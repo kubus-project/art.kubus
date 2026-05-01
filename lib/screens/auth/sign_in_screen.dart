@@ -258,6 +258,11 @@ class _SignInScreenState extends State<SignInScreen> {
       normalizedWalletAddress = expectedWalletAddress;
       walletAddress = expectedWalletAddress;
     }
+    final shouldSyncBackendWallet =
+        origin == _AuthOrigin.google &&
+        normalizedWalletAddress.isNotEmpty &&
+        expectedWalletAddress.isNotEmpty &&
+        !WalletUtils.equals(expectedWalletAddress, normalizedWalletAddress);
     if (isNewAccount &&
         normalizedWalletAddress.isNotEmpty &&
         walletProvider.hasSigner &&
@@ -289,6 +294,7 @@ class _SignInScreenState extends State<SignInScreen> {
         userId: userId,
         warmUp: !isModalReauth,
         loadProfile: !isModalReauth,
+        syncBackend: shouldSyncBackendWallet,
       );
       if (!mounted) return;
     }

@@ -6,12 +6,17 @@ import '../services/google_auth_service.dart';
 const String _walletRequiredForNewGoogleAccountCode =
     'WALLET_REQUIRED_FOR_NEW_ACCOUNT';
 
+bool _isLinkedAuthPlaceholderWallet(String? walletAddress) {
+  final normalized = (walletAddress ?? '').trim().toLowerCase();
+  return normalized.startsWith('linked_auth:');
+}
+
 String? signerBackedGoogleWalletAddress({
   required bool hasSigner,
   String? currentWalletAddress,
 }) {
   final normalizedWallet = (currentWalletAddress ?? '').trim();
-  if (!hasSigner || normalizedWallet.isEmpty) {
+  if (!hasSigner || normalizedWallet.isEmpty || _isLinkedAuthPlaceholderWallet(normalizedWallet)) {
     return null;
   }
   return normalizedWallet;
@@ -50,13 +55,21 @@ Future<Map<String, dynamic>> loginWithGoogleWalletRecovery({
   required String? walletAddress,
   required Future<String?> Function() createSignerBackedWallet,
 }) async {
+  var provisionedWallet = (walletAddress ?? '').trim();
+  if (provisionedWallet.isEmpty || _isLinkedAuthPlaceholderWallet(provisionedWallet)) {
+    provisionedWallet = (await createSignerBackedWallet())?.trim() ?? '';
+    if (provisionedWallet.isEmpty || _isLinkedAuthPlaceholderWallet(provisionedWallet)) {
+      throw Exception('Signer-backed wallet provisioning failed');
+    }
+  }
+
   try {
     return await api.loginWithGoogle(
       idToken: googleResult.idToken,
       code: googleResult.serverAuthCode,
       email: googleResult.email,
       username: null,
-      walletAddress: walletAddress,
+      walletAddress: provisionedWallet,
       displayName: googleResult.displayName,
     );
   } catch (error) {
@@ -64,9 +77,11 @@ Future<Map<String, dynamic>> loginWithGoogleWalletRecovery({
       rethrow;
     }
 
-    final provisionedWallet = (await createSignerBackedWallet())?.trim();
-    if (provisionedWallet == null || provisionedWallet.isEmpty) {
-      throw Exception('Signer-backed wallet provisioning failed');
+    if (provisionedWallet.isEmpty || _isLinkedAuthPlaceholderWallet(provisionedWallet)) {
+      provisionedWallet = (await createSignerBackedWallet())?.trim() ?? '';
+      if (provisionedWallet.isEmpty || _isLinkedAuthPlaceholderWallet(provisionedWallet)) {
+        throw Exception('Signer-backed wallet provisioning failed');
+      }
     }
 
     return api.loginWithGoogle(

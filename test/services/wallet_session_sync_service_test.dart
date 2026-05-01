@@ -1,7 +1,6 @@
 import 'package:art_kubus/providers/chat_provider.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
-import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/solana_wallet_service.dart';
 import 'package:art_kubus/services/wallet_session_sync_service.dart';
 import 'package:flutter/material.dart';
@@ -54,8 +53,6 @@ void main() {
 
   setUp(() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
-    BackendApiService().setAuthTokenForTesting(null);
-    BackendApiService().setPreferredWalletAddress(null);
   });
 
   testWidgets(
@@ -101,5 +98,91 @@ void main() {
     expect(prefs.getString('wallet_address'), 'wallet-123');
     expect(prefs.getString('wallet'), 'wallet-123');
     expect(prefs.getString('user_id'), 'user-42');
+  });
+
+  testWidgets(
+      'bindAuthenticatedWallet can sync the wallet back to the backend',
+      (tester) async {
+    var bindRequests = 0;
+    String? capturedWallet;
+
+    final walletProvider = _ThrowingWalletProvider();
+    final profileProvider = _ThrowingProfileProvider();
+    final chatProvider = _RecordingChatProvider();
+    late BuildContext buildContext;
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<WalletProvider>.value(value: walletProvider),
+          ChangeNotifierProvider<ProfileProvider>.value(value: profileProvider),
+          ChangeNotifierProvider<ChatProvider>.value(value: chatProvider),
+        ],
+        child: MaterialApp(
+          home: Builder(
+            builder: (context) {
+              buildContext = context;
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    await const WalletSessionSyncService().bindAuthenticatedWallet(
+      context: buildContext,
+      walletAddress: 'wallet-backend-sync',
+      userId: 'user-42',
+      warmUp: false,
+      syncBackend: true,
+      syncBackendWallet: (wallet) async {
+        bindRequests += 1;
+        capturedWallet = wallet;
+      },
+    );
+
+    expect(bindRequests, 1);
+    expect(capturedWallet, 'wallet-backend-sync');
+  });
+
+  testWidgets(
+      'bindAuthenticatedWallet ignores linked_auth placeholder wallets',
+      (tester) async {
+    final walletProvider = _ThrowingWalletProvider();
+    final profileProvider = _ThrowingProfileProvider();
+    final chatProvider = _RecordingChatProvider();
+    late BuildContext buildContext;
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<WalletProvider>.value(value: walletProvider),
+          ChangeNotifierProvider<ProfileProvider>.value(value: profileProvider),
+          ChangeNotifierProvider<ChatProvider>.value(value: chatProvider),
+        ],
+        child: MaterialApp(
+          home: Builder(
+            builder: (context) {
+              buildContext = context;
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    await const WalletSessionSyncService().bindAuthenticatedWallet(
+      context: buildContext,
+      walletAddress: 'linked_auth:placeholder',
+      userId: 'user-42',
+      warmUp: false,
+      syncBackend: true,
+    );
+
+    expect(walletProvider.restoreAttempted, isFalse);
+    expect(profileProvider.loadAttempted, isFalse);
+    expect(chatProvider.lastWallet, isNull);
   });
 }

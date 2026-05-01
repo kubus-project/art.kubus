@@ -176,6 +176,11 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
       normalizedWalletAddress = expectedWalletAddress;
       walletAddress = expectedWalletAddress;
     }
+    final shouldSyncBackendWallet =
+        origin == _AuthOrigin.google &&
+        normalizedWalletAddress.isNotEmpty &&
+        expectedWalletAddress.isNotEmpty &&
+        !WalletUtils.equals(expectedWalletAddress, normalizedWalletAddress);
     if (isNewAccount &&
         normalizedWalletAddress.isNotEmpty &&
         walletProvider.hasSigner &&
@@ -205,6 +210,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
         context: context,
         walletAddress: walletAddress.toString(),
         userId: userId,
+        syncBackend: shouldSyncBackendWallet,
       );
       if (!mounted) return;
     }

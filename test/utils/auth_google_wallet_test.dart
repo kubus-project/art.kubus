@@ -40,6 +40,16 @@ void main() {
     );
   });
 
+  test('treats linked_auth placeholders as non-wallet identities', () {
+    expect(
+      signerBackedGoogleWalletAddress(
+        hasSigner: true,
+        currentWalletAddress: 'linked_auth:abc123',
+      ),
+      isNull,
+    );
+  });
+
   test('detects backend wallet requirement for new google accounts', () {
     const error = BackendApiRequestException(
       statusCode: 400,
@@ -124,11 +134,42 @@ void main() {
 
     expect(result['success'], isTrue);
     expect(loginAttempts, 2);
-    expect(firstWalletAddress, isEmpty);
+    expect(firstWalletAddress, 'wallet-created-123');
     expect(secondWalletAddress, 'wallet-created-123');
     expect(firstDisplayName, 'New User');
     expect(secondDisplayName, 'New User');
     expect(walletProvisionCalls, 1);
+  });
+
+  test('does not call backend login when wallet provisioning fails', () async {
+    final api = BackendApiService();
+    var loginAttempts = 0;
+
+    api.setHttpClient(
+      MockClient((request) async {
+        loginAttempts += 1;
+        return http.Response(
+          '{"success":true,"data":{"token":"jwt-token"}}',
+          200,
+          headers: <String, String>{'content-type': 'application/json'},
+        );
+      }),
+    );
+
+    await expectLater(
+      () => loginWithGoogleWalletRecovery(
+        api: api,
+        googleResult: GoogleAuthResult(
+          idToken: 'google-id-token',
+          email: 'new-user@example.com',
+          displayName: 'New User',
+        ),
+        walletAddress: 'linked_auth:placeholder',
+        createSignerBackedWallet: () async => null,
+      ),
+      throwsA(isA<Exception>()),
+    );
+    expect(loginAttempts, 0);
   });
 
   test('does not retry google login for non-wallet backend errors', () async {
@@ -161,6 +202,6 @@ void main() {
       ),
       throwsA(isA<BackendApiRequestException>()),
     );
-    expect(walletProvisionCalls, 0);
+    expect(walletProvisionCalls, 1);
   });
 }

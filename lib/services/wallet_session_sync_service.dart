@@ -37,9 +37,11 @@ class WalletSessionSyncService {
     Object? userId,
     bool warmUp = true,
     bool loadProfile = true,
+    bool syncBackend = false,
+    Future<void> Function(String walletAddress)? syncBackendWallet,
   }) async {
     final normalizedWallet = walletAddress.trim();
-    if (normalizedWallet.isEmpty) return;
+    if (normalizedWallet.isEmpty || normalizedWallet.toLowerCase().startsWith('linked_auth:')) return;
     final walletProvider = context.read<WalletProvider>();
     final profileProvider = context.read<ProfileProvider>();
     final chatProvider = context.read<ChatProvider>();
@@ -63,6 +65,19 @@ class WalletSessionSyncService {
         debugPrint(
             'WalletSessionSyncService: failed to persist wallet state: $e');
       }
+    }
+
+    if (syncBackend) {
+      await _runNonFatal(
+        'backend wallet bind',
+        () => (syncBackendWallet ??
+                (wallet) => backendApi
+                    .bindAuthenticatedWallet(wallet)
+                    .timeout(_walletBindTimeout)
+                    .then((_) {}))(
+              normalizedWallet,
+            ),
+      );
     }
 
     if ((walletProvider.currentWalletAddress ?? '').trim() !=
