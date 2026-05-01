@@ -2,75 +2,78 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:art_kubus/services/onboarding_embedded_auth_service.dart';
 
 void main() {
-  group('OnboardingEmbeddedAuthService', () {
-    test('shouldProceedWithEmbeddedAuthSuccess: no pending email -> proceed', () {
-      final result = OnboardingEmbeddedAuthService.shouldProceedWithEmbeddedAuthSuccess(
+  group('OnboardingEmbeddedAuthService.decide()', () {
+    test('no pending email -> proceed', () {
+      final decision = OnboardingEmbeddedAuthService.decide(
         signedInEmail: 'user@example.com',
         pendingVerificationEmail: null,
       );
 
-      expect(result, isTrue);
+      expect(decision.canProceed, isTrue);
+      expect(decision.type, EmbeddedOnboardingAuthDecisionType.proceed);
     });
 
-    test('shouldProceedWithEmbeddedAuthSuccess: matching pending email -> proceed', () {
-      final result = OnboardingEmbeddedAuthService.shouldProceedWithEmbeddedAuthSuccess(
-        signedInEmail: 'user@example.com',
-        pendingVerificationEmail: 'user@example.com',
-      );
-
-      expect(result, isTrue);
-    });
-
-    test('shouldProceedWithEmbeddedAuthSuccess: case-insensitive match -> proceed', () {
-      final result = OnboardingEmbeddedAuthService.shouldProceedWithEmbeddedAuthSuccess(
+    test('matching pending email (case-insensitive) -> proceed', () {
+      final decision = OnboardingEmbeddedAuthService.decide(
         signedInEmail: 'User@Example.COM',
         pendingVerificationEmail: 'user@example.com',
       );
 
-      expect(result, isTrue);
+      expect(decision.canProceed, isTrue);
+      expect(decision.type, EmbeddedOnboardingAuthDecisionType.proceed);
+      expect(decision.normalizedSignedInEmail, 'user@example.com');
+      expect(decision.normalizedPendingEmail, 'user@example.com');
     });
 
-    test('shouldProceedWithEmbeddedAuthSuccess: whitespace tolerance -> proceed', () {
-      final result = OnboardingEmbeddedAuthService.shouldProceedWithEmbeddedAuthSuccess(
+    test('whitespace tolerance: emails normalized -> proceed', () {
+      final decision = OnboardingEmbeddedAuthService.decide(
         signedInEmail: '  user@example.com  ',
         pendingVerificationEmail: '  user@example.com  ',
       );
 
-      expect(result, isTrue);
+      expect(decision.canProceed, isTrue);
     });
 
-    test('shouldProceedWithEmbeddedAuthSuccess: mismatched email -> do not proceed', () {
-      final result = OnboardingEmbeddedAuthService.shouldProceedWithEmbeddedAuthSuccess(
+    test('mismatched email -> blockedEmailMismatch', () {
+      final decision = OnboardingEmbeddedAuthService.decide(
         signedInEmail: 'user1@example.com',
         pendingVerificationEmail: 'user2@example.com',
       );
 
-      expect(result, isFalse);
+      expect(decision.canProceed, isFalse);
+      expect(decision.type, EmbeddedOnboardingAuthDecisionType.blockedEmailMismatch);
+      expect(decision.isEmailMismatch, isTrue);
     });
 
-    test('shouldProceedWithEmbeddedAuthSuccess: pending email not empty but sign-in is different -> do not proceed', () {
-      final result = OnboardingEmbeddedAuthService.shouldProceedWithEmbeddedAuthSuccess(
-        signedInEmail: 'other@example.com',
+    test('pending email exists but signed-in email missing -> blockedMissingEmail', () {
+      final decision = OnboardingEmbeddedAuthService.decide(
+        signedInEmail: null,
         pendingVerificationEmail: 'user@example.com',
       );
 
-      expect(result, isFalse);
+      expect(decision.canProceed, isFalse);
+      expect(decision.type, EmbeddedOnboardingAuthDecisionType.blockedMissingEmail);
+      expect(decision.isMissingEmail, isTrue);
     });
 
-    test('validateOnboardingRemains: onboarding active -> true', () {
-      final result = OnboardingEmbeddedAuthService.validateOnboardingRemains(
-        isOnboardingActive: true,
+    test('pending email exists but signed-in email is empty string -> blockedMissingEmail', () {
+      final decision = OnboardingEmbeddedAuthService.decide(
+        signedInEmail: '',
+        pendingVerificationEmail: 'user@example.com',
       );
 
-      expect(result, isTrue);
+      expect(decision.canProceed, isFalse);
+      expect(decision.isMissingEmail, isTrue);
     });
 
-    test('validateOnboardingRemains: onboarding inactive -> false (contract violation)', () {
-      final result = OnboardingEmbeddedAuthService.validateOnboardingRemains(
-        isOnboardingActive: false,
+    test('empty pending email and empty signed-in email -> proceed (no constraint)', () {
+      final decision = OnboardingEmbeddedAuthService.decide(
+        signedInEmail: '',
+        pendingVerificationEmail: '',
       );
 
-      expect(result, isFalse);
+      expect(decision.canProceed, isTrue);
     });
   });
 }
+

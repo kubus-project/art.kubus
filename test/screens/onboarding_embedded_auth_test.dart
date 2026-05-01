@@ -2,60 +2,136 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:art_kubus/services/onboarding_embedded_auth_service.dart';
 
 void main() {
-  group('Embedded onboarding auth cannot escape onboarding', () {
-    test('embedded auth with no pending email -> allows account completion', () {
-      // Verify that embedded auth success is allowed when there is no conflicting pending email.
-      final canProceed = OnboardingEmbeddedAuthService.shouldProceedWithEmbeddedAuthSuccess(
+  group('OnboardingEmbeddedAuthService.decide()', () {
+    test('no pending email -> proceed', () {
+      final decision = OnboardingEmbeddedAuthService.decide(
         signedInEmail: 'user@example.com',
         pendingVerificationEmail: null,
       );
 
-      expect(canProceed, isTrue,
-          reason: 'embedded auth should allow account step completion when no pending email');
+      expect(decision.canProceed, isTrue);
+      expect(decision.type,
+          EmbeddedOnboardingAuthDecisionType.proceed);
     });
 
-    test('embedded auth with matching pending email -> allows verification completion', () {
-      // Verify that embedded auth success is allowed when email matches the pending verification email.
-      final canProceed = OnboardingEmbeddedAuthService.shouldProceedWithEmbeddedAuthSuccess(
+    test('matching pending email (exact case) -> proceed', () {
+      final decision = OnboardingEmbeddedAuthService.decide(
         signedInEmail: 'user@example.com',
         pendingVerificationEmail: 'user@example.com',
       );
 
-      expect(canProceed, isTrue,
-          reason: 'embedded auth should complete verification step when email matches');
+      expect(decision.canProceed, isTrue);
+      expect(decision.normalizedSignedInEmail, 'user@example.com');
+      expect(decision.normalizedPendingEmail, 'user@example.com');
     });
 
-    test('embedded auth with mismatched email -> blocks escape and forces user reconciliation', () {
-      // REGRESSION: embedded auth must never allow a user to escape onboarding by signing in with
-      // a different email than the one pending verification. Instead, it must force the user
-      // to either reconcile the email or re-enter the account step.
-      final canProceed = OnboardingEmbeddedAuthService.shouldProceedWithEmbeddedAuthSuccess(
+    test('matching pending email (case-insensitive) -> proceed', () {
+      final decision = OnboardingEmbeddedAuthService.decide(
+        signedInEmail: 'User@Example.COM',
+        pendingVerificationEmail: 'user@example.com',
+      );
+
+      expect(decision.canProceed, isTrue);
+      expect(decision.normalizedSignedInEmail, 'user@example.com');
+      expect(decision.normalizedPendingEmail, 'user@example.com');
+    });
+
+    test('REGRESSION: mismatched email -> block (prevents email swap)', () {
+      final decision = OnboardingEmbeddedAuthService.decide(
         signedInEmail: 'user1@example.com',
         pendingVerificationEmail: 'user2@example.com',
       );
 
-      expect(canProceed, isFalse,
-          reason: 'embedded auth must block and show warning when sign-in email differs from pending email');
+      expect(decision.canProceed, isFalse);
+      expect(decision.isEmailMismatch, isTrue);
+      expect(decision.normalizedSignedInEmail, 'user1@example.com');
+      expect(decision.normalizedPendingEmail, 'user2@example.com');
     });
 
-    test('onboarding must remain active after embedded auth success', () {
-      // Verify that the onboarding lifecycle is never violated by embedded auth.
-      final remains = OnboardingEmbeddedAuthService.validateOnboardingRemains(
-        isOnboardingActive: true,
+    test('pending email exists but signed-in email missing -> block', () {
+      final decision = OnboardingEmbeddedAuthService.decide(
+        signedInEmail: null,
+        pendingVerificationEmail: 'user@example.com',
       );
 
-      expect(remains, isTrue,
-          reason: 'embedded auth success must never allow onboarding to become inactive');
+      expect(decision.canProceed, isFalse);
+      expect(decision.isMissingEmail, isTrue);
+      expect(decision.normalizedSignedInEmail, isNull);
+      expect(decision.normalizedPendingEmail, 'user@example.com');
     });
 
-    test('embedded auth is rejected if onboarding is not active (contract violation)', () {
-      // Defensive check: embedded auth should only be invoked from within onboarding.
-      final remains = OnboardingEmbeddedAuthService.validateOnboardingRemains(
-        isOnboardingActive: false,
+    test('pending email exists but signed-in email is empty string -> block', () {
+      final decision = OnboardingEmbeddedAuthService.decide(
+        signedInEmail: '',
+        pendingVerificationEmail: 'user@example.com',
       );
 
-      expect(remains, isFalse,
-          reason: 'embedded auth invoked outside onboarding flow is a contract violation');
+      expect(decision.canProceed, isFalse);
+      expect(decision.isMissingEmail, isTrue);
+    });
+
+    test('whitespace tolerance: email with spaces normalized -> proceed', () {
+      final decision = OnboardingEmbeddedAuthService.decide(
+        signedInEmail: '  user@example.com  ',
+        pendingVerificationEmail: '  user@example.com  ',
+      );
+
+      expect(decision.canProceed, isTrue);
+      expect(decision.normalizedSignedInEmail, 'user@example.com');
+      expect(decision.normalizedPendingEmail, 'user@example.com');
+    });
+
+    test('empty pending email with signed-in email -> proceed', () {
+      final decision = OnboardingEmbeddedAuthService.decide(
+        signedInEmail: 'user@example.com',
+        pendingVerificationEmail: '',
+      );
+
+      expect(decision.canProceed, isTrue);
+    });
+
+    test('both emails empty -> proceed (no pending constraint)', () {
+      final decision = OnboardingEmbeddedAuthService.decide(
+        signedInEmail: '',
+        pendingVerificationEmail: '',
+      );
+
+      expect(decision.canProceed, isTrue);
+    });
+  });
+
+  group('Embedded auth flow guarantees', () {
+    test('email mismatch prevents step completion', () {
+      // When embedded auth email differs from pending verification email,
+      // the handler must NOT mark account/verification steps complete.
+      final decision = OnboardingEmbeddedAuthService.decide(
+        signedInEmail: 'wrong@example.com',
+        pendingVerificationEmail: 'correct@example.com',
+      );
+
+      // The handler code must check this decision and:
+      // - Not call _clearPendingEmailVerificationState()
+      // - Not call _markCompleted(account)
+      // - Show a warning and return without advancing
+      expect(decision.isEmailMismatch, isTrue);
+    });
+
+    test('no escape route from onboarding for email mismatch', () {
+      // A decision object with isEmailMismatch=true means:
+      // - Do not route to /main
+      // - Do not route to /sign-in
+      // - Stay in onboarding and show warning
+      final decision = OnboardingEmbeddedAuthService.decide(
+        signedInEmail: 'user1@example.com',
+        pendingVerificationEmail: 'user2@example.com',
+      );
+
+      expect(decision.canProceed, isFalse,
+          reason: 'Mismatch must block progression');
+      expect(decision.isEmailMismatch, isTrue,
+          reason: 'Mismatch is explicitly identified');
+      // The onboarding handler must interpret this as:
+      // "do not mark steps complete, do not advance, stay in onboarding"
     });
   });
 }

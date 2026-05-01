@@ -1,41 +1,82 @@
 /// Decision logic for embedded auth success within onboarding.
 /// 
-/// This service models the decision tree for when embedded sign-in succeeds
-/// during the onboarding flow. It ensures that embedded auth success never
-/// allows the user to escape onboarding before it is completed.
+/// This service ensures that embedded auth success during onboarding never
+/// allows escape to /main or /sign-in before completion.
+enum EmbeddedOnboardingAuthDecisionType {
+  /// Email validation passed; can proceed with auth step completion.
+  proceed,
+  /// Email mismatch with pending verification; block and show warning.
+  blockedEmailMismatch,
+  /// Signed-in email is empty but pending email exists; cannot proceed.
+  blockedMissingEmail,
+}
+
+class EmbeddedOnboardingAuthDecision {
+  const EmbeddedOnboardingAuthDecision({
+    required this.type,
+    this.normalizedSignedInEmail,
+    this.normalizedPendingEmail,
+  });
+
+  final EmbeddedOnboardingAuthDecisionType type;
+  final String? normalizedSignedInEmail;
+  final String? normalizedPendingEmail;
+
+  bool get canProceed => type == EmbeddedOnboardingAuthDecisionType.proceed;
+  bool get isEmailMismatch =>
+      type == EmbeddedOnboardingAuthDecisionType.blockedEmailMismatch;
+  bool get isMissingEmail =>
+      type == EmbeddedOnboardingAuthDecisionType.blockedMissingEmail;
+}
+
 class OnboardingEmbeddedAuthService {
-  /// Given the current onboarding state and auth payload, determine what action to take.
-  /// 
-  /// Returns true if onboarding can proceed normally (mark steps complete, refresh auth).
-  /// Returns false if the sign-in email differs from pending verification email
-  /// (requires user intervention to reconcile).
-  static bool shouldProceedWithEmbeddedAuthSuccess({
-    required String signedInEmail,
+  /// Decide whether embedded auth success can proceed based on email validation.
+  ///
+  /// Rules:
+  /// - If no pending verification email exists → proceed
+  /// - If pending email exists and signed-in email matches (case-insensitive) → proceed
+  /// - If pending email exists but signed-in email is missing → block (cannot verify)
+  /// - If pending email exists but differs from signed-in email → block (prevent email swap)
+  static EmbeddedOnboardingAuthDecision decide({
+    required String? signedInEmail,
     required String? pendingVerificationEmail,
   }) {
-    final normalizedSignedInEmail = signedInEmail.trim().toLowerCase();
-    final normalizedPendingEmail = (pendingVerificationEmail ?? '').trim().toLowerCase();
+    final normalizedSignedIn = (signedInEmail ?? '').trim().toLowerCase();
+    final normalizedPending = (pendingVerificationEmail ?? '').trim().toLowerCase();
 
-    // If there's a pending verification email and it doesn't match the signed-in email,
-    // we cannot proceed. Return false so the UI shows a warning and lets the user resolve.
-    if (normalizedPendingEmail.isNotEmpty &&
-        normalizedSignedInEmail != normalizedPendingEmail) {
-      return false;
+    // No pending verification email → can proceed
+    if (normalizedPending.isEmpty) {
+      return EmbeddedOnboardingAuthDecision(
+        type: EmbeddedOnboardingAuthDecisionType.proceed,
+        normalizedSignedInEmail: normalizedSignedIn.isEmpty ? null : normalizedSignedIn,
+        normalizedPendingEmail: null,
+      );
     }
 
-    // All checks passed; embedded sign-in can proceed.
-    return true;
-  }
+    // Pending email exists but signed-in email is missing → cannot verify
+    if (normalizedSignedIn.isEmpty) {
+      return EmbeddedOnboardingAuthDecision(
+        type: EmbeddedOnboardingAuthDecisionType.blockedMissingEmail,
+        normalizedSignedInEmail: null,
+        normalizedPendingEmail: normalizedPending,
+      );
+    }
 
-  /// Validate that embedded auth will not cause escape from onboarding.
-  /// 
-  /// Always returns true as long as onboarding is active. This is a defensive check
-  /// to ensure the onboarding lifecycle is never violated by embedded auth success.
-  static bool validateOnboardingRemains({
-    required bool isOnboardingActive,
-  }) {
-    // Embedded auth should only be invoked from within an active onboarding flow.
-    // If onboarding is not active, this is a contract violation.
-    return isOnboardingActive;
+    // Pending email exists; check if it matches signed-in email
+    if (normalizedSignedIn == normalizedPending) {
+      return EmbeddedOnboardingAuthDecision(
+        type: EmbeddedOnboardingAuthDecisionType.proceed,
+        normalizedSignedInEmail: normalizedSignedIn,
+        normalizedPendingEmail: normalizedPending,
+      );
+    }
+
+    // Pending email exists and differs from signed-in email → block
+    return EmbeddedOnboardingAuthDecision(
+      type: EmbeddedOnboardingAuthDecisionType.blockedEmailMismatch,
+      normalizedSignedInEmail: normalizedSignedIn,
+      normalizedPendingEmail: normalizedPending,
+    );
   }
 }
+

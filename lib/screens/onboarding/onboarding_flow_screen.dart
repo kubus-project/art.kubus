@@ -16,6 +16,7 @@ import 'package:art_kubus/services/auth_onboarding_service.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/notification_helper.dart';
 import 'package:art_kubus/services/onboarding_state_service.dart';
+import 'package:art_kubus/services/onboarding_embedded_auth_service.dart';
 import 'package:art_kubus/services/push_notification_service.dart';
 import 'package:art_kubus/services/telemetry/telemetry_service.dart';
 import 'package:art_kubus/services/wallet_backup_passkey_service.dart';
@@ -1592,28 +1593,47 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     final l10n = AppLocalizations.of(context)!;
     final data = (payload['data'] as Map<String, dynamic>?) ?? payload;
     final user = (data['user'] as Map<String, dynamic>?) ?? data;
-    final signedInEmail = (user['email'] ?? '').toString().trim().toLowerCase();
+    final signedInEmail = (user['email'] ?? '').toString().trim();
     final signedInWallet =
         (user['walletAddress'] ?? user['wallet_address'] ?? '')
             .toString()
             .trim();
-    final pendingEmail = (_pendingVerificationEmail ?? '').trim().toLowerCase();
-    var shouldPersistDrafts = false;
-    if (pendingEmail.isNotEmpty && signedInEmail == pendingEmail) {
-      _clearPendingEmailVerificationState();
-      shouldPersistDrafts = true;
-    } else if (pendingEmail.isNotEmpty) {
+
+    // Use OnboardingEmbeddedAuthService to validate email state.
+    final authDecision = OnboardingEmbeddedAuthService.decide(
+      signedInEmail: signedInEmail,
+      pendingVerificationEmail: _pendingVerificationEmail,
+    );
+
+    // If email validation failed, block and stay in onboarding.
+    if (!authDecision.canProceed) {
       _finishSignInPromptShown = false;
-      _showVerificationSnack(
-        l10n.onboardingFlowVerificationDifferentAccountWarning(pendingEmail),
-        tone: KubusSnackBarTone.warning,
-      );
+      if (authDecision.isEmailMismatch) {
+        _showVerificationSnack(
+          l10n.onboardingFlowVerificationDifferentAccountWarning(
+              authDecision.normalizedPendingEmail ?? ''),
+          tone: KubusSnackBarTone.warning,
+        );
+      } else if (authDecision.isMissingEmail) {
+        _showVerificationSnack(
+          l10n.onboardingFlowVerifySessionMismatch,
+          tone: KubusSnackBarTone.warning,
+        );
+      }
       _refreshAuthDerivedSteps();
       await _persistLocalDrafts();
       if (mounted) {
         await _jumpToVerifyStep();
       }
       return;
+    }
+
+    // Email validation passed; proceed with auth step completion.
+    var shouldPersistDrafts = false;
+    if (authDecision.normalizedPendingEmail != null) {
+      // Pending email matched; clear verification state.
+      _clearPendingEmailVerificationState();
+      shouldPersistDrafts = true;
     }
 
     await _syncWalletSessionIntoProviders(
