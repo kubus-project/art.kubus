@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../config/config.dart';
 import '../../providers/profile_provider.dart';
+import '../../providers/saved_items_provider.dart';
 import '../../providers/security_gate_provider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../services/auth_redirect_controller.dart';
@@ -31,8 +32,6 @@ import '../web3/wallet/connectwallet_screen.dart';
 import '../community/profile_edit_screen.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import '../../widgets/wallet_backup_prompts.dart';
-
-enum _AuthOrigin { emailPassword, google }
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({
@@ -195,7 +194,7 @@ class _SignInScreenState extends State<SignInScreen> {
     required WalletProvider walletProvider,
     String? walletAddress,
     required Map<String, dynamic> payload,
-    required _AuthOrigin origin,
+    required AuthOrigin origin,
   }) async {
     if (widget.embedded || widget.onAuthSuccess != null) return false;
 
@@ -209,15 +208,13 @@ class _SignInScreenState extends State<SignInScreen> {
       payload: payload,
       redirectRoute: widget.redirectRoute,
       redirectArguments: widget.redirectArguments,
-      origin: origin == _AuthOrigin.google
-          ? AuthOrigin.google
-          : AuthOrigin.emailPassword,
+      origin: origin,
     );
   }
 
   Future<void> _handleAuthSuccess(
     Map<String, dynamic> payload, {
-    _AuthOrigin origin = _AuthOrigin.emailPassword,
+    AuthOrigin origin = AuthOrigin.emailPassword,
   }) async {
     final l10n = AppLocalizations.of(context)!;
     final redirectRoute = widget.redirectRoute?.trim();
@@ -259,7 +256,7 @@ class _SignInScreenState extends State<SignInScreen> {
       walletAddress = expectedWalletAddress;
     }
     final shouldSyncBackendWallet =
-        origin == _AuthOrigin.google &&
+      origin == AuthOrigin.google &&
         normalizedWalletAddress.isNotEmpty &&
         expectedWalletAddress.isNotEmpty &&
         !WalletUtils.equals(expectedWalletAddress, normalizedWalletAddress);
@@ -299,6 +296,16 @@ class _SignInScreenState extends State<SignInScreen> {
       if (!mounted) return;
     }
 
+    try {
+      unawaited(
+        Provider.of<SavedItemsProvider>(context, listen: false)
+            .refreshFromBackend(),
+      );
+    } catch (e) {
+      AppConfig.debugPrint(
+          'SignInScreen: saved items refresh skipped/failed: $e');
+    }
+
     if (!isModalReauth) {
       final ok = await const PostAuthSecuritySetupService()
           .ensurePostAuthSecuritySetup(
@@ -333,7 +340,7 @@ class _SignInScreenState extends State<SignInScreen> {
       if (!mounted) return;
     }
 
-    if (!isModalReauth && origin != _AuthOrigin.google) {
+    if (!isModalReauth && origin != AuthOrigin.google) {
       await maybeShowGooglePasswordUpgradePrompt(context, payload);
       if (!mounted) return;
     }
@@ -570,7 +577,7 @@ class _SignInScreenState extends State<SignInScreen> {
     try {
       final api = BackendApiService();
       final result = await api.loginWithEmail(email: email, password: password);
-      await _handleAuthSuccess(result, origin: _AuthOrigin.emailPassword);
+      await _handleAuthSuccess(result, origin: AuthOrigin.emailPassword);
       unawaited(TelemetryService().trackSignInSuccess(method: 'email'));
     } catch (e) {
       unawaited(TelemetryService().trackSignInFailure(
@@ -730,7 +737,7 @@ class _SignInScreenState extends State<SignInScreen> {
 
     if (!mounted) return;
     _setGoogleAuthDiagnostics('profile_hydration');
-    await _handleAuthSuccess(result, origin: _AuthOrigin.google);
+    await _handleAuthSuccess(result, origin: AuthOrigin.google);
     _setGoogleAuthDiagnostics('success');
   }
 
@@ -803,7 +810,7 @@ class _SignInScreenState extends State<SignInScreen> {
       if (!mounted) return;
 
       if (routeResult is Map<String, dynamic>) {
-        await _handleAuthSuccess(routeResult, origin: _AuthOrigin.google);
+        await _handleAuthSuccess(routeResult, origin: AuthOrigin.wallet);
         return;
       }
 
@@ -813,7 +820,7 @@ class _SignInScreenState extends State<SignInScreen> {
       final hydratedPayload = await _resolveAuthPayloadFromCurrentSession();
       if (!mounted) return;
       if (hydratedPayload != null) {
-        await _handleAuthSuccess(hydratedPayload, origin: _AuthOrigin.google);
+        await _handleAuthSuccess(hydratedPayload, origin: AuthOrigin.wallet);
       }
     } finally {
       _walletFlowOpening = false;

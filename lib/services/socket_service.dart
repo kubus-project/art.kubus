@@ -500,12 +500,7 @@ class SocketService {
           }
           try { _messageController.add(mapped); _log('chat:new-message -> controller.added'); } catch (e) { _log('message controller add error: $e'); }
         } else {
-          _log('chat:message-read -> could not map payload, sending raw wrapper to listeners');
-          final rawMap = {'raw': data};
-          for (final l in _messageReadListeners) {
-            try { l(rawMap); } catch (e) { _log('chat:message-read fallback listener error: $e'); }
-          }
-          try { _messageReadController.add(rawMap); _log('chat:message-read -> controller.added (raw)'); } catch (e) { _log('messageRead controller add error: $e'); }
+          _log('chat:new-message -> payload could not be mapped; dropping');
         }
       } catch (e) { _log('chat:new-message handler error: $e'); }
     });
@@ -521,11 +516,7 @@ class SocketService {
           }
           try { _messageReadController.add(mapped); _log('chat:message-read -> controller.added'); } catch (e) { _log('messageRead controller add error: $e'); }
         } else {
-          _log('chat:new-conversation -> could not map payload, sending raw wrapper to listeners');
-          final rawMap = {'raw': data};
-          for (final l in _conversationListeners) {
-            try { l(rawMap); } catch (e) { _log('chat:new-conversation fallback listener error: $e'); }
-          }
+          _log('chat:message-read -> payload could not be mapped; dropping');
         }
       } catch (e) { _log('chat:message-read handler error: $e'); }
     });
@@ -540,12 +531,7 @@ class SocketService {
             try { l(mapped); } catch (e) { _log('chat:new-conversation listener error: $e'); }
           }
         } else {
-          _log('chat:members-updated -> could not map payload, sending raw wrapper to listeners');
-          final rawMap = {'raw': data};
-          for (final l in _conversationListeners) {
-            try { l(rawMap); } catch (e) { _log('chat:members-updated fallback listener error: $e'); }
-          }
-          try { _conversationMemberReadController.add(rawMap); _log('chat:members-updated -> controller.added (raw)'); } catch (e) { _log('conversationMember controller add error: $e'); }
+          _log('chat:new-conversation -> payload could not be mapped; dropping');
         }
       } catch (e) { _log('chat:new-conversation handler error: $e'); }
     });
@@ -561,12 +547,7 @@ class SocketService {
           }
           try { _conversationMemberReadController.add(mapped); _log('chat:members-updated -> controller.added'); } catch (e) { _log('conversationMember controller add error: $e'); }
         } else {
-          _log('message:received -> could not map payload, sending raw wrapper to listeners');
-          final rawMap = {'raw': data};
-          for (final l in _messageListeners) {
-            try { l(rawMap); } catch (e) { _log('message:received fallback listener error: $e'); }
-          }
-          try { _messageController.add(rawMap); _log('message:received -> controller.added (raw)'); } catch (e) { _log('message controller add error: $e'); }
+          _log('chat:members-updated -> payload could not be mapped; dropping');
         }
       } catch (e) { _log('chat:members-updated handler error: $e'); }
     });
@@ -583,13 +564,7 @@ class SocketService {
           }
           try { _messageController.add(mapped); _log('message:received -> controller.added'); } catch (e) { _log('message controller add error: $e'); }
         } else {
-          _log('message:read -> could not map payload, sending raw wrapper to listeners');
-          final rawMap = {'raw': data};
-          _logEventDetails('message:read', rawMap);
-          for (final l in _messageReadListeners) {
-            try { l(rawMap); } catch (e) { _log('message:read fallback listener error: $e'); }
-          }
-          try { _messageReadController.add(rawMap); _log('message:read -> controller.added (raw)'); } catch (e) { _log('messageRead controller add error: $e'); }
+          _log('message:received -> payload could not be mapped; dropping');
         }
       } catch (e) { _log('message:received handler error: $e'); }
     });
@@ -606,13 +581,7 @@ class SocketService {
           }
           try { _messageReadController.add(mapped); _log('message:read -> controller.added'); } catch (e) { _log('messageRead controller add error: $e'); }
         } else {
-          _log('conversation:member:read -> could not map payload, sending raw wrapper to listeners');
-          final rawMap = {'raw': data};
-          _logEventDetails('conversation:member:read', rawMap);
-          for (final l in _conversationListeners) {
-            try { l(rawMap); } catch (e) { _log('conversation:member:read fallback listener error: $e'); }
-          }
-          try { _conversationMemberReadController.add(rawMap); _log('conversation:member:read -> controller.added (raw)'); } catch (e) { _log('conversationMember controller add error: $e'); }
+          _log('message:read -> payload could not be mapped; dropping');
         }
       } catch (e) { _log('message:read handler error: $e'); }
     });

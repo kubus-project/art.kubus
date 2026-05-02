@@ -64,6 +64,17 @@ class SavedItemsRepository {
 
   Future<void> replayPendingMutations() => _replayOutbox();
 
+  Future<Map<String, bool>> getSavedBatchStatus(
+    Iterable<SavedItemRecord> items,
+  ) async {
+    try {
+      await _replayOutbox();
+      return await _api.getSavedBatchStatus(items);
+    } catch (_) {
+      return const <String, bool>{};
+    }
+  }
+
   Future<void> migrateLegacyItems(List<SavedItemRecord> items) async {
     if (items.isEmpty) return;
     for (final item in items) {
@@ -123,18 +134,18 @@ class SavedItemsRepository {
   }
 
   List<_SavedMutationRecord> _decodeMutations(String? source) {
-    if ((source ?? '').trim().isEmpty) return const <_SavedMutationRecord>[];
+    if ((source ?? '').trim().isEmpty) return <_SavedMutationRecord>[];
     try {
       final decoded = jsonDecode(source!);
-      if (decoded is! List) return const <_SavedMutationRecord>[];
+      if (decoded is! List) return <_SavedMutationRecord>[];
       return decoded
           .whereType<Map>()
           .map((entry) =>
               _SavedMutationRecord.fromJson(Map<String, dynamic>.from(entry)))
           .whereType<_SavedMutationRecord>()
-          .toList(growable: false);
+          .toList(growable: true);
     } catch (_) {
-      return const <_SavedMutationRecord>[];
+      return <_SavedMutationRecord>[];
     }
   }
 }

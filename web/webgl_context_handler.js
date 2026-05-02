@@ -33,6 +33,11 @@
   var mapIdSeq = 0;
   var canvasWatcherInstalled = false;
   var canvasObserver = null;
+  // Debounce and throttle constants
+  var CONTEXT_EVENT_DEBOUNCE_MS = 500; // ignore duplicate lost/restored within this window per-canvas
+  var MAP_RECOVERY_THROTTLE_MS = 500; // don't request map recovery more frequently than this per-map
+  // Per-canvas event timestamps to avoid duplicate processing
+  var canvasEventTimestamps = new WeakMap();
   // Track per-map removal to prevent double-remove from plugin + interception.
   var removedMapIds = {};
 
@@ -140,6 +145,20 @@
       return;
     }
 
+    // Debounce duplicate lost events on the same canvas
+    try {
+      var ts = canvasEventTimestamps.get(canvas) || { lastLost: 0, lastRestored: 0 };
+      if (now - (ts.lastLost || 0) < CONTEXT_EVENT_DEBOUNCE_MS) {
+        debugLog('warn', 'Ignoring duplicate webglcontextlost for canvas (debounced)', {
+          canvas: canvas,
+          delta: now - ts.lastLost
+        });
+        return;
+      }
+      ts.lastLost = now;
+      canvasEventTimestamps.set(canvas, ts);
+    } catch (_) {}
+
     debugLog('warn', 'WebGL context lost', {
       canvas: canvas,
       firefoxDetected: isFirefox,
@@ -190,6 +209,15 @@
     // Mark canvas as recovering
     if (canvas) {
       canvas.dataset.webglRecovering = 'true';
+      try {
+        var container = canvas.closest ? canvas.closest('.maplibregl-map') : null;
+        if (container) {
+          // Mirror the recovering state on the container so CSS can target it.
+          container.dataset.webglRecovering = 'true';
+          // Also add an explicit class for broader tooling compatibility.
+          try { container.classList.add('kubus-webgl-recovering'); } catch (_) {}
+        }
+      } catch (_) {}
     }
   }
 
@@ -198,6 +226,21 @@
    */
   function handleContextRestored(event) {
     var canvas = event.target;
+
+    // Debounce duplicate restored events per-canvas and clear recovering flags
+    try {
+      var now = Date.now();
+      var ts = canvasEventTimestamps.get(canvas) || { lastLost: 0, lastRestored: 0 };
+      if (now - (ts.lastRestored || 0) < CONTEXT_EVENT_DEBOUNCE_MS) {
+        debugLog('warn', 'Ignoring duplicate webglcontextrestored for canvas (debounced)', {
+          canvas: canvas,
+          delta: now - ts.lastRestored
+        });
+      } else {
+        ts.lastRestored = now;
+        canvasEventTimestamps.set(canvas, ts);
+      }
+    } catch (_) {}
 
     debugLog('info', 'WebGL context restored', {
       canvas: canvas,
@@ -208,7 +251,14 @@
 
     // Clear recovering flag
     if (canvas) {
-      delete canvas.dataset.webglRecovering;
+      try { delete canvas.dataset.webglRecovering; } catch (_) {}
+      try {
+        var container = canvas.closest ? canvas.closest('.maplibregl-map') : null;
+        if (container) {
+          try { delete container.dataset.webglRecovering; } catch (_) {}
+          try { container.classList.remove('kubus-webgl-recovering'); } catch (_) {}
+        }
+      } catch (_) {}
     }
 
     // Reset loss counter on successful recovery
@@ -269,20 +319,28 @@
       // with `pending` and reusing the same map instance.
       setTimeout(function () {
         try {
-          if (typeof map.resize === 'function') {
-            map.resize();
-          }
-          if (typeof map.triggerRepaint === 'function') {
-            map.triggerRepaint();
-          }
-          window.dispatchEvent(new Event('resize'));
-          window.dispatchEvent(new CustomEvent('kubus:map-recovery-requested', {
-            detail: {
-              container: container,
-              mapId: map.__kubusMapId,
-              attemptCount: state.attemptCount
+          var now = Date.now();
+          var lastReq = state.lastRequestedTs || 0;
+          if (now - lastReq < MAP_RECOVERY_THROTTLE_MS) {
+            debugLog('warn', 'Suppressed map.resize/triggerRepaint due to throttle', { mapId: map.__kubusMapId, delta: now - lastReq });
+          } else {
+            state.lastRequestedTs = now;
+            // perform resize/repaint
+            if (typeof map.resize === 'function') {
+              try { map.resize(); } catch (_) {}
             }
-          }));
+            if (typeof map.triggerRepaint === 'function') {
+              try { map.triggerRepaint(); } catch (_) {}
+            }
+            window.dispatchEvent(new Event('resize'));
+            window.dispatchEvent(new CustomEvent('kubus:map-recovery-requested', {
+              detail: {
+                container: container,
+                mapId: map.__kubusMapId,
+                attemptCount: state.attemptCount
+              }
+            }));
+          }
         } catch (e) {
           debugLog('error', 'Map recovery failed', e);
         } finally {
@@ -296,10 +354,18 @@
     debugLog('info', 'Attempting MapLibre map recovery');
     setTimeout(function () {
       try {
-        window.dispatchEvent(new Event('resize'));
-        window.dispatchEvent(new CustomEvent('kubus:map-recovery-requested', {
-          detail: { container: container }
-        }));
+        var now = Date.now();
+        var last = 0;
+        try { last = parseInt(container && container.dataset && container.dataset.kubusLastRecoveryTs ? container.dataset.kubusLastRecoveryTs : '0', 10) || 0; } catch (_) { last = 0; }
+        if (now - last < MAP_RECOVERY_THROTTLE_MS) {
+          debugLog('warn', 'Skipping container-only recovery (throttled)', { delta: now - last });
+        } else {
+          try { if (container && container.dataset) container.dataset.kubusLastRecoveryTs = String(now); } catch (_) {}
+          window.dispatchEvent(new Event('resize'));
+          window.dispatchEvent(new CustomEvent('kubus:map-recovery-requested', {
+            detail: { container: container }
+          }));
+        }
       } catch (e) {
         debugLog('error', 'Map recovery failed', e);
       }
@@ -339,6 +405,14 @@
       delete canvas.dataset.kubusWebglSource;
       delete canvas.dataset.webglRecovering;
       delete canvas.dataset.kubusMapRemoving;
+      try { canvasEventTimestamps.delete(canvas); } catch (_) {}
+      try {
+        var container = canvas.closest ? canvas.closest('.maplibregl-map') : null;
+        if (container) {
+          delete container.dataset.webglRecovering;
+          try { container.classList.remove('kubus-webgl-recovering'); } catch (_) {}
+        }
+      } catch (_) {}
     } catch (_) { }
     try {
       canvasToMap.delete(canvas);
@@ -428,7 +502,8 @@
             canvasToMap.set(canvas, map);
             mapRecoveryState.set(map, {
               pending: false,
-              attemptCount: 0
+              attemptCount: 0,
+              lastRequestedTs: 0
             });
             addCanvasHandlers(canvas, 'maplibre');
           }

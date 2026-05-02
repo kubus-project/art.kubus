@@ -273,6 +273,95 @@ class SavedItemsProvider extends ChangeNotifier {
         metadata: metadata);
   }
 
+  Future<void> toggleArtistSaved(String artistId) async {
+    await setArtistSaved(artistId, !isArtistSaved(artistId));
+  }
+
+  Future<void> setArtistSaved(String artistId, bool isSaved,
+      {DateTime? timestamp,
+      String? title,
+      String? subtitle,
+      String? imageUrl,
+      String? authorId,
+      String? authorName,
+      Map<String, dynamic> metadata = const <String, dynamic>{}}) {
+    return _setSaved(SavedItemType.artist, artistId, isSaved,
+        timestamp: timestamp,
+        title: title,
+        subtitle: subtitle,
+        imageUrl: imageUrl,
+        authorId: authorId,
+        authorName: authorName,
+        metadata: metadata);
+  }
+
+  Future<void> toggleInstitutionSaved(String institutionId) async {
+    await setInstitutionSaved(
+        institutionId, !isInstitutionSaved(institutionId));
+  }
+
+  Future<void> setInstitutionSaved(String institutionId, bool isSaved,
+      {DateTime? timestamp,
+      String? title,
+      String? subtitle,
+      String? imageUrl,
+      String? authorId,
+      String? authorName,
+      Map<String, dynamic> metadata = const <String, dynamic>{}}) {
+    return _setSaved(SavedItemType.institution, institutionId, isSaved,
+        timestamp: timestamp,
+        title: title,
+        subtitle: subtitle,
+        imageUrl: imageUrl,
+        authorId: authorId,
+        authorName: authorName,
+        metadata: metadata);
+  }
+
+  Future<void> toggleGroupSaved(String groupId) async {
+    await setGroupSaved(groupId, !isGroupSaved(groupId));
+  }
+
+  Future<void> setGroupSaved(String groupId, bool isSaved,
+      {DateTime? timestamp,
+      String? title,
+      String? subtitle,
+      String? imageUrl,
+      String? authorId,
+      String? authorName,
+      Map<String, dynamic> metadata = const <String, dynamic>{}}) {
+    return _setSaved(SavedItemType.group, groupId, isSaved,
+        timestamp: timestamp,
+        title: title,
+        subtitle: subtitle,
+        imageUrl: imageUrl,
+        authorId: authorId,
+        authorName: authorName,
+        metadata: metadata);
+  }
+
+  Future<void> toggleMarkerSaved(String markerId) async {
+    await setMarkerSaved(markerId, !isMarkerSaved(markerId));
+  }
+
+  Future<void> setMarkerSaved(String markerId, bool isSaved,
+      {DateTime? timestamp,
+      String? title,
+      String? subtitle,
+      String? imageUrl,
+      String? authorId,
+      String? authorName,
+      Map<String, dynamic> metadata = const <String, dynamic>{}}) {
+    return _setSaved(SavedItemType.marker, markerId, isSaved,
+        timestamp: timestamp,
+        title: title,
+        subtitle: subtitle,
+        imageUrl: imageUrl,
+        authorId: authorId,
+        authorName: authorName,
+        metadata: metadata);
+  }
+
   bool isArtworkSaved(String artworkId) =>
       _itemsByType[SavedItemType.artwork]!.containsKey(artworkId.trim());
   bool isEventSaved(String eventId) =>
@@ -283,6 +372,15 @@ class SavedItemsProvider extends ChangeNotifier {
       _itemsByType[SavedItemType.exhibition]!.containsKey(exhibitionId.trim());
   bool isPostSaved(String postId) =>
       _itemsByType[SavedItemType.communityPost]!.containsKey(postId.trim());
+    bool isArtistSaved(String artistId) =>
+      _itemsByType[SavedItemType.artist]!.containsKey(artistId.trim());
+    bool isInstitutionSaved(String institutionId) =>
+      _itemsByType[SavedItemType.institution]!
+        .containsKey(institutionId.trim());
+    bool isGroupSaved(String groupId) =>
+      _itemsByType[SavedItemType.group]!.containsKey(groupId.trim());
+    bool isMarkerSaved(String markerId) =>
+      _itemsByType[SavedItemType.marker]!.containsKey(markerId.trim());
 
   DateTime? getSavedTimestamp(String itemId, {SavedItemType? type}) {
     final normalizedId = itemId.trim();
@@ -307,6 +405,14 @@ class SavedItemsProvider extends ChangeNotifier {
       getSavedTimestamp(exhibitionId, type: SavedItemType.exhibition);
   DateTime? getPostSavedAt(String postId) =>
       getSavedTimestamp(postId, type: SavedItemType.communityPost);
+    DateTime? getArtistSavedAt(String artistId) =>
+      getSavedTimestamp(artistId, type: SavedItemType.artist);
+    DateTime? getInstitutionSavedAt(String institutionId) =>
+      getSavedTimestamp(institutionId, type: SavedItemType.institution);
+    DateTime? getGroupSavedAt(String groupId) =>
+      getSavedTimestamp(groupId, type: SavedItemType.group);
+    DateTime? getMarkerSavedAt(String markerId) =>
+      getSavedTimestamp(markerId, type: SavedItemType.marker);
 
   Future<void> removeArtwork(String artworkId) => setArtworkSaved(artworkId, false);
   Future<void> removeEvent(String eventId) => setEventSaved(eventId, false);
@@ -315,6 +421,11 @@ class SavedItemsProvider extends ChangeNotifier {
   Future<void> removeExhibition(String exhibitionId) =>
       setExhibitionSaved(exhibitionId, false);
   Future<void> removePost(String postId) => setPostSaved(postId, false);
+    Future<void> removeArtist(String artistId) => setArtistSaved(artistId, false);
+    Future<void> removeInstitution(String institutionId) =>
+      setInstitutionSaved(institutionId, false);
+    Future<void> removeGroup(String groupId) => setGroupSaved(groupId, false);
+    Future<void> removeMarker(String markerId) => setMarkerSaved(markerId, false);
   Future<void> removeItem(SavedItemType type, String id) =>
       _setSaved(type, id, false);
 
@@ -362,6 +473,38 @@ class SavedItemsProvider extends ChangeNotifier {
   }
 
   Future<void> reloadFromDisk() => refreshFromBackend();
+
+  Future<void> reconcileVisibleItems(Iterable<SavedItemRecord> items) async {
+    final visibleItems = items.where((item) => item.id.trim().isNotEmpty).toList(
+          growable: false,
+        );
+    if (visibleItems.isEmpty) return;
+
+    final statusMap = await _repository.getSavedBatchStatus(visibleItems);
+    if (statusMap.isEmpty) return;
+
+    var changed = false;
+    for (final item in visibleItems) {
+      final key = '${item.type.storageKey}:${item.id}';
+      final isSaved = statusMap[key];
+      if (isSaved == null) continue;
+      final bucket = _itemsByType[item.type]!;
+      final existing = bucket[item.id];
+      if (isSaved) {
+        if (existing == null) {
+          bucket[item.id] = item;
+          changed = true;
+        }
+      } else {
+        changed = bucket.remove(item.id) != null || changed;
+      }
+    }
+
+    if (!changed) return;
+    notifyListeners();
+    await _repository.cacheItems(_sortedRecords());
+    await _saveLegacyCompatKeys();
+  }
 
   List<SavedItemRecord> _loadLegacyItems() {
     final prefs = _prefs;

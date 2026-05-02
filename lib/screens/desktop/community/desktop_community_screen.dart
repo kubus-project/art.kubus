@@ -1250,74 +1250,14 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   ) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final screenWidth = MediaQuery.of(context).size.width;
 
-    final horizontalInset = screenWidth >= 1600
-        ? KubusSpacing.lg + KubusSpacing.xs
-        : screenWidth >= 1300
-            ? KubusSpacing.lg
-            : KubusSpacing.md;
-
-    final maxPaneWidth = screenWidth >= 1700
-        ? 1040.0
-        : screenWidth >= 1450
-            ? 960.0
-            : 900.0;
-
-    final shellColor = Color.lerp(
-      scheme.surface,
-      themeProvider.accentColor,
-      themeProvider.isDarkMode ? 0.04 : 0.02,
-    )!
-        .withValues(alpha: themeProvider.isDarkMode ? 0.94 : 0.97);
-
+    // Full-height, full-width conversation panel
     return Container(
       key: ValueKey('conversation-pane-${conversation.id}'),
-      color: Colors.transparent,
-      child: SafeArea(
-        top: false,
-        bottom: false,
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(
-            horizontalInset,
-            KubusSpacing.md,
-            horizontalInset,
-            KubusSpacing.md,
-          ),
-          child: Align(
-            alignment: Alignment.topCenter,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: maxPaneWidth,
-                maxHeight:
-                    MediaQuery.of(context).size.height - (KubusSpacing.xl * 2),
-              ),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: shellColor,
-                  borderRadius: BorderRadius.circular(KubusRadius.lg),
-                  border: Border.all(
-                    color: scheme.outline.withValues(alpha: 0.16),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: scheme.shadow.withValues(alpha: 0.18),
-                      blurRadius: 24,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(KubusRadius.lg),
-                  child: ConversationScreen(
-                    conversation: conversation,
-                    onClose: _popPane,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
+      color: scheme.surface,
+      child: ConversationScreen(
+        conversation: conversation,
+        onClose: _popPane,
       ),
     );
   }

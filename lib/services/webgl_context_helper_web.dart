@@ -8,6 +8,10 @@ import 'package:web/web.dart' as web;
 /// listens to this notifier to decide whether blur effects are safe.
 final ValueNotifier<bool> webGLContextHealthy = ValueNotifier<bool>(true);
 
+// Throttle toggles to avoid rapid duplicate flips from multiple canvas events.
+int _lastWebGLToggleMs = 0;
+const int _webGLToggleDebounceMs = 200;
+
 /// Returns `true` when the platform signals `prefers-reduced-motion: reduce`.
 bool prefersReducedMotion() {
   try {
@@ -48,17 +52,29 @@ void initWebGLContextHelper() {
 }
 
 void _onWebGLCritical(web.Event event) {
+  final now = DateTime.now().millisecondsSinceEpoch;
+  if (!webGLContextHealthy.value && now - _lastWebGLToggleMs < _webGLToggleDebounceMs) return;
   webGLContextHealthy.value = false;
+  _lastWebGLToggleMs = now;
 }
 
 void _onWebGLLost(web.Event event) {
+  final now = DateTime.now().millisecondsSinceEpoch;
+  if (!webGLContextHealthy.value && now - _lastWebGLToggleMs < _webGLToggleDebounceMs) return;
   webGLContextHealthy.value = false;
+  _lastWebGLToggleMs = now;
 }
 
 void _onCanvasKitCrash(web.Event event) {
+  final now = DateTime.now().millisecondsSinceEpoch;
+  if (!webGLContextHealthy.value && now - _lastWebGLToggleMs < _webGLToggleDebounceMs) return;
   webGLContextHealthy.value = false;
+  _lastWebGLToggleMs = now;
 }
 
 void _onWebGLRestored(web.Event event) {
+  final now = DateTime.now().millisecondsSinceEpoch;
+  if (webGLContextHealthy.value && now - _lastWebGLToggleMs < _webGLToggleDebounceMs) return;
   webGLContextHealthy.value = true;
+  _lastWebGLToggleMs = now;
 }

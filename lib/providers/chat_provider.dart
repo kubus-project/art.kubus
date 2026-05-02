@@ -1199,6 +1199,13 @@ class ChatProvider extends ChangeNotifier {
     try {
       final payload = _extractIncomingMessagePayload(data);
       final msg = ChatMessage.fromJson(payload);
+      if (!msg.isRenderable) {
+        if (kDebugMode) {
+          debugPrint(
+              'ChatProvider._onMessageReceived: ignoring non-renderable payload=${payload.keys.toList()}');
+        }
+        return;
+      }
       final convId = _resolveIncomingConversationId(data, payload, msg);
       if (convId.isEmpty) {
         if (kDebugMode) {
@@ -1443,6 +1450,32 @@ class ChatProvider extends ChangeNotifier {
   Future<void> sendMessage(String conversationId, String message,
       {Map<String, dynamic>? data, String? replyToId}) async {
     final nid = conversationId;
+    final trimmedMessage = message.trim();
+    final hasRenderableData = (data ?? const <String, dynamic>{}).entries.any((entry) {
+      final key = entry.key.toString();
+      final value = entry.value;
+      if (value == null) return false;
+      if (value is String && value.trim().isEmpty) return false;
+      if (value is List && value.isEmpty) return false;
+      if (value is Map && value.isEmpty) return false;
+      return const [
+        'message',
+        'messageText',
+        'text',
+        'content',
+        'body',
+        'caption',
+        'attachment',
+        'attachments',
+        'media',
+        'image',
+        'imageUrl',
+        'file',
+        'fileUrl',
+        'url',
+      ].contains(key);
+    });
+    if (trimmedMessage.isEmpty && !hasRenderableData) return;
     final tempId = 'temp-${DateTime.now().microsecondsSinceEpoch}';
     final optimisticData = <String, dynamic>{
       ...?data,
@@ -1453,7 +1486,7 @@ class ChatProvider extends ChangeNotifier {
       id: tempId,
       conversationId: nid,
       senderWallet: _currentWallet ?? '',
-      message: message,
+      message: trimmedMessage,
       data: optimisticData,
       createdAt: DateTime.now(),
       readByCurrent: true,

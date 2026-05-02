@@ -63,6 +63,39 @@ class ChatMessage {
   final List<Map<String, dynamic>> readers;
   final DateTime createdAt;
 
+  bool get hasRenderableContent {
+    if (message.trim().isNotEmpty) return true;
+    final payload = data;
+    if (payload == null || payload.isEmpty) return false;
+    for (final key in const [
+      'message',
+      'messageText',
+      'text',
+      'content',
+      'body',
+      'caption',
+      'attachment',
+      'attachments',
+      'media',
+      'image',
+      'imageUrl',
+      'file',
+      'fileUrl',
+      'url',
+    ]) {
+      final value = payload[key];
+      if (value == null) continue;
+      if (value is String && value.trim().isEmpty) continue;
+      if (value is List && value.isEmpty) continue;
+      if (value is Map && value.isEmpty) continue;
+      return true;
+    }
+    return false;
+  }
+
+  bool get isRenderable =>
+      hasRenderableContent || replyTo != null || reactions.isNotEmpty;
+
   ChatMessage({
     required this.id,
     required this.conversationId,
@@ -187,7 +220,7 @@ class ChatMessage {
       senderUsername: (j['username'] ?? j['sender_username'] ?? j['senderUsername']) as String?,
       senderDisplayName: (j['display_name'] ?? j['sender_display_name'] ?? j['senderDisplayName']) as String?,
       senderAvatar: (j['avatar_url'] ?? j['avatar'] ?? j['senderAvatar']) as String?,
-      message: (j['message'] as String?) ?? '',
+      message: _extractMessageText(j),
       data: data,
       replyTo: replyTo,
       reactions: reactionList,
@@ -224,4 +257,56 @@ class ChatMessage {
       createdAt: createdAt,
     );
   }
+}
+
+String _extractMessageText(Map<String, dynamic> j) {
+  for (final key in const [
+    'message',
+    'messageText',
+    'text',
+    'content',
+    'body',
+    'caption',
+  ]) {
+    final value = j[key];
+    if (value == null) continue;
+    final text = value.toString().trim();
+    if (text.isNotEmpty) return text;
+  }
+
+  final rawData = j['data'];
+  if (rawData is Map) {
+    for (final key in const [
+      'message',
+      'messageText',
+      'text',
+      'content',
+      'body',
+      'caption',
+    ]) {
+      final value = rawData[key];
+      if (value == null) continue;
+      final text = value.toString().trim();
+      if (text.isNotEmpty) return text;
+    }
+  }
+
+  final rawPayload = j['payload'];
+  if (rawPayload is Map) {
+    for (final key in const [
+      'message',
+      'messageText',
+      'text',
+      'content',
+      'body',
+      'caption',
+    ]) {
+      final value = rawPayload[key];
+      if (value == null) continue;
+      final text = value.toString().trim();
+      if (text.isNotEmpty) return text;
+    }
+  }
+
+  return '';
 }

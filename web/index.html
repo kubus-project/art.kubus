@@ -139,9 +139,62 @@
       opacity: 0.42;
       font-size: 11px !important;
       line-height: 1.25 !important;
+      -webkit-backdrop-filter: none !important;
       backdrop-filter: none !important;
     }
   </style>
+    <style id="kubus-webgl-fallback-style">
+     /* Kubus dark/teal fallback for WebGL/canvas flashes. This ensures a
+       consistent non-white background when canvases are (re)created or
+       WebGL contexts are lost/restored. */
+     :root {
+      --kubus-map-fallback: #012f2f; /* dark teal */
+      --kubus-map-fallback-opaque: rgba(1,47,47,1);
+      --kubus-map-fallback-subtle: rgba(1,47,47,0.92);
+     }
+
+     /* Apply fallback broadly to page roots and Flutter host elements so
+       there is never a white flash while the platform view/CanvasKit
+       surfaces are being created. Keep pointer-events untouched so
+       Flutter overlays remain interactive. */
+     html, body, #flt-glass-pane, flt-platform-view, flt-platform-view-slot {
+      background-color: var(--kubus-map-fallback) !important;
+      color-scheme: dark;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+     }
+
+     /* MapLibre specific canvas/container fallback. The map canvas is a
+       drawable element; set a fallback background color and ensure the
+       recovery overlay is visually dark/teal but non-blocking to Flutter
+       overlays. */
+     .maplibregl-map,
+     .maplibregl-canvas-container,
+     .maplibregl-canvas {
+      background-color: var(--kubus-map-fallback) !important;
+      /* Canvas should not intercept pointer events intended for Flutter
+        overlays that sit above it. Leave pointer-events as default for
+        normal map interaction, but recovery visuals avoid blocking. */
+     }
+
+     /* When a canvas/container is in recovering state (set by
+       webgl_context_handler.js) provide a visible dark backdrop that is
+       guaranteed to be non-white. Use attribute selector since the
+       handler sets dataset.webglRecovering = 'true'. */
+     .maplibregl-canvas[data-webgl-recovering="true"],
+     .maplibregl-map[data-webgl-recovering="true"],
+     .maplibregl-canvas-container[data-webgl-recovering="true"] {
+      background-color: var(--kubus-map-fallback-subtle) !important;
+      /* Keep canvas fully visible for debug; do not add opaque overlays
+        that would block Flutter UI. */
+     }
+
+     /* Helper CSS class for JS to toggle if preferred. It mirrors the
+       attribute selector above and can be used by other scripts. */
+     .kubus-webgl-recovering {
+      background-color: var(--kubus-map-fallback-subtle) !important;
+     }
+    </style>
   <script>
     (function () {
       try {
