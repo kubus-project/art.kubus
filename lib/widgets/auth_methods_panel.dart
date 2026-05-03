@@ -15,6 +15,7 @@ import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'package:art_kubus/utils/auth_google_wallet.dart';
 import 'package:art_kubus/utils/wallet_utils.dart';
 import 'package:art_kubus/widgets/auth_entry_shell.dart';
+import 'package:art_kubus/widgets/auth/post_auth_loading_screen.dart';
 import 'package:art_kubus/widgets/auth_methods_panel_helpers.dart';
 import 'package:art_kubus/widgets/auth_methods_panel_sections.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
@@ -75,6 +76,13 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
   String? _walletInlineRequiredWalletAddress;
   Completer<Object?>? _walletFlowCompleter;
 
+  // Post-auth state - shows loading surface instead of auth form
+  bool _postAuthActive = false;
+  Map<String, dynamic>? _postAuthPayload;
+  AuthOrigin? _postAuthOrigin;
+  String? _postAuthWalletAddress;
+  Object? _postAuthUserId;
+
   @override
   void dispose() {
     final completer = _walletFlowCompleter;
@@ -111,7 +119,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
     final data = (payload['data'] as Map<String, dynamic>?) ?? payload;
     final user = (data['user'] as Map<String, dynamic>?) ?? data;
 
-    // Normalize payload and collect values for handoff
+    // Normalize payload and collect values for post-auth
     final userId = user['id'];
     final walletAddressFromPayload =
         (user['walletAddress'] ?? user['wallet_address'] ?? '')
@@ -123,35 +131,43 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
         ? walletAddressFromPayload
         : (walletProvider.currentWalletAddress ?? '').trim();
 
-    // Hand off immediately to loading screen or coordinator
-    // All post-auth work (wallet provisioning, session sync, profile load, etc.)
-    // now happens inside PostAuthCoordinator with visible loading state
+    // Set post-auth state immediately. This will cause rebuild() to show
+    // PostAuthLoadingScreen instead of auth form.
+    // Auth UI must not remain visible while post-auth work runs.
     if (!mounted) return;
-    await const AuthSuccessHandoffService().handle(
-      navigator: navigator,
-      isMounted: () => mounted,
-      screenWidth: screenWidth,
-      payload: payload,
-      origin: origin,
-      walletAddress: normalizedWalletAddress,
-      userId: userId,
-      embedded: widget.embedded,
-      modalReauth: false,
-      requiresWalletBackup: false, // PostAuthCoordinator will determine this
-      onBeforeSavedItemsSync: origin != AuthOrigin.google
-          ? () => maybeShowGooglePasswordUpgradePrompt(context, payload)
-          : null,
-      onInlineCompleted: widget.onAuthSuccess == null
-          ? null
-          : (_) async {
-              if (kDebugMode) {
-                AppConfig.debugPrint(
-                  'AuthMethodsPanel._handleAuthSuccess: embedded flow auth success callback',
-                );
-              }
-              await widget.onAuthSuccess!();
-            },
-    );
+    setState(() {
+      _postAuthActive = true;
+      _postAuthPayload = payload;
+      _postAuthOrigin = origin;
+      _postAuthWalletAddress = normalizedWalletAddress;
+      _postAuthUserId = userId;
+    });
+
+    // For non-embedded flows, push PostAuthLoadingScreen route
+    if (!widget.embedded) {
+      await const AuthSuccessHandoffService().handle(
+        navigator: navigator,
+        isMounted: () => mounted,
+        screenWidth: screenWidth,
+        payload: payload,
+        origin: origin,
+        walletAddress: normalizedWalletAddress,
+        userId: userId,
+        embedded: widget.embedded,
+        modalReauth: false,
+        requiresWalletBackup: false,
+        onBeforeSavedItemsSync: origin != AuthOrigin.google
+            ? () => maybeShowGooglePasswordUpgradePrompt(context, payload)
+            : null,
+        onAuthSuccess: widget.onAuthSuccess == null
+            ? null
+            : (_) async {
+                await widget.onAuthSuccess!();
+              },
+      );
+    }
+    // For embedded flows, local build() will show PostAuthLoadingScreen
+    // because _postAuthActive is true
   }
 
   Future<void> _registerWithEmail() async {
@@ -612,6 +628,24 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
 
   @override
   Widget build(BuildContext context) {
+    // If post-auth is in progress, show loading screen instead of auth form
+    if (_postAuthActive) {
+      return PostAuthLoadingScreen(
+        payload: _postAuthPayload ?? {},
+        origin: _postAuthOrigin ?? AuthOrigin.emailPassword,
+        walletAddress: _postAuthWalletAddress,
+        userId: _postAuthUserId,
+        embedded: widget.embedded,
+        modalReauth: false,
+        requiresWalletBackup: false,
+        onAuthSuccess: widget.onAuthSuccess == null
+            ? null
+            : (_) async {
+                await widget.onAuthSuccess!();
+              },
+      );
+    }
+
     final theme = Theme.of(context);
     final colorScheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;

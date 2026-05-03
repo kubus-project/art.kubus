@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/services/auth_redirect_controller.dart';
 import 'package:art_kubus/services/post_auth_coordinator.dart';
@@ -36,6 +38,31 @@ class _FailingPostAuthCoordinator extends PostAuthCoordinator {
   }
 }
 
+class _BlockingPostAuthCoordinator extends PostAuthCoordinator {
+  const _BlockingPostAuthCoordinator(this.completer);
+
+  final Completer<PostAuthResult> completer;
+
+  @override
+  Future<PostAuthResult> complete({
+    required BuildContext context,
+    required AuthOrigin origin,
+    required Map<String, dynamic> payload,
+    String? redirectRoute,
+    Object? redirectArguments,
+    String? walletAddress,
+    Object? userId,
+    bool embedded = false,
+    bool modalReauth = false,
+    bool requiresWalletBackup = false,
+    Future<void> Function()? onBeforeSavedItemsSync,
+    required ValueChanged<PostAuthStage> onStageChanged,
+  }) async {
+    onStageChanged(PostAuthStage.preparingSession);
+    return completer.future;
+  }
+}
+
 Widget _buildApp(Widget child) {
   return MaterialApp(
     locale: const Locale('en'),
@@ -68,5 +95,39 @@ void main() {
     expect(find.text("We couldn't finish signing you in"), findsOneWidget);
     expect(find.text('Retry'), findsOneWidget);
     expect(find.text('Back to sign-in'), findsOneWidget);
+  });
+
+  testWidgets('fires onAuthSuccess only after the coordinator completes', (
+    tester,
+  ) async {
+    final completer = Completer<PostAuthResult>();
+    var successCalls = 0;
+
+    await tester.pumpWidget(
+      _buildApp(
+        PostAuthLoadingScreen(
+          payload: const <String, dynamic>{'data': <String, dynamic>{}},
+          origin: AuthOrigin.emailPassword,
+          coordinator: _BlockingPostAuthCoordinator(completer),
+          onAuthSuccess: (_) async {
+            successCalls += 1;
+          },
+        ),
+      ),
+    );
+
+    await tester.pump();
+    expect(successCalls, equals(0));
+
+    completer.complete(
+      const PostAuthResult(
+        completed: true,
+        routeName: '/main',
+        replaceStack: true,
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    expect(successCalls, equals(1));
   });
 }

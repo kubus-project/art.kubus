@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 
 import 'auth_redirect_controller.dart';
-import '../screens/onboarding/onboarding_flow_screen.dart';
 import '../widgets/auth/post_auth_loading_screen.dart';
-import 'post_auth_coordinator.dart';
 
 class AuthSuccessHandoffService {
   const AuthSuccessHandoffService();
 
+  /// For non-embedded auth flows, push the post-auth loading screen.
+  /// For embedded flows, the widget (SignInScreen/AuthMethodsPanel) handles
+  /// showing a visible loading surface by tracking local state.
+  ///
+  /// This ensures auth UI never remains visible while post-auth work runs.
   Future<void> handle({
     required NavigatorState navigator,
     required bool Function() isMounted,
@@ -22,9 +25,12 @@ class AuthSuccessHandoffService {
     required bool modalReauth,
     required bool requiresWalletBackup,
     Future<void> Function()? onBeforeSavedItemsSync,
-    Future<void> Function(Map<String, dynamic> payload)? onInlineCompleted,
+    Future<void> Function(Map<String, dynamic> payload)? onAuthSuccess,
   }) async {
-    if (!embedded && onInlineCompleted == null) {
+    // For non-embedded flows, always push a visible loading screen.
+    // The loading screen will run the coordinator and handle routing.
+    if (!embedded) {
+      if (!isMounted()) return;
       await navigator.pushReplacement(
         MaterialPageRoute(
           builder: (_) => PostAuthLoadingScreen(
@@ -37,6 +43,8 @@ class AuthSuccessHandoffService {
             embedded: embedded,
             modalReauth: modalReauth,
             requiresWalletBackup: requiresWalletBackup,
+            onBeforeSavedItemsSync: onBeforeSavedItemsSync,
+            onAuthSuccess: onAuthSuccess,
           ),
           settings: const RouteSettings(name: '/post-auth-loading'),
         ),
@@ -44,66 +52,8 @@ class AuthSuccessHandoffService {
       return;
     }
 
-    final currentContext = navigator.context;
-    final result = await const PostAuthCoordinator().complete(
-      context: currentContext,
-      origin: origin,
-      payload: payload,
-      redirectRoute: redirectRoute,
-      redirectArguments: redirectArguments,
-      walletAddress: walletAddress,
-      userId: userId,
-      embedded: embedded,
-      modalReauth: modalReauth,
-      requiresWalletBackup: requiresWalletBackup,
-      onBeforeSavedItemsSync: onBeforeSavedItemsSync,
-      onStageChanged: (_) {},
-    );
-
-    if (!isMounted() || !result.completed) {
-      return;
-    }
-
-    if (onInlineCompleted != null) {
-      await onInlineCompleted(payload);
-      return;
-    }
-
-    await _routeToResult(navigator, screenWidth, result);
-  }
-
-  Future<void> _routeToResult(
-    NavigatorState navigator,
-    double screenWidth,
-    PostAuthResult result,
-  ) async {
-    if (result.onboardingStepId != null &&
-        result.onboardingStepId!.isNotEmpty) {
-      await navigator.pushAndRemoveUntil(
-        MaterialPageRoute(
-          builder: (_) => OnboardingFlowScreen(
-            forceDesktop: screenWidth >= 1024,
-            initialStepId: result.onboardingStepId,
-          ),
-          settings: const RouteSettings(name: '/onboarding'),
-        ),
-        (_) => false,
-      );
-      return;
-    }
-
-    final routeName = result.routeName ?? '/main';
-    if (result.replaceStack) {
-      await navigator.pushNamedAndRemoveUntil(
-        routeName,
-        (_) => false,
-        arguments: result.arguments,
-      );
-    } else {
-      await navigator.pushReplacementNamed(
-        routeName,
-        arguments: result.arguments,
-      );
-    }
+    // For embedded flows, the widget will handle showing inline loading.
+    // This method does nothing; the widget is responsible for rendering
+    // the loading surface based on local state.
   }
 }

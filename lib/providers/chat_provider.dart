@@ -1117,38 +1117,38 @@ class ChatProvider extends ChangeNotifier {
     }
   }
 
-  Map<String, dynamic> _extractIncomingMessagePayload(
+  Map<String, dynamic>? _normalizeIncomingMessagePayload(
       Map<String, dynamic> data) {
-    final rawMessage = data['message'];
-    if (rawMessage is Map) {
-      return Map<String, dynamic>.from(rawMessage);
-    }
-
-    final rawData = data['data'];
-    if (rawData is Map) {
-      final nestedMessage = rawData['message'];
+    Map<String, dynamic>? unwrapCandidate(Object? candidate) {
+      if (candidate is! Map) return null;
+      final map = Map<String, dynamic>.from(candidate);
+      final nestedMessage = map['message'];
       if (nestedMessage is Map) {
         return Map<String, dynamic>.from(nestedMessage);
       }
-      return Map<String, dynamic>.from(rawData);
+      return map;
     }
 
-    final rawPayload = data['payload'];
-    if (rawPayload is Map) {
-      final nestedMessage = rawPayload['message'];
-      if (nestedMessage is Map) {
-        return Map<String, dynamic>.from(nestedMessage);
-      }
-      return Map<String, dynamic>.from(rawPayload);
+    final rawMessage = unwrapCandidate(data['message']);
+    if (rawMessage != null) return rawMessage;
+
+    final rawData = unwrapCandidate(data['data']);
+    if (rawData != null) return rawData;
+
+    final rawPayload = unwrapCandidate(data['payload']);
+    if (rawPayload != null) return rawPayload;
+
+    final rawRaw = unwrapCandidate(data['raw']);
+    if (rawRaw != null) {
+      return _looksLikeIncomingMessage(rawRaw) ? rawRaw : null;
     }
 
-    return Map<String, dynamic>.from(data);
+    return _looksLikeIncomingMessage(data) ? Map<String, dynamic>.from(data) : null;
   }
 
-  String _resolveIncomingConversationId(
+  String _extractIncomingConversationId(
     Map<String, dynamic> data,
     Map<String, dynamic> payload,
-    ChatMessage message,
   ) {
     final dataNode = data['data'];
     final dataMap =
@@ -1165,45 +1165,77 @@ class ChatProvider extends ChangeNotifier {
             dataMap?['conversation_id'] ??
             payloadMap?['conversationId'] ??
             payloadMap?['conversation_id'] ??
-            message.conversationId)
+            '')
         .toString()
         .trim();
   }
 
-  bool _isNonMessageEventPayload(Map<String, dynamic> data) {
-    // Detect read receipts, member updates, reactions, and other non-message events
-    // that may be sent on the message listener but must not be cached as messages.
-    final payload = _extractIncomingMessagePayload(data);
-    
-    // If payload has only metadata keys, not message content, reject.
-    if (payload.isEmpty) return true;
-    
-    // If payload is explicitly marked as a non-message event type, reject.
+  bool _looksLikeIncomingMessage(Map<String, dynamic> payload) {
+    final event = payload['event']?.toString().toLowerCase() ?? '';
     final eventType = payload['eventType']?.toString().toLowerCase() ?? '';
-    if (eventType.contains('read') || 
-        eventType.contains('receipt') || 
-        eventType.contains('member') || 
-        eventType.contains('reaction') ||
-        eventType.contains('subscribe')) {
-      return true;
+    final type = payload['type']?.toString().toLowerCase() ?? '';
+    final nonMessageSignals = <String>[
+      event,
+      eventType,
+      type,
+    ].join('|');
+    if (nonMessageSignals.contains('read') ||
+        nonMessageSignals.contains('receipt') ||
+        nonMessageSignals.contains('member') ||
+        nonMessageSignals.contains('reaction') ||
+        nonMessageSignals.contains('subscribe') ||
+        nonMessageSignals.contains('update') ||
+        nonMessageSignals.contains('conversation') ||
+        nonMessageSignals.contains('notification')) {
+      return false;
     }
-    
-    // If payload has no message/content whatsoever, reject.
-    final hasMessageContent = (payload['message']?.toString().trim().isNotEmpty == true) ||
+
+    final hasBody = (payload['message']?.toString().trim().isNotEmpty == true) ||
         (payload['content']?.toString().trim().isNotEmpty == true) ||
-        (payload['text']?.toString().trim().isNotEmpty == true);
-    if (!hasMessageContent) {
-      // Even if there's a message ID, reactions, or readers, without actual message text
-      // and when no embedded data/attachment, this is metadata-only.
-      final hasReactions = (payload['reactions'] as List?)?.isNotEmpty == true;
-      final hasReaders = (payload['readers'] as List?)?.isNotEmpty == true;
-      final hasData = payload['data'] != null;
-      if (!hasReactions && !hasReaders && !hasData) {
-        return true;
-      }
-    }
-    
-    return false;
+        (payload['text']?.toString().trim().isNotEmpty == true) ||
+        (payload['body']?.toString().trim().isNotEmpty == true);
+    final hasRenderableAttachment = payload['attachment'] is Map ||
+        payload['attachments'] is List ||
+        payload['media'] is Map ||
+        payload['image'] != null ||
+        payload['file'] != null ||
+        payload['url'] != null;
+    final hasReply = payload['replyTo'] is Map || payload['reply_to'] is Map;
+    final hasReactions = (payload['reactions'] as List?)?.isNotEmpty == true;
+
+    return hasBody || hasRenderableAttachment || hasReply || hasReactions;
+  }
+
+  bool _isNonMessageEventPayload(Map<String, dynamic> data) {
+    final payload = _normalizeIncomingMessagePayload(data);
+    if (payload == null) return true;
+
+    final keys = payload.keys.map((key) => key.toString().toLowerCase()).toSet();
+    final onlyMetaKeys = keys.every((key) => <String>{
+          'event',
+          'eventtype',
+          'type',
+          'reader',
+          'readers',
+          'read_at',
+          'readat',
+          'room',
+          'conversationid',
+          'conversation_id',
+          'messageid',
+          'message_id',
+          'member',
+          'members',
+          'payload',
+          'data',
+          'raw',
+          'status',
+          'state',
+          'subscription',
+        }.contains(key));
+    if (onlyMetaKeys) return true;
+
+    return !_looksLikeIncomingMessage(payload);
   }
 
   bool _matchesOptimisticMessage(
@@ -1241,16 +1273,15 @@ class ChatProvider extends ChangeNotifier {
         return;
       }
       
-      final payload = _extractIncomingMessagePayload(data);
-      final msg = ChatMessage.fromJson(payload);
-      if (!msg.isRenderable) {
+      final payload = _normalizeIncomingMessagePayload(data);
+      if (payload == null) {
         if (kDebugMode) {
-          debugPrint(
-              'ChatProvider._onMessageReceived: ignoring non-renderable payload=${payload.keys.toList()}');
+          debugPrint('ChatProvider._onMessageReceived: payload normalization failed');
         }
         return;
       }
-      final convId = _resolveIncomingConversationId(data, payload, msg);
+
+      final convId = _extractIncomingConversationId(data, payload);
       if (convId.isEmpty) {
         if (kDebugMode) {
           debugPrint(
@@ -1258,12 +1289,19 @@ class ChatProvider extends ChangeNotifier {
         }
         return;
       }
-      final msgJson = <String, dynamic>{
+
+      final msg = ChatMessage.fromJson(<String, dynamic>{
         ...payload,
         'conversationId': convId,
-      };
-      final normalizedMsg =
-          msg.conversationId == convId ? msg : ChatMessage.fromJson(msgJson);
+      });
+      if (!_isRenderableIncomingMessage(msg)) {
+        if (kDebugMode) {
+          debugPrint(
+              'ChatProvider._onMessageReceived: ignoring non-renderable payload=${payload.keys.toList()}');
+        }
+        return;
+      }
+      final normalizedMsg = msg;
       final existing = _messages[convId] ?? const <ChatMessage>[];
       final next = <ChatMessage>[];
       var inserted = false;
@@ -1337,6 +1375,8 @@ class ChatProvider extends ChangeNotifier {
       }
     }
   }
+
+  bool _isRenderableIncomingMessage(ChatMessage message) => message.isRenderable;
 
   void _onMessageRead(Map<String, dynamic> data) {
     try {

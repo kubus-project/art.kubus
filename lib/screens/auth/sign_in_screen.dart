@@ -18,6 +18,7 @@ import '../../widgets/google_sign_in_web_button.dart';
 import '../../widgets/secure_account_password_prompt.dart';
 import '../../widgets/kubus_button.dart';
 import '../../widgets/auth_entry_shell.dart';
+import '../../widgets/auth/post_auth_loading_screen.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/auth_google_wallet.dart';
@@ -69,6 +70,13 @@ class _SignInScreenState extends State<SignInScreen> {
   int _walletInlineInitialStep = 0;
   String? _walletInlineRequiredWalletAddress;
   Completer<Object?>? _walletFlowCompleter;
+
+  // Post-auth state - shows loading screen instead of auth form
+  bool _postAuthActive = false;
+  Map<String, dynamic>? _postAuthPayload;
+  AuthOrigin? _postAuthOrigin;
+  String? _postAuthWalletAddress;
+  Object? _postAuthUserId;
 
   @override
   void initState() {
@@ -188,9 +196,8 @@ class _SignInScreenState extends State<SignInScreen> {
     final screenWidth = MediaQuery.sizeOf(context).width;
     final data = (payload['data'] as Map<String, dynamic>?) ?? payload;
     final user = (data['user'] as Map<String, dynamic>?) ?? data;
-    final isModalReauth = widget.onAuthSuccess != null && !widget.embedded;
 
-    // Normalize payload and collect values for handoff
+    // Normalize payload and collect values for post-auth
     final userId = user['id'];
     final walletAddressFromPayload =
         (user['walletAddress'] ?? user['wallet_address'] ?? '')
@@ -202,42 +209,51 @@ class _SignInScreenState extends State<SignInScreen> {
         ? walletAddressFromPayload
         : (walletProvider.currentWalletAddress ?? '').trim();
 
-    // Hand off immediately to loading screen or coordinator
-    // All post-auth work (wallet provisioning, session sync, profile load, etc.)
-    // now happens inside PostAuthCoordinator with visible loading state
+    // Set post-auth state immediately. This will cause rebuild() to show
+    // PostAuthLoadingScreen instead of auth form.
+    // Auth UI must not remain visible while post-auth work runs.
     if (!mounted) return;
-    await const AuthSuccessHandoffService().handle(
-      navigator: navigator,
-      isMounted: () => mounted,
-      screenWidth: screenWidth,
-      payload: payload,
-      origin: origin,
-      redirectRoute: widget.redirectRoute,
-      redirectArguments: widget.redirectArguments,
-      walletAddress: normalizedWalletAddress,
-      userId: userId,
-      embedded: widget.embedded,
-      modalReauth: isModalReauth,
-      requiresWalletBackup: false, // PostAuthCoordinator will determine this
-      onBeforeSavedItemsSync: origin != AuthOrigin.google
-          ? () => maybeShowGooglePasswordUpgradePrompt(context, payload)
-          : null,
-      onInlineCompleted: widget.onAuthSuccess == null
-          ? null
-          : (payload) async {
-              try {
-                await widget.onAuthSuccess!(payload);
-              } catch (e) {
-                AppConfig.debugPrint(
-                  'SignInScreen: onAuthSuccess callback failed: $e',
-                );
-              }
-              if (!mounted) return;
-              if (!widget.embedded) {
-                Navigator.of(context).pop(true);
-              }
-            },
-    );
+    setState(() {
+      _postAuthActive = true;
+      _postAuthPayload = payload;
+      _postAuthOrigin = origin;
+      _postAuthWalletAddress = normalizedWalletAddress;
+      _postAuthUserId = userId;
+    });
+
+    // For non-embedded flows, push PostAuthLoadingScreen route
+    if (!widget.embedded) {
+      await const AuthSuccessHandoffService().handle(
+        navigator: navigator,
+        isMounted: () => mounted,
+        screenWidth: screenWidth,
+        payload: payload,
+        origin: origin,
+        redirectRoute: widget.redirectRoute,
+        redirectArguments: widget.redirectArguments,
+        walletAddress: normalizedWalletAddress,
+        userId: userId,
+        embedded: widget.embedded,
+        modalReauth: false,
+        requiresWalletBackup: false,
+        onBeforeSavedItemsSync: origin != AuthOrigin.google
+            ? () => maybeShowGooglePasswordUpgradePrompt(context, payload)
+            : null,
+        onAuthSuccess: widget.onAuthSuccess == null
+            ? null
+            : (payload) async {
+                try {
+                  await widget.onAuthSuccess!(payload);
+                } catch (e) {
+                  AppConfig.debugPrint(
+                    'SignInScreen: onAuthSuccess callback failed: $e',
+                  );
+                }
+              },
+      );
+    }
+    // For embedded flows, local build() will show PostAuthLoadingScreen
+    // because _postAuthActive is true
   }
 
   Future<void> _submitEmail() async {
@@ -524,7 +540,32 @@ class _SignInScreenState extends State<SignInScreen> {
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
+    // If post-auth is in progress, show loading screen instead of auth form
+    if (_postAuthActive) {
+      return PostAuthLoadingScreen(
+        payload: _postAuthPayload ?? {},
+        origin: _postAuthOrigin ?? AuthOrigin.emailPassword,
+        walletAddress: _postAuthWalletAddress,
+        userId: _postAuthUserId,
+        embedded: widget.embedded,
+        modalReauth: false,
+        requiresWalletBackup: false,
+        onAuthSuccess: widget.onAuthSuccess == null
+            ? null
+            : (payload) async {
+                try {
+                  await widget.onAuthSuccess!(payload);
+                } catch (e) {
+                  AppConfig.debugPrint(
+                    'SignInScreen: onAuthSuccess callback failed: $e',
+                  );
+                }
+              },
+      );
+    }
+
     final theme = Theme.of(context);
     final colorScheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;

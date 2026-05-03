@@ -211,6 +211,7 @@ class PostAuthCoordinator {
         }
       }
 
+      setStage(PostAuthStage.syncingSavedItems);
       if (onBeforeSavedItemsSync != null) {
         await onBeforeSavedItemsSync();
         if (!context.mounted) {
@@ -218,7 +219,6 @@ class PostAuthCoordinator {
         }
       }
 
-      setStage(PostAuthStage.syncingSavedItems);
       try {
         await savedItemsProvider.refreshFromBackend();
       } catch (e) {

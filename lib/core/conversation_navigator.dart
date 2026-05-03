@@ -140,7 +140,9 @@ class ConversationNavigator {
     } catch (e) {
       // Fallback: just navigate to conversation without preloads
       final route = MaterialPageRoute<T>(builder: (_) => ConversationScreen(conversation: conversation));
-      return Navigator.of(context).push<T>(route);
+      final navigator = Navigator.of(context);
+      if (pushReplacement) return navigator.pushReplacement<T, T>(route);
+      return navigator.push<T>(route);
     }
   }
 }

@@ -2,6 +2,7 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/services/auth_redirect_controller.dart';
 import 'package:art_kubus/screens/onboarding/onboarding_flow_screen.dart';
 import 'package:art_kubus/services/post_auth_coordinator.dart';
+import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
@@ -21,6 +22,8 @@ class PostAuthLoadingScreen extends StatefulWidget {
     this.embedded = false,
     this.modalReauth = false,
     this.requiresWalletBackup = false,
+    this.onBeforeSavedItemsSync,
+    this.onAuthSuccess,
   });
 
   final Map<String, dynamic> payload;
@@ -33,6 +36,8 @@ class PostAuthLoadingScreen extends StatefulWidget {
   final bool embedded;
   final bool modalReauth;
   final bool requiresWalletBackup;
+  final Future<void> Function()? onBeforeSavedItemsSync;
+  final Future<void> Function(Map<String, dynamic> payload)? onAuthSuccess;
 
   @override
   State<PostAuthLoadingScreen> createState() => _PostAuthLoadingScreenState();
@@ -68,7 +73,7 @@ class _PostAuthLoadingScreenState extends State<PostAuthLoadingScreen> {
       embedded: widget.embedded,
       modalReauth: widget.modalReauth,
       requiresWalletBackup: widget.requiresWalletBackup,
-      onBeforeSavedItemsSync: () => maybeShowGooglePasswordUpgradePrompt(
+      onBeforeSavedItemsSync: widget.onBeforeSavedItemsSync ?? () => maybeShowGooglePasswordUpgradePrompt(
         context,
         widget.payload,
       ),
@@ -88,6 +93,16 @@ class _PostAuthLoadingScreenState extends State<PostAuthLoadingScreen> {
       return;
     }
 
+    // Call onAuthSuccess callback if provided, before routing
+    if (widget.onAuthSuccess != null) {
+      try {
+        await widget.onAuthSuccess!(widget.payload);
+      } catch (e) {
+        AppConfig.debugPrint('PostAuthLoadingScreen: onAuthSuccess failed: $e');
+      }
+    }
+
+    if (!mounted) return;
     final navigator = Navigator.of(context);
     if (result.onboardingStepId != null && result.onboardingStepId!.isNotEmpty) {
       await navigator.pushAndRemoveUntil(
