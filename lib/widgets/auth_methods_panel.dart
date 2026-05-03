@@ -1,16 +1,14 @@
 import 'dart:async';
 import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
-import 'package:art_kubus/providers/profile_provider.dart';
-import 'package:art_kubus/providers/saved_items_provider.dart';
+import 'package:art_kubus/services/auth_redirect_controller.dart';
 import 'package:art_kubus/providers/security_gate_provider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
-import 'package:art_kubus/services/auth_redirect_controller.dart';
 import 'package:art_kubus/services/auth_onboarding_service.dart';
+import 'package:art_kubus/services/auth_success_handoff_service.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/google_auth_service.dart';
 import 'package:art_kubus/services/onboarding_state_service.dart';
-import 'package:art_kubus/services/security/post_auth_security_setup_service.dart';
 import 'package:art_kubus/services/telemetry/telemetry_service.dart';
 import 'package:art_kubus/services/wallet_session_sync_service.dart';
 import 'package:art_kubus/utils/auth_password_policy.dart';
@@ -18,7 +16,6 @@ import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'package:art_kubus/utils/auth_google_wallet.dart';
 import 'package:art_kubus/utils/wallet_utils.dart';
-import 'package:art_kubus/widgets/auth/post_auth_loading_screen.dart';
 import 'package:art_kubus/widgets/auth_entry_shell.dart';
 import 'package:art_kubus/widgets/auth_methods_panel_helpers.dart';
 import 'package:art_kubus/widgets/auth_methods_panel_sections.dart';
@@ -107,38 +104,15 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
     }
   }
 
-  Future<bool> _maybeRouteToStructuredOnboarding({
-    required SharedPreferences prefs,
-    required ProfileProvider profileProvider,
-    required WalletProvider walletProvider,
-    String? walletAddress,
-    required Map<String, dynamic> payload,
-    required AuthOrigin origin,
-  }) async {
-    if (widget.embedded || widget.onAuthSuccess != null) return false;
-
-    return const AuthRedirectController().routeAfterAuth(
-      context: context,
-      prefs: prefs,
-      profileProvider: profileProvider,
-      walletProvider: walletProvider,
-      walletAddress: walletAddress,
-      userId: (prefs.getString('user_id') ?? '').trim(),
-      payload: payload,
-      replaceStack: true,
-      origin: origin,
-    );
-  }
-
   Future<void> _handleAuthSuccess(
     Map<String, dynamic> payload, {
     AuthOrigin origin = AuthOrigin.emailPassword,
   }) async {
     final l10n = AppLocalizations.of(context)!;
-    final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-    final gate = Provider.of<SecurityGateProvider>(context, listen: false);
+    final screenWidth = MediaQuery.sizeOf(context).width;
     final data = (payload['data'] as Map<String, dynamic>?) ?? payload;
     final user = (data['user'] as Map<String, dynamic>?) ?? data;
     final isNewAccount =
@@ -196,14 +170,9 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
             'AuthMethodsPanel: failed to set wallet backup-required state: $e');
       }
     }
-    final prefs = await SharedPreferences.getInstance();
-    if (userId != null && userId.toString().isNotEmpty) {
-      await prefs.setString('user_id', userId.toString());
-      TelemetryService().setActorUserId(userId.toString());
-    }
-    if (!mounted) return;
 
     if (walletAddress != null && walletAddress.toString().isNotEmpty) {
+      if (!mounted) return;
       await const WalletSessionSyncService().bindAuthenticatedWallet(
         context: context,
         walletAddress: walletAddress.toString(),
@@ -213,92 +182,33 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
       if (!mounted) return;
     }
 
-    if (!widget.embedded && widget.onAuthSuccess == null) {
-      await navigator.pushReplacement(
-        MaterialPageRoute(
-          builder: (_) => PostAuthLoadingScreen(
-            payload: payload,
-            origin: origin,
-            walletAddress: normalizedWalletAddress.isEmpty
-                ? walletProvider.currentWalletAddress
-                : normalizedWalletAddress,
-            userId: userId,
-            redirectRoute: null,
-            redirectArguments: null,
-            requiresWalletBackup:
-                walletProvider.authority.mnemonicBackupRequired,
-          ),
-          settings: const RouteSettings(name: '/post-auth-loading'),
-        ),
-      );
-      return;
-    }
-
-    try {
-      unawaited(
-        Provider.of<SavedItemsProvider>(context, listen: false)
-            .refreshFromBackend(),
-      );
-    } catch (e) {
-      AppConfig.debugPrint(
-          'AuthMethodsPanel: saved items refresh skipped/failed: $e');
-    }
-
-    final ok =
-        await const PostAuthSecuritySetupService().ensurePostAuthSecuritySetup(
+    await const AuthSuccessHandoffService().handle(
       navigator: navigator,
-      walletProvider: walletProvider,
-      securityGateProvider: gate,
-    );
-    if (!mounted) return;
-    if (!ok) return;
-
-    try {
-      if ((walletAddress == null || walletAddress.toString().isEmpty) &&
-          walletProvider.currentWalletAddress != null &&
-          walletProvider.currentWalletAddress!.isNotEmpty) {
-        await Provider.of<ProfileProvider>(context, listen: false)
-            .loadProfile(walletProvider.currentWalletAddress!)
-            .timeout(const Duration(seconds: 5));
-      }
-    } catch (e) {
-      AppConfig.debugPrint('AuthMethodsPanel: profile load skipped/failed: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showKubusSnackBar(
-          SnackBar(content: Text(l10n.authAccountCreatedProfileLoading)),
-        );
-      }
-    }
-    if (!mounted) return;
-    if (origin != AuthOrigin.google) {
-      await maybeShowGooglePasswordUpgradePrompt(context, payload);
-      if (!mounted) return;
-    }
-    final profileProvider =
-        Provider.of<ProfileProvider>(context, listen: false);
-    if (await _maybeRouteToStructuredOnboarding(
-      prefs: prefs,
-      profileProvider: profileProvider,
-      walletProvider: walletProvider,
+      isMounted: () => mounted,
+      screenWidth: screenWidth,
+      payload: payload,
+      origin: origin,
       walletAddress: normalizedWalletAddress.isEmpty
           ? walletProvider.currentWalletAddress
           : normalizedWalletAddress,
-      payload: payload,
-      origin: origin,
-    )) {
-      return;
-    }
-    if (widget.embedded) {
-      AppConfig.debugPrint(
-          'AuthMethodsPanel._handleAuthSuccess: embedded flow auth success callback');
-      if (widget.onAuthSuccess != null) {
-        await widget.onAuthSuccess!();
-      }
-      return;
-    }
-    AppConfig.debugPrint(
-        'AuthMethodsPanel._handleAuthSuccess: navigating to /main');
-    navigator.pushReplacementNamed('/main');
+      userId: userId,
+      embedded: widget.embedded,
+      modalReauth: false,
+      requiresWalletBackup: walletProvider.authority.mnemonicBackupRequired,
+      onBeforeSavedItemsSync: origin != AuthOrigin.google
+          ? () => maybeShowGooglePasswordUpgradePrompt(context, payload)
+          : null,
+      onInlineCompleted: widget.onAuthSuccess == null
+          ? null
+          : (_) async {
+              if (kDebugMode) {
+                AppConfig.debugPrint(
+                  'AuthMethodsPanel._handleAuthSuccess: embedded flow auth success callback',
+                );
+              }
+              await widget.onAuthSuccess!();
+            },
+    );
   }
 
   Future<void> _registerWithEmail() async {

@@ -13,6 +13,7 @@ import '../services/pin_hashing.dart';
 import '../services/settings_service.dart';
 import '../providers/notification_provider.dart';
 import '../providers/profile_provider.dart';
+import '../providers/saved_items_provider.dart';
 import '../providers/wallet_provider.dart';
 import '../screens/auth/sign_in_screen.dart';
 
@@ -33,6 +34,7 @@ class SecurityGateProvider extends ChangeNotifier
   ProfileProvider? _profileProvider;
   WalletProvider? _walletProvider;
   NotificationProvider? _notificationProvider;
+  SavedItemsProvider? _savedItemsProvider;
 
   SettingsState? _settings;
 
@@ -67,10 +69,12 @@ class SecurityGateProvider extends ChangeNotifier
     required ProfileProvider profileProvider,
     required WalletProvider walletProvider,
     required NotificationProvider notificationProvider,
+    SavedItemsProvider? savedItemsProvider,
   }) {
     _profileProvider = profileProvider;
     _walletProvider = walletProvider;
     _notificationProvider = notificationProvider;
+    _savedItemsProvider = savedItemsProvider;
   }
 
   Future<void> initialize() {
@@ -268,6 +272,7 @@ class SecurityGateProvider extends ChangeNotifier
         backendApi: BackendApiService(),
         notificationProvider: _notificationProvider,
         profileProvider: _profileProvider,
+        savedItemsProvider: _savedItemsProvider,
       );
     } catch (e) {
       if (kDebugMode) {

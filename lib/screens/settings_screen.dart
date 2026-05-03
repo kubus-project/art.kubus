@@ -16,6 +16,7 @@ import '../providers/profile_provider.dart';
 import '../providers/navigation_provider.dart';
 import '../providers/security_gate_provider.dart';
 import '../providers/email_preferences_provider.dart';
+import '../providers/saved_items_provider.dart';
 import '../models/email_preferences.dart';
 import '../models/user_profile.dart';
 import '../models/wallet.dart';
@@ -2921,6 +2922,7 @@ class _SettingsScreenState extends State<SettingsScreen>
       backendApi: BackendApiService(),
       notificationProvider: notificationProvider,
       profileProvider: profileProvider,
+      savedItemsProvider: Provider.of<SavedItemsProvider>(context, listen: false),
     );
 
     if (!mounted) return;

@@ -13,6 +13,7 @@ import '../../providers/wallet_provider.dart';
 import '../../providers/platform_provider.dart';
 import '../../providers/security_gate_provider.dart';
 import '../../providers/email_preferences_provider.dart';
+import '../../providers/saved_items_provider.dart';
 import '../../models/email_preferences.dart';
 import '../../models/achievement_progress.dart';
 import '../../models/user_profile.dart';
@@ -2010,6 +2011,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
       backendApi: BackendApiService(),
       notificationProvider: notificationProvider,
       profileProvider: profileProvider,
+      savedItemsProvider: Provider.of<SavedItemsProvider>(context, listen: false),
     );
 
     if (!mounted) return;

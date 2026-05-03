@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../config/config.dart';
 import '../providers/notification_provider.dart';
 import '../providers/profile_provider.dart';
+import '../providers/saved_items_provider.dart';
 import '../providers/wallet_provider.dart';
 import 'backend_api_service.dart';
 import 'onboarding_state_service.dart';
@@ -109,10 +110,12 @@ class SettingsService {
     required BackendApiService backendApi,
     NotificationProvider? notificationProvider,
     ProfileProvider? profileProvider,
+    SavedItemsProvider? savedItemsProvider,
   }) async {
     await backendApi.clearAuth();
     notificationProvider?.reset();
     profileProvider?.signOut();
+    await savedItemsProvider?.resetForLogout();
     try {
       await PushNotificationService().cancelAllNotifications();
     } catch (_) {}

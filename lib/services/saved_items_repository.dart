@@ -34,6 +34,12 @@ class SavedItemsRepository {
     );
   }
 
+  Future<void> clearCachedState() async {
+    final prefs = await _preferences;
+    await prefs.remove(_cacheKey);
+    await prefs.remove(_outboxKey);
+  }
+
   Future<SavedItemsPage> loadBackendItems({
     SavedItemType? type,
     int limit = 50,

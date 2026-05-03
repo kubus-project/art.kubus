@@ -7,18 +7,15 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../config/config.dart';
-import '../../providers/profile_provider.dart';
-import '../../providers/saved_items_provider.dart';
+import '../../services/auth_redirect_controller.dart';
 import '../../providers/security_gate_provider.dart';
 import '../../providers/wallet_provider.dart';
-import '../../services/auth_redirect_controller.dart';
 import '../../services/auth_onboarding_service.dart';
+import '../../services/auth_success_handoff_service.dart';
 import '../../services/backend_api_service.dart';
 import '../../services/google_auth_service.dart';
-import '../../services/security/post_auth_security_setup_service.dart';
 import '../../services/telemetry/telemetry_service.dart';
 import '../../services/wallet_session_sync_service.dart';
-import '../../widgets/auth/post_auth_loading_screen.dart';
 import '../../widgets/google_sign_in_button.dart';
 import '../../widgets/google_sign_in_web_button.dart';
 import '../../widgets/secure_account_password_prompt.dart';
@@ -30,7 +27,6 @@ import '../../utils/auth_google_wallet.dart';
 import '../../utils/keyboard_inset_resolver.dart';
 import '../../utils/wallet_utils.dart';
 import '../web3/wallet/connectwallet_screen.dart';
-import '../community/profile_edit_screen.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import '../../widgets/wallet_backup_prompts.dart';
 
@@ -189,41 +185,16 @@ class _SignInScreenState extends State<SignInScreen> {
     return false;
   }
 
-  Future<bool> _maybeRouteToStructuredOnboarding({
-    required SharedPreferences prefs,
-    required ProfileProvider profileProvider,
-    required WalletProvider walletProvider,
-    String? walletAddress,
-    required Map<String, dynamic> payload,
-    required AuthOrigin origin,
-  }) async {
-    if (widget.embedded || widget.onAuthSuccess != null) return false;
-
-    return const AuthRedirectController().routeAfterAuth(
-      context: context,
-      prefs: prefs,
-      profileProvider: profileProvider,
-      walletProvider: walletProvider,
-      walletAddress: walletAddress,
-      userId: (prefs.getString('user_id') ?? '').trim(),
-      payload: payload,
-      redirectRoute: widget.redirectRoute,
-      redirectArguments: widget.redirectArguments,
-      origin: origin,
-    );
-  }
-
   Future<void> _handleAuthSuccess(
     Map<String, dynamic> payload, {
     AuthOrigin origin = AuthOrigin.emailPassword,
   }) async {
     final l10n = AppLocalizations.of(context)!;
-    final redirectRoute = widget.redirectRoute?.trim();
-    final isModalReauth = widget.onAuthSuccess != null && !widget.embedded;
-    final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-    final gate = Provider.of<SecurityGateProvider>(context, listen: false);
+    final isModalReauth = widget.onAuthSuccess != null && !widget.embedded;
+    final screenWidth = MediaQuery.sizeOf(context).width;
     final data = (payload['data'] as Map<String, dynamic>?) ?? payload;
     final user = (data['user'] as Map<String, dynamic>?) ?? data;
     final isNewAccount =
@@ -278,14 +249,9 @@ class _SignInScreenState extends State<SignInScreen> {
             'SignInScreen: failed to set wallet backup-required state: $e');
       }
     }
-    final prefs = await SharedPreferences.getInstance();
-    if (userId != null && userId.toString().isNotEmpty) {
-      await prefs.setString('user_id', userId.toString());
-      TelemetryService().setActorUserId(userId.toString());
-    }
-    if (!mounted) return;
 
     if (walletAddress != null && walletAddress.toString().isNotEmpty) {
+      if (!mounted) return;
       await const WalletSessionSyncService().bindAuthenticatedWallet(
         context: context,
         walletAddress: walletAddress.toString(),
@@ -297,128 +263,43 @@ class _SignInScreenState extends State<SignInScreen> {
       if (!mounted) return;
     }
 
-    if (!widget.embedded && widget.onAuthSuccess == null) {
-      await navigator.pushReplacement(
-        MaterialPageRoute(
-          builder: (_) => PostAuthLoadingScreen(
-            payload: payload,
-            origin: origin,
-            redirectRoute: widget.redirectRoute,
-            redirectArguments: widget.redirectArguments,
-            walletAddress: normalizedWalletAddress.isEmpty
-                ? walletProvider.currentWalletAddress
-                : normalizedWalletAddress,
-            userId: userId,
-            requiresWalletBackup:
-                walletProvider.authority.mnemonicBackupRequired,
-          ),
-          settings: const RouteSettings(name: '/post-auth-loading'),
-        ),
-      );
-      return;
-    }
-
-    try {
-      unawaited(
-        Provider.of<SavedItemsProvider>(context, listen: false)
-            .refreshFromBackend(),
-      );
-    } catch (e) {
-      AppConfig.debugPrint(
-          'SignInScreen: saved items refresh skipped/failed: $e');
-    }
-
-    if (!isModalReauth) {
-      final ok = await const PostAuthSecuritySetupService()
-          .ensurePostAuthSecuritySetup(
-        navigator: navigator,
-        walletProvider: walletProvider,
-        securityGateProvider: gate,
-      );
-      if (!mounted) return;
-      if (!ok) return;
-    }
-
-    // In modal re-auth flows, avoid running protected API calls here because the
-    // auth coordinator may be waiting on this route to pop (deadlock risk).
-    // The app refreshes profile/session via SecurityGateProvider after re-auth.
-    if (!isModalReauth) {
-      try {
-        if ((walletAddress == null || walletAddress.toString().isEmpty) &&
-            walletProvider.currentWalletAddress != null &&
-            walletProvider.currentWalletAddress!.isNotEmpty) {
-          await Provider.of<ProfileProvider>(context, listen: false)
-              .loadProfile(walletProvider.currentWalletAddress!)
-              .timeout(const Duration(seconds: 5));
-        }
-      } catch (e) {
-        AppConfig.debugPrint('SignInScreen: profile load skipped/failed: $e');
-        if (mounted) {
-          ScaffoldMessenger.of(context).showKubusSnackBar(
-            SnackBar(content: Text(l10n.authSignedInProfileRefreshSoon)),
-          );
-        }
-      }
-      if (!mounted) return;
-    }
-
-    if (!isModalReauth && origin != AuthOrigin.google) {
-      await maybeShowGooglePasswordUpgradePrompt(context, payload);
-      if (!mounted) return;
-    }
-
-    if (widget.onAuthSuccess != null) {
-      try {
-        await widget.onAuthSuccess!(payload);
-      } catch (e) {
-        AppConfig.debugPrint('SignInScreen: onAuthSuccess callback failed: $e');
-      }
-      if (!mounted) return;
-      if (!widget.embedded) {
-        Navigator.of(context).pop(true);
-      }
-      return;
-    }
-
-    final profileProvider =
-        Provider.of<ProfileProvider>(context, listen: false);
-    if (await _maybeRouteToStructuredOnboarding(
-      prefs: prefs,
-      profileProvider: profileProvider,
-      walletProvider: walletProvider,
+    final shouldShowGooglePasswordPrompt =
+        !isModalReauth && origin != AuthOrigin.google;
+    if (!mounted) return;
+    await const AuthSuccessHandoffService().handle(
+      navigator: navigator,
+      isMounted: () => mounted,
+      screenWidth: screenWidth,
+      payload: payload,
+      origin: origin,
+      redirectRoute: widget.redirectRoute,
+      redirectArguments: widget.redirectArguments,
       walletAddress: normalizedWalletAddress.isEmpty
           ? walletProvider.currentWalletAddress
           : normalizedWalletAddress,
-      payload: payload,
-      origin: origin,
-    )) {
-      return;
-    }
-
-    if (redirectRoute != null && redirectRoute.isNotEmpty) {
-      navigator.pushReplacementNamed(
-        redirectRoute,
-        arguments: widget.redirectArguments,
-      );
-      return;
-    }
-
-    final profile = profileProvider.currentUser;
-    final needsProfileSetup = profile != null &&
-        (profile.displayName.isEmpty ||
-            profile.displayName == profile.username) &&
-        (profile.bio).isEmpty;
-
-    if (needsProfileSetup) {
-      navigator.pushReplacement(
-        MaterialPageRoute(
-          builder: (context) => const ProfileEditScreen(isOnboarding: true),
-        ),
-      );
-      return;
-    }
-
-    navigator.pushReplacementNamed('/main');
+      userId: userId,
+      embedded: widget.embedded,
+      modalReauth: isModalReauth,
+      requiresWalletBackup: walletProvider.authority.mnemonicBackupRequired,
+      onBeforeSavedItemsSync: shouldShowGooglePasswordPrompt
+          ? () => maybeShowGooglePasswordUpgradePrompt(context, payload)
+          : null,
+      onInlineCompleted: widget.onAuthSuccess == null
+          ? null
+          : (payload) async {
+              try {
+                await widget.onAuthSuccess!(payload);
+              } catch (e) {
+                AppConfig.debugPrint(
+                  'SignInScreen: onAuthSuccess callback failed: $e',
+                );
+              }
+              if (!mounted) return;
+              if (!widget.embedded) {
+                Navigator.of(context).pop(true);
+              }
+            },
+    );
   }
 
   Future<String?> _ensureWalletProvisioned(String? existingWallet,

@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../config/config.dart';
 import '../models/community_group.dart';
 import '../models/community_subject.dart';
+import '../models/saved_item.dart';
 import '../providers/saved_items_provider.dart';
 import '../models/promotion.dart';
 import '../services/backend_api_service.dart';
@@ -700,6 +701,48 @@ class CommunityService {
   ) async {
     final prefs = await SharedPreferences.getInstance();
     final followedUsers = prefs.getStringList(_followsKey) ?? [];
+
+    if (savedItemsProvider != null && posts.isNotEmpty) {
+      await savedItemsProvider.reconcileVisibleItems(
+        posts
+            .map(
+              (post) => SavedItemRecord(
+                type: SavedItemType.communityPost,
+                id: post.id,
+                savedAt: savedItemsProvider.getPostSavedAt(post.id) ??
+                  DateTime.now(),
+                title: post.content.trim().isEmpty
+                    ? post.authorName
+                    : (post.content.trim().length <= 120
+                        ? post.content.trim()
+                        : '${post.content.trim().substring(0, 117).trimRight()}...'),
+                subtitle: post.authorName,
+                imageUrl: (post.imageUrl?.trim().isNotEmpty ?? false)
+                    ? post.imageUrl!.trim()
+                    : (post.mediaUrls.isNotEmpty
+                        ? post.mediaUrls.firstWhere(
+                            (media) => media.trim().isNotEmpty,
+                            orElse: () => '',
+                          ).trim()
+                        : null),
+                authorId: post.authorWallet ?? post.authorId,
+                authorName: post.authorName,
+                metadata: <String, dynamic>{
+                  if (post.category.trim().isNotEmpty)
+                    'category': post.category.trim(),
+                  if (post.tags.isNotEmpty) 'tags': post.tags,
+                  if (post.mentions.isNotEmpty) 'mentions': post.mentions,
+                  if (post.subjects.isNotEmpty)
+                    'subjects':
+                        post.subjects.map((subject) => subject.toJson()).toList(),
+                  if (post.groupId != null && post.groupId!.trim().isNotEmpty)
+                    'groupId': post.groupId!.trim(),
+                },
+              ),
+            )
+            .toList(growable: false),
+      );
+    }
 
     for (final post in posts) {
       if (savedItemsProvider != null) {

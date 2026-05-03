@@ -113,7 +113,7 @@ class SavedItemsProvider extends ChangeNotifier {
     notifyListeners();
     try {
       final page = await _repository.loadBackendItems(limit: 100);
-      _replaceAll(page.items);
+      _upsertAll(page.items);
       await _repository.cacheItems(_sortedRecords());
       await _saveLegacyCompatKeys();
       await _repository.replayPendingMutations();
@@ -143,6 +143,62 @@ class SavedItemsProvider extends ChangeNotifier {
     _upsertAll(page.items);
     await _repository.cacheItems(_sortedRecords());
     notifyListeners();
+  }
+
+  Future<void> hydrateSavedStatus({
+    required SavedItemType type,
+    required Iterable<String> ids,
+  }) async {
+    await hydrateSavedBatchStatus({type: ids});
+  }
+
+  Future<void> hydrateSavedBatchStatus(
+    Map<SavedItemType, Iterable<String>> idsByType,
+  ) async {
+    final items = <SavedItemRecord>[];
+    for (final entry in idsByType.entries) {
+      for (final rawId in entry.value) {
+        final id = rawId.trim();
+        if (id.isEmpty) continue;
+        items.add(
+          _itemsByType[entry.key]![id] ??
+              SavedItemRecord(
+                type: entry.key,
+                id: id,
+                savedAt: DateTime.fromMillisecondsSinceEpoch(0),
+              ),
+        );
+      }
+    }
+    if (items.isEmpty) return;
+
+    final statusMap = await _repository.getSavedBatchStatus(items);
+    if (statusMap.isEmpty) return;
+
+    var changed = false;
+    for (final item in items) {
+      final key = '${item.type.storageKey}:${item.id}';
+      final isSaved = statusMap[key];
+      if (isSaved == null) continue;
+      final bucket = _itemsByType[item.type]!;
+      final existing = bucket[item.id];
+      if (isSaved) {
+        if (existing == null) {
+          bucket[item.id] = item.savedAt.millisecondsSinceEpoch <= 0
+              ? item.copyWith(savedAt: DateTime.now())
+              : item;
+          changed = true;
+        }
+      } else if (existing != null) {
+        bucket.remove(item.id);
+        changed = true;
+      }
+    }
+
+    if (!changed) return;
+    notifyListeners();
+    await _repository.cacheItems(_sortedRecords());
+    await _saveLegacyCompatKeys();
   }
 
   Future<void> saveItem(SavedItemRecord record) async {
@@ -372,14 +428,13 @@ class SavedItemsProvider extends ChangeNotifier {
       _itemsByType[SavedItemType.exhibition]!.containsKey(exhibitionId.trim());
   bool isPostSaved(String postId) =>
       _itemsByType[SavedItemType.communityPost]!.containsKey(postId.trim());
-    bool isArtistSaved(String artistId) =>
+  bool isArtistSaved(String artistId) =>
       _itemsByType[SavedItemType.artist]!.containsKey(artistId.trim());
-    bool isInstitutionSaved(String institutionId) =>
-      _itemsByType[SavedItemType.institution]!
-        .containsKey(institutionId.trim());
-    bool isGroupSaved(String groupId) =>
+  bool isInstitutionSaved(String institutionId) =>
+      _itemsByType[SavedItemType.institution]!.containsKey(institutionId.trim());
+  bool isGroupSaved(String groupId) =>
       _itemsByType[SavedItemType.group]!.containsKey(groupId.trim());
-    bool isMarkerSaved(String markerId) =>
+  bool isMarkerSaved(String markerId) =>
       _itemsByType[SavedItemType.marker]!.containsKey(markerId.trim());
 
   DateTime? getSavedTimestamp(String itemId, {SavedItemType? type}) {
@@ -443,6 +498,20 @@ class SavedItemsProvider extends ChangeNotifier {
     }
     await _repository.cacheItems(const <SavedItemRecord>[]);
     await _saveLegacyCompatKeys();
+    notifyListeners();
+  }
+
+  Future<void> resetForLogout() async {
+    await _repository.clearCachedState();
+    final prefs = _prefs ??= await SharedPreferences.getInstance();
+    await prefs.remove(_storageKeyV2);
+    await prefs.remove(_artworkKey);
+    await prefs.remove(_postKey);
+    await prefs.remove(_bookmarkKey);
+    await prefs.remove(_timestampKey);
+    _replaceAll(const <SavedItemRecord>[]);
+    _isInitialized = false;
+    _isSyncing = false;
     notifyListeners();
   }
 
@@ -510,7 +579,7 @@ class SavedItemsProvider extends ChangeNotifier {
     final prefs = _prefs;
     if (prefs == null) return const <SavedItemRecord>[];
     final records = <SavedItemRecord>[];
-    records.addAll(_decodeV2(prefs.getString(_storageKeyV2)));
+    records.addAll(_decodeV2(_readStringPref(prefs, _storageKeyV2)));
     final timestamps = _decodeTimestampMap(prefs.getString(_timestampKey));
 
     void addLegacyItems(SavedItemType type, Iterable<String> ids) {
@@ -526,11 +595,11 @@ class SavedItemsProvider extends ChangeNotifier {
 
     addLegacyItems(SavedItemType.artwork, [
       ..._decodeStringList(prefs.getStringList(_artworkKey)),
-      ..._decodeJsonList(prefs.getString(_artworkKey)),
+      ..._decodeJsonList(_readStringPref(prefs, _artworkKey)),
     ]);
     addLegacyItems(SavedItemType.communityPost, {
       ..._decodeStringList(prefs.getStringList(_postKey)),
-      ..._decodeJsonList(prefs.getString(_postKey)),
+      ..._decodeJsonList(_readStringPref(prefs, _postKey)),
       ..._decodeStringList(prefs.getStringList(_bookmarkKey)),
     });
     return _mergeRecords(records);
@@ -585,6 +654,11 @@ class SavedItemsProvider extends ChangeNotifier {
     } catch (_) {
       return const <String>[];
     }
+  }
+
+  String? _readStringPref(SharedPreferences prefs, String key) {
+    final value = prefs.get(key);
+    return value is String ? value : null;
   }
 
   Future<void> _saveLegacyCompatKeys() async {
