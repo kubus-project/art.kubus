@@ -18,6 +18,7 @@ import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'package:art_kubus/utils/auth_google_wallet.dart';
 import 'package:art_kubus/utils/wallet_utils.dart';
+import 'package:art_kubus/widgets/auth/post_auth_loading_screen.dart';
 import 'package:art_kubus/widgets/auth_entry_shell.dart';
 import 'package:art_kubus/widgets/auth_methods_panel_helpers.dart';
 import 'package:art_kubus/widgets/auth_methods_panel_sections.dart';
@@ -210,6 +211,27 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
         syncBackend: shouldSyncBackendWallet,
       );
       if (!mounted) return;
+    }
+
+    if (!widget.embedded && widget.onAuthSuccess == null) {
+      await navigator.pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => PostAuthLoadingScreen(
+            payload: payload,
+            origin: origin,
+            walletAddress: normalizedWalletAddress.isEmpty
+                ? walletProvider.currentWalletAddress
+                : normalizedWalletAddress,
+            userId: userId,
+            redirectRoute: null,
+            redirectArguments: null,
+            requiresWalletBackup:
+                walletProvider.authority.mnemonicBackupRequired,
+          ),
+          settings: const RouteSettings(name: '/post-auth-loading'),
+        ),
+      );
+      return;
     }
 
     try {

@@ -532,7 +532,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
     if (mounted) {
       setState(() {
-        _messages = list;
+        _messages = list.where((message) => message.isRenderable).toList();
         // Ensure keys align to current messages so index-based keys are stable
         _messageKeys.clear();
       });
@@ -1252,12 +1252,16 @@ class _ConversationScreenState extends State<ConversationScreen> {
         title: _buildHeaderTitle(),
         actions: _buildHeaderActions(),
       ),
-      body: Column(
-        children: [
-          Expanded(child: _buildMessagesList()),
-          _buildMessageInput(),
-          if (_isUploading) const LinearProgressIndicator(),
-        ],
+      body: GlassSurface(
+        borderRadius: BorderRadius.zero,
+        showBorder: false,
+        child: Column(
+          children: [
+            Expanded(child: _buildMessagesList()),
+            _buildMessageInput(),
+            if (_isUploading) const LinearProgressIndicator(),
+          ],
+        ),
       ),
     );
   }
@@ -1649,11 +1653,15 @@ class _ConversationScreenState extends State<ConversationScreen> {
   Widget _buildMessagesList() {
     final profile = Provider.of<ProfileProvider>(context);
     final myWallet = profile.currentUser?.walletAddress ?? '';
-    final sourceMessages =
-        _chatProvider.messages[widget.conversation.id] ?? _messages;
+    final sourceMessages = (_chatProvider.messages[widget.conversation.id] ??
+        _messages)
+      .where((message) => message.isRenderable)
+      .toList();
+    final renderableMessages =
+      sourceMessages.where((message) => message.isRenderable).toList();
     // Ensure chronological order (oldest -> newest)
     // Chronological list oldest -> newest
-    final chrono = List<ChatMessage>.from(sourceMessages);
+    final chrono = List<ChatMessage>.from(renderableMessages);
     chrono.sort((a, b) => a.createdAt.compareTo(b.createdAt));
     // For display we want newest messages anchored at the bottom. Build a reversed
     // view list so index 0 corresponds to the newest visible message when the
@@ -2329,7 +2337,9 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
   void _syncMessagesFromProvider({bool refreshAvatars = false}) {
     try {
-      final providerMessages = _chatProvider.messages[widget.conversation.id];
+      final providerMessages = _chatProvider.messages[widget.conversation.id]
+          ?.where((message) => message.isRenderable)
+          .toList(growable: false);
       if (providerMessages == null) return;
       // Compare a light-weight signature of messages (id + readersCount + readByCurrent)
       // to detect changes even when the list instance reference didn't change.

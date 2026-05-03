@@ -582,6 +582,54 @@ class AppLocalizationsSl extends AppLocalizations {
   String get authSignedInProfileRefreshSoon => 'Prijava je uspela. Profil se bo kmalu osvežil.';
 
   @override
+  String get postAuthPreparingSession => 'Pripravljanje seje';
+
+  @override
+  String get postAuthSecuringWallet => 'Varovanje denarnice';
+
+  @override
+  String get postAuthLoadingProfile => 'Nalaganje profila';
+
+  @override
+  String get postAuthSyncingSavedItems => 'Sinhronizacija shranjenih vsebin';
+
+  @override
+  String get postAuthCheckingOnboarding => 'Preverjanje uvoda';
+
+  @override
+  String get postAuthOpeningWorkspace => 'Odpiranje delovnega prostora';
+
+  @override
+  String get postAuthPreparingSessionBody => 'Zaključujemo prijavo in pripravljamo delovni prostor.';
+
+  @override
+  String get postAuthSecuringWalletBody => 'Preverjamo dostop do denarnice in varnost naprave.';
+
+  @override
+  String get postAuthLoadingProfileBody => 'Nalagamo tvoj profil in nastavitve računa.';
+
+  @override
+  String get postAuthSyncingSavedItemsBody => 'Osvežujemo zaznamke in shranjeno stanje iz zaledja.';
+
+  @override
+  String get postAuthCheckingOnboardingBody => 'Preverjamo, ali je treba še kaj dokončati.';
+
+  @override
+  String get postAuthOpeningWorkspaceBody => 'Delovni prostor se povezuje.';
+
+  @override
+  String get postAuthFailedTitle => 'Prijave nismo mogli dokončati';
+
+  @override
+  String get postAuthFailedBody => 'Nekaj je prekinilo prijavni tok. Poskusi znova ali se vrni na prijavo.';
+
+  @override
+  String get postAuthRetry => 'Poskusi znova';
+
+  @override
+  String get postAuthBackToSignIn => 'Nazaj na prijavo';
+
+  @override
   String get authReauthDialogTitle => 'Ponovna prijava';
 
   @override

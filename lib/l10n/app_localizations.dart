@@ -1229,6 +1229,102 @@ abstract class AppLocalizations {
   /// **'Signed in. Your profile will refresh shortly.'**
   String get authSignedInProfileRefreshSoon;
 
+  /// No description provided for @postAuthPreparingSession.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing session'**
+  String get postAuthPreparingSession;
+
+  /// No description provided for @postAuthSecuringWallet.
+  ///
+  /// In en, this message translates to:
+  /// **'Securing wallet'**
+  String get postAuthSecuringWallet;
+
+  /// No description provided for @postAuthLoadingProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading profile'**
+  String get postAuthLoadingProfile;
+
+  /// No description provided for @postAuthSyncingSavedItems.
+  ///
+  /// In en, this message translates to:
+  /// **'Syncing saved items'**
+  String get postAuthSyncingSavedItems;
+
+  /// No description provided for @postAuthCheckingOnboarding.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking onboarding'**
+  String get postAuthCheckingOnboarding;
+
+  /// No description provided for @postAuthOpeningWorkspace.
+  ///
+  /// In en, this message translates to:
+  /// **'Opening workspace'**
+  String get postAuthOpeningWorkspace;
+
+  /// No description provided for @postAuthPreparingSessionBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Finalizing your sign-in and preparing the workspace.'**
+  String get postAuthPreparingSessionBody;
+
+  /// No description provided for @postAuthSecuringWalletBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Verifying wallet access and device security.'**
+  String get postAuthSecuringWalletBody;
+
+  /// No description provided for @postAuthLoadingProfileBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading your account profile and preferences.'**
+  String get postAuthLoadingProfileBody;
+
+  /// No description provided for @postAuthSyncingSavedItemsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Refreshing bookmarks and saved state from the backend.'**
+  String get postAuthSyncingSavedItemsBody;
+
+  /// No description provided for @postAuthCheckingOnboardingBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking whether anything still needs your attention.'**
+  String get postAuthCheckingOnboardingBody;
+
+  /// No description provided for @postAuthOpeningWorkspaceBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Bringing your workspace online.'**
+  String get postAuthOpeningWorkspaceBody;
+
+  /// No description provided for @postAuthFailedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t finish signing you in'**
+  String get postAuthFailedTitle;
+
+  /// No description provided for @postAuthFailedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Something interrupted the post-auth flow. You can retry or return to sign-in.'**
+  String get postAuthFailedBody;
+
+  /// No description provided for @postAuthRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get postAuthRetry;
+
+  /// No description provided for @postAuthBackToSignIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to sign-in'**
+  String get postAuthBackToSignIn;
+
   /// Title shown in a dialog when the user's session has expired and they need to re-authenticate.
   ///
   /// In en, this message translates to:

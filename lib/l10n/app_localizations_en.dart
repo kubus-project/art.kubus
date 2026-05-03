@@ -582,6 +582,54 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authSignedInProfileRefreshSoon => 'Signed in. Your profile will refresh shortly.';
 
   @override
+  String get postAuthPreparingSession => 'Preparing session';
+
+  @override
+  String get postAuthSecuringWallet => 'Securing wallet';
+
+  @override
+  String get postAuthLoadingProfile => 'Loading profile';
+
+  @override
+  String get postAuthSyncingSavedItems => 'Syncing saved items';
+
+  @override
+  String get postAuthCheckingOnboarding => 'Checking onboarding';
+
+  @override
+  String get postAuthOpeningWorkspace => 'Opening workspace';
+
+  @override
+  String get postAuthPreparingSessionBody => 'Finalizing your sign-in and preparing the workspace.';
+
+  @override
+  String get postAuthSecuringWalletBody => 'Verifying wallet access and device security.';
+
+  @override
+  String get postAuthLoadingProfileBody => 'Loading your account profile and preferences.';
+
+  @override
+  String get postAuthSyncingSavedItemsBody => 'Refreshing bookmarks and saved state from the backend.';
+
+  @override
+  String get postAuthCheckingOnboardingBody => 'Checking whether anything still needs your attention.';
+
+  @override
+  String get postAuthOpeningWorkspaceBody => 'Bringing your workspace online.';
+
+  @override
+  String get postAuthFailedTitle => 'We couldn\'t finish signing you in';
+
+  @override
+  String get postAuthFailedBody => 'Something interrupted the post-auth flow. You can retry or return to sign-in.';
+
+  @override
+  String get postAuthRetry => 'Retry';
+
+  @override
+  String get postAuthBackToSignIn => 'Back to sign-in';
+
+  @override
   String get authReauthDialogTitle => 'Sign in again';
 
   @override

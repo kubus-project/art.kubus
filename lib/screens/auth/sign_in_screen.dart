@@ -18,6 +18,7 @@ import '../../services/google_auth_service.dart';
 import '../../services/security/post_auth_security_setup_service.dart';
 import '../../services/telemetry/telemetry_service.dart';
 import '../../services/wallet_session_sync_service.dart';
+import '../../widgets/auth/post_auth_loading_screen.dart';
 import '../../widgets/google_sign_in_button.dart';
 import '../../widgets/google_sign_in_web_button.dart';
 import '../../widgets/secure_account_password_prompt.dart';
@@ -294,6 +295,27 @@ class _SignInScreenState extends State<SignInScreen> {
         syncBackend: shouldSyncBackendWallet,
       );
       if (!mounted) return;
+    }
+
+    if (!widget.embedded && widget.onAuthSuccess == null) {
+      await navigator.pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => PostAuthLoadingScreen(
+            payload: payload,
+            origin: origin,
+            redirectRoute: widget.redirectRoute,
+            redirectArguments: widget.redirectArguments,
+            walletAddress: normalizedWalletAddress.isEmpty
+                ? walletProvider.currentWalletAddress
+                : normalizedWalletAddress,
+            userId: userId,
+            requiresWalletBackup:
+                walletProvider.authority.mnemonicBackupRequired,
+          ),
+          settings: const RouteSettings(name: '/post-auth-loading'),
+        ),
+      );
+      return;
     }
 
     try {
