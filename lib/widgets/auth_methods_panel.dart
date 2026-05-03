@@ -4,13 +4,11 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/services/auth_redirect_controller.dart';
 import 'package:art_kubus/providers/security_gate_provider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
-import 'package:art_kubus/services/auth_onboarding_service.dart';
 import 'package:art_kubus/services/auth_success_handoff_service.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/google_auth_service.dart';
 import 'package:art_kubus/services/onboarding_state_service.dart';
 import 'package:art_kubus/services/telemetry/telemetry_service.dart';
-import 'package:art_kubus/services/wallet_session_sync_service.dart';
 import 'package:art_kubus/utils/auth_password_policy.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/utils/kubus_color_roles.dart';
@@ -108,93 +106,38 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
     Map<String, dynamic> payload, {
     AuthOrigin origin = AuthOrigin.emailPassword,
   }) async {
-    final l10n = AppLocalizations.of(context)!;
-    final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
-    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     final screenWidth = MediaQuery.sizeOf(context).width;
     final data = (payload['data'] as Map<String, dynamic>?) ?? payload;
     final user = (data['user'] as Map<String, dynamic>?) ?? data;
-    final isNewAccount =
-        AuthOnboardingService.payloadIndicatesNewAccount(payload);
-    final expectedWalletAddress =
+
+    // Normalize payload and collect values for handoff
+    final userId = user['id'];
+    final walletAddressFromPayload =
         (user['walletAddress'] ?? user['wallet_address'] ?? '')
             .toString()
             .trim();
-    String? walletAddress = expectedWalletAddress;
-    final usernameFromUser =
-        (user['username'] ?? _usernameController.text ?? '').toString();
-    final userId = user['id'];
-    try {
-      AppConfig.debugPrint(
-          'AuthMethodsPanel._handleAuthSuccess: ensuring wallet provisioning');
-      walletAddress = await _ensureWalletProvisioned(walletAddress.toString(),
-          desiredUsername: usernameFromUser);
-    } catch (e) {
-      AppConfig.debugPrint('AuthMethodsPanel: wallet provisioning failed: $e');
-    }
-    var normalizedWalletAddress = (walletAddress ?? '').toString().trim();
-    if (expectedWalletAddress.isNotEmpty && normalizedWalletAddress.isEmpty) {
-      final signerReady = await _requireSignerForWallet(expectedWalletAddress);
-      if (!mounted) return;
-      if (!signerReady) {
-        await BackendApiService().clearAuth();
-        messenger.showKubusSnackBar(
-          SnackBar(content: Text(l10n.connectWalletImportFailedToast)),
-          tone: KubusSnackBarTone.error,
-        );
-        return;
-      }
-      normalizedWalletAddress = expectedWalletAddress;
-      walletAddress = expectedWalletAddress;
-    }
-    final shouldSyncBackendWallet =
-      origin == AuthOrigin.google &&
-        normalizedWalletAddress.isNotEmpty &&
-        expectedWalletAddress.isNotEmpty &&
-        !WalletUtils.equals(expectedWalletAddress, normalizedWalletAddress);
-    if (isNewAccount &&
-        normalizedWalletAddress.isNotEmpty &&
-        walletProvider.hasSigner &&
-        WalletUtils.equals(
-          walletProvider.currentWalletAddress,
-          normalizedWalletAddress,
-        )) {
-      try {
-        await walletProvider.setMnemonicBackupRequired(
-          required: true,
-          walletAddress: normalizedWalletAddress,
-        );
-      } catch (e) {
-        AppConfig.debugPrint(
-            'AuthMethodsPanel: failed to set wallet backup-required state: $e');
-      }
-    }
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    
+    final normalizedWalletAddress = walletAddressFromPayload.isNotEmpty
+        ? walletAddressFromPayload
+        : (walletProvider.currentWalletAddress ?? '').trim();
 
-    if (walletAddress != null && walletAddress.toString().isNotEmpty) {
-      if (!mounted) return;
-      await const WalletSessionSyncService().bindAuthenticatedWallet(
-        context: context,
-        walletAddress: walletAddress.toString(),
-        userId: userId,
-        syncBackend: shouldSyncBackendWallet,
-      );
-      if (!mounted) return;
-    }
-
+    // Hand off immediately to loading screen or coordinator
+    // All post-auth work (wallet provisioning, session sync, profile load, etc.)
+    // now happens inside PostAuthCoordinator with visible loading state
+    if (!mounted) return;
     await const AuthSuccessHandoffService().handle(
       navigator: navigator,
       isMounted: () => mounted,
       screenWidth: screenWidth,
       payload: payload,
       origin: origin,
-      walletAddress: normalizedWalletAddress.isEmpty
-          ? walletProvider.currentWalletAddress
-          : normalizedWalletAddress,
+      walletAddress: normalizedWalletAddress,
       userId: userId,
       embedded: widget.embedded,
       modalReauth: false,
-      requiresWalletBackup: walletProvider.authority.mnemonicBackupRequired,
+      requiresWalletBackup: false, // PostAuthCoordinator will determine this
       onBeforeSavedItemsSync: origin != AuthOrigin.google
           ? () => maybeShowGooglePasswordUpgradePrompt(context, payload)
           : null,
@@ -440,20 +383,6 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
           'AuthMethodsPanel: signer-backed wallet creation failed: $e');
       return null;
     }
-  }
-
-  Future<bool> _requireSignerForWallet(String walletAddress) async {
-    await _showConnectWalletFlow(
-      initialStep: 1,
-      requiredWalletAddress: walletAddress,
-    );
-    if (!mounted) return false;
-    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-    return walletProvider.hasSigner &&
-        WalletUtils.equals(
-          walletProvider.currentWalletAddress,
-          walletAddress,
-        );
   }
 
   Future<String?> _prepareProvisionalProfileBeforeRegister({

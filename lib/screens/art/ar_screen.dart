@@ -264,6 +264,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
         _isARReady = true;
         _isLoading = false;
       });
+      _syncSavedArtworkStateFromProvider();
       _animationController.forward();
     } catch (e) {
       if (kDebugMode) {
@@ -277,6 +278,17 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
           }
         });
       }
+    }
+  }
+
+  void _syncSavedArtworkStateFromProvider() {
+    try {
+      final savedItemsProvider = context.read<SavedItemsProvider>();
+      _savedArtworks
+        ..clear()
+        ..addAll(savedItemsProvider.savedArtworkIds);
+    } catch (_) {
+      // Saved state is best-effort in AR mode.
     }
   }
 
@@ -2312,24 +2324,24 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
     final scheme = Theme.of(context).colorScheme;
-
-    setState(() {
-      if (_savedArtworks.contains(artwork['id'])) {
-        _savedArtworks.remove(artwork['id']);
-      } else {
-        _savedArtworks.add(artwork['id']);
-      }
-    });
+    final artworkId = (artwork['id'] ?? '').toString().trim();
+    if (artworkId.isEmpty) return;
 
     // Update SavedItemsProvider
     final savedItemsProvider =
         Provider.of<SavedItemsProvider>(context, listen: false);
-    await savedItemsProvider.toggleArtworkSaved(artwork['id']);
+    await savedItemsProvider.toggleArtworkSaved(artworkId);
+    if (!mounted) return;
+    setState(() {
+      _savedArtworks
+        ..clear()
+        ..addAll(savedItemsProvider.savedArtworkIds);
+    });
 
-    final isNowSaved = _savedArtworks.contains(artwork['id']);
+    final isNowSaved = savedItemsProvider.isArtworkSaved(artworkId);
     if (isNowSaved) {
       UserActionLogger.logArtworkSave(
-        artworkId: artwork['id'].toString(),
+        artworkId: artworkId,
         artworkTitle: artwork['title']?.toString() ?? l10n.commonUnknown,
         artistName: artwork['artist']?.toString(),
       );
@@ -2344,7 +2356,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
     }
 
     if (!mounted) return;
-    final isSaved = _savedArtworks.contains(artwork['id']);
+    final isSaved = isNowSaved;
     messenger.showKubusSnackBar(
       SnackBar(
         content: Row(
@@ -2363,7 +2375,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
             isSaved ? scheme.primary : scheme.surfaceContainerHighest,
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 2),
-        action: _savedArtworks.contains(artwork['id'])
+        action: isSaved
             ? SnackBarAction(
                 label: l10n.commonView,
                 textColor: scheme.onPrimary,

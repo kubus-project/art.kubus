@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -12,6 +13,10 @@ import '../services/auth_onboarding_service.dart';
 import '../services/auth_redirect_controller.dart';
 import '../services/security/post_auth_security_setup_service.dart';
 import '../services/telemetry/telemetry_service.dart';
+import '../services/wallet_session_sync_service.dart';
+import '../utils/wallet_utils.dart';
+import '../widgets/wallet_backup_prompts.dart';
+import '../l10n/app_localizations.dart';
 
 enum PostAuthStage {
   preparingSession,
@@ -73,7 +78,7 @@ class PostAuthCoordinator {
       final prefs = await SharedPreferences.getInstance();
       final data = _mapOrNull(payload['data']) ?? payload;
       final user = _mapOrNull(data['user']) ?? data;
-      final normalizedWallet = _walletAddressForFlow(
+      var normalizedWallet = _walletAddressForFlow(
         walletAddress: walletAddress,
         walletProvider: walletProvider,
         payload: payload,
@@ -88,6 +93,75 @@ class PostAuthCoordinator {
 
       setStage(PostAuthStage.securingWallet);
       if (!modalReauth) {
+        // Ensure wallet is provisioned from the auth payload before session sync
+        String? provisionedWallet = normalizedWallet;
+        final expectedWallet = _expectedWalletFromPayload(data, user);
+
+        if (!context.mounted) {
+          return const PostAuthResult(completed: false);
+        }
+        
+        try {
+          provisionedWallet = await _ensureWalletProvisioned(
+            context: context,
+            existingWallet: normalizedWallet.isEmpty ? expectedWallet : normalizedWallet,
+          );
+        } catch (e) {
+          AppConfig.debugPrint('PostAuthCoordinator: wallet provisioning failed: $e');
+        }
+
+        var resolvedWallet = (provisionedWallet ?? '').toString().trim();
+        
+        // If expected wallet exists but signer restoration/provisioning is not ready,
+        // continue with a read-only identity instead of hard-failing auth.
+        if (expectedWallet.isNotEmpty && resolvedWallet.isEmpty) {
+          try {
+            await walletProvider
+                .setReadOnlyWalletIdentity(expectedWallet)
+                .timeout(const Duration(seconds: 6));
+            resolvedWallet = expectedWallet;
+          } catch (e) {
+            AppConfig.debugPrint(
+              'PostAuthCoordinator: fallback read-only wallet identity failed: $e',
+            );
+          }
+        }
+
+        // Sync wallet session with backend
+        if (resolvedWallet.isNotEmpty) {
+          if (!context.mounted) {
+            return const PostAuthResult(completed: false);
+          }
+          final shouldSyncBackendWallet = origin == AuthOrigin.google &&
+              expectedWallet.isNotEmpty &&
+              resolvedWallet.isNotEmpty &&
+              !WalletUtils.equals(expectedWallet, resolvedWallet);
+          
+          try {
+            await const WalletSessionSyncService().bindAuthenticatedWallet(
+              context: context,
+              walletAddress: resolvedWallet,
+              userId: normalizedUserId,
+              warmUp: true,
+              loadProfile: false, // Profile loading happens in loadingProfile stage
+              syncBackend: shouldSyncBackendWallet,
+            );
+            if (!context.mounted) {
+              return const PostAuthResult(completed: false);
+            }
+          } catch (e) {
+            AppConfig.debugPrint(
+              'PostAuthCoordinator: wallet session sync failed: $e',
+            );
+          }
+        }
+
+        // Update normalized wallet for remaining stages
+        if (resolvedWallet.isNotEmpty) {
+          normalizedWallet = resolvedWallet;
+        }
+
+        // Set backup required flag
         final wallet = normalizedWallet.isNotEmpty
             ? normalizedWallet
             : (walletProvider.currentWalletAddress ?? '').trim();
@@ -204,4 +278,161 @@ class PostAuthCoordinator {
     if (fromPayload.isNotEmpty) return fromPayload;
     return (walletProvider.currentWalletAddress ?? '').trim();
   }
+
+  String _expectedWalletFromPayload(
+    Map<String, dynamic>? data,
+    Map<String, dynamic>? user,
+  ) {
+    return ((user ?? data)?['walletAddress'] ??
+            (user ?? data)?['wallet_address'] ??
+            '')
+        .toString()
+        .trim();
+  }
+
+  /// Ensure wallet is provisioned for the authenticated user.
+  /// Returns the wallet address if successful, null otherwise.
+  Future<String?> _ensureWalletProvisioned({
+    required BuildContext context,
+    String? existingWallet,
+  }) async {
+    final walletProvider = context.read<WalletProvider>();
+    final targetWallet = (existingWallet ?? '').trim();
+
+    // Wallet provisioning should be quick, but use a reasonable timeout
+    const walletConnectTimeout = Duration(seconds: 6);
+
+    if (targetWallet.isNotEmpty) {
+      // Target wallet from auth payload
+      final currentWallet = (walletProvider.currentWalletAddress ?? '').trim();
+      if (currentWallet.isEmpty ||
+          !WalletUtils.equals(currentWallet, targetWallet)) {
+        try {
+          await walletProvider
+              .setReadOnlyWalletIdentity(targetWallet)
+              .timeout(walletConnectTimeout);
+        } catch (e) {
+          AppConfig.debugPrint(
+              'PostAuthCoordinator: setReadOnlyWalletIdentity failed: $e');
+        }
+      }
+
+      if (walletProvider.isReadOnlySession) {
+        try {
+          final managedEligible =
+              await walletProvider.isManagedReconnectEligible();
+          if (managedEligible) {
+            await walletProvider
+                .recoverManagedWalletSession(
+                  walletAddress: targetWallet,
+                  refreshBackendSession: false,
+                )
+                .timeout(walletConnectTimeout);
+          }
+        } catch (e) {
+          AppConfig.debugPrint(
+              'PostAuthCoordinator: managed reconnect after auth failed: $e');
+        }
+      }
+
+      final activeWallet = (walletProvider.currentWalletAddress ?? '').trim();
+      if (walletProvider.hasSigner &&
+          WalletUtils.equals(activeWallet, targetWallet)) {
+        return targetWallet;
+      }
+
+      // Try encrypted backup recovery if available
+      final recovered = await _attemptEncryptedBackupRecovery(
+        context: context,
+        walletAddress: targetWallet,
+      );
+      if (recovered) {
+        final restoredWallet =
+            (walletProvider.currentWalletAddress ?? '').trim();
+        if (walletProvider.hasSigner &&
+            WalletUtils.equals(restoredWallet, targetWallet)) {
+          return targetWallet;
+        }
+      }
+      return null;
+    }
+
+    // No target wallet, try to create a signer-backed wallet
+    return _createSignerBackedWallet(walletProvider: walletProvider);
+  }
+
+  Future<String?> _createSignerBackedWallet({
+    required WalletProvider walletProvider,
+  }) async {
+    try {
+      final result = await walletProvider.createWallet();
+      final address = (result['address'] ?? '').trim();
+      return address.isEmpty ? null : address;
+    } catch (e) {
+      AppConfig.debugPrint(
+          'PostAuthCoordinator: signer-backed wallet creation failed: $e');
+      return null;
+    }
+  }
+
+  Future<bool> _attemptEncryptedBackupRecovery({
+    required BuildContext context,
+    required String walletAddress,
+  }) async {
+    if (!AppConfig.isFeatureEnabled('encryptedWalletBackup')) {
+      return false;
+    }
+
+    final l10n = AppLocalizations.of(context);
+    final walletProvider = context.read<WalletProvider>();
+    final backup = await walletProvider.getEncryptedWalletBackup(
+      walletAddress: walletAddress,
+      refresh: true,
+    );
+
+    if (backup == null) {
+      return false;
+    }
+
+    try {
+      if (kIsWeb &&
+          AppConfig.isFeatureEnabled('walletBackupPasskeyWeb') &&
+          backup.passkeys.isNotEmpty) {
+        await walletProvider.authenticateEncryptedWalletBackupPasskey(
+          walletAddress: walletAddress,
+        );
+      }
+      if (!context.mounted) return false;
+
+      final recoveryPassword = await showWalletBackupPasswordPrompt(
+        context: context,
+        title: l10n?.authRestoreWalletTitle ?? 'Restore Wallet',
+        description: l10n?.authRestoreWalletBeforeSignInDescription ??
+            'Enter your wallet recovery password',
+        actionLabel: l10n?.authRestoreWalletAction ?? 'Restore',
+      );
+      if (!context.mounted || recoveryPassword == null) {
+        return false;
+      }
+
+      final gate = context.read<SecurityGateProvider>();
+      final verified = await gate.requireSensitiveActionVerification();
+      if (!context.mounted) return false;
+      if (!verified) {
+        return false;
+      }
+
+      return await walletProvider.restoreSignerFromEncryptedWalletBackup(
+        walletAddress: walletAddress,
+        recoveryPassword: recoveryPassword,
+      );
+    } catch (e) {
+      AppConfig.debugPrint(
+        'PostAuthCoordinator: encrypted backup recovery failed: $e',
+      );
+      return false;
+    }
+  }
+
 }
+

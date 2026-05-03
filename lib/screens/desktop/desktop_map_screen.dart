@@ -16,6 +16,7 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../features/map/shared/map_screen_shared_helpers.dart';
 import '../../providers/themeprovider.dart';
 import '../../providers/artwork_provider.dart';
+import '../../providers/saved_items_provider.dart';
 import '../../providers/exhibitions_provider.dart';
 import '../../providers/events_provider.dart';
 import '../../providers/attestation_provider.dart';
@@ -2105,6 +2106,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     // Get the latest artwork from provider to ensure like/save states are updated
     final artwork = hydratedArtwork ?? selectedArtwork;
     final artworkProvider = context.read<ArtworkProvider>();
+    final savedItemsProvider = context.read<SavedItemsProvider>();
     final scheme = Theme.of(context).colorScheme;
     final accent = themeProvider.accentColor;
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -2120,6 +2122,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final distanceLabel = _formatDistanceToArtwork(artwork);
     final categoryLabel = artwork.category.trim();
     final artistLabel = artwork.artist.trim();
+    final isSaved = savedItemsProvider.isArtworkSaved(artwork.id);
     final arBadge = artwork.arEnabled
         ? Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -2310,18 +2313,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                       tooltip: l10n.commonViewInAr,
                     ),
                   DetailSecondaryAction(
-                    icon: artwork.isFavoriteByCurrentUser || artwork.isFavorite
-                        ? Icons.bookmark
-                        : Icons.bookmark_border,
-                    label:
-                        (artwork.isFavoriteByCurrentUser || artwork.isFavorite)
-                            ? l10n.commonSavedToast
-                            : l10n.commonSave,
+                    icon: isSaved ? Icons.bookmark : Icons.bookmark_border,
+                    label: isSaved ? l10n.commonSavedToast : l10n.commonSave,
                     onTap: () {
                       unawaited(artworkProvider.toggleArtworkSaved(artwork.id));
                     },
-                    isActive:
-                        artwork.isFavoriteByCurrentUser || artwork.isFavorite,
+                    isActive: isSaved,
                     activeColor: accent,
                     tooltip: l10n.commonSave,
                   ),

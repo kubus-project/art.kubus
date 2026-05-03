@@ -8,14 +8,11 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../config/config.dart';
 import '../../services/auth_redirect_controller.dart';
-import '../../providers/security_gate_provider.dart';
 import '../../providers/wallet_provider.dart';
-import '../../services/auth_onboarding_service.dart';
 import '../../services/auth_success_handoff_service.dart';
 import '../../services/backend_api_service.dart';
 import '../../services/google_auth_service.dart';
 import '../../services/telemetry/telemetry_service.dart';
-import '../../services/wallet_session_sync_service.dart';
 import '../../widgets/google_sign_in_button.dart';
 import '../../widgets/google_sign_in_web_button.dart';
 import '../../widgets/secure_account_password_prompt.dart';
@@ -25,10 +22,8 @@ import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/auth_google_wallet.dart';
 import '../../utils/keyboard_inset_resolver.dart';
-import '../../utils/wallet_utils.dart';
 import '../web3/wallet/connectwallet_screen.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
-import '../../widgets/wallet_backup_prompts.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({
@@ -189,82 +184,27 @@ class _SignInScreenState extends State<SignInScreen> {
     Map<String, dynamic> payload, {
     AuthOrigin origin = AuthOrigin.emailPassword,
   }) async {
-    final l10n = AppLocalizations.of(context)!;
-    final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
-    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-    final isModalReauth = widget.onAuthSuccess != null && !widget.embedded;
     final screenWidth = MediaQuery.sizeOf(context).width;
     final data = (payload['data'] as Map<String, dynamic>?) ?? payload;
     final user = (data['user'] as Map<String, dynamic>?) ?? data;
-    final isNewAccount =
-        AuthOnboardingService.payloadIndicatesNewAccount(payload);
-    final expectedWalletAddress =
+    final isModalReauth = widget.onAuthSuccess != null && !widget.embedded;
+
+    // Normalize payload and collect values for handoff
+    final userId = user['id'];
+    final walletAddressFromPayload =
         (user['walletAddress'] ?? user['wallet_address'] ?? '')
             .toString()
             .trim();
-    String? walletAddress = expectedWalletAddress;
-    final usernameFromUser =
-        (user['username'] ?? user['displayName'] ?? '').toString();
-    final userId = user['id'];
-    try {
-      walletAddress = await _ensureWalletProvisioned(walletAddress.toString(),
-          desiredUsername: usernameFromUser);
-    } catch (e) {
-      AppConfig.debugPrint('SignInScreen: wallet provisioning failed: $e');
-    }
-    var normalizedWalletAddress = (walletAddress ?? '').toString().trim();
-    if (expectedWalletAddress.isNotEmpty && normalizedWalletAddress.isEmpty) {
-      final signerReady = await _requireSignerForWallet(expectedWalletAddress);
-      if (!mounted) return;
-      if (!signerReady) {
-        await BackendApiService().clearAuth();
-        messenger.showKubusSnackBar(
-          SnackBar(content: Text(l10n.connectWalletImportFailedToast)),
-        );
-        return;
-      }
-      normalizedWalletAddress = expectedWalletAddress;
-      walletAddress = expectedWalletAddress;
-    }
-    final shouldSyncBackendWallet =
-      origin == AuthOrigin.google &&
-        normalizedWalletAddress.isNotEmpty &&
-        expectedWalletAddress.isNotEmpty &&
-        !WalletUtils.equals(expectedWalletAddress, normalizedWalletAddress);
-    if (isNewAccount &&
-        normalizedWalletAddress.isNotEmpty &&
-        walletProvider.hasSigner &&
-        WalletUtils.equals(
-          walletProvider.currentWalletAddress,
-          normalizedWalletAddress,
-        )) {
-      try {
-        await walletProvider.setMnemonicBackupRequired(
-          required: true,
-          walletAddress: normalizedWalletAddress,
-        );
-      } catch (e) {
-        AppConfig.debugPrint(
-            'SignInScreen: failed to set wallet backup-required state: $e');
-      }
-    }
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    
+    final normalizedWalletAddress = walletAddressFromPayload.isNotEmpty
+        ? walletAddressFromPayload
+        : (walletProvider.currentWalletAddress ?? '').trim();
 
-    if (walletAddress != null && walletAddress.toString().isNotEmpty) {
-      if (!mounted) return;
-      await const WalletSessionSyncService().bindAuthenticatedWallet(
-        context: context,
-        walletAddress: walletAddress.toString(),
-        userId: userId,
-        warmUp: !isModalReauth,
-        loadProfile: !isModalReauth,
-        syncBackend: shouldSyncBackendWallet,
-      );
-      if (!mounted) return;
-    }
-
-    final shouldShowGooglePasswordPrompt =
-        !isModalReauth && origin != AuthOrigin.google;
+    // Hand off immediately to loading screen or coordinator
+    // All post-auth work (wallet provisioning, session sync, profile load, etc.)
+    // now happens inside PostAuthCoordinator with visible loading state
     if (!mounted) return;
     await const AuthSuccessHandoffService().handle(
       navigator: navigator,
@@ -274,14 +214,12 @@ class _SignInScreenState extends State<SignInScreen> {
       origin: origin,
       redirectRoute: widget.redirectRoute,
       redirectArguments: widget.redirectArguments,
-      walletAddress: normalizedWalletAddress.isEmpty
-          ? walletProvider.currentWalletAddress
-          : normalizedWalletAddress,
+      walletAddress: normalizedWalletAddress,
       userId: userId,
       embedded: widget.embedded,
       modalReauth: isModalReauth,
-      requiresWalletBackup: walletProvider.authority.mnemonicBackupRequired,
-      onBeforeSavedItemsSync: shouldShowGooglePasswordPrompt
+      requiresWalletBackup: false, // PostAuthCoordinator will determine this
+      onBeforeSavedItemsSync: origin != AuthOrigin.google
           ? () => maybeShowGooglePasswordUpgradePrompt(context, payload)
           : null,
       onInlineCompleted: widget.onAuthSuccess == null
@@ -300,165 +238,6 @@ class _SignInScreenState extends State<SignInScreen> {
               }
             },
     );
-  }
-
-  Future<String?> _ensureWalletProvisioned(String? existingWallet,
-      {String? desiredUsername}) async {
-    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-    final targetWallet = (existingWallet ?? '').trim();
-    final signerWallet = _signerBackedWalletForGoogleAuth();
-
-    // Keep auth completion snappy and offline-friendly.
-    // Wallet + Web3 initialization is best-effort and must never block the UI
-    // indefinitely (e.g. on slow RPC / captive portals / flaky mobile data).
-    const walletConnectTimeout = Duration(seconds: 6);
-
-    if (targetWallet.isNotEmpty) {
-      if (signerWallet != null &&
-          WalletUtils.equals(signerWallet, targetWallet)) {
-        return targetWallet;
-      }
-
-      final currentWallet = (walletProvider.currentWalletAddress ?? '').trim();
-      if (currentWallet.isEmpty ||
-          !WalletUtils.equals(currentWallet, targetWallet)) {
-        try {
-          await walletProvider
-              .setReadOnlyWalletIdentity(targetWallet)
-              .timeout(walletConnectTimeout);
-        } catch (e) {
-          AppConfig.debugPrint(
-              'SignInScreen: setReadOnlyWalletIdentity failed: $e');
-        }
-      }
-      if (walletProvider.isReadOnlySession) {
-        try {
-          final managedEligible =
-              await walletProvider.isManagedReconnectEligible();
-          if (managedEligible) {
-            await walletProvider
-                .recoverManagedWalletSession(
-                  walletAddress: targetWallet,
-                  refreshBackendSession: false,
-                )
-                .timeout(walletConnectTimeout);
-          }
-        } catch (e) {
-          AppConfig.debugPrint(
-              'SignInScreen: managed reconnect after auth failed: $e');
-        }
-      }
-
-      final activeWallet = (walletProvider.currentWalletAddress ?? '').trim();
-      if (walletProvider.hasSigner &&
-          WalletUtils.equals(activeWallet, targetWallet)) {
-        return targetWallet;
-      }
-      final recovered = await _attemptEncryptedBackupRecovery(targetWallet);
-      if (recovered) {
-        final restoredWallet =
-            (walletProvider.currentWalletAddress ?? '').trim();
-        if (walletProvider.hasSigner &&
-            WalletUtils.equals(restoredWallet, targetWallet)) {
-          return targetWallet;
-        }
-      }
-      return null;
-    }
-
-    if (signerWallet != null && signerWallet.isNotEmpty) {
-      return signerWallet;
-    }
-
-    return _createSignerBackedWallet(desiredUsername: desiredUsername);
-  }
-
-  Future<String?> _createSignerBackedWallet({String? desiredUsername}) async {
-    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-    try {
-      final result = await walletProvider.createWallet();
-      final address = (result['address'] ?? '').trim();
-      return address.isEmpty ? null : address;
-    } catch (e) {
-      AppConfig.debugPrint(
-          'SignInScreen: signer-backed wallet creation failed: $e');
-      return null;
-    }
-  }
-
-  Future<bool> _attemptEncryptedBackupRecovery(String walletAddress) async {
-    if (!AppConfig.isFeatureEnabled('encryptedWalletBackup')) {
-      return false;
-    }
-
-    final l10n = AppLocalizations.of(context)!;
-    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-    final messenger = ScaffoldMessenger.of(context);
-    final backup = await walletProvider.getEncryptedWalletBackup(
-      walletAddress: walletAddress,
-      refresh: true,
-    );
-    if (backup == null) {
-      return false;
-    }
-
-    try {
-      if (kIsWeb &&
-          AppConfig.isFeatureEnabled('walletBackupPasskeyWeb') &&
-          backup.passkeys.isNotEmpty) {
-        await walletProvider.authenticateEncryptedWalletBackupPasskey(
-          walletAddress: walletAddress,
-        );
-      }
-      if (!mounted) return false;
-
-      final recoveryPassword = await showWalletBackupPasswordPrompt(
-        context: context,
-        title: l10n.authRestoreWalletTitle,
-        description: l10n.authRestoreWalletBeforeSignInDescription,
-        actionLabel: l10n.authRestoreWalletAction,
-      );
-      if (!mounted || recoveryPassword == null) {
-        return false;
-      }
-
-      final gate = Provider.of<SecurityGateProvider>(context, listen: false);
-      final verified = await gate.requireSensitiveActionVerification();
-      if (!mounted) return false;
-      if (!verified) {
-        messenger.showKubusSnackBar(
-          SnackBar(content: Text(l10n.lockAuthenticationFailedToast)),
-          tone: KubusSnackBarTone.error,
-        );
-        return false;
-      }
-
-      return await walletProvider.restoreSignerFromEncryptedWalletBackup(
-        walletAddress: walletAddress,
-        recoveryPassword: recoveryPassword,
-      );
-    } catch (e) {
-      if (!mounted) return false;
-      messenger.showKubusSnackBar(
-        SnackBar(content: Text(e.toString())),
-        tone: KubusSnackBarTone.error,
-      );
-      return false;
-    }
-  }
-
-  Future<bool> _requireSignerForWallet(String walletAddress) async {
-    await _showConnectWalletFlow(
-      initialStep: 1,
-      requiredWalletAddress: walletAddress,
-    );
-    if (!mounted) return false;
-    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-    return walletProvider.hasSigner &&
-        WalletUtils.equals(
-          walletProvider.currentWalletAddress,
-          walletAddress,
-        );
   }
 
   Future<void> _submitEmail() async {
@@ -522,6 +301,19 @@ class _SignInScreenState extends State<SignInScreen> {
           SnackBar(content: Text(l10n.authEmailSignInFailed)));
     } finally {
       if (mounted) setState(() => _isEmailSubmitting = false);
+    }
+  }
+
+  Future<String?> _createSignerBackedWallet() async {
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    try {
+      final result = await walletProvider.createWallet();
+      final address = (result['address'] ?? '').trim();
+      return address.isEmpty ? null : address;
+    } catch (e) {
+      AppConfig.debugPrint(
+          'SignInScreen: signer-backed wallet creation failed: $e');
+      return null;
     }
   }
 

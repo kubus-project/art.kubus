@@ -18,6 +18,7 @@ import '../../providers/saved_items_provider.dart';
 import '../../providers/attendance_provider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../providers/task_provider.dart';
+import '../../models/saved_item.dart';
 import '../../models/artwork.dart';
 import '../../models/artwork_comment.dart';
 import '../../services/backend_api_service.dart';
@@ -321,8 +322,13 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
     final l10n = AppLocalizations.of(context)!;
     final provider = context.read<ArtworkProvider>();
     final existing = provider.getArtworkById(widget.artworkId);
+    final savedItemsProvider = context.read<SavedItemsProvider>();
 
     if (existing != null) {
+      await savedItemsProvider.hydrateSavedStatus(
+        type: SavedItemType.artwork,
+        ids: [widget.artworkId],
+      );
       if (mounted) {
         setState(() {
           _artworkLoading = false;
@@ -341,6 +347,10 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
 
     try {
       await provider.fetchArtworkIfNeeded(widget.artworkId);
+      await savedItemsProvider.hydrateSavedStatus(
+        type: SavedItemType.artwork,
+        ids: [widget.artworkId],
+      );
     } catch (e) {
       if (!mounted) return;
       setState(() {

@@ -8,11 +8,13 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 
 import '../../../models/artwork.dart';
+import '../../../models/saved_item.dart';
 import '../../../providers/artwork_provider.dart';
 import '../../../providers/attendance_provider.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../providers/task_provider.dart';
 import '../../../providers/wallet_provider.dart';
+import '../../../providers/saved_items_provider.dart';
 import '../../../config/config.dart';
 import '../../../services/backend_api_service.dart';
 import '../../../services/map_data_controller.dart';
@@ -79,8 +81,13 @@ class _DesktopArtworkDetailScreenState
     final l10n = AppLocalizations.of(context)!;
     final provider = context.read<ArtworkProvider>();
     final existing = provider.getArtworkById(widget.artworkId);
+    final savedItemsProvider = context.read<SavedItemsProvider>();
 
     if (existing != null) {
+      await savedItemsProvider.hydrateSavedStatus(
+        type: SavedItemType.artwork,
+        ids: [widget.artworkId],
+      );
       if (mounted) {
         setState(() {
           _artworkLoading = false;
@@ -99,6 +106,10 @@ class _DesktopArtworkDetailScreenState
 
     try {
       await provider.fetchArtworkIfNeeded(widget.artworkId);
+      await savedItemsProvider.hydrateSavedStatus(
+        type: SavedItemType.artwork,
+        ids: [widget.artworkId],
+      );
     } catch (_) {
       if (!mounted) return;
       setState(() {
@@ -696,6 +707,9 @@ class _DesktopArtworkDetailScreenState
       Artwork artwork, ArtworkProvider artworkProvider, bool isSignedIn) {
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
+    final isSaved = context.select<SavedItemsProvider, bool>(
+      (provider) => provider.isArtworkSaved(artwork.id),
+    );
     final canInteract = isSignedIn;
     final showArPrimaryAction =
         artwork.arEnabled && AppConfig.isFeatureEnabled('ar');
@@ -744,14 +758,12 @@ class _DesktopArtworkDetailScreenState
           tooltip: l10n.commonLikes,
         ),
         DetailSecondaryAction(
-          icon: artwork.isFavoriteByCurrentUser
-              ? Icons.bookmark
-              : Icons.bookmark_border,
-          label: l10n.commonSave,
+          icon: isSaved ? Icons.bookmark : Icons.bookmark_border,
+          label: isSaved ? l10n.commonSavedToast : l10n.commonSave,
           onTap: canInteract
               ? () => artworkProvider.toggleArtworkSaved(artwork.id)
               : requireSignInToast,
-          isActive: artwork.isFavoriteByCurrentUser,
+          isActive: isSaved,
           tooltip: l10n.commonSave,
         ),
         DetailSecondaryAction(
