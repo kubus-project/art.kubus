@@ -390,12 +390,7 @@ class SocketService {
           }
           try { _notificationController.add(mapped); _log('notification:new -> controller.added'); } catch (e) { _log('notification controller add error: $e'); }
         } else {
-          _log('chat:new-message -> could not map payload, sending raw wrapper to listeners');
-          final rawMap = {'raw': data};
-          for (final l in _messageListeners) {
-            try { l(rawMap); } catch (e) { _log('chat:new-message fallback listener error: $e'); }
-          }
-          try { _messageController.add(rawMap); _log('chat:new-message -> controller.added (raw)'); } catch (e) { _log('message controller add error: $e'); }
+          _log('notification:new -> payload could not be mapped; dropping (never route to message listeners)');
         }
       } catch (e) {
         _log('notification:new handler error: $e');

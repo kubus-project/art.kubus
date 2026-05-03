@@ -1170,6 +1170,42 @@ class ChatProvider extends ChangeNotifier {
         .trim();
   }
 
+  bool _isNonMessageEventPayload(Map<String, dynamic> data) {
+    // Detect read receipts, member updates, reactions, and other non-message events
+    // that may be sent on the message listener but must not be cached as messages.
+    final payload = _extractIncomingMessagePayload(data);
+    
+    // If payload has only metadata keys, not message content, reject.
+    if (payload.isEmpty) return true;
+    
+    // If payload is explicitly marked as a non-message event type, reject.
+    final eventType = payload['eventType']?.toString().toLowerCase() ?? '';
+    if (eventType.contains('read') || 
+        eventType.contains('receipt') || 
+        eventType.contains('member') || 
+        eventType.contains('reaction') ||
+        eventType.contains('subscribe')) {
+      return true;
+    }
+    
+    // If payload has no message/content whatsoever, reject.
+    final hasMessageContent = (payload['message']?.toString().trim().isNotEmpty == true) ||
+        (payload['content']?.toString().trim().isNotEmpty == true) ||
+        (payload['text']?.toString().trim().isNotEmpty == true);
+    if (!hasMessageContent) {
+      // Even if there's a message ID, reactions, or readers, without actual message text
+      // and when no embedded data/attachment, this is metadata-only.
+      final hasReactions = (payload['reactions'] as List?)?.isNotEmpty == true;
+      final hasReaders = (payload['readers'] as List?)?.isNotEmpty == true;
+      final hasData = payload['data'] != null;
+      if (!hasReactions && !hasReaders && !hasData) {
+        return true;
+      }
+    }
+    
+    return false;
+  }
+
   bool _matchesOptimisticMessage(
     ChatMessage current,
     ChatMessage incoming,
@@ -1197,6 +1233,14 @@ class ChatProvider extends ChangeNotifier {
 
   void _onMessageReceived(Map<String, dynamic> data) {
     try {
+      // Multi-layer validation: reject non-message events before attempting to parse as ChatMessage.
+      if (_isNonMessageEventPayload(data)) {
+        if (kDebugMode) {
+          debugPrint('ChatProvider._onMessageReceived: rejecting non-message event payload');
+        }
+        return;
+      }
+      
       final payload = _extractIncomingMessagePayload(data);
       final msg = ChatMessage.fromJson(payload);
       if (!msg.isRenderable) {

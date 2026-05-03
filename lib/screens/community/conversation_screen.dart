@@ -59,7 +59,6 @@ class _ConversationScreenState extends State<ConversationScreen> {
   late ChatProvider _chatProvider;
   late CacheProvider _cacheProvider;
   final SocketService _socketService = SocketService();
-  List<ChatMessage> _messages = [];
   bool _isUploading = false;
   final ScrollController _scrollController = ScrollController();
   // Use index-based keys to avoid duplicate GlobalKey instances when message ids
@@ -532,13 +531,13 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
     if (mounted) {
       setState(() {
-        _messages = list.where((message) => message.isRenderable).toList();
-        // Ensure keys align to current messages so index-based keys are stable
+        // ChatProvider is now the sole source of truth for messages;
+        // we just clear local message keys to reset animation state
         _messageKeys.clear();
       });
     }
     debugPrint(
-        'ConversationScreen._load: ${_messages.length} messages loaded for ${widget.conversation.id}');
+        'ConversationScreen._load: ${list.length} messages loaded for ${widget.conversation.id}');
     _persistCacheSnapshots();
 
     // Fetch any remaining missing avatars/display names in background (non-blocking fallback)
@@ -572,9 +571,10 @@ class _ConversationScreenState extends State<ConversationScreen> {
                 (w) => w.isNotEmpty && _normWallet(w) != _normWallet(myWallet))
             .toList();
 
-        // If backend returned no members, infer from messages
+        // If backend returned no members, infer from messages in provider
         if (wallets.isEmpty) {
-          for (final m in _messages) {
+          final providerMessages = _chatProvider.messages[widget.conversation.id] ?? const [];
+          for (final m in providerMessages) {
             try {
               final w = m.senderWallet;
               if (w.isNotEmpty && _normWallet(w) != _normWallet(myWallet)) {
@@ -1213,7 +1213,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_messages.isNotEmpty && _scrollController.hasClients) {
+    final providerMessages = _chatProvider.messages[widget.conversation.id] ?? const [];
+    if (providerMessages.isNotEmpty && _scrollController.hasClients) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!_scrollController.hasClients) return;
         try {
@@ -1653,15 +1654,14 @@ class _ConversationScreenState extends State<ConversationScreen> {
   Widget _buildMessagesList() {
     final profile = Provider.of<ProfileProvider>(context);
     final myWallet = profile.currentUser?.walletAddress ?? '';
+    // Read directly from provider as single source of truth; never fall back to local _messages
     final sourceMessages = (_chatProvider.messages[widget.conversation.id] ??
-        _messages)
+        const <ChatMessage>[])
       .where((message) => message.isRenderable)
       .toList();
-    final renderableMessages =
-      sourceMessages.where((message) => message.isRenderable).toList();
     // Ensure chronological order (oldest -> newest)
     // Chronological list oldest -> newest
-    final chrono = List<ChatMessage>.from(renderableMessages);
+    final chrono = List<ChatMessage>.from(sourceMessages);
     chrono.sort((a, b) => a.createdAt.compareTo(b.createdAt));
     // For display we want newest messages anchored at the bottom. Build a reversed
     // view list so index 0 corresponds to the newest visible message when the
@@ -1715,7 +1715,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
   Widget _buildMessageItem(ChatMessage message, bool isMe, bool showAvatar,
       {int? chronoIndex, int? chronoLength}) {
     final sourceMessages =
-        _chatProvider.messages[widget.conversation.id] ?? _messages;
+        _chatProvider.messages[widget.conversation.id] ?? const <ChatMessage>[];
     final bool isFirst = (chronoIndex != null && chronoLength != null)
         ? chronoIndex == 0
         : (sourceMessages.isNotEmpty ? message == sourceMessages.first : false);
@@ -2335,94 +2335,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
     );
   }
 
-  void _syncMessagesFromProvider({bool refreshAvatars = false}) {
-    try {
-      final providerMessages = _chatProvider.messages[widget.conversation.id]
-          ?.where((message) => message.isRenderable)
-          .toList(growable: false);
-      if (providerMessages == null) return;
-      // Compare a light-weight signature of messages (id + readersCount + readByCurrent)
-      // to detect changes even when the list instance reference didn't change.
-      String buildSig(List<ChatMessage> list) {
-        try {
-          return list
-              .map((m) =>
-                  '${m.id}:${m.readersCount}:${m.readByCurrent}:${m.reactions.map((r) => '${r.emoji}:${r.count}:${r.reactors.length}').join(',')}')
-              .join('|');
-        } catch (_) {
-          return '';
-        }
-      }
-
-      final provSig = buildSig(providerMessages);
-      final localSig = buildSig(_messages);
-      if (provSig == localSig) return;
-
-      final profile = Provider.of<ProfileProvider>(context, listen: false);
-      final myWallet = profile.currentUser?.walletAddress ?? '';
-
-      if (mounted) {
-        setState(() {
-          // Build maps to detect changes
-          final oldMessageIds = <String>{};
-          final oldMessageMap = <String, String>{};
-          for (final m in _messages) {
-            oldMessageIds.add(m.id);
-            oldMessageMap[m.id] =
-                '${m.readersCount}:${m.readByCurrent}:${m.reactions.length}';
-          }
-
-          final changedIds = <String>{};
-          final newIds = <String>{};
-          for (final m in providerMessages) {
-            if (!oldMessageIds.contains(m.id)) {
-              // Truly new message - should animate
-              newIds.add(m.id);
-            } else {
-              // Existing message - check if metadata changed
-              final newSig =
-                  '${m.readersCount}:${m.readByCurrent}:${m.reactions.length}';
-              final oldSig = oldMessageMap[m.id];
-              if (oldSig != newSig) {
-                changedIds.add(m.id);
-              }
-            }
-          }
-
-          // Clear keys for metadata changes (will rebuild without animation)
-          for (final id in changedIds) {
-            _messageKeys.remove(id);
-            // Keep in _animatedMessageIds so it doesn't re-animate
-          }
-
-          // Clear animation tracking for truly new messages (will animate once)
-          for (final id in newIds) {
-            _messageKeys.remove(id);
-            _animatedMessageIds.remove(id);
-          }
-
-          _messages = providerMessages;
-        });
-      }
-
-      if (refreshAvatars) {
-        Future(() async {
-          try {
-            await _fetchAvatarsForMessages(providerMessages, myWallet);
-          } catch (e) {
-            debugPrint(
-                'ConversationScreen._syncMessagesFromProvider: avatar refresh failed: $e');
-          }
-        });
-      }
-
-      WidgetsBinding.instance
-          .addPostFrameCallback((_) => _checkVisibleMessages());
-      _persistCacheSnapshots();
-    } catch (e) {
-      debugPrint('ConversationScreen._syncMessagesFromProvider error: $e');
-    }
-  }
+  
 
   void _checkVisibleMessages() {
     if (!mounted) return;
@@ -2434,7 +2347,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
         (kToolbarHeight + MediaQuery.of(context).padding.top);
 
     final sourceMessages =
-        _chatProvider.messages[widget.conversation.id] ?? _messages;
+        _chatProvider.messages[widget.conversation.id] ?? const <ChatMessage>[];
     for (var i = 0; i < sourceMessages.length; i++) {
       final message = sourceMessages[i];
       final key = _messageKeys[message.id];
@@ -2502,7 +2415,28 @@ class _ConversationScreenState extends State<ConversationScreen> {
   }
 
   void _onChatProviderUpdated() {
-    _syncMessagesFromProvider(refreshAvatars: true);
+    // Provider message list changed; trigger rebuild to use new data.
+    if (mounted) {
+      setState(() {
+        // No need to manually sync; rebuild will call _buildMessagesList()
+        // which reads from provider directly.
+      });
+    }
+    // Optionally fetch avatars for newly visible messages
+    final profile = Provider.of<ProfileProvider>(context, listen: false);
+    final myWallet = profile.currentUser?.walletAddress ?? '';
+    final messages = _chatProvider.messages[widget.conversation.id] ?? const [];
+    if (messages.isNotEmpty) {
+      Future(() async {
+        try {
+          await _fetchAvatarsForMessages(messages, myWallet);
+        } catch (e) {
+          debugPrint('ConversationScreen avatar fetch failed: $e');
+        }
+      });
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkVisibleMessages());
+    _persistCacheSnapshots();
   }
 
   void _onSocketConnected() {
