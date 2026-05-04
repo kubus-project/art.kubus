@@ -342,6 +342,9 @@ class PostAuthCoordinator {
       }
 
       // Try encrypted backup recovery if available
+      if (!context.mounted) {
+        return null;
+      }
       final recovered = await _attemptEncryptedBackupRecovery(
         context: context,
         walletAddress: targetWallet,

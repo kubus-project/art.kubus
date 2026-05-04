@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/services/auth_redirect_controller.dart';
 import 'package:art_kubus/services/auth_success_handoff_service.dart';
@@ -36,7 +38,7 @@ void main() {
     );
 
     final service = AuthSuccessHandoffService();
-    await service.handle(
+    unawaited(service.handle(
       navigator: navigatorKey.currentState!,
       isMounted: () => true,
       screenWidth: 1440,
@@ -45,9 +47,10 @@ void main() {
       embedded: false,
       modalReauth: false,
       requiresWalletBackup: false,
-    );
+    ));
 
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 10));
 
     expect(find.byType(PostAuthLoadingScreen), findsOneWidget);
   });

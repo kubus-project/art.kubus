@@ -1207,6 +1207,20 @@ class ChatProvider extends ChangeNotifier {
   }
 
   bool _isNonMessageEventPayload(Map<String, dynamic> data) {
+    final topLevelEvent = data['event']?.toString().toLowerCase() ?? '';
+    final topLevelEventType = data['eventType']?.toString().toLowerCase() ?? '';
+    final topLevelType = data['type']?.toString().toLowerCase() ?? '';
+    final topLevelSignals = <String>[topLevelEvent, topLevelEventType, topLevelType].join('|');
+    if (topLevelSignals.contains('notification') ||
+        topLevelSignals.contains('read') ||
+        topLevelSignals.contains('receipt') ||
+        topLevelSignals.contains('member') ||
+        topLevelSignals.contains('reaction') ||
+        topLevelSignals.contains('subscribe') ||
+        topLevelSignals.contains('update')) {
+      return true;
+    }
+
     final payload = _normalizeIncomingMessagePayload(data);
     if (payload == null) return true;
 

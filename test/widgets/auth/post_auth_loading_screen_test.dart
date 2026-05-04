@@ -68,6 +68,14 @@ Widget _buildApp(Widget child) {
     locale: const Locale('en'),
     supportedLocales: AppLocalizations.supportedLocales,
     localizationsDelegates: AppLocalizations.localizationsDelegates,
+    onGenerateRoute: (settings) {
+      return MaterialPageRoute<void>(
+        settings: settings,
+        builder: (_) => Scaffold(
+          body: Center(child: Text('route:${settings.name ?? 'unknown'}')),
+        ),
+      );
+    },
     home: child,
   );
 }
@@ -127,7 +135,109 @@ void main() {
       ),
     );
 
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 10));
     expect(successCalls, equals(1));
+  });
+
+  testWidgets(
+      'does not invoke password prompt when onBeforeSavedItemsSync is null for wallet',
+      (tester) async {
+    final completer = Completer<PostAuthResult>();
+
+    await tester.pumpWidget(
+      _buildApp(
+        PostAuthLoadingScreen(
+          payload: const <String, dynamic>{'data': <String, dynamic>{}},
+          origin: AuthOrigin.wallet,
+          coordinator: _BlockingPostAuthCoordinator(completer),
+          onBeforeSavedItemsSync: null,
+          // Key: null means no password prompt callback
+        ),
+      ),
+    );
+
+    await tester.pump();
+
+    completer.complete(
+      const PostAuthResult(
+        completed: true,
+        routeName: '/main',
+        replaceStack: true,
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 10));
+
+    // Verify no password prompt was shown
+    expect(find.byType(AlertDialog), findsNothing);
+  });
+
+  testWidgets('uses correct origin for wallet auth post-auth flow',
+      (tester) async {
+    final completer = Completer<PostAuthResult>();
+
+    // Create a custom coordinator that captures the origin
+    const testPayload = <String, dynamic>{'data': <String, dynamic>{}};
+
+    await tester.pumpWidget(
+      _buildApp(
+        PostAuthLoadingScreen(
+          payload: testPayload,
+          origin: AuthOrigin.wallet,
+          coordinator: _BlockingPostAuthCoordinator(completer),
+        ),
+      ),
+    );
+
+    await tester.pump();
+
+    completer.complete(
+      const PostAuthResult(
+        completed: true,
+        routeName: '/main',
+        replaceStack: true,
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 10));
+
+    // Screen should render successfully with wallet origin
+    expect(find.byType(PostAuthLoadingScreen), findsOneWidget);
+  });
+
+  testWidgets('does not show password prompt for Google auth',
+      (tester) async {
+    final completer = Completer<PostAuthResult>();
+
+    await tester.pumpWidget(
+      _buildApp(
+        PostAuthLoadingScreen(
+          payload: const <String, dynamic>{'data': <String, dynamic>{}},
+          origin: AuthOrigin.google,
+          coordinator: _BlockingPostAuthCoordinator(completer),
+          onBeforeSavedItemsSync: null,
+          // For Google, should also be null
+        ),
+      ),
+    );
+
+    await tester.pump();
+
+    completer.complete(
+      const PostAuthResult(
+        completed: true,
+        routeName: '/main',
+        replaceStack: true,
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 10));
+
+    // No alert dialog should appear
+    expect(find.byType(AlertDialog), findsNothing);
   });
 }

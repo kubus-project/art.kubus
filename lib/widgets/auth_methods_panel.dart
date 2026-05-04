@@ -14,6 +14,7 @@ import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'package:art_kubus/utils/auth_google_wallet.dart';
 import 'package:art_kubus/utils/wallet_utils.dart';
+import 'package:art_kubus/utils/auth_wallet_result_normalizer.dart';
 import 'package:art_kubus/widgets/auth_entry_shell.dart';
 import 'package:art_kubus/widgets/auth/post_auth_loading_screen.dart';
 import 'package:art_kubus/widgets/auth_methods_panel_helpers.dart';
@@ -156,9 +157,10 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
         embedded: widget.embedded,
         modalReauth: false,
         requiresWalletBackup: false,
-        onBeforeSavedItemsSync: origin != AuthOrigin.google
-            ? () => maybeShowGooglePasswordUpgradePrompt(context, payload)
-            : null,
+        onBeforeSavedItemsSync: (origin == AuthOrigin.google ||
+                origin == AuthOrigin.wallet)
+            ? null
+            : () => maybeShowGooglePasswordUpgradePrompt(context, payload),
         onAuthSuccess: widget.onAuthSuccess == null
             ? null
             : (_) async {
@@ -168,6 +170,14 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
     }
     // For embedded flows, local build() will show PostAuthLoadingScreen
     // because _postAuthActive is true
+  }
+
+  @visibleForTesting
+  Future<void> debugTriggerAuthSuccess(
+    Map<String, dynamic> payload, {
+    AuthOrigin origin = AuthOrigin.emailPassword,
+  }) {
+    return _handleAuthSuccess(payload, origin: origin);
   }
 
   Future<void> _registerWithEmail() async {
@@ -546,7 +556,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
     }
 
     final api = BackendApiService();
-    final hadAuth = (api.getAuthToken() ?? '').trim().isNotEmpty;
+    final hadAuthBeforeOpen = (api.getAuthToken() ?? '').trim().isNotEmpty;
     _walletFlowOpening = true;
     try {
       FocusManager.instance.primaryFocus?.unfocus();
@@ -565,46 +575,66 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
       final routeResult = await completer.future;
       if (!mounted) return;
 
-      if (routeResult is Map<String, dynamic>) {
-        await _handleAuthSuccess(routeResult, origin: AuthOrigin.wallet);
+      if (kDebugMode) {
+        AppConfig.debugPrint(
+          'AuthMethodsPanel.wallet: flow completed with result type=${routeResult.runtimeType}',
+        );
+      }
+
+      // Normalize wallet auth result using comprehensive helper
+      final apiForNormalize = BackendApiService();
+      final normalizedPayload = await normalizeWalletAuthResult(
+        routeResult: routeResult,
+        api: apiForNormalize,
+      );
+
+      if (kDebugMode) {
+        AppConfig.debugPrint(
+          'AuthMethodsPanel.wallet: normalized payload=${normalizedPayload != null ? 'present' : 'null'}, auth_token=${(apiForNormalize.getAuthToken() ?? '').trim().isNotEmpty}',
+        );
+      }
+
+      if (!mounted) return;
+
+      if (normalizedPayload != null) {
+        // Success: we have a valid auth payload
+        await _handleAuthSuccess(normalizedPayload, origin: AuthOrigin.wallet);
+        unawaited(TelemetryService().trackSignUpSuccess(method: 'wallet'));
         return;
       }
 
-      final hasAuthNow = (api.getAuthToken() ?? '').trim().isNotEmpty;
-      if (!hadAuth && hasAuthNow) {
-        final hydratedPayload = await _resolveAuthPayloadFromCurrentSession();
-        if (!mounted) return;
-        if (hydratedPayload != null) {
-          await _handleAuthSuccess(hydratedPayload, origin: AuthOrigin.wallet);
+      // No normalized payload and no auth token: treat as cancel
+      if ((apiForNormalize.getAuthToken() ?? '').trim().isEmpty &&
+          hadAuthBeforeOpen == false) {
+        if (kDebugMode) {
+          AppConfig.debugPrint(
+            'AuthMethodsPanel.wallet: no payload and no auth token, treating as cancel',
+          );
         }
+        unawaited(TelemetryService().trackSignUpFailure(
+          method: 'wallet',
+          errorClass: 'wallet_cancelled',
+        ));
+        return;
       }
+
+      // Shouldn't reach here: auth token exists but no payload
+      if (kDebugMode) {
+        AppConfig.debugPrint(
+          'AuthMethodsPanel.wallet: WARNING - auth token exists but no normalized payload',
+        );
+      }
+      unawaited(TelemetryService().trackSignUpFailure(
+        method: 'wallet',
+        errorClass: 'wallet_payload_empty',
+      ));
     } finally {
-      _walletFlowOpening = false;
+      // Do not restore wallet UI state if post-auth is active
+      if (!_postAuthActive && mounted && _walletFlowOpening) {
+        _walletFlowOpening = false;
+      }
       _walletFlowCompleter = null;
     }
-  }
-
-  Future<Map<String, dynamic>?> _resolveAuthPayloadFromCurrentSession() async {
-    final api = BackendApiService();
-
-    final profile = await api.getMyProfile();
-    final profileData = profile['data'];
-    if (profile['success'] == true && profileData is Map<String, dynamic>) {
-      return <String, dynamic>{
-        'data': <String, dynamic>{'user': profileData},
-      };
-    }
-
-    final walletAddress = (api.getCurrentAuthWalletAddress() ?? '').trim();
-    if (walletAddress.isEmpty) {
-      return null;
-    }
-
-    return <String, dynamic>{
-      'data': <String, dynamic>{
-        'user': <String, dynamic>{'walletAddress': walletAddress},
-      },
-    };
   }
 
   String? _signerBackedWalletForGoogleAuth() {
