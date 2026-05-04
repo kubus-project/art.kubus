@@ -18,6 +18,7 @@ import '../../../utils/app_animations.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/media_url_resolver.dart';
 import '../../../utils/profile_edit_form_utils.dart';
+import '../../../utils/profile_media_ref_utils.dart';
 import '../../../widgets/common/kubus_screen_header.dart';
 import '../../../widgets/avatar_widget.dart';
 import '../components/desktop_widgets.dart';
@@ -57,8 +58,11 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
 
   String? _avatarUrl;
   String? _coverImageUrl;
-  bool _isLoading = false;
-  bool _isSaving = false;
+  bool _isSavingProfile = false;
+  bool _isUploadingAvatar = false;
+  bool _isUploadingCover = false;
+  bool _avatarChanged = false;
+  bool _coverChanged = false;
   Uint8List? _localAvatarBytes;
   Uint8List? _localCoverBytes;
   final ImagePicker _picker = ImagePicker();
@@ -279,7 +283,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
             ),
             tooltip: l10n.commonBack,
           ),
-          actions: _isLoading || _isSaving
+          actions: _isSavingProfile
               ? <Widget>[
                   const SizedBox(
                     width: KubusHeaderMetrics.actionIcon,
@@ -353,10 +357,12 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
               KubusSpacing.xl,
             ),
             child: GestureDetector(
-              onTap: _pickCoverImage,
+              onTap: _isUploadingCover ? null : _pickCoverImage,
               child: MouseRegion(
-                cursor: SystemMouseCursors.click,
-                child: Container(
+                cursor: _isUploadingCover ? SystemMouseCursors.basic : SystemMouseCursors.click,
+                child: Stack(
+                  children: [
+                    Container(
                   width: double.infinity,
                   height: 200,
                   decoration: BoxDecoration(
@@ -441,6 +447,24 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
                           ),
                         ),
                 ),
+                    if (_isUploadingCover)
+                      Positioned.fill(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.black26,
+                            borderRadius: BorderRadius.circular(KubusRadius.lg),
+                          ),
+                          child: const Center(
+                            child: SizedBox(
+                              width: 50,
+                              height: 50,
+                              child: CircularProgressIndicator(strokeWidth: 3),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -469,9 +493,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
           const SizedBox(height: KubusSpacing.lg),
           Center(
             child: GestureDetector(
-              onTap: _pickAvatar,
+              onTap: _isUploadingAvatar ? null : _pickAvatar,
               child: MouseRegion(
-                cursor: SystemMouseCursors.click,
+                cursor: _isUploadingAvatar ? SystemMouseCursors.basic : SystemMouseCursors.click,
                 child: Stack(
                   children: [
                     Container(
@@ -522,6 +546,22 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
                         ),
                       ),
                     ),
+                    if (_isUploadingAvatar)
+                      Positioned.fill(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(avatarFrameRadius),
+                          child: Container(
+                            color: Colors.black26,
+                            child: const Center(
+                              child: SizedBox(
+                                width: 45,
+                                height: 45,
+                                child: CircularProgressIndicator(strokeWidth: 3),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -916,7 +956,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
         if (!mounted) return;
         setState(() {
           _localAvatarBytes = bytes;
-          _isLoading = true;
+          _isUploadingAvatar = true;
         });
 
         try {
@@ -925,7 +965,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
           final wallet = profileProvider.currentUser?.walletAddress ?? '';
 
           if (wallet.isEmpty) {
-            setState(() => _isLoading = false);
+            setState(() => _isUploadingAvatar = false);
             if (!mounted) return;
             ScaffoldMessenger.of(context).showKubusSnackBar(
               SnackBar(
@@ -936,30 +976,37 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
             return;
           }
 
-          await profileProvider.saveProfile(walletAddress: wallet);
-
           final fileName =
               (image.name.isNotEmpty) ? image.name : path.basename(image.path);
-          final uploadedUrl = await profileProvider.uploadAvatarBytes(
+          final uploadedRef = await profileProvider.uploadAvatarBytes(
             fileBytes: bytes,
             fileName: fileName,
             walletAddress: wallet,
             mimeType: image.mimeType,
           );
 
+          final persistableAvatar = _toPersistableAvatarRef(uploadedRef);
+          if (persistableAvatar == null || persistableAvatar.isEmpty) {
+            throw Exception('Failed to get uploaded avatar ref');
+          }
+
+          _avatarChanged = true;
+
           final saved = await profileProvider.saveProfile(
             walletAddress: wallet,
-            avatar: uploadedUrl,
+            avatar: persistableAvatar,
           );
 
           setState(() {
-            _avatarUrl = uploadedUrl;
+            _avatarUrl = persistableAvatar;
             _localAvatarBytes = null;
-            _isLoading = false;
+            _avatarChanged = false;
+            _isUploadingAvatar = false;
           });
 
           if (!mounted) return;
-          final uri = Uri.tryParse(uploadedUrl);
+          final displayAvatarUrl = _normalizeMediaUrl(persistableAvatar) ?? persistableAvatar;
+          final uri = Uri.tryParse(displayAvatarUrl);
           ScaffoldMessenger.of(context).showKubusSnackBar(
             SnackBar(
               duration: const Duration(seconds: 6),
@@ -967,14 +1014,14 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
                 children: [
                   Expanded(
                     child: Text(
-                      uploadedUrl,
+                      displayAvatarUrl,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   IconButton(
                     icon: const Icon(Icons.copy, size: 20, color: Colors.white),
                     onPressed: () async {
-                      await Clipboard.setData(ClipboardData(text: uploadedUrl));
+                      await Clipboard.setData(ClipboardData(text: displayAvatarUrl));
                       if (!mounted) return;
                       ScaffoldMessenger.of(context).showKubusSnackBar(
                         SnackBar(
@@ -1017,7 +1064,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
             ),
           );
         } catch (e) {
-          setState(() => _isLoading = false);
+          setState(() {
+            _isUploadingAvatar = false;
+            _avatarChanged = false;
+          });
           if (!mounted) return;
           final profileProvider =
               Provider.of<ProfileProvider>(context, listen: false);
@@ -1094,7 +1144,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
         if (!mounted) return;
         setState(() {
           _localCoverBytes = bytes;
-          _isLoading = true;
+          _isUploadingCover = true;
         });
 
         try {
@@ -1103,7 +1153,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
           final wallet = profileProvider.currentUser?.walletAddress ?? '';
 
           if (wallet.isEmpty) {
-            if (mounted) setState(() => _isLoading = false);
+            if (mounted) setState(() => _isUploadingCover = false);
             if (!mounted) return;
             ScaffoldMessenger.of(context).showKubusSnackBar(
               SnackBar(
@@ -1124,10 +1174,6 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
             metadata: {'uploadFolder': 'profiles/cover'},
             walletAddress: wallet,
           );
-
-          // Prefer a backend-stable ref for persistence (covers must be saved as
-          // `/uploads/...`/`/profiles/...` paths; absolute URLs get rejected and
-          // can clear the cover on save).
           final uploadedRef = (result['uploadedUrl']?.toString() ??
                   result['data']?['relativeUrl']?.toString() ??
                   result['data']?['relative_url']?.toString() ??
@@ -1140,18 +1186,24 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
             throw Exception('Failed to get uploaded cover ref');
           }
 
-          final displayUrl = _normalizeMediaUrl(uploadedRef) ?? uploadedRef;
+          final persistableCover = _toPersistableCoverRef(uploadedRef);
+          if (persistableCover == null || persistableCover.isEmpty) {
+            throw Exception('Failed to normalize uploaded cover ref');
+          }
+
+          _coverChanged = true;
 
           final saved = await profileProvider.saveProfile(
             walletAddress: wallet,
-            coverImage: uploadedRef,
+            coverImage: persistableCover,
           );
 
           if (mounted) {
             setState(() {
-              _coverImageUrl = displayUrl;
+              _coverImageUrl = persistableCover;
               _localCoverBytes = null;
-              _isLoading = false;
+              _coverChanged = false;
+              _isUploadingCover = false;
             });
           }
 
@@ -1170,7 +1222,12 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
             ),
           );
         } catch (e) {
-          if (mounted) setState(() => _isLoading = false);
+          if (mounted) {
+            setState(() {
+              _isUploadingCover = false;
+              _coverChanged = false;
+            });
+          }
           if (!mounted) return;
           ScaffoldMessenger.of(context).showKubusSnackBar(
             SnackBar(
@@ -1202,7 +1259,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
     if (!(formState?.validate() ?? false)) return;
 
     final l10n = AppLocalizations.of(context)!;
-    setState(() => _isSaving = true);
+    setState(() => _isSavingProfile = true);
 
     try {
       final profileProvider =
@@ -1226,8 +1283,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
         username: _usernameController.text.trim(),
         displayName: _displayNameController.text.trim(),
         bio: _bioController.text.trim(),
-        avatar: _avatarUrl,
-        coverImage: _coverImageUrl,
+        avatar: _avatarChanged ? _toPersistableAvatarRef(_avatarUrl) : null,
+        coverImage: _coverChanged ? _toPersistableCoverRef(_coverImageUrl) : null,
         social: {
           'twitter': _twitterController.text.trim(),
           'instagram': _instagramController.text.trim(),
@@ -1291,8 +1348,16 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
       );
     } finally {
       if (mounted) {
-        setState(() => _isSaving = false);
+        setState(() => _isSavingProfile = false);
       }
     }
   }
+
+  // Local helper wrappers to keep the older private helper API used in this
+  // screen. These delegate to the shared ProfileMediaRefUtils implementation.
+  String? _toPersistableAvatarRef(String? value) =>
+      ProfileMediaRefUtils.toPersistableAvatarRef(value);
+
+  String? _toPersistableCoverRef(String? value) =>
+      ProfileMediaRefUtils.toPersistableCoverRef(value);
 }

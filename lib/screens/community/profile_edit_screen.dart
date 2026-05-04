@@ -16,6 +16,7 @@ import '../../models/dao.dart';
 import '../../services/event_bus.dart';
 import '../../providers/themeprovider.dart';
 import '../../utils/profile_edit_form_utils.dart';
+import '../../utils/profile_media_ref_utils.dart';
 import '../../widgets/inline_loading.dart';
 import '../../utils/media_url_resolver.dart';
 import 'package:art_kubus/widgets/app_mode_unavailable_state.dart';
@@ -48,7 +49,11 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
 
   String? _avatarUrl;
   String? _coverImageUrl;
-  bool _isLoading = false;
+  bool _isUploadingAvatar = false;
+  bool _avatarChanged = false;
+  bool _isUploadingCover = false;
+  bool _coverChanged = false;
+  bool _isSavingProfile = false;
   Uint8List? _localAvatarBytes;
   Uint8List? _localCoverBytes;
   final ImagePicker _picker = ImagePicker();
@@ -173,7 +178,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         if (!mounted) return;
         setState(() {
           _localAvatarBytes = bytes;
-          _isLoading = true;
+          _isUploadingAvatar = true;
         });
 
         try {
@@ -182,7 +187,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           final wallet = profileProvider.currentUser?.walletAddress ?? '';
 
           if (wallet.isEmpty) {
-            setState(() => _isLoading = false);
+            setState(() => _isUploadingAvatar = false);
             if (!mounted) return;
             ScaffoldMessenger.of(context).showKubusSnackBar(
               SnackBar(
@@ -193,35 +198,39 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             return;
           }
 
-          // Ensure profile exists and obtain JWT for authenticated upload
-          await profileProvider.saveProfile(walletAddress: wallet);
-
           // Upload avatar to backend using bytes (handles content:// URIs on Android)
           final fileName =
               (image.name.isNotEmpty) ? image.name : path.basename(image.path);
-          final uploadedUrl = await profileProvider.uploadAvatarBytes(
+          final uploadedRef = await profileProvider.uploadAvatarBytes(
             fileBytes: bytes,
             fileName: fileName,
             walletAddress: wallet,
             mimeType: image.mimeType,
           );
 
-          // Immediately save the avatar URL to the profile on the backend so it persists
+          final persistableAvatar = _toPersistableAvatarRef(uploadedRef);
+          if (persistableAvatar == null || persistableAvatar.isEmpty) {
+            throw Exception('Failed to get uploaded avatar ref');
+          }
+
+          _avatarChanged = true;
+
           final saved = await profileProvider.saveProfile(
             walletAddress: wallet,
-            avatar: uploadedUrl,
+            avatar: persistableAvatar,
           );
 
           setState(() {
-            _avatarUrl = uploadedUrl;
-            // Keep local preview cleared since backend URL is now available
+            _avatarUrl = persistableAvatar;
             _localAvatarBytes = null;
-            _isLoading = false;
+            _avatarChanged = false;
+            _isUploadingAvatar = false;
           });
 
           // Show resolved URL with actions: copy and open in browser
           if (!mounted) return;
-          final uri = Uri.tryParse(uploadedUrl);
+          final displayAvatarUrl = _normalizeMediaUrl(persistableAvatar) ?? persistableAvatar;
+          final uri = Uri.tryParse(displayAvatarUrl);
           ScaffoldMessenger.of(context).showKubusSnackBar(
             SnackBar(
               duration: const Duration(seconds: 6),
@@ -229,14 +238,14 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                 children: [
                   Expanded(
                     child: Text(
-                      uploadedUrl,
+                      displayAvatarUrl,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   IconButton(
                     icon: const Icon(Icons.copy, size: 20, color: Colors.white),
                     onPressed: () async {
-                      await Clipboard.setData(ClipboardData(text: uploadedUrl));
+                      await Clipboard.setData(ClipboardData(text: displayAvatarUrl));
                       if (!mounted) return;
                       ScaffoldMessenger.of(context).showKubusSnackBar(
                         SnackBar(
@@ -254,8 +263,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                       label: l10n.commonOpen,
                       onPressed: () async {
                         try {
-                          await launchUrl(uri,
-                              mode: LaunchMode.externalApplication);
+                          await launchUrl(uri, mode: LaunchMode.externalApplication);
                         } catch (_) {}
                       },
                     )
@@ -278,7 +286,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             ),
           );
         } catch (e) {
-          setState(() => _isLoading = false);
+          setState(() {
+            _isUploadingAvatar = false;
+            _avatarChanged = false;
+          });
           if (!mounted) return;
           final profileProvider =
               Provider.of<ProfileProvider>(context, listen: false);
@@ -353,7 +364,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         if (!mounted) return;
         setState(() {
           _localCoverBytes = bytes;
-          _isLoading = true;
+          _isUploadingCover = true;
         });
 
         try {
@@ -362,7 +373,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           final wallet = profileProvider.currentUser?.walletAddress ?? '';
 
           if (wallet.isEmpty) {
-            if (mounted) setState(() => _isLoading = false);
+            if (mounted) setState(() => _isUploadingCover = false);
             if (!mounted) return;
             ScaffoldMessenger.of(context).showKubusSnackBar(
               SnackBar(
@@ -400,19 +411,25 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             throw Exception('Failed to get uploaded cover ref');
           }
 
-          final displayUrl = _normalizeMediaUrl(uploadedRef) ?? uploadedRef;
+          final persistableCover = _toPersistableCoverRef(uploadedRef);
+          if (persistableCover == null || persistableCover.isEmpty) {
+            throw Exception('Failed to normalize uploaded cover ref');
+          }
+
+          _coverChanged = true;
 
           // Save cover ref to profile (persist raw, not resolved)
           final saved = await profileProvider.saveProfile(
             walletAddress: wallet,
-            coverImage: uploadedRef,
+            coverImage: persistableCover,
           );
 
           if (mounted) {
             setState(() {
-              _coverImageUrl = displayUrl;
+              _coverImageUrl = persistableCover;
               _localCoverBytes = null;
-              _isLoading = false;
+              _coverChanged = false;
+              _isUploadingCover = false;
             });
           }
 
@@ -431,7 +448,12 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             ),
           );
         } catch (e) {
-          if (mounted) setState(() => _isLoading = false);
+          if (mounted) {
+            setState(() {
+              _isUploadingCover = false;
+              _coverChanged = false;
+            });
+          }
           if (!mounted) return;
           ScaffoldMessenger.of(context).showKubusSnackBar(
             SnackBar(
@@ -457,7 +479,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     if (!(formState?.validate() ?? false)) return;
 
     final l10n = AppLocalizations.of(context)!;
-    setState(() => _isLoading = true);
+    setState(() => _isSavingProfile = true);
 
     try {
       final profileProvider =
@@ -482,8 +504,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         username: _usernameController.text.trim(),
         displayName: _displayNameController.text.trim(),
         bio: _bioController.text.trim(),
-        avatar: _avatarUrl,
-        coverImage: _coverImageUrl,
+        avatar: _avatarChanged ? _toPersistableAvatarRef(_avatarUrl) : null,
+        coverImage: _coverChanged ? _toPersistableCoverRef(_coverImageUrl) : null,
         social: {
           'twitter': _twitterController.text.trim(),
           'instagram': _instagramController.text.trim(),
@@ -553,7 +575,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       );
     } finally {
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() => _isSavingProfile = false);
       }
     }
   }
@@ -664,7 +686,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           ),
         ),
         actions: [
-          if (_isLoading)
+          if (_isSavingProfile)
             Center(
               child: Padding(
                 padding: EdgeInsets.all(16.0),
@@ -717,100 +739,125 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                                 l10n.commonCoverImage, Icons.panorama),
                             const SizedBox(height: 12),
                             GestureDetector(
-                              onTap: _pickCoverImage,
-                              child: Container(
-                                width: double.infinity,
-                                height: 150,
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .primaryContainer,
-                                  borderRadius:
-                                      BorderRadius.circular(KubusRadius.lg),
-                                  border: Border.all(
-                                    color: themeProvider.accentColor
-                                        .withValues(alpha: 0.3),
-                                    width: 2,
-                                    style: BorderStyle.solid,
-                                  ),
-                                  image: _localCoverBytes != null
-                                      ? DecorationImage(
-                                          image: MemoryImage(_localCoverBytes!),
-                                          fit: BoxFit.cover,
-                                        )
-                                      : _coverImageUrl != null &&
-                                              _coverImageUrl!.isNotEmpty
+                              onTap: _isUploadingCover ? null : _pickCoverImage,
+                              child: Stack(
+                                children: [
+                                  Container(
+                                    width: double.infinity,
+                                    height: 150,
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .primaryContainer,
+                                      borderRadius:
+                                          BorderRadius.circular(KubusRadius.lg),
+                                      border: Border.all(
+                                        color: themeProvider.accentColor
+                                            .withValues(alpha: 0.3),
+                                        width: 2,
+                                        style: BorderStyle.solid,
+                                      ),
+                                      image: _localCoverBytes != null
                                           ? DecorationImage(
-                                              image:
-                                                  NetworkImage(_coverImageUrl!),
+                                              image: MemoryImage(_localCoverBytes!),
                                               fit: BoxFit.cover,
-                                              onError: (error, stackTrace) {
-                                                // Swallow image load errors (e.g., 404) so Flutter web
-                                                // doesn't surface them as unhandled zone errors.
-                                              },
                                             )
-                                          : null,
-                                ),
-                                child: (_localCoverBytes == null &&
-                                        (_coverImageUrl == null ||
-                                            _coverImageUrl!.isEmpty))
-                                    ? Column(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          Icon(
-                                            Icons.add_photo_alternate_outlined,
-                                            size: 40,
-                                            color: themeProvider.accentColor
-                                                .withValues(alpha: 0.6),
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            l10n.profileEditCoverImageTapToAdd,
-                                            style: KubusTypography.inter(
-                                              fontSize: 14,
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .onSurface
-                                                  .withValues(alpha: 0.6),
-                                            ),
-                                          ),
-                                        ],
-                                      )
-                                    : Stack(
-                                        children: [
-                                          Positioned(
-                                            bottom: 12,
-                                            right: 12,
-                                            child: Container(
-                                              padding: const EdgeInsets.all(8),
-                                              decoration: BoxDecoration(
-                                                color: Colors.black54,
-                                                borderRadius:
-                                                    BorderRadius.circular(
-                                                        KubusRadius.sm),
+                                          : _coverImageUrl != null &&
+                                                  _coverImageUrl!.isNotEmpty
+                                              ? DecorationImage(
+                                                  image:
+                                                      NetworkImage(_coverImageUrl!),
+                                                  fit: BoxFit.cover,
+                                                  onError: (error, stackTrace) {
+                                                    // Swallow image load errors (e.g., 404) so Flutter web
+                                                    // doesn't surface them as unhandled zone errors.
+                                                  },
+                                                )
+                                              : null,
+                                    ),
+                                    child: (_localCoverBytes == null &&
+                                            (_coverImageUrl == null ||
+                                                _coverImageUrl!.isEmpty))
+                                        ? Column(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              Icon(
+                                                Icons.add_photo_alternate_outlined,
+                                                size: 40,
+                                                color: themeProvider.accentColor
+                                                    .withValues(alpha: 0.6),
                                               ),
-                                              child: Row(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  const Icon(Icons.edit,
-                                                      color: Colors.white,
-                                                      size: 16),
-                                                  const SizedBox(width: 4),
-                                                  Text(
-                                                    l10n.commonChange,
-                                                    style:
-                                                        KubusTypography.inter(
-                                                      fontSize: 12,
-                                                      color: Colors.white,
-                                                    ),
+                                              const SizedBox(height: 8),
+                                              Text(
+                                                l10n.profileEditCoverImageTapToAdd,
+                                                style: KubusTypography.inter(
+                                                  fontSize: 14,
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .onSurface
+                                                      .withValues(alpha: 0.6),
+                                                ),
+                                              ),
+                                            ],
+                                          )
+                                        : Stack(
+                                            children: [
+                                              Positioned(
+                                                bottom: 12,
+                                                right: 12,
+                                                child: Container(
+                                                  padding: const EdgeInsets.all(8),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.black54,
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            KubusRadius.sm),
                                                   ),
-                                                ],
+                                                  child: Row(
+                                                    mainAxisSize: MainAxisSize.min,
+                                                    children: [
+                                                      const Icon(Icons.edit,
+                                                          color: Colors.white,
+                                                          size: 16),
+                                                      const SizedBox(width: 4),
+                                                      Text(
+                                                        l10n.commonChange,
+                                                        style:
+                                                            KubusTypography.inter(
+                                                          fontSize: 12,
+                                                          color: Colors.white,
+                                                        ),
+                                                      ),
+                                                    ],
                                               ),
                                             ),
                                           ),
                                         ],
                                       ),
+                                  ),
+                                  if (_isUploadingCover)
+                                    Positioned.fill(
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: Colors.black26,
+                                          borderRadius:
+                                              BorderRadius.circular(KubusRadius.lg),
+                                        ),
+                                        child: Center(
+                                          child: SizedBox(
+                                            width: 40,
+                                            height: 40,
+                                            child: InlineLoading(
+                                              expand: true,
+                                              shape: BoxShape.circle,
+                                              tileSize: 4.0,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
                               ),
                             ),
                             const SizedBox(height: 32),
@@ -825,7 +872,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                               child: Column(
                                 children: [
                                   GestureDetector(
-                                    onTap: _pickAvatar,
+                                    onTap: _isUploadingAvatar ? null : _pickAvatar,
                                     child: Stack(
                                       children: [
                                         Container(
@@ -878,6 +925,28 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                                             ),
                                           ),
                                         ),
+                                        if (_isUploadingAvatar)
+                                          Positioned.fill(
+                                            child: ClipRRect(
+                                              borderRadius: BorderRadius.circular(
+                                                avatarFrameRadius,
+                                              ),
+                                              child: Container(
+                                                color: Colors.black26,
+                                                child: Center(
+                                                  child: SizedBox(
+                                                    width: 36,
+                                                    height: 36,
+                                                    child: InlineLoading(
+                                                      expand: true,
+                                                      shape: BoxShape.circle,
+                                                      tileSize: 3.0,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
                                       ],
                                     ),
                                   ),
@@ -1498,4 +1567,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   String? _normalizeMediaUrl(String? url) {
     return MediaUrlResolver.resolve(url);
   }
+
+  String? _toPersistableAvatarRef(String? value) =>
+      ProfileMediaRefUtils.toPersistableAvatarRef(value);
+
+  String? _toPersistableCoverRef(String? value) =>
+      ProfileMediaRefUtils.toPersistableCoverRef(value);
 }

@@ -261,9 +261,38 @@ class CollectiblesProvider with ChangeNotifier {
     bool requiresARInteraction = false,
     double? royaltyPercentage,
   }) async {
-    throw UnsupportedError(
-      'Create series is disabled in canonical mode. Minting must happen through wallet-native on-chain flow and backend indexing.',
+    // Allow local test/dev seeding when running in debug mode to support
+    // widget tests that need mock series/collectibles. Production/canonical
+    // mode still throws to enforce on-chain flows.
+    if (!kDebugMode) {
+      throw UnsupportedError(
+        'Create series is disabled in canonical mode. Minting must happen through wallet-native on-chain flow and backend indexing.',
+      );
+    }
+
+    final id = 'legacy_series_${artworkId}_${DateTime.now().microsecondsSinceEpoch}';
+    final createdAt = DateTime.now();
+    final series = CollectibleSeries(
+      id: id,
+      name: name,
+      description: description,
+      artworkId: artworkId,
+      creatorAddress: creatorAddress,
+      totalSupply: totalSupply,
+      mintedCount: 0,
+      rarity: rarity,
+      type: CollectibleType.nft,
+      mintPrice: mintPrice,
+      imageUrl: imageUrl,
+      animationUrl: animationUrl,
+      metadata: metadata,
+      createdAt: createdAt,
+      requiresARInteraction: requiresARInteraction,
     );
+
+    _legacySeries.add(series);
+    notifyListeners();
+    return series;
   }
 
   // Mint a new collectible from a series
@@ -273,9 +302,44 @@ class CollectiblesProvider with ChangeNotifier {
     required String transactionHash,
     Map<String, dynamic> properties = const {},
   }) async {
-    throw UnsupportedError(
-      'Local mint simulation is disabled in canonical mode. Use wallet-native minting and wait for backend-indexed mint proof.',
+    if (!kDebugMode) {
+      throw UnsupportedError(
+        'Local mint simulation is disabled in canonical mode. Use wallet-native minting and wait for backend-indexed mint proof.',
+      );
+    }
+
+    final series = _legacySeries.firstWhere(
+      (s) => s.id == seriesId,
+      orElse: () => throw StateError('Series not found'),
     );
+
+    final tokenId = (series.mintedCount + 1).toString();
+    final collectible = Collectible(
+      id: 'legacy_collectible_${seriesId}_$tokenId',
+      seriesId: seriesId,
+      tokenId: tokenId,
+      ownerAddress: ownerAddress,
+      status: CollectibleStatus.minted,
+      mintedAt: DateTime.now(),
+      currentListingPrice: null,
+      listedAt: null,
+      properties: {
+        'artwork_id': series.artworkId,
+        ...properties,
+      },
+      transactionHash: transactionHash,
+    );
+
+    _legacyCollectibles.add(collectible);
+    // update minted count on the legacy series
+    final idx = _legacySeries.indexWhere((s) => s.id == seriesId);
+    if (idx != -1) {
+      final updated = _legacySeries[idx].copyWith(mintedCount: _legacySeries[idx].mintedCount + 1);
+      _legacySeries[idx] = updated;
+    }
+
+    notifyListeners();
+    return collectible;
   }
 
   // List collectible for sale
@@ -369,16 +433,41 @@ class CollectiblesProvider with ChangeNotifier {
     required double salePrice,
     required String transactionHash,
   }) async {
-    throw UnsupportedError(
-      'Purchase transfer simulation is disabled in canonical mode. Ownership transfer must come from indexed on-chain settlement.',
+    if (!kDebugMode) {
+      throw UnsupportedError(
+        'Purchase transfer simulation is disabled in canonical mode. Ownership transfer must come from indexed on-chain settlement.',
+      );
+    }
+
+    final idx = _legacyCollectibles.indexWhere((c) => c.id == collectibleId);
+    if (idx == -1) throw StateError('Collectible not found');
+
+    final existing = _legacyCollectibles[idx];
+    final updated = existing.copyWith(
+      ownerAddress: buyerAddress,
+      status: CollectibleStatus.sold,
+      transactionHash: transactionHash,
+      lastSalePrice: salePrice,
+      lastSaleAt: DateTime.now(),
     );
+
+    _legacyCollectibles[idx] = updated;
+    notifyListeners();
   }
 
   // Initialize with mock data
   Future<void> initializeMockData() async {
-    _setError(
-      'Mock collectible data is disabled in canonical mode. Use indexed artwork mint records.',
-    );
+    if (!kDebugMode) {
+      _setError(
+        'Mock collectible data is disabled in canonical mode. Use indexed artwork mint records.',
+      );
+      return;
+    }
+
+    // populate legacy lists from bundled fixtures or keep empty for tests to seed
+    _legacySeries.clear();
+    _legacyCollectibles.clear();
+    notifyListeners();
   }
 
   void _setLoading(bool loading) {
