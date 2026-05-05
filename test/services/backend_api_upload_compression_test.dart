@@ -211,6 +211,89 @@ void main() {
     expect(requestHosts, <String>[primaryHost]);
   });
 
+  test('uploadAvatarToProfile fails fast when preferred write base is missing',
+      () async {
+    var attempts = 0;
+
+    BackendApiService().setHttpClient(
+      MockClient((request) async {
+        attempts++;
+        return http.Response(
+          jsonEncode(<String, Object?>{
+            'success': false,
+            'error': 'Node is not writable',
+            'code': 'NODE_NOT_WRITABLE',
+            'databaseRole': 'standby',
+            'switchRecommended': true,
+          }),
+          503,
+          headers: const <String, String>{
+            'content-type': 'application/json',
+          },
+        );
+      }),
+    );
+
+    await expectLater(
+      BackendApiService().uploadAvatarToProfile(
+        fileBytes: <int>[1, 2, 3],
+        fileName: 'avatar.png',
+        fileType: 'image/png',
+        compress: false,
+      ),
+      throwsA(
+        isA<BackendApiRequestException>()
+            .having((error) => error.statusCode, 'statusCode', 503)
+            .having(
+              (error) => error.body,
+              'body',
+              contains('NODE_NOT_WRITABLE'),
+            ),
+      ),
+    );
+    expect(attempts, 1);
+  });
+
+  test('uploadFile does not loop when preferred write node is also read-only',
+      () async {
+    final requestHosts = <String>[];
+    final primaryHost = Uri.parse(AppConfig.baseApiUrl).host;
+    final standbyHost = Uri.parse(AppConfig.standbyApiUrl).host;
+
+    BackendApiService().setHttpClient(
+      MockClient((request) async {
+        requestHosts.add(request.url.host);
+        return http.Response(
+          jsonEncode(<String, Object?>{
+            'success': false,
+            'error': 'Node is not writable',
+            'code': 'NODE_NOT_WRITABLE',
+            'databaseRole': 'standby',
+            'preferredWriteBaseUrl': request.url.host == primaryHost
+                ? AppConfig.standbyApiUrl
+                : AppConfig.baseApiUrl,
+            'switchRecommended': true,
+          }),
+          503,
+          headers: const <String, String>{
+            'content-type': 'application/json',
+          },
+        );
+      }),
+    );
+
+    await expectLater(
+      BackendApiService().uploadFile(
+        fileBytes: <int>[1, 2, 3],
+        fileName: 'cover.png',
+        fileType: 'image/png',
+        compress: false,
+      ),
+      throwsA(isA<BackendApiRequestException>()),
+    );
+    expect(requestHosts, <String>[primaryHost, standbyHost]);
+  });
+
   test('uploadFile keeps 429 retry behavior', () async {
     var attempts = 0;
 

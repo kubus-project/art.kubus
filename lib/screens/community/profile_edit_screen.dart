@@ -4,6 +4,7 @@ import '../../utils/design_tokens.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/services.dart';
+import 'dart:async';
 import 'dart:convert';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:path/path.dart' as path;
@@ -223,7 +224,6 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       );
 
       if (image != null) {
-        // Read bytes and show local preview immediately (works for gallery and PC)
         final bytes = await image.readAsBytes();
         if (!mounted) return;
         setState(() {
@@ -231,14 +231,13 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           _isUploadingAvatar = true;
         });
 
+        var succeeded = false;
         try {
           final profileProvider =
               Provider.of<ProfileProvider>(context, listen: false);
           final wallet = profileProvider.currentUser?.walletAddress ?? '';
 
           if (wallet.isEmpty) {
-            setState(() => _isUploadingAvatar = false);
-            if (!mounted) return;
             ScaffoldMessenger.of(context).showKubusSnackBar(
               SnackBar(
                 content: Text(l10n.profileEditNoWalletUploadAvatarToast),
@@ -248,7 +247,6 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             return;
           }
 
-          // Upload avatar to backend using bytes (handles content:// URIs on Android)
           final fileName =
               (image.name.isNotEmpty) ? image.name : path.basename(image.path);
           final uploadedRef = await profileProvider.uploadAvatarBytes(
@@ -265,20 +263,23 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
 
           _avatarChanged = true;
 
-          final saved = await profileProvider.saveProfile(
+          final saved = await profileProvider.saveProfileMedia(
             walletAddress: wallet,
             avatar: persistableAvatar,
           );
+          if (!saved) {
+            throw Exception(profileProvider.error ?? 'Avatar save failed');
+          }
 
+          succeeded = true;
+          if (!mounted) return;
           setState(() {
             _avatarUrl = persistableAvatar;
             _localAvatarBytes = null;
             _avatarChanged = false;
-            _isUploadingAvatar = false;
           });
 
-          // Show resolved URL with actions: copy and open in browser
-          if (!mounted) return;
+          unawaited(profileProvider.loadProfile(wallet));
           final displayAvatarUrl = _normalizeMediaUrl(persistableAvatar) ?? persistableAvatar;
           final uri = Uri.tryParse(displayAvatarUrl);
           ScaffoldMessenger.of(context).showKubusSnackBar(
@@ -324,26 +325,15 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           if (!mounted) return;
           ScaffoldMessenger.of(context).showKubusSnackBar(
             SnackBar(
-              content: Text(
-                saved
-                    ? l10n.profileEditAvatarUploadedSavedToast
-                    : l10n.profileEditAvatarUploadedLocalToast,
-              ),
-              backgroundColor: saved
-                  ? Theme.of(context).colorScheme.primary
-                  : Theme.of(context).colorScheme.secondary,
+              content: Text(l10n.profileEditAvatarUploadedSavedToast),
+              backgroundColor: Theme.of(context).colorScheme.primary,
               duration: const Duration(seconds: 2),
             ),
           );
         } catch (e) {
-          setState(() {
-            _isUploadingAvatar = false;
-            _avatarChanged = false;
-          });
           if (!mounted) return;
           final profileProvider =
               Provider.of<ProfileProvider>(context, listen: false);
-          // Show snackbar
           ScaffoldMessenger.of(context).showKubusSnackBar(
             SnackBar(
               content: Text(l10n.profileEditAvatarUploadFailedToast),
@@ -386,6 +376,13 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               ),
             );
           }
+        } finally {
+          if (mounted) {
+            setState(() {
+              _isUploadingAvatar = false;
+              if (!succeeded) _avatarChanged = false;
+            });
+          }
         }
       }
     } catch (e) {
@@ -417,14 +414,13 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           _isUploadingCover = true;
         });
 
+        var succeeded = false;
         try {
           final profileProvider =
               Provider.of<ProfileProvider>(context, listen: false);
           final wallet = profileProvider.currentUser?.walletAddress ?? '';
 
           if (wallet.isEmpty) {
-            if (mounted) setState(() => _isUploadingCover = false);
-            if (!mounted) return;
             ScaffoldMessenger.of(context).showKubusSnackBar(
               SnackBar(
                 content: Text(l10n.profileEditNoWalletUploadCoverToast),
@@ -468,42 +464,30 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
 
           _coverChanged = true;
 
-          // Save cover ref to profile (persist raw, not resolved)
-          final saved = await profileProvider.saveProfile(
+          final saved = await profileProvider.saveProfileMedia(
             walletAddress: wallet,
             coverImage: persistableCover,
           );
-
-          if (mounted) {
-            setState(() {
-              _coverImageUrl = persistableCover;
-              _localCoverBytes = null;
-              _coverChanged = false;
-              _isUploadingCover = false;
-            });
+          if (!saved) {
+            throw Exception(profileProvider.error ?? 'Cover save failed');
           }
 
           if (!mounted) return;
+          succeeded = true;
+          setState(() {
+            _coverImageUrl = persistableCover;
+            _localCoverBytes = null;
+            _coverChanged = false;
+          });
+          unawaited(profileProvider.loadProfile(wallet));
           ScaffoldMessenger.of(context).showKubusSnackBar(
             SnackBar(
-              content: Text(
-                saved
-                    ? l10n.profileEditCoverUploadedSavedToast
-                    : l10n.profileEditCoverUploadedLocalToast,
-              ),
-              backgroundColor: saved
-                  ? Theme.of(context).colorScheme.primary
-                  : Theme.of(context).colorScheme.secondary,
+              content: Text(l10n.profileEditCoverUploadedSavedToast),
+              backgroundColor: Theme.of(context).colorScheme.primary,
               duration: const Duration(seconds: 2),
             ),
           );
         } catch (e) {
-          if (mounted) {
-            setState(() {
-              _isUploadingCover = false;
-              _coverChanged = false;
-            });
-          }
           if (!mounted) return;
           ScaffoldMessenger.of(context).showKubusSnackBar(
             SnackBar(
@@ -511,6 +495,13 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
           );
+        } finally {
+          if (mounted) {
+            setState(() {
+              _isUploadingCover = false;
+              if (!succeeded) _coverChanged = false;
+            });
+          }
         }
       }
     } catch (e) {

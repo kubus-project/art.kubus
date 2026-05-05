@@ -1337,7 +1337,7 @@ class BackendApiService
     final http.Response response;
     try {
       final streamed = await _client.send(request).timeout(timeout);
-      response = await http.Response.fromStream(streamed);
+      response = await http.Response.fromStream(streamed).timeout(timeout);
     } catch (error) {
       if (allowImplicitBackendFailover && _isFallbackEligibleReadError(error)) {
         final failoverUri = _nextImplicitFailoverUri(
@@ -1718,13 +1718,32 @@ class BackendApiService
   }
 
   String? _extractPreferredWriteBaseUrl(http.Response response) {
-    final value = _decodeResponseJsonObject(response)?['preferredWriteBaseUrl'];
+    final payload = _decodeResponseJsonObject(response);
+    final responsePayload = payload?['response'];
+    if (responsePayload is Map) {
+      final raw = responsePayload['preferredWriteBaseUrl']?.toString().trim();
+      if (raw != null && raw.isNotEmpty) {
+        return _validatedApiBaseUrl(raw);
+      }
+    }
+    final dataPayload = payload?['data'];
+    if (dataPayload is Map) {
+      final raw = dataPayload['preferredWriteBaseUrl']?.toString().trim();
+      if (raw != null && raw.isNotEmpty) {
+        return _validatedApiBaseUrl(raw);
+      }
+    }
+    final value = payload?['preferredWriteBaseUrl'];
     final raw = value?.toString().trim();
     if (raw == null || raw.isEmpty) return null;
+    return _validatedApiBaseUrl(raw);
+  }
+
+  String? _validatedApiBaseUrl(String raw) {
     try {
       final normalized = _normalizeApiBaseUrl(raw);
       final uri = Uri.parse(normalized);
-      if (!uri.hasScheme || uri.host.trim().isEmpty) return null;
+      if (uri.scheme.trim().isEmpty || uri.host.trim().isEmpty) return null;
       return normalized;
     } catch (_) {
       return null;
@@ -1734,7 +1753,18 @@ class BackendApiService
   bool _isNodeNotWritableResponse(http.Response response) {
     if (response.statusCode != 503) return false;
     final payload = _decodeResponseJsonObject(response);
-    return payload?['code'] == 'NODE_NOT_WRITABLE';
+    if (payload?['code']?.toString() == 'NODE_NOT_WRITABLE') return true;
+    if (payload?['errorCode']?.toString() == 'NODE_NOT_WRITABLE') return true;
+    final data = payload?['data'];
+    if (data is Map && data['code']?.toString() == 'NODE_NOT_WRITABLE') {
+      return true;
+    }
+    final nestedResponse = payload?['response'];
+    if (nestedResponse is Map &&
+        nestedResponse['code']?.toString() == 'NODE_NOT_WRITABLE') {
+      return true;
+    }
+    return response.body.contains('NODE_NOT_WRITABLE');
   }
 
   Uri? _redirectNodeNotWritableRequest(

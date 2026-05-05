@@ -59,8 +59,7 @@ class SolanaWalletService {
     WalletUtils.canonical(ApiKeys.kub8MintAddress): {
       'symbol': 'KUB8',
       'name': 'kubus Governance Token',
-      // Intentionally omit a static logo URL so we always resolve imagery from
-      // on-chain/off-chain metadata (Metaplex) rather than hitting backend assets.
+      'logoUrl': 'assets/images/logo.png',
       'decimals': ApiKeys.kub8Decimals,
     },
   };
@@ -3036,6 +3035,16 @@ class SolanaWalletService {
     base['symbol'] ??= _fallbackSymbol(normalizedMint);
     base['name'] ??= _fallbackName(normalizedMint);
 
+    if (WalletUtils.equals(normalizedMint, ApiKeys.kub8MintAddress)) {
+      final sanitized = Map<String, dynamic>.from(base)
+        ..removeWhere((key, value) => value == null);
+      _tokenMetadataCache[normalizedMint] = _TokenMetadataCacheEntry(
+        data: sanitized,
+        timestamp: DateTime.now(),
+      );
+      return sanitized;
+    }
+
     try {
       final metadata = await _rpcClient.getMetadata(
         mint: Ed25519HDPublicKey.fromBase58(mint),
@@ -3053,7 +3062,7 @@ class SolanaWalletService {
         try {
           final offChain = await metadata
               .getExternalJson()
-              .timeout(const Duration(seconds: 6));
+              .timeout(const Duration(milliseconds: 3500));
           if (offChain != null) {
             base['description'] = offChain.description;
             final offChainName = offChain.name.trim();

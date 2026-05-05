@@ -965,9 +965,12 @@ class ProfileProvider extends foundation.ChangeNotifier {
             _currentUser?.copyWith(avatar: _convertSvgToRaster(resolved));
       } catch (_) {}
 
-      // Reload stats after profile update
       if (reloadStats) {
-        await _loadBackendStats(walletAddress);
+        unawaited(
+          _loadBackendStats(walletAddress)
+              .timeout(const Duration(seconds: 5))
+              .catchError((_) {}),
+        );
       }
 
       // Update sign-in state
@@ -1019,9 +1022,6 @@ class ProfileProvider extends foundation.ChangeNotifier {
           ]);
         }
       } catch (_) {}
-      _isLoading = false;
-      notifyListeners();
-
       // Emit an application event indicating the profile was updated
       try {
         EventBus().emitProfileUpdated(_currentUser);
@@ -1036,8 +1036,108 @@ class ProfileProvider extends foundation.ChangeNotifier {
       } else {
         _error = 'Failed to save profile: $e';
       }
-      _isLoading = false;
       debugPrint('Error saving profile: $e');
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> saveProfileMedia({
+    required String walletAddress,
+    String? avatar,
+    String? coverImage,
+  }) async {
+    _error = null;
+    final effectiveAvatar = ProfileMediaRefUtils.toPersistableAvatarRef(avatar);
+    final effectiveCover =
+        ProfileMediaRefUtils.toPersistableCoverRef(coverImage);
+    final profileData = <String, dynamic>{
+      'walletAddress': walletAddress,
+      if (effectiveAvatar != null) 'avatar': effectiveAvatar,
+      if (effectiveCover != null) 'coverImage': effectiveCover,
+    };
+
+    try {
+      final savedProfileRaw = await _apiService
+          .saveProfile(profileData)
+          .timeout(AppConfig.requestTimeout);
+      final raw = Map<String, dynamic>.from(savedProfileRaw);
+      final nested = raw['data'];
+      final candidate = nested is Map
+          ? Map<String, dynamic>.from(nested)
+          : raw;
+      final candidateWallet =
+          (candidate['walletAddress'] ?? candidate['wallet_address'] ?? '')
+              .toString()
+              .trim();
+
+      if (candidateWallet.isNotEmpty) {
+        final current = _currentUser;
+        if (current != null) {
+          candidate.putIfAbsent('id', () => current.id);
+          candidate.putIfAbsent('username', () => current.username);
+          candidate.putIfAbsent('displayName', () => current.displayName);
+          candidate.putIfAbsent('bio', () => current.bio);
+          candidate.putIfAbsent('avatar', () => current.avatar);
+          candidate.putIfAbsent('coverImage', () => current.coverImage);
+          candidate.putIfAbsent('social', () => current.social);
+          candidate.putIfAbsent('isArtist', () => current.isArtist);
+          candidate.putIfAbsent('isInstitution', () => current.isInstitution);
+          candidate.putIfAbsent(
+            'preferences',
+            () => current.preferences?.toJson(),
+          );
+          candidate.putIfAbsent('stats', () => current.stats?.toJson());
+          candidate.putIfAbsent(
+            'createdAt',
+            () => current.createdAt.toIso8601String(),
+          );
+        }
+        candidate.putIfAbsent(
+          'updatedAt',
+          () => DateTime.now().toIso8601String(),
+        );
+        _currentUser = UserProfile.fromJson(candidate);
+      } else {
+        final now = DateTime.now();
+        final current = _currentUser ??
+            UserProfile(
+              id:
+                  'profile_${walletAddress.length > 8 ? walletAddress.substring(0, 8) : walletAddress}',
+              walletAddress: walletAddress,
+              username: '',
+              displayName: '',
+              bio: '',
+              avatar: '',
+              createdAt: now,
+              updatedAt: now,
+            );
+        _currentUser = current.copyWith(
+          avatar: effectiveAvatar ?? current.avatar,
+          coverImage: effectiveCover ?? current.coverImage,
+          updatedAt: now,
+        );
+      }
+
+      if (effectiveAvatar != null) {
+        try {
+          final resolved = _resolveUrl(effectiveAvatar);
+          _currentUser =
+              _currentUser?.copyWith(avatar: _convertSvgToRaster(resolved));
+        } catch (_) {}
+      }
+
+      _isSignedIn = true;
+      notifyListeners();
+      try {
+        EventBus().emitProfileUpdated(_currentUser);
+      } catch (_) {}
+      return true;
+    } catch (e) {
+      _error = 'Failed to save profile media: $e';
+      debugPrint('Error saving profile media: $e');
       notifyListeners();
       return false;
     }

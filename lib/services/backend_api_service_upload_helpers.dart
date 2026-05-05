@@ -67,25 +67,55 @@ bool _backendApiIsNodeNotWritableException(Object error) {
       (error.body ?? '').contains('NODE_NOT_WRITABLE');
 }
 
-String? _backendApiExtractPreferredWriteBaseUrl(String? body) {
-  if (body == null || body.isEmpty) return null;
+Map<String, dynamic>? _backendApiDecodeResponseObject(String? body) {
+  if (body == null || body.trim().isEmpty) return null;
   try {
     final decoded = jsonDecode(body);
-    if (decoded is Map<String, dynamic>) {
-      final response = decoded['response'];
-      if (response is Map<String, dynamic>) {
-        final value = _backendApiTrimmedString(response['preferredWriteBaseUrl']);
-        if (value != null) return value;
-      }
-      final data = decoded['data'];
-      if (data is Map<String, dynamic>) {
-        final value = _backendApiTrimmedString(data['preferredWriteBaseUrl']);
-        if (value != null) return value;
-      }
-      return _backendApiTrimmedString(decoded['preferredWriteBaseUrl']);
+    if (decoded is Map) {
+      return Map<String, dynamic>.from(decoded);
     }
-  } catch (_) {
-    return null;
+  } catch (_) {}
+  return null;
+}
+
+bool _backendApiResponseBodyIsNodeNotWritable(String? body) {
+  if (body == null || body.trim().isEmpty) return false;
+
+  final decoded = _backendApiDecodeResponseObject(body);
+  if (decoded != null) {
+    if (decoded['code']?.toString() == 'NODE_NOT_WRITABLE') return true;
+    if (decoded['errorCode']?.toString() == 'NODE_NOT_WRITABLE') return true;
+
+    final data = decoded['data'];
+    if (data is Map &&
+        data['code']?.toString() == 'NODE_NOT_WRITABLE') {
+      return true;
+    }
+
+    final response = decoded['response'];
+    if (response is Map &&
+        response['code']?.toString() == 'NODE_NOT_WRITABLE') {
+      return true;
+    }
+  }
+
+  return body.contains('NODE_NOT_WRITABLE');
+}
+
+String? _backendApiExtractPreferredWriteBaseUrl(String? body) {
+  final decoded = _backendApiDecodeResponseObject(body);
+  if (decoded != null) {
+    final response = decoded['response'];
+    if (response is Map) {
+      final value = _backendApiTrimmedString(response['preferredWriteBaseUrl']);
+      if (value != null) return value;
+    }
+    final data = decoded['data'];
+    if (data is Map) {
+      final value = _backendApiTrimmedString(data['preferredWriteBaseUrl']);
+      if (value != null) return value;
+    }
+    return _backendApiTrimmedString(decoded['preferredWriteBaseUrl']);
   }
   return null;
 }
@@ -104,6 +134,19 @@ bool _backendApiIsValidWriteFailoverUrl(
   } catch (_) {
     return false;
   }
+}
+
+String _backendApiUploadErrorBody({
+  required String message,
+  required String? upstreamBody,
+}) {
+  final upstream = _backendApiDecodeResponseObject(upstreamBody);
+  return jsonEncode(<String, Object?>{
+    'success': false,
+    'error': message,
+    if (upstream != null) 'upstream': upstream,
+    if (upstream == null && upstreamBody != null) 'upstreamBody': upstreamBody,
+  });
 }
 
 Future<Map<String, dynamic>> _backendApiUploadFileImpl(
@@ -278,32 +321,43 @@ Future<Map<String, dynamic>> _backendApiUploadFileImpl(
         throw Exception('Too many requests (429) while uploading file.');
       }
 
-      throw Exception('Failed to upload file: ${response.statusCode}');
-    } catch (e, stackTrace) {
-      if (_backendApiIsNodeNotWritableException(e) &&
-          writeFailoverAttempt < maxWriteFailovers) {
-        writeFailoverAttempt++;
-        final responseBody = (e as BackendApiRequestException).body;
-        final writeBaseUrl = _backendApiExtractPreferredWriteBaseUrl(responseBody);
-        final currentUri = Uri.parse('${failoverBaseUrl ?? service.baseUrl}/api/upload');
+      final currentUri =
+          Uri.parse('${failoverBaseUrl ?? service.baseUrl}/api/upload');
+      if (response.statusCode == 503 &&
+          _backendApiResponseBodyIsNodeNotWritable(response.body)) {
+        final writeBaseUrl =
+            _backendApiExtractPreferredWriteBaseUrl(response.body);
 
-        if (_backendApiIsValidWriteFailoverUrl(currentUri, writeBaseUrl)) {
+        if (writeFailoverAttempt < maxWriteFailovers &&
+            _backendApiIsValidWriteFailoverUrl(currentUri, writeBaseUrl)) {
+          writeFailoverAttempt++;
           service._debugLogThrottled(
             'uploadFile:failover',
-            'BackendApiService.uploadFile: attempting write failover to $writeBaseUrl (attempt $writeFailoverAttempt/$maxWriteFailovers)',
+            'BackendApiService.uploadFile: retrying once on preferred write base $writeBaseUrl',
           );
           failoverBaseUrl = writeBaseUrl;
           attempt = 0;
           continue;
         }
 
-        service._debugLogThrottled(
-          'uploadFile:failover:invalid',
-          'BackendApiService.uploadFile: invalid or missing preferredWriteBaseUrl=$writeBaseUrl',
+        throw BackendApiRequestException(
+          statusCode: response.statusCode,
+          path: currentUri.path,
+          body: response.body,
         );
-        rethrow;
       }
 
+      throw BackendApiRequestException(
+        statusCode: response.statusCode,
+        path: currentUri.path,
+        body: response.body.trim().isEmpty
+            ? _backendApiUploadErrorBody(
+                message: 'Failed to upload file',
+                upstreamBody: response.body,
+              )
+            : response.body,
+      );
+    } catch (e, stackTrace) {
       if (_backendApiIsNodeNotWritableException(e)) {
         rethrow;
       }
@@ -516,36 +570,44 @@ Future<Map<String, dynamic>> _backendApiUploadAvatarToProfileImpl(
         throw Exception('Too many requests (429) while uploading avatar.');
       }
 
-      throw Exception(
-        'Failed to upload avatar: ${response.statusCode} ${response.body}',
+      final currentUri = Uri.parse(
+        '${failoverBaseUrl ?? service.baseUrl}/api/profiles/avatars',
       );
-    } catch (e, stackTrace) {
-      if (_backendApiIsNodeNotWritableException(e) &&
-          writeFailoverAttempt < maxWriteFailovers) {
-        writeFailoverAttempt++;
-        final responseBody = (e as BackendApiRequestException).body;
-        final writeBaseUrl = _backendApiExtractPreferredWriteBaseUrl(responseBody);
-        final currentUri = Uri.parse(
-          '${failoverBaseUrl ?? service.baseUrl}/api/profiles/avatars',
-        );
+      if (response.statusCode == 503 &&
+          _backendApiResponseBodyIsNodeNotWritable(response.body)) {
+        final writeBaseUrl =
+            _backendApiExtractPreferredWriteBaseUrl(response.body);
 
-        if (_backendApiIsValidWriteFailoverUrl(currentUri, writeBaseUrl)) {
+        if (writeFailoverAttempt < maxWriteFailovers &&
+            _backendApiIsValidWriteFailoverUrl(currentUri, writeBaseUrl)) {
+          writeFailoverAttempt++;
           service._debugLogThrottled(
             'uploadAvatarToProfile:failover',
-            'BackendApiService.uploadAvatarToProfile: attempting write failover to $writeBaseUrl (attempt $writeFailoverAttempt/$maxWriteFailovers)',
+            'BackendApiService.uploadAvatarToProfile: retrying once on preferred write base $writeBaseUrl',
           );
           failoverBaseUrl = writeBaseUrl;
           attempt = 0;
           continue;
         }
 
-        service._debugLogThrottled(
-          'uploadAvatarToProfile:failover:invalid',
-          'BackendApiService.uploadAvatarToProfile: invalid or missing preferredWriteBaseUrl=$writeBaseUrl',
+        throw BackendApiRequestException(
+          statusCode: response.statusCode,
+          path: currentUri.path,
+          body: response.body,
         );
-        rethrow;
       }
 
+      throw BackendApiRequestException(
+        statusCode: response.statusCode,
+        path: currentUri.path,
+        body: response.body.trim().isEmpty
+            ? _backendApiUploadErrorBody(
+                message: 'Failed to upload avatar',
+                upstreamBody: response.body,
+              )
+            : response.body,
+      );
+    } catch (e, stackTrace) {
       if (_backendApiIsNodeNotWritableException(e)) {
         rethrow;
       }
