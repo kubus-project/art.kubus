@@ -89,6 +89,19 @@ void main() {
       ),
       isTrue,
     );
+    expect(
+      ProfileMediaRefUtils.isGeneratedAvatarRef(
+        '/api/avatar/wallet?style=identicon',
+      ),
+      isTrue,
+    );
+    expect(
+      ProfileMediaRefUtils.isGeneratedAvatarRef(
+        'https://api.dicebear.com/9.x/identicon/png?seed=wallet',
+      ),
+      isTrue,
+    );
+    expect(ProfileMediaRefUtils.isGeneratedAvatarRef(''), isTrue);
     expect(ProfileMediaRefUtils.isGeneratedAvatarRef('/uploads/avatar.png'), isFalse);
     expect(
       ProfileMediaRefUtils.isPersistableAvatarRef('/uploads/avatar.png'),
@@ -101,6 +114,12 @@ void main() {
       isFalse,
     );
     expect(
+      ProfileMediaRefUtils.toPersistableAvatarRef(
+        '/api/avatar/wallet?style=identicon',
+      ),
+      isNull,
+    );
+    expect(
       ProfileMediaRefUtils.toPersistableCoverRef(
         'https://api.kubus.site/uploads/profiles/cover/one.png',
       ),
@@ -108,7 +127,7 @@ void main() {
     );
   });
 
-  test('ProfileProvider saveProfile preserves avatar when omitted or empty', () async {
+  test('ProfileProvider saveProfile omits avatar when omitted, empty, or generated', () async {
     final api = _FakeProfileApi();
     final provider = ProfileProvider(apiService: api);
 
@@ -138,11 +157,60 @@ void main() {
       username: 'artist_user',
       displayName: 'Artist User',
       bio: 'Updated bio',
-      avatar: 'https://api.kubus.site/api/avatar/ArtistWallet111111111111111111111111111111111?style=identicon&format=png',
+      avatar:
+          'https://api.kubus.site/api/avatar/ArtistWallet111111111111111111111111111111111?style=identicon&format=png',
       reloadStats: false,
     );
 
     expect(api.lastSavedProfile?['avatar'], isNull);
+  });
+
+  test('ProfileProvider text-only save does not resend current avatar or cover', () async {
+    final api = _FakeProfileApi();
+    final provider = ProfileProvider(apiService: api);
+
+    api.nextSaveResponse = <String, dynamic>{
+      'walletAddress': 'ArtistWallet111111111111111111111111111111111',
+      'username': 'artist_user',
+      'displayName': 'Artist User',
+      'bio': 'Initial bio',
+      'avatar': '/uploads/profiles/avatars/current.png',
+      'coverImage': '/uploads/profiles/cover/current.png',
+      'createdAt': '2026-03-31T00:00:00.000Z',
+      'updatedAt': '2026-03-31T00:00:00.000Z',
+    };
+
+    await provider.saveProfile(
+      walletAddress: 'ArtistWallet111111111111111111111111111111111',
+      username: 'artist_user',
+      displayName: 'Artist User',
+      bio: 'Initial bio',
+      avatar: '/uploads/profiles/avatars/current.png',
+      coverImage: '/uploads/profiles/cover/current.png',
+      reloadStats: false,
+    );
+
+    api.nextSaveResponse = <String, dynamic>{
+      'walletAddress': 'ArtistWallet111111111111111111111111111111111',
+      'username': 'artist_user',
+      'displayName': 'Artist User',
+      'bio': 'Updated text only',
+      'avatar': '/uploads/profiles/avatars/current.png',
+      'coverImage': '/uploads/profiles/cover/current.png',
+      'createdAt': '2026-03-31T00:00:00.000Z',
+      'updatedAt': '2026-03-31T00:00:00.000Z',
+    };
+
+    await provider.saveProfile(
+      walletAddress: 'ArtistWallet111111111111111111111111111111111',
+      username: 'artist_user',
+      displayName: 'Artist User',
+      bio: 'Updated text only',
+      reloadStats: false,
+    );
+
+    expect(api.lastSavedProfile?.containsKey('avatar'), isFalse);
+    expect(api.lastSavedProfile?.containsKey('coverImage'), isFalse);
   });
 
   test('ProfileProvider saveProfile normalizes backend cover URLs to stable paths', () async {

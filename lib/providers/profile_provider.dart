@@ -14,6 +14,7 @@ import '../services/user_service.dart';
 import '../services/event_bus.dart';
 import '../models/dao.dart';
 import '../utils/media_url_resolver.dart';
+import '../utils/profile_media_ref_utils.dart';
 import '../utils/wallet_utils.dart';
 import 'wallet_provider.dart';
 
@@ -864,8 +865,10 @@ class ProfileProvider extends foundation.ChangeNotifier {
       final effectiveUsername = rawUsername?.replaceFirst(RegExp(r'^@+'), '');
       final effectiveDisplayName = displayName ?? _currentUser?.displayName;
       final effectiveBio = bio ?? _currentUser?.bio;
-      final effectiveAvatar = avatar ?? _currentUser?.avatar;
-      final effectiveCover = coverImage ?? _currentUser?.coverImage;
+      final effectiveAvatar =
+          ProfileMediaRefUtils.toPersistableAvatarRef(avatar);
+      final effectiveCover =
+          ProfileMediaRefUtils.toPersistableCoverRef(coverImage);
       final effectiveSocial = social ?? _currentUser?.social;
       final effectiveFieldOfWork =
           fieldOfWork ?? _currentUser?.artistInfo?.specialty;

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/services.dart';
@@ -11,6 +12,7 @@ import '../../../providers/profile_provider.dart';
 import '../../../providers/dao_provider.dart';
 import '../../../services/backend_api_service.dart';
 import '../../../models/user.dart';
+import '../../../models/user_profile.dart';
 import '../../../models/dao.dart';
 import '../../../services/event_bus.dart';
 import '../../../providers/themeprovider.dart';
@@ -108,7 +110,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
     _instagramController =
         TextEditingController(text: social['instagram'] ?? '');
     _websiteController = TextEditingController(text: social['website'] ?? '');
-    _avatarUrl = profile?.avatar;
+    _avatarUrl = _editableAvatarRef(profile?.avatar);
     _coverImageUrl = _normalizeMediaUrl(profile?.coverImage);
 
     final artistInfo = profile?.artistInfo;
@@ -139,15 +141,63 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
     }
 
     _profileListener = () {
-      final p = profileProvider.currentUser;
       if (!mounted) return;
-      setState(() {
-        _avatarUrl = p?.avatar;
-        _coverImageUrl = _normalizeMediaUrl(p?.coverImage);
-      });
+      _syncMediaFromProvider(profileProvider.currentUser);
     };
     profileProvider.addListener(_profileListener!);
     _animationController.forward();
+  }
+
+  String? _editableAvatarRef(String? value) {
+    final avatar = value?.trim();
+    if (avatar == null ||
+        avatar.isEmpty ||
+        ProfileMediaRefUtils.isGeneratedAvatarRef(avatar)) {
+      return null;
+    }
+    return avatar;
+  }
+
+  void _syncMediaFromProvider(UserProfile? profile) {
+    final nextAvatar = _editableAvatarRef(profile?.avatar);
+    final nextCoverDisplay = _normalizeMediaUrl(profile?.coverImage);
+
+    setState(() {
+      if (!_isUploadingAvatar &&
+          !_avatarChanged &&
+          nextAvatar != null &&
+          nextAvatar.isNotEmpty) {
+        _avatarUrl = nextAvatar;
+      }
+
+      if (!_isUploadingCover &&
+          !_coverChanged &&
+          nextCoverDisplay != null &&
+          nextCoverDisplay.isNotEmpty) {
+        _coverImageUrl = nextCoverDisplay;
+      }
+    });
+  }
+
+  @visibleForTesting
+  String? get debugAvatarUrl => _avatarUrl;
+
+  @visibleForTesting
+  String? get debugCoverImageUrl => _coverImageUrl;
+
+  @visibleForTesting
+  void debugSetMediaSyncState({
+    bool? isUploadingAvatar,
+    bool? isUploadingCover,
+    bool? avatarChanged,
+    bool? coverChanged,
+  }) {
+    setState(() {
+      _isUploadingAvatar = isUploadingAvatar ?? _isUploadingAvatar;
+      _isUploadingCover = isUploadingCover ?? _isUploadingCover;
+      _avatarChanged = avatarChanged ?? _avatarChanged;
+      _coverChanged = coverChanged ?? _coverChanged;
+    });
   }
 
   @override
