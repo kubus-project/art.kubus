@@ -4876,6 +4876,7 @@ class _CommunityScreenState extends State<CommunityScreen>
     }
 
     setModalState(() => _isPostingNew = true);
+    var loadingCleared = false;
 
     try {
       final mediaUrls = await _uploadComposerMedia();
@@ -4895,6 +4896,7 @@ class _CommunityScreenState extends State<CommunityScreen>
       );
 
       setModalState(() => _isPostingNew = false);
+      loadingCleared = true;
       if (!mounted) return;
 
       _handlePostSuccess(createdPost, isGroupPost: isGroupPost);
@@ -4910,7 +4912,6 @@ class _CommunityScreenState extends State<CommunityScreen>
         ),
       );
     } catch (e) {
-      setModalState(() => _isPostingNew = false);
       if (kDebugMode) {
         debugPrint('CommunityScreen: create post failed: $e');
       }
@@ -4918,6 +4919,10 @@ class _CommunityScreenState extends State<CommunityScreen>
       messenger.showKubusSnackBar(
         SnackBar(content: Text(l10n.communityComposerCreatePostFailedToast)),
       );
+    } finally {
+      if (!loadingCleared) {
+        setModalState(() => _isPostingNew = false);
+      }
     }
   }
 

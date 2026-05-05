@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/http_client_factory.dart';
+import 'package:art_kubus/services/telemetry/kubus_client_context.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -26,11 +27,19 @@ void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     BackendApiService().setAuthTokenForTesting(_validAuthToken);
+    KubusClientContext.instance.setEnabled(true);
+    KubusClientContext.instance.update(
+      sessionId: 'session-1',
+      screenName: 'Community',
+      screenRoute: '/community',
+      flowStage: 'submit',
+    );
   });
 
   tearDown(() {
     BackendApiService().setHttpClient(createPlatformHttpClient());
     BackendApiService().setAuthTokenForTesting(null);
+    KubusClientContext.instance.setEnabled(false);
   });
 
   test('JSON POST retries once to preferred write base and preserves request',
@@ -53,6 +62,10 @@ void main() {
           _headerValue(request, 'Content-Type'),
           contains('application/json'),
         );
+        expect(_headerValue(request, 'x-kubus-session-id'), 'session-1');
+        expect(_headerValue(request, 'x-kubus-screen-name'), 'Community');
+        expect(_headerValue(request, 'x-kubus-screen-route'), '/community');
+        expect(_headerValue(request, 'x-kubus-flow-stage'), 'submit');
         requestBodies.add(
           jsonDecode(request.body) as Map<String, dynamic>,
         );
@@ -154,6 +167,81 @@ void main() {
               (error) => error.body,
               'body',
               contains('same backend'),
+            ),
+      ),
+    );
+    expect(attempts, 1);
+  });
+
+  test('JSON POST missing preferred write base fails fast', () async {
+    var attempts = 0;
+
+    BackendApiService().setHttpClient(
+      MockClient((request) async {
+        attempts++;
+        return http.Response(
+          jsonEncode(<String, Object?>{
+            'success': false,
+            'error': 'Node is not writable',
+            'code': 'NODE_NOT_WRITABLE',
+            'databaseRole': 'standby',
+            'switchRecommended': true,
+          }),
+          503,
+          headers: const <String, String>{
+            'content-type': 'application/json',
+          },
+        );
+      }),
+    );
+
+    await expectLater(
+      BackendApiService().createCommunityPost(content: 'hello kubus'),
+      throwsA(
+        isA<BackendApiRequestException>()
+            .having((error) => error.statusCode, 'statusCode', 503)
+            .having(
+              (error) => error.body,
+              'body',
+              contains('did not provide a preferred write base URL'),
+            ),
+      ),
+    );
+    expect(attempts, 1);
+  });
+
+  test('JSON POST invalid preferred write base fails fast', () async {
+    var attempts = 0;
+
+    BackendApiService().setHttpClient(
+      MockClient((request) async {
+        attempts++;
+        return http.Response(
+          jsonEncode(<String, Object?>{
+            'success': false,
+            'error': 'Node is not writable',
+            'code': 'NODE_NOT_WRITABLE',
+            'databaseRole': 'standby',
+            'preferredWriteBaseUrl': 'not a url',
+            'switchRecommended': true,
+          }),
+          503,
+          headers: const <String, String>{
+            'content-type': 'application/json',
+          },
+        );
+      }),
+    );
+
+    await expectLater(
+      BackendApiService().createCommunityPost(content: 'hello kubus'),
+      throwsA(
+        isA<BackendApiRequestException>()
+            .having((error) => error.statusCode, 'statusCode', 503)
+            .having(
+              (error) => error.body,
+              'body',
+              contains('did not provide a preferred write base URL'),
             ),
       ),
     );

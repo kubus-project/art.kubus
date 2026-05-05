@@ -573,8 +573,6 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
       return;
     }
 
-    setState(() => _isSaving = true);
-
     final updates = <String, dynamic>{};
     if (title != artwork.title) updates['title'] = title;
     if (description != artwork.description) {
@@ -618,7 +616,6 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
     if (nextPriceRaw.isNotEmpty && nextPrice == null) {
       messenger.showKubusSnackBar(
           SnackBar(content: Text(l10n.commonActionFailedToast)));
-      setState(() => _isSaving = false);
       return;
     }
     if (nextPrice != artwork.price) {
@@ -631,7 +628,6 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
     if (nextArScaleRaw.isNotEmpty && nextArScale == null) {
       messenger.showKubusSnackBar(
           SnackBar(content: Text(l10n.commonActionFailedToast)));
-      setState(() => _isSaving = false);
       return;
     }
     if (nextArScale != artwork.arScale) {
@@ -641,6 +637,8 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
     if (_arEnabled != artwork.arEnabled) {
       updates['isAREnabled'] = _arEnabled;
     }
+
+    setState(() => _isSaving = true);
 
     try {
       if (_nextCoverBytes != null) {
@@ -698,7 +696,6 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
         messenger.showKubusSnackBar(
           SnackBar(content: Text(l10n.commonActionFailedToast)),
         );
-        setState(() => _isSaving = false);
         return;
       }
 
@@ -710,7 +707,10 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
       if (!mounted) return;
       messenger.showKubusSnackBar(
           SnackBar(content: Text(l10n.commonActionFailedToast)));
-      setState(() => _isSaving = false);
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
     }
   }
 

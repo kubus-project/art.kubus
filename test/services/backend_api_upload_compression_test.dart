@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -160,6 +161,61 @@ void main() {
     );
 
     expect(result['uploadedUrl'], '/uploads/avatar.png');
+    expect(requestHosts, <String>[primaryHost, standbyHost]);
+  });
+
+  test('uploadFile switches once to preferred write base', () async {
+    final requestHosts = <String>[];
+    final primaryHost = Uri.parse(AppConfig.baseApiUrl).host;
+    final standbyHost = Uri.parse(AppConfig.standbyApiUrl).host;
+
+    BackendApiService().setHttpClient(
+      MockClient((request) async {
+        expect(request.url.path, '/api/upload');
+        requestHosts.add(request.url.host);
+
+        if (request.url.host == primaryHost) {
+          return http.Response(
+            jsonEncode(<String, Object?>{
+              'success': false,
+              'error': 'Node is not writable',
+              'code': 'NODE_NOT_WRITABLE',
+              'databaseRole': 'standby',
+              'preferredWriteBaseUrl': AppConfig.standbyApiUrl,
+              'switchRecommended': true,
+            }),
+            503,
+            headers: const <String, String>{
+              'content-type': 'application/json',
+            },
+          );
+        }
+
+        if (request.url.host == standbyHost) {
+          return http.Response(
+            jsonEncode(<String, Object?>{
+              'success': true,
+              'data': <String, Object?>{'relativeUrl': '/uploads/file.png'},
+            }),
+            200,
+            headers: const <String, String>{
+              'content-type': 'application/json',
+            },
+          );
+        }
+
+        return http.Response('unexpected host', 500);
+      }),
+    );
+
+    final result = await BackendApiService().uploadFile(
+      fileBytes: <int>[1, 2, 3],
+      fileName: 'file.png',
+      fileType: 'image/png',
+      compress: false,
+    );
+
+    expect(result['uploadedUrl'], '/uploads/file.png');
     expect(requestHosts, <String>[primaryHost, standbyHost]);
   });
 
@@ -335,5 +391,27 @@ void main() {
 
     expect(result['uploadedUrl'], '/uploads/retry.png');
     expect(attempts, 2);
+  });
+
+  test('uploadFile timeout throws without helper retry loop', () async {
+    var attempts = 0;
+
+    BackendApiService().setHttpClient(
+      MockClient((request) async {
+        attempts++;
+        throw TimeoutException('upload timed out');
+      }),
+    );
+
+    await expectLater(
+      BackendApiService().uploadFile(
+        fileBytes: <int>[1, 2, 3],
+        fileName: 'timeout.png',
+        fileType: 'image/png',
+        compress: false,
+      ),
+      throwsA(isA<TimeoutException>()),
+    );
+    expect(attempts, 1);
   });
 }

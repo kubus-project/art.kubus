@@ -263,9 +263,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
 
           _avatarChanged = true;
 
-          final saved = await profileProvider.saveProfileMedia(
+          final saved = await profileProvider.saveProfile(
             walletAddress: wallet,
             avatar: persistableAvatar,
+            reloadStats: false,
           );
           if (!saved) {
             throw Exception(profileProvider.error ?? 'Avatar save failed');
@@ -464,9 +465,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
 
           _coverChanged = true;
 
-          final saved = await profileProvider.saveProfileMedia(
+          final saved = await profileProvider.saveProfile(
             walletAddress: wallet,
             coverImage: persistableCover,
+            reloadStats: false,
           );
           if (!saved) {
             throw Exception(profileProvider.error ?? 'Cover save failed');

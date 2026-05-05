@@ -358,6 +358,9 @@ Future<Map<String, dynamic>> _backendApiUploadFileImpl(
             : response.body,
       );
     } catch (e, stackTrace) {
+      if (e is TimeoutException) {
+        rethrow;
+      }
       if (_backendApiIsNodeNotWritableException(e)) {
         rethrow;
       }
@@ -608,6 +611,9 @@ Future<Map<String, dynamic>> _backendApiUploadAvatarToProfileImpl(
             : response.body,
       );
     } catch (e, stackTrace) {
+      if (e is TimeoutException) {
+        rethrow;
+      }
       if (_backendApiIsNodeNotWritableException(e)) {
         rethrow;
       }

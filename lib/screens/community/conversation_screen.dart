@@ -996,12 +996,14 @@ class _ConversationScreenState extends State<ConversationScreen> {
       setState(() => _isUploading = true);
       await _chatProvider.uploadAttachment(
           widget.conversation.id, bytes, filename, contentType);
-      setState(() => _isUploading = false);
       // The socket should push the new message; we refresh local list just in case
       await _load();
     } catch (e) {
-      setState(() => _isUploading = false);
       debugPrint('Attachment upload error: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isUploading = false);
+      }
     }
   }
 

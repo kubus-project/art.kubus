@@ -8,6 +8,7 @@ import 'package:art_kubus/utils/profile_media_ref_utils.dart';
 class _FakeProfileApi implements ProfileBackendApi {
   Map<String, dynamic>? lastSavedProfile;
   Map<String, dynamic>? nextSaveResponse;
+  Object? saveError;
 
   @override
   String get baseUrl => 'https://api.kubus.site';
@@ -27,6 +28,10 @@ class _FakeProfileApi implements ProfileBackendApi {
 
   @override
   Future<Map<String, dynamic>> saveProfile(Map<String, dynamic> profileData) async {
+    final error = saveError;
+    if (error != null) {
+      throw error;
+    }
     lastSavedProfile = Map<String, dynamic>.from(profileData);
     return nextSaveResponse ?? <String, dynamic>{
       'walletAddress': profileData['walletAddress'],
@@ -227,5 +232,21 @@ void main() {
     );
 
     expect(api.lastSavedProfile?['coverImage'], '/uploads/profiles/cover/2026/cover.png');
+  });
+
+  test('ProfileProvider saveProfile clears loading after save exceptions',
+      () async {
+    final api = _FakeProfileApi()..saveError = Exception('network timeout');
+    final provider = ProfileProvider(apiService: api);
+
+    final saved = await provider.saveProfile(
+      walletAddress: 'ArtistWallet111111111111111111111111111111111',
+      username: 'artist_user',
+      reloadStats: false,
+    );
+
+    expect(saved, isFalse);
+    expect(provider.isLoading, isFalse);
+    expect(provider.error, contains('network timeout'));
   });
 }

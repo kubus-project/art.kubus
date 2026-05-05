@@ -5550,7 +5550,6 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _isPosting = false);
         ScaffoldMessenger.of(context).showKubusSnackBar(
           SnackBar(
             content: Text(AppLocalizations.of(context)!
@@ -5559,6 +5558,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isPosting = false);
       }
     }
   }
@@ -7383,7 +7386,6 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _isPosting = false);
         ScaffoldMessenger.of(context).showKubusSnackBar(
           SnackBar(
             content: Text(AppLocalizations.of(context)!
@@ -7392,6 +7394,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
             behavior: SnackBarBehavior.floating,
           ),
         );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isPosting = false);
       }
     }
   }

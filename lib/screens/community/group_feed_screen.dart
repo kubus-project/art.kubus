@@ -446,13 +446,16 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
       );
     } catch (e) {
       if (!mounted) return;
-      setState(() => _posting = false);
       messenger.showKubusSnackBar(
         SnackBar(
           content: Text(l10n.communityComposerCreatePostFailedToast),
           duration: const Duration(seconds: 3),
         ),
       );
+    } finally {
+      if (mounted) {
+        setState(() => _posting = false);
+      }
     }
   }
 

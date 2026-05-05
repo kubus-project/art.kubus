@@ -13,6 +13,7 @@ import '../models/wallet.dart';
 import 'storage_config.dart';
 import '../models/swap_quote.dart';
 import '../utils/wallet_utils.dart';
+import 'ipfs_metadata_resolver.dart';
 
 enum DerivationPathType { standard, legacy }
 
@@ -3059,29 +3060,28 @@ class SolanaWalletService {
         if (onChainName.isNotEmpty) base['name'] = onChainName;
         if (metadataUri.isNotEmpty) base['uri'] = metadataUri;
 
-        try {
-          final offChain = await metadata
-              .getExternalJson()
-              .timeout(const Duration(milliseconds: 3500));
-          if (offChain != null) {
-            base['description'] = offChain.description;
-            final offChainName = offChain.name.trim();
-            if (offChainName.isNotEmpty) {
-              base['name'] = offChainName;
-            }
-            final offChainSymbol = offChain.symbol.trim();
-            if (offChainSymbol.isNotEmpty) {
-              base['symbol'] = offChainSymbol;
-            }
-            final resolvedImage = _resolveTokenImage(offChain.image);
-            if (resolvedImage != null) {
-              base['logoUrl'] = resolvedImage;
-            }
-            base['rawOffChainMetadata'] = offChain.toJson();
+        final offChain =
+            await IpfsMetadataResolver.instance.resolveJson(metadataUri);
+        if (offChain != null) {
+          final description = offChain['description']?.toString().trim();
+          if (description != null && description.isNotEmpty) {
+            base['description'] = description;
           }
-        } catch (e) {
-          debugPrint(
-              'SolanaWalletService: Failed to fetch off-chain metadata for $mint -> $e');
+          final offChainName = offChain['name']?.toString().trim();
+          if (offChainName != null && offChainName.isNotEmpty) {
+            base['name'] = offChainName;
+          }
+          final offChainSymbol = offChain['symbol']?.toString().trim();
+          if (offChainSymbol != null && offChainSymbol.isNotEmpty) {
+            base['symbol'] = offChainSymbol;
+          }
+          final resolvedImage = _resolveTokenImage(
+            offChain['image']?.toString(),
+          );
+          if (resolvedImage != null) {
+            base['logoUrl'] = resolvedImage;
+          }
+          base['rawOffChainMetadata'] = offChain;
         }
       }
     } catch (e) {
@@ -3098,6 +3098,14 @@ class SolanaWalletService {
       timestamp: DateTime.now(),
     );
     return sanitized;
+  }
+
+  @visibleForTesting
+  Future<Map<String, dynamic>> getTokenInfoForTesting(
+    String mint, {
+    int? decimalsHint,
+  }) {
+    return _getTokenInfo(mint, decimalsHint: decimalsHint);
   }
 }
 

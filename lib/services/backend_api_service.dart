@@ -1339,6 +1339,9 @@ class BackendApiService
       final streamed = await _client.send(request).timeout(timeout);
       response = await http.Response.fromStream(streamed).timeout(timeout);
     } catch (error) {
+      if (error is TimeoutException) {
+        rethrow;
+      }
       if (allowImplicitBackendFailover && _isFallbackEligibleReadError(error)) {
         final failoverUri = _nextImplicitFailoverUri(
           request.url,
