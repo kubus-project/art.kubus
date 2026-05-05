@@ -708,6 +708,9 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
         embedded: widget.embedded,
         modalReauth: false,
         requiresWalletBackup: false,
+        presentation: widget.embedded
+            ? PostAuthLoadingPresentation.inline
+            : PostAuthLoadingPresentation.fullScreen,
         onAuthSuccess: widget.onAuthSuccess == null
             ? null
             : (_) async {

@@ -72,6 +72,7 @@ class AuthRedirectController {
     String? heuristicNextStepId,
     String? persona,
     bool removeAuthStack = true,
+    AuthOrigin origin = AuthOrigin.emailPassword,
   }) async {
     final targetWallet = (walletAddress ?? '').toString().trim();
     final flowScopeKey = OnboardingStateService.buildAuthOnboardingScopeKey(
@@ -83,10 +84,12 @@ class AuthRedirectController {
         await AuthOnboardingService.resolveStructuredOnboardingResume(
       prefs: prefs,
       hasPendingAuthOnboarding:
-          OnboardingStateService.hasPendingAuthOnboardingSync(
-        prefs,
-        scopeKey: flowScopeKey,
-      ),
+          origin == AuthOrigin.wallet && flowScopeKey == null
+              ? false
+              : OnboardingStateService.hasPendingAuthOnboardingSync(
+                  prefs,
+                  scopeKey: flowScopeKey,
+                ),
       hasAuthenticatedSession: true,
       hasHydratedProfile: hasHydratedProfile,
       requiresWalletBackup: requiresWalletBackup,
@@ -157,6 +160,7 @@ class AuthRedirectController {
       heuristicNextStepId: profileProvider.nextStructuredOnboardingStepId,
       persona: profileProvider.userPersona?.storageValue,
       removeAuthStack: replaceStack,
+      origin: origin,
     );
 
     if (result.state == PostAuthRouteState.onboardingRequired &&

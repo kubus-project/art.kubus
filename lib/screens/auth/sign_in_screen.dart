@@ -9,9 +9,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../config/config.dart';
 import '../../services/auth_redirect_controller.dart';
 import '../../providers/wallet_provider.dart';
-import '../../services/auth_success_handoff_service.dart';
 import '../../services/backend_api_service.dart';
 import '../../services/google_auth_service.dart';
+import '../../services/post_auth_coordinator.dart';
 import '../../services/telemetry/telemetry_service.dart';
 import '../../widgets/google_sign_in_button.dart';
 import '../../widgets/google_sign_in_web_button.dart';
@@ -38,6 +38,7 @@ class SignInScreen extends StatefulWidget {
     this.openWalletFlowOnStart = false,
     this.onVerificationRequired,
     this.onSwitchToRegister,
+    this.postAuthCoordinator = const PostAuthCoordinator(),
   });
 
   final String? redirectRoute;
@@ -48,6 +49,7 @@ class SignInScreen extends StatefulWidget {
   final bool openWalletFlowOnStart;
   final ValueChanged<String>? onVerificationRequired;
   final VoidCallback? onSwitchToRegister;
+  final PostAuthCoordinator postAuthCoordinator;
 
   @override
   State<SignInScreen> createState() => _SignInScreenState();
@@ -203,8 +205,6 @@ class _SignInScreenState extends State<SignInScreen> {
     Map<String, dynamic> payload, {
     AuthOrigin origin = AuthOrigin.emailPassword,
   }) async {
-    final navigator = Navigator.of(context);
-    final screenWidth = MediaQuery.sizeOf(context).width;
     final data = (payload['data'] as Map<String, dynamic>?) ?? payload;
     final user = (data['user'] as Map<String, dynamic>?) ?? data;
 
@@ -236,40 +236,8 @@ class _SignInScreenState extends State<SignInScreen> {
       _walletInlineRequiredWalletAddress = null;
     });
 
-    // For non-embedded flows, push PostAuthLoadingScreen route
-    if (!widget.embedded) {
-      await const AuthSuccessHandoffService().handle(
-        navigator: navigator,
-        isMounted: () => mounted,
-        screenWidth: screenWidth,
-        payload: payload,
-        origin: origin,
-        redirectRoute: widget.redirectRoute,
-        redirectArguments: widget.redirectArguments,
-        walletAddress: normalizedWalletAddress,
-        userId: userId,
-        embedded: widget.embedded,
-        modalReauth: false,
-        requiresWalletBackup: false,
-        onBeforeSavedItemsSync:
-            (origin == AuthOrigin.google || origin == AuthOrigin.wallet)
-                ? null
-                : () => maybeShowGooglePasswordUpgradePrompt(context, payload),
-        onAuthSuccess: widget.onAuthSuccess == null
-            ? null
-            : (payload) async {
-                try {
-                  await widget.onAuthSuccess!(payload);
-                } catch (e) {
-                  AppConfig.debugPrint(
-                    'SignInScreen: onAuthSuccess callback failed: $e',
-                  );
-                }
-              },
-      );
-    }
-    // For embedded flows, local build() will show PostAuthLoadingScreen
-    // because _postAuthActive is true
+    // Local build() now owns the post-auth loading presentation so desktop can
+    // keep the AuthEntryShell while replacing only the form area.
   }
 
   @visibleForTesting
@@ -609,30 +577,6 @@ class _SignInScreenState extends State<SignInScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // If post-auth is in progress, show loading screen instead of auth form
-    if (_postAuthActive) {
-      return PostAuthLoadingScreen(
-        payload: _postAuthPayload ?? {},
-        origin: _postAuthOrigin ?? AuthOrigin.emailPassword,
-        walletAddress: _postAuthWalletAddress,
-        userId: _postAuthUserId,
-        embedded: widget.embedded,
-        modalReauth: false,
-        requiresWalletBackup: false,
-        onAuthSuccess: widget.onAuthSuccess == null
-            ? null
-            : (payload) async {
-                try {
-                  await widget.onAuthSuccess!(payload);
-                } catch (e) {
-                  AppConfig.debugPrint(
-                    'SignInScreen: onAuthSuccess callback failed: $e',
-                  );
-                }
-              },
-      );
-    }
-
     final theme = Theme.of(context);
     final colorScheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
@@ -644,12 +588,19 @@ class _SignInScreenState extends State<SignInScreen> {
     final enableEmail = AppConfig.enableEmailAuth;
     final enableGoogle = AppConfig.enableGoogleAuth;
 
-    final form = _buildAuthForm(
-      colorScheme: colorScheme,
-      enableWallet: enableWallet,
-      enableEmail: enableEmail,
-      enableGoogle: enableGoogle,
-    );
+    final postAuthLoading = _postAuthActive ? _buildPostAuthLoading() : null;
+
+    if (postAuthLoading != null && _useFullScreenPostAuthLoading(context)) {
+      return postAuthLoading;
+    }
+
+    final form = postAuthLoading ??
+        _buildAuthForm(
+          colorScheme: colorScheme,
+          enableWallet: enableWallet,
+          enableEmail: enableEmail,
+          enableGoogle: enableGoogle,
+        );
 
     if (widget.embedded) {
       return form;
@@ -667,36 +618,84 @@ class _SignInScreenState extends State<SignInScreen> {
         l10n.authHighlightNoFees,
         l10n.authHighlightControl,
       ],
-      topAction: TextButton(
-        onPressed: _continueAsGuest,
-        style: TextButton.styleFrom(
-          foregroundColor: colorScheme.onSurface,
-          backgroundColor:
-              colorScheme.surface.withValues(alpha: isDark ? 0.16 : 0.78),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(999),
-          ),
-          padding: const EdgeInsets.symmetric(
-            horizontal: KubusSpacing.md,
-            vertical: 10,
-          ),
-        ),
-        child: Text(l10n.commonSkip),
-      ),
-      footer: Center(
-        child: TextButton(
-          onPressed: _navigateToRegister,
-          style: TextButton.styleFrom(
-            foregroundColor: colorScheme.onSurface,
-            padding: const EdgeInsets.symmetric(
-              horizontal: KubusSpacing.md,
-              vertical: KubusSpacing.xs,
-            ),
-          ),
-          child: Text(l10n.authNeedAccountRegister),
-        ),
-      ),
+      topAction: postAuthLoading == null
+          ? TextButton(
+              onPressed: _continueAsGuest,
+              style: TextButton.styleFrom(
+                foregroundColor: colorScheme.onSurface,
+                backgroundColor:
+                    colorScheme.surface.withValues(alpha: isDark ? 0.16 : 0.78),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: KubusSpacing.md,
+                  vertical: 10,
+                ),
+              ),
+              child: Text(l10n.commonSkip),
+            )
+          : null,
+      footer: postAuthLoading == null
+          ? Center(
+              child: TextButton(
+                onPressed: _navigateToRegister,
+                style: TextButton.styleFrom(
+                  foregroundColor: colorScheme.onSurface,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: KubusSpacing.md,
+                    vertical: KubusSpacing.xs,
+                  ),
+                ),
+                child: Text(l10n.authNeedAccountRegister),
+              ),
+            )
+          : null,
       form: form,
+    );
+  }
+
+  bool _useFullScreenPostAuthLoading(BuildContext context) {
+    final size = MediaQuery.sizeOf(context);
+    return !widget.embedded && size.width < 700;
+  }
+
+  Widget _buildPostAuthLoading() {
+    final origin = _postAuthOrigin ?? AuthOrigin.emailPassword;
+    final payload = _postAuthPayload ?? const <String, dynamic>{};
+    final presentation = widget.embedded
+        ? PostAuthLoadingPresentation.inline
+        : _useFullScreenPostAuthLoading(context)
+            ? PostAuthLoadingPresentation.fullScreen
+            : PostAuthLoadingPresentation.shellEmbedded;
+
+    return PostAuthLoadingScreen(
+      payload: payload,
+      origin: origin,
+      coordinator: widget.postAuthCoordinator,
+      redirectRoute: widget.redirectRoute,
+      redirectArguments: widget.redirectArguments,
+      walletAddress: _postAuthWalletAddress,
+      userId: _postAuthUserId,
+      embedded: widget.embedded,
+      modalReauth: false,
+      requiresWalletBackup: false,
+      presentation: presentation,
+      onBeforeSavedItemsSync:
+          (origin == AuthOrigin.google || origin == AuthOrigin.wallet)
+              ? null
+              : () => maybeShowGooglePasswordUpgradePrompt(context, payload),
+      onAuthSuccess: widget.onAuthSuccess == null
+          ? null
+          : (payload) async {
+              try {
+                await widget.onAuthSuccess!(payload);
+              } catch (e) {
+                AppConfig.debugPrint(
+                  'SignInScreen: onAuthSuccess callback failed: $e',
+                );
+              }
+            },
     );
   }
 

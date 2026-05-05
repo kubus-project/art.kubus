@@ -93,23 +93,6 @@ class AuthOnboardingService {
     final hasSavedProgress =
         completedSteps.isNotEmpty || deferredSteps.isNotEmpty;
 
-    final globalOnboardingCompleted =
-        prefs.getBool(PreferenceKeys.hasCompletedOnboarding) ?? false;
-
-    final shouldResume = hasPendingAuthOnboarding ||
-        payloadIsNewAccount ||
-        (!globalOnboardingCompleted && (hasSavedProgress ||
-            (hasAuthenticatedSession && hasHydratedProfile))) ||
-        (heuristicNextStepId != null &&
-            heuristicNextStepId.trim().isNotEmpty &&
-            isAccountStepId(heuristicNextStepId));
-
-    if (!shouldResume) {
-      return const StructuredOnboardingResumeState(
-        requiresStructuredOnboarding: false,
-      );
-    }
-
     final walletBackupOnboardingEnabled =
         AppConfig.isFeatureEnabled('walletBackupOnboarding');
     String? normalizedHeuristic = isAccountStepId(heuristicNextStepId)
@@ -123,16 +106,33 @@ class AuthOnboardingService {
       normalizedHeuristic = 'walletBackupIntro';
     }
     final normalizedPersona = (persona ?? '').trim().toLowerCase();
-    final requiresDaoReview = completedSteps.contains('daoReview') ||
-        deferredSteps.contains('daoReview') ||
-        normalizedPersona == 'creator' ||
-        normalizedPersona == 'institution';
-    final requiresVerifyEmail = completedSteps.contains('verifyEmail') ||
-        deferredSteps.contains('verifyEmail');
     final requiresWalletBackupStep = walletBackupOnboardingEnabled &&
         (completedSteps.contains('walletBackup') ||
             deferredSteps.contains('walletBackup') ||
             requiresWalletBackup);
+    final allowRoleSpecificOnboarding =
+        hasPendingAuthOnboarding || payloadIsNewAccount || hasSavedProgress;
+    final explicitTrustedHeuristic = normalizedHeuristic != null &&
+        (hasPendingAuthOnboarding || payloadIsNewAccount || hasSavedProgress);
+    final shouldResume = hasPendingAuthOnboarding ||
+        payloadIsNewAccount ||
+        hasSavedProgress ||
+        requiresWalletBackupStep ||
+        explicitTrustedHeuristic;
+
+    if (!shouldResume) {
+      return const StructuredOnboardingResumeState(
+        requiresStructuredOnboarding: false,
+      );
+    }
+
+    final requiresDaoReview = allowRoleSpecificOnboarding &&
+        (completedSteps.contains('daoReview') ||
+            deferredSteps.contains('daoReview') ||
+            normalizedPersona == 'creator' ||
+            normalizedPersona == 'institution');
+    final requiresVerifyEmail = completedSteps.contains('verifyEmail') ||
+        deferredSteps.contains('verifyEmail');
 
     if (hasSavedProgress) {
       final nextStepId = _nextIncompleteStepId(
@@ -148,7 +148,7 @@ class AuthOnboardingService {
       );
     }
 
-    if (normalizedHeuristic != null) {
+    if (explicitTrustedHeuristic) {
       return StructuredOnboardingResumeState(
         requiresStructuredOnboarding: true,
         nextStepId: normalizedHeuristic,

@@ -178,11 +178,9 @@ void main() {
   });
 
   test(
-      'REGRESSION: resumes onboarding when global onboarding incomplete, authenticated, and profile hydrated',
+      'existing hydrated users do not resume from missing global onboarding alone',
       () async {
-    // Simulate: user verified email, signed in, but global onboarding not finished.
     final prefs = await SharedPreferences.getInstance();
-    // Global onboarding is incomplete (no saved progress either)
     await prefs.setBool(PreferenceKeys.hasCompletedOnboarding, false);
 
     final state = await AuthOnboardingService.resolveStructuredOnboardingResume(
@@ -197,8 +195,8 @@ void main() {
       payload: const <String, dynamic>{}, // Backend doesn't flag as new
     );
 
-    expect(state.requiresStructuredOnboarding, isTrue);
-    expect(state.nextStepId, 'accountPermissions');
+    expect(state.requiresStructuredOnboarding, isFalse);
+    expect(state.nextStepId, isNull);
   });
 
   test(
@@ -224,10 +222,8 @@ void main() {
     expect(state.nextStepId, isNull);
   });
 
-  test(
-      'REGRESSION: resumes when heuristic next step exists and global onboarding incomplete',
+  test('ignores daoReview heuristic for existing login without pending scope',
       () async {
-    // Simulate: profile provider suggests next step even though backend doesn't signal new user
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(PreferenceKeys.hasCompletedOnboarding, false);
 
@@ -243,8 +239,65 @@ void main() {
       payload: const <String, dynamic>{},
     );
 
+    expect(state.requiresStructuredOnboarding, isFalse);
+    expect(state.nextStepId, isNull);
+  });
+
+  test('existing creator wallet profile does not default to dao review',
+      () async {
+    final prefs = await SharedPreferences.getInstance();
+    final state = await AuthOnboardingService.resolveStructuredOnboardingResume(
+      prefs: prefs,
+      hasPendingAuthOnboarding: false,
+      hasAuthenticatedSession: true,
+      hasHydratedProfile: true,
+      requiresWalletBackup: false,
+      heuristicNextStepId: null,
+      persona: 'creator',
+      flowScopeKey: testScope,
+      payload: const <String, dynamic>{},
+    );
+
+    expect(state.requiresStructuredOnboarding, isFalse);
+    expect(state.nextStepId, isNull);
+  });
+
+  test('new creator wallet account can still reach role-specific onboarding',
+      () async {
+    final prefs = await SharedPreferences.getInstance();
+    final state = await AuthOnboardingService.resolveStructuredOnboardingResume(
+      prefs: prefs,
+      hasPendingAuthOnboarding: false,
+      hasAuthenticatedSession: true,
+      hasHydratedProfile: true,
+      requiresWalletBackup: false,
+      heuristicNextStepId: null,
+      persona: 'creator',
+      flowScopeKey: testScope,
+      payload: const <String, dynamic>{'isNewUser': true},
+    );
+
+    expect(state.requiresStructuredOnboarding, isTrue);
+    expect(state.nextStepId, 'daoReview');
+  });
+
+  test('pending dao review scope still resumes dao review', () async {
+    final prefs = await seedProgress(
+      completedSteps: <String>{'account', 'role', 'profile'},
+    );
+    final state = await AuthOnboardingService.resolveStructuredOnboardingResume(
+      prefs: prefs,
+      hasPendingAuthOnboarding: true,
+      hasAuthenticatedSession: true,
+      hasHydratedProfile: true,
+      requiresWalletBackup: false,
+      heuristicNextStepId: 'daoReview',
+      persona: 'institution',
+      flowScopeKey: testScope,
+      payload: const <String, dynamic>{},
+    );
+
     expect(state.requiresStructuredOnboarding, isTrue);
     expect(state.nextStepId, 'daoReview');
   });
 }
-

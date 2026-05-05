@@ -1,12 +1,18 @@
-import 'package:art_kubus/l10n/app_localizations.dart';
-import 'package:art_kubus/services/auth_redirect_controller.dart';
-import 'package:art_kubus/screens/onboarding/onboarding_flow_screen.dart';
-import 'package:art_kubus/services/post_auth_coordinator.dart';
 import 'package:art_kubus/config/config.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:art_kubus/screens/onboarding/onboarding_flow_screen.dart';
+import 'package:art_kubus/services/auth_redirect_controller.dart';
+import 'package:art_kubus/services/post_auth_coordinator.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:flutter/material.dart';
+
+enum PostAuthLoadingPresentation {
+  fullScreen,
+  shellEmbedded,
+  inline,
+}
 
 class PostAuthLoadingScreen extends StatefulWidget {
   const PostAuthLoadingScreen({
@@ -21,6 +27,7 @@ class PostAuthLoadingScreen extends StatefulWidget {
     this.embedded = false,
     this.modalReauth = false,
     this.requiresWalletBackup = false,
+    this.presentation = PostAuthLoadingPresentation.fullScreen,
     this.onBeforeSavedItemsSync,
     this.onAuthSuccess,
   });
@@ -35,6 +42,7 @@ class PostAuthLoadingScreen extends StatefulWidget {
   final bool embedded;
   final bool modalReauth;
   final bool requiresWalletBackup;
+  final PostAuthLoadingPresentation presentation;
   final Future<void> Function()? onBeforeSavedItemsSync;
   final Future<void> Function(Map<String, dynamic> payload)? onAuthSuccess;
 
@@ -89,7 +97,6 @@ class _PostAuthLoadingScreenState extends State<PostAuthLoadingScreen> {
       return;
     }
 
-    // Call onAuthSuccess callback if provided, before routing
     if (widget.onAuthSuccess != null) {
       try {
         await widget.onAuthSuccess!(widget.payload);
@@ -100,7 +107,8 @@ class _PostAuthLoadingScreenState extends State<PostAuthLoadingScreen> {
 
     if (!mounted) return;
     final navigator = Navigator.of(context);
-    if (result.onboardingStepId != null && result.onboardingStepId!.isNotEmpty) {
+    if (result.onboardingStepId != null &&
+        result.onboardingStepId!.isNotEmpty) {
       await navigator.pushAndRemoveUntil(
         MaterialPageRoute(
           builder: (_) => OnboardingFlowScreen(
@@ -129,8 +137,80 @@ class _PostAuthLoadingScreenState extends State<PostAuthLoadingScreen> {
     }
   }
 
+  Future<void> _goBackToSignIn() async {
+    if (!mounted) return;
+    await Navigator.of(context)
+        .pushNamedAndRemoveUntil('/sign-in', (_) => false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isFullScreen =
+        widget.presentation == PostAuthLoadingPresentation.fullScreen;
+    final content = PostAuthLoadingContent(
+      stage: _stage,
+      running: _running,
+      error: _error,
+      onRetry: _running ? null : _runFlow,
+      onBackToSignIn: _goBackToSignIn,
+      compact: !isFullScreen,
+    );
+
+    if (!isFullScreen) {
+      return PopScope(
+        canPop: false,
+        child: content,
+      );
+    }
+
+    return PopScope(
+      canPop: false,
+      child: AnimatedGradientBackground(
+        duration: const Duration(seconds: 12),
+        intensity: 0.2,
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          body: SafeArea(
+            child: GlassSurface(
+              borderRadius: BorderRadius.zero,
+              showBorder: false,
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(KubusSpacing.lg),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 620),
+                    child: SingleChildScrollView(child: content),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class PostAuthLoadingContent extends StatelessWidget {
+  const PostAuthLoadingContent({
+    super.key,
+    required this.stage,
+    required this.running,
+    required this.error,
+    required this.onRetry,
+    required this.onBackToSignIn,
+    this.compact = false,
+  });
+
+  final PostAuthStage stage;
+  final bool running;
+  final Object? error;
+  final VoidCallback? onRetry;
+  final VoidCallback? onBackToSignIn;
+  final bool compact;
+
   String _stageLabel(AppLocalizations l10n) {
-    switch (_stage) {
+    switch (stage) {
       case PostAuthStage.preparingSession:
         return l10n.postAuthPreparingSession;
       case PostAuthStage.securingWallet:
@@ -149,7 +229,7 @@ class _PostAuthLoadingScreenState extends State<PostAuthLoadingScreen> {
   }
 
   String _stageSubtitle(AppLocalizations l10n) {
-    switch (_stage) {
+    switch (stage) {
       case PostAuthStage.preparingSession:
         return l10n.postAuthPreparingSessionBody;
       case PostAuthStage.securingWallet:
@@ -167,141 +247,124 @@ class _PostAuthLoadingScreenState extends State<PostAuthLoadingScreen> {
     }
   }
 
-  Future<void> _goBackToSignIn() async {
-    if (!mounted) return;
-    await Navigator.of(context).pushNamedAndRemoveUntil('/sign-in', (_) => false);
-  }
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final roles = KubusColorRoles.of(context);
-    final isFailed = _stage == PostAuthStage.failed;
+    final isFailed = stage == PostAuthStage.failed;
+    final iconSize = compact ? 46.0 : 54.0;
 
-    return PopScope(
-      canPop: false,
-      child: AnimatedGradientBackground(
-        duration: const Duration(seconds: 12),
-        intensity: 0.2,
-        child: Scaffold(
-          backgroundColor: Colors.transparent,
-          body: SafeArea(
-            child: GlassSurface(
-              borderRadius: BorderRadius.zero,
-              showBorder: false,
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(KubusSpacing.lg),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 620),
-                    child: SingleChildScrollView(
-                      child: LiquidGlassCard(
-                        padding: const EdgeInsets.all(KubusSpacing.xl),
-                        borderRadius: BorderRadius.circular(KubusRadius.xl),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  width: 54,
-                                  height: 54,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: isFailed
-                                        ? roles.negativeAction.withValues(alpha: 0.14)
-                                        : roles.positiveAction.withValues(alpha: 0.14),
-                                  ),
-                                  child: Icon(
-                                    isFailed ? Icons.error_outline : Icons.lock_outline,
-                                    color: isFailed ? roles.negativeAction : roles.positiveAction,
-                                    size: 28,
-                                  ),
-                                ),
-                                const SizedBox(width: KubusSpacing.md),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        isFailed ? l10n.postAuthFailedTitle : _stageLabel(l10n),
-                                        style: KubusTextStyles.sectionTitle.copyWith(
-                                          color: scheme.onSurface,
-                                          fontWeight: FontWeight.w800,
-                                        ),
-                                      ),
-                                      const SizedBox(height: KubusSpacing.xs),
-                                      Text(
-                                        _stageSubtitle(l10n),
-                                        style: KubusTextStyles.sectionSubtitle.copyWith(
-                                          color: scheme.onSurface.withValues(alpha: 0.72),
-                                          height: 1.4,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: KubusSpacing.xl),
-                            LinearProgressIndicator(
-                              minHeight: 6,
-                              backgroundColor: scheme.outlineVariant.withValues(alpha: 0.22),
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                isFailed ? roles.negativeAction : roles.positiveAction,
-                              ),
-                            ),
-                            const SizedBox(height: KubusSpacing.lg),
-                            _StageList(
-                              activeStage: _stage,
-                              failed: isFailed,
-                            ),
-                            if (isFailed) ...[
-                              const SizedBox(height: KubusSpacing.lg),
-                              Text(
-                                (_error ?? l10n.postAuthFailedBody).toString(),
-                                style: KubusTextStyles.detailBody.copyWith(
-                                  color: scheme.onSurface.withValues(alpha: 0.72),
-                                ),
-                              ),
-                              const SizedBox(height: KubusSpacing.lg),
-                              Wrap(
-                                spacing: KubusSpacing.sm,
-                                runSpacing: KubusSpacing.sm,
-                                children: [
-                                  OutlinedButton(
-                                    onPressed: _running ? null : _runFlow,
-                                    child: Text(l10n.postAuthRetry),
-                                  ),
-                                  ElevatedButton(
-                                    onPressed: _goBackToSignIn,
-                                    child: Text(l10n.postAuthBackToSignIn),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
+    return LiquidGlassCard(
+      padding: EdgeInsets.all(compact ? KubusSpacing.lg : KubusSpacing.xl),
+      borderRadius:
+          BorderRadius.circular(compact ? KubusRadius.lg : KubusRadius.xl),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: iconSize,
+                height: iconSize,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: isFailed
+                      ? roles.negativeAction.withValues(alpha: 0.14)
+                      : roles.positiveAction.withValues(alpha: 0.14),
+                ),
+                child: Icon(
+                  isFailed ? Icons.error_outline : Icons.lock_outline,
+                  color: isFailed ? roles.negativeAction : roles.positiveAction,
+                  size: compact ? 24 : 28,
                 ),
               ),
+              const SizedBox(width: KubusSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isFailed ? l10n.postAuthFailedTitle : _stageLabel(l10n),
+                      style: (compact
+                              ? KubusTextStyles.sectionTitle
+                              : KubusTextStyles.sectionTitle)
+                          .copyWith(
+                        color: scheme.onSurface,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: KubusSpacing.xs),
+                    Text(
+                      _stageSubtitle(l10n),
+                      style: (compact
+                              ? KubusTextStyles.detailBody
+                              : KubusTextStyles.sectionSubtitle)
+                          .copyWith(
+                        color: scheme.onSurface.withValues(alpha: 0.72),
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: compact ? KubusSpacing.lg : KubusSpacing.xl),
+          LinearProgressIndicator(
+            minHeight: compact ? 5 : 6,
+            backgroundColor: scheme.outlineVariant.withValues(alpha: 0.22),
+            valueColor: AlwaysStoppedAnimation<Color>(
+              isFailed ? roles.negativeAction : roles.positiveAction,
             ),
           ),
-        ),
+          SizedBox(height: compact ? KubusSpacing.md : KubusSpacing.lg),
+          _StageList(
+            activeStage: stage,
+            failed: isFailed,
+            compact: compact,
+          ),
+          if (isFailed) ...[
+            SizedBox(height: compact ? KubusSpacing.md : KubusSpacing.lg),
+            Text(
+              (error ?? l10n.postAuthFailedBody).toString(),
+              style: KubusTextStyles.detailBody.copyWith(
+                color: scheme.onSurface.withValues(alpha: 0.72),
+              ),
+            ),
+            SizedBox(height: compact ? KubusSpacing.md : KubusSpacing.lg),
+            Wrap(
+              spacing: KubusSpacing.sm,
+              runSpacing: KubusSpacing.sm,
+              children: [
+                OutlinedButton(
+                  onPressed: running ? null : onRetry,
+                  child: Text(l10n.postAuthRetry),
+                ),
+                ElevatedButton(
+                  onPressed: onBackToSignIn,
+                  child: Text(l10n.postAuthBackToSignIn),
+                ),
+              ],
+            ),
+          ],
+        ],
       ),
     );
   }
 }
 
 class _StageList extends StatelessWidget {
-  const _StageList({required this.activeStage, required this.failed});
+  const _StageList({
+    required this.activeStage,
+    required this.failed,
+    required this.compact,
+  });
 
   final PostAuthStage activeStage;
   final bool failed;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -309,12 +372,24 @@ class _StageList extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final roles = KubusColorRoles.of(context);
     final items = <({PostAuthStage stage, String label})>[
-      (stage: PostAuthStage.preparingSession, label: l10n.postAuthPreparingSession),
+      (
+        stage: PostAuthStage.preparingSession,
+        label: l10n.postAuthPreparingSession
+      ),
       (stage: PostAuthStage.securingWallet, label: l10n.postAuthSecuringWallet),
       (stage: PostAuthStage.loadingProfile, label: l10n.postAuthLoadingProfile),
-      (stage: PostAuthStage.syncingSavedItems, label: l10n.postAuthSyncingSavedItems),
-      (stage: PostAuthStage.checkingOnboarding, label: l10n.postAuthCheckingOnboarding),
-      (stage: PostAuthStage.openingWorkspace, label: l10n.postAuthOpeningWorkspace),
+      (
+        stage: PostAuthStage.syncingSavedItems,
+        label: l10n.postAuthSyncingSavedItems
+      ),
+      (
+        stage: PostAuthStage.checkingOnboarding,
+        label: l10n.postAuthCheckingOnboarding
+      ),
+      (
+        stage: PostAuthStage.openingWorkspace,
+        label: l10n.postAuthOpeningWorkspace
+      ),
     ];
 
     return Column(
@@ -332,25 +407,28 @@ class _StageList extends StatelessWidget {
                     : item.stage.index <= activeStage.index
                         ? roles.positiveAction
                         : scheme.onSurface.withValues(alpha: 0.28),
-                size: 18,
+                size: compact ? 16 : 18,
               ),
               const SizedBox(width: KubusSpacing.sm),
-              Text(
-                item.label,
-                style: KubusTextStyles.detailBody.copyWith(
-                  color: failed && item.stage == activeStage
-                      ? roles.negativeAction
-                      : item.stage.index <= activeStage.index
-                          ? scheme.onSurface
-                          : scheme.onSurface.withValues(alpha: 0.54),
-                  fontWeight: item.stage == activeStage
-                      ? FontWeight.w700
-                      : FontWeight.w500,
+              Flexible(
+                child: Text(
+                  item.label,
+                  style: KubusTextStyles.detailBody.copyWith(
+                    color: failed && item.stage == activeStage
+                        ? roles.negativeAction
+                        : item.stage.index <= activeStage.index
+                            ? scheme.onSurface
+                            : scheme.onSurface.withValues(alpha: 0.54),
+                    fontWeight: item.stage == activeStage
+                        ? FontWeight.w700
+                        : FontWeight.w500,
+                  ),
                 ),
               ),
             ],
           ),
-          if (item != items.last) const SizedBox(height: KubusSpacing.sm),
+          if (item != items.last)
+            SizedBox(height: compact ? KubusSpacing.xs : KubusSpacing.sm),
         ],
       ],
     );

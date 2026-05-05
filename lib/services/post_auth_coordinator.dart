@@ -100,18 +100,20 @@ class PostAuthCoordinator {
         if (!context.mounted) {
           return const PostAuthResult(completed: false);
         }
-        
+
         try {
           provisionedWallet = await _ensureWalletProvisioned(
             context: context,
-            existingWallet: normalizedWallet.isEmpty ? expectedWallet : normalizedWallet,
+            existingWallet:
+                normalizedWallet.isEmpty ? expectedWallet : normalizedWallet,
           );
         } catch (e) {
-          AppConfig.debugPrint('PostAuthCoordinator: wallet provisioning failed: $e');
+          AppConfig.debugPrint(
+              'PostAuthCoordinator: wallet provisioning failed: $e');
         }
 
         var resolvedWallet = (provisionedWallet ?? '').toString().trim();
-        
+
         // If expected wallet exists but signer restoration/provisioning is not ready,
         // continue with a read-only identity instead of hard-failing auth.
         if (expectedWallet.isNotEmpty && resolvedWallet.isEmpty) {
@@ -136,14 +138,15 @@ class PostAuthCoordinator {
               expectedWallet.isNotEmpty &&
               resolvedWallet.isNotEmpty &&
               !WalletUtils.equals(expectedWallet, resolvedWallet);
-          
+
           try {
             await const WalletSessionSyncService().bindAuthenticatedWallet(
               context: context,
               walletAddress: resolvedWallet,
               userId: normalizedUserId,
               warmUp: true,
-              loadProfile: false, // Profile loading happens in loadingProfile stage
+              loadProfile:
+                  false, // Profile loading happens in loadingProfile stage
               syncBackend: shouldSyncBackendWallet,
             );
             if (!context.mounted) {
@@ -168,7 +171,9 @@ class PostAuthCoordinator {
         final shouldRequireBackup = requiresWalletBackup ||
             (AuthOnboardingService.payloadIndicatesNewAccount(payload) &&
                 wallet.isNotEmpty);
-        if (shouldRequireBackup && wallet.isNotEmpty && walletProvider.hasSigner) {
+        if (shouldRequireBackup &&
+            wallet.isNotEmpty &&
+            walletProvider.hasSigner) {
           try {
             await walletProvider.setMnemonicBackupRequired(
               required: true,
@@ -228,8 +233,8 @@ class PostAuthCoordinator {
       }
 
       setStage(PostAuthStage.checkingOnboarding);
-      final routeResult = await const AuthRedirectController()
-          .resolvePostAuthRedirect(
+      final routeResult =
+          await const AuthRedirectController().resolvePostAuthRedirect(
         prefs: prefs,
         payload: payload,
         hasHydratedProfile: profileProvider.hasHydratedProfile,
@@ -240,6 +245,7 @@ class PostAuthCoordinator {
         redirectArguments: redirectArguments,
         heuristicNextStepId: profileProvider.nextStructuredOnboardingStepId,
         persona: profileProvider.userPersona?.storageValue,
+        origin: origin,
       );
 
       setStage(PostAuthStage.openingWorkspace);
@@ -436,6 +442,4 @@ class PostAuthCoordinator {
       return false;
     }
   }
-
 }
-

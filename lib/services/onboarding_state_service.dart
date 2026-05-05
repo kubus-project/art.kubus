@@ -14,7 +14,8 @@ class OnboardingState {
     required this.hasCompletedOnboarding,
   });
 
-  bool get isReturningUser => !isFirstLaunch || hasSeenWelcome || hasCompletedOnboarding;
+  bool get isReturningUser =>
+      !isFirstLaunch || hasSeenWelcome || hasCompletedOnboarding;
 }
 
 class OnboardingFlowProgress {
@@ -36,8 +37,10 @@ class OnboardingFlowProgress {
 /// - Helper methods for marking onboarding completed / reset
 class OnboardingStateService {
   static const String _onboardingVersionKey = 'onboarding_version';
-  static const String _onboardingCompletedStepsKey = 'onboarding_completed_steps_v2';
-  static const String _onboardingDeferredStepsKey = 'onboarding_deferred_steps_v2';
+  static const String _onboardingCompletedStepsKey =
+      'onboarding_completed_steps_v2';
+  static const String _onboardingDeferredStepsKey =
+      'onboarding_deferred_steps_v2';
 
   static String _scopedKey(String key, String? flowScopeKey) {
     final scope = (flowScopeKey ?? '').trim();
@@ -94,7 +97,8 @@ class OnboardingStateService {
 
     final isFirstLaunch = p.getBool(PreferenceKeys.isFirstLaunch) ?? true;
     final hasSeenWelcome = p.getBool(PreferenceKeys.hasSeenWelcome) ?? false;
-    final hasCompletedOnboarding = p.getBool(PreferenceKeys.hasCompletedOnboarding) ?? false;
+    final hasCompletedOnboarding =
+        p.getBool(PreferenceKeys.hasCompletedOnboarding) ?? false;
 
     return OnboardingState(
       isFirstLaunch: isFirstLaunch,
@@ -143,10 +147,10 @@ class OnboardingStateService {
     String? flowScopeKey,
   }) async {
     final p = prefs ?? await SharedPreferences.getInstance();
-    
+
     // Try to load scoped progress first.
     final normalizedScope = (flowScopeKey ?? '').trim();
-    
+
     final scopedProgress = await _loadFlowProgressRaw(
       prefs: p,
       onboardingVersion: onboardingVersion,
@@ -197,8 +201,7 @@ class OnboardingStateService {
     String? flowScopeKey,
   }) async {
     final versionKey = _scopedKey(_onboardingVersionKey, flowScopeKey);
-    final completedKey =
-        _scopedKey(_onboardingCompletedStepsKey, flowScopeKey);
+    final completedKey = _scopedKey(_onboardingCompletedStepsKey, flowScopeKey);
     final deferredKey = _scopedKey(_onboardingDeferredStepsKey, flowScopeKey);
     final seenVersion = prefs.getInt(versionKey) ?? 0;
 
@@ -233,17 +236,20 @@ class OnboardingStateService {
   }) async {
     final p = prefs ?? await SharedPreferences.getInstance();
     final versionKey = _scopedKey(_onboardingVersionKey, flowScopeKey);
-    final completedKey =
-        _scopedKey(_onboardingCompletedStepsKey, flowScopeKey);
+    final completedKey = _scopedKey(_onboardingCompletedStepsKey, flowScopeKey);
     final deferredKey = _scopedKey(_onboardingDeferredStepsKey, flowScopeKey);
     await p.setInt(versionKey, onboardingVersion);
     await p.setStringList(
       completedKey,
-      completedSteps.where((value) => value.trim().isNotEmpty).toList(growable: false),
+      completedSteps
+          .where((value) => value.trim().isNotEmpty)
+          .toList(growable: false),
     );
     await p.setStringList(
       deferredKey,
-      deferredSteps.where((value) => value.trim().isNotEmpty).toList(growable: false),
+      deferredSteps
+          .where((value) => value.trim().isNotEmpty)
+          .toList(growable: false),
     );
   }
 
@@ -255,20 +261,11 @@ class OnboardingStateService {
     if (normalizedScope.isNotEmpty) {
       final scopedKey =
           _scopedKey(PreferenceKeys.pendingAuthOnboarding, normalizedScope);
-      if (prefs.getBool(scopedKey) ?? false) {
-        return true;
-      }
-      // Backward compatibility for pre-scope auth onboarding state.
-      // Some existing sessions persisted the base key only.
+      return prefs.getBool(scopedKey) ?? false;
     }
 
     final baseKey = PreferenceKeys.pendingAuthOnboarding;
-    if (prefs.getBool(baseKey) ?? false) return true;
-    for (final key in prefs.getKeys()) {
-      if (!key.startsWith('$baseKey:')) continue;
-      if (prefs.getBool(key) ?? false) return true;
-    }
-    return false;
+    return prefs.getBool(baseKey) ?? false;
   }
 
   static Future<bool> hasPendingAuthOnboarding({
@@ -285,7 +282,8 @@ class OnboardingStateService {
   }) async {
     final p = prefs ?? await SharedPreferences.getInstance();
     final normalizedScope = (scopeKey ?? '').trim();
-    await p.setBool(_scopedKey(PreferenceKeys.pendingAuthOnboarding, scopeKey), true);
+    await p.setBool(
+        _scopedKey(PreferenceKeys.pendingAuthOnboarding, scopeKey), true);
     if (normalizedScope.isNotEmpty) {
       await p.remove(PreferenceKeys.pendingAuthOnboarding);
     }
