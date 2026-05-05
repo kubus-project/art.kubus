@@ -180,6 +180,69 @@ void main() {
     expect(find.byType(AuthMethodsPanel), findsOneWidget);
   });
 
+  testWidgets('malformed wallet result leaves auth methods visible',
+      (tester) async {
+    final walletProvider = WalletProvider(deferInit: true);
+
+    await tester.pumpWidget(
+      _buildApp(
+        child: const Scaffold(body: AuthMethodsPanel(embedded: true)),
+        walletProvider: walletProvider,
+      ),
+    );
+
+    await _handleWalletResult(
+      tester,
+      const <String, dynamic>{'data': <String, dynamic>{}},
+    );
+    await tester.pump();
+
+    final l10n = AppLocalizations.of(
+      tester.element(find.byType(AuthMethodsPanel)),
+    )!;
+    expect(find.byType(PostAuthLoadingScreen), findsNothing);
+    expect(find.byType(AuthMethodsPanel), findsOneWidget);
+    expect(find.text(l10n.authWalletSignInFailed), findsOneWidget);
+  });
+
+  testWidgets(
+      'explicit wallet failure leaves methods visible and reports error',
+      (tester) async {
+    Object? reportedError;
+    final walletProvider = WalletProvider(deferInit: true);
+
+    await tester.pumpWidget(
+      _buildApp(
+        child: Scaffold(
+          body: AuthMethodsPanel(
+            embedded: true,
+            onError: (error) {
+              reportedError = error;
+            },
+          ),
+        ),
+        walletProvider: walletProvider,
+      ),
+    );
+
+    await _handleWalletResult(
+      tester,
+      const <String, dynamic>{
+        'success': false,
+        'error': 'bad',
+      },
+    );
+    await tester.pump();
+
+    final l10n = AppLocalizations.of(
+      tester.element(find.byType(AuthMethodsPanel)),
+    )!;
+    expect(find.byType(PostAuthLoadingScreen), findsNothing);
+    expect(find.byType(AuthMethodsPanel), findsOneWidget);
+    expect(find.text(l10n.authWalletSignInFailed), findsOneWidget);
+    expect(reportedError, 'bad');
+  });
+
   testWidgets('null wallet result uses session token wallet fallback',
       (tester) async {
     final api = BackendApiService();

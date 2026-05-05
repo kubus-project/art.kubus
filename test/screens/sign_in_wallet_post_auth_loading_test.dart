@@ -35,7 +35,7 @@ Widget _buildApp(
       locale: const Locale('en'),
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
-      home: child,
+      home: Scaffold(body: child),
     ),
   );
 }
@@ -175,6 +175,59 @@ void main() {
 
     expect(find.byType(PostAuthLoadingScreen), findsNothing);
     expect(find.byType(SignInScreen), findsOneWidget);
+  });
+
+  testWidgets('malformed wallet result keeps auth form and shows no loading',
+      (tester) async {
+    final walletProvider = WalletProvider(deferInit: true);
+
+    await tester.pumpWidget(
+      _buildApp(
+        child: const SignInScreen(embedded: true),
+        walletProvider: walletProvider,
+      ),
+    );
+
+    await _handleWalletResult(
+      tester,
+      const <String, dynamic>{'success': true},
+    );
+    await tester.pump();
+
+    final l10n = AppLocalizations.of(
+      tester.element(find.byType(SignInScreen)),
+    )!;
+    expect(find.byType(PostAuthLoadingScreen), findsNothing);
+    expect(find.byType(SignInScreen), findsOneWidget);
+    expect(find.text(l10n.authWalletSignInFailed), findsOneWidget);
+  });
+
+  testWidgets('explicit wallet failure keeps auth form and shows error',
+      (tester) async {
+    final walletProvider = WalletProvider(deferInit: true);
+
+    await tester.pumpWidget(
+      _buildApp(
+        child: const SignInScreen(embedded: true),
+        walletProvider: walletProvider,
+      ),
+    );
+
+    await _handleWalletResult(
+      tester,
+      const <String, dynamic>{
+        'success': false,
+        'error': 'bad',
+      },
+    );
+    await tester.pump();
+
+    final l10n = AppLocalizations.of(
+      tester.element(find.byType(SignInScreen)),
+    )!;
+    expect(find.byType(PostAuthLoadingScreen), findsNothing);
+    expect(find.byType(SignInScreen), findsOneWidget);
+    expect(find.text(l10n.authWalletSignInFailed), findsOneWidget);
   });
 
   testWidgets('null wallet result uses session token wallet fallback',

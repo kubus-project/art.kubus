@@ -63,6 +63,12 @@ Future<NormalizedWalletAuthResult> normalizeWalletAuthResult({
       currentAuthWallet,
       fallbackWallet,
     ]);
+    if (!_hasAuthEvidence(map, walletAddress: walletAddress)) {
+      logResult('failure');
+      return const NormalizedWalletAuthResult.failed(
+        'Wallet authentication result did not include user, token, or wallet information',
+      );
+    }
     final payload = _standardAuthPayload(
       map,
       walletAddress: walletAddress,
@@ -227,6 +233,32 @@ bool _looksLikeUserData(Map<String, dynamic> map) {
     'displayName',
     'email',
   ].any(map.containsKey);
+}
+
+bool _hasAuthEvidence(
+  Map<String, dynamic> source, {
+  required String walletAddress,
+}) {
+  if (walletAddress.trim().isNotEmpty) return true;
+
+  final data = source['data'] is Map
+      ? _stringKeyedMap(source['data'] as Map)
+      : <String, dynamic>{};
+  final user = data['user'] is Map
+      ? _stringKeyedMap(data['user'] as Map)
+      : source['user'] is Map
+          ? _stringKeyedMap(source['user'] as Map)
+          : <String, dynamic>{};
+  final profile = source['profile'] is Map
+      ? _stringKeyedMap(source['profile'] as Map)
+      : <String, dynamic>{};
+
+  return _clean(source['token']).isNotEmpty ||
+      _clean(source['authToken']).isNotEmpty ||
+      _clean(source['accessToken']).isNotEmpty ||
+      _looksLikeUserData(user) ||
+      _looksLikeUserData(profile) ||
+      _looksLikeUserData(data);
 }
 
 String _extractWalletAddress(Map<String, dynamic> source) {

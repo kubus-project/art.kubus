@@ -202,7 +202,7 @@ class _ConnectWalletState extends State<ConnectWallet>
     Map<String, dynamic>? user,
     Map<String, dynamic>? response,
   }) {
-    if (!widget.authInline && !_isAuthEntryFlow) return null;
+    if (!_isAuthEntryFlow) return response;
     final normalizedWallet = walletAddress.trim();
     if (normalizedWallet.isEmpty) return response;
     return _buildWalletAuthPayload(
@@ -210,6 +210,62 @@ class _ConnectWalletState extends State<ConnectWallet>
       user: user,
       response: response,
     );
+  }
+
+  void _closeSuccessfulAuthFlow({
+    required String walletAddress,
+    Map<String, dynamic>? response,
+    Map<String, dynamic>? user,
+  }) {
+    _closeFlow(_walletAuthCompletionPayload(
+      walletAddress,
+      response: response,
+      user: user,
+    ));
+  }
+
+  void _closeConnectedWalletFlow() {
+    final walletProvider = Provider.of<WalletProvider?>(context, listen: false);
+    final walletAddress = walletProvider?.currentWalletAddress?.trim() ?? '';
+    if (_isAuthEntryFlow && walletAddress.isNotEmpty) {
+      _closeSuccessfulAuthFlow(walletAddress: walletAddress);
+      return;
+    }
+    _closeFlow();
+  }
+
+  @visibleForTesting
+  Map<String, dynamic> debugBuildWalletAuthPayload(
+    String walletAddress, {
+    Map<String, dynamic>? user,
+    Map<String, dynamic>? response,
+  }) {
+    return _buildWalletAuthPayload(
+      walletAddress,
+      user: user,
+      response: response,
+    );
+  }
+
+  @visibleForTesting
+  bool get debugIsAuthEntryFlow => _isAuthEntryFlow;
+
+  @visibleForTesting
+  void debugCloseSuccessfulAuthFlow({
+    required String walletAddress,
+    Map<String, dynamic>? response,
+    Map<String, dynamic>? user,
+  }) {
+    _closeSuccessfulAuthFlow(
+      walletAddress: walletAddress,
+      response: response,
+      user: user,
+    );
+  }
+
+  @visibleForTesting
+  void debugCloseConnectedWalletFlow() {
+    _closeConnectedWalletFlow();
   }
 
   void _handlePrimaryBackOrClose() {
@@ -279,8 +335,15 @@ class _ConnectWalletState extends State<ConnectWallet>
 
   String? _normalizedAuthFlow() {
     final raw = (widget.telemetryAuthFlow ?? '').trim().toLowerCase();
-    if (raw == 'signin' || raw == 'login') return 'signin';
-    if (raw == 'signup' || raw == 'register') return 'signup';
+    if (raw == 'signin' || raw == 'sign_in' || raw == 'login') {
+      return 'signin';
+    }
+    if (raw == 'signup' ||
+        raw == 'sign_up' ||
+        raw == 'register' ||
+        raw == 'registration') {
+      return 'signup';
+    }
     return null;
   }
 
@@ -308,7 +371,8 @@ class _ConnectWalletState extends State<ConnectWallet>
         .trackSignUpFailure(method: 'wallet', errorClass: normalized));
   }
 
-  bool get _isAuthEntryFlow => _normalizedAuthFlow() != null;
+  bool get _isAuthEntryFlow =>
+      widget.authInline || _normalizedAuthFlow() != null;
 
   void _emitProfileUpdate(ProfileProvider profileProvider) {
     final currentUser = profileProvider.currentUser;
@@ -1303,7 +1367,7 @@ class _ConnectWalletState extends State<ConnectWallet>
         ),
         const SizedBox(height: KubusSpacing.md),
         KubusButton(
-          onPressed: () => _closeFlow(),
+          onPressed: _closeConnectedWalletFlow,
           label: l10n.connectWalletConnectedStartExploringButton,
           isFullWidth: true,
         ),
@@ -1921,7 +1985,7 @@ class _ConnectWalletState extends State<ConnectWallet>
           );
         }
         _trackWalletAuthSuccess();
-        _closeFlow(_walletAuthCompletionPayload(address));
+        _closeSuccessfulAuthFlow(walletAddress: address);
       }
     } catch (e) {
       debugPrint('connectwallet: import wallet failed: $e');
@@ -2424,7 +2488,7 @@ class _ConnectWalletState extends State<ConnectWallet>
         );
       }
       _trackWalletAuthSuccess();
-      _closeFlow(_walletAuthCompletionPayload(address));
+      _closeSuccessfulAuthFlow(walletAddress: address);
     } catch (e) {
       debugPrint('connectwallet: external wallet failed: $e');
       _trackWalletAuthFailure('external_wallet_failed');
@@ -2539,7 +2603,7 @@ class _ConnectWalletState extends State<ConnectWallet>
             );
           }
           _trackWalletAuthSuccess();
-          _closeFlow(_walletAuthCompletionPayload(address));
+          _closeSuccessfulAuthFlow(walletAddress: address);
         }
       }
     } catch (e) {
@@ -2621,7 +2685,7 @@ class _ConnectWalletState extends State<ConnectWallet>
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () => _closeFlow(),
+                onPressed: _closeConnectedWalletFlow,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Color(0xFF10B981),
                   padding: EdgeInsets.symmetric(

@@ -135,6 +135,16 @@ class _SignInScreenState extends State<SignInScreen> {
     }
   }
 
+  void _returnToAuthOptionsAfterWalletEnd() {
+    if (!mounted || _postAuthActive) return;
+    setState(() {
+      _showInlineWalletFlow = false;
+      _walletFlowOpening = false;
+      _walletInlineInitialStep = 0;
+      _walletInlineRequiredWalletAddress = null;
+    });
+  }
+
   void _setGoogleAuthDiagnostics(String stage, {String? code}) {
     _googleAuthDiagStage = stage;
     _googleAuthDiagCode = code;
@@ -299,6 +309,7 @@ class _SignInScreenState extends State<SignInScreen> {
     }
 
     if (normalized.isFailure) {
+      _returnToAuthOptionsAfterWalletEnd();
       final l10n = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(content: Text(l10n.authWalletSignInFailed)),
@@ -311,6 +322,7 @@ class _SignInScreenState extends State<SignInScreen> {
       return;
     }
 
+    _returnToAuthOptionsAfterWalletEnd();
     unawaited(TelemetryService().trackSignInFailure(
       method: 'wallet',
       errorClass: 'wallet_cancelled',

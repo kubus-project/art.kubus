@@ -325,6 +325,9 @@ void main() {
       api: api,
       walletProvider: walletProvider,
     );
+    final l10n = AppLocalizations.of(
+      tester.element(find.byType(BackdropGlassSheet)),
+    )!;
 
     await scrollToSubmitButton(tester);
 
@@ -335,7 +338,7 @@ void main() {
     expect(submittedRateCardId, 'rate-1');
     expect(
         launcher.launchedUrls, <String>['https://checkout.example/session-1']);
-    expect(find.text('Continue to payment'), findsOneWidget);
+    expect(find.text(l10n.promotionBuilderContinuePayment), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('promotionBuilderSubmitButton')));
     await tester.pumpAndSettle();
@@ -348,7 +351,10 @@ void main() {
         'https://checkout.example/session-1',
       ],
     );
-    expect(find.text('Promote Test artwork'), findsNothing);
+    expect(
+      find.text(l10n.promotionBuilderPromoteEntityTitle('Test artwork')),
+      findsNothing,
+    );
   });
 
   testWidgets('KUB8 submit keeps the in-app success flow', (tester) async {
@@ -385,10 +391,16 @@ void main() {
       api: api,
       walletProvider: walletProvider,
     );
+    final l10n = AppLocalizations.of(
+      tester.element(find.byType(BackdropGlassSheet)),
+    )!;
 
-    await scrollSheetUntilVisible(tester, find.text('Pay with KUB8'));
+    await scrollSheetUntilVisible(
+      tester,
+      find.text(l10n.promotionBuilderPaymentKub8),
+    );
 
-    await tester.tap(find.text('Pay with KUB8'));
+    await tester.tap(find.text(l10n.promotionBuilderPaymentKub8));
     await tester.pumpAndSettle();
 
     await scrollToSubmitButton(tester);
@@ -399,7 +411,10 @@ void main() {
     expect(createCalls, 1);
     expect(submittedRateCardId, 'rate-1');
     expect(launcher.launchedUrls, isEmpty);
-    expect(find.text('Promote Test artwork'), findsNothing);
-    expect(find.text('Promotion request submitted!'), findsOneWidget);
+    expect(
+      find.text(l10n.promotionBuilderPromoteEntityTitle('Test artwork')),
+      findsNothing,
+    );
+    expect(find.text(l10n.promotionBuilderSubmitSuccess), findsOneWidget);
   });
 }

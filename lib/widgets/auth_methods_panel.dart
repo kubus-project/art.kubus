@@ -111,6 +111,16 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
     }
   }
 
+  void _returnToAuthOptionsAfterWalletEnd() {
+    if (!mounted || _postAuthActive) return;
+    setState(() {
+      _showInlineWalletFlow = false;
+      _walletFlowOpening = false;
+      _walletInlineInitialStep = 0;
+      _walletInlineRequiredWalletAddress = null;
+    });
+  }
+
   Future<void> _handleAuthSuccess(
     Map<String, dynamic> payload, {
     AuthOrigin origin = AuthOrigin.emailPassword,
@@ -213,6 +223,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
     }
 
     if (normalized.isFailure) {
+      _returnToAuthOptionsAfterWalletEnd();
       final reason = normalized.reason ?? 'wallet_failed';
       widget.onError?.call(reason);
       final l10n = AppLocalizations.of(context)!;
@@ -227,6 +238,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
       return;
     }
 
+    _returnToAuthOptionsAfterWalletEnd();
     unawaited(TelemetryService().trackSignUpFailure(
       method: 'wallet',
       errorClass: 'wallet_cancelled',
