@@ -310,11 +310,11 @@ void main() {
     final l10n = AppLocalizations.of(context)!;
 
     expect(
-      find.byTooltip(l10n.desktopArtistStudioPromoteProfileTitle),
+      find.byTooltip(l10n.artistStudioPromoteTooltip),
       findsOneWidget,
     );
     expect(
-      find.text(l10n.desktopArtistStudioPromoteProfileTitle),
+      find.text(l10n.artistStudioPromoteProfile),
       findsOneWidget,
     );
   });
@@ -328,15 +328,15 @@ void main() {
       reviewJson: _daoReviewJson(status: 'pending', role: 'institution'),
     );
 
-    expect(find.byTooltip('Promote my profile'), findsNothing);
-    expect(find.text('Promote my profile'), findsNothing);
+    final context = tester.element(find.byType(ArtistStudio));
+    final l10n = AppLocalizations.of(context)!;
+
+    expect(find.byTooltip(l10n.artistStudioPromoteTooltip), findsNothing);
+    expect(find.text(l10n.artistStudioPromoteProfile), findsNothing);
 
     final dynamic state = tester.state(find.byType(ArtistStudio));
     await state.debugOpenProfilePromotionFlow();
     await tester.pumpAndSettle();
-
-    final context = tester.element(find.byType(ArtistStudio));
-    final l10n = AppLocalizations.of(context)!;
 
     expect(
       find.text(l10n.artistPromotionConflictWithInstitutionReason),

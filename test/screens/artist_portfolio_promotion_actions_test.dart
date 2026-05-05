@@ -128,9 +128,12 @@ void main() {
       ],
     );
 
-    await tester.tap(find.byType(PopupMenuButton<String>));
+    final context = tester.element(find.byType(ArtistPortfolioScreen));
+    final l10n = AppLocalizations.of(context)!;
+
+    await tester.tap(find.byTooltip(l10n.commonMore));
     await tester.pumpAndSettle();
-    expect(find.text('Promote'), findsOneWidget);
+    expect(find.text(l10n.eventDetailPromoteLabel), findsOneWidget);
 
     await tester.tapAt(const Offset(20, 20));
     await tester.pumpAndSettle();
@@ -138,7 +141,7 @@ void main() {
     await tester.tap(find.text('Public Artwork'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Promote this artwork'), findsOneWidget);
+    expect(find.text(l10n.eventDetailPromoteLabel), findsOneWidget);
   });
 
   testWidgets('draft and inactive artworks do not expose promote actions',
@@ -164,15 +167,18 @@ void main() {
     expect(find.text('Draft Artwork'), findsOneWidget);
     expect(find.text('Inactive Artwork'), findsNothing);
 
-    await tester.tap(find.byType(PopupMenuButton<String>));
+    final context = tester.element(find.byType(ArtistPortfolioScreen));
+    final l10n = AppLocalizations.of(context)!;
+
+    await tester.tap(find.byTooltip(l10n.commonMore).first);
     await tester.pumpAndSettle();
-    expect(find.text('Promote'), findsNothing);
+    expect(find.text(l10n.eventDetailPromoteLabel), findsNothing);
 
     await tester.tapAt(const Offset(20, 20));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Draft Artwork'));
     await tester.pumpAndSettle();
-    expect(find.text('Promote this artwork'), findsNothing);
+    expect(find.text(l10n.eventDetailPromoteLabel), findsNothing);
   });
 }

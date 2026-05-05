@@ -678,6 +678,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authEmailSignInFailed => 'Email sign-in failed. Please try again.';
 
   @override
+  String get authWalletSignInFailed => 'Wallet sign-in failed. Please try again.';
+
+  @override
   String get authWalletOnlyAccountSignInHint => 'This account uses wallet sign-in. Connect the original wallet to continue.';
 
   @override
@@ -6807,6 +6810,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get artistPromotionRequiresApprovalReason => 'Profile promotion is available only for approved artist wallets.';
 
   @override
+  String get artistStudioPromoteAction => 'Promote';
+
+  @override
+  String get artistStudioPromoteTooltip => 'Promote artist profile';
+
+  @override
+  String get artistStudioPromoteArtwork => 'Promote artwork';
+
+  @override
+  String get artistStudioPromoteProfile => 'Promote profile';
+
+  @override
+  String get artistStudioPromoteCollection => 'Promote collection';
+
+  @override
+  String get artistStudioPromoteComingSoon => 'Promotion tools are coming soon.';
+
+  @override
   String get artistStudioTabGallery => 'Gallery';
 
   @override
@@ -11893,6 +11914,21 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get promotionActionPromote => 'Promote';
+
+  @override
+  String get promotionActionBoost => 'Boost';
+
+  @override
+  String get promotionFeaturedLabel => 'Featured';
+
+  @override
+  String get promotionCampaignLabel => 'Campaign';
+
+  @override
+  String get promotionCheckoutLabel => 'Checkout';
 
   @override
   String get attestationBadgePanelLoadFailed => 'Unable to load recognition right now.';

@@ -170,6 +170,48 @@ class _ConnectWalletState extends State<ConnectWallet>
     Navigator.of(context).pop(result);
   }
 
+  Map<String, dynamic> _buildWalletAuthPayload(
+    String walletAddress, {
+    Map<String, dynamic>? user,
+    Map<String, dynamic>? response,
+  }) {
+    final normalizedWallet = walletAddress.trim();
+    final responseData = response?['data'] is Map
+        ? Map<String, dynamic>.from(response!['data'] as Map)
+        : const <String, dynamic>{};
+    final responseUser = responseData['user'] is Map
+        ? Map<String, dynamic>.from(responseData['user'] as Map)
+        : const <String, dynamic>{};
+    final mergedUser = <String, dynamic>{
+      ...responseUser,
+      if (user != null) ...user,
+      if (normalizedWallet.isNotEmpty) 'walletAddress': normalizedWallet,
+    };
+
+    return <String, dynamic>{
+      if (response != null) ...response,
+      'data': <String, dynamic>{
+        ...responseData,
+        'user': mergedUser,
+      },
+    };
+  }
+
+  Object? _walletAuthCompletionPayload(
+    String walletAddress, {
+    Map<String, dynamic>? user,
+    Map<String, dynamic>? response,
+  }) {
+    if (!widget.authInline && !_isAuthEntryFlow) return null;
+    final normalizedWallet = walletAddress.trim();
+    if (normalizedWallet.isEmpty) return response;
+    return _buildWalletAuthPayload(
+      normalizedWallet,
+      user: user,
+      response: response,
+    );
+  }
+
   void _handlePrimaryBackOrClose() {
     if (_currentStep > 0) {
       setState(() => _currentStep--);
@@ -335,8 +377,8 @@ class _ConnectWalletState extends State<ConnectWallet>
       }
     }
 
-    final needsWalletAuth = !backendApiService.signedActions
-        .hasWalletSignedSessionFor(address);
+    final needsWalletAuth =
+        !backendApiService.signedActions.hasWalletSignedSessionFor(address);
 
     if (needsWalletAuth) {
       final signerReady = walletProvider != null &&
@@ -1879,7 +1921,7 @@ class _ConnectWalletState extends State<ConnectWallet>
           );
         }
         _trackWalletAuthSuccess();
-        _closeFlow();
+        _closeFlow(_walletAuthCompletionPayload(address));
       }
     } catch (e) {
       debugPrint('connectwallet: import wallet failed: $e');
@@ -2382,7 +2424,7 @@ class _ConnectWalletState extends State<ConnectWallet>
         );
       }
       _trackWalletAuthSuccess();
-      _closeFlow();
+      _closeFlow(_walletAuthCompletionPayload(address));
     } catch (e) {
       debugPrint('connectwallet: external wallet failed: $e');
       _trackWalletAuthFailure('external_wallet_failed');
@@ -2497,7 +2539,7 @@ class _ConnectWalletState extends State<ConnectWallet>
             );
           }
           _trackWalletAuthSuccess();
-          _closeFlow();
+          _closeFlow(_walletAuthCompletionPayload(address));
         }
       }
     } catch (e) {

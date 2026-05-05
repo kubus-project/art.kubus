@@ -1421,6 +1421,12 @@ abstract class AppLocalizations {
   /// **'Email sign-in failed. Please try again.'**
   String get authEmailSignInFailed;
 
+  /// No description provided for @authWalletSignInFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet sign-in failed. Please try again.'**
+  String get authWalletSignInFailed;
+
   /// No description provided for @authWalletOnlyAccountSignInHint.
   ///
   /// In en, this message translates to:
@@ -13043,6 +13049,42 @@ abstract class AppLocalizations {
   /// **'Profile promotion is available only for approved artist wallets.'**
   String get artistPromotionRequiresApprovalReason;
 
+  /// No description provided for @artistStudioPromoteAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Promote'**
+  String get artistStudioPromoteAction;
+
+  /// No description provided for @artistStudioPromoteTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Promote artist profile'**
+  String get artistStudioPromoteTooltip;
+
+  /// No description provided for @artistStudioPromoteArtwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Promote artwork'**
+  String get artistStudioPromoteArtwork;
+
+  /// No description provided for @artistStudioPromoteProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Promote profile'**
+  String get artistStudioPromoteProfile;
+
+  /// No description provided for @artistStudioPromoteCollection.
+  ///
+  /// In en, this message translates to:
+  /// **'Promote collection'**
+  String get artistStudioPromoteCollection;
+
+  /// No description provided for @artistStudioPromoteComingSoon.
+  ///
+  /// In en, this message translates to:
+  /// **'Promotion tools are coming soon.'**
+  String get artistStudioPromoteComingSoon;
+
   /// No description provided for @artistStudioTabGallery.
   ///
   /// In en, this message translates to:
@@ -22498,6 +22540,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, =1{1 guaranteed slot} other{{count} guaranteed slots}}'**
   String promotionBuilderGuaranteedSlots(num count);
+
+  /// No description provided for @promotionActionPromote.
+  ///
+  /// In en, this message translates to:
+  /// **'Promote'**
+  String get promotionActionPromote;
+
+  /// No description provided for @promotionActionBoost.
+  ///
+  /// In en, this message translates to:
+  /// **'Boost'**
+  String get promotionActionBoost;
+
+  /// No description provided for @promotionFeaturedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Featured'**
+  String get promotionFeaturedLabel;
+
+  /// No description provided for @promotionCampaignLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Campaign'**
+  String get promotionCampaignLabel;
+
+  /// No description provided for @promotionCheckoutLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Checkout'**
+  String get promotionCheckoutLabel;
 
   /// No description provided for @attestationBadgePanelLoadFailed.
   ///

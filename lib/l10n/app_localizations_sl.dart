@@ -678,6 +678,9 @@ class AppLocalizationsSl extends AppLocalizations {
   String get authEmailSignInFailed => 'Prijava z e-pošto ni uspela. Poskusi znova.';
 
   @override
+  String get authWalletSignInFailed => 'Prijava z denarnico ni uspela. Poskusi znova.';
+
+  @override
   String get authWalletOnlyAccountSignInHint => 'Ta račun uporablja prijavo z denarnico. Za nadaljevanje poveži izvorno denarnico.';
 
   @override
@@ -6823,6 +6826,24 @@ class AppLocalizationsSl extends AppLocalizations {
   String get artistPromotionRequiresApprovalReason => 'Promocija profila je na voljo samo za odobrene umetniške denarnice.';
 
   @override
+  String get artistStudioPromoteAction => 'Promoviraj';
+
+  @override
+  String get artistStudioPromoteTooltip => 'Promoviraj umetniški profil';
+
+  @override
+  String get artistStudioPromoteArtwork => 'Promoviraj umetnino';
+
+  @override
+  String get artistStudioPromoteProfile => 'Promoviraj profil';
+
+  @override
+  String get artistStudioPromoteCollection => 'Promoviraj zbirko';
+
+  @override
+  String get artistStudioPromoteComingSoon => 'Orodja za promocijo bodo kmalu na voljo.';
+
+  @override
   String get artistStudioTabGallery => 'Galerija';
 
   @override
@@ -11931,6 +11952,21 @@ class AppLocalizationsSl extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get promotionActionPromote => 'Promoviraj';
+
+  @override
+  String get promotionActionBoost => 'Pospeši';
+
+  @override
+  String get promotionFeaturedLabel => 'Izpostavljeno';
+
+  @override
+  String get promotionCampaignLabel => 'Kampanja';
+
+  @override
+  String get promotionCheckoutLabel => 'Plačilo';
 
   @override
   String get attestationBadgePanelLoadFailed => 'Priznanj trenutno ni bilo mogoče naložiti.';

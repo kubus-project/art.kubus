@@ -17,7 +17,8 @@ import 'package:http/testing.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-Widget _buildApp({required Widget child, required WalletProvider walletProvider}) {
+Widget _buildApp(
+    {required Widget child, required WalletProvider walletProvider}) {
   return MultiProvider(
     providers: [
       ChangeNotifierProvider<WalletProvider>.value(value: walletProvider),
@@ -56,19 +57,25 @@ String _buildJwtWithWallet(String walletAddress) {
 Future<void> _handleWalletResult(
   WidgetTester tester,
   Object? routeResult, {
-  String? requiredWalletAddress,
+  String? fallbackWalletAddress,
 }) async {
   final state = tester.state(find.byType(SignInScreen)) as dynamic;
-  await state.handleWalletFlowResultForTesting(
+  await state.debugHandleWalletFlowResult(
     routeResult,
-    requiredWalletAddress: requiredWalletAddress,
+    fallbackWalletAddress: fallbackWalletAddress,
   );
 }
 
+Future<void> _triggerAuthSuccess(
+  WidgetTester tester,
+  Map<String, dynamic> payload, {
+  required AuthOrigin origin,
+}) async {
+  final state = tester.state(find.byType(SignInScreen)) as dynamic;
+  await state.debugTriggerAuthSuccess(payload, origin: origin);
+}
+
 Future<void> _drainPostAuthTimers(WidgetTester tester) async {
-  // PostAuthCoordinator uses timeout wrappers (6s wallet + 5s profile + 0.8s
-  // token load in downstream services). Advance fake time so pending timers are
-  // settled before widget teardown.
   await tester.pump(const Duration(seconds: 13));
   await tester.pump();
 }
@@ -88,7 +95,9 @@ void main() {
     api.setAuthTokenForTesting(null);
   });
 
-  testWidgets('wallet map result flips to PostAuthLoadingScreen', (tester) async {
+  testWidgets(
+      'debugTriggerAuthSuccess with wallet hides auth form and shows loading',
+      (tester) async {
     final walletProvider = WalletProvider(deferInit: true);
 
     await tester.pumpWidget(
@@ -100,7 +109,7 @@ void main() {
 
     expect(find.byType(PostAuthLoadingScreen), findsNothing);
 
-    await _handleWalletResult(
+    await _triggerAuthSuccess(
       tester,
       const <String, dynamic>{
         'data': <String, dynamic>{
@@ -110,17 +119,62 @@ void main() {
           },
         },
       },
+      origin: AuthOrigin.wallet,
     );
-
     await tester.pump();
 
     expect(find.byType(PostAuthLoadingScreen), findsOneWidget);
-    final loading =
-        tester.widget<PostAuthLoadingScreen>(find.byType(PostAuthLoadingScreen));
+    expect(find.byIcon(Icons.account_balance_wallet_outlined), findsNothing);
+    final loading = tester
+        .widget<PostAuthLoadingScreen>(find.byType(PostAuthLoadingScreen));
     expect(loading.origin, AuthOrigin.wallet);
     expect(loading.walletAddress, 'wallet-123');
 
     await _drainPostAuthTimers(tester);
+  });
+
+  testWidgets('wallet success path using test seam shows loading',
+      (tester) async {
+    final walletProvider = WalletProvider(deferInit: true);
+
+    await tester.pumpWidget(
+      _buildApp(
+        child: const SignInScreen(embedded: true),
+        walletProvider: walletProvider,
+      ),
+    );
+
+    await _handleWalletResult(
+      tester,
+      const <String, dynamic>{'wallet_address': 'wallet-from-result'},
+    );
+    await tester.pump();
+
+    expect(find.byType(PostAuthLoadingScreen), findsOneWidget);
+    final loading = tester
+        .widget<PostAuthLoadingScreen>(find.byType(PostAuthLoadingScreen));
+    expect(loading.origin, AuthOrigin.wallet);
+    expect(loading.walletAddress, 'wallet-from-result');
+
+    await _drainPostAuthTimers(tester);
+  });
+
+  testWidgets('wallet cancel path keeps auth form and does not show loading',
+      (tester) async {
+    final walletProvider = WalletProvider(deferInit: true);
+
+    await tester.pumpWidget(
+      _buildApp(
+        child: const SignInScreen(embedded: true),
+        walletProvider: walletProvider,
+      ),
+    );
+
+    await _handleWalletResult(tester, null);
+    await tester.pump();
+
+    expect(find.byType(PostAuthLoadingScreen), findsNothing);
+    expect(find.byType(SignInScreen), findsOneWidget);
   });
 
   testWidgets('null wallet result uses session token wallet fallback',
@@ -149,15 +203,76 @@ void main() {
     await tester.pump();
 
     expect(find.byType(PostAuthLoadingScreen), findsOneWidget);
-    final loading =
-        tester.widget<PostAuthLoadingScreen>(find.byType(PostAuthLoadingScreen));
+    final loading = tester
+        .widget<PostAuthLoadingScreen>(find.byType(PostAuthLoadingScreen));
     expect(loading.origin, AuthOrigin.wallet);
     expect(loading.walletAddress, 'wallet-from-token');
 
     await _drainPostAuthTimers(tester);
   });
 
-  testWidgets('null wallet result with no session evidence stays on auth UI',
+  testWidgets('null wallet result uses fallback wallet', (tester) async {
+    final walletProvider = WalletProvider(deferInit: true);
+
+    await tester.pumpWidget(
+      _buildApp(
+        child: const SignInScreen(embedded: true),
+        walletProvider: walletProvider,
+      ),
+    );
+
+    await _handleWalletResult(
+      tester,
+      null,
+      fallbackWalletAddress: 'wallet-from-fallback',
+    );
+    await tester.pump();
+
+    expect(find.byType(PostAuthLoadingScreen), findsOneWidget);
+    final loading = tester
+        .widget<PostAuthLoadingScreen>(find.byType(PostAuthLoadingScreen));
+    expect(loading.walletAddress, 'wallet-from-fallback');
+
+    await _drainPostAuthTimers(tester);
+  });
+
+  testWidgets('email auth regression still shows loading', (tester) async {
+    final walletProvider = WalletProvider(deferInit: true);
+
+    await tester.pumpWidget(
+      _buildApp(
+        child: const SignInScreen(embedded: true),
+        walletProvider: walletProvider,
+      ),
+    );
+
+    await _triggerAuthSuccess(
+      tester,
+      const <String, dynamic>{
+        'data': <String, dynamic>{
+          'user': <String, dynamic>{
+            'id': 'email-user',
+            'walletAddress': 'email-wallet',
+          },
+        },
+      },
+      origin: AuthOrigin.emailPassword,
+    );
+    await tester.pump();
+
+    expect(find.byType(PostAuthLoadingScreen), findsOneWidget);
+    expect(
+      tester
+          .widget<PostAuthLoadingScreen>(find.byType(PostAuthLoadingScreen))
+          .origin,
+      AuthOrigin.emailPassword,
+    );
+
+    await _drainPostAuthTimers(tester);
+  });
+
+  testWidgets(
+      'Google auth regression shows loading without default password prompt',
       (tester) async {
     final walletProvider = WalletProvider(deferInit: true);
 
@@ -168,12 +283,25 @@ void main() {
       ),
     );
 
-    expect(find.byType(PostAuthLoadingScreen), findsNothing);
-
-    await _handleWalletResult(tester, null);
+    await _triggerAuthSuccess(
+      tester,
+      const <String, dynamic>{
+        'data': <String, dynamic>{
+          'user': <String, dynamic>{
+            'id': 'google-user',
+            'walletAddress': 'google-wallet',
+          },
+        },
+      },
+      origin: AuthOrigin.google,
+    );
     await tester.pump();
 
-    expect(find.byType(PostAuthLoadingScreen), findsNothing);
-    expect(find.byType(SignInScreen), findsOneWidget);
+    final loading = tester
+        .widget<PostAuthLoadingScreen>(find.byType(PostAuthLoadingScreen));
+    expect(loading.origin, AuthOrigin.google);
+    expect(loading.onBeforeSavedItemsSync, isNull);
+
+    await _drainPostAuthTimers(tester);
   });
 }

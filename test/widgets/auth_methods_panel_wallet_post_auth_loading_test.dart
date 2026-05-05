@@ -17,7 +17,10 @@ import 'package:http/testing.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-Widget _buildApp({required Widget child, required WalletProvider walletProvider}) {
+Widget _buildApp({
+  required Widget child,
+  required WalletProvider walletProvider,
+}) {
   return MultiProvider(
     providers: [
       ChangeNotifierProvider<WalletProvider>.value(value: walletProvider),
@@ -56,19 +59,25 @@ String _buildJwtWithWallet(String walletAddress) {
 Future<void> _handleWalletResult(
   WidgetTester tester,
   Object? routeResult, {
-  String? requiredWalletAddress,
+  String? fallbackWalletAddress,
 }) async {
   final state = tester.state(find.byType(AuthMethodsPanel)) as dynamic;
-  await state.handleWalletFlowResultForTesting(
+  await state.debugHandleWalletFlowResult(
     routeResult,
-    requiredWalletAddress: requiredWalletAddress,
+    fallbackWalletAddress: fallbackWalletAddress,
   );
 }
 
+Future<void> _triggerAuthSuccess(
+  WidgetTester tester,
+  Map<String, dynamic> payload, {
+  required AuthOrigin origin,
+}) async {
+  final state = tester.state(find.byType(AuthMethodsPanel)) as dynamic;
+  await state.debugTriggerAuthSuccess(payload, origin: origin);
+}
+
 Future<void> _drainPostAuthTimers(WidgetTester tester) async {
-  // PostAuthCoordinator uses timeout wrappers (6s wallet + 5s profile + 0.8s
-  // token load in downstream services). Advance fake time so pending timers are
-  // settled before widget teardown.
   await tester.pump(const Duration(seconds: 13));
   await tester.pump();
 }
@@ -88,7 +97,9 @@ void main() {
     api.setAuthTokenForTesting(null);
   });
 
-  testWidgets('wallet map result flips to PostAuthLoadingScreen', (tester) async {
+  testWidgets(
+      'debugTriggerAuthSuccess with wallet hides methods and shows loading',
+      (tester) async {
     final walletProvider = WalletProvider(deferInit: true);
 
     await tester.pumpWidget(
@@ -100,7 +111,7 @@ void main() {
 
     expect(find.byType(PostAuthLoadingScreen), findsNothing);
 
-    await _handleWalletResult(
+    await _triggerAuthSuccess(
       tester,
       const <String, dynamic>{
         'data': <String, dynamic>{
@@ -110,17 +121,63 @@ void main() {
           },
         },
       },
+      origin: AuthOrigin.wallet,
     );
-
     await tester.pump();
 
     expect(find.byType(PostAuthLoadingScreen), findsOneWidget);
-    final loading =
-        tester.widget<PostAuthLoadingScreen>(find.byType(PostAuthLoadingScreen));
+    expect(find.byIcon(Icons.account_balance_wallet_outlined), findsNothing);
+    final loading = tester
+        .widget<PostAuthLoadingScreen>(find.byType(PostAuthLoadingScreen));
     expect(loading.origin, AuthOrigin.wallet);
     expect(loading.walletAddress, 'wallet-xyz');
 
     await _drainPostAuthTimers(tester);
+  });
+
+  testWidgets('wallet success path using test seam shows loading inline',
+      (tester) async {
+    final walletProvider = WalletProvider(deferInit: true);
+
+    await tester.pumpWidget(
+      _buildApp(
+        child: const Scaffold(body: AuthMethodsPanel(embedded: true)),
+        walletProvider: walletProvider,
+      ),
+    );
+
+    await _handleWalletResult(
+      tester,
+      const <String, dynamic>{
+        'success': true,
+        'data': <String, dynamic>{'walletAddress': 'wallet-from-result'},
+      },
+    );
+    await tester.pump();
+
+    expect(find.byType(PostAuthLoadingScreen), findsOneWidget);
+    final loading = tester
+        .widget<PostAuthLoadingScreen>(find.byType(PostAuthLoadingScreen));
+    expect(loading.walletAddress, 'wallet-from-result');
+
+    await _drainPostAuthTimers(tester);
+  });
+
+  testWidgets('wallet cancel leaves auth methods visible', (tester) async {
+    final walletProvider = WalletProvider(deferInit: true);
+
+    await tester.pumpWidget(
+      _buildApp(
+        child: const Scaffold(body: AuthMethodsPanel(embedded: true)),
+        walletProvider: walletProvider,
+      ),
+    );
+
+    await _handleWalletResult(tester, null);
+    await tester.pump();
+
+    expect(find.byType(PostAuthLoadingScreen), findsNothing);
+    expect(find.byType(AuthMethodsPanel), findsOneWidget);
   });
 
   testWidgets('null wallet result uses session token wallet fallback',
@@ -149,31 +206,41 @@ void main() {
     await tester.pump();
 
     expect(find.byType(PostAuthLoadingScreen), findsOneWidget);
-    final loading =
-        tester.widget<PostAuthLoadingScreen>(find.byType(PostAuthLoadingScreen));
-    expect(loading.origin, AuthOrigin.wallet);
+    final loading = tester
+        .widget<PostAuthLoadingScreen>(find.byType(PostAuthLoadingScreen));
     expect(loading.walletAddress, 'wallet-from-token');
 
     await _drainPostAuthTimers(tester);
   });
 
-  testWidgets('null wallet result with no session evidence stays on auth UI',
+  testWidgets('onAuthSuccess is not called before coordinator completes',
       (tester) async {
+    var callbackCount = 0;
     final walletProvider = WalletProvider(deferInit: true);
 
     await tester.pumpWidget(
       _buildApp(
-        child: const Scaffold(body: AuthMethodsPanel(embedded: true)),
+        child: Scaffold(
+          body: AuthMethodsPanel(
+            embedded: true,
+            onAuthSuccess: () async {
+              callbackCount++;
+            },
+          ),
+        ),
         walletProvider: walletProvider,
       ),
     );
 
-    expect(find.byType(PostAuthLoadingScreen), findsNothing);
-
-    await _handleWalletResult(tester, null);
+    await _handleWalletResult(
+      tester,
+      const <String, dynamic>{'walletAddress': 'wallet-before-complete'},
+    );
     await tester.pump();
 
-    expect(find.byType(PostAuthLoadingScreen), findsNothing);
-    expect(find.byType(AuthMethodsPanel), findsOneWidget);
+    expect(find.byType(PostAuthLoadingScreen), findsOneWidget);
+    expect(callbackCount, 0);
+
+    await _drainPostAuthTimers(tester);
   });
 }

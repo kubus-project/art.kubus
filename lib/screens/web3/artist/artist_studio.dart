@@ -316,7 +316,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
                       Icons.campaign_outlined,
                       color: Theme.of(context).colorScheme.onSurface,
                     ),
-                    tooltip: l10n.desktopArtistStudioPromoteProfileTitle,
+                    tooltip: l10n.artistStudioPromoteTooltip,
                     onPressed: _openProfilePromotionFlow,
                   ),
                 TopBarIcon(
@@ -456,7 +456,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
                             onPressed: _openProfilePromotionFlow,
                             icon: const Icon(Icons.campaign_outlined),
                             label: Text(
-                              l10n.desktopArtistStudioPromoteProfileTitle,
+                              l10n.artistStudioPromoteProfile,
                               maxLines: 1,
                               softWrap: false,
                               overflow: TextOverflow.fade,

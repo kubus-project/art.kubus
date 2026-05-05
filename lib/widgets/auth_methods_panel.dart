@@ -127,7 +127,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
             .toString()
             .trim();
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-    
+
     final normalizedWalletAddress = walletAddressFromPayload.isNotEmpty
         ? walletAddressFromPayload
         : (walletProvider.currentWalletAddress ?? '').trim();
@@ -142,6 +142,10 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
       _postAuthOrigin = origin;
       _postAuthWalletAddress = normalizedWalletAddress;
       _postAuthUserId = userId;
+      _showInlineWalletFlow = false;
+      _walletFlowOpening = false;
+      _walletInlineInitialStep = 0;
+      _walletInlineRequiredWalletAddress = null;
     });
 
     // For non-embedded flows, push PostAuthLoadingScreen route
@@ -157,10 +161,10 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
         embedded: widget.embedded,
         modalReauth: false,
         requiresWalletBackup: false,
-        onBeforeSavedItemsSync: (origin == AuthOrigin.google ||
-                origin == AuthOrigin.wallet)
-            ? null
-            : () => maybeShowGooglePasswordUpgradePrompt(context, payload),
+        onBeforeSavedItemsSync:
+            (origin == AuthOrigin.google || origin == AuthOrigin.wallet)
+                ? null
+                : () => maybeShowGooglePasswordUpgradePrompt(context, payload),
         onAuthSuccess: widget.onAuthSuccess == null
             ? null
             : (_) async {
@@ -178,6 +182,70 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
     AuthOrigin origin = AuthOrigin.emailPassword,
   }) {
     return _handleAuthSuccess(payload, origin: origin);
+  }
+
+  Future<void> _handleWalletFlowResult(
+    Object? routeResult, {
+    BackendApiService? apiOverride,
+    String? fallbackWalletAddress,
+    bool hadAuthBeforeOpen = false,
+  }) async {
+    final apiForNormalize = apiOverride ?? BackendApiService();
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    final normalized = await normalizeWalletAuthResult(
+      routeResult: routeResult,
+      api: apiForNormalize,
+      fallbackWalletAddress: fallbackWalletAddress ??
+          _walletInlineRequiredWalletAddress ??
+          walletProvider.currentWalletAddress,
+      hadAuthBeforeOpen: hadAuthBeforeOpen,
+    );
+
+    if (!mounted) return;
+
+    if (normalized.isSuccess) {
+      await _handleAuthSuccess(
+        normalized.payload!,
+        origin: AuthOrigin.wallet,
+      );
+      unawaited(TelemetryService().trackSignUpSuccess(method: 'wallet'));
+      return;
+    }
+
+    if (normalized.isFailure) {
+      final reason = normalized.reason ?? 'wallet_failed';
+      widget.onError?.call(reason);
+      final l10n = AppLocalizations.of(context)!;
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+        SnackBar(content: Text(l10n.authWalletSignInFailed)),
+        tone: KubusSnackBarTone.error,
+      );
+      unawaited(TelemetryService().trackSignUpFailure(
+        method: 'wallet',
+        errorClass: reason,
+      ));
+      return;
+    }
+
+    unawaited(TelemetryService().trackSignUpFailure(
+      method: 'wallet',
+      errorClass: 'wallet_cancelled',
+    ));
+  }
+
+  @visibleForTesting
+  Future<void> debugHandleWalletFlowResult(
+    Object? routeResult, {
+    BackendApiService? apiOverride,
+    String? fallbackWalletAddress,
+    bool hadAuthBeforeOpen = false,
+  }) {
+    return _handleWalletFlowResult(
+      routeResult,
+      apiOverride: apiOverride,
+      fallbackWalletAddress: fallbackWalletAddress,
+      hadAuthBeforeOpen: hadAuthBeforeOpen,
+    );
   }
 
   Future<void> _registerWithEmail() async {
@@ -581,57 +649,17 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
         );
       }
 
-      // Normalize wallet auth result using comprehensive helper
-      final apiForNormalize = BackendApiService();
-      final normalizedPayload = await normalizeWalletAuthResult(
-        routeResult: routeResult,
-        api: apiForNormalize,
+      await _handleWalletFlowResult(
+        routeResult,
+        fallbackWalletAddress: requiredWalletAddress,
+        hadAuthBeforeOpen: hadAuthBeforeOpen,
       );
-
-      if (kDebugMode) {
-        AppConfig.debugPrint(
-          'AuthMethodsPanel.wallet: normalized payload=${normalizedPayload != null ? 'present' : 'null'}, auth_token=${(apiForNormalize.getAuthToken() ?? '').trim().isNotEmpty}',
-        );
-      }
-
-      if (!mounted) return;
-
-      if (normalizedPayload != null) {
-        // Success: we have a valid auth payload
-        await _handleAuthSuccess(normalizedPayload, origin: AuthOrigin.wallet);
-        unawaited(TelemetryService().trackSignUpSuccess(method: 'wallet'));
-        return;
-      }
-
-      // No normalized payload and no auth token: treat as cancel
-      if ((apiForNormalize.getAuthToken() ?? '').trim().isEmpty &&
-          hadAuthBeforeOpen == false) {
-        if (kDebugMode) {
-          AppConfig.debugPrint(
-            'AuthMethodsPanel.wallet: no payload and no auth token, treating as cancel',
-          );
-        }
-        unawaited(TelemetryService().trackSignUpFailure(
-          method: 'wallet',
-          errorClass: 'wallet_cancelled',
-        ));
-        return;
-      }
-
-      // Shouldn't reach here: auth token exists but no payload
-      if (kDebugMode) {
-        AppConfig.debugPrint(
-          'AuthMethodsPanel.wallet: WARNING - auth token exists but no normalized payload',
-        );
-      }
-      unawaited(TelemetryService().trackSignUpFailure(
-        method: 'wallet',
-        errorClass: 'wallet_payload_empty',
-      ));
     } finally {
       // Do not restore wallet UI state if post-auth is active
       if (!_postAuthActive && mounted && _walletFlowOpening) {
-        _walletFlowOpening = false;
+        setState(() {
+          _walletFlowOpening = false;
+        });
       }
       _walletFlowCompleter = null;
     }
