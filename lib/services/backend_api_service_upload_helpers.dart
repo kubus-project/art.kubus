@@ -31,13 +31,7 @@ String? _backendApiResolveUploadedUrl(Map<String, dynamic> data) {
         normalizePublicPath(data['public_path']);
     if (publicPath != null) return publicPath;
 
-    for (final key in const <String>[
-      'url',
-      'ipfsUrl',
-      'httpUrl',
-      'fileUrl',
-      'path'
-    ]) {
+    for (final key in const <String>['url', 'ipfsUrl', 'httpUrl', 'fileUrl', 'path']) {
       final value = _backendApiTrimmedString(data[key]);
       if (value != null) return value;
     }
@@ -73,6 +67,45 @@ bool _backendApiIsNodeNotWritableException(Object error) {
       (error.body ?? '').contains('NODE_NOT_WRITABLE');
 }
 
+String? _backendApiExtractPreferredWriteBaseUrl(String? body) {
+  if (body == null || body.isEmpty) return null;
+  try {
+    final decoded = jsonDecode(body);
+    if (decoded is Map<String, dynamic>) {
+      final response = decoded['response'];
+      if (response is Map<String, dynamic>) {
+        final value = _backendApiTrimmedString(response['preferredWriteBaseUrl']);
+        if (value != null) return value;
+      }
+      final data = decoded['data'];
+      if (data is Map<String, dynamic>) {
+        final value = _backendApiTrimmedString(data['preferredWriteBaseUrl']);
+        if (value != null) return value;
+      }
+      return _backendApiTrimmedString(decoded['preferredWriteBaseUrl']);
+    }
+  } catch (_) {
+    return null;
+  }
+  return null;
+}
+
+bool _backendApiIsValidWriteFailoverUrl(
+  Uri currentUri,
+  String? candidateBaseUrl,
+) {
+  if (candidateBaseUrl == null || candidateBaseUrl.isEmpty) return false;
+  try {
+    final candidate = Uri.parse(candidateBaseUrl);
+    if (candidate.scheme != 'http' && candidate.scheme != 'https') {
+      return false;
+    }
+    return candidate.origin != currentUri.origin;
+  } catch (_) {
+    return false;
+  }
+}
+
 Future<Map<String, dynamic>> _backendApiUploadFileImpl(
   BackendApiService service, {
   required List<int> fileBytes,
@@ -87,9 +120,11 @@ Future<Map<String, dynamic>> _backendApiUploadFileImpl(
   await service._ensureAuthBeforeRequest(walletAddress: walletAddress);
   final initialMetadata = Map<String, String>.from(metadata ?? const {});
   initialMetadata.putIfAbsent('publicationScope', () => 'draft');
+
   var uploadBytes = Uint8List.fromList(fileBytes);
   var uploadFileName = fileName;
-  String? uploadContentType = _backendApiGuessContentType(fileName, fileType);
+  var uploadContentType = _backendApiGuessContentType(fileName, fileType);
+
   if (compress) {
     final compression = await service._mediaUploadOptimizer.optimize(
       UploadCompressionRequestDto(
@@ -119,15 +154,21 @@ Future<Map<String, dynamic>> _backendApiUploadFileImpl(
       ).toMetadataFields(),
     );
   }
+
   const int maxRetries = 3;
+  const int maxWriteFailovers = 1;
   int attempt = 0;
+  int writeFailoverAttempt = 0;
+  String? failoverBaseUrl;
+
   while (true) {
     attempt++;
     try {
       http.MultipartRequest buildRequest() {
+        final effectiveBaseUrl = failoverBaseUrl ?? service.baseUrl;
         final request = http.MultipartRequest(
           'POST',
-          Uri.parse('${service.baseUrl}/api/upload'),
+          Uri.parse('$effectiveBaseUrl/api/upload'),
         );
 
         request.headers.addAll(service._getHeaders());
@@ -154,12 +195,14 @@ Future<Map<String, dynamic>> _backendApiUploadFileImpl(
             request.url.toString(),
             data: <String, dynamic>{
               'attempt': attempt,
+              'failoverAttempt': writeFailoverAttempt,
               'contentType': 'multipart/form-data',
               'fileField': 'file',
               'fileName': uploadFileName,
               'bytes': uploadBytes.length,
               'fileType': fileType,
               'targetStorage': 'http',
+              'baseUrl': effectiveBaseUrl,
               if (initialMetadata.isNotEmpty) 'metadata': initialMetadata,
             },
           );
@@ -167,8 +210,16 @@ Future<Map<String, dynamic>> _backendApiUploadFileImpl(
         return request;
       }
 
-      final response =
-          await service._sendMultipart(buildRequest, includeAuth: true);
+      final response = await service._sendMultipart(
+        buildRequest,
+        includeAuth: true,
+      );
+
+      service._debugLogThrottled(
+        'uploadFile:status',
+        'BackendApiService.uploadFile: status=${response.statusCode} bodyLen=${response.body.length}',
+      );
+
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body) as Map<String, dynamic>;
         final Map<String, dynamic> data = body['data'] is Map<String, dynamic>
@@ -181,7 +232,8 @@ Future<Map<String, dynamic>> _backendApiUploadFileImpl(
         if (kDebugMode && AppConfig.enableNetworkLogging) {
           AppConfig.networkLog(
             'UPLOAD_RES',
-            Uri.parse('${service.baseUrl}/api/upload').toString(),
+            Uri.parse('${failoverBaseUrl ?? service.baseUrl}/api/upload')
+                .toString(),
             data: <String, dynamic>{
               'status': response.statusCode,
               'success': body['success'],
@@ -202,13 +254,15 @@ Future<Map<String, dynamic>> _backendApiUploadFileImpl(
       if (kDebugMode && AppConfig.enableNetworkLogging) {
         AppConfig.networkLog(
           'UPLOAD_RES',
-          Uri.parse('${service.baseUrl}/api/upload').toString(),
+          Uri.parse('${failoverBaseUrl ?? service.baseUrl}/api/upload')
+              .toString(),
           data: <String, dynamic>{
             'status': response.statusCode,
             'bodyLen': response.body.length,
           },
         );
       }
+
       if (response.statusCode == 429) {
         final retryAfter = response.headers['retry-after'];
         final waitSeconds =
@@ -225,17 +279,43 @@ Future<Map<String, dynamic>> _backendApiUploadFileImpl(
       }
 
       throw Exception('Failed to upload file: ${response.statusCode}');
-    } catch (e) {
-      if (_backendApiIsNodeNotWritableException(e)) {
-        rethrow;
-      }
-      if (attempt >= maxRetries) {
+    } catch (e, stackTrace) {
+      if (_backendApiIsNodeNotWritableException(e) &&
+          writeFailoverAttempt < maxWriteFailovers) {
+        writeFailoverAttempt++;
+        final responseBody = (e as BackendApiRequestException).body;
+        final writeBaseUrl = _backendApiExtractPreferredWriteBaseUrl(responseBody);
+        final currentUri = Uri.parse('${failoverBaseUrl ?? service.baseUrl}/api/upload');
+
+        if (_backendApiIsValidWriteFailoverUrl(currentUri, writeBaseUrl)) {
+          service._debugLogThrottled(
+            'uploadFile:failover',
+            'BackendApiService.uploadFile: attempting write failover to $writeBaseUrl (attempt $writeFailoverAttempt/$maxWriteFailovers)',
+          );
+          failoverBaseUrl = writeBaseUrl;
+          attempt = 0;
+          continue;
+        }
+
         service._debugLogThrottled(
-          'uploadFile:error:final',
-          'BackendApiService.uploadFile: error (final): $e',
+          'uploadFile:failover:invalid',
+          'BackendApiService.uploadFile: invalid or missing preferredWriteBaseUrl=$writeBaseUrl',
         );
         rethrow;
       }
+
+      if (_backendApiIsNodeNotWritableException(e)) {
+        rethrow;
+      }
+
+      if (attempt >= maxRetries) {
+        service._debugLogThrottled(
+          'uploadFile:error:final',
+          'BackendApiService.uploadFile: error (final): $e\n$stackTrace',
+        );
+        rethrow;
+      }
+
       final backoff = 1 << (attempt - 1);
       service._debugLogThrottled(
         'uploadFile:error:retry',
@@ -309,12 +389,15 @@ Future<Map<String, dynamic>> _backendApiUploadAvatarToProfileImpl(
   );
 
   const int maxRetries = 3;
+  const int maxWriteFailovers = 1;
   final initialMetadata = Map<String, String>.from(metadata ?? const {});
   initialMetadata.putIfAbsent('publicationScope', () => 'draft');
+
   var uploadBytes = Uint8List.fromList(fileBytes);
   var uploadFileName = fileName;
   var uploadFileType =
       _backendApiGuessContentType(fileName, fileType) ?? fileType;
+
   if (compress) {
     final compression = await service._mediaUploadOptimizer.optimize(
       UploadCompressionRequestDto(
@@ -350,22 +433,26 @@ Future<Map<String, dynamic>> _backendApiUploadAvatarToProfileImpl(
       ).toMetadataFields(),
     );
   }
+
   int attempt = 0;
+  int writeFailoverAttempt = 0;
+  String? failoverBaseUrl;
+
   while (true) {
     attempt++;
     service._debugLogThrottled(
       'uploadAvatarToProfile:attempt',
       'BackendApiService.uploadAvatarToProfile: attempt $attempt/$maxRetries',
     );
-    try {
-      final uri = Uri.parse('${service.baseUrl}/api/profiles/avatars');
-      service._debugLogThrottled(
-        'uploadAvatarToProfile:url',
-        'BackendApiService.uploadAvatarToProfile: POST $uri',
-      );
 
+    try {
       http.MultipartRequest buildRequest() {
-        final request = http.MultipartRequest('POST', uri);
+        final effectiveBaseUrl = failoverBaseUrl ?? service.baseUrl;
+        final request = http.MultipartRequest(
+          'POST',
+          Uri.parse('$effectiveBaseUrl/api/profiles/avatars'),
+        );
+
         request.headers.addAll(service._getHeaders());
         request.files.add(
           http.MultipartFile.fromBytes(
@@ -383,8 +470,11 @@ Future<Map<String, dynamic>> _backendApiUploadAvatarToProfileImpl(
         return request;
       }
 
-      final response =
-          await service._sendMultipart(buildRequest, includeAuth: true);
+      final response = await service._sendMultipart(
+        buildRequest,
+        includeAuth: true,
+      );
+
       service._debugLogThrottled(
         'uploadAvatarToProfile:status',
         'BackendApiService.uploadAvatarToProfile: status=${response.statusCode} bodyLen=${response.body.length}',
@@ -430,9 +520,36 @@ Future<Map<String, dynamic>> _backendApiUploadAvatarToProfileImpl(
         'Failed to upload avatar: ${response.statusCode} ${response.body}',
       );
     } catch (e, stackTrace) {
+      if (_backendApiIsNodeNotWritableException(e) &&
+          writeFailoverAttempt < maxWriteFailovers) {
+        writeFailoverAttempt++;
+        final responseBody = (e as BackendApiRequestException).body;
+        final writeBaseUrl = _backendApiExtractPreferredWriteBaseUrl(responseBody);
+        final currentUri = Uri.parse(
+          '${failoverBaseUrl ?? service.baseUrl}/api/profiles/avatars',
+        );
+
+        if (_backendApiIsValidWriteFailoverUrl(currentUri, writeBaseUrl)) {
+          service._debugLogThrottled(
+            'uploadAvatarToProfile:failover',
+            'BackendApiService.uploadAvatarToProfile: attempting write failover to $writeBaseUrl (attempt $writeFailoverAttempt/$maxWriteFailovers)',
+          );
+          failoverBaseUrl = writeBaseUrl;
+          attempt = 0;
+          continue;
+        }
+
+        service._debugLogThrottled(
+          'uploadAvatarToProfile:failover:invalid',
+          'BackendApiService.uploadAvatarToProfile: invalid or missing preferredWriteBaseUrl=$writeBaseUrl',
+        );
+        rethrow;
+      }
+
       if (_backendApiIsNodeNotWritableException(e)) {
         rethrow;
       }
+
       if (attempt >= maxRetries) {
         service._debugLogThrottled(
           'uploadAvatarToProfile:error:final',
@@ -441,6 +558,7 @@ Future<Map<String, dynamic>> _backendApiUploadAvatarToProfileImpl(
         );
         rethrow;
       }
+
       final backoff = 1 << (attempt - 1);
       service._debugLogThrottled(
         'uploadAvatarToProfile:error:retry',
