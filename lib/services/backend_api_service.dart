@@ -948,6 +948,7 @@ class BackendApiService
     bool isIdempotent = false,
     Duration timeout = AppConfig.requestTimeout,
     bool retriedAfterReauth = false,
+    bool retriedAfterWritableRedirect = false,
     bool allowImplicitBackendFailover = true,
     Set<String>? attemptedBackendOrigins,
   }) async {
@@ -1064,6 +1065,7 @@ class BackendApiService
             isIdempotent: isIdempotent,
             timeout: timeout,
             retriedAfterReauth: retriedAfterReauth,
+            retriedAfterWritableRedirect: retriedAfterWritableRedirect,
             allowImplicitBackendFailover: allowImplicitBackendFailover,
             attemptedBackendOrigins: attemptedOrigins,
           );
@@ -1099,6 +1101,32 @@ class BackendApiService
         }
       }
 
+      if (_isNodeNotWritableResponse(response) &&
+          method.toUpperCase() != 'GET') {
+        final redirected = _redirectNodeNotWritableRequest(
+          response,
+          uri,
+          alreadyRedirected: retriedAfterWritableRedirect,
+        );
+        if (redirected != null) {
+          return _request(
+            method,
+            redirected,
+            includeAuth: includeAuth,
+            headers: headers,
+            body: body,
+            encoding: encoding,
+            isIdempotent: isIdempotent,
+            timeout: timeout,
+            retriedAfterReauth: retriedAfterReauth,
+            retriedAfterWritableRedirect: true,
+            allowImplicitBackendFailover: false,
+            attemptedBackendOrigins: attemptedOrigins,
+          );
+        }
+        throw _nodeNotWritableException(response, uri);
+      }
+
       if (allowImplicitBackendFailover &&
           _shouldImplicitFailoverOnStatus(method, response.statusCode)) {
         final failoverUri = _nextImplicitFailoverUri(
@@ -1117,6 +1145,7 @@ class BackendApiService
             isIdempotent: isIdempotent,
             timeout: timeout,
             retriedAfterReauth: retriedAfterReauth,
+            retriedAfterWritableRedirect: retriedAfterWritableRedirect,
             allowImplicitBackendFailover: allowImplicitBackendFailover,
             attemptedBackendOrigins: attemptedOrigins,
           );
@@ -1156,6 +1185,7 @@ class BackendApiService
         isIdempotent: isIdempotent,
         timeout: timeout,
         retriedAfterReauth: true,
+        retriedAfterWritableRedirect: retriedAfterWritableRedirect,
         allowImplicitBackendFailover: allowImplicitBackendFailover,
         attemptedBackendOrigins: attemptedOrigins,
       );
@@ -1269,6 +1299,7 @@ class BackendApiService
     bool includeAuth = true,
     Duration timeout = AppConfig.requestTimeout,
     bool retriedAfterReauth = false,
+    bool retriedAfterWritableRedirect = false,
     bool allowImplicitBackendFailover = true,
     Set<String>? attemptedBackendOrigins,
   }) async {
@@ -1330,6 +1361,7 @@ class BackendApiService
             includeAuth: includeAuth,
             timeout: timeout,
             retriedAfterReauth: retriedAfterReauth,
+            retriedAfterWritableRedirect: retriedAfterWritableRedirect,
             allowImplicitBackendFailover: allowImplicitBackendFailover,
             attemptedBackendOrigins: attemptedOrigins,
           );
@@ -1343,6 +1375,37 @@ class BackendApiService
       if (successfulBaseUrl != null) {
         _publicFallbackService.recordBackendSuccess(baseUrl: successfulBaseUrl);
       }
+    }
+
+    if (_isNodeNotWritableResponse(response) &&
+        request.method.toUpperCase() != 'GET') {
+      final redirected = _redirectNodeNotWritableRequest(
+        response,
+        request.url,
+        alreadyRedirected: retriedAfterWritableRedirect,
+      );
+      if (redirected != null) {
+        return _sendMultipart(
+          () {
+            final retryRequest = requestFactory();
+            final rewritten = http.MultipartRequest(
+              retryRequest.method,
+              redirected,
+            );
+            rewritten.headers.addAll(retryRequest.headers);
+            rewritten.fields.addAll(retryRequest.fields);
+            rewritten.files.addAll(retryRequest.files);
+            return rewritten;
+          },
+          includeAuth: includeAuth,
+          timeout: timeout,
+          retriedAfterReauth: retriedAfterReauth,
+          retriedAfterWritableRedirect: true,
+          allowImplicitBackendFailover: false,
+          attemptedBackendOrigins: attemptedOrigins,
+        );
+      }
+      throw _nodeNotWritableException(response, request.url);
     }
 
     if (allowImplicitBackendFailover &&
@@ -1368,6 +1431,7 @@ class BackendApiService
           includeAuth: includeAuth,
           timeout: timeout,
           retriedAfterReauth: retriedAfterReauth,
+          retriedAfterWritableRedirect: retriedAfterWritableRedirect,
           allowImplicitBackendFailover: allowImplicitBackendFailover,
           attemptedBackendOrigins: attemptedOrigins,
         );
@@ -1403,6 +1467,7 @@ class BackendApiService
       includeAuth: includeAuth,
       timeout: timeout,
       retriedAfterReauth: true,
+      retriedAfterWritableRedirect: retriedAfterWritableRedirect,
       allowImplicitBackendFailover: allowImplicitBackendFailover,
       attemptedBackendOrigins: attemptedOrigins,
     );
@@ -1635,6 +1700,83 @@ class BackendApiService
       path: originalUri.path,
       query: originalUri.hasQuery ? originalUri.query : null,
       fragment: originalUri.hasFragment ? originalUri.fragment : null,
+    );
+  }
+
+  Map<String, dynamic>? _decodeResponseJsonObject(http.Response response) {
+    final raw = response.body.trim();
+    if (raw.isEmpty) return null;
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map) {
+        return Map<String, dynamic>.from(decoded);
+      }
+    } catch (_) {
+      return null;
+    }
+    return null;
+  }
+
+  String? _extractPreferredWriteBaseUrl(http.Response response) {
+    final value = _decodeResponseJsonObject(response)?['preferredWriteBaseUrl'];
+    final raw = value?.toString().trim();
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      final normalized = _normalizeApiBaseUrl(raw);
+      final uri = Uri.parse(normalized);
+      if (!uri.hasScheme || uri.host.trim().isEmpty) return null;
+      return normalized;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  bool _isNodeNotWritableResponse(http.Response response) {
+    if (response.statusCode != 503) return false;
+    final payload = _decodeResponseJsonObject(response);
+    return payload?['code'] == 'NODE_NOT_WRITABLE';
+  }
+
+  Uri? _redirectNodeNotWritableRequest(
+    http.Response response,
+    Uri originalUri, {
+    required bool alreadyRedirected,
+  }) {
+    if (alreadyRedirected) return null;
+    final preferredWriteBaseUrl = _extractPreferredWriteBaseUrl(response);
+    if (preferredWriteBaseUrl == null) return null;
+
+    final preferredOrigin =
+        _uriOriginKey(_baseUrlOriginUri(preferredWriteBaseUrl));
+    if (preferredOrigin == null ||
+        preferredOrigin == _uriOriginKey(originalUri)) {
+      return null;
+    }
+
+    return _rewriteUriBase(originalUri, preferredWriteBaseUrl);
+  }
+
+  BackendApiRequestException _nodeNotWritableException(
+    http.Response response,
+    Uri attemptedUri,
+  ) {
+    final preferredWriteBaseUrl =
+        _extractPreferredWriteBaseUrl(response) ?? '';
+    final body = jsonEncode(<String, Object?>{
+      'success': false,
+      'error': preferredWriteBaseUrl.isEmpty
+          ? 'Node is not writable and did not provide a preferred write base URL.'
+          : 'Node is not writable and the configured preferred write base URL points to the same backend.',
+      'code': 'NODE_NOT_WRITABLE',
+      'attemptedUrl': attemptedUri.toString(),
+      'preferredWriteBaseUrl':
+          preferredWriteBaseUrl.isEmpty ? null : preferredWriteBaseUrl,
+      'upstream': _decodeResponseJsonObject(response) ?? response.body,
+    });
+    return BackendApiRequestException(
+      statusCode: response.statusCode,
+      path: attemptedUri.path,
+      body: body,
     );
   }
 

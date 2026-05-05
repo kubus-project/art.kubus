@@ -67,6 +67,12 @@ String? _backendApiGuessContentType(String fileName, String fileType) {
   return null;
 }
 
+bool _backendApiIsNodeNotWritableException(Object error) {
+  return error is BackendApiRequestException &&
+      error.statusCode == 503 &&
+      (error.body ?? '').contains('NODE_NOT_WRITABLE');
+}
+
 Future<Map<String, dynamic>> _backendApiUploadFileImpl(
   BackendApiService service, {
   required List<int> fileBytes,
@@ -220,6 +226,9 @@ Future<Map<String, dynamic>> _backendApiUploadFileImpl(
 
       throw Exception('Failed to upload file: ${response.statusCode}');
     } catch (e) {
+      if (_backendApiIsNodeNotWritableException(e)) {
+        rethrow;
+      }
       if (attempt >= maxRetries) {
         service._debugLogThrottled(
           'uploadFile:error:final',
@@ -421,6 +430,9 @@ Future<Map<String, dynamic>> _backendApiUploadAvatarToProfileImpl(
         'Failed to upload avatar: ${response.statusCode} ${response.body}',
       );
     } catch (e, stackTrace) {
+      if (_backendApiIsNodeNotWritableException(e)) {
+        rethrow;
+      }
       if (attempt >= maxRetries) {
         service._debugLogThrottled(
           'uploadAvatarToProfile:error:final',

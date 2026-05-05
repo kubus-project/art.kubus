@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/http_client_factory.dart';
 import 'package:art_kubus/services/media_upload_optimizer.dart';
@@ -105,5 +106,151 @@ void main() {
     expect(body, contains('clientCompressionApplied'));
     expect(body, contains('false'));
     expect(body, contains('disabled_by_caller'));
+  });
+
+  test('uploadAvatarToProfile switches once to preferred write base', () async {
+    final requestHosts = <String>[];
+    final primaryHost = Uri.parse(AppConfig.baseApiUrl).host;
+    final standbyHost = Uri.parse(AppConfig.standbyApiUrl).host;
+
+    BackendApiService().setHttpClient(
+      MockClient((request) async {
+        expect(request.url.path, '/api/profiles/avatars');
+        requestHosts.add(request.url.host);
+
+        if (request.url.host == primaryHost) {
+          return http.Response(
+            jsonEncode(<String, Object?>{
+              'success': false,
+              'error': 'Node is not writable',
+              'code': 'NODE_NOT_WRITABLE',
+              'databaseRole': 'standby',
+              'preferredWriteBaseUrl': AppConfig.standbyApiUrl,
+              'switchRecommended': true,
+            }),
+            503,
+            headers: const <String, String>{
+              'content-type': 'application/json',
+            },
+          );
+        }
+
+        if (request.url.host == standbyHost) {
+          return http.Response(
+            jsonEncode(<String, Object?>{
+              'success': true,
+              'data': <String, Object?>{'avatar': '/uploads/avatar.png'},
+            }),
+            200,
+            headers: const <String, String>{
+              'content-type': 'application/json',
+            },
+          );
+        }
+
+        return http.Response('unexpected host', 500);
+      }),
+    );
+
+    final result = await BackendApiService().uploadAvatarToProfile(
+      fileBytes: <int>[1, 2, 3],
+      fileName: 'avatar.png',
+      fileType: 'image/png',
+      compress: false,
+    );
+
+    expect(result['uploadedUrl'], '/uploads/avatar.png');
+    expect(requestHosts, <String>[primaryHost, standbyHost]);
+  });
+
+  test('uploadFile fails fast when preferred write base matches attempted base',
+      () async {
+    final requestHosts = <String>[];
+    final primaryHost = Uri.parse(AppConfig.baseApiUrl).host;
+
+    BackendApiService().setHttpClient(
+      MockClient((request) async {
+        requestHosts.add(request.url.host);
+        return http.Response(
+          jsonEncode(<String, Object?>{
+            'success': false,
+            'error': 'Node is not writable',
+            'code': 'NODE_NOT_WRITABLE',
+            'databaseRole': 'standby',
+            'preferredWriteBaseUrl': AppConfig.baseApiUrl,
+            'switchRecommended': true,
+          }),
+          503,
+          headers: const <String, String>{
+            'content-type': 'application/json',
+          },
+        );
+      }),
+    );
+
+    final future = BackendApiService().uploadFile(
+      fileBytes: <int>[1, 2, 3],
+      fileName: 'cover.png',
+      fileType: 'image/png',
+      compress: false,
+    );
+
+    await expectLater(
+      future,
+      throwsA(
+        isA<BackendApiRequestException>()
+            .having((error) => error.statusCode, 'statusCode', 503)
+            .having((error) => error.body, 'body', contains('standby'))
+            .having(
+              (error) => error.body,
+              'body',
+              contains('same backend'),
+            ),
+      ),
+    );
+    expect(requestHosts, <String>[primaryHost]);
+  });
+
+  test('uploadFile keeps 429 retry behavior', () async {
+    var attempts = 0;
+
+    BackendApiService().setHttpClient(
+      MockClient((request) async {
+        attempts++;
+        if (attempts == 1) {
+          return http.Response(
+            jsonEncode(<String, Object?>{
+              'success': false,
+              'error': 'rate limited',
+            }),
+            429,
+            headers: const <String, String>{
+              'retry-after': '0',
+              'content-type': 'application/json',
+            },
+          );
+        }
+        return http.Response(
+          jsonEncode(<String, Object?>{
+            'success': true,
+            'data': <String, Object?>{'relativeUrl': '/uploads/retry.png'},
+          }),
+          200,
+          headers: const <String, String>{
+            'content-type': 'application/json',
+          },
+        );
+      }),
+    );
+
+    final result = await BackendApiService().uploadFile(
+      fileBytes: <int>[1, 2, 3],
+      fileName: 'retry.png',
+      fileType: 'image/png',
+      compress: false,
+    );
+
+    expect(result['uploadedUrl'], '/uploads/retry.png');
+    expect(attempts, 2);
   });
 }

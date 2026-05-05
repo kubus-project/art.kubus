@@ -213,4 +213,64 @@ void main() {
     expect(result.state, PostAuthRouteState.ready);
     expect(result.routeName, '/main');
   });
+
+  test('wallet login without scope ignores stale global pending onboarding',
+      () async {
+    final prefs = await SharedPreferences.getInstance();
+    await OnboardingStateService.markAuthOnboardingPending(prefs: prefs);
+
+    final result = await const AuthRedirectController().resolvePostAuthRedirect(
+      prefs: prefs,
+      payload: const <String, dynamic>{},
+      hasHydratedProfile: true,
+      requiresWalletBackup: false,
+      heuristicNextStepId: 'daoReview',
+      persona: 'creator',
+      origin: AuthOrigin.wallet,
+    );
+
+    expect(result.state, PostAuthRouteState.ready);
+    expect(result.routeName, '/main');
+  });
+
+  test('clearing pending onboarding for wallet B leaves wallet A pending',
+      () async {
+    final prefs = await SharedPreferences.getInstance();
+    final walletAScope = OnboardingStateService.buildAuthOnboardingScopeKey(
+      walletAddress: 'wallet-a',
+      userId: 'user-a',
+    );
+    final walletBScope = OnboardingStateService.buildAuthOnboardingScopeKey(
+      walletAddress: 'wallet-b',
+      userId: 'user-b',
+    );
+
+    await OnboardingStateService.markAuthOnboardingPending(
+      prefs: prefs,
+      scopeKey: walletAScope,
+    );
+    await OnboardingStateService.markAuthOnboardingPending(
+      prefs: prefs,
+      scopeKey: walletBScope,
+    );
+    await OnboardingStateService.clearPendingAuthOnboarding(
+      prefs: prefs,
+      scopeKey: walletBScope,
+    );
+
+    expect(
+      OnboardingStateService.hasPendingAuthOnboardingSync(
+        prefs,
+        scopeKey: walletAScope,
+      ),
+      isTrue,
+    );
+    expect(
+      OnboardingStateService.hasPendingAuthOnboardingSync(
+        prefs,
+        scopeKey: walletBScope,
+      ),
+      isFalse,
+    );
+  });
 }

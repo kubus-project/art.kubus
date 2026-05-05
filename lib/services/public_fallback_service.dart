@@ -176,7 +176,46 @@ class PublicFallbackService extends ChangeNotifier {
     return <String>[AppConfig.baseApiUrl, AppConfig.standbyApiUrl];
   }
 
-  List<String> get preferredWriteBaseUrls => preferredReadBaseUrls;
+  List<String> get preferredWriteBaseUrls {
+    final candidates = <String>[];
+
+    void addCandidate(String? rawBaseUrl) {
+      final normalized = _normalizeOptionalBaseUrl(rawBaseUrl);
+      if (normalized == null) return;
+      if (!candidates.any((existing) => _isSameBaseUrl(existing, normalized))) {
+        candidates.add(normalized);
+      }
+    }
+
+    for (final status in <BackendWritableStatusRecord?>[
+      _primaryStatus,
+      _standbyStatus,
+    ]) {
+      if (status?.writable == true) {
+        addCandidate(status?.baseUrl);
+        addCandidate(status?.preferredWriteBaseUrl);
+      }
+    }
+
+    for (final status in <BackendWritableStatusRecord?>[
+      _primaryStatus,
+      _standbyStatus,
+    ]) {
+      if (status?.switchRecommended == true) {
+        addCandidate(status?.preferredWriteBaseUrl);
+      }
+    }
+
+    if (_mode == AppRuntimeMode.standby) {
+      addCandidate(AppConfig.standbyApiUrl);
+      addCandidate(AppConfig.baseApiUrl);
+    } else {
+      addCandidate(AppConfig.baseApiUrl);
+      addCandidate(AppConfig.standbyApiUrl);
+    }
+
+    return candidates;
+  }
 
   Future<void> initialize() {
     final existing = _initializeFuture;
