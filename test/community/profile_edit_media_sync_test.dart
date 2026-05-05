@@ -141,9 +141,16 @@ void main() {
     final provider = await _seedProfile(api);
     await _pumpEditScreen(tester, provider, const mobile.ProfileEditScreen());
 
-    final state = tester.state(find.byType(mobile.ProfileEditScreen)) as dynamic;
-    expect(state.debugAvatarUrl, '/uploads/profiles/avatars/current.png');
-    expect(state.debugCoverImageUrl, '/uploads/profiles/cover/current.png');
+    final state =
+        tester.state(find.byType(mobile.ProfileEditScreen)) as dynamic;
+    expect(
+      state.debugAvatarUrl,
+      'https://api.kubus.site/uploads/profiles/avatars/current.png',
+    );
+    expect(
+      state.debugCoverImageUrl,
+      'https://api.kubus.site/uploads/profiles/cover/current.png',
+    );
 
     api.nextSaveResponse = <String, dynamic>{
       'walletAddress': 'ArtistWallet111111111111111111111111111111111',
@@ -164,11 +171,18 @@ void main() {
     );
     await tester.pump();
 
-    expect(state.debugAvatarUrl, '/uploads/profiles/avatars/current.png');
-    expect(state.debugCoverImageUrl, '/uploads/profiles/cover/current.png');
+    expect(
+      state.debugAvatarUrl,
+      'https://api.kubus.site/uploads/profiles/avatars/current.png',
+    );
+    expect(
+      state.debugCoverImageUrl,
+      'https://api.kubus.site/uploads/profiles/cover/current.png',
+    );
   });
 
-  testWidgets('desktop edit profile listener ignores provider media during upload',
+  testWidgets(
+      'desktop edit profile listener ignores provider media during upload',
       (tester) async {
     final api = _FakeProfileApi();
     final provider = await _seedProfile(api);
@@ -203,7 +217,13 @@ void main() {
     );
     await tester.pump();
 
-    expect(state.debugAvatarUrl, '/uploads/profiles/avatars/current.png');
-    expect(state.debugCoverImageUrl, '/uploads/profiles/cover/current.png');
+    expect(
+      state.debugAvatarUrl,
+      'https://api.kubus.site/uploads/profiles/avatars/current.png',
+    );
+    expect(
+      state.debugCoverImageUrl,
+      'https://api.kubus.site/uploads/profiles/cover/current.png',
+    );
   });
 }

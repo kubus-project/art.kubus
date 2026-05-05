@@ -27,22 +27,24 @@ class _FakeProfileApi implements ProfileBackendApi {
   }
 
   @override
-  Future<Map<String, dynamic>> saveProfile(Map<String, dynamic> profileData) async {
+  Future<Map<String, dynamic>> saveProfile(
+      Map<String, dynamic> profileData) async {
     final error = saveError;
     if (error != null) {
       throw error;
     }
     lastSavedProfile = Map<String, dynamic>.from(profileData);
-    return nextSaveResponse ?? <String, dynamic>{
-      'walletAddress': profileData['walletAddress'],
-      'username': profileData['username'] ?? 'artist_user',
-      'displayName': profileData['displayName'] ?? 'Artist User',
-      'bio': profileData['bio'] ?? '',
-      'avatar': profileData['avatar'],
-      'coverImage': profileData['coverImage'],
-      'createdAt': '2026-03-31T00:00:00.000Z',
-      'updatedAt': '2026-03-31T00:00:00.000Z',
-    };
+    return nextSaveResponse ??
+        <String, dynamic>{
+          'walletAddress': profileData['walletAddress'],
+          'username': profileData['username'] ?? 'artist_user',
+          'displayName': profileData['displayName'] ?? 'Artist User',
+          'bio': profileData['bio'] ?? '',
+          'avatar': profileData['avatar'],
+          'coverImage': profileData['coverImage'],
+          'createdAt': '2026-03-31T00:00:00.000Z',
+          'updatedAt': '2026-03-31T00:00:00.000Z',
+        };
   }
 
   @override
@@ -75,7 +77,8 @@ class _FakeProfileApi implements ProfileBackendApi {
   Future<bool> isFollowing(String walletAddress) async => false;
 
   @override
-  Future<Map<String, dynamic>?> getDAOReview({required String idOrWallet}) async {
+  Future<Map<String, dynamic>?> getDAOReview(
+      {required String idOrWallet}) async {
     return null;
   }
 }
@@ -87,7 +90,8 @@ void main() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
   });
 
-  test('ProfileMediaRefUtils flags generated avatars and keeps upload refs', () {
+  test('ProfileMediaRefUtils flags generated avatars and keeps upload refs',
+      () {
     expect(
       ProfileMediaRefUtils.isGeneratedAvatarRef(
         'https://api.kubus.site/api/avatar/abc?style=identicon&format=png',
@@ -107,7 +111,8 @@ void main() {
       isTrue,
     );
     expect(ProfileMediaRefUtils.isGeneratedAvatarRef(''), isTrue);
-    expect(ProfileMediaRefUtils.isGeneratedAvatarRef('/uploads/avatar.png'), isFalse);
+    expect(ProfileMediaRefUtils.isGeneratedAvatarRef('/uploads/avatar.png'),
+        isFalse);
     expect(
       ProfileMediaRefUtils.isPersistableAvatarRef('/uploads/avatar.png'),
       isTrue,
@@ -132,7 +137,9 @@ void main() {
     );
   });
 
-  test('ProfileProvider saveProfile omits avatar when omitted, empty, or generated', () async {
+  test(
+      'ProfileProvider saveProfile omits avatar when omitted, empty, or generated',
+      () async {
     final api = _FakeProfileApi();
     final provider = ProfileProvider(apiService: api);
 
@@ -170,7 +177,8 @@ void main() {
     expect(api.lastSavedProfile?['avatar'], isNull);
   });
 
-  test('ProfileProvider text-only save does not resend current avatar or cover', () async {
+  test('ProfileProvider text-only save does not resend current avatar or cover',
+      () async {
     final api = _FakeProfileApi();
     final provider = ProfileProvider(apiService: api);
 
@@ -218,7 +226,9 @@ void main() {
     expect(api.lastSavedProfile?.containsKey('coverImage'), isFalse);
   });
 
-  test('ProfileProvider saveProfile normalizes backend cover URLs to stable paths', () async {
+  test(
+      'ProfileProvider saveProfile normalizes backend cover URLs to stable paths',
+      () async {
     final api = _FakeProfileApi();
     final provider = ProfileProvider(apiService: api);
 
@@ -227,11 +237,13 @@ void main() {
       username: 'artist_user',
       displayName: 'Artist User',
       bio: 'Updated bio',
-      coverImage: 'https://api.kubus.site/uploads/profiles/cover/2026/cover.png',
+      coverImage:
+          'https://api.kubus.site/uploads/profiles/cover/2026/cover.png',
       reloadStats: false,
     );
 
-    expect(api.lastSavedProfile?['coverImage'], '/uploads/profiles/cover/2026/cover.png');
+    expect(api.lastSavedProfile?['coverImage'],
+        '/uploads/profiles/cover/2026/cover.png');
   });
 
   test('ProfileProvider saveProfile clears loading after save exceptions',

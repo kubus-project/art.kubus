@@ -31,7 +31,13 @@ String? _backendApiResolveUploadedUrl(Map<String, dynamic> data) {
         normalizePublicPath(data['public_path']);
     if (publicPath != null) return publicPath;
 
-    for (final key in const <String>['url', 'ipfsUrl', 'httpUrl', 'fileUrl', 'path']) {
+    for (final key in const <String>[
+      'url',
+      'ipfsUrl',
+      'httpUrl',
+      'fileUrl',
+      'path'
+    ]) {
       final value = _backendApiTrimmedString(data[key]);
       if (value != null) return value;
     }
@@ -87,8 +93,7 @@ bool _backendApiResponseBodyIsNodeNotWritable(String? body) {
     if (decoded['errorCode']?.toString() == 'NODE_NOT_WRITABLE') return true;
 
     final data = decoded['data'];
-    if (data is Map &&
-        data['code']?.toString() == 'NODE_NOT_WRITABLE') {
+    if (data is Map && data['code']?.toString() == 'NODE_NOT_WRITABLE') {
       return true;
     }
 

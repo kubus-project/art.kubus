@@ -581,7 +581,8 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
       final linkedLabel = l10n.communitySubjectLinkedLabel(
         _subjectTypeLabel(l10n, previewValue.ref.normalizedType),
       );
-      label = subjectCount > 1 ? '$linkedLabel +${subjectCount - 1}' : linkedLabel;
+      label =
+          subjectCount > 1 ? '$linkedLabel +${subjectCount - 1}' : linkedLabel;
       title = previewValue.title;
       subjectIcon = _subjectTypeIcon(previewValue.ref.normalizedType);
       imageUrl = previewValue.imageUrl;

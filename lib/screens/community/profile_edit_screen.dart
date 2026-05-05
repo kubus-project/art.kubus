@@ -281,7 +281,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           });
 
           unawaited(profileProvider.loadProfile(wallet));
-          final displayAvatarUrl = _normalizeMediaUrl(persistableAvatar) ?? persistableAvatar;
+          final displayAvatarUrl =
+              _normalizeMediaUrl(persistableAvatar) ?? persistableAvatar;
           final uri = Uri.tryParse(displayAvatarUrl);
           ScaffoldMessenger.of(context).showKubusSnackBar(
             SnackBar(
@@ -297,7 +298,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                   IconButton(
                     icon: const Icon(Icons.copy, size: 20, color: Colors.white),
                     onPressed: () async {
-                      await Clipboard.setData(ClipboardData(text: displayAvatarUrl));
+                      await Clipboard.setData(
+                          ClipboardData(text: displayAvatarUrl));
                       if (!mounted) return;
                       ScaffoldMessenger.of(context).showKubusSnackBar(
                         SnackBar(
@@ -315,7 +317,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                       label: l10n.commonOpen,
                       onPressed: () async {
                         try {
-                          await launchUrl(uri, mode: LaunchMode.externalApplication);
+                          await launchUrl(uri,
+                              mode: LaunchMode.externalApplication);
                         } catch (_) {}
                       },
                     )
@@ -548,7 +551,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         displayName: _displayNameController.text.trim(),
         bio: _bioController.text.trim(),
         avatar: _avatarChanged ? _toPersistableAvatarRef(_avatarUrl) : null,
-        coverImage: _coverChanged ? _toPersistableCoverRef(_coverImageUrl) : null,
+        coverImage:
+            _coverChanged ? _toPersistableCoverRef(_coverImageUrl) : null,
         social: {
           'twitter': _twitterController.text.trim(),
           'instagram': _instagramController.text.trim(),
@@ -802,14 +806,15 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                                       ),
                                       image: _localCoverBytes != null
                                           ? DecorationImage(
-                                              image: MemoryImage(_localCoverBytes!),
+                                              image: MemoryImage(
+                                                  _localCoverBytes!),
                                               fit: BoxFit.cover,
                                             )
                                           : _coverImageUrl != null &&
                                                   _coverImageUrl!.isNotEmpty
                                               ? DecorationImage(
-                                                  image:
-                                                      NetworkImage(_coverImageUrl!),
+                                                  image: NetworkImage(
+                                                      _coverImageUrl!),
                                                   fit: BoxFit.cover,
                                                   onError: (error, stackTrace) {
                                                     // Swallow image load errors (e.g., 404) so Flutter web
@@ -826,7 +831,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                                                 MainAxisAlignment.center,
                                             children: [
                                               Icon(
-                                                Icons.add_photo_alternate_outlined,
+                                                Icons
+                                                    .add_photo_alternate_outlined,
                                                 size: 40,
                                                 color: themeProvider.accentColor
                                                     .withValues(alpha: 0.6),
@@ -850,7 +856,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                                                 bottom: 12,
                                                 right: 12,
                                                 child: Container(
-                                                  padding: const EdgeInsets.all(8),
+                                                  padding:
+                                                      const EdgeInsets.all(8),
                                                   decoration: BoxDecoration(
                                                     color: Colors.black54,
                                                     borderRadius:
@@ -858,7 +865,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                                                             KubusRadius.sm),
                                                   ),
                                                   child: Row(
-                                                    mainAxisSize: MainAxisSize.min,
+                                                    mainAxisSize:
+                                                        MainAxisSize.min,
                                                     children: [
                                                       const Icon(Icons.edit,
                                                           color: Colors.white,
@@ -866,26 +874,26 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                                                       const SizedBox(width: 4),
                                                       Text(
                                                         l10n.commonChange,
-                                                        style:
-                                                            KubusTypography.inter(
+                                                        style: KubusTypography
+                                                            .inter(
                                                           fontSize: 12,
                                                           color: Colors.white,
                                                         ),
                                                       ),
                                                     ],
+                                                  ),
+                                                ),
                                               ),
-                                            ),
+                                            ],
                                           ),
-                                        ],
-                                      ),
                                   ),
                                   if (_isUploadingCover)
                                     Positioned.fill(
                                       child: Container(
                                         decoration: BoxDecoration(
                                           color: Colors.black26,
-                                          borderRadius:
-                                              BorderRadius.circular(KubusRadius.lg),
+                                          borderRadius: BorderRadius.circular(
+                                              KubusRadius.lg),
                                         ),
                                         child: Center(
                                           child: SizedBox(
@@ -915,7 +923,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                               child: Column(
                                 children: [
                                   GestureDetector(
-                                    onTap: _isUploadingAvatar ? null : _pickAvatar,
+                                    onTap:
+                                        _isUploadingAvatar ? null : _pickAvatar,
                                     child: Stack(
                                       children: [
                                         Container(
@@ -971,7 +980,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                                         if (_isUploadingAvatar)
                                           Positioned.fill(
                                             child: ClipRRect(
-                                              borderRadius: BorderRadius.circular(
+                                              borderRadius:
+                                                  BorderRadius.circular(
                                                 avatarFrameRadius,
                                               ),
                                               child: Container(

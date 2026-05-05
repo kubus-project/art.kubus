@@ -1747,6 +1747,8 @@ class BackendApiService
       final normalized = _normalizeApiBaseUrl(raw);
       final uri = Uri.parse(normalized);
       if (uri.scheme.trim().isEmpty || uri.host.trim().isEmpty) return null;
+      final scheme = uri.scheme.toLowerCase();
+      if (scheme != 'http' && scheme != 'https') return null;
       return normalized;
     } catch (_) {
       return null;
@@ -1793,8 +1795,7 @@ class BackendApiService
     http.Response response,
     Uri attemptedUri,
   ) {
-    final preferredWriteBaseUrl =
-        _extractPreferredWriteBaseUrl(response) ?? '';
+    final preferredWriteBaseUrl = _extractPreferredWriteBaseUrl(response) ?? '';
     final body = jsonEncode(<String, Object?>{
       'success': false,
       'error': preferredWriteBaseUrl.isEmpty
@@ -2602,7 +2603,8 @@ class BackendApiService
           statusCode: response.statusCode, path: uri.path, body: response.body);
     }
     final decoded = jsonDecode(response.body);
-    final payload = decoded is Map ? (decoded['item'] ?? decoded['data']) : null;
+    final payload =
+        decoded is Map ? (decoded['item'] ?? decoded['data']) : null;
     return payload is Map
         ? SavedItemRecord.fromJson(Map<String, dynamic>.from(payload))
         : item;
@@ -2640,7 +2642,8 @@ class BackendApiService
     final raw = decoded is Map ? (decoded['status'] ?? decoded['data']) : null;
     if (raw is! Map) return const <String, bool>{};
     return {
-      for (final entry in raw.entries) entry.key.toString(): entry.value == true,
+      for (final entry in raw.entries)
+        entry.key.toString(): entry.value == true,
     };
   }
 

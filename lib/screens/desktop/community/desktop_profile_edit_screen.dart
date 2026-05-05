@@ -410,94 +410,100 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
             child: GestureDetector(
               onTap: _isUploadingCover ? null : _pickCoverImage,
               child: MouseRegion(
-                cursor: _isUploadingCover ? SystemMouseCursors.basic : SystemMouseCursors.click,
+                cursor: _isUploadingCover
+                    ? SystemMouseCursors.basic
+                    : SystemMouseCursors.click,
                 child: Stack(
                   children: [
                     Container(
-                  width: double.infinity,
-                  height: 200,
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(KubusRadius.lg),
-                    border: Border.all(
-                      color: themeProvider.accentColor.withValues(alpha: 0.3),
-                      width: 2,
-                    ),
-                    image: _localCoverBytes != null
-                        ? DecorationImage(
-                            image: MemoryImage(_localCoverBytes!),
-                            fit: BoxFit.cover,
-                          )
-                        : _coverImageUrl != null && _coverImageUrl!.isNotEmpty
+                      width: double.infinity,
+                      height: 200,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(KubusRadius.lg),
+                        border: Border.all(
+                          color:
+                              themeProvider.accentColor.withValues(alpha: 0.3),
+                          width: 2,
+                        ),
+                        image: _localCoverBytes != null
                             ? DecorationImage(
-                                image: NetworkImage(_coverImageUrl!),
+                                image: MemoryImage(_localCoverBytes!),
                                 fit: BoxFit.cover,
-                                onError: (error, stackTrace) {
-                                  // Ignore cover image load errors (e.g., 404) to avoid
-                                  // bubbling into unhandled zone exceptions on web.
-                                },
                               )
-                            : null,
-                  ),
-                  child: (_localCoverBytes == null &&
-                          (_coverImageUrl == null || _coverImageUrl!.isEmpty))
-                      ? Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.add_photo_alternate_outlined,
-                              size: 48,
-                              color: themeProvider.accentColor
-                                  .withValues(alpha: 0.6),
-                            ),
-                            const SizedBox(height: KubusSpacing.md),
-                            Text(
-                              l10n.profileEditCoverImageClickToUpload,
-                              style: KubusTextStyles.detailBody.copyWith(
-                                fontWeight: FontWeight.w500,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurface
-                                    .withValues(alpha: 0.6),
-                              ),
-                            ),
-                          ],
-                        )
-                      : Container(
-                          alignment: Alignment.bottomRight,
-                          padding: const EdgeInsets.all(KubusSpacing.md),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: KubusSpacing.md,
-                              vertical: KubusSpacing.sm +
-                                  KubusSpacing.xs +
-                                  KubusSpacing.xxs,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.7),
-                              borderRadius:
-                                  BorderRadius.circular(KubusRadius.sm),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
+                            : _coverImageUrl != null &&
+                                    _coverImageUrl!.isNotEmpty
+                                ? DecorationImage(
+                                    image: NetworkImage(_coverImageUrl!),
+                                    fit: BoxFit.cover,
+                                    onError: (error, stackTrace) {
+                                      // Ignore cover image load errors (e.g., 404) to avoid
+                                      // bubbling into unhandled zone exceptions on web.
+                                    },
+                                  )
+                                : null,
+                      ),
+                      child: (_localCoverBytes == null &&
+                              (_coverImageUrl == null ||
+                                  _coverImageUrl!.isEmpty))
+                          ? Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const Icon(
-                                  Icons.edit,
-                                  color: Colors.white,
-                                  size: KubusHeaderMetrics.actionIcon,
+                                Icon(
+                                  Icons.add_photo_alternate_outlined,
+                                  size: 48,
+                                  color: themeProvider.accentColor
+                                      .withValues(alpha: 0.6),
                                 ),
-                                const SizedBox(width: KubusSpacing.sm),
+                                const SizedBox(height: KubusSpacing.md),
                                 Text(
-                                  l10n.commonChangeCover,
-                                  style: KubusTextStyles.detailLabel.copyWith(
-                                    color: Colors.white,
+                                  l10n.profileEditCoverImageClickToUpload,
+                                  style: KubusTextStyles.detailBody.copyWith(
+                                    fontWeight: FontWeight.w500,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.6),
                                   ),
                                 ),
                               ],
+                            )
+                          : Container(
+                              alignment: Alignment.bottomRight,
+                              padding: const EdgeInsets.all(KubusSpacing.md),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: KubusSpacing.md,
+                                  vertical: KubusSpacing.sm +
+                                      KubusSpacing.xs +
+                                      KubusSpacing.xxs,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.7),
+                                  borderRadius:
+                                      BorderRadius.circular(KubusRadius.sm),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.edit,
+                                      color: Colors.white,
+                                      size: KubusHeaderMetrics.actionIcon,
+                                    ),
+                                    const SizedBox(width: KubusSpacing.sm),
+                                    Text(
+                                      l10n.commonChangeCover,
+                                      style:
+                                          KubusTextStyles.detailLabel.copyWith(
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
-                ),
+                    ),
                     if (_isUploadingCover)
                       Positioned.fill(
                         child: Container(
@@ -546,7 +552,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
             child: GestureDetector(
               onTap: _isUploadingAvatar ? null : _pickAvatar,
               child: MouseRegion(
-                cursor: _isUploadingAvatar ? SystemMouseCursors.basic : SystemMouseCursors.click,
+                cursor: _isUploadingAvatar
+                    ? SystemMouseCursors.basic
+                    : SystemMouseCursors.click,
                 child: Stack(
                   children: [
                     Container(
@@ -600,14 +608,16 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
                     if (_isUploadingAvatar)
                       Positioned.fill(
                         child: ClipRRect(
-                          borderRadius: BorderRadius.circular(avatarFrameRadius),
+                          borderRadius:
+                              BorderRadius.circular(avatarFrameRadius),
                           child: Container(
                             color: Colors.black26,
                             child: const Center(
                               child: SizedBox(
                                 width: 45,
                                 height: 45,
-                                child: CircularProgressIndicator(strokeWidth: 3),
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 3),
                               ),
                             ),
                           ),
@@ -1060,7 +1070,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
           });
 
           unawaited(profileProvider.loadProfile(wallet));
-          final displayAvatarUrl = _normalizeMediaUrl(persistableAvatar) ?? persistableAvatar;
+          final displayAvatarUrl =
+              _normalizeMediaUrl(persistableAvatar) ?? persistableAvatar;
           final uri = Uri.tryParse(displayAvatarUrl);
           ScaffoldMessenger.of(context).showKubusSnackBar(
             SnackBar(
@@ -1076,7 +1087,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
                   IconButton(
                     icon: const Icon(Icons.copy, size: 20, color: Colors.white),
                     onPressed: () async {
-                      await Clipboard.setData(ClipboardData(text: displayAvatarUrl));
+                      await Clipboard.setData(
+                          ClipboardData(text: displayAvatarUrl));
                       if (!mounted) return;
                       ScaffoldMessenger.of(context).showKubusSnackBar(
                         SnackBar(
@@ -1332,7 +1344,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
         displayName: _displayNameController.text.trim(),
         bio: _bioController.text.trim(),
         avatar: _avatarChanged ? _toPersistableAvatarRef(_avatarUrl) : null,
-        coverImage: _coverChanged ? _toPersistableCoverRef(_coverImageUrl) : null,
+        coverImage:
+            _coverChanged ? _toPersistableCoverRef(_coverImageUrl) : null,
         social: {
           'twitter': _twitterController.text.trim(),
           'instagram': _instagramController.text.trim(),

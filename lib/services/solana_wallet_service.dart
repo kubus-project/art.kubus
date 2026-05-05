@@ -99,8 +99,14 @@ class SolanaWalletService {
     required Map<String, String> queryParameters,
   }) async {
     final attempts = <({String source, Uri uri})>[
-      (source: 'direct', uri: _jupiterDirectUri(path, queryParameters: queryParameters)),
-      (source: 'backend', uri: _jupiterBackendUri(path, queryParameters: queryParameters)),
+      (
+        source: 'direct',
+        uri: _jupiterDirectUri(path, queryParameters: queryParameters)
+      ),
+      (
+        source: 'backend',
+        uri: _jupiterBackendUri(path, queryParameters: queryParameters)
+      ),
     ];
 
     final failures = <String>[];
@@ -160,7 +166,8 @@ class SolanaWalletService {
       return payload;
     }
     if (decoded.containsKey('swapTransaction') ||
-        (decoded.containsKey('inputMint') && decoded.containsKey('outputMint'))) {
+        (decoded.containsKey('inputMint') &&
+            decoded.containsKey('outputMint'))) {
       return decoded;
     }
     throw Exception('Invalid Jupiter proxy response payload');
@@ -655,7 +662,8 @@ class SolanaWalletService {
           ),
         );
         aggregated.totalBalance += balance;
-        aggregated.totalUiAmount += uiAmount is num ? uiAmount.toDouble() : balance;
+        aggregated.totalUiAmount +=
+            uiAmount is num ? uiAmount.toDouble() : balance;
         aggregated.decimals = decimals;
         aggregated.ownedTokenAccounts.add(
           TokenAccountHolding(
@@ -1227,8 +1235,7 @@ class SolanaWalletService {
             balance: account.balance,
             decimals: account.decimals,
             state: account.state,
-            isAssociatedTokenAccount:
-                canonicalAta != null &&
+            isAssociatedTokenAccount: canonicalAta != null &&
                 WalletUtils.equals(account.address, canonicalAta),
           ),
         )
@@ -1291,10 +1298,8 @@ class SolanaWalletService {
       final tokenAmount = parsedInfo['tokenAmount'] as Map? ?? const {};
       final decimals = (tokenAmount['decimals'] as num?)?.toInt() ?? 0;
       final rawAmount = tokenAmount['amount']?.toString() ?? '0';
-      final amountRaw =
-          double.tryParse(rawAmount) ?? 0.0;
-      final balance =
-          decimals > 0 ? amountRaw / pow(10, decimals) : amountRaw;
+      final amountRaw = double.tryParse(rawAmount) ?? 0.0;
+      final balance = decimals > 0 ? amountRaw / pow(10, decimals) : amountRaw;
       ownedTokenAccounts.add(
         TokenAccountHolding(
           address: address,
@@ -1408,10 +1413,9 @@ class SolanaWalletService {
     if (selected == null) {
       final totalRawBalance = ownedTokenAccounts.fold<BigInt>(
         BigInt.zero,
-        (sum, account) =>
-            _isSpendableTokenAccount(account)
-                ? sum + _parseRawTokenAmount(account.rawAmount)
-                : sum,
+        (sum, account) => _isSpendableTokenAccount(account)
+            ? sum + _parseRawTokenAmount(account.rawAmount)
+            : sum,
       );
       if (totalRawBalance >= requiredRawAmount) {
         throw SolanaWalletSendException(
@@ -1722,15 +1726,15 @@ class SolanaWalletService {
               entry.contains('owner mismatch'),
         )) {
       message =
-        'A token account used for this transfer is not valid for the expected owner or mint.';
+          'A token account used for this transfer is not valid for the expected owner or mint.';
     } else if (loweredMessage.contains('invalid account data') ||
         loweredLogs.any((entry) => entry.contains('invalid account data'))) {
       message =
-        'A token account used for this transfer is invalid for the selected mint.';
+          'A token account used for this transfer is invalid for the selected mint.';
     } else if (loweredMessage.contains('frozen') ||
         loweredLogs.any((entry) => entry.contains('frozen'))) {
       message =
-        'A token account used for this transfer is frozen and cannot move tokens.';
+          'A token account used for this transfer is frozen and cannot move tokens.';
     } else if (loweredMessage.contains('mint decimals') ||
         loweredMessage.contains('decimals mismatch') ||
         loweredMessage.contains('decimal') ||
@@ -2085,7 +2089,8 @@ class SolanaWalletService {
           'Fee splitter program configuration does not match the platform fee vault authority.',
         );
       }
-      if (feeSplitterProgram.totalPlatformFeeAmountRaw != routePlatformFeeAmountRaw) {
+      if (feeSplitterProgram.totalPlatformFeeAmountRaw !=
+          routePlatformFeeAmountRaw) {
         throw const SolanaWalletSendException(
           'Fee splitter amounts do not match the Jupiter platform fee amount for this quote.',
         );
@@ -2164,9 +2169,8 @@ class SolanaWalletService {
         'programs': _extractRouteLabels(route),
         'platformFeeBps': platformFeeBps,
         'platformFeeAccount': feeAccount,
-        'platformFeeOwnerAddress': feeOwnerAddress.isEmpty
-            ? null
-            : feeOwnerAddress,
+        'platformFeeOwnerAddress':
+            feeOwnerAddress.isEmpty ? null : feeOwnerAddress,
         'feeSettlementMode': feeSplitterProgram == null ? 'direct' : 'program',
         'feeSplitterProgramId': feeSplitterProgram?.programId,
         'feeSplitterConfigAccount': feeSplitterProgram?.configAccountAddress,
@@ -2237,7 +2241,8 @@ class SolanaWalletService {
     if (instructions is! List) return const <Instruction>[];
     return instructions
         .whereType<Map>()
-        .map((entry) => _buildJupiterInstruction(Map<String, dynamic>.from(entry)))
+        .map((entry) =>
+            _buildJupiterInstruction(Map<String, dynamic>.from(entry)))
         .toList(growable: false);
   }
 

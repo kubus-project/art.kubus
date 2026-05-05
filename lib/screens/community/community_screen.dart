@@ -2202,13 +2202,13 @@ class _CommunityScreenState extends State<CommunityScreen>
             ),
             title: Text(
               post.authorName,
-              style: KubusTypography.textTheme.titleSmall
-                  ?.copyWith(fontWeight: FontWeight.w700,
+              style: KubusTypography.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
                   color: scheme.onPrimaryContainer),
             ),
             subtitle: Text(
               '${_getTimeAgo(post.timestamp)} - ${post.category}',
-              style:  KubusTypography.textTheme.labelSmall?.copyWith(
+              style: KubusTypography.textTheme.labelSmall?.copyWith(
                 color: scheme.onPrimaryContainer.withValues(alpha: 0.72),
               ),
             ),
@@ -2297,7 +2297,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                                 : null,
                           ].whereType<String>().join(' - '),
                           style: KubusTypography.textTheme.labelSmall?.copyWith(
-                            color: scheme.onPrimaryContainer.withValues(alpha: 0.68),
+                            color: scheme.onPrimaryContainer
+                                .withValues(alpha: 0.68),
                           ),
                         ),
                       ),
@@ -2704,8 +2705,11 @@ class _CommunityScreenState extends State<CommunityScreen>
                     decoration: InputDecoration(
                       isDense: true,
                       hintText: l10n.postDetailWriteCommentHint,
-                        hintStyle: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.56),
+                      hintStyle: TextStyle(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.56),
                       ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(KubusRadius.md),
@@ -2923,10 +2927,12 @@ class _CommunityScreenState extends State<CommunityScreen>
                                 color: scheme.onSurface.withValues(alpha: 0.56),
                               ),
                               border: OutlineInputBorder(
-                                borderRadius: KubusRadius.circular(KubusRadius.md),
+                                borderRadius:
+                                    KubusRadius.circular(KubusRadius.md),
                               ),
                               filled: true,
-                              fillColor: scheme.primaryContainer.withValues(alpha: 0.4),
+                              fillColor: scheme.primaryContainer
+                                  .withValues(alpha: 0.4),
                             ),
                           ),
                           const SizedBox(height: 16),
@@ -2937,16 +2943,20 @@ class _CommunityScreenState extends State<CommunityScreen>
                               color: scheme.onSurface,
                             ),
                             decoration: InputDecoration(
-                              labelText: l10n.communityCreateGroupDescriptionLabel,
-                              hintText: l10n.communityCreateGroupDescriptionHint,
+                              labelText:
+                                  l10n.communityCreateGroupDescriptionLabel,
+                              hintText:
+                                  l10n.communityCreateGroupDescriptionHint,
                               hintStyle: TextStyle(
                                 color: scheme.onSurface.withValues(alpha: 0.56),
                               ),
                               border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(KubusRadius.md),
+                                borderRadius:
+                                    BorderRadius.circular(KubusRadius.md),
                               ),
                               filled: true,
-                              fillColor: scheme.primaryContainer.withValues(alpha: 0.4),
+                              fillColor: scheme.primaryContainer
+                                  .withValues(alpha: 0.4),
                             ),
                           ),
                           const SizedBox(height: 20),
@@ -3246,8 +3256,9 @@ class _CommunityScreenState extends State<CommunityScreen>
                                     key: ValueKey('composer_post_label'),
                                     style: KubusTextStyles.navLabel.copyWith(
                                       fontWeight: FontWeight.w600,
-                                      color:
-                                          Theme.of(context).colorScheme.onPrimary,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onPrimary,
                                     ),
                                   ),
                           ),
@@ -3444,15 +3455,15 @@ class _CommunityScreenState extends State<CommunityScreen>
             Positioned(
               top: 12,
               right: 12,
-            child: IconButton(
-              tooltip: l10n.commonRemove,
-              style: IconButton.styleFrom(
-                backgroundColor: scheme.surface.withValues(alpha: 0.8),
-                foregroundColor: scheme.onSurface,
-              ),
-              onPressed: () => setModalState(() {
-                _selectedPostVideo = null;
-              }),
+              child: IconButton(
+                tooltip: l10n.commonRemove,
+                style: IconButton.styleFrom(
+                  backgroundColor: scheme.surface.withValues(alpha: 0.8),
+                  foregroundColor: scheme.onSurface,
+                ),
+                onPressed: () => setModalState(() {
+                  _selectedPostVideo = null;
+                }),
                 icon: const Icon(Icons.close),
               ),
             ),
@@ -3613,10 +3624,12 @@ class _CommunityScreenState extends State<CommunityScreen>
         ? l10n.communitySubjectSelectPrompt
         : subjectCount > 1
             ? '${l10n.communitySubjectLinkedLabel(
-                communitySubjectTypeLabel(l10n, previewValue.ref.normalizedType),
+                communitySubjectTypeLabel(
+                    l10n, previewValue.ref.normalizedType),
               )} +${subjectCount - 1}'
             : l10n.communitySubjectLinkedLabel(
-                communitySubjectTypeLabel(l10n, previewValue.ref.normalizedType),
+                communitySubjectTypeLabel(
+                    l10n, previewValue.ref.normalizedType),
               );
     final title = previewValue?.title ?? l10n.communitySubjectSelectTitle;
     final subjectIcon = previewValue == null
@@ -4079,7 +4092,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                                     ? l10n.communitySearchSheetHintArtworks
                                     : l10n.communitySearchSheetHintDefault,
                         hintStyle: KubusTypography.inter(
-                          color: scheme.onPrimaryContainer.withValues(alpha: 0.72),
+                          color:
+                              scheme.onPrimaryContainer.withValues(alpha: 0.72),
                         ),
                         prefixIcon: Icon(
                           Icons.search,
@@ -4105,7 +4119,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                           borderSide: BorderSide.none,
                         ),
                         filled: true,
-                        fillColor: scheme.primaryContainer.withValues(alpha: 0.4),
+                        fillColor:
+                            scheme.primaryContainer.withValues(alpha: 0.4),
                       ),
                       onChanged: (query) async {
                         final q = query.trim();
@@ -4129,17 +4144,22 @@ class _CommunityScreenState extends State<CommunityScreen>
                           final list = <Map<String, dynamic>>[];
                           if (response['success'] == true) {
                             if (searchType == 'profiles') {
-                              final profiles = _extractSearchResults(response, 'profiles');
+                              final profiles =
+                                  _extractSearchResults(response, 'profiles');
                               list.addAll(profiles);
                             } else if (searchType == 'artworks') {
-                              final artworks = _extractSearchResults(response, 'artworks');
+                              final artworks =
+                                  _extractSearchResults(response, 'artworks');
                               list.addAll(artworks);
                             } else if (searchType == 'tags') {
-                              list.add({'tag': q, 'count': 0, 'isCustom': true});
-                              final tags = _extractSearchResults(response, 'tags');
+                              list.add(
+                                  {'tag': q, 'count': 0, 'isCustom': true});
+                              final tags =
+                                  _extractSearchResults(response, 'tags');
                               list.addAll(tags);
                             } else {
-                              final all = _extractSearchResults(response, 'all');
+                              final all =
+                                  _extractSearchResults(response, 'all');
                               list.addAll(all);
                             }
                           }
@@ -4943,7 +4963,8 @@ class _CommunityScreenState extends State<CommunityScreen>
       resolved = resolved.copyWith(
         subjectType: needsType ? draftType : createdType,
         subjectId: needsId ? draftId : createdId,
-        subjects: createdPost.subjects.isEmpty ? draftSubjects : createdPost.subjects,
+        subjects:
+            createdPost.subjects.isEmpty ? draftSubjects : createdPost.subjects,
         artwork: (draftType == 'artwork' && draft.artwork != null)
             ? draft.artwork
             : resolved.artwork,

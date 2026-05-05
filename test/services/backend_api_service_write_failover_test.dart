@@ -95,8 +95,7 @@ void main() {
                 'id': 'post-1',
                 'content': 'hello kubus',
                 'authorId': 'WalletTest111111111111111111111111111111111',
-                'walletAddress':
-                    'WalletTest111111111111111111111111111111111',
+                'walletAddress': 'WalletTest111111111111111111111111111111111',
                 'author': <String, Object?>{
                   'walletAddress':
                       'WalletTest111111111111111111111111111111111',

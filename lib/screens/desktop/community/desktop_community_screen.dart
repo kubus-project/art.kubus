@@ -6940,10 +6940,12 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         ? l10n.communitySubjectSelectPrompt
         : subjectCount > 1
             ? '${l10n.communitySubjectLinkedLabel(
-                communitySubjectTypeLabel(l10n, previewValue.ref.normalizedType),
+                communitySubjectTypeLabel(
+                    l10n, previewValue.ref.normalizedType),
               )} +${subjectCount - 1}'
             : l10n.communitySubjectLinkedLabel(
-                communitySubjectTypeLabel(l10n, previewValue.ref.normalizedType),
+                communitySubjectTypeLabel(
+                    l10n, previewValue.ref.normalizedType),
               );
     final title = previewValue?.title ?? l10n.communitySubjectSelectTitle;
     final subjectIcon = previewValue == null

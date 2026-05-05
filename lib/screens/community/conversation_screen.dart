@@ -573,7 +573,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
         // If backend returned no members, infer from messages in provider
         if (wallets.isEmpty) {
-          final providerMessages = _chatProvider.messages[widget.conversation.id] ?? const [];
+          final providerMessages =
+              _chatProvider.messages[widget.conversation.id] ?? const [];
           for (final m in providerMessages) {
             try {
               final w = m.senderWallet;
@@ -876,7 +877,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
     final accent =
         Provider.of<ThemeProvider>(context, listen: false).accentColor;
     return isRead ? accent : accent.withValues(alpha: 0.72);
-  } 
+  }
 
   Widget _wrapWithAnimation(Widget child, bool shouldAnimate,
       {required String messageId}) {
@@ -1215,7 +1216,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final providerMessages = _chatProvider.messages[widget.conversation.id] ?? const [];
+    final providerMessages =
+        _chatProvider.messages[widget.conversation.id] ?? const [];
     if (providerMessages.isNotEmpty && _scrollController.hasClients) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!_scrollController.hasClients) return;
@@ -1273,13 +1275,13 @@ class _ConversationScreenState extends State<ConversationScreen> {
     final l10n = AppLocalizations.of(context)!;
     final isGroup = widget.conversation.isGroup;
     final title = _conversationTitleOverride?.trim().isNotEmpty == true
-      ? _conversationTitleOverride!.trim()
-      : widget.conversation.title?.trim().isNotEmpty == true
-        ? widget.conversation.title!.trim()
-        : _conversationMembers.isNotEmpty
-            ? _displayNameCache[_conversationMembers.first] ??
-                _conversationMembers.first
-            : l10n.messagesFallbackConversationTitle;
+        ? _conversationTitleOverride!.trim()
+        : widget.conversation.title?.trim().isNotEmpty == true
+            ? widget.conversation.title!.trim()
+            : _conversationMembers.isNotEmpty
+                ? _displayNameCache[_conversationMembers.first] ??
+                    _conversationMembers.first
+                : l10n.messagesFallbackConversationTitle;
 
     Widget avatar;
     if (isGroup) {
@@ -1350,13 +1352,13 @@ class _ConversationScreenState extends State<ConversationScreen> {
   String _headerInitials() {
     final l10n = AppLocalizations.of(context)!;
     final name = _conversationTitleOverride?.trim().isNotEmpty == true
-      ? _conversationTitleOverride!.trim()
-      : widget.conversation.title?.trim().isNotEmpty == true
-        ? widget.conversation.title!.trim()
-        : _conversationMembers.isNotEmpty
-            ? _displayNameCache[_conversationMembers.first] ??
-                _conversationMembers.first
-            : l10n.messagesFallbackConversationTitle;
+        ? _conversationTitleOverride!.trim()
+        : widget.conversation.title?.trim().isNotEmpty == true
+            ? widget.conversation.title!.trim()
+            : _conversationMembers.isNotEmpty
+                ? _displayNameCache[_conversationMembers.first] ??
+                    _conversationMembers.first
+                : l10n.messagesFallbackConversationTitle;
     final parts =
         name.split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
     final initials = parts.map((p) => p[0]).take(2).join().toUpperCase();
@@ -1402,8 +1404,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                       (m['walletAddress'] as String?) ??
                       (m['id'] as String?) ??
                       '';
-                  final usernameFromPayload =
-                    (m['username'] as String?) ??
+                  final usernameFromPayload = (m['username'] as String?) ??
                       (m['userName'] as String?) ??
                       (m['handle'] as String?);
                   final displayNameFromPayload =
@@ -1586,7 +1587,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
                 await _chatProvider.deleteConversation(widget.conversation.id);
                 if (!mounted) return;
                 scaffold.showKubusSnackBar(SnackBar(
-                    content: Text(l10n.messagesDeleteConversationSuccessToast)));
+                    content:
+                        Text(l10n.messagesDeleteConversationSuccessToast)));
                 if (!mounted) return;
                 await navigator.maybePop();
               } catch (e) {
@@ -1658,9 +1660,9 @@ class _ConversationScreenState extends State<ConversationScreen> {
     final myWallet = profile.currentUser?.walletAddress ?? '';
     // Read directly from provider as single source of truth; never fall back to local _messages
     final sourceMessages = (_chatProvider.messages[widget.conversation.id] ??
-        const <ChatMessage>[])
-      .where((message) => message.isRenderable)
-      .toList();
+            const <ChatMessage>[])
+        .where((message) => message.isRenderable)
+        .toList();
     // Ensure chronological order (oldest -> newest)
     // Chronological list oldest -> newest
     final chrono = List<ChatMessage>.from(sourceMessages);
@@ -1713,7 +1715,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
           Timer(const Duration(milliseconds: 150), _checkVisibleMessages);
     }
   }
-  
+
   Widget _buildMessageItem(ChatMessage message, bool isMe, bool showAvatar,
       {int? chronoIndex, int? chronoLength}) {
     final sourceMessages =
@@ -2337,8 +2339,6 @@ class _ConversationScreenState extends State<ConversationScreen> {
     );
   }
 
-  
-
   void _checkVisibleMessages() {
     if (!mounted) return;
     final profile = Provider.of<ProfileProvider>(context, listen: false);
@@ -2437,7 +2437,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
         }
       });
     }
-    WidgetsBinding.instance.addPostFrameCallback((_) => _checkVisibleMessages());
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => _checkVisibleMessages());
     _persistCacheSnapshots();
   }
 

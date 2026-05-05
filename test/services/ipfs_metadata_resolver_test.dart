@@ -19,7 +19,8 @@ void main() {
           jsonEncode(<String, Object?>{
             'name': 'kubus Governance Token',
             'symbol': 'KUB8',
-            'image': 'ipfs://QmW8P69VpxdTipU46keFmcfrd2VeLg8E6eXEJcCWVNaqoR/logo.png',
+            'image':
+                'ipfs://QmW8P69VpxdTipU46keFmcfrd2VeLg8E6eXEJcCWVNaqoR/logo.png',
           }),
           200,
           headers: const <String, String>{
@@ -61,7 +62,8 @@ void main() {
     expect(attempts, attemptsAfterFirst);
   });
 
-  test('KUB8 token info returns static fallback metadata without IPFS', () async {
+  test('KUB8 token info returns static fallback metadata without IPFS',
+      () async {
     final service = SolanaWalletService();
 
     final metadata = await service.getTokenInfoForTesting(
