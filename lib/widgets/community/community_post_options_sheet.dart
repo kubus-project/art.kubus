@@ -11,21 +11,25 @@ import '../glass_components.dart';
 ///
 /// - If [isOwner] is false: shows "Report".
 /// - If [isOwner] is true: shows "Edit" and "Delete".
-Future<void> showCommunityPostOptionsSheet({
+enum CommunityPostOptionsAction {
+  report,
+  edit,
+  delete,
+}
+
+Future<CommunityPostOptionsAction?> showCommunityPostOptionsSheet({
   required BuildContext context,
   required CommunityPost post,
   required bool isOwner,
-  required VoidCallback onReport,
-  required VoidCallback onEdit,
-  required VoidCallback onDelete,
 }) async {
   final theme = Theme.of(context);
   final l10n = AppLocalizations.of(context);
 
   Widget optionTile({
+    required BuildContext sheetContext,
     required IconData icon,
     required String label,
-    required VoidCallback onTap,
+    required CommunityPostOptionsAction action,
     Color? iconColor,
     Color? textColor,
   }) {
@@ -41,11 +45,11 @@ Future<void> showCommunityPostOptionsSheet({
           fontWeight: FontWeight.w500,
         ),
       ),
-      onTap: onTap,
+      onTap: () => Navigator.pop(sheetContext, action),
     );
   }
 
-  await showModalBottomSheet<void>(
+  return showModalBottomSheet<CommunityPostOptionsAction>(
     context: context,
     backgroundColor: Colors.transparent,
     builder: (sheetContext) => BackdropGlassSheet(
@@ -75,31 +79,25 @@ Future<void> showCommunityPostOptionsSheet({
               children: [
                 if (!isOwner)
                   optionTile(
+                    sheetContext: sheetContext,
                     icon: Icons.report,
                     label: l10n?.postDetailMoreOptionsReportAction ?? 'Report',
-                    onTap: () {
-                      Navigator.pop(sheetContext);
-                      onReport();
-                    },
+                    action: CommunityPostOptionsAction.report,
                   )
                 else ...[
                   optionTile(
+                    sheetContext: sheetContext,
                     icon: Icons.edit_outlined,
                     label: l10n?.commonEdit ?? 'Edit',
-                    onTap: () {
-                      Navigator.pop(sheetContext);
-                      onEdit();
-                    },
+                    action: CommunityPostOptionsAction.edit,
                   ),
                   optionTile(
+                    sheetContext: sheetContext,
                     icon: Icons.delete_outline,
                     iconColor: theme.colorScheme.error,
                     textColor: theme.colorScheme.error,
                     label: l10n?.commonDelete ?? 'Delete',
-                    onTap: () {
-                      Navigator.pop(sheetContext);
-                      onDelete();
-                    },
+                    action: CommunityPostOptionsAction.delete,
                   ),
                 ],
               ],

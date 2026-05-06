@@ -50,9 +50,11 @@ class CommunityPostDraft {
   }) {
     return CommunityPostDraft(
       category: category ?? this.category,
-      tags: tags != null ? List<String>.from(tags) : List<String>.from(this.tags),
-      mentions:
-          mentions != null ? List<String>.from(mentions) : List<String>.from(this.mentions),
+      tags:
+          tags != null ? List<String>.from(tags) : List<String>.from(this.tags),
+      mentions: mentions != null
+          ? List<String>.from(mentions)
+          : List<String>.from(this.mentions),
       targetGroup: clearGroup ? null : (targetGroup ?? this.targetGroup),
       artwork: clearArtwork ? null : (artwork ?? this.artwork),
       subjectType: clearSubject ? null : (subjectType ?? this.subjectType),
@@ -63,7 +65,8 @@ class CommunityPostDraft {
               ? List<CommunitySubjectRef>.from(subjects)
               : List<CommunitySubjectRef>.from(this.subjects)),
       location: clearLocation ? null : (location ?? this.location),
-      locationLabel: clearLocationLabel ? null : (locationLabel ?? this.locationLabel),
+      locationLabel:
+          clearLocationLabel ? null : (locationLabel ?? this.locationLabel),
     );
   }
 }
@@ -200,7 +203,8 @@ class CommunityHubProvider extends ChangeNotifier {
 
   List<CommunityPost> groupPosts(String groupId) =>
       List.unmodifiable(_groupPosts[groupId] ?? const []);
-  bool groupPostsLoading(String groupId) => _groupPostsLoading[groupId] ?? false;
+  bool groupPostsLoading(String groupId) =>
+      _groupPostsLoading[groupId] ?? false;
   bool groupPostsHasMore(String groupId) => _groupPostsHasMore[groupId] ?? true;
   String? groupPostsError(String groupId) => _groupPostsError[groupId];
 
@@ -319,6 +323,14 @@ class CommunityHubProvider extends ChangeNotifier {
   bool get artFeedHasMore => _artFeedHasMore;
   int get artFeedPageSize => _artFeedPageSize;
 
+  void removeArtFeedPost(String postId) {
+    if (_artFeed.isEmpty) return;
+    final updated = _artFeed.where((post) => post.id != postId).toList();
+    if (updated.length == _artFeed.length) return;
+    _artFeed = updated;
+    notifyListeners();
+  }
+
   Future<void> loadArtFeed({
     required double latitude,
     required double longitude,
@@ -411,14 +423,16 @@ class CommunityHubProvider extends ChangeNotifier {
   void setDraftSubject({String? type, String? id}) {
     final nextType = type?.trim();
     final nextId = id?.trim();
-    if ((nextType == null || nextType.isEmpty) || (nextId == null || nextId.isEmpty)) {
+    if ((nextType == null || nextType.isEmpty) ||
+        (nextId == null || nextId.isEmpty)) {
       _draft = _draft.copyWith(clearSubject: true);
       notifyListeners();
       return;
     }
     final ref = CommunitySubjectRef(type: nextType, id: nextId);
     final subjects = <CommunitySubjectRef>[..._draft.subjects];
-    final existingIndex = subjects.indexWhere((subject) => subject.key == ref.key);
+    final existingIndex =
+        subjects.indexWhere((subject) => subject.key == ref.key);
     if (existingIndex == -1) {
       subjects.add(ref);
     } else {

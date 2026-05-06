@@ -153,6 +153,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   bool _refreshInFlight = false;
   Set<String> _followingWallets = <String>{};
   final Set<String> _followRequestsInFlight = <String>{};
+  final Set<String> _deleteDialogOpenPostIds = <String>{};
+  final Set<String> _deleteInFlightPostIds = <String>{};
 
   // Feed state for different tabs
   List<CommunityPost> _discoverPosts = [];
@@ -5191,23 +5193,142 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     }
   }
 
-  void _showPostOptionsForPost(CommunityPost post) {
+  Future<void> _showPostOptionsForPost(CommunityPost post) async {
     if (!mounted) return;
     final isOwner = _isCurrentUserPost(post);
 
-    unawaited(
-      showCommunityPostOptionsSheet(
-        context: context,
-        post: post,
-        isOwner: isOwner,
-        onReport: () =>
-            _openPostDetailWithAction(post, PostDetailInitialAction.report),
-        onEdit: () =>
-            _openPostDetailWithAction(post, PostDetailInitialAction.edit),
-        onDelete: () =>
-            _openPostDetailWithAction(post, PostDetailInitialAction.delete),
-      ),
+    final action = await showCommunityPostOptionsSheet(
+      context: context,
+      post: post,
+      isOwner: isOwner,
     );
+    if (!mounted || action == null) return;
+
+    switch (action) {
+      case CommunityPostOptionsAction.report:
+        _openPostDetailWithAction(post, PostDetailInitialAction.report);
+        break;
+      case CommunityPostOptionsAction.edit:
+        _openPostDetailWithAction(post, PostDetailInitialAction.edit);
+        break;
+      case CommunityPostOptionsAction.delete:
+        await _confirmDeleteFeedPost(post);
+        break;
+    }
+  }
+
+  void _removePostFromLocalFeeds(String postId) {
+    _discoverPosts.removeWhere((post) => post.id == postId);
+    _followingPosts.removeWhere((post) => post.id == postId);
+    _paneStack.removeWhere(
+      (route) =>
+          route.type == _PaneViewType.postDetail && route.post?.id == postId,
+    );
+    _expandedCommentPostIds.remove(postId);
+    _inlineReplyToCommentIds.remove(postId);
+    _inlineCommentControllers.remove(postId)?.dispose();
+    for (final entry in _tagFeeds.entries.toList()) {
+      final updatedPosts =
+          entry.value.posts.where((post) => post.id != postId).toList();
+      if (updatedPosts.length != entry.value.posts.length) {
+        _tagFeeds[entry.key] = entry.value.copyWith(posts: updatedPosts);
+      }
+    }
+  }
+
+  Future<void> _confirmDeleteFeedPost(CommunityPost post) async {
+    if (!mounted) return;
+    if (_deleteDialogOpenPostIds.contains(post.id) ||
+        _deleteInFlightPostIds.contains(post.id)) {
+      return;
+    }
+
+    final l10n = AppLocalizations.of(context)!;
+    _deleteDialogOpenPostIds.add(post.id);
+    bool deleting = false;
+
+    try {
+      await showKubusDialog<void>(
+        context: context,
+        builder: (dialogContext) => StatefulBuilder(
+          builder: (context, setDialogState) => KubusAlertDialog(
+            title: Text(
+              l10n.postDetailDeletePostTitle,
+              style: KubusTypography.inter(fontWeight: FontWeight.bold),
+            ),
+            content: Text(
+              l10n.postDetailDeletePostBody,
+              style: KubusTypography.inter(),
+            ),
+            actions: [
+              TextButton(
+                onPressed: deleting
+                    ? null
+                    : () => Navigator.of(dialogContext).maybePop(),
+                child: Text(l10n.commonCancel),
+              ),
+              TextButton(
+                onPressed: deleting
+                    ? null
+                    : () async {
+                        if (_deleteInFlightPostIds.contains(post.id)) return;
+                        setDialogState(() => deleting = true);
+                        _deleteInFlightPostIds.add(post.id);
+                        final messenger = ScaffoldMessenger.of(context);
+                        final appRefresh = _appRefreshProvider;
+
+                        try {
+                          await _backendApi.deleteCommunityPost(post.id);
+                          if (!mounted || !dialogContext.mounted) return;
+                          setState(() => _removePostFromLocalFeeds(post.id));
+                          try {
+                            final hub = Provider.of<CommunityHubProvider>(
+                              context,
+                              listen: false,
+                            );
+                            if (post.groupId != null) {
+                              hub.removeGroupPost(post.groupId!, post.id);
+                            }
+                            hub.removeArtFeedPost(post.id);
+                          } catch (_) {}
+                          appRefresh?.triggerCommunity();
+                          Navigator.of(dialogContext).pop();
+                          messenger.showKubusSnackBar(
+                            SnackBar(
+                                content: Text(l10n.postDetailPostDeletedToast)),
+                          );
+                        } catch (e) {
+                          if (kDebugMode) {
+                            debugPrint(
+                                'DesktopCommunityScreen: delete post failed: $e');
+                          }
+                          if (!mounted || !dialogContext.mounted) return;
+                          setDialogState(() => deleting = false);
+                          messenger.showKubusSnackBar(
+                            SnackBar(
+                              content:
+                                  Text(l10n.postDetailDeletePostFailedToast),
+                            ),
+                          );
+                        } finally {
+                          _deleteInFlightPostIds.remove(post.id);
+                        }
+                      },
+                child: deleting
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Text(l10n.commonDelete),
+              ),
+            ],
+          ),
+        ),
+      );
+    } finally {
+      _deleteDialogOpenPostIds.remove(post.id);
+    }
   }
 
   Future<void> _showMentionPicker(CommunityHubProvider hub) async {

@@ -11,6 +11,7 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../community/community_interactions.dart';
 import '../../models/community_group.dart';
 import '../../models/community_subject.dart';
+import '../../providers/app_refresh_provider.dart';
 import '../../providers/app_mode_provider.dart';
 import '../../providers/community_subject_provider.dart';
 import '../../providers/profile_provider.dart';
@@ -59,6 +60,8 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
   bool _posting = false;
   XFile? _selectedImage;
   Uint8List? _selectedImageBytes;
+  final Set<String> _deleteDialogOpenPostIds = <String>{};
+  final Set<String> _deleteInFlightPostIds = <String>{};
 
   @override
   void initState() {
@@ -779,24 +782,129 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
     }
   }
 
-  void _showPostOptionsForPost(CommunityPost post) {
+  Future<void> _showPostOptionsForPost(CommunityPost post) async {
     if (!mounted) return;
     final currentWallet = _currentWalletAddress();
     final authorWallet = post.authorWallet ?? post.authorId;
     final isOwner = currentWallet != null &&
         WalletUtils.equals(authorWallet, currentWallet);
 
-    showCommunityPostOptionsSheet(
+    final action = await showCommunityPostOptionsSheet(
       context: context,
       post: post,
       isOwner: isOwner,
-      onReport: () =>
-          _openPostDetail(post, initialAction: PostDetailInitialAction.report),
-      onEdit: () =>
-          _openPostDetail(post, initialAction: PostDetailInitialAction.edit),
-      onDelete: () =>
-          _openPostDetail(post, initialAction: PostDetailInitialAction.delete),
     );
+    if (!mounted || action == null) return;
+
+    switch (action) {
+      case CommunityPostOptionsAction.report:
+        _openPostDetail(post, initialAction: PostDetailInitialAction.report);
+        break;
+      case CommunityPostOptionsAction.edit:
+        _openPostDetail(post, initialAction: PostDetailInitialAction.edit);
+        break;
+      case CommunityPostOptionsAction.delete:
+        await _confirmDeleteFeedPost(post);
+        break;
+    }
+  }
+
+  Future<void> _confirmDeleteFeedPost(CommunityPost post) async {
+    if (!mounted) return;
+    if (_deleteDialogOpenPostIds.contains(post.id) ||
+        _deleteInFlightPostIds.contains(post.id)) {
+      return;
+    }
+
+    final l10n = AppLocalizations.of(context)!;
+    _deleteDialogOpenPostIds.add(post.id);
+    bool deleting = false;
+
+    try {
+      await showKubusDialog<void>(
+        context: context,
+        builder: (dialogContext) => StatefulBuilder(
+          builder: (context, setDialogState) => KubusAlertDialog(
+            title: Text(
+              l10n.postDetailDeletePostTitle,
+              style: KubusTypography.inter(fontWeight: FontWeight.bold),
+            ),
+            content: Text(
+              l10n.postDetailDeletePostBody,
+              style: KubusTypography.inter(),
+            ),
+            actions: [
+              TextButton(
+                onPressed: deleting
+                    ? null
+                    : () => Navigator.of(dialogContext).maybePop(),
+                child: Text(l10n.commonCancel),
+              ),
+              TextButton(
+                onPressed: deleting
+                    ? null
+                    : () async {
+                        if (_deleteInFlightPostIds.contains(post.id)) return;
+                        setDialogState(() => deleting = true);
+                        _deleteInFlightPostIds.add(post.id);
+                        final messenger = ScaffoldMessenger.of(context);
+                        AppRefreshProvider? appRefresh;
+                        try {
+                          appRefresh = Provider.of<AppRefreshProvider>(
+                            context,
+                            listen: false,
+                          );
+                        } catch (_) {}
+
+                        try {
+                          await BackendApiService()
+                              .deleteCommunityPost(post.id);
+                          if (!mounted || !dialogContext.mounted) return;
+                          final hub = Provider.of<CommunityHubProvider>(
+                            context,
+                            listen: false,
+                          );
+                          final groupId = post.groupId ?? _group.id;
+                          hub.removeGroupPost(groupId, post.id);
+                          hub.removeArtFeedPost(post.id);
+                          appRefresh?.triggerCommunity();
+                          Navigator.of(dialogContext).pop();
+                          messenger.showKubusSnackBar(
+                            SnackBar(
+                                content: Text(l10n.postDetailPostDeletedToast)),
+                          );
+                        } catch (e) {
+                          if (kDebugMode) {
+                            debugPrint(
+                                'GroupFeedScreen: delete post failed: $e');
+                          }
+                          if (!mounted || !dialogContext.mounted) return;
+                          setDialogState(() => deleting = false);
+                          messenger.showKubusSnackBar(
+                            SnackBar(
+                              content:
+                                  Text(l10n.postDetailDeletePostFailedToast),
+                            ),
+                          );
+                        } finally {
+                          _deleteInFlightPostIds.remove(post.id);
+                        }
+                      },
+                child: deleting
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Text(l10n.commonDelete),
+              ),
+            ],
+          ),
+        ),
+      );
+    } finally {
+      _deleteDialogOpenPostIds.remove(post.id);
+    }
   }
 
   Future<void> _toggleLike(CommunityPost post) async {
