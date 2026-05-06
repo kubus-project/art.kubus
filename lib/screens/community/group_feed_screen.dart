@@ -1530,8 +1530,14 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
   }
 
   Future<void> _unrepostPost(CommunityPost post) async {
+    if (!mounted) return;
+    if (_deleteDialogOpenPostIds.contains(post.id) ||
+        _deleteInFlightPostIds.contains(post.id)) {
+      return;
+    }
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
+    _deleteDialogOpenPostIds.add(post.id);
 
     final confirmed = await showKubusDialog<bool>(
       context: context,
@@ -1556,9 +1562,13 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
           ),
         ],
       ),
-    );
+    ).whenComplete(() {
+      _deleteDialogOpenPostIds.remove(post.id);
+    });
 
     if (confirmed != true || !mounted) return;
+    if (_deleteInFlightPostIds.contains(post.id)) return;
+    _deleteInFlightPostIds.add(post.id);
 
     try {
       await BackendApiService().deleteRepost(post.id);
@@ -1572,6 +1582,11 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
       final hub = Provider.of<CommunityHubProvider>(context, listen: false);
       final groupId = post.groupId ?? _group.id;
       hub.removeGroupPost(groupId, post.id);
+      hub.removeArtFeedPost(post.id);
+      try {
+        Provider.of<AppRefreshProvider>(context, listen: false)
+            .triggerCommunity();
+      } catch (_) {}
       messenger.showKubusSnackBar(
         SnackBar(content: Text(l10n.communityRepostRemovedToast)),
       );
@@ -1583,6 +1598,8 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
       messenger.showKubusSnackBar(
         SnackBar(content: Text(l10n.communityUnrepostFailedToast)),
       );
+    } finally {
+      _deleteInFlightPostIds.remove(post.id);
     }
   }
 

@@ -6460,8 +6460,13 @@ class _CommunityScreenState extends State<CommunityScreen>
 
   void _unrepostPost(CommunityPost post) async {
     if (!mounted) return;
+    if (_deleteDialogOpenPostIds.contains(post.id) ||
+        _deleteInFlightPostIds.contains(post.id)) {
+      return;
+    }
     final messenger = ScaffoldMessenger.of(context);
     final l10n = AppLocalizations.of(context)!;
+    _deleteDialogOpenPostIds.add(post.id);
 
     // Show confirmation dialog
     final confirmed = await showKubusDialog<bool>(
@@ -6485,9 +6490,13 @@ class _CommunityScreenState extends State<CommunityScreen>
           ),
         ],
       ),
-    );
+    ).whenComplete(() {
+      _deleteDialogOpenPostIds.remove(post.id);
+    });
 
     if (confirmed != true || !mounted) return;
+    if (_deleteInFlightPostIds.contains(post.id)) return;
+    _deleteInFlightPostIds.add(post.id);
 
     try {
       await BackendApiService().deleteRepost(post.id);
@@ -6497,8 +6506,16 @@ class _CommunityScreenState extends State<CommunityScreen>
         metadata: {'repost_id': post.id},
       );
 
-      await _loadCommunityData();
       if (!mounted) return;
+      setState(() => _removePostFromLocalFeeds(post.id));
+      try {
+        final hub = Provider.of<CommunityHubProvider>(context, listen: false);
+        if (post.groupId != null) {
+          hub.removeGroupPost(post.groupId!, post.id);
+        }
+        hub.removeArtFeedPost(post.id);
+      } catch (_) {}
+      _appRefreshProvider?.triggerCommunity();
       messenger.showKubusSnackBar(
         SnackBar(content: Text(l10n.communityRepostRemovedToast)),
       );
@@ -6510,6 +6527,8 @@ class _CommunityScreenState extends State<CommunityScreen>
       messenger.showKubusSnackBar(
         SnackBar(content: Text(l10n.communityUnrepostFailedToast)),
       );
+    } finally {
+      _deleteInFlightPostIds.remove(post.id);
     }
   }
 
