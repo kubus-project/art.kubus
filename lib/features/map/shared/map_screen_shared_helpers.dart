@@ -628,6 +628,24 @@ class KubusMarkerOverlayHelpers {
     );
   }
 
+  static String? resolveDistanceText({
+    required LatLng? userLocation,
+    required ArtMarker marker,
+    required Distance distance,
+  }) {
+    if (userLocation == null || !marker.hasValidPosition) return null;
+    final meters = distance.as(
+      LengthUnit.Meter,
+      userLocation,
+      marker.position,
+    );
+    if (!meters.isFinite || meters < 0) return null;
+    if (meters < 1000) {
+      return '${meters.round()} m';
+    }
+    return '${(meters / 1000).toStringAsFixed(1)} km';
+  }
+
   static bool canOpenStreetArtClaims(ArtMarker marker) {
     return AppConfig.isFeatureEnabled('streetArtClaims') &&
         marker.type == ArtMarkerType.streetArt &&

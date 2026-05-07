@@ -3266,12 +3266,11 @@ class _MapScreenState extends State<MapScreen>
                   child: IgnorePointer(
                     // In tutorial mode, prevent map gestures so the overlay can
                     // guide the user without accidental pans/zooms.
-                    ignoring: showMapTutorial || _isSheetInteracting,
+                    ignoring: _isSheetInteracting,
                     child: _mapViewMounted
                         ? _buildMap(
                             themeProvider,
                             attributionBottomMargin: attributionBottomMargin,
-                            tutorialActive: showMapTutorial,
                           )
                         : const SizedBox.expand(
                             child: ColoredBox(color: Colors.transparent),
@@ -3341,7 +3340,6 @@ class _MapScreenState extends State<MapScreen>
   Widget _buildMap(
     ThemeProvider themeProvider, {
     required double attributionBottomMargin,
-    required bool tutorialActive,
   }) {
     final isDark = themeProvider.isDarkMode;
     final tileProviders = Provider.of<TileProviders?>(context, listen: false);
@@ -3350,7 +3348,7 @@ class _MapScreenState extends State<MapScreen>
     // Keep map gestures enabled during normal operation. We block drag-through
     // from the Nearby Art sheet using an AbsorbPointer overlay over the sheet
     // area, rather than disabling map gestures globally.
-    final disableGesturesForOverlays = tutorialActive || _isSheetInteracting;
+    final disableGesturesForOverlays = _isSheetInteracting;
 
     return KeyedSubtree(
       key: _mapViewKey,
@@ -3865,17 +3863,20 @@ class _MapScreenState extends State<MapScreen>
       placementStrategy:
           overlay_wrapper.KubusMarkerOverlayPlacementStrategy.anchored,
       widthResolver: (constraints, mediaQuery) {
-        return MapOverlaySizing.resolveCardWidth(
-          constraints,
-          preferred: MapOverlaySizing.preferredCardWidth,
-          horizontalPadding: KubusSpacing.sm + KubusSpacing.xxs,
-        );
-      },
-      maxHeightResolver: (constraints, mediaQuery) {
-        return MapOverlaySizing.resolveMaxCardHeight(
+        return MapOverlaySizing.resolveMarkerOverlayCardLayout(
           constraints: constraints,
           media: mediaQuery,
-        );
+          isDesktop: false,
+          topChromePx: _markerOverlayTopPadding,
+        ).width;
+      },
+      maxHeightResolver: (constraints, mediaQuery) {
+        return MapOverlaySizing.resolveMarkerOverlayCardLayout(
+          constraints: constraints,
+          media: mediaQuery,
+          isDesktop: false,
+          topChromePx: _markerOverlayTopPadding,
+        ).maxHeight;
       },
       heightResolver: (constraints, mediaQuery, maxCardHeight) {
         final selectedMarker = selection.selectedMarker;
@@ -3915,8 +3916,18 @@ class _MapScreenState extends State<MapScreen>
           safeHeight * (isCompact ? 0.72 : 0.66),
         );
       },
-      markerOffset: 14.0,
-      horizontalPadding: KubusSpacing.sm + KubusSpacing.xxs,
+      markerOffset: MapOverlaySizing.resolveMarkerOverlayCardLayout(
+        constraints: const BoxConstraints(maxWidth: 600, maxHeight: 800),
+        media: MediaQuery.of(context),
+        isDesktop: false,
+        topChromePx: _markerOverlayTopPadding,
+      ).markerOffset,
+      horizontalPadding: MapOverlaySizing.resolveMarkerOverlayCardLayout(
+        constraints: const BoxConstraints(maxWidth: 600, maxHeight: 800),
+        media: MediaQuery.of(context),
+        isDesktop: false,
+        topChromePx: _markerOverlayTopPadding,
+      ).horizontalPadding,
       topPadding: _markerOverlayTopPadding,
       bottomPadding: MapOverlaySizing.defaultVerticalPadding,
       animation: const overlay_wrapper.KubusMarkerOverlayAnimationConfig(
@@ -4004,7 +4015,6 @@ class _MapScreenState extends State<MapScreen>
       ArtMarker pageMarker, {
       required double maxCardHeight,
     }) {
-      final l10n = AppLocalizations.of(context)!;
       final pageArtwork = pageMarker.isExhibitionMarker
           ? null
           : context
@@ -4032,18 +4042,11 @@ class _MapScreenState extends State<MapScreen>
           pagePrimaryExhibition.id.isNotEmpty &&
           exhibitionsApiAvailable != false;
 
-      final pageDistanceText = () {
-        if (_currentPosition == null) return null;
-        final meters = _distanceCalculator.as(
-          LengthUnit.Meter,
-          _currentPosition!,
-          pageMarker.position,
-        );
-        if (meters >= 1000) {
-          return l10n.commonDistanceKm((meters / 1000).toStringAsFixed(1));
-        }
-        return l10n.commonDistanceM(meters.round().toString());
-      }();
+      final pageDistanceText = KubusMarkerOverlayHelpers.resolveDistanceText(
+        userLocation: _currentPosition,
+        marker: pageMarker,
+        distance: _distanceCalculator,
+      );
 
       final pageBaseColor = _resolveArtMarkerColor(pageMarker, themeProvider);
       final overlayActions = buildMarkerOverlayActions(

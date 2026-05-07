@@ -3,7 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:art_kubus/widgets/tutorial/interactive_tutorial_overlay.dart';
 
 void main() {
-  testWidgets('InteractiveTutorialOverlay absorbs background gestures',
+  testWidgets(
+      'InteractiveTutorialOverlay lets background gestures pass through',
       (tester) async {
     int tapCount = 0;
     int panCount = 0;
@@ -61,10 +62,7 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    await tester.drag(
-      find.byType(InteractiveTutorialOverlay),
-      const Offset(80, 0),
-    );
+    await tester.dragFrom(const Offset(120, 120), const Offset(80, 0));
     await tester.pump();
 
     final gesture1 = await tester.startGesture(
@@ -85,9 +83,8 @@ void main() {
     await tester.tapAt(const Offset(5, 5));
     await tester.pump();
 
-    expect(tapCount, 0);
-    expect(panCount, 0);
-    expect(scaleCount, 0);
+    expect(tapCount, 1);
+    expect(panCount, greaterThan(0));
   });
 
   testWidgets(
@@ -149,7 +146,58 @@ void main() {
     expect(nextCount, 0);
 
     await tester.pump();
+    await tester.pump();
     expect(targetTapCount, 1);
     expect(nextCount, 1);
+  });
+
+  testWidgets(
+      'InteractiveTutorialOverlay does not invoke target from outside highlight',
+      (tester) async {
+    int targetTapCount = 0;
+    final targetKey = GlobalKey();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Stack(
+            children: [
+              Center(
+                child: SizedBox(
+                  key: targetKey,
+                  width: 48,
+                  height: 48,
+                ),
+              ),
+              InteractiveTutorialOverlay(
+                steps: <TutorialStepDefinition>[
+                  TutorialStepDefinition(
+                    targetKey: targetKey,
+                    title: 'Step',
+                    body: 'Body',
+                    onTargetTap: () => targetTapCount += 1,
+                    advanceOnTargetTap: false,
+                  ),
+                ],
+                currentIndex: 0,
+                onNext: () {},
+                onBack: () {},
+                onSkip: () {},
+                skipLabel: 'Skip',
+                backLabel: 'Back',
+                nextLabel: 'Next',
+                doneLabel: 'Done',
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.tapAt(const Offset(20, 300));
+    await tester.pump();
+
+    expect(targetTapCount, 0);
   });
 }

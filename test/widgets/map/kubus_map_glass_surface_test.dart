@@ -4,6 +4,53 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  testWidgets('map blur policy allows compact web-sized chrome when capable',
+      (tester) async {
+    late KubusMapBlurDecision decision;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MediaQuery(
+          data: const MediaQueryData(size: Size(390, 720)),
+          child: Builder(
+            builder: (context) {
+              decision = resolveKubusMapBlurDecision(
+                context,
+                policy: KubusMapBlurPolicy.allowCompactWeb,
+              );
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      ),
+    );
+
+    expect(decision.enabled, isTrue);
+    expect(decision.width, 390);
+  });
+
+  testWidgets('map blur policy reports explicit disabled fallback',
+      (tester) async {
+    late KubusMapBlurDecision decision;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) {
+            decision = resolveKubusMapBlurDecision(
+              context,
+              policy: KubusMapBlurPolicy.disabled,
+            );
+            return const SizedBox.shrink();
+          },
+        ),
+      ),
+    );
+
+    expect(decision.enabled, isFalse);
+    expect(decision.reason, 'policy-disabled');
+  });
+
   testWidgets(
       'map glass surface uses the same opaque fallback when blur is forced off',
       (tester) async {

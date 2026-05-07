@@ -118,13 +118,6 @@ class InteractiveTutorialOverlay extends StatelessWidget {
     }
   }
 
-  bool _isInside(Rect rect, Offset point) {
-    return point.dx >= rect.left &&
-        point.dx <= rect.right &&
-        point.dy >= rect.top &&
-        point.dy <= rect.bottom;
-  }
-
   @override
   Widget build(BuildContext context) {
     if (steps.isEmpty) return const SizedBox.shrink();
@@ -144,6 +137,12 @@ class InteractiveTutorialOverlay extends StatelessWidget {
     }
 
     final rect = _targetRect(context, step);
+    if (rect == null && step.targetKey?.currentContext != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!context.mounted) return;
+        (context as Element).markNeedsBuild();
+      });
+    }
 
     // Expand the highlight a bit so it feels forgiving.
     final inflated = rect?.inflate(10);
@@ -237,36 +236,16 @@ class InteractiveTutorialOverlay extends StatelessWidget {
       WidgetsBinding.instance.scheduleFrame();
     }
 
-    Offset? lastTapGlobalPosition;
+    final shouldHandleTargetTap = highlightRect != null &&
+        (step.onTargetTap != null || step.advanceOnTargetTap);
 
-    void handleOverlayTap() {
-      final tapPosition = lastTapGlobalPosition;
-      final activeHighlightRect = highlightRect;
-      if (activeHighlightRect != null && tapPosition != null) {
-        final tappedHighlightedRegion =
-            _isInside(activeHighlightRect, tapPosition);
-        if (tappedHighlightedRegion) {
-          handleTargetTap();
-          return;
-        }
-      }
-
-      // Fall back to default tutorial tap behavior when geometry is unavailable
-      // or the tap is outside the highlight.
-      handleTargetTap();
-    }
-
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTapDown: (details) {
-        lastTapGlobalPosition = details.globalPosition;
-      },
-      onTap: handleOverlayTap,
-      child: SizedBox.expand(
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Positioned.fill(
+    return SizedBox.expand(
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned.fill(
+            child: IgnorePointer(
+              ignoring: true,
               child: CustomPaint(
                 painter: _CoachMarkPainter(
                   highlightRect: highlightRect,
@@ -275,36 +254,46 @@ class InteractiveTutorialOverlay extends StatelessWidget {
                 ),
               ),
             ),
+          ),
 
-            // Skip button
-            Positioned(
-              top: safe.top + 10,
-              right: 12,
-              child: _GlassActionChip(
-                label: skipLabel,
-                onTap: onSkip,
+          if (shouldHandleTargetTap)
+            Positioned.fromRect(
+              rect: highlightRect,
+              child: GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onTap: handleTargetTap,
+                child: const SizedBox.expand(),
               ),
             ),
 
-            // Tooltip
-            Positioned(
-              left: tooltipX,
-              top: tooltipY,
-              width: tooltipWidth,
-              child: _TutorialTooltipCard(
-                title: step.title,
-                body: step.body,
-                icon: step.icon,
-                stepLabel: stepLabel,
-                backLabel: backLabel,
-                nextLabel: isLast ? doneLabel : nextLabel,
-                showBack: currentIndex > 0,
-                onBack: onBack,
-                onNext: onNext,
-              ),
+          // Skip button
+          Positioned(
+            top: safe.top + 10,
+            right: 12,
+            child: _GlassActionChip(
+              label: skipLabel,
+              onTap: onSkip,
             ),
-          ],
-        ),
+          ),
+
+          // Tooltip
+          Positioned(
+            left: tooltipX,
+            top: tooltipY,
+            width: tooltipWidth,
+            child: _TutorialTooltipCard(
+              title: step.title,
+              body: step.body,
+              icon: step.icon,
+              stepLabel: stepLabel,
+              backLabel: backLabel,
+              nextLabel: isLast ? doneLabel : nextLabel,
+              showBack: currentIndex > 0,
+              onBack: onBack,
+              onNext: onNext,
+            ),
+          ),
+        ],
       ),
     );
   }

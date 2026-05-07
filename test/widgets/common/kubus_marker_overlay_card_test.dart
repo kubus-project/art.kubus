@@ -55,8 +55,11 @@ String _buildWordSequence(int count) {
   return words.join(' ');
 }
 
-Widget _wrap(Widget child) {
+Widget _wrap(Widget child, {ThemeMode themeMode = ThemeMode.light}) {
   return MaterialApp(
+    theme: ThemeData.light(useMaterial3: true),
+    darkTheme: ThemeData.dark(useMaterial3: true),
+    themeMode: themeMode,
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
     home: Scaffold(
@@ -440,6 +443,74 @@ void main() {
       );
     },
   );
+
+  testWidgets('distance badge renders when distance text is passed',
+      (tester) async {
+    final marker = _marker();
+    final artwork = _artwork();
+
+    await tester.pumpWidget(
+      _wrap(
+        SizedBox(
+          width: 340,
+          child: KubusMarkerOverlayCard(
+            marker: marker,
+            artwork: artwork,
+            baseColor: Colors.teal,
+            displayTitle: artwork.title,
+            canPresentExhibition: false,
+            distanceText: '1.2 km',
+            description: 'Short preview.',
+            onClose: () {},
+            onPrimaryAction: () {},
+            primaryActionIcon: Icons.arrow_forward,
+            primaryActionLabel: 'More info',
+            maxWidth: 340,
+            maxHeight: 420,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('1.2 km'), findsOneWidget);
+    expect(find.byIcon(Icons.near_me), findsOneWidget);
+  });
+
+  testWidgets('primary CTA foreground follows brightness contrast rule',
+      (tester) async {
+    Future<Color?> pumpAndReadColor(ThemeMode mode) async {
+      final marker = _marker();
+      final artwork = _artwork();
+      await tester.pumpWidget(
+        _wrap(
+          SizedBox(
+            width: 340,
+            child: KubusMarkerOverlayCard(
+              marker: marker,
+              artwork: artwork,
+              baseColor: Colors.teal,
+              displayTitle: artwork.title,
+              canPresentExhibition: false,
+              description: 'Short preview.',
+              onClose: () {},
+              onPrimaryAction: () {},
+              primaryActionIcon: Icons.arrow_forward,
+              primaryActionLabel: 'More info',
+              maxWidth: 340,
+              maxHeight: 420,
+            ),
+          ),
+          themeMode: mode,
+        ),
+      );
+      await tester.pumpAndSettle();
+      final text = tester.widget<Text>(find.text('More info'));
+      return text.style?.color;
+    }
+
+    expect(await pumpAndReadColor(ThemeMode.light), Colors.black);
+    expect(await pumpAndReadColor(ThemeMode.dark), Colors.white);
+  });
 
   testWidgets(
     'missing image uses fallback without stretching network image widget',

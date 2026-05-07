@@ -5,6 +5,8 @@ import 'package:provider/provider.dart';
 
 import '../../providers/glass_capabilities_provider.dart';
 import '../../utils/design_tokens.dart';
+import 'glass_platform_backdrop_stub.dart'
+    if (dart.library.js_interop) 'glass_platform_backdrop_web.dart';
 
 /// The canonical glass surface widget for the Kubus design system.
 ///
@@ -167,9 +169,20 @@ class GlassSurface extends StatelessWidget {
     if (useBlur) {
       return ClipRRect(
         borderRadius: borderRadius,
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
-          child: tintedBox,
+        child: Stack(
+          fit: StackFit.passthrough,
+          children: [
+            Positioned.fill(
+              child: GlassPlatformBackdropShim(
+                enabled: true,
+                blurSigma: blurSigma,
+              ),
+            ),
+            BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
+              child: tintedBox,
+            ),
+          ],
         ),
       );
     }

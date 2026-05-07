@@ -91,7 +91,7 @@ void main() {
   });
 
   testWidgets(
-      'KubusMapTutorialOverlay blocks taps from reaching underlying map layer',
+      'KubusMapTutorialOverlay allows map taps outside tutorial controls and highlight',
       (tester) async {
     final targetKey = GlobalKey();
     var backgroundTapCount = 0;
@@ -140,9 +140,60 @@ void main() {
     );
 
     await tester.pumpAndSettle();
-    await tester.tapAt(const Offset(10, 10));
+    await tester.tapAt(const Offset(10, 300));
     await tester.pump();
 
-    expect(backgroundTapCount, 0);
+    expect(backgroundTapCount, 1);
+  });
+
+  testWidgets('KubusMapTutorialOverlay highlighted target tap invokes action',
+      (tester) async {
+    final targetKey = GlobalKey();
+    var targetTapCount = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Stack(
+            children: [
+              Center(
+                child: SizedBox(
+                  key: targetKey,
+                  width: 40,
+                  height: 40,
+                ),
+              ),
+              KubusMapTutorialOverlay(
+                visible: true,
+                steps: <TutorialStepDefinition>[
+                  TutorialStepDefinition(
+                    targetKey: targetKey,
+                    title: 'Title',
+                    body: 'Body',
+                    onTargetTap: () => targetTapCount += 1,
+                    advanceOnTargetTap: false,
+                  ),
+                ],
+                currentIndex: 0,
+                onNext: () {},
+                onBack: () {},
+                onSkip: () {},
+                skipLabel: 'Skip',
+                backLabel: 'Back',
+                nextLabel: 'Next',
+                doneLabel: 'Done',
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.tapAt(tester.getCenter(find.byKey(targetKey)));
+    await tester.pump();
+    await tester.pump();
+
+    expect(targetTapCount, 1);
   });
 }

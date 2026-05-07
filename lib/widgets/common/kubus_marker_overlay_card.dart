@@ -160,7 +160,8 @@ class KubusMarkerOverlayCard extends StatelessWidget {
 
     final isPromoted =
         marker.isPromoted || (artwork?.promotion.isPromoted ?? false);
-    final actionFg = AppColorUtils.contrastText(baseColor);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final actionFg = isDark ? Colors.white : Colors.black;
 
     final resolvedCardTap = onCardTap ?? onPrimaryAction;
     final resolvedTitleTap = onTitleTap ?? onPrimaryAction;

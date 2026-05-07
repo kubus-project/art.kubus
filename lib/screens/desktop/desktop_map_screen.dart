@@ -1683,12 +1683,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       body: Stack(
         children: [
           // Map layer
-          AbsorbPointer(
-            absorbing: showMapTutorial,
-            child: KeyedSubtree(
-              key: _tutorialMapKey,
-              child: _buildMapLayer(themeProvider),
-            ),
+          KeyedSubtree(
+            key: _tutorialMapKey,
+            child: _buildMapLayer(themeProvider),
           ),
 
           _buildSearchOverlayScaffold(
@@ -4365,9 +4362,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         primaryExhibition.id.isNotEmpty &&
         exhibitionsApiAvailable != false;
 
-    final distanceText = _userLocation != null
-        ? _formatDistance(_calculateDistance(_userLocation!, marker.position))
-        : null;
+    final distanceText = KubusMarkerOverlayHelpers.resolveDistanceText(
+      userLocation: _userLocation,
+      marker: marker,
+      distance: _distance,
+    );
     final overlayActions = buildMarkerOverlayActions(
       context: context,
       marker: marker,
@@ -4444,17 +4443,22 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           ? overlay_wrapper.KubusMarkerOverlayPlacementStrategy.centered
           : overlay_wrapper.KubusMarkerOverlayPlacementStrategy.anchored,
       widthResolver: (constraints, mediaQuery) {
-        return MapOverlaySizing.resolveCardWidth(
-          constraints,
-          preferred: MapOverlaySizing.preferredCardWidth,
-          horizontalPadding: KubusSpacing.md,
-        );
-      },
-      maxHeightResolver: (constraints, mediaQuery) {
-        return MapOverlaySizing.resolveMaxCardHeight(
+        return MapOverlaySizing.resolveMarkerOverlayCardLayout(
           constraints: constraints,
           media: mediaQuery,
-        );
+          isDesktop: true,
+          rightSidebarOpen: _isRightSidebarOpen,
+          leftPanelOpen: _isLeftPanelVisible,
+        ).width;
+      },
+      maxHeightResolver: (constraints, mediaQuery) {
+        return MapOverlaySizing.resolveMarkerOverlayCardLayout(
+          constraints: constraints,
+          media: mediaQuery,
+          isDesktop: true,
+          rightSidebarOpen: _isRightSidebarOpen,
+          leftPanelOpen: _isLeftPanelVisible,
+        ).maxHeight;
       },
       heightResolver: (constraints, mediaQuery, maxHeight) {
         final selectedMarker = selection.selectedMarker;
@@ -4481,13 +4485,37 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         );
       },
       markerOffset: (() {
-        const baseOffset = 32.0;
+        final baseOffset = MapOverlaySizing.resolveMarkerOverlayCardLayout(
+          constraints: const BoxConstraints(maxWidth: 1000, maxHeight: 800),
+          media: MediaQuery.of(context),
+          isDesktop: true,
+          rightSidebarOpen: _isRightSidebarOpen,
+          leftPanelOpen: _isLeftPanelVisible,
+        ).markerOffset;
         final zoomFactor = (_cameraZoom / 15.0).clamp(0.5, 1.5);
         return baseOffset * zoomFactor;
       })(),
-      horizontalPadding: KubusSpacing.md,
-      topPadding: KubusSpacing.md,
-      bottomPadding: KubusSpacing.md,
+      horizontalPadding: MapOverlaySizing.resolveMarkerOverlayCardLayout(
+        constraints: const BoxConstraints(maxWidth: 1000, maxHeight: 800),
+        media: MediaQuery.of(context),
+        isDesktop: true,
+        rightSidebarOpen: _isRightSidebarOpen,
+        leftPanelOpen: _isLeftPanelVisible,
+      ).horizontalPadding,
+      topPadding: MapOverlaySizing.resolveMarkerOverlayCardLayout(
+        constraints: const BoxConstraints(maxWidth: 1000, maxHeight: 800),
+        media: MediaQuery.of(context),
+        isDesktop: true,
+        rightSidebarOpen: _isRightSidebarOpen,
+        leftPanelOpen: _isLeftPanelVisible,
+      ).topPadding,
+      bottomPadding: MapOverlaySizing.resolveMarkerOverlayCardLayout(
+        constraints: const BoxConstraints(maxWidth: 1000, maxHeight: 800),
+        media: MediaQuery.of(context),
+        isDesktop: true,
+        rightSidebarOpen: _isRightSidebarOpen,
+        leftPanelOpen: _isLeftPanelVisible,
+      ).bottomPadding,
       animation: const overlay_wrapper.KubusMarkerOverlayAnimationConfig(
         duration: Duration(milliseconds: 220),
         curve: Curves.easeOutCubic,
