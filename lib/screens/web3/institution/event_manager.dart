@@ -38,6 +38,8 @@ class _EventManagerState extends State<EventManager>
   late Animation<double> _fadeAnimation;
   String _selectedFilter = 'all';
   String _searchQuery = '';
+  final Set<String> _deleteDialogOpenEventIds = <String>{};
+  final Set<String> _deleteInFlightEventIds = <String>{};
 
   @override
   void initState() {
@@ -734,10 +736,16 @@ class _EventManagerState extends State<EventManager>
     );
   }
 
-  void _deleteEvent(Event event) {
+  Future<void> _deleteEvent(Event event) async {
+    if (_deleteDialogOpenEventIds.contains(event.id) ||
+        _deleteInFlightEventIds.contains(event.id)) {
+      return;
+    }
+
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
-    showKubusDialog(
+    _deleteDialogOpenEventIds.add(event.id);
+    final confirmed = await showKubusDialog<bool>(
       context: context,
       builder: (context) => KubusAlertDialog(
         backgroundColor: scheme.surfaceContainerHighest,
@@ -753,24 +761,32 @@ class _EventManagerState extends State<EventManager>
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(context, false),
             child: Text(AppLocalizations.of(context)!.commonCancel),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: scheme.error),
-            onPressed: () async {
-              Navigator.pop(context);
-              await _performEventDelete(event);
-            },
+            onPressed: () => Navigator.pop(context, true),
             child: Text(l10n.commonDelete,
                 style: TextStyle(color: scheme.onError)),
           ),
         ],
       ),
-    );
+    ).whenComplete(() {
+      _deleteDialogOpenEventIds.remove(event.id);
+    });
+    if (confirmed != true || !mounted) {
+      return;
+    }
+    await _performEventDelete(event);
   }
 
   Future<void> _performEventDelete(Event event) async {
+    if (_deleteInFlightEventIds.contains(event.id)) {
+      return;
+    }
+
+    _deleteInFlightEventIds.add(event.id);
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
     try {
@@ -788,6 +804,8 @@ class _EventManagerState extends State<EventManager>
           backgroundColor: Theme.of(context).colorScheme.errorContainer,
         ),
       );
+    } finally {
+      _deleteInFlightEventIds.remove(event.id);
     }
   }
 }

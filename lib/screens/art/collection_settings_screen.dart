@@ -54,6 +54,8 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen> {
   Uint8List? _pickedCoverBytes;
   String? _pickedCoverFileName;
   String? _hydratedCollectionId;
+  final Set<String> _deleteDialogOpenCollectionIds = <String>{};
+  final Set<String> _deleteInFlightCollectionIds = <String>{};
 
   @override
   void initState() {
@@ -196,9 +198,15 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen> {
   }
 
   Future<void> _delete(CollectionRecord collection) async {
+    if (_deleteDialogOpenCollectionIds.contains(collection.id) ||
+        _deleteInFlightCollectionIds.contains(collection.id)) {
+      return;
+    }
+
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final collectionsProvider = context.read<CollectionsProvider>();
+    _deleteDialogOpenCollectionIds.add(collection.id);
     final confirmed = await showKubusDialog<bool>(
       context: context,
       builder: (dialogContext) => KubusAlertDialog(
@@ -218,9 +226,13 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen> {
           ),
         ],
       ),
-    );
+    ).whenComplete(() {
+      _deleteDialogOpenCollectionIds.remove(collection.id);
+    });
     if (confirmed != true) return;
+    if (_deleteInFlightCollectionIds.contains(collection.id)) return;
 
+    _deleteInFlightCollectionIds.add(collection.id);
     try {
       await collectionsProvider.deleteCollection(collection.id);
       if (!mounted) return;
@@ -233,6 +245,8 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen> {
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(content: Text(l10n.commonActionFailedToast)),
       );
+    } finally {
+      _deleteInFlightCollectionIds.remove(collection.id);
     }
   }
 

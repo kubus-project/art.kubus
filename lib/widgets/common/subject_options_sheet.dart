@@ -60,16 +60,11 @@ Future<void> showSubjectOptionsSheet({
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(KubusRadius.md),
       ),
-      onTap: enabled
-          ? () {
-              Navigator.of(sheetContext).pop();
-              action.onSelected();
-            }
-          : null,
+      onTap: enabled ? () => Navigator.of(sheetContext).pop(action) : null,
     );
   }
 
-  await showModalBottomSheet<void>(
+  final selectedAction = await showModalBottomSheet<SubjectOptionsAction>(
     context: context,
     backgroundColor: Colors.transparent,
     isScrollControlled: true,
@@ -182,4 +177,5 @@ Future<void> showSubjectOptionsSheet({
       );
     },
   );
+  selectedAction?.onSelected();
 }

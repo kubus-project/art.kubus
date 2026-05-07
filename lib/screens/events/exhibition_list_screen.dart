@@ -45,6 +45,8 @@ class ExhibitionListScreen extends StatefulWidget {
 class _ExhibitionListScreenState extends State<ExhibitionListScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final Set<String> _deleteDialogOpenExhibitionIds = <String>{};
+  final Set<String> _deleteInFlightExhibitionIds = <String>{};
 
   @override
   void initState() {
@@ -138,10 +140,16 @@ class _ExhibitionListScreenState extends State<ExhibitionListScreen>
   }
 
   Future<void> _deleteExhibition(Exhibition exhibition) async {
+    if (_deleteDialogOpenExhibitionIds.contains(exhibition.id) ||
+        _deleteInFlightExhibitionIds.contains(exhibition.id)) {
+      return;
+    }
+
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final provider = context.read<ExhibitionsProvider>();
 
+    _deleteDialogOpenExhibitionIds.add(exhibition.id);
     final confirmed = await showKubusDialog<bool>(
       context: context,
       builder: (dialogContext) => KubusAlertDialog(
@@ -161,9 +169,13 @@ class _ExhibitionListScreenState extends State<ExhibitionListScreen>
           ),
         ],
       ),
-    );
+    ).whenComplete(() {
+      _deleteDialogOpenExhibitionIds.remove(exhibition.id);
+    });
     if (confirmed != true) return;
+    if (_deleteInFlightExhibitionIds.contains(exhibition.id)) return;
 
+    _deleteInFlightExhibitionIds.add(exhibition.id);
     try {
       await provider.deleteExhibition(exhibition.id);
       if (!mounted) return;
@@ -175,6 +187,8 @@ class _ExhibitionListScreenState extends State<ExhibitionListScreen>
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(content: Text(l10n.commonActionFailedToast)),
       );
+    } finally {
+      _deleteInFlightExhibitionIds.remove(exhibition.id);
     }
   }
 

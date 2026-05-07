@@ -211,6 +211,7 @@ class ExhibitionsProvider extends ChangeNotifier {
     try {
       await _api.deleteExhibition(id);
       _exhibitions.removeWhere((e) => e.id == id);
+      _myExhibitions.removeWhere((e) => e.id == id);
       _byId.remove(id);
       _poapByExhibitionId.remove(id);
       if (_selected?.id == id) _selected = null;

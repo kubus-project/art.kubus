@@ -66,6 +66,8 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
   bool _autoClaimAttempted = false;
   bool _scanProofExchangeAttempted = false;
   String? _claimProofToken;
+  final Set<String> _deleteDialogOpenExhibitionIds = <String>{};
+  final Set<String> _deleteInFlightExhibitionIds = <String>{};
 
   String get _effectiveProofSource {
     final source = (widget.proofSource ?? '').trim();
@@ -252,10 +254,16 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
   }
 
   Future<void> _deleteExhibition(Exhibition exhibition) async {
+    if (_deleteDialogOpenExhibitionIds.contains(exhibition.id) ||
+        _deleteInFlightExhibitionIds.contains(exhibition.id)) {
+      return;
+    }
+
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final provider = context.read<ExhibitionsProvider>();
 
+    _deleteDialogOpenExhibitionIds.add(exhibition.id);
     final confirmed = await showKubusDialog<bool>(
       context: context,
       builder: (dialogContext) => KubusAlertDialog(
@@ -274,9 +282,13 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
           ),
         ],
       ),
-    );
+    ).whenComplete(() {
+      _deleteDialogOpenExhibitionIds.remove(exhibition.id);
+    });
     if (confirmed != true) return;
+    if (_deleteInFlightExhibitionIds.contains(exhibition.id)) return;
 
+    _deleteInFlightExhibitionIds.add(exhibition.id);
     try {
       await provider.deleteExhibition(exhibition.id);
       if (!mounted) return;
@@ -289,6 +301,8 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(content: Text(l10n.commonActionFailedToast)),
       );
+    } finally {
+      _deleteInFlightExhibitionIds.remove(exhibition.id);
     }
   }
 

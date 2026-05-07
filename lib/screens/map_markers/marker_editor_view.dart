@@ -75,6 +75,8 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
   bool _requiresProximity = true;
   bool _isCommunity = false;
   bool _saving = false;
+  final Set<String> _deleteDialogOpenMarkerIds = <String>{};
+  final Set<String> _deleteInFlightMarkerIds = <String>{};
   Uint8List? _coverImageBytes;
   String? _coverImageFileName;
   String? _coverImageFileType;
@@ -976,9 +978,14 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
   Future<void> _delete() async {
     final marker = widget.marker;
     if (marker == null || marker.id.isEmpty) return;
+    if (_deleteDialogOpenMarkerIds.contains(marker.id) ||
+        _deleteInFlightMarkerIds.contains(marker.id)) {
+      return;
+    }
 
     final l10n = AppLocalizations.of(context)!;
     final navigator = Navigator.of(context);
+    _deleteDialogOpenMarkerIds.add(marker.id);
     final confirm = await showKubusDialog<bool>(
       context: context,
       builder: (_) => KubusAlertDialog(
@@ -995,10 +1002,14 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
           ),
         ],
       ),
-    );
+    ).whenComplete(() {
+      _deleteDialogOpenMarkerIds.remove(marker.id);
+    });
     if (!mounted) return;
     if (confirm != true) return;
+    if (_deleteInFlightMarkerIds.contains(marker.id)) return;
 
+    _deleteInFlightMarkerIds.add(marker.id);
     setState(() => _saving = true);
     try {
       final markerProvider = context.read<MarkerManagementProvider>();
@@ -1018,6 +1029,7 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
         Navigator.of(context).maybePop();
       }
     } finally {
+      _deleteInFlightMarkerIds.remove(marker.id);
       if (mounted) {
         setState(() => _saving = false);
       }

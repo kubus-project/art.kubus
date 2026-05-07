@@ -72,6 +72,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
   bool _animationsInitialized = false;
   bool _artworkLoading = true;
   String? _artworkError;
+  final Set<String> _deleteDialogOpenArtworkIds = <String>{};
+  final Set<String> _deleteInFlightArtworkIds = <String>{};
 
   @override
   void initState() {
@@ -144,7 +146,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
           wallet: walletProvider.currentWalletAddress,
           userId: profileProvider.currentUser?.id,
         );
-        final artworkOwnerWallet = WalletUtils.canonical(artwork?.walletAddress);
+        final artworkOwnerWallet =
+            WalletUtils.canonical(artwork?.walletAddress);
         final isOwner = viewerWallet.isNotEmpty &&
             artworkOwnerWallet.isNotEmpty &&
             WalletUtils.equals(viewerWallet, artworkOwnerWallet);
@@ -647,7 +650,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         l10n.exhibitionDetailAttendanceRewardPending(rewardAmount.toString()),
       if (validFrom != null || validTo != null)
         '${l10n.commonAvailable}: ${(validFrom != null) ? validFrom.toLocal().toIso8601String().split('T').first : '…'} → ${(validTo != null) ? validTo.toLocal().toIso8601String().split('T').first : '…'}',
-      if (eventId != null && eventId.isNotEmpty) '${l10n.commonEvent}: $eventId',
+      if (eventId != null && eventId.isNotEmpty)
+        '${l10n.commonEvent}: $eventId',
     ];
 
     final uri = (claimUrl != null && claimUrl.isNotEmpty)
@@ -712,16 +716,17 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildStatItem(Icons.favorite_rounded, artwork.likesCount, l10n.commonLikes),
+          _buildStatItem(
+              Icons.favorite_rounded, artwork.likesCount, l10n.commonLikes),
           _buildStatDivider(),
           _buildStatItem(Icons.chat_bubble_outline_rounded,
               artwork.commentsCount, l10n.commonComments),
           _buildStatDivider(),
-          _buildStatItem(
-              Icons.visibility_outlined, artwork.viewsCount, l10n.artistGalleryStatViewsLabel),
+          _buildStatItem(Icons.visibility_outlined, artwork.viewsCount,
+              l10n.artistGalleryStatViewsLabel),
           _buildStatDivider(),
-          _buildStatItem(
-              Icons.explore_outlined, artwork.discoveryCount, l10n.profilePerformanceDiscoveriesTitle),
+          _buildStatItem(Icons.explore_outlined, artwork.discoveryCount,
+              l10n.profilePerformanceDiscoveriesTitle),
         ],
       ),
     );
@@ -987,7 +992,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
     final walletProvider = context.read<WalletProvider>();
     final messenger = ScaffoldMessenger.of(context);
     final provider = context.read<ArtworkProvider>();
-    
+
     final canProceed = await WalletActionGuard.ensureSignerAccess(
       context: context,
       profileProvider: profileProvider,
@@ -1003,7 +1008,9 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
       messenger.showKubusSnackBar(
         SnackBar(
           content: Text(
-            updated != null ? l10n.commonSavedToast : l10n.commonActionFailedToast,
+            updated != null
+                ? l10n.commonSavedToast
+                : l10n.commonActionFailedToast,
           ),
         ),
       );
@@ -1016,8 +1023,14 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
   }
 
   Future<void> _deleteArtwork(Artwork artwork) async {
+    if (_deleteDialogOpenArtworkIds.contains(artwork.id) ||
+        _deleteInFlightArtworkIds.contains(artwork.id)) {
+      return;
+    }
+
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
+    _deleteDialogOpenArtworkIds.add(artwork.id);
     final confirmed = await showKubusDialog<bool>(
       context: context,
       builder: (dialogContext) => KubusAlertDialog(
@@ -1036,16 +1049,19 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
           ),
         ],
       ),
-    );
+    ).whenComplete(() {
+      _deleteDialogOpenArtworkIds.remove(artwork.id);
+    });
     if (confirmed != true) return;
     if (!mounted) return;
+    if (_deleteInFlightArtworkIds.contains(artwork.id)) return;
 
     final profileProvider = context.read<ProfileProvider>();
     final walletProvider = context.read<WalletProvider>();
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
     final artworkProvider = context.read<ArtworkProvider>();
-    
+
     final canProceed = await WalletActionGuard.ensureSignerAccess(
       context: context,
       profileProvider: profileProvider,
@@ -1053,6 +1069,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
     );
     if (!mounted || !canProceed) return;
 
+    _deleteInFlightArtworkIds.add(artwork.id);
     try {
       final deleted = await BackendApiService().deleteArtwork(artwork.id);
       if (!mounted) return;
@@ -1072,6 +1089,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
       messenger.showKubusSnackBar(
         SnackBar(content: Text(l10n.commonActionFailedToast)),
       );
+    } finally {
+      _deleteInFlightArtworkIds.remove(artwork.id);
     }
   }
 
@@ -1151,10 +1170,10 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         final isConfirming = state.isConfirming;
 
         final label = isConfirming
-          ? l10n.exhibitionDetailAttendanceConfirmingAction
-          : (alreadyAttended
-            ? l10n.exhibitionDetailAttendanceAlreadyCheckedIn
-            : l10n.exhibitionDetailAttendanceConfirmAction);
+            ? l10n.exhibitionDetailAttendanceConfirmingAction
+            : (alreadyAttended
+                ? l10n.exhibitionDetailAttendanceAlreadyCheckedIn
+                : l10n.exhibitionDetailAttendanceConfirmAction);
         final icon = isConfirming
             ? Icons.hourglass_top
             : (alreadyAttended ? Icons.check_circle : Icons.verified_user);
@@ -1221,8 +1240,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
       if (result == null) {
         messenger.showKubusSnackBar(
           SnackBar(
-            content:
-                Text(l10n.exhibitionDetailAttendanceUnableToConfirmToast),
+            content: Text(l10n.exhibitionDetailAttendanceUnableToConfirmToast),
           ),
           tone: KubusSnackBarTone.warning,
         );
@@ -2280,7 +2298,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         _showErrorDialog(l10n.artDetailNavigationCouldNotOpenGoogleMaps);
       }
     } catch (e) {
-      _showErrorDialog(l10n.artDetailNavigationErrorOpeningGoogleMaps(e.toString()));
+      _showErrorDialog(
+          l10n.artDetailNavigationErrorOpeningGoogleMaps(e.toString()));
     }
   }
 
@@ -2300,7 +2319,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         _showErrorDialog(l10n.artDetailNavigationCouldNotOpenAppleMaps);
       }
     } catch (e) {
-      _showErrorDialog(l10n.artDetailNavigationErrorOpeningAppleMaps(e.toString()));
+      _showErrorDialog(
+          l10n.artDetailNavigationErrorOpeningAppleMaps(e.toString()));
     }
   }
 

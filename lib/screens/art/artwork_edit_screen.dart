@@ -68,6 +68,8 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
 
   bool _isSaving = false;
   bool _arEnabled = false;
+  final Set<String> _deleteDialogOpenArtworkIds = <String>{};
+  final Set<String> _deleteInFlightArtworkIds = <String>{};
 
   List<SubjectOptionsAction> _buildSubjectActions(Artwork artwork) {
     final l10n = AppLocalizations.of(context)!;
@@ -248,11 +250,17 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
   }
 
   Future<void> _deleteArtwork(Artwork artwork) async {
+    if (_deleteDialogOpenArtworkIds.contains(artwork.id) ||
+        _deleteInFlightArtworkIds.contains(artwork.id)) {
+      return;
+    }
+
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final artworkProvider = context.read<ArtworkProvider>();
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
+    _deleteDialogOpenArtworkIds.add(artwork.id);
     final confirmed = await showKubusDialog<bool>(
       context: context,
       builder: (dialogContext) => KubusAlertDialog(
@@ -271,9 +279,12 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
           ),
         ],
       ),
-    );
+    ).whenComplete(() {
+      _deleteDialogOpenArtworkIds.remove(artwork.id);
+    });
     if (confirmed != true) return;
     if (!mounted) return;
+    if (_deleteInFlightArtworkIds.contains(artwork.id)) return;
     if (context.read<ProfileProvider>().isSignedIn != true) {
       messenger.showKubusSnackBar(
         SnackBar(content: Text(l10n.communityCommentAuthRequiredToast)),
@@ -287,6 +298,7 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
       return;
     }
 
+    _deleteInFlightArtworkIds.add(artwork.id);
     try {
       final deleted = await BackendApiService().deleteArtwork(artwork.id);
       if (!mounted) return;
@@ -306,6 +318,8 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
       messenger.showKubusSnackBar(
         SnackBar(content: Text(l10n.commonActionFailedToast)),
       );
+    } finally {
+      _deleteInFlightArtworkIds.remove(artwork.id);
     }
   }
 

@@ -37,6 +37,9 @@ class CollectionDetailScreen extends StatefulWidget {
 }
 
 class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
+  final Set<String> _deleteDialogOpenCollectionIds = <String>{};
+  final Set<String> _deleteInFlightCollectionIds = <String>{};
+
   @override
   void initState() {
     super.initState();
@@ -96,7 +99,7 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
                 tooltip: l10n.commonActions,
                 onPressed: () => _showCollectionOptions(collection, canEdit),
                 icon: const Icon(Icons.more_horiz),
-                ),
+              ),
             ],
           ),
           const SizedBox(height: DetailSpacing.md),
@@ -196,9 +199,15 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
   }
 
   Future<void> _deleteCollection(CollectionRecord collection) async {
+    if (_deleteDialogOpenCollectionIds.contains(collection.id) ||
+        _deleteInFlightCollectionIds.contains(collection.id)) {
+      return;
+    }
+
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final collectionsProvider = context.read<CollectionsProvider>();
+    _deleteDialogOpenCollectionIds.add(collection.id);
     final confirmed = await showKubusDialog<bool>(
       context: context,
       builder: (dialogContext) => KubusAlertDialog(
@@ -219,9 +228,13 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
           ),
         ],
       ),
-    );
+    ).whenComplete(() {
+      _deleteDialogOpenCollectionIds.remove(collection.id);
+    });
     if (confirmed != true) return;
+    if (_deleteInFlightCollectionIds.contains(collection.id)) return;
 
+    _deleteInFlightCollectionIds.add(collection.id);
     try {
       await collectionsProvider.deleteCollection(collection.id);
       if (!mounted) return;
@@ -234,6 +247,8 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(content: Text(l10n.commonActionFailedToast)),
       );
+    } finally {
+      _deleteInFlightCollectionIds.remove(collection.id);
     }
   }
 

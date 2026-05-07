@@ -40,6 +40,8 @@ class ArtistPortfolioScreen extends StatefulWidget {
 class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
   PortfolioEntryType? _typeFilter;
   PortfolioPublishState? _statusFilter;
+  final Set<String> _deleteDialogOpenArtworkIds = <String>{};
+  final Set<String> _deleteInFlightArtworkIds = <String>{};
 
   @override
   void didChangeDependencies() {
@@ -439,7 +441,8 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
               const SizedBox(width: KubusSpacing.xs + KubusSpacing.xxs),
               IconButton(
                 tooltip: l10n.commonMore,
-                onPressed: () => _showEntryOptionsSheet(context, provider, entry),
+                onPressed: () =>
+                    _showEntryOptionsSheet(context, provider, entry),
                 icon: Icon(
                   Icons.more_horiz,
                   color: scheme.onSurface.withValues(alpha: 0.75),
@@ -517,13 +520,31 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
         );
         return;
       case 'delete':
-        final confirmed = await _confirmDeleteArtwork(context, artwork.title);
+        if (_deleteDialogOpenArtworkIds.contains(artwork.id) ||
+            _deleteInFlightArtworkIds.contains(artwork.id)) {
+          return;
+        }
+        final confirmed =
+            await _confirmDeleteArtwork(context, artwork.id, artwork.title);
         if (confirmed != true) return;
-        await provider.deleteArtwork(artwork.id);
-        messenger.showKubusSnackBar(
-          SnackBar(
-              content: Text(l10n.artistGalleryDeletedToast(artwork.title))),
-        );
+        if (!mounted) return;
+        if (_deleteInFlightArtworkIds.contains(artwork.id)) return;
+        _deleteInFlightArtworkIds.add(artwork.id);
+        try {
+          await provider.deleteArtwork(artwork.id);
+          if (!mounted) return;
+          messenger.showKubusSnackBar(
+            SnackBar(
+                content: Text(l10n.artistGalleryDeletedToast(artwork.title))),
+          );
+        } catch (_) {
+          if (!mounted) return;
+          messenger.showKubusSnackBar(
+            SnackBar(content: Text(l10n.commonActionFailedToast)),
+          );
+        } finally {
+          _deleteInFlightArtworkIds.remove(artwork.id);
+        }
         return;
       case 'promote':
         if (!_artworkCanBePromoted(artwork)) {
@@ -565,7 +586,9 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
         ),
         SubjectOptionsAction(
           id: isPublished ? 'unpublish' : 'publish',
-          icon: isPublished ? Icons.visibility_off_outlined : Icons.publish_outlined,
+          icon: isPublished
+              ? Icons.visibility_off_outlined
+              : Icons.publish_outlined,
           label: isPublished ? l10n.commonUnpublish : l10n.commonPublish,
           onSelected: () => _handleAction(
             context,
@@ -579,7 +602,8 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
             id: 'promote',
             icon: Icons.campaign_outlined,
             label: l10n.eventDetailPromoteLabel,
-            onSelected: () => _handleAction(context, provider, entry, 'promote'),
+            onSelected: () =>
+                _handleAction(context, provider, entry, 'promote'),
           ),
         SubjectOptionsAction(
           id: 'delete',
@@ -612,8 +636,13 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
     );
   }
 
-  Future<bool?> _confirmDeleteArtwork(BuildContext context, String title) {
+  Future<bool?> _confirmDeleteArtwork(
+    BuildContext context,
+    String artworkId,
+    String title,
+  ) {
     final l10n = AppLocalizations.of(context)!;
+    _deleteDialogOpenArtworkIds.add(artworkId);
     return showKubusDialog<bool>(
       context: context,
       builder: (dialogContext) {
@@ -632,7 +661,9 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
           ],
         );
       },
-    );
+    ).whenComplete(() {
+      _deleteDialogOpenArtworkIds.remove(artworkId);
+    });
   }
 
   Future<void> _runPublishActionWithGuard({
