@@ -76,6 +76,7 @@ import '../../features/map/shared/map_artwork_filtering.dart';
 import '../../features/map/shared/map_marker_overlay_actions.dart';
 import '../../features/map/shared/map_marker_overlay_presentation.dart';
 import '../../features/map/shared/map_marker_selection_resolver.dart';
+import '../../features/map/shared/map_marker_overlay_viewport_planner.dart';
 import '../../features/map/shared/map_overlay_sizing.dart';
 import '../../features/map/shared/map_search_filter_assembly.dart';
 import '../../features/map/map_layers_manager.dart';
@@ -192,6 +193,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   bool _markerStackPagerSyncing = false;
   final PageController _markerStackPageController = PageController();
   bool _didOpenInitialSelection = false;
+  int _lastMarkerOverlayNudgeSelectionToken = -1;
   bool _showFiltersPanel = false;
   bool _isDiscoveryExpanded = false;
   String _selectedFilter = 'nearby';
@@ -262,7 +264,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   final Set<String> _registeredMapImages = <String>{};
   final Set<String> _managedLayerIds = <String>{};
   final Set<String> _managedSourceIds = <String>{};
-  final LayerLink _markerOverlayLink = LayerLink();
   final Debouncer _cubeSyncDebouncer = Debouncer();
   final Debouncer _radiusChangeDebouncer = Debouncer();
   late final ValueNotifier<Offset?> _selectedMarkerAnchorNotifier;
@@ -748,8 +749,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       ),
       MapTutorialStepBinding(
         id: 'filters',
-        isAnchorAvailable: () =>
-            _tutorialSearchPanelKey.currentContext != null,
+        isAnchorAvailable: () => _tutorialSearchPanelKey.currentContext != null,
         step: TutorialStepDefinition(
           targetKey: _tutorialSearchPanelKey,
           icon: Icons.tune,
@@ -1498,6 +1498,80 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     );
   }
 
+  Size? _mapViewportSize() {
+    final context = _mapViewKey.currentContext;
+    final renderObject = context?.findRenderObject();
+    if (renderObject is RenderBox && renderObject.hasSize) {
+      return renderObject.size;
+    }
+    return null;
+  }
+
+  double _desiredPitch() {
+    if (!_isometricViewEnabled) return 0.0;
+    if (!AppConfig.isFeatureEnabled('mapIsometricView')) return 0.0;
+    return 54.736;
+  }
+
+  void _handleMarkerOverlayLayoutResolved(
+    MapMarkerSelectionState selection,
+    overlay_wrapper.KubusMarkerOverlayResolvedLayout resolvedLayout,
+  ) {
+    if (!mounted) return;
+    if (_styleInitializationInProgress || !_styleInitialized) return;
+    final marker = selection.selectedMarker;
+    if (marker == null) return;
+    if (selection.selectionToken !=
+        _kubusMapController.selectionState.selectionToken) {
+      return;
+    }
+    if (_lastMarkerOverlayNudgeSelectionToken == selection.selectionToken) {
+      return;
+    }
+
+    final anchor = resolvedLayout.layout.anchor;
+    if (anchor == null) return;
+    final viewportSize = _mapViewportSize() ?? resolvedLayout.viewportSize;
+    if (!viewportSize.width.isFinite || !viewportSize.height.isFinite) return;
+
+    final media = resolvedLayout.mediaQuery;
+    final plan = planSelectedMarkerOverlayViewport(
+      viewportSize: viewportSize,
+      markerAnchor: anchor,
+      cardSize: Size(
+        resolvedLayout.layout.cardWidth,
+        resolvedLayout.layout.cardHeight,
+      ),
+      safeInsets: EdgeInsets.only(
+        top: media.padding.top,
+        bottom: MapOverlaySizing.bottomSafeInset(media),
+      ),
+      markerOffset: resolvedLayout.markerOffset,
+      topChromePx: KubusSpacing.md,
+      bottomChromePx: MapOverlaySizing.defaultVerticalPadding,
+    );
+
+    _lastMarkerOverlayNudgeSelectionToken = selection.selectionToken;
+    if (!plan.needsNudge) return;
+
+    unawaited(
+      _mapCameraController
+          .animateTo(
+        marker.position,
+        zoom: _cameraZoom,
+        rotation: _lastBearing,
+        tilt: _desiredPitch(),
+        duration: const Duration(milliseconds: 260),
+        compositionYOffsetPx: plan.compositionYOffsetPx,
+        queueIfNotReady: false,
+      )
+          .then((_) {
+        if (!mounted) return;
+        _kubusMapController.queueOverlayAnchorRefresh(force: true);
+      }),
+    );
+  }
+
   @override
   void deactivate() {
     // Detach early (top-down) so listeners are removed before the MapLibre
@@ -1745,6 +1819,22 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             },
           ),
 
+          ValueListenableBuilder<MapUiStateSnapshot>(
+            valueListenable: _mapUiStateCoordinator.state,
+            builder: (context, uiState, _) {
+              final selection = uiState.markerSelection;
+              return Consumer<ArtworkProvider>(
+                builder: (context, artworkProvider, _) {
+                  return _buildMarkerOverlayLayer(
+                    themeProvider: themeProvider,
+                    artworkProvider: artworkProvider,
+                    selection: selection,
+                  );
+                },
+              );
+            },
+          ),
+
           KubusMapTutorialOverlay(
             visible: showMapTutorial,
             steps: tutorialSteps,
@@ -1881,49 +1971,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       ),
     );
 
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        Positioned.fill(child: map),
-        ValueListenableBuilder<MapUiStateSnapshot>(
-          valueListenable: _mapUiStateCoordinator.state,
-          builder: (context, uiState, _) {
-            final selection = uiState.markerSelection;
-            return Stack(
-              fit: StackFit.expand,
-              children: [
-                ValueListenableBuilder<Offset?>(
-                  valueListenable: _selectedMarkerAnchorNotifier,
-                  builder: (context, markerAnchor, _) {
-                    if (_markerOverlayMode != _MarkerOverlayMode.anchored ||
-                        markerAnchor == null) {
-                      return const SizedBox.shrink();
-                    }
-                    return Positioned(
-                      left: markerAnchor.dx,
-                      top: markerAnchor.dy,
-                      child: CompositedTransformTarget(
-                        link: _markerOverlayLink,
-                        child: const SizedBox(width: 1, height: 1),
-                      ),
-                    );
-                  },
-                ),
-                Consumer<ArtworkProvider>(
-                  builder: (context, artworkProvider, _) {
-                    return _buildMarkerOverlayLayer(
-                      themeProvider: themeProvider,
-                      artworkProvider: artworkProvider,
-                      selection: selection,
-                    );
-                  },
-                ),
-              ],
-            );
-          },
-        ),
-      ],
-    );
+    return map;
   }
 
   Future<void> _refreshUserLocation({bool animate = false}) async {
@@ -2026,7 +2074,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           key: _tutorialFiltersButtonKey,
           child: KubusGlassIconButton(
             icon: _showFiltersPanel ? Icons.close : Icons.tune,
-            tooltip: _showFiltersPanel ? l10n.commonClose : l10n.mapFiltersTitle,
+            tooltip:
+                _showFiltersPanel ? l10n.commonClose : l10n.mapFiltersTitle,
             active: _showFiltersPanel,
             accentColor: themeProvider.accentColor,
             borderRadius: 10,
@@ -4288,7 +4337,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     ArtMarker marker,
     Artwork? artwork,
     ThemeProvider themeProvider, {
-    required double cardHeight,
     required double maxCardHeight,
     required int stackCount,
     required int stackIndex,
@@ -4350,27 +4398,24 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         maxWidth: MapOverlaySizing.maxCardWidth,
         maxHeight: maxCardHeight,
       ),
-      child: SizedBox(
-        height: cardHeight,
-        child: KubusMarkerOverlayHelpers.buildOverlayCard(
-          context: context,
-          marker: marker,
-          artwork: artwork,
-          event: linkedEvent,
-          baseColor: baseColor,
-          canPresentExhibition: canPresentExhibition,
-          distanceText: distanceText,
-          onClose: _kubusMapController.dismissSelection,
-          onOpenDetails: openDetails,
-          actions: overlayActions,
-          stackCount: stackCount,
-          stackIndex: stackIndex,
-          onNextStacked: onNextStacked,
-          onPreviousStacked: onPreviousStacked,
-          onSelectStackIndex: onSelectStackIndex,
-          onHorizontalDragEnd: onHorizontalDragEnd,
-          maxCardHeight: cardHeight,
-        ),
+      child: KubusMarkerOverlayHelpers.buildOverlayCard(
+        context: context,
+        marker: marker,
+        artwork: artwork,
+        event: linkedEvent,
+        baseColor: baseColor,
+        canPresentExhibition: canPresentExhibition,
+        distanceText: distanceText,
+        onClose: _kubusMapController.dismissSelection,
+        onOpenDetails: openDetails,
+        actions: overlayActions,
+        stackCount: stackCount,
+        stackIndex: stackIndex,
+        onNextStacked: onNextStacked,
+        onPreviousStacked: onPreviousStacked,
+        onSelectStackIndex: onSelectStackIndex,
+        onHorizontalDragEnd: onHorizontalDragEnd,
+        maxCardHeight: maxCardHeight,
       ),
     );
   }
@@ -4447,6 +4492,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         duration: Duration(milliseconds: 220),
         curve: Curves.easeOutCubic,
       ),
+      onLayoutResolved: (resolvedLayout) {
+        _handleMarkerOverlayLayoutResolved(selection, resolvedLayout);
+      },
       cardBuilder: (context, layout) {
         return _buildMarkerOverlayPositionedCard(
           selection: selection,
@@ -4480,13 +4528,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
     return SizedBox(
       width: layout.cardWidth,
-      height: layout.cardHeight,
       child: RepaintBoundary(
         child: _buildMarkerOverlayCard(
           visibleMarker,
           visibleArtwork,
           themeProvider,
-          cardHeight: layout.cardHeight,
           maxCardHeight: layout.maxCardHeight,
           stackCount: count,
           stackIndex: stackIndex,

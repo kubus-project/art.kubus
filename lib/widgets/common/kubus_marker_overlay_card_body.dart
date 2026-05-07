@@ -44,10 +44,10 @@ extension _KubusMarkerOverlayCardBodyParts on KubusMarkerOverlayCard {
       );
     }
 
-    final subjectCategory =
-        (marker.metadata?['subjectCategory'] ?? marker.metadata?['subject_category'])
-            ?.toString()
-            .trim();
+    final subjectCategory = (marker.metadata?['subjectCategory'] ??
+            marker.metadata?['subject_category'])
+        ?.toString()
+        .trim();
     if ((subjectCategory ?? '').isNotEmpty) {
       badges.add(
         _OverlayMetaBadge(
@@ -83,7 +83,7 @@ extension _KubusMarkerOverlayCardBodyParts on KubusMarkerOverlayCard {
     required String visibleDescription,
     required bool isConstrained,
   }) {
-    final maxDescriptionLines = isConstrained ? 8 : 12;
+    final maxDescriptionLines = isConstrained ? 5 : 7;
     if (visibleDescription.isEmpty) return const SizedBox.shrink();
 
     return Semantics(

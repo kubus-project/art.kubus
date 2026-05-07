@@ -86,7 +86,7 @@ void main() {
   });
 
   testWidgets(
-    'constrained marker overlay card keeps cover image and non-scrollable body',
+    'constrained marker overlay card keeps cover image filling media box',
     (tester) async {
       final marker = _marker();
       final artwork = _artwork();
@@ -128,13 +128,16 @@ void main() {
       );
 
       expect(find.byType(FittedBox), findsNothing);
-      expect(find.byType(SingleChildScrollView), findsNothing);
+      expect(find.byType(SingleChildScrollView), findsOneWidget);
       expect(find.byType(GlassSurface), findsWidgets);
 
       final imageWidget = tester.widget<KubusCachedImage>(
         find.byType(KubusCachedImage),
       );
       expect(imageWidget.fit, BoxFit.cover);
+      expect(imageWidget.width, double.infinity);
+      expect(imageWidget.height, isNotNull);
+      expect(imageWidget.height!, inInclusiveRange(132, 180));
 
       expect(find.text('More info'), findsOneWidget);
 
@@ -221,7 +224,7 @@ void main() {
   );
 
   testWidgets(
-    'long description keeps a high preview word budget in dense card mode',
+    'long description uses a compact floating-card preview budget',
     (tester) async {
       final marker = _marker();
       final artwork = _artwork();
@@ -264,7 +267,177 @@ void main() {
           .where((segment) => segment.trim().isNotEmpty)
           .length;
 
-      expect(words, greaterThanOrEqualTo(150));
+      expect(words, lessThanOrEqualTo(90));
+      expect(descriptionData.length, lessThanOrEqualTo(703));
+    },
+  );
+
+  testWidgets(
+    'short description card does not expand to maximum height',
+    (tester) async {
+      final marker = _marker();
+      final artwork = _artwork();
+
+      await tester.pumpWidget(
+        _wrap(
+          SizedBox(
+            width: 340,
+            child: KubusMarkerOverlayCard(
+              marker: marker,
+              artwork: artwork,
+              baseColor: Colors.teal,
+              displayTitle: artwork.title,
+              canPresentExhibition: false,
+              description: 'Short preview.',
+              onClose: () {},
+              onPrimaryAction: () {},
+              primaryActionIcon: Icons.arrow_forward,
+              primaryActionLabel: 'More info',
+              maxWidth: 340,
+              maxHeight: 460,
+            ),
+          ),
+        ),
+      );
+
+      final cardSize = tester.getSize(
+        find.byKey(const ValueKey<String>('marker_overlay_card_surface')),
+      );
+      expect(cardSize.height, lessThan(460));
+      expect(find.text('More info'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'long description stays bounded and keeps footer visible',
+    (tester) async {
+      final marker = _marker();
+      final artwork = _artwork();
+
+      await tester.pumpWidget(
+        _wrap(
+          SizedBox(
+            width: 340,
+            child: KubusMarkerOverlayCard(
+              marker: marker,
+              artwork: artwork,
+              baseColor: Colors.teal,
+              displayTitle: artwork.title,
+              canPresentExhibition: false,
+              description: _buildWordSequence(180),
+              onClose: () {},
+              onPrimaryAction: () {},
+              primaryActionIcon: Icons.arrow_forward,
+              primaryActionLabel: 'More info',
+              actions: const [
+                MarkerOverlayActionSpec(
+                  icon: Icons.bookmark_border,
+                  label: 'Save',
+                  isActive: false,
+                  activeColor: Colors.teal,
+                ),
+                MarkerOverlayActionSpec(
+                  icon: Icons.share_outlined,
+                  label: 'Share',
+                  isActive: false,
+                  activeColor: Colors.teal,
+                ),
+              ],
+              maxWidth: 340,
+              maxHeight: 360,
+            ),
+          ),
+        ),
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('More info'), findsOneWidget);
+      final cardRect = tester.getRect(
+        find.byKey(const ValueKey<String>('marker_overlay_card_surface')),
+      );
+      final primaryRect = tester.getRect(
+        find.byKey(const ValueKey<String>('marker_overlay_primary_action')),
+      );
+      expect(primaryRect.bottom, lessThanOrEqualTo(cardRect.bottom));
+    },
+  );
+
+  testWidgets(
+    'footer actions are compact and narrow cards use icon-only secondary actions',
+    (tester) async {
+      final marker = _marker();
+      final artwork = _artwork();
+
+      await tester.pumpWidget(
+        _wrap(
+          SizedBox(
+            width: 280,
+            child: KubusMarkerOverlayCard(
+              marker: marker,
+              artwork: artwork,
+              baseColor: Colors.teal,
+              displayTitle: artwork.title,
+              canPresentExhibition: false,
+              description: 'Short preview.',
+              onClose: () {},
+              onPrimaryAction: () {},
+              primaryActionIcon: Icons.arrow_forward,
+              primaryActionLabel: 'More info',
+              actions: const [
+                MarkerOverlayActionSpec(
+                  icon: Icons.bookmark_border,
+                  label: 'Save',
+                  isActive: false,
+                  activeColor: Colors.teal,
+                  tooltip: 'Save',
+                ),
+                MarkerOverlayActionSpec(
+                  icon: Icons.share_outlined,
+                  label: 'Share',
+                  isActive: false,
+                  activeColor: Colors.teal,
+                  tooltip: 'Share',
+                ),
+                MarkerOverlayActionSpec(
+                  icon: Icons.favorite_border,
+                  label: 'Like',
+                  isActive: false,
+                  activeColor: Colors.teal,
+                  tooltip: 'Like',
+                ),
+              ],
+              maxWidth: 280,
+              maxHeight: 380,
+            ),
+          ),
+        ),
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Save'), findsNothing);
+      expect(find.text('Share'), findsNothing);
+      expect(find.text('Like'), findsNothing);
+      expect(find.byTooltip('Save'), findsOneWidget);
+      expect(
+        tester
+            .getSize(
+              find
+                  .byKey(
+                      const ValueKey<String>('marker_overlay_secondary_action'))
+                  .first,
+            )
+            .height,
+        30,
+      );
+      expect(
+        tester
+            .getSize(
+              find.byKey(
+                  const ValueKey<String>('marker_overlay_primary_action')),
+            )
+            .height,
+        34,
+      );
     },
   );
 

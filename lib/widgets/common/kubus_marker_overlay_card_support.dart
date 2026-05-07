@@ -144,9 +144,13 @@ class _OverlayMetaBadge extends StatelessWidget {
 }
 
 class _OverlayActionButton extends StatelessWidget {
-  const _OverlayActionButton({required this.spec});
+  const _OverlayActionButton({
+    required this.spec,
+    required this.showLabel,
+  });
 
   final MarkerOverlayActionSpec spec;
+  final bool showLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -169,32 +173,35 @@ class _OverlayActionButton extends StatelessWidget {
             : scheme.surface.withValues(alpha: 0.15),
         padding: const EdgeInsets.symmetric(
           horizontal: KubusSpacing.sm - KubusSpacing.xs,
-          vertical: KubusSpacing.xxs + 1,
+          vertical: 0,
         ),
         border: Border.all(color: border),
         onTap: spec.onTap,
         child: SizedBox(
-          height: 34,
+          key: const ValueKey<String>('marker_overlay_secondary_action'),
+          height: 30,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.max,
+            mainAxisSize: showLabel ? MainAxisSize.max : MainAxisSize.min,
             children: [
               Icon(spec.icon, size: 14, color: fg),
-              const SizedBox(width: KubusSpacing.xs),
-              Flexible(
-                child: Text(
-                  spec.label,
-                  textAlign: TextAlign.center,
-                  style: KubusTypography.textTheme.bodyMedium?.copyWith(
-                    fontSize: KubusHeaderMetrics.sectionSubtitle - 3,
-                    fontWeight: FontWeight.w500,
-                    color: fg,
+              if (showLabel) ...[
+                const SizedBox(width: KubusSpacing.xs),
+                Flexible(
+                  child: Text(
+                    spec.label,
+                    textAlign: TextAlign.center,
+                    style: KubusTypography.textTheme.bodyMedium?.copyWith(
+                      fontSize: KubusHeaderMetrics.sectionSubtitle - 3,
+                      fontWeight: FontWeight.w500,
+                      color: fg,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                    softWrap: false,
                   ),
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
-                  softWrap: false,
                 ),
-              ),
+              ],
             ],
           ),
         ),
@@ -349,7 +356,7 @@ class _OverlayPrimaryButton extends StatelessWidget {
         tintBase: accent,
         padding: const EdgeInsets.symmetric(
           horizontal: KubusSpacing.sm + KubusSpacing.xxs,
-          vertical: KubusSpacing.xs,
+          vertical: 0,
         ),
         border: Border.all(color: accent.withValues(alpha: 0.45)),
         boxShadow: [
@@ -361,7 +368,8 @@ class _OverlayPrimaryButton extends StatelessWidget {
         ],
         onTap: onPressed,
         child: SizedBox(
-          height: 38,
+          key: const ValueKey<String>('marker_overlay_primary_action'),
+          height: 34,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [

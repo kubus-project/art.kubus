@@ -212,9 +212,8 @@ class KubusMapMarkerCreationHelpers {
     required MarkerSubjectType? subjectType,
     required Uint8List? coverImageBytes,
   }) {
-    final isStreetArtMarker =
-        subjectType == MarkerSubjectType.streetArt ||
-            markerType == ArtMarkerType.streetArt;
+    final isStreetArtMarker = subjectType == MarkerSubjectType.streetArt ||
+        markerType == ArtMarkerType.streetArt;
     return isStreetArtMarker &&
         coverImageBytes != null &&
         coverImageBytes.isNotEmpty;
@@ -587,36 +586,31 @@ class KubusMarkerOverlayHelpers {
       event: event,
     );
 
-    final normalizedDescription = presentation.description
-        .replaceAll(RegExp(r'\s+'), ' ')
-        .trim();
+    final normalizedDescription =
+        presentation.description.replaceAll(RegExp(r'\s+'), ' ').trim();
     final words = normalizedDescription.isEmpty
         ? const <String>[]
         : normalizedDescription.split(' ');
-    final wordCapped = words.length > 220
-        ? words.take(220).join(' ')
-        : normalizedDescription;
-    final cappedChars = wordCapped.length.clamp(0, 1800);
+    final wordCapped =
+        words.length > 90 ? words.take(90).join(' ') : normalizedDescription;
+    final cappedChars = wordCapped.length.clamp(0, 700);
     final hasDescription = cappedChars > 0;
-    final hasLinkedContext =
-        presentation.linkedSubject.kind !=
+    final hasLinkedContext = presentation.linkedSubject.kind !=
             MapMarkerOverlayLinkedSubjectKind.none ||
-      (presentation.linkedSubject.title ?? '').trim().isNotEmpty ||
-      (presentation.linkedSubject.subtitle ?? '').trim().isNotEmpty;
+        (presentation.linkedSubject.title ?? '').trim().isNotEmpty ||
+        (presentation.linkedSubject.subtitle ?? '').trim().isNotEmpty;
 
-    var estimated = isCompactWidth ? 364.0 : 340.0;
+    var estimated = isCompactWidth ? 320.0 : 336.0;
     if (hasDescription) {
       final approxCharsPerLine = isCompactWidth ? 34.0 : 42.0;
-      final approxLines = math.max(1, (cappedChars / approxCharsPerLine).ceil());
-      final cappedLines = approxLines.clamp(3, isCompactWidth ? 14 : 11);
+      final approxLines =
+          math.max(1, (cappedChars / approxCharsPerLine).ceil());
+      final cappedLines = approxLines.clamp(1, isCompactWidth ? 5 : 7);
       final lineHeightPx = isCompactWidth ? 17.0 : 16.0;
       final descriptionHeight = cappedLines * lineHeightPx;
-      estimated += math.min(
-        isCompactWidth ? 208.0 : 176.0,
-        descriptionHeight,
-      );
+      estimated += descriptionHeight;
     } else {
-      estimated -= 24.0;
+      estimated -= 18.0;
     }
 
     if (hasLinkedContext) {

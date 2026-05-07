@@ -20,6 +20,7 @@ import '../features/map/shared/map_artwork_filtering.dart';
 import '../features/map/shared/map_marker_overlay_actions.dart';
 import '../features/map/shared/map_marker_overlay_presentation.dart';
 import '../features/map/shared/map_marker_selection_resolver.dart';
+import '../features/map/shared/map_marker_overlay_viewport_planner.dart';
 import '../features/map/shared/map_overlay_sizing.dart';
 import '../features/map/shared/map_search_filter_assembly.dart';
 import '../providers/artwork_provider.dart';
@@ -546,7 +547,6 @@ class _MapScreenState extends State<MapScreen>
             _renderCoordinator.requestStyleUpdate(force: true);
             unawaited(_playMarkerSelectionFeedback(marker));
             _syncMarkerStackPager(state.selectionToken);
-            _requestFocusSelectedMarker(state.selectionToken);
             if (!marker.isExhibitionMarker) {
               _ensureLinkedArtworkLoaded(marker);
             }
@@ -1189,7 +1189,8 @@ class _MapScreenState extends State<MapScreen>
     // Detach the controller early (deactivate runs top-down, before children
     // dispose). This removes feature tap/hover listeners before the MapLibre
     // plugin disposes the controller, preventing "used after being disposed".
-    _deactivateDetachedMapController = KubusMapLifecycleHelpers.detachMapController(
+    _deactivateDetachedMapController =
+        KubusMapLifecycleHelpers.detachMapController(
       controller: _mapController,
       kubusMapController: _kubusMapController,
       setMapController: (controller) => _mapController = controller,
@@ -1589,7 +1590,8 @@ class _MapScreenState extends State<MapScreen>
           preferredPosition: targetPosition,
         );
         if (refreshed != null) {
-          await _animateMapTo(refreshed.position, zoom: math.max(_lastZoom, 15));
+          await _animateMapTo(refreshed.position,
+              zoom: math.max(_lastZoom, 15));
           _showArtMarkerDialog(refreshed);
           return true;
         }
@@ -2153,55 +2155,6 @@ class _MapScreenState extends State<MapScreen>
       } catch (_) {
         // Best-effort; controller may not be attached during transitions.
       }
-    });
-  }
-
-  void _requestFocusSelectedMarker(int selectionToken) {
-    // Never call camera movement from build(). Instead, schedule a controlled
-    // focus effect that runs at most once per selection token.
-    if (_kubusMapController.selectedMarkerData == null) return;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      if (selectionToken != _kubusMapController.selectionState.selectionToken) {
-        return;
-      }
-      if (_kubusMapController.selectedMarkerData == null) return;
-      if (_lastFocusedSelectionToken == selectionToken) return;
-      if (_styleInitializationInProgress || !_styleInitialized) return;
-
-      final marker = _kubusMapController.selectedMarkerData!;
-
-      // Compute a deterministic vertical offset based on the last computed
-      // overlay height. This avoids the visible two-step recenter.
-      final media = MediaQuery.of(context);
-      final size = _mapViewportSize() ?? media.size;
-      final overlayHeight = _lastComputedMarkerOverlayHeightPx;
-      final topSafe = media.padding.top;
-      final double minMarkerY =
-          (topSafe + overlayHeight + 24).clamp(0.0, size.height).toDouble();
-
-      // Keep anchored behavior, but compose the camera so the marker sits
-      // closer to center-height while preserving room for the larger card.
-      final double desiredY = math
-          .max(size.height * 0.74, minMarkerY)
-          .clamp(0.0, size.height)
-          .toDouble();
-      final double dy = desiredY - (size.height / 2);
-
-      // If the required offset is negligible, just center at the target zoom.
-      final Offset offset = dy.abs() < 1.0 ? Offset.zero : Offset(0, -dy);
-
-      _lastFocusedSelectionToken = selectionToken;
-      final targetZoom = math.max(_lastZoom, 15.5);
-      unawaited(
-        _animateMapTo(
-          marker.position,
-          zoom: targetZoom,
-          rotation: _lastBearing,
-          offset: offset,
-          duration: const Duration(milliseconds: 420),
-        ),
-      );
     });
   }
 
@@ -3042,6 +2995,63 @@ class _MapScreenState extends State<MapScreen>
       return renderObject.size;
     }
     return null;
+  }
+
+  void _handleMarkerOverlayLayoutResolved(
+    MapMarkerSelectionState selection,
+    overlay_wrapper.KubusMarkerOverlayResolvedLayout resolvedLayout,
+  ) {
+    if (!mounted) return;
+    if (_styleInitializationInProgress || !_styleInitialized) return;
+    final marker = selection.selectedMarker;
+    if (marker == null) return;
+    if (selection.selectionToken !=
+        _kubusMapController.selectionState.selectionToken) {
+      return;
+    }
+    if (_lastFocusedSelectionToken == selection.selectionToken) return;
+
+    final anchor = resolvedLayout.layout.anchor;
+    if (anchor == null) return;
+    final viewportSize = _mapViewportSize() ?? resolvedLayout.viewportSize;
+    if (!viewportSize.width.isFinite || !viewportSize.height.isFinite) return;
+
+    final media = resolvedLayout.mediaQuery;
+    final plan = planSelectedMarkerOverlayViewport(
+      viewportSize: viewportSize,
+      markerAnchor: anchor,
+      cardSize: Size(
+        resolvedLayout.layout.cardWidth,
+        resolvedLayout.layout.cardHeight,
+      ),
+      safeInsets: EdgeInsets.only(
+        top: media.padding.top,
+        bottom: MapOverlaySizing.bottomSafeInset(media),
+      ),
+      markerOffset: resolvedLayout.markerOffset,
+      topChromePx: _markerOverlayTopPadding,
+      bottomChromePx: MapOverlaySizing.defaultVerticalPadding,
+    );
+
+    _lastFocusedSelectionToken = selection.selectionToken;
+    if (!plan.needsNudge) return;
+
+    unawaited(
+      _mapCameraController
+          .animateTo(
+        marker.position,
+        zoom: _lastZoom,
+        rotation: _lastBearing,
+        tilt: _desiredPitch(),
+        duration: const Duration(milliseconds: 260),
+        compositionYOffsetPx: plan.compositionYOffsetPx,
+        queueIfNotReady: false,
+      )
+          .then((_) {
+        if (!mounted) return;
+        _kubusMapController.queueOverlayAnchorRefresh(force: true);
+      }),
+    );
   }
 
   Offset _normalizeMapScreenOffset(
@@ -3913,6 +3923,9 @@ class _MapScreenState extends State<MapScreen>
         duration: Duration(milliseconds: 220),
         curve: Curves.easeOutCubic,
       ),
+      onLayoutResolved: (resolvedLayout) {
+        _handleMarkerOverlayLayoutResolved(selection, resolvedLayout);
+      },
       cardBuilder: (context, layout) {
         return _buildAnchoredMarkerOverlay(themeProvider, selection, layout);
       },
@@ -4105,13 +4118,10 @@ class _MapScreenState extends State<MapScreen>
       constraints: BoxConstraints(
         maxHeight: layout.maxCardHeight,
       ),
-      child: SizedBox(
-        height: layout.cardHeight,
-        child: RepaintBoundary(
-          child: buildCardForMarker(
-            visibleMarker,
-            maxCardHeight: layout.cardHeight,
-          ),
+      child: RepaintBoundary(
+        child: buildCardForMarker(
+          visibleMarker,
+          maxCardHeight: layout.maxCardHeight,
         ),
       ),
     );
@@ -4258,7 +4268,8 @@ class _MapScreenState extends State<MapScreen>
     ArtMarker marker,
     String? linkedInstitutionId,
   ) async {
-    final institutionId = (linkedInstitutionId ?? marker.subjectId ?? '').trim();
+    final institutionId =
+        (linkedInstitutionId ?? marker.subjectId ?? '').trim();
     final profileTargetId = InstitutionNavigation.resolveProfileTargetId(
       institutionId: institutionId,
       data: marker.metadata,

@@ -11,9 +11,9 @@ class MapOverlaySizing {
   static const double minCardWidth = 272.0;
   static const double maxCardWidth = 336.0;
   static const double preferredCardWidth = 320.0;
-  static const double minCardHeight = 320.0;
+  static const double minCardHeight = 280.0;
   static const double maxCardHeight = 500.0;
-  static const double fixedCardHeight = 450.0;
+  static const double fixedCardHeight = 420.0;
 
   static const double defaultHorizontalPadding = KubusSpacing.md;
   static const double defaultVerticalPadding =
@@ -57,8 +57,7 @@ class MapOverlaySizing {
     required double maxCardHeight,
     required bool isCompactWidth,
   }) {
-    final minExpandedHeight = isCompactWidth ? 360.0 : 320.0;
-    final raw = math.max(estimatedHeight, minExpandedHeight);
+    final raw = math.max(estimatedHeight, minCardHeight);
     return raw.clamp(minCardHeight, maxCardHeight).toDouble();
   }
 

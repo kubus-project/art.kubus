@@ -100,7 +100,8 @@ class KubusMapMarkerOverlayLayer extends StatelessWidget {
                 child: SlideTransition(
                   position: slide,
                   child: ScaleTransition(
-                    scale: Tween<double>(begin: 0.985, end: 1.0).animate(curved),
+                    scale:
+                        Tween<double>(begin: 0.985, end: 1.0).animate(curved),
                     child: child,
                   ),
                 ),
@@ -163,6 +164,7 @@ class KubusMapMarkerOverlayShell {
     bool interceptPlatformViews = true,
     bool enabled = true,
     bool centerWhenAnchorMissing = true,
+    KubusMarkerOverlayLayoutCallback? onLayoutResolved,
   }) {
     return KubusMapMarkerOverlayLayer(
       content: isVisible
@@ -182,6 +184,7 @@ class KubusMapMarkerOverlayShell {
               interceptPlatformViews: interceptPlatformViews,
               enabled: enabled,
               centerWhenAnchorMissing: centerWhenAnchorMissing,
+              onLayoutResolved: onLayoutResolved,
               cardBuilder: cardBuilder,
             )
           : null,

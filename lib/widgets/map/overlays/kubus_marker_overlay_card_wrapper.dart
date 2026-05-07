@@ -61,6 +61,35 @@ typedef KubusMarkerOverlayCardBuilder = Widget Function(
   KubusMarkerOverlayLayoutState layout,
 );
 
+@immutable
+class KubusMarkerOverlayResolvedLayout {
+  const KubusMarkerOverlayResolvedLayout({
+    required this.layout,
+    required this.viewportSize,
+    required this.mediaQuery,
+    required this.horizontalPadding,
+    required this.topPadding,
+    required this.bottomPadding,
+    required this.markerOffset,
+    required this.cardLeft,
+    required this.cardTop,
+  });
+
+  final KubusMarkerOverlayLayoutState layout;
+  final Size viewportSize;
+  final MediaQueryData mediaQuery;
+  final double horizontalPadding;
+  final double topPadding;
+  final double bottomPadding;
+  final double markerOffset;
+  final double cardLeft;
+  final double cardTop;
+}
+
+typedef KubusMarkerOverlayLayoutCallback = void Function(
+  KubusMarkerOverlayResolvedLayout resolvedLayout,
+);
+
 /// Shared anchored/centered marker overlay placement wrapper.
 ///
 /// This centralizes width/height clamping, safe-area handling, pointer
@@ -84,6 +113,7 @@ class KubusMarkerOverlayCardWrapper extends StatelessWidget {
     this.interceptPlatformViews = true,
     this.enabled = true,
     this.centerWhenAnchorMissing = true,
+    this.onLayoutResolved,
   });
 
   final ValueListenable<Offset?> anchorListenable;
@@ -105,6 +135,7 @@ class KubusMarkerOverlayCardWrapper extends StatelessWidget {
   final bool interceptPlatformViews;
   final bool enabled;
   final bool centerWhenAnchorMissing;
+  final KubusMarkerOverlayLayoutCallback? onLayoutResolved;
 
   static double _defaultWidthResolver(
     BoxConstraints constraints,
@@ -180,6 +211,19 @@ class KubusMarkerOverlayCardWrapper extends StatelessWidget {
                 (anchor == null && centerWhenAnchorMissing);
 
             if (shouldCenter) {
+              _scheduleLayoutCallback(
+                KubusMarkerOverlayResolvedLayout(
+                  layout: layout,
+                  viewportSize: constraints.biggest,
+                  mediaQuery: media,
+                  horizontalPadding: horizontalPadding,
+                  topPadding: topPadding,
+                  bottomPadding: bottomPadding,
+                  markerOffset: markerOffset,
+                  cardLeft: (constraints.maxWidth - cardWidth) / 2,
+                  cardTop: (constraints.maxHeight - cardHeight) / 2,
+                ),
+              );
               return KeyedSubtree(
                 key: const ValueKey<String>('kubus_marker_overlay_centered'),
                 child: Center(
@@ -222,6 +266,20 @@ class KubusMarkerOverlayCardWrapper extends StatelessWidget {
                 )
                 .toDouble();
 
+            _scheduleLayoutCallback(
+              KubusMarkerOverlayResolvedLayout(
+                layout: layout,
+                viewportSize: constraints.biggest,
+                mediaQuery: media,
+                horizontalPadding: horizontalPadding,
+                topPadding: topPadding,
+                bottomPadding: bottomPadding,
+                markerOffset: markerOffset,
+                cardLeft: left,
+                cardTop: top,
+              ),
+            );
+
             return KeyedSubtree(
               key: const ValueKey<String>('kubus_marker_overlay_anchored'),
               child: Stack(
@@ -245,6 +303,14 @@ class KubusMarkerOverlayCardWrapper extends StatelessWidget {
         );
       },
     );
+  }
+
+  void _scheduleLayoutCallback(KubusMarkerOverlayResolvedLayout layout) {
+    final callback = onLayoutResolved;
+    if (callback == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      callback(layout);
+    });
   }
 
   Widget _buildWrappedCard(

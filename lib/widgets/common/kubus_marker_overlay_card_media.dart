@@ -11,51 +11,41 @@ extension _KubusMarkerOverlayCardMediaParts on KubusMarkerOverlayCard {
     required int cacheHeight,
     required double imageHeight,
   }) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        const coverAspectRatio = 16 / 9;
-      final minImageHeight = math.max(96.0, imageHeight * 0.72);
-        final widthDerivedHeight = constraints.maxWidth.isFinite
-            ? constraints.maxWidth / coverAspectRatio
-            : imageHeight;
-      final maxAllowedHeight = math.max(minImageHeight, imageHeight);
-        final resolvedHeight = widthDerivedHeight
-        .clamp(minImageHeight, maxAllowedHeight)
-            .toDouble();
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(KubusRadius.md),
-          child: SizedBox(
-            height: resolvedHeight,
-            width: double.infinity,
-            child: imageUrl != null
-                ? KubusCachedImage(
-                    imageUrl: imageUrl,
-                    fit: BoxFit.cover,
-                    filterQuality: FilterQuality.low,
-                    cacheWidth: cacheWidth,
-                    cacheHeight: cacheHeight,
-                    maxDisplayWidth: cacheWidth,
-                    cacheVersion: imageVersion,
-                    placeholderBuilder: (context) => Container(
-                      color: baseColor.withValues(alpha: 0.12),
-                      child: const Center(
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                    ),
-                    errorBuilder: (_, __, ___) => _imageFallback(
-                      baseColor,
-                      scheme,
-                      marker,
-                    ),
-                  )
-                : _imageFallback(
-                    baseColor,
-                    scheme,
-                    marker,
+    final resolvedHeight = imageHeight.clamp(132.0, 180.0).toDouble();
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(KubusRadius.md),
+      child: SizedBox(
+        height: resolvedHeight,
+        width: double.infinity,
+        child: imageUrl != null
+            ? KubusCachedImage(
+                imageUrl: imageUrl,
+                width: double.infinity,
+                height: resolvedHeight,
+                fit: BoxFit.cover,
+                filterQuality: FilterQuality.low,
+                cacheWidth: cacheWidth,
+                cacheHeight: cacheHeight,
+                maxDisplayWidth: cacheWidth,
+                cacheVersion: imageVersion,
+                placeholderBuilder: (context) => Container(
+                  color: baseColor.withValues(alpha: 0.12),
+                  child: const Center(
+                    child: CircularProgressIndicator(strokeWidth: 2),
                   ),
-          ),
-        );
-      },
+                ),
+                errorBuilder: (_, __, ___) => _imageFallback(
+                  baseColor,
+                  scheme,
+                  marker,
+                ),
+              )
+            : _imageFallback(
+                baseColor,
+                scheme,
+                marker,
+              ),
+      ),
     );
   }
 
