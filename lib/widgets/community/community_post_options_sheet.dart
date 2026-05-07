@@ -24,6 +24,7 @@ Future<CommunityPostOptionsAction?> showCommunityPostOptionsSheet({
 }) async {
   final theme = Theme.of(context);
   final l10n = AppLocalizations.of(context);
+  bool selectionMade = false;
 
   Widget optionTile({
     required BuildContext sheetContext,
@@ -45,7 +46,11 @@ Future<CommunityPostOptionsAction?> showCommunityPostOptionsSheet({
           fontWeight: FontWeight.w500,
         ),
       ),
-      onTap: () => Navigator.pop(sheetContext, action),
+      onTap: () {
+        if (selectionMade) return;
+        selectionMade = true;
+        Navigator.pop(sheetContext, action);
+      },
     );
   }
 

@@ -206,6 +206,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   // Interactive onboarding tutorial (coach marks)
   final GlobalKey _tutorialMapKey = GlobalKey();
   final GlobalKey _tutorialSearchKey = GlobalKey();
+  final GlobalKey _tutorialSearchPanelKey = GlobalKey();
   final GlobalKey _tutorialFilterChipsKey = GlobalKey();
   final GlobalKey _tutorialFiltersButtonKey = GlobalKey();
   final GlobalKey _tutorialNearbyButtonKey = GlobalKey();
@@ -748,9 +749,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       MapTutorialStepBinding(
         id: 'filters',
         isAnchorAvailable: () =>
-            _tutorialFiltersButtonKey.currentContext != null,
+            _tutorialSearchPanelKey.currentContext != null,
         step: TutorialStepDefinition(
-          targetKey: _tutorialFiltersButtonKey,
+          targetKey: _tutorialSearchPanelKey,
           icon: Icons.tune,
           title: l10n.mapTutorialStepFiltersTitle,
           body: l10n.mapTutorialStepFiltersDesktopBody,
@@ -1986,67 +1987,70 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     required bool nearbyPanelOpen,
   }) {
     final l10n = AppLocalizations.of(context)!;
-    return KubusMapSearchOverlayAssembly(
-      controller: _mapSearchController,
-      layout: KubusSearchOverlayLayout.sidePanel,
-      sidePanelSurfaceMode: kIsWeb
-          ? KubusSearchSidePanelSurfaceMode.hostless
-          : KubusSearchSidePanelSurfaceMode.glassHost,
-      sidePanelAnimated: true,
-      positionAnimationDuration: animationTheme.medium,
-      positionAnimationCurve: animationTheme.defaultCurve,
-      panelInsets: const EdgeInsets.fromLTRB(
-        KubusSpacing.lg,
-        KubusSpacing.sm + KubusSpacing.xs,
-        KubusSpacing.lg,
-        0,
-      ),
-      rightInset: nearbyPanelOpen ? 360 : 0,
-      leading: Row(
-        children: [
-          const AppLogo(
-            width: KubusSpacing.xl + KubusSpacing.xs,
-            height: KubusSpacing.xl + KubusSpacing.xs,
-          ),
-          const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
-          Text(
-            l10n.desktopMapTitleDiscover,
-            style: KubusTextStyles.screenTitle.copyWith(
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-          ),
-        ],
-      ),
-      searchField: _buildDesktopSearchField(l10n),
-      filterChips: _buildDesktopFilterChipRow(themeProvider),
-      mapToggle: KeyedSubtree(
-        key: _tutorialFiltersButtonKey,
-        child: KubusGlassIconButton(
-          icon: _showFiltersPanel ? Icons.close : Icons.tune,
-          tooltip: _showFiltersPanel ? l10n.commonClose : l10n.mapFiltersTitle,
-          active: _showFiltersPanel,
-          accentColor: themeProvider.accentColor,
-          borderRadius: 10,
-          enableBlur: kubusMapBlurEnabled(context),
-          onPressed: () {
-            setState(() {
-              _showFiltersPanel = !_showFiltersPanel;
-              _selectedArtwork = null;
-              _selectedExhibition = null;
-              _selectedEvent = null;
-            });
-          },
-          tooltipPreferBelow: true,
-          tooltipVerticalOffset: 18,
-          tooltipMargin: const EdgeInsets.symmetric(horizontal: 24),
+    return KeyedSubtree(
+      key: _tutorialSearchPanelKey,
+      child: KubusMapSearchOverlayAssembly(
+        controller: _mapSearchController,
+        layout: KubusSearchOverlayLayout.sidePanel,
+        sidePanelSurfaceMode: kIsWeb
+            ? KubusSearchSidePanelSurfaceMode.hostless
+            : KubusSearchSidePanelSurfaceMode.glassHost,
+        sidePanelAnimated: true,
+        positionAnimationDuration: animationTheme.medium,
+        positionAnimationCurve: animationTheme.defaultCurve,
+        panelInsets: const EdgeInsets.fromLTRB(
+          KubusSpacing.lg,
+          KubusSpacing.sm + KubusSpacing.xs,
+          KubusSpacing.lg,
+          0,
         ),
+        rightInset: nearbyPanelOpen ? 360 : 0,
+        leading: Row(
+          children: [
+            const AppLogo(
+              width: KubusSpacing.xl + KubusSpacing.xs,
+              height: KubusSpacing.xl + KubusSpacing.xs,
+            ),
+            const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
+            Text(
+              l10n.desktopMapTitleDiscover,
+              style: KubusTextStyles.screenTitle.copyWith(
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
+          ],
+        ),
+        searchField: _buildDesktopSearchField(l10n),
+        filterChips: _buildDesktopFilterChipRow(themeProvider),
+        mapToggle: KeyedSubtree(
+          key: _tutorialFiltersButtonKey,
+          child: KubusGlassIconButton(
+            icon: _showFiltersPanel ? Icons.close : Icons.tune,
+            tooltip: _showFiltersPanel ? l10n.commonClose : l10n.mapFiltersTitle,
+            active: _showFiltersPanel,
+            accentColor: themeProvider.accentColor,
+            borderRadius: 10,
+            enableBlur: kubusMapBlurEnabled(context),
+            onPressed: () {
+              setState(() {
+                _showFiltersPanel = !_showFiltersPanel;
+                _selectedArtwork = null;
+                _selectedExhibition = null;
+                _selectedEvent = null;
+              });
+            },
+            tooltipPreferBelow: true,
+            tooltipVerticalOffset: 18,
+            tooltipMargin: const EdgeInsets.symmetric(horizontal: 24),
+          ),
+        ),
+        accentColor: themeProvider.accentColor,
+        minCharsHint: l10n.mapSearchMinCharsHint,
+        noResultsText: l10n.commonNoResultsFound,
+        onResultTap: (result) {
+          unawaited(_handleSearchResultTap(result));
+        },
       ),
-      accentColor: themeProvider.accentColor,
-      minCharsHint: l10n.mapSearchMinCharsHint,
-      noResultsText: l10n.commonNoResultsFound,
-      onResultTap: (result) {
-        unawaited(_handleSearchResultTap(result));
-      },
     );
   }
 

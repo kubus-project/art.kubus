@@ -34,6 +34,7 @@ Future<void> showSubjectOptionsSheet({
 
   final theme = Theme.of(context);
   final scheme = theme.colorScheme;
+  bool selectionMade = false;
 
   Widget optionTile(
     BuildContext sheetContext,
@@ -60,7 +61,13 @@ Future<void> showSubjectOptionsSheet({
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(KubusRadius.md),
       ),
-      onTap: enabled ? () => Navigator.of(sheetContext).pop(action) : null,
+      onTap: enabled
+          ? () {
+              if (selectionMade) return;
+              selectionMade = true;
+              Navigator.of(sheetContext).pop(action);
+            }
+          : null,
     );
   }
 

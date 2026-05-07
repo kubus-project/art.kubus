@@ -86,7 +86,8 @@ class _ArtworkCollaboratorsExpandableCardState
           walletProvider.currentWalletAddress ??
           '',
     );
-    final ownerWallet = WalletUtils.canonical(widget.artwork.walletAddress ?? '');
+    final ownerWallet =
+        WalletUtils.canonical(widget.artwork.walletAddress ?? '');
     final isOwner = viewerWallet.isNotEmpty && ownerWallet == viewerWallet;
 
     return DetailCard(
@@ -123,8 +124,9 @@ class _ArtworkCollaboratorsExpandableCardState
           ),
           AnimatedCrossFade(
             duration: const Duration(milliseconds: 220),
-            crossFadeState:
-                _expanded ? CrossFadeState.showFirst : CrossFadeState.showSecond,
+            crossFadeState: _expanded
+                ? CrossFadeState.showFirst
+                : CrossFadeState.showSecond,
             firstChild: Padding(
               padding: const EdgeInsets.only(top: DetailSpacing.sm),
               child: CollaborationPanel(
@@ -180,6 +182,8 @@ class _ArtworkCommentsExpandableCardState
   String? _replyToAuthorName;
   String? _loadedArtworkId;
   late bool _expanded;
+  final Set<String> _deleteDialogOpenCommentIds = <String>{};
+  final Set<String> _deleteInFlightCommentIds = <String>{};
 
   @override
   void initState() {
@@ -224,7 +228,8 @@ class _ArtworkCommentsExpandableCardState
     if (artworkId.isEmpty) return;
     if (!force && _loadedArtworkId == artworkId) return;
     _loadedArtworkId = artworkId;
-    unawaited(context.read<ArtworkProvider>().loadComments(artworkId, force: force));
+    unawaited(
+        context.read<ArtworkProvider>().loadComments(artworkId, force: force));
   }
 
   void _openAndScrollToTop() {
@@ -558,8 +563,8 @@ class _ArtworkCommentsExpandableCardState
                   controller: controller,
                   maxLines: null,
                   autofocus: true,
-                  decoration:
-                      InputDecoration(hintText: l10n.postDetailWriteCommentHint),
+                  decoration: InputDecoration(
+                      hintText: l10n.postDetailWriteCommentHint),
                 ),
                 actions: [
                   TextButton(
@@ -584,7 +589,8 @@ class _ArtworkCommentsExpandableCardState
                               if (!dialogContext.mounted) return;
                               Navigator.of(dialogContext).pop();
                               messenger.showKubusSnackBar(
-                                SnackBar(content: Text(l10n.commentUpdatedToast)),
+                                SnackBar(
+                                    content: Text(l10n.commentUpdatedToast)),
                               );
                             } catch (_) {
                               if (!mounted) return;
@@ -612,7 +618,13 @@ class _ArtworkCommentsExpandableCardState
     }
 
     Future<void> promptDelete() async {
+      if (_deleteDialogOpenCommentIds.contains(comment.id) ||
+          _deleteInFlightCommentIds.contains(comment.id)) {
+        return;
+      }
+
       final messenger = ScaffoldMessenger.of(context);
+      _deleteDialogOpenCommentIds.add(comment.id);
       final confirmed = await showKubusDialog<bool>(
         context: context,
         builder: (dialogContext) {
@@ -635,9 +647,13 @@ class _ArtworkCommentsExpandableCardState
             ],
           );
         },
-      );
+      ).whenComplete(() {
+        _deleteDialogOpenCommentIds.remove(comment.id);
+      });
       if (confirmed != true) return;
+      if (_deleteInFlightCommentIds.contains(comment.id)) return;
 
+      _deleteInFlightCommentIds.add(comment.id);
       try {
         await provider.deleteArtworkComment(
           artworkId: widget.artwork.id,
@@ -655,6 +671,8 @@ class _ArtworkCommentsExpandableCardState
             backgroundColor: scheme.errorContainer,
           ),
         );
+      } finally {
+        _deleteInFlightCommentIds.remove(comment.id);
       }
     }
 
@@ -749,8 +767,8 @@ class _ArtworkCommentsExpandableCardState
                   Row(
                     children: [
                       IconButton(
-                        onPressed: () =>
-                            provider.toggleCommentLike(widget.artwork.id, comment.id),
+                        onPressed: () => provider.toggleCommentLike(
+                            widget.artwork.id, comment.id),
                         icon: Icon(
                           comment.isLikedByCurrentUser
                               ? Icons.favorite
@@ -780,9 +798,11 @@ class _ArtworkCommentsExpandableCardState
                           _commentController.text = '@${comment.userName} ';
                           _commentController.selection =
                               TextSelection.fromPosition(
-                            TextPosition(offset: _commentController.text.length),
+                            TextPosition(
+                                offset: _commentController.text.length),
                           );
-                          FocusScope.of(context).requestFocus(_commentFocusNode);
+                          FocusScope.of(context)
+                              .requestFocus(_commentFocusNode);
                         },
                         child: Text(
                           l10n.commonReply,
@@ -944,8 +964,8 @@ class _ArtworkCommentsExpandableCardState
       });
       messenger.showKubusSnackBar(
         SnackBar(
-          content:
-              Text(l10n.artworkCommentAddedToast, style: KubusTypography.inter()),
+          content: Text(l10n.artworkCommentAddedToast,
+              style: KubusTypography.inter()),
           backgroundColor: Theme.of(context).colorScheme.primary,
           duration: const Duration(seconds: 2),
         ),
@@ -992,7 +1012,9 @@ class _ArtworkCommentsExpandableCardState
                       arguments: widget.signInArguments ??
                           {
                             'redirectRoute': '/artwork',
-                            'redirectArguments': {'artworkId': widget.artwork.id},
+                            'redirectArguments': {
+                              'artworkId': widget.artwork.id
+                            },
                           },
                     );
                   },
@@ -1004,8 +1026,8 @@ class _ArtworkCommentsExpandableCardState
       if (!mounted) return;
       messenger.showKubusSnackBar(
         SnackBar(
-          content:
-              Text(l10n.commonSomethingWentWrong, style: KubusTypography.inter()),
+          content: Text(l10n.commonSomethingWentWrong,
+              style: KubusTypography.inter()),
         ),
       );
     }

@@ -79,6 +79,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   String? _replyToAuthorName;
   final FocusNode _commentFocusNode = FocusNode();
   bool _didRunInitialAction = false;
+  final Set<String> _deleteDialogOpenCommentIds = <String>{};
+  final Set<String> _deleteInFlightCommentIds = <String>{};
 
   String? _currentWalletAddress() {
     final override = widget.currentWalletAddressOverride;
@@ -1908,7 +1910,13 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                             }
 
                             Future<void> promptDelete(Comment c) async {
+                              if (_deleteDialogOpenCommentIds.contains(c.id) ||
+                                  _deleteInFlightCommentIds.contains(c.id)) {
+                                return;
+                              }
+
                               final messenger = ScaffoldMessenger.of(context);
+                              _deleteDialogOpenCommentIds.add(c.id);
                               final confirmed = await showKubusDialog<bool>(
                                 context: context,
                                 builder: (dialogContext) {
@@ -1936,8 +1944,14 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                     ],
                                   );
                                 },
-                              );
+                              ).whenComplete(() {
+                                _deleteDialogOpenCommentIds.remove(c.id);
+                              });
                               if (confirmed != true) return;
+                              if (_deleteInFlightCommentIds.contains(c.id)) {
+                                return;
+                              }
+                              _deleteInFlightCommentIds.add(c.id);
                               try {
                                 await commentsProvider.deleteComment(
                                     postId: post.id, commentId: c.id);
@@ -1953,6 +1967,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                     backgroundColor: scheme.errorContainer,
                                   ),
                                 );
+                              } finally {
+                                _deleteInFlightCommentIds.remove(c.id);
                               }
                             }
 

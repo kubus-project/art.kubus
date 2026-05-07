@@ -76,6 +76,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
   String? _conversationAvatar;
   String? _conversationTitleOverride;
   List<String> _conversationMembers = [];
+  final Set<String> _deleteDialogOpenConversationIds = <String>{};
+  final Set<String> _deleteInFlightConversationIds = <String>{};
   String _normWallet(String? w) => WalletUtils.normalize(w);
   // Removed UserService cache listener usage; we now fetch user profiles directly.
 
@@ -1560,6 +1562,13 @@ class _ConversationScreenState extends State<ConversationScreen> {
               break;
             case 'delete_conversation':
               try {
+                final conversationId = widget.conversation.id;
+                if (_deleteDialogOpenConversationIds.contains(conversationId) ||
+                    _deleteInFlightConversationIds.contains(conversationId)) {
+                  break;
+                }
+
+                _deleteDialogOpenConversationIds.add(conversationId);
                 final confirmed = await showKubusDialog<bool>(
                   context: context,
                   builder: (dialogCtx) => KubusAlertDialog(
@@ -1580,11 +1589,17 @@ class _ConversationScreenState extends State<ConversationScreen> {
                       ),
                     ],
                   ),
-                );
+                ).whenComplete(() {
+                  _deleteDialogOpenConversationIds.remove(conversationId);
+                });
                 if (!mounted) return;
                 if (confirmed != true) break;
+                if (_deleteInFlightConversationIds.contains(conversationId)) {
+                  break;
+                }
 
-                await _chatProvider.deleteConversation(widget.conversation.id);
+                _deleteInFlightConversationIds.add(conversationId);
+                await _chatProvider.deleteConversation(conversationId);
                 if (!mounted) return;
                 scaffold.showKubusSnackBar(SnackBar(
                     content:
@@ -1599,6 +1614,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
                 if (!mounted) return;
                 scaffold.showKubusSnackBar(SnackBar(
                     content: Text(l10n.messagesDeleteConversationFailedToast)));
+              } finally {
+                _deleteInFlightConversationIds.remove(widget.conversation.id);
               }
               break;
             case 'messages_overlay':

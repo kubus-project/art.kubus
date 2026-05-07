@@ -1047,15 +1047,15 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
 
     final managedEmailEnabled =
-      emailPreferencesProvider.preferences.marketingProductUpdates ||
-        emailPreferencesProvider.preferences.marketingNewsletter ||
-        emailPreferencesProvider.preferences.marketingCommunityDigest ||
-        emailPreferencesProvider.preferences.activityArt ||
-        emailPreferencesProvider.preferences.activityCommunity ||
-        emailPreferencesProvider.preferences.activityDao ||
-        emailPreferencesProvider.preferences.activityArtistHub ||
-        emailPreferencesProvider.preferences.activityInstitutionHub ||
-        emailPreferencesProvider.preferences.activityPromotion;
+        emailPreferencesProvider.preferences.marketingProductUpdates ||
+            emailPreferencesProvider.preferences.marketingNewsletter ||
+            emailPreferencesProvider.preferences.marketingCommunityDigest ||
+            emailPreferencesProvider.preferences.activityArt ||
+            emailPreferencesProvider.preferences.activityCommunity ||
+            emailPreferencesProvider.preferences.activityDao ||
+            emailPreferencesProvider.preferences.activityArtistHub ||
+            emailPreferencesProvider.preferences.activityInstitutionHub ||
+            emailPreferencesProvider.preferences.activityPromotion;
     final emailNotificationsState = emailPreferencesProvider.canManage
         ? (managedEmailEnabled ? l10n.commonOn : l10n.commonOff)
         : (_emailNotifications ? l10n.commonOn : l10n.commonOff);
@@ -2922,7 +2922,8 @@ class _SettingsScreenState extends State<SettingsScreen>
       backendApi: BackendApiService(),
       notificationProvider: notificationProvider,
       profileProvider: profileProvider,
-      savedItemsProvider: Provider.of<SavedItemsProvider>(context, listen: false),
+      savedItemsProvider:
+          Provider.of<SavedItemsProvider>(context, listen: false),
     );
 
     if (!mounted) return;
@@ -4000,9 +4001,9 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  void _showSecuritySettingsDialog() {
+  Future<void> _showSecuritySettingsDialog() async {
     final l10n = AppLocalizations.of(context)!;
-    showKubusDialog(
+    await showKubusDialog<void>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (innerContext, setDialogState) => KubusAlertDialog(
@@ -4117,7 +4118,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  void _showAccountManagementDialog() {
+  Future<void> _showAccountManagementDialog() async {
     final l10n = AppLocalizations.of(context)!;
     final emailPreferencesProvider = context.read<EmailPreferencesProvider>();
     if (emailPreferencesProvider.canManage &&
@@ -4125,7 +4126,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         !emailPreferencesProvider.isLoading) {
       unawaited(emailPreferencesProvider.initialize());
     }
-    showKubusDialog(
+    final followUpAction = await showKubusDialog<String>(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) =>
@@ -4469,19 +4470,13 @@ class _SettingsScreenState extends State<SettingsScreen>
                         l10n.settingsDeactivateAccountTileTitle,
                         l10n.settingsDeactivateAccountTileSubtitle,
                         Icons.pause_circle_outline,
-                        () {
-                          Navigator.pop(context);
-                          _showAccountDeactivationDialog();
-                        },
+                        () => Navigator.pop(context, 'deactivate'),
                       ),
                       _buildActionTile(
                         l10n.settingsDeleteAccountTileTitle,
                         l10n.settingsDeleteAccountTileSubtitle,
                         Icons.delete_forever,
-                        () {
-                          Navigator.pop(context);
-                          _showDeleteAccountDialog();
-                        },
+                        () => Navigator.pop(context, 'delete'),
                       ),
                     ],
                   ),
@@ -4527,6 +4522,15 @@ class _SettingsScreenState extends State<SettingsScreen>
         ),
       ),
     );
+    if (!mounted) return;
+    switch (followUpAction) {
+      case 'deactivate':
+        _showAccountDeactivationDialog();
+        break;
+      case 'delete':
+        _showDeleteAccountDialog();
+        break;
+    }
   }
 
   // Additional Dialog Methods

@@ -1483,12 +1483,12 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
     );
   }
 
-  void _showRepostOptions(CommunityPost post) {
+  Future<void> _showRepostOptions(CommunityPost post) async {
     if (!mounted) return;
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
 
-    showModalBottomSheet(
+    final shouldUnrepost = await showModalBottomSheet<bool>(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (sheetContext) => Container(
@@ -1518,15 +1518,14 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                 l10n.communityUnrepostAction,
                 style: KubusTypography.inter(color: theme.colorScheme.error),
               ),
-              onTap: () {
-                Navigator.pop(sheetContext);
-                _unrepostPost(post);
-              },
+              onTap: () => Navigator.pop(sheetContext, true),
             ),
           ],
         ),
       ),
     );
+    if (!mounted || shouldUnrepost != true) return;
+    await _unrepostPost(post);
   }
 
   Future<void> _unrepostPost(CommunityPost post) async {

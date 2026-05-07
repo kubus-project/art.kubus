@@ -147,6 +147,8 @@ class _CommunityScreenState extends State<CommunityScreen>
   final Set<String> _groupActionsInFlight = <String>{};
   final Set<String> _deleteDialogOpenPostIds = <String>{};
   final Set<String> _deleteInFlightPostIds = <String>{};
+  final Set<String> _deleteDialogOpenCommentIds = <String>{};
+  final Set<String> _deleteInFlightCommentIds = <String>{};
 
   // Buffered incoming posts when user is scrolled away from top
   final List<CommunityPost> _bufferedIncomingPosts = [];
@@ -5388,7 +5390,13 @@ class _CommunityScreenState extends State<CommunityScreen>
                     }
 
                     Future<void> promptDelete(Comment c) async {
+                      if (_deleteDialogOpenCommentIds.contains(c.id) ||
+                          _deleteInFlightCommentIds.contains(c.id)) {
+                        return;
+                      }
+
                       final messenger = ScaffoldMessenger.of(context);
+                      _deleteDialogOpenCommentIds.add(c.id);
                       final confirmed = await showKubusDialog<bool>(
                         context: context,
                         builder: (dialogContext) {
@@ -5413,8 +5421,12 @@ class _CommunityScreenState extends State<CommunityScreen>
                             ],
                           );
                         },
-                      );
+                      ).whenComplete(() {
+                        _deleteDialogOpenCommentIds.remove(c.id);
+                      });
                       if (confirmed != true) return;
+                      if (_deleteInFlightCommentIds.contains(c.id)) return;
+                      _deleteInFlightCommentIds.add(c.id);
                       try {
                         await commentsProvider.deleteComment(
                             postId: post.id, commentId: c.id);
@@ -5430,6 +5442,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                             backgroundColor: scheme.errorContainer,
                           ),
                         );
+                      } finally {
+                        _deleteInFlightCommentIds.remove(c.id);
                       }
                     }
 
@@ -6410,12 +6424,12 @@ class _CommunityScreenState extends State<CommunityScreen>
     );
   }
 
-  void _showRepostOptions(CommunityPost post) {
+  Future<void> _showRepostOptions(CommunityPost post) async {
     if (!mounted) return;
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
 
-    showModalBottomSheet(
+    final shouldUnrepost = await showModalBottomSheet<bool>(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (sheetContext) => Container(
@@ -6440,22 +6454,21 @@ class _CommunityScreenState extends State<CommunityScreen>
                   Icon(Icons.delete_outline, color: theme.colorScheme.error),
               title: Text(l10n.communityUnrepostAction,
                   style: KubusTypography.inter(color: theme.colorScheme.error)),
-              onTap: () {
-                Navigator.pop(sheetContext);
-                _unrepostPost(post);
-              },
+              onTap: () => Navigator.pop(sheetContext, true),
             ),
             ListTile(
               leading: Icon(Icons.cancel,
                   color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
               title: Text(l10n.commonCancel, style: KubusTypography.inter()),
-              onTap: () => Navigator.pop(sheetContext),
+              onTap: () => Navigator.pop(sheetContext, false),
             ),
             const SizedBox(height: 16),
           ],
         ),
       ),
     );
+    if (!mounted || shouldUnrepost != true) return;
+    _unrepostPost(post);
   }
 
   void _unrepostPost(CommunityPost post) async {

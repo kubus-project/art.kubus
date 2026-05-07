@@ -74,6 +74,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
   String? _artworkError;
   final Set<String> _deleteDialogOpenArtworkIds = <String>{};
   final Set<String> _deleteInFlightArtworkIds = <String>{};
+  final Set<String> _deleteDialogOpenCommentIds = <String>{};
+  final Set<String> _deleteInFlightCommentIds = <String>{};
 
   @override
   void initState() {
@@ -1608,10 +1610,16 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
     required ArtworkComment comment,
     required ArtworkProvider provider,
   }) async {
+    if (_deleteDialogOpenCommentIds.contains(comment.id) ||
+        _deleteInFlightCommentIds.contains(comment.id)) {
+      return;
+    }
+
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final messenger = ScaffoldMessenger.of(context);
 
+    _deleteDialogOpenCommentIds.add(comment.id);
     final confirmed = await showKubusDialog<bool>(
       context: context,
       builder: (dialogContext) {
@@ -1634,9 +1642,13 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
           ],
         );
       },
-    );
+    ).whenComplete(() {
+      _deleteDialogOpenCommentIds.remove(comment.id);
+    });
 
     if (confirmed != true) return;
+    if (_deleteInFlightCommentIds.contains(comment.id)) return;
+    _deleteInFlightCommentIds.add(comment.id);
     try {
       await provider.deleteArtworkComment(
         artworkId: widget.artworkId,
@@ -1654,6 +1666,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
           backgroundColor: scheme.errorContainer,
         ),
       );
+    } finally {
+      _deleteInFlightCommentIds.remove(comment.id);
     }
   }
 

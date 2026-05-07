@@ -3398,15 +3398,16 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
 
   Future<void> _showUnrepostOptions(CommunityPost post) async {
     final l10n = AppLocalizations.of(context)!;
-    await showKubusDialog(
+    final shouldUnrepost = await showKubusDialog<bool>(
       context: context,
       builder: (dialogContext) {
+        bool selectionMade = false;
         Widget optionTile({
           required IconData icon,
           required String label,
           Color? iconColor,
           TextStyle? textStyle,
-          required VoidCallback onTap,
+          required bool result,
         }) {
           final scheme = Theme.of(dialogContext).colorScheme;
           return LiquidGlassPanel(
@@ -3420,8 +3421,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               child: InkWell(
                 borderRadius: BorderRadius.circular(KubusRadius.md),
                 onTap: () {
-                  Navigator.of(dialogContext).pop();
-                  onTap();
+                  if (selectionMade) return;
+                  selectionMade = true;
+                  Navigator.of(dialogContext).pop(result);
                 },
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
@@ -3460,20 +3462,22 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                 iconColor: scheme.error,
                 textStyle:
                     KubusTextStyles.navLabel.copyWith(color: scheme.error),
-                onTap: () => unawaited(_unrepostPost(post)),
+                result: true,
               ),
               const SizedBox(height: KubusSpacing.md),
               optionTile(
                 icon: Icons.cancel,
                 label: l10n.commonCancel,
                 iconColor: scheme.onSurface.withValues(alpha: 0.65),
-                onTap: () {},
+                result: false,
               ),
             ],
           ),
         );
       },
     );
+    if (!mounted || shouldUnrepost != true) return;
+    await _unrepostPost(post);
   }
 
   Future<void> _unrepostPost(CommunityPost post) async {
