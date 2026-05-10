@@ -98,6 +98,7 @@ import '../../widgets/map/controls/kubus_map_primary_controls.dart'
 import '../../widgets/map/filters/kubus_map_marker_layer_chips.dart';
 import '../../widgets/map/dialogs/kubus_map_attribution_dialog.dart';
 import '../../widgets/map/dialogs/street_art_claims_dialog.dart';
+import '../../widgets/map/glass/kubus_map_platform_backdrop_host.dart';
 import '../../widgets/map/kubus_map_glass_surface.dart';
 import '../../widgets/common/kubus_filter_panel.dart';
 import '../../widgets/common/kubus_glass_icon_button.dart';
@@ -178,6 +179,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   late final NearbyArtController _nearbyArtController;
   late final MapUiStateCoordinator _mapUiStateCoordinator;
   late final MapMarkerRenderCoordinator _renderCoordinator;
+  final KubusMapBackdropHostController _mapBackdropHostController =
+      KubusMapBackdropHostController();
 
   ml.MapLibreMapController? _mapController;
   ml.MapLibreMapController? _deactivateDetachedMapController;
@@ -1644,6 +1647,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     _mapDataCoordinator.dispose();
     _mapUiStateCoordinator.dispose();
     _kubusMapController.dispose();
+    _mapBackdropHostController.dispose();
     WidgetsBinding.instance.removeObserver(this);
     _perf.logSummary(
       'dispose',
@@ -1677,174 +1681,191 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     // (glass panel with blur). This keeps the map at full width; only the
     // UI chrome (controls, search bar) shifts to avoid overlap.
     final showLocalNearbyPanel = _isRightSidebarOpen;
+    final backdropDecision = resolveKubusMapBlurDecision(
+      context,
+      policy: KubusMapBlurPolicy.allowCompactWeb,
+      overMapPlatformView: true,
+    );
+    final platformBackdropHostEnabled = backdropDecision.enabled &&
+        backdropDecision.strategy ==
+            KubusMapBackdropStrategy.platformViewBackdropHost;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: Stack(
-        children: [
-          // Map layer
-          KeyedSubtree(
-            key: _tutorialMapKey,
-            child: _buildMapLayer(themeProvider),
-          ),
+      body: KubusMapBackdropScope(
+        controller: _mapBackdropHostController,
+        child: Stack(
+          children: [
+            // Map layer
+            KeyedSubtree(
+              key: _tutorialMapKey,
+              child: _buildMapLayer(themeProvider),
+            ),
 
-          _buildSearchOverlayScaffold(
-            themeProvider,
-            animationTheme,
-            nearbyPanelOpen: showLocalNearbyPanel,
-          ),
-
-          // Left side panel (artwork/exhibition details or filters)
-          AnimatedPositioned(
-            duration: animationTheme.medium,
-            curve: animationTheme.defaultCurve,
-            left: _isLeftPanelVisible ? 0 : -400,
-            top: 80,
-            bottom: 24,
-            width: 380,
-            child: MapOverlayBlocker(
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () {}, // absorb taps
-                child: _selectedExhibition != null
-                    ? Semantics(
-                        label: 'left_info_panel',
-                        container: true,
-                        child: _buildExhibitionDetailPanel(
-                          themeProvider,
-                          animationTheme,
-                        ),
-                      )
-                    : _selectedEvent != null
-                        ? Semantics(
-                            label: 'left_info_panel',
-                            container: true,
-                            child: _buildEventDetailPanel(
-                              themeProvider,
-                              animationTheme,
-                            ),
-                          )
-                        : _selectedArtwork != null
-                            ? Semantics(
-                                label: 'left_info_panel',
-                                container: true,
-                                child: _buildArtworkDetailPanel(
-                                  themeProvider,
-                                  animationTheme,
-                                ),
-                              )
-                            : _buildFiltersPanel(themeProvider),
+            if (platformBackdropHostEnabled)
+              KubusMapPlatformBackdropHost(
+                controller: _mapBackdropHostController,
+                enabled: true,
               ),
-            ),
-          ),
 
-          // Local nearby sidebar (only when DesktopMapScreen is opened
-          // outside of DesktopShellScope).
-          AnimatedPositioned(
-            duration: animationTheme.medium,
-            curve: animationTheme.defaultCurve,
-            right: showLocalNearbyPanel ? 0 : -420,
-            top: 0,
-            bottom: 0,
-            width: 360,
-            child: Consumer<ArtworkProvider>(
-              builder: (context, artworkProvider, _) {
-                return _buildRightSidebarContent(
-                  themeProvider,
-                  artworkProvider,
-                );
-              },
+            _buildSearchOverlayScaffold(
+              themeProvider,
+              animationTheme,
+              nearbyPanelOpen: showLocalNearbyPanel,
             ),
-          ),
 
-          // Map controls (bottom-right) - absorb pointer events
-          Positioned(
-            left: _hasLeftDetailPanel ? 400 : 24,
-            right: showLocalNearbyPanel ? (24 + 360) : 24,
-            bottom: 24,
-            child: Align(
-              alignment: Alignment.bottomRight,
+            // Left side panel (artwork/exhibition details or filters)
+            AnimatedPositioned(
+              duration: animationTheme.medium,
+              curve: animationTheme.defaultCurve,
+              left: _isLeftPanelVisible ? 0 : -400,
+              top: 80,
+              bottom: 24,
+              width: 380,
               child: MapOverlayBlocker(
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: () {}, // absorb taps
-                  child: _buildMapControls(themeProvider),
+                  child: _selectedExhibition != null
+                      ? Semantics(
+                          label: 'left_info_panel',
+                          container: true,
+                          child: _buildExhibitionDetailPanel(
+                            themeProvider,
+                            animationTheme,
+                          ),
+                        )
+                      : _selectedEvent != null
+                          ? Semantics(
+                              label: 'left_info_panel',
+                              container: true,
+                              child: _buildEventDetailPanel(
+                                themeProvider,
+                                animationTheme,
+                              ),
+                            )
+                          : _selectedArtwork != null
+                              ? Semantics(
+                                  label: 'left_info_panel',
+                                  container: true,
+                                  child: _buildArtworkDetailPanel(
+                                    themeProvider,
+                                    animationTheme,
+                                  ),
+                                )
+                              : _buildFiltersPanel(themeProvider),
                 ),
               ),
             ),
-          ),
 
-          // Discovery path card (bottom-left when no panel is open)
-          Consumer<TaskProvider>(
-            builder: (context, taskProvider, _) {
-              final activeProgress = taskProvider.getActiveTaskProgress();
-              final leftOffset = _isLeftPanelVisible ? 400.0 : 24.0;
+            // Local nearby sidebar (only when DesktopMapScreen is opened
+            // outside of DesktopShellScope).
+            AnimatedPositioned(
+              duration: animationTheme.medium,
+              curve: animationTheme.defaultCurve,
+              right: showLocalNearbyPanel ? 0 : -420,
+              top: 0,
+              bottom: 0,
+              width: 360,
+              child: Consumer<ArtworkProvider>(
+                builder: (context, artworkProvider, _) {
+                  return _buildRightSidebarContent(
+                    themeProvider,
+                    artworkProvider,
+                  );
+                },
+              ),
+            ),
 
-              if (activeProgress.isEmpty) {
-                // No active tasks: show attribution icon standalone in bottom-left
-                return Positioned(
-                  left: 24,
-                  bottom: KubusSpacing.xl +
-                      KubusHeaderMetrics.actionHitArea +
-                      KubusSpacing.sm,
-                  child: MapOverlayBlocker(
-                    child: _buildDesktopAttributionButton(),
-                  ),
-                );
-              }
-
-              // Active tasks: show column with attribution + discovery card
-              return Positioned(
-                left: leftOffset,
-                bottom: 24,
+            // Map controls (bottom-right) - absorb pointer events
+            Positioned(
+              left: _hasLeftDetailPanel ? 400 : 24,
+              right: showLocalNearbyPanel ? (24 + 360) : 24,
+              bottom: 24,
+              child: Align(
+                alignment: Alignment.bottomRight,
                 child: MapOverlayBlocker(
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTap: () {}, // absorb taps
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildDiscoveryCard(taskProvider),
-                        const SizedBox(height: KubusSpacing.sm),
-                        _buildDesktopAttributionButton(),
-                      ],
-                    ),
+                    child: _buildMapControls(themeProvider),
                   ),
                 ),
-              );
-            },
-          ),
+              ),
+            ),
 
-          ValueListenableBuilder<MapUiStateSnapshot>(
-            valueListenable: _mapUiStateCoordinator.state,
-            builder: (context, uiState, _) {
-              final selection = uiState.markerSelection;
-              return Consumer<ArtworkProvider>(
-                builder: (context, artworkProvider, _) {
-                  return _buildMarkerOverlayLayer(
-                    themeProvider: themeProvider,
-                    artworkProvider: artworkProvider,
-                    selection: selection,
+            // Discovery path card (bottom-left when no panel is open)
+            Consumer<TaskProvider>(
+              builder: (context, taskProvider, _) {
+                final activeProgress = taskProvider.getActiveTaskProgress();
+                final leftOffset = _isLeftPanelVisible ? 400.0 : 24.0;
+
+                if (activeProgress.isEmpty) {
+                  // No active tasks: show attribution icon standalone in bottom-left
+                  return Positioned(
+                    left: 24,
+                    bottom: KubusSpacing.xl +
+                        KubusHeaderMetrics.actionHitArea +
+                        KubusSpacing.sm,
+                    child: MapOverlayBlocker(
+                      child: _buildDesktopAttributionButton(),
+                    ),
                   );
-                },
-              );
-            },
-          ),
+                }
 
-          KubusMapTutorialOverlay(
-            visible: showMapTutorial,
-            steps: tutorialSteps,
-            currentIndex: mapTutorialIndex,
-            onNext: _mapTutorialCoordinator.next,
-            onBack: _mapTutorialCoordinator.back,
-            onSkip: () => unawaited(_mapTutorialCoordinator.dismiss()),
-            skipLabel: l10n.commonSkip,
-            backLabel: l10n.commonBack,
-            nextLabel: l10n.commonNext,
-            doneLabel: l10n.commonDone,
-          ),
-        ],
+                // Active tasks: show column with attribution + discovery card
+                return Positioned(
+                  left: leftOffset,
+                  bottom: 24,
+                  child: MapOverlayBlocker(
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () {}, // absorb taps
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildDiscoveryCard(taskProvider),
+                          const SizedBox(height: KubusSpacing.sm),
+                          _buildDesktopAttributionButton(),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+
+            ValueListenableBuilder<MapUiStateSnapshot>(
+              valueListenable: _mapUiStateCoordinator.state,
+              builder: (context, uiState, _) {
+                final selection = uiState.markerSelection;
+                return Consumer<ArtworkProvider>(
+                  builder: (context, artworkProvider, _) {
+                    return _buildMarkerOverlayLayer(
+                      themeProvider: themeProvider,
+                      artworkProvider: artworkProvider,
+                      selection: selection,
+                    );
+                  },
+                );
+              },
+            ),
+
+            KubusMapTutorialOverlay(
+              visible: showMapTutorial,
+              steps: tutorialSteps,
+              currentIndex: mapTutorialIndex,
+              onNext: _mapTutorialCoordinator.next,
+              onBack: _mapTutorialCoordinator.back,
+              onSkip: () => unawaited(_mapTutorialCoordinator.dismiss()),
+              skipLabel: l10n.commonSkip,
+              backLabel: l10n.commonBack,
+              nextLabel: l10n.commonNext,
+              doneLabel: l10n.commonDone,
+            ),
+          ],
+        ),
       ),
     );
   }

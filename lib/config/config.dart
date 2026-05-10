@@ -51,6 +51,7 @@ class AppConfig {
   static const bool enableWalletBackupPasskeyWeb = true;
   static const bool enableWalletSettlements = true;
   static const bool enableAvailabilityNodes = true;
+
   /// Token swaps are intentionally disabled at the app surface for now.
   static const bool enableTokenSwap = false;
 
@@ -96,6 +97,14 @@ class AppConfig {
   static const bool enableMapWebPreserveDrawingBuffer = bool.fromEnvironment(
     'MAP_WEB_PRESERVE_DRAWING_BUFFER',
     defaultValue: false,
+  );
+
+  /// Web map chrome: use a centralized DOM backdrop host to blur MapLibre
+  /// behind Flutter map glass surfaces. Foreground Flutter content remains
+  /// outside the CSS blur layer.
+  static const bool enableMapCssBlurHost = bool.fromEnvironment(
+    'MAP_CSS_BLUR_HOST',
+    defaultValue: true,
   );
 
   /// MapLibre map style assets (theme-specific).
@@ -483,6 +492,8 @@ class AppConfig {
         return enableStreetArtClaims;
       case 'mapWebPreserveDrawingBuffer':
         return enableMapWebPreserveDrawingBuffer;
+      case 'mapCssBlurHost':
+        return enableMapCssBlurHost;
       case 'clientUploadCompression':
         return enableClientUploadCompression;
       default:
@@ -528,8 +539,8 @@ class AppConfig {
 class AppInfo {
   static const String appName = 'art.kubus';
   static const String version = '0.5.12';
-  static const int buildNumber = 26050703;
-  static const String buildDate = '2026-05-07';
+  static const int buildNumber = 26051001;
+  static const String buildDate = '2026-05-10';
 
   /// Get full version string
   static String get fullVersion => '$version+$buildNumber';

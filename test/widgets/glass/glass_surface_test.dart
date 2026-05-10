@@ -4,6 +4,46 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  testWidgets('GlassSurface blur path keeps platform views out of foreground',
+      (tester) async {
+    const childKey = Key('sharp-foreground-child');
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.light(useMaterial3: true),
+        home: const Scaffold(
+          body: GlassSurface(
+            enableBlur: true,
+            child: SizedBox(
+              key: childKey,
+              width: 120,
+              height: 60,
+              child: Text('Sharp'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byType(BackdropFilter), findsOneWidget);
+    expect(find.byType(HtmlElementView), findsNothing);
+    expect(find.byKey(childKey), findsOneWidget);
+
+    final blurFinder = find.byType(BackdropFilter);
+    final decoratedFinder = find.descendant(
+      of: blurFinder,
+      matching: find.byType(DecoratedBox),
+    );
+    expect(decoratedFinder, findsOneWidget);
+    expect(
+      find.descendant(
+        of: decoratedFinder,
+        matching: find.byKey(childKey),
+      ),
+      findsOneWidget,
+    );
+  });
+
   testWidgets(
       'GlassSurface uses opaque theme-surface fallback when blur is disabled',
       (tester) async {

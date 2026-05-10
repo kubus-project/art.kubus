@@ -102,6 +102,7 @@ import '../widgets/map/controls/kubus_map_primary_controls.dart'
     show KubusMapPrimaryControlsLayout;
 import '../widgets/map/dialogs/kubus_map_attribution_dialog.dart';
 import '../widgets/map/dialogs/street_art_claims_dialog.dart';
+import '../widgets/map/glass/kubus_map_platform_backdrop_host.dart';
 import '../widgets/map/kubus_map_glass_surface.dart';
 import '../widgets/common/kubus_filter_panel.dart';
 import '../widgets/common/kubus_glass_icon_button.dart';
@@ -227,6 +228,8 @@ class _MapScreenState extends State<MapScreen>
   late final NearbyArtController _nearbyArtController;
   late final MapUiStateCoordinator _mapUiStateCoordinator;
   late final MapMarkerRenderCoordinator _renderCoordinator;
+  final KubusMapBackdropHostController _mapBackdropHostController =
+      KubusMapBackdropHostController();
   bool _autoFollow = true;
   double? _direction; // Compass direction
   StreamSubscription<CompassEvent>? _compassSubscription;
@@ -1278,6 +1281,7 @@ class _MapScreenState extends State<MapScreen>
     _markerStackPageController.dispose();
     _sheetController.dispose();
     _nearbySheetExtentNotifier.dispose();
+    _mapBackdropHostController.dispose();
     WidgetsBinding.instance.removeObserver(this);
     _perf.logSummary(
       'dispose',
@@ -3259,69 +3263,83 @@ class _MapScreenState extends State<MapScreen>
                 .clamp(12.0, math.max(12.0, constraints.maxHeight - 12.0))
                 .toDouble();
             _syncWebAttributionBottomForSheet(sheetExtent);
-            return Stack(
-              children: [
-                KeyedSubtree(
-                  key: _tutorialMapKey,
-                  child: IgnorePointer(
-                    // In tutorial mode, prevent map gestures so the overlay can
-                    // guide the user without accidental pans/zooms.
-                    ignoring: _isSheetInteracting,
-                    child: _mapViewMounted
-                        ? _buildMap(
-                            themeProvider,
-                            attributionBottomMargin: attributionBottomMargin,
-                          )
-                        : const SizedBox.expand(
-                            child: ColoredBox(color: Colors.transparent),
-                          ),
-                  ),
-                ),
-                if (_isSheetBlocking || _isSheetInteracting)
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    child: ValueListenableBuilder<double>(
-                      valueListenable: _nearbySheetExtentNotifier,
-                      builder: (context, extent, _) {
-                        final blockerHeight = constraints.maxHeight * extent;
-                        return SizedBox(
-                          height: blockerHeight,
-                          child: const AbsorbPointer(
-                            absorbing: true,
-                            child: SizedBox.expand(),
-                          ),
-                        );
-                      },
+            final backdropDecision = resolveKubusMapBlurDecision(
+              context,
+              policy: KubusMapBlurPolicy.allowCompactWeb,
+              overMapPlatformView: true,
+            );
+            final platformBackdropHostEnabled = backdropDecision.enabled &&
+                backdropDecision.strategy ==
+                    KubusMapBackdropStrategy.platformViewBackdropHost;
+            return KubusMapBackdropScope(
+              controller: _mapBackdropHostController,
+              child: Stack(
+                children: [
+                  KeyedSubtree(
+                    key: _tutorialMapKey,
+                    child: IgnorePointer(
+                      ignoring: _isSheetInteracting,
+                      child: _mapViewMounted
+                          ? _buildMap(
+                              themeProvider,
+                              attributionBottomMargin: attributionBottomMargin,
+                            )
+                          : const SizedBox.expand(
+                              child: ColoredBox(color: Colors.transparent),
+                            ),
                     ),
                   ),
-                _buildPrimaryControls(),
-                _buildBottomSheet(
-                  // This will likely be refactored into _buildDraggablePanel()
-                  theme,
-                  filteredArtworks,
-                  discoveryProgress,
-                  isLoadingArtworks,
-                ),
-                _buildMobileAttributionButton(),
-                _buildTopOverlays(theme, themeProvider, taskProvider),
-                // Keep marker overlay above map UI chrome (controls/search/sheet)
-                // so the selected marker card remains the top interactive layer.
-                _buildMarkerOverlay(themeProvider, ui.markerSelection),
-                KubusMapTutorialOverlay(
-                  visible: showMapTutorial,
-                  steps: tutorialSteps,
-                  currentIndex: mapTutorialIndex,
-                  onNext: _mapTutorialCoordinator.next,
-                  onBack: _mapTutorialCoordinator.back,
-                  onSkip: () => unawaited(_mapTutorialCoordinator.dismiss()),
-                  skipLabel: l10n.commonSkip,
-                  backLabel: l10n.commonBack,
-                  nextLabel: l10n.commonNext,
-                  doneLabel: l10n.commonDone,
-                ),
-              ],
+                  if (platformBackdropHostEnabled)
+                    KubusMapPlatformBackdropHost(
+                      controller: _mapBackdropHostController,
+                      enabled: true,
+                    ),
+                  if (_isSheetBlocking || _isSheetInteracting)
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      child: ValueListenableBuilder<double>(
+                        valueListenable: _nearbySheetExtentNotifier,
+                        builder: (context, extent, _) {
+                          final blockerHeight = constraints.maxHeight * extent;
+                          return SizedBox(
+                            height: blockerHeight,
+                            child: const AbsorbPointer(
+                              absorbing: true,
+                              child: SizedBox.expand(),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  _buildPrimaryControls(),
+                  _buildBottomSheet(
+                    // This will likely be refactored into _buildDraggablePanel()
+                    theme,
+                    filteredArtworks,
+                    discoveryProgress,
+                    isLoadingArtworks,
+                  ),
+                  _buildMobileAttributionButton(),
+                  _buildTopOverlays(theme, themeProvider, taskProvider),
+                  // Keep marker overlay above map UI chrome (controls/search/sheet)
+                  // so the selected marker card remains the top interactive layer.
+                  _buildMarkerOverlay(themeProvider, ui.markerSelection),
+                  KubusMapTutorialOverlay(
+                    visible: showMapTutorial,
+                    steps: tutorialSteps,
+                    currentIndex: mapTutorialIndex,
+                    onNext: _mapTutorialCoordinator.next,
+                    onBack: _mapTutorialCoordinator.back,
+                    onSkip: () => unawaited(_mapTutorialCoordinator.dismiss()),
+                    skipLabel: l10n.commonSkip,
+                    backLabel: l10n.commonBack,
+                    nextLabel: l10n.commonNext,
+                    doneLabel: l10n.commonDone,
+                  ),
+                ],
+              ),
             );
           },
         );

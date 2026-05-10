@@ -2,10 +2,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../config/config.dart';
 import '../../providers/glass_capabilities_provider.dart';
 import '../../services/webgl_context_helper.dart';
 import '../../utils/design_tokens.dart';
 import '../glass_components.dart';
+import 'glass/kubus_map_platform_backdrop_host.dart';
 
 enum KubusMapGlassSurfaceKind {
   panel,
@@ -14,6 +16,7 @@ enum KubusMapGlassSurfaceKind {
 }
 
 final Set<String> _loggedMapGlassFallbackKeys = <String>{};
+int _mapGlassRegionIdSequence = 0;
 
 enum KubusMapBlurPolicy {
   automatic,
@@ -22,15 +25,24 @@ enum KubusMapBlurPolicy {
   disabled,
 }
 
+enum KubusMapBackdropStrategy {
+  flutterBackdropFilter,
+  platformViewSafeTintFallback,
+  platformViewBackdropHost,
+}
+
 @immutable
 class KubusMapBlurDecision {
   const KubusMapBlurDecision({
     required this.enabled,
     required this.reason,
+    required this.strategy,
     required this.providerAllowsBlur,
     required this.width,
     required this.policy,
     required this.web,
+    required this.overMapPlatformView,
+    required this.platformBackdropHostAvailable,
     required this.webGlHealthy,
     required this.reduceEffects,
     required this.reduceEffectsUserTouched,
@@ -40,10 +52,13 @@ class KubusMapBlurDecision {
 
   final bool enabled;
   final String reason;
+  final KubusMapBackdropStrategy strategy;
   final bool providerAllowsBlur;
   final double width;
   final KubusMapBlurPolicy policy;
   final bool web;
+  final bool overMapPlatformView;
+  final bool platformBackdropHostAvailable;
   final bool webGlHealthy;
   final bool reduceEffects;
   final bool reduceEffectsUserTouched;
@@ -55,10 +70,19 @@ class KubusMapBlurDecision {
 KubusMapBlurDecision resolveKubusMapBlurDecision(
   BuildContext context, {
   KubusMapBlurPolicy policy = KubusMapBlurPolicy.automatic,
+  bool overMapPlatformView = true,
+  bool? isWebOverride,
+  bool? webGlHealthyOverride,
+  bool? platformBackdropHostAvailableOverride,
 }) {
   final width = MediaQuery.maybeOf(context)?.size.width ?? 0;
   final allowBlur = GlassCapabilitiesProvider.watchAllowBlurEnabled(context);
-  final webGlHealthy = webGLContextHealthy.value;
+  final web = isWebOverride ?? kIsWeb;
+  final webGlHealthy = webGlHealthyOverride ?? webGLContextHealthy.value;
+  final platformBackdropHostAvailable = platformBackdropHostAvailableOverride ??
+      (web &&
+          AppConfig.isFeatureEnabled('mapCssBlurHost') &&
+          KubusMapPlatformBackdropHost.isSupported);
   GlassCapabilitiesProvider? provider;
   try {
     provider = context.read<GlassCapabilitiesProvider>();
@@ -71,10 +95,13 @@ KubusMapBlurDecision resolveKubusMapBlurDecision(
     return KubusMapBlurDecision(
       enabled: false,
       reason: 'policy-disabled',
+      strategy: KubusMapBackdropStrategy.platformViewSafeTintFallback,
       providerAllowsBlur: allowBlur,
       width: width,
       policy: policy,
-      web: kIsWeb,
+      web: web,
+      overMapPlatformView: overMapPlatformView,
+      platformBackdropHostAvailable: platformBackdropHostAvailable,
       webGlHealthy: webGlHealthy,
       reduceEffects: reduceEffects,
       reduceEffectsUserTouched: reduceEffectsUserTouched,
@@ -86,10 +113,69 @@ KubusMapBlurDecision resolveKubusMapBlurDecision(
     return KubusMapBlurDecision(
       enabled: false,
       reason: 'glass-provider-fallback',
+      strategy: KubusMapBackdropStrategy.platformViewSafeTintFallback,
       providerAllowsBlur: allowBlur,
       width: width,
       policy: policy,
-      web: kIsWeb,
+      web: web,
+      overMapPlatformView: overMapPlatformView,
+      platformBackdropHostAvailable: platformBackdropHostAvailable,
+      webGlHealthy: webGlHealthy,
+      reduceEffects: reduceEffects,
+      reduceEffectsUserTouched: reduceEffectsUserTouched,
+      heuristicTriggered: heuristicTriggered,
+      autoReduceEffectsApplied: autoReduceEffectsApplied,
+    );
+  }
+  if (web && !webGlHealthy) {
+    return KubusMapBlurDecision(
+      enabled: false,
+      reason: 'webgl-unhealthy',
+      strategy: KubusMapBackdropStrategy.platformViewSafeTintFallback,
+      providerAllowsBlur: allowBlur,
+      width: width,
+      policy: policy,
+      web: web,
+      overMapPlatformView: overMapPlatformView,
+      platformBackdropHostAvailable: platformBackdropHostAvailable,
+      webGlHealthy: webGlHealthy,
+      reduceEffects: reduceEffects,
+      reduceEffectsUserTouched: reduceEffectsUserTouched,
+      heuristicTriggered: heuristicTriggered,
+      autoReduceEffectsApplied: autoReduceEffectsApplied,
+    );
+  }
+
+  if (web && overMapPlatformView && platformBackdropHostAvailable) {
+    return KubusMapBlurDecision(
+      enabled: true,
+      reason: 'platform-view-backdrop-host',
+      strategy: KubusMapBackdropStrategy.platformViewBackdropHost,
+      providerAllowsBlur: allowBlur,
+      width: width,
+      policy: policy,
+      web: web,
+      overMapPlatformView: overMapPlatformView,
+      platformBackdropHostAvailable: platformBackdropHostAvailable,
+      webGlHealthy: webGlHealthy,
+      reduceEffects: reduceEffects,
+      reduceEffectsUserTouched: reduceEffectsUserTouched,
+      heuristicTriggered: heuristicTriggered,
+      autoReduceEffectsApplied: autoReduceEffectsApplied,
+    );
+  }
+
+  if (web && overMapPlatformView) {
+    return KubusMapBlurDecision(
+      enabled: false,
+      reason: 'platform-view-safe-tint-fallback',
+      strategy: KubusMapBackdropStrategy.platformViewSafeTintFallback,
+      providerAllowsBlur: allowBlur,
+      width: width,
+      policy: policy,
+      web: web,
+      overMapPlatformView: overMapPlatformView,
+      platformBackdropHostAvailable: platformBackdropHostAvailable,
       webGlHealthy: webGlHealthy,
       reduceEffects: reduceEffects,
       reduceEffectsUserTouched: reduceEffectsUserTouched,
@@ -100,11 +186,14 @@ KubusMapBlurDecision resolveKubusMapBlurDecision(
 
   return KubusMapBlurDecision(
     enabled: true,
-    reason: kIsWeb ? 'web-css-platform-shim' : 'flutter-backdrop-filter',
+    reason: 'flutter-backdrop-filter',
+    strategy: KubusMapBackdropStrategy.flutterBackdropFilter,
     providerAllowsBlur: allowBlur,
     width: width,
     policy: policy,
-    web: kIsWeb,
+    web: web,
+    overMapPlatformView: overMapPlatformView,
+    platformBackdropHostAvailable: platformBackdropHostAvailable,
     webGlHealthy: webGlHealthy,
     reduceEffects: reduceEffects,
     reduceEffectsUserTouched: reduceEffectsUserTouched,
@@ -116,8 +205,15 @@ KubusMapBlurDecision resolveKubusMapBlurDecision(
 bool kubusMapBlurEnabled(
   BuildContext context, {
   KubusMapBlurPolicy policy = KubusMapBlurPolicy.automatic,
+  bool overMapPlatformView = true,
 }) {
-  return resolveKubusMapBlurDecision(context, policy: policy).enabled;
+  final decision = resolveKubusMapBlurDecision(
+    context,
+    policy: policy,
+    overMapPlatformView: overMapPlatformView,
+  );
+  return decision.enabled &&
+      decision.strategy == KubusMapBackdropStrategy.flutterBackdropFilter;
 }
 
 @immutable
@@ -130,7 +226,10 @@ class KubusMapGlassSurfacePreset {
     required this.shadowBlurRadius,
     required this.shadowOffset,
     required this.useBlur,
+    required this.usePlatformBackdropHost,
+    required this.blurSigma,
     required this.blurReason,
+    required this.backdropStrategy,
   });
 
   final KubusGlassStyle style;
@@ -140,7 +239,10 @@ class KubusMapGlassSurfacePreset {
   final double shadowBlurRadius;
   final Offset shadowOffset;
   final bool useBlur;
+  final bool usePlatformBackdropHost;
+  final double blurSigma;
   final String blurReason;
+  final KubusMapBackdropStrategy backdropStrategy;
 }
 
 KubusMapGlassSurfacePreset resolveKubusMapGlassSurfacePreset(
@@ -149,6 +251,9 @@ KubusMapGlassSurfacePreset resolveKubusMapGlassSurfacePreset(
   Color? tintBase,
   bool useBlur = true,
   KubusMapBlurPolicy blurPolicy = KubusMapBlurPolicy.automatic,
+  bool overMapPlatformView = true,
+  bool? isWebOverride,
+  bool? platformBackdropHostAvailableOverride,
 }) {
   final theme = Theme.of(context);
   final scheme = theme.colorScheme;
@@ -166,8 +271,24 @@ KubusMapGlassSurfacePreset resolveKubusMapGlassSurfacePreset(
     tintBase: tintBase,
   );
 
-  final blurDecision = resolveKubusMapBlurDecision(context, policy: blurPolicy);
-  final resolvedBlur = useBlur && blurDecision.enabled;
+  final blurDecision = resolveKubusMapBlurDecision(
+    context,
+    policy: blurPolicy,
+    overMapPlatformView: overMapPlatformView,
+    isWebOverride: isWebOverride,
+    platformBackdropHostAvailableOverride:
+        platformBackdropHostAvailableOverride,
+  );
+  final resolvedBlur = useBlur &&
+      blurDecision.enabled &&
+      (blurDecision.strategy ==
+              KubusMapBackdropStrategy.flutterBackdropFilter ||
+          blurDecision.strategy ==
+              KubusMapBackdropStrategy.platformViewBackdropHost);
+  final resolvedPlatformBackdrop = useBlur &&
+      blurDecision.enabled &&
+      blurDecision.strategy ==
+          KubusMapBackdropStrategy.platformViewBackdropHost;
   final borderColor = scheme.outlineVariant.withValues(
     alpha: switch (kind) {
       KubusMapGlassSurfaceKind.panel =>
@@ -213,13 +334,18 @@ KubusMapGlassSurfacePreset resolveKubusMapGlassSurfacePreset(
       KubusMapGlassSurfaceKind.button => const Offset(0, 2),
     },
     useBlur: resolvedBlur,
+    usePlatformBackdropHost: resolvedPlatformBackdrop,
+    blurSigma: style.blurSigma,
     blurReason: useBlur
         ? '${blurDecision.reason}; providerAllows=${blurDecision.providerAllowsBlur}; '
             'reduce=${blurDecision.reduceEffects}; touched=${blurDecision.reduceEffectsUserTouched}; '
             'webGlHealthy=${blurDecision.webGlHealthy}; heuristic=${blurDecision.heuristicTriggered}; '
             'autoReduce=${blurDecision.autoReduceEffectsApplied}; width=${blurDecision.width.toStringAsFixed(0)}; '
-            'policy=${blurDecision.policy}'
+            'policy=${blurDecision.policy}; strategy=${blurDecision.strategy}; '
+            'web=${blurDecision.web}; overMapPlatformView=${blurDecision.overMapPlatformView}; '
+            'platformBackdropHostAvailable=${blurDecision.platformBackdropHostAvailable}'
         : 'caller-disabled',
+    backdropStrategy: blurDecision.strategy,
   );
 }
 
@@ -237,6 +363,11 @@ Widget buildKubusMapGlassSurface({
   List<BoxShadow>? boxShadow,
   VoidCallback? onTap,
   KubusMapBlurPolicy blurPolicy = KubusMapBlurPolicy.allowCompactWeb,
+  bool overMapPlatformView = true,
+  String? backdropRegionId,
+  bool enablePlatformBackdropRegion = true,
+  bool? isWebOverride,
+  bool? platformBackdropHostAvailableOverride,
 }) {
   final preset = resolveKubusMapGlassSurfacePreset(
     context,
@@ -244,6 +375,10 @@ Widget buildKubusMapGlassSurface({
     tintBase: tintBase,
     useBlur: useBlur,
     blurPolicy: blurPolicy,
+    overMapPlatformView: overMapPlatformView,
+    isWebOverride: isWebOverride,
+    platformBackdropHostAvailableOverride:
+        platformBackdropHostAvailableOverride,
   );
   final effectiveRadius = borderRadius ?? preset.borderRadius;
   final effectivePadding = padding;
@@ -304,6 +439,15 @@ Widget buildKubusMapGlassSurface({
     child: surface,
   );
 
+  if (preset.usePlatformBackdropHost && enablePlatformBackdropRegion) {
+    surface = _KubusMapGlassBackdropTrackedSurface(
+      regionId: backdropRegionId,
+      borderRadius: effectiveRadius,
+      blurSigma: preset.blurSigma,
+      child: surface,
+    );
+  }
+
   if (onTap != null) {
     surface = Material(
       color: Colors.transparent,
@@ -315,4 +459,39 @@ Widget buildKubusMapGlassSurface({
     );
   }
   return surface;
+}
+
+class _KubusMapGlassBackdropTrackedSurface extends StatefulWidget {
+  const _KubusMapGlassBackdropTrackedSurface({
+    required this.regionId,
+    required this.borderRadius,
+    required this.blurSigma,
+    required this.child,
+  });
+
+  final String? regionId;
+  final BorderRadius borderRadius;
+  final double blurSigma;
+  final Widget child;
+
+  @override
+  State<_KubusMapGlassBackdropTrackedSurface> createState() =>
+      _KubusMapGlassBackdropTrackedSurfaceState();
+}
+
+class _KubusMapGlassBackdropTrackedSurfaceState
+    extends State<_KubusMapGlassBackdropTrackedSurface> {
+  late final String _generatedRegionId =
+      'kubus-map-glass-${++_mapGlassRegionIdSequence}';
+
+  @override
+  Widget build(BuildContext context) {
+    return KubusMapBackdropRegionTracker(
+      id: widget.regionId ?? _generatedRegionId,
+      enabled: true,
+      borderRadius: widget.borderRadius,
+      blurSigma: widget.blurSigma,
+      child: widget.child,
+    );
+  }
 }
