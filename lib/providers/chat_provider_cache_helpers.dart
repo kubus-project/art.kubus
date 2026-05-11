@@ -53,6 +53,7 @@ void _chatProviderCacheUser(ChatProvider provider, User user) {
   if (user.id.isEmpty) return;
   provider._userCache[user.id] = user;
   provider._userCacheTouchMs[user.id] = DateTime.now().millisecondsSinceEpoch;
+  provider._upsertUserParticipant(user, notify: false);
   provider._pruneCacheMap<User>(
     provider._userCache,
     provider._userCacheTouchMs,
@@ -108,6 +109,9 @@ void _chatProviderResetSessionState(
   provider._membersCacheTouchMs.clear();
   provider._userCache.clear();
   provider._userCacheTouchMs.clear();
+  provider._participantIdentityByKey.clear();
+  provider._participantHydrationInFlight.clear();
+  provider._participantIdentityRevision = 0;
   provider._lastUnauthorizedAt = null;
   provider._lastStateSignature = '';
   provider._lastTotalUnread = 0;

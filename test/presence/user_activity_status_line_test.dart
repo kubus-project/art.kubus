@@ -20,7 +20,8 @@ class _FakePresenceApi implements PresenceApi {
   Future<void> ensureAuthLoaded({String? walletAddress}) async {}
 
   @override
-  Future<Map<String, dynamic>> pingPresence({String? walletAddress}) async => {'success': true};
+  Future<Map<String, dynamic>> pingPresence({String? walletAddress}) async =>
+      {'success': true};
 
   @override
   Future<Map<String, dynamic>> recordPresenceVisit({
@@ -34,7 +35,56 @@ class _FakePresenceApi implements PresenceApi {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('UserActivityStatusLine alternates to location when available and not expired', (tester) async {
+  testWidgets('UserActivityStatusLine uses fresh online, not raw isOnline',
+      (tester) async {
+    const wallet = '0xSTALE';
+    final now = DateTime.now();
+    final api = _FakePresenceApi(
+      presenceResponse: {
+        'success': true,
+        'data': [
+          {
+            'walletAddress': wallet,
+            'exists': true,
+            'visible': true,
+            'isOnline': true,
+            'lastSeenAt':
+                now.subtract(const Duration(minutes: 5)).toIso8601String(),
+            'observedAt':
+                now.subtract(const Duration(minutes: 5)).toIso8601String(),
+          }
+        ],
+      },
+    );
+
+    final presenceProvider = PresenceProvider(api: api);
+
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: presenceProvider,
+        child: MaterialApp(
+          locale: const Locale('en'),
+          supportedLocales: AppLocalizations.supportedLocales,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          home: const Scaffold(
+            body: UserActivityStatusLine(walletAddress: wallet),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pump(const Duration(milliseconds: 150));
+    expect(find.text('Online'), findsNothing);
+    expect(find.textContaining('Last seen'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    presenceProvider.dispose();
+  });
+
+  testWidgets(
+      'UserActivityStatusLine alternates to location when available and not expired',
+      (tester) async {
     const wallet = '0xABC123';
     final now = DateTime.now();
     final api = _FakePresenceApi(
@@ -46,12 +96,15 @@ void main() {
             'exists': true,
             'visible': true,
             'isOnline': false,
-            'lastSeenAt': now.subtract(const Duration(minutes: 2)).toIso8601String(),
+            'lastSeenAt':
+                now.subtract(const Duration(minutes: 2)).toIso8601String(),
             'lastVisited': {
               'type': 'artwork',
               'id': '00000000-0000-0000-0000-000000000001',
-              'visitedAt': now.subtract(const Duration(minutes: 2)).toIso8601String(),
-              'expiresAt': now.add(const Duration(minutes: 30)).toIso8601String(),
+              'visitedAt':
+                  now.subtract(const Duration(minutes: 2)).toIso8601String(),
+              'expiresAt':
+                  now.add(const Duration(minutes: 30)).toIso8601String(),
             },
             'lastVisitedTitle': 'Test Artwork',
           }
@@ -89,7 +142,9 @@ void main() {
     presenceProvider.dispose();
   });
 
-  testWidgets('UserActivityStatusLine does not alternate when lastVisited is expired', (tester) async {
+  testWidgets(
+      'UserActivityStatusLine does not alternate when lastVisited is expired',
+      (tester) async {
     const wallet = '0xDEF456';
     final now = DateTime.now();
     final api = _FakePresenceApi(
@@ -101,12 +156,15 @@ void main() {
             'exists': true,
             'visible': true,
             'isOnline': false,
-            'lastSeenAt': now.subtract(const Duration(minutes: 1)).toIso8601String(),
+            'lastSeenAt':
+                now.subtract(const Duration(minutes: 1)).toIso8601String(),
             'lastVisited': {
               'type': 'artwork',
               'id': '00000000-0000-0000-0000-000000000002',
-              'visitedAt': now.subtract(const Duration(minutes: 2)).toIso8601String(),
-              'expiresAt': now.subtract(const Duration(minutes: 1)).toIso8601String(),
+              'visitedAt':
+                  now.subtract(const Duration(minutes: 2)).toIso8601String(),
+              'expiresAt':
+                  now.subtract(const Duration(minutes: 1)).toIso8601String(),
             },
             'lastVisitedTitle': 'Expired Artwork',
           }

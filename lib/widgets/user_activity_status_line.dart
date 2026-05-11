@@ -119,7 +119,7 @@ class _UserActivityStatusLineState extends State<UserActivityStatusLine> {
     }
 
     final p = presenceEntry;
-    final isOnline = p.isOnline == true;
+    final isOnline = p.isFreshOnline();
     if (isOnline) {
       _stopToggleTimer();
       return Text(
@@ -142,10 +142,10 @@ class _UserActivityStatusLineState extends State<UserActivityStatusLine> {
 
     final lastVisited = p.lastVisited;
     final canShowLocation =
-      AppConfig.isFeatureEnabled('presenceLastVisitedLocation') &&
-        lastVisited != null &&
-        (p.lastVisitedTitle ?? '').trim().isNotEmpty &&
-        lastVisited.isExpired == false;
+        AppConfig.isFeatureEnabled('presenceLastVisitedLocation') &&
+            lastVisited != null &&
+            (p.lastVisitedTitle ?? '').trim().isNotEmpty &&
+            lastVisited.isExpired == false;
 
     if (!canShowLocation) {
       _stopToggleTimer();
@@ -166,11 +166,11 @@ class _UserActivityStatusLineState extends State<UserActivityStatusLine> {
     }
 
     final locationText =
-      l10n.presenceLastSeenAtLabel((p.lastVisitedTitle ?? '').trim());
+        l10n.presenceLastSeenAtLabel((p.lastVisitedTitle ?? '').trim());
     final activeChild = _showLocation
         ? InkWell(
             key: const ValueKey('presence_location'),
-        onTap: () => _openLastVisited(context, lastVisited),
+            onTap: () => _openLastVisited(context, lastVisited),
             child: Text(
               locationText,
               textAlign: widget.textAlign,
@@ -192,7 +192,8 @@ class _UserActivityStatusLineState extends State<UserActivityStatusLine> {
       duration: AppConfig.shortAnimationDuration,
       switchInCurve: Curves.easeIn,
       switchOutCurve: Curves.easeOut,
-      transitionBuilder: (child, animation) => FadeTransition(opacity: animation, child: child),
+      transitionBuilder: (child, animation) =>
+          FadeTransition(opacity: animation, child: child),
       child: activeChild,
     );
   }
@@ -216,7 +217,8 @@ class _UserActivityStatusLineState extends State<UserActivityStatusLine> {
     return l10n.commonTimeAgoJustNow;
   }
 
-  void _openLastVisited(BuildContext context, UserPresenceLastVisited lastVisited) {
+  void _openLastVisited(
+      BuildContext context, UserPresenceLastVisited lastVisited) {
     final id = lastVisited.id.trim();
     if (id.isEmpty) return;
     final type = lastVisited.type.trim().toLowerCase();
@@ -226,13 +228,16 @@ class _UserActivityStatusLineState extends State<UserActivityStatusLine> {
         openArtwork(context, id, source: 'user_activity_status');
         return;
       case 'exhibition':
-        Navigator.of(context).push(MaterialPageRoute(builder: (_) => ExhibitionDetailScreen(exhibitionId: id)));
+        Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => ExhibitionDetailScreen(exhibitionId: id)));
         return;
       case 'event':
-        Navigator.of(context).push(MaterialPageRoute(builder: (_) => EventDetailScreen(eventId: id)));
+        Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => EventDetailScreen(eventId: id)));
         return;
       case 'collection':
-        Navigator.of(context).push(MaterialPageRoute(builder: (_) => CollectionDetailScreen(collectionId: id)));
+        Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => CollectionDetailScreen(collectionId: id)));
         return;
     }
   }

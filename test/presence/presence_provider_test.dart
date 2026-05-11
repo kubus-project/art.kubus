@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:art_kubus/models/user_profile.dart';
+import 'package:art_kubus/models/user_presence.dart';
 import 'package:art_kubus/providers/presence_provider.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
@@ -10,6 +11,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 class _FakePresenceApi implements PresenceApi {
   int batchCalls = 0;
+  int pingCalls = 0;
   List<List<String>> requestedWallets = <List<String>>[];
   Completer<Map<String, dynamic>>? batchCompleter;
 
@@ -36,6 +38,7 @@ class _FakePresenceApi implements PresenceApi {
 
   @override
   Future<Map<String, dynamic>> pingPresence({String? walletAddress}) async {
+    pingCalls += 1;
     return {'success': true};
   }
 
@@ -102,6 +105,228 @@ class _FakeProfileApi implements ProfileBackendApi {
 }
 
 void main() {
+  test('stale cached online presence is not isOnlineFresh', () {
+    final provider = PresenceProvider(api: _FakePresenceApi());
+    addTearDown(provider.dispose);
+    final old = DateTime.now().subtract(const Duration(minutes: 5));
+
+    provider.applyPresenceUpdate(UserPresenceEntry(
+      walletAddress: 'wallet_1',
+      exists: true,
+      visible: true,
+      isOnline: true,
+      lastSeenAt: old,
+      observedAt: old,
+      source: PresenceSource.cache,
+      lastVisited: null,
+      lastVisitedTitle: null,
+    ));
+
+    expect(provider.isOnlineFresh('wallet_1'), isFalse);
+    expect(provider.shouldShowOnlineBadge('wallet_1'), isFalse);
+  });
+
+  test('fresh API online presence is isOnlineFresh', () {
+    final provider = PresenceProvider(api: _FakePresenceApi());
+    addTearDown(provider.dispose);
+    final now = DateTime.now();
+
+    provider.applyPresenceUpdate(UserPresenceEntry(
+      walletAddress: 'wallet_1',
+      exists: true,
+      visible: true,
+      isOnline: true,
+      lastSeenAt: now,
+      observedAt: now,
+      source: PresenceSource.api,
+      lastVisited: null,
+      lastVisitedTitle: null,
+    ));
+
+    expect(provider.isOnlineFresh('wallet_1'), isTrue);
+  });
+
+  test('online with no timestamp is not isOnlineFresh', () {
+    final entry = UserPresenceEntry(
+      walletAddress: 'wallet_1',
+      exists: true,
+      visible: true,
+      isOnline: true,
+      lastSeenAt: null,
+      observedAt: null,
+      source: PresenceSource.api,
+      lastVisited: null,
+      lastVisitedTitle: null,
+    );
+
+    expect(entry.isFreshOnline(), isFalse);
+  });
+
+  test('unknown presence shows no green badge', () {
+    final provider = PresenceProvider(api: _FakePresenceApi());
+    addTearDown(provider.dispose);
+
+    provider.applyPresenceUpdate(const UserPresenceEntry(
+      walletAddress: 'wallet_1',
+      exists: false,
+      visible: false,
+      isOnline: null,
+      lastSeenAt: null,
+      observedAt: null,
+      source: PresenceSource.unknown,
+      lastVisited: null,
+      lastVisitedTitle: null,
+    ));
+
+    expect(provider.shouldShowOnlineBadge('wallet_1'), isFalse);
+  });
+
+  test(
+      'older API offline response does not override newer local optimistic online',
+      () {
+    final provider = PresenceProvider(api: _FakePresenceApi());
+    addTearDown(provider.dispose);
+    final now = DateTime.now();
+
+    provider.applyPresenceUpdate(UserPresenceEntry(
+      walletAddress: 'wallet_1',
+      exists: true,
+      visible: true,
+      isOnline: true,
+      lastSeenAt: now,
+      observedAt: now,
+      source: PresenceSource.localOptimistic,
+      lastVisited: null,
+      lastVisitedTitle: null,
+    ));
+    provider.applyPresenceUpdate(UserPresenceEntry(
+      walletAddress: 'wallet_1',
+      exists: true,
+      visible: true,
+      isOnline: false,
+      lastSeenAt: now.subtract(const Duration(seconds: 5)),
+      observedAt: now.subtract(const Duration(seconds: 5)),
+      source: PresenceSource.api,
+      lastVisited: null,
+      lastVisitedTitle: null,
+    ));
+
+    expect(provider.presenceFor('wallet_1')?.isOnline, isTrue);
+  });
+
+  test('older API online response does not override newer socket offline', () {
+    final provider = PresenceProvider(api: _FakePresenceApi());
+    addTearDown(provider.dispose);
+    final now = DateTime.now();
+
+    provider.applyPresenceUpdate(UserPresenceEntry(
+      walletAddress: 'wallet_1',
+      exists: true,
+      visible: true,
+      isOnline: false,
+      lastSeenAt: now,
+      observedAt: now,
+      source: PresenceSource.socket,
+      lastVisited: null,
+      lastVisitedTitle: null,
+    ));
+    provider.applyPresenceUpdate(UserPresenceEntry(
+      walletAddress: 'wallet_1',
+      exists: true,
+      visible: true,
+      isOnline: true,
+      lastSeenAt: now.subtract(const Duration(seconds: 5)),
+      observedAt: now.subtract(const Duration(seconds: 5)),
+      source: PresenceSource.api,
+      lastVisited: null,
+      lastVisitedTitle: null,
+    ));
+
+    expect(provider.presenceFor('wallet_1')?.isOnline, isFalse);
+  });
+
+  test(
+      'local optimistic current-user presence updates cache synchronously before API completes',
+      () {
+    final api = _FakePresenceApi();
+    final provider = PresenceProvider(api: api);
+    addTearDown(provider.dispose);
+
+    unawaited(provider.activateCurrentUserPresence(walletAddress: 'wallet_1'));
+
+    expect(provider.presenceFor('wallet_1')?.isOnline, isTrue);
+    expect(provider.presenceFor('wallet_1')?.source,
+        PresenceSource.localOptimistic);
+  });
+
+  test('heartbeatCurrentUserPresence throttles backend calls', () {
+    fakeAsync((async) {
+      final api = _FakePresenceApi();
+      final provider = PresenceProvider(api: api);
+      final profileProvider = ProfileProvider(apiService: _FakeProfileApi());
+      addTearDown(provider.dispose);
+
+      BackendApiService().setAuthTokenForTesting('token');
+      profileProvider.setCurrentUser(
+        UserProfile(
+          id: 'p1',
+          walletAddress: 'wallet_1',
+          username: 'user_1',
+          displayName: 'User 1',
+          bio: '',
+          avatar: '',
+          preferences: ProfilePreferences(showActivityStatus: true),
+          createdAt: DateTime(2025, 1, 1),
+          updatedAt: DateTime(2025, 1, 1),
+        ),
+      );
+      provider.bindProfileProvider(profileProvider);
+
+      unawaited(provider.heartbeatCurrentUserPresence());
+      async.flushMicrotasks();
+      unawaited(provider.heartbeatCurrentUserPresence());
+      async.flushMicrotasks();
+
+      expect(api.pingCalls, 1);
+      BackendApiService().setAuthTokenForTesting(null);
+    });
+  });
+
+  test('markCurrentUserAwayOrOffline updates cache immediately', () {
+    final provider = PresenceProvider(api: _FakePresenceApi());
+    final profileProvider = ProfileProvider(apiService: _FakeProfileApi());
+    addTearDown(provider.dispose);
+    profileProvider.setCurrentUser(
+      UserProfile(
+        id: 'p1',
+        walletAddress: 'wallet_1',
+        username: 'user_1',
+        displayName: 'User 1',
+        bio: '',
+        avatar: '',
+        preferences: ProfilePreferences(showActivityStatus: true),
+        createdAt: DateTime(2025, 1, 1),
+        updatedAt: DateTime(2025, 1, 1),
+      ),
+    );
+    provider.bindProfileProvider(profileProvider);
+    provider.applyPresenceUpdate(UserPresenceEntry(
+      walletAddress: 'wallet_1',
+      exists: true,
+      visible: true,
+      isOnline: true,
+      lastSeenAt: DateTime.now(),
+      observedAt: DateTime.now(),
+      source: PresenceSource.localOptimistic,
+      lastVisited: null,
+      lastVisitedTitle: null,
+    ));
+
+    unawaited(provider.markCurrentUserAwayOrOffline(offline: true));
+
+    expect(provider.presenceFor('wallet_1')?.isOnline, isFalse);
+  });
+
   test('PresenceProvider auth change triggers immediate refresh', () {
     fakeAsync((async) {
       final api = _FakePresenceApi();

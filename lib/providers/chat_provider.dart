@@ -5,6 +5,7 @@ import '../config/config.dart';
 import '../services/backend_api_service.dart';
 import '../services/socket_service.dart';
 import '../models/conversation.dart';
+import '../models/resolved_conversation_participant.dart';
 import '../services/user_service.dart';
 import '../services/push_notification_service.dart';
 import '../models/message.dart';
@@ -461,6 +462,10 @@ class ChatProvider extends ChangeNotifier {
   final Map<String, Map<String, dynamic>> _membersCache =
       {}; // convId -> {'result': List<dynamic>, 'ts': int}
   final Map<String, User> _userCache = {}; // wallet -> User
+  final Map<String, ResolvedConversationParticipant> _participantIdentityByKey =
+      {};
+  final Set<String> _participantHydrationInFlight = <String>{};
+  int _participantIdentityRevision = 0;
   StreamSubscription<Map<String, dynamic>>? _eventBusSub;
   StreamSubscription<Map<String, dynamic>>? _eventBusProfilesSub;
   String? _currentWallet;
@@ -572,12 +577,348 @@ class ChatProvider extends ChangeNotifier {
   List<Conversation> get conversations => _conversations;
   Map<String, List<ChatMessage>> get messages => _messages;
   Map<String, int> get unreadCounts => _unreadCounts;
+  Map<String, ResolvedConversationParticipant>
+      get participantIdentitySnapshot =>
+          Map.unmodifiable(_participantIdentityByKey);
+  int get participantIdentityRevision => _participantIdentityRevision;
+
   User? getCachedUser(String wallet) {
     final cached = _userCache[wallet];
     if (cached != null) {
       _userCacheTouchMs[wallet] = DateTime.now().millisecondsSinceEpoch;
     }
     return cached;
+  }
+
+  void seedConversationParticipants(Conversation conversation) {
+    var seeded = 0;
+
+    void add(
+      String? wallet, {
+      String? displayName,
+      String? username,
+      String? avatarUrl,
+      ParticipantIdentitySource source =
+          ParticipantIdentitySource.conversationSnapshot,
+    }) {
+      final normalizedWallet = WalletUtils.normalize(wallet);
+      final key = normalizeParticipantIdentityKey(
+        walletAddress: normalizedWallet,
+        userId: normalizedWallet,
+      );
+      if (key == 'unknown') return;
+      final changed = _upsertParticipantIdentity(
+        ResolvedConversationParticipant(
+          identityKey: key,
+          walletAddress: normalizedWallet.isEmpty ? null : normalizedWallet,
+          userId: normalizedWallet.isEmpty ? null : normalizedWallet,
+          displayName: _meaningfulDisplayName(displayName, normalizedWallet),
+          username: _meaningfulUsername(username),
+          avatarUrl: _normalizeParticipantAvatar(avatarUrl),
+          source: source,
+          updatedAt: DateTime.now(),
+        ),
+        notify: false,
+      );
+      if (changed) seeded++;
+    }
+
+    for (final profile in conversation.memberProfiles) {
+      add(
+        profile.wallet,
+        displayName: profile.displayName,
+        avatarUrl: profile.avatarUrl,
+      );
+    }
+    final counterpart = conversation.counterpartProfile;
+    if (counterpart != null) {
+      add(
+        counterpart.wallet,
+        displayName: counterpart.displayName,
+        avatarUrl: counterpart.avatarUrl,
+      );
+    }
+    for (final wallet in conversation.memberWallets) {
+      add(wallet);
+    }
+
+    if (kDebugMode && seeded > 0) {
+      debugPrint(
+        'ChatProvider: seeded $seeded conversation participants',
+      );
+    }
+    if (seeded > 0) {
+      _safeNotifyListeners(force: true);
+    }
+  }
+
+  void seedMessageParticipants(Iterable<ChatMessage> messages) {
+    var seeded = 0;
+    for (final message in messages) {
+      final key = normalizeParticipantIdentityKey(
+        walletAddress: message.senderWallet,
+        userId: message.senderWallet,
+        senderId: message.id,
+      );
+      if (key == 'unknown') continue;
+      final changed = _upsertParticipantIdentity(
+        ResolvedConversationParticipant(
+          identityKey: key,
+          walletAddress: WalletUtils.normalize(message.senderWallet),
+          userId: WalletUtils.normalize(message.senderWallet),
+          displayName: _meaningfulDisplayName(
+              message.senderDisplayName, message.senderWallet),
+          username: _meaningfulUsername(message.senderUsername),
+          avatarUrl: _normalizeParticipantAvatar(message.senderAvatar),
+          source: ParticipantIdentitySource.messageSnapshot,
+          updatedAt: message.createdAt,
+        ),
+        notify: false,
+      );
+      if (changed) seeded++;
+    }
+    if (kDebugMode && seeded > 0) {
+      debugPrint('ChatProvider: seeded $seeded message participants');
+    }
+    if (seeded > 0) {
+      _safeNotifyListeners(force: true);
+    }
+  }
+
+  void upsertParticipantIdentity(
+    ResolvedConversationParticipant participant,
+  ) {
+    _upsertParticipantIdentity(participant, notify: true);
+  }
+
+  ResolvedConversationParticipant resolveParticipantForMessage({
+    required ChatMessage message,
+    required Conversation conversation,
+    String? currentUserWallet,
+    String? currentUserId,
+    String? currentUserDisplayName,
+    String? currentUserAvatarUrl,
+  }) {
+    final senderWallet = WalletUtils.normalize(message.senderWallet);
+    final senderKey = normalizeParticipantIdentityKey(
+      walletAddress: senderWallet,
+      userId: senderWallet,
+      senderId: message.id,
+    );
+    final currentKey = normalizeParticipantIdentityKey(
+      walletAddress: currentUserWallet,
+      userId: currentUserId,
+    );
+
+    if (currentKey != 'unknown' && senderKey == currentKey) {
+      final local = ResolvedConversationParticipant(
+        identityKey: currentKey,
+        walletAddress: WalletUtils.normalize(currentUserWallet).isNotEmpty
+            ? WalletUtils.normalize(currentUserWallet)
+            : senderWallet,
+        userId: WalletUtils.normalize(currentUserId).isNotEmpty
+            ? WalletUtils.normalize(currentUserId)
+            : senderWallet,
+        displayName:
+            _meaningfulDisplayName(currentUserDisplayName, senderWallet),
+        avatarUrl: _normalizeParticipantAvatar(currentUserAvatarUrl),
+        source: ParticipantIdentitySource.localUser,
+        updatedAt: DateTime.now(),
+      );
+      _upsertParticipantIdentity(local, notify: false);
+      return _participantIdentityByKey[currentKey] ?? local;
+    }
+
+    final cached = _participantIdentityByKey[senderKey];
+    if (cached != null) return cached;
+
+    _upsertParticipantIdentity(
+      ResolvedConversationParticipant(
+        identityKey: senderKey,
+        walletAddress: senderWallet.isEmpty ? null : senderWallet,
+        userId: senderWallet.isEmpty ? null : senderWallet,
+        displayName:
+            _meaningfulDisplayName(message.senderDisplayName, senderWallet),
+        username: _meaningfulUsername(message.senderUsername),
+        avatarUrl: _normalizeParticipantAvatar(message.senderAvatar),
+        source: ParticipantIdentitySource.messageSnapshot,
+        updatedAt: message.createdAt,
+      ),
+      notify: false,
+    );
+    return _participantIdentityByKey[senderKey] ??
+        ResolvedConversationParticipant(
+          identityKey: senderKey,
+          walletAddress: senderWallet.isEmpty ? null : senderWallet,
+          userId: senderWallet.isEmpty ? null : senderWallet,
+          source: ParticipantIdentitySource.fallback,
+          updatedAt: message.createdAt,
+        );
+  }
+
+  Future<void> hydrateConversationParticipants({
+    required Conversation conversation,
+    required Iterable<ChatMessage> messages,
+  }) async {
+    seedConversationParticipants(conversation);
+    seedMessageParticipants(messages);
+
+    final walletsByKey = <String, String>{};
+    for (final participant in _participantIdentityByKey.values) {
+      final wallet = WalletUtils.normalize(participant.walletAddress);
+      if (wallet.isEmpty) continue;
+      if (_participantHasProfileMetadata(participant)) continue;
+      walletsByKey[participant.identityKey] = wallet;
+    }
+
+    final pendingKeys = walletsByKey.keys
+        .where((key) => !_participantHydrationInFlight.contains(key))
+        .toList(growable: false);
+    if (pendingKeys.isEmpty) return;
+    _participantHydrationInFlight.addAll(pendingKeys);
+
+    final wallets = pendingKeys.map((key) => walletsByKey[key]!).toList();
+    var hydrated = 0;
+    try {
+      final cachedUsers = UserService.getCachedUsers(wallets);
+      for (final entry in cachedUsers.entries) {
+        hydrated += _upsertUserParticipant(entry.value, notify: false) ? 1 : 0;
+      }
+
+      final stillMissing = wallets.where((wallet) {
+        final key = normalizeParticipantIdentityKey(
+          walletAddress: wallet,
+          userId: wallet,
+        );
+        final participant = _participantIdentityByKey[key];
+        return participant == null ||
+            !_participantHasProfileMetadata(participant);
+      }).toList(growable: false);
+
+      if (stillMissing.isNotEmpty) {
+        final users = await UserService.getUsersByWallets(stillMissing);
+        try {
+          UserService.setUsersInCache(users);
+        } catch (_) {}
+        for (final user in users) {
+          hydrated += _upsertUserParticipant(user, notify: false) ? 1 : 0;
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('ChatProvider: hydrate participants failed: $e');
+      }
+    } finally {
+      _participantHydrationInFlight.removeAll(pendingKeys);
+    }
+
+    if (kDebugMode && hydrated > 0) {
+      debugPrint('ChatProvider: hydrated participant count=$hydrated');
+    }
+    if (hydrated > 0) {
+      _safeNotifyListeners(force: true);
+    }
+  }
+
+  bool _upsertUserParticipant(User user, {required bool notify}) {
+    if (user.id.isEmpty) return false;
+    return _upsertParticipantIdentity(
+      ResolvedConversationParticipant(
+        identityKey: normalizeParticipantIdentityKey(
+          walletAddress: user.id,
+          userId: user.id,
+        ),
+        walletAddress: user.id,
+        userId: user.id,
+        displayName: _meaningfulDisplayName(user.name, user.id),
+        username: _meaningfulUsername(user.username),
+        avatarUrl: _normalizeParticipantAvatar(user.profileImageUrl),
+        source: ParticipantIdentitySource.profileHydration,
+        updatedAt: DateTime.now(),
+      ),
+      notify: notify,
+    );
+  }
+
+  bool _upsertParticipantIdentity(
+    ResolvedConversationParticipant participant, {
+    required bool notify,
+  }) {
+    final key = participant.identityKey.trim().toLowerCase();
+    if (key.isEmpty || key == 'unknown') return false;
+    final normalized = ResolvedConversationParticipant(
+      identityKey: key,
+      walletAddress: WalletUtils.normalize(participant.walletAddress).isEmpty
+          ? null
+          : WalletUtils.normalize(participant.walletAddress),
+      userId: WalletUtils.normalize(participant.userId).isEmpty
+          ? null
+          : WalletUtils.normalize(participant.userId),
+      displayName: _meaningfulDisplayName(
+          participant.displayName, participant.walletAddress),
+      username: _meaningfulUsername(participant.username),
+      avatarUrl: _normalizeParticipantAvatar(participant.avatarUrl),
+      source: participant.source,
+      updatedAt: participant.updatedAt,
+    );
+
+    final existing = _participantIdentityByKey[key];
+    final merged =
+        existing == null ? normalized : existing.mergeFrom(normalized);
+    if (existing != null && existing == merged) return false;
+    final visibleChanged =
+        existing == null || !existing.hasSameVisibleIdentity(merged);
+    _participantIdentityByKey[key] = merged;
+    if (visibleChanged) {
+      _participantIdentityRevision++;
+      if (kDebugMode) {
+        debugPrint(
+          'ChatProvider: participant visible cache changes revision=$_participantIdentityRevision',
+        );
+      }
+      if (notify) {
+        _safeNotifyListeners(force: true);
+      }
+    }
+    return visibleChanged;
+  }
+
+  bool _participantHasProfileMetadata(
+    ResolvedConversationParticipant participant,
+  ) {
+    final hasDisplay = (participant.displayName ?? '').trim().isNotEmpty ||
+        (participant.username ?? '').trim().isNotEmpty;
+    final hasAvatar = (participant.avatarUrl ?? '').trim().isNotEmpty;
+    return participant.source.index >=
+            ParticipantIdentitySource.profileHydration.index &&
+        (hasDisplay || hasAvatar);
+  }
+
+  String? _meaningfulDisplayName(String? value, String? wallet) {
+    final trimmed = value?.trim();
+    if (trimmed == null || trimmed.isEmpty) return null;
+    final normalizedWallet = WalletUtils.normalize(wallet);
+    if (normalizedWallet.isNotEmpty &&
+        trimmed.toLowerCase() == normalizedWallet.toLowerCase()) {
+      return null;
+    }
+    if (WalletUtils.looksLikeWallet(trimmed)) return null;
+    return trimmed;
+  }
+
+  String? _meaningfulUsername(String? value) {
+    final trimmed = value?.trim();
+    if (trimmed == null || trimmed.isEmpty) return null;
+    if (WalletUtils.looksLikeWallet(trimmed.replaceFirst('@', ''))) {
+      return null;
+    }
+    return trimmed;
+  }
+
+  String? _normalizeParticipantAvatar(String? avatar) {
+    final normalized = MediaUrlResolver.resolve(avatar);
+    if (normalized == null || normalized.trim().isEmpty) return null;
+    return normalized.trim();
   }
 
   bool get isAuthenticated => (_api.getAuthToken() ?? '').isNotEmpty;
@@ -1143,7 +1484,9 @@ class ChatProvider extends ChangeNotifier {
       return _looksLikeIncomingMessage(rawRaw) ? rawRaw : null;
     }
 
-    return _looksLikeIncomingMessage(data) ? Map<String, dynamic>.from(data) : null;
+    return _looksLikeIncomingMessage(data)
+        ? Map<String, dynamic>.from(data)
+        : null;
   }
 
   String _extractIncomingConversationId(
@@ -1190,10 +1533,11 @@ class ChatProvider extends ChangeNotifier {
       return false;
     }
 
-    final hasBody = (payload['message']?.toString().trim().isNotEmpty == true) ||
-        (payload['content']?.toString().trim().isNotEmpty == true) ||
-        (payload['text']?.toString().trim().isNotEmpty == true) ||
-        (payload['body']?.toString().trim().isNotEmpty == true);
+    final hasBody =
+        (payload['message']?.toString().trim().isNotEmpty == true) ||
+            (payload['content']?.toString().trim().isNotEmpty == true) ||
+            (payload['text']?.toString().trim().isNotEmpty == true) ||
+            (payload['body']?.toString().trim().isNotEmpty == true);
     final hasRenderableAttachment = payload['attachment'] is Map ||
         payload['attachments'] is List ||
         payload['media'] is Map ||
@@ -1210,7 +1554,8 @@ class ChatProvider extends ChangeNotifier {
     final topLevelEvent = data['event']?.toString().toLowerCase() ?? '';
     final topLevelEventType = data['eventType']?.toString().toLowerCase() ?? '';
     final topLevelType = data['type']?.toString().toLowerCase() ?? '';
-    final topLevelSignals = <String>[topLevelEvent, topLevelEventType, topLevelType].join('|');
+    final topLevelSignals =
+        <String>[topLevelEvent, topLevelEventType, topLevelType].join('|');
     if (topLevelSignals.contains('notification') ||
         topLevelSignals.contains('read') ||
         topLevelSignals.contains('receipt') ||
@@ -1224,7 +1569,8 @@ class ChatProvider extends ChangeNotifier {
     final payload = _normalizeIncomingMessagePayload(data);
     if (payload == null) return true;
 
-    final keys = payload.keys.map((key) => key.toString().toLowerCase()).toSet();
+    final keys =
+        payload.keys.map((key) => key.toString().toLowerCase()).toSet();
     final onlyMetaKeys = keys.every((key) => <String>{
           'event',
           'eventtype',
@@ -1282,15 +1628,17 @@ class ChatProvider extends ChangeNotifier {
       // Multi-layer validation: reject non-message events before attempting to parse as ChatMessage.
       if (_isNonMessageEventPayload(data)) {
         if (kDebugMode) {
-          debugPrint('ChatProvider._onMessageReceived: rejecting non-message event payload');
+          debugPrint(
+              'ChatProvider._onMessageReceived: rejecting non-message event payload');
         }
         return;
       }
-      
+
       final payload = _normalizeIncomingMessagePayload(data);
       if (payload == null) {
         if (kDebugMode) {
-          debugPrint('ChatProvider._onMessageReceived: payload normalization failed');
+          debugPrint(
+              'ChatProvider._onMessageReceived: payload normalization failed');
         }
         return;
       }
@@ -1390,7 +1738,8 @@ class ChatProvider extends ChangeNotifier {
     }
   }
 
-  bool _isRenderableIncomingMessage(ChatMessage message) => message.isRenderable;
+  bool _isRenderableIncomingMessage(ChatMessage message) =>
+      message.isRenderable;
 
   void _onMessageRead(Map<String, dynamic> data) {
     try {
@@ -1549,7 +1898,8 @@ class ChatProvider extends ChangeNotifier {
       {Map<String, dynamic>? data, String? replyToId}) async {
     final nid = conversationId;
     final trimmedMessage = message.trim();
-    final hasRenderableData = (data ?? const <String, dynamic>{}).entries.any((entry) {
+    final hasRenderableData =
+        (data ?? const <String, dynamic>{}).entries.any((entry) {
       final key = entry.key.toString();
       final value = entry.value;
       if (value == null) return false;
@@ -1677,6 +2027,7 @@ class ChatProvider extends ChangeNotifier {
           .map((i) => ChatMessage.fromJson(i as Map<String, dynamic>))
           .toList();
       _cacheMessages(conversationId, list);
+      seedMessageParticipants(list);
       debugPrint(
           'ChatProvider.loadMessages: conversationId=$conversationId loaded ${list.length} messages');
       _safeNotifyListeners(force: true);

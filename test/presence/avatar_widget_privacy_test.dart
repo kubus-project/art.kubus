@@ -11,7 +11,8 @@ class _FakePresenceApi implements PresenceApi {
 
   _FakePresenceApi(this._presenceBatchBuilder);
 
-  void setPresenceBatchBuilder(Map<String, dynamic> Function(List<String> wallets) builder) {
+  void setPresenceBatchBuilder(
+      Map<String, dynamic> Function(List<String> wallets) builder) {
     _presenceBatchBuilder = builder;
   }
 
@@ -24,7 +25,8 @@ class _FakePresenceApi implements PresenceApi {
   Future<void> ensureAuthLoaded({String? walletAddress}) async {}
 
   @override
-  Future<Map<String, dynamic>> pingPresence({String? walletAddress}) async => {'success': true};
+  Future<Map<String, dynamic>> pingPresence({String? walletAddress}) async =>
+      {'success': true};
 
   @override
   Future<Map<String, dynamic>> recordPresenceVisit({
@@ -38,7 +40,104 @@ class _FakePresenceApi implements PresenceApi {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('AvatarWidget hides presence badge when presence is private', (tester) async {
+  testWidgets(
+      'AvatarWidget does not show green badge for stale online presence',
+      (tester) async {
+    const wallet = '0xSTALE123';
+    final now = DateTime.now();
+    final api = _FakePresenceApi((wallets) {
+      return {
+        'success': true,
+        'data': [
+          {
+            'walletAddress': wallet,
+            'exists': true,
+            'visible': true,
+            'isOnline': true,
+            'lastSeenAt':
+                now.subtract(const Duration(minutes: 3)).toIso8601String(),
+            'observedAt':
+                now.subtract(const Duration(minutes: 3)).toIso8601String(),
+          }
+        ],
+      };
+    });
+    final presenceProvider = PresenceProvider(api: api);
+
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: presenceProvider,
+        child: MaterialApp(
+          locale: const Locale('en'),
+          supportedLocales: AppLocalizations.supportedLocales,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          home: const Scaffold(
+            body: AvatarWidget(
+              wallet: wallet,
+              avatarUrl: 'https://api.dicebear.com/7.x/identicon/svg?seed=test',
+              enableProfileNavigation: false,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pump(const Duration(milliseconds: 150));
+    expect(
+        find.byKey(const ValueKey('avatar_presence_indicator')), findsNothing);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    presenceProvider.dispose();
+  });
+
+  testWidgets('AvatarWidget does not show green badge for unknown presence',
+      (tester) async {
+    const wallet = '0xUNKNOWN123';
+    final api = _FakePresenceApi((wallets) {
+      return {
+        'success': true,
+        'data': [
+          {
+            'walletAddress': wallet,
+            'exists': false,
+            'visible': false,
+            'isOnline': null,
+          }
+        ],
+      };
+    });
+    final presenceProvider = PresenceProvider(api: api);
+
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: presenceProvider,
+        child: MaterialApp(
+          locale: const Locale('en'),
+          supportedLocales: AppLocalizations.supportedLocales,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          home: const Scaffold(
+            body: AvatarWidget(
+              wallet: wallet,
+              avatarUrl: 'https://api.dicebear.com/7.x/identicon/svg?seed=test',
+              enableProfileNavigation: false,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pump(const Duration(milliseconds: 150));
+    expect(
+        find.byKey(const ValueKey('avatar_presence_indicator')), findsNothing);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    presenceProvider.dispose();
+  });
+
+  testWidgets('AvatarWidget hides presence badge when presence is private',
+      (tester) async {
     const wallet = '0xABC123';
     final now = DateTime.now();
 
@@ -81,7 +180,8 @@ void main() {
     );
 
     await tester.pump(const Duration(milliseconds: 150));
-    expect(find.byKey(const ValueKey('avatar_presence_indicator')), findsOneWidget);
+    expect(find.byKey(const ValueKey('avatar_presence_indicator')),
+        findsOneWidget);
 
     api.setPresenceBatchBuilder((wallets) {
       return {
@@ -103,7 +203,8 @@ void main() {
     await presenceProvider.refreshWallet(wallet);
     await tester.pump(const Duration(milliseconds: 150));
 
-    expect(find.byKey(const ValueKey('avatar_presence_indicator')), findsNothing);
+    expect(
+        find.byKey(const ValueKey('avatar_presence_indicator')), findsNothing);
 
     // Dispose provider before test ends to avoid pending timers.
     await tester.pumpWidget(const SizedBox.shrink());

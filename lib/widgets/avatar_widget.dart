@@ -342,13 +342,15 @@ class _AvatarWidgetState extends State<AvatarWidget>
       presence = null;
     }
     final bool presenceVisible = presence?.visible == true;
-    final bool? presenceOnline = presence?.isOnline;
-
-    final bool? effectiveOnline = presenceOnline ?? widget.isOnline;
+    final bool presenceFreshOnline = presence?.isFreshOnline() == true;
+    final bool? effectiveOnline = presence == null
+        ? widget.isOnline
+        : (presenceFreshOnline ? true : false);
     final bool shouldShowPresence = AppConfig.isFeatureEnabled('presence') &&
         widget.showStatusIndicator &&
-        presenceVisible &&
-        effectiveOnline != null;
+        ((presenceVisible &&
+                (presenceFreshOnline || presence?.isOnline == false)) ||
+            (presence == null && widget.isOnline == false));
 
     // Keep presence watch alive on long-lived surfaces.
     // PresenceProvider prunes watched wallets after a short TTL unless they are re-requested.
@@ -518,9 +520,11 @@ class _AvatarWidgetState extends State<AvatarWidget>
 
       // Repair common malformed absolute URL form: "https:/host/path".
       // This can happen when a backend/base url is concatenated incorrectly.
-      if (candidate.startsWith('https:/') && !candidate.startsWith('https://')) {
+      if (candidate.startsWith('https:/') &&
+          !candidate.startsWith('https://')) {
         candidate = candidate.replaceFirst('https:/', 'https://');
-      } else if (candidate.startsWith('http:/') && !candidate.startsWith('http://')) {
+      } else if (candidate.startsWith('http:/') &&
+          !candidate.startsWith('http://')) {
         candidate = candidate.replaceFirst('http:/', 'http://');
       }
     } catch (_) {

@@ -210,11 +210,11 @@ class PresenceProvider extends ChangeNotifier {
 
     _ensureHeartbeatTimer();
     _ensureAutoRefreshTimer();
+    unawaited(activateCurrentUserPresence(
+      walletAddress: wallet,
+      userId: profile.currentUser?.id,
+    ));
     _refreshWatchedWallets(forceImmediate: true);
-
-    if (!hadAuth || _lastHeartbeatAt == null) {
-      unawaited(_sendHeartbeat(force: true));
-    }
   }
 
   void _refreshWatchedWallets({bool forceImmediate = false}) {
@@ -262,6 +262,108 @@ class PresenceProvider extends ChangeNotifier {
     final p = presenceForWallet(wallet);
     if (p == null) return false;
     return p.visible;
+  }
+
+  UserPresenceEntry? presenceFor(String walletOrKey) {
+    return presenceForWallet(walletOrKey);
+  }
+
+  bool isOnlineFresh(String walletOrKey, {DateTime? now}) {
+    return presenceFor(walletOrKey)?.isFreshOnline(now: now) == true;
+  }
+
+  bool shouldShowOnlineBadge(String walletOrKey, {DateTime? now}) {
+    return isOnlineFresh(walletOrKey, now: now);
+  }
+
+  Future<void> activateCurrentUserPresence({
+    required String walletAddress,
+    String? userId,
+  }) async {
+    if (!AppConfig.isFeatureEnabled('presence')) return;
+    final wallet = walletAddress.trim();
+    if (wallet.isEmpty) return;
+
+    final now = DateTime.now();
+    applyLocalCurrentUserPresence(UserPresenceEntry(
+      walletAddress: wallet,
+      exists: true,
+      visible: true,
+      isOnline: true,
+      lastSeenAt: now,
+      observedAt: now,
+      source: PresenceSource.localOptimistic,
+      lastVisited: null,
+      lastVisitedTitle: null,
+    ));
+
+    final last = _lastHeartbeatAt;
+    final minHeartbeatInterval = _heartbeatIntervalForWallet(wallet);
+    if (last != null && now.difference(last) < minHeartbeatInterval) {
+      return;
+    }
+    if (_heartbeatInFlight) return;
+
+    _heartbeatInFlight = true;
+    try {
+      await _api.ensureAuthLoaded(walletAddress: wallet);
+      final response = await _api.pingPresence(walletAddress: wallet);
+      final returned = _presenceEntryFromResponse(response);
+      if (returned != null) {
+        applyPresenceUpdate(returned.copyWith(source: PresenceSource.api));
+      }
+      _lastHeartbeatAt = DateTime.now();
+      _debugHeartbeats++;
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('PresenceProvider: activate current user failed: $e');
+      }
+    } finally {
+      _heartbeatInFlight = false;
+    }
+  }
+
+  Future<void> heartbeatCurrentUserPresence() async {
+    final profile = _profileProvider;
+    final wallet = (profile?.currentUser?.walletAddress ?? '').trim();
+    if (profile?.isSignedIn != true || wallet.isEmpty) return;
+    if (profile?.preferences.showActivityStatus != true) return;
+    await activateCurrentUserPresence(
+      walletAddress: wallet,
+      userId: profile?.currentUser?.id,
+    );
+  }
+
+  Future<void> markCurrentUserAwayOrOffline({bool offline = false}) async {
+    final profile = _profileProvider;
+    final wallet = (profile?.currentUser?.walletAddress ?? '').trim();
+    if (wallet.isEmpty) return;
+    final now = DateTime.now();
+    applyLocalCurrentUserPresence(UserPresenceEntry(
+      walletAddress: wallet,
+      exists: true,
+      visible: true,
+      isOnline: offline ? false : null,
+      lastSeenAt: now,
+      observedAt: now,
+      source: PresenceSource.localOptimistic,
+      lastVisited: null,
+      lastVisitedTitle: null,
+    ));
+  }
+
+  void applyLocalCurrentUserPresence(UserPresenceEntry presence) {
+    applyPresenceUpdate(
+      presence.copyWith(source: PresenceSource.localOptimistic),
+    );
+  }
+
+  void applyPresenceUpdate(UserPresenceEntry presence) {
+    _applyPresenceUpdate(
+      presence,
+      fetchedAt: DateTime.now(),
+      notify: true,
+    );
   }
 
   void prefetch(Iterable<String> wallets) {
@@ -568,10 +670,13 @@ class PresenceProvider extends ChangeNotifier {
 
   Future<void> onAppResumed() async {
     _ensureHeartbeatTimer();
-    await _sendHeartbeat();
+    await heartbeatCurrentUserPresence();
   }
 
   Future<void> _sendHeartbeat({bool force = false}) async {
+    if (force) {
+      _lastHeartbeatAt = null;
+    }
     if (_heartbeatInFlight) return;
     if (!AppConfig.isFeatureEnabled('presence')) return;
 
@@ -583,27 +688,10 @@ class PresenceProvider extends ChangeNotifier {
     final prefs = profile?.preferences;
     if (prefs?.showActivityStatus != true) return;
 
-    final minHeartbeatInterval = _heartbeatIntervalForWallet(wallet);
-    final last = _lastHeartbeatAt;
-    if (!force &&
-        last != null &&
-        DateTime.now().difference(last) < minHeartbeatInterval) {
-      return;
-    }
-
-    _heartbeatInFlight = true;
-    try {
-      await _api.ensureAuthLoaded(walletAddress: wallet);
-      await _api.pingPresence(walletAddress: wallet);
-      _lastHeartbeatAt = DateTime.now();
-      _debugHeartbeats++;
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('PresenceProvider: heartbeat failed: $e');
-      }
-    } finally {
-      _heartbeatInFlight = false;
-    }
+    await activateCurrentUserPresence(
+      walletAddress: wallet,
+      userId: profile?.currentUser?.id,
+    );
   }
 
   void handleAppForegroundChanged(bool isForeground) {
@@ -724,16 +812,12 @@ class PresenceProvider extends ChangeNotifier {
           final walletKey = _walletLowerOrNull(parsed.walletAddress);
           if (walletKey == null) continue;
           returnedWalletsLower.add(walletKey);
-          final existing = _cacheByWalletLower[walletKey];
-          if (existing == null || existing.presence != parsed) {
-            didChange = true;
-          }
-
-          _cacheByWalletLower[walletKey] = _PresenceCacheEntry(
-            presence:
-                existing?.presence == parsed ? existing!.presence : parsed,
-            fetchedAt: now,
-          );
+          didChange = _applyPresenceUpdate(
+                parsed.copyWith(source: PresenceSource.api),
+                fetchedAt: now,
+                notify: false,
+              ) ||
+              didChange;
         }
 
         // If the backend omits some requested wallets from the response, mark
@@ -755,6 +839,8 @@ class PresenceProvider extends ChangeNotifier {
               visible: false,
               isOnline: null,
               lastSeenAt: null,
+              observedAt: null,
+              source: PresenceSource.unknown,
               lastVisited: null,
               lastVisitedTitle: null,
             ),
@@ -845,6 +931,37 @@ class PresenceProvider extends ChangeNotifier {
         debugPrint('PresenceProvider: recordVisit failed: $e');
       }
     }
+  }
+
+  UserPresenceEntry? _presenceEntryFromResponse(Map<String, dynamic> response) {
+    if (response['success'] != true) return null;
+    final raw = response['data'] ?? response['presence'] ?? response['record'];
+    if (raw is Map<String, dynamic>) return UserPresenceEntry.fromJson(raw);
+    if (raw is Map) {
+      return UserPresenceEntry.fromJson(Map<String, dynamic>.from(raw));
+    }
+    return null;
+  }
+
+  bool _applyPresenceUpdate(
+    UserPresenceEntry presence, {
+    required DateTime fetchedAt,
+    required bool notify,
+  }) {
+    final key = _walletLowerOrNull(presence.walletAddress);
+    if (key == null) return false;
+
+    final existing = _cacheByWalletLower[key];
+    final merged = existing == null
+        ? presence
+        : existing.presence.mergeFreshnessAware(presence);
+    final changed = existing == null || existing.presence != merged;
+    _cacheByWalletLower[key] = _PresenceCacheEntry(
+      presence: merged,
+      fetchedAt: fetchedAt,
+    );
+    if (changed && notify) notifyListeners();
+    return changed;
   }
 
   String? _walletLowerOrNull(String? wallet) {
