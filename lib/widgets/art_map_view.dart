@@ -142,16 +142,19 @@ class ArtMapView extends StatefulWidget {
   @visibleForTesting
   static bool shouldShowWebGLRecoveryOverlayForTest({
     required bool webGLRecovering,
+    required bool styleFailed,
   }) {
-    return webGLRecovering;
+    // Only show recovery UI for transient WebGL loss. If a real style failure
+    // is present, the style error UI should take precedence.
+    return webGLRecovering && !styleFailed;
   }
 
   @visibleForTesting
   static bool shouldShowStyleErrorOverlayForTest({
     required bool styleFailed,
-    required bool webGLRecovering,
   }) {
-    return styleFailed && !webGLRecovering;
+    // Style errors are independent of WebGL recovery state.
+    return styleFailed;
   }
 
   @override
@@ -710,18 +713,47 @@ class _ArtMapViewState extends State<ArtMapView> {
               ),
               if (ArtMapView.shouldShowWebGLRecoveryOverlayForTest(
                 webGLRecovering: _webGLRecovering,
+                styleFailed: _styleFailed,
               ))
                 Positioned.fill(
                   child: IgnorePointer(
                     ignoring: true,
-                    child: ColoredBox(
+                    child: Container(
                       color: _mapWebGLRecoveryBackdropColor(),
+                      alignment: Alignment.center,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 320),
+                        child: Container(
+                          margin: const EdgeInsets.all(KubusSpacing.md),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: KubusSpacing.md,
+                            vertical: KubusSpacing.sm,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.18),
+                            borderRadius:
+                                BorderRadius.circular(KubusRadius.lg),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.10),
+                            ),
+                          ),
+                          child: Text(
+                            'Recovering map rendering…',
+                            textAlign: TextAlign.center,
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: Colors.white
+                                          .withValues(alpha: 0.85),
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ),
               if (ArtMapView.shouldShowStyleErrorOverlayForTest(
                 styleFailed: _styleFailed,
-                webGLRecovering: _webGLRecovering,
               ))
                 Positioned.fill(
                   child: IgnorePointer(

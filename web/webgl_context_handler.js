@@ -299,6 +299,17 @@
 
   /**
    * Handle WebGL context restored event
+    *
+    * Manual verification (no automated JS test harness here):
+    * - In DevTools console, pick a MapLibre canvas:
+    *     const c = document.querySelector('.maplibregl-canvas');
+    * - Dispatch two restored events back-to-back:
+    *     c.dispatchEvent(new Event('webglcontextrestored'));
+    *     c.dispatchEvent(new Event('webglcontextrestored'));
+    * - With ?debug_webgl=1, confirm only the first one triggers:
+    *   - one "WebGL context restored" log
+    *   - one kubus:webgl-restored dispatch
+    *   - at most one tryMapRecovery() attempt within CONTEXT_EVENT_DEBOUNCE_MS
    */
   function handleContextRestored(event) {
     var canvas = event.target;

@@ -92,12 +92,23 @@ void main() {
     expect(
       ArtMapView.shouldShowWebGLRecoveryOverlayForTest(
         webGLRecovering: true,
+        styleFailed: false,
       ),
       isTrue,
     );
     expect(
       ArtMapView.shouldShowWebGLRecoveryOverlayForTest(
         webGLRecovering: false,
+        styleFailed: false,
+      ),
+      isFalse,
+    );
+
+    // Real style failures take precedence over the transient WebGL recovery UI.
+    expect(
+      ArtMapView.shouldShowWebGLRecoveryOverlayForTest(
+        webGLRecovering: true,
+        styleFailed: true,
       ),
       isFalse,
     );
@@ -105,21 +116,12 @@ void main() {
     expect(
       ArtMapView.shouldShowStyleErrorOverlayForTest(
         styleFailed: true,
-        webGLRecovering: false,
       ),
       isTrue,
     );
     expect(
       ArtMapView.shouldShowStyleErrorOverlayForTest(
-        styleFailed: true,
-        webGLRecovering: true,
-      ),
-      isFalse,
-    );
-    expect(
-      ArtMapView.shouldShowStyleErrorOverlayForTest(
         styleFailed: false,
-        webGLRecovering: true,
       ),
       isFalse,
     );
