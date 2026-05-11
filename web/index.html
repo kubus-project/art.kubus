@@ -91,9 +91,66 @@
 
   <!-- MapLibre GL JS (required by maplibre_gl on web) -->
   <!-- Vendored locally to avoid CSP / CDN availability issues in production. -->
+  <!-- Versioned query parameters track the app build so stale service-worker
+       or browser caches do not keep old MapLibre/WebGL recovery code alive. -->
   <!-- Use the CSP build + explicit worker URL to support strict CSP (no blob: workers). -->
-  <script src="local/maplibre-gl/maplibre-gl-csp.js"></script>
-  <link href="local/maplibre-gl/maplibre-gl.css" rel="stylesheet" />
+  <script>
+    // Single source of truth for cache-busting/versioning.
+    // `{{flutter_service_worker_version}}` is replaced during `flutter build web`.
+    // If it isn't replaced (e.g. unusual tooling), fall back to a stable dev tag.
+    (function () {
+      try {
+        var v = '{{flutter_service_worker_version}}';
+        if (!v || v.indexOf('{{') !== -1) v = 'dev';
+        window.__kubusBuildVersion = v;
+      } catch (_) {
+        window.__kubusBuildVersion = 'dev';
+      }
+    })();
+  </script>
+  <script>
+    (function () {
+      try {
+        var v = window.__kubusBuildVersion || 'dev';
+
+        // CSS first.
+        var css = document.createElement('link');
+        css.rel = 'stylesheet';
+        css.href = 'local/maplibre-gl/maplibre-gl.css?v=' + encodeURIComponent(String(v));
+        document.head.appendChild(css);
+
+        // Then MapLibre JS (must be loaded before we set the worker URL and
+        // before Flutter instantiates the web map).
+        var maplibre = document.createElement('script');
+        maplibre.async = false; // preserve execution order
+        maplibre.src = 'local/maplibre-gl/maplibre-gl-csp.js?v=' + encodeURIComponent(String(v));
+        maplibre.onload = function () {
+          try {
+            if (window.maplibregl && typeof window.maplibregl.setWorkerUrl === 'function') {
+              window.maplibregl.setWorkerUrl(
+                'local/maplibre-gl/maplibre-gl-csp-worker.js?v=' + encodeURIComponent(String(v))
+              );
+            } else {
+              console.error('MapLibre GL JS not available (window.maplibregl is missing).');
+            }
+          } catch (e) {
+            console.error('MapLibre GL JS worker setup failed:', e);
+          }
+
+          // Finally, install the WebGL handler (needs MapLibre present).
+          try {
+            var handler = document.createElement('script');
+            handler.async = false;
+            handler.src = 'webgl_context_handler.js?v=' + encodeURIComponent(String(v));
+            document.head.appendChild(handler);
+          } catch (_) {}
+        };
+        document.head.appendChild(maplibre);
+      } catch (e) {
+        console.error('Kubus maplibre loader bootstrap failed:', e);
+      }
+    })();
+  </script>
   <style id="kubus-maplibre-attribution-style">
     :root {
       --kubus-mobile-map-attrib-bottom: 0px;
@@ -195,22 +252,7 @@
       background-color: var(--kubus-map-fallback-subtle) !important;
      }
     </style>
-  <script>
-    (function () {
-      try {
-        if (window.maplibregl && typeof window.maplibregl.setWorkerUrl === 'function') {
-          window.maplibregl.setWorkerUrl('local/maplibre-gl/maplibre-gl-csp-worker.js');
-        } else {
-          console.error('MapLibre GL JS not available (window.maplibregl is missing).');
-        }
-      } catch (e) {
-        console.error('MapLibre GL JS worker setup failed:', e);
-      }
-    })();
-  </script>
-
-  <!-- WebGL context loss handler (Firefox crash mitigation) -->
-  <script src="webgl_context_handler.js"></script>
+  <!-- MapLibre worker URL + WebGL handler are loaded by the bootstrap script above. -->
 
   <script>
     // Optional web debugging: add `?debug_map=1` to log platform-view insertion.

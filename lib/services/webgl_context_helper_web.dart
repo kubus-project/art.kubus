@@ -12,6 +12,16 @@ final ValueNotifier<bool> webGLContextHealthy = ValueNotifier<bool>(true);
 int _lastWebGLToggleMs = 0;
 const int _webGLToggleDebounceMs = 200;
 
+bool isWebGLDebugEnabled() {
+  try {
+    final params =
+        web.URLSearchParams((web.window.location.search).toJS);
+    return params.get('debug_webgl') == '1' || params.get('debug_map') == '1';
+  } catch (_) {
+    return false;
+  }
+}
+
 /// Returns `true` when the platform signals `prefers-reduced-motion: reduce`.
 bool prefersReducedMotion() {
   try {
@@ -46,35 +56,52 @@ void initWebGLContextHelper() {
     _onWebGLRestored.toJS,
   );
 
-  if (kDebugMode) {
-    print('webgl_context_helper: initialized (context-loss listeners active)');
+  if (kDebugMode && isWebGLDebugEnabled()) {
+    // Keep logs opt-in to avoid noisy debug output.
+    // (The primary detailed diagnostics live in webgl_context_handler.js.)
+    // ignore: avoid_print
+    print(
+      'webgl_context_helper: initialized (context-loss listeners active)',
+    );
   }
 }
 
 void _onWebGLCritical(web.Event event) {
   final now = DateTime.now().millisecondsSinceEpoch;
-  if (!webGLContextHealthy.value && now - _lastWebGLToggleMs < _webGLToggleDebounceMs) return;
+  if (!webGLContextHealthy.value &&
+      now - _lastWebGLToggleMs < _webGLToggleDebounceMs) {
+    return;
+  }
   webGLContextHealthy.value = false;
   _lastWebGLToggleMs = now;
 }
 
 void _onWebGLLost(web.Event event) {
   final now = DateTime.now().millisecondsSinceEpoch;
-  if (!webGLContextHealthy.value && now - _lastWebGLToggleMs < _webGLToggleDebounceMs) return;
+  if (!webGLContextHealthy.value &&
+      now - _lastWebGLToggleMs < _webGLToggleDebounceMs) {
+    return;
+  }
   webGLContextHealthy.value = false;
   _lastWebGLToggleMs = now;
 }
 
 void _onCanvasKitCrash(web.Event event) {
   final now = DateTime.now().millisecondsSinceEpoch;
-  if (!webGLContextHealthy.value && now - _lastWebGLToggleMs < _webGLToggleDebounceMs) return;
+  if (!webGLContextHealthy.value &&
+      now - _lastWebGLToggleMs < _webGLToggleDebounceMs) {
+    return;
+  }
   webGLContextHealthy.value = false;
   _lastWebGLToggleMs = now;
 }
 
 void _onWebGLRestored(web.Event event) {
   final now = DateTime.now().millisecondsSinceEpoch;
-  if (webGLContextHealthy.value && now - _lastWebGLToggleMs < _webGLToggleDebounceMs) return;
+  if (webGLContextHealthy.value &&
+      now - _lastWebGLToggleMs < _webGLToggleDebounceMs) {
+    return;
+  }
   webGLContextHealthy.value = true;
   _lastWebGLToggleMs = now;
 }

@@ -20,6 +20,11 @@
   if (typeof window === 'undefined') return;
 
   var isFirefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
+  // Total counters for diagnostics (monotonic).
+  var totalContextLostCount = 0;
+  var totalContextRestoredCount = 0;
+
+  // Burst counter used for crash-frequency detection (resets across cooldown).
   var contextLostCount = 0;
   var lastContextLoss = 0;
   var MAX_RECOVERY_ATTEMPTS = 3;
@@ -47,11 +52,7 @@
   function debugLog(level, message, data) {
     try {
       var params = new URLSearchParams(location.search || '');
-      var debugMode = params.get('debug_webgl') === '1' ||
-        params.get('debug_map') === '1' ||
-        params.get('debug_stack') === '1' ||
-        location.hostname === 'localhost' ||
-        location.hostname === '127.0.0.1';
+      var debugMode = isWebGLDiagnosticsEnabled();
 
       if (!debugMode) return;
 
@@ -88,11 +89,80 @@
     }
   }
 
-  function logCanvasSnapshot(label, extra) {
+  function isWebGLDiagnosticsEnabled() {
+    try {
+      var params = new URLSearchParams(location.search || '');
+      return params.get('debug_webgl') === '1' || params.get('debug_map') === '1';
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function getMapPreserveDrawingBuffer(map) {
+    try {
+      if (!map) return null;
+      if (typeof map.__kubusPreserveDrawingBuffer !== 'undefined') {
+        return !!map.__kubusPreserveDrawingBuffer;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  function isRecoveringCanvas(canvas, map) {
+    try {
+      if (canvas && canvas.dataset && canvas.dataset.webglRecovering === 'true') return true;
+      var container = canvas && canvas.closest ? canvas.closest('.maplibregl-map') : null;
+      if (container && container.dataset && container.dataset.webglRecovering === 'true') return true;
+      if (map) {
+        var state = mapRecoveryState.get(map);
+        if (state && state.pending) return true;
+      }
+    } catch (_) {}
+    return false;
+  }
+
+  function recoveryAttemptCountFor(map) {
+    try {
+      var state = map ? mapRecoveryState.get(map) : null;
+      return state && typeof state.attemptCount === 'number' ? state.attemptCount : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function buildWebGLDebugPayload(canvas, extra) {
+    var map = canvas ? canvasToMap.get(canvas) : null;
+    var canvases = snapshotCanvases();
     var payload = {
       ts: new Date().toISOString(),
       route: currentRoute(),
-      canvases: snapshotCanvases()
+      canvasCount: canvases.total,
+      mapLibreCanvasCount: canvases.maplibre,
+      mapId: map && map.__kubusMapId ? map.__kubusMapId : null,
+      contextLostCount: totalContextLostCount,
+      contextRestoredCount: totalContextRestoredCount,
+      contextLostBurstCount: contextLostCount,
+      recoveryAttemptCount: recoveryAttemptCountFor(map),
+      recovering: isRecoveringCanvas(canvas, map),
+      preserveDrawingBuffer: getMapPreserveDrawingBuffer(map),
+      mapState: mapStateForLog(map)
+    };
+    if (extra) {
+      try {
+        for (var k in extra) payload[k] = extra[k];
+      } catch (_) { }
+    }
+    return payload;
+  }
+
+  function logCanvasSnapshot(label, extra) {
+    var canvases = snapshotCanvases();
+    var payload = {
+      ts: new Date().toISOString(),
+      route: currentRoute(),
+      canvasCount: canvases.total,
+      mapLibreCanvasCount: canvases.maplibre,
+      otherCanvasCount: canvases.other
     };
     if (extra) {
       try {
@@ -159,15 +229,6 @@
       canvasEventTimestamps.set(canvas, ts);
     } catch (_) {}
 
-    debugLog('warn', 'WebGL context lost', {
-      canvas: canvas,
-      firefoxDetected: isFirefox,
-      lossCount: contextLostCount + 1,
-      ts: new Date(now).toISOString(),
-      route: currentRoute(),
-      mapState: mapStateForLog(canvasToMap.get(canvas))
-    });
-
     // Track loss frequency for crash detection
     if (now - lastContextLoss < RECOVERY_COOLDOWN_MS) {
       contextLostCount++;
@@ -175,6 +236,27 @@
       contextLostCount = 1;
     }
     lastContextLoss = now;
+    totalContextLostCount++;
+
+    // Mark canvas as recovering before logging so diagnostics reflect the
+    // active recovering state.
+    if (canvas) {
+      canvas.dataset.webglRecovering = 'true';
+      try {
+        var container = canvas.closest ? canvas.closest('.maplibregl-map') : null;
+        if (container) {
+          container.dataset.webglRecovering = 'true';
+          try { container.classList.add('kubus-webgl-recovering'); } catch (_) {}
+        }
+      } catch (_) {}
+    }
+
+    debugLog('warn', 'WebGL context lost', {
+      firefoxDetected: isFirefox,
+      lossBurstCount: contextLostCount,
+      lossTotalCount: totalContextLostCount,
+      ...buildWebGLDebugPayload(canvas, { recovering: true })
+    });
 
     // Notify Flutter immediately on any unexpected context loss so the app can
     // degrade map rendering gracefully while recovery is in-flight.
@@ -182,7 +264,9 @@
       window.dispatchEvent(new CustomEvent('kubus:webgl-lost', {
         detail: {
           type: 'context_lost',
-          count: contextLostCount,
+          count: totalContextLostCount,
+          burstCount: contextLostCount,
+          restoredCount: totalContextRestoredCount,
           timestamp: now
         }
       }));
@@ -191,7 +275,9 @@
     // If we're losing context too frequently, something is seriously wrong
     if (contextLostCount > MAX_RECOVERY_ATTEMPTS) {
       debugLog('error', 'Excessive WebGL context losses - possible memory issue', {
-        lossCount: contextLostCount
+        lossBurstCount: contextLostCount,
+        lossTotalCount: totalContextLostCount,
+        ...buildWebGLDebugPayload(canvas, { recovering: true })
       });
 
       // Dispatch custom event that Flutter can listen for via JS interop
@@ -199,26 +285,16 @@
         window.dispatchEvent(new CustomEvent('kubus:webgl-critical', {
           detail: {
             type: 'excessive_context_loss',
-            count: contextLostCount,
+            count: totalContextLostCount,
+            burstCount: contextLostCount,
+            restoredCount: totalContextRestoredCount,
             timestamp: now
           }
         }));
       } catch (_) { }
     }
 
-    // Mark canvas as recovering
-    if (canvas) {
-      canvas.dataset.webglRecovering = 'true';
-      try {
-        var container = canvas.closest ? canvas.closest('.maplibregl-map') : null;
-        if (container) {
-          // Mirror the recovering state on the container so CSS can target it.
-          container.dataset.webglRecovering = 'true';
-          // Also add an explicit class for broader tooling compatibility.
-          try { container.classList.add('kubus-webgl-recovering'); } catch (_) {}
-        }
-      } catch (_) {}
-    }
+    // (Recovering markers already set above for accurate diagnostics.)
   }
 
   /**
@@ -236,17 +312,16 @@
           canvas: canvas,
           delta: now - ts.lastRestored
         });
-      } else {
-        ts.lastRestored = now;
-        canvasEventTimestamps.set(canvas, ts);
+        return;
       }
+      ts.lastRestored = now;
+      canvasEventTimestamps.set(canvas, ts);
     } catch (_) {}
 
+    totalContextRestoredCount++;
+
     debugLog('info', 'WebGL context restored', {
-      canvas: canvas,
-      ts: new Date().toISOString(),
-      route: currentRoute(),
-      mapState: mapStateForLog(canvasToMap.get(canvas))
+      ...buildWebGLDebugPayload(canvas)
     });
 
     // Clear recovering flag
@@ -269,6 +344,8 @@
       window.dispatchEvent(new CustomEvent('kubus:webgl-restored', {
         detail: {
           canvas: canvas,
+          lostCount: totalContextLostCount,
+          restoredCount: totalContextRestoredCount,
           timestamp: Date.now()
         }
       }));
@@ -302,7 +379,9 @@
       };
       if (state.pending) {
         debugLog('warn', 'Skipping MapLibre recovery because one is already pending', {
-          mapId: map.__kubusMapId
+          ...buildWebGLDebugPayload(canvas, {
+            mapId: map.__kubusMapId
+          })
         });
         return;
       }
@@ -311,8 +390,11 @@
       mapRecoveryState.set(map, state);
 
       debugLog('info', 'Attempting MapLibre map recovery', {
-        mapId: map.__kubusMapId,
-        attemptCount: state.attemptCount
+        ...buildWebGLDebugPayload(canvas, {
+          mapId: map.__kubusMapId,
+          attemptCount: state.attemptCount,
+          recovering: true
+        })
       });
 
       // Trigger a bounded one-shot recovery. Avoid recreate loops by guarding
@@ -351,14 +433,16 @@
       return;
     }
 
-    debugLog('info', 'Attempting MapLibre map recovery');
+    debugLog('info', 'Attempting MapLibre map recovery', buildWebGLDebugPayload(canvas));
     setTimeout(function () {
       try {
         var now = Date.now();
         var last = 0;
         try { last = parseInt(container && container.dataset && container.dataset.kubusLastRecoveryTs ? container.dataset.kubusLastRecoveryTs : '0', 10) || 0; } catch (_) { last = 0; }
         if (now - last < MAP_RECOVERY_THROTTLE_MS) {
-          debugLog('warn', 'Skipping container-only recovery (throttled)', { delta: now - last });
+          debugLog('warn', 'Skipping container-only recovery (throttled)', {
+            ...buildWebGLDebugPayload(canvas, { delta: now - last })
+          });
         } else {
           try { if (container && container.dataset) container.dataset.kubusLastRecoveryTs = String(now); } catch (_) {}
           window.dispatchEvent(new Event('resize'));
@@ -494,6 +578,7 @@
       var map = new OriginalMap(options);
       try {
         map.__kubusMapId = ++mapIdSeq;
+        map.__kubusPreserveDrawingBuffer = !!(options && options.preserveDrawingBuffer);
         activeMaps.add(map);
         if (map.getCanvas) {
           var canvas = map.getCanvas();
@@ -514,12 +599,13 @@
       // Flutter UI widgets. No MapLibre JS NavigationControl is added.
 
       debugLog('info', 'MapLibre constructor intercepted', {
-        mapId: map.__kubusMapId,
-        route: currentRoute(),
-        ts: new Date().toISOString(),
-        canvasesBefore: before,
-        canvasesAfter: snapshotCanvases(),
-        mapState: mapStateForLog(map)
+        ...buildWebGLDebugPayload(mapCanvases.get(map) || null, {
+          mapId: map.__kubusMapId,
+          preserveDrawingBuffer: getMapPreserveDrawingBuffer(map),
+          canvasesBefore: before,
+          canvasesAfter: snapshotCanvases(),
+          mapState: mapStateForLog(map)
+        })
       });
 
       return map;
@@ -565,11 +651,11 @@
         } catch (_) { }
 
         debugLog('info', 'MapLibre remove intercepted', {
-          mapId: mapId,
-          ts: new Date().toISOString(),
-          route: currentRoute(),
-          mapState: mapStateForLog(this),
-          canvasesBefore: before
+          ...buildWebGLDebugPayload(canvas, {
+            mapId: mapId,
+            mapState: mapStateForLog(this),
+            canvasesBefore: before
+          })
         });
 
         var result = originalRemove.apply(this, arguments);
@@ -586,11 +672,12 @@
         setTimeout(function () {
           var mapRef = canvas ? canvasToMap.get(canvas) : null;
           debugLog('info', 'MapLibre map remove() completed', {
-            mapId: mapRef ? mapRef.__kubusMapId : null,
-            ts: new Date().toISOString(),
-            route: currentRoute(),
-            canvasesAfter: snapshotCanvases(),
-            canvasConnected: canvas ? !!canvas.isConnected : null
+            ...buildWebGLDebugPayload(canvas, {
+              mapId: mapRef ? mapRef.__kubusMapId : null,
+              canvasesAfter: snapshotCanvases(),
+              canvasConnected: canvas ? !!canvas.isConnected : null,
+              recovering: isRecoveringCanvas(canvas, mapRef)
+            })
           });
         }, 0);
 
@@ -611,8 +698,8 @@
   function installGlobalErrorHandler() {
     var originalOnError = window.onerror;
     var params = new URLSearchParams(location.search || '');
-    var debugStacks = params.get('debug_stack') === '1' ||
-      params.get('debug_webgl') === '1';
+    var debugStacks =
+      isWebGLDiagnosticsEnabled() && params.get('debug_stack') === '1';
 
     window.onerror = function (message, source, lineno, colno, error) {
       // Check for CanvasKit crash patterns

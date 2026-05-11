@@ -128,6 +128,32 @@ class ArtMapView extends StatefulWidget {
         KubusColors.backgroundLight;
   }
 
+  /// Backdrop color used for transient WebGL recovery UI.
+  ///
+  /// This intentionally reuses the same dark/teal map-loading tone so the
+  /// recovery state feels like a rendering transition rather than an error.
+  @visibleForTesting
+  static Color mapWebGLRecoveryBackdropColorForTest({
+    required bool isDarkMode,
+  }) {
+    return mapLoadingBackdropColorForTest(isDarkMode: isDarkMode);
+  }
+
+  @visibleForTesting
+  static bool shouldShowWebGLRecoveryOverlayForTest({
+    required bool webGLRecovering,
+  }) {
+    return webGLRecovering;
+  }
+
+  @visibleForTesting
+  static bool shouldShowStyleErrorOverlayForTest({
+    required bool styleFailed,
+    required bool webGLRecovering,
+  }) {
+    return styleFailed && !webGLRecovering;
+  }
+
   @override
   State<ArtMapView> createState() => _ArtMapViewState();
 }
@@ -135,8 +161,6 @@ class ArtMapView extends StatefulWidget {
 class _ArtMapViewState extends State<ArtMapView> {
   static int _debugLiveInstances = 0;
   static int _debugMapCreateSeq = 0;
-  static const String _webGLRecoveryMessage =
-      'WebGL context lost. Map rendering will resume after recovery.';
 
   Future<String>? _resolvedStyleFuture;
   String? _resolvedStyleString;
@@ -174,6 +198,7 @@ class _ArtMapViewState extends State<ArtMapView> {
   String? _styleFailureReason;
   Stopwatch? _styleStopwatch;
   bool _webGLHealthy = true;
+  bool _webGLRecovering = false;
 
   @override
   void initState() {
@@ -188,6 +213,7 @@ class _ArtMapViewState extends State<ArtMapView> {
     }());
     if (kIsWeb) {
       _webGLHealthy = webGLContextHealthy.value;
+      _webGLRecovering = !_webGLHealthy;
       webGLContextHealthy.addListener(_handleWebGLHealthChanged);
     }
     _refreshStyleFuture();
@@ -281,20 +307,39 @@ class _ArtMapViewState extends State<ArtMapView> {
     _webGLHealthy = healthy;
 
     if (!healthy) {
-      _markStyleFailure(
-        _webGLRecoveryMessage,
-        force: true,
-      );
+      // WebGL loss is transient. Do not convert it into a map style failure.
+      // Also pause the style load timeout while the browser is recovering,
+      // otherwise we can incorrectly trigger fallback/retry paths.
+      _styleLoadTimer?.cancel();
+      _styleLoadTimer = null;
+      if (!_webGLRecovering) {
+        setState(() {
+          _webGLRecovering = true;
+        });
+      }
       return;
     }
 
-    if (_styleFailureReason == _webGLRecoveryMessage) {
+    if (_webGLRecovering) {
       setState(() {
-        _styleFailed = false;
-        _styleFailureReason = null;
+        _webGLRecovering = false;
       });
-      _requestWebResizeRecovery(reason: 'webGLRecovered');
     }
+
+    // If the style is still pending, restart the style health check now that
+    // WebGL is healthy again.
+    if (!_styleLoaded && !_didFallback && !_styleFailed) {
+      _startStyleHealthCheck();
+    }
+
+    if (_pendingStyleApply && _controller != null) {
+      _pendingStyleApply = false;
+      _resetStyleLoadState();
+      _startStyleHealthCheck();
+      unawaited(_applyStyleToController());
+    }
+
+    _requestWebResizeRecovery(reason: 'webGLRecovered');
   }
 
   void _handleWebLayoutChanged(Size size) {
@@ -404,6 +449,11 @@ class _ArtMapViewState extends State<ArtMapView> {
   void _markStyleFailure(String reason, {bool force = false}) {
     if (!mounted || _disposed) return;
     if (!force && _styleLoaded) return;
+    if (kIsWeb && _webGLRecovering && !force) {
+      // WebGL loss is transient; do not permanently classify this as a style
+      // failure while the browser is still recovering.
+      return;
+    }
     setState(() {
       _styleFailed = true;
       _styleFailureReason = reason;
@@ -467,6 +517,12 @@ class _ArtMapViewState extends State<ArtMapView> {
       if (kDebugMode) {
         AppConfig.debugPrint('ArtMapView: setStyle stack: $st');
       }
+      if (kIsWeb && _webGLRecovering) {
+        // During WebGL recovery, setStyle can fail for transient reasons.
+        // Defer any failure UI and retry once WebGL is healthy.
+        _pendingStyleApply = true;
+        return;
+      }
       _markStyleFailure('Failed to apply map style.');
       unawaited(_attemptFallbackStyle());
     }
@@ -478,6 +534,7 @@ class _ArtMapViewState extends State<ArtMapView> {
       if (!mounted || _disposed) return;
       if (_styleLoaded) return;
       if (_didFallback) return;
+      if (kIsWeb && _webGLRecovering) return;
 
       final controller = _controller;
       if (controller == null) return;
@@ -651,7 +708,21 @@ class _ArtMapViewState extends State<ArtMapView> {
                       },
                 trackCameraPosition: true,
               ),
-              if (_styleFailed)
+              if (ArtMapView.shouldShowWebGLRecoveryOverlayForTest(
+                webGLRecovering: _webGLRecovering,
+              ))
+                Positioned.fill(
+                  child: IgnorePointer(
+                    ignoring: true,
+                    child: ColoredBox(
+                      color: _mapWebGLRecoveryBackdropColor(),
+                    ),
+                  ),
+                ),
+              if (ArtMapView.shouldShowStyleErrorOverlayForTest(
+                styleFailed: _styleFailed,
+                webGLRecovering: _webGLRecovering,
+              ))
                 Positioned.fill(
                   child: IgnorePointer(
                     ignoring: false,
@@ -688,6 +759,12 @@ class _ArtMapViewState extends State<ArtMapView> {
     return ArtMapView.mapLoadingBackdropColorForTest(
       isDarkMode: widget.isDarkMode,
     );
+  }
+
+  Color _mapWebGLRecoveryBackdropColor() {
+    return ArtMapView.mapWebGLRecoveryBackdropColorForTest(
+      isDarkMode: widget.isDarkMode,
+    ).withValues(alpha: 0.92);
   }
 }
 
