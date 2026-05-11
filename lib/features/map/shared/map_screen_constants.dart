@@ -45,6 +45,15 @@ abstract final class MapScreenConstants {
       Duration(milliseconds: 16); // ~60 fps
 
   // ---------------------------------------------------------------------------
+  // Web MapLibre attribution
+  // ---------------------------------------------------------------------------
+  /// Desktop bottom offset (in CSS px) for the MapLibre attribution control.
+  ///
+  /// This must be small so the control remains near the bottom edge while still
+  /// clearing desktop UI chrome.
+  static const double desktopAttributionBottomPx = 12.0;
+
+  // ---------------------------------------------------------------------------
   // Pre-built MapLayersIds (mobile -- no pending marker support)
   // ---------------------------------------------------------------------------
   static const MapLayersIds mobileLayerIds = MapLayersIds(

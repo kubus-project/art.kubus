@@ -14,8 +14,7 @@ const int _webGLToggleDebounceMs = 200;
 
 bool isWebGLDebugEnabled() {
   try {
-    final params =
-        web.URLSearchParams((web.window.location.search ?? '').toJS);
+    final params = web.URLSearchParams(web.window.location.search.toJS);
     return params.get('debug_webgl') == '1' || params.get('debug_map') == '1';
   } catch (_) {
     return false;

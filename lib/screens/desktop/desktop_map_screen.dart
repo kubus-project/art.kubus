@@ -89,7 +89,8 @@ import '../../utils/marker_cube_geometry.dart';
 import '../../widgets/glass_components.dart';
 import '../../widgets/kubus_snackbar.dart';
 import '../../widgets/tutorial/interactive_tutorial_overlay.dart';
-import '../../widgets/map/tutorial/kubus_map_tutorial_overlay.dart';
+import '../../widgets/tutorial/tutorial_overlay_controller.dart';
+import '../../widgets/tutorial/tutorial_overlay_scope.dart';
 import '../../widgets/map/kubus_map_marker_geojson_builder.dart';
 import '../../widgets/map/kubus_map_marker_rendering.dart';
 import '../../widgets/map/kubus_map_marker_features.dart';
@@ -287,6 +288,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   late final KubusSearchController _mapSearchController;
   late final MapViewPreferencesController _mapViewPreferencesController;
   late final MapTutorialCoordinator _mapTutorialCoordinator;
+  TutorialOverlayController? _tutorialOverlayController;
   bool _pendingSafeSetState = false;
   int _debugMarkerTapCount = 0;
   int _debugMarkerSourceWriteCount = 0;
@@ -340,7 +342,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     _mapTutorialCoordinator = MapTutorialCoordinator(
       seenPreferenceKey: PreferenceKeys.mapOnboardingDesktopSeenV2,
     );
-    _mapTutorialCoordinator.addListener(_handleTutorialCoordinatorChanged);
 
     _mapSearchController = KubusSearchController(
       config: const KubusSearchConfig(
@@ -571,7 +572,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     _cameraZoom = widget.initialZoom ?? _cameraZoom;
     MapAttributionHelper.setDesktopMapEnabled(true);
     MapAttributionHelper.setDesktopMapAttributionBottomPx(
-      KubusSpacing.xl.toDouble(),
+      MapScreenConstants.desktopAttributionBottomPx,
     );
 
     final bindingName = WidgetsBinding.instance.runtimeType.toString();
@@ -626,6 +627,31 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       }
       _setRouteVisible(route.isCurrent);
     }
+
+    final overlayController = TutorialOverlayScope.maybeOf(context);
+    if (_tutorialOverlayController != overlayController) {
+      _tutorialOverlayController?.unbindDriver(_mapTutorialCoordinator);
+      _tutorialOverlayController = overlayController;
+    }
+    _syncRootTutorialBinding();
+  }
+
+  void _syncRootTutorialBinding() {
+    final controller = _tutorialOverlayController;
+    if (controller == null) return;
+
+    if (!_isRouteVisible) {
+      controller.unbindDriver(_mapTutorialCoordinator);
+      return;
+    }
+
+    final routeName =
+        ModalRoute.of(context)?.settings.name ?? 'DesktopMapScreen';
+    controller.bindDriver(
+      tutorialId: 'map',
+      ownerRoute: routeName,
+      driver: _mapTutorialCoordinator,
+    );
   }
 
   void _handleMapViewPreferencesChanged() {
@@ -692,16 +718,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
     unawaited(
         _applyIsometricCamera(enabled: enabled, adjustZoomForScale: true));
-  }
-
-  void _handleTutorialCoordinatorChanged() {
-    if (!mounted) return;
-    final tutorial = _mapTutorialCoordinator.state;
-    _mapUiStateCoordinator.setTutorial(
-      show: tutorial.show,
-      index: tutorial.index,
-    );
-    _safeSetState(() {});
   }
 
   List<MapTutorialStepBinding> _buildMapTutorialStepBindings(
@@ -1114,6 +1130,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     if (_isRouteVisible == isVisible) return;
     _isRouteVisible = isVisible;
     _handleActiveStateChanged();
+    _syncRootTutorialBinding();
     if (isVisible) {
       _scheduleWebMapResizeRecovery(reason: 'routeVisible');
     }
@@ -1633,7 +1650,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     _mapViewPreferencesController
         .removeListener(_handleMapViewPreferencesChanged);
     _mapViewPreferencesController.dispose();
-    _mapTutorialCoordinator.removeListener(_handleTutorialCoordinatorChanged);
+    _tutorialOverlayController?.unbindDriver(_mapTutorialCoordinator);
+    _tutorialOverlayController = null;
     _mapTutorialCoordinator.dispose();
     _markerStreamSub?.cancel();
     _perf.subscriptionStopped('marker_socket_created');
@@ -1673,10 +1691,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     _mapTutorialCoordinator.configure(
       bindings: _buildMapTutorialStepBindings(l10n),
     );
-    final tutorialSteps = _mapTutorialCoordinator.steps;
-    final tutorial = _mapTutorialCoordinator.state;
-    final showMapTutorial = tutorial.show;
-    final mapTutorialIndex = tutorial.index;
     // Always show the nearby panel as a local overlay on top of the map
     // (glass panel with blur). This keeps the map at full width; only the
     // UI chrome (controls, search bar) shifts to avoid overlap.
@@ -1723,38 +1737,34 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               bottom: 24,
               width: 380,
               child: MapOverlayBlocker(
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () {}, // absorb taps
-                  child: _selectedExhibition != null
-                      ? Semantics(
-                          label: 'left_info_panel',
-                          container: true,
-                          child: _buildExhibitionDetailPanel(
-                            themeProvider,
-                            animationTheme,
-                          ),
-                        )
-                      : _selectedEvent != null
-                          ? Semantics(
-                              label: 'left_info_panel',
-                              container: true,
-                              child: _buildEventDetailPanel(
-                                themeProvider,
-                                animationTheme,
-                              ),
-                            )
-                          : _selectedArtwork != null
-                              ? Semantics(
-                                  label: 'left_info_panel',
-                                  container: true,
-                                  child: _buildArtworkDetailPanel(
-                                    themeProvider,
-                                    animationTheme,
-                                  ),
-                                )
-                              : _buildFiltersPanel(themeProvider),
-                ),
+                child: _selectedExhibition != null
+                    ? Semantics(
+                        label: 'left_info_panel',
+                        container: true,
+                        child: _buildExhibitionDetailPanel(
+                          themeProvider,
+                          animationTheme,
+                        ),
+                      )
+                    : _selectedEvent != null
+                        ? Semantics(
+                            label: 'left_info_panel',
+                            container: true,
+                            child: _buildEventDetailPanel(
+                              themeProvider,
+                              animationTheme,
+                            ),
+                          )
+                        : _selectedArtwork != null
+                            ? Semantics(
+                                label: 'left_info_panel',
+                                container: true,
+                                child: _buildArtworkDetailPanel(
+                                  themeProvider,
+                                  animationTheme,
+                                ),
+                              )
+                            : _buildFiltersPanel(themeProvider),
               ),
             ),
 
@@ -1785,11 +1795,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               child: Align(
                 alignment: Alignment.bottomRight,
                 child: MapOverlayBlocker(
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () {}, // absorb taps
-                    child: _buildMapControls(themeProvider),
-                  ),
+                  child: _buildMapControls(themeProvider),
                 ),
               ),
             ),
@@ -1818,18 +1824,14 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   left: leftOffset,
                   bottom: 24,
                   child: MapOverlayBlocker(
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: () {}, // absorb taps
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildDiscoveryCard(taskProvider),
-                          const SizedBox(height: KubusSpacing.sm),
-                          _buildDesktopAttributionButton(),
-                        ],
-                      ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildDiscoveryCard(taskProvider),
+                        const SizedBox(height: KubusSpacing.sm),
+                        _buildDesktopAttributionButton(),
+                      ],
                     ),
                   ),
                 );
@@ -1850,19 +1852,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   },
                 );
               },
-            ),
-
-            KubusMapTutorialOverlay(
-              visible: showMapTutorial,
-              steps: tutorialSteps,
-              currentIndex: mapTutorialIndex,
-              onNext: _mapTutorialCoordinator.next,
-              onBack: _mapTutorialCoordinator.back,
-              onSkip: () => unawaited(_mapTutorialCoordinator.dismiss()),
-              skipLabel: l10n.commonSkip,
-              backLabel: l10n.commonBack,
-              nextLabel: l10n.commonNext,
-              doneLabel: l10n.commonDone,
             ),
           ],
         ),
@@ -3413,11 +3402,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         label: 'create_marker_sidebar_panel',
         container: true,
         child: MapOverlayBlocker(
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () {},
-            child: _buildCreateMarkerSidebar(),
-          ),
+          child: _buildCreateMarkerSidebar(),
         ),
       );
     }
@@ -3433,15 +3418,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       label: 'nearby_sidebar_panel',
       container: true,
       child: MapOverlayBlocker(
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () {},
-          child: _buildNearbyArtSidebar(
-            themeProvider,
-            filteredArtworks,
-            basePosition: nearbyBasePosition,
-            isLoading: isLoadingArtworks,
-          ),
+        child: _buildNearbyArtSidebar(
+          themeProvider,
+          filteredArtworks,
+          basePosition: nearbyBasePosition,
+          isLoading: isLoadingArtworks,
         ),
       ),
     );

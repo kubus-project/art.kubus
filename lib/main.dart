@@ -97,6 +97,7 @@ import 'services/webgl_context_helper.dart';
 
 import 'widgets/glass_components.dart';
 import 'widgets/security_gate_overlay.dart';
+import 'widgets/tutorial/tutorial_overlay_host.dart';
 
 import 'screens/collab/invites_inbox_screen.dart';
 import 'services/share/share_deep_link_parser.dart';
@@ -1189,8 +1190,11 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
             return AnimatedGradientBackground(
               animate: false,
               intensity: 0.22,
-              child:
-                  SecurityGateOverlay(child: child ?? const SizedBox.shrink()),
+              child: SecurityGateOverlay(
+                child: TutorialOverlayHost(
+                  child: child ?? const SizedBox.shrink(),
+                ),
+              ),
             );
           },
           onGenerateInitialRoutes: _generateInitialRoutes,

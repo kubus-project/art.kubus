@@ -93,7 +93,8 @@ import '../widgets/search/kubus_search_controller.dart';
 import '../widgets/search/kubus_search_result.dart';
 import '../widgets/map/nearby/kubus_nearby_art_panel.dart';
 import '../widgets/tutorial/interactive_tutorial_overlay.dart';
-import '../widgets/map/tutorial/kubus_map_tutorial_overlay.dart';
+import '../widgets/tutorial/tutorial_overlay_controller.dart';
+import '../widgets/tutorial/tutorial_overlay_scope.dart';
 import '../widgets/map/kubus_map_marker_rendering.dart';
 import '../widgets/map/kubus_map_marker_geojson_builder.dart';
 import '../widgets/map/kubus_map_marker_features.dart';
@@ -305,6 +306,7 @@ class _MapScreenState extends State<MapScreen>
   late final MapDataCoordinator _mapDataCoordinator;
   late final MapViewPreferencesController _mapViewPreferencesController;
   late final MapTutorialCoordinator _mapTutorialCoordinator;
+  TutorialOverlayController? _tutorialOverlayController;
 
   // Map search (shared controller + UI)
   late final KubusSearchController _mapSearchController;
@@ -472,7 +474,6 @@ class _MapScreenState extends State<MapScreen>
     _mapTutorialCoordinator = MapTutorialCoordinator(
       seenPreferenceKey: PreferenceKeys.mapOnboardingMobileSeenV2,
     );
-    _mapTutorialCoordinator.addListener(_handleTutorialCoordinatorChanged);
 
     _mapSearchController = KubusSearchController(
       config: const KubusSearchConfig(
@@ -787,6 +788,31 @@ class _MapScreenState extends State<MapScreen>
       if (!mounted) return;
       _handleMapDeepLinkProviderChanged();
     });
+
+    final overlayController = TutorialOverlayScope.maybeOf(context);
+    if (_tutorialOverlayController != overlayController) {
+      _tutorialOverlayController?.unbindDriver(_mapTutorialCoordinator);
+      _tutorialOverlayController = overlayController;
+    }
+    _syncRootTutorialBinding();
+  }
+
+  void _syncRootTutorialBinding() {
+    final controller = _tutorialOverlayController;
+    if (controller == null) return;
+
+    final shouldBind = _isMapTabVisible && _isRouteVisible;
+    if (!shouldBind) {
+      controller.unbindDriver(_mapTutorialCoordinator);
+      return;
+    }
+
+    final routeName = ModalRoute.of(context)?.settings.name ?? 'MapScreen';
+    controller.bindDriver(
+      tutorialId: 'map',
+      ownerRoute: routeName,
+      driver: _mapTutorialCoordinator,
+    );
   }
 
   bool get _pollingEnabled =>
@@ -801,6 +827,7 @@ class _MapScreenState extends State<MapScreen>
     if (_isMapTabVisible == isVisible) return;
     _isMapTabVisible = isVisible;
     _handleActiveStateChanged();
+    _syncRootTutorialBinding();
     if (isVisible) {
       _scheduleWebMapResizeRecovery(reason: 'tabVisible');
     }
@@ -810,6 +837,7 @@ class _MapScreenState extends State<MapScreen>
     if (_isRouteVisible == isVisible) return;
     _isRouteVisible = isVisible;
     _handleActiveStateChanged();
+    _syncRootTutorialBinding();
     if (isVisible) {
       _scheduleWebMapResizeRecovery(reason: 'routeVisible');
     }
@@ -1000,15 +1028,6 @@ class _MapScreenState extends State<MapScreen>
       _travelModeEnabled = next.travelModeEnabled;
       _isometricViewEnabled = next.isometricViewEnabled;
     });
-  }
-
-  void _handleTutorialCoordinatorChanged() {
-    if (!mounted) return;
-    final tutorial = _mapTutorialCoordinator.state;
-    _mapUiStateCoordinator.setTutorial(
-      show: tutorial.show,
-      index: tutorial.index,
-    );
   }
 
   Future<void> _loadMapViewPreferences() async {
@@ -1230,7 +1249,8 @@ class _MapScreenState extends State<MapScreen>
     _mapViewPreferencesController
         .removeListener(_handleMapViewPreferencesChanged);
     _mapViewPreferencesController.dispose();
-    _mapTutorialCoordinator.removeListener(_handleTutorialCoordinatorChanged);
+    _tutorialOverlayController?.unbindDriver(_mapTutorialCoordinator);
+    _tutorialOverlayController = null;
     _mapTutorialCoordinator.dispose();
     _mapCameraController.dispose();
     _markerVisualSyncCoordinator.dispose();
@@ -3242,13 +3262,9 @@ class _MapScreenState extends State<MapScreen>
     _mapTutorialCoordinator.configure(
       bindings: _buildMapTutorialStepBindings(l10n),
     );
-    final tutorialSteps = _mapTutorialCoordinator.steps;
     final stack = ValueListenableBuilder<MapUiStateSnapshot>(
       valueListenable: _mapUiStateCoordinator.state,
       builder: (context, ui, _) {
-        final showMapTutorial = ui.tutorial.show;
-        final mapTutorialIndex = ui.tutorial.index;
-
         return LayoutBuilder(
           builder: (context, constraints) {
             final media = MediaQuery.of(context);
@@ -3326,18 +3342,6 @@ class _MapScreenState extends State<MapScreen>
                   // Keep marker overlay above map UI chrome (controls/search/sheet)
                   // so the selected marker card remains the top interactive layer.
                   _buildMarkerOverlay(themeProvider, ui.markerSelection),
-                  KubusMapTutorialOverlay(
-                    visible: showMapTutorial,
-                    steps: tutorialSteps,
-                    currentIndex: mapTutorialIndex,
-                    onNext: _mapTutorialCoordinator.next,
-                    onBack: _mapTutorialCoordinator.back,
-                    onSkip: () => unawaited(_mapTutorialCoordinator.dismiss()),
-                    skipLabel: l10n.commonSkip,
-                    backLabel: l10n.commonBack,
-                    nextLabel: l10n.commonNext,
-                    doneLabel: l10n.commonDone,
-                  ),
                 ],
               ),
             );

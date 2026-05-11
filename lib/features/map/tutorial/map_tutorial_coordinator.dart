@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../widgets/tutorial/interactive_tutorial_overlay.dart';
+import '../../../widgets/tutorial/tutorial_overlay_driver.dart';
 
 @immutable
 class MapTutorialStepBinding {
@@ -48,7 +49,8 @@ class MapTutorialState {
 }
 
 /// Coordinates map tutorial steps, progression, and persisted seen state.
-class MapTutorialCoordinator extends ChangeNotifier {
+class MapTutorialCoordinator extends ChangeNotifier
+    implements TutorialOverlayDriver {
   MapTutorialCoordinator({
     required this.seenPreferenceKey,
     Future<SharedPreferences> Function()? sharedPreferencesLoader,
@@ -60,7 +62,8 @@ class MapTutorialCoordinator extends ChangeNotifier {
 
   MapTutorialState _state = const MapTutorialState();
   List<MapTutorialStepBinding> _bindings = const <MapTutorialStepBinding>[];
-  List<TutorialStepDefinition> _resolvedSteps = const <TutorialStepDefinition>[];
+  List<TutorialStepDefinition> _resolvedSteps =
+      const <TutorialStepDefinition>[];
   bool _startRequested = false;
   bool _startInFlight = false;
   Timer? _startRetryTimer;
@@ -70,6 +73,8 @@ class MapTutorialCoordinator extends ChangeNotifier {
   static const int _maxStartRetryAttempts = 30;
 
   MapTutorialState get state => _state;
+
+  @override
   List<TutorialStepDefinition> get steps =>
       List<TutorialStepDefinition>.unmodifiable(_resolvedSteps);
 
@@ -79,10 +84,14 @@ class MapTutorialCoordinator extends ChangeNotifier {
   bool get show => _state.show;
   int get index => _state.index;
 
+  @override
+  bool get visible => show;
+
+  @override
+  int get currentIndex => index;
+
   void configure({required List<MapTutorialStepBinding> bindings}) {
-    final currentSignature = _bindings
-        .map((binding) => binding.id)
-        .join('|');
+    final currentSignature = _bindings.map((binding) => binding.id).join('|');
     final nextSignature = bindings.map((binding) => binding.id).join('|');
     _bindings = bindings;
     _resolvedSteps = _resolveSteps(_bindings);
@@ -162,6 +171,7 @@ class MapTutorialCoordinator extends ChangeNotifier {
     }
   }
 
+  @override
   void next() {
     if (_resolvedSteps.isEmpty) return;
     if (_state.index >= _resolvedSteps.length - 1) {
@@ -177,6 +187,7 @@ class MapTutorialCoordinator extends ChangeNotifier {
     );
   }
 
+  @override
   void back() {
     if (_resolvedSteps.isEmpty) return;
     if (_state.index <= 0) return;
@@ -189,6 +200,7 @@ class MapTutorialCoordinator extends ChangeNotifier {
     );
   }
 
+  @override
   Future<void> dismiss() async {
     _setState(_state.copyWith(show: false));
     _startRequested = false;

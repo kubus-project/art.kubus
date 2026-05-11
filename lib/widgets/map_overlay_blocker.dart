@@ -34,24 +34,19 @@ class MapOverlayBlocker extends StatelessWidget {
   Widget build(BuildContext context) {
     if (!enabled) return child;
 
-    Widget result;
-    if (kIsWeb) {
-      result = GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () {},
-        child: child,
-      );
-    } else {
-      result = Listener(
-        behavior: HitTestBehavior.opaque,
-        onPointerDown: (_) {},
-        onPointerMove: (_) {},
-        onPointerUp: (_) {},
-        onPointerCancel: (_) {},
-        onPointerSignal: (_) {},
-        child: child,
-      );
-    }
+    // Important: avoid GestureDetector(onTap: ...) here.
+    // On web this can steal taps from interactive children by competing in the
+    // gesture arena, which breaks hit-testing for visible UI layered above the
+    // MapLibre DOM node.
+    Widget result = Listener(
+      behavior: HitTestBehavior.opaque,
+      onPointerDown: (_) {},
+      onPointerMove: (_) {},
+      onPointerUp: (_) {},
+      onPointerCancel: (_) {},
+      onPointerSignal: (_) {},
+      child: child,
+    );
 
     result = MouseRegion(cursor: cursor, child: result);
 

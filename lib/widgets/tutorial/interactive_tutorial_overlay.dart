@@ -60,6 +60,17 @@ class InteractiveTutorialOverlay extends StatelessWidget {
     required this.doneLabel,
   });
 
+  /// Root widget key for tests.
+  static const Key overlayRootKey =
+      ValueKey<String>('kubus_tutorial_overlay_root');
+
+  /// Tooltip card key for tests.
+  static const Key tooltipKey = ValueKey<String>('kubus_tutorial_tooltip');
+
+  /// Highlight tap region key for tests.
+  static const Key highlightTapRegionKey =
+      ValueKey<String>('kubus_tutorial_highlight_tap_region');
+
   bool _isRectUsable(Rect rect) {
     if (!rect.left.isFinite ||
         !rect.top.isFinite ||
@@ -79,10 +90,7 @@ class InteractiveTutorialOverlay extends StatelessWidget {
     return true;
   }
 
-  Rect? _targetRect(
-    BuildContext context,
-    TutorialStepDefinition step,
-  ) {
+  Rect? _targetRectGlobal(TutorialStepDefinition step) {
     final key = step.targetKey;
     if (key == null) return null;
     final ctx = key.currentContext;
@@ -118,6 +126,29 @@ class InteractiveTutorialOverlay extends StatelessWidget {
     }
   }
 
+  Rect? _convertGlobalRectToLocal({
+    required Rect globalRect,
+    required RenderBox overlayBox,
+  }) {
+    if (!overlayBox.attached || !overlayBox.hasSize) return null;
+
+    try {
+      final topLeft = overlayBox.globalToLocal(globalRect.topLeft);
+      final bottomRight = overlayBox.globalToLocal(globalRect.bottomRight);
+      if (!topLeft.dx.isFinite ||
+          !topLeft.dy.isFinite ||
+          !bottomRight.dx.isFinite ||
+          !bottomRight.dy.isFinite) {
+        return null;
+      }
+      final rect = Rect.fromPoints(topLeft, bottomRight);
+      if (!_isRectUsable(rect)) return null;
+      return rect;
+    } catch (_) {
+      return null;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (steps.isEmpty) return const SizedBox.shrink();
@@ -125,176 +156,202 @@ class InteractiveTutorialOverlay extends StatelessWidget {
       return const SizedBox.shrink();
     }
     final step = steps[currentIndex];
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final media = MediaQuery.of(context);
-    final size = media.size;
-    if (!size.width.isFinite ||
-        !size.height.isFinite ||
-        size.width <= 0 ||
-        size.height <= 0) {
-      return const SizedBox.shrink();
-    }
-
-    final rect = _targetRect(context, step);
-    if (rect == null && step.targetKey?.currentContext != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!context.mounted) return;
-        (context as Element).markNeedsBuild();
-      });
-    }
-
-    // Expand the highlight a bit so it feels forgiving.
-    final inflated = rect?.inflate(10);
-    final highlightRect =
-        inflated != null && _isRectUsable(inflated) ? inflated : null;
-
-    // Tooltip sizing/position.
-    // Keep this reasonably narrow so it doesn't feel like a full-width banner,
-    // and so it can be positioned safely near right-edge targets.
-    const double tooltipMaxWidth = 340;
-    final availableWidth = math.max(0.0, size.width - 24);
-    if (!availableWidth.isFinite || availableWidth <= 0) {
-      return const SizedBox.shrink();
-    }
-    final double tooltipWidth = math
-        .min(tooltipMaxWidth, availableWidth)
-        .clamp(1.0, tooltipMaxWidth)
-        .toDouble();
-
-    final EdgeInsets safe = media.padding;
-
-    const double horizontalSafeMargin = 12;
-
-    final double preferredCenteredX = (highlightRect != null)
-        ? (highlightRect.center.dx - (tooltipWidth / 2))
-        : ((size.width - tooltipWidth) / 2);
-
-    final bool alignRightEdge = step.tooltipAlignToTargetRightEdge;
-
-    // If requested, align tooltip's RIGHT edge to the target's right edge.
-    // Otherwise, center it; if centering would clamp on the right edge, fall
-    // back to right-edge alignment to keep the association with the target.
-    final bool wouldClampRight = highlightRect != null &&
-        preferredCenteredX > (size.width - tooltipWidth - horizontalSafeMargin);
-
-    final double preferredX =
-        (highlightRect != null && (alignRightEdge || wouldClampRight))
-            ? (highlightRect.right - tooltipWidth)
-            : preferredCenteredX;
-
-    final minX = horizontalSafeMargin;
-    final maxX = math.max(
-        horizontalSafeMargin, size.width - tooltipWidth - horizontalSafeMargin);
-    final double tooltipX =
-        preferredX.isFinite ? preferredX.clamp(minX, maxX).toDouble() : minX;
-
-    // Decide whether to place tooltip above or below highlight.
-    final double spaceAbove =
-        (highlightRect?.top ?? (size.height / 2)) - safe.top;
-    final double spaceBelow = size.height -
-        safe.bottom -
-        (highlightRect?.bottom ?? (size.height / 2));
-
-    final bool placeBelow = spaceBelow >= spaceAbove;
-    final rawTooltipY = () {
-      if (highlightRect == null) {
-        return safe.top + 84;
-      }
-      if (placeBelow) {
-        return math.min(
-          highlightRect.bottom + 14,
-          size.height - safe.bottom - 220,
-        );
-      }
-      return math.max(
-        safe.top + 14,
-        highlightRect.top - 14 - 220,
-      );
-    }();
-    final minY = safe.top + 14;
-    final maxY = math.max(minY, size.height - safe.bottom - 220);
-    final double tooltipY =
-        rawTooltipY.isFinite ? rawTooltipY.clamp(minY, maxY).toDouble() : minY;
-
-    final isLast = currentIndex == steps.length - 1;
-    final stepLabel = '${currentIndex + 1}/${steps.length}';
-
-    void handleTargetTap() {
-      final onTargetTap = step.onTargetTap;
-      final shouldAdvance = step.advanceOnTargetTap && !isLast;
-      if (onTargetTap == null && !shouldAdvance) return;
-
-      // Web pointer dispatch can become unstable if tutorial callbacks
-      // mutate layout synchronously during the active tap sequence.
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        onTargetTap?.call();
-        if (shouldAdvance) {
-          onNext();
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final theme = Theme.of(context);
+        final scheme = theme.colorScheme;
+        final media = MediaQuery.of(context);
+        final size = constraints.biggest;
+        if (!size.width.isFinite ||
+            !size.height.isFinite ||
+            size.width <= 0 ||
+            size.height <= 0) {
+          return const SizedBox.shrink();
         }
-      });
-      WidgetsBinding.instance.scheduleFrame();
-    }
 
-    final shouldHandleTargetTap = highlightRect != null &&
-        (step.onTargetTap != null || step.advanceOnTargetTap);
+        final overlayRender = context.findRenderObject();
+        final overlayBox = overlayRender is RenderBox &&
+                overlayRender.attached &&
+                overlayRender.hasSize
+            ? overlayRender
+            : null;
 
-    return SizedBox.expand(
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Positioned.fill(
-            child: IgnorePointer(
-              ignoring: true,
-              child: CustomPaint(
-                painter: _CoachMarkPainter(
-                  highlightRect: highlightRect,
-                  color: Colors.black.withValues(alpha: 0.55),
-                  accent: scheme.primary,
+        final rectGlobal = _targetRectGlobal(step);
+        final rectLocal = (rectGlobal != null && overlayBox != null)
+            ? _convertGlobalRectToLocal(
+                globalRect: rectGlobal,
+                overlayBox: overlayBox,
+              )
+            : null;
+
+        if (rectLocal == null && step.targetKey?.currentContext != null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!context.mounted) return;
+            (context as Element).markNeedsBuild();
+          });
+        }
+
+        // Expand the highlight a bit so it feels forgiving.
+        final inflated = rectLocal?.inflate(10);
+        final highlightRect =
+            inflated != null && _isRectUsable(inflated) ? inflated : null;
+
+        // Tooltip sizing/position.
+        // Keep this reasonably narrow so it doesn't feel like a full-width banner,
+        // and so it can be positioned safely near right-edge targets.
+        const double tooltipMaxWidth = 340;
+        final availableWidth = math.max(0.0, size.width - 24);
+        if (!availableWidth.isFinite || availableWidth <= 0) {
+          return const SizedBox.shrink();
+        }
+        final double tooltipWidth = math
+            .min(tooltipMaxWidth, availableWidth)
+            .clamp(1.0, tooltipMaxWidth)
+            .toDouble();
+
+        final EdgeInsets safe = media.padding;
+
+        const double horizontalSafeMargin = 12;
+
+        final double preferredCenteredX = (highlightRect != null)
+            ? (highlightRect.center.dx - (tooltipWidth / 2))
+            : ((size.width - tooltipWidth) / 2);
+
+        final bool alignRightEdge = step.tooltipAlignToTargetRightEdge;
+
+        // If requested, align tooltip's RIGHT edge to the target's right edge.
+        // Otherwise, center it; if centering would clamp on the right edge, fall
+        // back to right-edge alignment to keep the association with the target.
+        final bool wouldClampRight = highlightRect != null &&
+            preferredCenteredX >
+                (size.width - tooltipWidth - horizontalSafeMargin);
+
+        final double preferredX =
+            (highlightRect != null && (alignRightEdge || wouldClampRight))
+                ? (highlightRect.right - tooltipWidth)
+                : preferredCenteredX;
+
+        final minX = horizontalSafeMargin;
+        final maxX = math.max(horizontalSafeMargin,
+            size.width - tooltipWidth - horizontalSafeMargin);
+        final double tooltipX = preferredX.isFinite
+            ? preferredX.clamp(minX, maxX).toDouble()
+            : minX;
+
+        // Decide whether to place tooltip above or below highlight.
+        final double spaceAbove =
+            (highlightRect?.top ?? (size.height / 2)) - safe.top;
+        final double spaceBelow = size.height -
+            safe.bottom -
+            (highlightRect?.bottom ?? (size.height / 2));
+
+        final bool placeBelow = spaceBelow >= spaceAbove;
+        final rawTooltipY = () {
+          if (highlightRect == null) {
+            return safe.top + 84;
+          }
+          if (placeBelow) {
+            return math.min(
+              highlightRect.bottom + 14,
+              size.height - safe.bottom - 220,
+            );
+          }
+          return math.max(
+            safe.top + 14,
+            highlightRect.top - 14 - 220,
+          );
+        }();
+        final minY = safe.top + 14;
+        final maxY = math.max(minY, size.height - safe.bottom - 220);
+        final double tooltipY = rawTooltipY.isFinite
+            ? rawTooltipY.clamp(minY, maxY).toDouble()
+            : minY;
+
+        final isLast = currentIndex == steps.length - 1;
+        final stepLabel = '${currentIndex + 1}/${steps.length}';
+
+        void handleTargetTap() {
+          final onTargetTap = step.onTargetTap;
+          final shouldAdvance = step.advanceOnTargetTap && !isLast;
+          if (onTargetTap == null && !shouldAdvance) return;
+
+          // Web pointer dispatch can become unstable if tutorial callbacks
+          // mutate layout synchronously during the active tap sequence.
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            onTargetTap?.call();
+            if (shouldAdvance) {
+              onNext();
+            }
+          });
+          WidgetsBinding.instance.scheduleFrame();
+        }
+
+        final shouldHandleTargetTap = highlightRect != null &&
+            (step.onTargetTap != null || step.advanceOnTargetTap);
+
+        return SizedBox.expand(
+          key: overlayRootKey,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Positioned.fill(
+                child: IgnorePointer(
+                  ignoring: true,
+                  child: CustomPaint(
+                    painter: _CoachMarkPainter(
+                      highlightRect: highlightRect,
+                      color: Colors.black.withValues(alpha: 0.55),
+                      accent: scheme.primary,
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
 
-          if (shouldHandleTargetTap)
-            Positioned.fromRect(
-              rect: highlightRect,
-              child: GestureDetector(
-                behavior: HitTestBehavior.translucent,
-                onTap: handleTargetTap,
-                child: const SizedBox.expand(),
+              if (shouldHandleTargetTap)
+                Positioned.fromRect(
+                  rect: highlightRect,
+                  child: GestureDetector(
+                    key: highlightTapRegionKey,
+                    behavior: HitTestBehavior.translucent,
+                    onTap: handleTargetTap,
+                    child: const SizedBox.expand(),
+                  ),
+                ),
+
+              // Skip button
+              Positioned(
+                top: safe.top + 10,
+                right: 12,
+                child: _GlassActionChip(
+                  label: skipLabel,
+                  onTap: onSkip,
+                ),
               ),
-            ),
 
-          // Skip button
-          Positioned(
-            top: safe.top + 10,
-            right: 12,
-            child: _GlassActionChip(
-              label: skipLabel,
-              onTap: onSkip,
-            ),
+              // Tooltip
+              Positioned(
+                left: tooltipX,
+                top: tooltipY,
+                width: tooltipWidth,
+                child: KeyedSubtree(
+                  key: tooltipKey,
+                  child: _TutorialTooltipCard(
+                    title: step.title,
+                    body: step.body,
+                    icon: step.icon,
+                    stepLabel: stepLabel,
+                    backLabel: backLabel,
+                    nextLabel: isLast ? doneLabel : nextLabel,
+                    showBack: currentIndex > 0,
+                    onBack: onBack,
+                    onNext: onNext,
+                  ),
+                ),
+              ),
+            ],
           ),
-
-          // Tooltip
-          Positioned(
-            left: tooltipX,
-            top: tooltipY,
-            width: tooltipWidth,
-            child: _TutorialTooltipCard(
-              title: step.title,
-              body: step.body,
-              icon: step.icon,
-              stepLabel: stepLabel,
-              backLabel: backLabel,
-              nextLabel: isLast ? doneLabel : nextLabel,
-              showBack: currentIndex > 0,
-              onBack: onBack,
-              onNext: onNext,
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
