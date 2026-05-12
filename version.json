@@ -1,5 +1,29 @@
 {
   "version": "0.6.0",
-  "buildNumber": "260512.02",
-  "buildDate": "2026-05-12"
+  "buildNumber": "260512.04",
+  "buildDate": "2026-05-12",
+  "channel": "beta",
+  "ecosystem": "art.kubus",
+  "targets": {
+    "backend": {
+      "repo": "art.kubus-backend",
+      "path": "./backend",
+      "kind": "backend-node"
+    },
+    "node": {
+      "repo": "kubus-node",
+      "path": "../kubus-node",
+      "kind": "node"
+    },
+    "admin": {
+      "repo": "admin.kubus",
+      "path": "../admin.kubus",
+      "kind": "vite"
+    },
+    "artLanding": {
+      "repo": "art.kubus.site",
+      "path": "../art.kubus.site_webpage",
+      "kind": "vite"
+    }
+  }
 }

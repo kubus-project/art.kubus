@@ -4,7 +4,20 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const rootDir = path.resolve(__dirname, '..');
-const manifestPath = path.join(rootDir, 'version.json');
+let manifestPath = path.join(rootDir, 'version.json');
+
+// Parse CLI args for --manifest
+const manifestArg = process.argv.find(arg => arg.startsWith('--manifest'));
+if (manifestArg) {
+  if (manifestArg === '--manifest' && process.argv.includes('--manifest')) {
+    const idx = process.argv.indexOf('--manifest');
+    if (idx + 1 < process.argv.length) {
+      manifestPath = path.resolve(process.argv[idx + 1]);
+    }
+  } else if (manifestArg.startsWith('--manifest=')) {
+    manifestPath = path.resolve(manifestArg.slice(11));
+  }
+}
 
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
@@ -27,7 +40,7 @@ function normalizeBuildNumber(rawBuildNumber) {
     }
   }
 
-  // Allow date-like dotted build numbers (e.g. "20260325.1") by flattening.
+  // Allow date-like dotted build numbers (e.g. "20260512.02") by flattening.
   if (/^\d+(\.\d+)+$/.test(text)) {
     const flattened = text.replace(/\./g, '');
     const parsed = Number.parseInt(flattened, 10);
@@ -37,7 +50,7 @@ function normalizeBuildNumber(rawBuildNumber) {
   }
 
   throw new Error(
-    'buildNumber must be a non-negative integer (e.g. 42) or numeric string (e.g. "42" or "20260325.1")',
+    'buildNumber must be a non-negative integer (e.g. 42) or numeric string (e.g. "42" or "20260512.02")',
   );
 }
 
@@ -47,13 +60,6 @@ function replaceOrThrow(source, matcher, replacement, description) {
     throw new Error(`Failed to update ${description}`);
   }
   return source.replace(matcher, replacement);
-}
-
-function syncBackendPackage(version) {
-  const filePath = path.join(rootDir, 'backend', 'package.json');
-  const data = readJson(filePath);
-  data.version = version;
-  writeText(filePath, `${JSON.stringify(data, null, 2)}\n`);
 }
 
 function syncPubspec(version, buildNumber) {
@@ -113,7 +119,6 @@ function run() {
   validateManifest(manifest);
   const normalizedBuildNumber = normalizeBuildNumber(manifest.buildNumber);
 
-  syncBackendPackage(manifest.version);
   syncPubspec(manifest.version, normalizedBuildNumber);
   syncAppConfig(manifest.version, normalizedBuildNumber, manifest.buildDate);
 
