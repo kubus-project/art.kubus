@@ -183,6 +183,22 @@ extension BackendApiAvailabilityNetworkAccess on BackendApiService {
     }
   }
 
+  Future<Map<String, dynamic>?> getAvailabilityAccountOperatorDashboard() async {
+    try {
+      final response = await _fetchJson(
+        Uri.parse('$baseUrl/api/availability/account/operator-dashboard'),
+        includeAuth: true,
+        allowOrbitFallback: false,
+      );
+      return _backendApiMapOrNull(response['data']) ?? response;
+    } catch (e) {
+      AppConfig.debugPrint(
+        'BackendApiService.getAvailabilityAccountOperatorDashboard failed: $e',
+      );
+      return null;
+    }
+  }
+
   Future<Map<String, dynamic>?> getMyAvailabilityRewards() async {
     try {
       final response = await _fetchJson(

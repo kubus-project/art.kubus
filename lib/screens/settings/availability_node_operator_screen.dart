@@ -410,6 +410,11 @@ class _NodeStatusPanel extends StatelessWidget {
             const SizedBox(height: KubusSpacing.sm),
             if (status == null) ...[
               Text(
+                l10n.availabilityNodeNoNodeTitle,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: KubusSpacing.xs),
+              Text(
                 l10n.availabilityNodeRunNodeCta,
                 style: TextStyle(color: scheme.onSurfaceVariant),
               ),

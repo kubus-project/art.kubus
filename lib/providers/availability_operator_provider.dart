@@ -285,15 +285,19 @@ class AvailabilityOperatorProvider extends ChangeNotifier {
   }
 
   Future<void> _loadNodeStatusInternal() async {
-    final statusJson = await _api.getCurrentAvailabilityNode();
-    final rewardsJson = await _api.getMyAvailabilityRewards();
-    if (statusJson == null || (statusJson['node'] == null && statusJson['latestHeartbeat'] == null)) {
+    final dashboard = await _api.getAvailabilityAccountOperatorDashboard();
+    final statusJson = dashboard?['nodeStatus'] is Map<String, dynamic>
+        ? dashboard!['nodeStatus'] as Map<String, dynamic>
+        : null;
+    if (statusJson == null || statusJson['node'] == null || statusJson['status'] == 'none') {
       _nodeStatus = null;
       return;
     }
     _nodeStatus = AvailabilityNodeStatusSnapshot.fromJson(
       statusJson: statusJson,
-      rewardsJson: rewardsJson ?? <String, dynamic>{},
+      rewardsJson: <String, dynamic>{
+        'summary': statusJson['rewardSummary'],
+      },
     );
   }
 }

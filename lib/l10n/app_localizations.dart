@@ -10889,10 +10889,16 @@ abstract class AppLocalizations {
   /// **'My node status'**
   String get availabilityNodeStatusTitle;
 
+  /// No description provided for @availabilityNodeNoNodeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No node is registered yet.'**
+  String get availabilityNodeNoNodeTitle;
+
   /// No description provided for @availabilityNodeRunNodeCta.
   ///
   /// In en, this message translates to:
-  /// **'No active node status yet. Create an operator token, start Kubus Node, and the archive contribution summary will appear here.'**
+  /// **'Run a node to start contributing to the public art archive.'**
   String get availabilityNodeRunNodeCta;
 
   String get availabilityNodeUptimeTodayLabel;

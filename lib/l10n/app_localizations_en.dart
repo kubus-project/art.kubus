@@ -5640,7 +5640,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get availabilityNodeStatusTitle => 'My node status';
 
   @override
-  String get availabilityNodeRunNodeCta => 'No active node status yet. Create an operator token, start Kubus Node, and the archive contribution summary will appear here.';
+  String get availabilityNodeNoNodeTitle => 'No node is registered yet.';
+
+  @override
+  String get availabilityNodeRunNodeCta => 'Run a node to start contributing to the public art archive.';
 
   @override
   String get availabilityNodeUptimeTodayLabel => 'Uptime today';
@@ -5655,13 +5658,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get availabilityNodePendingKub8Label => 'Pending KUB8';
 
   @override
-  String get availabilityNodePublicCidsPinnedLabel => 'Public CIDs pinned';
+  String get availabilityNodePublicCidsPinnedLabel => 'Public archive records pinned';
 
   @override
-  String get availabilityNodeRewardableCidsPinnedLabel => 'Rewardable bonus CIDs pinned';
+  String get availabilityNodeRewardableCidsPinnedLabel => 'Priority archive records pinned';
 
   @override
-  String get availabilityNodeFormulaExplanation => 'Rewards are based on verified public archive availability: uptime, public CID coverage, retrieval checks, and priority CID bonuses. Rewards are pending records until settlement exists.';
+  String get availabilityNodeFormulaExplanation => 'Public archive replication is the base contribution. Priority archive records add bonus weight. Rewards are pending records until settlement exists.';
 
   @override
   String get availabilityNodeCopyGuiUrlButton => 'Copy node GUI URL';
