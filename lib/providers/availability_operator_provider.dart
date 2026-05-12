@@ -68,6 +68,90 @@ class CreatedAvailabilityOperatorToken {
   final AvailabilityOperatorTokenRecord record;
 }
 
+class AvailabilityNodeStatusSnapshot {
+  const AvailabilityNodeStatusSnapshot({
+    required this.status,
+    required this.pendingKub8,
+    required this.settledKub8,
+    required this.noRewardEpochs,
+    this.nodeId,
+    this.nodeLabel,
+    this.peerId,
+    this.lastHeartbeatAt,
+    this.publicCidsPinned = 0,
+    this.publicCidsTracked = 0,
+    this.rewardableCidsPinned = 0,
+    this.rewardableCidsTracked = 0,
+    this.uptimeTodayHours = 0,
+    this.publicArchiveCoverage = 0,
+    this.estimatedContributionScore = 0,
+  });
+
+  final String status;
+  final String? nodeId;
+  final String? nodeLabel;
+  final String? peerId;
+  final DateTime? lastHeartbeatAt;
+  final int publicCidsPinned;
+  final int publicCidsTracked;
+  final int rewardableCidsPinned;
+  final int rewardableCidsTracked;
+  final double uptimeTodayHours;
+  final double publicArchiveCoverage;
+  final double estimatedContributionScore;
+  final double pendingKub8;
+  final double settledKub8;
+  final int noRewardEpochs;
+
+  factory AvailabilityNodeStatusSnapshot.fromJson({
+    required Map<String, dynamic> statusJson,
+    required Map<String, dynamic> rewardsJson,
+  }) {
+    final node = statusJson['node'] is Map<String, dynamic>
+        ? statusJson['node'] as Map<String, dynamic>
+        : <String, dynamic>{};
+    final heartbeat = statusJson['latestHeartbeat'] is Map<String, dynamic>
+        ? statusJson['latestHeartbeat'] as Map<String, dynamic>
+        : <String, dynamic>{};
+    final metadata = heartbeat['metadata'] is Map<String, dynamic>
+        ? heartbeat['metadata'] as Map<String, dynamic>
+        : <String, dynamic>{};
+    final archive = statusJson['archiveContribution'] is Map<String, dynamic>
+        ? statusJson['archiveContribution'] as Map<String, dynamic>
+        : <String, dynamic>{};
+    final summary = statusJson['rewardSummary'] is Map<String, dynamic>
+        ? statusJson['rewardSummary'] as Map<String, dynamic>
+        : (rewardsJson['summary'] is Map<String, dynamic>
+            ? rewardsJson['summary'] as Map<String, dynamic>
+            : <String, dynamic>{});
+    final healthyMinutes = _num(archive['healthyMinutes']);
+    final tracked = _int(metadata['desiredCidCount'] ?? metadata['publicPinSetCount'] ?? heartbeat['trackedCidCount']);
+    final pinned = _int(metadata['pinnedPublicCidCount'] ?? heartbeat['pinnedCidCount']);
+    return AvailabilityNodeStatusSnapshot(
+      status: (statusJson['status'] ?? 'offline').toString(),
+      nodeId: (node['id'] ?? '').toString().isEmpty ? null : node['id'].toString(),
+      nodeLabel: (node['label'] ?? node['nodeKey'] ?? '').toString(),
+      peerId: (heartbeat['peerId'] ?? '').toString().isEmpty
+          ? null
+          : heartbeat['peerId'].toString(),
+      lastHeartbeatAt: DateTime.tryParse((heartbeat['receivedAt'] ?? '').toString()),
+      publicCidsPinned: pinned,
+      publicCidsTracked: tracked,
+      rewardableCidsPinned: _int(metadata['pinnedRewardableCidCount']),
+      rewardableCidsTracked: _int(metadata['rewardableCidCount']),
+      uptimeTodayHours: healthyMinutes > 0 ? healthyMinutes / 60 : 0,
+      publicArchiveCoverage: tracked > 0 ? pinned / tracked : _num(archive['coverageScore']),
+      estimatedContributionScore: _num(archive['effectivePoints']),
+      pendingKub8: _num(summary['pendingKub8']),
+      settledKub8: _num(summary['settledKub8']),
+      noRewardEpochs: _int(summary['noRewardEpochs']),
+    );
+  }
+
+  static int _int(Object? value) => int.tryParse((value ?? '').toString()) ?? 0;
+  static double _num(Object? value) => double.tryParse((value ?? '').toString()) ?? 0;
+}
+
 class AvailabilityOperatorProvider extends ChangeNotifier {
   AvailabilityOperatorProvider({BackendApiService? api})
       : _api = api ?? BackendApiService();
@@ -79,15 +163,18 @@ class AvailabilityOperatorProvider extends ChangeNotifier {
   List<AvailabilityOperatorTokenRecord> _tokens =
       const <AvailabilityOperatorTokenRecord>[];
   CreatedAvailabilityOperatorToken? _createdToken;
+  AvailabilityNodeStatusSnapshot? _nodeStatus;
 
   bool get isLoading => _isLoading;
   String? get error => _error;
   List<AvailabilityOperatorTokenRecord> get tokens => _tokens;
   CreatedAvailabilityOperatorToken? get createdToken => _createdToken;
+  AvailabilityNodeStatusSnapshot? get nodeStatus => _nodeStatus;
 
   Future<void> loadTokens({required String walletAddress}) async {
     await _run(() async {
       await _loadTokensInternal(walletAddress: walletAddress);
+      await _loadNodeStatusInternal();
     });
   }
 
@@ -118,6 +205,7 @@ class AvailabilityOperatorProvider extends ChangeNotifier {
       _createdToken = created;
       try {
         await _loadTokensInternal(walletAddress: walletAddress);
+        await _loadNodeStatusInternal();
       } catch (e) {
         AppConfig.debugPrint(
           'AvailabilityOperatorProvider token refresh failed after create: $e',
@@ -194,5 +282,18 @@ class AvailabilityOperatorProvider extends ChangeNotifier {
         .map(AvailabilityOperatorTokenRecord.fromJson)
         .where((token) => token.id.isNotEmpty)
         .toList(growable: false);
+  }
+
+  Future<void> _loadNodeStatusInternal() async {
+    final statusJson = await _api.getCurrentAvailabilityNode();
+    final rewardsJson = await _api.getMyAvailabilityRewards();
+    if (statusJson == null || (statusJson['node'] == null && statusJson['latestHeartbeat'] == null)) {
+      _nodeStatus = null;
+      return;
+    }
+    _nodeStatus = AvailabilityNodeStatusSnapshot.fromJson(
+      statusJson: statusJson,
+      rewardsJson: rewardsJson ?? <String, dynamic>{},
+    );
   }
 }

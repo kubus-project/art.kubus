@@ -5309,6 +5309,16 @@
       "label": {}
     }
   },
+  "availabilityNodeStatusTitle": "Stanje mojega vozlišča",
+  "availabilityNodeRunNodeCta": "Aktivno stanje vozlišča še ni na voljo. Ustvari operatorski token, zaženi Kubus Node in povzetek prispevka k arhivu se bo prikazal tukaj.",
+  "availabilityNodeUptimeTodayLabel": "Razpoložljivost danes",
+  "availabilityNodePublicCoverageLabel": "Pokritost javnega umetniškega arhiva",
+  "availabilityNodeContributionScoreLabel": "Ocena prispevka",
+  "availabilityNodePendingKub8Label": "Začasne nagrade KUB8",
+  "availabilityNodePublicCidsPinnedLabel": "Pripeti javni CID zapisi",
+  "availabilityNodeRewardableCidsPinnedLabel": "Pripeti nagradljivi CID zapisi",
+  "availabilityNodeFormulaExplanation": "Nagrade temeljijo na preverjeni dostopnosti javnega umetniškega arhiva: času delovanja, pokritosti javnih CID zapisov, preverjanju dostopnosti in bonusu prioritetnih CID zapisov. Nagrade so začasne evidence do vzpostavitve poravnave.",
+  "availabilityNodeCopyGuiUrlButton": "Kopiraj URL GUI vozlišča",
   "walletHomeSecurityTitle": "Zaščiti svojo denarnico",
   "walletHomeSecuritySubtitle": "Varnostna kopija, dostop do denarnice in stanje obnove so zbrani tukaj.",
   "receiveTokenSidebarShareTitle": "Deli podatke za prejem",

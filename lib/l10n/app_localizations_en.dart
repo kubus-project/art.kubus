@@ -5637,6 +5637,36 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get availabilityNodeStatusTitle => 'My node status';
+
+  @override
+  String get availabilityNodeRunNodeCta => 'No active node status yet. Create an operator token, start Kubus Node, and the archive contribution summary will appear here.';
+
+  @override
+  String get availabilityNodeUptimeTodayLabel => 'Uptime today';
+
+  @override
+  String get availabilityNodePublicCoverageLabel => 'Public archive coverage';
+
+  @override
+  String get availabilityNodeContributionScoreLabel => 'Contribution score';
+
+  @override
+  String get availabilityNodePendingKub8Label => 'Pending KUB8';
+
+  @override
+  String get availabilityNodePublicCidsPinnedLabel => 'Public CIDs pinned';
+
+  @override
+  String get availabilityNodeRewardableCidsPinnedLabel => 'Rewardable bonus CIDs pinned';
+
+  @override
+  String get availabilityNodeFormulaExplanation => 'Rewards are based on verified public archive availability: uptime, public CID coverage, retrieval checks, and priority CID bonuses. Rewards are pending records until settlement exists.';
+
+  @override
+  String get availabilityNodeCopyGuiUrlButton => 'Copy node GUI URL';
+
+  @override
   String get walletHomeSecurityTitle => 'Secure your wallet';
 
   @override

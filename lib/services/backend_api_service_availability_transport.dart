@@ -167,6 +167,38 @@ extension BackendApiAvailabilityNetworkAccess on BackendApiService {
     }
   }
 
+  Future<Map<String, dynamic>?> getCurrentAvailabilityNode() async {
+    try {
+      final response = await _fetchJson(
+        Uri.parse('$baseUrl/api/availability/nodes/current'),
+        includeAuth: true,
+        allowOrbitFallback: false,
+      );
+      return _backendApiMapOrNull(response['data']) ?? response;
+    } catch (e) {
+      AppConfig.debugPrint(
+        'BackendApiService.getCurrentAvailabilityNode failed: $e',
+      );
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>?> getMyAvailabilityRewards() async {
+    try {
+      final response = await _fetchJson(
+        Uri.parse('$baseUrl/api/availability/rewards/me?limit=20&offset=0'),
+        includeAuth: true,
+        allowOrbitFallback: false,
+      );
+      return _backendApiMapOrNull(response['data']) ?? response;
+    } catch (e) {
+      AppConfig.debugPrint(
+        'BackendApiService.getMyAvailabilityRewards failed: $e',
+      );
+      return null;
+    }
+  }
+
   Future<Map<String, dynamic>?> getCurrentAvailabilityEpoch() async {
     try {
       final response = await _fetchJson(

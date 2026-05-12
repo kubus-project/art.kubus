@@ -10883,6 +10883,27 @@ abstract class AppLocalizations {
   /// **'Revoke \"{label}\"? This token will stop working immediately.'**
   String availabilityNodeRevokeBody(Object label);
 
+  /// No description provided for @availabilityNodeStatusTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'My node status'**
+  String get availabilityNodeStatusTitle;
+
+  /// No description provided for @availabilityNodeRunNodeCta.
+  ///
+  /// In en, this message translates to:
+  /// **'No active node status yet. Create an operator token, start Kubus Node, and the archive contribution summary will appear here.'**
+  String get availabilityNodeRunNodeCta;
+
+  String get availabilityNodeUptimeTodayLabel;
+  String get availabilityNodePublicCoverageLabel;
+  String get availabilityNodeContributionScoreLabel;
+  String get availabilityNodePendingKub8Label;
+  String get availabilityNodePublicCidsPinnedLabel;
+  String get availabilityNodeRewardableCidsPinnedLabel;
+  String get availabilityNodeFormulaExplanation;
+  String get availabilityNodeCopyGuiUrlButton;
+
   /// No description provided for @walletHomeSecurityTitle.
   ///
   /// In en, this message translates to:

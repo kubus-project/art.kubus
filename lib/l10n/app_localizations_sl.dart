@@ -5654,6 +5654,36 @@ class AppLocalizationsSl extends AppLocalizations {
   String get walletHomeSecurityTitle => 'Zaščiti svojo denarnico';
 
   @override
+  String get availabilityNodeStatusTitle => 'Stanje mojega vozlisca';
+
+  @override
+  String get availabilityNodeRunNodeCta => 'Aktivno stanje vozlisca se ni na voljo. Ustvari operatorski token, zazeni Kubus Node in povzetek prispevka k arhivu se bo prikazal tukaj.';
+
+  @override
+  String get availabilityNodeUptimeTodayLabel => 'Razpolozljivost danes';
+
+  @override
+  String get availabilityNodePublicCoverageLabel => 'Pokritost javnega umetniskega arhiva';
+
+  @override
+  String get availabilityNodeContributionScoreLabel => 'Ocena prispevka';
+
+  @override
+  String get availabilityNodePendingKub8Label => 'Zacasne nagrade KUB8';
+
+  @override
+  String get availabilityNodePublicCidsPinnedLabel => 'Pripeti javni CID zapisi';
+
+  @override
+  String get availabilityNodeRewardableCidsPinnedLabel => 'Pripeti nagradljivi CID zapisi';
+
+  @override
+  String get availabilityNodeFormulaExplanation => 'Nagrade temeljijo na preverjeni dostopnosti javnega umetniskega arhiva: casu delovanja, pokritosti javnih CID zapisov, preverjanju dostopnosti in bonusu prioritetnih CID zapisov. Nagrade so zacasne evidence do vzpostavitve poravnave.';
+
+  @override
+  String get availabilityNodeCopyGuiUrlButton => 'Kopiraj URL GUI vozlisca';
+
+  @override
   String get walletHomeSecuritySubtitle => 'Varnostna kopija, dostop do denarnice in stanje obnove so zbrani tukaj.';
 
   @override

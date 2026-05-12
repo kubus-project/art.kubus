@@ -223,6 +223,8 @@ class _AvailabilityNodeOperatorBodyState
             children: [
               _InfoPanel(wallet: wallet),
               const SizedBox(height: KubusSpacing.lg),
+              _NodeStatusPanel(status: provider.nodeStatus),
+              const SizedBox(height: KubusSpacing.lg),
               GlassSurface(
                 child: Padding(
                   padding: const EdgeInsets.all(KubusSpacing.md),
@@ -366,6 +368,144 @@ class _InfoPanel extends StatelessWidget {
             ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _NodeStatusPanel extends StatelessWidget {
+  const _NodeStatusPanel({required this.status});
+
+  final AvailabilityNodeStatusSnapshot? status;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    final coverage = ((status?.publicArchiveCoverage ?? 0) * 100)
+        .clamp(0, 100)
+        .toStringAsFixed(1);
+    return GlassSurface(
+      child: Padding(
+        padding: const EdgeInsets.all(KubusSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    l10n.availabilityNodeStatusTitle,
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                ),
+                if (status != null)
+                  Chip(
+                    label: Text(status!.status),
+                    side: BorderSide(color: scheme.outlineVariant),
+                    backgroundColor: scheme.surfaceContainerHighest,
+                  ),
+              ],
+            ),
+            const SizedBox(height: KubusSpacing.sm),
+            if (status == null) ...[
+              Text(
+                l10n.availabilityNodeRunNodeCta,
+                style: TextStyle(color: scheme.onSurfaceVariant),
+              ),
+              const SizedBox(height: KubusSpacing.sm),
+              OutlinedButton.icon(
+                onPressed: () => Clipboard.setData(
+                  const ClipboardData(text: 'http://my.node.kubus.site:8787/gui'),
+                ),
+                icon: const Icon(Icons.copy),
+                label: Text(l10n.availabilityNodeCopyGuiUrlButton),
+              ),
+            ] else ...[
+              Wrap(
+                spacing: KubusSpacing.sm,
+                runSpacing: KubusSpacing.sm,
+                children: [
+                  _MetricChip(
+                    label: l10n.availabilityNodeUptimeTodayLabel,
+                    value: '${status!.uptimeTodayHours.toStringAsFixed(1)} h',
+                  ),
+                  _MetricChip(
+                    label: l10n.availabilityNodePublicCoverageLabel,
+                    value: '$coverage%',
+                  ),
+                  _MetricChip(
+                    label: l10n.availabilityNodeContributionScoreLabel,
+                    value: status!.estimatedContributionScore.toStringAsFixed(0),
+                  ),
+                  _MetricChip(
+                    label: l10n.availabilityNodePendingKub8Label,
+                    value: status!.pendingKub8.toStringAsFixed(2),
+                  ),
+                ],
+              ),
+              const SizedBox(height: KubusSpacing.md),
+              Text(
+                l10n.availabilityNodeFormulaExplanation,
+                style: TextStyle(color: scheme.onSurfaceVariant),
+              ),
+              const SizedBox(height: KubusSpacing.md),
+              Text(
+                '${l10n.availabilityNodePublicCidsPinnedLabel}: ${status!.publicCidsPinned}/${status!.publicCidsTracked} - '
+                '${l10n.availabilityNodeRewardableCidsPinnedLabel}: ${status!.rewardableCidsPinned}/${status!.rewardableCidsTracked}',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: KubusSpacing.sm),
+              Row(
+                children: [
+                  Expanded(
+                    child: SelectableText(
+                      'http://my.node.kubus.site:8787/gui',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: l10n.availabilityNodeCopyGuiUrlButton,
+                    onPressed: () => Clipboard.setData(
+                      const ClipboardData(text: 'http://my.node.kubus.site:8787/gui'),
+                    ),
+                    icon: const Icon(Icons.copy),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MetricChip extends StatelessWidget {
+  const _MetricChip({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      constraints: const BoxConstraints(minWidth: 150),
+      padding: const EdgeInsets.all(KubusSpacing.sm),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(KubusRadius.md),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(label, style: Theme.of(context).textTheme.labelSmall),
+          const SizedBox(height: 4),
+          Text(value, style: Theme.of(context).textTheme.titleMedium),
+        ],
       ),
     );
   }
