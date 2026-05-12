@@ -82,6 +82,47 @@ void main() {
     presenceProvider.dispose();
   });
 
+  testWidgets('UserActivityStatusLine ignores raw online without timestamp',
+      (tester) async {
+    const wallet = '0xRAWONLINE';
+    final api = _FakePresenceApi(
+      presenceResponse: {
+        'success': true,
+        'data': [
+          {
+            'walletAddress': wallet,
+            'exists': true,
+            'visible': true,
+            'isOnline': true,
+          }
+        ],
+      },
+    );
+
+    final presenceProvider = PresenceProvider(api: api);
+
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: presenceProvider,
+        child: MaterialApp(
+          locale: const Locale('en'),
+          supportedLocales: AppLocalizations.supportedLocales,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          home: const Scaffold(
+            body: UserActivityStatusLine(walletAddress: wallet),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pump(const Duration(milliseconds: 150));
+    expect(find.text('Online'), findsNothing);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    presenceProvider.dispose();
+  });
+
   testWidgets(
       'UserActivityStatusLine alternates to location when available and not expired',
       (tester) async {

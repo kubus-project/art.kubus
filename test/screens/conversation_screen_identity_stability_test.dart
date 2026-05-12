@@ -88,6 +88,68 @@ void main() {
     expect(keyAfter, keyBefore);
   });
 
+  test('Message presentation uses ChatProvider label over message snapshot',
+      () {
+    final provider = ChatProvider();
+    addTearDown(provider.dispose);
+    final chatMessage = message(displayName: 'Legacy Snapshot');
+
+    provider.upsertParticipantIdentity(
+      const ResolvedConversationParticipant(
+        identityKey: '0x1234567890abcdef1234567890abcdef12345678',
+        walletAddress: '0x1234567890abcdef1234567890abcdef12345678',
+        displayName: 'Provider Sender',
+        avatarUrl: 'https://example.test/provider.png',
+        source: ParticipantIdentitySource.profileHydration,
+      ),
+    );
+
+    final presentation = resolveMessagePresentationForTesting(
+      message: chatMessage,
+      conversation: conversation,
+      chatProvider: provider,
+    );
+
+    expect(presentation.senderLabel, 'Provider Sender');
+    expect(presentation.senderAvatarUrl, 'https://example.test/provider.png');
+    expect(presentation.rowKey, conversationMessageRowKey(chatMessage));
+  });
+
+  test(
+      'Participant hydration updates presentation label without changing row key',
+      () {
+    final provider = ChatProvider();
+    addTearDown(provider.dispose);
+    final chatMessage = message(displayName: null, avatar: null);
+
+    final before = resolveMessagePresentationForTesting(
+      message: chatMessage,
+      conversation: Conversation(id: 'c1'),
+      chatProvider: provider,
+    );
+
+    provider.upsertParticipantIdentity(
+      const ResolvedConversationParticipant(
+        identityKey: '0x1234567890abcdef1234567890abcdef12345678',
+        walletAddress: '0x1234567890abcdef1234567890abcdef12345678',
+        displayName: 'Hydrated Sender',
+        avatarUrl: 'https://example.test/hydrated.png',
+        source: ParticipantIdentitySource.profileHydration,
+      ),
+    );
+
+    final after = resolveMessagePresentationForTesting(
+      message: chatMessage,
+      conversation: Conversation(id: 'c1'),
+      chatProvider: provider,
+    );
+
+    expect(before.senderLabel, '0x1234...5678');
+    expect(after.senderLabel, 'Hydrated Sender');
+    expect(after.senderAvatarUrl, 'https://example.test/hydrated.png');
+    expect(after.rowKey, before.rowKey);
+  });
+
   test('Fallback wallet label remains stable before profile hydration', () {
     final provider = ChatProvider();
     addTearDown(provider.dispose);

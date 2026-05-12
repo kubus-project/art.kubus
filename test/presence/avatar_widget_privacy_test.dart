@@ -136,6 +136,99 @@ void main() {
     presenceProvider.dispose();
   });
 
+  testWidgets('AvatarWidget shows green badge for fresh online presence',
+      (tester) async {
+    const wallet = '0xFRESH123';
+    final now = DateTime.now();
+    final api = _FakePresenceApi((wallets) {
+      return {
+        'success': true,
+        'data': [
+          {
+            'walletAddress': wallet,
+            'exists': true,
+            'visible': true,
+            'isOnline': true,
+            'lastSeenAt': now.toIso8601String(),
+            'observedAt': now.toIso8601String(),
+          }
+        ],
+      };
+    });
+    final presenceProvider = PresenceProvider(api: api);
+
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: presenceProvider,
+        child: MaterialApp(
+          locale: const Locale('en'),
+          supportedLocales: AppLocalizations.supportedLocales,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          home: const Scaffold(
+            body: AvatarWidget(
+              wallet: wallet,
+              avatarUrl: 'https://api.dicebear.com/7.x/identicon/svg?seed=test',
+              enableProfileNavigation: false,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pump(const Duration(milliseconds: 150));
+    expect(find.byKey(const ValueKey('avatar_presence_indicator')),
+        findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    presenceProvider.dispose();
+  });
+
+  testWidgets('AvatarWidget hides green badge for raw online without timestamp',
+      (tester) async {
+    const wallet = '0xRAWONLINE';
+    final api = _FakePresenceApi((wallets) {
+      return {
+        'success': true,
+        'data': [
+          {
+            'walletAddress': wallet,
+            'exists': true,
+            'visible': true,
+            'isOnline': true,
+          }
+        ],
+      };
+    });
+    final presenceProvider = PresenceProvider(api: api);
+
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: presenceProvider,
+        child: MaterialApp(
+          locale: const Locale('en'),
+          supportedLocales: AppLocalizations.supportedLocales,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          home: const Scaffold(
+            body: AvatarWidget(
+              wallet: wallet,
+              avatarUrl: 'https://api.dicebear.com/7.x/identicon/svg?seed=test',
+              enableProfileNavigation: false,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pump(const Duration(milliseconds: 150));
+    expect(
+        find.byKey(const ValueKey('avatar_presence_indicator')), findsNothing);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    presenceProvider.dispose();
+  });
+
   testWidgets('AvatarWidget hides presence badge when presence is private',
       (tester) async {
     const wallet = '0xABC123';

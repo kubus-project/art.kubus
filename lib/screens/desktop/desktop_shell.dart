@@ -44,6 +44,9 @@ import '../../widgets/glass_components.dart';
 import '../../utils/share_deep_link_navigation.dart';
 import '../../services/share/share_deep_link_parser.dart';
 import 'components/desktop_notifications_panel.dart';
+import '../../widgets/tutorial/tutorial_overlay_controller.dart';
+import '../../widgets/tutorial/tutorial_overlay_presenter.dart';
+import '../../widgets/tutorial/tutorial_overlay_scope.dart';
 
 export 'desktop_shell_scope.dart';
 
@@ -89,6 +92,8 @@ class _DesktopShellState extends State<DesktopShell>
 
   DesktopFunctionsPanel _functionsPanel = DesktopFunctionsPanel.none;
   Widget? _functionsPanelContent;
+
+  late final TutorialOverlayController _tutorialOverlayController;
 
   /// Stack of screens pushed via DesktopShellScope.pushScreen
   /// When empty, shows the route-based screen from _buildCurrentScreen
@@ -182,6 +187,7 @@ class _DesktopShellState extends State<DesktopShell>
   @override
   void initState() {
     super.initState();
+    _tutorialOverlayController = TutorialOverlayController();
     _activeRoute = _signedInNavItems[
             widget.initialIndex.clamp(0, _signedInNavItems.length - 1)]
         .route;
@@ -211,6 +217,7 @@ class _DesktopShellState extends State<DesktopShell>
       DesktopShellRegistry.instance.unregister(ctx);
     }
     _shellScopeContext = null;
+    _tutorialOverlayController.dispose();
     _navExpandController.dispose();
     super.dispose();
   }
@@ -668,45 +675,47 @@ class _DesktopShellState extends State<DesktopShell>
     }
 
     return UserPersonaOnboardingGate(
-      child: DesktopShellScope(
-          pushScreen: _pushScreenToStack,
-          popScreen: _popScreenFromStack,
-          navigateToRoute: _navigateToRoute,
-          openNotifications: () => unawaited(_toggleNotificationsPanel()),
-          openFunctionsPanel: _openFunctionsPanel,
-          setFunctionsPanelContent: _setFunctionsPanelContent,
-          closeFunctionsPanel: _closeFunctionsPanel,
-          canPop: _screenStack.isNotEmpty,
-          child: Builder(
-            builder: (shellContext) {
-              _shellScopeContext = shellContext;
-              DesktopShellRegistry.instance.register(shellContext);
-              _maybeConsumePendingDeepLink(shellContext);
+      child: TutorialOverlayScope(
+        controller: _tutorialOverlayController,
+        child: DesktopShellScope(
+            pushScreen: _pushScreenToStack,
+            popScreen: _popScreenFromStack,
+            navigateToRoute: _navigateToRoute,
+            openNotifications: () => unawaited(_toggleNotificationsPanel()),
+            openFunctionsPanel: _openFunctionsPanel,
+            setFunctionsPanelContent: _setFunctionsPanelContent,
+            closeFunctionsPanel: _closeFunctionsPanel,
+            canPop: _screenStack.isNotEmpty,
+            child: Builder(
+              builder: (shellContext) {
+                _shellScopeContext = shellContext;
+                DesktopShellRegistry.instance.register(shellContext);
+                _maybeConsumePendingDeepLink(shellContext);
 
-              return Stack(
-                children: [
-                  Positioned.fill(
-                    child: ColoredBox(
-                      key: const ValueKey<String>(
-                          'desktop-shell-fallback-backdrop'),
-                      color: _fallbackBackdropColorForRoute(
-                          context, effectiveRoute),
-                    ),
-                  ),
-                  if (!(kIsWeb && effectiveRoute == '/explore'))
+                return Stack(
+                  children: [
                     Positioned.fill(
-                      child: AnimatedGradientBackground(
-                        duration: const Duration(seconds: 12),
-                        intensity: 0.25,
-                        colors:
-                            _backgroundColorsForRoute(context, effectiveRoute),
-                        child: const SizedBox.expand(),
+                      child: ColoredBox(
+                        key: const ValueKey<String>(
+                            'desktop-shell-fallback-backdrop'),
+                        color: _fallbackBackdropColorForRoute(
+                            context, effectiveRoute),
                       ),
                     ),
-                  Scaffold(
-                    backgroundColor: Colors.transparent,
-                    body: Row(
-                      children: [
+                    if (!(kIsWeb && effectiveRoute == '/explore'))
+                      Positioned.fill(
+                        child: AnimatedGradientBackground(
+                          duration: const Duration(seconds: 12),
+                          intensity: 0.25,
+                          colors: _backgroundColorsForRoute(
+                              context, effectiveRoute),
+                          child: const SizedBox.expand(),
+                        ),
+                      ),
+                    Scaffold(
+                      backgroundColor: Colors.transparent,
+                      body: Row(
+                        children: [
                         // Primary navigation rail anchored to the LEFT edge.
                         AnimatedBuilder(
                           animation: _navExpandAnimation,
@@ -894,13 +903,19 @@ class _DesktopShellState extends State<DesktopShell>
                               ),
                             ),
                           ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                ],
-              );
-            },
-          )),
+                    Positioned.fill(
+                      child: TutorialOverlayPresenter(
+                        controller: _tutorialOverlayController,
+                      ),
+                    ),
+                  ],
+                );
+              },
+            )),
+      ),
     );
   }
 

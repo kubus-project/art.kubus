@@ -13,6 +13,7 @@ import 'dart:math' as math;
 import '../../models/conversation.dart';
 import '../../models/user.dart';
 import '../../models/message.dart';
+import '../../models/resolved_conversation_participant.dart';
 import '../../models/user_profile.dart';
 import 'messages_screen.dart';
 import '../../providers/chat_provider.dart';
@@ -48,6 +49,60 @@ Key conversationMessageRowKey(ChatMessage message) {
   );
 }
 
+@visibleForTesting
+class ResolvedMessagePresentation {
+  const ResolvedMessagePresentation({
+    required this.rowKey,
+    required this.senderIdentityKey,
+    required this.senderLabel,
+    this.senderAvatarUrl,
+    required this.senderWallet,
+    required this.isMine,
+  });
+
+  final Key rowKey;
+  final String senderIdentityKey;
+  final String senderLabel;
+  final String? senderAvatarUrl;
+  final String senderWallet;
+  final bool isMine;
+}
+
+@visibleForTesting
+ResolvedMessagePresentation resolveMessagePresentationForTesting({
+  required ChatMessage message,
+  required Conversation conversation,
+  required ChatProvider chatProvider,
+  String? currentUserWallet,
+  String? currentUserId,
+  String? currentUserDisplayName,
+  String? currentUserAvatarUrl,
+}) {
+  final participant = chatProvider.resolveParticipantForMessage(
+    message: message,
+    conversation: conversation,
+    currentUserWallet: currentUserWallet,
+    currentUserId: currentUserId,
+    currentUserDisplayName: currentUserDisplayName,
+    currentUserAvatarUrl: currentUserAvatarUrl,
+  );
+  final normalizedCurrentWallet = WalletUtils.normalize(currentUserWallet);
+  final normalizedCurrentId = WalletUtils.normalize(currentUserId);
+  final normalizedSender = WalletUtils.normalize(message.senderWallet);
+  final isMine = normalizedSender.isNotEmpty &&
+      (normalizedSender == normalizedCurrentWallet ||
+          normalizedSender == normalizedCurrentId);
+
+  return ResolvedMessagePresentation(
+    rowKey: conversationMessageRowKey(message),
+    senderIdentityKey: participant.identityKey,
+    senderLabel: participant.stableDisplayLabel,
+    senderAvatarUrl: participant.avatarUrl,
+    senderWallet: participant.walletAddress ?? message.senderWallet,
+    isMine: isMine,
+  );
+}
+
 class ConversationScreen extends StatefulWidget {
   final Conversation conversation;
   final List<String>? preloadedMembers;
@@ -75,8 +130,10 @@ class _ConversationScreenState extends State<ConversationScreen> {
   bool _isUploading = false;
   final ScrollController _scrollController = ScrollController();
   final Map<String, GlobalKey> _messageKeys = {};
-  final Map<String, String?> _avatarUrlCache = {};
-  final Map<String, String?> _displayNameCache = {};
+  // Header-only compatibility caches. Message sender rows must resolve identity
+  // through ChatProvider's participant identity cache.
+  final Map<String, String?> _headerAvatarUrlCache = {};
+  final Map<String, String?> _headerDisplayNameCache = {};
   Timer? _scrollDebounce;
   final Set<String> _pendingReadMarks = {};
   final Set<String> _animatedMessageIds =
@@ -102,9 +159,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
     _cacheProvider = Provider.of<CacheProvider>(context, listen: false);
     // Defer initial load to a microtask to allow widget to fully initialize
     _chatProvider.addListener(_onChatProviderUpdated);
-    // We no longer rely on a global cache notifier to refresh avatar/profile data.
-    // Instead, we fetch profiles directly via UserService.getUsersByWallets or
-    // UserService.getUserById as needed in background and update local caches.
+    // Header caches are local compatibility state only; message rows use
+    // ChatProvider participant identities.
     if (!mounted) return;
 
     final initialTitle = widget.conversation.title?.trim();
@@ -117,11 +173,12 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
     // Initialize caches from optional preloaded values to avoid network fetch
     if (widget.preloadedAvatars != null) {
-      _avatarUrlCache.addAll(widget.preloadedAvatars!);
+      _headerAvatarUrlCache.addAll(widget.preloadedAvatars!);
     }
     if (widget.preloadedDisplayNames != null) {
-      _displayNameCache.addAll(widget.preloadedDisplayNames!);
+      _headerDisplayNameCache.addAll(widget.preloadedDisplayNames!);
     }
+    _seedHeaderCacheIntoParticipantProvider();
     if (widget.preloadedMembers != null &&
         widget.preloadedMembers!.isNotEmpty) {
       _conversationMembers = List<String>.from(widget.preloadedMembers!);
@@ -131,16 +188,16 @@ class _ConversationScreenState extends State<ConversationScreen> {
       // If a preloaded avatar is present for the header, set it too
       if (_conversationMembers.isNotEmpty) {
         final w = _conversationMembers.first;
-        if (_avatarUrlCache.containsKey(w) &&
-            (_avatarUrlCache[w]?.isNotEmpty ?? false)) {
-          _conversationAvatar = _avatarUrlCache[w];
+        if (_headerAvatarUrlCache.containsKey(w) &&
+            (_headerAvatarUrlCache[w]?.isNotEmpty ?? false)) {
+          _conversationAvatar = _headerAvatarUrlCache[w];
         }
       }
     }
     // As a fallback, use provider-level preloaded maps if we didn't receive explicit preloaded data.
     if ((_conversationMembers.isEmpty || _conversationAvatar == null) &&
-        _avatarUrlCache.isEmpty &&
-        _displayNameCache.isEmpty) {
+        _headerAvatarUrlCache.isEmpty &&
+        _headerDisplayNameCache.isEmpty) {
       try {
         final map = _chatProvider
             .getPreloadedProfileMapsForConversation(widget.conversation.id);
@@ -150,16 +207,17 @@ class _ConversationScreenState extends State<ConversationScreen> {
         final names = (map['names'] as Map<String, String?>?) ?? {};
         if (members.isNotEmpty) {
           _conversationMembers = members;
-          if (_avatarUrlCache.isEmpty && avatars.isNotEmpty) {
-            _avatarUrlCache.addAll(avatars);
+          if (_headerAvatarUrlCache.isEmpty && avatars.isNotEmpty) {
+            _headerAvatarUrlCache.addAll(avatars);
           }
-          if (_displayNameCache.isEmpty && names.isNotEmpty) {
-            _displayNameCache.addAll(names);
+          if (_headerDisplayNameCache.isEmpty && names.isNotEmpty) {
+            _headerDisplayNameCache.addAll(names);
           }
           if (_conversationAvatar == null &&
-              _avatarUrlCache.containsKey(members.first)) {
-            _conversationAvatar = _avatarUrlCache[members.first];
+              _headerAvatarUrlCache.containsKey(members.first)) {
+            _conversationAvatar = _headerAvatarUrlCache[members.first];
           }
+          _seedHeaderCacheIntoParticipantProvider();
         }
       } catch (_) {}
     }
@@ -204,13 +262,13 @@ class _ConversationScreenState extends State<ConversationScreen> {
         _hydrateFromGlobalCache(trimmed);
       }
       if (displayName != null && displayName.trim().isNotEmpty) {
-        final existing = _displayNameCache[trimmed];
+        final existing = _headerDisplayNameCache[trimmed];
         if (existing == null || existing.isEmpty || existing == trimmed) {
-          _displayNameCache[trimmed] = displayName.trim();
+          _headerDisplayNameCache[trimmed] = displayName.trim();
         }
       }
       if (avatarUrl != null && avatarUrl.trim().isNotEmpty) {
-        final existing = _avatarUrlCache[trimmed];
+        final existing = _headerAvatarUrlCache[trimmed];
         if (existing == null ||
             existing.isEmpty ||
             _isPlaceholderAvatar(existing, trimmed)) {
@@ -248,7 +306,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
     if ((_conversationAvatar == null || _conversationAvatar!.isEmpty) &&
         _conversationMembers.isNotEmpty) {
       final primary = _conversationMembers.first;
-      final candidate = _avatarUrlCache[primary];
+      final candidate = _headerAvatarUrlCache[primary];
       if (candidate != null && candidate.isNotEmpty) {
         _conversationAvatar = candidate;
       }
@@ -260,7 +318,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
     try {
       final cachedAvatar = _cacheProvider.getAvatar(wallet);
       if (cachedAvatar != null && cachedAvatar.isNotEmpty) {
-        final current = _avatarUrlCache[wallet];
+        final current = _headerAvatarUrlCache[wallet];
         if (current == null ||
             current.isEmpty ||
             _isPlaceholderAvatar(current, wallet)) {
@@ -270,8 +328,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
       final cachedName = _cacheProvider.getDisplayName(wallet);
       if (cachedName != null &&
           cachedName.isNotEmpty &&
-          _isPlaceholderName(_displayNameCache[wallet], wallet)) {
-        _displayNameCache[wallet] = cachedName;
+          _isPlaceholderName(_headerDisplayNameCache[wallet], wallet)) {
+        _headerDisplayNameCache[wallet] = cachedName;
       }
     } catch (_) {}
   }
@@ -280,13 +338,13 @@ class _ConversationScreenState extends State<ConversationScreen> {
     if (!mounted || !_cacheProvider.isInitialized) return;
     final avatarPayload = <String, String?>{};
     final displayPayload = <String, String?>{};
-    _avatarUrlCache.forEach((wallet, url) {
+    _headerAvatarUrlCache.forEach((wallet, url) {
       final trimmed = url?.trim() ?? '';
       if (trimmed.isEmpty) return;
       if (_isPlaceholderAvatar(trimmed, wallet)) return;
       avatarPayload[wallet] = trimmed;
     });
-    _displayNameCache.forEach((wallet, name) {
+    _headerDisplayNameCache.forEach((wallet, name) {
       if ((name ?? '').trim().isEmpty || name == wallet) return;
       displayPayload[wallet] = name!.trim();
     });
@@ -295,6 +353,54 @@ class _ConversationScreenState extends State<ConversationScreen> {
       avatars: avatarPayload.isEmpty ? null : avatarPayload,
       displayNames: displayPayload.isEmpty ? null : displayPayload,
     ));
+  }
+
+  void _seedHeaderCacheIntoParticipantProvider() {
+    final wallets = <String>{
+      ..._conversationMembers,
+      ..._headerAvatarUrlCache.keys,
+      ..._headerDisplayNameCache.keys,
+    };
+    for (final wallet in wallets) {
+      final normalizedWallet = WalletUtils.normalize(wallet);
+      if (normalizedWallet.isEmpty) continue;
+      final displayName = _headerDisplayNameCache[wallet] ??
+          _headerDisplayNameCache[normalizedWallet];
+      final avatarUrl = _headerAvatarUrlCache[wallet] ??
+          _headerAvatarUrlCache[normalizedWallet];
+      _chatProvider.upsertParticipantIdentity(
+        ResolvedConversationParticipant(
+          identityKey: normalizeParticipantIdentityKey(
+            walletAddress: normalizedWallet,
+            userId: normalizedWallet,
+          ),
+          walletAddress: normalizedWallet,
+          userId: normalizedWallet,
+          displayName: displayName,
+          avatarUrl: avatarUrl,
+          source: ParticipantIdentitySource.conversationSnapshot,
+          updatedAt: DateTime.now(),
+        ),
+      );
+    }
+  }
+
+  void _upsertHeaderFetchedUser(User user) {
+    _chatProvider.upsertParticipantIdentity(
+      ResolvedConversationParticipant(
+        identityKey: normalizeParticipantIdentityKey(
+          walletAddress: user.id,
+          userId: user.id,
+        ),
+        walletAddress: user.id,
+        userId: user.id,
+        displayName: user.name,
+        username: user.username,
+        avatarUrl: user.profileImageUrl,
+        source: ParticipantIdentitySource.profileHydration,
+        updatedAt: DateTime.now(),
+      ),
+    );
   }
 
   /// Load the messages and associated member data for this conversation.
@@ -314,121 +420,27 @@ class _ConversationScreenState extends State<ConversationScreen> {
     if (!mounted) return;
     _seedAndHydrateParticipants(list);
 
-    // Pre-populate avatar and display name caches from message rows when available
-    try {
-      for (final m in list) {
-        final w = m.senderWallet;
-        if (w.isEmpty) continue;
-        _hydrateFromGlobalCache(w);
-        if (m.senderAvatar != null && m.senderAvatar!.isNotEmpty) {
-          _assignAvatarIfBetter(w, m.senderAvatar);
-        }
-        if (m.senderDisplayName != null && m.senderDisplayName!.isNotEmpty) {
-          _displayNameCache[w] = m.senderDisplayName;
-        }
-      }
-    } catch (_) {}
-
-    // Build a set of wallets mentioned in messages (non-blocking users will be fetched)
-    final Set<String> walletsToFetch = {};
+    // Build a set of remote senders for header fallback only. Message row
+    // identity is seeded/hydrated in ChatProvider above.
+    final Set<String> remoteSenderWallets = {};
     for (final m in list) {
       final w = m.senderWallet;
       if (w.isEmpty) continue;
-      // skip current user
       if (_normWallet(w) == _normWallet(myWallet)) continue;
-      _hydrateFromGlobalCache(w);
-      walletsToFetch.add(w);
-    }
-
-    // Prepopulate caches from local ChatProvider cache and persistent cache to minimize lookups and ensure immediate UI availability
-    final List<String> missingWallets = [];
-    for (final w in walletsToFetch) {
-      final cu = _chatProvider.getCachedUser(w);
-      if (cu != null) {
-        if (cu.profileImageUrl != null && cu.profileImageUrl!.isNotEmpty) {
-          final cur = _avatarUrlCache[w];
-          final candidate =
-              (cu.profileImageUrl != null && cu.profileImageUrl!.isNotEmpty)
-                  ? (_normalizeAvatar(cu.profileImageUrl) ?? cu.profileImageUrl)
-                  : null;
-          if (candidate != null && _isPlaceholderAvatar(cur, w)) {
-            _assignAvatarIfBetter(w, candidate, allowOverrideReal: true);
-          }
-        }
-        if (cu.name.isNotEmpty) {
-          final cur = _displayNameCache[w];
-          if (_isPlaceholderName(cur, w)) _displayNameCache[w] = cu.name;
-        }
-      } else {
-        // Attempt to read from persisted UserService cache sync to avoid network fetch and flicker
-        final persisted = UserService.getCachedUser(w);
-        if (persisted != null) {
-          if (persisted.profileImageUrl != null &&
-              persisted.profileImageUrl!.isNotEmpty) {
-            final cur = _avatarUrlCache[w];
-            final candidate = (persisted.profileImageUrl != null &&
-                    persisted.profileImageUrl!.isNotEmpty)
-                ? (_normalizeAvatar(persisted.profileImageUrl) ??
-                    persisted.profileImageUrl)
-                : null;
-            if (candidate != null && _isPlaceholderAvatar(cur, w)) {
-              _assignAvatarIfBetter(w, candidate, allowOverrideReal: true);
-            }
-          }
-          if (persisted.name.isNotEmpty) {
-            final cur = _displayNameCache[w];
-            if (_isPlaceholderName(cur, w)) {
-              _displayNameCache[w] = persisted.name;
-            }
-          }
-          continue;
-        }
-        if (!_avatarUrlCache.containsKey(w) ||
-            !(_displayNameCache.containsKey(w) &&
-                (_displayNameCache[w]?.isNotEmpty ?? false))) {
-          missingWallets.add(w);
-        }
-      }
-    }
-
-    // Fetch missing user profiles in one call so the UI can display names/avatars on first render
-    // If we have preloaded members from the previous screen, don't trigger a network fetch
-    final hasPreloadedMembers =
-        widget.preloadedMembers != null && widget.preloadedMembers!.isNotEmpty;
-    if (!hasPreloadedMembers && missingWallets.isNotEmpty) {
-      try {
-        final users = await UserService.getUsersByWallets(missingWallets);
-        try {
-          EventBus().emitProfilesUpdated(users);
-        } catch (_) {}
-        for (final u in users) {
-          final key = u.id;
-          final p = (u.profileImageUrl != null && u.profileImageUrl!.isNotEmpty)
-              ? (_normalizeAvatar(u.profileImageUrl) ?? u.profileImageUrl)
-              : null;
-          final curAv = _avatarUrlCache[key];
-          final curName = _displayNameCache[key];
-          if (p != null && _isPlaceholderAvatar(curAv, key)) {
-            _assignAvatarIfBetter(key, p, allowOverrideReal: true);
-          }
-          if (_isPlaceholderName(curName, key)) _displayNameCache[key] = u.name;
-        }
-      } catch (e) {
-        // ignore and proceed; fallback background fetch will still occur
-        debugPrint('ConversationScreen._load: prefetch profiles failed: $e');
-      }
+      remoteSenderWallets.add(w);
     }
 
     // Update UI with messages (and now with pre-fetched avatars/names)
     // Prefer to set conversation header info from first other participant if available
-    final firstOther = walletsToFetch.isNotEmpty ? walletsToFetch.first : null;
+    final firstOther =
+        remoteSenderWallets.isNotEmpty ? remoteSenderWallets.first : null;
     if (firstOther != null && !_conversationMembers.contains(firstOther)) {
       _conversationMembers = [firstOther];
       // prefer cached avatar & name if available
-      if (_avatarUrlCache.containsKey(firstOther) &&
-          (_avatarUrlCache[firstOther]?.isNotEmpty ?? false)) {
+      if (_headerAvatarUrlCache.containsKey(firstOther) &&
+          (_headerAvatarUrlCache[firstOther]?.isNotEmpty ?? false)) {
         if (_isPlaceholderAvatar(_conversationAvatar, firstOther)) {
-          _conversationAvatar = _avatarUrlCache[firstOther];
+          _conversationAvatar = _headerAvatarUrlCache[firstOther];
         }
       }
     }
@@ -492,7 +504,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
               if (cu != null) {
                 if (cu.profileImageUrl != null &&
                     cu.profileImageUrl!.isNotEmpty) {
-                  final cur = _avatarUrlCache[cu.id];
+                  final cur = _headerAvatarUrlCache[cu.id];
                   final candidate = (cu.profileImageUrl != null &&
                           cu.profileImageUrl!.isNotEmpty)
                       ? (_normalizeAvatar(cu.profileImageUrl) ??
@@ -504,9 +516,9 @@ class _ConversationScreenState extends State<ConversationScreen> {
                   }
                 }
                 if (cu.name.isNotEmpty) {
-                  final cur = _displayNameCache[cu.id];
+                  final cur = _headerDisplayNameCache[cu.id];
                   if (_isPlaceholderName(cur, cu.id)) {
-                    _displayNameCache[cu.id] = cu.name;
+                    _headerDisplayNameCache[cu.id] = cu.name;
                   }
                 }
               } else {
@@ -519,9 +531,10 @@ class _ConversationScreenState extends State<ConversationScreen> {
                 EventBus().emitProfilesUpdated(users);
               } catch (_) {}
               for (final u in users) {
+                _upsertHeaderFetchedUser(u);
                 final key = u.id;
-                final curAv = _avatarUrlCache[key];
-                final curName = _displayNameCache[key];
+                final curAv = _headerAvatarUrlCache[key];
+                final curName = _headerDisplayNameCache[key];
                 if (u.profileImageUrl != null &&
                     u.profileImageUrl!.isNotEmpty) {
                   final candidate = (u.profileImageUrl != null &&
@@ -536,7 +549,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                 }
                 if (u.name.isNotEmpty) {
                   if (_isPlaceholderName(curName, key)) {
-                    _displayNameCache[key] = u.name;
+                    _headerDisplayNameCache[key] = u.name;
                   }
                 }
               }
@@ -554,15 +567,17 @@ class _ConversationScreenState extends State<ConversationScreen> {
             if (cached != null && (cached.profileImageUrl ?? '').isNotEmpty) {
               _conversationAvatar = _normalizeAvatar(cached.profileImageUrl) ??
                   cached.profileImageUrl;
-            } else if (_avatarUrlCache[wallets.first]?.isNotEmpty ?? false) {
-              _conversationAvatar = _avatarUrlCache[wallets.first];
+            } else if (_headerAvatarUrlCache[wallets.first]?.isNotEmpty ??
+                false) {
+              _conversationAvatar = _headerAvatarUrlCache[wallets.first];
             }
           }
         }
 
         if (mounted) {
           debugPrint(
-              'ConversationScreen._load: header avatar=$_conversationAvatar, members=${_conversationMembers.length}, display cache keys=${_displayNameCache.keys.length}');
+              'ConversationScreen._load: header avatar=$_conversationAvatar, members=${_conversationMembers.length}, display cache keys=${_headerDisplayNameCache.keys.length}');
+          _seedHeaderCacheIntoParticipantProvider();
           setState(() {});
           _persistCacheSnapshots();
         }
@@ -582,10 +597,13 @@ class _ConversationScreenState extends State<ConversationScreen> {
     _chatProvider.seedConversationParticipants(widget.conversation);
     _chatProvider.seedMessageParticipants(list);
 
-    final signature = list
-        .map((message) =>
-            '${message.id}:${message.senderWallet}:${message.senderDisplayName ?? ''}:${message.senderAvatar ?? ''}')
-        .join('|');
+    final senderKeys = list
+        .map((message) => WalletUtils.normalize(message.senderWallet))
+        .where((wallet) => wallet.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort();
+    final signature = '${widget.conversation.id}:${senderKeys.join('|')}';
     if (signature == _lastParticipantHydrationSignature) return;
     _lastParticipantHydrationSignature = signature;
     unawaited(_chatProvider.hydrateConversationParticipants(
@@ -621,13 +639,13 @@ class _ConversationScreenState extends State<ConversationScreen> {
       {bool allowOverrideReal = false}) {
     final normalized = _normalizeAndValidateAvatar(wallet, avatar);
     if (normalized == null) return false;
-    final current = _avatarUrlCache[wallet];
+    final current = _headerAvatarUrlCache[wallet];
     final hasReal = current != null &&
         current.isNotEmpty &&
         !_isPlaceholderAvatar(current, wallet);
     if (hasReal && !allowOverrideReal) return false;
     if (current == normalized) return false;
-    _avatarUrlCache[wallet] = normalized;
+    _headerAvatarUrlCache[wallet] = normalized;
     _promoteConversationAvatar(wallet);
     return true;
   }
@@ -636,7 +654,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
     if (_conversationMembers.isEmpty) return;
     final primary = _conversationMembers.first;
     if (primary != wallet) return;
-    final candidate = _avatarUrlCache[wallet];
+    final candidate = _headerAvatarUrlCache[wallet];
     if (candidate == null || candidate.isEmpty) return;
     if (_conversationAvatar == null ||
         _isPlaceholderAvatar(_conversationAvatar, wallet)) {
@@ -825,10 +843,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
     try {
       debugPrint(
           'ConversationScreen._buildAvatar: wallet=$wallet, avatarUrl=$normalized');
-      final isLoading = (!_avatarUrlCache.containsKey(wallet) &&
-          _chatProvider.getCachedUser(wallet) == null &&
-          UserService.getCachedUser(wallet) == null &&
-          (avatarUrl == null || avatarUrl.isEmpty));
+      final isLoading = avatarUrl == null || avatarUrl.isEmpty;
       return AvatarWidget(
           avatarUrl: normalized,
           wallet: wallet,
@@ -857,10 +872,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
               style: TextStyle(
                   fontSize: (radius * 0.7).clamp(10, 14).toDouble(),
                   fontWeight: FontWeight.w600)));
-      final isLoading = (!_avatarUrlCache.containsKey(wallet) &&
-          _chatProvider.getCachedUser(wallet) == null &&
-          UserService.getCachedUser(wallet) == null &&
-          (avatarUrl == null || avatarUrl.isEmpty));
+      final isLoading = avatarUrl == null || avatarUrl.isEmpty;
       if (isLoading) {
         return Stack(alignment: Alignment.center, children: [
           base,
@@ -918,15 +930,13 @@ class _ConversationScreenState extends State<ConversationScreen> {
   Widget _buildReplyPreview() {
     if (_replyingTo == null) return const SizedBox.shrink();
     final l10n = AppLocalizations.of(context)!;
-    final isMe = _replyingTo!.senderWallet ==
-        (Provider.of<ProfileProvider>(context, listen: false)
-                .currentUser
-                ?.walletAddress ??
-            '');
+    final profile = Provider.of<ProfileProvider>(context, listen: false);
+    final isMe =
+        _replyingTo!.senderWallet == (profile.currentUser?.walletAddress ?? '');
     final senderName = isMe
         ? l10n.commonYou
-        : (_displayNameCache[_replyingTo!.senderWallet] ??
-            _replyingTo!.senderWallet);
+        : _resolveMessagePresentation(_replyingTo!, _chatProvider, profile)
+            .senderLabel;
 
     return Container(
       padding: const EdgeInsets.all(8),
@@ -1186,7 +1196,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
         : widget.conversation.title?.trim().isNotEmpty == true
             ? widget.conversation.title!.trim()
             : _conversationMembers.isNotEmpty
-                ? _displayNameCache[_conversationMembers.first] ??
+                ? _headerDisplayNameCache[_conversationMembers.first] ??
                     _conversationMembers.first
                 : l10n.messagesFallbackConversationTitle;
 
@@ -1263,7 +1273,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
         : widget.conversation.title?.trim().isNotEmpty == true
             ? widget.conversation.title!.trim()
             : _conversationMembers.isNotEmpty
-                ? _displayNameCache[_conversationMembers.first] ??
+                ? _headerDisplayNameCache[_conversationMembers.first] ??
                     _conversationMembers.first
                 : l10n.messagesFallbackConversationTitle;
     final parts =
@@ -1300,6 +1310,9 @@ class _ConversationScreenState extends State<ConversationScreen> {
                 List<User> users = [];
                 try {
                   users = await UserService.getUsersByWallets(wallets);
+                  for (final user in users) {
+                    _upsertHeaderFetchedUser(user);
+                  }
                   _chatProvider.mergeUserCache(users);
                 } catch (e) {
                   debugPrint(
@@ -1578,13 +1591,10 @@ class _ConversationScreenState extends State<ConversationScreen> {
   }
 
   Widget _buildMessagesList() {
-    final profile = context.select<ProfileProvider, UserProfile?>(
+    context.select<ProfileProvider, UserProfile?>(
       (provider) => provider.currentUser,
     );
-    final myWallet = profile?.walletAddress ?? '';
-    final currentUserId = profile?.id;
-    final currentDisplayName = profile?.displayName;
-    final currentAvatar = profile?.avatar;
+    final profileProvider = context.read<ProfileProvider>();
     context.select<ChatProvider, int>(
       (provider) => provider.participantIdentityRevision,
     );
@@ -1614,39 +1624,75 @@ class _ConversationScreenState extends State<ConversationScreen> {
       itemCount: display.length,
       itemBuilder: (context, index) {
         final message = display[index];
-        final isMe = _normWallet(message.senderWallet) == _normWallet(myWallet);
+        final presentation = _resolveMessagePresentation(
+            message, _chatProvider, profileProvider);
         final showAvatar = index == 0 ||
             display[index - 1].senderWallet != message.senderWallet;
-        final shouldAnimate = !_animatedMessageIds.contains(message.id);
+        final animationId = _messageAnimationId(message);
+        final shouldAnimate = !_animatedMessageIds.contains(animationId);
         final visibilityKey =
-            _messageKeys.putIfAbsent(message.id, () => GlobalKey());
+            _messageKeys.putIfAbsent(animationId, () => GlobalKey());
         final built = _wrapWithAnimation(
           KeyedSubtree(
-            key: _messageRowKey(message),
+            key: presentation.rowKey,
             child: KeyedSubtree(
               key: visibilityKey,
-              child: _buildMessageItem(message, isMe, showAvatar,
-                  currentUserWallet: myWallet,
-                  currentUserId: currentUserId,
-                  currentUserDisplayName: currentDisplayName,
-                  currentUserAvatarUrl: currentAvatar,
+              child: _buildMessageItem(message, presentation, showAvatar,
                   chronoIndex: (display.length - 1 - index),
                   chronoLength: display.length),
             ),
           ),
           shouldAnimate,
-          messageId: message.id,
+          messageId: animationId,
         );
         if (shouldAnimate) {
-          _animatedMessageIds.add(message.id);
+          _animatedMessageIds.add(animationId);
         }
         return built;
       },
     );
   }
 
-  Key _messageRowKey(ChatMessage message) {
-    return conversationMessageRowKey(message);
+  String _messageAnimationId(ChatMessage message) {
+    final id = message.id.trim();
+    if (id.isNotEmpty) return id;
+    return conversationMessageRowKey(message).toString();
+  }
+
+  ResolvedMessagePresentation _resolveMessagePresentation(
+    ChatMessage message,
+    ChatProvider chatProvider,
+    ProfileProvider profileProvider,
+  ) {
+    return resolveMessagePresentationForTesting(
+      message: message,
+      conversation: widget.conversation,
+      chatProvider: chatProvider,
+      currentUserWallet: profileProvider.currentUser?.walletAddress,
+      currentUserId: profileProvider.currentUser?.id,
+      currentUserDisplayName: profileProvider.currentUser?.displayName,
+      currentUserAvatarUrl: profileProvider.currentUser?.avatar,
+    );
+  }
+
+  String _resolveReplyParticipantLabel(
+    MessageReply reply,
+    String fallbackName,
+  ) {
+    final profileProvider =
+        Provider.of<ProfileProvider>(context, listen: false);
+    final replyMessage = ChatMessage(
+      id: reply.messageId,
+      conversationId: widget.conversation.id,
+      senderWallet: reply.senderWallet,
+      senderDisplayName: reply.senderDisplayName,
+      message: reply.message ?? '',
+      createdAt: DateTime.fromMillisecondsSinceEpoch(0),
+    );
+    final presentation = _resolveMessagePresentation(
+        replyMessage, _chatProvider, profileProvider);
+    final label = presentation.senderLabel.trim();
+    return label.isNotEmpty ? label : fallbackName;
   }
 
   void _onScroll() {
@@ -1660,15 +1706,12 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
   Widget _buildMessageItem(
     ChatMessage message,
-    bool isMe,
+    ResolvedMessagePresentation presentation,
     bool showAvatar, {
-    String? currentUserWallet,
-    String? currentUserId,
-    String? currentUserDisplayName,
-    String? currentUserAvatarUrl,
     int? chronoIndex,
     int? chronoLength,
   }) {
+    final isMe = presentation.isMine;
     final sourceMessages =
         _chatProvider.messages[widget.conversation.id] ?? const <ChatMessage>[];
     final bool isFirst = (chronoIndex != null && chronoLength != null)
@@ -1678,22 +1721,9 @@ class _ConversationScreenState extends State<ConversationScreen> {
         ? chronoIndex == (chronoLength - 1)
         : (sourceMessages.isNotEmpty ? message == sourceMessages.last : false);
 
-    String? avatarUrl;
-    String? displayName;
-    var participantWallet = message.senderWallet;
-    if (!isMe) {
-      final participant = _chatProvider.resolveParticipantForMessage(
-        message: message,
-        conversation: widget.conversation,
-        currentUserWallet: currentUserWallet,
-        currentUserId: currentUserId,
-        currentUserDisplayName: currentUserDisplayName,
-        currentUserAvatarUrl: currentUserAvatarUrl,
-      );
-      participantWallet = participant.walletAddress ?? message.senderWallet;
-      avatarUrl = participant.avatarUrl;
-      displayName = participant.stableDisplayLabel;
-    }
+    final avatarUrl = presentation.senderAvatarUrl;
+    final displayName = presentation.senderLabel;
+    final participantWallet = presentation.senderWallet;
 
     final double avatarRadius = 16;
     final double bubbleMaxWidth = MediaQuery.of(context).size.width * 0.72;
@@ -1757,7 +1787,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                   height: 15,
                   child: showAvatar
                       ? Text(
-                          displayName ?? '',
+                          displayName,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: KubusTextStyles.navMetaLabel.copyWith(
@@ -1855,12 +1885,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
     final accent =
         Provider.of<ThemeProvider>(context, listen: false).accentColor;
 
-    final senderWallet = reply.senderWallet;
     final fallbackName = reply.senderDisplayName ?? reply.messageId;
-    final nameSource = reply.senderDisplayName ??
-        _displayNameCache[senderWallet] ??
-        _cacheProvider.getDisplayName(senderWallet) ??
-        fallbackName;
+    final nameSource = _resolveReplyParticipantLabel(reply, fallbackName);
 
     final resolvedName = nameSource.trim();
     final localizedName =
@@ -2291,7 +2317,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
         _chatProvider.messages[widget.conversation.id] ?? const <ChatMessage>[];
     for (var i = 0; i < sourceMessages.length; i++) {
       final message = sourceMessages[i];
-      final key = _messageKeys[message.id];
+      final key = _messageKeys[_messageAnimationId(message)];
       if (key == null) continue;
       final ctx = key.currentContext;
       if (ctx == null) continue;

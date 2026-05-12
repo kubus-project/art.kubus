@@ -30,6 +30,19 @@ class TutorialOverlayPresenter extends StatelessWidget {
           return const SizedBox.shrink();
         }
 
+        final ownerRoute = controller.ownerRoute;
+        if (ownerRoute != null) {
+          final activeRoute = ModalRoute.of(context)?.settings.name;
+          if (activeRoute != null && activeRoute != ownerRoute) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (controller.driver == driver) {
+                controller.unbindDriver(driver);
+              }
+            });
+            return const SizedBox.shrink();
+          }
+        }
+
         final steps = driver.steps;
         final int clampedIndex;
         if (driver.currentIndex < 0) {

@@ -29,6 +29,9 @@ import 'utils/kubus_color_roles.dart';
 import 'widgets/glass_components.dart';
 import 'widgets/mobile_shell_exit_scope.dart';
 import 'widgets/user_persona_onboarding_gate.dart';
+import 'widgets/tutorial/tutorial_overlay_controller.dart';
+import 'widgets/tutorial/tutorial_overlay_presenter.dart';
+import 'widgets/tutorial/tutorial_overlay_scope.dart';
 
 class MainApp extends StatefulWidget {
   const MainApp({super.key});
@@ -42,6 +45,8 @@ class _MainAppState extends State<MainApp> {
   int _lastTelemetryIndex = -1;
   bool _didConsumeInitialDeepLink = false;
 
+  late final TutorialOverlayController _tutorialOverlayController;
+
   // Lazy-mount tabs to avoid initializing heavy surfaces (MapLibre, marker
   // polling, etc.) before the user actually visits them.
   //
@@ -52,6 +57,7 @@ class _MainAppState extends State<MainApp> {
   @override
   void initState() {
     super.initState();
+    _tutorialOverlayController = TutorialOverlayController();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final index = context.read<MainTabProvider>().currentIndex;
@@ -116,6 +122,7 @@ class _MainAppState extends State<MainApp> {
     MobileShellRegistry.instance.unregister(context);
     _tabProvider?.removeListener(_handleTabProviderChanged);
     _tabProvider = null;
+    _tutorialOverlayController.dispose();
     super.dispose();
   }
 
@@ -158,7 +165,7 @@ class _MainAppState extends State<MainApp> {
     //
     // Keep the Kubus gradient everywhere else, but let the map tab "punch
     // through" so the web map remains visible.
-    return UserPersonaOnboardingGate(
+    final shell = UserPersonaOnboardingGate(
       child: MobileShellExitScope(
         child: mapNeedsPlatformViewBackgroundPassthrough
             ? scaffold
@@ -171,6 +178,20 @@ class _MainAppState extends State<MainApp> {
                 intensity: 0.22,
                 child: scaffold,
               ),
+      ),
+    );
+
+    return TutorialOverlayScope(
+      controller: _tutorialOverlayController,
+      child: Stack(
+        children: [
+          shell,
+          Positioned.fill(
+            child: TutorialOverlayPresenter(
+              controller: _tutorialOverlayController,
+            ),
+          ),
+        ],
       ),
     );
   }
