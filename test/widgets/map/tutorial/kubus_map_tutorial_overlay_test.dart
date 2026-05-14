@@ -91,7 +91,7 @@ void main() {
   });
 
   testWidgets(
-      'KubusMapTutorialOverlay allows map taps outside tutorial controls and highlight',
+      'KubusMapTutorialOverlay blocks map taps outside tutorial controls and highlight',
       (tester) async {
     final targetKey = GlobalKey();
     var backgroundTapCount = 0;
@@ -143,7 +143,7 @@ void main() {
     await tester.tapAt(const Offset(10, 300));
     await tester.pump();
 
-    expect(backgroundTapCount, 1);
+    expect(backgroundTapCount, 0);
   });
 
   testWidgets('KubusMapTutorialOverlay highlighted target tap invokes action',
@@ -245,7 +245,7 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    expect(backgroundTapCount, 1);
+    expect(backgroundTapCount, 0);
     expect(nextTapped, 0);
     expect(skipTapped, 0);
     expect(find.byKey(InteractiveTutorialOverlay.tooltipKey), findsOneWidget);

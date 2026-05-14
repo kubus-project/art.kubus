@@ -80,6 +80,10 @@ class InteractiveTutorialOverlay extends StatefulWidget {
   static const Key highlightTapRegionKey =
       ValueKey<String>('kubus_tutorial_highlight_tap_region');
 
+  /// Full-screen modal pointer gate key for tests.
+  static const Key modalPointerGateKey =
+      ValueKey<String>('kubus_tutorial_modal_pointer_gate');
+
   @override
   State<InteractiveTutorialOverlay> createState() =>
       _InteractiveTutorialOverlayState();
@@ -514,8 +518,14 @@ class _InteractiveTutorialOverlayState extends State<InteractiveTutorialOverlay>
             clipBehavior: Clip.none,
             children: [
               Positioned.fill(
-                child: IgnorePointer(
-                  ignoring: true,
+                child: Listener(
+                  key: InteractiveTutorialOverlay.modalPointerGateKey,
+                  behavior: HitTestBehavior.opaque,
+                  onPointerDown: (_) {},
+                  onPointerMove: (_) {},
+                  onPointerUp: (_) {},
+                  onPointerCancel: (_) {},
+                  onPointerSignal: (_) {},
                   child: CustomPaint(
                     painter: _CoachMarkPainter(
                       highlightRect: highlightRect,

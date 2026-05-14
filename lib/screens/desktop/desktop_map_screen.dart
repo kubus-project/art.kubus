@@ -791,9 +791,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       ),
       MapTutorialStepBinding(
         id: 'filters',
-        isAnchorAvailable: () => _tutorialSearchPanelKey.currentContext != null,
+        isAnchorAvailable: () =>
+            _tutorialFiltersButtonKey.currentContext != null,
         step: TutorialStepDefinition(
-          targetKey: _tutorialSearchPanelKey,
+          targetKey: _tutorialFiltersButtonKey,
           icon: Icons.tune,
           title: l10n.mapTutorialStepFiltersTitle,
           body: l10n.mapTutorialStepFiltersDesktopBody,

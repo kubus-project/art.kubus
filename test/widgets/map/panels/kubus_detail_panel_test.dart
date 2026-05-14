@@ -1,3 +1,4 @@
+import 'package:art_kubus/widgets/common/kubus_glass_icon_button.dart';
 import 'package:art_kubus/widgets/map/panels/kubus_detail_panel.dart';
 import 'package:art_kubus/widgets/map/glass/kubus_map_platform_backdrop_host.dart';
 import 'package:art_kubus/widgets/map/kubus_map_glass_surface.dart';
@@ -93,6 +94,51 @@ void main() {
 
     expect(closeTapped, 1);
     expect(actionTapped, 1);
+  });
+
+  testWidgets('DetailHeader close button uses squared Kubus radius once',
+      (tester) async {
+    var closeTapped = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            height: 260,
+            child: KubusDetailPanel(
+              kind: DetailPanelKind.artwork,
+              presentation: PanelPresentation.sidePanel,
+              header: DetailHeader(
+                accentColor: Colors.blue,
+                closeTooltip: 'Close',
+                onClose: () => closeTapped += 1,
+              ),
+              sections: const [
+                Text('Artwork section'),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    final closeButtons = find.byWidgetPredicate(
+      (widget) =>
+          widget is KubusGlassIconButton &&
+          widget.icon == Icons.close &&
+          widget.tooltip == 'Close',
+    );
+    expect(closeButtons, findsOneWidget);
+
+    final closeButton = tester.widget<KubusGlassIconButton>(closeButtons);
+    expect(closeButton.borderRadius, 12);
+
+    await tester.tap(find.byIcon(Icons.close));
+    await tester.pump();
+
+    expect(closeTapped, 1);
   });
 
   testWidgets('side panel detail registers stable map backdrop region',

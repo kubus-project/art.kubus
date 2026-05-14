@@ -46,7 +46,7 @@ void main() {
   });
 
   testWidgets(
-      'TutorialOverlayHost lets background taps pass outside visible tutorial surfaces',
+      'TutorialOverlayHost blocks background taps during tutorial and restores after skip',
       (tester) async {
     final targetKey = GlobalKey();
     var tapCount = 0;
@@ -87,7 +87,7 @@ void main() {
     await tester.pumpAndSettle();
 
     controller.showTutorial(
-      tutorialId: 'pass-through',
+      tutorialId: 'modal-gate',
       ownerRoute: 'mobile-map',
       steps: <TutorialStepDefinition>[
         TutorialStepDefinition(
@@ -105,6 +105,17 @@ void main() {
     await tester.pump();
 
     expect(find.byKey(TutorialOverlayPresenter.rootKey), findsOneWidget);
+    expect(tapCount, 0);
+
+    await tester.tap(find.text('Skip'));
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.byKey(TutorialOverlayPresenter.rootKey), findsNothing);
+
+    await tester.tapAt(const Offset(20, 20));
+    await tester.pump();
+
     expect(tapCount, 1);
   });
 

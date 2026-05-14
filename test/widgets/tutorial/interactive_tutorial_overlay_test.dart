@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:art_kubus/widgets/tutorial/interactive_tutorial_overlay.dart';
 
 void main() {
   testWidgets(
-      'InteractiveTutorialOverlay lets background gestures pass through',
+      'InteractiveTutorialOverlay blocks background gestures while visible',
       (tester) async {
     int tapCount = 0;
     int panCount = 0;
     int scaleCount = 0;
+    int signalCount = 0;
     final targetKey = GlobalKey();
 
     final steps = <TutorialStepDefinition>[
@@ -27,6 +29,7 @@ void main() {
               Positioned.fill(
                 child: Listener(
                   behavior: HitTestBehavior.opaque,
+                  onPointerSignal: (_) => signalCount += 1,
                   onPointerMove: (_) => panCount += 1,
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
@@ -80,11 +83,106 @@ void main() {
     await gesture1.up();
     await gesture2.up();
 
+    await tester.sendEventToBinding(
+      const PointerScrollEvent(
+        position: Offset(120, 120),
+        scrollDelta: Offset(0, 24),
+      ),
+    );
+    await tester.pump();
+
     await tester.tapAt(const Offset(5, 5));
     await tester.pump();
 
-    expect(tapCount, 1);
-    expect(panCount, greaterThan(0));
+    expect(find.byKey(InteractiveTutorialOverlay.modalPointerGateKey),
+        findsOneWidget);
+    expect(tapCount, 0);
+    expect(panCount, 0);
+    expect(scaleCount, 0);
+    expect(signalCount, 0);
+  });
+
+  testWidgets(
+      'InteractiveTutorialOverlay exposes Skip, Back, Next, and Done controls',
+      (tester) async {
+    int nextCount = 0;
+    int backCount = 0;
+    int skipCount = 0;
+    final targetKey = GlobalKey();
+
+    final steps = <TutorialStepDefinition>[
+      TutorialStepDefinition(
+        targetKey: targetKey,
+        title: 'Step 1',
+        body: 'Step body 1',
+      ),
+      const TutorialStepDefinition(
+        title: 'Step 2',
+        body: 'Step body 2',
+      ),
+    ];
+
+    Future<void> pumpOverlay({required int currentIndex}) {
+      return tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Stack(
+              children: [
+                Center(
+                  child: SizedBox(
+                    key: targetKey,
+                    width: 48,
+                    height: 48,
+                  ),
+                ),
+                InteractiveTutorialOverlay(
+                  steps: steps,
+                  currentIndex: currentIndex,
+                  onNext: () => nextCount += 1,
+                  onBack: () => backCount += 1,
+                  onSkip: () => skipCount += 1,
+                  skipLabel: 'Skip',
+                  backLabel: 'Back',
+                  nextLabel: 'Next',
+                  doneLabel: 'Done',
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    await pumpOverlay(currentIndex: 0);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Skip'), findsOneWidget);
+    expect(find.text('Next'), findsOneWidget);
+    expect(find.text('Back'), findsNothing);
+
+    await tester.tap(find.text('Next'));
+    await tester.pump();
+    await tester.tap(find.text('Skip'));
+    await tester.pump();
+
+    expect(nextCount, 1);
+    expect(skipCount, 1);
+    expect(backCount, 0);
+
+    await pumpOverlay(currentIndex: 1);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Back'), findsOneWidget);
+    expect(find.text('Done'), findsOneWidget);
+
+    await tester.tap(find.text('Back'));
+    await tester.pump();
+    await tester.tap(find.text('Done'));
+    await tester.pump();
+
+    expect(nextCount, 2);
+    expect(skipCount, 1);
+    expect(backCount, 1);
   });
 
   testWidgets(

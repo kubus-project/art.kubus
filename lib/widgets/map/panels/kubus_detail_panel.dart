@@ -198,6 +198,7 @@ class DetailHeader extends StatelessWidget {
                 iconColor: closeIconColor,
                 tooltip: closeTooltip,
                 enableBlur: kubusMapBlurEnabled(context),
+                borderRadius: KubusRadius.md,
                 onPressed: onClose,
               ),
             ),
