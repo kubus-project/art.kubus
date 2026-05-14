@@ -226,6 +226,59 @@ void main() {
     expect(find.text('Root host title'), findsOneWidget);
   });
 
+  testWidgets('TutorialOverlayHost keeps tutorial visible across frames',
+      (tester) async {
+    final targetKey = GlobalKey();
+    late TutorialOverlayController controller;
+
+    await tester.pumpWidget(
+      _buildApp(
+        Scaffold(
+          body: TutorialOverlayHost(
+            child: Builder(
+              builder: (context) {
+                controller = TutorialOverlayScope.of(context);
+                return Center(
+                  child: SizedBox(
+                    key: targetKey,
+                    width: 48,
+                    height: 48,
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    controller.showTutorial(
+      tutorialId: 'persistent',
+      ownerRoute: 'desktop-explore-map',
+      steps: <TutorialStepDefinition>[
+        TutorialStepDefinition(
+          targetKey: targetKey,
+          title: 'Persistent title',
+          body: 'Persistent body',
+        ),
+      ],
+    );
+
+    for (var i = 0; i < 10; i += 1) {
+      await tester.pump(const Duration(milliseconds: 16));
+      expect(find.byKey(TutorialOverlayPresenter.rootKey), findsOneWidget);
+      expect(controller.driver, isNotNull);
+    }
+
+    await tester.tap(find.text('Skip'));
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.byKey(TutorialOverlayPresenter.rootKey), findsNothing);
+  });
+
   testWidgets(
       'TutorialOverlayHost renders in full-window coordinates (sidebar layout)',
       (tester) async {

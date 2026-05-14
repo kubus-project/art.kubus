@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -67,6 +68,7 @@ class MapTutorialCoordinator extends ChangeNotifier
   bool _startRequested = false;
   bool _startInFlight = false;
   Timer? _startRetryTimer;
+  Timer? _visibleReconfigureRetryTimer;
   int _startRetryAttempts = 0;
 
   static const Duration _startRetryDelay = Duration(milliseconds: 100);
@@ -94,7 +96,23 @@ class MapTutorialCoordinator extends ChangeNotifier
     final currentSignature = _bindings.map((binding) => binding.id).join('|');
     final nextSignature = bindings.map((binding) => binding.id).join('|');
     _bindings = bindings;
-    _resolvedSteps = _resolveSteps(_bindings);
+    final resolvedSteps = _resolveSteps(_bindings);
+
+    if (_state.show &&
+        resolvedSteps.isEmpty &&
+        _resolvedSteps.isNotEmpty &&
+        _hasEnabledBindings(_bindings)) {
+      _debugLog(
+        'configure: keeping visible tutorial through transient empty anchors '
+        'steps=${_resolvedSteps.length} index=${_state.index}',
+      );
+      _scheduleVisibleReconfigureRetry();
+      return;
+    }
+
+    _visibleReconfigureRetryTimer?.cancel();
+    _visibleReconfigureRetryTimer = null;
+    _resolvedSteps = resolvedSteps;
 
     final nextCount = _resolvedSteps.length;
     final int nextIndex;
@@ -113,6 +131,11 @@ class MapTutorialCoordinator extends ChangeNotifier
         _state.stepCount == nextCount &&
         _state.index == nextIndex &&
         _state.show == nextShow)) {
+      _debugLog(
+        'configure: show ${_state.show}->$nextShow '
+        'index ${_state.index}->$nextIndex '
+        'steps ${_state.stepCount}->$nextCount',
+      );
       _setState(
         _state.copyWith(
           stepCount: nextCount,
@@ -133,6 +156,10 @@ class MapTutorialCoordinator extends ChangeNotifier
   }
 
   Future<void> maybeStart() async {
+    _debugLog(
+      'maybeStart: requested show=${_state.show} '
+      'steps=${_resolvedSteps.length} index=${_state.index}',
+    );
     _startRequested = true;
     _startRetryAttempts = 0;
     await _tryStartIfRequested();
@@ -151,6 +178,7 @@ class MapTutorialCoordinator extends ChangeNotifier
       final prefs = await _sharedPreferencesLoader();
       final seen = prefs.getBool(seenPreferenceKey) ?? false;
       if (seen) {
+        _debugLog('maybeStart: already seen');
         _startRequested = false;
         _cancelStartRetry();
         return;
@@ -164,6 +192,10 @@ class MapTutorialCoordinator extends ChangeNotifier
       );
       _startRequested = false;
       _cancelStartRetry();
+      _debugLog(
+        'maybeStart: visible steps=${_resolvedSteps.length} '
+        'index=${_state.index}',
+      );
     } catch (_) {
       // Best-effort.
     } finally {
@@ -202,9 +234,14 @@ class MapTutorialCoordinator extends ChangeNotifier
 
   @override
   Future<void> dismiss() async {
+    _debugLog(
+      'dismiss: steps=${_resolvedSteps.length} index=${_state.index}',
+    );
     _setState(_state.copyWith(show: false));
     _startRequested = false;
     _cancelStartRetry();
+    _visibleReconfigureRetryTimer?.cancel();
+    _visibleReconfigureRetryTimer = null;
     await _persistSeen();
   }
 
@@ -227,6 +264,13 @@ class MapTutorialCoordinator extends ChangeNotifier
     return steps;
   }
 
+  bool _hasEnabledBindings(List<MapTutorialStepBinding> bindings) {
+    for (final binding in bindings) {
+      if (binding.enabled) return true;
+    }
+    return false;
+  }
+
   void _scheduleStartRetry() {
     if (!_startRequested || _state.show) return;
     if (_startRetryAttempts >= _maxStartRetryAttempts) return;
@@ -243,6 +287,16 @@ class MapTutorialCoordinator extends ChangeNotifier
   void _cancelStartRetry() {
     _startRetryTimer?.cancel();
     _startRetryTimer = null;
+  }
+
+  void _scheduleVisibleReconfigureRetry() {
+    if (!_state.show) return;
+    if (_visibleReconfigureRetryTimer != null) return;
+    _visibleReconfigureRetryTimer = Timer(_startRetryDelay, () {
+      _visibleReconfigureRetryTimer = null;
+      if (!_state.show) return;
+      configure(bindings: _bindings);
+    });
   }
 
   Future<void> _persistSeen() async {
@@ -264,9 +318,16 @@ class MapTutorialCoordinator extends ChangeNotifier
     notifyListeners();
   }
 
+  void _debugLog(String message) {
+    if (!kDebugMode) return;
+    debugPrint('MapTutorialCoordinator: $message');
+  }
+
   @override
   void dispose() {
     _cancelStartRetry();
+    _visibleReconfigureRetryTimer?.cancel();
+    _visibleReconfigureRetryTimer = null;
     super.dispose();
   }
 }

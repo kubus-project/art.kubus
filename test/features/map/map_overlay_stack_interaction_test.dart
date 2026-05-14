@@ -13,7 +13,8 @@ import 'package:latlong2/latlong.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('hidden marker overlay with cursor does not block controls',
+  testWidgets(
+      'hidden marker overlay with cursor does not block Flutter buttons',
       (tester) async {
     var outsideTapCount = 0;
 
@@ -22,11 +23,13 @@ void main() {
         home: Scaffold(
           body: Stack(
             children: [
-              Positioned.fill(
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => outsideTapCount += 1,
-                  child: const SizedBox.expand(),
+              Positioned(
+                left: 24,
+                top: 24,
+                child: ElevatedButton(
+                  key: const ValueKey<String>('under_marker_overlay_button'),
+                  onPressed: () => outsideTapCount += 1,
+                  child: const Text('Under overlay'),
                 ),
               ),
               KubusMapMarkerOverlayLayer(
@@ -43,7 +46,8 @@ void main() {
       ),
     );
 
-    await tester.tapAt(const Offset(40, 40));
+    await tester
+        .tap(find.byKey(const ValueKey<String>('under_marker_overlay_button')));
     await tester.pump();
 
     expect(outsideTapCount, 1);
@@ -187,6 +191,57 @@ void main() {
     expect(chipToggleCount, 1);
     expect(createMarkerCount, 1);
     expect(centerOnMeCount, 1);
+  });
+
+  testWidgets('desktop primary control optional callbacks fire',
+      (tester) async {
+    final controller = _buildMapController();
+    var nearbyToggleCount = 0;
+    var travelToggleCount = 0;
+    var isometricToggleCount = 0;
+
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Align(
+            alignment: Alignment.topLeft,
+            child: KubusMapPrimaryControls(
+              controller: controller,
+              layout: KubusMapPrimaryControlsLayout.desktopToolbar,
+              onCenterOnMe: () {},
+              onCreateMarker: () {},
+              centerOnMeActive: false,
+              showNearbyToggle: true,
+              onToggleNearby: () => nearbyToggleCount += 1,
+              nearbyKey: const ValueKey<String>('nearby_toggle_control'),
+              showTravelModeToggle: true,
+              onToggleTravelMode: () => travelToggleCount += 1,
+              travelModeKey: const ValueKey<String>('travel_toggle_control'),
+              showIsometricViewToggle: true,
+              onToggleIsometricView: () => isometricToggleCount += 1,
+              isometricViewTooltip: 'Isometric',
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester
+        .tap(find.byKey(const ValueKey<String>('nearby_toggle_control')));
+    await tester.pump();
+    await tester
+        .tap(find.byKey(const ValueKey<String>('travel_toggle_control')));
+    await tester.pump();
+    await tester.tap(find.byTooltip('Isometric'));
+    await tester.pump();
+
+    expect(nearbyToggleCount, 1);
+    expect(travelToggleCount, 1);
+    expect(isometricToggleCount, 1);
   });
 }
 

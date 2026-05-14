@@ -630,6 +630,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
     final overlayController = TutorialOverlayScope.maybeOf(context);
     if (_tutorialOverlayController != overlayController) {
+      _debugMapTutorialBindingLog('scope changed; unbinding previous driver');
       _tutorialOverlayController?.unbindDriver(_mapTutorialCoordinator);
       _tutorialOverlayController = overlayController;
     }
@@ -638,18 +639,38 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   void _syncRootTutorialBinding() {
     final controller = _tutorialOverlayController;
-    if (controller == null) return;
+    if (controller == null) {
+      _debugMapTutorialBindingLog(
+          'skip bind: TutorialOverlayScope unavailable');
+      return;
+    }
 
     if (!_isRouteVisible) {
+      _debugMapTutorialBindingLog(
+        'unbind: route invisible visible=${_mapTutorialCoordinator.visible} '
+        'index=${_mapTutorialCoordinator.currentIndex} '
+        'steps=${_mapTutorialCoordinator.steps.length}',
+      );
       controller.unbindDriver(_mapTutorialCoordinator);
       return;
     }
 
+    _debugMapTutorialBindingLog(
+      'bind owner=desktop-explore-map '
+      'visible=${_mapTutorialCoordinator.visible} '
+      'index=${_mapTutorialCoordinator.currentIndex} '
+      'steps=${_mapTutorialCoordinator.steps.length}',
+    );
     controller.bindDriver(
       tutorialId: 'map',
       ownerRoute: 'desktop-explore-map',
       driver: _mapTutorialCoordinator,
     );
+  }
+
+  void _debugMapTutorialBindingLog(String message) {
+    if (!kDebugMode) return;
+    debugPrint('DesktopMapScreen tutorial: $message');
   }
 
   void _handleMapViewPreferencesChanged() {

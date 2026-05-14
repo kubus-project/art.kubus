@@ -110,6 +110,11 @@ class TutorialOverlayController extends ChangeNotifier {
       return;
     }
 
+    _debugLog(
+      'bindDriver tutorialId=$tutorialId ownerRoute=$ownerRoute '
+      'visible=${driver.visible} index=${driver.currentIndex} '
+      'steps=${driver.steps.length}',
+    );
     _unbindCurrentDriver();
 
     _driver = driver;
@@ -121,6 +126,11 @@ class TutorialOverlayController extends ChangeNotifier {
 
   void unbindDriver(TutorialOverlayDriver driver) {
     if (!identical(_driver, driver)) return;
+    _debugLog(
+      'unbindDriver tutorialId=$_tutorialId ownerRoute=$_ownerRoute '
+      'visible=${driver.visible} index=${driver.currentIndex} '
+      'steps=${driver.steps.length}',
+    );
     _unbindCurrentDriver();
     notifyListeners();
   }
@@ -163,6 +173,12 @@ class TutorialOverlayController extends ChangeNotifier {
   }
 
   void _handleDriverChanged() {
+    final driver = _driver;
+    _debugLog(
+      'driverChanged tutorialId=$_tutorialId ownerRoute=$_ownerRoute '
+      'visible=${driver?.visible} index=${driver?.currentIndex} '
+      'steps=${driver?.steps.length}',
+    );
     notifyListeners();
   }
 
@@ -174,6 +190,11 @@ class TutorialOverlayController extends ChangeNotifier {
     _driver = null;
     _tutorialId = null;
     _ownerRoute = null;
+  }
+
+  void _debugLog(String message) {
+    if (!kDebugMode) return;
+    debugPrint('TutorialOverlayController: $message');
   }
 
   @override

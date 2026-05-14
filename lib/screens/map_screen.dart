@@ -776,6 +776,14 @@ class _MapScreenState extends State<MapScreen>
       _handleTabProviderChanged();
     }
 
+    final overlayController = TutorialOverlayScope.maybeOf(context);
+    if (_tutorialOverlayController != overlayController) {
+      _debugMapTutorialBindingLog('scope changed; unbinding previous driver');
+      _tutorialOverlayController?.unbindDriver(_mapTutorialCoordinator);
+      _tutorialOverlayController = overlayController;
+    }
+    _syncRootTutorialBinding();
+
     final provider = Provider.of<MapDeepLinkProvider>(context);
     if (_mapDeepLinkProvider == provider) return;
 
@@ -788,30 +796,43 @@ class _MapScreenState extends State<MapScreen>
       if (!mounted) return;
       _handleMapDeepLinkProviderChanged();
     });
-
-    final overlayController = TutorialOverlayScope.maybeOf(context);
-    if (_tutorialOverlayController != overlayController) {
-      _tutorialOverlayController?.unbindDriver(_mapTutorialCoordinator);
-      _tutorialOverlayController = overlayController;
-    }
-    _syncRootTutorialBinding();
   }
 
   void _syncRootTutorialBinding() {
     final controller = _tutorialOverlayController;
-    if (controller == null) return;
+    if (controller == null) {
+      _debugMapTutorialBindingLog(
+          'skip bind: TutorialOverlayScope unavailable');
+      return;
+    }
 
     final shouldBind = _isMapTabVisible && _isRouteVisible;
     if (!shouldBind) {
+      _debugMapTutorialBindingLog(
+        'unbind: inactive tab=$_isMapTabVisible route=$_isRouteVisible '
+        'visible=${_mapTutorialCoordinator.visible} '
+        'index=${_mapTutorialCoordinator.currentIndex} '
+        'steps=${_mapTutorialCoordinator.steps.length}',
+      );
       controller.unbindDriver(_mapTutorialCoordinator);
       return;
     }
 
+    _debugMapTutorialBindingLog(
+      'bind owner=mobile-map visible=${_mapTutorialCoordinator.visible} '
+      'index=${_mapTutorialCoordinator.currentIndex} '
+      'steps=${_mapTutorialCoordinator.steps.length}',
+    );
     controller.bindDriver(
       tutorialId: 'map',
       ownerRoute: 'mobile-map',
       driver: _mapTutorialCoordinator,
     );
+  }
+
+  void _debugMapTutorialBindingLog(String message) {
+    if (!kDebugMode) return;
+    debugPrint('MapScreen tutorial: $message');
   }
 
   bool get _pollingEnabled =>

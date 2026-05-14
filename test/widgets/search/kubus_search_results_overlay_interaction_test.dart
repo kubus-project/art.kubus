@@ -17,7 +17,8 @@ void main() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
   });
 
-  testWidgets('search results are clickable and outside click dismisses overlay',
+  testWidgets(
+      'search results are clickable and outside Flutter UI remains active',
       (tester) async {
     final themeProvider = ThemeProvider();
     addTearDown(themeProvider.dispose);
@@ -33,6 +34,7 @@ void main() {
     addTearDown(controller.dispose);
 
     KubusSearchResult? tapped;
+    var outsideButtonTapCount = 0;
 
     await tester.pumpWidget(
       ChangeNotifierProvider<ThemeProvider>.value(
@@ -51,6 +53,15 @@ void main() {
                     controller: controller,
                     hintText: 'Search',
                     semanticsLabel: 'test_search_input',
+                  ),
+                ),
+                Positioned(
+                  right: 24,
+                  bottom: 24,
+                  child: ElevatedButton(
+                    key: const ValueKey<String>('outside_search_button'),
+                    onPressed: () => outsideButtonTapCount += 1,
+                    child: const Text('Outside action'),
                   ),
                 ),
                 KubusSearchResultsOverlay(
@@ -95,18 +106,19 @@ void main() {
 
     expect(tapped, isNotNull);
 
-    // Show again and ensure outside click dismisses.
+    // Show again and ensure the overlay does not install a full-screen
+    // Flutter hit-test blocker above other map chrome.
     await tester.showKeyboard(field);
     await tester.enterText(field, 'ab');
     await tester.pump();
     await tester.pumpAndSettle();
     expect(find.byType(ListTile), findsAtLeastNWidgets(1));
 
-    // Tap outside the dropdown panel area.
-    await tester.tapAt(const Offset(5, 5));
+    await tester
+        .tap(find.byKey(const ValueKey<String>('outside_search_button')));
     await tester.pump();
 
-    expect(controller.state.isOverlayVisible, isFalse);
+    expect(outsideButtonTapCount, 1);
   });
 }
 

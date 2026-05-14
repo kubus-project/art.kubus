@@ -147,6 +147,46 @@ void main() {
       expect(coordinator.state.index, 0);
       expect(coordinator.steps.length, 1);
     });
+
+    test('keeps visible tutorial through transient empty anchor frame',
+        () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      var anchorReady = true;
+      final coordinator = MapTutorialCoordinator(
+        seenPreferenceKey: PreferenceKeys.mapOnboardingMobileSeenV2,
+      );
+
+      coordinator.configure(
+        bindings: <MapTutorialStepBinding>[
+          _binding(
+            id: 'transient',
+            isAnchorAvailable: () => anchorReady,
+          ),
+        ],
+      );
+      await coordinator.maybeStart();
+
+      expect(coordinator.state.show, isTrue);
+      expect(coordinator.steps.length, 1);
+
+      anchorReady = false;
+      coordinator.configure(
+        bindings: <MapTutorialStepBinding>[
+          _binding(
+            id: 'transient',
+            isAnchorAvailable: () => anchorReady,
+          ),
+        ],
+      );
+
+      expect(coordinator.state.show, isTrue);
+      expect(coordinator.steps.length, 1);
+
+      await Future<void>.delayed(const Duration(milliseconds: 250));
+
+      expect(coordinator.state.show, isTrue);
+      expect(coordinator.steps.length, 1);
+    });
   });
 }
 

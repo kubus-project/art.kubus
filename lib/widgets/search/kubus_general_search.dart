@@ -95,7 +95,8 @@ class _KubusGeneralSearchState extends State<KubusGeneralSearch> {
     if (widget.style != null) return widget.style!;
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final accent = Provider.of<ThemeProvider>(context, listen: false).accentColor;
+    final accent =
+        Provider.of<ThemeProvider>(context, listen: false).accentColor;
     final surfaceStyle = KubusGlassStyle.resolve(
       context,
       surfaceType: KubusGlassSurfaceType.button,
@@ -326,13 +327,6 @@ class KubusSearchResultsOverlay extends StatelessWidget {
         return Positioned.fill(
           child: Stack(
             children: [
-              Positioned.fill(
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: onDismiss ?? controller.dismissOverlay,
-                  child: const SizedBox.expand(),
-                ),
-              ),
               CompositedTransformFollower(
                 link: link,
                 showWhenUnlinked: false,
@@ -361,7 +355,8 @@ class KubusSearchResultsOverlay extends StatelessWidget {
                               child: Text(
                                 minCharsHint,
                                 style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: scheme.onSurface.withValues(alpha: 0.6),
+                                  color:
+                                      scheme.onSurface.withValues(alpha: 0.6),
                                 ),
                               ),
                             );
@@ -381,13 +376,15 @@ class KubusSearchResultsOverlay extends StatelessWidget {
                                 children: [
                                   Icon(
                                     Icons.search_off,
-                                    color: scheme.onSurface.withValues(alpha: 0.4),
+                                    color:
+                                        scheme.onSurface.withValues(alpha: 0.4),
                                   ),
                                   const SizedBox(width: 12),
                                   Flexible(
                                     child: Text(
                                       noResultsText,
-                                      style: theme.textTheme.bodyMedium?.copyWith(
+                                      style:
+                                          theme.textTheme.bodyMedium?.copyWith(
                                         color: scheme.onSurface
                                             .withValues(alpha: 0.6),
                                       ),
@@ -414,8 +411,7 @@ class KubusSearchResultsOverlay extends StatelessWidget {
                                   cursor: SystemMouseCursors.click,
                                   child: ListTile(
                                     minLeadingWidth: 44,
-                                    contentPadding:
-                                        const EdgeInsets.symmetric(
+                                    contentPadding: const EdgeInsets.symmetric(
                                       horizontal: KubusSpacing.md,
                                       vertical: KubusSpacing.xxs,
                                     ),
@@ -444,7 +440,8 @@ class KubusSearchResultsOverlay extends StatelessWidget {
                                       ),
                                     ),
                                     onTap: () {
-                                      (onDismiss ?? controller.dismissOverlay)();
+                                      (onDismiss ??
+                                          controller.dismissOverlay)();
                                       FocusManager.instance.primaryFocus
                                           ?.unfocus();
                                       onResultTap(result);

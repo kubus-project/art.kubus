@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
@@ -27,6 +28,12 @@ class TutorialOverlayPresenter extends StatelessWidget {
       builder: (context, _) {
         final driver = controller.driver;
         if (driver == null || !driver.visible || driver.steps.isEmpty) {
+          _debugLog(
+            'hidden tutorialId=${controller.tutorialId} '
+            'ownerRoute=${controller.ownerRoute} '
+            'hasDriver=${driver != null} visible=${driver?.visible} '
+            'index=${driver?.currentIndex} steps=${driver?.steps.length}',
+          );
           return const SizedBox.shrink();
         }
 
@@ -41,6 +48,12 @@ class TutorialOverlayPresenter extends StatelessWidget {
         }
 
         final l10n = AppLocalizations.of(context)!;
+        _debugLog(
+          'visible tutorialId=${controller.tutorialId} '
+          'ownerRoute=${controller.ownerRoute} '
+          'index=${driver.currentIndex} clampedIndex=$clampedIndex '
+          'steps=${steps.length}',
+        );
 
         return KeyedSubtree(
           key: rootKey,
@@ -58,5 +71,10 @@ class TutorialOverlayPresenter extends StatelessWidget {
         );
       },
     );
+  }
+
+  void _debugLog(String message) {
+    if (!kDebugMode) return;
+    debugPrint('TutorialOverlayPresenter: $message');
   }
 }
