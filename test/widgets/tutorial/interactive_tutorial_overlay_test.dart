@@ -88,7 +88,7 @@ void main() {
   });
 
   testWidgets(
-      'InteractiveTutorialOverlay defers target actions to next frame on web-safe path',
+      'InteractiveTutorialOverlay defers target actions without auto-advancing',
       (tester) async {
     int targetTapCount = 0;
     int nextCount = 0;
@@ -148,7 +148,166 @@ void main() {
     await tester.pump();
     await tester.pump();
     expect(targetTapCount, 1);
+    expect(nextCount, 0);
+  });
+
+  testWidgets('descriptive highlight tap does not advance', (tester) async {
+    int nextCount = 0;
+    final targetKey = GlobalKey();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Stack(
+            children: [
+              Center(
+                child: SizedBox(
+                  key: targetKey,
+                  width: 48,
+                  height: 48,
+                ),
+              ),
+              InteractiveTutorialOverlay(
+                steps: <TutorialStepDefinition>[
+                  TutorialStepDefinition(
+                    targetKey: targetKey,
+                    title: 'Step 1',
+                    body: 'Body 1',
+                  ),
+                  const TutorialStepDefinition(
+                    title: 'Step 2',
+                    body: 'Body 2',
+                  ),
+                ],
+                currentIndex: 0,
+                onNext: () => nextCount += 1,
+                onBack: () {},
+                onSkip: () {},
+                skipLabel: 'Skip',
+                backLabel: 'Back',
+                nextLabel: 'Next',
+                doneLabel: 'Done',
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.tapAt(tester.getCenter(find.byKey(targetKey)));
+    await tester.pump();
+    await tester.pump();
+
+    expect(nextCount, 0);
+    expect(
+      find.byKey(InteractiveTutorialOverlay.highlightTapRegionKey),
+      findsNothing,
+    );
+  });
+
+  testWidgets('explicit target advance calls onNext once', (tester) async {
+    int nextCount = 0;
+    final targetKey = GlobalKey();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Stack(
+            children: [
+              Center(
+                child: SizedBox(
+                  key: targetKey,
+                  width: 48,
+                  height: 48,
+                ),
+              ),
+              InteractiveTutorialOverlay(
+                steps: <TutorialStepDefinition>[
+                  TutorialStepDefinition(
+                    targetKey: targetKey,
+                    title: 'Step 1',
+                    body: 'Body 1',
+                    advanceOnTargetTap: true,
+                  ),
+                  const TutorialStepDefinition(
+                    title: 'Step 2',
+                    body: 'Body 2',
+                  ),
+                ],
+                currentIndex: 0,
+                onNext: () => nextCount += 1,
+                onBack: () {},
+                onSkip: () {},
+                skipLabel: 'Skip',
+                backLabel: 'Back',
+                nextLabel: 'Next',
+                doneLabel: 'Done',
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.tapAt(tester.getCenter(find.byKey(targetKey)));
+    await tester.pump();
+    await tester.pump();
+
     expect(nextCount, 1);
+  });
+
+  testWidgets('last-step target tap does not dismiss by default',
+      (tester) async {
+    int nextCount = 0;
+    int skipCount = 0;
+    final targetKey = GlobalKey();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Stack(
+            children: [
+              Center(
+                child: SizedBox(
+                  key: targetKey,
+                  width: 48,
+                  height: 48,
+                ),
+              ),
+              InteractiveTutorialOverlay(
+                steps: <TutorialStepDefinition>[
+                  TutorialStepDefinition(
+                    targetKey: targetKey,
+                    title: 'Only step',
+                    body: 'Body',
+                    advanceOnTargetTap: true,
+                  ),
+                ],
+                currentIndex: 0,
+                onNext: () => nextCount += 1,
+                onBack: () {},
+                onSkip: () => skipCount += 1,
+                skipLabel: 'Skip',
+                backLabel: 'Back',
+                nextLabel: 'Next',
+                doneLabel: 'Done',
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.tapAt(tester.getCenter(find.byKey(targetKey)));
+    await tester.pump();
+    await tester.pump();
+
+    expect(nextCount, 0);
+    expect(skipCount, 0);
+    expect(find.byKey(InteractiveTutorialOverlay.tooltipKey), findsOneWidget);
   });
 
   testWidgets(

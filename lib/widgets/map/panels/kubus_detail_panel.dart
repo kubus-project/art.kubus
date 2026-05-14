@@ -31,6 +31,13 @@ class KubusDetailPanel extends StatelessWidget {
     this.sectionSpacing = 0,
     this.backgroundAlphaDark = KubusGlassEffects.blurTintOpacityDark,
     this.backgroundAlphaLight = KubusGlassEffects.blurTintOpacityLight,
+    this.useBlur = true,
+    this.blurPolicy = KubusMapBlurPolicy.allowCompactWeb,
+    this.overMapPlatformView = true,
+    this.backdropRegionId,
+    this.enablePlatformBackdropRegion = true,
+    this.isWebOverride,
+    this.platformBackdropHostAvailableOverride,
   });
 
   final DetailPanelKind kind;
@@ -45,6 +52,13 @@ class KubusDetailPanel extends StatelessWidget {
   final double sectionSpacing;
   final double backgroundAlphaDark;
   final double backgroundAlphaLight;
+  final bool useBlur;
+  final KubusMapBlurPolicy blurPolicy;
+  final bool overMapPlatformView;
+  final String? backdropRegionId;
+  final bool enablePlatformBackdropRegion;
+  final bool? isWebOverride;
+  final bool? platformBackdropHostAvailableOverride;
 
   @override
   Widget build(BuildContext context) {
@@ -70,7 +84,14 @@ class KubusDetailPanel extends StatelessWidget {
       padding: EdgeInsets.zero,
       borderRadius: BorderRadius.circular(borderRadius),
       tintBase: scheme.surface,
-      useBlur: kubusMapBlurEnabled(context),
+      useBlur: useBlur,
+      blurPolicy: blurPolicy,
+      overMapPlatformView: overMapPlatformView,
+      backdropRegionId: backdropRegionId,
+      enablePlatformBackdropRegion: enablePlatformBackdropRegion,
+      isWebOverride: isWebOverride,
+      platformBackdropHostAvailableOverride:
+          platformBackdropHostAvailableOverride,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../utils/design_tokens.dart';
@@ -17,6 +18,12 @@ class TutorialStepDefinition {
   /// If true, tapping the highlighted region also advances to next step.
   final bool advanceOnTargetTap;
 
+  /// If true, tapping the highlighted region on the last step completes it.
+  ///
+  /// Last-step target taps are visual-only by default so accidental map/control
+  /// taps cannot silently dismiss and persist the tutorial.
+  final bool dismissOnTargetTapWhenLast;
+
   /// If true, the tooltip card aligns its RIGHT edge to the target's right edge
   /// (useful for UI controls anchored near the window's right edge).
   final bool tooltipAlignToTargetRightEdge;
@@ -27,7 +34,8 @@ class TutorialStepDefinition {
     this.targetKey,
     this.icon,
     this.onTargetTap,
-    this.advanceOnTargetTap = true,
+    this.advanceOnTargetTap = false,
+    this.dismissOnTargetTapWhenLast = false,
     this.tooltipAlignToTargetRightEdge = false,
   });
 }
@@ -273,13 +281,26 @@ class InteractiveTutorialOverlay extends StatelessWidget {
         void handleTargetTap() {
           final onTargetTap = step.onTargetTap;
           final shouldAdvance = step.advanceOnTargetTap && !isLast;
-          if (onTargetTap == null && !shouldAdvance) return;
+          final shouldDismiss = step.dismissOnTargetTapWhenLast && isLast;
+          _debugLog(
+            'targetTap index=$currentIndex step="${step.title}" '
+            'isLast=$isLast advanceOnTargetTap=${step.advanceOnTargetTap} '
+            'dismissOnTargetTapWhenLast=${step.dismissOnTargetTapWhenLast} '
+            'hasOnTargetTap=${onTargetTap != null} '
+            'willCallOnNext=${shouldAdvance || shouldDismiss}',
+          );
+          if (onTargetTap == null && !shouldAdvance && !shouldDismiss) return;
 
           // Web pointer dispatch can become unstable if tutorial callbacks
           // mutate layout synchronously during the active tap sequence.
           WidgetsBinding.instance.addPostFrameCallback((_) {
+            _debugLog(
+              'targetTapCallback index=$currentIndex step="${step.title}" '
+              'callingOnTargetTap=${onTargetTap != null} '
+              'callingOnNext=${shouldAdvance || shouldDismiss}',
+            );
             onTargetTap?.call();
-            if (shouldAdvance) {
+            if (shouldAdvance || shouldDismiss) {
               onNext();
             }
           });
@@ -287,7 +308,32 @@ class InteractiveTutorialOverlay extends StatelessWidget {
         }
 
         final shouldHandleTargetTap = highlightRect != null &&
-            (step.onTargetTap != null || step.advanceOnTargetTap);
+            (step.onTargetTap != null ||
+                step.advanceOnTargetTap ||
+                step.dismissOnTargetTapWhenLast);
+
+        void handleSkipTap() {
+          _debugLog(
+            'skipTap index=$currentIndex step="${step.title}" '
+            'isLast=$isLast willDismiss=true',
+          );
+          onSkip();
+        }
+
+        void handleBackTap() {
+          _debugLog(
+            'backTap index=$currentIndex step="${step.title}" isLast=$isLast',
+          );
+          onBack();
+        }
+
+        void handleNextTap() {
+          _debugLog(
+            '${isLast ? 'doneTap' : 'nextTap'} index=$currentIndex '
+            'step="${step.title}" isLast=$isLast willCallOnNext=true',
+          );
+          onNext();
+        }
 
         return SizedBox.expand(
           key: overlayRootKey,
@@ -324,7 +370,7 @@ class InteractiveTutorialOverlay extends StatelessWidget {
                 right: 12,
                 child: _GlassActionChip(
                   label: skipLabel,
-                  onTap: onSkip,
+                  onTap: handleSkipTap,
                 ),
               ),
 
@@ -343,8 +389,8 @@ class InteractiveTutorialOverlay extends StatelessWidget {
                     backLabel: backLabel,
                     nextLabel: isLast ? doneLabel : nextLabel,
                     showBack: currentIndex > 0,
-                    onBack: onBack,
-                    onNext: onNext,
+                    onBack: handleBackTap,
+                    onNext: handleNextTap,
                   ),
                 ),
               ),
@@ -353,6 +399,11 @@ class InteractiveTutorialOverlay extends StatelessWidget {
         );
       },
     );
+  }
+
+  void _debugLog(String message) {
+    if (!kDebugMode) return;
+    debugPrint('InteractiveTutorialOverlay: $message');
   }
 }
 

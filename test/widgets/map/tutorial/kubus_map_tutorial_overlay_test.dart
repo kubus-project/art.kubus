@@ -196,4 +196,58 @@ void main() {
 
     expect(targetTapCount, 1);
   });
+
+  testWidgets('descriptive map-sized target tap does not dismiss',
+      (tester) async {
+    final mapTargetKey = GlobalKey();
+    var nextTapped = 0;
+    var skipTapped = 0;
+    var backgroundTapCount = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Stack(
+            children: [
+              Positioned.fill(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => backgroundTapCount += 1,
+                  child: SizedBox.expand(key: mapTargetKey),
+                ),
+              ),
+              KubusMapTutorialOverlay(
+                visible: true,
+                steps: <TutorialStepDefinition>[
+                  TutorialStepDefinition(
+                    targetKey: mapTargetKey,
+                    title: 'Map overview',
+                    body: 'Body',
+                  ),
+                ],
+                currentIndex: 0,
+                onNext: () => nextTapped += 1,
+                onBack: () {},
+                onSkip: () => skipTapped += 1,
+                skipLabel: 'Skip',
+                backLabel: 'Back',
+                nextLabel: 'Next',
+                doneLabel: 'Done',
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.tapAt(const Offset(40, 300));
+    await tester.pump();
+    await tester.pump();
+
+    expect(backgroundTapCount, 1);
+    expect(nextTapped, 0);
+    expect(skipTapped, 0);
+    expect(find.byKey(InteractiveTutorialOverlay.tooltipKey), findsOneWidget);
+  });
 }

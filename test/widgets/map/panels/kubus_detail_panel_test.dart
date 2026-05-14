@@ -1,4 +1,6 @@
 import 'package:art_kubus/widgets/map/panels/kubus_detail_panel.dart';
+import 'package:art_kubus/widgets/map/glass/kubus_map_platform_backdrop_host.dart';
+import 'package:art_kubus/widgets/map/kubus_map_glass_surface.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -91,5 +93,45 @@ void main() {
 
     expect(closeTapped, 1);
     expect(actionTapped, 1);
+  });
+
+  testWidgets('side panel detail registers stable map backdrop region',
+      (tester) async {
+    final controller = KubusMapBackdropHostController();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: KubusMapBackdropScope(
+            controller: controller,
+            child: SizedBox(
+              width: 320,
+              height: 260,
+              child: KubusDetailPanel(
+                kind: DetailPanelKind.artwork,
+                presentation: PanelPresentation.sidePanel,
+                blurPolicy: KubusMapBlurPolicy.forceMapChromeWhenCapable,
+                backdropRegionId: 'desktop-map-marker-detail-panel',
+                isWebOverride: true,
+                platformBackdropHostAvailableOverride: true,
+                header: DetailHeader(
+                  accentColor: Colors.teal,
+                  closeTooltip: 'Close',
+                  onClose: () {},
+                ),
+                sections: const [
+                  Text('Artwork section'),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byType(KubusMapBackdropRegionTracker), findsOneWidget);
+    expect(controller.regionCount, 1);
+    expect(controller.regions.single.id, 'desktop-map-marker-detail-panel');
   });
 }

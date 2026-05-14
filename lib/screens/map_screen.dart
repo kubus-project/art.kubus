@@ -1116,6 +1116,7 @@ class _MapScreenState extends State<MapScreen>
           icon: Icons.map_outlined,
           title: l10n.mapTutorialStepMapTitle,
           body: l10n.mapTutorialStepMapBody,
+          advanceOnTargetTap: false,
         ),
       ),
       MapTutorialStepBinding(
@@ -1126,6 +1127,7 @@ class _MapScreenState extends State<MapScreen>
           icon: Icons.place_outlined,
           title: l10n.mapTutorialStepMarkersTitle,
           body: l10n.mapTutorialStepMarkersBody,
+          advanceOnTargetTap: false,
         ),
       ),
       MapTutorialStepBinding(
@@ -1137,6 +1139,8 @@ class _MapScreenState extends State<MapScreen>
           icon: Icons.add_location_alt,
           title: l10n.mapTutorialStepCreateMarkerTitle,
           body: l10n.mapTutorialStepCreateMarkerBody,
+          advanceOnTargetTap: false,
+          onTargetTap: () => unawaited(_handleCurrentLocationTap()),
         ),
       ),
       MapTutorialStepBinding(
@@ -1147,6 +1151,7 @@ class _MapScreenState extends State<MapScreen>
           icon: Icons.view_list,
           title: l10n.mapTutorialStepNearbyTitle,
           body: l10n.mapTutorialStepNearbyBody,
+          advanceOnTargetTap: false,
           onTargetTap: () {
             // Expand the sheet a bit so users see the list.
             try {
@@ -1168,6 +1173,7 @@ class _MapScreenState extends State<MapScreen>
           icon: Icons.filter_alt_outlined,
           title: l10n.mapTutorialStepFiltersTitle,
           body: l10n.mapTutorialStepFiltersBody,
+          advanceOnTargetTap: false,
           onTargetTap: () {
             if (!mounted) return;
             setState(() {
@@ -1185,6 +1191,8 @@ class _MapScreenState extends State<MapScreen>
           icon: Icons.my_location,
           title: l10n.mapTutorialStepRecenterTitle,
           body: l10n.mapTutorialStepRecenterBody,
+          advanceOnTargetTap: false,
+          onTargetTap: () => unawaited(_handleCenterOnMeTap()),
         ),
       ),
     ];
@@ -1201,6 +1209,7 @@ class _MapScreenState extends State<MapScreen>
             icon: Icons.travel_explore,
             title: l10n.mapTutorialStepTravelTitle,
             body: l10n.mapTutorialStepTravelBody,
+            advanceOnTargetTap: false,
             onTargetTap: () => unawaited(_setTravelModeEnabled(true)),
           ),
         ),

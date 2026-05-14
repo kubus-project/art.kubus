@@ -186,6 +186,53 @@ void main() {
 
       expect(coordinator.state.show, isTrue);
       expect(coordinator.steps.length, 1);
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(
+        prefs.getBool(PreferenceKeys.mapOnboardingMobileSeenV2),
+        isNot(isTrue),
+      );
+
+      await coordinator.dismiss();
+      expect(
+        prefs.getBool(PreferenceKeys.mapOnboardingMobileSeenV2),
+        isTrue,
+      );
+    });
+
+    test('remains visible across frames until intentionally dismissed',
+        () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      final coordinator = MapTutorialCoordinator(
+        seenPreferenceKey: PreferenceKeys.mapOnboardingMobileSeenV2,
+      );
+
+      coordinator.configure(
+        bindings: <MapTutorialStepBinding>[
+          _binding(id: 'one'),
+          _binding(id: 'two'),
+        ],
+      );
+      await coordinator.maybeStart();
+
+      await Future<void>.delayed(const Duration(milliseconds: 250));
+
+      expect(coordinator.visible, isTrue);
+      expect(coordinator.currentIndex, 0);
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(
+        prefs.getBool(PreferenceKeys.mapOnboardingMobileSeenV2),
+        isNot(isTrue),
+      );
+
+      await coordinator.dismiss();
+
+      expect(coordinator.visible, isFalse);
+      expect(
+        prefs.getBool(PreferenceKeys.mapOnboardingMobileSeenV2),
+        isTrue,
+      );
     });
   });
 }

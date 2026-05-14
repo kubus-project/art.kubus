@@ -16,6 +16,7 @@ enum KubusMapGlassSurfaceKind {
 }
 
 final Set<String> _loggedMapGlassFallbackKeys = <String>{};
+final Set<String> _loggedMapGlassRegionKeys = <String>{};
 int _mapGlassRegionIdSequence = 0;
 
 enum KubusMapBlurPolicy {
@@ -440,6 +441,16 @@ Widget buildKubusMapGlassSurface({
   );
 
   if (preset.usePlatformBackdropHost && enablePlatformBackdropRegion) {
+    if (kDebugMode) {
+      final key = '$kind:${backdropRegionId ?? '<generated>'}';
+      if (_loggedMapGlassRegionKeys.add(key)) {
+        debugPrint(
+          'KubusMapGlassSurface: platformBackdropRegion kind=$kind '
+          'id=${backdropRegionId ?? '<generated>'} '
+          'policy=$blurPolicy strategy=${preset.backdropStrategy}',
+        );
+      }
+    }
     surface = _KubusMapGlassBackdropTrackedSurface(
       regionId: backdropRegionId,
       borderRadius: effectiveRadius,

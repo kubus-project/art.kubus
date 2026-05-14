@@ -55,7 +55,16 @@ class _SessionDriver extends ChangeNotifier implements TutorialOverlayDriver {
 
   @override
   void next() {
-    if (_session.steps.isEmpty) return;
+    if (_session.steps.isEmpty) {
+      _debugLog('sessionNext ignored: empty steps');
+      return;
+    }
+    final isLast = _session.currentIndex >= _session.steps.length - 1;
+    _debugLog(
+      'sessionNext id=${_session.id} ownerRoute=${_session.ownerRoute} '
+      'index=${_session.currentIndex} steps=${_session.steps.length} '
+      'isLast=$isLast step="${_currentStepTitle()}"',
+    );
     if (_session.currentIndex >= _session.steps.length - 1) {
       unawaited(dismiss());
       return;
@@ -66,15 +75,39 @@ class _SessionDriver extends ChangeNotifier implements TutorialOverlayDriver {
 
   @override
   void back() {
-    if (_session.steps.isEmpty) return;
-    if (_session.currentIndex <= 0) return;
+    if (_session.steps.isEmpty) {
+      _debugLog('sessionBack ignored: empty steps');
+      return;
+    }
+    if (_session.currentIndex <= 0) {
+      _debugLog(
+        'sessionBack ignored: at first step id=${_session.id} '
+        'ownerRoute=${_session.ownerRoute}',
+      );
+      return;
+    }
+    _debugLog(
+      'sessionBack id=${_session.id} ownerRoute=${_session.ownerRoute} '
+      'index=${_session.currentIndex} step="${_currentStepTitle()}"',
+    );
     _session = _session.copyWith(currentIndex: _session.currentIndex - 1);
     notifyListeners();
   }
 
   @override
   Future<void> dismiss() async {
-    if (!_visible) return;
+    if (!_visible) {
+      _debugLog(
+        'sessionDismiss ignored: already hidden id=${_session.id} '
+        'ownerRoute=${_session.ownerRoute}',
+      );
+      return;
+    }
+    _debugLog(
+      'sessionDismiss id=${_session.id} ownerRoute=${_session.ownerRoute} '
+      'index=${_session.currentIndex} steps=${_session.steps.length} '
+      'step="${_currentStepTitle()}" persistedSeen=${_session.onPersistSeen != null}',
+    );
     _visible = false;
     notifyListeners();
     try {
@@ -82,6 +115,17 @@ class _SessionDriver extends ChangeNotifier implements TutorialOverlayDriver {
     } catch (_) {
       // Best-effort.
     }
+  }
+
+  String _currentStepTitle() {
+    if (_session.steps.isEmpty) return '<none>';
+    final index = _session.currentIndex.clamp(0, _session.steps.length - 1);
+    return _session.steps[index].title;
+  }
+
+  void _debugLog(String message) {
+    if (!kDebugMode) return;
+    debugPrint('TutorialOverlayController: $message');
   }
 }
 
@@ -159,16 +203,31 @@ class TutorialOverlayController extends ChangeNotifier {
   }
 
   void next() {
+    _debugLog(
+      'next tutorialId=$_tutorialId ownerRoute=$_ownerRoute '
+      'visible=${_driver?.visible} index=${_driver?.currentIndex} '
+      'steps=${_driver?.steps.length}',
+    );
     _driver?.next();
   }
 
   void back() {
+    _debugLog(
+      'back tutorialId=$_tutorialId ownerRoute=$_ownerRoute '
+      'visible=${_driver?.visible} index=${_driver?.currentIndex} '
+      'steps=${_driver?.steps.length}',
+    );
     _driver?.back();
   }
 
   Future<void> dismiss() async {
     final driver = _driver;
     if (driver == null) return;
+    _debugLog(
+      'dismiss tutorialId=$_tutorialId ownerRoute=$_ownerRoute '
+      'visible=${driver.visible} index=${driver.currentIndex} '
+      'steps=${driver.steps.length}',
+    );
     await driver.dismiss();
   }
 

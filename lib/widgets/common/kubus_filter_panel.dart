@@ -28,6 +28,7 @@ class KubusFilterPanel extends StatelessWidget {
     this.absorbPointer = false,
     this.cursor = SystemMouseCursors.basic,
     this.titleStyle,
+    this.useGlassSurface = true,
   });
 
   final String title;
@@ -45,6 +46,7 @@ class KubusFilterPanel extends StatelessWidget {
   final bool absorbPointer;
   final MouseCursor cursor;
   final TextStyle? titleStyle;
+  final bool useGlassSurface;
 
   @override
   Widget build(BuildContext context) {
@@ -61,51 +63,64 @@ class KubusFilterPanel extends StatelessWidget {
       child: child,
     );
 
-    Widget panel = LiquidGlassPanel(
-      margin: margin,
-      padding: EdgeInsets.zero,
-      borderRadius: BorderRadius.circular(borderRadius),
-      blurSigma: surfaceStyle.blurSigma,
-      backgroundColor: surfaceStyle.tintColor,
-      fallbackMinOpacity: surfaceStyle.fallbackMinOpacity,
-      showBorder: true,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: headerPadding,
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    title,
-                    style: titleStyle ??
-                        KubusTextStyles.sectionTitle.copyWith(
-                          color: scheme.onSurface,
-                        ),
-                  ),
+    final panelBody = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: headerPadding,
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: titleStyle ??
+                      KubusTextStyles.sectionTitle.copyWith(
+                        color: scheme.onSurface,
+                      ),
                 ),
-                if (onClose != null)
-                  KubusGlassIconButton(
-                    icon: Icons.close,
-                    tooltip: closeTooltip,
-                    borderRadius: 10,
-                    onPressed: onClose,
-                  ),
-              ],
-            ),
+              ),
+              if (onClose != null)
+                KubusGlassIconButton(
+                  icon: Icons.close,
+                  tooltip: closeTooltip,
+                  borderRadius: 10,
+                  onPressed: onClose,
+                ),
+            ],
           ),
-          if (showHeaderDivider)
+        ),
+        if (showHeaderDivider)
+          Divider(height: 1, color: scheme.outline.withValues(alpha: 0.14)),
+        if (expandContent) Expanded(child: content) else content,
+        if (footer != null) ...[
+          if (showFooterDivider)
             Divider(height: 1, color: scheme.outline.withValues(alpha: 0.14)),
-          if (expandContent) Expanded(child: content) else content,
-          if (footer != null) ...[
-            if (showFooterDivider)
-              Divider(height: 1, color: scheme.outline.withValues(alpha: 0.14)),
-            footer!,
-          ],
+          footer!,
         ],
-      ),
+      ],
     );
+
+    Widget panel;
+    if (useGlassSurface) {
+      panel = LiquidGlassPanel(
+        margin: margin,
+        padding: EdgeInsets.zero,
+        borderRadius: BorderRadius.circular(borderRadius),
+        blurSigma: surfaceStyle.blurSigma,
+        backgroundColor: surfaceStyle.tintColor,
+        fallbackMinOpacity: surfaceStyle.fallbackMinOpacity,
+        showBorder: true,
+        child: panelBody,
+      );
+    } else {
+      panel = Padding(
+        padding: margin,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(borderRadius),
+          child: panelBody,
+        ),
+      );
+    }
 
     if (!absorbPointer) return MouseRegion(cursor: cursor, child: panel);
 

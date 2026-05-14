@@ -104,7 +104,8 @@ class MapTutorialCoordinator extends ChangeNotifier
         _hasEnabledBindings(_bindings)) {
       _debugLog(
         'configure: keeping visible tutorial through transient empty anchors '
-        'steps=${_resolvedSteps.length} index=${_state.index}',
+        'steps=${_resolvedSteps.length} index=${_state.index} '
+        'step="${_currentStepTitle()}" persistedSeen=false',
       );
       _scheduleVisibleReconfigureRetry();
       return;
@@ -134,7 +135,9 @@ class MapTutorialCoordinator extends ChangeNotifier
       _debugLog(
         'configure: show ${_state.show}->$nextShow '
         'index ${_state.index}->$nextIndex '
-        'steps ${_state.stepCount}->$nextCount',
+        'steps ${_state.stepCount}->$nextCount '
+        'signature="$currentSignature"->"$nextSignature" '
+        'persistedSeen=false',
       );
       _setState(
         _state.copyWith(
@@ -194,7 +197,7 @@ class MapTutorialCoordinator extends ChangeNotifier
       _cancelStartRetry();
       _debugLog(
         'maybeStart: visible steps=${_resolvedSteps.length} '
-        'index=${_state.index}',
+        'index=${_state.index} step="${_currentStepTitle()}"',
       );
     } catch (_) {
       // Best-effort.
@@ -205,8 +208,16 @@ class MapTutorialCoordinator extends ChangeNotifier
 
   @override
   void next() {
-    if (_resolvedSteps.isEmpty) return;
-    if (_state.index >= _resolvedSteps.length - 1) {
+    if (_resolvedSteps.isEmpty) {
+      _debugLog('next: ignored empty steps persistedSeen=false');
+      return;
+    }
+    final isLast = _state.index >= _resolvedSteps.length - 1;
+    _debugLog(
+      'next: index=${_state.index} steps=${_resolvedSteps.length} '
+      'isLast=$isLast step="${_currentStepTitle()}"',
+    );
+    if (isLast) {
       unawaited(dismiss());
       return;
     }
@@ -221,8 +232,18 @@ class MapTutorialCoordinator extends ChangeNotifier
 
   @override
   void back() {
-    if (_resolvedSteps.isEmpty) return;
-    if (_state.index <= 0) return;
+    if (_resolvedSteps.isEmpty) {
+      _debugLog('back: ignored empty steps');
+      return;
+    }
+    if (_state.index <= 0) {
+      _debugLog('back: ignored first step index=${_state.index}');
+      return;
+    }
+    _debugLog(
+      'back: index=${_state.index} steps=${_resolvedSteps.length} '
+      'step="${_currentStepTitle()}"',
+    );
     _setState(
       _state.copyWith(
         show: true,
@@ -235,7 +256,8 @@ class MapTutorialCoordinator extends ChangeNotifier
   @override
   Future<void> dismiss() async {
     _debugLog(
-      'dismiss: steps=${_resolvedSteps.length} index=${_state.index}',
+      'dismiss: steps=${_resolvedSteps.length} index=${_state.index} '
+      'step="${_currentStepTitle()}" persistedSeen=true',
     );
     _setState(_state.copyWith(show: false));
     _startRequested = false;
@@ -246,6 +268,10 @@ class MapTutorialCoordinator extends ChangeNotifier
   }
 
   Future<void> markSeen() async {
+    _debugLog(
+      'markSeen: steps=${_resolvedSteps.length} index=${_state.index} '
+      'step="${_currentStepTitle()}" persistedSeen=true',
+    );
     _startRequested = false;
     _cancelStartRetry();
     await _persistSeen();
@@ -273,12 +299,26 @@ class MapTutorialCoordinator extends ChangeNotifier
 
   void _scheduleStartRetry() {
     if (!_startRequested || _state.show) return;
-    if (_startRetryAttempts >= _maxStartRetryAttempts) return;
+    if (_startRetryAttempts >= _maxStartRetryAttempts) {
+      _debugLog(
+        'startRetry: giving up attempts=$_startRetryAttempts '
+        'persistedSeen=false',
+      );
+      return;
+    }
     if (_startRetryTimer != null) return;
+    _debugLog(
+      'startRetry: scheduled attempt=${_startRetryAttempts + 1} '
+      'persistedSeen=false',
+    );
     _startRetryTimer = Timer(_startRetryDelay, () {
       _startRetryTimer = null;
       if (!_startRequested || _state.show) return;
       _startRetryAttempts += 1;
+      _debugLog(
+        'startRetry: running attempt=$_startRetryAttempts '
+        'persistedSeen=false',
+      );
       configure(bindings: _bindings);
       unawaited(_tryStartIfRequested());
     });
@@ -292,15 +332,24 @@ class MapTutorialCoordinator extends ChangeNotifier
   void _scheduleVisibleReconfigureRetry() {
     if (!_state.show) return;
     if (_visibleReconfigureRetryTimer != null) return;
+    _debugLog(
+      'visibleReconfigureRetry: scheduled index=${_state.index} '
+      'steps=${_resolvedSteps.length} persistedSeen=false',
+    );
     _visibleReconfigureRetryTimer = Timer(_startRetryDelay, () {
       _visibleReconfigureRetryTimer = null;
       if (!_state.show) return;
+      _debugLog(
+        'visibleReconfigureRetry: running index=${_state.index} '
+        'steps=${_resolvedSteps.length} persistedSeen=false',
+      );
       configure(bindings: _bindings);
     });
   }
 
   Future<void> _persistSeen() async {
     try {
+      _debugLog('persistSeen: key=$seenPreferenceKey value=true');
       final prefs = await _sharedPreferencesLoader();
       await prefs.setBool(seenPreferenceKey, true);
     } catch (_) {
@@ -321,6 +370,12 @@ class MapTutorialCoordinator extends ChangeNotifier
   void _debugLog(String message) {
     if (!kDebugMode) return;
     debugPrint('MapTutorialCoordinator: $message');
+  }
+
+  String _currentStepTitle() {
+    if (_resolvedSteps.isEmpty) return '<none>';
+    final index = _state.index.clamp(0, _resolvedSteps.length - 1);
+    return _resolvedSteps[index].title;
   }
 
   @override
