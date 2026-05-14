@@ -200,6 +200,80 @@ void main() {
       );
     });
 
+    test('keeps visible tutorial through transient partial anchor frame',
+        () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      var secondAnchorReady = true;
+      final coordinator = MapTutorialCoordinator(
+        seenPreferenceKey: PreferenceKeys.mapOnboardingMobileSeenV2,
+      );
+
+      coordinator.configure(
+        bindings: <MapTutorialStepBinding>[
+          _binding(id: 'map'),
+          _binding(
+            id: 'filters',
+            isAnchorAvailable: () => secondAnchorReady,
+          ),
+        ],
+      );
+      await coordinator.maybeStart();
+
+      expect(coordinator.state.show, isTrue);
+      expect(coordinator.steps.length, 2);
+
+      secondAnchorReady = false;
+      coordinator.configure(
+        bindings: <MapTutorialStepBinding>[
+          _binding(id: 'map'),
+          _binding(
+            id: 'filters',
+            isAnchorAvailable: () => secondAnchorReady,
+          ),
+        ],
+      );
+
+      expect(coordinator.state.show, isTrue);
+      expect(coordinator.steps.length, 2);
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(
+        prefs.getBool(PreferenceKeys.mapOnboardingMobileSeenV2),
+        isNot(isTrue),
+      );
+
+      coordinator.dispose();
+    });
+
+    test('allows visible tutorial to update when a step is explicitly disabled',
+        () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      final coordinator = MapTutorialCoordinator(
+        seenPreferenceKey: PreferenceKeys.mapOnboardingMobileSeenV2,
+      );
+
+      coordinator.configure(
+        bindings: <MapTutorialStepBinding>[
+          _binding(id: 'map'),
+          _binding(id: 'travel'),
+        ],
+      );
+      await coordinator.maybeStart();
+
+      expect(coordinator.state.show, isTrue);
+      expect(coordinator.steps.length, 2);
+
+      coordinator.configure(
+        bindings: <MapTutorialStepBinding>[
+          _binding(id: 'map'),
+          _binding(id: 'travel', enabled: false),
+        ],
+      );
+
+      expect(coordinator.state.show, isTrue);
+      expect(coordinator.steps.length, 1);
+    });
+
     test('remains visible across frames until intentionally dismissed',
         () async {
       SharedPreferences.setMockInitialValues(<String, Object>{});

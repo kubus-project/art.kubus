@@ -65,6 +65,7 @@ class MapTutorialCoordinator extends ChangeNotifier
   List<MapTutorialStepBinding> _bindings = const <MapTutorialStepBinding>[];
   List<TutorialStepDefinition> _resolvedSteps =
       const <TutorialStepDefinition>[];
+  List<String> _resolvedStepIds = const <String>[];
   bool _startRequested = false;
   bool _startInFlight = false;
   Timer? _startRetryTimer;
@@ -93,18 +94,27 @@ class MapTutorialCoordinator extends ChangeNotifier
   int get currentIndex => index;
 
   void configure({required List<MapTutorialStepBinding> bindings}) {
-    final currentSignature = _bindings.map((binding) => binding.id).join('|');
-    final nextSignature = bindings.map((binding) => binding.id).join('|');
+    final currentSignature = _bindingSignature(_bindings);
+    final nextSignature = _bindingSignature(bindings);
     _bindings = bindings;
-    final resolvedSteps = _resolveSteps(_bindings);
+    final resolvedBindings = _resolveBindings(_bindings);
+    final resolvedSteps =
+        resolvedBindings.map((binding) => binding.step).toList(growable: false);
+    final resolvedStepIds =
+        resolvedBindings.map((binding) => binding.id).toList(growable: false);
+    final resolvedSignature = resolvedStepIds.join('|');
+    final activeSignature = _resolvedStepIds.join('|');
 
     if (_state.show &&
-        resolvedSteps.isEmpty &&
         _resolvedSteps.isNotEmpty &&
+        currentSignature == nextSignature &&
+        resolvedSteps.length < _resolvedSteps.length &&
+        activeSignature != resolvedSignature &&
         _hasEnabledBindings(_bindings)) {
       _debugLog(
-        'configure: keeping visible tutorial through transient empty anchors '
-        'steps=${_resolvedSteps.length} index=${_state.index} '
+        'configure: preserving active tutorial through transient anchor churn '
+        'activeSteps=${_resolvedSteps.length} resolvedSteps=${resolvedSteps.length} '
+        'index=${_state.index} '
         'step="${_currentStepTitle()}" persistedSeen=false',
       );
       _scheduleVisibleReconfigureRetry();
@@ -114,6 +124,7 @@ class MapTutorialCoordinator extends ChangeNotifier
     _visibleReconfigureRetryTimer?.cancel();
     _visibleReconfigureRetryTimer = null;
     _resolvedSteps = resolvedSteps;
+    _resolvedStepIds = resolvedStepIds;
 
     final nextCount = _resolvedSteps.length;
     final int nextIndex;
@@ -277,17 +288,17 @@ class MapTutorialCoordinator extends ChangeNotifier
     await _persistSeen();
   }
 
-  List<TutorialStepDefinition> _resolveSteps(
+  List<MapTutorialStepBinding> _resolveBindings(
     List<MapTutorialStepBinding> bindings,
   ) {
-    final steps = <TutorialStepDefinition>[];
+    final resolved = <MapTutorialStepBinding>[];
     for (final binding in bindings) {
       if (!binding.enabled) continue;
       final available = binding.isAnchorAvailable?.call() ?? true;
       if (!available) continue;
-      steps.add(binding.step);
+      resolved.add(binding);
     }
-    return steps;
+    return resolved;
   }
 
   bool _hasEnabledBindings(List<MapTutorialStepBinding> bindings) {
@@ -295,6 +306,12 @@ class MapTutorialCoordinator extends ChangeNotifier
       if (binding.enabled) return true;
     }
     return false;
+  }
+
+  String _bindingSignature(List<MapTutorialStepBinding> bindings) {
+    return bindings
+        .map((binding) => '${binding.id}:${binding.enabled ? 1 : 0}')
+        .join('|');
   }
 
   void _scheduleStartRetry() {
