@@ -5,7 +5,30 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('filter side panel can use map glass backdrop region',
+  testWidgets('filter panel default remains generic glass', (tester) async {
+    final controller = KubusMapBackdropHostController();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: KubusMapBackdropScope(
+            controller: controller,
+            child: const KubusFilterPanel(
+              title: 'Filters',
+              child: Text('Generic content'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byType(KubusMapBackdropRegionTracker), findsNothing);
+    expect(controller.regionCount, 0);
+    expect(find.text('Generic content'), findsOneWidget);
+  });
+
+  testWidgets('filter side panel can opt into map glass backdrop region',
       (tester) async {
     final controller = KubusMapBackdropHostController();
     var buttonTapped = 0;
@@ -15,22 +38,16 @@ void main() {
         home: Scaffold(
           body: KubusMapBackdropScope(
             controller: controller,
-            child: Builder(
-              builder: (context) => buildKubusMapGlassSurface(
-                context: context,
-                kind: KubusMapGlassSurfaceKind.panel,
-                blurPolicy: KubusMapBlurPolicy.forceMapChromeWhenCapable,
-                backdropRegionId: 'desktop-map-filter-panel',
-                isWebOverride: true,
-                platformBackdropHostAvailableOverride: true,
-                child: KubusFilterPanel(
-                  title: 'Filters',
-                  useGlassSurface: false,
-                  child: TextButton(
-                    onPressed: () => buttonTapped += 1,
-                    child: const Text('Apply'),
-                  ),
-                ),
+            child: KubusFilterPanel(
+              title: 'Filters',
+              useMapGlassSurface: true,
+              mapBlurPolicy: KubusMapBlurPolicy.forceMapChromeWhenCapable,
+              backdropRegionId: 'desktop-map-filter-panel',
+              isWebOverride: true,
+              platformBackdropHostAvailableOverride: true,
+              child: TextButton(
+                onPressed: () => buttonTapped += 1,
+                child: const Text('Apply'),
               ),
             ),
           ),
@@ -46,5 +63,34 @@ void main() {
     await tester.tap(find.text('Apply'));
     await tester.pump();
     expect(buttonTapped, 1);
+  });
+
+  testWidgets('filter panel map glass uses fallback when host unavailable',
+      (tester) async {
+    final controller = KubusMapBackdropHostController();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: KubusMapBackdropScope(
+            controller: controller,
+            child: const KubusFilterPanel(
+              title: 'Filters',
+              useMapGlassSurface: true,
+              mapBlurPolicy: KubusMapBlurPolicy.forceMapChromeWhenCapable,
+              isWebOverride: true,
+              platformBackdropHostAvailableOverride: false,
+              backdropRegionId: 'desktop-map-filter-panel',
+              child: Text('Fallback content'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byType(KubusMapBackdropRegionTracker), findsNothing);
+    expect(controller.regionCount, 0);
+    expect(find.text('Fallback content'), findsOneWidget);
   });
 }

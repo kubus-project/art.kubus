@@ -310,6 +310,169 @@ void main() {
     expect(find.byKey(InteractiveTutorialOverlay.tooltipKey), findsOneWidget);
   });
 
+  testWidgets('shows fallback tooltip when target geometry is unavailable',
+      (tester) async {
+    final detachedTargetKey = GlobalKey();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: InteractiveTutorialOverlay(
+            steps: <TutorialStepDefinition>[
+              TutorialStepDefinition(
+                targetKey: detachedTargetKey,
+                title: 'Step',
+                body: 'Body',
+              ),
+            ],
+            currentIndex: 0,
+            onNext: () {},
+            onBack: () {},
+            onSkip: () {},
+            skipLabel: 'Skip',
+            backLabel: 'Back',
+            nextLabel: 'Next',
+            doneLabel: 'Done',
+          ),
+        ),
+      ),
+    );
+
+    await tester.pump();
+
+    expect(
+        find.byKey(InteractiveTutorialOverlay.overlayRootKey), findsOneWidget);
+    expect(find.byKey(InteractiveTutorialOverlay.tooltipKey), findsOneWidget);
+    expect(find.byKey(InteractiveTutorialOverlay.highlightTapRegionKey),
+        findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('keeps rendering when target disappears after valid geometry',
+      (tester) async {
+    final targetKey = GlobalKey();
+    late StateSetter setHarnessState;
+    var showTarget = true;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: StatefulBuilder(
+            builder: (context, setState) {
+              setHarnessState = setState;
+              return Stack(
+                children: [
+                  if (showTarget)
+                    Center(
+                      child: SizedBox(
+                        key: targetKey,
+                        width: 48,
+                        height: 48,
+                      ),
+                    ),
+                  InteractiveTutorialOverlay(
+                    steps: <TutorialStepDefinition>[
+                      TutorialStepDefinition(
+                        targetKey: targetKey,
+                        title: 'Step',
+                        body: 'Body',
+                      ),
+                    ],
+                    currentIndex: 0,
+                    onNext: () {},
+                    onBack: () {},
+                    onSkip: () {},
+                    skipLabel: 'Skip',
+                    backLabel: 'Back',
+                    nextLabel: 'Next',
+                    doneLabel: 'Done',
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    expect(find.byKey(InteractiveTutorialOverlay.tooltipKey), findsOneWidget);
+
+    setHarnessState(() => showTarget = false);
+    await tester.pump();
+    await tester.pump();
+
+    expect(
+        find.byKey(InteractiveTutorialOverlay.overlayRootKey), findsOneWidget);
+    expect(find.byKey(InteractiveTutorialOverlay.tooltipKey), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('uses cached target rect when current target geometry is invalid',
+      (tester) async {
+    final targetKey = GlobalKey();
+    late StateSetter setHarnessState;
+    var showTarget = true;
+    var targetTapCount = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: StatefulBuilder(
+            builder: (context, setState) {
+              setHarnessState = setState;
+              return Stack(
+                children: [
+                  if (showTarget)
+                    Center(
+                      child: SizedBox(
+                        key: targetKey,
+                        width: 48,
+                        height: 48,
+                      ),
+                    ),
+                  InteractiveTutorialOverlay(
+                    steps: <TutorialStepDefinition>[
+                      TutorialStepDefinition(
+                        targetKey: targetKey,
+                        title: 'Step',
+                        body: 'Body',
+                        onTargetTap: () => targetTapCount += 1,
+                      ),
+                    ],
+                    currentIndex: 0,
+                    onNext: () {},
+                    onBack: () {},
+                    onSkip: () {},
+                    skipLabel: 'Skip',
+                    backLabel: 'Back',
+                    nextLabel: 'Next',
+                    doneLabel: 'Done',
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    final oldCenter = tester.getCenter(find.byKey(targetKey));
+
+    setHarnessState(() => showTarget = false);
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.byKey(InteractiveTutorialOverlay.highlightTapRegionKey),
+        findsOneWidget);
+    await tester.tapAt(oldCenter);
+    await tester.pump();
+    await tester.pump();
+
+    expect(targetTapCount, 1);
+  });
+
   testWidgets(
       'InteractiveTutorialOverlay does not invoke target from outside highlight',
       (tester) async {

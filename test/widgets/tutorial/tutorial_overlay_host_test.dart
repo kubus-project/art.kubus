@@ -334,10 +334,13 @@ void main() {
       ],
     );
 
-    await tester.pump();
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     expect(find.byKey(InteractiveTutorialOverlay.tooltipKey), findsOneWidget);
+    expect(
+      find.byKey(InteractiveTutorialOverlay.highlightTapRegionKey),
+      findsOneWidget,
+    );
 
     final targetCenter = tester.getCenter(find.byKey(targetKey));
     await tester.tapAt(targetCenter);

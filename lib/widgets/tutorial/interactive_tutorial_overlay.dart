@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 
 import '../../utils/design_tokens.dart';
 import '../glass_components.dart';
@@ -42,7 +43,7 @@ class TutorialStepDefinition {
 
 /// Full-screen coach-mark overlay that highlights a target widget (via [GlobalKey])
 /// and renders a liquid-glass tooltip card with step controls.
-class InteractiveTutorialOverlay extends StatelessWidget {
+class InteractiveTutorialOverlay extends StatefulWidget {
   final List<TutorialStepDefinition> steps;
   final int currentIndex;
 
@@ -79,6 +80,61 @@ class InteractiveTutorialOverlay extends StatelessWidget {
   static const Key highlightTapRegionKey =
       ValueKey<String>('kubus_tutorial_highlight_tap_region');
 
+  @override
+  State<InteractiveTutorialOverlay> createState() =>
+      _InteractiveTutorialOverlayState();
+}
+
+class _InteractiveTutorialOverlayState extends State<InteractiveTutorialOverlay>
+    with WidgetsBindingObserver {
+  static const int _maxGeometryRetryCount = 30;
+
+  Rect? _lastValidTargetRectGlobal;
+  Rect? _lastValidTargetRectLocal;
+  int _geometryRetryCount = 0;
+  bool _geometryRetryScheduled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didUpdateWidget(covariant InteractiveTutorialOverlay oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.currentIndex != widget.currentIndex) {
+      _debugLog(
+        'stepChanged oldIndex=${oldWidget.currentIndex} '
+        'newIndex=${widget.currentIndex}; clearing cached geometry',
+      );
+      _lastValidTargetRectGlobal = null;
+      _lastValidTargetRectLocal = null;
+      _geometryRetryCount = 0;
+      _geometryRetryScheduled = false;
+    }
+  }
+
+  @override
+  void didChangeMetrics() {
+    _debugLog('didChangeMetrics: scheduling geometry refresh');
+    _scheduleGeometryRetry(reason: 'metrics');
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _debugLog('didChangeAppLifecycleState: state=$state');
+    if (state == AppLifecycleState.resumed) {
+      _scheduleGeometryRetry(reason: 'lifecycle-resumed');
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
   bool _isRectUsable(Rect rect) {
     if (!rect.left.isFinite ||
         !rect.top.isFinite ||
@@ -100,36 +156,64 @@ class InteractiveTutorialOverlay extends StatelessWidget {
 
   Rect? _targetRectGlobal(TutorialStepDefinition step) {
     final key = step.targetKey;
-    if (key == null) return null;
+    if (key == null) {
+      _debugLog('targetRect: no targetKey step="${step.title}"');
+      return null;
+    }
     final ctx = key.currentContext;
-    if (ctx == null || !ctx.mounted) return null;
+    if (ctx == null || !ctx.mounted) {
+      _debugLog(
+        'targetRect: missing context mounted=${ctx?.mounted} '
+        'step="${step.title}"',
+      );
+      return null;
+    }
 
     RenderObject? rawRender;
     try {
       rawRender = ctx.findRenderObject();
-    } catch (_) {
+    } catch (error) {
+      _debugLog('targetRect: findRenderObject failed error=$error');
       return null;
     }
     final render = rawRender;
-    if (render is! RenderBox) return null;
-    if (!render.attached) return null;
-    if (!render.hasSize) return null;
+    if (render is! RenderBox) {
+      _debugLog(
+          'targetRect: render is not RenderBox type=${render.runtimeType}');
+      return null;
+    }
+    if (!render.attached || !render.hasSize) {
+      _debugLog(
+        'targetRect: invalid render attached=${render.attached} '
+        'hasSize=${render.hasSize} step="${step.title}"',
+      );
+      return null;
+    }
     final size = render.size;
     if (!size.width.isFinite ||
         !size.height.isFinite ||
         size.width <= 0 ||
         size.height <= 0) {
+      _debugLog('targetRect: invalid size=$size step="${step.title}"');
       return null;
     }
 
     try {
       final offset = render.localToGlobal(Offset.zero);
-      if (!offset.dx.isFinite || !offset.dy.isFinite) return null;
+      if (!offset.dx.isFinite || !offset.dy.isFinite) {
+        _debugLog('targetRect: invalid offset=$offset step="${step.title}"');
+        return null;
+      }
       final rect = offset & size;
-      if (!_isRectUsable(rect)) return null;
+      if (!_isRectUsable(rect)) {
+        _debugLog('targetRect: unusable rect=$rect step="${step.title}"');
+        return null;
+      }
+      _debugLog('targetRect: valid global=$rect step="${step.title}"');
       return rect;
-    } catch (_) {
+    } catch (error) {
       // Web can briefly surface detached/invalid transforms during layout.
+      _debugLog('targetRect: localToGlobal failed error=$error');
       return null;
     }
   }
@@ -138,7 +222,13 @@ class InteractiveTutorialOverlay extends StatelessWidget {
     required Rect globalRect,
     required RenderBox overlayBox,
   }) {
-    if (!overlayBox.attached || !overlayBox.hasSize) return null;
+    if (!overlayBox.attached || !overlayBox.hasSize) {
+      _debugLog(
+        'overlayBox: invalid attached=${overlayBox.attached} '
+        'hasSize=${overlayBox.hasSize}',
+      );
+      return null;
+    }
 
     try {
       final topLeft = overlayBox.globalToLocal(globalRect.topLeft);
@@ -147,23 +237,65 @@ class InteractiveTutorialOverlay extends StatelessWidget {
           !topLeft.dy.isFinite ||
           !bottomRight.dx.isFinite ||
           !bottomRight.dy.isFinite) {
+        _debugLog(
+          'rectLocal: invalid points topLeft=$topLeft '
+          'bottomRight=$bottomRight',
+        );
         return null;
       }
       final rect = Rect.fromPoints(topLeft, bottomRight);
-      if (!_isRectUsable(rect)) return null;
+      if (!_isRectUsable(rect)) {
+        _debugLog('rectLocal: unusable rect=$rect');
+        return null;
+      }
       return rect;
-    } catch (_) {
+    } catch (error) {
+      _debugLog('rectLocal: conversion failed error=$error');
       return null;
     }
   }
 
+  void _scheduleGeometryRetry({required String reason}) {
+    if (!mounted) return;
+    if (_geometryRetryScheduled) return;
+    if (_geometryRetryCount >= _maxGeometryRetryCount) {
+      _debugLog(
+        'geometryRetry: max reached reason=$reason '
+        'count=$_geometryRetryCount',
+      );
+      return;
+    }
+    _geometryRetryScheduled = true;
+    _geometryRetryCount += 1;
+    _debugLog(
+      'geometryRetry: scheduled reason=$reason count=$_geometryRetryCount',
+    );
+    SchedulerBinding.instance.addPostFrameCallback((_) async {
+      await SchedulerBinding.instance.endOfFrame;
+      if (!mounted) return;
+      _geometryRetryScheduled = false;
+      _debugLog(
+        'geometryRetry: repaint reason=$reason count=$_geometryRetryCount',
+      );
+      setState(() {});
+    });
+    SchedulerBinding.instance.scheduleFrame();
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (steps.isEmpty) return const SizedBox.shrink();
-    if (currentIndex < 0 || currentIndex >= steps.length) {
+    if (widget.steps.isEmpty) {
+      _debugLog('build: returning shrink reason=empty-steps');
       return const SizedBox.shrink();
     }
-    final step = steps[currentIndex];
+    if (widget.currentIndex < 0 || widget.currentIndex >= widget.steps.length) {
+      _debugLog(
+        'build: returning shrink reason=invalid-index '
+        'index=${widget.currentIndex} steps=${widget.steps.length}',
+      );
+      return const SizedBox.shrink();
+    }
+    final step = widget.steps[widget.currentIndex];
     return LayoutBuilder(
       builder: (context, constraints) {
         final theme = Theme.of(context);
@@ -174,6 +306,9 @@ class InteractiveTutorialOverlay extends StatelessWidget {
             !size.height.isFinite ||
             size.width <= 0 ||
             size.height <= 0) {
+          _debugLog(
+            'build: returning shrink reason=invalid-layout-size size=$size',
+          );
           return const SizedBox.shrink();
         }
 
@@ -185,24 +320,53 @@ class InteractiveTutorialOverlay extends StatelessWidget {
             : null;
 
         final rectGlobal = _targetRectGlobal(step);
-        final rectLocal = (rectGlobal != null && overlayBox != null)
+        final currentRectLocal = (rectGlobal != null && overlayBox != null)
             ? _convertGlobalRectToLocal(
                 globalRect: rectGlobal,
                 overlayBox: overlayBox,
               )
             : null;
 
-        if (rectLocal == null && step.targetKey?.currentContext != null) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (!context.mounted) return;
-            (context as Element).markNeedsBuild();
-          });
+        Rect? rectLocal = currentRectLocal;
+        if (rectGlobal != null && currentRectLocal != null) {
+          _lastValidTargetRectGlobal = rectGlobal;
+          _lastValidTargetRectLocal = currentRectLocal;
+          _geometryRetryCount = 0;
+        } else if (_lastValidTargetRectGlobal != null && overlayBox != null) {
+          rectLocal = _convertGlobalRectToLocal(
+                globalRect: _lastValidTargetRectGlobal!,
+                overlayBox: overlayBox,
+              ) ??
+              _lastValidTargetRectLocal;
+          _debugLog(
+            'geometry: using cached rect global=$_lastValidTargetRectGlobal '
+            'local=$rectLocal',
+          );
+        } else if (_lastValidTargetRectLocal != null) {
+          rectLocal = _lastValidTargetRectLocal;
+          _debugLog('geometry: using cached local rect=$rectLocal');
+        }
+
+        final targetHasContext = step.targetKey?.currentContext != null;
+        final currentGeometryValid = rectGlobal != null &&
+            currentRectLocal != null &&
+            _isRectUsable(currentRectLocal);
+        if (!currentGeometryValid && targetHasContext) {
+          _scheduleGeometryRetry(reason: 'invalid-target-geometry');
         }
 
         // Expand the highlight a bit so it feels forgiving.
         final inflated = rectLocal?.inflate(10);
         final highlightRect =
             inflated != null && _isRectUsable(inflated) ? inflated : null;
+        _debugLog(
+          'buildGeometry index=${widget.currentIndex} step="${step.title}" '
+          'targetHasContext=$targetHasContext '
+          'overlayBoxValid=${overlayBox != null} '
+          'rectGlobalValid=${rectGlobal != null} '
+          'rectLocalValid=${rectLocal != null} '
+          'highlightValid=${highlightRect != null}',
+        );
 
         // Tooltip sizing/position.
         // Keep this reasonably narrow so it doesn't feel like a full-width banner,
@@ -210,6 +374,10 @@ class InteractiveTutorialOverlay extends StatelessWidget {
         const double tooltipMaxWidth = 340;
         final availableWidth = math.max(0.0, size.width - 24);
         if (!availableWidth.isFinite || availableWidth <= 0) {
+          _debugLog(
+            'build: returning shrink reason=invalid-available-width '
+            'availableWidth=$availableWidth',
+          );
           return const SizedBox.shrink();
         }
         final double tooltipWidth = math
@@ -274,16 +442,20 @@ class InteractiveTutorialOverlay extends StatelessWidget {
         final double tooltipY = rawTooltipY.isFinite
             ? rawTooltipY.clamp(minY, maxY).toDouble()
             : minY;
+        _debugLog(
+          'tooltip: x=$tooltipX y=$tooltipY width=$tooltipWidth '
+          'highlight=${highlightRect != null}',
+        );
 
-        final isLast = currentIndex == steps.length - 1;
-        final stepLabel = '${currentIndex + 1}/${steps.length}';
+        final isLast = widget.currentIndex == widget.steps.length - 1;
+        final stepLabel = '${widget.currentIndex + 1}/${widget.steps.length}';
 
         void handleTargetTap() {
           final onTargetTap = step.onTargetTap;
           final shouldAdvance = step.advanceOnTargetTap && !isLast;
           final shouldDismiss = step.dismissOnTargetTapWhenLast && isLast;
           _debugLog(
-            'targetTap index=$currentIndex step="${step.title}" '
+            'targetTap index=${widget.currentIndex} step="${step.title}" '
             'isLast=$isLast advanceOnTargetTap=${step.advanceOnTargetTap} '
             'dismissOnTargetTapWhenLast=${step.dismissOnTargetTapWhenLast} '
             'hasOnTargetTap=${onTargetTap != null} '
@@ -295,13 +467,13 @@ class InteractiveTutorialOverlay extends StatelessWidget {
           // mutate layout synchronously during the active tap sequence.
           WidgetsBinding.instance.addPostFrameCallback((_) {
             _debugLog(
-              'targetTapCallback index=$currentIndex step="${step.title}" '
+              'targetTapCallback index=${widget.currentIndex} step="${step.title}" '
               'callingOnTargetTap=${onTargetTap != null} '
               'callingOnNext=${shouldAdvance || shouldDismiss}',
             );
             onTargetTap?.call();
             if (shouldAdvance || shouldDismiss) {
-              onNext();
+              widget.onNext();
             }
           });
           WidgetsBinding.instance.scheduleFrame();
@@ -314,29 +486,30 @@ class InteractiveTutorialOverlay extends StatelessWidget {
 
         void handleSkipTap() {
           _debugLog(
-            'skipTap index=$currentIndex step="${step.title}" '
+            'skipTap index=${widget.currentIndex} step="${step.title}" '
             'isLast=$isLast willDismiss=true',
           );
-          onSkip();
+          widget.onSkip();
         }
 
         void handleBackTap() {
           _debugLog(
-            'backTap index=$currentIndex step="${step.title}" isLast=$isLast',
+            'backTap index=${widget.currentIndex} step="${step.title}" '
+            'isLast=$isLast',
           );
-          onBack();
+          widget.onBack();
         }
 
         void handleNextTap() {
           _debugLog(
-            '${isLast ? 'doneTap' : 'nextTap'} index=$currentIndex '
+            '${isLast ? 'doneTap' : 'nextTap'} index=${widget.currentIndex} '
             'step="${step.title}" isLast=$isLast willCallOnNext=true',
           );
-          onNext();
+          widget.onNext();
         }
 
         return SizedBox.expand(
-          key: overlayRootKey,
+          key: InteractiveTutorialOverlay.overlayRootKey,
           child: Stack(
             clipBehavior: Clip.none,
             children: [
@@ -357,7 +530,7 @@ class InteractiveTutorialOverlay extends StatelessWidget {
                 Positioned.fromRect(
                   rect: highlightRect,
                   child: GestureDetector(
-                    key: highlightTapRegionKey,
+                    key: InteractiveTutorialOverlay.highlightTapRegionKey,
                     behavior: HitTestBehavior.translucent,
                     onTap: handleTargetTap,
                     child: const SizedBox.expand(),
@@ -369,7 +542,7 @@ class InteractiveTutorialOverlay extends StatelessWidget {
                 top: safe.top + 10,
                 right: 12,
                 child: _GlassActionChip(
-                  label: skipLabel,
+                  label: widget.skipLabel,
                   onTap: handleSkipTap,
                 ),
               ),
@@ -380,15 +553,15 @@ class InteractiveTutorialOverlay extends StatelessWidget {
                 top: tooltipY,
                 width: tooltipWidth,
                 child: KeyedSubtree(
-                  key: tooltipKey,
+                  key: InteractiveTutorialOverlay.tooltipKey,
                   child: _TutorialTooltipCard(
                     title: step.title,
                     body: step.body,
                     icon: step.icon,
                     stepLabel: stepLabel,
-                    backLabel: backLabel,
-                    nextLabel: isLast ? doneLabel : nextLabel,
-                    showBack: currentIndex > 0,
+                    backLabel: widget.backLabel,
+                    nextLabel: isLast ? widget.doneLabel : widget.nextLabel,
+                    showBack: widget.currentIndex > 0,
                     onBack: handleBackTap,
                     onNext: handleNextTap,
                   ),

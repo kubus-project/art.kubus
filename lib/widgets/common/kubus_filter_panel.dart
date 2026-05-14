@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../utils/design_tokens.dart';
 import '../glass_components.dart';
+import '../map/kubus_map_glass_surface.dart';
 import 'kubus_glass_icon_button.dart';
 
 /// Shared glass shell for map filter/sort content.
@@ -29,6 +30,13 @@ class KubusFilterPanel extends StatelessWidget {
     this.cursor = SystemMouseCursors.basic,
     this.titleStyle,
     this.useGlassSurface = true,
+    this.useMapGlassSurface = false,
+    this.mapBlurPolicy = KubusMapBlurPolicy.allowCompactWeb,
+    this.overMapPlatformView = true,
+    this.backdropRegionId,
+    this.enablePlatformBackdropRegion = true,
+    this.isWebOverride,
+    this.platformBackdropHostAvailableOverride,
   });
 
   final String title;
@@ -47,6 +55,13 @@ class KubusFilterPanel extends StatelessWidget {
   final MouseCursor cursor;
   final TextStyle? titleStyle;
   final bool useGlassSurface;
+  final bool useMapGlassSurface;
+  final KubusMapBlurPolicy mapBlurPolicy;
+  final bool overMapPlatformView;
+  final String? backdropRegionId;
+  final bool enablePlatformBackdropRegion;
+  final bool? isWebOverride;
+  final bool? platformBackdropHostAvailableOverride;
 
   @override
   Widget build(BuildContext context) {
@@ -101,7 +116,24 @@ class KubusFilterPanel extends StatelessWidget {
     );
 
     Widget panel;
-    if (useGlassSurface) {
+    if (useMapGlassSurface) {
+      panel = buildKubusMapGlassSurface(
+        context: context,
+        kind: KubusMapGlassSurfaceKind.panel,
+        margin: margin,
+        padding: EdgeInsets.zero,
+        borderRadius: BorderRadius.circular(borderRadius),
+        tintBase: scheme.surface,
+        blurPolicy: mapBlurPolicy,
+        overMapPlatformView: overMapPlatformView,
+        backdropRegionId: backdropRegionId,
+        enablePlatformBackdropRegion: enablePlatformBackdropRegion,
+        isWebOverride: isWebOverride,
+        platformBackdropHostAvailableOverride:
+            platformBackdropHostAvailableOverride,
+        child: panelBody,
+      );
+    } else if (useGlassSurface) {
       panel = LiquidGlassPanel(
         margin: margin,
         padding: EdgeInsets.zero,
