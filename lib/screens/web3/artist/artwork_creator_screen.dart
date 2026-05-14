@@ -1692,10 +1692,20 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
   Widget _buildDesktopSidebar({
     required ArtworkDraftsProvider drafts,
     required ArtworkDraftState draft,
-    required Color accent,
     required AppLocalizations l10n,
   }) {
     final scheme = Theme.of(context).colorScheme;
+    const contextType = DesktopCreatorContextType.artwork;
+    final arColors = resolveDesktopCreatorSectionColors(
+      context,
+      contextType: contextType,
+      semantic: DesktopCreatorSectionSemantic.ar,
+    );
+    final collaborationColors = resolveDesktopCreatorSectionColors(
+      context,
+      contextType: contextType,
+      semantic: DesktopCreatorSectionSemantic.collaboration,
+    );
     final isSignedIn = context.read<ProfileProvider>().isSignedIn == true;
     final persistedArtwork = _createdArtwork;
     final artworkId = persistedArtwork?.id ?? '';
@@ -1761,7 +1771,8 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
               : (persistedArtwork.isPublic
                   ? Icons.public_outlined
                   : Icons.bookmark_outline),
-          accentColor: accent,
+          contextType: contextType,
+          semantic: DesktopCreatorSectionSemantic.status,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1769,11 +1780,8 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                 label: persistedArtwork == null
                     ? 'Draft'
                     : (persistedArtwork.isPublic ? 'Live' : 'Draft saved'),
-                color: persistedArtwork == null
-                    ? scheme.primary
-                    : (persistedArtwork.isPublic
-                        ? scheme.primary
-                        : scheme.tertiary),
+                contextType: contextType,
+                semantic: DesktopCreatorSectionSemantic.status,
               ),
               const SizedBox(height: KubusSpacing.sm),
               DesktopCreatorSummaryRow(
@@ -1806,10 +1814,11 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
           title: 'Readiness',
           subtitle: 'Complete the essentials before you publish.',
           icon: Icons.fact_check_outlined,
-          accentColor: accent,
+          contextType: contextType,
+          semantic: DesktopCreatorSectionSemantic.readiness,
           child: DesktopCreatorReadinessChecklist(
             items: readyItems,
-            accentColor: accent,
+            contextType: contextType,
           ),
         ),
         const SizedBox(height: KubusSpacing.md),
@@ -1817,7 +1826,8 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
           title: 'Quick actions',
           subtitle: 'Keep the workflow inside this creator.',
           icon: Icons.flash_on_outlined,
-          accentColor: accent,
+          contextType: contextType,
+          semantic: DesktopCreatorSectionSemantic.actions,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -1847,11 +1857,40 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                       }
                     : null,
                 icon: const Icon(Icons.qr_code_2_outlined),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: arColors.accent,
+                  side: BorderSide(color: arColors.border),
+                ),
                 label: Text(
                   canUseAr
                       ? l10n.artworkCreatorOpenArSetup
                       : l10n.artworkCreatorSaveFirstToUnlockAr,
                 ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: KubusSpacing.md),
+        DesktopCreatorSidebarSection(
+          title: 'Media',
+          subtitle: 'Cover and gallery assets for this artwork.',
+          icon: Icons.perm_media_outlined,
+          contextType: contextType,
+          semantic: DesktopCreatorSectionSemantic.media,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              DesktopCreatorSummaryRow(
+                label: 'Cover',
+                value: hasCover ? 'Ready' : 'Missing',
+                icon: Icons.image_outlined,
+              ),
+              DesktopCreatorSummaryRow(
+                label: 'Gallery',
+                value: hasGallery
+                    ? '${draft.gallery.length} item(s)'
+                    : 'No supporting media',
+                icon: Icons.collections_outlined,
               ),
             ],
           ),
@@ -1872,18 +1911,20 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
               ? _buildDraftCollaborationSection(
                   drafts: drafts,
                   draft: draft,
-                  accent: accent,
+                  accent: collaborationColors.accent,
                   compact: true,
                 )
               : null,
-          accentColor: accent,
+          contextType: contextType,
+          sectionColors: collaborationColors,
         ),
         const SizedBox(height: KubusSpacing.md),
         DesktopCreatorSidebarSection(
           title: 'Art direction',
           subtitle: 'What the creator already knows about this piece.',
           icon: Icons.auto_awesome_outlined,
-          accentColor: accent,
+          contextType: contextType,
+          semantic: DesktopCreatorSectionSemantic.ar,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1917,7 +1958,6 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final accent = KubusColorRoles.of(context).web3ArtistStudioAccent;
-    final scheme = Theme.of(context).colorScheme;
     final shellScope = DesktopShellScope.of(context);
 
     return Consumer<ArtworkDraftsProvider>(
@@ -2000,11 +2040,8 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                   : (_createdArtwork!.isPublic
                       ? l10n.commonPublished
                       : l10n.artworkCreatorDraftSavedBadge),
-              color: _createdArtwork == null
-                  ? accent
-                  : (_createdArtwork!.isPublic
-                      ? scheme.primary
-                      : scheme.tertiary),
+              contextType: DesktopCreatorContextType.artwork,
+              semantic: DesktopCreatorSectionSemantic.status,
             ),
             sidebarAccentColor: accent,
             actions: [
@@ -2028,7 +2065,6 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
             sidebar: _buildDesktopSidebar(
               drafts: drafts,
               draft: draft,
-              accent: accent,
               l10n: l10n,
             ),
           );

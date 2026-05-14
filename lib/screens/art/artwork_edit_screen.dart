@@ -19,6 +19,7 @@ import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
 import '../../utils/artwork_media_resolver.dart';
 import '../../utils/artwork_navigation.dart';
+import '../../utils/kubus_color_roles.dart';
 import '../../utils/wallet_utils.dart';
 import '../../widgets/creator/creator_kit.dart';
 import '../../widgets/collaboration_panel.dart';
@@ -363,6 +364,7 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
         (ArtworkMediaResolver.resolveCover(artwork: art) ?? '').isNotEmpty;
     final hasAr = !AppConfig.enableARViewer ||
         (_arEnabled && _arScaleController.text.trim().isNotEmpty);
+    const contextType = DesktopCreatorContextType.artwork;
 
     final readinessItems = <DesktopCreatorReadinessItem>[
       DesktopCreatorReadinessItem(
@@ -395,8 +397,11 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
           title: l10n.collectionCreatorReadinessTitle,
           subtitle: l10n.commonEdit,
           icon: Icons.fact_check_outlined,
+          contextType: contextType,
+          semantic: DesktopCreatorSectionSemantic.readiness,
           child: DesktopCreatorReadinessChecklist(
             items: readinessItems,
+            contextType: contextType,
           ),
         ),
         const SizedBox(height: KubusSpacing.md),
@@ -404,6 +409,8 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
           title: l10n.commonActions,
           subtitle: l10n.commonSave,
           icon: Icons.save_outlined,
+          contextType: contextType,
+          semantic: DesktopCreatorSectionSemantic.actions,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -441,6 +448,7 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
             enabled: true,
             lockedMessage: l10n.collabPanelLoadFailed,
             myRole: _resolveCurrentCollabRole(art),
+            contextType: contextType,
           ),
         ],
       ],
@@ -995,6 +1003,7 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
           ),
         ],
         mainContent: content,
+        sidebarAccentColor: KubusColorRoles.of(context).web3ArtistStudioAccent,
         sidebar: _buildDesktopSidebar(l10n, art),
       );
     }

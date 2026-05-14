@@ -191,9 +191,10 @@ class _EventCreatorState extends State<EventCreator>
   Widget _buildDesktopSidebar(AppLocalizations l10n) {
     final scheme = Theme.of(context).colorScheme;
     final institutionProvider = context.watch<InstitutionProvider>();
-    final selectedInstitution = _institutionId == null || _institutionId!.isEmpty
-        ? institutionProvider.selectedInstitution
-        : institutionProvider.getInstitutionById(_institutionId!);
+    final selectedInstitution =
+        _institutionId == null || _institutionId!.isEmpty
+            ? institutionProvider.selectedInstitution
+            : institutionProvider.getInstitutionById(_institutionId!);
     final created = _createdEvent;
     final createdId = created?.id ?? '';
     final hasInstitution = selectedInstitution != null;
@@ -203,7 +204,7 @@ class _EventCreatorState extends State<EventCreator>
     final hasCapacity = _capacityController.text.trim().isNotEmpty;
     final collabEnabled =
         AppConfig.isFeatureEnabled('collabInvites') && createdId.isNotEmpty;
-    final accent = KubusColorRoles.of(context).web3InstitutionAccent;
+    const contextType = DesktopCreatorContextType.event;
 
     final readyItems = <DesktopCreatorReadinessItem>[
       DesktopCreatorReadinessItem(
@@ -248,16 +249,19 @@ class _EventCreatorState extends State<EventCreator>
           subtitle: created == null
               ? l10n.eventCreatorStatusDraftSubtitle
               : l10n.eventCreatorStatusSavedSubtitle,
-          icon: created == null ? Icons.edit_outlined : Icons.event_available_outlined,
-          accentColor: accent,
+          icon: created == null
+              ? Icons.edit_outlined
+              : Icons.event_available_outlined,
+          contextType: contextType,
+          semantic: DesktopCreatorSectionSemantic.status,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               CreatorStatusBadge(
-                label: created == null
-                    ? l10n.commonDraft
-                    : l10n.commonSavedToast,
-                color: KubusColorRoles.of(context).web3InstitutionAccent,
+                label:
+                    created == null ? l10n.commonDraft : l10n.commonSavedToast,
+                contextType: contextType,
+                semantic: DesktopCreatorSectionSemantic.status,
               ),
               const SizedBox(height: KubusSpacing.sm),
               DesktopCreatorSummaryRow(
@@ -276,9 +280,7 @@ class _EventCreatorState extends State<EventCreator>
               ),
               DesktopCreatorSummaryRow(
                 label: l10n.eventCreatorSummaryRegistration,
-                value: _allowRegistration
-                    ? l10n.commonEnabled
-                    : l10n.commonOff,
+                value: _allowRegistration ? l10n.commonEnabled : l10n.commonOff,
                 icon: Icons.how_to_reg_outlined,
               ),
             ],
@@ -286,13 +288,29 @@ class _EventCreatorState extends State<EventCreator>
         ),
         const SizedBox(height: KubusSpacing.md),
         DesktopCreatorSidebarSection(
+          title: l10n.eventCreatorReadyInstitutionLabel,
+          subtitle: selectedInstitution?.name ??
+              l10n.eventCreatorReadyInstitutionPending,
+          icon: Icons.apartment_outlined,
+          contextType: contextType,
+          semantic: DesktopCreatorSectionSemantic.summary,
+          child: DesktopCreatorSummaryRow(
+            label: l10n.eventCreatorReadyInstitutionLabel,
+            value: selectedInstitution?.name ??
+                l10n.eventCreatorReadyInstitutionPending,
+            icon: Icons.verified_outlined,
+          ),
+        ),
+        const SizedBox(height: KubusSpacing.md),
+        DesktopCreatorSidebarSection(
           title: l10n.eventCreatorReadinessTitle,
           subtitle: l10n.eventCreatorReadinessSubtitle,
           icon: Icons.fact_check_outlined,
-          accentColor: accent,
+          contextType: contextType,
+          semantic: DesktopCreatorSectionSemantic.readiness,
           child: DesktopCreatorReadinessChecklist(
             items: readyItems,
-            accentColor: accent,
+            contextType: contextType,
           ),
         ),
         const SizedBox(height: KubusSpacing.md),
@@ -300,7 +318,8 @@ class _EventCreatorState extends State<EventCreator>
           title: l10n.eventCreatorQuickActionsTitle,
           subtitle: l10n.eventCreatorQuickActionsSubtitle,
           icon: Icons.flash_on_outlined,
-          accentColor: accent,
+          contextType: contextType,
+          semantic: DesktopCreatorSectionSemantic.actions,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -308,7 +327,9 @@ class _EventCreatorState extends State<EventCreator>
                 onPressed: _submitting
                     ? null
                     : (_currentStep < 3 ? _nextStep : _createEvent),
-                icon: Icon(_currentStep < 3 ? Icons.arrow_forward : Icons.save_outlined),
+                icon: Icon(_currentStep < 3
+                    ? Icons.arrow_forward
+                    : Icons.save_outlined),
                 label: Text(_currentStep < 3
                     ? l10n.eventCreatorQuickActionNextStep
                     : (created == null
@@ -345,7 +366,7 @@ class _EventCreatorState extends State<EventCreator>
           entityId: createdId,
           enabled: collabEnabled,
           lockedMessage: l10n.eventCreatorCollaborationLockedMessage,
-          accentColor: accent,
+          contextType: contextType,
         ),
       ],
     );
@@ -434,7 +455,7 @@ class _EventCreatorState extends State<EventCreator>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-              _buildSectionTitle(l10n.eventCreatorBasicsTitle),
+            _buildSectionTitle(l10n.eventCreatorBasicsTitle),
             const SizedBox(height: KubusSpacing.lg),
             _buildInstitutionSelector(),
             const SizedBox(height: KubusSpacing.md),
@@ -654,36 +675,38 @@ class _EventCreatorState extends State<EventCreator>
           Text(
             _descriptionController.text.isNotEmpty
                 ? _descriptionController.text
-              : l10n.eventCreatorDescriptionPlaceholder,
+                : l10n.eventCreatorDescriptionPlaceholder,
             style: KubusTextStyles.detailBody.copyWith(
               color: scheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
           const SizedBox(height: KubusSpacing.md),
-            _buildReviewItem(l10n.eventCreatorReviewTypeLabel, _eventTypeLabel(_eventType, l10n)),
-            _buildReviewItem(l10n.eventCreatorReviewCategoryLabel, _categoryLabel(_category, l10n)),
+          _buildReviewItem(l10n.eventCreatorReviewTypeLabel,
+              _eventTypeLabel(_eventType, l10n)),
+          _buildReviewItem(l10n.eventCreatorReviewCategoryLabel,
+              _categoryLabel(_category, l10n)),
           _buildReviewItem(
               l10n.eventCreatorReviewLocationLabel,
               _locationController.text.isNotEmpty
                   ? _locationController.text
-                : l10n.eventCreatorLocationLabel),
-            _buildReviewItem(l10n.eventCreatorReviewDateLabel, _formatDateRange(l10n)),
-            _buildReviewItem(l10n.eventCreatorReviewTimeLabel, _formatTimeRange(l10n)),
+                  : l10n.eventCreatorLocationLabel),
+          _buildReviewItem(
+              l10n.eventCreatorReviewDateLabel, _formatDateRange(l10n)),
+          _buildReviewItem(
+              l10n.eventCreatorReviewTimeLabel, _formatTimeRange(l10n)),
           _buildReviewItem(
               l10n.eventCreatorReviewCapacityLabel,
               _capacityController.text.isNotEmpty
                   ? _capacityController.text
-                : '0'),
+                  : '0'),
           _buildReviewItem(
               l10n.eventCreatorReviewPriceLabel,
               _priceController.text.isNotEmpty
                   ? '\$${_priceController.text}'
-                : l10n.commonFree),
-            _buildReviewItem(
-              l10n.eventCreatorReviewPublicLabel,
+                  : l10n.commonFree),
+          _buildReviewItem(l10n.eventCreatorReviewPublicLabel,
               _isPublic ? l10n.commonEnabled : l10n.commonDisabled),
-          _buildReviewItem(
-              l10n.eventCreatorReviewRegistrationLabel,
+          _buildReviewItem(l10n.eventCreatorReviewRegistrationLabel,
               _allowRegistration ? l10n.commonEnabled : l10n.commonDisabled),
         ],
       ),
@@ -946,7 +969,8 @@ class _EventCreatorState extends State<EventCreator>
                 Text(
                   date != null
                       ? MaterialLocalizations.of(context).formatShortDate(date)
-                      : AppLocalizations.of(context)!.eventCreatorSelectDateLabel,
+                      : AppLocalizations.of(context)!
+                          .eventCreatorSelectDateLabel,
                   style: TextStyle(
                     color: date != null
                         ? scheme.onSurface
@@ -994,7 +1018,8 @@ class _EventCreatorState extends State<EventCreator>
                 Text(
                   time != null
                       ? time.format(context)
-                      : AppLocalizations.of(context)!.eventCreatorSelectTimeLabel,
+                      : AppLocalizations.of(context)!
+                          .eventCreatorSelectTimeLabel,
                   style: TextStyle(
                     color: time != null
                         ? scheme.onSurface
@@ -1216,7 +1241,8 @@ class _EventCreatorState extends State<EventCreator>
             _isEditing
                 ? l10n.eventCreatorEventUpdatedTitle
                 : l10n.eventCreatorEventCreatedTitle,
-            style: TextStyle(color: Theme.of(dialogContext).colorScheme.onSurface),
+            style:
+                TextStyle(color: Theme.of(dialogContext).colorScheme.onSurface),
           ),
           content: Text(
             _isEditing
@@ -1318,7 +1344,9 @@ class _EventCreatorState extends State<EventCreator>
   }
 
   String _formatDateRange(AppLocalizations l10n) {
-    if (_startDate == null || _endDate == null) return l10n.eventCreatorNotSelectedLabel;
+    if (_startDate == null || _endDate == null) {
+      return l10n.eventCreatorNotSelectedLabel;
+    }
     final localizations = MaterialLocalizations.of(context);
     if (_startDate == _endDate) {
       return localizations.formatShortDate(_startDate!);
@@ -1327,7 +1355,9 @@ class _EventCreatorState extends State<EventCreator>
   }
 
   String _formatTimeRange(AppLocalizations l10n) {
-    if (_startTime == null || _endTime == null) return l10n.eventCreatorNotSelectedLabel;
+    if (_startTime == null || _endTime == null) {
+      return l10n.eventCreatorNotSelectedLabel;
+    }
     return '${_startTime!.format(context)} - ${_endTime!.format(context)}';
   }
 
@@ -1475,7 +1505,8 @@ class _EventCreatorState extends State<EventCreator>
         content: Text(
           l10n.eventCreatorHelpBody,
           style: TextStyle(
-            color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7),
+            color:
+                Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7),
           ),
         ),
         actions: [

@@ -426,16 +426,13 @@ class _CollectionCreatorState extends State<CollectionCreator> {
           label: _createdCollectionId == null
               ? l10n.commonDraft
               : l10n.commonSavedToast,
-          color: _createdCollectionId == null
-              ? studioAccent
-              : Theme.of(context).colorScheme.primary,
+          contextType: DesktopCreatorContextType.collection,
+          semantic: DesktopCreatorSectionSemantic.status,
         ),
         sidebarAccentColor: studioAccent,
         mainContent: formBody,
         sidebar: _buildDesktopSidebar(
           l10n,
-          studioAccent,
-          walletAddress,
         ),
       );
     }
@@ -448,8 +445,6 @@ class _CollectionCreatorState extends State<CollectionCreator> {
 
   Widget _buildDesktopSidebar(
     AppLocalizations l10n,
-    Color accent,
-    String walletAddress,
   ) {
     final scheme = Theme.of(context).colorScheme;
     final createdId = _createdCollectionId ?? '';
@@ -458,6 +453,7 @@ class _CollectionCreatorState extends State<CollectionCreator> {
     final hasCover = _coverBytes != null;
     final hasBasics = _nameController.text.trim().isNotEmpty &&
         _descriptionController.text.trim().isNotEmpty;
+    const contextType = DesktopCreatorContextType.collection;
 
     final readyItems = <DesktopCreatorReadinessItem>[
       DesktopCreatorReadinessItem(
@@ -501,13 +497,15 @@ class _CollectionCreatorState extends State<CollectionCreator> {
               ? l10n.collectionCreatorStatusSavedSubtitle
               : l10n.collectionCreatorStatusDraftSubtitle,
           icon: created ? Icons.bookmark_added_outlined : Icons.edit_outlined,
-          accentColor: accent,
+          contextType: contextType,
+          semantic: DesktopCreatorSectionSemantic.status,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               CreatorStatusBadge(
                 label: created ? l10n.commonSavedToast : l10n.commonDraft,
-                color: created ? scheme.primary : accent,
+                contextType: contextType,
+                semantic: DesktopCreatorSectionSemantic.status,
               ),
               const SizedBox(height: KubusSpacing.sm),
               DesktopCreatorSummaryRow(
@@ -537,10 +535,11 @@ class _CollectionCreatorState extends State<CollectionCreator> {
           title: l10n.collectionCreatorReadinessTitle,
           subtitle: l10n.collectionCreatorReadinessSubtitle,
           icon: Icons.fact_check_outlined,
-          accentColor: accent,
+          contextType: contextType,
+          semantic: DesktopCreatorSectionSemantic.readiness,
           child: DesktopCreatorReadinessChecklist(
             items: readyItems,
-            accentColor: accent,
+            contextType: contextType,
           ),
         ),
         const SizedBox(height: KubusSpacing.md),
@@ -548,7 +547,8 @@ class _CollectionCreatorState extends State<CollectionCreator> {
           title: l10n.collectionCreatorQuickActionsTitle,
           subtitle: l10n.collectionCreatorQuickActionsSubtitle,
           icon: Icons.flash_on_outlined,
-          accentColor: accent,
+          contextType: contextType,
+          semantic: DesktopCreatorSectionSemantic.actions,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -581,6 +581,31 @@ class _CollectionCreatorState extends State<CollectionCreator> {
           ),
         ),
         const SizedBox(height: KubusSpacing.md),
+        DesktopCreatorSidebarSection(
+          title: l10n.collectionCreatorSummarySelectedArtworksLabel,
+          subtitle: l10n.collectionCreatorAddArtworksTitle,
+          icon: Icons.collections_bookmark_outlined,
+          contextType: contextType,
+          semantic: DesktopCreatorSectionSemantic.curation,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              DesktopCreatorSummaryRow(
+                label: l10n.collectionCreatorSummarySelectedArtworksLabel,
+                value: '$selectedCount',
+                icon: Icons.collections_outlined,
+              ),
+              DesktopCreatorSummaryRow(
+                label: l10n.commonCoverImage,
+                value: hasCover
+                    ? l10n.collectionCreatorReadyCoverComplete
+                    : l10n.collectionCreatorReadyCoverPending,
+                icon: Icons.image_outlined,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: KubusSpacing.md),
         DesktopCreatorCollaborationSection(
           title: l10n.collectionSettingsCollaboration,
           subtitle: created
@@ -590,7 +615,7 @@ class _CollectionCreatorState extends State<CollectionCreator> {
           entityId: createdId,
           enabled: created && AppConfig.isFeatureEnabled('collabInvites'),
           lockedMessage: l10n.collectionCreatorCollaborationLockedMessage,
-          accentColor: accent,
+          contextType: contextType,
         ),
       ],
     );

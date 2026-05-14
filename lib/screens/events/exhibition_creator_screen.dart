@@ -291,7 +291,8 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
           label: _createdExhibition == null
               ? l10n.commonDraft
               : l10n.commonSavedToast,
-          color: _createdExhibition == null ? scheme.primary : scheme.tertiary,
+          contextType: DesktopCreatorContextType.exhibition,
+          semantic: DesktopCreatorSectionSemantic.status,
         ),
         sidebarAccentColor: accent,
         mainContent: formBody,
@@ -315,7 +316,7 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
     final isPublic = widget.forceDraftOnly ? false : _published;
     final collabEnabled =
         AppConfig.isFeatureEnabled('collabInvites') && createdId.isNotEmpty;
-    final accent = KubusColorRoles.of(context).web3InstitutionAccent;
+    const contextType = DesktopCreatorContextType.exhibition;
 
     final readyItems = <DesktopCreatorReadinessItem>[
       DesktopCreatorReadinessItem(
@@ -359,14 +360,16 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
               ? l10n.exhibitionCreatorStatusDraftSubtitle
               : l10n.exhibitionCreatorStatusSavedSubtitle,
           icon: created == null ? Icons.edit_outlined : Icons.museum_outlined,
-          accentColor: accent,
+          contextType: contextType,
+          semantic: DesktopCreatorSectionSemantic.status,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               CreatorStatusBadge(
                 label:
                     created == null ? l10n.commonDraft : l10n.commonSavedToast,
-                color: created == null ? scheme.primary : scheme.tertiary,
+                contextType: contextType,
+                semantic: DesktopCreatorSectionSemantic.status,
               ),
               const SizedBox(height: KubusSpacing.sm),
               DesktopCreatorSummaryRow(
@@ -398,10 +401,11 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
           title: l10n.exhibitionCreatorReadinessTitle,
           subtitle: l10n.exhibitionCreatorReadinessSubtitle,
           icon: Icons.fact_check_outlined,
-          accentColor: accent,
+          contextType: contextType,
+          semantic: DesktopCreatorSectionSemantic.readiness,
           child: DesktopCreatorReadinessChecklist(
             items: readyItems,
-            accentColor: accent,
+            contextType: contextType,
           ),
         ),
         const SizedBox(height: KubusSpacing.md),
@@ -409,7 +413,8 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
           title: l10n.exhibitionCreatorQuickActionsTitle,
           subtitle: l10n.exhibitionCreatorQuickActionsSubtitle,
           icon: Icons.flash_on_outlined,
-          accentColor: accent,
+          contextType: contextType,
+          semantic: DesktopCreatorSectionSemantic.actions,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -452,7 +457,7 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
           entityId: createdId,
           enabled: collabEnabled,
           lockedMessage: l10n.exhibitionCreatorCollaborationLockedMessage,
-          accentColor: accent,
+          contextType: contextType,
         ),
       ],
     );

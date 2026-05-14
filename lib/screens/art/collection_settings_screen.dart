@@ -20,6 +20,7 @@ import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
 import '../../utils/creator_shell_navigation.dart';
 import '../../utils/design_tokens.dart';
+import '../../utils/kubus_color_roles.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../utils/wallet_utils.dart';
 import '../desktop/desktop_shell.dart';
@@ -522,6 +523,8 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen> {
           subtitle: l10n.collectionSettingsTitle,
           actions: subjectActions,
         );
+        final identityAccent =
+            KubusColorRoles.of(context).web3ArtistStudioAccent;
 
         final body = _buildMainBody(context, collection, canEdit);
         if (widget.embedded) {
@@ -539,8 +542,10 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen> {
             actions: [actionsButton],
             headerBadge: CreatorStatusBadge(
               label: l10n.collectionCreatorStatusSavedSubtitle,
-              color: Theme.of(context).colorScheme.primary,
+              contextType: DesktopCreatorContextType.collection,
+              semantic: DesktopCreatorSectionSemantic.status,
             ),
+            sidebarAccentColor: identityAccent,
             mainContent: body,
             sidebar: _buildSidebar(context, collection, canEdit),
           );
@@ -563,6 +568,11 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen> {
   ) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
+    final actionColors = resolveDesktopCreatorSectionColors(
+      context,
+      contextType: DesktopCreatorContextType.collection,
+      semantic: DesktopCreatorSectionSemantic.actions,
+    );
     final coverUrl = _pickedCoverBytes == null
         ? MediaUrlResolver.resolveDisplayUrl(collection.thumbnailUrl)
         : null;
@@ -740,7 +750,7 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen> {
             primaryLoading: _saving,
             secondaryLabel: l10n.commonCancel,
             onSecondary: () => Navigator.of(context).maybePop(),
-            accentColor: scheme.primary,
+            accentColor: actionColors.accent,
           ),
         ],
       ),
@@ -754,6 +764,12 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen> {
   ) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
+    const contextType = DesktopCreatorContextType.collection;
+    final collaborationColors = resolveDesktopCreatorSectionColors(
+      context,
+      contextType: contextType,
+      semantic: DesktopCreatorSectionSemantic.collaboration,
+    );
     final readinessItems = <DesktopCreatorReadinessItem>[
       DesktopCreatorReadinessItem(
         label: l10n.collectionCreatorReadyBasicsLabel,
@@ -789,14 +805,19 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen> {
             title: l10n.collectionCreatorReadinessTitle,
             subtitle: l10n.collectionCreatorReadinessSubtitle,
             icon: Icons.checklist_outlined,
-            accentColor: scheme.primary,
-            child: DesktopCreatorReadinessChecklist(items: readinessItems),
+            contextType: contextType,
+            semantic: DesktopCreatorSectionSemantic.readiness,
+            child: DesktopCreatorReadinessChecklist(
+              items: readinessItems,
+              contextType: contextType,
+            ),
           ),
           const SizedBox(height: KubusSpacing.lg),
           DesktopCreatorSubjectActionsSection(
             title: l10n.collectionSettingsTitle,
             subtitle: l10n.commonActions,
-            accentColor: scheme.primary,
+            contextType: contextType,
+            semantic: DesktopCreatorSectionSemantic.actions,
             actions: [
               SubjectOptionsAction(
                 id: 'open',
@@ -842,7 +863,8 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen> {
             title: l10n.collectionCreatorQuickActionsTitle,
             subtitle: l10n.collectionCreatorQuickActionsSubtitle,
             icon: Icons.flash_on_outlined,
-            accentColor: scheme.secondary,
+            contextType: contextType,
+            semantic: DesktopCreatorSectionSemantic.actions,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -870,7 +892,8 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen> {
             title: l10n.collectionCreatorSummaryIdLabel,
             subtitle: l10n.collectionCreatorSummarySelectedArtworksLabel,
             icon: Icons.info_outline,
-            accentColor: scheme.tertiary,
+            contextType: contextType,
+            semantic: DesktopCreatorSectionSemantic.summary,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -907,16 +930,20 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen> {
               entityId: collection.id,
               enabled: canEdit,
               lockedMessage: l10n.collectionCreatorCollaborationLockedMessage,
+              contextType: contextType,
             )
           else
             DesktopCreatorSidebarSection(
               title: l10n.collectionSettingsCollaboration,
               subtitle: l10n.collectionCreatorCollaborationLockedSubtitle,
               icon: Icons.group_off_outlined,
-              accentColor: scheme.tertiary,
+              contextType: contextType,
+              semantic: DesktopCreatorSectionSemantic.collaboration,
+              sectionColors: collaborationColors,
               child: CreatorInfoBox(
                 text: l10n.collectionCreatorCollaborationLockedMessage,
                 icon: Icons.lock_outline,
+                accentColor: collaborationColors.accent,
               ),
             ),
         ],

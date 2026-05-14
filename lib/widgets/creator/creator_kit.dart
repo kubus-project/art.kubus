@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
 import '../../utils/design_tokens.dart';
+import '../../utils/kubus_color_roles.dart';
 import '../collaboration_panel.dart';
 import '../glass_components.dart';
 import '../common/subject_options_sheet.dart';
@@ -12,6 +13,128 @@ import '../common/subject_options_sheet.dart';
 /// Every creator screen should use these widgets to ensure visual consistency
 /// across Artwork Creator, Exhibition Creator, Event Creator, Collection
 /// Creator, Marker Editor, and their respective managers.
+
+enum DesktopCreatorContextType {
+  artist,
+  institution,
+  artwork,
+  collection,
+  event,
+  exhibition,
+  editor,
+}
+
+enum DesktopCreatorSectionSemantic {
+  identity,
+  status,
+  readiness,
+  actions,
+  collaboration,
+  media,
+  ar,
+  visibility,
+  curation,
+  summary,
+  danger,
+}
+
+@immutable
+class DesktopCreatorSectionColors {
+  final Color accent;
+  final Color border;
+  final Color backgroundTint;
+  final Color iconColor;
+  final Color badgeColor;
+  final Color mutedAccent;
+  final Color completeAccent;
+  final Color incompleteAccent;
+
+  const DesktopCreatorSectionColors({
+    required this.accent,
+    required this.border,
+    required this.backgroundTint,
+    required this.iconColor,
+    required this.badgeColor,
+    required this.mutedAccent,
+    required this.completeAccent,
+    required this.incompleteAccent,
+  });
+}
+
+Color _desktopCreatorIdentityAccent(
+  DesktopCreatorContextType contextType,
+  KubusColorRoles roles,
+  ColorScheme scheme, {
+  Color? identityColor,
+}) {
+  if (identityColor != null) return identityColor;
+  switch (contextType) {
+    case DesktopCreatorContextType.artist:
+    case DesktopCreatorContextType.artwork:
+    case DesktopCreatorContextType.collection:
+      return roles.web3ArtistStudioAccent;
+    case DesktopCreatorContextType.institution:
+    case DesktopCreatorContextType.event:
+    case DesktopCreatorContextType.exhibition:
+      return roles.web3InstitutionAccent;
+    case DesktopCreatorContextType.editor:
+      return scheme.primary;
+  }
+}
+
+Color _desktopCreatorLegibleAccent(Color color, ColorScheme scheme) {
+  final blend = scheme.brightness == Brightness.light ? 0.16 : 0.06;
+  return Color.lerp(color, scheme.onSurface, blend) ?? color;
+}
+
+DesktopCreatorSectionColors resolveDesktopCreatorSectionColors(
+  BuildContext context, {
+  required DesktopCreatorContextType contextType,
+  required DesktopCreatorSectionSemantic semantic,
+  Color? identityColor,
+}) {
+  final scheme = Theme.of(context).colorScheme;
+  final roles = KubusColorRoles.of(context);
+  final identityAccent = _desktopCreatorIdentityAccent(
+    contextType,
+    roles,
+    scheme,
+    identityColor: identityColor,
+  );
+
+  final baseAccent = switch (semantic) {
+    DesktopCreatorSectionSemantic.identity => identityAccent,
+    DesktopCreatorSectionSemantic.status => identityAccent,
+    DesktopCreatorSectionSemantic.readiness => roles.positiveAction,
+    DesktopCreatorSectionSemantic.actions => roles.web3MarketplaceAccent,
+    DesktopCreatorSectionSemantic.collaboration => roles.statTeal,
+    DesktopCreatorSectionSemantic.media => roles.statAmber,
+    DesktopCreatorSectionSemantic.ar => roles.statBlue,
+    DesktopCreatorSectionSemantic.visibility => scheme.primary,
+    DesktopCreatorSectionSemantic.curation => roles.achievementGold,
+    DesktopCreatorSectionSemantic.summary => roles.statTeal,
+    DesktopCreatorSectionSemantic.danger => roles.negativeAction,
+  };
+
+  final accent = _desktopCreatorLegibleAccent(baseAccent, scheme);
+  final completeAccent =
+      _desktopCreatorLegibleAccent(roles.positiveAction, scheme);
+  final incompleteAccent =
+      _desktopCreatorLegibleAccent(roles.warningAction, scheme);
+  final tintAlpha = scheme.brightness == Brightness.dark ? 0.07 : 0.05;
+  final borderAlpha = scheme.brightness == Brightness.dark ? 0.28 : 0.22;
+
+  return DesktopCreatorSectionColors(
+    accent: accent,
+    border: accent.withValues(alpha: borderAlpha),
+    backgroundTint: accent.withValues(alpha: tintAlpha),
+    iconColor: accent,
+    badgeColor: accent,
+    mutedAccent: Color.lerp(accent, scheme.onSurface, 0.46) ?? accent,
+    completeAccent: completeAccent,
+    incompleteAccent: incompleteAccent,
+  );
+}
 
 // ---------------------------------------------------------------------------
 // CreatorGlassBody
@@ -452,6 +575,9 @@ class DesktopCreatorSubjectActionsSection extends StatelessWidget {
   final String? subtitle;
   final List<SubjectOptionsAction> actions;
   final Color? accentColor;
+  final DesktopCreatorContextType contextType;
+  final DesktopCreatorSectionSemantic semantic;
+  final DesktopCreatorSectionColors? sectionColors;
 
   const DesktopCreatorSubjectActionsSection({
     super.key,
@@ -459,18 +585,29 @@ class DesktopCreatorSubjectActionsSection extends StatelessWidget {
     required this.actions,
     this.subtitle,
     this.accentColor,
+    this.contextType = DesktopCreatorContextType.editor,
+    this.semantic = DesktopCreatorSectionSemantic.actions,
+    this.sectionColors,
   });
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
+    final colors = sectionColors ??
+        resolveDesktopCreatorSectionColors(
+          context,
+          contextType: contextType,
+          semantic: semantic,
+          identityColor: accentColor,
+        );
 
     return DesktopCreatorSidebarSection(
       title: title,
       subtitle: subtitle ?? l10n.commonActions,
       icon: Icons.more_horiz,
-      accentColor: accentColor ?? scheme.primary,
+      contextType: contextType,
+      semantic: semantic,
+      sectionColors: colors,
       child: SizedBox(
         width: double.infinity,
         child: OutlinedButton.icon(
@@ -481,6 +618,10 @@ class DesktopCreatorSubjectActionsSection extends StatelessWidget {
             actions: actions,
           ),
           icon: const Icon(Icons.more_horiz),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: colors.accent,
+            side: BorderSide(color: colors.border),
+          ),
           label: Text(l10n.commonActions),
         ),
       ),
@@ -918,32 +1059,46 @@ class CreatorInfoBox extends StatelessWidget {
 /// A small pill badge for status indicators (Draft, Public, Private, etc.).
 class CreatorStatusBadge extends StatelessWidget {
   final String label;
-  final Color color;
+  final Color? color;
+  final DesktopCreatorContextType contextType;
+  final DesktopCreatorSectionSemantic semantic;
+  final DesktopCreatorSectionColors? sectionColors;
 
   const CreatorStatusBadge({
     super.key,
     required this.label,
-    required this.color,
+    this.color,
+    this.contextType = DesktopCreatorContextType.editor,
+    this.semantic = DesktopCreatorSectionSemantic.status,
+    this.sectionColors,
   });
 
   @override
   Widget build(BuildContext context) {
+    final resolvedColor = color ??
+        sectionColors?.badgeColor ??
+        resolveDesktopCreatorSectionColors(
+          context,
+          contextType: contextType,
+          semantic: semantic,
+        ).badgeColor;
+
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: KubusSpacing.sm + KubusSpacing.xxs,
         vertical: KubusSpacing.xs + KubusSpacing.xxs,
       ),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.14),
+        color: resolvedColor.withValues(alpha: 0.14),
         borderRadius: BorderRadius.circular(KubusRadius.xl),
         border: Border.all(
-          color: color.withValues(alpha: 0.35),
+          color: resolvedColor.withValues(alpha: 0.35),
         ),
       ),
       child: Text(
         label,
         style: KubusTextStyles.detailLabel.copyWith(
-          color: color,
+          color: resolvedColor,
           fontWeight: FontWeight.w600,
         ),
       ),
@@ -1256,24 +1411,37 @@ class DesktopCreatorReadinessItem {
 class DesktopCreatorReadinessChecklist extends StatelessWidget {
   final List<DesktopCreatorReadinessItem> items;
   final Color? accentColor;
+  final DesktopCreatorContextType contextType;
+  final DesktopCreatorSectionColors? sectionColors;
 
   const DesktopCreatorReadinessChecklist({
     super.key,
     required this.items,
     this.accentColor,
+    this.contextType = DesktopCreatorContextType.editor,
+    this.sectionColors,
   });
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final accent = accentColor ?? scheme.primary;
+    final colors = sectionColors ??
+        resolveDesktopCreatorSectionColors(
+          context,
+          contextType: contextType,
+          semantic: DesktopCreatorSectionSemantic.readiness,
+          identityColor: accentColor,
+        );
     if (items.isEmpty) return const SizedBox.shrink();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: items.map((item) {
         final itemAccent =
-            item.complete ? accent : scheme.onSurface.withValues(alpha: 0.55);
+            item.complete ? colors.completeAccent : colors.incompleteAccent;
+        final labelColor = item.complete
+            ? scheme.onSurface
+            : scheme.onSurface.withValues(alpha: 0.82);
         return Padding(
           padding: const EdgeInsets.only(bottom: KubusSpacing.sm),
           child: Row(
@@ -1283,8 +1451,15 @@ class DesktopCreatorReadinessChecklist extends StatelessWidget {
                 width: KubusHeaderMetrics.actionHitArea - KubusSpacing.xs,
                 height: KubusHeaderMetrics.actionHitArea - KubusSpacing.xs,
                 decoration: BoxDecoration(
-                  color: itemAccent.withValues(alpha: 0.14),
+                  color: itemAccent.withValues(
+                    alpha: item.complete ? 0.14 : 0.10,
+                  ),
                   borderRadius: BorderRadius.circular(KubusRadius.md),
+                  border: Border.all(
+                    color: itemAccent.withValues(
+                      alpha: item.complete ? 0.22 : 0.18,
+                    ),
+                  ),
                 ),
                 child: Icon(
                   item.icon ??
@@ -1303,7 +1478,7 @@ class DesktopCreatorReadinessChecklist extends StatelessWidget {
                     Text(
                       item.label,
                       style: KubusTextStyles.detailLabel.copyWith(
-                        color: scheme.onSurface,
+                        color: labelColor,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -1335,6 +1510,9 @@ class DesktopCreatorSidebarSection extends StatelessWidget {
   final IconData? icon;
   final Widget? trailing;
   final Color? accentColor;
+  final DesktopCreatorContextType contextType;
+  final DesktopCreatorSectionSemantic semantic;
+  final DesktopCreatorSectionColors? sectionColors;
 
   const DesktopCreatorSidebarSection({
     super.key,
@@ -1344,18 +1522,27 @@ class DesktopCreatorSidebarSection extends StatelessWidget {
     this.icon,
     this.trailing,
     this.accentColor,
+    this.contextType = DesktopCreatorContextType.editor,
+    this.semantic = DesktopCreatorSectionSemantic.identity,
+    this.sectionColors,
   });
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final accent = accentColor ?? scheme.primary;
+    final colors = sectionColors ??
+        resolveDesktopCreatorSectionColors(
+          context,
+          contextType: contextType,
+          semantic: semantic,
+          identityColor: accentColor,
+        );
 
     return LiquidGlassCard(
       padding: const EdgeInsets.all(KubusSpacing.md),
       borderRadius: BorderRadius.circular(KubusRadius.lg),
       showBorder: true,
-      backgroundColor: accent.withValues(alpha: 0.04),
+      backgroundColor: colors.backgroundTint,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1367,10 +1554,11 @@ class DesktopCreatorSidebarSection extends StatelessWidget {
                   width: KubusHeaderMetrics.actionHitArea - KubusSpacing.xxs,
                   height: KubusHeaderMetrics.actionHitArea - KubusSpacing.xxs,
                   decoration: BoxDecoration(
-                    color: accent.withValues(alpha: 0.12),
+                    color: colors.iconColor.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(KubusRadius.md),
+                    border: Border.all(color: colors.border),
                   ),
-                  child: Icon(icon, color: accent, size: 18),
+                  child: Icon(icon, color: colors.iconColor, size: 18),
                 ),
                 const SizedBox(width: KubusSpacing.sm),
               ],
@@ -1424,6 +1612,8 @@ class DesktopCreatorCollaborationSection extends StatelessWidget {
   final String? myRole;
   final Widget? draftPanel;
   final Color? accentColor;
+  final DesktopCreatorContextType contextType;
+  final DesktopCreatorSectionColors? sectionColors;
 
   const DesktopCreatorCollaborationSection({
     super.key,
@@ -1436,16 +1626,26 @@ class DesktopCreatorCollaborationSection extends StatelessWidget {
     this.myRole,
     this.draftPanel,
     this.accentColor,
+    this.contextType = DesktopCreatorContextType.editor,
+    this.sectionColors,
   });
 
   @override
   Widget build(BuildContext context) {
-    final accent = accentColor ?? Theme.of(context).colorScheme.primary;
+    final colors = sectionColors ??
+        resolveDesktopCreatorSectionColors(
+          context,
+          contextType: contextType,
+          semantic: DesktopCreatorSectionSemantic.collaboration,
+          identityColor: accentColor,
+        );
     return DesktopCreatorSidebarSection(
       title: title,
       subtitle: subtitle,
       icon: Icons.group_add_outlined,
-      accentColor: accent,
+      contextType: contextType,
+      semantic: DesktopCreatorSectionSemantic.collaboration,
+      sectionColors: colors,
       child: draftPanel ??
           (enabled && entityId.trim().isNotEmpty
               ? CollaborationPanel(
@@ -1456,7 +1656,7 @@ class DesktopCreatorCollaborationSection extends StatelessWidget {
               : CreatorInfoBox(
                   text: lockedMessage,
                   icon: Icons.lock_outline,
-                  accentColor: accent,
+                  accentColor: colors.accent,
                 )),
     );
   }
