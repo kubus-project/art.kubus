@@ -63,7 +63,44 @@ class KubusMapMarkerOverlayLayer extends StatelessWidget {
   Widget build(BuildContext context) {
     final isVisible = content != null;
 
-    Widget layer = Stack(
+    final Widget overlaySwitcher = AnimatedSwitcher(
+      duration: const Duration(milliseconds: 240),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      transitionBuilder: (child, animation) {
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+          reverseCurve: Curves.easeInCubic,
+        );
+        final slide = Tween<Offset>(
+          begin: const Offset(0, 0.06),
+          end: Offset.zero,
+        ).animate(curved);
+        return FadeTransition(
+          opacity: curved,
+          child: SlideTransition(
+            position: slide,
+            child: ScaleTransition(
+              scale: Tween<double>(begin: 0.985, end: 1.0).animate(curved),
+              child: child,
+            ),
+          ),
+        );
+      },
+      child: !isVisible
+          ? const SizedBox.shrink(key: ValueKey('marker_overlay_hidden'))
+          // Use StackFit.expand to ensure bounded constraints for
+          // Positioned.fill children during AnimatedSwitcher transitions.
+          // Without this, web can throw "RenderBox was not laid out".
+          : Stack(
+              key: contentKey,
+              fit: StackFit.expand,
+              children: [content!],
+            ),
+    );
+
+    final layer = Stack(
       fit: StackFit.expand,
       children: [
         if (isVisible && blockMapGestures)
@@ -81,50 +118,12 @@ class KubusMapMarkerOverlayLayer extends StatelessWidget {
           ),
         if (underlay != null) underlay!,
         Positioned.fill(
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 240),
-            switchInCurve: Curves.easeOutCubic,
-            switchOutCurve: Curves.easeInCubic,
-            transitionBuilder: (child, animation) {
-              final curved = CurvedAnimation(
-                parent: animation,
-                curve: Curves.easeOutCubic,
-                reverseCurve: Curves.easeInCubic,
-              );
-              final slide = Tween<Offset>(
-                begin: const Offset(0, 0.06),
-                end: Offset.zero,
-              ).animate(curved);
-              return FadeTransition(
-                opacity: curved,
-                child: SlideTransition(
-                  position: slide,
-                  child: ScaleTransition(
-                    scale:
-                        Tween<double>(begin: 0.985, end: 1.0).animate(curved),
-                    child: child,
-                  ),
-                ),
-              );
-            },
-            child: !isVisible
-                ? const SizedBox.shrink(key: ValueKey('marker_overlay_hidden'))
-                // Use StackFit.expand to ensure bounded constraints for
-                // Positioned.fill children during AnimatedSwitcher transitions.
-                // Without this, web can throw "RenderBox was not laid out".
-                : Stack(
-                    key: contentKey,
-                    fit: StackFit.expand,
-                    children: [content!],
-                  ),
-          ),
+          child: isVisible
+              ? overlaySwitcher
+              : IgnorePointer(child: overlaySwitcher),
         ),
       ],
     );
-
-    if (cursor != null) {
-      layer = MouseRegion(cursor: cursor!, child: layer);
-    }
 
     return Positioned.fill(child: layer);
   }

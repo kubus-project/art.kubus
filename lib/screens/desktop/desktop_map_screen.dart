@@ -645,11 +645,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       return;
     }
 
-    final routeName =
-        ModalRoute.of(context)?.settings.name ?? 'DesktopMapScreen';
     controller.bindDriver(
       tutorialId: 'map',
-      ownerRoute: routeName,
+      ownerRoute: 'desktop-explore-map',
       driver: _mapTutorialCoordinator,
     );
   }

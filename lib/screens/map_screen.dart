@@ -807,10 +807,9 @@ class _MapScreenState extends State<MapScreen>
       return;
     }
 
-    final routeName = ModalRoute.of(context)?.settings.name ?? 'MapScreen';
     controller.bindDriver(
       tutorialId: 'map',
-      ownerRoute: routeName,
+      ownerRoute: 'mobile-map',
       driver: _mapTutorialCoordinator,
     );
   }
