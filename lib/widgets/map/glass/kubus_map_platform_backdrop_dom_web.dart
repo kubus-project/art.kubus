@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 import 'package:web/web.dart' as web;
 
@@ -25,24 +26,34 @@ void syncKubusMapPlatformBackdropDom({
   }
 
   final host = _ensureHost(mapElement);
-  final mapRect = mapElement.getBoundingClientRect();
+  final domMapRect = mapElement.getBoundingClientRect();
+  final mapRect = Rect.fromLTWH(
+    domMapRect.left.toDouble(),
+    domMapRect.top.toDouble(),
+    domMapRect.width.toDouble(),
+    domMapRect.height.toDouble(),
+  );
   final activeIds = <String>{};
 
   for (final region in regions) {
-    if (!region.visible ||
-        region.rect.width <= 0 ||
-        region.rect.height <= 0 ||
-        !region.rect.isFinite) {
+    final validation = validateKubusMapBackdropRegionForMap(
+      region: region,
+      mapRect: mapRect,
+    );
+    _debugLogRegionValidation(region, validation);
+    final resolvedRegion = validation.resolvedRegion;
+    if (resolvedRegion == null) {
+      _regionElements.remove(region.id)?.remove();
       continue;
     }
-    activeIds.add(region.id);
-    final element = _regionElements.putIfAbsent(region.id, () {
+    activeIds.add(resolvedRegion.id);
+    final element = _regionElements.putIfAbsent(resolvedRegion.id, () {
       final created = web.document.createElement('div') as web.HTMLDivElement;
       _applyRegionBaseStyle(created);
       host.appendChild(created);
       return created;
     });
-    _syncRegionElement(element, region, mapRect);
+    _syncRegionElement(element, resolvedRegion, domMapRect);
   }
 
   final staleIds = _regionElements.keys
@@ -146,4 +157,23 @@ String _cssBorderRadius(BorderRadius borderRadius) {
       '${topRight.toStringAsFixed(1)}px '
       '${bottomRight.toStringAsFixed(1)}px '
       '${bottomLeft.toStringAsFixed(1)}px';
+}
+
+void _debugLogRegionValidation(
+  KubusMapBackdropRegion region,
+  KubusMapBackdropRegionValidation validation,
+) {
+  if (!kDebugMode) return;
+  debugPrint(
+    'KubusMapPlatformBackdropDom: region=${region.id} '
+    'rect=${_formatRect(region.rect)} blurSigma=${region.blurSigma.toStringAsFixed(1)} '
+    'mapRect=${_formatRect(validation.mapRect)} '
+    'disposition=${validation.disposition.name} reason=${validation.reason}',
+  );
+}
+
+String _formatRect(Rect rect) {
+  if (!rect.isFinite) return rect.toString();
+  return '(${rect.left.toStringAsFixed(1)}, ${rect.top.toStringAsFixed(1)}, '
+      '${rect.width.toStringAsFixed(1)} x ${rect.height.toStringAsFixed(1)})';
 }

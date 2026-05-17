@@ -75,6 +75,9 @@ class KubusCreateMarkerPanel extends StatelessWidget {
       padding: EdgeInsets.zero,
       margin: EdgeInsets.zero,
       showBorder: false,
+      blurPolicy: KubusMapBlurPolicy.forceMapChromeWhenCapable,
+      backdropRegionId: 'desktop-create-marker-panel',
+      enablePlatformBackdropRegion: true,
       boxShadow: [
         BoxShadow(
           color: Theme.of(context).colorScheme.shadow.withValues(

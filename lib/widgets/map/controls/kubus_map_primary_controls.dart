@@ -557,6 +557,9 @@ class KubusMapPrimaryControls extends StatelessWidget {
         tintBase: scheme.surface,
         padding: resolvedPadding,
         margin: EdgeInsets.zero,
+        blurPolicy: KubusMapBlurPolicy.forceMapChromeWhenCapable,
+        backdropRegionId: 'desktop-map-primary-controls',
+        enablePlatformBackdropRegion: true,
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: rowChildren,
@@ -704,6 +707,8 @@ class _KubusSquareControlButton extends StatelessWidget {
               showBorder: false,
               boxShadow: const <BoxShadow>[],
               padding: EdgeInsets.zero,
+              blurPolicy: KubusMapBlurPolicy.forceMapChromeWhenCapable,
+              enablePlatformBackdropRegion: false,
               onTap: resolvedOnTap,
               child: tooltip.isEmpty
                   ? child

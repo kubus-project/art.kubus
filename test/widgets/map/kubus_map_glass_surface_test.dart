@@ -72,16 +72,19 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: Builder(
-          builder: (context) {
-            decision = resolveKubusMapBlurDecision(
-              context,
-              policy: KubusMapBlurPolicy.allowCompactWeb,
-              overMapPlatformView: true,
-              isWebOverride: true,
-            );
-            return const SizedBox.shrink();
-          },
+        home: MediaQuery(
+          data: const MediaQueryData(size: Size(390, 720)),
+          child: Builder(
+            builder: (context) {
+              decision = resolveKubusMapBlurDecision(
+                context,
+                policy: KubusMapBlurPolicy.allowCompactWeb,
+                overMapPlatformView: true,
+                isWebOverride: true,
+              );
+              return const SizedBox.shrink();
+            },
+          ),
         ),
       ),
     );
@@ -91,37 +94,107 @@ void main() {
       decision.strategy,
       KubusMapBackdropStrategy.platformViewSafeTintFallback,
     );
-    expect(decision.reason, 'platform-view-safe-tint-fallback');
+    expect(decision.reason, 'compact-web-platform-view-safe-tint-fallback');
     expect(decision.overMapPlatformView, isTrue);
     expect(decision.platformBackdropHostAvailable, isFalse);
   });
 
-  testWidgets('web over MapLibre uses platform host when available',
+  testWidgets('compact web automatic policy falls back safely over MapLibre',
       (tester) async {
     late KubusMapBlurDecision decision;
 
     await tester.pumpWidget(
       MaterialApp(
-        home: Builder(
-          builder: (context) {
-            decision = resolveKubusMapBlurDecision(
-              context,
-              policy: KubusMapBlurPolicy.allowCompactWeb,
-              overMapPlatformView: true,
-              isWebOverride: true,
-              platformBackdropHostAvailableOverride: true,
-            );
-            return const SizedBox.shrink();
-          },
+        home: MediaQuery(
+          data: const MediaQueryData(size: Size(390, 720)),
+          child: Builder(
+            builder: (context) {
+              decision = resolveKubusMapBlurDecision(
+                context,
+                policy: KubusMapBlurPolicy.automatic,
+                overMapPlatformView: true,
+                isWebOverride: true,
+                platformBackdropHostAvailableOverride: true,
+              );
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      ),
+    );
+
+    expect(decision.enabled, isFalse);
+    expect(
+      decision.strategy,
+      KubusMapBackdropStrategy.platformViewSafeTintFallback,
+    );
+    expect(decision.reason, 'compact-web-platform-view-safe-tint-fallback');
+  });
+
+  testWidgets(
+      'compact web over MapLibre keeps safe tint fallback when host is available',
+      (tester) async {
+    late KubusMapBlurDecision decision;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MediaQuery(
+          data: const MediaQueryData(size: Size(390, 720)),
+          child: Builder(
+            builder: (context) {
+              decision = resolveKubusMapBlurDecision(
+                context,
+                policy: KubusMapBlurPolicy.allowCompactWeb,
+                overMapPlatformView: true,
+                isWebOverride: true,
+                platformBackdropHostAvailableOverride: true,
+              );
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      ),
+    );
+
+    expect(decision.enabled, isFalse);
+    expect(
+      decision.strategy,
+      KubusMapBackdropStrategy.platformViewSafeTintFallback,
+    );
+    expect(decision.reason, 'compact-web-platform-view-safe-tint-fallback');
+    expect(decision.platformBackdropHostAvailable, isTrue);
+  });
+
+  testWidgets('desktop explicit map chrome policy uses platform host when available',
+      (tester) async {
+    late KubusMapBlurDecision decision;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MediaQuery(
+          data: const MediaQueryData(size: Size(1280, 900)),
+          child: Builder(
+            builder: (context) {
+              decision = resolveKubusMapBlurDecision(
+                context,
+                policy: KubusMapBlurPolicy.forceMapChromeWhenCapable,
+                overMapPlatformView: true,
+                isWebOverride: true,
+                platformBackdropHostAvailableOverride: true,
+              );
+              return const SizedBox.shrink();
+            },
+          ),
         ),
       ),
     );
 
     expect(decision.enabled, isTrue);
     expect(
-        decision.strategy, KubusMapBackdropStrategy.platformViewBackdropHost);
+      decision.strategy,
+      KubusMapBackdropStrategy.platformViewBackdropHost,
+    );
     expect(decision.reason, 'platform-view-backdrop-host');
-    expect(decision.platformBackdropHostAvailable, isTrue);
   });
 
   testWidgets('web unhealthy WebGL resolves to documented fallback',
@@ -252,6 +325,7 @@ void main() {
                 backdropRegionId: 'card',
                 isWebOverride: true,
                 platformBackdropHostAvailableOverride: true,
+                blurPolicy: KubusMapBlurPolicy.forceMapChromeWhenCapable,
                 child: const SizedBox(width: 80, height: 40),
               ),
             ),
@@ -305,6 +379,56 @@ void main() {
     expect(
       gradient.colors.first.a,
       closeTo(KubusGlassEffects.fallbackOpaqueOpacity, 0.001),
+    );
+  });
+
+  test('oversized map backdrop regions are rejected', () {
+    final validation = validateKubusMapBackdropRegionForMap(
+      mapRect: const Rect.fromLTWH(0, 0, 390, 720),
+      region: KubusMapBackdropRegion(
+        id: 'oversized-sheet',
+        rect: const Rect.fromLTWH(0, 0, 390, 500),
+        borderRadius: BorderRadius.circular(16),
+        blurSigma: 18,
+      ),
+    );
+
+    expect(validation.disposition, KubusMapBackdropRegionDisposition.rejected);
+    expect(validation.reason, 'region-area-too-large');
+    expect(validation.resolvedRegion, isNull);
+  });
+
+  test('small map backdrop regions are still accepted', () {
+    final validation = validateKubusMapBackdropRegionForMap(
+      mapRect: const Rect.fromLTWH(0, 0, 390, 720),
+      region: KubusMapBackdropRegion(
+        id: 'small-control',
+        rect: const Rect.fromLTWH(318, 420, 56, 56),
+        borderRadius: BorderRadius.circular(14),
+        blurSigma: 12,
+      ),
+    );
+
+    expect(validation.disposition, KubusMapBackdropRegionDisposition.accepted);
+    expect(validation.resolvedRegion?.id, 'small-control');
+  });
+
+  test('partially outside map backdrop regions are clamped', () {
+    final validation = validateKubusMapBackdropRegionForMap(
+      mapRect: const Rect.fromLTWH(0, 0, 390, 720),
+      region: KubusMapBackdropRegion(
+        id: 'edge-control',
+        rect: const Rect.fromLTWH(360, 700, 48, 48),
+        borderRadius: BorderRadius.circular(14),
+        blurSigma: 12,
+      ),
+    );
+
+    expect(validation.disposition, KubusMapBackdropRegionDisposition.clamped);
+    expect(validation.reason, 'clamped-to-map-bounds');
+    expect(
+      validation.resolvedRegion?.rect,
+      const Rect.fromLTWH(360, 700, 30, 20),
     );
   });
 }
