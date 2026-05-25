@@ -44,6 +44,8 @@ class TaskProvider extends ChangeNotifier {
                     kub8Reward: def.tokenReward.toDouble(),
                   ))
               .toList(growable: false);
+  bool get hasBackendAchievementDefinitions =>
+      _backendDefinitionsById.isNotEmpty;
   double get totalKub8Earned => _totalKub8Earned;
   bool get isLoading => _isLoading;
   String? get error => _error;
@@ -325,8 +327,8 @@ class TaskProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final summary = await achievement_svc.AchievementService()
-          .getMyAchievements();
+      final summary =
+          await achievement_svc.AchievementService().getMyAchievements();
       _applySummary(summary);
       _error = null;
     } catch (e) {

@@ -1825,6 +1825,12 @@
   "userProfileConversationOpenFailedToast": "Pogovora ni bilo mogoče odpreti.",
   "userProfileConversationOpenGenericErrorToast": "Pogovora ni bilo mogoče odpreti. Poskusi znova.",
   "userProfileAchievementsTitle": "Dosežki",
+  "profileBadgesVerificationTitle": "Značke in potrditve",
+  "profileBadgesVerificationSubtitle": "Preverjeni identitetni signali, profilne značke in potrditve.",
+  "walletBadgesVerificationTitle": "Denarniške značke in potrditve",
+  "walletBadgesVerificationSubtitle": "Značke, potrditve in zaupanja vredni signali, povezani z denarnico.",
+  "profileAchievementsPreviewTitle": "Dosežki",
+  "profileAchievementsPreviewSubtitle": "Mejniki napredka in nagrade KUB8.",
   "userProfileAchievementsProgressLabel": "Odklenjenih {completed} od {total}",
   "@userProfileAchievementsProgressLabel": {
     "placeholders": {

@@ -1869,6 +1869,12 @@
   "userProfileConversationOpenFailedToast": "Could not open conversation.",
   "userProfileConversationOpenGenericErrorToast": "Failed to open conversation. Please try again.",
   "userProfileAchievementsTitle": "Achievements",
+  "profileBadgesVerificationTitle": "Badges & verification",
+  "profileBadgesVerificationSubtitle": "Verified identity signals, profile badges, and attestations.",
+  "walletBadgesVerificationTitle": "Wallet badges & verification",
+  "walletBadgesVerificationSubtitle": "Wallet-linked badges, attestations, and trust signals.",
+  "profileAchievementsPreviewTitle": "Achievements",
+  "profileAchievementsPreviewSubtitle": "Progress milestones and KUB8 rewards.",
   "userProfileAchievementsProgressLabel": "{completed} of {total} unlocked",
   "@userProfileAchievementsProgressLabel": {
     "placeholders": {

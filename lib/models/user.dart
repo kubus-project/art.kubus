@@ -1,4 +1,5 @@
 import 'achievement_progress.dart';
+import 'achievements.dart' as backend_achievements;
 
 class User {
   final String id;
@@ -7,10 +8,12 @@ class User {
   final String bio;
   final String? profileImageUrl;
   final String? coverImageUrl;
+
   /// Artist profile: field(s) of work (aka specialty/categories).
   ///
   /// Kept as plain strings (no UI concern).
   final List<String> fieldOfWork;
+
   /// Artist profile: years active (0 when unset).
   final int yearsActive;
   final int followersCount;
@@ -23,6 +26,7 @@ class User {
   final bool showAchievements;
   final String joinedDate;
   final List<AchievementProgress> achievementProgress;
+  final List<backend_achievements.AchievementDefinition> achievementDefinitions;
 
   const User({
     required this.id,
@@ -43,6 +47,7 @@ class User {
     this.showAchievements = true,
     required this.joinedDate,
     this.achievementProgress = const [],
+    this.achievementDefinitions = const [],
   });
 
   User copyWith({
@@ -64,6 +69,7 @@ class User {
     bool? showAchievements,
     String? joinedDate,
     List<AchievementProgress>? achievementProgress,
+    List<backend_achievements.AchievementDefinition>? achievementDefinitions,
   }) {
     return User(
       id: id ?? this.id,
@@ -84,6 +90,8 @@ class User {
       showAchievements: showAchievements ?? this.showAchievements,
       joinedDate: joinedDate ?? this.joinedDate,
       achievementProgress: achievementProgress ?? this.achievementProgress,
+      achievementDefinitions:
+          achievementDefinitions ?? this.achievementDefinitions,
     );
   }
 }

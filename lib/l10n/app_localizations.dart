@@ -8729,6 +8729,42 @@ abstract class AppLocalizations {
   /// **'Achievements'**
   String get userProfileAchievementsTitle;
 
+  /// No description provided for @profileBadgesVerificationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Badges & verification'**
+  String get profileBadgesVerificationTitle;
+
+  /// No description provided for @profileBadgesVerificationSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Verified identity signals, profile badges, and attestations.'**
+  String get profileBadgesVerificationSubtitle;
+
+  /// No description provided for @walletBadgesVerificationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet badges & verification'**
+  String get walletBadgesVerificationTitle;
+
+  /// No description provided for @walletBadgesVerificationSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet-linked badges, attestations, and trust signals.'**
+  String get walletBadgesVerificationSubtitle;
+
+  /// No description provided for @profileAchievementsPreviewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Achievements'**
+  String get profileAchievementsPreviewTitle;
+
+  /// No description provided for @profileAchievementsPreviewSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Progress milestones and KUB8 rewards.'**
+  String get profileAchievementsPreviewSubtitle;
+
   /// No description provided for @userProfileAchievementsProgressLabel.
   ///
   /// In en, this message translates to:
@@ -10901,13 +10937,52 @@ abstract class AppLocalizations {
   /// **'Run a node to start contributing to the public art archive.'**
   String get availabilityNodeRunNodeCta;
 
+  /// No description provided for @availabilityNodeUptimeTodayLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Uptime today'**
   String get availabilityNodeUptimeTodayLabel;
+
+  /// No description provided for @availabilityNodePublicCoverageLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Public archive coverage'**
   String get availabilityNodePublicCoverageLabel;
+
+  /// No description provided for @availabilityNodeContributionScoreLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Contribution score'**
   String get availabilityNodeContributionScoreLabel;
+
+  /// No description provided for @availabilityNodePendingKub8Label.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending KUB8'**
   String get availabilityNodePendingKub8Label;
+
+  /// No description provided for @availabilityNodePublicCidsPinnedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Public archive records pinned'**
   String get availabilityNodePublicCidsPinnedLabel;
+
+  /// No description provided for @availabilityNodeRewardableCidsPinnedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Priority archive records pinned'**
   String get availabilityNodeRewardableCidsPinnedLabel;
+
+  /// No description provided for @availabilityNodeFormulaExplanation.
+  ///
+  /// In en, this message translates to:
+  /// **'Public archive replication is the base contribution. Priority archive records add bonus weight. Rewards are pending records until settlement exists.'**
   String get availabilityNodeFormulaExplanation;
+
+  /// No description provided for @availabilityNodeCopyGuiUrlButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy node GUI URL'**
   String get availabilityNodeCopyGuiUrlButton;
 
   /// No description provided for @walletHomeSecurityTitle.

@@ -4474,6 +4474,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get userProfileAchievementsTitle => 'Achievements';
 
   @override
+  String get profileBadgesVerificationTitle => 'Badges & verification';
+
+  @override
+  String get profileBadgesVerificationSubtitle => 'Verified identity signals, profile badges, and attestations.';
+
+  @override
+  String get walletBadgesVerificationTitle => 'Wallet badges & verification';
+
+  @override
+  String get walletBadgesVerificationSubtitle => 'Wallet-linked badges, attestations, and trust signals.';
+
+  @override
+  String get profileAchievementsPreviewTitle => 'Achievements';
+
+  @override
+  String get profileAchievementsPreviewSubtitle => 'Progress milestones and KUB8 rewards.';
+
+  @override
   String userProfileAchievementsProgressLabel(Object completed, Object total) {
     return '$completed of $total unlocked';
   }

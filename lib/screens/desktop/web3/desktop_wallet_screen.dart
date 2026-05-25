@@ -1425,7 +1425,8 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
       padding: EdgeInsets.all(DetailSpacing.xl),
       children: [
         AttestationBadgePanel(
-          title: l10n.desktopSettingsAchievementsTitle,
+          title: l10n.walletBadgesVerificationTitle,
+          subtitle: l10n.walletBadgesVerificationSubtitle,
           compact: true,
         ),
         SizedBox(height: DetailSpacing.xxl),

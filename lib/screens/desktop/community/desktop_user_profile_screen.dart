@@ -3,15 +3,12 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
-import '../../../utils/achievement_ui.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/wallet_utils.dart';
 import '../../../widgets/app_loading.dart';
 import 'package:provider/provider.dart';
 import '../../../models/user.dart';
 import '../../../services/user_service.dart';
-import '../../../models/achievement_progress.dart';
-import '../../../services/achievement_service.dart' as achievement_svc;
 import '../../../services/backend_api_service.dart';
 import '../../../services/share/share_service.dart';
 import '../../../services/share/share_types.dart';
@@ -54,6 +51,7 @@ import 'package:art_kubus/widgets/glass_components.dart';
 import '../../../widgets/common/kubus_glass_icon_button.dart';
 import '../../../widgets/common/kubus_screen_header.dart';
 import '../../../widgets/community/community_post_card.dart';
+import '../../../widgets/profile/profile_achievements_preview_section.dart';
 
 const double _kProfileOverlayMaxWidth = 920.0;
 const double _kProfileCoverHeightWithImage = 216.0;
@@ -1523,158 +1521,12 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       return const SizedBox.shrink();
     }
 
-    final progress = user?.achievementProgress ?? [];
-    final achievementsToShow = achievement_svc
-        .AchievementService.achievementDefinitions.values
-        .take(6)
-        .toList();
-    if (achievementsToShow.isEmpty) return const SizedBox.shrink();
-
-    final progressById = <String, AchievementProgress>{
-      for (final entry in progress) entry.achievementId: entry,
-    };
-    final completedCount = achievement_svc
-        .AchievementService.achievementDefinitions.values
-        .where((achievement) {
-      final current = progressById[achievement.id];
-      final required =
-          achievement.requiredCount > 0 ? achievement.requiredCount : 1;
-      return (current?.isCompleted ?? false) ||
-          (current != null && current.currentProgress >= required);
-    }).length;
-    final totalAchievements =
-        achievement_svc.AchievementService.achievementDefinitions.length;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        DesktopSectionHeader(
-          title: l10n.userProfileAchievementsTitle,
-          subtitle: l10n.userProfileAchievementsProgressLabel(
-              completedCount, totalAchievements),
-          icon: Icons.emoji_events_outlined,
-        ),
-        const SizedBox(height: 16),
-        if (progress.isEmpty)
-          DesktopCard(
-            child: EmptyStateCard(
-              title: l10n.userProfileAchievementsEmptyTitle(user!.name),
-              description: l10n.userProfileAchievementsEmptyDescription,
-              icon: Icons.emoji_events,
-            ),
-          )
-        else
-          DesktopGrid(
-            minCrossAxisCount: 2,
-            maxCrossAxisCount: 3,
-            childAspectRatio: 1.2,
-            children: achievementsToShow.map((achievement) {
-              final achievementProgress = progressById[achievement.id] ??
-                  AchievementProgress(
-                    achievementId: achievement.id,
-                    currentProgress: 0,
-                    isCompleted: false,
-                  );
-              return _buildAchievementCard(achievement, achievementProgress);
-            }).toList(),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildAchievementCard(
-    achievement_svc.AchievementDefinition achievement,
-    AchievementProgress progress,
-  ) {
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
-    final l10n = AppLocalizations.of(context)!;
-    final required =
-        achievement.requiredCount > 0 ? achievement.requiredCount : 1;
-    final ratio = (progress.currentProgress / required).clamp(0.0, 1.0);
-    final isCompleted = progress.isCompleted || ratio >= 1.0;
-    final accent = AchievementUi.accentFor(context, achievement);
-
-    return DesktopCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding:
-                    const EdgeInsets.all(KubusSpacing.sm + KubusSpacing.xs),
-                decoration: BoxDecoration(
-                  color: accent.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(KubusRadius.md),
-                ),
-                child: Icon(AchievementUi.iconFor(achievement),
-                    color: accent, size: 24),
-              ),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .secondaryContainer
-                      .withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(KubusRadius.sm),
-                ),
-                child: Text(
-                  '+${achievement.tokenReward}',
-                  style: KubusTypography.inter(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSecondaryContainer,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            achievement.title,
-            style: KubusTypography.inter(
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            isCompleted
-                ? l10n.userProfileAchievementCompletedLabel
-                : '${progress.currentProgress}/$required',
-            style: KubusTypography.inter(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: isCompleted
-                  ? themeProvider.accentColor
-                  : Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.6),
-            ),
-          ),
-          const SizedBox(height: 8),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(KubusRadius.sm),
-            child: LinearProgressIndicator(
-              value: ratio,
-              minHeight: 6,
-              backgroundColor: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.08),
-              valueColor: AlwaysStoppedAnimation<Color>(
-                isCompleted ? themeProvider.accentColor : accent,
-              ),
-            ),
-          ),
-        ],
-      ),
+    return ProfileAchievementsPreviewSection(
+      mode: ProfileAchievementsPreviewMode.publicProfile,
+      compact: true,
+      publicProgress: user?.achievementProgress,
+      publicDefinitions: user?.achievementDefinitions,
+      showWhenEmpty: true,
     );
   }
 

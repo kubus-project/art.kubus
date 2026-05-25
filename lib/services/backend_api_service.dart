@@ -6009,12 +6009,12 @@ class BackendApiService
         final payload = decoded['data'] ?? decoded['post'] ?? decoded;
         if (payload is Map<String, dynamic>) {
           final created = _communityPostFromBackendJson(payload);
-          final achievementResult = decoded is Map<String, dynamic> &&
-                  decoded['achievements'] is Map
-              ? achievements_model.AchievementEventResult.fromJson(
-                  decoded['achievements'] as Map<String, dynamic>,
-                )
-              : null;
+          final achievementResult =
+              decoded is Map<String, dynamic> && decoded['achievements'] is Map
+                  ? achievements_model.AchievementEventResult.fromJson(
+                      decoded['achievements'] as Map<String, dynamic>,
+                    )
+                  : null;
           final decoratedPost = achievementResult == null
               ? created
               : created.copyWith(achievementResult: achievementResult);
@@ -7005,6 +7005,32 @@ class BackendApiService
     }
   }
 
+  Future<Map<String, dynamic>> getPublicUserAchievements(
+      String walletAddress) async {
+    try {
+      final response = await _get(
+        Uri.parse('$baseUrl/api/achievements/users/$walletAddress'),
+        headers: _getHeaders(),
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
+      throw Exception(
+          'Failed to get public user achievements: ${response.statusCode}');
+    } catch (e) {
+      AppConfig.debugPrint(
+          'BackendApiService.getPublicUserAchievements failed: $e');
+      return {
+        'success': false,
+        'definitions': [],
+        'unlocked': [],
+        'progress': [],
+        'totalKub8Earned': 0,
+      };
+    }
+  }
+
   Future<Map<String, dynamic>> getMyAchievements() async {
     try {
       final response = await _get(
@@ -7050,7 +7076,8 @@ class BackendApiService
     if (response.statusCode == 200 || response.statusCode == 201) {
       return jsonDecode(response.body) as Map<String, dynamic>;
     }
-    throw Exception('Failed to record achievement event: ${response.statusCode}');
+    throw Exception(
+        'Failed to record achievement event: ${response.statusCode}');
   }
 
   /// Unlock an achievement

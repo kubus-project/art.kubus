@@ -12,10 +12,12 @@ class AttestationBadgePanel extends StatelessWidget {
   const AttestationBadgePanel({
     super.key,
     required this.title,
+    this.subtitle,
     this.compact = false,
   });
 
   final String title;
+  final String? subtitle;
   final bool compact;
 
   @override
@@ -104,6 +106,15 @@ class AttestationBadgePanel extends StatelessWidget {
                     ),
                 ],
               ),
+              if (subtitle != null && subtitle!.trim().isNotEmpty) ...[
+                const SizedBox(height: KubusSpacing.xs),
+                Text(
+                  subtitle!,
+                  style: KubusTextStyles.detailCaption.copyWith(
+                    color: scheme.onSurface.withValues(alpha: 0.68),
+                  ),
+                ),
+              ],
               const SizedBox(height: KubusSpacing.sm),
               child,
             ],

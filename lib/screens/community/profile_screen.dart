@@ -20,20 +20,16 @@ import '../../providers/community_interactions_provider.dart';
 import '../../services/backend_api_service.dart';
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
-import '../../utils/achievement_ui.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../utils/profile_showcase_normalizer.dart';
 import '../../community/community_interactions.dart';
 import '../web3/wallet/wallet_home.dart';
-import '../web3/achievements/achievements_page.dart';
 import '../settings_screen.dart';
 import '../activity/saved_items_screen.dart';
 import 'profile_screen_methods.dart';
 import '../activity/view_history_screen.dart';
 import '../collab/invites_inbox_screen.dart';
-import '../../models/achievement_progress.dart';
 import '../../models/artwork.dart';
-import '../../services/achievement_service.dart' as achievement_svc;
 import 'profile_edit_screen.dart';
 import '../../widgets/avatar_widget.dart';
 import '../../widgets/user_activity_status_line.dart';
@@ -55,7 +51,8 @@ import '../../widgets/institution_badge.dart';
 import '../../widgets/email_verification_status_badge.dart';
 import '../../widgets/secure_account_banner_card.dart';
 import '../../widgets/wallet_backup_banner_card.dart';
-import '../../widgets/attestation_badge_panel.dart';
+import '../../widgets/profile/profile_achievements_preview_section.dart';
+import '../../widgets/profile/profile_badges_verification_section.dart';
 import '../../models/dao.dart';
 import '../../config/config.dart';
 import '../../utils/kubus_color_roles.dart';
@@ -228,13 +225,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                       const SliverToBoxAdapter(
                           child: SizedBox(height: DetailSpacing.xxl)),
                       SliverToBoxAdapter(
-                        child: Padding(
+                        child: ProfileBadgesVerificationSection(
                           padding: EdgeInsets.symmetric(
                             horizontal: DetailSpacing.lg,
-                          ),
-                          child: AttestationBadgePanel(
-                            title: AppLocalizations.of(context)!
-                                .desktopSettingsAchievementsTitle,
                           ),
                         ),
                       ),
@@ -251,7 +244,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                       SliverToBoxAdapter(
                         child: isInstitution
                             ? _buildInstitutionHighlightsSection()
-                            : _buildAchievementsSection(),
+                            : const ProfileAchievementsPreviewSection(
+                                mode: ProfileAchievementsPreviewMode.ownProfile,
+                                padding: EdgeInsets.symmetric(horizontal: 24),
+                              ),
                       ),
                       const SliverToBoxAdapter(
                           child: SizedBox(height: DetailSpacing.xl)),
@@ -1026,6 +1022,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     final profileProvider =
         Provider.of<ProfileProvider>(context, listen: false);
     final daoProvider = Provider.of<DAOProvider>(context, listen: false);
+    final taskProvider = context.read<TaskProvider>();
     final wallet = await _resolveCurrentWallet();
 
     if (!mounted) return;
@@ -1038,6 +1035,11 @@ class _ProfileScreenState extends State<ProfileScreen>
       await _postsFuture;
     } catch (_) {}
     await _maybeLoadArtistData(force: true);
+    try {
+      await taskProvider.refreshAchievementsForCurrentUser();
+    } catch (e) {
+      AppConfig.debugPrint('ProfileScreen: achievements refresh failed: $e');
+    }
 
     if (wallet != null && wallet.isNotEmpty) {
       try {
@@ -1681,146 +1683,6 @@ class _ProfileScreenState extends State<ProfileScreen>
   String _formatCount(num value) {
     final locale = Localizations.localeOf(context).toLanguageTag();
     return NumberFormat.compact(locale: locale).format(value);
-  }
-
-  Widget _buildAchievementsSection() {
-    final profileProvider = Provider.of<ProfileProvider>(context);
-    if (!profileProvider.preferences.showAchievements) {
-      return const SizedBox.shrink();
-    }
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Consumer<TaskProvider>(
-        builder: (context, taskProvider, child) {
-          final themeProvider =
-              Provider.of<ThemeProvider>(context, listen: false);
-          final accent = themeProvider.accentColor;
-
-          final achievements = taskProvider.achievementProgress;
-          final progressById = <String, AchievementProgress>{
-            for (final progress in achievements)
-              progress.achievementId: progress,
-          };
-          final displayAchievements = achievement_svc
-              .AchievementService.achievementDefinitions.values
-              .take(6)
-              .toList();
-
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    AppLocalizations.of(context)!.userProfileAchievementsTitle,
-                    style: KubusTypography.inter(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const AchievementsPage(),
-                        ),
-                      );
-                    },
-                    child: FrostedContainer(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: KubusSpacing.sm,
-                        vertical: KubusSpacing.xs,
-                      ),
-                      borderRadius: BorderRadius.circular(KubusRadius.sm),
-                      backgroundColor: accent.withValues(alpha: 0.12),
-                      child: Text(
-                        AppLocalizations.of(context)!.commonViewAll,
-                        style: KubusTextStyles.compactBadge.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: accent,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              achievements.isEmpty
-                  ? _buildEmptyStateCard(
-                      title: AppLocalizations.of(context)!
-                          .profileAchievementsEmptyTitle,
-                      description: AppLocalizations.of(context)!
-                          .userProfileAchievementsEmptyDescription,
-                      icon: Icons.emoji_events,
-                    )
-                  : LayoutBuilder(
-                      builder: (context, constraints) {
-                        final cardWidth = constraints.maxWidth < 420
-                            ? ((constraints.maxWidth - 12) / 2)
-                            : 160.0;
-                        return Wrap(
-                          spacing: 12,
-                          runSpacing: 12,
-                          children: displayAchievements.map((achievement) {
-                            final progress = progressById[achievement.id] ??
-                                AchievementProgress(
-                                  achievementId: achievement.id,
-                                  currentProgress: 0,
-                                  isCompleted: false,
-                                );
-                            final required = achievement.requiredCount > 0
-                                ? achievement.requiredCount
-                                : 1;
-                            final unlocked = progress.isCompleted ||
-                                progress.currentProgress >= required;
-                            final progressLabel = unlocked
-                                ? '+${achievement.tokenReward} KUB8'
-                                : '${progress.currentProgress}/$required';
-
-                            return SizedBox(
-                              width: cardWidth,
-                              child: KubusStatCard(
-                                title: achievement.title,
-                                value: progressLabel,
-                                icon: AchievementUi.iconFor(achievement),
-                                layout: KubusStatCardLayout.centered,
-                                accent: AchievementUi.accentFor(
-                                    context, achievement),
-                                centeredWatermarkAlignment: Alignment.center,
-                                centeredWatermarkScale: 0.84,
-                                minHeight: 96,
-                                padding: const EdgeInsets.all(KubusSpacing.sm),
-                                titleMaxLines: 2,
-                                titleStyle:
-                                    KubusTextStyles.detailCaption.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurface
-                                      .withValues(alpha: unlocked ? 0.84 : 0.7),
-                                ),
-                                valueStyle:
-                                    KubusTextStyles.detailCardTitle.copyWith(
-                                  color:
-                                      Theme.of(context).colorScheme.onSurface,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                        );
-                      },
-                    ),
-            ],
-          );
-        },
-      ),
-    );
   }
 
   Widget _buildPerformanceStats() {

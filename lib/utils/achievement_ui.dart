@@ -8,30 +8,53 @@ import 'category_accent_color.dart';
 class AchievementUi {
   const AchievementUi._();
 
+  static IconData iconForPreview({
+    required String code,
+    required String category,
+    bool isPoap = false,
+  }) {
+    if (isPoap) return Icons.verified;
+    final normalizedCategory = category.toLowerCase();
+    final normalizedCode = code.toLowerCase();
+    switch (normalizedCategory) {
+      case 'discovery':
+        return Icons.explore_outlined;
+      case 'ar':
+        return Icons.view_in_ar;
+      case 'nft':
+        return Icons.token;
+      case 'community':
+        if (normalizedCode.contains('comment')) {
+          return Icons.chat_bubble_outline;
+        }
+        if (normalizedCode.contains('like')) return Icons.favorite_border;
+        return Icons.forum_outlined;
+      case 'street_art':
+        return Icons.streetview;
+      case 'events':
+        return Icons.event_available;
+      case 'trading':
+        return Icons.swap_horiz;
+    }
+    return Icons.emoji_events_outlined;
+  }
+
+  static Color accentForPreview(
+    BuildContext context, {
+    required String category,
+    required String rarity,
+  }) {
+    final normalizedCategory = category.trim().isEmpty ? rarity : category;
+    return CategoryAccentColor.resolve(context, normalizedCategory);
+  }
+
   static IconData iconFor(Object achievement) {
     if (achievement is backend_achievements.AchievementDefinition) {
-      if (achievement.isPoap) return Icons.verified;
-      switch (achievement.category.toLowerCase()) {
-        case 'discovery':
-          return Icons.explore_outlined;
-        case 'ar':
-          return Icons.view_in_ar;
-        case 'nft':
-          return Icons.token;
-        case 'community':
-          if (achievement.code.contains('comment')) {
-            return Icons.chat_bubble_outline;
-          }
-          if (achievement.code.contains('like')) return Icons.favorite_border;
-          return Icons.forum_outlined;
-        case 'street_art':
-          return Icons.streetview;
-        case 'events':
-          return Icons.event_available;
-        case 'trading':
-          return Icons.swap_horiz;
-      }
-      return Icons.emoji_events_outlined;
+      return iconForPreview(
+        code: achievement.code,
+        category: achievement.category,
+        isPoap: achievement.isPoap,
+      );
     }
     final typed = achievement as achievement_svc.AchievementDefinition;
     if (typed.isPOAP) return Icons.verified;

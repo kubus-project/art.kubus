@@ -8,13 +8,10 @@ import '../../widgets/app_loading.dart';
 import 'package:provider/provider.dart';
 import '../../models/user.dart';
 import '../../services/user_service.dart';
-import '../../models/achievement_progress.dart';
-import '../../services/achievement_service.dart' as achievement_svc;
 import '../../services/backend_api_service.dart';
 import '../../services/block_list_service.dart';
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
-import '../../utils/achievement_ui.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../utils/profile_showcase_normalizer.dart';
@@ -49,6 +46,7 @@ import 'profile_screen_methods.dart';
 import '../../models/dao.dart';
 import '../../widgets/glass_components.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import '../../widgets/profile/profile_achievements_preview_section.dart';
 
 class UserProfileScreen extends StatefulWidget {
   final String userId;
@@ -1179,9 +1177,9 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                           .createConversation('', false, [user!.id]);
                       if (conv != null) {
                         if (!mounted) return;
-                        final preloaded =
-                            Provider.of<ChatProvider>(context, listen: false)
-                                .getPreloadedProfileMapsForConversation(conv.id);
+                        final preloaded = Provider.of<ChatProvider>(context,
+                                listen: false)
+                            .getPreloadedProfileMapsForConversation(conv.id);
                         // Ensure we pass non-empty members and sensible fallbacks for avatars / display names
                         final rawMembers =
                             (preloaded['members'] as List<dynamic>?)
@@ -1288,216 +1286,12 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       return const SizedBox.shrink();
     }
 
-    final progress = user?.achievementProgress ?? [];
-    final achievementsToShow = achievement_svc
-        .AchievementService.achievementDefinitions.values
-        .take(6)
-        .toList();
-
-    if (achievementsToShow.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    final progressById = <String, AchievementProgress>{
-      for (final entry in progress) entry.achievementId: entry,
-    };
-    final completedCount = achievement_svc
-        .AchievementService.achievementDefinitions.values
-        .where((achievement) {
-      final current = progressById[achievement.id];
-      final required =
-          achievement.requiredCount > 0 ? achievement.requiredCount : 1;
-      return (current?.isCompleted ?? false) ||
-          (current != null && current.currentProgress >= required);
-    }).length;
-    final totalAchievements =
-        achievement_svc.AchievementService.achievementDefinitions.length;
-
-    return Container(
+    return ProfileAchievementsPreviewSection(
+      mode: ProfileAchievementsPreviewMode.publicProfile,
+      publicProgress: user?.achievementProgress,
+      publicDefinitions: user?.achievementDefinitions,
       padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                l10n.userProfileAchievementsTitle,
-                style: KubusTextStyles.sectionTitle.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-              ),
-              Text(
-                '$completedCount/$totalAchievements',
-                style: KubusTextStyles.sectionSubtitle.copyWith(
-                  color: themeProvider.accentColor,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          if (progress.isEmpty)
-            _buildEmptyStateCard(
-              l10n: l10n,
-              title: l10n.userProfileAchievementsEmptyTitle(user!.name),
-              description: l10n.userProfileAchievementsEmptyDescription,
-              icon: Icons.emoji_events,
-            )
-          else
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: achievementsToShow.map((achievement) {
-                final achievementProgress = progressById[achievement.id] ??
-                    AchievementProgress(
-                      achievementId: achievement.id,
-                      currentProgress: 0,
-                      isCompleted: false,
-                    );
-                return _buildAchievementCard(
-                  themeProvider,
-                  achievement,
-                  achievementProgress,
-                );
-              }).toList(),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAchievementCard(
-    ThemeProvider themeProvider,
-    achievement_svc.AchievementDefinition achievement,
-    AchievementProgress progress,
-  ) {
-    final l10n = AppLocalizations.of(context)!;
-    final required =
-        achievement.requiredCount > 0 ? achievement.requiredCount : 1;
-    final ratio = (progress.currentProgress / required).clamp(0.0, 1.0);
-    final isCompleted = progress.isCompleted || ratio >= 1.0;
-    final accent = AchievementUi.accentFor(context, achievement);
-
-    return Container(
-      width: 180,
-      padding: const EdgeInsets.all(KubusSpacing.md),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(KubusRadius.xl),
-        border: Border.all(
-          color: isCompleted
-              ? themeProvider.accentColor.withValues(alpha: 0.4)
-              : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
-          width: 1.5,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Theme.of(context).shadowColor.withValues(alpha: 0.08),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: accent.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(KubusRadius.md),
-                ),
-                child: Icon(
-                  AchievementUi.iconFor(achievement),
-                  color: accent,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  achievement.title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: KubusTextStyles.sectionTitle.copyWith(
-                    fontSize: KubusHeaderMetrics.screenSubtitle,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
-          Text(
-            achievement.description,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: KubusTextStyles.navMetaLabel.copyWith(
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.7),
-            ),
-          ),
-          const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                isCompleted
-                    ? l10n.userProfileAchievementCompletedLabel
-                    : '${progress.currentProgress}/$required',
-                style: KubusTextStyles.navMetaLabel.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: isCompleted
-                      ? themeProvider.accentColor
-                      : Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.7),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: KubusSpacing.sm - KubusSpacing.xxs,
-                  vertical: KubusSpacing.xxs,
-                ),
-                decoration: BoxDecoration(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .secondaryContainer
-                      .withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(KubusRadius.sm),
-                ),
-                child: Text(
-                  '+${achievement.tokenReward}',
-                  style: KubusTextStyles.badgeCount.copyWith(
-                    color: Theme.of(context).colorScheme.onSecondaryContainer,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(KubusRadius.sm),
-            child: LinearProgressIndicator(
-              value: ratio,
-              minHeight: 6,
-              backgroundColor: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.08),
-              valueColor: AlwaysStoppedAnimation<Color>(
-                isCompleted ? themeProvider.accentColor : accent,
-              ),
-            ),
-          ),
-        ],
-      ),
+      showWhenEmpty: true,
     );
   }
 

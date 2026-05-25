@@ -4484,6 +4484,24 @@ class AppLocalizationsSl extends AppLocalizations {
   String get userProfileAchievementsTitle => 'Dosežki';
 
   @override
+  String get profileBadgesVerificationTitle => 'Značke in potrditve';
+
+  @override
+  String get profileBadgesVerificationSubtitle => 'Preverjeni identitetni signali, profilne značke in potrditve.';
+
+  @override
+  String get walletBadgesVerificationTitle => 'Denarniške značke in potrditve';
+
+  @override
+  String get walletBadgesVerificationSubtitle => 'Značke, potrditve in zaupanja vredni signali, povezani z denarnico.';
+
+  @override
+  String get profileAchievementsPreviewTitle => 'Dosežki';
+
+  @override
+  String get profileAchievementsPreviewSubtitle => 'Mejniki napredka in nagrade KUB8.';
+
+  @override
   String userProfileAchievementsProgressLabel(Object completed, Object total) {
     return 'Odklenjenih $completed od $total';
   }
@@ -5651,9 +5669,6 @@ class AppLocalizationsSl extends AppLocalizations {
   }
 
   @override
-  String get walletHomeSecurityTitle => 'Zaščiti svojo denarnico';
-
-  @override
   String get availabilityNodeStatusTitle => 'Stanje mojega vozlišča';
 
   @override
@@ -5685,6 +5700,9 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get availabilityNodeCopyGuiUrlButton => 'Kopiraj URL GUI vozlišča';
+
+  @override
+  String get walletHomeSecurityTitle => 'Zaščiti svojo denarnico';
 
   @override
   String get walletHomeSecuritySubtitle => 'Varnostna kopija, dostop do denarnice in stanje obnove so zbrani tukaj.';

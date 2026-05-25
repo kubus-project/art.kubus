@@ -246,7 +246,8 @@ class _WalletHomeState extends State<WalletHome> {
                   ),
                   const SizedBox(height: KubusSpacing.lg),
                   AttestationBadgePanel(
-                    title: l10n.desktopSettingsAchievementsTitle,
+                    title: l10n.walletBadgesVerificationTitle,
+                    subtitle: l10n.walletBadgesVerificationSubtitle,
                   ),
                   const SizedBox(height: KubusSpacing.lg),
                   if (isWide)

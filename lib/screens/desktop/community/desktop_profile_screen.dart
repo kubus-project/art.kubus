@@ -14,7 +14,6 @@ import '../../../providers/community_interactions_provider.dart';
 import '../../../services/backend_api_service.dart';
 import '../../../services/share/share_service.dart';
 import '../../../services/share/share_types.dart';
-import '../../../utils/achievement_ui.dart';
 import '../../../utils/artwork_navigation.dart';
 import '../../../utils/media_url_resolver.dart';
 import '../../../utils/profile_showcase_normalizer.dart';
@@ -23,9 +22,7 @@ import '../../web3/achievements/achievements_page.dart';
 import '../desktop_settings_screen.dart';
 import '../../activity/saved_items_screen.dart';
 import '../../community/post_detail_screen.dart';
-import '../../../models/achievement_progress.dart';
 import '../../../models/artwork.dart';
-import '../../../services/achievement_service.dart' as achievement_svc;
 import 'desktop_profile_edit_screen.dart';
 import '../../../widgets/avatar_widget.dart';
 import '../../../widgets/user_activity_status_line.dart';
@@ -39,7 +36,8 @@ import '../../../widgets/institution_badge.dart';
 import '../../../widgets/email_verification_status_badge.dart';
 import '../../../widgets/secure_account_banner_card.dart';
 import '../../../widgets/wallet_backup_banner_card.dart';
-import '../../../widgets/attestation_badge_panel.dart';
+import '../../../widgets/profile/profile_achievements_preview_section.dart';
+import '../../../widgets/profile/profile_badges_verification_section.dart';
 import '../../../models/dao.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/design_tokens.dart';
@@ -244,7 +242,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildAttestationSection(),
+              _buildBadgesVerificationSection(),
               const SizedBox(height: DetailSpacing.lg),
               _buildPerformanceStatsSection(),
               const SizedBox(height: DetailSpacing.lg),
@@ -314,7 +312,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         const SizedBox(height: DetailSpacing.lg),
         _buildPerformanceStatsSection(),
         const SizedBox(height: DetailSpacing.lg),
-        _buildAttestationSection(),
+        _buildBadgesVerificationSection(),
         const SizedBox(height: DetailSpacing.lg),
         _buildAchievementsSection(),
         const SizedBox(height: DetailSpacing.lg),
@@ -1494,22 +1492,12 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  Widget _buildAttestationSection() {
+  Widget _buildBadgesVerificationSection() {
     final l10n = AppLocalizations.of(context)!;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        DesktopSectionHeader(
-          title: l10n.desktopSettingsAchievementsTitle,
-          subtitle: l10n.desktopSettingsAchievementsSubtitle,
-          icon: Icons.verified_outlined,
-        ),
-        const SizedBox(height: DetailSpacing.md),
-        AttestationBadgePanel(
-          title: l10n.desktopSettingsAchievementsTitle,
-          compact: true,
-        ),
-      ],
+    return ProfileBadgesVerificationSection(
+      title: l10n.profileBadgesVerificationTitle,
+      subtitle: l10n.profileBadgesVerificationSubtitle,
+      compact: true,
     );
   }
 
@@ -1882,103 +1870,18 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildAchievementsSection() {
-    final profileProvider = Provider.of<ProfileProvider>(context);
-    if (!profileProvider.preferences.showAchievements) {
-      return const SizedBox.shrink();
-    }
-
-    return Consumer<TaskProvider>(
-      builder: (context, taskProvider, _) {
-        final l10n = AppLocalizations.of(context)!;
-        final achievements = taskProvider.achievementProgress;
-        final progressById = <String, AchievementProgress>{
-          for (final progress in achievements) progress.achievementId: progress,
-        };
-        final displayAchievements = achievement_svc
-            .AchievementService.achievementDefinitions.values
-            .take(6)
-            .toList();
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            DesktopSectionHeader(
-              title: l10n.userProfileAchievementsTitle,
-              subtitle: l10n.desktopProfileAchievementsSubtitle,
-              icon: Icons.emoji_events_outlined,
-              action: TextButton.icon(
-                onPressed: () {
-                  final shellScope = DesktopShellScope.of(context);
-                  if (shellScope != null) {
-                    shellScope.pushScreen(const AchievementsPage());
-                    return;
-                  }
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const AchievementsPage()),
-                  );
-                },
-                icon: const Icon(Icons.arrow_forward, size: 18),
-                label: Text(l10n.commonViewAll),
-              ),
-            ),
-            const SizedBox(height: 16),
-            if (achievements.isEmpty)
-              DesktopCard(
-                child: EmptyStateCard(
-                  icon: Icons.emoji_events,
-                  title: l10n.profileAchievementsEmptyTitle,
-                  description: l10n.userProfileAchievementsEmptyDescription,
-                ),
-              )
-            else
-              DesktopGrid(
-                minCrossAxisCount: 2,
-                maxCrossAxisCount: 3,
-                childAspectRatio: 1.25,
-                children: displayAchievements.map((achievement) {
-                  final progress = progressById[achievement.id] ??
-                      AchievementProgress(
-                        achievementId: achievement.id,
-                        currentProgress: 0,
-                        isCompleted: false,
-                      );
-                  final required = achievement.requiredCount > 0
-                      ? achievement.requiredCount
-                      : 1;
-                  final unlocked = progress.isCompleted ||
-                      progress.currentProgress >= required;
-                  final progressLabel = unlocked
-                      ? '+${achievement.tokenReward} KUB8'
-                      : '${progress.currentProgress}/$required';
-
-                  return KubusStatCard(
-                    title: achievement.title,
-                    value: progressLabel,
-                    icon: AchievementUi.iconFor(achievement),
-                    layout: KubusStatCardLayout.centered,
-                    accent: AchievementUi.accentFor(context, achievement),
-                    centeredWatermarkAlignment: Alignment.center,
-                    centeredWatermarkScale: 0.84,
-                    minHeight: 0,
-                    padding: const EdgeInsets.all(KubusSpacing.md),
-                    titleMaxLines: 2,
-                    titleStyle: KubusTextStyles.detailCaption.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: unlocked ? 0.84 : 0.7),
-                    ),
-                    valueStyle: KubusTextStyles.detailCardTitle.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  );
-                }).toList(),
-              ),
-          ],
+    return ProfileAchievementsPreviewSection(
+      mode: ProfileAchievementsPreviewMode.ownProfile,
+      compact: true,
+      onViewAll: () {
+        final shellScope = DesktopShellScope.of(context);
+        if (shellScope != null) {
+          shellScope.pushScreen(const AchievementsPage());
+          return;
+        }
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const AchievementsPage()),
         );
       },
     );
@@ -2110,6 +2013,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   Future<void> _handleRefresh() async {
     final profileProvider =
         Provider.of<ProfileProvider>(context, listen: false);
+    final taskProvider = context.read<TaskProvider>();
     final wallet = await _resolveCurrentWallet();
 
     if (!mounted) return;
@@ -2124,6 +2028,12 @@ class _ProfileScreenState extends State<ProfileScreen>
     } catch (_) {}
 
     await _maybeLoadArtistData(force: true);
+    try {
+      await taskProvider.refreshAchievementsForCurrentUser();
+    } catch (e) {
+      AppConfig.debugPrint(
+          'DesktopProfileScreen: achievements refresh failed: $e');
+    }
 
     if (wallet != null && wallet.isNotEmpty) {
       try {

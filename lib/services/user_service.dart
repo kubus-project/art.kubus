@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../config/config.dart';
 import '../models/achievement_progress.dart';
+import '../models/achievements.dart' as backend_achievements;
 import '../models/user.dart';
 import 'backend_api_service.dart';
 import 'stats_api_service.dart';
@@ -39,6 +40,16 @@ class UserFollowMutationResult {
       followersCount != null ||
       followingCount != null ||
       actorFollowingCount != null;
+}
+
+class UserAchievementSummaryPayload {
+  const UserAchievementSummaryPayload({
+    this.progress = const <AchievementProgress>[],
+    this.definitions = const <backend_achievements.AchievementDefinition>[],
+  });
+
+  final List<AchievementProgress> progress;
+  final List<backend_achievements.AchievementDefinition> definitions;
 }
 
 class UserService {
@@ -388,11 +399,10 @@ class UserService {
               stats['posts'] ?? stats['postsCount'] ?? stats['posts_count']);
         }
       } catch (_) {}
-      List<AchievementProgress> achievementProgress = const [];
+      UserAchievementSummaryPayload achievementSummary =
+          const UserAchievementSummaryPayload();
       try {
-        if (await _isCurrentUserWallet(resolvedWallet)) {
-          achievementProgress = await loadAchievementProgress(resolvedWallet);
-        }
+        achievementSummary = await loadPublicAchievementSummary(resolvedWallet);
       } catch (e) {
         if (kDebugMode) {
           debugPrint(
@@ -482,7 +492,8 @@ class UserService {
         joinedDate: profile['createdAt'] != null
             ? 'Joined ${DateTime.parse(profile['createdAt']).month}/${DateTime.parse(profile['createdAt']).year}'
             : 'Joined recently',
-        achievementProgress: achievementProgress,
+        achievementProgress: achievementSummary.progress,
+        achievementDefinitions: achievementSummary.definitions,
         profileImageUrl: _extractAvatarCandidate(profile['avatar'], userId),
         coverImageUrl: _extractMediaCandidate(
           profile['coverImage'] ??
@@ -670,6 +681,9 @@ class UserService {
             achievementProgress: u.achievementProgress.isNotEmpty
                 ? u.achievementProgress
                 : existing.achievementProgress,
+            achievementDefinitions: u.achievementDefinitions.isNotEmpty
+                ? u.achievementDefinitions
+                : existing.achievementDefinitions,
           );
         }
         try {
@@ -955,11 +969,10 @@ class UserService {
       final isInstitution =
           profile['isInstitution'] == true || profile['is_institution'] == true;
 
-      List<AchievementProgress> achievementProgress = const [];
+      UserAchievementSummaryPayload achievementSummary =
+          const UserAchievementSummaryPayload();
       try {
-        if (await _isCurrentUserWallet(wallet)) {
-          achievementProgress = await loadAchievementProgress(wallet);
-        }
+        achievementSummary = await loadPublicAchievementSummary(wallet);
       } catch (e) {
         if (kDebugMode) {
           debugPrint(
@@ -990,7 +1003,8 @@ class UserService {
         isInstitution: isInstitution,
         showAchievements: _extractShowAchievements(profile),
         joinedDate: joinedDate,
-        achievementProgress: achievementProgress,
+        achievementProgress: achievementSummary.progress,
+        achievementDefinitions: achievementSummary.definitions,
         profileImageUrl: _extractAvatarCandidate(avatarCandidate, wallet),
         coverImageUrl: _extractMediaCandidate(
           profile['coverImage'] ??
@@ -1427,6 +1441,100 @@ class UserService {
       AppConfig.debugPrint('UserService.loadAchievementProgress: $e');
       return const [];
     }
+  }
+
+  static Future<UserAchievementSummaryPayload> loadPublicAchievementSummary(
+      String walletAddress) async {
+    if (walletAddress.isEmpty) return const UserAchievementSummaryPayload();
+    try {
+      final resp =
+          await BackendApiService().getPublicUserAchievements(walletAddress);
+      final definitions = _listOfMaps(resp['definitions'])
+          .map(backend_achievements.AchievementDefinition.fromJson)
+          .where((definition) => definition.code.trim().isNotEmpty)
+          .toList(growable: false);
+      final definitionsByCode =
+          <String, backend_achievements.AchievementDefinition>{
+        for (final definition in definitions) definition.code: definition,
+      };
+      final progressEntries = <String, AchievementProgress>{};
+
+      for (final item in _listOfMaps(resp['progress'])) {
+        final code = (item['achievementCode'] ??
+                item['achievement_code'] ??
+                item['code'] ??
+                item['achievementId'] ??
+                item['achievement_id'])
+            ?.toString()
+            .trim();
+        if (code == null || code.isEmpty) continue;
+        final definition = definitionsByCode[code];
+        final requiredCount = _parseInt(
+          item['requiredCount'] ??
+              item['required_count'] ??
+              definition?.requiredCount,
+        ).clamp(1, 1 << 30);
+        final currentProgress = _parseInt(
+          item['currentProgress'] ??
+              item['current_progress'] ??
+              item['progress'],
+        ).clamp(0, requiredCount);
+        final completed = item['isCompleted'] == true ||
+            item['is_completed'] == true ||
+            currentProgress >= requiredCount;
+        progressEntries[code] = AchievementProgress(
+          achievementId: code,
+          currentProgress: completed && currentProgress < requiredCount
+              ? requiredCount
+              : currentProgress,
+          isCompleted: completed,
+          completedDate:
+              _parseDate(item['completedAt'] ?? item['completed_at']),
+        );
+      }
+
+      for (final item in _listOfMaps(resp['unlocked'])) {
+        final code = (item['code'] ??
+                item['achievementCode'] ??
+                item['achievement_code'])
+            ?.toString()
+            .trim();
+        if (code == null || code.isEmpty || progressEntries.containsKey(code)) {
+          continue;
+        }
+        final definition = definitionsByCode[code];
+        final requiredCount =
+            (definition?.requiredCount ?? 1).clamp(1, 1 << 30);
+        progressEntries[code] = AchievementProgress(
+          achievementId: code,
+          currentProgress: requiredCount,
+          isCompleted: true,
+          completedDate: _parseDate(item['unlockedAt'] ?? item['unlocked_at']),
+        );
+      }
+
+      return UserAchievementSummaryPayload(
+        progress: progressEntries.values.toList(growable: false),
+        definitions: definitions,
+      );
+    } catch (e) {
+      AppConfig.debugPrint('UserService.loadPublicAchievementSummary: $e');
+      return const UserAchievementSummaryPayload();
+    }
+  }
+
+  static List<Map<String, dynamic>> _listOfMaps(dynamic raw) {
+    if (raw is! List) return const <Map<String, dynamic>>[];
+    return raw
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList(growable: false);
+  }
+
+  static DateTime? _parseDate(dynamic raw) {
+    if (raw == null) return null;
+    if (raw is DateTime) return raw;
+    return DateTime.tryParse(raw.toString());
   }
 
   static int _parseInt(dynamic value) {
