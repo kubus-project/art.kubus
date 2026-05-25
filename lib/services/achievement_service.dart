@@ -629,19 +629,41 @@ class AchievementService {
     }
   }
 
-  /// Get all available achievements from backend
-  Future<List<AchievementDefinition>> getAllAchievements() async {
+  /// Get all available achievements from backend.
+  ///
+  /// Static definitions are used only when the backend list is unavailable.
+  Future<List<backend_achievements.AchievementDefinition>>
+      getAllAchievements() async {
     try {
       final achievementsData = await _backendApi.getAchievements();
-      // Map backend data to Achievement objects if needed
+      final backendDefinitions = achievementsData
+          .map(backend_achievements.AchievementDefinition.fromJson)
+          .where((definition) => definition.code.trim().isNotEmpty)
+          .toList(growable: false);
       AppConfig.debugPrint(
-        'AchievementService: fetched ${achievementsData.length} achievements from backend',
+        'AchievementService: fetched ${backendDefinitions.length} achievements from backend',
       );
-      return achievementDefinitions.values.toList();
+      if (backendDefinitions.isNotEmpty) return backendDefinitions;
     } catch (e) {
       AppConfig.debugPrint('AchievementService: getAllAchievements failed: $e');
-      return achievementDefinitions.values.toList();
     }
+    return _fallbackBackendDefinitions();
+  }
+
+  List<backend_achievements.AchievementDefinition>
+      _fallbackBackendDefinitions() {
+    return achievementDefinitions.values
+        .map((def) => backend_achievements.AchievementDefinition(
+              code: def.id,
+              title: def.title,
+              description: def.description,
+              category: _categoryForType(def.type),
+              rarity: def.rarity.name,
+              isPoap: def.isPOAP,
+              requiredCount: def.requiredCount,
+              kub8Reward: def.tokenReward.toDouble(),
+            ))
+        .toList(growable: false);
   }
 
   String _categoryForType(AchievementType type) {

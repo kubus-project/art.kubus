@@ -26,7 +26,9 @@ class _AchievementsPageState extends State<AchievementsPage> {
   @override
   void initState() {
     super.initState();
-    _refreshAchievements();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _refreshAchievements();
+    });
   }
 
   Future<void> _refreshAchievements() async {
