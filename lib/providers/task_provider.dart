@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../config/config.dart';
 import '../models/achievement_progress.dart';
+import '../models/achievements.dart' as backend_achievements;
 import '../models/task.dart';
 import '../services/achievement_service.dart' as achievement_svc;
 import '../services/task_service.dart';
@@ -17,6 +18,10 @@ class TaskProvider extends ChangeNotifier {
   final List<TaskProgress> _taskProgress = <TaskProgress>[];
   final List<AchievementProgress> _achievementProgress =
       <AchievementProgress>[];
+  final Map<String, backend_achievements.AchievementDefinition>
+      _backendDefinitionsById =
+      <String, backend_achievements.AchievementDefinition>{};
+  double _totalKub8Earned = 0;
 
   bool _isLoading = false;
   String? _error;
@@ -24,6 +29,22 @@ class TaskProvider extends ChangeNotifier {
   List<TaskProgress> get taskProgress => List.unmodifiable(_taskProgress);
   List<AchievementProgress> get achievementProgress =>
       List.unmodifiable(_achievementProgress);
+  List<backend_achievements.AchievementDefinition> get achievementDefinitions =>
+      _backendDefinitionsById.isNotEmpty
+          ? List.unmodifiable(_backendDefinitionsById.values)
+          : achievement_svc.AchievementService.achievementDefinitions.values
+              .map((def) => backend_achievements.AchievementDefinition(
+                    code: def.id,
+                    title: def.title,
+                    description: def.description,
+                    category: 'fallback',
+                    rarity: def.rarity.name,
+                    isPoap: def.isPOAP,
+                    requiredCount: def.requiredCount,
+                    kub8Reward: def.tokenReward.toDouble(),
+                  ))
+              .toList(growable: false);
+  double get totalKub8Earned => _totalKub8Earned;
   bool get isLoading => _isLoading;
   String? get error => _error;
 
@@ -31,6 +52,13 @@ class TaskProvider extends ChangeNotifier {
     final id = achievementId.trim();
     if (id.isEmpty) return null;
     return _definitionsById[id];
+  }
+
+  backend_achievements.AchievementDefinition? backendDefinitionFor(
+      String achievementId) {
+    final id = achievementId.trim();
+    if (id.isEmpty) return null;
+    return _backendDefinitionsById[id];
   }
 
   /// Initialize progress for a fresh session.
@@ -42,11 +70,12 @@ class TaskProvider extends ChangeNotifier {
     _isLoading = true;
 
     try {
+      final definitions = achievementDefinitions;
       _achievementProgress
         ..clear()
-        ..addAll(_definitionsById.values.map((def) {
+        ..addAll(definitions.map((def) {
           return AchievementProgress(
-            achievementId: def.id,
+            achievementId: def.code,
             currentProgress: 0,
             isCompleted: false,
           );
@@ -127,12 +156,20 @@ class TaskProvider extends ChangeNotifier {
   int _calculateTaskTotal(Task task) {
     var total = 0;
     for (final achievementId in task.achievementIds) {
-      final def = definitionFor(achievementId);
-      if (def != null) {
-        total += def.requiredCount > 0 ? def.requiredCount : 1;
-      }
+      final required = _requiredCountFor(achievementId);
+      if (required != null) total += required;
     }
     return total > 0 ? total : 1;
+  }
+
+  int? _requiredCountFor(String achievementId) {
+    final backendDef = backendDefinitionFor(achievementId);
+    if (backendDef != null) {
+      return backendDef.requiredCount > 0 ? backendDef.requiredCount : 1;
+    }
+    final def = definitionFor(achievementId);
+    if (def != null) return def.requiredCount > 0 ? def.requiredCount : 1;
+    return null;
   }
 
   void _recalculateTaskProgress() {
@@ -189,8 +226,7 @@ class TaskProvider extends ChangeNotifier {
     required String achievementId,
     required int currentProgress,
   }) {
-    final def = definitionFor(achievementId);
-    final required = def?.requiredCount ?? 1;
+    final required = _requiredCountFor(achievementId) ?? 1;
     final completed =
         required > 0 ? currentProgress >= required : currentProgress > 0;
 
@@ -212,9 +248,9 @@ class TaskProvider extends ChangeNotifier {
 
   void _ensureAchievementProgressSeeded() {
     if (_achievementProgress.isEmpty) {
-      _achievementProgress.addAll(_definitionsById.values.map((def) {
+      _achievementProgress.addAll(achievementDefinitions.map((def) {
         return AchievementProgress(
-          achievementId: def.id,
+          achievementId: def.code,
           currentProgress: 0,
           isCompleted: false,
         );
@@ -224,11 +260,11 @@ class TaskProvider extends ChangeNotifier {
 
     final existingIds =
         _achievementProgress.map((p) => p.achievementId).toSet();
-    for (final def in _definitionsById.values) {
-      if (existingIds.contains(def.id)) continue;
+    for (final def in achievementDefinitions) {
+      if (existingIds.contains(def.code)) continue;
       _achievementProgress.add(
         AchievementProgress(
-          achievementId: def.id,
+          achievementId: def.code,
           currentProgress: 0,
           isCompleted: false,
         ),
@@ -282,5 +318,100 @@ class TaskProvider extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  Future<void> refreshAchievementsForCurrentUser() async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final summary = await achievement_svc.AchievementService()
+          .getMyAchievements();
+      _applySummary(summary);
+      _error = null;
+    } catch (e) {
+      AppConfig.debugPrint(
+          'TaskProvider: refreshAchievementsForCurrentUser failed: $e');
+      _error = 'Failed to refresh achievements: $e';
+      if (_achievementProgress.isEmpty) initializeProgress();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  void applyAchievementResult(
+      backend_achievements.AchievementEventResult result) {
+    if (result.progress.isEmpty && result.unlocked.isEmpty) {
+      if (result.totalKub8Earned > 0) {
+        _totalKub8Earned = result.totalKub8Earned;
+        notifyListeners();
+      }
+      return;
+    }
+
+    _ensureAchievementProgressSeeded();
+    for (final progress in result.progress) {
+      _setAchievementProgress(
+        achievementId: progress.achievementCode,
+        currentProgress: progress.currentProgress,
+      );
+    }
+    for (final unlocked in result.unlocked) {
+      final required = _requiredCountFor(unlocked.code) ?? 1;
+      _setAchievementProgress(
+        achievementId: unlocked.code,
+        currentProgress: required,
+      );
+    }
+    if (result.totalKub8Earned > 0) {
+      _totalKub8Earned = result.totalKub8Earned;
+    }
+    _recalculateTaskProgress();
+    _checkForUnlockedTasks();
+    notifyListeners();
+  }
+
+  void _applySummary(backend_achievements.UserAchievementsSummary summary) {
+    _backendDefinitionsById
+      ..clear()
+      ..addEntries(summary.definitions
+          .where((def) => def.code.trim().isNotEmpty)
+          .map((def) => MapEntry(def.code, def)));
+
+    _achievementProgress
+      ..clear()
+      ..addAll(achievementDefinitions.map((def) {
+        backend_achievements.AchievementProgress? progress;
+        for (final item in summary.progress) {
+          if (item.achievementCode == def.code) {
+            progress = item;
+            break;
+          }
+        }
+        final unlocked = summary.unlocked.any((item) => item.code == def.code);
+        return AchievementProgress(
+          achievementId: def.code,
+          currentProgress:
+              progress?.currentProgress ?? (unlocked ? def.requiredCount : 0),
+          isCompleted: progress?.isCompleted == true || unlocked,
+          completedDate: progress?.completedAt,
+        );
+      }));
+    _totalKub8Earned = summary.totalKub8Earned;
+    if (_taskProgress.isEmpty) {
+      final initialTasks = TaskService().getInitialTasks();
+      _taskProgress
+        ..clear()
+        ..addAll(initialTasks.map((task) => TaskProgress(
+              taskId: task.id,
+              completed: 0,
+              total: _calculateTaskTotal(task),
+              isCompleted: false,
+              lastUpdated: DateTime.now(),
+            )));
+    }
+    _recalculateTaskProgress();
+    _checkForUnlockedTasks();
   }
 }

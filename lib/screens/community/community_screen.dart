@@ -39,6 +39,7 @@ import '../../providers/community_hub_provider.dart';
 import '../../providers/community_comments_provider.dart';
 import '../../providers/community_interactions_provider.dart';
 import '../../providers/community_subject_provider.dart';
+import '../../providers/task_provider.dart';
 import '../../models/community_group.dart';
 import '../../services/backend_api_service.dart';
 import '../../services/community_post_save_controller.dart';
@@ -48,6 +49,7 @@ import '../../services/block_list_service.dart';
 import '../map_screen.dart';
 import 'post_detail_screen.dart';
 import 'group_feed_screen.dart';
+import '../web3/achievements/achievements_page.dart';
 import '../../community/community_interactions.dart';
 import '../../services/user_service.dart';
 import '../../providers/app_refresh_provider.dart';
@@ -4992,6 +4994,33 @@ class _CommunityScreenState extends State<CommunityScreen>
         Provider.of<CommunitySubjectProvider>(context, listen: false);
     final draft = hub.draft;
     final resolvedPost = _mergeDraftSubject(createdPost, draft);
+    final achievementResult = resolvedPost.achievementResult;
+    if (achievementResult != null) {
+      context.read<TaskProvider>().applyAchievementResult(achievementResult);
+      if (achievementResult.unlocked.isNotEmpty) {
+        final first = achievementResult.unlocked.first;
+        final extra = achievementResult.unlocked.length > 1
+            ? ' +${achievementResult.unlocked.length - 1}'
+            : '';
+        ScaffoldMessenger.of(context).showKubusSnackBar(
+          SnackBar(
+            content: Text(
+              'Achievement unlocked\n${first.title}$extra\n+${first.kub8Reward.round()} ${first.rewardCurrency}',
+            ),
+            action: SnackBarAction(
+              label: 'View achievements',
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const AchievementsPage(),
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      }
+    }
     hub.resetDraft();
     if (!mounted) return;
     subjectProvider.primeFromPosts([resolvedPost]);

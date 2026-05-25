@@ -1,8 +1,8 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/config.dart';
 import '../models/art_marker.dart';
+import '../models/achievements.dart' as backend_achievements;
 import 'backend_api_service.dart';
-import 'push_notification_service.dart';
 import '../models/collectible.dart';
 
 /// Achievement types
@@ -88,8 +88,6 @@ class AchievementService {
   AchievementService._internal();
 
   final BackendApiService _backendApi = BackendApiService();
-  final PushNotificationService _notificationService =
-      PushNotificationService();
 
   // Achievement definitions
   static const Map<AchievementType, AchievementDefinition>
@@ -394,225 +392,60 @@ class AchievementService {
   }) async {
     try {
       AppConfig.debugPrint(
-        'AchievementService: checking achievements for action: $action',
+        'AchievementService: reporting achievement action: $action',
       );
-
-      // Map actions to achievement checks
-      switch (action) {
-        case 'artwork_discovered':
-          await _checkDiscoveryAchievements(userId, data);
-          break;
-        case 'ar_viewed':
-          await _checkARViewAchievements(userId, data);
-          break;
-        case 'nft_minted':
-          await _checkNFTMintAchievements(userId, data);
-          break;
-        case 'nft_owned':
-          await _checkNFTCollectionAchievements(userId, data);
-          break;
-        case 'trade_completed':
-          await _checkTradingAchievements(userId, data);
-          break;
-        case 'post_created':
-          await _checkCommunityAchievements(userId, data);
-          break;
-        case 'likes_received':
-          await _checkInfluencerAchievements(userId, data);
-          break;
-        case 'followers_gained':
-          await _checkFollowerAchievements(userId, data);
-          break;
-        case 'comment_posted':
-          await _checkCommentAchievements(userId, data);
-          break;
-        case 'like_given':
-          await _checkSocialAchievements(userId, data);
-          break;
-        case 'event_attended':
-          await _checkEventAchievements(userId, data);
-          break;
-        case 'public_street_art_added':
-          await _checkStreetArtAchievements(userId, data);
-          break;
+      if (!_isSafeClientReportedAction(action)) {
+        AppConfig.debugPrint(
+          'AchievementService: action is backend-owned; ignoring client report: $action',
+        );
+        return;
       }
+
+      final subjectId = (data?['subjectId'] ??
+              data?['subject_id'] ??
+              data?['markerId'] ??
+              data?['marker_id'] ??
+              data?['artworkId'] ??
+              data?['artwork_id'])
+          ?.toString()
+          .trim();
+      if (subjectId == null || subjectId.isEmpty) {
+        AppConfig.debugPrint(
+          'AchievementService: missing subject id for client-reported action: $action',
+        );
+        return;
+      }
+
+      final subjectType = _subjectTypeForAction(action);
+      final idempotencyKey =
+          (data?['idempotencyKey'] ?? data?['idempotency_key'])
+              ?.toString()
+              .trim();
+      await recordEvent(
+        eventType: action,
+        subjectType: subjectType,
+        subjectId: subjectId,
+        idempotencyKey: idempotencyKey != null && idempotencyKey.isNotEmpty
+            ? idempotencyKey
+            : '$action:$subjectId:$userId',
+        metadata: data,
+      );
     } catch (e) {
       AppConfig.debugPrint('AchievementService: checkAchievements failed: $e');
     }
   }
 
-  /// Check discovery achievements
-  Future<void> _checkDiscoveryAchievements(
-      String userId, Map<String, dynamic>? data) async {
-    final count = data?['discoverCount'] as int? ?? 0;
-
-    if (count == 1) {
-      await _unlockAchievement(userId, AchievementType.firstDiscovery);
-    } else if (count == 10) {
-      await _unlockAchievement(userId, AchievementType.artExplorer);
-    } else if (count == 50) {
-      await _unlockAchievement(userId, AchievementType.artMaster);
-    } else if (count == 100) {
-      await _unlockAchievement(userId, AchievementType.artLegend);
-    }
+  bool _isSafeClientReportedAction(String action) {
+    return action == 'ar_viewed' || action == 'public_street_art_added';
   }
 
-  /// Check AR view achievements
-  Future<void> _checkARViewAchievements(
-      String userId, Map<String, dynamic>? data) async {
-    final raw = data?['viewCount'] ?? data?['arViewCount'];
-    final count = raw is int
-        ? raw
-        : raw is num
-            ? raw.toInt()
-            : int.tryParse(raw?.toString() ?? '') ?? 0;
-
-    if (count == 1) {
-      await _unlockAchievement(userId, AchievementType.firstARView);
-    } else if (count == 25) {
-      await _unlockAchievement(userId, AchievementType.arEnthusiast);
-    } else if (count == 100) {
-      await _unlockAchievement(userId, AchievementType.arPro);
-    }
-  }
-
-  /// Check NFT minting achievements
-  Future<void> _checkNFTMintAchievements(
-      String userId, Map<String, dynamic>? data) async {
-    final count = data?['mintCount'] as int? ?? 0;
-
-    if (count == 1) {
-      await _unlockAchievement(userId, AchievementType.firstNFTMint);
-    }
-  }
-
-  /// Check NFT collection achievements
-  Future<void> _checkNFTCollectionAchievements(
-      String userId, Map<String, dynamic>? data) async {
-    final count = data?['nftCount'] as int? ?? 0;
-
-    if (count == 10) {
-      await _unlockAchievement(userId, AchievementType.nftCollector);
-    }
-  }
-
-  /// Check trading achievements
-  Future<void> _checkTradingAchievements(
-      String userId, Map<String, dynamic>? data) async {
-    final count = data?['tradeCount'] as int? ?? 0;
-    final profitCount = data?['profitableTradeCount'] as int? ?? 0;
-
-    if (count == 1) {
-      await _unlockAchievement(userId, AchievementType.firstTrade);
-    } else if (count == 5) {
-      await _unlockAchievement(userId, AchievementType.nftTrader);
-    } else if (count == 100) {
-      await _unlockAchievement(userId, AchievementType.marketMaster);
-    }
-
-    if (profitCount == 10) {
-      await _unlockAchievement(userId, AchievementType.smartTrader);
-    }
-  }
-
-  /// Check community achievements
-  Future<void> _checkCommunityAchievements(
-      String userId, Map<String, dynamic>? data) async {
-    final count = data?['postCount'] as int? ?? 0;
-
-    if (count == 1) {
-      await _unlockAchievement(userId, AchievementType.firstPost);
-    }
-  }
-
-  /// Check influencer achievements
-  Future<void> _checkInfluencerAchievements(
-      String userId, Map<String, dynamic>? data) async {
-    final totalLikes = data?['totalLikes'] as int? ?? 0;
-    final postLikes = data?['postLikes'] as int? ?? 0;
-
-    if (totalLikes == 100) {
-      await _unlockAchievement(userId, AchievementType.influencer);
-    }
-
-    if (postLikes >= 50) {
-      await _unlockAchievement(userId, AchievementType.popularCreator);
-    }
-  }
-
-  /// Check follower achievements
-  Future<void> _checkFollowerAchievements(
-      String userId, Map<String, dynamic>? data) async {
-    final count = data?['followerCount'] as int? ?? 0;
-
-    if (count == 50) {
-      await _unlockAchievement(userId, AchievementType.communityBuilder);
-    }
-  }
-
-  /// Check comment achievements
-  Future<void> _checkCommentAchievements(
-      String userId, Map<String, dynamic>? data) async {
-    final count = data?['commentCount'] as int? ?? 0;
-
-    if (count == 1) {
-      await _unlockAchievement(userId, AchievementType.firstComment);
-    } else if (count == 50) {
-      await _unlockAchievement(userId, AchievementType.commentator);
-    }
-  }
-
-  /// Check social achievements
-  Future<void> _checkSocialAchievements(
-      String userId, Map<String, dynamic>? data) async {
-    final count = data?['likeCount'] as int? ?? 0;
-
-    if (count == 1) {
-      await _unlockAchievement(userId, AchievementType.firstLike);
-    }
-  }
-
-  /// Check event (POAP) achievements
-  Future<void> _checkEventAchievements(
-      String userId, Map<String, dynamic>? data) async {
-    final eventType = data?['eventType'] as String?;
-
-    switch (eventType) {
-      case 'general_event':
-        await _unlockAchievement(userId, AchievementType.eventAttendee,
-            eventData: data);
-        break;
-      case 'gallery_visit':
-        await _unlockAchievement(userId, AchievementType.galleryVisitor,
-            eventData: data);
-        break;
-      case 'workshop':
-        await _unlockAchievement(userId, AchievementType.workshopParticipant,
-            eventData: data);
-        break;
-    }
-  }
-
-  /// Check public street art contribution achievements
-  Future<void> _checkStreetArtAchievements(
-      String userId, Map<String, dynamic>? data) async {
-    final raw = data?['streetArtCount'] ??
-        data?['publicStreetArtCount'] ??
-        data?['count'];
-    final count = raw is int
-        ? raw
-        : raw is num
-            ? raw.toInt()
-            : int.tryParse(raw?.toString() ?? '') ?? 0;
-
-    if (count == 1) {
-      await _unlockAchievement(userId, AchievementType.streetArtSpotter);
-    } else if (count == 5) {
-      await _unlockAchievement(userId, AchievementType.streetArtScout);
-    } else if (count == 25) {
-      await _unlockAchievement(userId, AchievementType.streetArtCurator);
-    } else if (count == 100) {
-      await _unlockAchievement(userId, AchievementType.streetArtPatron);
+  String _subjectTypeForAction(String action) {
+    switch (action) {
+      case 'public_street_art_added':
+        return 'art_marker';
+      case 'ar_viewed':
+      default:
+        return 'artwork';
     }
   }
 
@@ -641,43 +474,14 @@ class AchievementService {
         userId: normalizedUserId,
         action: 'public_street_art_added',
         data: <String, dynamic>{
+          'subjectId': marker.id,
+          'markerId': marker.id,
           'streetArtCount': streetArtCount,
         },
       );
     } catch (e) {
       AppConfig.debugPrint(
           'AchievementService: trackPublicStreetArtMarkerAdded failed: $e');
-    }
-  }
-
-  /// Unlock achievement and award tokens
-  Future<void> _unlockAchievement(
-    String userId,
-    AchievementType type, {
-    Map<String, dynamic>? eventData,
-  }) async {
-    try {
-      final achievement = achievementDefinitions[type]!;
-
-      // Unlock achievement in backend
-      await _backendApi.unlockAchievement(
-        achievementType: achievement.id,
-        data: eventData ?? {},
-      );
-
-      // Show notification
-      await _notificationService.showAchievementNotification(
-        achievementId: achievement.id,
-        title: achievement.title,
-        description: achievement.description,
-        rewardTokens: achievement.tokenReward,
-      );
-
-      AppConfig.debugPrint(
-        'AchievementService: unlocked ${achievement.id} (+${achievement.tokenReward} KUB8)',
-      );
-    } catch (e) {
-      AppConfig.debugPrint('AchievementService: unlock failed: $e');
     }
   }
 
@@ -744,6 +548,45 @@ class AchievementService {
     }
   }
 
+  Future<backend_achievements.UserAchievementsSummary>
+      getMyAchievements() async {
+    final data = await _backendApi.getMyAchievements();
+    if (data['success'] == true) {
+      return backend_achievements.UserAchievementsSummary.fromJson(data);
+    }
+    return backend_achievements.UserAchievementsSummary(
+      definitions: achievementDefinitions.values
+          .map((def) => backend_achievements.AchievementDefinition(
+                code: def.id,
+                title: def.title,
+                description: def.description,
+                category: _categoryForType(def.type),
+                rarity: def.rarity.name,
+                isPoap: def.isPOAP,
+                requiredCount: def.requiredCount,
+                kub8Reward: def.tokenReward.toDouble(),
+              ))
+          .toList(growable: false),
+    );
+  }
+
+  Future<backend_achievements.AchievementEventResult> recordEvent({
+    required String eventType,
+    required String subjectType,
+    required String subjectId,
+    required String idempotencyKey,
+    Map<String, dynamic>? metadata,
+  }) async {
+    final data = await _backendApi.recordAchievementEvent(
+      eventType: eventType,
+      subjectType: subjectType,
+      subjectId: subjectId,
+      idempotencyKey: idempotencyKey,
+      metadata: metadata,
+    );
+    return backend_achievements.AchievementEventResult.fromJson(data);
+  }
+
   /// Get achievement progress
   Future<Map<String, int>> getAchievementProgress(String userId) async {
     try {
@@ -798,6 +641,39 @@ class AchievementService {
     } catch (e) {
       AppConfig.debugPrint('AchievementService: getAllAchievements failed: $e');
       return achievementDefinitions.values.toList();
+    }
+  }
+
+  String _categoryForType(AchievementType type) {
+    switch (type) {
+      case AchievementType.firstPost:
+      case AchievementType.influencer:
+      case AchievementType.communityBuilder:
+      case AchievementType.firstLike:
+      case AchievementType.popularCreator:
+      case AchievementType.firstComment:
+      case AchievementType.commentator:
+        return 'community';
+      case AchievementType.firstDiscovery:
+      case AchievementType.artExplorer:
+      case AchievementType.artMaster:
+      case AchievementType.artLegend:
+        return 'discovery';
+      case AchievementType.firstARView:
+      case AchievementType.arEnthusiast:
+      case AchievementType.arPro:
+        return 'ar';
+      case AchievementType.streetArtSpotter:
+      case AchievementType.streetArtScout:
+      case AchievementType.streetArtCurator:
+      case AchievementType.streetArtPatron:
+        return 'street_art';
+      case AchievementType.eventAttendee:
+      case AchievementType.galleryVisitor:
+      case AchievementType.workshopParticipant:
+        return 'events';
+      default:
+        return 'general';
     }
   }
 

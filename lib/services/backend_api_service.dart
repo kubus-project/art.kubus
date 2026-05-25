@@ -17,6 +17,7 @@ import '../models/exhibition.dart';
 import '../models/community_subject.dart';
 import '../models/saved_item.dart';
 import '../models/attestation.dart';
+import '../models/achievements.dart' as achievements_model;
 import '../models/collab_member.dart';
 import '../models/collab_invite.dart';
 import '../models/street_art_claim.dart';
@@ -5538,20 +5539,28 @@ class BackendApiService
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         final createdPost =
             _communityPostFromBackendJson(data['data'] as Map<String, dynamic>);
+        final achievementResult = data['achievements'] is Map
+            ? achievements_model.AchievementEventResult.fromJson(
+                data['achievements'] as Map<String, dynamic>,
+              )
+            : null;
+        final decoratedPost = achievementResult == null
+            ? createdPost
+            : createdPost.copyWith(achievementResult: achievementResult);
         try {
           await UserActionLogger.logPostCreated(
-            postId: createdPost.id,
-            content: createdPost.content,
+            postId: decoratedPost.id,
+            content: decoratedPost.content,
             mediaUrls: aggregatedMedia.isNotEmpty
                 ? aggregatedMedia
-                : (createdPost.imageUrl != null
-                    ? <String>[createdPost.imageUrl!]
+                : (decoratedPost.imageUrl != null
+                    ? <String>[decoratedPost.imageUrl!]
                     : null),
           );
         } catch (e) {
           AppConfig.debugPrint('UserActionLogger.logPostCreated failed: $e');
         }
-        return createdPost;
+        return decoratedPost;
       } else {
         throw Exception('Failed to create post: ${response.statusCode}');
       }
@@ -6000,21 +6009,30 @@ class BackendApiService
         final payload = decoded['data'] ?? decoded['post'] ?? decoded;
         if (payload is Map<String, dynamic>) {
           final created = _communityPostFromBackendJson(payload);
+          final achievementResult = decoded is Map<String, dynamic> &&
+                  decoded['achievements'] is Map
+              ? achievements_model.AchievementEventResult.fromJson(
+                  decoded['achievements'] as Map<String, dynamic>,
+                )
+              : null;
+          final decoratedPost = achievementResult == null
+              ? created
+              : created.copyWith(achievementResult: achievementResult);
           try {
             await UserActionLogger.logPostCreated(
-              postId: created.id,
-              content: created.content,
+              postId: decoratedPost.id,
+              content: decoratedPost.content,
               mediaUrls: aggregatedMedia.isNotEmpty
                   ? aggregatedMedia
-                  : (created.imageUrl != null
-                      ? <String>[created.imageUrl!]
+                  : (decoratedPost.imageUrl != null
+                      ? <String>[decoratedPost.imageUrl!]
                       : null),
             );
           } catch (e) {
             AppConfig.debugPrint(
                 'BackendApiService.createGroupPost: UserActionLogger failed: $e');
           }
-          return created;
+          return decoratedPost;
         }
         throw Exception('Unexpected group post payload');
       }
@@ -6985,6 +7003,54 @@ class BackendApiService
         'totalTokens': 0,
       };
     }
+  }
+
+  Future<Map<String, dynamic>> getMyAchievements() async {
+    try {
+      final response = await _get(
+        Uri.parse('$baseUrl/api/achievements/me'),
+        headers: _getHeaders(),
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
+      throw Exception('Failed to get achievements: ${response.statusCode}');
+    } catch (e) {
+      AppConfig.debugPrint('BackendApiService.getMyAchievements failed: $e');
+      return {
+        'success': false,
+        'definitions': [],
+        'progress': [],
+        'unlocked': [],
+        'totalKub8Earned': 0,
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>> recordAchievementEvent({
+    required String eventType,
+    required String subjectType,
+    required String subjectId,
+    required String idempotencyKey,
+    Map<String, dynamic>? metadata,
+  }) async {
+    final response = await _post(
+      Uri.parse('$baseUrl/api/achievements/events'),
+      headers: _getHeaders(),
+      body: jsonEncode({
+        'eventType': eventType,
+        'subjectType': subjectType,
+        'subjectId': subjectId,
+        'idempotencyKey': idempotencyKey,
+        if (metadata != null) 'metadata': metadata,
+      }),
+    );
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+    throw Exception('Failed to record achievement event: ${response.statusCode}');
   }
 
   /// Unlock an achievement

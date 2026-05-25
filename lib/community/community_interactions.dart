@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../config/config.dart';
 import '../models/community_group.dart';
 import '../models/community_subject.dart';
+import '../models/achievements.dart' as achievements_model;
 import '../models/saved_item.dart';
 import '../providers/saved_items_provider.dart';
 import '../models/promotion.dart';
@@ -49,6 +50,7 @@ class CommunityPost {
   final PromotionMetadata promotion;
   final CommunityFeedPinMetadata feedPin;
   final double? hybridScore;
+  final achievements_model.AchievementEventResult? achievementResult;
 
   CommunityPost({
     required this.id,
@@ -88,6 +90,7 @@ class CommunityPost {
     this.promotion = PromotionMetadata.none,
     this.feedPin = CommunityFeedPinMetadata.none,
     this.hybridScore,
+    this.achievementResult,
   });
 
   CommunityPost copyWith({
@@ -121,6 +124,7 @@ class CommunityPost {
     PromotionMetadata? promotion,
     CommunityFeedPinMetadata? feedPin,
     double? hybridScore,
+    achievements_model.AchievementEventResult? achievementResult,
   }) {
     return CommunityPost(
       id: id,
@@ -160,6 +164,7 @@ class CommunityPost {
       promotion: promotion ?? this.promotion,
       feedPin: feedPin ?? this.feedPin,
       hybridScore: hybridScore ?? this.hybridScore,
+      achievementResult: achievementResult ?? this.achievementResult,
     );
   }
 }

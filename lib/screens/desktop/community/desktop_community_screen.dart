@@ -16,6 +16,7 @@ import '../../../providers/wallet_provider.dart';
 import '../../../providers/app_mode_provider.dart';
 import '../../../providers/app_refresh_provider.dart';
 import '../../../providers/community_subject_provider.dart';
+import '../../../providers/task_provider.dart';
 import '../../../providers/community_comments_provider.dart';
 import '../../../providers/community_interactions_provider.dart';
 import '../../../community/community_interactions.dart';
@@ -72,6 +73,7 @@ import '../../community/post_detail_screen.dart';
 import '../../download_app_screen.dart';
 import '../../map_screen.dart';
 import '../../season0/season0_screen.dart';
+import '../../web3/achievements/achievements_page.dart';
 import '../../../widgets/community/community_season0_banner.dart';
 import '../../../widgets/common/kubus_screen_header.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
@@ -5633,8 +5635,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       final locationName =
           _selectedLocation ?? draft.locationLabel ?? location?.name;
 
+      CommunityPost createdPost;
       if (draft.targetGroup != null) {
-        await api.createGroupPost(
+        createdPost = await api.createGroupPost(
           draft.targetGroup!.id,
           content: _composeController.text.trim(),
           category: draft.category,
@@ -5650,7 +5653,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           locationLng: location?.lng,
         );
       } else {
-        await api.createCommunityPost(
+        createdPost = await api.createCommunityPost(
           content: _composeController.text.trim(),
           category: draft.category,
           artworkId: draft.artwork?.id,
@@ -5664,6 +5667,33 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           locationLat: location?.lat,
           locationLng: location?.lng,
         );
+      }
+      final achievementResult = createdPost.achievementResult;
+      if (achievementResult != null && mounted) {
+        context.read<TaskProvider>().applyAchievementResult(achievementResult);
+        if (achievementResult.unlocked.isNotEmpty) {
+          final first = achievementResult.unlocked.first;
+          final extra = achievementResult.unlocked.length > 1
+              ? ' +${achievementResult.unlocked.length - 1}'
+              : '';
+          ScaffoldMessenger.of(context).showKubusSnackBar(
+            SnackBar(
+              content: Text(
+                'Achievement unlocked\n${first.title}$extra\n+${first.kub8Reward.round()} ${first.rewardCurrency}',
+              ),
+              action: SnackBarAction(
+                label: 'View achievements',
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const AchievementsPage(),
+                    ),
+                  );
+                },
+              ),
+            ),
+          );
+        }
       }
 
       if (mounted) {

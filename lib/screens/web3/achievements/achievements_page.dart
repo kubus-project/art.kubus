@@ -1,8 +1,8 @@
 import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/models/achievement_progress.dart';
+import 'package:art_kubus/models/achievements.dart' as backend_achievements;
 import 'package:art_kubus/providers/task_provider.dart';
-import 'package:art_kubus/services/achievement_service.dart' as achievement_svc;
 import 'package:art_kubus/utils/achievement_ui.dart';
 import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
@@ -26,18 +26,18 @@ class _AchievementsPageState extends State<AchievementsPage> {
   @override
   void initState() {
     super.initState();
-    _loadTokenBalance();
+    _refreshAchievements();
   }
 
-  Future<void> _loadTokenBalance() async {
+  Future<void> _refreshAchievements() async {
     setState(() => _isLoadingTokens = true);
     try {
-      final tokens =
-          await achievement_svc.AchievementService().getTotalEarnedTokens();
+      await context.read<TaskProvider>().refreshAchievementsForCurrentUser();
       if (!mounted) return;
-      setState(() => _totalTokens = tokens);
+      setState(() => _totalTokens =
+          context.read<TaskProvider>().totalKub8Earned.round());
     } catch (e) {
-      AppConfig.debugPrint('AchievementsPage: token balance load failed: $e');
+      AppConfig.debugPrint('AchievementsPage: refresh failed: $e');
       if (!mounted) return;
       setState(() => _totalTokens = 0);
     } finally {
@@ -56,23 +56,23 @@ class _AchievementsPageState extends State<AchievementsPage> {
         progress.achievementId: progress,
     };
 
-    final achievements = achievement_svc
-        .AchievementService.achievementDefinitions.values
-        .toList(growable: false);
+    final achievements = taskProvider.achievementDefinitions;
 
     final completedCount = achievements.where((achievement) {
-      final progress = progressById[achievement.id];
+      final progress = progressById[achievement.code];
       if (progress == null) return false;
       final required =
           achievement.requiredCount > 0 ? achievement.requiredCount : 1;
       return progress.isCompleted || progress.currentProgress >= required;
     }).length;
 
-    int maxProgressForTypes(Set<achievement_svc.AchievementType> types) {
+    int maxProgressForCategory(Set<String> categories) {
       var maxProgress = 0;
       for (final achievement in achievements) {
-        if (!types.contains(achievement.type)) continue;
-        final progress = progressById[achievement.id]?.currentProgress ?? 0;
+        if (!categories.contains(achievement.category.toLowerCase())) {
+          continue;
+        }
+        final progress = progressById[achievement.code]?.currentProgress ?? 0;
         if (progress > maxProgress) {
           maxProgress = progress;
         }
@@ -80,22 +80,9 @@ class _AchievementsPageState extends State<AchievementsPage> {
       return maxProgress;
     }
 
-    final discoveryCount = maxProgressForTypes({
-      achievement_svc.AchievementType.firstDiscovery,
-      achievement_svc.AchievementType.artExplorer,
-      achievement_svc.AchievementType.artMaster,
-      achievement_svc.AchievementType.artLegend,
-    });
-    final arViews = maxProgressForTypes({
-      achievement_svc.AchievementType.firstARView,
-      achievement_svc.AchievementType.arEnthusiast,
-      achievement_svc.AchievementType.arPro,
-    });
-    final eventCount = maxProgressForTypes({
-      achievement_svc.AchievementType.eventAttendee,
-      achievement_svc.AchievementType.galleryVisitor,
-      achievement_svc.AchievementType.workshopParticipant,
-    });
+    final discoveryCount = maxProgressForCategory({'discovery'});
+    final arViews = maxProgressForCategory({'ar'});
+    final eventCount = maxProgressForCategory({'events'});
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -112,7 +99,7 @@ class _AchievementsPageState extends State<AchievementsPage> {
         ),
       ),
       body: RefreshIndicator(
-        onRefresh: _loadTokenBalance,
+        onRefresh: _refreshAchievements,
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 1680),
@@ -218,7 +205,7 @@ class _AchievementsPageState extends State<AchievementsPage> {
               width: cardWidth,
               child: KubusStatCard(
                 title: l10n.desktopSettingsAchievementsStatKub8PointsEarned,
-                value: _isLoadingTokens ? '…' : _totalTokens.toString(),
+                value: _isLoadingTokens ? '...' : _totalTokens.toString(),
                 icon: Icons.token,
                 layout: KubusStatCardLayout.centered,
                 accent: KubusColorRoles.of(context).web3MarketplaceAccent,
@@ -235,7 +222,7 @@ class _AchievementsPageState extends State<AchievementsPage> {
 
   Widget _buildAchievementsList({
     required AppLocalizations l10n,
-    required List<achievement_svc.AchievementDefinition> achievements,
+    required List<backend_achievements.AchievementDefinition> achievements,
     required Map<String, AchievementProgress> progressById,
   }) {
     if (achievements.isEmpty) {
@@ -278,9 +265,9 @@ class _AchievementsPageState extends State<AchievementsPage> {
           itemCount: achievements.length,
           itemBuilder: (context, index) {
             final achievement = achievements[index];
-            final progress = progressById[achievement.id] ??
+            final progress = progressById[achievement.code] ??
                 AchievementProgress(
-                  achievementId: achievement.id,
+                  achievementId: achievement.code,
                   currentProgress: 0,
                   isCompleted: false,
                 );
@@ -296,7 +283,7 @@ class _AchievementsPageState extends State<AchievementsPage> {
   }
 
   Widget _buildAchievementCard({
-    required achievement_svc.AchievementDefinition achievement,
+    required backend_achievements.AchievementDefinition achievement,
     required AchievementProgress progress,
     required double cardWidth,
   }) {
@@ -304,7 +291,7 @@ class _AchievementsPageState extends State<AchievementsPage> {
         achievement.requiredCount > 0 ? achievement.requiredCount : 1;
     final isUnlocked = progress.isCompleted || progress.currentProgress >= required;
     final progressLabel = isUnlocked
-        ? '+${achievement.tokenReward} KUB8'
+        ? '+${achievement.kub8Reward.round()} KUB8'
         : '${progress.currentProgress}/$required';
     final accent = AchievementUi.accentFor(context, achievement);
     final roomyCard = cardWidth >= 280;

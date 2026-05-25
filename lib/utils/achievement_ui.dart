@@ -2,14 +2,40 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 import '../services/achievement_service.dart' as achievement_svc;
+import '../models/achievements.dart' as backend_achievements;
 import 'category_accent_color.dart';
 
 class AchievementUi {
   const AchievementUi._();
 
-  static IconData iconFor(achievement_svc.AchievementDefinition achievement) {
-    if (achievement.isPOAP) return Icons.verified;
-    switch (achievement.type) {
+  static IconData iconFor(Object achievement) {
+    if (achievement is backend_achievements.AchievementDefinition) {
+      if (achievement.isPoap) return Icons.verified;
+      switch (achievement.category.toLowerCase()) {
+        case 'discovery':
+          return Icons.explore_outlined;
+        case 'ar':
+          return Icons.view_in_ar;
+        case 'nft':
+          return Icons.token;
+        case 'community':
+          if (achievement.code.contains('comment')) {
+            return Icons.chat_bubble_outline;
+          }
+          if (achievement.code.contains('like')) return Icons.favorite_border;
+          return Icons.forum_outlined;
+        case 'street_art':
+          return Icons.streetview;
+        case 'events':
+          return Icons.event_available;
+        case 'trading':
+          return Icons.swap_horiz;
+      }
+      return Icons.emoji_events_outlined;
+    }
+    final typed = achievement as achievement_svc.AchievementDefinition;
+    if (typed.isPOAP) return Icons.verified;
+    switch (typed.type) {
       case achievement_svc.AchievementType.firstDiscovery:
       case achievement_svc.AchievementType.artExplorer:
       case achievement_svc.AchievementType.artMaster:
@@ -54,11 +80,32 @@ class AchievementUi {
   }
 
   static String categoryLabelFor(
-    achievement_svc.AchievementDefinition achievement,
+    Object achievement,
     AppLocalizations l10n,
   ) {
-    if (achievement.isPOAP) return l10n.userProfileAchievementCategoryEvents;
-    switch (achievement.type) {
+    if (achievement is backend_achievements.AchievementDefinition) {
+      if (achievement.isPoap) return l10n.userProfileAchievementCategoryEvents;
+      switch (achievement.category.toLowerCase()) {
+        case 'discovery':
+          return l10n.userProfileAchievementCategoryDiscovery;
+        case 'ar':
+          return l10n.userProfileAchievementCategoryAr;
+        case 'nft':
+          return l10n.userProfileAchievementCategoryNft;
+        case 'community':
+          return l10n.userProfileAchievementCategoryCommunity;
+        case 'street_art':
+          return l10n.userProfileAchievementCategoryStreetArt;
+        case 'events':
+          return l10n.userProfileAchievementCategoryEvents;
+        case 'trading':
+          return l10n.userProfileAchievementCategoryTrading;
+      }
+      return achievement.category;
+    }
+    final typed = achievement as achievement_svc.AchievementDefinition;
+    if (typed.isPOAP) return l10n.userProfileAchievementCategoryEvents;
+    switch (typed.type) {
       case achievement_svc.AchievementType.firstDiscovery:
       case achievement_svc.AchievementType.artExplorer:
       case achievement_svc.AchievementType.artMaster:
@@ -103,7 +150,7 @@ class AchievementUi {
 
   static Color accentFor(
     BuildContext context,
-    achievement_svc.AchievementDefinition achievement,
+    Object achievement,
   ) {
     final l10n = AppLocalizations.of(context)!;
     final category = categoryLabelFor(achievement, l10n);

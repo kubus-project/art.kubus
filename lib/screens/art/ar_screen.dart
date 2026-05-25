@@ -1987,7 +1987,12 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
     await AchievementService().checkAchievements(
       userId: userId,
       action: 'ar_viewed',
-      data: {'viewCount': _placedObjects.length},
+      data: {
+        'subjectId': artworkId,
+        'artworkId': artworkId,
+        'idempotencyKey':
+            'ar_viewed:$artworkId:${DateTime.now().toUtc().toIso8601String().substring(0, 13)}',
+      },
     );
     if (!mounted) return;
 
