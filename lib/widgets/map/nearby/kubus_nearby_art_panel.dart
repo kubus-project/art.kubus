@@ -122,6 +122,13 @@ class _KubusNearbyArtPanelState extends State<KubusNearbyArtPanel> {
       tintBase: scheme.surface,
       padding: EdgeInsets.zero,
       margin: EdgeInsets.zero,
+      blurPolicy: isMobile
+          ? KubusMapBlurPolicy.disabled
+          : KubusMapBlurPolicy.forceMapChromeWhenCapable,
+      backdropRegionId: isMobile
+          ? 'mobile-nearby-art-sheet'
+          : 'desktop-nearby-art-panel',
+      enablePlatformBackdropRegion: !isMobile,
       child: content,
     );
 

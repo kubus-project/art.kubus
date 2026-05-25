@@ -4773,6 +4773,10 @@ class _MapScreenState extends State<MapScreen>
         fontWeight: FontWeight.w700,
         color: scheme.onSurface,
       ),
+      useMapGlassSurface: true,
+      mapBlurPolicy: KubusMapBlurPolicy.disabled,
+      backdropRegionId: 'mobile-map-filter-panel',
+      enablePlatformBackdropRegion: false,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

@@ -19,6 +19,128 @@ class KubusMapBackdropRegion {
   final String? clipPath;
 }
 
+enum KubusMapBackdropRegionDisposition {
+  accepted,
+  clamped,
+  rejected,
+}
+
+@immutable
+class KubusMapBackdropRegionValidation {
+  const KubusMapBackdropRegionValidation({
+    required this.disposition,
+    required this.reason,
+    required this.mapRect,
+    required this.originalRect,
+    this.resolvedRegion,
+  });
+
+  final KubusMapBackdropRegionDisposition disposition;
+  final String reason;
+  final Rect mapRect;
+  final Rect originalRect;
+  final KubusMapBackdropRegion? resolvedRegion;
+
+  bool get accepted =>
+      disposition == KubusMapBackdropRegionDisposition.accepted ||
+      disposition == KubusMapBackdropRegionDisposition.clamped;
+}
+
+const double kubusMapBackdropMaxAreaRatio = 0.30;
+const double kubusMapBackdropAlmostFullWidthRatio = 0.92;
+const double kubusMapBackdropVeryTallHeightRatio = 0.46;
+
+KubusMapBackdropRegionValidation validateKubusMapBackdropRegionForMap({
+  required KubusMapBackdropRegion region,
+  required Rect mapRect,
+}) {
+  if (!region.visible) {
+    return KubusMapBackdropRegionValidation(
+      disposition: KubusMapBackdropRegionDisposition.rejected,
+      reason: 'region-hidden',
+      mapRect: mapRect,
+      originalRect: region.rect,
+    );
+  }
+
+  if (!region.rect.isFinite ||
+      region.rect.width <= 0 ||
+      region.rect.height <= 0 ||
+      !region.blurSigma.isFinite ||
+      region.blurSigma < 0) {
+    return KubusMapBackdropRegionValidation(
+      disposition: KubusMapBackdropRegionDisposition.rejected,
+      reason: 'invalid-region-geometry',
+      mapRect: mapRect,
+      originalRect: region.rect,
+    );
+  }
+
+  if (!mapRect.isFinite || mapRect.width <= 0 || mapRect.height <= 0) {
+    return KubusMapBackdropRegionValidation(
+      disposition: KubusMapBackdropRegionDisposition.rejected,
+      reason: 'invalid-map-geometry',
+      mapRect: mapRect,
+      originalRect: region.rect,
+    );
+  }
+
+  final overlap = region.rect.intersect(mapRect);
+  if (!overlap.isFinite || overlap.width <= 0 || overlap.height <= 0) {
+    return KubusMapBackdropRegionValidation(
+      disposition: KubusMapBackdropRegionDisposition.rejected,
+      reason: 'outside-map-bounds',
+      mapRect: mapRect,
+      originalRect: region.rect,
+    );
+  }
+
+  final mapArea = mapRect.width * mapRect.height;
+  final overlapArea = overlap.width * overlap.height;
+  final areaRatio = overlapArea / mapArea;
+  final widthRatio = overlap.width / mapRect.width;
+  final heightRatio = overlap.height / mapRect.height;
+
+  if (areaRatio > kubusMapBackdropMaxAreaRatio) {
+    return KubusMapBackdropRegionValidation(
+      disposition: KubusMapBackdropRegionDisposition.rejected,
+      reason: 'region-area-too-large',
+      mapRect: mapRect,
+      originalRect: region.rect,
+    );
+  }
+
+  if (widthRatio >= kubusMapBackdropAlmostFullWidthRatio &&
+      heightRatio >= kubusMapBackdropVeryTallHeightRatio) {
+    return KubusMapBackdropRegionValidation(
+      disposition: KubusMapBackdropRegionDisposition.rejected,
+      reason: 'region-near-fullscreen',
+      mapRect: mapRect,
+      originalRect: region.rect,
+    );
+  }
+
+  final clamped = overlap != region.rect;
+  return KubusMapBackdropRegionValidation(
+    disposition: clamped
+        ? KubusMapBackdropRegionDisposition.clamped
+        : KubusMapBackdropRegionDisposition.accepted,
+    reason: clamped ? 'clamped-to-map-bounds' : 'accepted',
+    mapRect: mapRect,
+    originalRect: region.rect,
+    resolvedRegion: clamped
+        ? KubusMapBackdropRegion(
+            id: region.id,
+            rect: overlap,
+            borderRadius: region.borderRadius,
+            blurSigma: region.blurSigma,
+            visible: region.visible,
+            clipPath: region.clipPath,
+          )
+        : region,
+  );
+}
+
 class KubusMapBackdropHostController extends ChangeNotifier {
   final Map<String, KubusMapBackdropRegion> _regions =
       <String, KubusMapBackdropRegion>{};

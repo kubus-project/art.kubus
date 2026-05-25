@@ -92,6 +92,7 @@ KubusMapBlurDecision resolveKubusMapBlurDecision(
   final reduceEffectsUserTouched = provider?.reduceEffectsUserTouched ?? false;
   final heuristicTriggered = provider?.heuristicTriggered ?? false;
   final autoReduceEffectsApplied = provider?.autoReduceEffectsApplied ?? false;
+  final compactWeb = web && width > 0 && width < 700;
   if (policy == KubusMapBlurPolicy.disabled) {
     return KubusMapBlurDecision(
       enabled: false,
@@ -147,7 +148,16 @@ KubusMapBlurDecision resolveKubusMapBlurDecision(
     );
   }
 
-  if (web && overMapPlatformView && platformBackdropHostAvailable) {
+  final platformHostAllowed = policy ==
+          KubusMapBlurPolicy.forceMapChromeWhenCapable ||
+      (!compactWeb &&
+          (policy == KubusMapBlurPolicy.allowCompactWeb ||
+              policy == KubusMapBlurPolicy.automatic));
+
+  if (web &&
+      overMapPlatformView &&
+      platformBackdropHostAvailable &&
+      platformHostAllowed) {
     return KubusMapBlurDecision(
       enabled: true,
       reason: 'platform-view-backdrop-host',
@@ -169,7 +179,9 @@ KubusMapBlurDecision resolveKubusMapBlurDecision(
   if (web && overMapPlatformView) {
     return KubusMapBlurDecision(
       enabled: false,
-      reason: 'platform-view-safe-tint-fallback',
+      reason: compactWeb
+          ? 'compact-web-platform-view-safe-tint-fallback'
+          : 'platform-view-safe-tint-fallback',
       strategy: KubusMapBackdropStrategy.platformViewSafeTintFallback,
       providerAllowsBlur: allowBlur,
       width: width,
