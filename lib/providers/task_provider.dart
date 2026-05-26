@@ -7,6 +7,13 @@ import '../models/task.dart';
 import '../services/achievement_service.dart' as achievement_svc;
 import '../services/task_service.dart';
 
+enum AchievementHydrationStatus {
+  idle,
+  loading,
+  ready,
+  failed,
+}
+
 class TaskProvider extends ChangeNotifier {
   static final Map<String, achievement_svc.AchievementDefinition>
       _definitionsById = <String, achievement_svc.AchievementDefinition>{
@@ -25,6 +32,8 @@ class TaskProvider extends ChangeNotifier {
 
   bool _isLoading = false;
   String? _error;
+  AchievementHydrationStatus _achievementHydrationStatus =
+      AchievementHydrationStatus.idle;
 
   List<TaskProgress> get taskProgress => List.unmodifiable(_taskProgress);
   List<AchievementProgress> get achievementProgress =>
@@ -32,20 +41,13 @@ class TaskProvider extends ChangeNotifier {
   List<backend_achievements.AchievementDefinition> get achievementDefinitions =>
       _backendDefinitionsById.isNotEmpty
           ? List.unmodifiable(_backendDefinitionsById.values)
-          : achievement_svc.AchievementService.achievementDefinitions.values
-              .map((def) => backend_achievements.AchievementDefinition(
-                    code: def.id,
-                    title: def.title,
-                    description: def.description,
-                    category: 'fallback',
-                    rarity: def.rarity.name,
-                    isPoap: def.isPOAP,
-                    requiredCount: def.requiredCount,
-                    kub8Reward: def.tokenReward.toDouble(),
-                  ))
-              .toList(growable: false);
+          : _achievementHydrationStatus == AchievementHydrationStatus.failed
+              ? _staticFallbackDefinitions()
+              : const <backend_achievements.AchievementDefinition>[];
   bool get hasBackendAchievementDefinitions =>
       _backendDefinitionsById.isNotEmpty;
+  AchievementHydrationStatus get achievementHydrationStatus =>
+      _achievementHydrationStatus;
   double get totalKub8Earned => _totalKub8Earned;
   bool get isLoading => _isLoading;
   String? get error => _error;
@@ -107,6 +109,22 @@ class TaskProvider extends ChangeNotifier {
     }
 
     notifyListeners();
+  }
+
+  static List<backend_achievements.AchievementDefinition>
+      _staticFallbackDefinitions() {
+    return achievement_svc.AchievementService.achievementDefinitions.values
+        .map((def) => backend_achievements.AchievementDefinition(
+              code: def.id,
+              title: def.title,
+              description: def.description,
+              category: 'fallback',
+              rarity: def.rarity.name,
+              isPoap: def.isPOAP,
+              requiredCount: def.requiredCount,
+              kub8Reward: 0,
+            ))
+        .toList(growable: false);
   }
 
   TaskProgress? getTaskProgress(String taskId) {
@@ -324,18 +342,31 @@ class TaskProvider extends ChangeNotifier {
 
   Future<void> refreshAchievementsForCurrentUser() async {
     _isLoading = true;
+    _achievementHydrationStatus = AchievementHydrationStatus.loading;
     notifyListeners();
 
     try {
       final summary =
           await achievement_svc.AchievementService().getMyAchievements();
       _applySummary(summary);
+      _achievementHydrationStatus = _backendDefinitionsById.isNotEmpty
+          ? AchievementHydrationStatus.ready
+          : AchievementHydrationStatus.failed;
       _error = null;
     } catch (e) {
       AppConfig.debugPrint(
           'TaskProvider: refreshAchievementsForCurrentUser failed: $e');
       _error = 'Failed to refresh achievements: $e';
-      if (_achievementProgress.isEmpty) initializeProgress();
+      _achievementHydrationStatus = AchievementHydrationStatus.failed;
+      if (_achievementProgress.isEmpty) {
+        _achievementProgress.addAll(_staticFallbackDefinitions().map((def) {
+          return AchievementProgress(
+            achievementId: def.code,
+            currentProgress: 0,
+            isCompleted: false,
+          );
+        }));
+      }
     } finally {
       _isLoading = false;
       notifyListeners();

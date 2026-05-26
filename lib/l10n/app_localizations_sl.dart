@@ -4484,22 +4484,22 @@ class AppLocalizationsSl extends AppLocalizations {
   String get userProfileAchievementsTitle => 'Dosežki';
 
   @override
-  String get profileBadgesVerificationTitle => 'Značke in potrditve';
+  String get profileBadgesVerificationTitle => 'Profilne značke';
 
   @override
-  String get profileBadgesVerificationSubtitle => 'Preverjeni identitetni signali, profilne značke in potrditve.';
+  String get profileBadgesVerificationSubtitle => 'Vloge, potrditve in signali sodelovanja tega profila.';
 
   @override
-  String get walletBadgesVerificationTitle => 'Denarniške značke in potrditve';
+  String get walletBadgesVerificationTitle => 'Denarniške značke';
 
   @override
-  String get walletBadgesVerificationSubtitle => 'Značke, potrditve in zaupanja vredni signali, povezani z denarnico.';
+  String get walletBadgesVerificationSubtitle => 'Značke, povezane s to denarnico in njeno aktivnostjo na art.kubus.';
 
   @override
   String get profileAchievementsPreviewTitle => 'Dosežki';
 
   @override
-  String get profileAchievementsPreviewSubtitle => 'Mejniki napredka in nagrade KUB8.';
+  String get profileAchievementsPreviewSubtitle => 'Mejniki, pridobljeni z aktivnostjo na art.kubus.';
 
   @override
   String userProfileAchievementsProgressLabel(Object completed, Object total) {
@@ -12018,6 +12018,42 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get promotionCheckoutLabel => 'Plačilo';
+
+  @override
+  String get profileAchievementsProgressOnlyTitle => 'Zabeležen mejnik';
+
+  @override
+  String get profileAchievementsUnavailableTitle => 'Dosežki niso na voljo';
+
+  @override
+  String get profileAchievementsUnavailableDescription => 'Podrobnosti dosežkov trenutno ni mogoče naložiti.';
+
+  @override
+  String get recognitionBadgePanelLoadFailed => 'Priznanj trenutno ni mogoče naložiti.';
+
+  @override
+  String get recognitionBadgePanelEmpty => 'Za zdaj še ni priznanj. Obišči dogodke in sodeluj pri odobritvah, da si prislužiš značke.';
+
+  @override
+  String get recognitionBadgePanelAttendance => 'Obiski';
+
+  @override
+  String get recognitionBadgePanelParticipation => 'Sodelovanje';
+
+  @override
+  String get recognitionBadgePanelApproval => 'Odobritve';
+
+  @override
+  String get recognitionBadgePanelCuratorial => 'Kuratorsko';
+
+  @override
+  String get recognitionBadgePanelInstitutional => 'Institucionalno';
+
+  @override
+  String get recognitionBadgePanelCollectibleProof => 'Dokaz zbirateljstva';
+
+  @override
+  String get recognitionBadgePanelMinted => 'Izdano';
 
   @override
   String get attestationBadgePanelLoadFailed => 'Priznanj trenutno ni bilo mogoče naložiti.';

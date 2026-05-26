@@ -3,9 +3,9 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/models/achievement_progress.dart';
 import 'package:art_kubus/models/achievements.dart' as backend_achievements;
 import 'package:art_kubus/providers/task_provider.dart';
-import 'package:art_kubus/utils/achievement_ui.dart';
 import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
+import 'package:art_kubus/widgets/achievement/achievement_stat_card.dart';
 import 'package:art_kubus/widgets/common/kubus_stat_card.dart';
 import 'package:art_kubus/widgets/detail/shared_section_widgets.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
@@ -36,8 +36,8 @@ class _AchievementsPageState extends State<AchievementsPage> {
     try {
       await context.read<TaskProvider>().refreshAchievementsForCurrentUser();
       if (!mounted) return;
-      setState(() => _totalTokens =
-          context.read<TaskProvider>().totalKub8Earned.round());
+      setState(() =>
+          _totalTokens = context.read<TaskProvider>().totalKub8Earned.round());
     } catch (e) {
       AppConfig.debugPrint('AchievementsPage: refresh failed: $e');
       if (!mounted) return;
@@ -234,35 +234,32 @@ class _AchievementsPageState extends State<AchievementsPage> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
-      final crossAxisCount = width >= 1780
-        ? 6
-        : width >= 1480
-          ? 5
-          : width >= 1160
-            ? 4
-            : width >= 860
-              ? 3
-              : width >= 520
-                ? 2
-                : 1;
-      final crossSpacing =
-        width >= 1480 ? KubusSpacing.lg : KubusSpacing.md;
-      final mainSpacing =
-        width >= 1480 ? KubusSpacing.lg : KubusSpacing.md;
-      final cardWidth =
-        (width - (crossSpacing * (crossAxisCount - 1))) / crossAxisCount;
-      final childAspectRatio = crossAxisCount == 1
-        ? 2.45
-        : (cardWidth >= 280 ? 1.12 : 1.22);
+        final crossAxisCount = width >= 1780
+            ? 6
+            : width >= 1480
+                ? 5
+                : width >= 1160
+                    ? 4
+                    : width >= 860
+                        ? 3
+                        : width >= 520
+                            ? 2
+                            : 1;
+        final crossSpacing = width >= 1480 ? KubusSpacing.lg : KubusSpacing.md;
+        final mainSpacing = width >= 1480 ? KubusSpacing.lg : KubusSpacing.md;
+        final cardWidth =
+            (width - (crossSpacing * (crossAxisCount - 1))) / crossAxisCount;
+        final childAspectRatio =
+            crossAxisCount == 1 ? 2.45 : (cardWidth >= 280 ? 1.12 : 1.22);
 
         return GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: crossAxisCount,
-        crossAxisSpacing: crossSpacing,
-        mainAxisSpacing: mainSpacing,
-        childAspectRatio: childAspectRatio,
+            crossAxisSpacing: crossSpacing,
+            mainAxisSpacing: mainSpacing,
+            childAspectRatio: childAspectRatio,
           ),
           itemCount: achievements.length,
           itemBuilder: (context, index) {
@@ -291,40 +288,22 @@ class _AchievementsPageState extends State<AchievementsPage> {
   }) {
     final required =
         achievement.requiredCount > 0 ? achievement.requiredCount : 1;
-    final isUnlocked = progress.isCompleted || progress.currentProgress >= required;
+    final isUnlocked =
+        progress.isCompleted || progress.currentProgress >= required;
     final progressLabel = isUnlocked
         ? '+${achievement.kub8Reward.round()} KUB8'
         : '${progress.currentProgress}/$required';
-    final accent = AchievementUi.accentFor(context, achievement);
-    final roomyCard = cardWidth >= 280;
-    final compactCard = cardWidth < 220;
-
-    return KubusStatCard(
-      title: achievement.title,
-      value: progressLabel,
-      icon: AchievementUi.iconFor(achievement),
-      layout: KubusStatCardLayout.centered,
-      accent: accent,
-      centeredWatermarkAlignment: Alignment.center,
-      centeredWatermarkScale: compactCard ? 0.80 : 0.84,
+    return AchievementStatCard(
+      data: AchievementStatCardData(
+        code: achievement.code,
+        title: achievement.title,
+        category: achievement.category,
+        rarity: achievement.rarity,
+        value: progressLabel,
+        isCompleted: isUnlocked,
+      ),
+      cardWidth: cardWidth,
       minHeight: 0,
-      padding: EdgeInsets.all(
-        roomyCard ? KubusChromeMetrics.cardPadding : KubusSpacing.md,
-      ),
-      titleMaxLines: roomyCard ? 3 : 2,
-      titleStyle: KubusTextStyles.detailCaption.copyWith(
-        fontWeight: FontWeight.w600,
-        fontSize: roomyCard ? 13 : 12,
-        color: Theme.of(context)
-            .colorScheme
-            .onSurface
-            .withValues(alpha: isUnlocked ? 0.84 : 0.7),
-      ),
-      valueStyle: KubusTextStyles.detailCardTitle.copyWith(
-        color: Theme.of(context).colorScheme.onSurface,
-        fontSize: roomyCard ? 15 : 14,
-        fontWeight: FontWeight.w700,
-      ),
     );
   }
 }

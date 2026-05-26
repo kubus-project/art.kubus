@@ -51,7 +51,7 @@ class AttestationBadgePanel extends StatelessWidget {
                   provider.totalCount == 0) ...<Widget>[
                 const SizedBox(height: KubusSpacing.sm),
                 Text(
-                  l10n.attestationBadgePanelLoadFailed,
+                  l10n.recognitionBadgePanelLoadFailed,
                   style: KubusTextStyles.detailCaption.copyWith(
                     color: scheme.error.withValues(alpha: 0.82),
                   ),
@@ -145,43 +145,43 @@ class AttestationBadgePanel extends StatelessWidget {
     }
 
     addBadge(
-      label: l10n.attestationBadgePanelAttendance,
+      label: l10n.recognitionBadgePanelAttendance,
       count: provider.countByType(AttestationType.attendance),
       icon: Icons.place_outlined,
       color: roles.statBlue,
     );
     addBadge(
-      label: l10n.attestationBadgePanelParticipation,
+      label: l10n.recognitionBadgePanelParticipation,
       count: provider.countByType(AttestationType.participationProof),
       icon: Icons.event_available_outlined,
       color: roles.statTeal,
     );
     addBadge(
-      label: l10n.attestationBadgePanelApproval,
+      label: l10n.recognitionBadgePanelApproval,
       count: provider.countByType(AttestationType.approval),
       icon: Icons.task_alt,
       color: roles.positiveAction,
     );
     addBadge(
-      label: l10n.attestationBadgePanelCuratorial,
+      label: l10n.recognitionBadgePanelCuratorial,
       count: provider.countByType(AttestationType.curatorial),
       icon: Icons.auto_awesome_outlined,
       color: roles.statAmber,
     );
     addBadge(
-      label: l10n.attestationBadgePanelInstitutional,
+      label: l10n.recognitionBadgePanelInstitutional,
       count: provider.countByType(AttestationType.institutional),
       icon: Icons.account_balance_outlined,
       color: roles.web3InstitutionAccent,
     );
     addBadge(
-      label: l10n.attestationBadgePanelCollectibleProof,
+      label: l10n.recognitionBadgePanelCollectibleProof,
       count: provider.countByType(AttestationType.collectibleProof),
       icon: Icons.collections_bookmark_outlined,
       color: roles.web3MarketplaceAccent,
     );
     addBadge(
-      label: l10n.attestationBadgePanelMinted,
+      label: l10n.recognitionBadgePanelMinted,
       count: provider.mintedCount,
       icon: Icons.verified,
       color: roles.web3MarketplaceAccent,
@@ -190,7 +190,7 @@ class AttestationBadgePanel extends StatelessWidget {
     if (badges.isEmpty) {
       return <Widget>[
         Text(
-          l10n.attestationBadgePanelEmpty,
+          l10n.recognitionBadgePanelEmpty,
           style: KubusTextStyles.detailCaption.copyWith(
             color:
                 Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.68),

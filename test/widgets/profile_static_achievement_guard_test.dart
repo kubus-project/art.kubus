@@ -30,5 +30,21 @@ void main() {
         reason: '$path must not label badges/attestations as achievements',
       );
     }
+
+    final previewContents = File(
+      'lib/widgets/profile/profile_achievements_preview_section.dart',
+    ).readAsStringSync();
+    expect(
+      previewContents,
+      isNot(contains('_humanizeCode')),
+      reason:
+          'Profile achievement previews must not humanize codes during loading.',
+    );
+    expect(
+      previewContents,
+      isNot(contains("RegExp(r'[_-]+')")),
+      reason:
+          'Profile achievement previews must not derive display titles from codes.',
+    );
   });
 }

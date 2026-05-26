@@ -7,14 +7,20 @@ import '../../models/achievements.dart' as backend;
 import '../../providers/profile_provider.dart';
 import '../../providers/task_provider.dart';
 import '../../screens/web3/achievements/achievements_page.dart';
-import '../../utils/achievement_ui.dart';
 import '../../utils/design_tokens.dart';
-import '../../widgets/common/kubus_stat_card.dart';
+import '../../widgets/achievement/achievement_stat_card.dart';
 import '../../widgets/empty_state_card.dart';
 
 enum ProfileAchievementsPreviewMode {
   ownProfile,
   publicProfile,
+}
+
+enum AchievementPreviewDataState {
+  loading,
+  ready,
+  fallback,
+  unavailable,
 }
 
 class AchievementPreviewItem {
@@ -30,6 +36,7 @@ class AchievementPreviewItem {
     this.hasRequiredCount = true,
     this.kub8Reward,
     this.rewardCurrency = 'KUB8',
+    this.subdued = false,
   });
 
   final String code;
@@ -43,6 +50,7 @@ class AchievementPreviewItem {
   final bool hasRequiredCount;
   final double? kub8Reward;
   final String rewardCurrency;
+  final bool subdued;
 }
 
 class ProfileAchievementsPreviewSection extends StatelessWidget {
@@ -54,6 +62,7 @@ class ProfileAchievementsPreviewSection extends StatelessWidget {
     this.onViewAll,
     this.publicProgress,
     this.publicDefinitions,
+    this.dataState = AchievementPreviewDataState.ready,
     this.showWhenEmpty = true,
     this.padding,
   });
@@ -64,6 +73,7 @@ class ProfileAchievementsPreviewSection extends StatelessWidget {
   final VoidCallback? onViewAll;
   final List<legacy.AchievementProgress>? publicProgress;
   final List<backend.AchievementDefinition>? publicDefinitions;
+  final AchievementPreviewDataState dataState;
   final bool showWhenEmpty;
   final EdgeInsetsGeometry? padding;
 
@@ -76,13 +86,45 @@ class ProfileAchievementsPreviewSection extends StatelessWidget {
             if (!profileProvider.preferences.showAchievements) {
               return const SizedBox.shrink();
             }
+            if (!taskProvider.hasBackendAchievementDefinitions) {
+              if (taskProvider.achievementHydrationStatus ==
+                      AchievementHydrationStatus.loading ||
+                  taskProvider.achievementHydrationStatus ==
+                      AchievementHydrationStatus.idle) {
+                return _buildSection(
+                  context,
+                  const <AchievementPreviewItem>[],
+                  state: AchievementPreviewDataState.loading,
+                );
+              }
+              if (taskProvider.achievementHydrationStatus ==
+                  AchievementHydrationStatus.failed) {
+                return _buildSection(
+                  context,
+                  const <AchievementPreviewItem>[],
+                  state: AchievementPreviewDataState.unavailable,
+                );
+              }
+            }
             final items = _ownProfileItems(taskProvider);
             return _buildSection(context, items);
           },
         );
       case ProfileAchievementsPreviewMode.publicProfile:
-        final items = _publicProfileItems();
-        return _buildSection(context, items);
+        if (dataState == AchievementPreviewDataState.loading ||
+            dataState == AchievementPreviewDataState.unavailable) {
+          return _buildSection(
+            context,
+            const <AchievementPreviewItem>[],
+            state: dataState,
+          );
+        }
+        final l10n = AppLocalizations.of(context)!;
+        final items = _publicProfileItems(
+          progressOnlyTitle: l10n.profileAchievementsProgressOnlyTitle,
+          isFallback: dataState == AchievementPreviewDataState.fallback,
+        );
+        return _buildSection(context, items, state: dataState);
     }
   }
 
@@ -117,7 +159,10 @@ class ProfileAchievementsPreviewSection extends StatelessWidget {
     }).toList(growable: false);
   }
 
-  List<AchievementPreviewItem> _publicProfileItems() {
+  List<AchievementPreviewItem> _publicProfileItems({
+    required String progressOnlyTitle,
+    required bool isFallback,
+  }) {
     final progress = publicProgress ?? const <legacy.AchievementProgress>[];
     final definitionsByCode = <String, backend.AchievementDefinition>{
       for (final definition
@@ -156,7 +201,7 @@ class ProfileAchievementsPreviewSection extends StatelessWidget {
           : (item.currentProgress > 0 ? item.currentProgress : 1);
       return AchievementPreviewItem(
         code: item.achievementId,
-        title: _humanizeCode(item.achievementId),
+        title: progressOnlyTitle,
         description: '',
         category: 'general',
         rarity: 'common',
@@ -164,12 +209,16 @@ class ProfileAchievementsPreviewSection extends StatelessWidget {
         requiredCount: required,
         isCompleted: item.isCompleted,
         hasRequiredCount: false,
+        subdued: isFallback,
       );
     }).toList(growable: false);
   }
 
   Widget _buildSection(
-      BuildContext context, List<AchievementPreviewItem> items) {
+    BuildContext context,
+    List<AchievementPreviewItem> items, {
+    AchievementPreviewDataState state = AchievementPreviewDataState.ready,
+  }) {
     if (items.isEmpty && !showWhenEmpty) return const SizedBox.shrink();
 
     final l10n = AppLocalizations.of(context)!;
@@ -212,7 +261,15 @@ class ProfileAchievementsPreviewSection extends StatelessWidget {
           ],
         ),
         SizedBox(height: compact ? KubusSpacing.md : KubusSpacing.lg),
-        if (items.isEmpty)
+        if (state == AchievementPreviewDataState.loading)
+          _buildLoadingGrid(context)
+        else if (state == AchievementPreviewDataState.unavailable)
+          EmptyStateCard(
+            title: l10n.profileAchievementsUnavailableTitle,
+            description: l10n.profileAchievementsUnavailableDescription,
+            icon: Icons.emoji_events_outlined,
+          )
+        else if (items.isEmpty)
           EmptyStateCard(
             title: l10n.profileAchievementsEmptyTitle,
             description: l10n.userProfileAchievementsEmptyDescription,
@@ -249,8 +306,8 @@ class ProfileAchievementsPreviewSection extends StatelessWidget {
           children: items.map((item) {
             return SizedBox(
               width: cardWidth,
-              child: _AchievementPreviewCard(
-                item: item,
+              child: AchievementStatCard(
+                data: item.toStatCardData(context),
                 compact: compact,
               ),
             );
@@ -267,73 +324,63 @@ class ProfileAchievementsPreviewSection extends StatelessWidget {
     );
   }
 
-  static String _humanizeCode(String code) {
-    final normalized = code.trim().replaceAll(RegExp(r'[_-]+'), ' ');
-    if (normalized.isEmpty) return 'Achievement';
-    return normalized
-        .split(' ')
-        .where((part) => part.isNotEmpty)
-        .map((part) => '${part[0].toUpperCase()}${part.substring(1)}')
-        .join(' ');
+  Widget _buildLoadingGrid(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final availableWidth = constraints.maxWidth;
+        final minCardWidth = compact ? 132.0 : 156.0;
+        final cardWidth = availableWidth < 420
+            ? ((availableWidth - KubusSpacing.md) / 2)
+            : minCardWidth;
+
+        return Wrap(
+          key: const ValueKey<String>('profile-achievements-loading'),
+          spacing: KubusSpacing.md,
+          runSpacing: KubusSpacing.md,
+          children: List<Widget>.generate(3, (index) {
+            return Container(
+              width: cardWidth,
+              height: compact ? 96 : 104,
+              decoration: BoxDecoration(
+                color: scheme.surfaceContainerHighest.withValues(alpha: 0.42),
+                borderRadius: BorderRadius.circular(KubusRadius.md),
+                border: Border.all(
+                  color: scheme.outline.withValues(alpha: 0.08),
+                ),
+              ),
+            );
+          }),
+        );
+      },
+    );
   }
 }
 
-class _AchievementPreviewCard extends StatelessWidget {
-  const _AchievementPreviewCard({
-    required this.item,
-    required this.compact,
-  });
-
-  final AchievementPreviewItem item;
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    final required = item.requiredCount > 0 ? item.requiredCount : 1;
-    final completed = item.hasRequiredCount
-        ? item.isCompleted || item.currentProgress >= required
-        : item.isCompleted;
-    final reward = item.kub8Reward;
+extension on AchievementPreviewItem {
+  AchievementStatCardData toStatCardData(BuildContext context) {
+    final required = requiredCount > 0 ? requiredCount : 1;
+    final completed = hasRequiredCount
+        ? isCompleted || currentProgress >= required
+        : isCompleted;
+    final reward = kub8Reward;
     final l10n = AppLocalizations.of(context)!;
     final value = completed && reward != null && reward > 0
-        ? '+${_formatReward(reward)} ${item.rewardCurrency}'
-        : item.hasRequiredCount
-            ? '${item.currentProgress}/$required'
+        ? '+${_formatReward(reward)} $rewardCurrency'
+        : hasRequiredCount
+            ? '$currentProgress/$required'
             : (completed
                 ? l10n.userProfileAchievementCompletedLabel
-                : item.currentProgress.toString());
-    final accent = AchievementUi.accentForPreview(
-      context,
-      category: item.category,
-      rarity: item.rarity,
-    );
+                : currentProgress.toString());
 
-    return KubusStatCard(
-      title: item.title,
+    return AchievementStatCardData(
+      code: code,
+      title: title,
+      category: category,
+      rarity: rarity,
       value: value,
-      icon: AchievementUi.iconForPreview(
-        code: item.code,
-        category: item.category,
-      ),
-      layout: KubusStatCardLayout.centered,
-      accent: accent,
-      centeredWatermarkAlignment: Alignment.center,
-      centeredWatermarkScale: 0.84,
-      minHeight: compact ? 96 : 104,
-      padding: EdgeInsets.all(compact ? KubusSpacing.sm : KubusSpacing.md),
-      titleMaxLines: 2,
-      titleStyle: KubusTextStyles.detailCaption.copyWith(
-        fontWeight: FontWeight.w600,
-        color: Theme.of(context)
-            .colorScheme
-            .onSurface
-            .withValues(alpha: completed ? 0.84 : 0.7),
-      ),
-      valueStyle: KubusTextStyles.detailCardTitle.copyWith(
-        color: Theme.of(context).colorScheme.onSurface,
-        fontSize: 14,
-        fontWeight: FontWeight.w700,
-      ),
+      isCompleted: completed,
+      subdued: subdued,
     );
   }
 

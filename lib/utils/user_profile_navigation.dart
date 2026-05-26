@@ -7,7 +7,8 @@ import '../screens/community/user_profile_screen.dart' as mobile;
 import '../screens/desktop/community/desktop_user_profile_screen.dart'
     as desktop;
 import '../screens/desktop/desktop_shell.dart';
-import '../services/user_service.dart';
+import '../models/profile_package.dart';
+import '../services/profile_package_service.dart';
 import 'design_tokens.dart';
 
 enum DesktopProfilePresentation {
@@ -37,15 +38,19 @@ class DesktopProfilePresentationScope extends InheritedWidget {
 }
 
 class UserProfileNavigation {
-  static void _prefetchUserProfile(String userId) {
+  static Future<ProfilePackage?>? _prefetchUserProfilePackage(
+    String userId, {
+    String? username,
+  }) {
     final trimmed = userId.trim();
-    if (trimmed.isEmpty) return;
-    // Best-effort warmup: this populates UserService cache so profile screens
-    // can render immediately while a backend-authoritative profile refresh is
-    // already in flight.
+    if (trimmed.isEmpty) return null;
     try {
-      unawaited(UserService.getUserById(trimmed, forceRefresh: true));
+      return ProfilePackageService.prefetchPublicProfilePackage(
+        trimmed,
+        username: username,
+      );
     } catch (_) {}
+    return null;
   }
 
   static Future<void> open(
@@ -54,7 +59,10 @@ class UserProfileNavigation {
     String? username,
     String? heroTag,
   }) async {
-    _prefetchUserProfile(userId);
+    final initialPackageFuture = _prefetchUserProfilePackage(
+      userId,
+      username: username,
+    );
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth >= 900;
 
@@ -66,6 +74,7 @@ class UserProfileNavigation {
           userId: userId,
           username: username,
           heroTag: heroTag,
+          initialPackageFuture: initialPackageFuture,
         );
         return;
       }
@@ -77,6 +86,7 @@ class UserProfileNavigation {
             userId: userId,
             username: username,
             heroTag: heroTag,
+            initialPackageFuture: initialPackageFuture,
           ),
         );
         return;
@@ -88,11 +98,13 @@ class UserProfileNavigation {
             userId: userId,
             username: username,
             heroTag: heroTag,
+            initialPackageFuture: initialPackageFuture,
           )
         : mobile.UserProfileScreen(
             userId: userId,
             username: username,
             heroTag: heroTag,
+            initialPackageFuture: initialPackageFuture,
           );
 
     await Navigator.push(
@@ -106,8 +118,13 @@ class UserProfileNavigation {
     required String userId,
     String? username,
     String? heroTag,
+    Future<ProfilePackage?>? initialPackageFuture,
   }) async {
-    _prefetchUserProfile(userId);
+    final packageFuture = initialPackageFuture ??
+        _prefetchUserProfilePackage(
+          userId,
+          username: username,
+        );
     if (userId.trim().isEmpty) return;
 
     final theme = Theme.of(context);
@@ -175,6 +192,7 @@ class UserProfileNavigation {
                                   userId: userId,
                                   username: username,
                                   heroTag: heroTag,
+                                  initialPackageFuture: packageFuture,
                                 ),
                               ),
                             ),

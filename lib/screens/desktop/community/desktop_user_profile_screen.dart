@@ -7,8 +7,10 @@ import '../../../utils/design_tokens.dart';
 import '../../../utils/wallet_utils.dart';
 import '../../../widgets/app_loading.dart';
 import 'package:provider/provider.dart';
+import '../../../models/profile_package.dart';
 import '../../../models/user.dart';
 import '../../../services/user_service.dart';
+import '../../../services/profile_package_service.dart';
 import '../../../services/backend_api_service.dart';
 import '../../../services/share/share_service.dart';
 import '../../../services/share/share_types.dart';
@@ -63,12 +65,16 @@ class UserProfileScreen extends StatefulWidget {
   final String userId;
   final String? username;
   final String? heroTag;
+  final ProfilePackage? initialPackage;
+  final Future<ProfilePackage?>? initialPackageFuture;
 
   const UserProfileScreen({
     super.key,
     required this.userId,
     this.username,
     this.heroTag,
+    this.initialPackage,
+    this.initialPackageFuture,
   });
 
   @override
@@ -82,6 +88,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
   late ScrollController _scrollController;
 
   User? user;
+  ProfilePackage? _profilePackage;
   bool isLoading = true;
   List<CommunityPost> _posts = [];
   bool _postsLoading = true;
@@ -92,7 +99,6 @@ class _UserProfileScreenState extends State<UserProfileScreen>
 
   bool _artistDataLoading = false;
   bool _artistDataLoaded = false;
-  bool _artistDataRequested = false;
   bool _isFollowMutationInFlight = false;
   int _publicStreetArtAddedCount = 0;
   List<Map<String, dynamic>> _artistArtworks = [];
@@ -1524,10 +1530,26 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     return ProfileAchievementsPreviewSection(
       mode: ProfileAchievementsPreviewMode.publicProfile,
       compact: true,
-      publicProgress: user?.achievementProgress,
-      publicDefinitions: user?.achievementDefinitions,
+      dataState: _achievementPreviewDataState,
+      publicProgress: _profilePackage?.achievementProgress,
+      publicDefinitions: _profilePackage?.achievementDefinitions,
       showWhenEmpty: true,
     );
+  }
+
+  AchievementPreviewDataState get _achievementPreviewDataState {
+    final package = _profilePackage;
+    if (package == null || !package.isComplete) {
+      return AchievementPreviewDataState.loading;
+    }
+    if (package.achievementsUnavailable) {
+      return AchievementPreviewDataState.unavailable;
+    }
+    if (package.achievementDefinitions.isNotEmpty ||
+        package.achievementProgress.isEmpty) {
+      return AchievementPreviewDataState.ready;
+    }
+    return AchievementPreviewDataState.fallback;
   }
 
   Widget _buildPostsSection(
@@ -1613,87 +1635,129 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     await _loadUser(
       showFullScreenLoader: false,
       forceModalPrefetch: true,
+      forceRefresh: true,
     );
   }
 
   Future<void> _loadUser({
     bool showFullScreenLoader = true,
     bool forceModalPrefetch = false,
+    bool forceRefresh = false,
   }) async {
-    if (showFullScreenLoader) setState(() => isLoading = true);
-
     final targetId = widget.userId.trim();
+    final initial = !forceRefresh ? widget.initialPackage : null;
+    final cached = !forceRefresh
+        ? (initial ??
+            ProfilePackageService.getCachedPackage(
+              targetId,
+              allowStale: true,
+            ))
+        : null;
 
-    if (widget.username == null && targetId.isNotEmpty) {
-      try {
-        final cached = UserService.getCachedUser(targetId);
-        if (cached != null) {
-          setState(() {
-            user = cached;
-            isLoading = false;
-          });
-
-          try {
-            Future(() async {
-              final fresh = await UserService.getUserById(
-                targetId,
-                forceRefresh: true,
-              );
-              if (!mounted) return;
-              if (fresh != null && WalletUtils.equals(fresh.id, targetId)) {
-                setState(() {
-                  user = fresh;
-                });
-              }
-            });
-          } catch (_) {}
-        }
-      } catch (_) {}
+    if (cached != null && cached.isComplete) {
+      _applyProfilePackage(cached);
+      if (!forceRefresh) {
+        unawaited(_refreshProfilePackageInBackground());
+        return;
+      }
+    } else if (showFullScreenLoader) {
+      setState(() => isLoading = true);
     }
 
-    User? loadedUser;
+    ProfilePackage? package;
     try {
-      if (widget.username != null) {
-        loadedUser = await UserService.getUserByUsername(widget.username!);
-      } else {
-        loadedUser = await UserService.getUserById(
-          targetId,
-          forceRefresh: true,
-        );
-      }
+      package = !forceRefresh && widget.initialPackageFuture != null
+          ? await widget.initialPackageFuture
+          : await ProfilePackageService.loadPublicProfilePackage(
+              targetId,
+              forceRefresh: forceRefresh,
+              includePosts: true,
+              includeShowcase: true,
+              username: widget.username,
+            );
     } catch (e) {
-      debugPrint('Failed to fetch user: $e');
+      debugPrint('Failed to fetch profile package: $e');
     }
 
     if (!mounted) return;
+
+    if (package == null || !package.isComplete) {
+      setState(() {
+        user = null;
+        _profilePackage = null;
+        isLoading = false;
+      });
+      return;
+    }
+
+    _applyProfilePackage(package);
+
+    if (forceModalPrefetch) {
+      try {
+        await ProfileScreenMethods.prefetchOtherUserProfileData(
+          context,
+          walletAddress: package.user.id,
+          force: true,
+          prefetchStatsSnapshot: false,
+        );
+      } catch (_) {}
+    }
+  }
+
+  void _applyProfilePackage(ProfilePackage package) {
+    if (!mounted) return;
     setState(() {
-      user = loadedUser;
+      _profilePackage = package;
+      user = package.user;
       isLoading = false;
-    });
+      _publicStreetArtAddedCount =
+          package.publicStats['publicStreetArtAdded'] ??
+              _publicStreetArtAddedCount;
 
-    if (user == null) return;
-
-    try {
-      final prefetchFuture = ProfileScreenMethods.prefetchOtherUserProfileData(
-        context,
-        walletAddress: user!.id,
-        force: forceModalPrefetch,
-        prefetchStatsSnapshot: false,
-      );
-      if (forceModalPrefetch) {
-        await prefetchFuture;
-      } else {
-        unawaited(prefetchFuture);
+      final posts = package.initialPosts;
+      if (posts != null) {
+        _posts = List<CommunityPost>.from(posts);
+        _postsLoading = false;
+        _postsError = null;
+        _currentPage = 1;
+        _isLastPage = posts.length < 20;
+        _loadingMore = false;
       }
-    } catch (_) {}
 
+      _artistArtworks = package.artistArtworks
+          .map((item) => Map<String, dynamic>.from(item))
+          .toList(growable: false);
+      _artistCollections = package.artistCollections
+          .map((item) => Map<String, dynamic>.from(item))
+          .toList(growable: false);
+      _artistDataLoaded = true;
+      _artistDataLoading = false;
+    });
+  }
+
+  Future<void> _refreshProfilePackageInBackground() async {
+    final targetId = widget.userId.trim();
+    if (targetId.isEmpty) return;
     try {
-      UserService.fetchAndUpdateUserStats(user!.id);
-    } catch (_) {}
-
-    await _loadUserStats(forceRefresh: true);
-    await _loadPosts();
-    await _maybeLoadArtistData(force: true);
+      final fresh = await ProfilePackageService.loadPublicProfilePackage(
+        targetId,
+        forceRefresh: true,
+        includePosts: true,
+        includeShowcase: true,
+        username: widget.username,
+      );
+      if (!mounted || fresh == null || !fresh.isComplete) return;
+      final current = user;
+      if (current != null && !WalletUtils.equals(current.id, fresh.user.id)) {
+        return;
+      }
+      _applyProfilePackage(fresh);
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint(
+            'DesktopUserProfileScreen._refreshProfilePackageInBackground: $e');
+      }
+    }
   }
 
   Future<void> _loadPosts() async {
@@ -1736,6 +1800,14 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       try {
         if (user != null) {
           user = user!.copyWith(postsCount: posts.length);
+          _profilePackage = _profilePackage?.copyWith(
+            user: user,
+            initialPosts: List<CommunityPost>.from(_posts),
+            publicStats: <String, int>{
+              ...?_profilePackage?.publicStats,
+              'posts': posts.length,
+            },
+          );
           UserService.setUsersInCache([user!]);
         }
       } catch (_) {}
@@ -1839,10 +1911,22 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           resolvedFollowing = currentUser.followingCount;
         }
 
-        user = currentUser.copyWith(
+        final updatedUser = currentUser.copyWith(
           postsCount: resolvedPosts,
           followersCount: resolvedFollowers,
           followingCount: resolvedFollowing,
+        );
+        user = updatedUser;
+        _profilePackage = _profilePackage?.copyWith(
+          user: updatedUser,
+          publicStats: <String, int>{
+            ...?_profilePackage?.publicStats,
+            if (hasPosts) 'posts': resolvedPosts,
+            if (hasFollowers) 'followers': resolvedFollowers,
+            if (hasFollowing) 'following': resolvedFollowing,
+            if (hasStreetArtAdded)
+              'publicStreetArtAdded': counters['publicStreetArtAdded'] ?? 0,
+          },
         );
 
         if (hasStreetArtAdded) {
@@ -1914,6 +1998,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
         followersCount: mutation.followersCount ?? currentUser.followersCount,
         followingCount: mutation.followingCount ?? currentUser.followingCount,
       );
+      _profilePackage = _profilePackage?.copyWith(user: user);
     });
 
     if (!mutation.hasCanonicalCounters) {
@@ -1969,6 +2054,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       final fresh = await UserService.getUserById(
         current.id,
         forceRefresh: true,
+        includeAchievements: false,
       );
       if (!mounted || fresh == null) return;
 
@@ -1977,6 +2063,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
         user = latest.copyWith(
           isFollowing: fresh.isFollowing,
         );
+        _profilePackage = _profilePackage?.copyWith(user: user);
       });
     } catch (e) {
       if (kDebugMode) {
@@ -2245,42 +2332,6 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       if (!mounted) return;
       messenger.showKubusSnackBar(
           SnackBar(content: Text(l10n.commonActionFailedToast)));
-    }
-  }
-
-  Future<void> _maybeLoadArtistData({bool force = false}) async {
-    final isCreator =
-        (user?.isArtist ?? false) || (user?.isInstitution ?? false);
-    if (!isCreator) return;
-    if (_artistDataLoading && !force) return;
-    if (_artistDataRequested && !force) return;
-
-    _artistDataRequested = true;
-    await _loadArtistData(user!.id, force: force);
-  }
-
-  Future<void> _loadArtistData(String walletAddress,
-      {bool force = false}) async {
-    if (!mounted) return;
-    setState(() => _artistDataLoading = true);
-
-    try {
-      final api = BackendApiService();
-      final artworks = await api.getArtistArtworks(walletAddress, limit: 6);
-      final collections =
-          await api.getCollections(walletAddress: walletAddress, limit: 6);
-
-      if (!mounted) return;
-      setState(() {
-        _artistArtworks = artworks;
-        _artistCollections = collections;
-        _artistDataLoaded = true;
-      });
-    } catch (e) {
-      debugPrint('Failed to load artist showcase data: $e');
-      if (mounted) setState(() => _artistDataLoaded = true);
-    } finally {
-      if (mounted) setState(() => _artistDataLoading = false);
     }
   }
 

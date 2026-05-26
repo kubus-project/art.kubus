@@ -14,6 +14,7 @@ import '../../providers/wallet_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/platform_provider.dart';
 import '../../services/backend_api_service.dart';
+import '../../services/profile_package_service.dart';
 import '../../services/user_service.dart';
 import '../../utils/artwork_navigation.dart';
 import '../../utils/artwork_media_resolver.dart';
@@ -331,6 +332,14 @@ class ProfileScreenMethods {
             );
           } catch (_) {}
         })(),
+        (() async {
+          try {
+            await ProfilePackageService.prefetchPublicProfilePackage(
+              canonicalWallet,
+              forceRefresh: force,
+            );
+          } catch (_) {}
+        })(),
       ]);
     }
 
@@ -637,11 +646,12 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
     if (wallets.isEmpty) return;
 
     try {
-      await UserService.getUsersByWallets(wallets, forceRefresh: false);
+      await Future.wait<void>(
+        wallets.map((wallet) async {
+          await ProfilePackageService.prefetchPublicProfilePackage(wallet);
+        }),
+      );
     } catch (_) {}
-
-    if (!mounted) return;
-    setState(() {});
   }
 
   @override
@@ -1055,11 +1065,12 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
     if (wallets.isEmpty) return;
 
     try {
-      await UserService.getUsersByWallets(wallets, forceRefresh: false);
+      await Future.wait<void>(
+        wallets.map((wallet) async {
+          await ProfilePackageService.prefetchPublicProfilePackage(wallet);
+        }),
+      );
     } catch (_) {}
-
-    if (!mounted) return;
-    setState(() {});
   }
 
   @override

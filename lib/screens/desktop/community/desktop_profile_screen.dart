@@ -79,6 +79,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   List<Map<String, dynamic>> _artistEvents = [];
   bool _showActivityStatus = true;
   bool _profilePrefsListenerAttached = false;
+  bool _didScheduleAchievementHydration = false;
 
   @override
   void initState() {
@@ -118,6 +119,21 @@ class _ProfileScreenState extends State<ProfileScreen>
           }
         });
       } catch (_) {}
+    }
+    if (!_didScheduleAchievementHydration) {
+      _didScheduleAchievementHydration = true;
+      final taskProvider = context.read<TaskProvider>();
+      if (taskProvider.achievementHydrationStatus ==
+          AchievementHydrationStatus.idle) {
+        Future.microtask(() async {
+          try {
+            await taskProvider.refreshAchievementsForCurrentUser();
+          } catch (e) {
+            AppConfig.debugPrint(
+                'DesktopProfileScreen: achievements hydration failed: $e');
+          }
+        });
+      }
     }
     _maybeLoadArtistData();
   }

@@ -8732,25 +8732,25 @@ abstract class AppLocalizations {
   /// No description provided for @profileBadgesVerificationTitle.
   ///
   /// In en, this message translates to:
-  /// **'Badges & verification'**
+  /// **'Profile badges'**
   String get profileBadgesVerificationTitle;
 
   /// No description provided for @profileBadgesVerificationSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Verified identity signals, profile badges, and attestations.'**
+  /// **'Role, verification and participation signals for this profile.'**
   String get profileBadgesVerificationSubtitle;
 
   /// No description provided for @walletBadgesVerificationTitle.
   ///
   /// In en, this message translates to:
-  /// **'Wallet badges & verification'**
+  /// **'Wallet badges'**
   String get walletBadgesVerificationTitle;
 
   /// No description provided for @walletBadgesVerificationSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Wallet-linked badges, attestations, and trust signals.'**
+  /// **'Badges linked to this wallet and its activity on art.kubus.'**
   String get walletBadgesVerificationSubtitle;
 
   /// No description provided for @profileAchievementsPreviewTitle.
@@ -8762,7 +8762,7 @@ abstract class AppLocalizations {
   /// No description provided for @profileAchievementsPreviewSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Progress milestones and KUB8 rewards.'**
+  /// **'Milestones earned through activity across art.kubus.'**
   String get profileAchievementsPreviewSubtitle;
 
   /// No description provided for @userProfileAchievementsProgressLabel.
@@ -22672,6 +22672,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Checkout'**
   String get promotionCheckoutLabel;
+
+  /// No description provided for @profileAchievementsProgressOnlyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Milestone recorded'**
+  String get profileAchievementsProgressOnlyTitle;
+
+  /// No description provided for @profileAchievementsUnavailableTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Achievements unavailable'**
+  String get profileAchievementsUnavailableTitle;
+
+  /// No description provided for @profileAchievementsUnavailableDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Achievement details could not be loaded right now.'**
+  String get profileAchievementsUnavailableDescription;
+
+  /// No description provided for @recognitionBadgePanelLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load recognition right now.'**
+  String get recognitionBadgePanelLoadFailed;
+
+  /// No description provided for @recognitionBadgePanelEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No recognition yet. Visit events and take part in approvals to earn badges.'**
+  String get recognitionBadgePanelEmpty;
+
+  /// No description provided for @recognitionBadgePanelAttendance.
+  ///
+  /// In en, this message translates to:
+  /// **'Visits'**
+  String get recognitionBadgePanelAttendance;
+
+  /// No description provided for @recognitionBadgePanelParticipation.
+  ///
+  /// In en, this message translates to:
+  /// **'Participation'**
+  String get recognitionBadgePanelParticipation;
+
+  /// No description provided for @recognitionBadgePanelApproval.
+  ///
+  /// In en, this message translates to:
+  /// **'Approvals'**
+  String get recognitionBadgePanelApproval;
+
+  /// No description provided for @recognitionBadgePanelCuratorial.
+  ///
+  /// In en, this message translates to:
+  /// **'Curatorial'**
+  String get recognitionBadgePanelCuratorial;
+
+  /// No description provided for @recognitionBadgePanelInstitutional.
+  ///
+  /// In en, this message translates to:
+  /// **'Institutional'**
+  String get recognitionBadgePanelInstitutional;
+
+  /// No description provided for @recognitionBadgePanelCollectibleProof.
+  ///
+  /// In en, this message translates to:
+  /// **'Collectible proof'**
+  String get recognitionBadgePanelCollectibleProof;
+
+  /// No description provided for @recognitionBadgePanelMinted.
+  ///
+  /// In en, this message translates to:
+  /// **'Issued'**
+  String get recognitionBadgePanelMinted;
 
   /// No description provided for @attestationBadgePanelLoadFailed.
   ///

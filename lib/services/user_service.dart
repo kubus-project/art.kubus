@@ -52,6 +52,18 @@ class UserAchievementSummaryPayload {
   final List<backend_achievements.AchievementDefinition> definitions;
 }
 
+class UserAchievementSummaryResult extends UserAchievementSummaryPayload {
+  const UserAchievementSummaryResult({
+    super.progress = const <AchievementProgress>[],
+    super.definitions = const <backend_achievements.AchievementDefinition>[],
+    this.unavailable = false,
+  });
+
+  final bool unavailable;
+
+  bool get isResolved => true;
+}
+
 class UserService {
   static const String _followingKey = 'following_users';
   static const String _cachePrefsKey = 'user_cache_v1';
@@ -302,7 +314,7 @@ class UserService {
   }
 
   static Future<User?> getUserById(String userId,
-      {bool forceRefresh = false}) async {
+      {bool forceRefresh = false, bool includeAchievements = true}) async {
     try {
       // Consult cache first (unless caller requests fresh data)
       if (!forceRefresh) {
@@ -319,13 +331,23 @@ class UserService {
             } else {
               // Force a one-time refresh for legacy cache entries that predate
               // coverImageUrl persistence so profile covers load automatically.
-              if (!_legacyCacheMissingCoverKey.contains(userId)) {
-                return _cache[userId];
+              final cached = _cache[userId];
+              final hasAchievementPackage = cached != null &&
+                  (cached.achievementDefinitions.isNotEmpty ||
+                      cached.achievementProgress.isNotEmpty);
+              if (!_legacyCacheMissingCoverKey.contains(userId) &&
+                  (!includeAchievements || hasAchievementPackage)) {
+                return cached;
               }
             }
           } catch (_) {
-            if (!_legacyCacheMissingCoverKey.contains(userId)) {
-              return _cache[userId];
+            final cached = _cache[userId];
+            final hasAchievementPackage = cached != null &&
+                (cached.achievementDefinitions.isNotEmpty ||
+                    cached.achievementProgress.isNotEmpty);
+            if (!_legacyCacheMissingCoverKey.contains(userId) &&
+                (!includeAchievements || hasAchievementPackage)) {
+              return cached;
             }
           }
         }
@@ -401,12 +423,15 @@ class UserService {
       } catch (_) {}
       UserAchievementSummaryPayload achievementSummary =
           const UserAchievementSummaryPayload();
-      try {
-        achievementSummary = await loadPublicAchievementSummary(resolvedWallet);
-      } catch (e) {
-        if (kDebugMode) {
-          debugPrint(
-              'UserService.getUserById: failed to load achievements for $resolvedWallet: $e');
+      if (includeAchievements) {
+        try {
+          achievementSummary =
+              await loadPublicAchievementSummary(resolvedWallet);
+        } catch (e) {
+          if (kDebugMode) {
+            debugPrint(
+                'UserService.getUserById: failed to load achievements for $resolvedWallet: $e');
+          }
         }
       }
 
@@ -522,14 +547,6 @@ class UserService {
             _legacyCacheMissingCoverKey.remove(user.id);
           } catch (_) {}
         }
-      } catch (_) {}
-      // Trigger a background refresh of authoritative stats. This is intentionally
-      // non-blocking so callers of getUserById stay fast. The background fetch
-      // will update the cached User when it completes.
-      try {
-        Future(() async {
-          await fetchAndUpdateUserStats(resolvedWallet);
-        });
       } catch (_) {}
       return user;
     } catch (e) {
@@ -703,6 +720,70 @@ class UserService {
     } catch (_) {}
   }
 
+  static Map<String, dynamic> _cacheUserToJson(User u, int cachedAt) {
+    return {
+      'id': u.id,
+      'name': u.name,
+      'username': u.username,
+      'bio': u.bio,
+      'followersCount': u.followersCount,
+      'followingCount': u.followingCount,
+      'postsCount': u.postsCount,
+      'isFollowing': u.isFollowing,
+      'isVerified': u.isVerified,
+      'isArtist': u.isArtist,
+      'isInstitution': u.isInstitution,
+      'showAchievements': u.showAchievements,
+      'joinedDate': u.joinedDate,
+      'profileImageUrl': u.profileImageUrl,
+      'coverImageUrl': u.coverImageUrl,
+      'achievementProgress':
+          u.achievementProgress.map(_achievementProgressToJson).toList(),
+      'achievementDefinitions':
+          u.achievementDefinitions.map(_achievementDefinitionToJson).toList(),
+      'cachedAt': cachedAt,
+    };
+  }
+
+  static Map<String, dynamic> _achievementProgressToJson(
+      AchievementProgress progress) {
+    return {
+      'achievementId': progress.achievementId,
+      'currentProgress': progress.currentProgress,
+      'isCompleted': progress.isCompleted,
+      'completedDate': progress.completedDate?.toIso8601String(),
+    };
+  }
+
+  static AchievementProgress _achievementProgressFromJson(
+      Map<String, dynamic> json) {
+    return AchievementProgress(
+      achievementId: json['achievementId']?.toString() ?? '',
+      currentProgress: _parseInt(json['currentProgress']),
+      isCompleted: json['isCompleted'] == true,
+      completedDate: _parseDate(json['completedDate']),
+    );
+  }
+
+  static Map<String, dynamic> _achievementDefinitionToJson(
+      backend_achievements.AchievementDefinition definition) {
+    return {
+      'code': definition.code,
+      'title': definition.title,
+      'description': definition.description,
+      'category': definition.category,
+      'rarity': definition.rarity,
+      'iconKey': definition.iconKey,
+      'isPoap': definition.isPoap,
+      'isActive': definition.isActive,
+      'seasonId': definition.seasonId,
+      'requiredCount': definition.requiredCount,
+      'eventType': definition.eventType,
+      'metricKey': definition.metricKey,
+      'kub8Reward': definition.kub8Reward,
+    };
+  }
+
   static Future<void> _persistCache() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -717,48 +798,18 @@ class UserService {
         final keep = sorted.reversed.take(_maxEntries).toList();
         for (final k in keep) {
           final u = _cache[k]!;
-          map[k] = {
-            'id': u.id,
-            'name': u.name,
-            'username': u.username,
-            'bio': u.bio,
-            'followersCount': u.followersCount,
-            'followingCount': u.followingCount,
-            'postsCount': u.postsCount,
-            'isFollowing': u.isFollowing,
-            'isVerified': u.isVerified,
-            'isArtist': u.isArtist,
-            'isInstitution': u.isInstitution,
-            'showAchievements': u.showAchievements,
-            'joinedDate': u.joinedDate,
-            'profileImageUrl': u.profileImageUrl,
-            'coverImageUrl': u.coverImageUrl,
-            'cachedAt':
-                _cacheTimestamps[k] ?? DateTime.now().millisecondsSinceEpoch,
-          };
+          map[k] = _cacheUserToJson(
+            u,
+            _cacheTimestamps[k] ?? DateTime.now().millisecondsSinceEpoch,
+          );
         }
       } else {
         for (final k in entries) {
           final u = _cache[k]!;
-          map[k] = {
-            'id': u.id,
-            'name': u.name,
-            'username': u.username,
-            'bio': u.bio,
-            'followersCount': u.followersCount,
-            'followingCount': u.followingCount,
-            'postsCount': u.postsCount,
-            'isFollowing': u.isFollowing,
-            'isVerified': u.isVerified,
-            'isArtist': u.isArtist,
-            'isInstitution': u.isInstitution,
-            'showAchievements': u.showAchievements,
-            'joinedDate': u.joinedDate,
-            'profileImageUrl': u.profileImageUrl,
-            'coverImageUrl': u.coverImageUrl,
-            'cachedAt':
-                _cacheTimestamps[k] ?? DateTime.now().millisecondsSinceEpoch,
-          };
+          map[k] = _cacheUserToJson(
+            u,
+            _cacheTimestamps[k] ?? DateTime.now().millisecondsSinceEpoch,
+          );
         }
       }
       await prefs.setString(_cachePrefsKey, json.encode(map));
@@ -818,7 +869,14 @@ class UserService {
                 ? v['showAchievements'] as bool
                 : true,
             joinedDate: v['joinedDate']?.toString() ?? 'Joined recently',
-            achievementProgress: [],
+            achievementProgress: _listOfMaps(v['achievementProgress'])
+                .map(_achievementProgressFromJson)
+                .where((progress) => progress.achievementId.trim().isNotEmpty)
+                .toList(growable: false),
+            achievementDefinitions: _listOfMaps(v['achievementDefinitions'])
+                .map(backend_achievements.AchievementDefinition.fromJson)
+                .where((definition) => definition.code.trim().isNotEmpty)
+                .toList(growable: false),
             profileImageUrl: v['profileImageUrl']?.toString(),
             coverImageUrl: v['coverImageUrl']?.toString(),
           );
@@ -911,7 +969,10 @@ class UserService {
     }
   }
 
-  static Future<User?> getUserByUsername(String username) async {
+  static Future<User?> getUserByUsername(
+    String username, {
+    bool includeAchievements = true,
+  }) async {
     final trimmed = username.trim();
     if (trimmed.isEmpty) return null;
     final lookup = trimmed.replaceFirst(RegExp(r'^@+'), '').toLowerCase();
@@ -922,7 +983,12 @@ class UserService {
         final cachedUsername =
             entry.username.replaceFirst(RegExp(r'^@+'), '').toLowerCase();
         if (cachedUsername == lookup) {
-          return entry;
+          final hasAchievementPackage =
+              entry.achievementDefinitions.isNotEmpty ||
+                  entry.achievementProgress.isNotEmpty;
+          if (!includeAchievements || hasAchievementPackage) {
+            return entry;
+          }
         }
       }
     } catch (_) {}
@@ -971,12 +1037,14 @@ class UserService {
 
       UserAchievementSummaryPayload achievementSummary =
           const UserAchievementSummaryPayload();
-      try {
-        achievementSummary = await loadPublicAchievementSummary(wallet);
-      } catch (e) {
-        if (kDebugMode) {
-          debugPrint(
-              'UserService.getUserByUsername: failed to load achievements for $wallet: $e');
+      if (includeAchievements) {
+        try {
+          achievementSummary = await loadPublicAchievementSummary(wallet);
+        } catch (e) {
+          if (kDebugMode) {
+            debugPrint(
+                'UserService.getUserByUsername: failed to load achievements for $wallet: $e');
+          }
         }
       }
 
@@ -1445,10 +1513,24 @@ class UserService {
 
   static Future<UserAchievementSummaryPayload> loadPublicAchievementSummary(
       String walletAddress) async {
-    if (walletAddress.isEmpty) return const UserAchievementSummaryPayload();
+    final result = await loadPublicAchievementSummaryResult(walletAddress);
+    return UserAchievementSummaryPayload(
+      progress: result.progress,
+      definitions: result.definitions,
+    );
+  }
+
+  static Future<UserAchievementSummaryResult>
+      loadPublicAchievementSummaryResult(String walletAddress) async {
+    if (walletAddress.isEmpty) {
+      return const UserAchievementSummaryResult(unavailable: true);
+    }
     try {
-      final resp =
-          await BackendApiService().getPublicUserAchievements(walletAddress);
+      final isCurrentUser = await _isCurrentUserWallet(walletAddress);
+      final resp = isCurrentUser
+          ? await BackendApiService().getUserAchievements(walletAddress)
+          : await BackendApiService().getPublicUserAchievements(walletAddress);
+      final unavailable = resp['success'] == false;
       final definitions = _listOfMaps(resp['definitions'])
           .map(backend_achievements.AchievementDefinition.fromJson)
           .where((definition) => definition.code.trim().isNotEmpty)
@@ -1513,13 +1595,15 @@ class UserService {
         );
       }
 
-      return UserAchievementSummaryPayload(
+      return UserAchievementSummaryResult(
         progress: progressEntries.values.toList(growable: false),
         definitions: definitions,
+        unavailable:
+            unavailable && progressEntries.isEmpty && definitions.isEmpty,
       );
     } catch (e) {
       AppConfig.debugPrint('UserService.loadPublicAchievementSummary: $e');
-      return const UserAchievementSummaryPayload();
+      return const UserAchievementSummaryResult(unavailable: true);
     }
   }
 

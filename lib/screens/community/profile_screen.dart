@@ -81,6 +81,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   List<Map<String, dynamic>> _artistCollections = [];
   List<Map<String, dynamic>> _artistEvents = [];
   bool _profilePrefsListenerAttached = false;
+  bool _didScheduleAchievementHydration = false;
   String? _failedCoverImageUrl;
 
   // Privacy settings state
@@ -143,6 +144,21 @@ class _ProfileScreenState extends State<ProfileScreen>
           }
         });
       } catch (_) {}
+    }
+    if (!_didScheduleAchievementHydration) {
+      _didScheduleAchievementHydration = true;
+      final taskProvider = context.read<TaskProvider>();
+      if (taskProvider.achievementHydrationStatus ==
+          AchievementHydrationStatus.idle) {
+        Future.microtask(() async {
+          try {
+            await taskProvider.refreshAchievementsForCurrentUser();
+          } catch (e) {
+            AppConfig.debugPrint(
+                'ProfileScreen: achievements hydration failed: $e');
+          }
+        });
+      }
     }
     _maybeLoadArtistData();
   }

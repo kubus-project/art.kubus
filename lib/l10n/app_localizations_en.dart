@@ -4474,22 +4474,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get userProfileAchievementsTitle => 'Achievements';
 
   @override
-  String get profileBadgesVerificationTitle => 'Badges & verification';
+  String get profileBadgesVerificationTitle => 'Profile badges';
 
   @override
-  String get profileBadgesVerificationSubtitle => 'Verified identity signals, profile badges, and attestations.';
+  String get profileBadgesVerificationSubtitle => 'Role, verification and participation signals for this profile.';
 
   @override
-  String get walletBadgesVerificationTitle => 'Wallet badges & verification';
+  String get walletBadgesVerificationTitle => 'Wallet badges';
 
   @override
-  String get walletBadgesVerificationSubtitle => 'Wallet-linked badges, attestations, and trust signals.';
+  String get walletBadgesVerificationSubtitle => 'Badges linked to this wallet and its activity on art.kubus.';
 
   @override
   String get profileAchievementsPreviewTitle => 'Achievements';
 
   @override
-  String get profileAchievementsPreviewSubtitle => 'Progress milestones and KUB8 rewards.';
+  String get profileAchievementsPreviewSubtitle => 'Milestones earned through activity across art.kubus.';
 
   @override
   String userProfileAchievementsProgressLabel(Object completed, Object total) {
@@ -11980,6 +11980,42 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get promotionCheckoutLabel => 'Checkout';
+
+  @override
+  String get profileAchievementsProgressOnlyTitle => 'Milestone recorded';
+
+  @override
+  String get profileAchievementsUnavailableTitle => 'Achievements unavailable';
+
+  @override
+  String get profileAchievementsUnavailableDescription => 'Achievement details could not be loaded right now.';
+
+  @override
+  String get recognitionBadgePanelLoadFailed => 'Could not load recognition right now.';
+
+  @override
+  String get recognitionBadgePanelEmpty => 'No recognition yet. Visit events and take part in approvals to earn badges.';
+
+  @override
+  String get recognitionBadgePanelAttendance => 'Visits';
+
+  @override
+  String get recognitionBadgePanelParticipation => 'Participation';
+
+  @override
+  String get recognitionBadgePanelApproval => 'Approvals';
+
+  @override
+  String get recognitionBadgePanelCuratorial => 'Curatorial';
+
+  @override
+  String get recognitionBadgePanelInstitutional => 'Institutional';
+
+  @override
+  String get recognitionBadgePanelCollectibleProof => 'Collectible proof';
+
+  @override
+  String get recognitionBadgePanelMinted => 'Issued';
 
   @override
   String get attestationBadgePanelLoadFailed => 'Unable to load recognition right now.';

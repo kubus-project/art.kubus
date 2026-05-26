@@ -97,7 +97,11 @@ class AppBootstrapService {
       _runTask('stats', statsProvider.initialize),
       _runTask('presence', presenceProvider.initialize),
       _runTask(
-          'tasks', () => Future<void>.sync(taskProvider.initializeProgress)),
+        'tasks',
+        () => hasAuth
+            ? taskProvider.refreshAchievementsForCurrentUser()
+            : Future<void>.sync(taskProvider.initializeProgress),
+      ),
     ];
 
     final p1 = <Future<void>>[
