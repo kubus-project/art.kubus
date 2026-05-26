@@ -20,6 +20,7 @@ import '../../providers/themeprovider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../services/backend_api_service.dart';
 import '../../services/community_post_save_controller.dart';
+import '../../services/profile_package_mutation_tracker.dart';
 import '../../utils/app_animations.dart';
 import '../../utils/community_subject_navigation.dart';
 import '../../utils/media_url_resolver.dart';
@@ -859,6 +860,9 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                         try {
                           await BackendApiService()
                               .deleteCommunityPost(post.id);
+                          ProfilePackageMutationTracker.postDeleted(
+                            authorWallet: post.authorWallet ?? post.authorId,
+                          );
                           if (!mounted || !dialogContext.mounted) return;
                           final hub = Provider.of<CommunityHubProvider>(
                             context,
@@ -1571,6 +1575,9 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
 
     try {
       await BackendApiService().deleteRepost(post.id);
+      ProfilePackageMutationTracker.postDeleted(
+        authorWallet: post.authorWallet ?? post.authorId,
+      );
       BackendApiService().trackAnalyticsEvent(
         eventType: 'repost_deleted',
         postId: post.originalPostId ?? post.id,

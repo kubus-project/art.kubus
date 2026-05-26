@@ -24,7 +24,7 @@ import '../../../models/community_group.dart';
 import '../../../models/conversation.dart';
 import '../../../models/promotion.dart';
 import '../../../services/backend_api_service.dart';
-import '../../../services/profile_package_service.dart';
+import '../../../services/profile_package_mutation_tracker.dart';
 import '../../../services/block_list_service.dart';
 import '../../../services/community_post_save_controller.dart';
 import '../../../services/user_service.dart';
@@ -2846,6 +2846,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               parentId != null && parentId.isNotEmpty ? parentId : null,
         );
         post.commentCount = commentsProvider.totalCountForPost(post.id);
+        ProfilePackageMutationTracker.postUpdated(post: post);
         controller.clear();
         if (!mounted) return;
         setState(() {
@@ -3541,7 +3542,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
 
       if (!mounted) return;
       setState(() => _removePostFromLocalFeeds(post.id));
-      ProfilePackageService.invalidatePosts(post.authorWallet ?? post.authorId);
+      ProfilePackageMutationTracker.postDeleted(
+        authorWallet: post.authorWallet ?? post.authorId,
+      );
       try {
         final hub = Provider.of<CommunityHubProvider>(context, listen: false);
         if (post.groupId != null) {
@@ -5308,8 +5311,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                           await _backendApi.deleteCommunityPost(post.id);
                           if (!mounted || !dialogContext.mounted) return;
                           setState(() => _removePostFromLocalFeeds(post.id));
-                          ProfilePackageService.invalidatePosts(
-                            post.authorWallet ?? post.authorId,
+                          ProfilePackageMutationTracker.postDeleted(
+                            authorWallet: post.authorWallet ?? post.authorId,
                           );
                           try {
                             final hub = Provider.of<CommunityHubProvider>(
@@ -5673,15 +5676,13 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           locationLng: location?.lng,
         );
       }
-      final authorWallet = createdPost.authorWallet ?? createdPost.authorId;
-      ProfilePackageService.invalidatePosts(authorWallet);
+      ProfilePackageMutationTracker.postCreated(
+        post: createdPost,
+        achievementResult: createdPost.achievementResult,
+      );
       final achievementResult = createdPost.achievementResult;
       if (achievementResult != null && mounted) {
         context.read<TaskProvider>().applyAchievementResult(achievementResult);
-        ProfilePackageService.patchAchievementResult(
-          authorWallet,
-          achievementResult,
-        );
         if (achievementResult.unlocked.isNotEmpty) {
           final first = achievementResult.unlocked.first;
           final extra = achievementResult.unlocked.length > 1
@@ -7546,8 +7547,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           locationLat: location?.lat,
           locationLng: location?.lng,
         );
-        ProfilePackageService.invalidatePosts(
-          created.authorWallet ?? created.authorId,
+        ProfilePackageMutationTracker.postCreated(
+          post: created,
+          achievementResult: created.achievementResult,
         );
       }
 

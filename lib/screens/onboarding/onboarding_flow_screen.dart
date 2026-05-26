@@ -2837,6 +2837,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
                               Theme.of(context).textTheme.titleLarge?.copyWith(
                                     color: scheme.onSurface,
                                     fontWeight: FontWeight.w800,
+                                    fontStyle: FontStyle.italic,
                                     height: 1.05,
                                   ),
                         ),
@@ -3403,6 +3404,7 @@ class _WelcomeHeroColumn extends StatelessWidget {
           style: Theme.of(context).textTheme.displaySmall?.copyWith(
                 color: scheme.onSurface,
                 fontWeight: FontWeight.w800,
+                fontStyle: FontStyle.italic,
                 height: 1.02,
               ),
         ),

@@ -54,7 +54,9 @@ class UserPersonaOnboardingSheet extends StatelessWidget {
               subtitle: l10n.personaOnboardingSubtitle,
               compact: true,
               minHeight: 0,
-              titleStyle: KubusTextStyles.sheetTitle,
+              titleStyle: KubusTextStyles.sheetTitle.copyWith(
+                fontStyle: FontStyle.italic,
+              ),
               subtitleStyle: KubusTextStyles.sheetSubtitle.copyWith(
                 color: scheme.onSurface.withValues(alpha: 0.75),
               ),

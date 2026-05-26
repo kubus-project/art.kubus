@@ -1194,9 +1194,14 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                   ),
                   RadioListTile<ArtworkPoapMode>(
                     value: ArtworkPoapMode.kubusPoap,
-                    title: Text('Create with kubus'),
+                    title: Text(
+                      'Create with kubus',
+                      style: TextStyle(fontStyle: FontStyle.italic),
+                    ),
                     subtitle: Text(
-                        'kubus generates a simple claim link automatically (no POAP setup required).'),
+                      'kubus generates a simple claim link automatically (no POAP setup required).',
+                      style: TextStyle(fontStyle: FontStyle.italic),
+                    ),
                   ),
                 ],
               ),

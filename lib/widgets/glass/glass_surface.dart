@@ -6,7 +6,7 @@ import 'package:provider/provider.dart';
 import '../../providers/glass_capabilities_provider.dart';
 import '../../utils/design_tokens.dart';
 
-/// The canonical glass surface widget for the Kubus design system.
+/// The canonical glass surface widget for the kubus design system.
 ///
 /// Wraps its [child] in a clipped, optionally blurred, tinted container that
 /// produces the app's "liquid glass" look. When the [GlassCapabilitiesProvider]

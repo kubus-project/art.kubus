@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../models/event.dart';
 import '../models/exhibition.dart';
 import '../services/backend_api_service.dart';
-import '../services/profile_package_service.dart';
+import '../services/profile_package_mutation_tracker.dart';
 
 class EventsProvider extends ChangeNotifier {
   final BackendApiService _api;
@@ -128,10 +128,10 @@ class EventsProvider extends ChangeNotifier {
       if (created != null) {
         _upsertEvent(created, notify: false);
         _selected = created;
-        final wallet = created.host?.walletAddress ?? created.host?.id;
-        if (wallet != null && wallet.trim().isNotEmpty) {
-          ProfilePackageService.invalidateShowcase(wallet);
-        }
+        ProfilePackageMutationTracker.eventChanged(
+          created,
+          kind: ProfilePackageMutationKind.eventCreated,
+        );
         notifyListeners();
       }
       return created;
@@ -153,10 +153,7 @@ class EventsProvider extends ChangeNotifier {
       if (updated != null) {
         _upsertEvent(updated, notify: false);
         if (_selected?.id == id) _selected = updated;
-        final wallet = updated.host?.walletAddress ?? updated.host?.id;
-        if (wallet != null && wallet.trim().isNotEmpty) {
-          ProfilePackageService.invalidateShowcase(wallet);
-        }
+        ProfilePackageMutationTracker.eventChanged(updated);
         notifyListeners();
       }
       return updated;
@@ -179,9 +176,11 @@ class EventsProvider extends ChangeNotifier {
       _byId.remove(id);
       _exhibitionsByEventId.remove(id);
       if (_selected?.id == id) _selected = null;
-      final wallet = previous?.host?.walletAddress ?? previous?.host?.id;
-      if (wallet != null && wallet.trim().isNotEmpty) {
-        ProfilePackageService.invalidateShowcase(wallet);
+      if (previous != null) {
+        ProfilePackageMutationTracker.eventChanged(
+          previous,
+          kind: ProfilePackageMutationKind.eventDeleted,
+        );
       }
       notifyListeners();
     } catch (e) {

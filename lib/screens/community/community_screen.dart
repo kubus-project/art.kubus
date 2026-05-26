@@ -43,7 +43,7 @@ import '../../providers/task_provider.dart';
 import '../../models/community_group.dart';
 import '../../services/backend_api_service.dart';
 import '../../services/community_post_save_controller.dart';
-import '../../services/profile_package_service.dart';
+import '../../services/profile_package_mutation_tracker.dart';
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart' as share_types;
 import '../../services/block_list_service.dart';
@@ -642,6 +642,7 @@ class _CommunityScreenState extends State<CommunityScreen>
             try {
               await commentsProvider.loadComments(post.id);
               post.commentCount = commentsProvider.totalCountForPost(post.id);
+              ProfilePackageMutationTracker.postUpdated(post: post);
               if (mounted) setState(() {});
               break;
             } catch (e) {
@@ -2484,6 +2485,7 @@ class _CommunityScreenState extends State<CommunityScreen>
               parentId != null && parentId.isNotEmpty ? parentId : null,
         );
         post.commentCount = commentsProvider.totalCountForPost(post.id);
+        ProfilePackageMutationTracker.postUpdated(post: post);
         controller.clear();
         if (!mounted) return;
         setState(() {
@@ -4995,15 +4997,13 @@ class _CommunityScreenState extends State<CommunityScreen>
         Provider.of<CommunitySubjectProvider>(context, listen: false);
     final draft = hub.draft;
     final resolvedPost = _mergeDraftSubject(createdPost, draft);
-    final authorWallet = resolvedPost.authorWallet ?? resolvedPost.authorId;
-    ProfilePackageService.invalidatePosts(authorWallet);
+    ProfilePackageMutationTracker.postCreated(
+      post: resolvedPost,
+      achievementResult: resolvedPost.achievementResult,
+    );
     final achievementResult = resolvedPost.achievementResult;
     if (achievementResult != null) {
       context.read<TaskProvider>().applyAchievementResult(achievementResult);
-      ProfilePackageService.patchAchievementResult(
-        authorWallet,
-        achievementResult,
-      );
       if (achievementResult.unlocked.isNotEmpty) {
         final first = achievementResult.unlocked.first;
         final extra = achievementResult.unlocked.length > 1
@@ -5468,6 +5468,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                             postId: post.id, commentId: c.id);
                         post.commentCount =
                             commentsProvider.totalCountForPost(post.id);
+                        ProfilePackageMutationTracker.postUpdated(post: post);
                         if (mounted) setState(() {});
                         messenger.showKubusSnackBar(
                             SnackBar(content: Text(l10n.commentDeletedToast)));
@@ -5918,6 +5919,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                                     );
                                     post.commentCount = commentsProvider
                                         .totalCountForPost(post.id);
+                                    ProfilePackageMutationTracker.postUpdated(
+                                        post: post);
                                     if (!mounted) return;
                                     // Reset reply state
                                     replyToCommentId = null;
@@ -5995,6 +5998,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                                     );
                                     post.commentCount = commentsProvider
                                         .totalCountForPost(post.id);
+                                    ProfilePackageMutationTracker.postUpdated(
+                                        post: post);
                                     if (!mounted) return;
 
                                     // Reset reply state
@@ -6557,7 +6562,9 @@ class _CommunityScreenState extends State<CommunityScreen>
 
       if (!mounted) return;
       setState(() => _removePostFromLocalFeeds(post.id));
-      ProfilePackageService.invalidatePosts(post.authorWallet ?? post.authorId);
+      ProfilePackageMutationTracker.postDeleted(
+        authorWallet: post.authorWallet ?? post.authorId,
+      );
       try {
         final hub = Provider.of<CommunityHubProvider>(context, listen: false);
         if (post.groupId != null) {
@@ -6686,8 +6693,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                               .deleteCommunityPost(post.id);
                           if (!mounted || !dialogContext.mounted) return;
                           setState(() => _removePostFromLocalFeeds(post.id));
-                          ProfilePackageService.invalidatePosts(
-                            post.authorWallet ?? post.authorId,
+                          ProfilePackageMutationTracker.postDeleted(
+                            authorWallet: post.authorWallet ?? post.authorId,
                           );
                           try {
                             final hub = Provider.of<CommunityHubProvider>(

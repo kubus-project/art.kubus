@@ -3,6 +3,7 @@ import '../config/config.dart';
 import '../models/art_marker.dart';
 import '../models/achievements.dart' as backend_achievements;
 import 'backend_api_service.dart';
+import 'profile_package_mutation_tracker.dart';
 import '../models/collectible.dart';
 
 /// Achievement types
@@ -429,6 +430,7 @@ class AchievementService {
             ? idempotencyKey
             : '$action:$subjectId:$userId',
         metadata: data,
+        walletAddress: userId,
       );
     } catch (e) {
       AppConfig.debugPrint('AchievementService: checkAchievements failed: $e');
@@ -576,6 +578,7 @@ class AchievementService {
     required String subjectId,
     required String idempotencyKey,
     Map<String, dynamic>? metadata,
+    String? walletAddress,
   }) async {
     final data = await _backendApi.recordAchievementEvent(
       eventType: eventType,
@@ -584,7 +587,12 @@ class AchievementService {
       idempotencyKey: idempotencyKey,
       metadata: metadata,
     );
-    return backend_achievements.AchievementEventResult.fromJson(data);
+    final result = backend_achievements.AchievementEventResult.fromJson(data);
+    ProfilePackageMutationTracker.achievementResult(
+      wallet: walletAddress ?? '',
+      result: result,
+    );
+    return result;
   }
 
   /// Get achievement progress

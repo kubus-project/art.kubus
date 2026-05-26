@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import '../config/config.dart';
 import '../models/artwork.dart';
 import '../services/backend_api_service.dart';
+import '../services/profile_package_mutation_tracker.dart';
 
 class ArtworkDraftGalleryItem {
   final Uint8List bytes;
@@ -655,6 +656,11 @@ class ArtworkDraftsProvider extends ChangeNotifier {
         draft.submitError = 'Failed to publish artwork. Please try again.';
         return null;
       }
+
+      ProfilePackageMutationTracker.artworkChanged(
+        artwork,
+        kind: ProfilePackageMutationKind.artworkCreated,
+      );
 
       draft.uploadProgress = 1;
       notifyListeners();

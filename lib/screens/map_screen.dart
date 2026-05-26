@@ -122,6 +122,36 @@ import 'map_core/map_marker_render_coordinator.dart';
 
 enum _MarkerSocketScope { inScope, outOfScope, unknown }
 
+class _MapTutorialReadiness {
+  const _MapTutorialReadiness({
+    required this.ready,
+    required this.reason,
+    required this.signature,
+    required this.bindings,
+    this.firstTargetRect,
+  });
+
+  final bool ready;
+  final String reason;
+  final String signature;
+  final List<MapTutorialStepBinding> bindings;
+  final Rect? firstTargetRect;
+}
+
+class _MapTutorialTargetRectResult {
+  const _MapTutorialTargetRectResult.ready([this.rect])
+      : ready = true,
+        reason = 'ready';
+
+  const _MapTutorialTargetRectResult.notReady(this.reason)
+      : ready = false,
+        rect = null;
+
+  final bool ready;
+  final String reason;
+  final Rect? rect;
+}
+
 /// Custom painter for the direction cone indicator
 class DirectionConePainter extends CustomPainter {
   final Color color;
@@ -307,6 +337,15 @@ class _MapScreenState extends State<MapScreen>
   late final MapViewPreferencesController _mapViewPreferencesController;
   late final MapTutorialCoordinator _mapTutorialCoordinator;
   TutorialOverlayController? _tutorialOverlayController;
+  bool _mapTutorialConfigureScheduled = false;
+  bool _mapTutorialStartScheduled = false;
+  String? _lastMapTutorialBindingSignature;
+  int _mapTutorialOwnerGeneration = 0;
+  int _mapTutorialStartAttempts = 0;
+  Timer? _mapTutorialStartRetryTimer;
+  static const int _maxMapTutorialStartAttempts = 20;
+  static const Duration _mapTutorialStartRetryDelay =
+      Duration(milliseconds: 100);
 
   // Map search (shared controller + UI)
   late final KubusSearchController _mapSearchController;
@@ -741,7 +780,7 @@ class _MapScreenState extends State<MapScreen>
 
       if (!mounted) return;
 
-      unawaited(_mapTutorialCoordinator.maybeStart());
+      _scheduleMapTutorialStartIfEligible(reason: 'initial-layout');
     });
   }
 
@@ -830,12 +869,233 @@ class _MapScreenState extends State<MapScreen>
     );
   }
 
+  void _scheduleMapTutorialConfigure({
+    required String reason,
+    required List<MapTutorialStepBinding> bindings,
+  }) {
+    if (_mapTutorialConfigureScheduled) return;
+    _mapTutorialConfigureScheduled = true;
+    final generation = _mapTutorialOwnerGeneration;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _mapTutorialConfigureScheduled = false;
+      if (!_isMapTutorialOwnerActive(generation)) {
+        _deactivateRootTutorialOwner(
+          reason: 'mobile-map-configure-inactive-$reason',
+        );
+        return;
+      }
+
+      final readiness = _resolveMapTutorialReadiness(bindings);
+      final previousSignature = _lastMapTutorialBindingSignature;
+      _lastMapTutorialBindingSignature = readiness.signature;
+      if (!readiness.ready) {
+        _scheduleMapTutorialStartRetry(reason: readiness.reason);
+        return;
+      }
+      if (readiness.signature == previousSignature &&
+          readiness.bindings.isEmpty) {
+        return;
+      }
+
+      _mapTutorialCoordinator.configure(bindings: readiness.bindings);
+      _syncRootTutorialBinding();
+    });
+  }
+
+  void _scheduleMapTutorialStartIfEligible({required String reason}) {
+    if (_mapTutorialStartScheduled) return;
+    if (_mapTutorialCoordinator.visible) return;
+    if (_mapTutorialStartAttempts >= _maxMapTutorialStartAttempts) return;
+    _debugMapTutorialBindingLog('start gate scheduled reason=$reason');
+    _mapTutorialStartScheduled = true;
+    final generation = _mapTutorialOwnerGeneration;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      _mapTutorialStartScheduled = false;
+      if (!_isMapTutorialOwnerActive(generation)) return;
+
+      final l10n = AppLocalizations.of(context)!;
+      final first = _resolveMapTutorialReadiness(
+        _buildMapTutorialStepBindings(l10n),
+      );
+      if (!first.ready) {
+        _scheduleMapTutorialStartRetry(reason: first.reason);
+        return;
+      }
+
+      await WidgetsBinding.instance.endOfFrame;
+      if (!_isMapTutorialOwnerActive(generation)) return;
+
+      final second = _resolveMapTutorialReadiness(
+        _buildMapTutorialStepBindings(l10n),
+      );
+      if (!second.ready ||
+          second.signature != first.signature ||
+          !_isMapTutorialFirstRectStable(
+              first.firstTargetRect, second.firstTargetRect)) {
+        _scheduleMapTutorialStartRetry(reason: second.reason);
+        return;
+      }
+
+      if (await _mapTutorialCoordinator.hasPersistedSeen()) return;
+      if (!_isMapTutorialOwnerActive(generation)) return;
+
+      _mapTutorialCoordinator.configure(bindings: second.bindings);
+      _lastMapTutorialBindingSignature = second.signature;
+      _syncRootTutorialBinding();
+
+      if (!_isMapTutorialOwnerActive(generation)) return;
+      if (_tutorialOverlayController?.driver != _mapTutorialCoordinator) {
+        return;
+      }
+
+      _mapTutorialStartAttempts = 0;
+      unawaited(_mapTutorialCoordinator.maybeStart());
+    });
+  }
+
+  void _scheduleMapTutorialStartRetry({required String reason}) {
+    if (!_isMapTutorialOwnerActive()) return;
+    if (_mapTutorialStartAttempts >= _maxMapTutorialStartAttempts) return;
+    if (_mapTutorialStartRetryTimer != null) return;
+    _mapTutorialStartAttempts += 1;
+    final generation = _mapTutorialOwnerGeneration;
+    _mapTutorialStartRetryTimer = Timer(_mapTutorialStartRetryDelay, () {
+      _mapTutorialStartRetryTimer = null;
+      if (!_isMapTutorialOwnerActive(generation)) return;
+      _scheduleMapTutorialStartIfEligible(reason: 'retry-$reason');
+    });
+  }
+
+  void _cancelMapTutorialStartRetry() {
+    _mapTutorialStartRetryTimer?.cancel();
+    _mapTutorialStartRetryTimer = null;
+    _mapTutorialStartScheduled = false;
+    _mapTutorialConfigureScheduled = false;
+  }
+
+  bool _isMapTutorialOwnerActive([int? generation]) {
+    if (!mounted) return false;
+    if (generation != null && generation != _mapTutorialOwnerGeneration) {
+      return false;
+    }
+    if (!_isRouteVisible) return false;
+    if (!_isMapTabVisible) return false;
+    if (_tutorialOverlayController == null) return false;
+    return true;
+  }
+
+  _MapTutorialReadiness _resolveMapTutorialReadiness(
+    List<MapTutorialStepBinding> bindings,
+  ) {
+    final resolved = <MapTutorialStepBinding>[];
+    final ids = <String>[];
+    Rect? firstRect;
+
+    for (final binding in bindings) {
+      if (!binding.enabled) continue;
+      if (binding.isAnchorAvailable?.call() == false) continue;
+      final rectResult = _mapTutorialTargetRect(binding.step.targetKey);
+      if (!rectResult.ready) {
+        return _MapTutorialReadiness(
+          ready: false,
+          reason: rectResult.reason,
+          signature: ids.join('|'),
+          bindings: resolved,
+        );
+      }
+      resolved.add(binding);
+      ids.add(binding.id);
+      firstRect ??= rectResult.rect;
+    }
+
+    final signature = ids.join('|');
+    if (resolved.isEmpty) {
+      return _MapTutorialReadiness(
+        ready: false,
+        reason: 'no-ready-bindings',
+        signature: signature,
+        bindings: resolved,
+      );
+    }
+
+    return _MapTutorialReadiness(
+      ready: true,
+      reason: 'ready',
+      signature: signature,
+      bindings: resolved,
+      firstTargetRect: firstRect,
+    );
+  }
+
+  _MapTutorialTargetRectResult _mapTutorialTargetRect(GlobalKey? key) {
+    if (key == null) {
+      return const _MapTutorialTargetRectResult.ready();
+    }
+    final ctx = key.currentContext;
+    if (ctx == null || !ctx.mounted) {
+      return const _MapTutorialTargetRectResult.notReady('missing-context');
+    }
+    final RenderObject? render;
+    try {
+      render = ctx.findRenderObject();
+    } catch (_) {
+      return const _MapTutorialTargetRectResult.notReady('inactive-context');
+    }
+    if (render is! RenderBox) {
+      return const _MapTutorialTargetRectResult.notReady('not-render-box');
+    }
+    if (!render.attached || !render.hasSize) {
+      return const _MapTutorialTargetRectResult.notReady('invalid-render-box');
+    }
+    final size = render.size;
+    if (!size.width.isFinite ||
+        !size.height.isFinite ||
+        size.width <= 0 ||
+        size.height <= 0) {
+      return const _MapTutorialTargetRectResult.notReady('invalid-size');
+    }
+    final Offset offset;
+    try {
+      offset = render.localToGlobal(Offset.zero);
+    } catch (_) {
+      return const _MapTutorialTargetRectResult.notReady('invalid-transform');
+    }
+    final rect = offset & size;
+    if (!_isMapTutorialRectUsable(rect)) {
+      return const _MapTutorialTargetRectResult.notReady('invalid-rect');
+    }
+    return _MapTutorialTargetRectResult.ready(rect);
+  }
+
+  bool _isMapTutorialRectUsable(Rect rect) {
+    return rect.left.isFinite &&
+        rect.top.isFinite &&
+        rect.right.isFinite &&
+        rect.bottom.isFinite &&
+        rect.width > 0 &&
+        rect.height > 0;
+  }
+
+  bool _isMapTutorialFirstRectStable(Rect? first, Rect? second) {
+    if (first == null || second == null) return first == null && second == null;
+    const tolerance = 1.0;
+    return (first.left - second.left).abs() <= tolerance &&
+        (first.top - second.top).abs() <= tolerance &&
+        (first.width - second.width).abs() <= tolerance &&
+        (first.height - second.height).abs() <= tolerance;
+  }
+
   void _debugMapTutorialBindingLog(String message) {
     if (!kDebugMode) return;
     debugPrint('MapScreen tutorial: $message');
   }
 
   void _deactivateRootTutorialOwner({required String reason}) {
+    _mapTutorialOwnerGeneration += 1;
+    _cancelMapTutorialStartRetry();
+    _lastMapTutorialBindingSignature = null;
+    _mapTutorialStartAttempts = 0;
     _mapTutorialCoordinator.deactivateForOwnerExit(reason: reason);
     _tutorialOverlayController?.unbindDriver(_mapTutorialCoordinator);
   }
@@ -1253,6 +1513,7 @@ class _MapScreenState extends State<MapScreen>
 
   @override
   void deactivate() {
+    _deactivateRootTutorialOwner(reason: 'mobile-map-deactivate');
     // Detach the controller early (deactivate runs top-down, before children
     // dispose). This removes feature tap/hover listeners before the MapLibre
     // plugin disposes the controller, preventing "used after being disposed".
@@ -1278,6 +1539,7 @@ class _MapScreenState extends State<MapScreen>
       setMapController: (value) => _mapController = value,
       setLayersManager: (manager) => _layersManager = manager,
     );
+    _syncRootTutorialBinding();
   }
 
   @override
@@ -3304,9 +3566,12 @@ class _MapScreenState extends State<MapScreen>
     final discoveryProgress = taskProvider.getOverallProgress();
     final isLoadingArtworks = artworkProvider.isLoading('load_artworks');
     final l10n = AppLocalizations.of(context)!;
-    _mapTutorialCoordinator.configure(
-      bindings: _buildMapTutorialStepBindings(l10n),
+    final tutorialBindings = _buildMapTutorialStepBindings(l10n);
+    _scheduleMapTutorialConfigure(
+      reason: 'build',
+      bindings: tutorialBindings,
     );
+    _scheduleMapTutorialStartIfEligible(reason: 'build');
     final stack = ValueListenableBuilder<MapUiStateSnapshot>(
       valueListenable: _mapUiStateCoordinator.state,
       builder: (context, ui, _) {

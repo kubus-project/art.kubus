@@ -7,6 +7,7 @@ import '../models/achievement_preview_data_state.dart';
 import '../models/profile_package.dart';
 import '../models/user.dart';
 import '../services/backend_api_service.dart';
+import '../services/profile_package_mutation_tracker.dart';
 import '../services/profile_package_service.dart';
 import '../services/user_service.dart';
 import '../utils/wallet_utils.dart';
@@ -14,6 +15,12 @@ import 'community_interactions_provider.dart';
 import 'saved_items_provider.dart';
 import 'stats_provider.dart';
 
+/// Screen-local state holder for public profile packages.
+///
+/// The controller applies complete critical packages atomically and lets
+/// extended posts/showcase update separately. Profile-affecting writes should
+/// go through ProfilePackageMutationTracker so cached achievements stay stable
+/// and backend definitions are never synthesized locally.
 class ProfilePackageController extends ChangeNotifier {
   ProfilePackageController({
     required String walletAddress,
@@ -274,7 +281,10 @@ class ProfilePackageController extends ChangeNotifier {
     final nextUser = patch(current.user);
     _package = current.copyWith(user: nextUser);
     UserService.setUsersInCache([nextUser]);
-    ProfilePackageService.patchUser(nextUser.id, (_) => nextUser);
+    ProfilePackageMutationTracker.userPatched(
+      wallet: nextUser.id,
+      patch: (_) => nextUser,
+    );
     _notifyListenersSafe();
   }
 
@@ -294,7 +304,10 @@ class ProfilePackageController extends ChangeNotifier {
     );
     _publicStreetArtAddedCount =
         nextStats['publicStreetArtAdded'] ?? _publicStreetArtAddedCount;
-    ProfilePackageService.patchStats(nextUser.id, patch);
+    ProfilePackageMutationTracker.publicStatsChanged(
+      wallet: nextUser.id,
+      patch: patch,
+    );
     UserService.setUsersInCache([nextUser]);
     _notifyListenersSafe();
   }
@@ -309,7 +322,10 @@ class ProfilePackageController extends ChangeNotifier {
     final current = _package;
     if (current != null) {
       _package = current.copyWith(initialPosts: _posts);
-      ProfilePackageService.patchPosts(current.user.id, _posts);
+      ProfilePackageMutationTracker.postsPatched(
+        wallet: current.user.id,
+        posts: _posts,
+      );
     }
     _notifyListenersSafe();
   }
@@ -386,7 +402,10 @@ class ProfilePackageController extends ChangeNotifier {
       _isLastPage = posts.length < pageSize;
       _postsError = null;
       patchStats(<String, int>{'posts': posts.length});
-      ProfilePackageService.patchPosts(currentUser.id, _posts);
+      ProfilePackageMutationTracker.postsPatched(
+        wallet: currentUser.id,
+        posts: _posts,
+      );
       _notifyListenersSafe();
     } catch (e) {
       if (kDebugMode) {
@@ -425,9 +444,9 @@ class ProfilePackageController extends ChangeNotifier {
       _posts.addAll(more);
       _isLastPage = more.length < pageSize;
       _loadingMore = false;
-      ProfilePackageService.patchPosts(
-        currentUser.id,
-        _posts,
+      ProfilePackageMutationTracker.postsPatched(
+        wallet: currentUser.id,
+        posts: _posts,
         updateCount: false,
       );
       _notifyListenersSafe();
@@ -475,8 +494,11 @@ class ProfilePackageController extends ChangeNotifier {
       _posts.insert(0, post);
       final nextPostsCount = currentUser.postsCount + 1;
       patchStats(<String, int>{'posts': nextPostsCount});
-      ProfilePackageService.invalidatePosts(currentUser.id);
-      ProfilePackageService.patchPosts(currentUser.id, _posts);
+      ProfilePackageMutationTracker.postCreated(post: post);
+      ProfilePackageMutationTracker.postsPatched(
+        wallet: currentUser.id,
+        posts: _posts,
+      );
       _notifyListenersSafe();
     } catch (e) {
       if (kDebugMode) {

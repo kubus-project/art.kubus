@@ -112,6 +112,38 @@ void main() {
       expect(coordinator.state.stepCount, 1);
     });
 
+    test('configure with empty active resolution does not mark seen', () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      var anchorReady = true;
+      final coordinator = MapTutorialCoordinator(
+        seenPreferenceKey: PreferenceKeys.mapOnboardingMobileSeenV2,
+      );
+
+      coordinator.configure(
+        bindings: <MapTutorialStepBinding>[
+          _binding(id: 'map', isAnchorAvailable: () => anchorReady),
+        ],
+      );
+      await coordinator.maybeStart();
+
+      expect(coordinator.visible, isTrue);
+      anchorReady = false;
+      coordinator.configure(
+        bindings: <MapTutorialStepBinding>[
+          _binding(id: 'map', isAnchorAvailable: () => anchorReady),
+        ],
+      );
+
+      expect(coordinator.visible, isTrue);
+      expect(coordinator.steps.length, 1);
+      final prefs = await SharedPreferences.getInstance();
+      expect(
+        prefs.getBool(PreferenceKeys.mapOnboardingMobileSeenV2),
+        isNot(isTrue),
+      );
+      coordinator.dispose();
+    });
+
     test('does not start when already seen', () async {
       SharedPreferences.setMockInitialValues(<String, Object>{
         PreferenceKeys.mapOnboardingDesktopSeenV2: true,

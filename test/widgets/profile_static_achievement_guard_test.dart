@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 
@@ -18,7 +19,7 @@ void main() {
     ];
 
     for (final path in guardedFiles) {
-      final contents = File(path).readAsStringSync();
+      final contents = _readText(path);
       expect(
         contents,
         isNot(contains('AchievementService.achievementDefinitions')),
@@ -31,9 +32,9 @@ void main() {
       );
     }
 
-    final previewContents = File(
+    final previewContents = _readText(
       'lib/widgets/profile/profile_achievements_preview_section.dart',
-    ).readAsStringSync();
+    );
     expect(
       previewContents,
       isNot(contains('_humanizeCode')),
@@ -51,7 +52,7 @@ void main() {
       'lib/screens/community/user_profile_screen.dart',
       'lib/screens/desktop/community/desktop_user_profile_screen.dart',
     ]) {
-      final contents = File(path).readAsStringSync();
+      final contents = _readText(path);
       expect(
         contents,
         isNot(contains('UserService.getUserById')),
@@ -72,7 +73,7 @@ void main() {
       'lib/l10n/app_localizations_en.dart',
       'lib/l10n/app_localizations_sl.dart',
     ]) {
-      final contents = File(path).readAsStringSync();
+      final contents = _readText(path);
       expect(
         contents,
         isNot(contains('attestationBadgePanel')),
@@ -80,4 +81,13 @@ void main() {
       );
     }
   });
+}
+
+String _readText(String path) {
+  final bytes = File(path).readAsBytesSync();
+  try {
+    return utf8.decode(bytes);
+  } on FormatException {
+    return latin1.decode(bytes);
+  }
 }

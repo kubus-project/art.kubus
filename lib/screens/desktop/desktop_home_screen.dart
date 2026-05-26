@@ -888,6 +888,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                     l10n.desktopHomeDiscoverArtTitle,
                     style: KubusTextStyles.heroTitle.copyWith(
                       color: Colors.white,
+                      fontStyle: FontStyle.italic,
                     ),
                   ),
                   const SizedBox(height: DetailSpacing.md),

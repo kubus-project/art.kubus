@@ -596,7 +596,7 @@ void main() {
                       ),
                     ),
                   InteractiveTutorialOverlay(
-                    ownerSessionKey: sessionKey,
+                    sessionKey: sessionKey,
                     steps: <TutorialStepDefinition>[
                       TutorialStepDefinition(
                         targetKey: targetKey,

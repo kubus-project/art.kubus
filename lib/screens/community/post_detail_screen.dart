@@ -15,6 +15,7 @@ import '../../widgets/avatar_widget.dart';
 import '../../widgets/common/keyboard_inset_padding.dart';
 import '../../services/backend_api_service.dart';
 import '../../services/community_post_save_controller.dart';
+import '../../services/profile_package_mutation_tracker.dart';
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
 import '../../providers/app_refresh_provider.dart';
@@ -352,6 +353,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
             content: text,
             parentCommentId: parentId,
           );
+      ProfilePackageMutationTracker.postUpdated(post: _post!);
       if (!mounted) return;
       messenger.showKubusSnackBar(
         SnackBar(content: Text(l10n.postDetailCommentAddedToast)),
@@ -1240,6 +1242,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                         artworkId: artworkIdPayload,
                                         includeSubject: true,
                                       );
+                                      ProfilePackageMutationTracker.postUpdated(
+                                        post: post,
+                                      );
                                       if (!mounted) return;
                                       CommunityArtworkReference? updatedArtwork;
                                       if (subjectTypePayload == 'artwork' &&
@@ -1358,6 +1363,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
                       try {
                         await BackendApiService().deleteCommunityPost(post.id);
+                        ProfilePackageMutationTracker.postDeleted(
+                          authorWallet: post.authorWallet ?? post.authorId,
+                        );
                         if (!mounted) return;
                         appRefresh?.triggerCommunity();
                         dialogNavigator.pop();
@@ -1955,6 +1963,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                               try {
                                 await commentsProvider.deleteComment(
                                     postId: post.id, commentId: c.id);
+                                ProfilePackageMutationTracker.postUpdated(
+                                    post: post);
                                 if (!mounted) return;
                                 messenger.showKubusSnackBar(SnackBar(
                                     content: Text(l10n.commentDeletedToast)));

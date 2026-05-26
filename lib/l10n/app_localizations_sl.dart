@@ -12,7 +12,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get appTitle => 'art.kubus';
 
   @override
-  String get appTagline => 'Kubus je tvoj sopotnik v umetnosti.';
+  String get appTagline => 'kubus je tvoj sopotnik v umetnosti.';
 
   @override
   String get appTaglineSupport => 'Vodnik za odkrivanje umetnosti, krajev in ljudi okoli tebe.';
@@ -302,7 +302,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get commonPinLabel => 'PIN';
 
   @override
-  String get personaOnboardingTitle => 'Kako naj te Kubus vodi?';
+  String get personaOnboardingTitle => 'Kako naj te kubus vodi?';
 
   @override
   String get personaOnboardingSubtitle => 'Izberi, zakaj si tukaj. To spremeni samo poudarke, ne pa dostopa.';
@@ -926,7 +926,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get onboardingFlowTitle => 'Hitra nastavitev';
 
   @override
-  String get onboardingFlowWelcomeTitle => 'Kubus je tvoj sopotnik v umetnosti.';
+  String get onboardingFlowWelcomeTitle => 'kubus je tvoj sopotnik v umetnosti.';
 
   @override
   String get onboardingFlowWelcomeBody => 'Začni pri umetnosti, krajih in skupnosti. Račun in izbirna denarniška orodja lahko počakajo.';
@@ -1232,13 +1232,13 @@ class AppLocalizationsSl extends AppLocalizations {
   String get onboardingFlowDaoReviewSubmitAction => 'Oddaj za skupnostni pregled';
 
   @override
-  String get onboardingWelcomeTitle => 'Kubus je tvoj sopotnik v umetnosti.';
+  String get onboardingWelcomeTitle => 'kubus je tvoj sopotnik v umetnosti.';
 
   @override
   String get onboardingWelcomeSubtitle => 'Umetnost, kraji in skupnost skupaj';
 
   @override
-  String get onboardingWelcomeDescription => 'S Kubusom kot vodnikom odkrivaj umetnine, kraje, ustvarjalce in institucije. Denarniške funkcije so izbirne. AR, upravljanje, poravnave in nagrade se razvijajo postopoma.';
+  String get onboardingWelcomeDescription => 'S kubusom kot vodnikom odkrivaj umetnine, kraje, ustvarjalce in institucije. Denarniške funkcije so izbirne. AR, upravljanje, poravnave in nagrade se razvijajo postopoma.';
 
   @override
   String get onboardingExploreTitle => 'Raziskuj umetnine';
@@ -5584,7 +5584,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get availabilityNodeTitle => 'Vozlišče razpoložljivosti';
 
   @override
-  String get availabilityNodeNavTitle => 'Kubus vozlišče';
+  String get availabilityNodeNavTitle => 'kubus vozlišče';
 
   @override
   String get availabilityNodeNavSubtitle => 'Ustvari in upravljaj operatorske tokene za svoje vozlišče.';
@@ -8862,7 +8862,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get homeDefaultDisplayName => 'prijatelj';
 
   @override
-  String get homeWelcomeSubtitle => 'Kubus je tvoj sopotnik v umetnosti.';
+  String get homeWelcomeSubtitle => 'kubus je tvoj sopotnik v umetnosti.';
 
   @override
   String get homeExploreWeb3Button => 'Izbirna denarniška orodja';
@@ -8874,7 +8874,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get homeRecentlyUsedLabel => 'Nedavno uporabljeno';
 
   @override
-  String get homeQuickActionsEmptyDescription => 'Začni raziskovati in Kubus bo tukaj hranil uporabne bližnjice.';
+  String get homeQuickActionsEmptyDescription => 'Začni raziskovati in kubus bo tukaj hranil uporabne bližnjice.';
 
   @override
   String get homeYourStatsTitle => 'Tvoja statistika';
@@ -8883,7 +8883,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get homeNoStatsAvailableTitle => 'Tvoja prva umetnina te čaka.';
 
   @override
-  String get homeNoStatsAvailableDescription => 'Začni pot odkrivanja in Kubus bo tukaj zbiral tvoje obiske.';
+  String get homeNoStatsAvailableDescription => 'Začni pot odkrivanja in kubus bo tukaj zbiral tvoje obiske.';
 
   @override
   String get homeStatArtworks => 'Umetnine';
@@ -8974,7 +8974,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get homeNoRecentActivityTitle => 'Tvoja prva umetnina te čaka.';
 
   @override
-  String get homeNoRecentActivityDescription => 'Začni pot odkrivanja. Kubus bo tukaj zbiral tvoje obiske.';
+  String get homeNoRecentActivityDescription => 'Začni pot odkrivanja. kubus bo tukaj zbiral tvoje obiske.';
 
   @override
   String get homeUnableToLoadActivityTitle => 'Aktivnosti ni mogoče naložiti';
@@ -9034,7 +9034,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get desktopHomeWelcomeFallbackName => 'Dobrodošel/a v art.kubus';
 
   @override
-  String get desktopHomeDiscoverArtTitle => 'Kubus je tvoj sopotnik v umetnosti.';
+  String get desktopHomeDiscoverArtTitle => 'kubus je tvoj sopotnik v umetnosti.';
 
   @override
   String get desktopHomeDiscoverArtDescription => 'Odkrivaj umetnine, kraje, ustvarjalce in institucije v javnem prostoru in na spletu. Denarniška orodja so izbirna, AR plasti pa v razvoju.';
@@ -11764,7 +11764,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get commonSearchHint => 'Išči…';
 
   @override
-  String get onboardingWelcomeDiscoverTitle => 'Odkrij umetnost s Kubusom';
+  String get onboardingWelcomeDiscoverTitle => 'Odkrij umetnost s kubusom';
 
   @override
   String get onboardingWelcomeDiscoverBody => 'Raziskuj umetnine, razstave, javna dela in ustvarjalne prostore na skupnostnem zemljevidu.';

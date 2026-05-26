@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Central source of truth for all Kubus design tokens.
+/// Central source of truth for all kubus design tokens.
 /// This file defines the palette, spacing, radii, and typography to be used across the app.
 
 class KubusColors {

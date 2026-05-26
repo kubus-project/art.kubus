@@ -24,6 +24,7 @@ import '../../models/artwork_comment.dart';
 import '../../services/backend_api_service.dart';
 import '../../services/map_data_controller.dart';
 import '../../services/nft_minting_service.dart';
+import '../../services/profile_package_mutation_tracker.dart';
 import '../../models/collectible.dart';
 import '../../utils/app_animations.dart';
 import '../../utils/artwork_media_resolver.dart';
@@ -1081,6 +1082,10 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         );
         return;
       }
+      ProfilePackageMutationTracker.artworkChanged(
+        artwork,
+        kind: ProfilePackageMutationKind.artworkDeleted,
+      );
       artworkProvider.removeArtwork(artwork.id);
       navigator.maybePop();
       messenger.showKubusSnackBar(

@@ -1133,6 +1133,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           l10n.homeWelcomeSubtitle,
                           style: KubusTextStyles.heroSubtitle.copyWith(
                             color: Colors.white.withValues(alpha: 0.9),
+                            fontStyle: FontStyle.italic,
                           ),
                         ),
                       ],

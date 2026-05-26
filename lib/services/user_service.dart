@@ -6,6 +6,7 @@ import '../models/achievement_progress.dart';
 import '../models/achievements.dart' as backend_achievements;
 import '../models/user.dart';
 import 'backend_api_service.dart';
+import 'profile_package_mutation_tracker.dart';
 import 'stats_api_service.dart';
 import 'achievement_service.dart' as achievement_svc;
 import '../utils/wallet_utils.dart';
@@ -1271,6 +1272,14 @@ class UserService {
     final resolvedUnfollowed =
         mutation?.unfollowed ?? (!resolvedIsFollowing && wasFollowingLocally);
     final resolvedRemoved = mutation?.removed ?? resolvedUnfollowed;
+
+    ProfilePackageMutationTracker.followStateChanged(
+      targetWallet: resolvedTargetWallet,
+      actorWallet: actorWallet,
+      isFollowing: resolvedIsFollowing,
+      followersCount: mutation?.followersCount,
+      followingCount: resolvedActorFollowingCount,
+    );
 
     final shouldLogFollow =
         resolvedIsFollowing && (resolvedFollowCreated || resolvedChanged);

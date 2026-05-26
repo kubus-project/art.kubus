@@ -23,6 +23,12 @@ enum ProfilePackageCacheStatus {
   failed,
 }
 
+/// Owns public profile package loading and cache storage.
+///
+/// Critical packages contain profile, stats, and backend-owned achievement
+/// data. Extended packages contain posts and showcase data. UI/provider write
+/// paths should use ProfilePackageMutationTracker instead of calling cache
+/// invalidation or patch methods here directly.
 class ProfilePackageService {
   ProfilePackageService._();
 

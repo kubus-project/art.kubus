@@ -169,7 +169,7 @@ class _MainAppState extends State<MainApp> {
     // When using the CanvasKit renderer, any full-screen Flutter-painted
     // background can end up covering the DOM-based map surface.
     //
-    // Keep the Kubus gradient everywhere else, but let the map tab "punch
+    // Keep the kubus gradient everywhere else, but let the map tab "punch
     // through" so the web map remains visible.
     final shell = UserPersonaOnboardingGate(
       child: MobileShellExitScope(

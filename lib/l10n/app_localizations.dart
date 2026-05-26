@@ -104,7 +104,7 @@ abstract class AppLocalizations {
   /// No description provided for @appTagline.
   ///
   /// In en, this message translates to:
-  /// **'Kubus is your art companion.'**
+  /// **'kubus is your art companion.'**
   String get appTagline;
 
   /// No description provided for @appTaglineSupport.
@@ -680,7 +680,7 @@ abstract class AppLocalizations {
   /// No description provided for @personaOnboardingTitle.
   ///
   /// In en, this message translates to:
-  /// **'How should Kubus guide you?'**
+  /// **'How should kubus guide you?'**
   String get personaOnboardingTitle;
 
   /// No description provided for @personaOnboardingSubtitle.
@@ -1916,7 +1916,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingFlowWelcomeTitle.
   ///
   /// In en, this message translates to:
-  /// **'Kubus is your art companion.'**
+  /// **'kubus is your art companion.'**
   String get onboardingFlowWelcomeTitle;
 
   /// No description provided for @onboardingFlowWelcomeBody.
@@ -2516,7 +2516,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingWelcomeTitle.
   ///
   /// In en, this message translates to:
-  /// **'Kubus is your art companion.'**
+  /// **'kubus is your art companion.'**
   String get onboardingWelcomeTitle;
 
   /// No description provided for @onboardingWelcomeSubtitle.
@@ -2528,7 +2528,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingWelcomeDescription.
   ///
   /// In en, this message translates to:
-  /// **'Discover artworks, places, creators, and institutions with Kubus as your guide. Wallet features are optional. AR, governance, settlement, and rewards are developing step by step.'**
+  /// **'Discover artworks, places, creators, and institutions with kubus as your guide. Wallet features are optional. AR, governance, settlement, and rewards are developing step by step.'**
   String get onboardingWelcomeDescription;
 
   /// No description provided for @onboardingExploreTitle.
@@ -16856,7 +16856,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeWelcomeSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Kubus is your art companion.'**
+  /// **'kubus is your art companion.'**
   String get homeWelcomeSubtitle;
 
   /// No description provided for @homeExploreWeb3Button.
@@ -16880,7 +16880,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeQuickActionsEmptyDescription.
   ///
   /// In en, this message translates to:
-  /// **'Start exploring and Kubus will keep your useful shortcuts here.'**
+  /// **'Start exploring and kubus will keep your useful shortcuts here.'**
   String get homeQuickActionsEmptyDescription;
 
   /// No description provided for @homeYourStatsTitle.
@@ -16898,7 +16898,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeNoStatsAvailableDescription.
   ///
   /// In en, this message translates to:
-  /// **'Start a discovery path and Kubus will collect your visits here.'**
+  /// **'Start a discovery path and kubus will collect your visits here.'**
   String get homeNoStatsAvailableDescription;
 
   /// No description provided for @homeStatArtworks.
@@ -17072,7 +17072,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeNoRecentActivityDescription.
   ///
   /// In en, this message translates to:
-  /// **'Start a discovery path. Kubus will collect your visits here.'**
+  /// **'Start a discovery path. kubus will collect your visits here.'**
   String get homeNoRecentActivityDescription;
 
   /// No description provided for @homeUnableToLoadActivityTitle.
@@ -17192,7 +17192,7 @@ abstract class AppLocalizations {
   /// No description provided for @desktopHomeDiscoverArtTitle.
   ///
   /// In en, this message translates to:
-  /// **'Kubus is your art companion.'**
+  /// **'kubus is your art companion.'**
   String get desktopHomeDiscoverArtTitle;
 
   /// No description provided for @desktopHomeDiscoverArtDescription.
@@ -22256,7 +22256,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingWelcomeDiscoverTitle.
   ///
   /// In en, this message translates to:
-  /// **'Discover art with Kubus'**
+  /// **'Discover art with kubus'**
   String get onboardingWelcomeDiscoverTitle;
 
   /// No description provided for @onboardingWelcomeDiscoverBody.

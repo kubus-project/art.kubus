@@ -7,7 +7,7 @@ import '../models/portfolio_entry.dart';
 import '../providers/artwork_provider.dart';
 import '../providers/app_refresh_provider.dart';
 import '../services/backend_api_service.dart';
-import '../services/profile_package_service.dart';
+import '../services/profile_package_mutation_tracker.dart';
 
 class PortfolioProvider extends ChangeNotifier {
   final BackendApiService _api;
@@ -268,7 +268,7 @@ class PortfolioProvider extends ChangeNotifier {
       _upsertArtwork(updated);
       final wallet = updated.walletAddress;
       if (wallet != null && wallet.trim().isNotEmpty) {
-        ProfilePackageService.invalidateShowcase(wallet);
+        ProfilePackageMutationTracker.showcaseChanged(wallet);
       }
     }
     return updated;
@@ -288,7 +288,7 @@ class PortfolioProvider extends ChangeNotifier {
     _artworkProvider?.removeArtwork(id);
     final wallet = previous?.walletAddress ?? _walletAddress;
     if (wallet.trim().isNotEmpty) {
-      ProfilePackageService.invalidateShowcase(wallet);
+      ProfilePackageMutationTracker.showcaseChanged(wallet);
     }
     notifyListeners();
   }
@@ -310,7 +310,7 @@ class PortfolioProvider extends ChangeNotifier {
   void _invalidateShowcaseForArtwork(Artwork artwork) {
     final wallet = artwork.walletAddress;
     if (wallet != null && wallet.trim().isNotEmpty) {
-      ProfilePackageService.invalidateShowcase(wallet);
+      ProfilePackageMutationTracker.showcaseChanged(wallet);
     }
   }
 }

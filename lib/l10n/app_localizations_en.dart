@@ -12,7 +12,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appTitle => 'art.kubus';
 
   @override
-  String get appTagline => 'Kubus is your art companion.';
+  String get appTagline => 'kubus is your art companion.';
 
   @override
   String get appTaglineSupport => 'A guide for discovering art, places, and people around you.';
@@ -302,7 +302,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonPinLabel => 'PIN';
 
   @override
-  String get personaOnboardingTitle => 'How should Kubus guide you?';
+  String get personaOnboardingTitle => 'How should kubus guide you?';
 
   @override
   String get personaOnboardingSubtitle => 'Choose what you are here for. This only changes what we highlight, not what you can access.';
@@ -926,7 +926,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingFlowTitle => 'Your quick setup';
 
   @override
-  String get onboardingFlowWelcomeTitle => 'Kubus is your art companion.';
+  String get onboardingFlowWelcomeTitle => 'kubus is your art companion.';
 
   @override
   String get onboardingFlowWelcomeBody => 'Start with art, places, and community. Account setup and optional wallet tools can wait.';
@@ -1232,13 +1232,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingFlowDaoReviewSubmitAction => 'Submit for community review';
 
   @override
-  String get onboardingWelcomeTitle => 'Kubus is your art companion.';
+  String get onboardingWelcomeTitle => 'kubus is your art companion.';
 
   @override
   String get onboardingWelcomeSubtitle => 'Art, places, and community together';
 
   @override
-  String get onboardingWelcomeDescription => 'Discover artworks, places, creators, and institutions with Kubus as your guide. Wallet features are optional. AR, governance, settlement, and rewards are developing step by step.';
+  String get onboardingWelcomeDescription => 'Discover artworks, places, creators, and institutions with kubus as your guide. Wallet features are optional. AR, governance, settlement, and rewards are developing step by step.';
 
   @override
   String get onboardingExploreTitle => 'Explore artworks';
@@ -8842,7 +8842,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeDefaultDisplayName => 'there';
 
   @override
-  String get homeWelcomeSubtitle => 'Kubus is your art companion.';
+  String get homeWelcomeSubtitle => 'kubus is your art companion.';
 
   @override
   String get homeExploreWeb3Button => 'Optional wallet tools';
@@ -8854,7 +8854,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeRecentlyUsedLabel => 'Recently Used';
 
   @override
-  String get homeQuickActionsEmptyDescription => 'Start exploring and Kubus will keep your useful shortcuts here.';
+  String get homeQuickActionsEmptyDescription => 'Start exploring and kubus will keep your useful shortcuts here.';
 
   @override
   String get homeYourStatsTitle => 'Your Stats';
@@ -8863,7 +8863,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeNoStatsAvailableTitle => 'Your first artwork is waiting.';
 
   @override
-  String get homeNoStatsAvailableDescription => 'Start a discovery path and Kubus will collect your visits here.';
+  String get homeNoStatsAvailableDescription => 'Start a discovery path and kubus will collect your visits here.';
 
   @override
   String get homeStatArtworks => 'Artworks';
@@ -8954,7 +8954,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeNoRecentActivityTitle => 'Your first artwork is waiting.';
 
   @override
-  String get homeNoRecentActivityDescription => 'Start a discovery path. Kubus will collect your visits here.';
+  String get homeNoRecentActivityDescription => 'Start a discovery path. kubus will collect your visits here.';
 
   @override
   String get homeUnableToLoadActivityTitle => 'Unable to load activity';
@@ -9014,7 +9014,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopHomeWelcomeFallbackName => 'Welcome to art.kubus';
 
   @override
-  String get desktopHomeDiscoverArtTitle => 'Kubus is your art companion.';
+  String get desktopHomeDiscoverArtTitle => 'kubus is your art companion.';
 
   @override
   String get desktopHomeDiscoverArtDescription => 'Discover artworks, places, creators, and institutions across public space and online. Wallet tools are optional, and AR layers are in development.';
@@ -11732,7 +11732,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonSearchHint => 'Search…';
 
   @override
-  String get onboardingWelcomeDiscoverTitle => 'Discover art with Kubus';
+  String get onboardingWelcomeDiscoverTitle => 'Discover art with kubus';
 
   @override
   String get onboardingWelcomeDiscoverBody => 'Explore artworks, exhibitions, public works, and creative spaces on the community map.';

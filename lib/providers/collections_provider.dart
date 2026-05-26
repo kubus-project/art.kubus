@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../models/collection_record.dart';
 import '../services/backend_api_service.dart';
-import '../services/profile_package_service.dart';
+import '../services/profile_package_mutation_tracker.dart';
 import '../utils/wallet_utils.dart';
 
 class CollectionsProvider extends ChangeNotifier {
@@ -131,7 +131,7 @@ class CollectionsProvider extends ChangeNotifier {
       );
       _upsertCollection(record);
       if (record.walletAddress.trim().isNotEmpty) {
-        ProfilePackageService.invalidateShowcase(record.walletAddress);
+        ProfilePackageMutationTracker.collectionChanged(record);
       }
       notifyListeners();
       return record;
@@ -265,7 +265,10 @@ class CollectionsProvider extends ChangeNotifier {
           final record = await _loadCollection(extractedId);
           _upsertCollection(record);
           if (record.walletAddress.trim().isNotEmpty) {
-            ProfilePackageService.invalidateShowcase(record.walletAddress);
+            ProfilePackageMutationTracker.collectionChanged(
+              record,
+              kind: ProfilePackageMutationKind.collectionCreated,
+            );
           }
           notifyListeners();
           return (
@@ -305,7 +308,7 @@ class CollectionsProvider extends ChangeNotifier {
 
         _upsertCollection(matching);
         if (matching.walletAddress.trim().isNotEmpty) {
-          ProfilePackageService.invalidateShowcase(matching.walletAddress);
+          ProfilePackageMutationTracker.collectionChanged(matching);
         }
         notifyListeners();
         return (
@@ -528,7 +531,10 @@ class CollectionsProvider extends ChangeNotifier {
       }
       _upsertCollection(record);
       if (record.walletAddress.trim().isNotEmpty) {
-        ProfilePackageService.invalidateShowcase(record.walletAddress);
+        ProfilePackageMutationTracker.collectionChanged(
+          record,
+          kind: ProfilePackageMutationKind.collectionMembershipChanged,
+        );
       }
       notifyListeners();
       return record;
@@ -564,7 +570,10 @@ class CollectionsProvider extends ChangeNotifier {
       }
       _upsertCollection(record);
       if (record.walletAddress.trim().isNotEmpty) {
-        ProfilePackageService.invalidateShowcase(record.walletAddress);
+        ProfilePackageMutationTracker.collectionChanged(
+          record,
+          kind: ProfilePackageMutationKind.collectionMembershipChanged,
+        );
       }
       notifyListeners();
       return record;
@@ -589,7 +598,10 @@ class CollectionsProvider extends ChangeNotifier {
       _collections.removeWhere((item) => item.id == id);
       _byId.remove(id);
       if (previous != null && previous.walletAddress.trim().isNotEmpty) {
-        ProfilePackageService.invalidateShowcase(previous.walletAddress);
+        ProfilePackageMutationTracker.collectionChanged(
+          previous,
+          kind: ProfilePackageMutationKind.collectionDeleted,
+        );
       }
       notifyListeners();
     } catch (e) {

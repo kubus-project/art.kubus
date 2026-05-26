@@ -11,7 +11,7 @@ import '../services/backend_api_service.dart';
 import '../services/stats_api_service.dart';
 import '../models/user.dart';
 import '../services/user_service.dart';
-import '../services/profile_package_service.dart';
+import '../services/profile_package_mutation_tracker.dart';
 import '../services/event_bus.dart';
 import '../models/dao.dart';
 import '../utils/media_url_resolver.dart';
@@ -1027,7 +1027,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
       try {
         EventBus().emitProfileUpdated(_currentUser);
       } catch (_) {}
-      ProfilePackageService.invalidate(walletAddress);
+      ProfilePackageMutationTracker.profileChanged(walletAddress);
       return true;
     } catch (e) {
       // Detect 429 response message and provide a friendly error
@@ -1133,7 +1133,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
       try {
         EventBus().emitProfileUpdated(_currentUser);
       } catch (_) {}
-      ProfilePackageService.invalidate(walletAddress);
+      ProfilePackageMutationTracker.profileMediaChanged(walletAddress);
       return true;
     } catch (e) {
       _error = 'Failed to save profile media: $e';
@@ -1653,7 +1653,9 @@ class ProfileProvider extends foundation.ChangeNotifier {
             _currentUser!.walletAddress,
             {'preferences': next.toJson()},
           );
-          ProfilePackageService.invalidate(_currentUser!.walletAddress);
+          ProfilePackageMutationTracker.profileChanged(
+            _currentUser!.walletAddress,
+          );
         } catch (e) {
           debugPrint(
               'ProfileProvider.updatePreferences: backend update failed: $e');
@@ -1696,8 +1698,11 @@ class ProfileProvider extends foundation.ChangeNotifier {
       if (!_followingUsers.any((u) => u.id == user.id)) {
         _followingUsers.add(user);
         _realFollowingCount++;
-        ProfilePackageService.invalidateMany(
-          <String>[user.walletAddress, _currentUser?.walletAddress ?? ''],
+        ProfilePackageMutationTracker.followStateChanged(
+          targetWallet: user.walletAddress,
+          actorWallet: _currentUser?.walletAddress,
+          isFollowing: true,
+          followingCount: _realFollowingCount,
         );
         notifyListeners();
       }
@@ -1713,8 +1718,11 @@ class ProfileProvider extends foundation.ChangeNotifier {
       _followingUsers.removeWhere((user) =>
           user.id == walletAddress || user.walletAddress == walletAddress);
       _realFollowingCount = _followingUsers.length;
-      ProfilePackageService.invalidateMany(
-        <String>[walletAddress, _currentUser?.walletAddress ?? ''],
+      ProfilePackageMutationTracker.followStateChanged(
+        targetWallet: walletAddress,
+        actorWallet: _currentUser?.walletAddress,
+        isFollowing: false,
+        followingCount: _realFollowingCount,
       );
       notifyListeners();
     } catch (e) {

@@ -339,7 +339,7 @@ Color _normalizeBase(Color color) {
 /// Renders the cube marker visuals into PNG bytes for MapLibre symbol icons.
 ///
 /// This keeps marker rendering native (no Flutter widget markers on top of the
-/// map) while preserving the exact Kubus cube styling.
+/// map) while preserving the exact kubus cube styling.
 ///
 /// For real-time camera-relative markers, use [RotatableCubeMarker] instead.
 class ArtMarkerCubeIconRenderer {

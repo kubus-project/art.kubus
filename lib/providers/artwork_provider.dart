@@ -8,7 +8,7 @@ import '../models/artwork_comment.dart';
 import '../services/ar_content_service.dart';
 import '../services/art_content_service.dart';
 import '../services/backend_api_service.dart';
-import '../services/profile_package_service.dart';
+import '../services/profile_package_mutation_tracker.dart';
 import '../services/user_action_logger.dart';
 import '../utils/wallet_utils.dart';
 import 'saved_items_provider.dart';
@@ -169,7 +169,7 @@ class ArtworkProvider extends ChangeNotifier {
   void _invalidateShowcaseForArtwork(Artwork artwork) {
     final wallet = artwork.walletAddress;
     if (wallet != null && wallet.trim().isNotEmpty) {
-      ProfilePackageService.invalidateShowcase(wallet);
+      ProfilePackageMutationTracker.showcaseChanged(wallet);
     }
   }
 
@@ -249,7 +249,10 @@ class ArtworkProvider extends ChangeNotifier {
       addOrUpdateArtwork(artwork);
       final wallet = artwork.walletAddress;
       if (wallet != null && wallet.trim().isNotEmpty) {
-        ProfilePackageService.invalidateShowcase(wallet);
+        ProfilePackageMutationTracker.artworkChanged(
+          artwork,
+          kind: ProfilePackageMutationKind.artworkCreated,
+        );
       }
       return artwork;
     } catch (e) {
@@ -359,7 +362,7 @@ class ArtworkProvider extends ChangeNotifier {
         addOrUpdateArtwork(updated);
         final wallet = updated.walletAddress;
         if (wallet != null && wallet.trim().isNotEmpty) {
-          ProfilePackageService.invalidateShowcase(wallet);
+          ProfilePackageMutationTracker.artworkChanged(updated);
         }
         return updated;
       }

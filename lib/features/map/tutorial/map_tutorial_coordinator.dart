@@ -105,6 +105,17 @@ class MapTutorialCoordinator extends ChangeNotifier
     final resolvedSignature = resolvedStepIds.join('|');
     final activeSignature = _resolvedStepIds.join('|');
 
+    if (_state.show && _resolvedSteps.isNotEmpty && resolvedSteps.isEmpty) {
+      _debugLog(
+        'configure: preserving active tutorial through empty owner-active '
+        'resolution activeSteps=${_resolvedSteps.length} '
+        'index=${_state.index} step="${_currentStepTitle()}" '
+        'persistedSeen=false',
+      );
+      _scheduleVisibleReconfigureRetry();
+      return;
+    }
+
     if (_state.show &&
         _resolvedSteps.isNotEmpty &&
         currentSignature == nextSignature &&
@@ -300,6 +311,15 @@ class MapTutorialCoordinator extends ChangeNotifier
     _startRequested = false;
     _cancelStartRetry();
     await _persistSeen();
+  }
+
+  Future<bool> hasPersistedSeen() async {
+    try {
+      final prefs = await _sharedPreferencesLoader();
+      return prefs.getBool(seenPreferenceKey) ?? false;
+    } catch (_) {
+      return false;
+    }
   }
 
   List<MapTutorialStepBinding> _resolveBindings(

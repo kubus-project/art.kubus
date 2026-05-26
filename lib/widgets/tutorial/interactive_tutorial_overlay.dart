@@ -46,7 +46,7 @@ class TutorialStepDefinition {
 class InteractiveTutorialOverlay extends StatefulWidget {
   final List<TutorialStepDefinition> steps;
   final int currentIndex;
-  final Object? ownerSessionKey;
+  final String sessionKey;
 
   final VoidCallback onNext;
   final VoidCallback onBack;
@@ -59,7 +59,7 @@ class InteractiveTutorialOverlay extends StatefulWidget {
 
   const InteractiveTutorialOverlay({
     super.key,
-    this.ownerSessionKey,
+    this.sessionKey = 'default',
     required this.steps,
     required this.currentIndex,
     required this.onNext,
@@ -109,10 +109,10 @@ class _InteractiveTutorialOverlayState extends State<InteractiveTutorialOverlay>
   @override
   void didUpdateWidget(covariant InteractiveTutorialOverlay oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.ownerSessionKey != widget.ownerSessionKey) {
+    if (oldWidget.sessionKey != widget.sessionKey) {
       _debugLog(
-        'ownerSessionChanged old=${oldWidget.ownerSessionKey} '
-        'new=${widget.ownerSessionKey}; clearing cached geometry',
+        'sessionChanged old=${oldWidget.sessionKey} '
+        'new=${widget.sessionKey}; clearing cached geometry',
       );
       _clearCachedGeometry();
       return;

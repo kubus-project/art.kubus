@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../community/community_interactions.dart';
 import '../services/backend_api_service.dart';
+import '../services/profile_package_mutation_tracker.dart';
 import 'community_comments_provider.dart';
 import 'wallet_provider.dart';
 
@@ -181,6 +182,7 @@ class CommunityInteractionsProvider extends ChangeNotifier {
         post.likeCount = updatedCount;
       }
       applyServerPostState(post);
+      ProfilePackageMutationTracker.postUpdated(post: post);
       _postLikeFetchedAt.remove(post.id);
       _postLikeUsers.remove(post.id);
       notifyListeners();

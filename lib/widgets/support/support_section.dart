@@ -10,7 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 /// Home-screen Support / Donate section.
 ///
-/// Uses Kubus glass primitives and token-driven spacing to match the app's
+/// Uses kubus glass primitives and token-driven spacing to match the app's
 /// liquid-glass design language.
 class SupportSectionCard extends StatelessWidget {
   const SupportSectionCard({super.key});

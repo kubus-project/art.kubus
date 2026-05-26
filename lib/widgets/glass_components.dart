@@ -254,7 +254,7 @@ class LiquidGlassPanel extends StatelessWidget {
   final double fallbackMinOpacity;
 
   /// Force the panel onto the opaque fallback path while preserving canonical
-  /// Kubus glass tint, border, and shadow handling.
+  /// kubus glass tint, border, and shadow handling.
   final bool enableBlur;
 
   const LiquidGlassPanel({
@@ -620,7 +620,7 @@ class _GlassShimmerState extends State<GlassShimmer>
   }
 }
 
-/// A glass-first dialog surface matching Kubus liquid glass rules.
+/// A glass-first dialog surface matching kubus liquid glass rules.
 ///
 /// Prefer using this with [showKubusDialog] so dialogs also blur the background.
 class KubusAlertDialog extends StatelessWidget {

@@ -15,6 +15,7 @@ import '../../providers/app_refresh_provider.dart';
 import '../../providers/collab_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../services/backend_api_service.dart';
+import '../../services/profile_package_mutation_tracker.dart';
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
 import '../../utils/artwork_media_resolver.dart';
@@ -309,6 +310,10 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
         );
         return;
       }
+      ProfilePackageMutationTracker.artworkChanged(
+        artwork,
+        kind: ProfilePackageMutationKind.artworkDeleted,
+      );
       artworkProvider.removeArtwork(artwork.id);
       navigator.maybePop();
       messenger.showKubusSnackBar(
