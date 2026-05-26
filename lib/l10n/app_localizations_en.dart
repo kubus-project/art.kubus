@@ -12,6 +12,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appTitle => 'art.kubus';
 
   @override
+  String get appTagline => 'Kubus is your art companion.';
+
+  @override
+  String get appTaglineSupport => 'A guide for discovering art, places, and people around you.';
+
+  @override
   String get appExitConfirmBackHint => 'Swipe or press back again to exit the app.';
 
   @override
@@ -296,28 +302,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonPinLabel => 'PIN';
 
   @override
-  String get personaOnboardingTitle => 'How do you want to use art.kubus?';
+  String get personaOnboardingTitle => 'How should Kubus guide you?';
 
   @override
-  String get personaOnboardingSubtitle => 'Choose what you’re here for. This only changes what we highlight - not what you can access.';
+  String get personaOnboardingSubtitle => 'Choose what you are here for. This only changes what we highlight, not what you can access.';
 
   @override
   String get personaOptionLoverTitle => 'Art lover';
 
   @override
-  String get personaOptionLoverSubtitle => 'Discover nearby artworks, exhibitions, and community updates.';
+  String get personaOptionLoverSubtitle => 'Discover nearby artworks, exhibitions, public works, and community updates.';
 
   @override
   String get personaOptionCreatorTitle => 'Artist / collective';
 
   @override
-  String get personaOptionCreatorSubtitle => 'Create artworks and exhibitions, and collaborate with others.';
+  String get personaOptionCreatorSubtitle => 'Share your practice, add context, publish works, and build community.';
 
   @override
   String get personaOptionInstitutionTitle => 'Institution / gallery';
 
   @override
-  String get personaOptionInstitutionSubtitle => 'Organize events and exhibitions, manage collaborators, and share your program.';
+  String get personaOptionInstitutionSubtitle => 'Connect programmes, exhibitions, artists, and public archive context.';
 
   @override
   String get exhibitionCreatorAppBarTitle => 'Create exhibition';
@@ -552,31 +558,31 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authSignInTitle => 'Sign in to art.kubus';
 
   @override
-  String get authSignInSubtitle => 'Start exploring, creating, and connecting with the community.';
+  String get authSignInSubtitle => 'Start exploring art, places, and community. Wallet features are optional.';
 
   @override
   String get authRegisterTitle => 'Create your account';
 
   @override
-  String get authRegisterSubtitle => 'Create a profile and join the community.';
+  String get authRegisterSubtitle => 'Create a profile to personalize your art companion. Wallet features can wait.';
 
   @override
-  String get authHighlightSignInMethods => 'Email, Google, or wallet sign-in';
+  String get authHighlightSignInMethods => 'Email, Google, or optional wallet sign-in';
 
   @override
-  String get authHighlightNoFees => 'No fees to sign in';
+  String get authHighlightNoFees => 'No fee is required to sign in';
 
   @override
-  String get authHighlightControl => 'Your access stays yours';
+  String get authHighlightControl => 'Basic exploration works without a wallet';
 
   @override
-  String get authHighlightOnboardingOptions => 'Choose email, Google, or wallet sign-in';
+  String get authHighlightOnboardingOptions => 'Choose email, Google, or optional wallet sign-in';
 
   @override
   String get authHighlightKeysLocal => 'Private keys stay with you';
 
   @override
-  String get authHighlightOptionalWeb3 => 'Built for ownership and future participation';
+  String get authHighlightOptionalWeb3 => 'Future participation features stay optional';
 
   @override
   String get authSignedInProfileRefreshSoon => 'Signed in. Your profile will refresh shortly.';
@@ -920,19 +926,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingFlowTitle => 'Your quick setup';
 
   @override
-  String get onboardingFlowWelcomeTitle => 'Welcome to art.kubus';
+  String get onboardingFlowWelcomeTitle => 'Kubus is your art companion.';
 
   @override
-  String get onboardingFlowWelcomeBody => 'Start with art, places, and community. You can finish the rest later.';
+  String get onboardingFlowWelcomeBody => 'Start with art, places, and community. Account setup and optional wallet tools can wait.';
 
   @override
-  String get onboardingFlowWelcomeInfoAccount => 'Create your account and choose how you want to sign in.';
+  String get onboardingFlowWelcomeInfoAccount => 'Create a profile when you want a personal feed and contributions.';
 
   @override
-  String get onboardingFlowWelcomeInfoCreate => 'Set up your profile and publish your first artwork.';
+  String get onboardingFlowWelcomeInfoCreate => 'Add context, publish works, or keep exploring.';
 
   @override
-  String get onboardingFlowWelcomeInfoFollow => 'Follow artists to personalize your feed.';
+  String get onboardingFlowWelcomeInfoFollow => 'Follow places, stories, and artists to personalize your feed.';
 
   @override
   String get onboardingFlowWelcomeInfoTime => 'Most people finish this in about 2 minutes.';
@@ -941,7 +947,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingFlowAccountTitle => 'Create your account';
 
   @override
-  String get onboardingFlowAccountBody => 'Use email, Google, or wallet sign-in to create your account. art.kubus uses a wallet you control, so long-term access stays with you.';
+  String get onboardingFlowAccountBody => 'Use email, Google, or optional wallet sign-in. Basic exploration works without a wallet, and account-linked recovery is explained before you enable it.';
 
   @override
   String get onboardingFlowAccountVerifyHint => 'If you registered with email, verify your email before signing in.';
@@ -965,13 +971,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingFlowProfileBody => 'Add a name and a photo so people can recognize you.';
 
   @override
-  String get onboardingFlowWalletBackupIntroTitle => 'Secure your account wallet';
+  String get onboardingFlowWalletBackupIntroTitle => 'Protect account recovery';
 
   @override
-  String get onboardingFlowWalletBackupIntroBody => 'Email and Google sign-up also create an art.kubus account wallet. It supports long-term access, future digital participation, and anything tied to your account. Back up the recovery phrase now.';
+  String get onboardingFlowWalletBackupIntroBody => 'Some sign-in paths create an account wallet for long-term access and future participation. It is separate from basic exploration. Back up the recovery phrase if you choose these account-linked features.';
 
   @override
-  String get onboardingFlowWalletBackupIntroWeb3Warning => 'This wallet is part of your account, not an optional extra.';
+  String get onboardingFlowWalletBackupIntroWeb3Warning => 'This backup protects account-linked features. Basic discovery does not require connecting a wallet.';
 
   @override
   String get onboardingFlowWalletBackupIntroSecretWarning => 'If you use encrypted backup, store the two secrets separately: the recovery phrase restores the wallet, and the recovery password unlocks the encrypted backup.';
@@ -1013,13 +1019,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingFlowWalletBackupTitle => 'Back up your recovery phrase';
 
   @override
-  String get onboardingFlowWalletBackupBody => 'This phrase restores your wallet, your account access, and future features tied to it on a new device.';
+  String get onboardingFlowWalletBackupBody => 'This phrase restores account-linked wallet access and future optional features on a new device.';
 
   @override
   String get onboardingFlowWalletBackupPrivacyWarning => 'Keep it private. Anyone with this phrase can fully control your wallet.';
 
   @override
-  String get onboardingFlowWalletBackupLossWarning => 'If you lose it, we cannot restore the wallet for you. You may lose access to your account, digital activity, collectibles, and future account-linked features.';
+  String get onboardingFlowWalletBackupLossWarning => 'If you lose it, we cannot restore account-linked wallet access for you. Basic public exploration still works.';
 
   @override
   String get onboardingFlowWalletBackupAction => 'Reveal and confirm backup';
@@ -1037,13 +1043,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingFlowRoleTitle => 'Pick your role';
 
   @override
-  String get onboardingFlowRoleBody => 'Choose what best describes you. You can change this later in Settings.';
+  String get onboardingFlowRoleBody => 'Choose the highlights you want. You can change this later in Settings.';
 
   @override
   String get onboardingFlowPermissionsTitle => 'Choose what to enable';
 
   @override
-  String get onboardingFlowPermissionsBody => 'Enable location to discover nearby art, camera for AR, and notifications for community updates.';
+  String get onboardingFlowPermissionsBody => 'Enable location to discover nearby art, camera for AR layers in development, and notifications for community updates.';
 
   @override
   String get onboardingFlowContinueWithoutPermissions => 'Continue';
@@ -1052,7 +1058,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingFlowArtworkTitle => 'Create your first artwork';
 
   @override
-  String get onboardingFlowArtworkBody => 'Start with one piece. Drafts are fine — you can refine it anytime.';
+  String get onboardingFlowArtworkBody => 'Start with one piece. Drafts are fine, and you can refine it anytime.';
 
   @override
   String get onboardingFlowFollowTitle => 'Follow a few artists';
@@ -1064,7 +1070,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingFlowDoneTitle => 'You’re all set';
 
   @override
-  String get onboardingFlowDoneBody => 'Your space is ready. Jump in and explore.';
+  String get onboardingFlowDoneBody => 'Your space is ready. Start exploring art, places, and community.';
 
   @override
   String get onboardingFlowOpenProfile => 'Open profile setup';
@@ -1132,7 +1138,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingFlowProfileAvatarPickFailed => 'Unable to select avatar right now.';
 
   @override
-  String get onboardingFlowProfileInstitutionIntro => 'Add the organization details people should see first. The DAO review step comes right after this.';
+  String get onboardingFlowProfileInstitutionIntro => 'Add the organization details people should see first. Community review comes right after this.';
 
   @override
   String get onboardingFlowProfileCreatorIntro => 'Set up your public creator profile now so your review submission has the right context.';
@@ -1179,19 +1185,19 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get onboardingFlowDaoReviewTitle => 'DAO review';
+  String get onboardingFlowDaoReviewTitle => 'Community review';
 
   @override
-  String get onboardingFlowDaoReviewInstitutionBody => 'Submit your institution details for DAO review before account setup is completed.';
+  String get onboardingFlowDaoReviewInstitutionBody => 'Submit your institution details for community review before account setup is completed.';
 
   @override
-  String get onboardingFlowDaoReviewArtistBody => 'Submit your practice for DAO review before account setup is completed.';
+  String get onboardingFlowDaoReviewArtistBody => 'Submit your practice for community review before account setup is completed.';
 
   @override
   String get onboardingFlowDaoReviewCompleteFormError => 'Complete the review form before continuing.';
 
   @override
-  String get onboardingFlowDaoReviewSubmitFailed => 'Unable to submit the DAO review right now.';
+  String get onboardingFlowDaoReviewSubmitFailed => 'Unable to submit the community review right now.';
 
   @override
   String onboardingFlowDaoReviewStatus(Object status) {
@@ -1223,16 +1229,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingFlowDaoReviewReviewerNotes => 'Reviewer notes';
 
   @override
-  String get onboardingFlowDaoReviewSubmitAction => 'Submit for DAO review';
+  String get onboardingFlowDaoReviewSubmitAction => 'Submit for community review';
 
   @override
-  String get onboardingWelcomeTitle => 'Welcome to art.kubus';
+  String get onboardingWelcomeTitle => 'Kubus is your art companion.';
 
   @override
-  String get onboardingWelcomeSubtitle => 'Art, places, and community—together';
+  String get onboardingWelcomeSubtitle => 'Art, places, and community together';
 
   @override
-  String get onboardingWelcomeDescription => 'Discover artworks, explore places, and connect with creators and institutions. AR is there when you want it. Your account uses a wallet you control, so long-term access, ownership, and future participation stay with you.';
+  String get onboardingWelcomeDescription => 'Discover artworks, places, creators, and institutions with Kubus as your guide. Wallet features are optional. AR, governance, settlement, and rewards are developing step by step.';
 
   @override
   String get onboardingExploreTitle => 'Explore artworks';
@@ -1250,7 +1256,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingCreateSubtitle => 'Express your creativity';
 
   @override
-  String get onboardingCreateDescription => 'Create AR experiences and share them with the community when you’re ready.';
+  String get onboardingCreateDescription => 'Share your practice, add context, and prepare future AR layers when they are ready.';
 
   @override
   String get onboardingCommunityTitle => 'Join the community';
@@ -1341,19 +1347,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get permissionsLocationBenefit4 => 'Track your exploration journey';
 
   @override
-  String get permissionsCameraTitle => 'Experience art in AR';
+  String get permissionsCameraTitle => 'Camera for AR layers';
 
   @override
-  String get permissionsCameraSubtitle => 'AR artworks in your space';
+  String get permissionsCameraSubtitle => 'AR pilots in development';
 
   @override
-  String get permissionsCameraDescription => 'The camera is used to view AR artworks in your space—place them, interact, and capture the moment.';
+  String get permissionsCameraDescription => 'Camera access supports AR layers in development, including previews, placement, and capture when pilots are available.';
 
   @override
-  String get permissionsCameraBenefit1 => 'View AR artworks in the real world';
+  String get permissionsCameraBenefit1 => 'Preview AR layers when pilots are available';
 
   @override
-  String get permissionsCameraBenefit2 => 'Place virtual sculptures in your space';
+  String get permissionsCameraBenefit2 => 'Prepare optional virtual placements';
 
   @override
   String get permissionsCameraBenefit3 => 'Take photos to share';
@@ -1389,10 +1395,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get permissionsPhotosSubtitle => 'Save your creations';
 
   @override
-  String get permissionsPhotosDescription => 'Save AR screenshots and downloads to your photo library so you can keep your memories and share them.';
+  String get permissionsPhotosDescription => 'Save AR pilot screenshots and downloads to your photo library when those features are available.';
 
   @override
-  String get permissionsPhotosBenefit1 => 'Save AR screenshots to your photos';
+  String get permissionsPhotosBenefit1 => 'Save AR pilot screenshots to your photos';
 
   @override
   String get permissionsPhotosBenefit2 => 'Download artwork images';
@@ -1602,16 +1608,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopSettingsOpeningBugReportToast => 'Opening bug report form…';
 
   @override
-  String get desktopSettingsAboutSubtitle => 'AR art platform connecting artists and institutions';
+  String get desktopSettingsAboutSubtitle => 'Open art platform connecting artists, institutions, and public space';
 
   @override
   String get desktopSettingsFeaturesSectionTitle => 'Features';
 
   @override
-  String get desktopSettingsFeatureArDiscoveryTitle => 'AR art discovery';
+  String get desktopSettingsFeatureArDiscoveryTitle => 'AR layers in development';
 
   @override
-  String get desktopSettingsFeatureArDiscoveryDescription => 'Experience artworks in augmented reality';
+  String get desktopSettingsFeatureArDiscoveryDescription => 'Prepare for optional AR previews as pilots become available.';
 
   @override
   String get desktopSettingsFeatureWeb3IntegrationTitle => 'Wallet integration (Solana)';
@@ -2712,7 +2718,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3OnboardingKeyFeaturesTitle => 'Key features:';
 
   @override
-  String get web3FeatureWeb3Title => 'Wallet-based participation';
+  String get web3FeatureWeb3Title => 'Optional wallet and archive tools';
 
   @override
   String get web3FeatureMarketplaceTitle => 'Digital collectibles';
@@ -3182,10 +3188,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3MarketplaceP4Feature4 => 'Join the creative community';
 
   @override
-  String get web3FeaturesP1Title => 'Your account wallet';
+  String get web3FeaturesP1Title => 'Optional account wallet';
 
   @override
-  String get web3FeaturesP1Description => 'art.kubus uses a wallet you control as part of your account foundation. It supports long-term access, ownership, and future participation across artist, institution, and community features.';
+  String get web3FeaturesP1Description => 'A wallet can support long-term access, attribution, and future participation when you choose. Basic discovery and community browsing do not start with a wallet.';
 
   @override
   String get web3FeaturesP1Feature1 => 'Long-term account continuity';
@@ -3242,10 +3248,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3FeaturesP3Feature5 => 'Collaborate with other creators';
 
   @override
-  String get web3FeaturesP4Title => 'Community decision-making (DAO)';
+  String get web3FeaturesP4Title => 'Future community governance';
 
   @override
-  String get web3FeaturesP4Description => 'Vote on proposals and help shape platform priorities together.';
+  String get web3FeaturesP4Description => 'Governance is developing as a transparent way for the community to help shape platform priorities. It is not required for discovery.';
 
   @override
   String get web3FeaturesP4Feature1 => 'Vote on proposals';
@@ -3284,10 +3290,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3FeaturesP5Feature5 => 'Tools built for institutions';
 
   @override
-  String get web3FeaturesP6Title => 'KUB8 points (Season 0)';
+  String get web3FeaturesP6Title => 'KUB8 recognition records';
 
   @override
-  String get web3FeaturesP6Description => 'KUB8 points track season participation, reputation, and unlocks. They are not money or a tradable asset.';
+  String get web3FeaturesP6Description => 'KUB8 points track Season 0 participation and recognition. They are not money, not a tradable asset, and not live payouts.';
 
   @override
   String get web3FeaturesP6Feature1 => 'Collect points for participation and discoveries';
@@ -4087,7 +4093,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String arShareText(Object title, Object artist) {
-    return 'Check out this AR artwork on art.kubus!\n\n\"$title\"\nby $artist\n\nExperience it in augmented reality!';
+    return 'Check out this artwork on art.kubus!\n\n\"$title\"\nby $artist\n\nAR layers are in development.';
   }
 
   @override
@@ -5345,7 +5351,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get connectWalletWeb3GuideFeatureSecureTitle => 'You stay in control';
 
   @override
-  String get connectWalletWeb3GuideFeatureSecureDescription => 'You control the keys—not us';
+  String get connectWalletWeb3GuideFeatureSecureDescription => 'You control the keys, not us';
 
   @override
   String get connectWalletWeb3GuideFeatureNftsTitle => 'Collectibles';
@@ -8806,10 +8812,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get downloadAppDefaultDescription => 'For the best AR experience, use the mobile app.';
+  String get downloadAppDefaultDescription => 'Mobile AR pilots are in development and will stay optional.';
 
   @override
-  String get downloadAppFeatureViewInAr => 'View artworks in AR';
+  String get downloadAppFeatureViewInAr => 'Preview AR layers when available';
 
   @override
   String get downloadAppFeatureScanArtworks => 'Scan artworks';
@@ -8836,10 +8842,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeDefaultDisplayName => 'there';
 
   @override
-  String get homeWelcomeSubtitle => 'Ready to discover new art today?';
+  String get homeWelcomeSubtitle => 'Kubus is your art companion.';
 
   @override
-  String get homeExploreWeb3Button => 'Wallet & future features';
+  String get homeExploreWeb3Button => 'Optional wallet tools';
 
   @override
   String get homeQuickActionsTitle => 'Quick Actions';
@@ -8848,16 +8854,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeRecentlyUsedLabel => 'Recently Used';
 
   @override
-  String get homeQuickActionsEmptyDescription => 'Your shortcuts will appear here as you use the app.';
+  String get homeQuickActionsEmptyDescription => 'Start exploring and Kubus will keep your useful shortcuts here.';
 
   @override
   String get homeYourStatsTitle => 'Your Stats';
 
   @override
-  String get homeNoStatsAvailableTitle => 'No stats yet';
+  String get homeNoStatsAvailableTitle => 'Your first artwork is waiting.';
 
   @override
-  String get homeNoStatsAvailableDescription => 'Check back later for your activity stats.';
+  String get homeNoStatsAvailableDescription => 'Start a discovery path and Kubus will collect your visits here.';
 
   @override
   String get homeStatArtworks => 'Artworks';
@@ -8945,10 +8951,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeRecentActivityTitle => 'Recent Activity';
 
   @override
-  String get homeNoRecentActivityTitle => 'No recent activity';
+  String get homeNoRecentActivityTitle => 'Your first artwork is waiting.';
 
   @override
-  String get homeNoRecentActivityDescription => 'Your recent actions will show up here.';
+  String get homeNoRecentActivityDescription => 'Start a discovery path. Kubus will collect your visits here.';
 
   @override
   String get homeUnableToLoadActivityTitle => 'Unable to load activity';
@@ -9008,10 +9014,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopHomeWelcomeFallbackName => 'Welcome to art.kubus';
 
   @override
-  String get desktopHomeDiscoverArtTitle => 'Discover Art Around You';
+  String get desktopHomeDiscoverArtTitle => 'Kubus is your art companion.';
 
   @override
-  String get desktopHomeDiscoverArtDescription => 'Explore artworks in augmented reality, connect with creators, and take part in a growing cultural layer around public art.';
+  String get desktopHomeDiscoverArtDescription => 'Discover artworks, places, creators, and institutions across public space and online. Wallet tools are optional, and AR layers are in development.';
 
   @override
   String get desktopHomeYourActivityTitle => 'Your Activity';
@@ -9044,7 +9050,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopHomeQuickActionsEmptyDescription => 'Navigate to different screens and they\'ll appear here for quick access. Cards disappear after 24 hours of inactivity.';
 
   @override
-  String get desktopHomeFeaturedArtworksSubtitle => 'Discover trending AR art';
+  String get desktopHomeFeaturedArtworksSubtitle => 'Discover featured art and future AR layers';
 
   @override
   String get desktopHomeWeb3HubTitle => 'Wallet features';
@@ -9133,7 +9139,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopHomeUnreadNotificationsLabel => 'unread notifications';
 
   @override
-  String get homeWeb3SectionTitle => 'Wallet';
+  String get homeWeb3SectionTitle => 'Optional wallet tools';
 
   @override
   String get homeAccountRequiredLabel => 'Wallet required';
@@ -10983,7 +10989,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopCommunityArArtworkLabel => 'AR artwork';
 
   @override
-  String get desktopCommunityArArtworkSubtitle => 'Tap to view in augmented reality';
+  String get desktopCommunityArArtworkSubtitle => 'AR preview in development';
 
   @override
   String desktopCommunityTagFeedLoadingPostsLabel(Object tag) {
@@ -11272,7 +11278,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get profileAboutDescription => 'AR art platform for discovering public art and connecting artists, institutions, and communities.';
+  String get profileAboutDescription => 'Open art platform for discovering public art and connecting artists, institutions, and communities. AR layers are in development.';
 
   @override
   String get profileAboutCopyright => 'Copyright (c) 2024 kubus Project';
@@ -11726,16 +11732,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonSearchHint => 'Search…';
 
   @override
-  String get onboardingWelcomeDiscoverTitle => 'Discover art around you';
+  String get onboardingWelcomeDiscoverTitle => 'Discover art with Kubus';
 
   @override
-  String get onboardingWelcomeDiscoverBody => 'Explore artworks, exhibitions, and creative spaces on an interactive map.';
+  String get onboardingWelcomeDiscoverBody => 'Explore artworks, exhibitions, public works, and creative spaces on the community map.';
 
   @override
-  String get onboardingWelcomeCreateTitle => 'Create and share';
+  String get onboardingWelcomeCreateTitle => 'Contribute to the archive';
 
   @override
-  String get onboardingWelcomeCreateBody => 'Build your portfolio, publish artworks, and take part in a growing cultural community.';
+  String get onboardingWelcomeCreateBody => 'Share practice, publish artworks, add context, and take part in a growing art community.';
 
   @override
   String get onboardingWelcomeJoinTitle => 'Ready to begin?';

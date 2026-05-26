@@ -101,6 +101,18 @@ abstract class AppLocalizations {
   /// **'art.kubus'**
   String get appTitle;
 
+  /// No description provided for @appTagline.
+  ///
+  /// In en, this message translates to:
+  /// **'Kubus is your art companion.'**
+  String get appTagline;
+
+  /// No description provided for @appTaglineSupport.
+  ///
+  /// In en, this message translates to:
+  /// **'A guide for discovering art, places, and people around you.'**
+  String get appTaglineSupport;
+
   /// No description provided for @appExitConfirmBackHint.
   ///
   /// In en, this message translates to:
@@ -668,13 +680,13 @@ abstract class AppLocalizations {
   /// No description provided for @personaOnboardingTitle.
   ///
   /// In en, this message translates to:
-  /// **'How do you want to use art.kubus?'**
+  /// **'How should Kubus guide you?'**
   String get personaOnboardingTitle;
 
   /// No description provided for @personaOnboardingSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Choose what you’re here for. This only changes what we highlight - not what you can access.'**
+  /// **'Choose what you are here for. This only changes what we highlight, not what you can access.'**
   String get personaOnboardingSubtitle;
 
   /// No description provided for @personaOptionLoverTitle.
@@ -686,7 +698,7 @@ abstract class AppLocalizations {
   /// No description provided for @personaOptionLoverSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Discover nearby artworks, exhibitions, and community updates.'**
+  /// **'Discover nearby artworks, exhibitions, public works, and community updates.'**
   String get personaOptionLoverSubtitle;
 
   /// No description provided for @personaOptionCreatorTitle.
@@ -698,7 +710,7 @@ abstract class AppLocalizations {
   /// No description provided for @personaOptionCreatorSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Create artworks and exhibitions, and collaborate with others.'**
+  /// **'Share your practice, add context, publish works, and build community.'**
   String get personaOptionCreatorSubtitle;
 
   /// No description provided for @personaOptionInstitutionTitle.
@@ -710,7 +722,7 @@ abstract class AppLocalizations {
   /// No description provided for @personaOptionInstitutionSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Organize events and exhibitions, manage collaborators, and share your program.'**
+  /// **'Connect programmes, exhibitions, artists, and public archive context.'**
   String get personaOptionInstitutionSubtitle;
 
   /// No description provided for @exhibitionCreatorAppBarTitle.
@@ -1172,7 +1184,7 @@ abstract class AppLocalizations {
   /// No description provided for @authSignInSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Start exploring, creating, and connecting with the community.'**
+  /// **'Start exploring art, places, and community. Wallet features are optional.'**
   String get authSignInSubtitle;
 
   /// No description provided for @authRegisterTitle.
@@ -1184,25 +1196,25 @@ abstract class AppLocalizations {
   /// No description provided for @authRegisterSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Create a profile and join the community.'**
+  /// **'Create a profile to personalize your art companion. Wallet features can wait.'**
   String get authRegisterSubtitle;
 
   /// No description provided for @authHighlightSignInMethods.
   ///
   /// In en, this message translates to:
-  /// **'Email, Google, or wallet sign-in'**
+  /// **'Email, Google, or optional wallet sign-in'**
   String get authHighlightSignInMethods;
 
   /// No description provided for @authHighlightNoFees.
   ///
   /// In en, this message translates to:
-  /// **'No fees to sign in'**
+  /// **'No fee is required to sign in'**
   String get authHighlightNoFees;
 
   /// No description provided for @authHighlightControl.
   ///
   /// In en, this message translates to:
-  /// **'Your access stays yours'**
+  /// **'Basic exploration works without a wallet'**
   String get authHighlightControl;
 
   /// No description provided for @authHighlightOnboardingOptions.
@@ -1220,7 +1232,7 @@ abstract class AppLocalizations {
   /// No description provided for @authHighlightOptionalWeb3.
   ///
   /// In en, this message translates to:
-  /// **'Built for ownership and future participation'**
+  /// **'Future participation features stay optional'**
   String get authHighlightOptionalWeb3;
 
   /// No description provided for @authSignedInProfileRefreshSoon.
@@ -1904,31 +1916,31 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingFlowWelcomeTitle.
   ///
   /// In en, this message translates to:
-  /// **'Welcome to art.kubus'**
+  /// **'Kubus is your art companion.'**
   String get onboardingFlowWelcomeTitle;
 
   /// No description provided for @onboardingFlowWelcomeBody.
   ///
   /// In en, this message translates to:
-  /// **'Start with art, places, and community. You can finish the rest later.'**
+  /// **'Start with art, places, and community. Account setup and optional wallet tools can wait.'**
   String get onboardingFlowWelcomeBody;
 
   /// No description provided for @onboardingFlowWelcomeInfoAccount.
   ///
   /// In en, this message translates to:
-  /// **'Create your account and choose how you want to sign in.'**
+  /// **'Create a profile when you want a personal feed and contributions.'**
   String get onboardingFlowWelcomeInfoAccount;
 
   /// No description provided for @onboardingFlowWelcomeInfoCreate.
   ///
   /// In en, this message translates to:
-  /// **'Set up your profile and publish your first artwork.'**
+  /// **'Add context, publish works, or keep exploring.'**
   String get onboardingFlowWelcomeInfoCreate;
 
   /// No description provided for @onboardingFlowWelcomeInfoFollow.
   ///
   /// In en, this message translates to:
-  /// **'Follow artists to personalize your feed.'**
+  /// **'Follow places, stories, and artists to personalize your feed.'**
   String get onboardingFlowWelcomeInfoFollow;
 
   /// No description provided for @onboardingFlowWelcomeInfoTime.
@@ -1946,7 +1958,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingFlowAccountBody.
   ///
   /// In en, this message translates to:
-  /// **'Use email, Google, or wallet sign-in to create your account. art.kubus uses a wallet you control, so long-term access stays with you.'**
+  /// **'Use email, Google, or optional wallet sign-in. Basic exploration works without a wallet, and account-linked recovery is explained before you enable it.'**
   String get onboardingFlowAccountBody;
 
   /// No description provided for @onboardingFlowAccountVerifyHint.
@@ -1994,19 +2006,19 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingFlowWalletBackupIntroTitle.
   ///
   /// In en, this message translates to:
-  /// **'Secure your account wallet'**
+  /// **'Protect account recovery'**
   String get onboardingFlowWalletBackupIntroTitle;
 
   /// No description provided for @onboardingFlowWalletBackupIntroBody.
   ///
   /// In en, this message translates to:
-  /// **'Email and Google sign-up also create an art.kubus account wallet. It supports long-term access, future digital participation, and anything tied to your account. Back up the recovery phrase now.'**
+  /// **'Some sign-in paths create an account wallet for long-term access and future participation. It is separate from basic exploration. Back up the recovery phrase if you choose these account-linked features.'**
   String get onboardingFlowWalletBackupIntroBody;
 
   /// No description provided for @onboardingFlowWalletBackupIntroWeb3Warning.
   ///
   /// In en, this message translates to:
-  /// **'This wallet is part of your account, not an optional extra.'**
+  /// **'This backup protects account-linked features. Basic discovery does not require connecting a wallet.'**
   String get onboardingFlowWalletBackupIntroWeb3Warning;
 
   /// No description provided for @onboardingFlowWalletBackupIntroSecretWarning.
@@ -2090,7 +2102,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingFlowWalletBackupBody.
   ///
   /// In en, this message translates to:
-  /// **'This phrase restores your wallet, your account access, and future features tied to it on a new device.'**
+  /// **'This phrase restores account-linked wallet access and future optional features on a new device.'**
   String get onboardingFlowWalletBackupBody;
 
   /// No description provided for @onboardingFlowWalletBackupPrivacyWarning.
@@ -2102,7 +2114,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingFlowWalletBackupLossWarning.
   ///
   /// In en, this message translates to:
-  /// **'If you lose it, we cannot restore the wallet for you. You may lose access to your account, digital activity, collectibles, and future account-linked features.'**
+  /// **'If you lose it, we cannot restore account-linked wallet access for you. Basic public exploration still works.'**
   String get onboardingFlowWalletBackupLossWarning;
 
   /// No description provided for @onboardingFlowWalletBackupAction.
@@ -2138,7 +2150,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingFlowRoleBody.
   ///
   /// In en, this message translates to:
-  /// **'Choose what best describes you. You can change this later in Settings.'**
+  /// **'Choose the highlights you want. You can change this later in Settings.'**
   String get onboardingFlowRoleBody;
 
   /// No description provided for @onboardingFlowPermissionsTitle.
@@ -2150,7 +2162,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingFlowPermissionsBody.
   ///
   /// In en, this message translates to:
-  /// **'Enable location to discover nearby art, camera for AR, and notifications for community updates.'**
+  /// **'Enable location to discover nearby art, camera for AR layers in development, and notifications for community updates.'**
   String get onboardingFlowPermissionsBody;
 
   /// No description provided for @onboardingFlowContinueWithoutPermissions.
@@ -2168,7 +2180,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingFlowArtworkBody.
   ///
   /// In en, this message translates to:
-  /// **'Start with one piece. Drafts are fine — you can refine it anytime.'**
+  /// **'Start with one piece. Drafts are fine, and you can refine it anytime.'**
   String get onboardingFlowArtworkBody;
 
   /// No description provided for @onboardingFlowFollowTitle.
@@ -2192,7 +2204,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingFlowDoneBody.
   ///
   /// In en, this message translates to:
-  /// **'Your space is ready. Jump in and explore.'**
+  /// **'Your space is ready. Start exploring art, places, and community.'**
   String get onboardingFlowDoneBody;
 
   /// No description provided for @onboardingFlowOpenProfile.
@@ -2324,7 +2336,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingFlowProfileInstitutionIntro.
   ///
   /// In en, this message translates to:
-  /// **'Add the organization details people should see first. The DAO review step comes right after this.'**
+  /// **'Add the organization details people should see first. Community review comes right after this.'**
   String get onboardingFlowProfileInstitutionIntro;
 
   /// No description provided for @onboardingFlowProfileCreatorIntro.
@@ -2414,19 +2426,19 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingFlowDaoReviewTitle.
   ///
   /// In en, this message translates to:
-  /// **'DAO review'**
+  /// **'Community review'**
   String get onboardingFlowDaoReviewTitle;
 
   /// No description provided for @onboardingFlowDaoReviewInstitutionBody.
   ///
   /// In en, this message translates to:
-  /// **'Submit your institution details for DAO review before account setup is completed.'**
+  /// **'Submit your institution details for community review before account setup is completed.'**
   String get onboardingFlowDaoReviewInstitutionBody;
 
   /// No description provided for @onboardingFlowDaoReviewArtistBody.
   ///
   /// In en, this message translates to:
-  /// **'Submit your practice for DAO review before account setup is completed.'**
+  /// **'Submit your practice for community review before account setup is completed.'**
   String get onboardingFlowDaoReviewArtistBody;
 
   /// No description provided for @onboardingFlowDaoReviewCompleteFormError.
@@ -2438,7 +2450,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingFlowDaoReviewSubmitFailed.
   ///
   /// In en, this message translates to:
-  /// **'Unable to submit the DAO review right now.'**
+  /// **'Unable to submit the community review right now.'**
   String get onboardingFlowDaoReviewSubmitFailed;
 
   /// No description provided for @onboardingFlowDaoReviewStatus.
@@ -2498,25 +2510,25 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingFlowDaoReviewSubmitAction.
   ///
   /// In en, this message translates to:
-  /// **'Submit for DAO review'**
+  /// **'Submit for community review'**
   String get onboardingFlowDaoReviewSubmitAction;
 
   /// No description provided for @onboardingWelcomeTitle.
   ///
   /// In en, this message translates to:
-  /// **'Welcome to art.kubus'**
+  /// **'Kubus is your art companion.'**
   String get onboardingWelcomeTitle;
 
   /// No description provided for @onboardingWelcomeSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Art, places, and community—together'**
+  /// **'Art, places, and community together'**
   String get onboardingWelcomeSubtitle;
 
   /// No description provided for @onboardingWelcomeDescription.
   ///
   /// In en, this message translates to:
-  /// **'Discover artworks, explore places, and connect with creators and institutions. AR is there when you want it. Your account uses a wallet you control, so long-term access, ownership, and future participation stay with you.'**
+  /// **'Discover artworks, places, creators, and institutions with Kubus as your guide. Wallet features are optional. AR, governance, settlement, and rewards are developing step by step.'**
   String get onboardingWelcomeDescription;
 
   /// No description provided for @onboardingExploreTitle.
@@ -2552,7 +2564,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingCreateDescription.
   ///
   /// In en, this message translates to:
-  /// **'Create AR experiences and share them with the community when you’re ready.'**
+  /// **'Share your practice, add context, and prepare future AR layers when they are ready.'**
   String get onboardingCreateDescription;
 
   /// No description provided for @onboardingCommunityTitle.
@@ -2726,31 +2738,31 @@ abstract class AppLocalizations {
   /// No description provided for @permissionsCameraTitle.
   ///
   /// In en, this message translates to:
-  /// **'Experience art in AR'**
+  /// **'Camera for AR layers'**
   String get permissionsCameraTitle;
 
   /// No description provided for @permissionsCameraSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'AR artworks in your space'**
+  /// **'AR pilots in development'**
   String get permissionsCameraSubtitle;
 
   /// No description provided for @permissionsCameraDescription.
   ///
   /// In en, this message translates to:
-  /// **'The camera is used to view AR artworks in your space—place them, interact, and capture the moment.'**
+  /// **'Camera access supports AR layers in development, including previews, placement, and capture when pilots are available.'**
   String get permissionsCameraDescription;
 
   /// No description provided for @permissionsCameraBenefit1.
   ///
   /// In en, this message translates to:
-  /// **'View AR artworks in the real world'**
+  /// **'Preview AR layers when pilots are available'**
   String get permissionsCameraBenefit1;
 
   /// No description provided for @permissionsCameraBenefit2.
   ///
   /// In en, this message translates to:
-  /// **'Place virtual sculptures in your space'**
+  /// **'Prepare optional virtual placements'**
   String get permissionsCameraBenefit2;
 
   /// No description provided for @permissionsCameraBenefit3.
@@ -2822,13 +2834,13 @@ abstract class AppLocalizations {
   /// No description provided for @permissionsPhotosDescription.
   ///
   /// In en, this message translates to:
-  /// **'Save AR screenshots and downloads to your photo library so you can keep your memories and share them.'**
+  /// **'Save AR pilot screenshots and downloads to your photo library when those features are available.'**
   String get permissionsPhotosDescription;
 
   /// No description provided for @permissionsPhotosBenefit1.
   ///
   /// In en, this message translates to:
-  /// **'Save AR screenshots to your photos'**
+  /// **'Save AR pilot screenshots to your photos'**
   String get permissionsPhotosBenefit1;
 
   /// No description provided for @permissionsPhotosBenefit2.
@@ -3248,7 +3260,7 @@ abstract class AppLocalizations {
   /// No description provided for @desktopSettingsAboutSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'AR art platform connecting artists and institutions'**
+  /// **'Open art platform connecting artists, institutions, and public space'**
   String get desktopSettingsAboutSubtitle;
 
   /// No description provided for @desktopSettingsFeaturesSectionTitle.
@@ -3260,13 +3272,13 @@ abstract class AppLocalizations {
   /// No description provided for @desktopSettingsFeatureArDiscoveryTitle.
   ///
   /// In en, this message translates to:
-  /// **'AR art discovery'**
+  /// **'AR layers in development'**
   String get desktopSettingsFeatureArDiscoveryTitle;
 
   /// No description provided for @desktopSettingsFeatureArDiscoveryDescription.
   ///
   /// In en, this message translates to:
-  /// **'Experience artworks in augmented reality'**
+  /// **'Prepare for optional AR previews as pilots become available.'**
   String get desktopSettingsFeatureArDiscoveryDescription;
 
   /// No description provided for @desktopSettingsFeatureWeb3IntegrationTitle.
@@ -5396,7 +5408,7 @@ abstract class AppLocalizations {
   /// No description provided for @web3FeatureWeb3Title.
   ///
   /// In en, this message translates to:
-  /// **'Wallet-based participation'**
+  /// **'Optional wallet and archive tools'**
   String get web3FeatureWeb3Title;
 
   /// No description provided for @web3FeatureMarketplaceTitle.
@@ -6332,13 +6344,13 @@ abstract class AppLocalizations {
   /// No description provided for @web3FeaturesP1Title.
   ///
   /// In en, this message translates to:
-  /// **'Your account wallet'**
+  /// **'Optional account wallet'**
   String get web3FeaturesP1Title;
 
   /// No description provided for @web3FeaturesP1Description.
   ///
   /// In en, this message translates to:
-  /// **'art.kubus uses a wallet you control as part of your account foundation. It supports long-term access, ownership, and future participation across artist, institution, and community features.'**
+  /// **'A wallet can support long-term access, attribution, and future participation when you choose. Basic discovery and community browsing do not start with a wallet.'**
   String get web3FeaturesP1Description;
 
   /// No description provided for @web3FeaturesP1Feature1.
@@ -6452,13 +6464,13 @@ abstract class AppLocalizations {
   /// No description provided for @web3FeaturesP4Title.
   ///
   /// In en, this message translates to:
-  /// **'Community decision-making (DAO)'**
+  /// **'Future community governance'**
   String get web3FeaturesP4Title;
 
   /// No description provided for @web3FeaturesP4Description.
   ///
   /// In en, this message translates to:
-  /// **'Vote on proposals and help shape platform priorities together.'**
+  /// **'Governance is developing as a transparent way for the community to help shape platform priorities. It is not required for discovery.'**
   String get web3FeaturesP4Description;
 
   /// No description provided for @web3FeaturesP4Feature1.
@@ -6536,13 +6548,13 @@ abstract class AppLocalizations {
   /// No description provided for @web3FeaturesP6Title.
   ///
   /// In en, this message translates to:
-  /// **'KUB8 points (Season 0)'**
+  /// **'KUB8 recognition records'**
   String get web3FeaturesP6Title;
 
   /// No description provided for @web3FeaturesP6Description.
   ///
   /// In en, this message translates to:
-  /// **'KUB8 points track season participation, reputation, and unlocks. They are not money or a tradable asset.'**
+  /// **'KUB8 points track Season 0 participation and recognition. They are not money, not a tradable asset, and not live payouts.'**
   String get web3FeaturesP6Description;
 
   /// No description provided for @web3FeaturesP6Feature1.
@@ -8048,7 +8060,7 @@ abstract class AppLocalizations {
   /// No description provided for @arShareText.
   ///
   /// In en, this message translates to:
-  /// **'Check out this AR artwork on art.kubus!\n\n\"{title}\"\nby {artist}\n\nExperience it in augmented reality!'**
+  /// **'Check out this artwork on art.kubus!\n\n\"{title}\"\nby {artist}\n\nAR layers are in development.'**
   String arShareText(Object title, Object artist);
 
   /// No description provided for @arShareSuccessToast.
@@ -10322,7 +10334,7 @@ abstract class AppLocalizations {
   /// No description provided for @connectWalletWeb3GuideFeatureSecureDescription.
   ///
   /// In en, this message translates to:
-  /// **'You control the keys—not us'**
+  /// **'You control the keys, not us'**
   String get connectWalletWeb3GuideFeatureSecureDescription;
 
   /// No description provided for @connectWalletWeb3GuideFeatureNftsTitle.
@@ -16784,13 +16796,13 @@ abstract class AppLocalizations {
   /// No description provided for @downloadAppDefaultDescription.
   ///
   /// In en, this message translates to:
-  /// **'For the best AR experience, use the mobile app.'**
+  /// **'Mobile AR pilots are in development and will stay optional.'**
   String get downloadAppDefaultDescription;
 
   /// No description provided for @downloadAppFeatureViewInAr.
   ///
   /// In en, this message translates to:
-  /// **'View artworks in AR'**
+  /// **'Preview AR layers when available'**
   String get downloadAppFeatureViewInAr;
 
   /// No description provided for @downloadAppFeatureScanArtworks.
@@ -16844,13 +16856,13 @@ abstract class AppLocalizations {
   /// No description provided for @homeWelcomeSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Ready to discover new art today?'**
+  /// **'Kubus is your art companion.'**
   String get homeWelcomeSubtitle;
 
   /// No description provided for @homeExploreWeb3Button.
   ///
   /// In en, this message translates to:
-  /// **'Wallet & future features'**
+  /// **'Optional wallet tools'**
   String get homeExploreWeb3Button;
 
   /// No description provided for @homeQuickActionsTitle.
@@ -16868,7 +16880,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeQuickActionsEmptyDescription.
   ///
   /// In en, this message translates to:
-  /// **'Your shortcuts will appear here as you use the app.'**
+  /// **'Start exploring and Kubus will keep your useful shortcuts here.'**
   String get homeQuickActionsEmptyDescription;
 
   /// No description provided for @homeYourStatsTitle.
@@ -16880,13 +16892,13 @@ abstract class AppLocalizations {
   /// No description provided for @homeNoStatsAvailableTitle.
   ///
   /// In en, this message translates to:
-  /// **'No stats yet'**
+  /// **'Your first artwork is waiting.'**
   String get homeNoStatsAvailableTitle;
 
   /// No description provided for @homeNoStatsAvailableDescription.
   ///
   /// In en, this message translates to:
-  /// **'Check back later for your activity stats.'**
+  /// **'Start a discovery path and Kubus will collect your visits here.'**
   String get homeNoStatsAvailableDescription;
 
   /// No description provided for @homeStatArtworks.
@@ -17060,7 +17072,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeNoRecentActivityDescription.
   ///
   /// In en, this message translates to:
-  /// **'Your recent actions will show up here.'**
+  /// **'Start a discovery path. Kubus will collect your visits here.'**
   String get homeNoRecentActivityDescription;
 
   /// No description provided for @homeUnableToLoadActivityTitle.
@@ -17180,13 +17192,13 @@ abstract class AppLocalizations {
   /// No description provided for @desktopHomeDiscoverArtTitle.
   ///
   /// In en, this message translates to:
-  /// **'Discover Art Around You'**
+  /// **'Kubus is your art companion.'**
   String get desktopHomeDiscoverArtTitle;
 
   /// No description provided for @desktopHomeDiscoverArtDescription.
   ///
   /// In en, this message translates to:
-  /// **'Explore artworks in augmented reality, connect with creators, and take part in a growing cultural layer around public art.'**
+  /// **'Discover artworks, places, creators, and institutions across public space and online. Wallet tools are optional, and AR layers are in development.'**
   String get desktopHomeDiscoverArtDescription;
 
   /// No description provided for @desktopHomeYourActivityTitle.
@@ -17252,7 +17264,7 @@ abstract class AppLocalizations {
   /// No description provided for @desktopHomeFeaturedArtworksSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Discover trending AR art'**
+  /// **'Discover featured art and future AR layers'**
   String get desktopHomeFeaturedArtworksSubtitle;
 
   /// No description provided for @desktopHomeWeb3HubTitle.
@@ -20906,7 +20918,7 @@ abstract class AppLocalizations {
   /// No description provided for @desktopCommunityArArtworkSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Tap to view in augmented reality'**
+  /// **'AR preview in development'**
   String get desktopCommunityArArtworkSubtitle;
 
   /// No description provided for @desktopCommunityTagFeedLoadingPostsLabel.
@@ -21404,7 +21416,7 @@ abstract class AppLocalizations {
   /// No description provided for @profileAboutDescription.
   ///
   /// In en, this message translates to:
-  /// **'AR art platform for discovering public art and connecting artists, institutions, and communities.'**
+  /// **'Open art platform for discovering public art and connecting artists, institutions, and communities. AR layers are in development.'**
   String get profileAboutDescription;
 
   /// No description provided for @profileAboutCopyright.
@@ -22244,25 +22256,25 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingWelcomeDiscoverTitle.
   ///
   /// In en, this message translates to:
-  /// **'Discover art around you'**
+  /// **'Discover art with Kubus'**
   String get onboardingWelcomeDiscoverTitle;
 
   /// No description provided for @onboardingWelcomeDiscoverBody.
   ///
   /// In en, this message translates to:
-  /// **'Explore artworks, exhibitions, and creative spaces on an interactive map.'**
+  /// **'Explore artworks, exhibitions, public works, and creative spaces on the community map.'**
   String get onboardingWelcomeDiscoverBody;
 
   /// No description provided for @onboardingWelcomeCreateTitle.
   ///
   /// In en, this message translates to:
-  /// **'Create and share'**
+  /// **'Contribute to the archive'**
   String get onboardingWelcomeCreateTitle;
 
   /// No description provided for @onboardingWelcomeCreateBody.
   ///
   /// In en, this message translates to:
-  /// **'Build your portfolio, publish artworks, and take part in a growing cultural community.'**
+  /// **'Share practice, publish artworks, add context, and take part in a growing art community.'**
   String get onboardingWelcomeCreateBody;
 
   /// No description provided for @onboardingWelcomeJoinTitle.

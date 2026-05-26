@@ -12,6 +12,12 @@ class AppLocalizationsSl extends AppLocalizations {
   String get appTitle => 'art.kubus';
 
   @override
+  String get appTagline => 'Kubus je tvoj sopotnik v umetnosti.';
+
+  @override
+  String get appTaglineSupport => 'Vodnik za odkrivanje umetnosti, krajev in ljudi okoli tebe.';
+
+  @override
   String get appExitConfirmBackHint => 'Za izhod iz aplikacije še enkrat povleci ali pritisni nazaj.';
 
   @override
@@ -296,28 +302,28 @@ class AppLocalizationsSl extends AppLocalizations {
   String get commonPinLabel => 'PIN';
 
   @override
-  String get personaOnboardingTitle => 'Kako želiš uporabljati art.kubus?';
+  String get personaOnboardingTitle => 'Kako naj te Kubus vodi?';
 
   @override
-  String get personaOnboardingSubtitle => 'Izberi, zakaj si tukaj. To vpliva samo na to, kaj izpostavimo, ne pa na dostop.';
+  String get personaOnboardingSubtitle => 'Izberi, zakaj si tukaj. To spremeni samo poudarke, ne pa dostopa.';
 
   @override
   String get personaOptionLoverTitle => 'Ljubitelj umetnosti';
 
   @override
-  String get personaOptionLoverSubtitle => 'Odkrij bližnja dela, razstave in dogajanje v skupnosti.';
+  String get personaOptionLoverSubtitle => 'Odkrij bližnja dela, razstave, javna dela in novice skupnosti.';
 
   @override
   String get personaOptionCreatorTitle => 'Umetnik / kolektiv';
 
   @override
-  String get personaOptionCreatorSubtitle => 'Ustvarjaj dela in razstave ter sodeluj z drugimi.';
+  String get personaOptionCreatorSubtitle => 'Predstavi prakso, dodaj kontekst, objavi dela in gradi skupnost.';
 
   @override
   String get personaOptionInstitutionTitle => 'Institucija / galerija';
 
   @override
-  String get personaOptionInstitutionSubtitle => 'Organiziraj dogodke in razstave, upravljaj sodelavce in deli program.';
+  String get personaOptionInstitutionSubtitle => 'Poveži programe, razstave, umetnike in javni arhivski kontekst.';
 
   @override
   String get exhibitionCreatorAppBarTitle => 'Ustvari razstavo';
@@ -552,31 +558,31 @@ class AppLocalizationsSl extends AppLocalizations {
   String get authSignInTitle => 'Prijava v art.kubus';
 
   @override
-  String get authSignInSubtitle => 'Začni raziskovati, ustvarjati in se povezovati s skupnostjo.';
+  String get authSignInSubtitle => 'Začni odkrivati umetnost, kraje in skupnost. Denarniške funkcije so izbirne.';
 
   @override
   String get authRegisterTitle => 'Ustvari račun';
 
   @override
-  String get authRegisterSubtitle => 'Ustvari profil in se pridruži skupnosti.';
+  String get authRegisterSubtitle => 'Ustvari profil in prilagodi svojega sopotnika v umetnosti. Denarnica lahko počaka.';
 
   @override
-  String get authHighlightSignInMethods => 'Prijava z e-pošto, Googlom ali denarnico';
+  String get authHighlightSignInMethods => 'Prijava z e-pošto, Googlom ali izbirno denarnico';
 
   @override
   String get authHighlightNoFees => 'Za prijavo ni provizije';
 
   @override
-  String get authHighlightControl => 'Dostop ostane v tvojih rokah';
+  String get authHighlightControl => 'Osnovno raziskovanje deluje brez denarnice';
 
   @override
-  String get authHighlightOnboardingOptions => 'Izberi e-pošto, Google ali denarnico';
+  String get authHighlightOnboardingOptions => 'Izberi e-pošto, Google ali izbirno denarnico';
 
   @override
   String get authHighlightKeysLocal => 'Zasebni ključi ostanejo pri tebi';
 
   @override
-  String get authHighlightOptionalWeb3 => 'Pripravljeno za prihodnje lastništvo in sodelovanje';
+  String get authHighlightOptionalWeb3 => 'Prihodnje funkcije sodelovanja ostajajo izbirne';
 
   @override
   String get authSignedInProfileRefreshSoon => 'Prijava je uspela. Profil se bo kmalu osvežil.';
@@ -920,19 +926,19 @@ class AppLocalizationsSl extends AppLocalizations {
   String get onboardingFlowTitle => 'Hitra nastavitev';
 
   @override
-  String get onboardingFlowWelcomeTitle => 'Dobrodošel/a v art.kubus';
+  String get onboardingFlowWelcomeTitle => 'Kubus je tvoj sopotnik v umetnosti.';
 
   @override
-  String get onboardingFlowWelcomeBody => 'Začni pri umetnosti, krajih in skupnosti. Ostalo lahko urediš tudi pozneje.';
+  String get onboardingFlowWelcomeBody => 'Začni pri umetnosti, krajih in skupnosti. Račun in izbirna denarniška orodja lahko počakajo.';
 
   @override
-  String get onboardingFlowWelcomeInfoAccount => 'Ustvari račun in izberi način prijave.';
+  String get onboardingFlowWelcomeInfoAccount => 'Ustvari profil, ko želiš osebni tok vsebin in prispevke.';
 
   @override
-  String get onboardingFlowWelcomeInfoCreate => 'Nastavi profil in objavi prvo umetnino.';
+  String get onboardingFlowWelcomeInfoCreate => 'Dodaj kontekst, objavi dela ali nadaljuj z raziskovanjem.';
 
   @override
-  String get onboardingFlowWelcomeInfoFollow => 'Sledi umetnikom in prilagodi svoj tok vsebin.';
+  String get onboardingFlowWelcomeInfoFollow => 'Sledi krajem, zgodbam in umetnikom ter prilagodi tok vsebin.';
 
   @override
   String get onboardingFlowWelcomeInfoTime => 'Večina uporabnikov to dokonča v približno 2 minutah.';
@@ -941,7 +947,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get onboardingFlowAccountTitle => 'Ustvari račun';
 
   @override
-  String get onboardingFlowAccountBody => 'Račun lahko ustvariš z e-pošto, Googlom ali denarnico. art.kubus uporablja denarnico, ki jo upravljaš sam, zato dolgoročni dostop ostane v tvojih rokah.';
+  String get onboardingFlowAccountBody => 'Uporabi e-pošto, Google ali izbirno prijavo z denarnico. Osnovno raziskovanje deluje brez denarnice, obnovitev računa pa je razložena, preden jo omogočiš.';
 
   @override
   String get onboardingFlowAccountVerifyHint => 'Če si se registriral/a z e-pošto, pred prijavo potrdi e-poštni naslov.';
@@ -965,13 +971,13 @@ class AppLocalizationsSl extends AppLocalizations {
   String get onboardingFlowProfileBody => 'Dodaj ime in fotografijo, da te drugi lažje prepoznajo.';
 
   @override
-  String get onboardingFlowWalletBackupIntroTitle => 'Zaščiti denarnico računa';
+  String get onboardingFlowWalletBackupIntroTitle => 'Zaščiti obnovitev računa';
 
   @override
-  String get onboardingFlowWalletBackupIntroBody => 'Ob registraciji z e-pošto ali Googlom se za tvoj račun art.kubus ustvari tudi denarnica. Ta skrbi za dolgoročni dostop, prihodnje digitalno sodelovanje in vse, kar je vezano na tvoj račun. Obnovitveno frazo zato shrani že zdaj.';
+  String get onboardingFlowWalletBackupIntroBody => 'Nekatere prijavne poti ustvarijo denarnico računa za dolgoročni dostop in prihodnje sodelovanje. To je ločeno od osnovnega raziskovanja. Obnovitveno frazo shrani, če izbereš te funkcije računa.';
 
   @override
-  String get onboardingFlowWalletBackupIntroWeb3Warning => 'Ta denarnica je del tvojega računa, ne dodatna možnost.';
+  String get onboardingFlowWalletBackupIntroWeb3Warning => 'Ta varnostna kopija ščiti funkcije, vezane na račun. Osnovno odkrivanje ne zahteva povezane denarnice.';
 
   @override
   String get onboardingFlowWalletBackupIntroSecretWarning => 'Če uporabiš šifrirano varnostno kopijo, skrivnosti shrani ločeno: obnovitvena fraza obnovi denarnico, obnovitveno geslo pa odklene šifrirano kopijo.';
@@ -1013,13 +1019,13 @@ class AppLocalizationsSl extends AppLocalizations {
   String get onboardingFlowWalletBackupTitle => 'Varnostno shrani obnovitveno frazo';
 
   @override
-  String get onboardingFlowWalletBackupBody => 'Ta fraza ti na novi napravi povrne denarnico, dostop do računa in prihodnje funkcije, vezane nanjo.';
+  String get onboardingFlowWalletBackupBody => 'Ta fraza ti na novi napravi povrne dostop do denarnice računa in prihodnjih izbirnih funkcij.';
 
   @override
   String get onboardingFlowWalletBackupPrivacyWarning => 'Frazo ohrani zasebno. Kdor jo ima, lahko popolnoma upravlja tvojo denarnico.';
 
   @override
-  String get onboardingFlowWalletBackupLossWarning => 'Če jo izgubiš, denarnice ne moremo obnoviti. Lahko izgubiš dostop do računa, digitalne dejavnosti, zbirk in prihodnjih funkcij, vezanih na to denarnico.';
+  String get onboardingFlowWalletBackupLossWarning => 'Če jo izgubiš, dostopa do denarnice računa ne moremo obnoviti. Osnovno javno raziskovanje še vedno deluje.';
 
   @override
   String get onboardingFlowWalletBackupAction => 'Prikaži in potrdi varnostno kopijo';
@@ -1037,13 +1043,13 @@ class AppLocalizationsSl extends AppLocalizations {
   String get onboardingFlowRoleTitle => 'Izberi svojo vlogo';
 
   @override
-  String get onboardingFlowRoleBody => 'Izberi, kaj te najbolje opiše. Kasneje lahko to spremeniš v Nastavitvah.';
+  String get onboardingFlowRoleBody => 'Izberi poudarke, ki jih želiš videti. Kasneje lahko to spremeniš v Nastavitvah.';
 
   @override
   String get onboardingFlowPermissionsTitle => 'Izberi, kaj želiš omogočiti';
 
   @override
-  String get onboardingFlowPermissionsBody => 'Omogoči lokacijo za umetnost v bližini, kamero za AR in obvestila za novosti skupnosti.';
+  String get onboardingFlowPermissionsBody => 'Omogoči lokacijo za umetnost v bližini, kamero za AR plasti v razvoju in obvestila za novosti skupnosti.';
 
   @override
   String get onboardingFlowContinueWithoutPermissions => 'Nadaljuj';
@@ -1052,7 +1058,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get onboardingFlowArtworkTitle => 'Ustvari prvo umetnino';
 
   @override
-  String get onboardingFlowArtworkBody => 'Začni z eno objavo. Osnutek je čisto v redu — urediš ga lahko kasneje.';
+  String get onboardingFlowArtworkBody => 'Začni z eno objavo. Osnutek je čisto v redu, urediš ga lahko kasneje.';
 
   @override
   String get onboardingFlowFollowTitle => 'Sledi nekaj umetnikom';
@@ -1064,7 +1070,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get onboardingFlowDoneTitle => 'Pripravljeno';
 
   @override
-  String get onboardingFlowDoneBody => 'Tvoj prostor je pripravljen. Raziskovanje se lahko začne.';
+  String get onboardingFlowDoneBody => 'Tvoj prostor je pripravljen. Začni odkrivati umetnost, kraje in skupnost.';
 
   @override
   String get onboardingFlowOpenProfile => 'Odpri nastavitev profila';
@@ -1132,7 +1138,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get onboardingFlowProfileAvatarPickFailed => 'Izbira avatarja trenutno ni na voljo.';
 
   @override
-  String get onboardingFlowProfileInstitutionIntro => 'Dodaj podatke o organizaciji, ki jih naj drugi najprej vidijo. Korak pregleda DAO sledi takoj za tem.';
+  String get onboardingFlowProfileInstitutionIntro => 'Dodaj podatke o organizaciji, ki naj jih drugi najprej vidijo. Skupnostni pregled sledi takoj za tem.';
 
   @override
   String get onboardingFlowProfileCreatorIntro => 'Nastavi svoj javni profil ustvarjalca, da bo prijava za pregled imela pravi kontekst.';
@@ -1179,19 +1185,19 @@ class AppLocalizationsSl extends AppLocalizations {
   }
 
   @override
-  String get onboardingFlowDaoReviewTitle => 'DAO pregled';
+  String get onboardingFlowDaoReviewTitle => 'Skupnostni pregled';
 
   @override
-  String get onboardingFlowDaoReviewInstitutionBody => 'Oddaj podatke institucije za DAO pregled pred zaključkom nastavitve računa.';
+  String get onboardingFlowDaoReviewInstitutionBody => 'Oddaj podatke institucije za skupnostni pregled pred zaključkom nastavitve računa.';
 
   @override
-  String get onboardingFlowDaoReviewArtistBody => 'Oddaj opis svoje prakse za DAO pregled pred zaključkom nastavitve računa.';
+  String get onboardingFlowDaoReviewArtistBody => 'Oddaj opis svoje prakse za skupnostni pregled pred zaključkom nastavitve računa.';
 
   @override
   String get onboardingFlowDaoReviewCompleteFormError => 'Pred nadaljevanjem izpolni obrazec pregleda.';
 
   @override
-  String get onboardingFlowDaoReviewSubmitFailed => 'Oddaja DAO pregleda trenutno ni uspela.';
+  String get onboardingFlowDaoReviewSubmitFailed => 'Oddaja skupnostnega pregleda trenutno ni uspela.';
 
   @override
   String onboardingFlowDaoReviewStatus(Object status) {
@@ -1223,16 +1229,16 @@ class AppLocalizationsSl extends AppLocalizations {
   String get onboardingFlowDaoReviewReviewerNotes => 'Opombe pregledovalca';
 
   @override
-  String get onboardingFlowDaoReviewSubmitAction => 'Oddaj za DAO pregled';
+  String get onboardingFlowDaoReviewSubmitAction => 'Oddaj za skupnostni pregled';
 
   @override
-  String get onboardingWelcomeTitle => 'Dobrodošel/a v art.kubus';
+  String get onboardingWelcomeTitle => 'Kubus je tvoj sopotnik v umetnosti.';
 
   @override
-  String get onboardingWelcomeSubtitle => 'Umetnost, kraji in skupnost — skupaj';
+  String get onboardingWelcomeSubtitle => 'Umetnost, kraji in skupnost skupaj';
 
   @override
-  String get onboardingWelcomeDescription => 'Odkrij umetnine, raziskuj kraje ter se poveži z ustvarjalci in institucijami. AR je tu, ko ga želiš. Tvoj račun uporablja denarnico, ki jo upravljaš sam, zato dolgoročni dostop, lastništvo in prihodnje sodelovanje ostanejo v tvojih rokah.';
+  String get onboardingWelcomeDescription => 'S Kubusom kot vodnikom odkrivaj umetnine, kraje, ustvarjalce in institucije. Denarniške funkcije so izbirne. AR, upravljanje, poravnave in nagrade se razvijajo postopoma.';
 
   @override
   String get onboardingExploreTitle => 'Raziskuj umetnine';
@@ -1250,7 +1256,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get onboardingCreateSubtitle => 'Izrazi svojo ustvarjalnost';
 
   @override
-  String get onboardingCreateDescription => 'Ustvari AR izkušnje in jih deli s skupnostjo, ko bo pravi čas.';
+  String get onboardingCreateDescription => 'Predstavi svojo prakso, dodaj kontekst in pripravi prihodnje AR plasti, ko bodo pripravljene.';
 
   @override
   String get onboardingCommunityTitle => 'Pridruži se skupnosti';
@@ -1341,19 +1347,19 @@ class AppLocalizationsSl extends AppLocalizations {
   String get permissionsLocationBenefit4 => 'Spremljaj svoje raziskovanje';
 
   @override
-  String get permissionsCameraTitle => 'Doživi umetnost v AR';
+  String get permissionsCameraTitle => 'Kamera za AR plasti';
 
   @override
-  String get permissionsCameraSubtitle => 'AR umetnine v tvojem prostoru';
+  String get permissionsCameraSubtitle => 'AR piloti v razvoju';
 
   @override
-  String get permissionsCameraDescription => 'Kamera je potrebna za ogled AR umetnin v tvojem prostoru — postavljaj jih, sodeluj in ujemi trenutek.';
+  String get permissionsCameraDescription => 'Dostop do kamere podpira AR plasti v razvoju, vključno s predogledi, postavitvijo in zajemom, ko bodo piloti na voljo.';
 
   @override
-  String get permissionsCameraBenefit1 => 'Oglej si AR umetnine v resničnem svetu';
+  String get permissionsCameraBenefit1 => 'Predoglej si AR plasti, ko bodo piloti na voljo';
 
   @override
-  String get permissionsCameraBenefit2 => 'Postavi virtualne skulpture v svoj prostor';
+  String get permissionsCameraBenefit2 => 'Pripravi izbirne virtualne postavitve';
 
   @override
   String get permissionsCameraBenefit3 => 'Ustvari fotografije za deljenje';
@@ -1389,10 +1395,10 @@ class AppLocalizationsSl extends AppLocalizations {
   String get permissionsPhotosSubtitle => 'Shranjuj svoje stvaritve';
 
   @override
-  String get permissionsPhotosDescription => 'Shranjuj AR posnetke zaslona in prenose v fototeko, da ohraniš spomine in jih deliš.';
+  String get permissionsPhotosDescription => 'Shranjuj posnetke AR pilotov in prenose v fototeko, ko bodo te funkcije na voljo.';
 
   @override
-  String get permissionsPhotosBenefit1 => 'Shranjuj AR posnetke zaslona med fotografije';
+  String get permissionsPhotosBenefit1 => 'Shranjuj posnetke AR pilotov med fotografije';
 
   @override
   String get permissionsPhotosBenefit2 => 'Prenesi slike umetnin';
@@ -1602,16 +1608,16 @@ class AppLocalizationsSl extends AppLocalizations {
   String get desktopSettingsOpeningBugReportToast => 'Odpiram obrazec za prijavo napake…';
 
   @override
-  String get desktopSettingsAboutSubtitle => 'AR umetniška platforma, ki povezuje umetnike in institucije';
+  String get desktopSettingsAboutSubtitle => 'Odprta umetniška platforma, ki povezuje umetnike, institucije in javni prostor';
 
   @override
   String get desktopSettingsFeaturesSectionTitle => 'Funkcije';
 
   @override
-  String get desktopSettingsFeatureArDiscoveryTitle => 'Odkritje AR umetnosti';
+  String get desktopSettingsFeatureArDiscoveryTitle => 'AR plasti v razvoju';
 
   @override
-  String get desktopSettingsFeatureArDiscoveryDescription => 'Doživi umetnine v razširjeni resničnosti';
+  String get desktopSettingsFeatureArDiscoveryDescription => 'Priprava na izbirne AR predoglede, ko bodo piloti na voljo.';
 
   @override
   String get desktopSettingsFeatureWeb3IntegrationTitle => 'Povezava z denarnico (Solana)';
@@ -2712,7 +2718,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get web3OnboardingKeyFeaturesTitle => 'Ključne funkcije:';
 
   @override
-  String get web3FeatureWeb3Title => 'Dostop in sodelovanje z denarnico';
+  String get web3FeatureWeb3Title => 'Izbirna denarnica in arhivska orodja';
 
   @override
   String get web3FeatureMarketplaceTitle => 'Digitalne zbirke';
@@ -3182,10 +3188,10 @@ class AppLocalizationsSl extends AppLocalizations {
   String get web3MarketplaceP4Feature4 => 'Pridruži se ustvarjalni skupnosti';
 
   @override
-  String get web3FeaturesP1Title => 'Denarnica tvojega računa';
+  String get web3FeaturesP1Title => 'Izbirna denarnica računa';
 
   @override
-  String get web3FeaturesP1Description => 'art.kubus uporablja denarnico, ki jo upravljaš sam, kot del temelja računa. Ta podpira dolgoročni dostop, lastništvo in prihodnje sodelovanje v umetniških, institucijskih in skupnostnih funkcijah.';
+  String get web3FeaturesP1Description => 'Denarnica lahko podpira dolgoročni dostop, atribucijo in prihodnje sodelovanje, ko to izbereš. Osnovno odkrivanje in skupnostno brskanje se ne začneta z denarnico.';
 
   @override
   String get web3FeaturesP1Feature1 => 'Dolgoročna kontinuiteta računa';
@@ -3242,10 +3248,10 @@ class AppLocalizationsSl extends AppLocalizations {
   String get web3FeaturesP3Feature5 => 'Sodeluj z drugimi ustvarjalci';
 
   @override
-  String get web3FeaturesP4Title => 'Skupnostno odločanje (DAO)';
+  String get web3FeaturesP4Title => 'Prihodnje skupnostno vodenje';
 
   @override
-  String get web3FeaturesP4Description => 'Glasuj o predlogih in skupaj usmerjaj prioritete platforme.';
+  String get web3FeaturesP4Description => 'Vodenje se razvija kot pregleden način, da skupnost pomaga usmerjati prioritete platforme. Za odkrivanje ni potrebno.';
 
   @override
   String get web3FeaturesP4Feature1 => 'Glasuj o predlogih';
@@ -3284,10 +3290,10 @@ class AppLocalizationsSl extends AppLocalizations {
   String get web3FeaturesP5Feature5 => 'Orodja prilagojena institucijam';
 
   @override
-  String get web3FeaturesP6Title => 'KUB8 točke (Sezona 0)';
+  String get web3FeaturesP6Title => 'Zapisi priznanja KUB8';
 
   @override
-  String get web3FeaturesP6Description => 'KUB8 točke beležijo sezonsko sodelovanje, ugled in odklenitve. Niso denar in niso prenosljivo sredstvo.';
+  String get web3FeaturesP6Description => 'KUB8 točke beležijo sodelovanje in priznanje v Sezoni 0. Niso denar, niso prenosljivo sredstvo in niso živa izplačila.';
 
   @override
   String get web3FeaturesP6Feature1 => 'Točke zbiraš z sodelovanjem in odkritji';
@@ -4089,7 +4095,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String arShareText(Object title, Object artist) {
-    return 'Oglej si to AR umetnino na art.kubus!\n\n\"$title\"\nAvtor: $artist\n\nDoživi jo v razširjeni resničnosti!';
+    return 'Oglej si to umetnino na art.kubus!\n\n\"$title\"\nAvtor: $artist\n\nAR plasti so v razvoju.';
   }
 
   @override
@@ -8826,10 +8832,10 @@ class AppLocalizationsSl extends AppLocalizations {
   }
 
   @override
-  String get downloadAppDefaultDescription => 'Za najboljšo AR izkušnjo uporabi mobilno aplikacijo.';
+  String get downloadAppDefaultDescription => 'Mobilni AR piloti so v razvoju in bodo ostali izbirni.';
 
   @override
-  String get downloadAppFeatureViewInAr => 'Ogled umetnin v AR';
+  String get downloadAppFeatureViewInAr => 'Predogled AR plasti, ko bodo na voljo';
 
   @override
   String get downloadAppFeatureScanArtworks => 'Skeniraj umetnine';
@@ -8856,10 +8862,10 @@ class AppLocalizationsSl extends AppLocalizations {
   String get homeDefaultDisplayName => 'prijatelj';
 
   @override
-  String get homeWelcomeSubtitle => 'Si za to, da danes odkriješ novo umetnost?';
+  String get homeWelcomeSubtitle => 'Kubus je tvoj sopotnik v umetnosti.';
 
   @override
-  String get homeExploreWeb3Button => 'Denarnica in prihodnje funkcije';
+  String get homeExploreWeb3Button => 'Izbirna denarniška orodja';
 
   @override
   String get homeQuickActionsTitle => 'Hitra dejanja';
@@ -8868,16 +8874,16 @@ class AppLocalizationsSl extends AppLocalizations {
   String get homeRecentlyUsedLabel => 'Nedavno uporabljeno';
 
   @override
-  String get homeQuickActionsEmptyDescription => 'Bližnjice se bodo prikazale tukaj, ko začneš uporabljati aplikacijo.';
+  String get homeQuickActionsEmptyDescription => 'Začni raziskovati in Kubus bo tukaj hranil uporabne bližnjice.';
 
   @override
   String get homeYourStatsTitle => 'Tvoja statistika';
 
   @override
-  String get homeNoStatsAvailableTitle => 'Še ni statistike';
+  String get homeNoStatsAvailableTitle => 'Tvoja prva umetnina te čaka.';
 
   @override
-  String get homeNoStatsAvailableDescription => 'Pozneje preveri svojo statistiko aktivnosti.';
+  String get homeNoStatsAvailableDescription => 'Začni pot odkrivanja in Kubus bo tukaj zbiral tvoje obiske.';
 
   @override
   String get homeStatArtworks => 'Umetnine';
@@ -8965,10 +8971,10 @@ class AppLocalizationsSl extends AppLocalizations {
   String get homeRecentActivityTitle => 'Nedavna aktivnost';
 
   @override
-  String get homeNoRecentActivityTitle => 'Ni nedavne aktivnosti';
+  String get homeNoRecentActivityTitle => 'Tvoja prva umetnina te čaka.';
 
   @override
-  String get homeNoRecentActivityDescription => 'Tvoja nedavna dejanja se bodo prikazala tukaj.';
+  String get homeNoRecentActivityDescription => 'Začni pot odkrivanja. Kubus bo tukaj zbiral tvoje obiske.';
 
   @override
   String get homeUnableToLoadActivityTitle => 'Aktivnosti ni mogoče naložiti';
@@ -9028,10 +9034,10 @@ class AppLocalizationsSl extends AppLocalizations {
   String get desktopHomeWelcomeFallbackName => 'Dobrodošel/a v art.kubus';
 
   @override
-  String get desktopHomeDiscoverArtTitle => 'Odkrij umetnost okoli sebe';
+  String get desktopHomeDiscoverArtTitle => 'Kubus je tvoj sopotnik v umetnosti.';
 
   @override
-  String get desktopHomeDiscoverArtDescription => 'Raziskuj umetnine v obogateni resničnosti, poveži se z ustvarjalci in sodeluj v rastoči kulturni plasti okoli javne umetnosti.';
+  String get desktopHomeDiscoverArtDescription => 'Odkrivaj umetnine, kraje, ustvarjalce in institucije v javnem prostoru in na spletu. Denarniška orodja so izbirna, AR plasti pa v razvoju.';
 
   @override
   String get desktopHomeYourActivityTitle => 'Tvoja aktivnost';
@@ -9064,7 +9070,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get desktopHomeQuickActionsEmptyDescription => 'Pojdi na različne zaslone in prikazali se bodo tukaj za hiter dostop. Kartice izginejo po 24 urah neaktivnosti.';
 
   @override
-  String get desktopHomeFeaturedArtworksSubtitle => 'Odkrij priljubljeno AR umetnost';
+  String get desktopHomeFeaturedArtworksSubtitle => 'Odkrij izbrano umetnost in prihodnje AR plasti';
 
   @override
   String get desktopHomeWeb3HubTitle => 'Funkcije denarnice';
@@ -9155,7 +9161,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get desktopHomeUnreadNotificationsLabel => 'neprebrana obvestila';
 
   @override
-  String get homeWeb3SectionTitle => 'Denarnica';
+  String get homeWeb3SectionTitle => 'Izbirna denarniška orodja';
 
   @override
   String get homeAccountRequiredLabel => 'Potrebna denarnica';
@@ -11009,7 +11015,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get desktopCommunityArArtworkLabel => 'AR umetnina';
 
   @override
-  String get desktopCommunityArArtworkSubtitle => 'Tapni za ogled v razširjeni resničnosti';
+  String get desktopCommunityArArtworkSubtitle => 'AR predogled v razvoju';
 
   @override
   String desktopCommunityTagFeedLoadingPostsLabel(Object tag) {
@@ -11302,7 +11308,7 @@ class AppLocalizationsSl extends AppLocalizations {
   }
 
   @override
-  String get profileAboutDescription => 'AR umetniška platforma za odkrivanje javne umetnosti ter povezovanje umetnikov, institucij in skupnosti.';
+  String get profileAboutDescription => 'Odprta umetniška platforma za odkrivanje javne umetnosti ter povezovanje umetnikov, institucij in skupnosti. AR plasti so v razvoju.';
 
   @override
   String get profileAboutCopyright => 'Avtorske pravice (c) 2024 kubus Project';
@@ -11758,16 +11764,16 @@ class AppLocalizationsSl extends AppLocalizations {
   String get commonSearchHint => 'Išči…';
 
   @override
-  String get onboardingWelcomeDiscoverTitle => 'Odkrij umetnost okoli sebe';
+  String get onboardingWelcomeDiscoverTitle => 'Odkrij umetnost s Kubusom';
 
   @override
-  String get onboardingWelcomeDiscoverBody => 'Raziskuj umetnine, razstave in ustvarjalne prostore na interaktivnem zemljevidu.';
+  String get onboardingWelcomeDiscoverBody => 'Raziskuj umetnine, razstave, javna dela in ustvarjalne prostore na skupnostnem zemljevidu.';
 
   @override
-  String get onboardingWelcomeCreateTitle => 'Ustvarjaj in deli';
+  String get onboardingWelcomeCreateTitle => 'Prispevaj v arhiv';
 
   @override
-  String get onboardingWelcomeCreateBody => 'Gradi svoj portfelj, objavljaj umetnine in sodeluj v rastoči kulturni skupnosti.';
+  String get onboardingWelcomeCreateBody => 'Predstavi prakso, objavi dela, dodaj kontekst in sodeluj v rastoči umetniški skupnosti.';
 
   @override
   String get onboardingWelcomeJoinTitle => 'Pripravljen/a?';
