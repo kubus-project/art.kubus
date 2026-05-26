@@ -39,6 +39,8 @@ class ProfilePackageService {
   static final Map<String, Future<ProfileExtendedPackage?>> _extendedInFlight =
       <String, Future<ProfileExtendedPackage?>>{};
   static final Map<String, DateTime> _failedAt = <String, DateTime>{};
+  static final Map<String, int> _criticalInvalidationEpoch = <String, int>{};
+  static final Map<String, int> _extendedInvalidationEpoch = <String, int>{};
   static bool _persistentCacheLoaded = false;
 
   static Future<ProfileCriticalPackage?> loadPublicProfileCriticalPackage(
@@ -72,12 +74,23 @@ class ProfilePackageService {
     final watch = Stopwatch()..start();
     _debugTelemetry('profile_package_critical_network_load',
         wallet: lookup.cacheKey);
+    final shouldCheckInvalidation = lookup.wallet.isNotEmpty;
+    final invalidationEpoch = shouldCheckInvalidation
+        ? (_criticalInvalidationEpoch[lookup.wallet] ?? 0)
+        : 0;
     final future = _loadFreshPublicProfileCriticalPackage(lookup);
     _criticalInFlight[lookup.cacheKey] = future;
     try {
       final critical = await future;
       if (critical != null && critical.isComplete) {
+        if (shouldCheckInvalidation &&
+            _criticalInvalidatedSince(critical.user.id, invalidationEpoch)) {
+          return null;
+        }
         _storeCriticalPackage(critical);
+        if (lookup.wallet.isEmpty && lookup.cacheKey.isNotEmpty) {
+          _criticalCache[lookup.cacheKey] = critical;
+        }
         if (critical.achievementsUnavailable) {
           _debugTelemetry(
             'profile_package_achievement_unavailable',
@@ -119,6 +132,7 @@ class ProfilePackageService {
 
     final watch = Stopwatch()..start();
     _debugTelemetry('profile_package_extended_network_load', wallet: wallet);
+    final invalidationEpoch = _extendedInvalidationEpoch[wallet] ?? 0;
     final future = _loadFreshPublicProfileExtendedPackage(
       wallet,
       includePosts: includePosts,
@@ -129,6 +143,9 @@ class ProfilePackageService {
     try {
       final extended = await future;
       if (extended != null) {
+        if (_extendedInvalidatedSince(wallet, invalidationEpoch)) {
+          return null;
+        }
         _storeExtendedPackage(wallet, extended);
       }
       return extended;
@@ -413,6 +430,8 @@ class ProfilePackageService {
     _criticalInFlight.clear();
     _extendedInFlight.clear();
     _failedAt.clear();
+    _criticalInvalidationEpoch.clear();
+    _extendedInvalidationEpoch.clear();
     _persistentCacheLoaded = false;
   }
 
@@ -655,6 +674,7 @@ class ProfilePackageService {
     final normalized = WalletUtils.normalize(wallet);
     final keys = <String>{wallet, normalized};
     if (critical) {
+      _bumpEpoch(_criticalInvalidationEpoch, keys);
       for (final key in keys) {
         _criticalCache.remove(key);
         _failedAt.remove(key);
@@ -664,6 +684,7 @@ class ProfilePackageService {
       );
     }
     if (extended) {
+      _bumpEpoch(_extendedInvalidationEpoch, keys);
       for (final key in keys) {
         _extendedCache.remove(key);
       }
@@ -671,6 +692,25 @@ class ProfilePackageService {
         (key, _) => keys.contains(key) || key.startsWith('$wallet|'),
       );
     }
+  }
+
+  static void _bumpEpoch(Map<String, int> epochs, Set<String> keys) {
+    for (final key in keys) {
+      if (key.isEmpty) continue;
+      epochs[key] = (epochs[key] ?? 0) + 1;
+    }
+  }
+
+  static bool _criticalInvalidatedSince(String walletAddress, int startEpoch) {
+    final wallet = WalletUtils.canonical(walletAddress);
+    if (wallet.isEmpty) return false;
+    return (_criticalInvalidationEpoch[wallet] ?? 0) != startEpoch;
+  }
+
+  static bool _extendedInvalidatedSince(String walletAddress, int startEpoch) {
+    final wallet = WalletUtils.canonical(walletAddress);
+    if (wallet.isEmpty) return false;
+    return (_extendedInvalidationEpoch[wallet] ?? 0) != startEpoch;
   }
 
   static Future<void> _ensurePersistentCacheLoaded() async {
@@ -708,7 +748,9 @@ class ProfilePackageService {
   static Future<void> _persistCriticalCache() async {
     try {
       final entries = _criticalCache.entries
-          .where((entry) => WalletUtils.canonical(entry.key) == entry.key)
+          .where((entry) =>
+              WalletUtils.canonical(entry.key) == entry.key &&
+              WalletUtils.looksLikeWallet(entry.key))
           .map((entry) => MapEntry(entry.key, entry.value))
           .toList(growable: false)
         ..sort((a, b) => b.value.fetchedAt.compareTo(a.value.fetchedAt));

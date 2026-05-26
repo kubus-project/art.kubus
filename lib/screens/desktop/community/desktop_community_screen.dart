@@ -5308,6 +5308,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                           await _backendApi.deleteCommunityPost(post.id);
                           if (!mounted || !dialogContext.mounted) return;
                           setState(() => _removePostFromLocalFeeds(post.id));
+                          ProfilePackageService.invalidatePosts(
+                            post.authorWallet ?? post.authorId,
+                          );
                           try {
                             final hub = Provider.of<CommunityHubProvider>(
                               context,

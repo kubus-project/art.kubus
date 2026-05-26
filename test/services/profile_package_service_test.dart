@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:art_kubus/models/achievement_progress.dart';
@@ -231,6 +232,122 @@ void main() {
         'Cached Backend Milestone');
   });
 
+  test('patchStats preserves achievement definitions', () async {
+    ProfilePackageService.setCachedPackageForTesting(
+      _cachedPackage(wallet: wallet, title: 'Cached Backend Milestone'),
+    );
+
+    ProfilePackageService.patchStats(wallet, const <String, int>{
+      'followers': 21,
+      'posts': 9,
+    });
+
+    final critical = ProfilePackageService.getCachedCriticalPackage(wallet)!;
+    expect(critical.user.followersCount, 21);
+    expect(critical.user.postsCount, 9);
+    expect(critical.achievementDefinitions.single.title,
+        'Cached Backend Milestone');
+  });
+
+  test('patchAchievementResult updates progress and preserves definitions',
+      () async {
+    ProfilePackageService.setCachedPackageForTesting(
+      _cachedPackage(wallet: wallet, title: 'Cached Backend Milestone'),
+    );
+
+    ProfilePackageService.patchAchievementResult(
+      wallet,
+      achievements.AchievementEventResult(
+        progress: const <achievements.AchievementProgress>[
+          achievements.AchievementProgress(
+            achievementCode: 'cached_milestone',
+            currentProgress: 2,
+            requiredCount: 3,
+            isCompleted: false,
+          ),
+        ],
+        unlocked: <achievements.UserAchievement>[
+          achievements.UserAchievement(
+            code: 'new_milestone',
+            title: 'New Milestone',
+            description: '',
+            category: 'community',
+            rarity: 'common',
+            kub8Reward: 0,
+            unlockedAt: DateTime.utc(2026, 5, 26),
+          ),
+        ],
+      ),
+    );
+
+    final critical = ProfilePackageService.getCachedCriticalPackage(wallet)!;
+    expect(critical.achievementDefinitions.single.title,
+        'Cached Backend Milestone');
+    expect(
+      critical.achievementProgress
+          .firstWhere((item) => item.achievementId == 'cached_milestone')
+          .currentProgress,
+      2,
+    );
+    expect(
+      critical.achievementProgress
+          .firstWhere((item) => item.achievementId == 'new_milestone')
+          .isCompleted,
+      isTrue,
+    );
+  });
+
+  test('old v1 cache migration restores complete critical package', () async {
+    final legacy = _legacyCriticalJson(wallet: wallet);
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'profile_package_cache_v1': jsonEncode(<String, Object?>{
+        wallet: legacy,
+      }),
+    });
+    ProfilePackageService.clearMemoryCacheForTesting();
+
+    var networkCalls = 0;
+    BackendApiService().setHttpClient(MockClient((request) async {
+      networkCalls += 1;
+      return http.Response('Unexpected', 500);
+    }));
+
+    final critical =
+        await ProfilePackageService.loadPublicProfileCriticalPackage(wallet);
+
+    expect(critical, isNotNull);
+    expect(critical!.achievementDefinitions.single.title,
+        'Legacy Backend Milestone');
+    expect(networkCalls, 0);
+  });
+
+  test('critical invalidation prevents stale in-flight result from caching',
+      () async {
+    final releaseProfile = Completer<void>();
+    var profileRequested = false;
+    BackendApiService().setHttpClient(MockClient((request) async {
+      if (request.url.path.contains('/api/profiles/')) {
+        profileRequested = true;
+        await releaseProfile.future;
+      }
+      return _mockProfilePackageResponse(request, wallet: wallet);
+    }));
+
+    final load = ProfilePackageService.loadPublicProfileCriticalPackage(
+      wallet,
+      forceRefresh: true,
+    );
+    await Future<void>.delayed(Duration.zero);
+    expect(profileRequested, isTrue);
+
+    ProfilePackageService.invalidate(wallet);
+    releaseProfile.complete();
+
+    final result = await load;
+    expect(result, isNull);
+    expect(ProfilePackageService.getCachedCriticalPackage(wallet), isNull);
+  });
+
   test('background refresh replaces cached package atomically', () async {
     ProfilePackageService.setCachedPackageForTesting(
       _cachedPackage(wallet: wallet, title: 'Old Backend Milestone'),
@@ -271,6 +388,49 @@ void main() {
       'Fresh Backend Milestone',
     );
   });
+}
+
+Map<String, Object?> _legacyCriticalJson({required String wallet}) {
+  return <String, Object?>{
+    'user': <String, Object?>{
+      'id': wallet,
+      'name': 'Legacy Profile',
+      'username': 'legacy.profile',
+      'bio': '',
+      'followersCount': 1,
+      'followingCount': 2,
+      'postsCount': 3,
+      'isFollowing': false,
+      'isVerified': false,
+      'joinedDate': 'Joined 5/2026',
+    },
+    'achievementProgress': <Map<String, Object?>>[
+      <String, Object?>{
+        'achievementId': 'legacy_milestone',
+        'currentProgress': 1,
+        'isCompleted': true,
+      },
+    ],
+    'achievementDefinitions': <Map<String, Object?>>[
+      <String, Object?>{
+        'code': 'legacy_milestone',
+        'title': 'Legacy Backend Milestone',
+        'description': 'Legacy definition',
+        'category': 'community',
+        'rarity': 'rare',
+        'requiredCount': 1,
+        'kub8Reward': 3,
+      },
+    ],
+    'publicStats': <String, int>{
+      'posts': 3,
+      'followers': 1,
+      'following': 2,
+    },
+    'fetchedAt': DateTime.now().toIso8601String(),
+    'isComplete': true,
+    'achievementsUnavailable': false,
+  };
 }
 
 http.Response _mockProfilePackageResponse(

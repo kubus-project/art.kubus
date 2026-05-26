@@ -180,13 +180,24 @@ class ProfileIdentitySummary extends StatelessWidget {
         (layout == ProfileIdentityLayout.stacked
             ? TextAlign.center
             : TextAlign.start);
+    void prefetchHighIntent() {
+      if (!identity.canOpenProfile) return;
+      ProfilePackagePrefetcher.prefetchHighIntent(
+        identity.userId!,
+        username: identity.username,
+      );
+    }
+
     final resolvedOnTap = onTap ??
         (enableProfileNavigation && identity.canOpenProfile
-            ? () => UserProfileNavigation.open(
+            ? () {
+                prefetchHighIntent();
+                UserProfileNavigation.open(
                   context,
                   userId: identity.userId!,
                   username: identity.username,
-                )
+                );
+              }
             : null);
     if (identity.canOpenProfile) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -254,10 +265,16 @@ class ProfileIdentitySummary extends StatelessWidget {
       return child;
     }
 
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: resolvedOnTap,
-      child: child,
+    return MouseRegion(
+      onEnter: (_) => prefetchHighIntent(),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          prefetchHighIntent();
+          resolvedOnTap();
+        },
+        child: child,
+      ),
     );
   }
 }

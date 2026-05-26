@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 
 import 'package:art_kubus/community/community_interactions.dart';
 import 'package:art_kubus/models/achievement_preview_data_state.dart';
@@ -116,6 +117,111 @@ void main() {
 
     expect(controller.user!.isFollowing, isTrue);
     expect(controller.user!.followersCount, 42);
+    expect(controller.package!.achievementDefinitions.single.title,
+        'Backend Milestone');
+
+    controller.dispose();
+  });
+
+  test('posts patch preserves achievement definitions', () {
+    final controller = ProfilePackageController(walletAddress: wallet);
+    controller.applyCritical(
+      _critical(wallet: wallet, title: 'Backend Milestone'),
+    );
+
+    controller.patchPosts(<CommunityPost>[_post(wallet: wallet)]);
+
+    expect(controller.posts.single.id, 'post-1');
+    expect(controller.package!.achievementDefinitions.single.title,
+        'Backend Milestone');
+
+    controller.dispose();
+  });
+
+  test('stale async critical result is ignored after newer refresh', () async {
+    final oldCritical =
+        _critical(wallet: wallet, title: 'Old Backend Milestone');
+    final pendingInitial = Completer<ProfileCriticalPackage?>();
+    final controller = ProfilePackageController(
+      walletAddress: wallet,
+      initialCriticalPackageFuture: pendingInitial.future,
+    );
+
+    BackendApiService().setHttpClient(MockClient((request) async {
+      return _mockProfilePackageResponse(
+        request,
+        wallet: wallet,
+        achievementTitle: 'Fresh Backend Milestone',
+      );
+    }));
+
+    final initialLoad = controller.load();
+    final refresh = controller.refresh();
+    await refresh;
+    pendingInitial.complete(oldCritical);
+    await initialLoad;
+
+    expect(controller.package!.achievementDefinitions.single.title,
+        'Fresh Backend Milestone');
+
+    controller.dispose();
+  });
+
+  test('stale async extended result is ignored after newer extended load',
+      () async {
+    final staleExtended = ProfileExtendedPackage(
+      initialPosts: <CommunityPost>[_post(wallet: wallet)],
+      fetchedAt: DateTime.now(),
+    );
+    final pendingInitial = Completer<ProfileExtendedPackage?>();
+    final controller = ProfilePackageController(
+      walletAddress: wallet,
+      initialExtendedPackageFuture: pendingInitial.future,
+    );
+    controller.applyCritical(
+      _critical(wallet: wallet, title: 'Backend Milestone'),
+    );
+
+    BackendApiService().setHttpClient(MockClient((request) async {
+      return _mockProfilePackageResponse(
+        request,
+        wallet: wallet,
+        achievementTitle: 'Backend Milestone',
+      );
+    }));
+
+    final firstLoad = controller.loadExtended();
+    await Future<void>.delayed(Duration.zero);
+    await controller.loadExtended(forceRefresh: true);
+    pendingInitial.complete(staleExtended);
+    await firstLoad;
+
+    expect(controller.posts, isEmpty);
+    expect(controller.package!.achievementDefinitions.single.title,
+        'Backend Milestone');
+
+    controller.dispose();
+  });
+
+  test('extended failure does not clear critical package', () async {
+    final controller = ProfilePackageController(walletAddress: wallet);
+    controller.applyCritical(
+      _critical(wallet: wallet, title: 'Backend Milestone'),
+    );
+    BackendApiService().setHttpClient(MockClient((request) async {
+      if (request.url.path.contains('/api/community/posts')) {
+        return http.Response('failed', 500);
+      }
+      return _mockProfilePackageResponse(
+        request,
+        wallet: wallet,
+        achievementTitle: 'Backend Milestone',
+      );
+    }));
+
+    await controller.loadExtended(forceRefresh: true);
+
+    expect(controller.isLoadingExtended, isFalse);
     expect(controller.package!.achievementDefinitions.single.title,
         'Backend Milestone');
 

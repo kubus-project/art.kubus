@@ -68,6 +68,51 @@ void main() {
       isTrue,
     );
   });
+
+  test('invalid wallet is skipped', () async {
+    var requests = 0;
+    BackendApiService().setHttpClient(MockClient((request) async {
+      requests += 1;
+      return _mockResponse(request, wallet: wallet);
+    }));
+
+    ProfilePackagePrefetcher.prefetchVisible('not-a-wallet');
+    await Future<void>.delayed(const Duration(milliseconds: 180));
+
+    expect(requests, 0);
+  });
+
+  test('self wallet is skipped', () async {
+    var requests = 0;
+    BackendApiService().setHttpClient(MockClient((request) async {
+      requests += 1;
+      return _mockResponse(request, wallet: wallet);
+    }));
+
+    ProfilePackagePrefetcher.prefetchVisible(wallet, selfWallet: wallet);
+    ProfilePackagePrefetcher.prefetchHighIntent(wallet, selfWallet: wallet);
+    await Future<void>.delayed(const Duration(milliseconds: 180));
+
+    expect(requests, 0);
+  });
+
+  test('recent-window duplicate is skipped', () async {
+    var profileRequests = 0;
+    BackendApiService().setHttpClient(MockClient((request) async {
+      if (request.url.path.contains('/api/profiles/')) {
+        profileRequests += 1;
+      }
+      return _mockResponse(request, wallet: wallet);
+    }));
+
+    ProfilePackagePrefetcher.prefetchVisible(wallet);
+    await Future<void>.delayed(const Duration(milliseconds: 350));
+    ProfilePackageService.clearMemoryCacheForTesting();
+    ProfilePackagePrefetcher.prefetchVisible(wallet);
+    await Future<void>.delayed(const Duration(milliseconds: 180));
+
+    expect(profileRequests, 1);
+  });
 }
 
 http.Response _mockResponse(http.Request request, {required String wallet}) {

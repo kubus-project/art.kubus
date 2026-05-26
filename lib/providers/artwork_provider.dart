@@ -166,6 +166,13 @@ class ArtworkProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void _invalidateShowcaseForArtwork(Artwork artwork) {
+    final wallet = artwork.walletAddress;
+    if (wallet != null && wallet.trim().isNotEmpty) {
+      ProfilePackageService.invalidateShowcase(wallet);
+    }
+  }
+
   /// Create a brand-new artwork with optional AR assets
   Future<Artwork?> createArtwork({
     required String title,
@@ -268,6 +275,7 @@ class ArtworkProvider extends ChangeNotifier {
       final updated = await _backendApi.publishArtwork(artworkId);
       if (updated != null) {
         addOrUpdateArtwork(updated);
+        _invalidateShowcaseForArtwork(updated);
         return updated;
       }
 
@@ -276,6 +284,7 @@ class ArtworkProvider extends ChangeNotifier {
       try {
         final refreshed = await _backendApi.getArtwork(artworkId);
         addOrUpdateArtwork(refreshed);
+        _invalidateShowcaseForArtwork(refreshed);
         return refreshed;
       } catch (_) {
         // Refresh failed. Check if we have a cached artwork and update it optimistically.
@@ -284,6 +293,7 @@ class ArtworkProvider extends ChangeNotifier {
           // Return optimistically updated artwork (marked as public)
           final optimistic = cached.copyWith(isPublic: true);
           addOrUpdateArtwork(optimistic);
+          _invalidateShowcaseForArtwork(optimistic);
           return optimistic;
         }
         // No cached artwork; backend likely succeeded but we can't verify
@@ -304,6 +314,7 @@ class ArtworkProvider extends ChangeNotifier {
       final updated = await _backendApi.unpublishArtwork(artworkId);
       if (updated != null) {
         addOrUpdateArtwork(updated);
+        _invalidateShowcaseForArtwork(updated);
         return updated;
       }
 
@@ -312,6 +323,7 @@ class ArtworkProvider extends ChangeNotifier {
       try {
         final refreshed = await _backendApi.getArtwork(artworkId);
         addOrUpdateArtwork(refreshed);
+        _invalidateShowcaseForArtwork(refreshed);
         return refreshed;
       } catch (_) {
         // Refresh failed. Check if we have a cached artwork and update it optimistically.
@@ -320,6 +332,7 @@ class ArtworkProvider extends ChangeNotifier {
           // Return optimistically updated artwork (marked as not public)
           final optimistic = cached.copyWith(isPublic: false);
           addOrUpdateArtwork(optimistic);
+          _invalidateShowcaseForArtwork(optimistic);
           return optimistic;
         }
         // No cached artwork; backend likely succeeded but we can't verify

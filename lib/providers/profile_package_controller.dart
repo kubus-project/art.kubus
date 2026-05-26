@@ -64,6 +64,7 @@ class ProfilePackageController extends ChangeNotifier {
   List<Map<String, dynamic>> _artistCollections = <Map<String, dynamic>>[];
   List<Map<String, dynamic>> _artistEvents = <Map<String, dynamic>>[];
   int _loadEpoch = 0;
+  int _extendedLoadEpoch = 0;
   bool _disposed = false;
 
   ProfilePackage? get package => _package;
@@ -167,12 +168,14 @@ class ProfilePackageController extends ChangeNotifier {
   }
 
   Future<void> refresh() async {
+    final epoch = ++_loadEpoch;
     final critical =
         await ProfilePackageService.loadPublicProfileCriticalPackage(
       _walletAddress,
       forceRefresh: true,
       username: _username,
     );
+    if (epoch != _loadEpoch || _disposed) return;
     if (critical != null && critical.isComplete) {
       applyCritical(critical);
     }
@@ -180,6 +183,7 @@ class ProfilePackageController extends ChangeNotifier {
   }
 
   Future<void> loadExtended({bool forceRefresh = false}) async {
+    final epoch = ++_extendedLoadEpoch;
     final currentUser = user;
     final wallet = currentUser?.id ?? _walletAddress;
     if (wallet.trim().isEmpty) return;
@@ -210,6 +214,7 @@ class ProfilePackageController extends ChangeNotifier {
               includeShowcase: true,
               user: currentUser,
             );
+      if (epoch != _extendedLoadEpoch || _disposed) return;
       if (extended != null) {
         applyExtended(extended);
       } else {
@@ -219,6 +224,7 @@ class ProfilePackageController extends ChangeNotifier {
         _notifyListenersSafe();
       }
     } catch (e) {
+      if (epoch != _extendedLoadEpoch || _disposed) return;
       _error = e;
       _isLoadingExtended = false;
       _artistDataLoading = false;

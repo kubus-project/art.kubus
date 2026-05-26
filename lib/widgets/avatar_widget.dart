@@ -401,29 +401,33 @@ class _AvatarWidgetState extends State<AvatarWidget>
     }
 
     if (widget.enableProfileNavigation) {
-      return GestureDetector(
-        onTap: () {
-          // Generate unique hero tag for this navigation
-          final newTag =
-              'avatar_${WalletUtils.normalize(widget.wallet)}_${DateTime.now().microsecondsSinceEpoch}';
-          setState(() {
-            _currentHeroTag = newTag;
-          });
+      return MouseRegion(
+        onEnter: (_) => _prefetchProfilePackageHighIntent(),
+        child: GestureDetector(
+          onTap: () {
+            _prefetchProfilePackageHighIntent();
+            // Generate unique hero tag for this navigation
+            final newTag =
+                'avatar_${WalletUtils.normalize(widget.wallet)}_${DateTime.now().microsecondsSinceEpoch}';
+            setState(() {
+              _currentHeroTag = newTag;
+            });
 
-          UserProfileNavigation.open(
-            context,
-            userId: widget.wallet,
-            heroTag: newTag,
-          ).whenComplete(() {
-            // clear temporary hero tag after return
-            if (mounted) {
-              setState(() {
-                _currentHeroTag = null;
-              });
-            }
-          });
-        },
-        child: wrapped,
+            UserProfileNavigation.open(
+              context,
+              userId: widget.wallet,
+              heroTag: newTag,
+            ).whenComplete(() {
+              // clear temporary hero tag after return
+              if (mounted) {
+                setState(() {
+                  _currentHeroTag = null;
+                });
+              }
+            });
+          },
+          child: wrapped,
+        ),
       );
     }
 
@@ -557,5 +561,12 @@ class _AvatarWidgetState extends State<AvatarWidget>
     final wallet = widget.wallet.trim();
     if (wallet.isEmpty) return;
     ProfilePackagePrefetcher.prefetchVisible(wallet);
+  }
+
+  void _prefetchProfilePackageHighIntent() {
+    if (!widget.enableProfileNavigation) return;
+    final wallet = widget.wallet.trim();
+    if (wallet.isEmpty) return;
+    ProfilePackagePrefetcher.prefetchHighIntent(wallet);
   }
 }

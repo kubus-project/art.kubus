@@ -241,6 +241,7 @@ class PortfolioProvider extends ChangeNotifier {
     final updated = await _api.publishArtwork(id);
     if (updated != null) {
       _upsertArtwork(updated);
+      _invalidateShowcaseForArtwork(updated);
     }
     return updated;
   }
@@ -252,6 +253,7 @@ class PortfolioProvider extends ChangeNotifier {
     final updated = await _api.unpublishArtwork(id);
     if (updated != null) {
       _upsertArtwork(updated);
+      _invalidateShowcaseForArtwork(updated);
     }
     return updated;
   }
@@ -303,5 +305,12 @@ class PortfolioProvider extends ChangeNotifier {
     _cachedEntries = null;
     _artworkProvider?.addOrUpdateArtwork(artwork);
     notifyListeners();
+  }
+
+  void _invalidateShowcaseForArtwork(Artwork artwork) {
+    final wallet = artwork.walletAddress;
+    if (wallet != null && wallet.trim().isNotEmpty) {
+      ProfilePackageService.invalidateShowcase(wallet);
+    }
   }
 }

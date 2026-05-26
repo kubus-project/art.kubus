@@ -4,6 +4,7 @@ import '../community/community_interactions.dart';
 import '../models/community_group.dart';
 import '../models/community_subject.dart';
 import '../services/backend_api_service.dart';
+import '../services/profile_package_service.dart';
 import 'community_subject_provider.dart';
 
 class CommunityPostDraft {
@@ -281,6 +282,15 @@ class CommunityHubProvider extends ChangeNotifier {
     );
     final existing = _groupPosts[groupId] ?? const [];
     _groupPosts[groupId] = [created, ...existing];
+    final authorWallet = created.authorWallet ?? created.authorId;
+    ProfilePackageService.invalidatePosts(authorWallet);
+    final achievementResult = created.achievementResult;
+    if (achievementResult != null) {
+      ProfilePackageService.patchAchievementResult(
+        authorWallet,
+        achievementResult,
+      );
+    }
     _subjectProvider?.primeFromPosts([created]);
     _groupPostsHasMore[groupId] = true;
     final preview = GroupPostPreview(
@@ -302,6 +312,18 @@ class CommunityHubProvider extends ChangeNotifier {
     final updated = existing.where((post) => post.id != postId).toList();
     if (updated.length == existing.length) return;
     _groupPosts[groupId] = updated;
+    CommunityPost? removed;
+    for (final post in existing) {
+      if (post.id == postId) {
+        removed = post;
+        break;
+      }
+    }
+    if (removed != null) {
+      ProfilePackageService.invalidatePosts(
+        removed.authorWallet ?? removed.authorId,
+      );
+    }
     notifyListeners();
   }
 
