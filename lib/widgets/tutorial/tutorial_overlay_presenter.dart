@@ -58,6 +58,8 @@ class TutorialOverlayPresenter extends StatelessWidget {
         return KeyedSubtree(
           key: rootKey,
           child: InteractiveTutorialOverlay(
+            ownerSessionKey:
+                '${controller.ownerRoute ?? '<none>'}:${controller.tutorialId ?? '<none>'}:${identityHashCode(driver)}',
             steps: steps,
             currentIndex: clampedIndex,
             onNext: driver.next,

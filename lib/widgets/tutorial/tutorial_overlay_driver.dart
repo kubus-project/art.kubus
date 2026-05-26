@@ -23,3 +23,9 @@ abstract class TutorialOverlayDriver extends Listenable {
 
   Future<void> dismiss();
 }
+
+/// Optional extension for drivers that can hide because their owning widget is
+/// leaving without treating the tutorial as completed by the user.
+abstract class TutorialOverlayOwnerExitDriver {
+  void deactivateForOwnerExit({String reason = 'owner-exit'});
+}

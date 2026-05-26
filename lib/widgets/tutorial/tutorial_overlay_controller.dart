@@ -35,7 +35,8 @@ class TutorialSession {
   }
 }
 
-class _SessionDriver extends ChangeNotifier implements TutorialOverlayDriver {
+class _SessionDriver extends ChangeNotifier
+    implements TutorialOverlayDriver, TutorialOverlayOwnerExitDriver {
   _SessionDriver({required TutorialSession session}) : _session = session;
 
   TutorialSession _session;
@@ -117,6 +118,24 @@ class _SessionDriver extends ChangeNotifier implements TutorialOverlayDriver {
     }
   }
 
+  @override
+  void deactivateForOwnerExit({String reason = 'owner-exit'}) {
+    if (!_visible) {
+      _debugLog(
+        'sessionOwnerExit ignored: already hidden id=${_session.id} '
+        'ownerRoute=${_session.ownerRoute} reason=$reason',
+      );
+      return;
+    }
+    _debugLog(
+      'sessionOwnerExit id=${_session.id} ownerRoute=${_session.ownerRoute} '
+      'index=${_session.currentIndex} steps=${_session.steps.length} '
+      'reason=$reason persistedSeen=false',
+    );
+    _visible = false;
+    notifyListeners();
+  }
+
   String _currentStepTitle() {
     if (_session.steps.isEmpty) return '<none>';
     final index = _session.currentIndex.clamp(0, _session.steps.length - 1);
@@ -175,6 +194,26 @@ class TutorialOverlayController extends ChangeNotifier {
       'visible=${driver.visible} index=${driver.currentIndex} '
       'steps=${driver.steps.length}',
     );
+    _unbindCurrentDriver();
+    notifyListeners();
+  }
+
+  void deactivateOwner(
+    String ownerRoute, {
+    String reason = 'owner-deactivated',
+  }) {
+    final driver = _driver;
+    if (driver == null || _ownerRoute != ownerRoute) return;
+    _debugLog(
+      'deactivateOwner ownerRoute=$ownerRoute tutorialId=$_tutorialId '
+      'reason=$reason visible=${driver.visible} index=${driver.currentIndex} '
+      'steps=${driver.steps.length}',
+    );
+    if (driver is TutorialOverlayOwnerExitDriver) {
+      (driver as TutorialOverlayOwnerExitDriver).deactivateForOwnerExit(
+        reason: reason,
+      );
+    }
     _unbindCurrentDriver();
     notifyListeners();
   }

@@ -571,6 +571,80 @@ void main() {
     expect(targetTapCount, 1);
   });
 
+  testWidgets('cached geometry is not painted after owner deactivation',
+      (tester) async {
+    final targetKey = GlobalKey();
+    late StateSetter setHarnessState;
+    var showTarget = true;
+    var sessionKey = 'session-active';
+    var targetTapCount = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: StatefulBuilder(
+            builder: (context, setState) {
+              setHarnessState = setState;
+              return Stack(
+                children: [
+                  if (showTarget)
+                    Center(
+                      child: SizedBox(
+                        key: targetKey,
+                        width: 48,
+                        height: 48,
+                      ),
+                    ),
+                  InteractiveTutorialOverlay(
+                    ownerSessionKey: sessionKey,
+                    steps: <TutorialStepDefinition>[
+                      TutorialStepDefinition(
+                        targetKey: targetKey,
+                        title: 'Step',
+                        body: 'Body',
+                        onTargetTap: () => targetTapCount += 1,
+                      ),
+                    ],
+                    currentIndex: 0,
+                    onNext: () {},
+                    onBack: () {},
+                    onSkip: () {},
+                    skipLabel: 'Skip',
+                    backLabel: 'Back',
+                    nextLabel: 'Next',
+                    doneLabel: 'Done',
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    final oldCenter = tester.getCenter(find.byKey(targetKey));
+
+    setHarnessState(() {
+      showTarget = false;
+      sessionKey = 'session-deactivated';
+    });
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.byKey(InteractiveTutorialOverlay.tooltipKey), findsOneWidget);
+    expect(
+      find.byKey(InteractiveTutorialOverlay.highlightTapRegionKey),
+      findsNothing,
+    );
+
+    await tester.tapAt(oldCenter);
+    await tester.pump();
+    await tester.pump();
+
+    expect(targetTapCount, 0);
+  });
+
   testWidgets(
       'InteractiveTutorialOverlay does not invoke target from outside highlight',
       (tester) async {

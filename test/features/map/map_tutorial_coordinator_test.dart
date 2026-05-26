@@ -43,6 +43,54 @@ void main() {
       );
     });
 
+    test('deactivateForOwnerExit hides tutorial without persisting seen',
+        () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      final coordinator = MapTutorialCoordinator(
+        seenPreferenceKey: PreferenceKeys.mapOnboardingMobileSeenV2,
+      );
+
+      coordinator.configure(
+        bindings: <MapTutorialStepBinding>[
+          _binding(id: 'one'),
+        ],
+      );
+      await coordinator.maybeStart();
+
+      expect(coordinator.state.show, isTrue);
+
+      coordinator.deactivateForOwnerExit(reason: 'test-owner-exit');
+
+      expect(coordinator.state.show, isFalse);
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(
+        prefs.getBool(PreferenceKeys.mapOnboardingMobileSeenV2),
+        isNot(isTrue),
+      );
+    });
+
+    test('dismiss still persists seen', () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      final coordinator = MapTutorialCoordinator(
+        seenPreferenceKey: PreferenceKeys.mapOnboardingMobileSeenV2,
+      );
+
+      coordinator.configure(
+        bindings: <MapTutorialStepBinding>[
+          _binding(id: 'one'),
+        ],
+      );
+      await coordinator.maybeStart();
+      await coordinator.dismiss();
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(
+        prefs.getBool(PreferenceKeys.mapOnboardingMobileSeenV2),
+        isTrue,
+      );
+    });
+
     test('filters out disabled/unavailable step bindings', () async {
       SharedPreferences.setMockInitialValues(<String, Object>{});
       final coordinator = MapTutorialCoordinator(

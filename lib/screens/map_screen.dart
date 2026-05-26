@@ -779,7 +779,7 @@ class _MapScreenState extends State<MapScreen>
     final overlayController = TutorialOverlayScope.maybeOf(context);
     if (_tutorialOverlayController != overlayController) {
       _debugMapTutorialBindingLog('scope changed; unbinding previous driver');
-      _tutorialOverlayController?.unbindDriver(_mapTutorialCoordinator);
+      _deactivateRootTutorialOwner(reason: 'mobile-map-scope-changed');
       _tutorialOverlayController = overlayController;
     }
     _syncRootTutorialBinding();
@@ -814,7 +814,7 @@ class _MapScreenState extends State<MapScreen>
         'index=${_mapTutorialCoordinator.currentIndex} '
         'steps=${_mapTutorialCoordinator.steps.length}',
       );
-      controller.unbindDriver(_mapTutorialCoordinator);
+      _deactivateRootTutorialOwner(reason: 'mobile-map-inactive');
       return;
     }
 
@@ -835,6 +835,11 @@ class _MapScreenState extends State<MapScreen>
     debugPrint('MapScreen tutorial: $message');
   }
 
+  void _deactivateRootTutorialOwner({required String reason}) {
+    _mapTutorialCoordinator.deactivateForOwnerExit(reason: reason);
+    _tutorialOverlayController?.unbindDriver(_mapTutorialCoordinator);
+  }
+
   bool get _pollingEnabled =>
       _isAppForeground && _isMapTabVisible && _isRouteVisible;
 
@@ -845,6 +850,9 @@ class _MapScreenState extends State<MapScreen>
 
   void _setMapTabVisible(bool isVisible) {
     if (_isMapTabVisible == isVisible) return;
+    if (!isVisible) {
+      _deactivateRootTutorialOwner(reason: 'mobile-map-tab-hidden');
+    }
     _isMapTabVisible = isVisible;
     _handleActiveStateChanged();
     _syncRootTutorialBinding();
@@ -855,6 +863,9 @@ class _MapScreenState extends State<MapScreen>
 
   void _setRouteVisible(bool isVisible) {
     if (_isRouteVisible == isVisible) return;
+    if (!isVisible) {
+      _deactivateRootTutorialOwner(reason: 'mobile-map-route-hidden');
+    }
     _isRouteVisible = isVisible;
     _handleActiveStateChanged();
     _syncRootTutorialBinding();
@@ -915,6 +926,11 @@ class _MapScreenState extends State<MapScreen>
   @override
   void didPushNext() {
     KubusMapRouteAwareHelpers.didPushNext(setRouteVisible: _setRouteVisible);
+  }
+
+  @override
+  void didPop() {
+    _setRouteVisible(false);
   }
 
   @override
@@ -1278,7 +1294,7 @@ class _MapScreenState extends State<MapScreen>
     _mapViewPreferencesController
         .removeListener(_handleMapViewPreferencesChanged);
     _mapViewPreferencesController.dispose();
-    _tutorialOverlayController?.unbindDriver(_mapTutorialCoordinator);
+    _deactivateRootTutorialOwner(reason: 'mobile-map-dispose');
     _tutorialOverlayController = null;
     _mapTutorialCoordinator.dispose();
     _mapCameraController.dispose();

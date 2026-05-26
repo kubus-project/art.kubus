@@ -631,7 +631,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final overlayController = TutorialOverlayScope.maybeOf(context);
     if (_tutorialOverlayController != overlayController) {
       _debugMapTutorialBindingLog('scope changed; unbinding previous driver');
-      _tutorialOverlayController?.unbindDriver(_mapTutorialCoordinator);
+      _deactivateRootTutorialOwner(reason: 'desktop-map-scope-changed');
       _tutorialOverlayController = overlayController;
     }
     _syncRootTutorialBinding();
@@ -651,7 +651,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         'index=${_mapTutorialCoordinator.currentIndex} '
         'steps=${_mapTutorialCoordinator.steps.length}',
       );
-      controller.unbindDriver(_mapTutorialCoordinator);
+      _deactivateRootTutorialOwner(reason: 'desktop-map-route-invisible');
       return;
     }
 
@@ -671,6 +671,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   void _debugMapTutorialBindingLog(String message) {
     if (!kDebugMode) return;
     debugPrint('DesktopMapScreen tutorial: $message');
+  }
+
+  void _deactivateRootTutorialOwner({required String reason}) {
+    _mapTutorialCoordinator.deactivateForOwnerExit(reason: reason);
+    _tutorialOverlayController?.unbindDriver(_mapTutorialCoordinator);
   }
 
   void _handleMapViewPreferencesChanged() {
@@ -1155,6 +1160,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   void _setRouteVisible(bool isVisible) {
     if (_isRouteVisible == isVisible) return;
+    if (!isVisible) {
+      _deactivateRootTutorialOwner(reason: 'desktop-map-route-hidden');
+    }
     _isRouteVisible = isVisible;
     _handleActiveStateChanged();
     _syncRootTutorialBinding();
@@ -1225,6 +1233,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   @override
   void didPushNext() {
     KubusMapRouteAwareHelpers.didPushNext(setRouteVisible: _setRouteVisible);
+  }
+
+  @override
+  void didPop() {
+    _setRouteVisible(false);
   }
 
   @override
@@ -1677,7 +1690,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     _mapViewPreferencesController
         .removeListener(_handleMapViewPreferencesChanged);
     _mapViewPreferencesController.dispose();
-    _tutorialOverlayController?.unbindDriver(_mapTutorialCoordinator);
+    _deactivateRootTutorialOwner(reason: 'desktop-map-dispose');
     _tutorialOverlayController = null;
     _mapTutorialCoordinator.dispose();
     _markerStreamSub?.cancel();

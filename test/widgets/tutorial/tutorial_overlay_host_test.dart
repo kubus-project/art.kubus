@@ -290,6 +290,119 @@ void main() {
     expect(find.byKey(TutorialOverlayPresenter.rootKey), findsNothing);
   });
 
+  testWidgets('root presenter stops rendering immediately after owner exit',
+      (tester) async {
+    final controller = TutorialOverlayController();
+    final targetKey = GlobalKey();
+    var persisted = false;
+
+    await tester.pumpWidget(
+      _buildApp(
+        Scaffold(
+          body: Stack(
+            children: [
+              Center(
+                child: SizedBox(
+                  key: targetKey,
+                  width: 48,
+                  height: 48,
+                ),
+              ),
+              Positioned.fill(
+                child: TutorialOverlayPresenter(controller: controller),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    controller.showTutorial(
+      tutorialId: 'owner-exit',
+      ownerRoute: 'mobile-map',
+      steps: <TutorialStepDefinition>[
+        TutorialStepDefinition(
+          targetKey: targetKey,
+          title: 'Owner title',
+          body: 'Owner body',
+        ),
+      ],
+      onPersistSeen: () async => persisted = true,
+    );
+
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.byKey(TutorialOverlayPresenter.rootKey), findsOneWidget);
+
+    controller.deactivateOwner('mobile-map', reason: 'test-owner-exit');
+    await tester.pump();
+
+    expect(find.byKey(TutorialOverlayPresenter.rootKey), findsNothing);
+    expect(controller.driver, isNull);
+    expect(persisted, isFalse);
+
+    controller.dispose();
+  });
+
+  testWidgets(
+      'visible tutorial unbinds and deactivates on route invisible before target detach',
+      (tester) async {
+    final controller = TutorialOverlayController();
+    final targetKey = GlobalKey();
+    final driver = _MutableTutorialDriver(
+      steps: <TutorialStepDefinition>[
+        TutorialStepDefinition(
+          targetKey: targetKey,
+          title: 'Route title',
+          body: 'Route body',
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      _buildApp(
+        Scaffold(
+          body: Stack(
+            children: [
+              Center(
+                child: SizedBox(
+                  key: targetKey,
+                  width: 48,
+                  height: 48,
+                ),
+              ),
+              Positioned.fill(
+                child: TutorialOverlayPresenter(controller: controller),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    controller.bindDriver(
+      tutorialId: 'map',
+      ownerRoute: 'mobile-map',
+      driver: driver,
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.byKey(TutorialOverlayPresenter.rootKey), findsOneWidget);
+
+    driver.deactivateForOwnerExit(reason: 'route-hidden');
+    controller.unbindDriver(driver);
+    await tester.pump();
+
+    expect(driver.visible, isFalse);
+    expect(driver.deactivationReason, 'route-hidden');
+    expect(controller.driver, isNull);
+    expect(find.byKey(TutorialOverlayPresenter.rootKey), findsNothing);
+
+    controller.dispose();
+  });
+
   testWidgets(
       'TutorialOverlayHost renders in full-window coordinates (sidebar layout)',
       (tester) async {
@@ -389,4 +502,43 @@ class _TestTutorialDriver extends ChangeNotifier
 
   @override
   void next() {}
+}
+
+class _MutableTutorialDriver extends ChangeNotifier
+    implements TutorialOverlayDriver, TutorialOverlayOwnerExitDriver {
+  _MutableTutorialDriver({
+    required List<TutorialStepDefinition> steps,
+  }) : _steps = steps;
+
+  final List<TutorialStepDefinition> _steps;
+  bool _visible = true;
+  String? deactivationReason;
+
+  @override
+  bool get visible => _visible;
+
+  @override
+  int get currentIndex => 0;
+
+  @override
+  List<TutorialStepDefinition> get steps => _steps;
+
+  @override
+  void back() {}
+
+  @override
+  Future<void> dismiss() async {
+    _visible = false;
+    notifyListeners();
+  }
+
+  @override
+  void next() {}
+
+  @override
+  void deactivateForOwnerExit({String reason = 'owner-exit'}) {
+    deactivationReason = reason;
+    _visible = false;
+    notifyListeners();
+  }
 }

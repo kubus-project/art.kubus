@@ -51,7 +51,7 @@ class MapTutorialState {
 
 /// Coordinates map tutorial steps, progression, and persisted seen state.
 class MapTutorialCoordinator extends ChangeNotifier
-    implements TutorialOverlayDriver {
+    implements TutorialOverlayDriver, TutorialOverlayOwnerExitDriver {
   MapTutorialCoordinator({
     required this.seenPreferenceKey,
     Future<SharedPreferences> Function()? sharedPreferencesLoader,
@@ -276,6 +276,20 @@ class MapTutorialCoordinator extends ChangeNotifier
     _visibleReconfigureRetryTimer?.cancel();
     _visibleReconfigureRetryTimer = null;
     await _persistSeen();
+  }
+
+  @override
+  void deactivateForOwnerExit({String reason = 'owner-exit'}) {
+    _debugLog(
+      'deactivateForOwnerExit: reason=$reason '
+      'show=${_state.show} steps=${_resolvedSteps.length} '
+      'index=${_state.index} persistedSeen=false',
+    );
+    _startRequested = false;
+    _cancelStartRetry();
+    _visibleReconfigureRetryTimer?.cancel();
+    _visibleReconfigureRetryTimer = null;
+    _setState(_state.copyWith(show: false));
   }
 
   Future<void> markSeen() async {

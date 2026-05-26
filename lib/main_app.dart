@@ -104,6 +104,12 @@ class _MainAppState extends State<MainApp> {
   void _handleTabProviderChanged() {
     if (!mounted) return;
     final index = _tabProvider?.currentIndex ?? 0;
+    if (_lastTelemetryIndex == 0 && index != 0) {
+      _tutorialOverlayController.deactivateOwner(
+        'mobile-map',
+        reason: 'mobile-shell-tab-change',
+      );
+    }
     if (index == _lastTelemetryIndex) return;
     _lastTelemetryIndex = index;
 
@@ -235,8 +241,7 @@ class _MainAppState extends State<MainApp> {
         final tintedSurface =
             Color.lerp(scheme.surface, activeAccent, isDark ? 0.18 : 0.10) ??
                 scheme.surface;
-        final glassTint =
-            tintedSurface.withValues(alpha: isDark ? 0.22 : 0.14);
+        final glassTint = tintedSurface.withValues(alpha: isDark ? 0.22 : 0.14);
 
         // Explicit height prevents the nav bar from accidentally expanding to
         // fill the entire Scaffold when it receives overly-permissive (or tight)
@@ -320,12 +325,8 @@ class _MainAppState extends State<MainApp> {
   }
 
   Widget _buildNavItem(
-    BuildContext context,
-    int index,
-    IconData icon,
-    bool isSmallScreen,
-    {required Color activeAccent}
-  ) {
+      BuildContext context, int index, IconData icon, bool isSmallScreen,
+      {required Color activeAccent}) {
     final isSelected =
         context.select<MainTabProvider, bool>((p) => p.currentIndex == index);
     final animationTheme = context.animationTheme;
@@ -342,6 +343,12 @@ class _MainAppState extends State<MainApp> {
           final deferredOnboarding = context.read<DeferredOnboardingProvider>();
           if (deferredOnboarding.maybeShowOnboarding(context)) return;
 
+          if (tabs.currentIndex == 0 && index != 0) {
+            _tutorialOverlayController.deactivateOwner(
+              'mobile-map',
+              reason: 'mobile-shell-nav-tap',
+            );
+          }
           tabs.setIndex(index);
         },
         child: AnimatedContainer(

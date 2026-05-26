@@ -46,6 +46,7 @@ class TutorialStepDefinition {
 class InteractiveTutorialOverlay extends StatefulWidget {
   final List<TutorialStepDefinition> steps;
   final int currentIndex;
+  final Object? ownerSessionKey;
 
   final VoidCallback onNext;
   final VoidCallback onBack;
@@ -58,6 +59,7 @@ class InteractiveTutorialOverlay extends StatefulWidget {
 
   const InteractiveTutorialOverlay({
     super.key,
+    this.ownerSessionKey,
     required this.steps,
     required this.currentIndex,
     required this.onNext,
@@ -107,15 +109,25 @@ class _InteractiveTutorialOverlayState extends State<InteractiveTutorialOverlay>
   @override
   void didUpdateWidget(covariant InteractiveTutorialOverlay oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.ownerSessionKey != widget.ownerSessionKey) {
+      _debugLog(
+        'ownerSessionChanged old=${oldWidget.ownerSessionKey} '
+        'new=${widget.ownerSessionKey}; clearing cached geometry',
+      );
+      _clearCachedGeometry();
+      return;
+    }
+    if (widget.steps.isEmpty && oldWidget.steps.isNotEmpty) {
+      _debugLog('stepsEmpty: clearing cached geometry');
+      _clearCachedGeometry();
+      return;
+    }
     if (oldWidget.currentIndex != widget.currentIndex) {
       _debugLog(
         'stepChanged oldIndex=${oldWidget.currentIndex} '
         'newIndex=${widget.currentIndex}; clearing cached geometry',
       );
-      _lastValidTargetRectGlobal = null;
-      _lastValidTargetRectLocal = null;
-      _geometryRetryCount = 0;
-      _geometryRetryScheduled = false;
+      _clearCachedGeometry();
     }
   }
 
@@ -135,8 +147,16 @@ class _InteractiveTutorialOverlayState extends State<InteractiveTutorialOverlay>
 
   @override
   void dispose() {
+    _clearCachedGeometry();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  void _clearCachedGeometry() {
+    _lastValidTargetRectGlobal = null;
+    _lastValidTargetRectLocal = null;
+    _geometryRetryCount = 0;
+    _geometryRetryScheduled = false;
   }
 
   bool _isRectUsable(Rect rect) {
