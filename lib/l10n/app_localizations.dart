@@ -22745,60 +22745,6 @@ abstract class AppLocalizations {
   /// **'Issued'**
   String get recognitionBadgePanelMinted;
 
-  /// No description provided for @attestationBadgePanelLoadFailed.
-  ///
-  /// In en, this message translates to:
-  /// **'Unable to load recognition right now.'**
-  String get attestationBadgePanelLoadFailed;
-
-  /// No description provided for @attestationBadgePanelEmpty.
-  ///
-  /// In en, this message translates to:
-  /// **'No recognition yet. Attend events or complete approvals to unlock badges.'**
-  String get attestationBadgePanelEmpty;
-
-  /// No description provided for @attestationBadgePanelAttendance.
-  ///
-  /// In en, this message translates to:
-  /// **'Attendance'**
-  String get attestationBadgePanelAttendance;
-
-  /// No description provided for @attestationBadgePanelParticipation.
-  ///
-  /// In en, this message translates to:
-  /// **'Participation'**
-  String get attestationBadgePanelParticipation;
-
-  /// No description provided for @attestationBadgePanelApproval.
-  ///
-  /// In en, this message translates to:
-  /// **'Approval'**
-  String get attestationBadgePanelApproval;
-
-  /// No description provided for @attestationBadgePanelCuratorial.
-  ///
-  /// In en, this message translates to:
-  /// **'Curatorial'**
-  String get attestationBadgePanelCuratorial;
-
-  /// No description provided for @attestationBadgePanelInstitutional.
-  ///
-  /// In en, this message translates to:
-  /// **'Institutional'**
-  String get attestationBadgePanelInstitutional;
-
-  /// No description provided for @attestationBadgePanelCollectibleProof.
-  ///
-  /// In en, this message translates to:
-  /// **'Collectible proof'**
-  String get attestationBadgePanelCollectibleProof;
-
-  /// No description provided for @attestationBadgePanelMinted.
-  ///
-  /// In en, this message translates to:
-  /// **'Minted'**
-  String get attestationBadgePanelMinted;
-
   /// No description provided for @exhibitionDetailPromoteTooltip.
   ///
   /// In en, this message translates to:

@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../models/collection_record.dart';
 import '../services/backend_api_service.dart';
+import '../services/profile_package_service.dart';
 import '../utils/wallet_utils.dart';
 
 class CollectionsProvider extends ChangeNotifier {
@@ -129,6 +130,9 @@ class CollectionsProvider extends ChangeNotifier {
         thumbnailUrl: thumbnailUrl,
       );
       _upsertCollection(record);
+      if (record.walletAddress.trim().isNotEmpty) {
+        ProfilePackageService.invalidateShowcase(record.walletAddress);
+      }
       notifyListeners();
       return record;
     } catch (e) {
@@ -260,6 +264,9 @@ class CollectionsProvider extends ChangeNotifier {
         try {
           final record = await _loadCollection(extractedId);
           _upsertCollection(record);
+          if (record.walletAddress.trim().isNotEmpty) {
+            ProfilePackageService.invalidateShowcase(record.walletAddress);
+          }
           notifyListeners();
           return (
             success: true,
@@ -297,6 +304,9 @@ class CollectionsProvider extends ChangeNotifier {
         }
 
         _upsertCollection(matching);
+        if (matching.walletAddress.trim().isNotEmpty) {
+          ProfilePackageService.invalidateShowcase(matching.walletAddress);
+        }
         notifyListeners();
         return (
           success: true,
@@ -517,6 +527,9 @@ class CollectionsProvider extends ChangeNotifier {
         record = _bumpArtworkCount(previous, unique.length);
       }
       _upsertCollection(record);
+      if (record.walletAddress.trim().isNotEmpty) {
+        ProfilePackageService.invalidateShowcase(record.walletAddress);
+      }
       notifyListeners();
       return record;
     } catch (e) {
@@ -550,6 +563,9 @@ class CollectionsProvider extends ChangeNotifier {
         record = _removeArtworkLocally(previous, artworkId);
       }
       _upsertCollection(record);
+      if (record.walletAddress.trim().isNotEmpty) {
+        ProfilePackageService.invalidateShowcase(record.walletAddress);
+      }
       notifyListeners();
       return record;
     } catch (e) {
@@ -569,8 +585,12 @@ class CollectionsProvider extends ChangeNotifier {
     _errorsById.remove(id);
     try {
       await _api.deleteCollection(id);
+      final previous = _byId[id];
       _collections.removeWhere((item) => item.id == id);
       _byId.remove(id);
+      if (previous != null && previous.walletAddress.trim().isNotEmpty) {
+        ProfilePackageService.invalidateShowcase(previous.walletAddress);
+      }
       notifyListeners();
     } catch (e) {
       _errorsById[id] = e.toString();

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../models/achievement_preview_data_state.dart';
 import '../../models/achievement_progress.dart' as legacy;
 import '../../models/achievements.dart' as backend;
 import '../../providers/profile_provider.dart';
@@ -14,13 +15,6 @@ import '../../widgets/empty_state_card.dart';
 enum ProfileAchievementsPreviewMode {
   ownProfile,
   publicProfile,
-}
-
-enum AchievementPreviewDataState {
-  loading,
-  ready,
-  fallback,
-  unavailable,
 }
 
 class AchievementPreviewItem {

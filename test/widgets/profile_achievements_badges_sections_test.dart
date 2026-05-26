@@ -1,4 +1,5 @@
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:art_kubus/models/achievement_preview_data_state.dart';
 import 'package:art_kubus/models/achievement_progress.dart';
 import 'package:art_kubus/models/achievements.dart' as backend;
 import 'package:art_kubus/providers/attestation_provider.dart';

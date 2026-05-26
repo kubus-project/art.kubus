@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../models/event.dart';
 import '../models/exhibition.dart';
 import '../services/backend_api_service.dart';
+import '../services/profile_package_service.dart';
 
 class EventsProvider extends ChangeNotifier {
   final BackendApiService _api;
@@ -11,7 +12,8 @@ class EventsProvider extends ChangeNotifier {
 
   final List<KubusEvent> _events = <KubusEvent>[];
   final Map<String, KubusEvent> _byId = <String, KubusEvent>{};
-  final Map<String, List<Exhibition>> _exhibitionsByEventId = <String, List<Exhibition>>{};
+  final Map<String, List<Exhibition>> _exhibitionsByEventId =
+      <String, List<Exhibition>>{};
 
   bool _isLoading = false;
   String? _error;
@@ -25,7 +27,8 @@ class EventsProvider extends ChangeNotifier {
   bool get initialized => _initialized;
 
   List<Exhibition> exhibitionsForEvent(String eventId) {
-    return List.unmodifiable(_exhibitionsByEventId[eventId] ?? const <Exhibition>[]);
+    return List.unmodifiable(
+        _exhibitionsByEventId[eventId] ?? const <Exhibition>[]);
   }
 
   Future<void> initialize({bool refresh = false}) async {
@@ -125,6 +128,10 @@ class EventsProvider extends ChangeNotifier {
       if (created != null) {
         _upsertEvent(created, notify: false);
         _selected = created;
+        final wallet = created.host?.walletAddress ?? created.host?.id;
+        if (wallet != null && wallet.trim().isNotEmpty) {
+          ProfilePackageService.invalidateShowcase(wallet);
+        }
         notifyListeners();
       }
       return created;
@@ -137,7 +144,8 @@ class EventsProvider extends ChangeNotifier {
     }
   }
 
-  Future<KubusEvent?> updateEvent(String id, Map<String, dynamic> updates) async {
+  Future<KubusEvent?> updateEvent(
+      String id, Map<String, dynamic> updates) async {
     _setLoading(true);
     _error = null;
     try {
@@ -145,6 +153,10 @@ class EventsProvider extends ChangeNotifier {
       if (updated != null) {
         _upsertEvent(updated, notify: false);
         if (_selected?.id == id) _selected = updated;
+        final wallet = updated.host?.walletAddress ?? updated.host?.id;
+        if (wallet != null && wallet.trim().isNotEmpty) {
+          ProfilePackageService.invalidateShowcase(wallet);
+        }
         notifyListeners();
       }
       return updated;
@@ -162,10 +174,15 @@ class EventsProvider extends ChangeNotifier {
     _error = null;
     try {
       await _api.deleteEvent(id);
+      final previous = _byId[id];
       _events.removeWhere((e) => e.id == id);
       _byId.remove(id);
       _exhibitionsByEventId.remove(id);
       if (_selected?.id == id) _selected = null;
+      final wallet = previous?.host?.walletAddress ?? previous?.host?.id;
+      if (wallet != null && wallet.trim().isNotEmpty) {
+        ProfilePackageService.invalidateShowcase(wallet);
+      }
       notifyListeners();
     } catch (e) {
       _error = e.toString();
@@ -185,7 +202,8 @@ class EventsProvider extends ChangeNotifier {
     _setLoading(true);
     _error = null;
     try {
-      final list = await _api.listEventExhibitions(eventId, limit: limit, offset: offset);
+      final list = await _api.listEventExhibitions(eventId,
+          limit: limit, offset: offset);
       if (refresh) {
         _exhibitionsByEventId[eventId] = list;
       } else {

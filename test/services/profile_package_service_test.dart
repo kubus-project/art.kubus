@@ -32,7 +32,7 @@ void main() {
     BackendApiService().setHttpClient(createPlatformHttpClient());
   });
 
-  test('loads public profile package with profile and achievements together',
+  test('critical package loads profile, stats, and achievements without posts',
       () async {
     final requests = <String>[];
     BackendApiService().setHttpClient(MockClient((request) async {
@@ -40,25 +40,84 @@ void main() {
       return _mockProfilePackageResponse(request, wallet: wallet);
     }));
 
-    final package = await ProfilePackageService.loadPublicProfilePackage(
+    final critical =
+        await ProfilePackageService.loadPublicProfileCriticalPackage(
       wallet,
       forceRefresh: true,
-      includePosts: false,
-      includeShowcase: false,
     );
 
-    expect(package, isNotNull);
-    expect(package!.isComplete, isTrue);
-    expect(package.user.id, wallet);
-    expect(package.user.followersCount, 12);
-    expect(package.achievementDefinitions.single.title, 'Backend Milestone');
+    expect(critical, isNotNull);
+    expect(critical!.isComplete, isTrue);
+    expect(critical.user.id, wallet);
+    expect(critical.user.followersCount, 12);
+    expect(critical.achievementDefinitions.single.title, 'Backend Milestone');
     expect(
-        package.achievementProgress.single.achievementId, 'backend_milestone');
+        critical.achievementProgress.single.achievementId, 'backend_milestone');
     expect(requests.any((path) => path.contains('/api/profiles/')), isTrue);
     expect(
       requests.any((path) => path.contains('/api/achievements/users/')),
       isTrue,
     );
+    expect(
+      requests.any((path) => path.contains('/api/community/posts')),
+      isFalse,
+    );
+  });
+
+  test('extended package loads posts separately', () async {
+    final requests = <String>[];
+    BackendApiService().setHttpClient(MockClient((request) async {
+      requests.add(request.url.path);
+      return _mockProfilePackageResponse(request, wallet: wallet);
+    }));
+
+    final extended =
+        await ProfilePackageService.loadPublicProfileExtendedPackage(
+      wallet,
+      forceRefresh: true,
+      includePosts: true,
+      includeShowcase: false,
+    );
+
+    expect(extended, isNotNull);
+    expect(extended!.initialPosts, isEmpty);
+    expect(
+      requests.any((path) => path.contains('/api/community/posts')),
+      isTrue,
+    );
+    expect(requests.any((path) => path.contains('/api/profiles/')), isFalse);
+    expect(
+      requests.any((path) => path.contains('/api/achievements/users/')),
+      isFalse,
+    );
+  });
+
+  test('failed extended package does not fail critical package', () async {
+    BackendApiService().setHttpClient(MockClient((request) async {
+      if (request.url.path.contains('/api/community/posts')) {
+        return http.Response('Post load failed', 500);
+      }
+      return _mockProfilePackageResponse(request, wallet: wallet);
+    }));
+
+    final critical =
+        await ProfilePackageService.loadPublicProfileCriticalPackage(
+      wallet,
+      forceRefresh: true,
+    );
+    final extended =
+        await ProfilePackageService.loadPublicProfileExtendedPackage(
+      wallet,
+      forceRefresh: true,
+      includePosts: true,
+      includeShowcase: false,
+      user: critical!.user,
+    );
+
+    expect(critical.isComplete, isTrue);
+    expect(critical.achievementDefinitions.single.title, 'Backend Milestone');
+    expect(extended, isNotNull);
+    expect(extended!.initialPosts, isEmpty);
   });
 
   test('marks package complete when achievements are explicitly unavailable',
@@ -103,10 +162,73 @@ void main() {
       includeShowcase: false,
     );
 
-    expect(package, same(cached));
     expect(package!.achievementDefinitions.single.title,
         'Cached Backend Milestone');
     expect(networkCalls, 0);
+  });
+
+  test('invalidating achievements forces achievement reload', () async {
+    ProfilePackageService.setCachedPackageForTesting(
+      _cachedPackage(wallet: wallet, title: 'Old Backend Milestone'),
+    );
+    ProfilePackageService.invalidateAchievements(wallet);
+
+    final requests = <String>[];
+    BackendApiService().setHttpClient(MockClient((request) async {
+      requests.add(request.url.path);
+      return _mockProfilePackageResponse(
+        request,
+        wallet: wallet,
+        achievementTitle: 'Reloaded Backend Milestone',
+      );
+    }));
+
+    final critical =
+        await ProfilePackageService.loadPublicProfileCriticalPackage(wallet);
+
+    expect(critical!.achievementDefinitions.single.title,
+        'Reloaded Backend Milestone');
+    expect(
+      requests.any((path) => path.contains('/api/achievements/users/')),
+      isTrue,
+    );
+  });
+
+  test('invalidating posts does not invalidate achievements', () async {
+    ProfilePackageService.setCachedPackageForTesting(
+      _cachedPackage(wallet: wallet, title: 'Cached Backend Milestone'),
+    );
+    ProfilePackageService.invalidatePosts(wallet);
+
+    var networkCalls = 0;
+    BackendApiService().setHttpClient(MockClient((request) async {
+      networkCalls += 1;
+      return _mockProfilePackageResponse(request, wallet: wallet);
+    }));
+
+    final critical =
+        await ProfilePackageService.loadPublicProfileCriticalPackage(wallet);
+
+    expect(critical!.achievementDefinitions.single.title,
+        'Cached Backend Milestone');
+    expect(networkCalls, 0);
+  });
+
+  test('patching follow state preserves achievement definitions', () async {
+    ProfilePackageService.setCachedPackageForTesting(
+      _cachedPackage(wallet: wallet, title: 'Cached Backend Milestone'),
+    );
+
+    ProfilePackageService.patchUser(
+      wallet,
+      (current) => current.copyWith(isFollowing: true, followersCount: 8),
+    );
+
+    final critical = ProfilePackageService.getCachedCriticalPackage(wallet)!;
+    expect(critical.user.isFollowing, isTrue);
+    expect(critical.user.followersCount, 8);
+    expect(critical.achievementDefinitions.single.title,
+        'Cached Backend Milestone');
   });
 
   test('background refresh replaces cached package atomically', () async {

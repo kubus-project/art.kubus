@@ -12056,33 +12056,6 @@ class AppLocalizationsSl extends AppLocalizations {
   String get recognitionBadgePanelMinted => 'Izdano';
 
   @override
-  String get attestationBadgePanelLoadFailed => 'Priznanj trenutno ni bilo mogoče naložiti.';
-
-  @override
-  String get attestationBadgePanelEmpty => 'Za zdaj še ni priznanj. Udeleži se dogodkov ali dokončaj odobritve, da odklenes značke.';
-
-  @override
-  String get attestationBadgePanelAttendance => 'Udeležba';
-
-  @override
-  String get attestationBadgePanelParticipation => 'Sodelovanje';
-
-  @override
-  String get attestationBadgePanelApproval => 'Odobritev';
-
-  @override
-  String get attestationBadgePanelCuratorial => 'Kuratorsko';
-
-  @override
-  String get attestationBadgePanelInstitutional => 'Institucionalno';
-
-  @override
-  String get attestationBadgePanelCollectibleProof => 'Dokaz zbirateljskega predmeta';
-
-  @override
-  String get attestationBadgePanelMinted => 'Izdano';
-
-  @override
   String get exhibitionDetailPromoteTooltip => 'Promoviraj razstavo';
 
   @override

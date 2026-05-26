@@ -7,11 +7,13 @@ import '../models/portfolio_entry.dart';
 import '../providers/artwork_provider.dart';
 import '../providers/app_refresh_provider.dart';
 import '../services/backend_api_service.dart';
+import '../services/profile_package_service.dart';
 
 class PortfolioProvider extends ChangeNotifier {
   final BackendApiService _api;
 
-  PortfolioProvider({BackendApiService? api}) : _api = api ?? BackendApiService();
+  PortfolioProvider({BackendApiService? api})
+      : _api = api ?? BackendApiService();
 
   String _walletAddress = '';
   ArtworkProvider? _artworkProvider;
@@ -57,7 +59,9 @@ class PortfolioProvider extends ChangeNotifier {
     ];
 
     DateTime sortKey(PortfolioEntry e) {
-      return e.updatedAt ?? e.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+      return e.updatedAt ??
+          e.createdAt ??
+          DateTime.fromMillisecondsSinceEpoch(0);
     }
 
     result.sort((a, b) => sortKey(b).compareTo(sortKey(a)));
@@ -110,7 +114,11 @@ class PortfolioProvider extends ChangeNotifier {
 
     if (next == _walletAddress) {
       // Wallet didn't change, but ensure we have data if this is the first time
-      if (_walletAddress.isNotEmpty && _artworks.isEmpty && _collections.isEmpty && _exhibitions.isEmpty && !_loading) {
+      if (_walletAddress.isNotEmpty &&
+          _artworks.isEmpty &&
+          _collections.isEmpty &&
+          _exhibitions.isEmpty &&
+          !_loading) {
         Future.microtask(() => refresh(force: true));
       }
       _handleAppRefreshChanged();
@@ -149,11 +157,13 @@ class PortfolioProvider extends ChangeNotifier {
     try {
       Object? firstError;
 
-      final artworksFuture = _loadAllArtworksForWallet(_walletAddress).catchError((e) {
+      final artworksFuture =
+          _loadAllArtworksForWallet(_walletAddress).catchError((e) {
         firstError ??= e;
         return const <Artwork>[];
       });
-      final collectionsFuture = _loadAllCollectionsForWallet(_walletAddress).catchError((e) {
+      final collectionsFuture =
+          _loadAllCollectionsForWallet(_walletAddress).catchError((e) {
         firstError ??= e;
         return const <CollectionRecord>[];
       });
@@ -203,7 +213,8 @@ class PortfolioProvider extends ChangeNotifier {
     return results;
   }
 
-  Future<List<CollectionRecord>> _loadAllCollectionsForWallet(String walletAddress) async {
+  Future<List<CollectionRecord>> _loadAllCollectionsForWallet(
+      String walletAddress) async {
     const pageSize = 50;
     const maxPages = 10;
     final results = <CollectionRecord>[];
@@ -245,13 +256,18 @@ class PortfolioProvider extends ChangeNotifier {
     return updated;
   }
 
-  Future<Artwork?> updateArtwork(String artworkId, Map<String, dynamic> updates) async {
+  Future<Artwork?> updateArtwork(
+      String artworkId, Map<String, dynamic> updates) async {
     final id = artworkId.trim();
     if (id.isEmpty) return null;
 
     final updated = await _api.updateArtwork(id, updates);
     if (updated != null) {
       _upsertArtwork(updated);
+      final wallet = updated.walletAddress;
+      if (wallet != null && wallet.trim().isNotEmpty) {
+        ProfilePackageService.invalidateShowcase(wallet);
+      }
     }
     return updated;
   }
@@ -260,10 +276,18 @@ class PortfolioProvider extends ChangeNotifier {
     final id = artworkId.trim();
     if (id.isEmpty) return;
 
+    final previous = _artworks
+        .where((artwork) => artwork.id == id)
+        .cast<Artwork?>()
+        .firstWhere((artwork) => artwork != null, orElse: () => null);
     await _api.deleteArtwork(id);
     _artworks = _artworks.where((a) => a.id != id).toList(growable: false);
     _cachedEntries = null;
     _artworkProvider?.removeArtwork(id);
+    final wallet = previous?.walletAddress ?? _walletAddress;
+    if (wallet.trim().isNotEmpty) {
+      ProfilePackageService.invalidateShowcase(wallet);
+    }
     notifyListeners();
   }
 

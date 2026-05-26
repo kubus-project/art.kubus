@@ -8,6 +8,7 @@ import '../models/artwork_comment.dart';
 import '../services/ar_content_service.dart';
 import '../services/art_content_service.dart';
 import '../services/backend_api_service.dart';
+import '../services/profile_package_service.dart';
 import '../services/user_action_logger.dart';
 import '../utils/wallet_utils.dart';
 import 'saved_items_provider.dart';
@@ -239,6 +240,10 @@ class ArtworkProvider extends ChangeNotifier {
       );
 
       addOrUpdateArtwork(artwork);
+      final wallet = artwork.walletAddress;
+      if (wallet != null && wallet.trim().isNotEmpty) {
+        ProfilePackageService.invalidateShowcase(wallet);
+      }
       return artwork;
     } catch (e) {
       _setError('Failed to create artwork: $e');
@@ -339,6 +344,10 @@ class ArtworkProvider extends ChangeNotifier {
       final updated = await _backendApi.updateArtwork(id, updates);
       if (updated != null) {
         addOrUpdateArtwork(updated);
+        final wallet = updated.walletAddress;
+        if (wallet != null && wallet.trim().isNotEmpty) {
+          ProfilePackageService.invalidateShowcase(wallet);
+        }
         return updated;
       }
       try {

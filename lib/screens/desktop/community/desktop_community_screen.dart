@@ -24,6 +24,7 @@ import '../../../models/community_group.dart';
 import '../../../models/conversation.dart';
 import '../../../models/promotion.dart';
 import '../../../services/backend_api_service.dart';
+import '../../../services/profile_package_service.dart';
 import '../../../services/block_list_service.dart';
 import '../../../services/community_post_save_controller.dart';
 import '../../../services/user_service.dart';
@@ -3540,6 +3541,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
 
       if (!mounted) return;
       setState(() => _removePostFromLocalFeeds(post.id));
+      ProfilePackageService.invalidatePosts(post.authorWallet ?? post.authorId);
       try {
         final hub = Provider.of<CommunityHubProvider>(context, listen: false);
         if (post.groupId != null) {
@@ -5668,9 +5670,15 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           locationLng: location?.lng,
         );
       }
+      final authorWallet = createdPost.authorWallet ?? createdPost.authorId;
+      ProfilePackageService.invalidatePosts(authorWallet);
       final achievementResult = createdPost.achievementResult;
       if (achievementResult != null && mounted) {
         context.read<TaskProvider>().applyAchievementResult(achievementResult);
+        ProfilePackageService.patchAchievementResult(
+          authorWallet,
+          achievementResult,
+        );
         if (achievementResult.unlocked.isNotEmpty) {
           final first = achievementResult.unlocked.first;
           final extra = achievementResult.unlocked.length > 1
@@ -7519,7 +7527,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           locationLabel: locationName,
         );
       } else {
-        await api.createCommunityPost(
+        final created = await api.createCommunityPost(
           content: content,
           mediaUrls: mediaUrls.isEmpty ? null : mediaUrls,
           postType: postType,
@@ -7534,6 +7542,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           locationName: locationName,
           locationLat: location?.lat,
           locationLng: location?.lng,
+        );
+        ProfilePackageService.invalidatePosts(
+          created.authorWallet ?? created.authorId,
         );
       }
 

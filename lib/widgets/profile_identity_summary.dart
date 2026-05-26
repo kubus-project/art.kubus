@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/promotion.dart';
 import '../utils/creator_display_format.dart';
+import '../utils/profile_package_prefetcher.dart';
 import '../utils/user_identity_display.dart';
 import '../utils/user_profile_navigation.dart';
 import '../utils/wallet_utils.dart';
@@ -73,8 +74,8 @@ class ProfileIdentityData {
       wallet: wallet,
     );
     final normalizedUsername = _normalizeUsername(username);
-    final normalizedUserId =
-        WalletUtils.canonical((userId ?? '').trim().isNotEmpty ? userId : wallet);
+    final normalizedUserId = WalletUtils.canonical(
+        (userId ?? '').trim().isNotEmpty ? userId : wallet);
     final walletSeed = WalletUtils.canonical(
       (wallet ?? '').trim().isNotEmpty ? wallet : normalizedUserId,
     );
@@ -175,8 +176,8 @@ class ProfileIdentitySummary extends StatelessWidget {
         theme.textTheme.bodySmall?.copyWith(
           color: scheme.onSurface.withValues(alpha: 0.62),
         );
-    final effectiveTextAlign =
-        textAlign ?? (layout == ProfileIdentityLayout.stacked
+    final effectiveTextAlign = textAlign ??
+        (layout == ProfileIdentityLayout.stacked
             ? TextAlign.center
             : TextAlign.start);
     final resolvedOnTap = onTap ??
@@ -187,6 +188,14 @@ class ProfileIdentitySummary extends StatelessWidget {
                   username: identity.username,
                 )
             : null);
+    if (identity.canOpenProfile) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ProfilePackagePrefetcher.prefetchVisible(
+          identity.userId!,
+          username: identity.username,
+        );
+      });
+    }
 
     final child = switch (layout) {
       ProfileIdentityLayout.row => Row(
@@ -286,8 +295,9 @@ class _IdentityTextBlock extends StatelessWidget {
         ? title
         : Row(
             mainAxisSize: centerTitleRow ? MainAxisSize.min : MainAxisSize.max,
-            mainAxisAlignment:
-                centerTitleRow ? MainAxisAlignment.center : MainAxisAlignment.start,
+            mainAxisAlignment: centerTitleRow
+                ? MainAxisAlignment.center
+                : MainAxisAlignment.start,
             children: [
               Flexible(child: title),
               const SizedBox(width: 6),
@@ -296,9 +306,8 @@ class _IdentityTextBlock extends StatelessWidget {
           );
 
     return Column(
-      crossAxisAlignment: centerTitleRow
-          ? CrossAxisAlignment.center
-          : CrossAxisAlignment.start,
+      crossAxisAlignment:
+          centerTitleRow ? CrossAxisAlignment.center : CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
         titleRow,

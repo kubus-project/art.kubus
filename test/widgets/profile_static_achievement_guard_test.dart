@@ -46,5 +46,38 @@ void main() {
       reason:
           'Profile achievement previews must not derive display titles from codes.',
     );
+
+    for (final path in const [
+      'lib/screens/community/user_profile_screen.dart',
+      'lib/screens/desktop/community/desktop_user_profile_screen.dart',
+    ]) {
+      final contents = File(path).readAsStringSync();
+      expect(
+        contents,
+        isNot(contains('UserService.getUserById')),
+        reason:
+            '$path must route public profile loading through the shared controller/service.',
+      );
+      expect(
+        contents,
+        isNot(contains('AchievementPreviewDataState get')),
+        reason: '$path must not implement achievement data-state logic.',
+      );
+    }
+
+    for (final path in const [
+      'lib/l10n/app_en.arb',
+      'lib/l10n/app_sl.arb',
+      'lib/l10n/app_localizations.dart',
+      'lib/l10n/app_localizations_en.dart',
+      'lib/l10n/app_localizations_sl.dart',
+    ]) {
+      final contents = File(path).readAsStringSync();
+      expect(
+        contents,
+        isNot(contains('attestationBadgePanel')),
+        reason: '$path must use the recognition badge copy namespace.',
+      );
+    }
   });
 }

@@ -38,17 +38,27 @@ class DesktopProfilePresentationScope extends InheritedWidget {
 }
 
 class UserProfileNavigation {
-  static Future<ProfilePackage?>? _prefetchUserProfilePackage(
+  static Future<ProfileCriticalPackage?>? _prefetchCriticalProfilePackage(
     String userId, {
     String? username,
   }) {
     final trimmed = userId.trim();
     if (trimmed.isEmpty) return null;
     try {
-      return ProfilePackageService.prefetchPublicProfilePackage(
+      final future = ProfilePackageService.prefetchPublicProfileCriticalPackage(
         trimmed,
         username: username,
       );
+      unawaited(
+        future.then((critical) async {
+          if (critical == null) return;
+          await ProfilePackageService.prefetchPublicProfileExtendedPackage(
+            critical.user.id,
+            user: critical.user,
+          );
+        }),
+      );
+      return future;
     } catch (_) {}
     return null;
   }
@@ -59,7 +69,7 @@ class UserProfileNavigation {
     String? username,
     String? heroTag,
   }) async {
-    final initialPackageFuture = _prefetchUserProfilePackage(
+    final initialCriticalPackageFuture = _prefetchCriticalProfilePackage(
       userId,
       username: username,
     );
@@ -74,7 +84,7 @@ class UserProfileNavigation {
           userId: userId,
           username: username,
           heroTag: heroTag,
-          initialPackageFuture: initialPackageFuture,
+          initialCriticalPackageFuture: initialCriticalPackageFuture,
         );
         return;
       }
@@ -86,7 +96,7 @@ class UserProfileNavigation {
             userId: userId,
             username: username,
             heroTag: heroTag,
-            initialPackageFuture: initialPackageFuture,
+            initialCriticalPackageFuture: initialCriticalPackageFuture,
           ),
         );
         return;
@@ -98,13 +108,13 @@ class UserProfileNavigation {
             userId: userId,
             username: username,
             heroTag: heroTag,
-            initialPackageFuture: initialPackageFuture,
+            initialCriticalPackageFuture: initialCriticalPackageFuture,
           )
         : mobile.UserProfileScreen(
             userId: userId,
             username: username,
             heroTag: heroTag,
-            initialPackageFuture: initialPackageFuture,
+            initialCriticalPackageFuture: initialCriticalPackageFuture,
           );
 
     await Navigator.push(
@@ -118,10 +128,10 @@ class UserProfileNavigation {
     required String userId,
     String? username,
     String? heroTag,
-    Future<ProfilePackage?>? initialPackageFuture,
+    Future<ProfileCriticalPackage?>? initialCriticalPackageFuture,
   }) async {
-    final packageFuture = initialPackageFuture ??
-        _prefetchUserProfilePackage(
+    final criticalFuture = initialCriticalPackageFuture ??
+        _prefetchCriticalProfilePackage(
           userId,
           username: username,
         );
@@ -192,7 +202,7 @@ class UserProfileNavigation {
                                   userId: userId,
                                   username: username,
                                   heroTag: heroTag,
-                                  initialPackageFuture: packageFuture,
+                                  initialCriticalPackageFuture: criticalFuture,
                                 ),
                               ),
                             ),

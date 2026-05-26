@@ -11,6 +11,7 @@ import '../services/backend_api_service.dart';
 import '../services/stats_api_service.dart';
 import '../models/user.dart';
 import '../services/user_service.dart';
+import '../services/profile_package_service.dart';
 import '../services/event_bus.dart';
 import '../models/dao.dart';
 import '../utils/media_url_resolver.dart';
@@ -1026,6 +1027,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
       try {
         EventBus().emitProfileUpdated(_currentUser);
       } catch (_) {}
+      ProfilePackageService.invalidate(walletAddress);
       return true;
     } catch (e) {
       // Detect 429 response message and provide a friendly error
@@ -1065,9 +1067,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
           .timeout(AppConfig.requestTimeout);
       final raw = Map<String, dynamic>.from(savedProfileRaw);
       final nested = raw['data'];
-      final candidate = nested is Map
-          ? Map<String, dynamic>.from(nested)
-          : raw;
+      final candidate = nested is Map ? Map<String, dynamic>.from(nested) : raw;
       final candidateWallet =
           (candidate['walletAddress'] ?? candidate['wallet_address'] ?? '')
               .toString()
@@ -1104,8 +1104,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
         final now = DateTime.now();
         final current = _currentUser ??
             UserProfile(
-              id:
-                  'profile_${walletAddress.length > 8 ? walletAddress.substring(0, 8) : walletAddress}',
+              id: 'profile_${walletAddress.length > 8 ? walletAddress.substring(0, 8) : walletAddress}',
               walletAddress: walletAddress,
               username: '',
               displayName: '',
@@ -1134,6 +1133,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
       try {
         EventBus().emitProfileUpdated(_currentUser);
       } catch (_) {}
+      ProfilePackageService.invalidate(walletAddress);
       return true;
     } catch (e) {
       _error = 'Failed to save profile media: $e';
@@ -1373,10 +1373,9 @@ class ProfileProvider extends foundation.ChangeNotifier {
       final bool isPrivate = prefs.getBool('private_profile') ?? false;
       final bool showActivityStatus =
           prefs.getBool('show_activity_status') ?? true;
-        final bool showAchievements =
-          prefs.getBool('show_achievements') ??
-            prefs.getBool('showAchievements') ??
-            true;
+      final bool showAchievements = prefs.getBool('show_achievements') ??
+          prefs.getBool('showAchievements') ??
+          true;
       final bool shareLastVisitedLocation =
           prefs.getBool('share_last_visited_location') ?? false;
       final bool showCollection = prefs.getBool('show_collection') ?? true;
@@ -1526,8 +1525,8 @@ class ProfileProvider extends foundation.ChangeNotifier {
           'private_profile', preferences.privacy.toLowerCase() == 'private');
       await prefs.setBool(
           'show_activity_status', preferences.showActivityStatus);
-        await prefs.setBool('show_achievements', preferences.showAchievements);
-        await prefs.setBool('showAchievements', preferences.showAchievements);
+      await prefs.setBool('show_achievements', preferences.showAchievements);
+      await prefs.setBool('showAchievements', preferences.showAchievements);
       await prefs.setBool(
           'share_last_visited_location', preferences.shareLastVisitedLocation);
       await prefs.setBool('show_collection', preferences.showCollection);
@@ -1654,6 +1653,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
             _currentUser!.walletAddress,
             {'preferences': next.toJson()},
           );
+          ProfilePackageService.invalidate(_currentUser!.walletAddress);
         } catch (e) {
           debugPrint(
               'ProfileProvider.updatePreferences: backend update failed: $e');
@@ -1696,6 +1696,9 @@ class ProfileProvider extends foundation.ChangeNotifier {
       if (!_followingUsers.any((u) => u.id == user.id)) {
         _followingUsers.add(user);
         _realFollowingCount++;
+        ProfilePackageService.invalidateMany(
+          <String>[user.walletAddress, _currentUser?.walletAddress ?? ''],
+        );
         notifyListeners();
       }
     } catch (e) {
@@ -1710,6 +1713,9 @@ class ProfileProvider extends foundation.ChangeNotifier {
       _followingUsers.removeWhere((user) =>
           user.id == walletAddress || user.walletAddress == walletAddress);
       _realFollowingCount = _followingUsers.length;
+      ProfilePackageService.invalidateMany(
+        <String>[walletAddress, _currentUser?.walletAddress ?? ''],
+      );
       notifyListeners();
     } catch (e) {
       debugPrint('Error unfollowing user: $e');

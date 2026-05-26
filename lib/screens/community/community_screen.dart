@@ -43,6 +43,7 @@ import '../../providers/task_provider.dart';
 import '../../models/community_group.dart';
 import '../../services/backend_api_service.dart';
 import '../../services/community_post_save_controller.dart';
+import '../../services/profile_package_service.dart';
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart' as share_types;
 import '../../services/block_list_service.dart';
@@ -4994,9 +4995,15 @@ class _CommunityScreenState extends State<CommunityScreen>
         Provider.of<CommunitySubjectProvider>(context, listen: false);
     final draft = hub.draft;
     final resolvedPost = _mergeDraftSubject(createdPost, draft);
+    final authorWallet = resolvedPost.authorWallet ?? resolvedPost.authorId;
+    ProfilePackageService.invalidatePosts(authorWallet);
     final achievementResult = resolvedPost.achievementResult;
     if (achievementResult != null) {
       context.read<TaskProvider>().applyAchievementResult(achievementResult);
+      ProfilePackageService.patchAchievementResult(
+        authorWallet,
+        achievementResult,
+      );
       if (achievementResult.unlocked.isNotEmpty) {
         final first = achievementResult.unlocked.first;
         final extra = achievementResult.unlocked.length > 1
@@ -6550,6 +6557,7 @@ class _CommunityScreenState extends State<CommunityScreen>
 
       if (!mounted) return;
       setState(() => _removePostFromLocalFeeds(post.id));
+      ProfilePackageService.invalidatePosts(post.authorWallet ?? post.authorId);
       try {
         final hub = Provider.of<CommunityHubProvider>(context, listen: false);
         if (post.groupId != null) {

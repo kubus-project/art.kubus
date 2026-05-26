@@ -7,6 +7,7 @@ import '../models/user_presence.dart';
 import '../providers/presence_provider.dart';
 import '../services/user_service.dart';
 import '../utils/media_url_resolver.dart';
+import '../utils/profile_package_prefetcher.dart';
 import '../utils/user_profile_navigation.dart';
 import '../utils/wallet_utils.dart';
 
@@ -78,6 +79,7 @@ class _AvatarWidgetState extends State<AvatarWidget>
   void didChangeDependencies() {
     super.didChangeDependencies();
     _prefetchPresenceIfNeeded();
+    _prefetchProfilePackageIfNeeded();
   }
 
   Future<void> _setup() async {
@@ -548,5 +550,12 @@ class _AvatarWidgetState extends State<AvatarWidget>
     if (uri.scheme != 'http' && uri.scheme != 'https') return false;
     if (uri.host.trim().isEmpty) return false;
     return true;
+  }
+
+  void _prefetchProfilePackageIfNeeded() {
+    if (!widget.enableProfileNavigation) return;
+    final wallet = widget.wallet.trim();
+    if (wallet.isEmpty) return;
+    ProfilePackagePrefetcher.prefetchVisible(wallet);
   }
 }

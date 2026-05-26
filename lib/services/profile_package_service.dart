@@ -5,6 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../community/community_interactions.dart';
+import '../models/achievement_progress.dart' as legacy;
+import '../models/achievements.dart' as backend;
 import '../models/profile_package.dart';
 import '../models/user.dart';
 import '../utils/profile_showcase_normalizer.dart';
@@ -25,14 +27,121 @@ class ProfilePackageService {
   ProfilePackageService._();
 
   static const Duration cacheTtl = Duration(minutes: 5);
-  static const String _cachePrefsKey = 'profile_package_cache_v1';
+  static const String _criticalCachePrefsKey = 'profile_critical_cache_v2';
   static const int _maxPersistedPackages = 80;
 
-  static final Map<String, ProfilePackage> _cache = <String, ProfilePackage>{};
-  static final Map<String, Future<ProfilePackage?>> _inFlight =
-      <String, Future<ProfilePackage?>>{};
+  static final Map<String, ProfileCriticalPackage> _criticalCache =
+      <String, ProfileCriticalPackage>{};
+  static final Map<String, ProfileExtendedPackage> _extendedCache =
+      <String, ProfileExtendedPackage>{};
+  static final Map<String, Future<ProfileCriticalPackage?>> _criticalInFlight =
+      <String, Future<ProfileCriticalPackage?>>{};
+  static final Map<String, Future<ProfileExtendedPackage?>> _extendedInFlight =
+      <String, Future<ProfileExtendedPackage?>>{};
   static final Map<String, DateTime> _failedAt = <String, DateTime>{};
   static bool _persistentCacheLoaded = false;
+
+  static Future<ProfileCriticalPackage?> loadPublicProfileCriticalPackage(
+    String walletAddress, {
+    bool forceRefresh = false,
+    String? username,
+  }) async {
+    final lookup = _ProfileLookup(walletAddress, username: username);
+    if (!lookup.hasLookup) return null;
+
+    await _ensurePersistentCacheLoaded();
+
+    final cached = _criticalCache[lookup.cacheKey] ??
+        (lookup.wallet.isNotEmpty ? _criticalCache[lookup.wallet] : null);
+    if (!forceRefresh &&
+        cached != null &&
+        cached.isComplete &&
+        cached.isFresh(cacheTtl)) {
+      _debugTelemetry('profile_package_critical_cache_hit',
+          wallet: cached.user.id);
+      return cached;
+    }
+    if (!forceRefresh && cached != null && cached.isComplete) {
+      _debugTelemetry('profile_package_critical_stale_hit',
+          wallet: cached.user.id);
+    }
+
+    final existing = _criticalInFlight[lookup.cacheKey];
+    if (existing != null) return existing;
+
+    final watch = Stopwatch()..start();
+    _debugTelemetry('profile_package_critical_network_load',
+        wallet: lookup.cacheKey);
+    final future = _loadFreshPublicProfileCriticalPackage(lookup);
+    _criticalInFlight[lookup.cacheKey] = future;
+    try {
+      final critical = await future;
+      if (critical != null && critical.isComplete) {
+        _storeCriticalPackage(critical);
+        if (critical.achievementsUnavailable) {
+          _debugTelemetry(
+            'profile_package_achievement_unavailable',
+            wallet: critical.user.id,
+          );
+        }
+      } else {
+        _failedAt[lookup.cacheKey] = DateTime.now();
+      }
+      return critical;
+    } finally {
+      watch.stop();
+      _debugTelemetry(
+        'profile_package_critical_load_ms',
+        wallet: lookup.cacheKey,
+        value: watch.elapsedMilliseconds,
+      );
+      _criticalInFlight.remove(lookup.cacheKey);
+    }
+  }
+
+  static Future<ProfileExtendedPackage?> loadPublicProfileExtendedPackage(
+    String walletAddress, {
+    bool forceRefresh = false,
+    bool includePosts = true,
+    bool includeShowcase = true,
+    User? user,
+  }) async {
+    final wallet = WalletUtils.canonical(walletAddress);
+    if (wallet.isEmpty) return null;
+
+    final cached =
+        _extendedCache[wallet] ?? _extendedCache[WalletUtils.normalize(wallet)];
+    if (!forceRefresh && cached != null) return cached;
+
+    final inFlightKey = '$wallet|posts:$includePosts|showcase:$includeShowcase';
+    final existing = _extendedInFlight[inFlightKey];
+    if (existing != null) return existing;
+
+    final watch = Stopwatch()..start();
+    _debugTelemetry('profile_package_extended_network_load', wallet: wallet);
+    final future = _loadFreshPublicProfileExtendedPackage(
+      wallet,
+      includePosts: includePosts,
+      includeShowcase: includeShowcase,
+      user: user,
+    );
+    _extendedInFlight[inFlightKey] = future;
+    try {
+      final extended = await future;
+      if (extended != null) {
+        _storeExtendedPackage(wallet, extended);
+      }
+      return extended;
+    } finally {
+      watch.stop();
+      _debugTelemetry(
+        'profile_package_extended_load_ms',
+        wallet: wallet,
+        value: watch.elapsedMilliseconds,
+      );
+      _extendedInFlight.remove(inFlightKey);
+    }
+  }
 
   static Future<ProfilePackage?> loadPublicProfilePackage(
     String walletAddress, {
@@ -41,58 +150,97 @@ class ProfilePackageService {
     bool includeShowcase = true,
     String? username,
   }) async {
-    final wallet = WalletUtils.canonical(walletAddress);
-    if (wallet.isEmpty && (username == null || username.trim().isEmpty)) {
-      return null;
-    }
-
-    await _ensurePersistentCacheLoaded();
-
-    final cacheKey = wallet.isNotEmpty
-        ? wallet
-        : 'username:${username!.trim().replaceFirst(RegExp(r'^@+'), '').toLowerCase()}';
-    final cached = _cache[cacheKey] ??
-        (wallet.isNotEmpty ? _cache[WalletUtils.normalize(wallet)] : null);
-    if (!forceRefresh &&
-        cached != null &&
-        cached.isComplete &&
-        cached.isFresh(cacheTtl)) {
-      return cached;
-    }
-
-    final existing = _inFlight[cacheKey];
-    if (existing != null) return existing;
-
-    final future = _loadFreshPublicProfilePackage(
-      wallet,
+    final critical = await loadPublicProfileCriticalPackage(
+      walletAddress,
+      forceRefresh: forceRefresh,
       username: username,
-      includePosts: includePosts,
-      includeShowcase: includeShowcase,
     );
-    _inFlight[cacheKey] = future;
-    try {
-      final package = await future;
-      if (package != null && package.isComplete) {
-        _storePackage(package);
-      } else {
-        _failedAt[cacheKey] = DateTime.now();
-      }
-      return package;
-    } finally {
-      _inFlight.remove(cacheKey);
+    if (critical == null || !critical.isComplete) return null;
+
+    final extended = (includePosts || includeShowcase)
+        ? await loadPublicProfileExtendedPackage(
+            critical.user.id,
+            forceRefresh: forceRefresh,
+            includePosts: includePosts,
+            includeShowcase: includeShowcase,
+            user: critical.user,
+          )
+        : getCachedExtendedPackage(critical.user.id, allowStale: true);
+
+    return ProfilePackage.fromParts(
+      critical: critical,
+      extended: extended,
+    );
+  }
+
+  static ProfileCriticalPackage? getCachedCriticalPackage(
+    String walletAddress, {
+    bool allowStale = true,
+  }) {
+    final wallet = WalletUtils.canonical(walletAddress);
+    if (wallet.isEmpty) return null;
+    final cached =
+        _criticalCache[wallet] ?? _criticalCache[WalletUtils.normalize(wallet)];
+    if (cached == null || !cached.isComplete) return null;
+    final fresh = cached.isFresh(cacheTtl);
+    if (!allowStale && !fresh) return null;
+    if (allowStale && !fresh) {
+      _debugTelemetry('profile_package_critical_stale_hit', wallet: wallet);
     }
+    return cached;
+  }
+
+  static ProfileExtendedPackage? getCachedExtendedPackage(
+    String walletAddress, {
+    bool allowStale = true,
+  }) {
+    final wallet = WalletUtils.canonical(walletAddress);
+    if (wallet.isEmpty) return null;
+    return _extendedCache[wallet] ??
+        _extendedCache[WalletUtils.normalize(wallet)];
   }
 
   static ProfilePackage? getCachedPackage(
     String walletAddress, {
     bool allowStale = true,
   }) {
-    final wallet = WalletUtils.canonical(walletAddress);
-    if (wallet.isEmpty) return null;
-    final cached = _cache[wallet] ?? _cache[WalletUtils.normalize(wallet)];
-    if (cached == null || !cached.isComplete) return null;
-    if (!allowStale && !cached.isFresh(cacheTtl)) return null;
-    return cached;
+    final critical = getCachedCriticalPackage(
+      walletAddress,
+      allowStale: allowStale,
+    );
+    if (critical == null) return null;
+    return ProfilePackage.fromParts(
+      critical: critical,
+      extended: getCachedExtendedPackage(walletAddress, allowStale: allowStale),
+    );
+  }
+
+  static Future<ProfileCriticalPackage?> prefetchPublicProfileCriticalPackage(
+    String walletAddress, {
+    bool forceRefresh = false,
+    String? username,
+  }) {
+    return loadPublicProfileCriticalPackage(
+      walletAddress,
+      forceRefresh: forceRefresh,
+      username: username,
+    );
+  }
+
+  static Future<ProfileExtendedPackage?> prefetchPublicProfileExtendedPackage(
+    String walletAddress, {
+    bool forceRefresh = false,
+    bool includePosts = true,
+    bool includeShowcase = true,
+    User? user,
+  }) {
+    return loadPublicProfileExtendedPackage(
+      walletAddress,
+      forceRefresh: forceRefresh,
+      includePosts: includePosts,
+      includeShowcase: includeShowcase,
+      user: user,
+    );
   }
 
   static Future<ProfilePackage?> prefetchPublicProfilePackage(
@@ -112,9 +260,9 @@ class ProfilePackageService {
   static ProfilePackageCacheStatus cacheStatus(String walletAddress) {
     final wallet = WalletUtils.canonical(walletAddress);
     if (wallet.isEmpty) return ProfilePackageCacheStatus.none;
-    final package = _cache[wallet];
-    if (package != null && package.isComplete) {
-      return package.isFresh(cacheTtl)
+    final critical = _criticalCache[wallet];
+    if (critical != null && critical.isComplete) {
+      return critical.isFresh(cacheTtl)
           ? ProfilePackageCacheStatus.complete
           : ProfilePackageCacheStatus.staleComplete;
     }
@@ -125,50 +273,197 @@ class ProfilePackageService {
     return ProfilePackageCacheStatus.none;
   }
 
+  static void invalidate(String walletAddress) {
+    final wallet = WalletUtils.canonical(walletAddress);
+    if (wallet.isEmpty) return;
+    _removeKeys(wallet, critical: true, extended: true);
+    unawaited(_persistCriticalCache());
+  }
+
+  static void invalidateMany(Iterable<String> walletAddresses) {
+    var changed = false;
+    for (final walletAddress in walletAddresses) {
+      final wallet = WalletUtils.canonical(walletAddress);
+      if (wallet.isEmpty) continue;
+      _removeKeys(wallet, critical: true, extended: true);
+      changed = true;
+    }
+    if (changed) unawaited(_persistCriticalCache());
+  }
+
+  static void invalidateAchievements(String walletAddress) {
+    final wallet = WalletUtils.canonical(walletAddress);
+    if (wallet.isEmpty) return;
+    _removeKeys(wallet, critical: true, extended: false);
+    unawaited(_persistCriticalCache());
+  }
+
+  static void invalidatePosts(String walletAddress) {
+    final wallet = WalletUtils.canonical(walletAddress);
+    if (wallet.isEmpty) return;
+    _removeKeys(wallet, critical: false, extended: true);
+  }
+
+  static void invalidateShowcase(String walletAddress) {
+    final wallet = WalletUtils.canonical(walletAddress);
+    if (wallet.isEmpty) return;
+    _removeKeys(wallet, critical: false, extended: true);
+  }
+
+  static void patchUser(
+    String walletAddress,
+    User Function(User current) patch,
+  ) {
+    final wallet = WalletUtils.canonical(walletAddress);
+    if (wallet.isEmpty) return;
+    final critical = _criticalCache[wallet];
+    if (critical == null) return;
+    final nextUser = patch(critical.user);
+    _storeCriticalPackage(critical.copyWith(user: nextUser));
+  }
+
+  static void patchStats(String walletAddress, Map<String, int> patch) {
+    final wallet = WalletUtils.canonical(walletAddress);
+    if (wallet.isEmpty || patch.isEmpty) return;
+    final critical = _criticalCache[wallet];
+    if (critical == null) return;
+    final updatedStats = <String, int>{...critical.publicStats, ...patch};
+    _storeCriticalPackage(
+      critical.copyWith(
+        publicStats: updatedStats,
+        user: critical.user.copyWith(
+          postsCount: updatedStats['posts'] ?? critical.user.postsCount,
+          followersCount:
+              updatedStats['followers'] ?? critical.user.followersCount,
+          followingCount:
+              updatedStats['following'] ?? critical.user.followingCount,
+        ),
+      ),
+    );
+  }
+
+  static void patchPosts(
+    String walletAddress,
+    List<CommunityPost> posts, {
+    bool updateCount = true,
+  }) {
+    final wallet = WalletUtils.canonical(walletAddress);
+    if (wallet.isEmpty) return;
+    final current = _extendedCache[wallet];
+    _storeExtendedPackage(
+      wallet,
+      (current ?? ProfileExtendedPackage(fetchedAt: DateTime.now())).copyWith(
+        initialPosts: List<CommunityPost>.from(posts),
+        fetchedAt: DateTime.now(),
+      ),
+    );
+    if (updateCount) {
+      patchStats(wallet, <String, int>{'posts': posts.length});
+    }
+  }
+
+  static void patchAchievementResult(
+    String walletAddress,
+    backend.AchievementEventResult result,
+  ) {
+    final wallet = WalletUtils.canonical(walletAddress);
+    if (wallet.isEmpty) return;
+    final critical = _criticalCache[wallet];
+    if (critical == null) return;
+
+    final progressById = <String, legacy.AchievementProgress>{
+      for (final item in critical.achievementProgress) item.achievementId: item,
+    };
+    for (final progress in result.progress) {
+      final code = progress.achievementCode.trim();
+      if (code.isEmpty) continue;
+      progressById[code] = legacy.AchievementProgress(
+        achievementId: code,
+        currentProgress: progress.currentProgress,
+        isCompleted: progress.isCompleted,
+        completedDate: progress.completedAt,
+      );
+    }
+    for (final unlocked in result.unlocked) {
+      final code = unlocked.code.trim();
+      if (code.isEmpty) continue;
+      final current = progressById[code];
+      progressById[code] = legacy.AchievementProgress(
+        achievementId: code,
+        currentProgress: current?.currentProgress ?? 1,
+        isCompleted: true,
+        completedDate: unlocked.unlockedAt ?? current?.completedDate,
+      );
+    }
+
+    final nextProgress = progressById.values.toList(growable: false);
+    _storeCriticalPackage(
+      critical.copyWith(
+        achievementProgress: nextProgress,
+        user: critical.user.copyWith(achievementProgress: nextProgress),
+        fetchedAt: DateTime.now(),
+      ),
+    );
+  }
+
   @visibleForTesting
   static void clearMemoryCacheForTesting() {
-    _cache.clear();
-    _inFlight.clear();
+    _criticalCache.clear();
+    _extendedCache.clear();
+    _criticalInFlight.clear();
+    _extendedInFlight.clear();
     _failedAt.clear();
     _persistentCacheLoaded = false;
   }
 
   @visibleForTesting
-  static void setCachedPackageForTesting(ProfilePackage package) {
-    _storePackage(package, persist: false);
+  static void setCachedCriticalPackageForTesting(
+    ProfileCriticalPackage critical,
+  ) {
+    _storeCriticalPackage(critical, persist: false);
   }
 
-  static Future<ProfilePackage?> _loadFreshPublicProfilePackage(
-    String walletAddress, {
-    String? username,
-    required bool includePosts,
-    required bool includeShowcase,
-  }) async {
-    final wallet = WalletUtils.canonical(walletAddress);
-    final hasWallet = wallet.isNotEmpty;
+  @visibleForTesting
+  static void setCachedExtendedPackageForTesting(
+    String walletAddress,
+    ProfileExtendedPackage extended,
+  ) {
+    _storeExtendedPackage(walletAddress, extended);
+  }
+
+  @visibleForTesting
+  static void setCachedPackageForTesting(ProfilePackage package) {
+    _storeCriticalPackage(package.critical, persist: false);
+    final extended = package.extended;
+    if (extended != null) {
+      _storeExtendedPackage(package.user.id, extended);
+    }
+  }
+
+  static Future<ProfileCriticalPackage?> _loadFreshPublicProfileCriticalPackage(
+    _ProfileLookup lookup,
+  ) async {
+    final hasWallet = lookup.wallet.isNotEmpty;
 
     final userFuture = hasWallet
         ? UserService.getUserById(
-            wallet,
+            lookup.wallet,
             forceRefresh: true,
             includeAchievements: false,
           )
         : UserService.getUserByUsername(
-            username ?? '',
+            lookup.username ?? '',
             includeAchievements: false,
           );
 
     final achievementFuture = hasWallet
-        ? UserService.loadPublicAchievementSummaryResult(wallet)
+        ? UserService.loadPublicAchievementSummaryResult(lookup.wallet)
         : Future<UserAchievementSummaryResult>.value(
             const UserAchievementSummaryResult(unavailable: true),
           );
     final statsFuture = hasWallet
-        ? _loadPublicStats(wallet)
+        ? _loadPublicStats(lookup.wallet)
         : Future<Map<String, int>>.value(const <String, int>{});
-    final postsFuture = hasWallet && includePosts
-        ? _loadInitialPosts(wallet)
-        : Future<List<CommunityPost>?>.value(null);
 
     final userShell = await userFuture;
     if (userShell == null) return null;
@@ -179,14 +474,6 @@ class ProfilePackageService {
         : await UserService.loadPublicAchievementSummaryResult(resolvedWallet);
     final stats =
         hasWallet ? await statsFuture : await _loadPublicStats(resolvedWallet);
-    final posts = hasWallet && includePosts
-        ? await postsFuture
-        : includePosts
-            ? await _loadInitialPosts(resolvedWallet)
-            : null;
-    final showcase = includeShowcase
-        ? await _loadShowcase(userShell, resolvedWallet)
-        : const _ProfileShowcasePayload();
 
     final statsWithFallback = <String, int>{
       'posts': userShell.postsCount,
@@ -203,24 +490,54 @@ class ProfilePackageService {
       achievementDefinitions: achievementResult.definitions,
     );
 
-    final package = ProfilePackage(
+    final critical = ProfileCriticalPackage(
       user: user,
       achievementProgress: achievementResult.progress,
       achievementDefinitions: achievementResult.definitions,
       publicStats: statsWithFallback,
-      initialPosts: posts,
-      artistArtworks: showcase.artworks,
-      artistCollections: showcase.collections,
-      artistEvents: showcase.events,
       fetchedAt: DateTime.now(),
       isComplete: achievementResult.isResolved,
       achievementsUnavailable: achievementResult.unavailable,
     );
 
-    if (package.isComplete) {
-      UserService.setUsersInCacheAuthoritative([package.user]);
+    if (critical.isComplete) {
+      UserService.setUsersInCacheAuthoritative([critical.user]);
     }
-    return package;
+    return critical;
+  }
+
+  static Future<ProfileExtendedPackage?> _loadFreshPublicProfileExtendedPackage(
+    String walletAddress, {
+    required bool includePosts,
+    required bool includeShowcase,
+    User? user,
+  }) async {
+    final wallet = WalletUtils.canonical(walletAddress);
+    final effectiveUser = user ??
+        getCachedCriticalPackage(wallet, allowStale: true)?.user ??
+        UserService.getCachedUser(wallet);
+
+    final postsFuture = includePosts
+        ? _loadInitialPosts(wallet)
+        : Future<List<CommunityPost>?>.value(null);
+    final showcaseFuture = includeShowcase && effectiveUser != null
+        ? _loadShowcase(effectiveUser, wallet)
+        : Future<_ProfileShowcasePayload>.value(
+            const _ProfileShowcasePayload(),
+          );
+
+    final results = await Future.wait<dynamic>([
+      postsFuture,
+      showcaseFuture,
+    ]);
+    final showcase = results[1] as _ProfileShowcasePayload;
+    return ProfileExtendedPackage(
+      initialPosts: results[0] as List<CommunityPost>?,
+      artistArtworks: showcase.artworks,
+      artistCollections: showcase.collections,
+      artistEvents: showcase.events,
+      fetchedAt: DateTime.now(),
+    );
   }
 
   static Future<Map<String, int>> _loadPublicStats(String walletAddress) async {
@@ -305,18 +622,54 @@ class ProfilePackageService {
     }
   }
 
-  static void _storePackage(
-    ProfilePackage package, {
+  static void _storeCriticalPackage(
+    ProfileCriticalPackage critical, {
     bool persist = true,
   }) {
-    if (!package.isComplete) return;
-    final wallet = WalletUtils.canonical(package.user.id);
+    if (!critical.isComplete) return;
+    final wallet = WalletUtils.canonical(critical.user.id);
     if (wallet.isEmpty) return;
-    _cache[wallet] = package;
-    _cache[WalletUtils.normalize(wallet)] = package;
+    _criticalCache[wallet] = critical;
+    _criticalCache[WalletUtils.normalize(wallet)] = critical;
     _failedAt.remove(wallet);
     if (persist) {
-      unawaited(_persistCache());
+      unawaited(_persistCriticalCache());
+    }
+  }
+
+  static void _storeExtendedPackage(
+    String walletAddress,
+    ProfileExtendedPackage extended,
+  ) {
+    final wallet = WalletUtils.canonical(walletAddress);
+    if (wallet.isEmpty) return;
+    _extendedCache[wallet] = extended;
+    _extendedCache[WalletUtils.normalize(wallet)] = extended;
+  }
+
+  static void _removeKeys(
+    String wallet, {
+    required bool critical,
+    required bool extended,
+  }) {
+    final normalized = WalletUtils.normalize(wallet);
+    final keys = <String>{wallet, normalized};
+    if (critical) {
+      for (final key in keys) {
+        _criticalCache.remove(key);
+        _failedAt.remove(key);
+      }
+      _criticalInFlight.removeWhere(
+        (key, _) => keys.contains(key) || key.startsWith('$wallet|'),
+      );
+    }
+    if (extended) {
+      for (final key in keys) {
+        _extendedCache.remove(key);
+      }
+      _extendedInFlight.removeWhere(
+        (key, _) => keys.contains(key) || key.startsWith('$wallet|'),
+      );
     }
   }
 
@@ -325,7 +678,8 @@ class ProfilePackageService {
     _persistentCacheLoaded = true;
     try {
       final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString(_cachePrefsKey);
+      final raw = prefs.getString(_criticalCachePrefsKey) ??
+          prefs.getString('profile_package_cache_v1');
       if (raw == null || raw.trim().isEmpty) return;
       final decoded = jsonDecode(raw);
       if (decoded is! Map) return;
@@ -333,11 +687,15 @@ class ProfilePackageService {
         try {
           final payload = entry.value;
           if (payload is! Map) continue;
-          final package =
-              ProfilePackage.fromJson(Map<String, dynamic>.from(payload));
-          if (!package.isComplete) continue;
-          if (!package.isFresh(const Duration(hours: 24))) continue;
-          _storePackage(package, persist: false);
+          final map = Map<String, dynamic>.from(payload);
+          final critical = map['critical'] is Map
+              ? ProfileCriticalPackage.fromJson(
+                  Map<String, dynamic>.from(map['critical'] as Map),
+                )
+              : ProfilePackage.fromJson(map).critical;
+          if (!critical.isComplete) continue;
+          if (!critical.isFresh(const Duration(hours: 24))) continue;
+          _storeCriticalPackage(critical, persist: false);
         } catch (_) {}
       }
     } catch (e) {
@@ -347,9 +705,9 @@ class ProfilePackageService {
     }
   }
 
-  static Future<void> _persistCache() async {
+  static Future<void> _persistCriticalCache() async {
     try {
-      final entries = _cache.entries
+      final entries = _criticalCache.entries
           .where((entry) => WalletUtils.canonical(entry.key) == entry.key)
           .map((entry) => MapEntry(entry.key, entry.value))
           .toList(growable: false)
@@ -359,13 +717,45 @@ class ProfilePackageService {
         for (final entry in limited) entry.key: entry.value.toJson(),
       };
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_cachePrefsKey, jsonEncode(payload));
+      await prefs.setString(_criticalCachePrefsKey, jsonEncode(payload));
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('ProfilePackageService._persistCache: $e');
+        debugPrint('ProfilePackageService._persistCriticalCache: $e');
       }
     }
   }
+
+  static void _debugTelemetry(
+    String event, {
+    String? wallet,
+    int? value,
+  }) {
+    if (!kDebugMode) return;
+    final suffix = <String>[
+      if (wallet != null && wallet.isNotEmpty) 'wallet=$wallet',
+      if (value != null) 'value=$value',
+    ].join(' ');
+    debugPrint(
+      suffix.isEmpty
+          ? 'ProfilePackageService.telemetry $event'
+          : 'ProfilePackageService.telemetry $event $suffix',
+    );
+  }
+}
+
+class _ProfileLookup {
+  _ProfileLookup(String walletAddress, {String? username})
+      : wallet = WalletUtils.canonical(walletAddress),
+        username = username?.trim().replaceFirst(RegExp(r'^@+'), '');
+
+  final String wallet;
+  final String? username;
+
+  bool get hasLookup =>
+      wallet.isNotEmpty || (username != null && username!.isNotEmpty);
+
+  String get cacheKey =>
+      wallet.isNotEmpty ? wallet : 'username:${username!.toLowerCase()}';
 }
 
 class _ProfileShowcasePayload {

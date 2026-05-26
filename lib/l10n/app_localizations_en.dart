@@ -12018,33 +12018,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get recognitionBadgePanelMinted => 'Issued';
 
   @override
-  String get attestationBadgePanelLoadFailed => 'Unable to load recognition right now.';
-
-  @override
-  String get attestationBadgePanelEmpty => 'No recognition yet. Attend events or complete approvals to unlock badges.';
-
-  @override
-  String get attestationBadgePanelAttendance => 'Attendance';
-
-  @override
-  String get attestationBadgePanelParticipation => 'Participation';
-
-  @override
-  String get attestationBadgePanelApproval => 'Approval';
-
-  @override
-  String get attestationBadgePanelCuratorial => 'Curatorial';
-
-  @override
-  String get attestationBadgePanelInstitutional => 'Institutional';
-
-  @override
-  String get attestationBadgePanelCollectibleProof => 'Collectible proof';
-
-  @override
-  String get attestationBadgePanelMinted => 'Minted';
-
-  @override
   String get exhibitionDetailPromoteTooltip => 'Promote exhibition';
 
   @override

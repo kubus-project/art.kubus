@@ -2,8 +2,20 @@ allprojects {
     repositories {
         google()
         mavenCentral()
-        maven { url 'https://jitpack.io' }
-        maven { url 'https://maven.reown.com/releases' }
+        maven {
+            url 'https://jitpack.io'
+            content {
+                includeGroupByRegex 'com\\.github\\..*'
+            }
+        }
+        maven {
+            url 'https://maven.reown.com/releases'
+            content {
+                includeGroupByRegex 'com\\.reown(\\..*)?'
+                includeGroupByRegex 'com\\.walletconnect(\\..*)?'
+                includeGroupByRegex 'foundation\\.walletconnect(\\..*)?'
+            }
+        }
     }
 }
 

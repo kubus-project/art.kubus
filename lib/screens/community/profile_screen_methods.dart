@@ -19,6 +19,7 @@ import '../../services/user_service.dart';
 import '../../utils/artwork_navigation.dart';
 import '../../utils/artwork_media_resolver.dart';
 import '../../utils/creator_display_format.dart';
+import '../../utils/profile_package_prefetcher.dart';
 import '../../utils/search_suggestions.dart';
 import '../../utils/user_profile_navigation.dart';
 import '../../utils/wallet_utils.dart';
@@ -334,10 +335,20 @@ class ProfileScreenMethods {
         })(),
         (() async {
           try {
-            await ProfilePackageService.prefetchPublicProfilePackage(
+            final critical = await ProfilePackageService
+                .prefetchPublicProfileCriticalPackage(
               canonicalWallet,
               forceRefresh: force,
             );
+            if (critical != null) {
+              unawaited(
+                ProfilePackageService.prefetchPublicProfileExtendedPackage(
+                  critical.user.id,
+                  forceRefresh: force,
+                  user: critical.user,
+                ),
+              );
+            }
           } catch (_) {}
         })(),
       ]);
@@ -645,13 +656,9 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
     }
     if (wallets.isEmpty) return;
 
-    try {
-      await Future.wait<void>(
-        wallets.map((wallet) async {
-          await ProfilePackageService.prefetchPublicProfilePackage(wallet);
-        }),
-      );
-    } catch (_) {}
+    for (final wallet in wallets.take(10)) {
+      ProfilePackagePrefetcher.prefetchVisible(wallet);
+    }
   }
 
   @override
@@ -1064,13 +1071,9 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
     }
     if (wallets.isEmpty) return;
 
-    try {
-      await Future.wait<void>(
-        wallets.map((wallet) async {
-          await ProfilePackageService.prefetchPublicProfilePackage(wallet);
-        }),
-      );
-    } catch (_) {}
+    for (final wallet in wallets.take(10)) {
+      ProfilePackagePrefetcher.prefetchVisible(wallet);
+    }
   }
 
   @override

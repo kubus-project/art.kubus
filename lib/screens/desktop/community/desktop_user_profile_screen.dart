@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../../utils/design_tokens.dart';
@@ -10,8 +9,6 @@ import 'package:provider/provider.dart';
 import '../../../models/profile_package.dart';
 import '../../../models/user.dart';
 import '../../../services/user_service.dart';
-import '../../../services/profile_package_service.dart';
-import '../../../services/backend_api_service.dart';
 import '../../../services/share/share_service.dart';
 import '../../../services/share/share_types.dart';
 import '../../../services/block_list_service.dart';
@@ -27,6 +24,7 @@ import '../../../providers/app_refresh_provider.dart';
 import '../../../providers/artwork_provider.dart';
 import '../../../providers/community_interactions_provider.dart';
 import '../../../providers/saved_items_provider.dart';
+import '../../../providers/profile_package_controller.dart';
 import '../../../core/conversation_navigator.dart';
 import '../../../widgets/avatar_widget.dart';
 import '../../../widgets/user_activity_status_line.dart';
@@ -67,6 +65,9 @@ class UserProfileScreen extends StatefulWidget {
   final String? heroTag;
   final ProfilePackage? initialPackage;
   final Future<ProfilePackage?>? initialPackageFuture;
+  final ProfileCriticalPackage? initialCriticalPackage;
+  final Future<ProfileCriticalPackage?>? initialCriticalPackageFuture;
+  final Future<ProfileExtendedPackage?>? initialExtendedPackageFuture;
 
   const UserProfileScreen({
     super.key,
@@ -75,6 +76,9 @@ class UserProfileScreen extends StatefulWidget {
     this.heroTag,
     this.initialPackage,
     this.initialPackageFuture,
+    this.initialCriticalPackage,
+    this.initialCriticalPackageFuture,
+    this.initialExtendedPackageFuture,
   });
 
   @override
@@ -88,11 +92,10 @@ class _UserProfileScreenState extends State<UserProfileScreen>
   late ScrollController _scrollController;
 
   User? user;
-  ProfilePackage? _profilePackage;
+  late final ProfilePackageController _profileController;
   bool isLoading = true;
   List<CommunityPost> _posts = [];
   bool _postsLoading = true;
-  int _currentPage = 1;
   bool _isLastPage = false;
   bool _loadingMore = false;
   String? _postsError;
@@ -153,7 +156,18 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     });
 
     _animationController.forward();
-    _loadUser();
+    _profileController = ProfilePackageController(
+      walletAddress: widget.userId,
+      username: widget.username,
+      initialCriticalPackage: widget.initialCriticalPackage,
+      initialCriticalPackageFuture: widget.initialCriticalPackageFuture,
+      initialExtendedPackageFuture: widget.initialExtendedPackageFuture,
+      initialPackage: widget.initialPackage,
+      initialPackageFuture: widget.initialPackageFuture,
+    );
+    _profileController.addListener(_syncProfileControllerState);
+    _syncProfileControllerState();
+    unawaited(_profileController.load());
 
     try {
       (() async {
@@ -172,6 +186,8 @@ class _UserProfileScreenState extends State<UserProfileScreen>
 
   @override
   void dispose() {
+    _profileController.removeListener(_syncProfileControllerState);
+    _profileController.dispose();
     _animationController.dispose();
     _followButtonController.dispose();
     _scrollController.dispose();
@@ -185,52 +201,34 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     super.dispose();
   }
 
+  void _syncProfileControllerState() {
+    if (!mounted) return;
+    setState(() {
+      user = _profileController.user;
+      isLoading = _profileController.isLoadingCritical;
+      _posts = _profileController.posts;
+      _postsLoading = _profileController.postsLoading;
+      _isLastPage = _profileController.isLastPage;
+      _loadingMore = _profileController.loadingMore;
+      _postsError = _profileController.postsError;
+      _publicStreetArtAddedCount = _profileController.publicStreetArtAddedCount;
+      _artistArtworks = _profileController.artistArtworks;
+      _artistCollections = _profileController.artistCollections;
+      _artistDataLoaded = _profileController.artistDataLoaded;
+      _artistDataLoading = _profileController.artistDataLoading;
+    });
+  }
+
   void _handleIncomingPost(Map<String, dynamic> data) async {
-    try {
-      if (user == null) return;
-      final incomingAuthor =
-          (data['walletAddress'] ?? data['author'] ?? data['authorWallet'])
-              ?.toString();
-      if (incomingAuthor == null) return;
-      if (!WalletUtils.equals(incomingAuthor, user!.id)) return;
-
-      final id = (data['id'] ?? data['postId'] ?? data['post_id'])?.toString();
-      if (id == null) return;
-      if (_posts.any((p) => p.id == id)) return;
-
-      try {
-        final post = await BackendApiService().getCommunityPostById(id);
-        if (!mounted) return;
-        setState(() => _posts.insert(0, post));
-        try {
-          if (user != null) {
-            final updatedPosts = user!.postsCount + 1;
-            user = user!.copyWith(postsCount: updatedPosts);
-            UserService.setUsersInCache([user!]);
-          }
-        } catch (_) {}
-      } catch (e) {
-        debugPrint('Failed to fetch incoming user post $id: $e');
-      }
-    } catch (e) {
-      debugPrint('UserProfile incoming post handler error: $e');
-    }
+    await _profileController.handleIncomingPostData(data);
   }
 
   void _onWalletChanged() async {
     try {
-      if (_posts.isNotEmpty) {
-        final interactionsProvider =
-            context.read<CommunityInteractionsProvider>();
-        final savedItemsProvider = context.read<SavedItemsProvider>();
-        await CommunityService.loadSavedInteractions(
-          _posts,
-          savedItemsProvider: savedItemsProvider,
-        );
-        await interactionsProvider.refreshPostStates(_posts, force: true);
-        if (!mounted) return;
-        setState(() {});
-      }
+      await _profileController.refreshPostInteractions(
+        interactionsProvider: context.read<CommunityInteractionsProvider>(),
+        savedItemsProvider: context.read<SavedItemsProvider>(),
+      );
     } catch (e) {
       debugPrint('Failed to refresh post interactions on wallet change: $e');
     }
@@ -1530,26 +1528,11 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     return ProfileAchievementsPreviewSection(
       mode: ProfileAchievementsPreviewMode.publicProfile,
       compact: true,
-      dataState: _achievementPreviewDataState,
-      publicProgress: _profilePackage?.achievementProgress,
-      publicDefinitions: _profilePackage?.achievementDefinitions,
+      dataState: _profileController.achievementPreviewDataState,
+      publicProgress: _profileController.package?.achievementProgress,
+      publicDefinitions: _profileController.package?.achievementDefinitions,
       showWhenEmpty: true,
     );
-  }
-
-  AchievementPreviewDataState get _achievementPreviewDataState {
-    final package = _profilePackage;
-    if (package == null || !package.isComplete) {
-      return AchievementPreviewDataState.loading;
-    }
-    if (package.achievementsUnavailable) {
-      return AchievementPreviewDataState.unavailable;
-    }
-    if (package.achievementDefinitions.isNotEmpty ||
-        package.achievementProgress.isEmpty) {
-      return AchievementPreviewDataState.ready;
-    }
-    return AchievementPreviewDataState.fallback;
   }
 
   Widget _buildPostsSection(
@@ -1632,312 +1615,44 @@ class _UserProfileScreenState extends State<UserProfileScreen>
 
   // Helper methods
   Future<void> _handleRefresh() async {
-    await _loadUser(
-      showFullScreenLoader: false,
-      forceModalPrefetch: true,
-      forceRefresh: true,
-    );
-  }
-
-  Future<void> _loadUser({
-    bool showFullScreenLoader = true,
-    bool forceModalPrefetch = false,
-    bool forceRefresh = false,
-  }) async {
-    final targetId = widget.userId.trim();
-    final initial = !forceRefresh ? widget.initialPackage : null;
-    final cached = !forceRefresh
-        ? (initial ??
-            ProfilePackageService.getCachedPackage(
-              targetId,
-              allowStale: true,
-            ))
-        : null;
-
-    if (cached != null && cached.isComplete) {
-      _applyProfilePackage(cached);
-      if (!forceRefresh) {
-        unawaited(_refreshProfilePackageInBackground());
-        return;
-      }
-    } else if (showFullScreenLoader) {
-      setState(() => isLoading = true);
-    }
-
-    ProfilePackage? package;
+    await _profileController.refresh();
+    final profile = user;
+    if (!mounted || profile == null) return;
     try {
-      package = !forceRefresh && widget.initialPackageFuture != null
-          ? await widget.initialPackageFuture
-          : await ProfilePackageService.loadPublicProfilePackage(
-              targetId,
-              forceRefresh: forceRefresh,
-              includePosts: true,
-              includeShowcase: true,
-              username: widget.username,
-            );
-    } catch (e) {
-      debugPrint('Failed to fetch profile package: $e');
-    }
-
-    if (!mounted) return;
-
-    if (package == null || !package.isComplete) {
-      setState(() {
-        user = null;
-        _profilePackage = null;
-        isLoading = false;
-      });
-      return;
-    }
-
-    _applyProfilePackage(package);
-
-    if (forceModalPrefetch) {
-      try {
-        await ProfileScreenMethods.prefetchOtherUserProfileData(
-          context,
-          walletAddress: package.user.id,
-          force: true,
-          prefetchStatsSnapshot: false,
-        );
-      } catch (_) {}
-    }
-  }
-
-  void _applyProfilePackage(ProfilePackage package) {
-    if (!mounted) return;
-    setState(() {
-      _profilePackage = package;
-      user = package.user;
-      isLoading = false;
-      _publicStreetArtAddedCount =
-          package.publicStats['publicStreetArtAdded'] ??
-              _publicStreetArtAddedCount;
-
-      final posts = package.initialPosts;
-      if (posts != null) {
-        _posts = List<CommunityPost>.from(posts);
-        _postsLoading = false;
-        _postsError = null;
-        _currentPage = 1;
-        _isLastPage = posts.length < 20;
-        _loadingMore = false;
-      }
-
-      _artistArtworks = package.artistArtworks
-          .map((item) => Map<String, dynamic>.from(item))
-          .toList(growable: false);
-      _artistCollections = package.artistCollections
-          .map((item) => Map<String, dynamic>.from(item))
-          .toList(growable: false);
-      _artistDataLoaded = true;
-      _artistDataLoading = false;
-    });
-  }
-
-  Future<void> _refreshProfilePackageInBackground() async {
-    final targetId = widget.userId.trim();
-    if (targetId.isEmpty) return;
-    try {
-      final fresh = await ProfilePackageService.loadPublicProfilePackage(
-        targetId,
-        forceRefresh: true,
-        includePosts: true,
-        includeShowcase: true,
-        username: widget.username,
+      await ProfileScreenMethods.prefetchOtherUserProfileData(
+        context,
+        walletAddress: profile.id,
+        force: true,
+        prefetchStatsSnapshot: false,
       );
-      if (!mounted || fresh == null || !fresh.isComplete) return;
-      final current = user;
-      if (current != null && !WalletUtils.equals(current.id, fresh.user.id)) {
-        return;
-      }
-      _applyProfilePackage(fresh);
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint(
-            'DesktopUserProfileScreen._refreshProfilePackageInBackground: $e');
-      }
-    }
+    } catch (_) {}
   }
 
   Future<void> _loadPosts() async {
-    if (user == null) return;
     final l10n = AppLocalizations.of(context)!;
-    setState(() {
-      _postsLoading = true;
-      _postsError = null;
-      _currentPage = 1;
-      _isLastPage = false;
-    });
-
-    try {
-      const pageSize = 20;
-      final savedItemsProvider = context.read<SavedItemsProvider>();
-      final posts = await BackendApiService().getCommunityPosts(
-        page: _currentPage,
-        limit: pageSize,
-        authorWallet: user!.id,
-      );
-
-      try {
-        await CommunityService.loadSavedInteractions(
-          posts,
-          savedItemsProvider: savedItemsProvider,
-        );
-        if (mounted) {
-          context
-              .read<CommunityInteractionsProvider>()
-              .hydratePostsFromServer(posts);
-        }
-      } catch (_) {}
-
-      setState(() {
-        _posts = posts;
-        _postsLoading = false;
-        _isLastPage = posts.length < pageSize;
-      });
-
-      try {
-        if (user != null) {
-          user = user!.copyWith(postsCount: posts.length);
-          _profilePackage = _profilePackage?.copyWith(
-            user: user,
-            initialPosts: List<CommunityPost>.from(_posts),
-            publicStats: <String, int>{
-              ...?_profilePackage?.publicStats,
-              'posts': posts.length,
-            },
-          );
-          UserService.setUsersInCache([user!]);
-        }
-      } catch (_) {}
-    } catch (e) {
-      debugPrint('Error loading user posts: $e');
-      setState(() {
-        _posts = [];
-        _postsLoading = false;
-        _postsError = l10n.userProfilePostsLoadFailedDescription;
-      });
-    }
+    await _profileController.loadPosts(
+      interactionsProvider: context.read<CommunityInteractionsProvider>(),
+      savedItemsProvider: context.read<SavedItemsProvider>(),
+      errorMessage: l10n.userProfilePostsLoadFailedDescription,
+    );
   }
 
   Future<void> _loadMorePosts() async {
-    if (user == null || _isLastPage || _loadingMore) return;
     final l10n = AppLocalizations.of(context)!;
-    setState(() {
-      _loadingMore = true;
-      _currentPage += 1;
-    });
-
-    try {
-      const pageSize = 20;
-      final savedItemsProvider = context.read<SavedItemsProvider>();
-      final more = await BackendApiService().getCommunityPosts(
-        page: _currentPage,
-        limit: pageSize,
-        authorWallet: user!.id,
-      );
-
-      try {
-        await CommunityService.loadSavedInteractions(
-          more,
-          savedItemsProvider: savedItemsProvider,
-        );
-        if (mounted) {
-          context
-              .read<CommunityInteractionsProvider>()
-              .hydratePostsFromServer(more);
-        }
-      } catch (_) {}
-
-      setState(() {
-        _posts.addAll(more);
-        _isLastPage = more.length < pageSize;
-        _loadingMore = false;
-      });
-    } catch (e) {
-      debugPrint('Error loading more posts: $e');
-      setState(() {
-        _loadingMore = false;
-        _postsError = l10n.userProfilePostsLoadMoreFailedDescription;
-        if (_currentPage > 1) _currentPage -= 1;
-      });
-    }
+    await _profileController.loadMorePosts(
+      interactionsProvider: context.read<CommunityInteractionsProvider>(),
+      savedItemsProvider: context.read<SavedItemsProvider>(),
+      errorMessage: l10n.userProfilePostsLoadMoreFailedDescription,
+    );
   }
 
   Future<void> _loadUserStats(
       {bool skipFollowersOverwrite = false, bool forceRefresh = false}) async {
-    final profile = user;
-    if (profile == null) return;
-
-    try {
-      final statsProvider = context.read<StatsProvider>();
-      final snapshot = await statsProvider.ensureSnapshot(
-        entityType: 'user',
-        entityId: profile.id,
-        metrics: const [
-          'posts',
-          'followers',
-          'following',
-          'publicStreetArtAdded'
-        ],
-        scope: 'public',
-        forceRefresh: forceRefresh,
-      );
-      if (!mounted) return;
-
-      setState(() {
-        final currentUser = user ?? profile;
-        final counters = snapshot?.counters ?? const <String, int>{};
-
-        final hasPosts = counters.containsKey('posts');
-        final hasFollowers = counters.containsKey('followers');
-        final hasFollowing = counters.containsKey('following');
-        final hasStreetArtAdded = counters.containsKey('publicStreetArtAdded');
-
-        final resolvedPosts =
-            hasPosts ? (counters['posts'] ?? 0) : currentUser.postsCount;
-
-        var resolvedFollowers = hasFollowers
-            ? (counters['followers'] ?? 0)
-            : currentUser.followersCount;
-
-        var resolvedFollowing = hasFollowing
-            ? (counters['following'] ?? 0)
-            : currentUser.followingCount;
-
-        if (skipFollowersOverwrite) {
-          resolvedFollowers = currentUser.followersCount;
-          resolvedFollowing = currentUser.followingCount;
-        }
-
-        final updatedUser = currentUser.copyWith(
-          postsCount: resolvedPosts,
-          followersCount: resolvedFollowers,
-          followingCount: resolvedFollowing,
-        );
-        user = updatedUser;
-        _profilePackage = _profilePackage?.copyWith(
-          user: updatedUser,
-          publicStats: <String, int>{
-            ...?_profilePackage?.publicStats,
-            if (hasPosts) 'posts': resolvedPosts,
-            if (hasFollowers) 'followers': resolvedFollowers,
-            if (hasFollowing) 'following': resolvedFollowing,
-            if (hasStreetArtAdded)
-              'publicStreetArtAdded': counters['publicStreetArtAdded'] ?? 0,
-          },
-        );
-
-        if (hasStreetArtAdded) {
-          _publicStreetArtAddedCount = counters['publicStreetArtAdded'] ?? 0;
-        }
-      });
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('DesktopUserProfileScreen._loadUserStats: $e');
-      }
-    }
+    await _profileController.loadStats(
+      statsProvider: context.read<StatsProvider>(),
+      skipFollowersOverwrite: skipFollowersOverwrite,
+      forceRefresh: forceRefresh,
+    );
   }
 
   Future<void> _toggleFollow() async {
@@ -1992,13 +1707,12 @@ class _UserProfileScreenState extends State<UserProfileScreen>
 
     final currentUser = user ?? profile;
 
-    setState(() {
-      user = currentUser.copyWith(
+    _profileController.patchUser((_) {
+      return currentUser.copyWith(
         isFollowing: mutation.isFollowing,
         followersCount: mutation.followersCount ?? currentUser.followersCount,
         followingCount: mutation.followingCount ?? currentUser.followingCount,
       );
-      _profilePackage = _profilePackage?.copyWith(user: user);
     });
 
     if (!mutation.hasCanonicalCounters) {
@@ -2037,40 +1751,13 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       ));
     } catch (_) {}
 
-    try {
-      if (user != null) UserService.setUsersInCache([user!]);
-    } catch (_) {}
-
     if (mounted) {
       setState(() => _isFollowMutationInFlight = false);
     }
   }
 
   Future<void> _refreshFollowStateFromServer() async {
-    final current = user;
-    if (current == null) return;
-
-    try {
-      final fresh = await UserService.getUserById(
-        current.id,
-        forceRefresh: true,
-        includeAchievements: false,
-      );
-      if (!mounted || fresh == null) return;
-
-      setState(() {
-        final latest = user ?? current;
-        user = latest.copyWith(
-          isFollowing: fresh.isFollowing,
-        );
-        _profilePackage = _profilePackage?.copyWith(user: user);
-      });
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint(
-            'DesktopUserProfileScreen._refreshFollowStateFromServer: $e');
-      }
-    }
+    await _profileController.refreshFollowStateFromServer();
   }
 
   Future<void> _openConversation() async {
