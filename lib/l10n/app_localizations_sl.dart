@@ -9,13 +9,13 @@ class AppLocalizationsSl extends AppLocalizations {
   AppLocalizationsSl([String locale = 'sl']) : super(locale);
 
   @override
-  String get appTitle => 'art.kubus';
-
-  @override
-  String get appTagline => 'kubus je tvoj sopotnik v umetnosti.';
+  String get appTagline => 'kubus - tvoj sopotnik v umetnosti.';
 
   @override
   String get appTaglineSupport => 'Vodnik za odkrivanje umetnosti, krajev in ljudi okoli tebe.';
+
+  @override
+  String get appTitle => 'art.kubus';
 
   @override
   String get appExitConfirmBackHint => 'Za izhod iz aplikacije še enkrat povleci ali pritisni nazaj.';
@@ -926,7 +926,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get onboardingFlowTitle => 'Hitra nastavitev';
 
   @override
-  String get onboardingFlowWelcomeTitle => 'kubus je tvoj sopotnik v umetnosti.';
+  String get onboardingFlowWelcomeTitle => 'kubus - tvoj sopotnik v umetnosti.';
 
   @override
   String get onboardingFlowWelcomeBody => 'Začni pri umetnosti, krajih in skupnosti. Račun in izbirna denarniška orodja lahko počakajo.';
@@ -1232,7 +1232,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get onboardingFlowDaoReviewSubmitAction => 'Oddaj za skupnostni pregled';
 
   @override
-  String get onboardingWelcomeTitle => 'kubus je tvoj sopotnik v umetnosti.';
+  String get onboardingWelcomeTitle => 'kubus - tvoj sopotnik v umetnosti.';
 
   @override
   String get onboardingWelcomeSubtitle => 'Umetnost, kraji in skupnost skupaj';
@@ -8862,7 +8862,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get homeDefaultDisplayName => 'prijatelj';
 
   @override
-  String get homeWelcomeSubtitle => 'kubus je tvoj sopotnik v umetnosti.';
+  String get homeWelcomeSubtitle => 'kubus - tvoj sopotnik v umetnosti.';
 
   @override
   String get homeExploreWeb3Button => 'Izbirna denarniška orodja';
@@ -9034,7 +9034,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get desktopHomeWelcomeFallbackName => 'Dobrodošel/a v art.kubus';
 
   @override
-  String get desktopHomeDiscoverArtTitle => 'kubus je tvoj sopotnik v umetnosti.';
+  String get desktopHomeDiscoverArtTitle => 'kubus - tvoj sopotnik v umetnosti.';
 
   @override
   String get desktopHomeDiscoverArtDescription => 'Odkrivaj umetnine, kraje, ustvarjalce in institucije v javnem prostoru in na spletu. Denarniška orodja so izbirna, AR plasti pa v razvoju.';

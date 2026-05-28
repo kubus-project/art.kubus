@@ -9,13 +9,13 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
-  String get appTitle => 'art.kubus';
-
-  @override
-  String get appTagline => 'kubus is your art companion.';
+  String get appTagline => 'kubus - your art companion.';
 
   @override
   String get appTaglineSupport => 'A guide for discovering art, places, and people around you.';
+
+  @override
+  String get appTitle => 'art.kubus';
 
   @override
   String get appExitConfirmBackHint => 'Swipe or press back again to exit the app.';
@@ -714,7 +714,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authVerifyEmailHighlightInbox => 'Open your email app and find our message';
 
   @override
-  String get authVerifyEmailHighlightSpam => 'Check spam/junk if you don’t see it';
+  String get authVerifyEmailHighlightSpam => 'Check spam/junk if you don\'t see it';
 
   @override
   String get authVerifyEmailHighlightSecure => 'Links expire for security';
@@ -753,7 +753,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authForgotPasswordTitle => 'Reset your password';
 
   @override
-  String get authForgotPasswordSubtitle => 'Enter your email and we’ll send a reset link.';
+  String get authForgotPasswordSubtitle => 'Enter your email and we\'ll send a reset link.';
 
   @override
   String get authForgotPasswordHighlightOne => 'We never reveal whether an email exists';
@@ -884,7 +884,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authSecureAccountVerificationSentTitle => 'Verification email sent';
 
   @override
-  String get authSecureAccountVerificationSentSubtitle => 'You’re still signed in. Verify when you can.';
+  String get authSecureAccountVerificationSentSubtitle => 'You\'re still signed in. Verify when you can.';
 
   @override
   String get authSecureAccountSecuredTitle => 'Account secured';
@@ -926,7 +926,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingFlowTitle => 'Your quick setup';
 
   @override
-  String get onboardingFlowWelcomeTitle => 'kubus is your art companion.';
+  String get onboardingFlowWelcomeTitle => 'kubus - your art companion.';
 
   @override
   String get onboardingFlowWelcomeBody => 'Start with art, places, and community. Account setup and optional wallet tools can wait.';
@@ -1067,7 +1067,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingFlowFollowBody => 'Pick a few creators to personalize your feed.';
 
   @override
-  String get onboardingFlowDoneTitle => 'You’re all set';
+  String get onboardingFlowDoneTitle => 'You\'re all set';
 
   @override
   String get onboardingFlowDoneBody => 'Your space is ready. Start exploring art, places, and community.';
@@ -1094,7 +1094,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingFlowUnknownArtist => 'Artist';
 
   @override
-  String get onboardingFlowFollowFailed => 'Couldn’t update follow status. Please try again.';
+  String get onboardingFlowFollowFailed => 'Couldn\'t update follow status. Please try again.';
 
   @override
   String get onboardingFlowVerifyContinue => 'I verified / Continue';
@@ -1232,7 +1232,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingFlowDaoReviewSubmitAction => 'Submit for community review';
 
   @override
-  String get onboardingWelcomeTitle => 'kubus is your art companion.';
+  String get onboardingWelcomeTitle => 'kubus - your art companion.';
 
   @override
   String get onboardingWelcomeSubtitle => 'Art, places, and community together';
@@ -3760,7 +3760,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mapTutorialStepMarkersTitle => 'Markers & types';
 
   @override
-  String get mapTutorialStepMarkersBody => 'Markers can represent artworks, exhibitions, events, institutions, and more. Colors/icons help you spot what’s what.';
+  String get mapTutorialStepMarkersBody => 'Markers can represent artworks, exhibitions, events, institutions, and more. Colors/icons help you spot what\'s what.';
 
   @override
   String get mapTutorialStepCreateMarkerTitle => 'Create a marker';
@@ -3814,7 +3814,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mapTravelModeTutorialTitle => 'Explore beyond nearby';
 
   @override
-  String get mapTravelModeTutorialBody => 'Travel mode lets you browse markers anywhere. The map loads what’s currently in view.';
+  String get mapTravelModeTutorialBody => 'Travel mode lets you browse markers anywhere. The map loads what\'s currently in view.';
 
   @override
   String get mapTravelModeTutorialHint => 'Tip: Pan and zoom - markers refresh to match the viewport.';
@@ -3959,7 +3959,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get arWebFallbackFeature => 'AR experience';
 
   @override
-  String get arWebFallbackDescription => 'Augmented Reality (AR) features require native device capabilities. Download the art.kubus app to view digital artworks in your physical space using your phone’s camera.';
+  String get arWebFallbackDescription => 'Augmented Reality (AR) features require native device capabilities. Download the art.kubus app to view digital artworks in your physical space using your phone\'s camera.';
 
   @override
   String get arModeScanName => 'Scan';
@@ -5237,7 +5237,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get connectWalletOptionRegisterDescription => 'Register with your e-mail or Google account';
 
   @override
-  String get connectWalletHybridHelpLink => 'What’s WalletConnect?';
+  String get connectWalletHybridHelpLink => 'What\'s WalletConnect?';
 
   @override
   String get connectWalletLinkExistingTitle => 'Link existing wallet';
@@ -5327,7 +5327,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get connectWalletMnemonicDialogConfirmButton => 'I’ve saved it';
+  String get connectWalletMnemonicDialogConfirmButton => 'I\'ve saved it';
 
   @override
   String get connectWalletConnectedTitle => 'Wallet connected';
@@ -5342,7 +5342,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get connectWalletConnectedDisconnectButton => 'Disconnect wallet';
 
   @override
-  String get connectWalletWeb3GuideTitle => 'What’s a wallet?';
+  String get connectWalletWeb3GuideTitle => 'What\'s a wallet?';
 
   @override
   String get connectWalletWeb3GuideDescription => 'Your account wallet keeps access and ownership in your hands. It also enables features that need proof of ownership, without giving your keys to us:';
@@ -5440,7 +5440,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get connectWalletWalletConnectConnectButton => 'Connect';
 
   @override
-  String get connectWalletWalletConnectNoWalletPrefix => 'Don’t have a wallet yet?';
+  String get connectWalletWalletConnectNoWalletPrefix => 'Don\'t have a wallet yet?';
 
   @override
   String get connectWalletWalletConnectNoWalletLink => 'Create one';
@@ -5906,7 +5906,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String receiveTokenSidebarTransferSubtitle(Object token, Object amount, Object date) {
-    return '$token • $amount • $date';
+    return '$token · $amount · $date';
   }
 
   @override
@@ -5958,7 +5958,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String sendTokenSidebarRecipientSubtitle(Object token, Object amount, Object date) {
-    return '$token • $amount • $date';
+    return '$token · $amount · $date';
   }
 
   @override
@@ -7435,7 +7435,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get marketplaceOwnedNftStatus => 'Owned NFT';
 
   @override
-  String get marketplaceOwnedNftListedStatus => 'Owned NFT • Listed for sale';
+  String get marketplaceOwnedNftListedStatus => 'Owned NFT · Listed for sale';
 
   @override
   String get marketplaceEmptyCollectionTitle => 'No collectibles yet';
@@ -7513,7 +7513,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get marketplaceNftArtworkStatus => 'NFT Artwork';
 
   @override
-  String get marketplaceNftArtworkStatusArEnabled => 'NFT Artwork • AR Enabled';
+  String get marketplaceNftArtworkStatusArEnabled => 'NFT Artwork · AR Enabled';
 
   @override
   String get marketplaceMintUnavailableLabel => 'Mint unavailable';
@@ -7815,7 +7815,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get daoProposalRequirementClearlyDefined => 'Proposal must be clearly defined';
 
   @override
-  String get daoProposalRequirementVotingPeriod => 'Voting period: 3–14 days';
+  String get daoProposalRequirementVotingPeriod => 'Voting period: 3-14 days';
 
   @override
   String get daoProposalRequirementQuorumTargets => 'Quorum targets are enforced by DAO config';
@@ -8517,7 +8517,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityComposerTitle => 'Compose';
 
   @override
-  String get communityComposerTextHint => 'Share what you’re making, discovering, or working on…';
+  String get communityComposerTextHint => 'Share what you\'re making, discovering, or working on…';
 
   @override
   String get communityComposerTagsLabel => 'Tags';
@@ -8548,7 +8548,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityComposerTargetGroupLabel => 'Target group';
 
   @override
-  String get communityComposerGroupOptionalHelper => 'Optional • Join a group to unlock curator chats.';
+  String get communityComposerGroupOptionalHelper => 'Optional · Join a group to unlock curator chats.';
 
   @override
   String communityComposerPostingInGroupHelper(Object groupName) {
@@ -8842,7 +8842,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeDefaultDisplayName => 'there';
 
   @override
-  String get homeWelcomeSubtitle => 'kubus is your art companion.';
+  String get homeWelcomeSubtitle => 'kubus - your art companion.';
 
   @override
   String get homeExploreWeb3Button => 'Optional wallet tools';
@@ -9014,7 +9014,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopHomeWelcomeFallbackName => 'Welcome to art.kubus';
 
   @override
-  String get desktopHomeDiscoverArtTitle => 'kubus is your art companion.';
+  String get desktopHomeDiscoverArtTitle => 'kubus - your art companion.';
 
   @override
   String get desktopHomeDiscoverArtDescription => 'Discover artworks, places, creators, and institutions across public space and online. Wallet tools are optional, and AR layers are in development.';
@@ -9666,7 +9666,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String walletSwapRecentPairSubtitle(Object amount, Object date) {
-    return '$amount • $date';
+    return '$amount · $date';
   }
 
   @override
@@ -9703,7 +9703,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String walletSwapSubmitLabel(Object fromToken, Object toToken) {
-    return 'Swap $fromToken → $toToken';
+    return 'Swap $fromToken ? $toToken';
   }
 
   @override
@@ -9726,12 +9726,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String walletSwapSubmittedToast(Object fromToken, Object toToken) {
-    return 'Swap submitted: $fromToken → $toToken';
+    return 'Swap submitted: $fromToken ? $toToken';
   }
 
   @override
   String walletSwapSubmittedToastWithSignature(Object fromToken, Object toToken, Object signature) {
-    return 'Swap submitted: $fromToken → $toToken. Tx: $signature';
+    return 'Swap submitted: $fromToken ? $toToken. Tx: $signature';
   }
 
   @override
@@ -9823,7 +9823,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String walletSwapTokenOptionSubtitle(Object symbol, Object balance) {
-    return '$symbol • Balance $balance';
+    return '$symbol · Balance $balance';
   }
 
   @override
@@ -11725,7 +11725,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String daoProposalVotesSupportSummaryLabel(Object totalVotes, Object supportPct) {
-    return '$totalVotes votes • $supportPct% support';
+    return '$totalVotes votes · $supportPct% support';
   }
 
   @override

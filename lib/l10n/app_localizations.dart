@@ -95,16 +95,10 @@ abstract class AppLocalizations {
     Locale('sl')
   ];
 
-  /// No description provided for @appTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'art.kubus'**
-  String get appTitle;
-
   /// No description provided for @appTagline.
   ///
   /// In en, this message translates to:
-  /// **'kubus is your art companion.'**
+  /// **'kubus - your art companion.'**
   String get appTagline;
 
   /// No description provided for @appTaglineSupport.
@@ -112,6 +106,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'A guide for discovering art, places, and people around you.'**
   String get appTaglineSupport;
+
+  /// No description provided for @appTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'art.kubus'**
+  String get appTitle;
 
   /// No description provided for @appExitConfirmBackHint.
   ///
@@ -1220,7 +1220,7 @@ abstract class AppLocalizations {
   /// No description provided for @authHighlightOnboardingOptions.
   ///
   /// In en, this message translates to:
-  /// **'Choose email, Google, or wallet sign-in'**
+  /// **'Choose email, Google, or optional wallet sign-in'**
   String get authHighlightOnboardingOptions;
 
   /// No description provided for @authHighlightKeysLocal.
@@ -1496,7 +1496,7 @@ abstract class AppLocalizations {
   /// No description provided for @authVerifyEmailHighlightSpam.
   ///
   /// In en, this message translates to:
-  /// **'Check spam/junk if you don’t see it'**
+  /// **'Check spam/junk if you don\'t see it'**
   String get authVerifyEmailHighlightSpam;
 
   /// No description provided for @authVerifyEmailHighlightSecure.
@@ -1574,7 +1574,7 @@ abstract class AppLocalizations {
   /// No description provided for @authForgotPasswordSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Enter your email and we’ll send a reset link.'**
+  /// **'Enter your email and we\'ll send a reset link.'**
   String get authForgotPasswordSubtitle;
 
   /// No description provided for @authForgotPasswordHighlightOne.
@@ -1832,7 +1832,7 @@ abstract class AppLocalizations {
   /// No description provided for @authSecureAccountVerificationSentSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'You’re still signed in. Verify when you can.'**
+  /// **'You\'re still signed in. Verify when you can.'**
   String get authSecureAccountVerificationSentSubtitle;
 
   /// No description provided for @authSecureAccountSecuredTitle.
@@ -1916,7 +1916,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingFlowWelcomeTitle.
   ///
   /// In en, this message translates to:
-  /// **'kubus is your art companion.'**
+  /// **'kubus - your art companion.'**
   String get onboardingFlowWelcomeTitle;
 
   /// No description provided for @onboardingFlowWelcomeBody.
@@ -2198,7 +2198,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingFlowDoneTitle.
   ///
   /// In en, this message translates to:
-  /// **'You’re all set'**
+  /// **'You\'re all set'**
   String get onboardingFlowDoneTitle;
 
   /// No description provided for @onboardingFlowDoneBody.
@@ -2252,7 +2252,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingFlowFollowFailed.
   ///
   /// In en, this message translates to:
-  /// **'Couldn’t update follow status. Please try again.'**
+  /// **'Couldn\'t update follow status. Please try again.'**
   String get onboardingFlowFollowFailed;
 
   /// No description provided for @onboardingFlowVerifyContinue.
@@ -2516,7 +2516,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingWelcomeTitle.
   ///
   /// In en, this message translates to:
-  /// **'kubus is your art companion.'**
+  /// **'kubus - your art companion.'**
   String get onboardingWelcomeTitle;
 
   /// No description provided for @onboardingWelcomeSubtitle.
@@ -7436,7 +7436,7 @@ abstract class AppLocalizations {
   /// Body text for the markers/types step of the interactive map tutorial.
   ///
   /// In en, this message translates to:
-  /// **'Markers can represent artworks, exhibitions, events, institutions, and more. Colors/icons help you spot what’s what.'**
+  /// **'Markers can represent artworks, exhibitions, events, institutions, and more. Colors/icons help you spot what\'s what.'**
   String get mapTutorialStepMarkersBody;
 
   /// Title for the create-marker step of the interactive map tutorial.
@@ -7544,7 +7544,7 @@ abstract class AppLocalizations {
   /// No description provided for @mapTravelModeTutorialBody.
   ///
   /// In en, this message translates to:
-  /// **'Travel mode lets you browse markers anywhere. The map loads what’s currently in view.'**
+  /// **'Travel mode lets you browse markers anywhere. The map loads what\'s currently in view.'**
   String get mapTravelModeTutorialBody;
 
   /// No description provided for @mapTravelModeTutorialHint.
@@ -7814,7 +7814,7 @@ abstract class AppLocalizations {
   /// No description provided for @arWebFallbackDescription.
   ///
   /// In en, this message translates to:
-  /// **'Augmented Reality (AR) features require native device capabilities. Download the art.kubus app to view digital artworks in your physical space using your phone’s camera.'**
+  /// **'Augmented Reality (AR) features require native device capabilities. Download the art.kubus app to view digital artworks in your physical space using your phone\'s camera.'**
   String get arWebFallbackDescription;
 
   /// No description provided for @arModeScanName.
@@ -10118,7 +10118,7 @@ abstract class AppLocalizations {
   /// No description provided for @connectWalletHybridHelpLink.
   ///
   /// In en, this message translates to:
-  /// **'What’s WalletConnect?'**
+  /// **'What\'s WalletConnect?'**
   String get connectWalletHybridHelpLink;
 
   /// No description provided for @connectWalletLinkExistingTitle.
@@ -10286,7 +10286,7 @@ abstract class AppLocalizations {
   /// No description provided for @connectWalletMnemonicDialogConfirmButton.
   ///
   /// In en, this message translates to:
-  /// **'I’ve saved it'**
+  /// **'I\'ve saved it'**
   String get connectWalletMnemonicDialogConfirmButton;
 
   /// No description provided for @connectWalletConnectedTitle.
@@ -10316,7 +10316,7 @@ abstract class AppLocalizations {
   /// No description provided for @connectWalletWeb3GuideTitle.
   ///
   /// In en, this message translates to:
-  /// **'What’s a wallet?'**
+  /// **'What\'s a wallet?'**
   String get connectWalletWeb3GuideTitle;
 
   /// No description provided for @connectWalletWeb3GuideDescription.
@@ -10508,7 +10508,7 @@ abstract class AppLocalizations {
   /// No description provided for @connectWalletWalletConnectNoWalletPrefix.
   ///
   /// In en, this message translates to:
-  /// **'Don’t have a wallet yet?'**
+  /// **'Don\'t have a wallet yet?'**
   String get connectWalletWalletConnectNoWalletPrefix;
 
   /// No description provided for @connectWalletWalletConnectNoWalletLink.
@@ -11366,7 +11366,7 @@ abstract class AppLocalizations {
   /// No description provided for @receiveTokenSidebarTransferSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'{token} • {amount} • {date}'**
+  /// **'{token} · {amount} · {date}'**
   String receiveTokenSidebarTransferSubtitle(Object token, Object amount, Object date);
 
   /// No description provided for @sendTokenTitle.
@@ -11462,7 +11462,7 @@ abstract class AppLocalizations {
   /// No description provided for @sendTokenSidebarRecipientSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'{token} • {amount} • {date}'**
+  /// **'{token} · {amount} · {date}'**
   String sendTokenSidebarRecipientSubtitle(Object token, Object amount, Object date);
 
   /// No description provided for @sendTokenSidebarSummaryTitle.
@@ -14258,7 +14258,7 @@ abstract class AppLocalizations {
   /// No description provided for @marketplaceOwnedNftListedStatus.
   ///
   /// In en, this message translates to:
-  /// **'Owned NFT • Listed for sale'**
+  /// **'Owned NFT · Listed for sale'**
   String get marketplaceOwnedNftListedStatus;
 
   /// No description provided for @marketplaceEmptyCollectionTitle.
@@ -14414,7 +14414,7 @@ abstract class AppLocalizations {
   /// No description provided for @marketplaceNftArtworkStatusArEnabled.
   ///
   /// In en, this message translates to:
-  /// **'NFT Artwork • AR Enabled'**
+  /// **'NFT Artwork · AR Enabled'**
   String get marketplaceNftArtworkStatusArEnabled;
 
   /// No description provided for @marketplaceMintUnavailableLabel.
@@ -14978,7 +14978,7 @@ abstract class AppLocalizations {
   /// No description provided for @daoProposalRequirementVotingPeriod.
   ///
   /// In en, this message translates to:
-  /// **'Voting period: 3–14 days'**
+  /// **'Voting period: 3-14 days'**
   String get daoProposalRequirementVotingPeriod;
 
   /// No description provided for @daoProposalRequirementQuorumTargets.
@@ -16250,7 +16250,7 @@ abstract class AppLocalizations {
   /// No description provided for @communityComposerTextHint.
   ///
   /// In en, this message translates to:
-  /// **'Share what you’re making, discovering, or working on…'**
+  /// **'Share what you\'re making, discovering, or working on…'**
   String get communityComposerTextHint;
 
   /// No description provided for @communityComposerTagsLabel.
@@ -16304,7 +16304,7 @@ abstract class AppLocalizations {
   /// No description provided for @communityComposerGroupOptionalHelper.
   ///
   /// In en, this message translates to:
-  /// **'Optional • Join a group to unlock curator chats.'**
+  /// **'Optional · Join a group to unlock curator chats.'**
   String get communityComposerGroupOptionalHelper;
 
   /// No description provided for @communityComposerPostingInGroupHelper.
@@ -16856,7 +16856,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeWelcomeSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'kubus is your art companion.'**
+  /// **'kubus - your art companion.'**
   String get homeWelcomeSubtitle;
 
   /// No description provided for @homeExploreWeb3Button.
@@ -17066,7 +17066,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeNoRecentActivityTitle.
   ///
   /// In en, this message translates to:
-  /// **'No recent activity'**
+  /// **'Your first artwork is waiting.'**
   String get homeNoRecentActivityTitle;
 
   /// No description provided for @homeNoRecentActivityDescription.
@@ -17192,7 +17192,7 @@ abstract class AppLocalizations {
   /// No description provided for @desktopHomeDiscoverArtTitle.
   ///
   /// In en, this message translates to:
-  /// **'kubus is your art companion.'**
+  /// **'kubus - your art companion.'**
   String get desktopHomeDiscoverArtTitle;
 
   /// No description provided for @desktopHomeDiscoverArtDescription.
@@ -17426,7 +17426,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeWeb3SectionTitle.
   ///
   /// In en, this message translates to:
-  /// **'Wallet'**
+  /// **'Optional wallet tools'**
   String get homeWeb3SectionTitle;
 
   /// No description provided for @homeAccountRequiredLabel.
@@ -18434,7 +18434,7 @@ abstract class AppLocalizations {
   /// No description provided for @walletSwapRecentPairSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'{amount} • {date}'**
+  /// **'{amount} · {date}'**
   String walletSwapRecentPairSubtitle(Object amount, Object date);
 
   /// No description provided for @walletSwapSecuritySubtitle.
@@ -18500,7 +18500,7 @@ abstract class AppLocalizations {
   /// No description provided for @walletSwapSubmitLabel.
   ///
   /// In en, this message translates to:
-  /// **'Swap {fromToken} → {toToken}'**
+  /// **'Swap {fromToken} ? {toToken}'**
   String walletSwapSubmitLabel(Object fromToken, Object toToken);
 
   /// No description provided for @walletSwapNoHistoryTitle.
@@ -18542,13 +18542,13 @@ abstract class AppLocalizations {
   /// No description provided for @walletSwapSubmittedToast.
   ///
   /// In en, this message translates to:
-  /// **'Swap submitted: {fromToken} → {toToken}'**
+  /// **'Swap submitted: {fromToken} ? {toToken}'**
   String walletSwapSubmittedToast(Object fromToken, Object toToken);
 
   /// No description provided for @walletSwapSubmittedToastWithSignature.
   ///
   /// In en, this message translates to:
-  /// **'Swap submitted: {fromToken} → {toToken}. Tx: {signature}'**
+  /// **'Swap submitted: {fromToken} ? {toToken}. Tx: {signature}'**
   String walletSwapSubmittedToastWithSignature(Object fromToken, Object toToken, Object signature);
 
   /// No description provided for @walletTransactionConfirmationsLabel.
@@ -18716,7 +18716,7 @@ abstract class AppLocalizations {
   /// No description provided for @walletSwapTokenOptionSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'{symbol} • Balance {balance}'**
+  /// **'{symbol} · Balance {balance}'**
   String walletSwapTokenOptionSubtitle(Object symbol, Object balance);
 
   /// No description provided for @manageMarkersTitle.
@@ -22244,7 +22244,7 @@ abstract class AppLocalizations {
   /// No description provided for @daoProposalVotesSupportSummaryLabel.
   ///
   /// In en, this message translates to:
-  /// **'{totalVotes} votes • {supportPct}% support'**
+  /// **'{totalVotes} votes · {supportPct}% support'**
   String daoProposalVotesSupportSummaryLabel(Object totalVotes, Object supportPct);
 
   /// No description provided for @commonSearchHint.
