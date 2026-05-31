@@ -202,10 +202,10 @@ class Web3Provider extends ChangeNotifier {
 
   Future<String> mintArtworkNFT(Map<String, dynamic> metadata) async {
     if (!_boundWalletProvider.authority.canTransact) {
-      throw Exception('Wallet signer required for NFT minting');
+      throw Exception('Wallet signer required for archive object creation');
     }
     if (!_boundWalletProvider.hasLocalSigner) {
-      throw Exception('Local signer required for NFT minting');
+      throw Exception('Local signer required for archive object creation');
     }
     return _boundWalletProvider.solanaWalletService.mintNft(metadata: metadata);
   }

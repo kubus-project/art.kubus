@@ -638,7 +638,7 @@ class ExploreOnlyApp extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => _showWalletPrompt(context),
-            child: const Text('Connect Wallet'),
+            child: const Text('Connect optional wallet'),
           ),
         ],
       ),
@@ -691,8 +691,8 @@ class ExploreOnlyApp extends StatelessWidget {
                   const SizedBox(height: 12),
                   _buildFeatureCard(
                     context,
-                    'Marketplace',
-                    'Discover and trade NFT artworks',
+                    'Digital artifacts',
+                    'Discover optional archive objects connected to artworks',
                     Icons.store,
                     () => _showWalletPrompt(context),
                   ),
@@ -705,7 +705,7 @@ class ExploreOnlyApp extends StatelessWidget {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showWalletPrompt(context),
         icon: const Icon(Icons.account_balance_wallet),
-        label: const Text('Connect Wallet'),
+        label: const Text('Connect optional wallet'),
       ),
     );
   }
@@ -758,7 +758,7 @@ class WalletPromptScreen extends StatelessWidget {
             color: Theme.of(context).primaryColor,
           ),
           const SizedBox(width: 8),
-          const Text('Connect Wallet'),
+          const Text('Connect optional wallet'),
         ],
       ),
       content: Column(
@@ -778,13 +778,13 @@ class WalletPromptScreen extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           const Text(
-            'To access this feature, you need to connect a Web3 wallet.',
+            'This optional infrastructure feature uses a wallet for attribution and archive records.',
             style: TextStyle(fontSize: 16),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
           const Text(
-            'Set up your secure wallet to unlock:',
+            'Set up wallet access only if you want:',
             style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
             textAlign: TextAlign.center,
           ),
@@ -797,7 +797,7 @@ class WalletPromptScreen extends StatelessWidget {
                 children: [
                   Icon(Icons.check_circle, color: Colors.green, size: 16),
                   SizedBox(width: 8),
-                  Text('• Buy and sell NFTs'),
+                  Text('• Digital archive objects'),
                 ],
               ),
               SizedBox(height: 4),
@@ -839,7 +839,7 @@ class WalletPromptScreen extends StatelessWidget {
             );
           },
           icon: const Icon(Icons.arrow_forward),
-          label: const Text('Set Up Wallet'),
+          label: const Text('Set up optional wallet'),
           style: ElevatedButton.styleFrom(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           ),

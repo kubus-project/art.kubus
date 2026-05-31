@@ -82,7 +82,7 @@ class AchievementDefinition {
   });
 }
 
-/// Achievement Service - Manages achievements, token rewards, and POAPs
+/// Achievement Service - Manages achievements, recognition, and attendance records
 class AchievementService {
   static final AchievementService _instance = AchievementService._internal();
   factory AchievementService() => _instance;
@@ -160,12 +160,12 @@ class AchievementService {
       rarity: CollectibleRarity.epic,
     ),
 
-    // NFT achievements
+    // Digital archive object achievements
     AchievementType.firstNFTMint: AchievementDefinition(
       type: AchievementType.firstNFTMint,
       id: 'first_nft_mint',
-      title: 'NFT Creator',
-      description: 'Minted your first NFT',
+      title: 'Archive Object Creator',
+      description: 'Created your first digital archive object',
       tokenReward: 25,
       requiredCount: 1,
       rarity: CollectibleRarity.uncommon,
@@ -173,8 +173,8 @@ class AchievementService {
     AchievementType.nftCollector: AchievementDefinition(
       type: AchievementType.nftCollector,
       id: 'nft_collector',
-      title: 'NFT Collector',
-      description: 'Own 10 NFTs',
+      title: 'Archive Collector',
+      description: 'Hold 10 digital archive objects',
       tokenReward: 150,
       requiredCount: 10,
       rarity: CollectibleRarity.rare,
@@ -182,8 +182,8 @@ class AchievementService {
     AchievementType.nftTrader: AchievementDefinition(
       type: AchievementType.nftTrader,
       id: 'nft_trader',
-      title: 'NFT Trader',
-      description: 'Completed 5 NFT trades',
+      title: 'Archive Supporter',
+      description: 'Completed 5 digital archive object interactions',
       tokenReward: 100,
       requiredCount: 5,
       rarity: CollectibleRarity.rare,
@@ -260,8 +260,8 @@ class AchievementService {
     AchievementType.firstTrade: AchievementDefinition(
       type: AchievementType.firstTrade,
       id: 'first_trade',
-      title: 'First Trade',
-      description: 'Completed your first NFT trade',
+      title: 'First Archive Exchange',
+      description: 'Completed your first archive object exchange',
       tokenReward: 20,
       requiredCount: 1,
       rarity: CollectibleRarity.uncommon,
@@ -527,7 +527,7 @@ class AchievementService {
     }
   }
 
-  /// Get user's total earned tokens
+  /// Get user's total recorded recognition
   Future<int> getTotalEarnedTokens() async {
     try {
       final prefs = await SharedPreferences.getInstance();

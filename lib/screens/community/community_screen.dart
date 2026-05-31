@@ -5012,7 +5012,7 @@ class _CommunityScreenState extends State<CommunityScreen>
         ScaffoldMessenger.of(context).showKubusSnackBar(
           SnackBar(
             content: Text(
-              'Achievement unlocked\n${first.title}$extra\n+${first.kub8Reward.round()} ${first.rewardCurrency}',
+              'Achievement unlocked\n${first.title}$extra\n+${first.kub8Reward.round()} ${first.rewardCurrency} recognition',
             ),
             action: SnackBarAction(
               label: 'View achievements',

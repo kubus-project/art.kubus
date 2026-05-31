@@ -176,8 +176,8 @@ const List<Task> allTasks = [
     ),
     Task(
       id: 'mega_collector',
-      name: 'NFT Trader',
-      description: 'Complete 5 NFT trades',
+      name: 'Archive Supporter',
+      description: 'Complete 5 digital archive object interactions',
       icon: Icons.collections_bookmark,
       category: 'Collection',
       achievementIds: ['nft_trader'],

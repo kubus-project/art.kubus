@@ -1268,7 +1268,8 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
       itemCount: _nfts.length,
       itemBuilder: (context, index) {
         final nft = _nfts[index];
-        final title = (nft['name'] ?? nft['title'] ?? 'NFT').toString();
+        final title =
+            (nft['name'] ?? nft['title'] ?? 'Archive object').toString();
         final imageUrl =
             (nft['image'] ?? nft['imageUrl'] ?? nft['preview'])?.toString();
         final creator = (nft['creator'] ?? nft['artist'] ?? '').toString();

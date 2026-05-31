@@ -146,7 +146,8 @@ class AnalyticsPresets {
     kind: AnalyticsPresetKind.artist,
     contextKey: AnalyticsFiltersProvider.artistContextKey,
     title: 'Artist analytics',
-    subtitle: 'Artwork reach, collector response, AR activity, and rewards.',
+    subtitle:
+        'Artwork reach, community response, AR activity, and recognition.',
     scopeLabel: 'Artist studio',
     entityType: AnalyticsEntityType.user,
     icon: Icons.palette_outlined,
@@ -176,7 +177,7 @@ class AnalyticsPresets {
     kind: AnalyticsPresetKind.institution,
     contextKey: AnalyticsFiltersProvider.institutionContextKey,
     title: 'Institution analytics',
-    subtitle: 'Visitor reach, hosted programs, exhibitions, and rewards.',
+    subtitle: 'Visitor reach, hosted programs, exhibitions, and recognition.',
     scopeLabel: 'Institution hub',
     entityType: AnalyticsEntityType.user,
     icon: Icons.account_balance_outlined,

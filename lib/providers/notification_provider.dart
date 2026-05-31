@@ -846,7 +846,7 @@ class NotificationProvider extends ChangeNotifier {
             break;
           case 'reward':
             await _pushService.showRewardNotification(
-                title: 'You got a reward!',
+                title: 'Recognition recorded',
                 amount: payload['amount'] ?? 0,
                 reason: payload['reason'] ?? '');
             break;

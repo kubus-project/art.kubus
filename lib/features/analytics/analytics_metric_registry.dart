@@ -187,8 +187,8 @@ class AnalyticsMetricRegistry {
     ),
     AnalyticsMetricDefinition(
       id: 'nftsMinted',
-      label: 'NFTs minted',
-      description: 'Minted NFT artworks.',
+      label: 'Archive objects created',
+      description: 'Digital archive objects connected to artworks.',
       icon: Icons.token_outlined,
       format: AnalyticsMetricFormat.compact,
       supportedEntities: userEntity,
@@ -215,8 +215,8 @@ class AnalyticsMetricRegistry {
     ),
     AnalyticsMetricDefinition(
       id: 'achievementTokensTotal',
-      label: 'KUB8 earned',
-      description: 'KUB8 earned through achievement rewards.',
+      label: 'KUB8 recognition',
+      description: 'KUB8 recorded through contribution recognition.',
       icon: Icons.payments_outlined,
       format: AnalyticsMetricFormat.kub8,
       supportedEntities: userEntity,

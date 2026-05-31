@@ -61,7 +61,7 @@ extension _KubusMarkerOverlayCardBodyParts on KubusMarkerOverlayCard {
     if (canPresentExhibition) {
       badges.add(
         _OverlayMetaBadge(
-          label: 'POAP',
+          label: 'Attendance record',
           icon: Icons.verified_outlined,
           accent: baseColor,
         ),

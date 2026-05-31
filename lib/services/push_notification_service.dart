@@ -421,8 +421,8 @@ class PushNotificationService {
 
     const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       'rewards',
-      'Rewards',
-      channelDescription: 'Notifications for token rewards',
+      'Recognition',
+      channelDescription: 'Notifications for contribution recognition',
       importance: Importance.high,
       priority: Priority.high,
       showWhen: true,
@@ -487,16 +487,16 @@ class PushNotificationService {
         String bodyText = '';
         switch (status) {
           case 'started':
-            titleText = 'Minting NFT... ⏳';
-            bodyText = 'Creating NFT for "$artworkTitle"';
+            titleText = 'Creating archive object...';
+            bodyText = 'Creating archive object for "$artworkTitle"';
             break;
           case 'success':
-            titleText = 'NFT Minted! 🎉';
-            bodyText = '"$artworkTitle" is now on the blockchain';
+            titleText = 'Archive object created';
+            bodyText = '"$artworkTitle" now has an optional archive record';
             break;
           case 'failed':
-            titleText = 'Minting Failed ❌';
-            bodyText = 'Could not mint "$artworkTitle". Please try again.';
+            titleText = 'Creation failed';
+            bodyText = 'Could not create "$artworkTitle" archive object. Please try again.';
             break;
         }
         await webshow.showNotification(titleText, bodyText, mapData);
@@ -508,8 +508,8 @@ class PushNotificationService {
 
     const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       'nft_minting',
-      'NFT Minting',
-      channelDescription: 'Notifications for NFT minting process',
+      'Archive Object Creation',
+      channelDescription: 'Notifications for digital archive object creation',
       importance: Importance.high,
       priority: Priority.high,
       showWhen: true,
@@ -542,16 +542,16 @@ class PushNotificationService {
     
     switch (status) {
       case 'started':
-        title = 'Minting NFT... ⏳';
-        body = 'Creating NFT for "$artworkTitle"';
+        title = 'Creating archive object...';
+        body = 'Creating archive object for "$artworkTitle"';
         break;
       case 'success':
-        title = 'NFT Minted! 🎉';
-        body = '"$artworkTitle" is now on the blockchain';
+        title = 'Archive object created';
+        body = '"$artworkTitle" now has an optional archive record';
         break;
       case 'failed':
-        title = 'Minting Failed ❌';
-        body = 'Could not mint "$artworkTitle". Please try again.';
+        title = 'Creation failed';
+        body = 'Could not create "$artworkTitle" archive object. Please try again.';
         break;
     }
 

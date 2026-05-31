@@ -9,10 +9,10 @@ class AppLocalizationsSl extends AppLocalizations {
   AppLocalizationsSl([String locale = 'sl']) : super(locale);
 
   @override
-  String get appTagline => 'Odprta umetniška platforma.';
+  String get appTagline => 'kubus - tvoj sopotnik v umetnosti.';
 
   @override
-  String get appTaglineSupport => 'Vodnik za odkrivanje umetnosti, krajev in ljudi okoli tebe.';
+  String get appTaglineSupport => 'Odkrivaj javno umetnost, ustvarjalce, institucije in zgodbe skupnosti prek odprtega kulturnega zemljevida.';
 
   @override
   String get appTitle => 'art.kubus';
@@ -1268,13 +1268,13 @@ class AppLocalizationsSl extends AppLocalizations {
   String get onboardingCommunityDescription => 'Sledi ustvarjalcem in institucijam, razpravljaj o delih, sodeluj in povečaj vidnost lokalnega kulturnega dogajanja.';
 
   @override
-  String get onboardingCollectiblesTitle => 'Digitalni artefakti (izbirno)';
+  String get onboardingCollectiblesTitle => 'Digitalni spominki in zapisi sodelovanja';
 
   @override
-  String get onboardingCollectiblesSubtitle => 'Poskusi lastništva in arhiviranja';
+  String get onboardingCollectiblesSubtitle => 'Izbirna plast kulturnega arhiva';
 
   @override
-  String get onboardingCollectiblesDescription => 'Ta korak je izbiren. Denarnica lahko hrani digitalne kulturne artefakte, dokaze obiska ali eksperimentalne arhivske objekte. Odkrivanje in skupnost delujeta brez nje.';
+  String get onboardingCollectiblesDescription => 'Ko obiščeš ali prispevaš k javni umetnosti, lahko kubus to izbirno zabeleži kot digitalni spominek ali arhivski zapis. Odkrivanje umetnosti in skupnost delujeta brez denarnice.';
 
   @override
   String get onboardingGrantPermissions => 'Dovoli dostop';
@@ -1374,7 +1374,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get permissionsNotificationsSubtitle => 'Ostani na tekočem';
 
   @override
-  String get permissionsNotificationsDescription => 'Prejemaj obvestila o novih umetninah, razstavah, dogodkih, ustvarjalcih, institucijah in skupnosti. Obvestila, vezana na denarnico, so drugotna.';
+  String get permissionsNotificationsDescription => 'Prejemaj obvestila o novih umetninah, razstavah, dogodkih in dejavnosti skupnosti. Izbirne zapise sodelovanja lahko omogočiš kasneje.';
 
   @override
   String get permissionsNotificationsBenefit1 => 'Obvestila o novih umetninah';
@@ -1383,7 +1383,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get permissionsNotificationsBenefit2 => 'Napredek in priznanja';
 
   @override
-  String get permissionsNotificationsBenefit3 => 'Zbirke in dokazi obiska';
+  String get permissionsNotificationsBenefit3 => 'Zapisi sodelovanja in razstavne novosti';
 
   @override
   String get permissionsNotificationsBenefit4 => 'Opomniki o dogodkih v skupnosti';
@@ -1539,7 +1539,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get desktopSettingsAchievementsTitle => 'Dosežki in priznanja';
 
   @override
-  String get desktopSettingsAchievementsSubtitle => 'Spremljaj napredek, mejnike in priznanja skupnosti';
+  String get desktopSettingsAchievementsSubtitle => 'Spremljaj mejnike in znake sodelovanja brez obljub o finančnih nagradah';
 
   @override
   String get desktopSettingsAchievementsStatArtworksDiscovered => 'Odkrite umetnine';
@@ -1551,13 +1551,13 @@ class AppLocalizationsSl extends AppLocalizations {
   String get desktopSettingsAchievementsStatEventsAttended => 'Obiskani dogodki';
 
   @override
-  String get desktopSettingsAchievementsStatKub8PointsEarned => 'Zbrana priznanja KUB8';
+  String get desktopSettingsAchievementsStatKub8PointsEarned => 'Priznanja za prispevke';
 
   @override
   String get desktopSettingsAchievementFirstDiscoveryTitle => 'Prvo odkritje';
 
   @override
-  String get desktopSettingsAchievementFirstDiscoveryDescription => 'Odkrij svojo prvo AR umetnino';
+  String get desktopSettingsAchievementFirstDiscoveryDescription => 'Odkrij prvo javno umetnino';
 
   @override
   String get desktopSettingsAchievementArtCollectorTitle => 'Zbiralec umetnin';
@@ -1578,10 +1578,10 @@ class AppLocalizationsSl extends AppLocalizations {
   String get desktopSettingsAchievementEventExplorerDescription => 'Obišči 5 umetniških dogodkov';
 
   @override
-  String get desktopSettingsAchievementNftCreatorTitle => 'Ustvarjalec digitalnih zbirk';
+  String get desktopSettingsAchievementNftCreatorTitle => 'Prvi digitalni arhivski objekt';
 
   @override
-  String get desktopSettingsAchievementNftCreatorDescription => 'Ustvari svoj prvi digitalni zbirateljski predmet';
+  String get desktopSettingsAchievementNftCreatorDescription => 'Ustvari prvi izbirni digitalni arhivski objekt';
 
   @override
   String get desktopSettingsHelpSupportTitle => 'Pomoč in podpora';
@@ -1620,16 +1620,16 @@ class AppLocalizationsSl extends AppLocalizations {
   String get desktopSettingsFeatureArDiscoveryDescription => 'Priprava na izbirne AR predoglede, ko bodo piloti na voljo.';
 
   @override
-  String get desktopSettingsFeatureWeb3IntegrationTitle => 'Izbirna lastniška plast';
+  String get desktopSettingsFeatureWeb3IntegrationTitle => 'Izbirna plast denarnice';
 
   @override
-  String get desktopSettingsFeatureWeb3IntegrationDescription => 'Pripis prek denarnice, priznanja KUB8 in raziskave prihodnjega sodelovanja';
+  String get desktopSettingsFeatureWeb3IntegrationDescription => 'Denarnico poveži le, če želiš atribucijo, digitalne arhivske objekte ali prihodnja orodja za sodelovanje. Osnovno odkrivanje in skupnost delujeta brez nje.';
 
   @override
-  String get desktopSettingsFeatureNftMintingTitle => 'Digitalni kulturni artefakti';
+  String get desktopSettingsFeatureNftMintingTitle => 'Digitalni arhivski objekti';
 
   @override
-  String get desktopSettingsFeatureNftMintingDescription => 'Ustvarjaj in upravljaj digitalne umetniške zbirateljske predmete';
+  String get desktopSettingsFeatureNftMintingDescription => 'Ustvarjaj in upravljaj izbirne digitalne zapise, povezane z umetninami, obiski ali prispevki.';
 
   @override
   String get desktopSettingsFeatureCommunityTitle => 'Skupnost';
@@ -3290,25 +3290,25 @@ class AppLocalizationsSl extends AppLocalizations {
   String get web3FeaturesP5Feature5 => 'Orodja prilagojena institucijam';
 
   @override
-  String get web3FeaturesP6Title => 'Zapisi priznanja KUB8';
+  String get web3FeaturesP6Title => 'Priznanja za prispevke';
 
   @override
-  String get web3FeaturesP6Description => 'KUB8 točke beležijo sodelovanje in priznanje v Sezoni 0. Niso denar, niso prenosljivo sredstvo in niso živa izplačila.';
+  String get web3FeaturesP6Description => 'KUB8 beleži sodelovanje in priznanja v Sezoni 0. Ni denar, ni prenosljivo sredstvo in ni izplačilo.';
 
   @override
-  String get web3FeaturesP6Feature1 => 'Točke zbiraš z sodelovanjem in odkritji';
+  String get web3FeaturesP6Feature1 => 'Beleži sodelovanje in odkritja';
 
   @override
-  String get web3FeaturesP6Feature2 => 'Spremljaj napredek skozi sezono';
+  String get web3FeaturesP6Feature2 => 'Spremljaj napredek prispevkov skozi sezono';
 
   @override
-  String get web3FeaturesP6Feature3 => 'Odkleni značke in priznanja';
+  String get web3FeaturesP6Feature3 => 'Odkleni značke in priznanje skupnosti';
 
   @override
-  String get web3FeaturesP6Feature4 => 'Priznanje prinaša dostop in vidnost';
+  String get web3FeaturesP6Feature4 => 'Priznanje pomeni dostop in vidnost';
 
   @override
-  String get web3FeaturesP6Feature5 => 'Neprenosljive sezonske točke';
+  String get web3FeaturesP6Feature5 => 'Neprenosljivi zapisi sodelovanja';
 
   @override
   String get commonApply => 'Uveljavi';
@@ -3873,7 +3873,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get desktopMapArtworkTypeArArt => 'AR umetnost';
 
   @override
-  String get desktopMapArtworkTypeNfts => 'NFT-ji';
+  String get desktopMapArtworkTypeNfts => 'Arhivski objekti';
 
   @override
   String get desktopMapArtworkTypeModels3d => '3D modeli';
@@ -5741,16 +5741,16 @@ class AppLocalizationsSl extends AppLocalizations {
   String get walletHomeDesktopTabActivity => 'Dejavnost';
 
   @override
-  String get walletHomeDesktopTabNfts => 'NFT-ji';
+  String get walletHomeDesktopTabNfts => 'Artefakti';
 
   @override
   String get walletHomeDesktopTabStaking => 'Zastavljanje';
 
   @override
-  String get walletHomeNftLoadFailedTitle => 'NFT-jev ni bilo mogoče naložiti';
+  String get walletHomeNftLoadFailedTitle => 'Digitalnih artefaktov ni bilo mogoče naložiti';
 
   @override
-  String get walletHomeNoCollectiblesDescription => 'Izdaj ali kupi NFT-je, da se prikažejo tukaj.';
+  String get walletHomeNoCollectiblesDescription => 'Digitalni kulturni artefakti se prikažejo tukaj, ko so povezani s to denarnico.';
 
   @override
   String walletHomeCollectibleByline(Object creator) {
@@ -6244,7 +6244,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get artworkDetailHideComments => 'Skrij komentarje';
 
   @override
-  String get artworkDetailMintNft => 'Izdaj kot NFT';
+  String get artworkDetailMintNft => 'Ustvari arhivski objekt';
 
   @override
   String get eventCreatorNoInstitutionAvailableMessage => 'Za ta dogodek še ni na voljo institucije.';
@@ -7398,7 +7398,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get marketplaceNoMintedNftsTitle => 'Digitalnih artefaktov še ni';
 
   @override
-  String get marketplaceNoMintedNftsDescription => 'Objave na tržnici se prikažejo, ko je umetnina izdana kot NFT.';
+  String get marketplaceNoMintedNftsDescription => 'Objave artefaktov se prikažejo, ko je umetnina izdana kot izbirni digitalni kulturni objekt.';
 
   @override
   String get marketplaceTrendingThisWeekTitle => 'V trendu ta teden';
@@ -7407,24 +7407,24 @@ class AppLocalizationsSl extends AppLocalizations {
   String get marketplaceTrendingThisWeekSubtitle => 'Objave z najvec zbirateljske aktivnosti trenutno.';
 
   @override
-  String get marketplaceNoTrendingNftsTitle => 'Še ni priljubljenih NFT-jev';
+  String get marketplaceNoTrendingNftsTitle => 'Aktivnih artefaktov še ni';
 
   @override
-  String get marketplaceNoTrendingNftsDescription => 'Preveri pozneje, ko bo dejavnost NFT-jev večja.';
+  String get marketplaceNoTrendingNftsDescription => 'Preveri pozneje, ko bo dejavnost kulturnih artefaktov zrasla.';
 
   @override
   String get marketplaceMyCollectionTitle => 'Moji digitalni artefakti';
 
   @override
   String marketplaceMyCollectionCount(Object count) {
-    return '$count NFT';
+    return '$count artefaktov';
   }
 
   @override
   String get marketplaceListedForSaleTitle => 'Objavljeno za prodajo';
 
   @override
-  String get marketplaceListNftForSaleTitle => 'Objavi NFT za prodajo';
+  String get marketplaceListNftForSaleTitle => 'Objavi digitalni artefakt';
 
   @override
   String get marketplacePriceKub8Label => 'Cena (KUB8)';
@@ -7439,7 +7439,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get marketplaceTokenIdLabel => 'ID žetona';
 
   @override
-  String get marketplaceMintedLabel => 'Izdano kot NFT';
+  String get marketplaceMintedLabel => 'Izdano kot digitalni artefakt';
 
   @override
   String get marketplaceTotalSupplyLabel => 'Skupna zaloga';
@@ -7448,16 +7448,16 @@ class AppLocalizationsSl extends AppLocalizations {
   String get marketplaceRarityLabel => 'Redkost';
 
   @override
-  String get marketplaceOwnedNftStatus => 'NFT v lasti';
+  String get marketplaceOwnedNftStatus => 'Artefakt v lasti';
 
   @override
-  String get marketplaceOwnedNftListedStatus => 'NFT v lasti • Objavljeno za prodajo';
+  String get marketplaceOwnedNftListedStatus => 'Artefakt v lasti - objavljen';
 
   @override
-  String get marketplaceEmptyCollectionTitle => 'V tvoji zbirki še ni zbirateljskih predmetov (NFT)';
+  String get marketplaceEmptyCollectionTitle => 'Digitalnih artefaktov še ni';
 
   @override
-  String get marketplaceEmptyCollectionDescription => 'Ustvari zbirateljske predmete (NFT) iz AR umetnin in jih zbiraj tukaj.';
+  String get marketplaceEmptyCollectionDescription => 'Ustvari izbirne digitalne artefakte iz umetnin in jih hrani tukaj.';
 
   @override
   String get marketplaceExploreArArtButton => 'Razišči AR umetnost';
@@ -7466,31 +7466,31 @@ class AppLocalizationsSl extends AppLocalizations {
   String get marketplaceListForSaleButton => 'Objavi za prodajo';
 
   @override
-  String get marketplaceListForSaleSuccessToast => 'NFT je uspešno objavljen za prodajo.';
+  String get marketplaceListForSaleSuccessToast => 'Artefakt je objavljen.';
 
   @override
-  String get marketplaceListForSaleFailedToast => 'NFT trenutno ni mogoče objaviti za prodajo.';
+  String get marketplaceListForSaleFailedToast => 'Artefakta trenutno ni mogoče objaviti.';
 
   @override
   String get marketplaceRemoveFromSaleTitle => 'Odstrani iz prodaje';
 
   @override
-  String get marketplaceRemoveFromSaleConfirmBody => 'Želiš odstraniti ta NFT s tržnice?';
+  String get marketplaceRemoveFromSaleConfirmBody => 'Odstrani ta digitalni artefakt iz objav?';
 
   @override
-  String get marketplaceRemoveFromSaleSuccessToast => 'NFT je odstranjen iz prodaje.';
+  String get marketplaceRemoveFromSaleSuccessToast => 'Artefakt je odstranjen iz objave.';
 
   @override
   String get marketplaceMintConnectWalletTitle => 'Potrebna je denarnica';
 
   @override
-  String get marketplaceMintConnectWalletDescription => 'Poveži denarnico za ustvarjanje zbirateljskih predmetov (NFT) iz AR umetnin.';
+  String get marketplaceMintConnectWalletDescription => 'Denarnico poveži samo, če želiš ustvariti digitalne kulturne artefakte iz umetnin.';
 
   @override
   String get marketplaceMintSuccessTitle => 'Ustvarjanje je uspelo';
 
   @override
-  String get marketplaceMintSuccessDescription => 'Zbirateljski predmet (NFT) je ustvarjen. Ogledaš si ga lahko v svoji denarnici.';
+  String get marketplaceMintSuccessDescription => 'Tvoj digitalni kulturni artefakt je pripravljen. Ogledaš si ga lahko v denarnici.';
 
   @override
   String get marketplaceViewInWalletButton => 'Ogled v denarnici';
@@ -7499,7 +7499,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get marketplaceMintFailedTitle => 'Ustvarjanje ni uspelo';
 
   @override
-  String get marketplaceMintFailedDescription => 'Zbirateljskega predmeta (NFT) trenutno ni mogoče ustvariti. Poskusi znova.';
+  String get marketplaceMintFailedDescription => 'Digitalnega artefakta trenutno ni mogoče ustvariti. Poskusi znova.';
 
   @override
   String get marketplaceArBadgeLabel => 'AR';
@@ -7526,10 +7526,10 @@ class AppLocalizationsSl extends AppLocalizations {
   String get marketplaceCardActionView => 'Poglej';
 
   @override
-  String get marketplaceNftArtworkStatus => 'NFT umetnina';
+  String get marketplaceNftArtworkStatus => 'Umetnina digitalnega artefakta';
 
   @override
-  String get marketplaceNftArtworkStatusArEnabled => 'NFT umetnina • AR omogočeno';
+  String get marketplaceNftArtworkStatusArEnabled => 'Umetnina digitalnega artefakta - AR omogočen';
 
   @override
   String get marketplaceMintUnavailableLabel => 'Izdaja ni na voljo';
@@ -7544,7 +7544,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get marketplaceArRequiredTitle => 'AR je obvezen';
 
   @override
-  String get marketplaceArRequiredDescription => 'Ta NFT zahteva AR-interakcijo s fizično umetnino. Obišči lokacijo umetnine in uporabi AR-skener, da izdaš svoj NFT.';
+  String get marketplaceArRequiredDescription => 'Ta artefakt zahteva interakcijo z lokacijo fizične umetnine. Obišči umetnino in uporabi AR skener, če ga je ustvarjalec omogočil.';
 
   @override
   String get marketplaceGoToArButton => 'Pojdi na AR';
@@ -7554,7 +7554,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String marketplaceMintConfirmCollectionDescription(Object collection) {
-    return 'Kmalu boš izdal/-a NFT iz zbirke \"$collection\".';
+    return 'Ustvaril/-a boš digitalni artefakt iz zbirke \"$collection\".';
   }
 
   @override
@@ -7594,7 +7594,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get marketplaceRemoveFromSaleTooltip => 'Odstrani iz prodaje';
 
   @override
-  String get marketplaceRemoveFromSaleFailedToast => 'NFT-ja trenutno ni mogoče odstraniti iz prodaje.';
+  String get marketplaceRemoveFromSaleFailedToast => 'Artefakta trenutno ni mogoče odstraniti iz objave.';
 
   @override
   String get marketplaceValueNotListedLabel => 'Ni objavljeno';
@@ -7638,7 +7638,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get marketplacePropertyMintedByLabel => 'Izdal/-a';
 
   @override
-  String get marketplaceNftCollectibleLabel => 'NFT zbirateljski predmet';
+  String get marketplaceNftCollectibleLabel => 'Digitalni arhivski objekt';
 
   @override
   String get collectibleRarityCommon => 'Običajno';
@@ -7659,7 +7659,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get collectibleRarityMythic => 'Mitsko';
 
   @override
-  String get collectibleStatusMinted => 'Izdano kot NFT';
+  String get collectibleStatusMinted => 'Izdano kot arhivski objekt';
 
   @override
   String get collectibleStatusListed => 'Objavljeno';
@@ -10697,7 +10697,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get userProfileAchievementCategoryAr => 'AR';
 
   @override
-  String get userProfileAchievementCategoryNft => 'NFT';
+  String get userProfileAchievementCategoryNft => 'Arhivski objekt';
 
   @override
   String get userProfileAchievementCategoryCommunity => 'Skupnost';
@@ -11699,7 +11699,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get desktopProfilePerformanceCreatedTitle => 'Ustvarjeno';
 
   @override
-  String get desktopProfilePerformanceNftsOwnedTitle => 'NFT-ji v lasti';
+  String get desktopProfilePerformanceNftsOwnedTitle => 'Arhivski objekti v lasti';
 
   @override
   String get desktopProfileAchievementsSubtitle => 'Tvoj napredek in mejniki';
@@ -12099,7 +12099,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get exhibitionDetailManagementTitle => 'Upravljanje';
 
   @override
-  String get exhibitionDetailPoapTitle => 'Značka prisotnosti (POAP)';
+  String get exhibitionDetailPoapTitle => 'Zapis prisotnosti';
 
   @override
   String get exhibitionDetailPoapDescription => 'Prevzemi ta dokaz obiska in ga dodaj v svojo zgodovino priznanj.';

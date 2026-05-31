@@ -537,18 +537,20 @@ class ArtworkDraftsProvider extends ChangeNotifier {
 
       if (poapMode == ArtworkPoapMode.existingPoap) {
         if (!AppConfig.isFeatureEnabled('attendance')) {
-          draft.submitError = 'Attendance rewards are currently unavailable.';
+          draft.submitError =
+              'Attendance records are currently unavailable.';
           return null;
         }
         if (poapEventId.isEmpty && poapClaimUrl.isEmpty) {
-          draft.submitError = 'Please provide a POAP Event ID or a Claim URL.';
+          draft.submitError =
+              'Please provide an attendance event ID or record URL.';
           return null;
         }
       }
 
       if (poapMode == ArtworkPoapMode.kubusPoap &&
           !AppConfig.isFeatureEnabled('attendance')) {
-        draft.submitError = 'Attendance rewards are currently unavailable.';
+        draft.submitError = 'Attendance records are currently unavailable.';
         return null;
       }
 
@@ -595,7 +597,7 @@ class ArtworkDraftsProvider extends ChangeNotifier {
               uploaded['data']?['url'] as String?;
           if (poapImageUrl == null || poapImageUrl.trim().isEmpty) {
             draft.submitError =
-                'Failed to upload POAP image. Please try again.';
+                'Failed to upload attendance record image. Please try again.';
             return null;
           }
         } else {

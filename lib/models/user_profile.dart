@@ -464,9 +464,9 @@ extension UserProfileSamples on UserProfile {
       UserProfile(
         id: 'sample2',
         walletAddress: '0xSample2',
-        username: 'nft_collector',
-        displayName: 'NFT Collector',
-        bio: 'Collecting amazing digital art',
+        username: 'archive_collector',
+        displayName: 'Archive Collector',
+        bio: 'Collecting and contextualizing digital art records',
         avatar: '${_backendAvatarBase()}/nft_collector?style=avataaars&format=png',
         stats: UserStats(followersCount: 890, followingCount: 432),
         createdAt: now,

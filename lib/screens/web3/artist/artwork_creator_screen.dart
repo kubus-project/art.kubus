@@ -678,7 +678,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
       builder: (context) => AlertDialog(
         backgroundColor: scheme.surface,
         title: Text(
-          'Minting NFT\u2026',
+          'Creating archive object...',
           style: KubusTextStyles.detailSectionTitle,
         ),
         content: Row(
@@ -718,18 +718,21 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
 
       if (result.success) {
         messenger.showKubusSnackBar(
-          const SnackBar(content: Text('NFT minted successfully.')),
+          const SnackBar(content: Text('Archive object created.')),
         );
       } else {
         messenger.showKubusSnackBar(
-          SnackBar(content: Text(result.error ?? 'Failed to mint NFT.')),
+          SnackBar(
+              content:
+                  Text(result.error ?? 'Failed to create archive object.')),
         );
       }
     } catch (_) {
       if (!mounted) return;
       Navigator.of(context).pop();
       messenger.showKubusSnackBar(
-        const SnackBar(content: Text('Failed to mint NFT. Please try again.')),
+        const SnackBar(
+            content: Text('Failed to create archive object. Please try again.')),
       );
     }
   }
@@ -1062,13 +1065,13 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
         ),
         const CreatorFieldSpacing(),
 
-        // --- NFT minting toggle ---
+        // --- Digital archive object toggle ---
         CreatorSwitchTile(
-          title: 'Mint as NFT',
+          title: 'Create digital archive object',
           subtitle: (AppConfig.isFeatureEnabled('web3') &&
                   AppConfig.isFeatureEnabled('nftMinting'))
-              ? 'You can mint after publishing (wallet required).'
-              : 'NFT minting is currently unavailable.',
+              ? 'You can create it after publishing (optional wallet required).'
+              : 'Digital archive object creation is currently unavailable.',
           value: draft.mintNftAfterPublish,
           onChanged: (AppConfig.isFeatureEnabled('web3') &&
                   AppConfig.isFeatureEnabled('nftMinting') &&
@@ -1184,13 +1187,14 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                   RadioListTile<ArtworkPoapMode>(
                     value: ArtworkPoapMode.none,
                     title: Text('No badge'),
-                    subtitle: Text('Publish without attendance rewards.'),
+                    subtitle:
+                        Text('Publish without attendance recognition records.'),
                   ),
                   RadioListTile<ArtworkPoapMode>(
                     value: ArtworkPoapMode.existingPoap,
-                    title: Text('Use existing POAP'),
+                    title: Text('Use existing attendance record'),
                     subtitle: Text(
-                        'Paste an Event ID or claim link from an existing POAP drop.'),
+                        'Paste an Event ID or record link from an existing attendance setup.'),
                   ),
                   RadioListTile<ArtworkPoapMode>(
                     value: ArtworkPoapMode.kubusPoap,
@@ -1199,7 +1203,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                       style: TextStyle(fontStyle: FontStyle.italic),
                     ),
                     subtitle: Text(
-                      'kubus generates a simple claim link automatically (no POAP setup required).',
+                      'kubus generates a simple attendance record link automatically.',
                       style: TextStyle(fontStyle: FontStyle.italic),
                     ),
                   ),
@@ -1210,7 +1214,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
           if (draft.poapMode == ArtworkPoapMode.existingPoap) ...[
             const CreatorFieldSpacing(),
             CreatorTextField(
-              label: 'POAP Event ID (optional)',
+              label: 'Attendance event ID (optional)',
               hint: 'If you have an Event ID, paste it here.',
               accentColor: accent,
               controller: _poapEventIdController,
@@ -1219,8 +1223,8 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
             ),
             const CreatorFieldSpacing(),
             CreatorTextField(
-              label: 'POAP Claim URL (optional)',
-              hint: 'A link people can open to claim the badge.',
+              label: 'Attendance record URL (optional)',
+              hint: 'A link people can open to save the badge.',
               accentColor: accent,
               controller: _poapClaimUrlController,
               onChanged: (v) => drafts.updateOptionalFeatures(
@@ -1231,7 +1235,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
             const CreatorFieldSpacing(),
             CreatorTextField(
               controller: _poapRewardAmountController,
-              label: 'Reward amount (KUB8)',
+              label: 'Recognition amount (KUB8)',
               accentColor: accent,
               keyboardType: TextInputType.number,
               onChanged: (v) {
@@ -1345,7 +1349,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
             ),
             const CreatorFieldSpacing(),
             Text(
-              'Your claim link will be generated when you publish.',
+              'Your attendance record link will be generated when you publish.',
               style: KubusTextStyles.detailLabel.copyWith(
                 color: scheme.onSurface.withValues(alpha: 0.7),
               ),
@@ -1355,7 +1359,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
         ] else ...[
           const CreatorFieldSpacing(),
           Text(
-            'Attendance rewards are currently unavailable.',
+            'Attendance records are currently unavailable.',
             style: KubusTextStyles.detailBody.copyWith(
               color: scheme.onSurface.withValues(alpha: 0.7),
             ),
@@ -1670,7 +1674,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
           OutlinedButton.icon(
             onPressed: () => unawaited(_mintNftForCreated(draft: draft)),
             icon: const Icon(Icons.auto_awesome_outlined),
-            label: const Text('Mint NFT series'),
+            label: const Text('Create archive object series'),
           ),
         ],
         const CreatorFieldSpacing(),

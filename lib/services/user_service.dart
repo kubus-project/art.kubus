@@ -122,9 +122,9 @@ class UserService {
     const User(
       id: 'alex_nft',
       name: 'Alex Creator',
-      username: 'alex_nft',
+      username: 'alex_archive',
       bio:
-          'NFT creator and blockchain enthusiast. Building the future of digital ownership through art and technology.',
+          'Digital archive creator exploring open cultural infrastructure through art and technology.',
       followersCount: 892,
       followingCount: 341,
       postsCount: 67,

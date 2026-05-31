@@ -22,7 +22,7 @@ import '../components/desktop_widgets.dart';
 import '../../art/ar_screen.dart';
 import 'desktop_wallet_screen.dart';
 
-/// Desktop marketplace screen with OpenSea-style NFT grid
+/// Desktop digital artifacts screen with archive object grid
 /// Features advanced filtering, sorting, and collection browsing
 class DesktopMarketplaceScreen extends StatefulWidget {
   const DesktopMarketplaceScreen({super.key});
@@ -39,7 +39,7 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
   late ScrollController _scrollController;
 
   final List<String> _tabs = [
-    'All NFTs',
+    'All artifacts',
     'Art',
     'Photography',
     'Music',
@@ -121,7 +121,7 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                       // Toolbar
                       _buildToolbar(themeProvider),
 
-                      // NFT Grid
+                      // Digital artifact grid
                       Expanded(
                         child: _buildNFTGrid(themeProvider, isLarge),
                       ),
@@ -146,7 +146,7 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'NFT Marketplace',
+                'Digital Artifacts',
                 style: KubusTextStyles.screenTitle.copyWith(
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
@@ -162,7 +162,7 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
           SizedBox(
             width: 400,
             child: DesktopSearchBar(
-              hintText: 'Search NFTs, collections, artists...',
+              hintText: 'Search artifacts, collections, artists...',
               onSubmitted: (value) {},
             ),
           ),
@@ -185,7 +185,7 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
               return ElevatedButton.icon(
                 onPressed: () async {
                   if (canCreate) {
-                    // Create NFT
+                    // Create digital artifact
                     return;
                   }
 
@@ -737,7 +737,7 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                 ),
                 const SizedBox(height: KubusSpacing.lg),
                 Text(
-                  'No NFTs found',
+                  'No digital artifacts found',
                   style: KubusTextStyles.detailCardTitle.copyWith(
                     color: Theme.of(context)
                         .colorScheme

@@ -362,7 +362,7 @@ class RecentActivityProvider extends ChangeNotifier {
       case ActivityCategory.discovery:
         return 'Artwork Discovered';
       case ActivityCategory.reward:
-        return 'Reward Earned';
+        return 'Recognition Recorded';
       case ActivityCategory.follow:
         return 'New Follower';
       case ActivityCategory.share:
@@ -370,7 +370,7 @@ class RecentActivityProvider extends ChangeNotifier {
       case ActivityCategory.mention:
         return 'You were mentioned';
       case ActivityCategory.nft:
-        return 'NFT Update';
+        return 'Archive Object Update';
       case ActivityCategory.ar:
         return 'AR Event';
       case ActivityCategory.save:
@@ -405,8 +405,8 @@ class RecentActivityProvider extends ChangeNotifier {
         final amount =
             data['amount'] ?? data['rewards'] ?? data['rewardTokens'];
         return amount != null
-            ? '+$amount KUB8 awarded'
-            : 'You earned new rewards';
+            ? '+$amount KUB8 recognition'
+            : 'You have new recognition';
       case ActivityCategory.follow:
         return '$actorName started following you';
       case ActivityCategory.share:
@@ -415,7 +415,7 @@ class RecentActivityProvider extends ChangeNotifier {
         return '$actorName mentioned you';
       case ActivityCategory.nft:
         final status = data['status'] ?? 'update';
-        return 'NFT $status for ${data['artworkTitle'] ?? 'an artwork'}';
+        return 'Archive object $status for ${data['artworkTitle'] ?? 'an artwork'}';
       case ActivityCategory.ar:
         return data['eventTitle']?.toString() ?? 'New AR activity nearby';
       case ActivityCategory.save:

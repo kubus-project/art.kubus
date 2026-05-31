@@ -2450,7 +2450,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         builder: (context, setState) => KubusAlertDialog(
           backgroundColor: Theme.of(context).colorScheme.surface,
           title: Text(
-            'Mint NFT Series',
+            'Create archive object series',
             style: KubusTypography.inter(
               fontWeight: FontWeight.bold,
               color: Theme.of(context).colorScheme.onSurface,
@@ -2462,7 +2462,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Create an NFT series for this artwork',
+                  'Create an optional digital archive object series for this artwork',
                   style: KubusTypography.inter(
                     fontSize: 14,
                     color: Theme.of(context).colorScheme.onSurface,
@@ -2504,7 +2504,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                 TextField(
                   controller: priceController,
                   decoration: InputDecoration(
-                    labelText: 'Mint Price (SOL)',
+                    labelText: 'Creation price (SOL)',
                     labelStyle: KubusTypography.inter(),
                     border: const OutlineInputBorder(),
                   ),
@@ -2530,7 +2530,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                 DropdownButtonFormField<CollectibleType>(
                   initialValue: selectedType,
                   decoration: InputDecoration(
-                    labelText: 'NFT Type',
+                    labelText: 'Archive object type',
                     labelStyle: KubusTypography.inter(),
                     border: const OutlineInputBorder(),
                   ),
@@ -2586,7 +2586,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                   type: selectedType,
                 );
               },
-              child: Text('Mint NFT',
+              child: Text('Create archive object',
                   style: KubusTypography.inter(fontWeight: FontWeight.w600)),
             ),
           ],
@@ -2646,7 +2646,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                     tileSize: 8.0)),
             const SizedBox(height: 16),
             Text(
-              'Minting NFT...',
+              'Creating archive object...',
               style: KubusTypography.inter(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
@@ -2698,7 +2698,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'NFT minted successfully!',
+                      'Archive object created.',
                       style: KubusTypography.inter(fontWeight: FontWeight.w600),
                     ),
                   ),
@@ -2712,7 +2712,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
           ScaffoldMessenger.of(context).showKubusSnackBar(
             SnackBar(
               content: Text(
-                'Failed to mint NFT: ${result.error}',
+                'Failed to create archive object: ${result.error}',
                 style: KubusTypography.inter(),
               ),
               backgroundColor: Colors.red,
@@ -2727,7 +2727,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         ScaffoldMessenger.of(context).showKubusSnackBar(
           SnackBar(
             content: Text(
-              'Error minting NFT: $e',
+              'Error creating archive object: $e',
               style: KubusTypography.inter(),
             ),
             backgroundColor: Colors.red,

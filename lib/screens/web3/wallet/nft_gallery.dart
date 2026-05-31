@@ -141,8 +141,9 @@ class _NFTGalleryState extends State<NFTGallery> {
                   width: double.infinity,
                   child: EmptyStateCard(
                     icon: Icons.diamond_outlined,
-                    title: 'No collectibles yet',
-                    description: 'Mint NFTs from artworks to see them here.',
+                    title: 'No digital artifacts yet',
+                    description:
+                        'Create digital archive objects from artworks to see them here.',
                     showAction: false,
                   ),
                 ),

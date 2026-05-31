@@ -138,7 +138,8 @@ class NFTMintingService {
           final seriesResult = await createNFTSeries(
             artworkId: artworkId,
             name: seriesName ?? '$artworkTitle Collection',
-            description: seriesDescription ?? 'NFT collection for $artworkTitle by $artistName',
+            description:
+                seriesDescription ?? 'Archive object series for $artworkTitle by $artistName',
             creatorAddress: ownerAddress,
             totalSupply: totalSupply,
             rarity: rarity,
@@ -152,7 +153,8 @@ class NFTMintingService {
           );
 
           if (!seriesResult.success || seriesResult.seriesId == null) {
-            throw Exception(seriesResult.error ?? 'Failed to create NFT series');
+            throw Exception(
+                seriesResult.error ?? 'Failed to create archive object series');
           }
 
           finalSeriesId = seriesResult.seriesId!;
@@ -179,7 +181,7 @@ class NFTMintingService {
       // Step 4: Record mint locally
       final seriesIndex = seriesList.indexWhere((s) => s.id == finalSeriesId);
       if (seriesIndex == -1) {
-        throw Exception('NFT series not found');
+        throw Exception('Archive object series not found');
       }
       final series = seriesList[seriesIndex];
       if (series.isSoldOut) {
@@ -222,9 +224,10 @@ class NFTMintingService {
 
       // Award tokens for minting
       await _notificationService.showRewardNotification(
-        title: 'NFT Minted Successfully!',
+        title: 'Archive object created',
         amount: 50,
-        reason: 'Created NFT for "$artworkTitle" (Edition #$tokenId)',
+        reason:
+            'Created archive object for "$artworkTitle" (Edition #$tokenId)',
       );
       
       // Check NFT minting achievements
@@ -279,7 +282,7 @@ class NFTMintingService {
 
     final payload = <String, dynamic>{
       'name': title,
-      'description': 'NFT for $title by $artist',
+      'description': 'Archive object for $title by $artist',
       'artist': artist,
       'image': imageUrl,
       if (model3DURL != null && model3DURL.isNotEmpty) 'animation_url': model3DURL,
