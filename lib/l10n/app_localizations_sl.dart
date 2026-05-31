@@ -9,7 +9,7 @@ class AppLocalizationsSl extends AppLocalizations {
   AppLocalizationsSl([String locale = 'sl']) : super(locale);
 
   @override
-  String get appTagline => 'kubus - tvoj sopotnik v umetnosti.';
+  String get appTagline => 'Odprta umetniška platforma.';
 
   @override
   String get appTaglineSupport => 'Vodnik za odkrivanje umetnosti, krajev in ljudi okoli tebe.';
@@ -558,13 +558,13 @@ class AppLocalizationsSl extends AppLocalizations {
   String get authSignInTitle => 'Prijava v art.kubus';
 
   @override
-  String get authSignInSubtitle => 'Začni odkrivati umetnost, kraje in skupnost. Denarniške funkcije so izbirne.';
+  String get authSignInSubtitle => 'Začni z odkrivanjem umetnosti, ustvarjalci, institucijami in skupnostjo. Denarniška orodja so izbirna.';
 
   @override
   String get authRegisterTitle => 'Ustvari račun';
 
   @override
-  String get authRegisterSubtitle => 'Ustvari profil in prilagodi svojega sopotnika v umetnosti. Denarnica lahko počaka.';
+  String get authRegisterSubtitle => 'Najprej ustvari profil. Odkrivanje, skupnost in dostop do lokalne umetnosti delujejo brez denarnice.';
 
   @override
   String get authHighlightSignInMethods => 'Prijava z e-pošto, Googlom ali izbirno denarnico';
@@ -573,7 +573,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get authHighlightNoFees => 'Za prijavo ni provizije';
 
   @override
-  String get authHighlightControl => 'Osnovno raziskovanje deluje brez denarnice';
+  String get authHighlightControl => 'Raziskuj umetnost in skupnost brez denarnice';
 
   @override
   String get authHighlightOnboardingOptions => 'Izberi e-pošto, Google ali izbirno denarnico';
@@ -582,7 +582,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get authHighlightKeysLocal => 'Zasebni ključi ostanejo pri tebi';
 
   @override
-  String get authHighlightOptionalWeb3 => 'Prihodnje funkcije sodelovanja ostajajo izbirne';
+  String get authHighlightOptionalWeb3 => 'Digitalno lastništvo in sodelovanje ostajata izbirna';
 
   @override
   String get authSignedInProfileRefreshSoon => 'Prijava je uspela. Profil se bo kmalu osvežil.';
@@ -809,16 +809,16 @@ class AppLocalizationsSl extends AppLocalizations {
   }
 
   @override
-  String get authConnectWalletButton => 'Poveži denarnico';
+  String get authConnectWalletButton => 'Poveži izbirno denarnico';
 
   @override
-  String get authConnectWalletModalTitle => 'Poveži denarnico';
+  String get authConnectWalletModalTitle => 'Poveži izbirno denarnico';
 
   @override
-  String get authConnectWalletModalDescriptionSignIn => 'V denarnici potrdi podpis, s katerim potrdiš, da si to res ti. Za prijavo ni provizije.';
+  String get authConnectWalletModalDescriptionSignIn => 'Ta korak je izbiren. Podpis odobri samo, če želiš denarniški dostop na tej napravi. Za prijavo ni provizije.';
 
   @override
-  String get authConnectWalletModalDescriptionRegister => 'V denarnici potrdi podpis, s katerim potrdiš, da si to res ti. Za dokončanje registracije ni provizije.';
+  String get authConnectWalletModalDescriptionRegister => 'Ta korak je izbiren. Podpis odobri samo, če želiš denarniški dostop po ustvarjanju profila. Provizije ni.';
 
   @override
   String get authWalletOptionWalletConnect => 'WalletConnect';
@@ -926,10 +926,10 @@ class AppLocalizationsSl extends AppLocalizations {
   String get onboardingFlowTitle => 'Hitra nastavitev';
 
   @override
-  String get onboardingFlowWelcomeTitle => 'kubus - tvoj sopotnik v umetnosti.';
+  String get onboardingFlowWelcomeTitle => 'art.kubus je odprta umetniška platforma.';
 
   @override
-  String get onboardingFlowWelcomeBody => 'Začni pri umetnosti, krajih in skupnosti. Račun in izbirna denarniška orodja lahko počakajo.';
+  String get onboardingFlowWelcomeBody => 'Začni z odkrivanjem, umetnostjo v javnem prostoru, ustvarjalci, institucijami in skupnostjo. Najprej profil; denarniška orodja lahko počakajo.';
 
   @override
   String get onboardingFlowWelcomeInfoAccount => 'Ustvari profil, ko želiš osebni tok vsebin in prispevke.';
@@ -944,10 +944,10 @@ class AppLocalizationsSl extends AppLocalizations {
   String get onboardingFlowWelcomeInfoTime => 'Večina uporabnikov to dokonča v približno 2 minutah.';
 
   @override
-  String get onboardingFlowAccountTitle => 'Ustvari račun';
+  String get onboardingFlowAccountTitle => 'Najprej ustvari profil';
 
   @override
-  String get onboardingFlowAccountBody => 'Uporabi e-pošto, Google ali izbirno prijavo z denarnico. Osnovno raziskovanje deluje brez denarnice, obnovitev računa pa je razložena, preden jo omogočiš.';
+  String get onboardingFlowAccountBody => 'Uporabi e-pošto, Google ali izbirno prijavo z denarnico. Odkrivanje, zemljevid in skupnost delujejo brez denarnice.';
 
   @override
   String get onboardingFlowAccountVerifyHint => 'Če si se registriral/a z e-pošto, pred prijavo potrdi e-poštni naslov.';
@@ -971,13 +971,13 @@ class AppLocalizationsSl extends AppLocalizations {
   String get onboardingFlowProfileBody => 'Dodaj ime in fotografijo, da te drugi lažje prepoznajo.';
 
   @override
-  String get onboardingFlowWalletBackupIntroTitle => 'Zaščiti obnovitev računa';
+  String get onboardingFlowWalletBackupIntroTitle => 'Varnostna kopija izbirne lastniške plasti';
 
   @override
-  String get onboardingFlowWalletBackupIntroBody => 'Nekatere prijavne poti ustvarijo denarnico računa za dolgoročni dostop in prihodnje sodelovanje. To je ločeno od osnovnega raziskovanja. Obnovitveno frazo shrani, če izbereš te funkcije računa.';
+  String get onboardingFlowWalletBackupIntroBody => 'Ta korak je izbiren. Nekatere poti računa ustvarijo denarnico za digitalno lastništvo, pripis avtorstva in prihodnje sodelovanje. To je ločeno od javnega odkrivanja in skupnosti.';
 
   @override
-  String get onboardingFlowWalletBackupIntroWeb3Warning => 'Ta varnostna kopija ščiti funkcije, vezane na račun. Osnovno odkrivanje ne zahteva povezane denarnice.';
+  String get onboardingFlowWalletBackupIntroWeb3Warning => 'Ta korak je izbiren. Osnovno odkrivanje, profili in skupnost ne zahtevajo povezane denarnice.';
 
   @override
   String get onboardingFlowWalletBackupIntroSecretWarning => 'Če uporabiš šifrirano varnostno kopijo, skrivnosti shrani ločeno: obnovitvena fraza obnovi denarnico, obnovitveno geslo pa odklene šifrirano kopijo.';
@@ -1019,13 +1019,13 @@ class AppLocalizationsSl extends AppLocalizations {
   String get onboardingFlowWalletBackupTitle => 'Varnostno shrani obnovitveno frazo';
 
   @override
-  String get onboardingFlowWalletBackupBody => 'Ta fraza ti na novi napravi povrne dostop do denarnice računa in prihodnjih izbirnih funkcij.';
+  String get onboardingFlowWalletBackupBody => 'Ta fraza na novi napravi obnovi izbirni denarniški dostop za digitalno lastništvo in prihodnje sodelovanje.';
 
   @override
   String get onboardingFlowWalletBackupPrivacyWarning => 'Frazo ohrani zasebno. Kdor jo ima, lahko popolnoma upravlja tvojo denarnico.';
 
   @override
-  String get onboardingFlowWalletBackupLossWarning => 'Če jo izgubiš, dostopa do denarnice računa ne moremo obnoviti. Osnovno javno raziskovanje še vedno deluje.';
+  String get onboardingFlowWalletBackupLossWarning => 'Če jo izgubiš, denarniškega dostopa ne moremo obnoviti. Javno odkrivanje in skupnost še vedno delujeta.';
 
   @override
   String get onboardingFlowWalletBackupAction => 'Prikaži in potrdi varnostno kopijo';
@@ -1049,7 +1049,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get onboardingFlowPermissionsTitle => 'Izberi, kaj želiš omogočiti';
 
   @override
-  String get onboardingFlowPermissionsBody => 'Omogoči lokacijo za umetnost v bližini, kamero za AR plasti v razvoju in obvestila za novosti skupnosti.';
+  String get onboardingFlowPermissionsBody => 'Omogoči lokacijo za javno umetnost v bližini, kamero za izbirne AR plasti v razvoju in obvestila za ustvarjalce, institucije, razstave ter skupnost.';
 
   @override
   String get onboardingFlowContinueWithoutPermissions => 'Nadaljuj';
@@ -1070,7 +1070,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get onboardingFlowDoneTitle => 'Pripravljeno';
 
   @override
-  String get onboardingFlowDoneBody => 'Tvoj prostor je pripravljen. Začni odkrivati umetnost, kraje in skupnost.';
+  String get onboardingFlowDoneBody => 'Tvoj prostor je pripravljen. Začni odkrivati javno umetnost, ustvarjalce, institucije in dogajanje v skupnosti.';
 
   @override
   String get onboardingFlowOpenProfile => 'Odpri nastavitev profila';
@@ -1232,49 +1232,49 @@ class AppLocalizationsSl extends AppLocalizations {
   String get onboardingFlowDaoReviewSubmitAction => 'Oddaj za skupnostni pregled';
 
   @override
-  String get onboardingWelcomeTitle => 'kubus - tvoj sopotnik v umetnosti.';
+  String get onboardingWelcomeTitle => 'art.kubus je odprta umetniška platforma.';
 
   @override
-  String get onboardingWelcomeSubtitle => 'Umetnost, kraji in skupnost skupaj';
+  String get onboardingWelcomeSubtitle => 'Skupnostno odkrivanje kulture';
 
   @override
-  String get onboardingWelcomeDescription => 'S kubusom kot vodnikom odkrivaj umetnine, kraje, ustvarjalce in institucije. Denarniške funkcije so izbirne. AR, upravljanje, poravnave in nagrade se razvijajo postopoma.';
+  String get onboardingWelcomeDescription => 'Odkrivaj lokalno umetnost, ustvarjalce, institucije, razstave in dela v javnem prostoru. art.kubus je raziskovalno-razvojni prototip odprte kulturne infrastrukture; denarnice, AR, upravljanje in priznanja so izbirne plasti.';
 
   @override
-  String get onboardingExploreTitle => 'Raziskuj umetnine';
+  String get onboardingExploreTitle => 'Raziskuj odprti zemljevid umetnosti';
 
   @override
-  String get onboardingExploreSubtitle => 'Poišči umetnost v bližini';
+  String get onboardingExploreSubtitle => 'Odkrij lokalno in javno umetnost';
 
   @override
-  String get onboardingExploreDescription => 'Z zemljevidom odkrij umetnine in označevalce v okolici. Vsaka lokacija lahko pripoveduje zgodbo.';
+  String get onboardingExploreDescription => 'S skupnostno ustvarjenim kulturnim zemljevidom najdi umetnine, razstave, institucije, ustvarjalce in zgodbe javnega prostora v bližini.';
 
   @override
-  String get onboardingCreateTitle => 'Ustvarjaj in deli';
+  String get onboardingCreateTitle => 'Deli umetnost in kontekst';
 
   @override
-  String get onboardingCreateSubtitle => 'Izrazi svojo ustvarjalnost';
+  String get onboardingCreateSubtitle => 'Prispevaj v kulturni arhiv';
 
   @override
-  String get onboardingCreateDescription => 'Predstavi svojo prakso, dodaj kontekst in pripravi prihodnje AR plasti, ko bodo pripravljene.';
+  String get onboardingCreateDescription => 'Objavi umetnine, dokumentiraj prakso, dodaj kontekst in pripravi izbirne AR plasti, kadar podpirajo delo.';
 
   @override
-  String get onboardingCommunityTitle => 'Pridruži se skupnosti';
+  String get onboardingCommunityTitle => 'Pridruži se umetniški skupnosti';
 
   @override
-  String get onboardingCommunitySubtitle => 'Sodelovanje je privzeto';
+  String get onboardingCommunitySubtitle => 'Sodelovanje pred infrastrukturo';
 
   @override
-  String get onboardingCommunityDescription => 'Sledi umetnikom, pošiljaj sporočila in sodeluj pri projektih. Kjer je smiselno, je sodelovanje privzeto.';
+  String get onboardingCommunityDescription => 'Sledi ustvarjalcem in institucijam, razpravljaj o delih, sodeluj in povečaj vidnost lokalnega kulturnega dogajanja.';
 
   @override
-  String get onboardingCollectiblesTitle => 'Zbirateljski predmeti (neobvezno)';
+  String get onboardingCollectiblesTitle => 'Digitalni artefakti (izbirno)';
 
   @override
-  String get onboardingCollectiblesSubtitle => 'Dokazi obiska in zbirateljski predmeti';
+  String get onboardingCollectiblesSubtitle => 'Poskusi lastništva in arhiviranja';
 
   @override
-  String get onboardingCollectiblesDescription => 'Z denarnico lahko po želji zbiraš zbirateljske predmete (NFT) in digitalne dokaze obiska (POAP). Raziskovanje in skupnost delujeta tudi brez tega.';
+  String get onboardingCollectiblesDescription => 'Ta korak je izbiren. Denarnica lahko hrani digitalne kulturne artefakte, dokaze obiska ali eksperimentalne arhivske objekte. Odkrivanje in skupnost delujeta brez nje.';
 
   @override
   String get onboardingGrantPermissions => 'Dovoli dostop';
@@ -1374,7 +1374,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get permissionsNotificationsSubtitle => 'Ostani na tekočem';
 
   @override
-  String get permissionsNotificationsDescription => 'Prejemaj obvestila o novih umetninah, razstavah, dogodkih in dogajanju v skupnosti ter tudi posodobitve, vezane na denarnico, kot so zbirateljski predmeti (NFT) in dokazi obiska (POAP).';
+  String get permissionsNotificationsDescription => 'Prejemaj obvestila o novih umetninah, razstavah, dogodkih, ustvarjalcih, institucijah in skupnosti. Obvestila, vezana na denarnico, so drugotna.';
 
   @override
   String get permissionsNotificationsBenefit1 => 'Obvestila o novih umetninah';
@@ -1479,7 +1479,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get desktopSettingsLocationHint => 'Mesto, država';
 
   @override
-  String get desktopSettingsWalletSectionSubtitle => 'Upravljaj denarnico računa, obnovitev dostopa in povezane funkcije';
+  String get desktopSettingsWalletSectionSubtitle => 'Upravljaj izbirni lastniški dostop, obnovitev in funkcije, vezane na denarnico';
 
   @override
   String get desktopSettingsViewWalletButton => 'Ogled denarnice';
@@ -1551,7 +1551,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get desktopSettingsAchievementsStatEventsAttended => 'Obiskani dogodki';
 
   @override
-  String get desktopSettingsAchievementsStatKub8PointsEarned => 'Zbrane KUB8 točke';
+  String get desktopSettingsAchievementsStatKub8PointsEarned => 'Zbrana priznanja KUB8';
 
   @override
   String get desktopSettingsAchievementFirstDiscoveryTitle => 'Prvo odkritje';
@@ -1620,13 +1620,13 @@ class AppLocalizationsSl extends AppLocalizations {
   String get desktopSettingsFeatureArDiscoveryDescription => 'Priprava na izbirne AR predoglede, ko bodo piloti na voljo.';
 
   @override
-  String get desktopSettingsFeatureWeb3IntegrationTitle => 'Povezava z denarnico (Solana)';
+  String get desktopSettingsFeatureWeb3IntegrationTitle => 'Izbirna lastniška plast';
 
   @override
-  String get desktopSettingsFeatureWeb3IntegrationDescription => 'Denarnica računa na Solani, KUB8 točke in prihodnje funkcije sodelovanja';
+  String get desktopSettingsFeatureWeb3IntegrationDescription => 'Pripis prek denarnice, priznanja KUB8 in raziskave prihodnjega sodelovanja';
 
   @override
-  String get desktopSettingsFeatureNftMintingTitle => 'Zbirateljski predmeti (NFT)';
+  String get desktopSettingsFeatureNftMintingTitle => 'Digitalni kulturni artefakti';
 
   @override
   String get desktopSettingsFeatureNftMintingDescription => 'Ustvarjaj in upravljaj digitalne umetniške zbirateljske predmete';
@@ -1809,10 +1809,10 @@ class AppLocalizationsSl extends AppLocalizations {
   String get settingsRoleInstitutionSubtitle => 'Pokaži razdelke institucije (dogodki, zbirke)';
 
   @override
-  String get settingsWalletSectionTitle => 'Denarnica';
+  String get settingsWalletSectionTitle => 'Izbirna denarniška plast';
 
   @override
-  String get settingsWalletConnectionTileTitle => 'Povezava denarnice';
+  String get settingsWalletConnectionTileTitle => 'Povezava denarnice (izbirno)';
 
   @override
   String get settingsWalletConnectionConnected => 'Povezano';
@@ -1841,7 +1841,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get walletActionSignInRequiredToast => 'Za nadaljevanje se prijavi.';
 
   @override
-  String get walletActionConnectWalletRequiredToast => 'Za nadaljevanje poveži denarnico.';
+  String get walletActionConnectWalletRequiredToast => 'Za to dejanje, vezano na denarnico, poveži izbirno denarnico.';
 
   @override
   String get walletActionAccountShellNeedsWalletToast => 'Račun je prijavljen, vendar je treba na tej napravi še obnoviti ali povezati denarnico, preden lahko to dejanje nadaljuje.';
@@ -2034,7 +2034,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get settingsLogoutTileTitle => 'Odjava';
 
   @override
-  String get settingsLogoutTileSubtitle => 'Odklopi denarnico in počisti sejo';
+  String get settingsLogoutTileSubtitle => 'Odjavi se in počisti sejo na tej napravi';
 
   @override
   String get settingsResetAppTileTitle => 'Ponastavi aplikacijo';
@@ -2318,7 +2318,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get settingsTermsDialogTitle => 'Pogoji uporabe';
 
   @override
-  String get settingsTermsDialogBody => 'Z uporabo art.kubus se strinjaš s temi pogoji:\n\n1. Za varnost denarnice, obnovitvene fraze in obnovitvenih gesel skrbiš ti.\n2. Tvojih zasebnih ključev in obnovitvene fraze ne hranimo namesto tebe.\n3. Dejanja in transakcije, vezane na denarnico, so lahko dokončne in nepovratne.\n4. Aplikacijo uporabljaj premišljeno in varuj podatke za obnovitev.\n5. Te pogoje lahko občasno posodobimo.\n\nZa celotne pogoje obišči našo spletno stran.';
+  String get settingsTermsDialogBody => 'Z uporabo art.kubus se strinjaš s temi pogoji:\n\n1. art.kubus je odprta umetniška platforma in raziskovalno-razvojni prototip.\n2. Sam/-a si odgovoren/-na za zaščito izbirne denarnice, obnovitvene fraze in obnovitvenih gesel, če jih uporabiš.\n3. Dejanja z denarnico so lahko dokončna in nepovratna.\n4. Odkrivanje, sodelovanje v skupnosti in javni kulturni dostop uporabljaj odgovorno.\n5. Pogoje lahko sčasoma posodobimo.\n\nZa celotne pogoje obišči našo spletno stran.';
 
   @override
   String get settingsPrivacyPolicyDialogTitle => 'Pravilnik o zasebnosti';
@@ -2548,7 +2548,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get settingsEmailPreferencesActivityCommunitySubtitle => 'Odgovori, omembe in posodobitve iz skupnosti';
 
   @override
-  String get settingsEmailPreferencesActivityDaoTitle => 'Aktivnost DAO';
+  String get settingsEmailPreferencesActivityDaoTitle => 'Aktivnost raziskav upravljanja';
 
   @override
   String get settingsEmailPreferencesActivityDaoSubtitle => 'Posodobitve skupnostnega upravljanja, predlogi in opomniki za glasovanje';
@@ -2617,10 +2617,10 @@ class AppLocalizationsSl extends AppLocalizations {
   String get settingsInAppNotificationsCommunitySubtitle => 'Obvestila v aplikaciji za komentarje, všečke, sledenja in delitve.';
 
   @override
-  String get settingsInAppNotificationsDaoTitle => 'DAO obvestila';
+  String get settingsInAppNotificationsDaoTitle => 'Obvestila raziskav upravljanja';
 
   @override
-  String get settingsInAppNotificationsDaoSubtitle => 'Obvestila v aplikaciji o DAO pregledih in odločitvah skupnosti.';
+  String get settingsInAppNotificationsDaoSubtitle => 'Obvestila v aplikaciji za skupnostni pregled in odločitve raziskav upravljanja.';
 
   @override
   String get settingsInAppNotificationsArtistHubTitle => 'Obvestila Artist Huba';
@@ -2715,13 +2715,13 @@ class AppLocalizationsSl extends AppLocalizations {
   }
 
   @override
-  String get web3OnboardingKeyFeaturesTitle => 'Ključne funkcije:';
+  String get web3OnboardingKeyFeaturesTitle => 'Izbirne infrastrukturne plasti:';
 
   @override
-  String get web3FeatureWeb3Title => 'Izbirna denarnica in arhivska orodja';
+  String get web3FeatureWeb3Title => 'Izbirna lastniška in arhivska orodja';
 
   @override
-  String get web3FeatureMarketplaceTitle => 'Digitalne zbirke';
+  String get web3FeatureMarketplaceTitle => 'Digitalni kulturni artefakti';
 
   @override
   String get web3FeatureArtistStudioTitle => 'Umetniški studio';
@@ -2730,34 +2730,34 @@ class AppLocalizationsSl extends AppLocalizations {
   String get web3FeatureInstitutionHubTitle => 'Središče za institucije';
 
   @override
-  String get web3FeatureGovernanceTitle => 'Skupnostno upravljanje';
+  String get web3FeatureGovernanceTitle => 'Raziskave upravljanja';
 
   @override
-  String get web3DaoP1Title => 'Dobrodošel/a v skupnostnem odločanju';
+  String get web3DaoP1Title => 'Raziskave skupnostnega upravljanja';
 
   @override
-  String get web3DaoP1Description => 'Sodeluj pri skupnostnih odločitvah, ki oblikujejo art.kubus. To je upravljanje kot sodelovanje, ne špekulacija.';
+  String get web3DaoP1Description => 'Sodeluj v eksperimentalnem skupnostnem odločanju, ki pomaga oblikovati art.kubus. Gre za infrastrukturo sodelovanja, ne finančni produkt.';
 
   @override
-  String get web3DaoP1Feature1 => 'Glasuj o skupnostnih predlogih';
+  String get web3DaoP1Feature1 => 'Pregleduj skupnostne predloge';
 
   @override
-  String get web3DaoP1Feature2 => 'Ustvari in oddaj predloge';
+  String get web3DaoP1Feature2 => 'Oddaj ideje s kontekstom';
 
   @override
-  String get web3DaoP1Feature3 => 'Za sodelovanje zbiraj KUB8 točke';
+  String get web3DaoP1Feature3 => 'Prejmi priznanje za sodelovanje';
 
   @override
   String get web3DaoP1Feature4 => 'Razpravljaj in sodeluj z drugimi';
 
   @override
-  String get web3DaoP2Title => 'Tvoja glasovalna moč';
+  String get web3DaoP2Title => 'Signali sodelovanja';
 
   @override
-  String get web3DaoP2Description => 'Glasovalna moč lahko odraža sodelovanje v Sezoni 0 (KUB8 točke). Gre za prispevek in priznanje, ne za finančno vrednost.';
+  String get web3DaoP2Description => 'Signali sodelovanja lahko odražajo priznanja Sezone 0. Priznavajo prispevek in vidnost, ne finančne vrednosti.';
 
   @override
-  String get web3DaoP2Feature1 => 'Glasovalna moč lahko sledi tvojim KUB8 točkam';
+  String get web3DaoP2Feature1 => 'Signali lahko sledijo priznanjem KUB8';
 
   @override
   String get web3DaoP2Feature2 => 'Glasuj o aktivnih predlogih';
@@ -2826,7 +2826,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get web3ArtistStudioP2Title => 'Galerija umetnin';
 
   @override
-  String get web3ArtistStudioP2Description => 'Predstavi svoje stvaritve in zbirateljske predmete (NFT). Naloži, organiziraj in prikaži svoje umetnine.';
+  String get web3ArtistStudioP2Description => 'Predstavi umetnine in izbirne digitalne kulturne artefakte. Naloži, organiziraj in opiši svojo prakso.';
 
   @override
   String get web3ArtistStudioP2Feature1 => 'Naloži in organiziraj umetnine';
@@ -2853,7 +2853,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get web3ArtistStudioP3Feature2 => 'Poveži umetnine z lokacijami';
 
   @override
-  String get web3ArtistStudioP3Feature3 => 'Dodaj priznanje za odkritja (KUB8 točke)';
+  String get web3ArtistStudioP3Feature3 => 'Dodaj priznanje za odkritja';
 
   @override
   String get web3ArtistStudioP3Feature4 => 'Spremljaj interakcije z označevalci';
@@ -2868,7 +2868,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get web3ArtistStudioP4Feature1 => 'Spremljaj uspešnost umetnin';
 
   @override
-  String get web3ArtistStudioP4Feature2 => 'Spremljaj napredek KUB8 točk';
+  String get web3ArtistStudioP4Feature2 => 'Spremljaj napredek priznanj';
 
   @override
   String get web3ArtistStudioP4Feature3 => 'Oglej si vzorce odkritij';
@@ -2892,7 +2892,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get web3ArtistStudioP5Feature3 => 'Razišči stvaritve skupnosti';
 
   @override
-  String get web3ArtistStudioP5Feature4 => 'Začni zbirati KUB8 točke';
+  String get web3ArtistStudioP5Feature4 => 'Gradi priznanje za sodelovanje';
 
   @override
   String get web3InstitutionHubP1Title => 'Dobrodošel/a v središču za institucije';
@@ -3000,7 +3000,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get institutionHubTabAnalytics => 'Analitika';
 
   @override
-  String get institutionHubSeparateWalletsTip => 'Namig: Uporabi ločeni denarnici za vloge umetnika in institucije, da se izogneš DAO konfliktom.';
+  String get institutionHubSeparateWalletsTip => 'Namig: Uporabi ločeni izbirni denarnici za vlogi ustvarjalca in institucije, da konteksti skupnostnega pregleda ostanejo jasni.';
 
   @override
   String get institutionHubApplyForReviewAction => 'Oddaj prijavo za pregled';
@@ -3021,7 +3021,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get institutionHubApplicationTitle => 'Prijava institucije';
 
   @override
-  String get institutionHubApplicationSubtitle => 'Deli svoje poslanstvo, programski fokus in nacin sodelovanja z DAO.';
+  String get institutionHubApplicationSubtitle => 'Deli svoje poslanstvo, programski fokus in način sodelovanja s skupnostjo.';
 
   @override
   String get institutionHubApplicationOrganizationLabel => 'Ime organizacije';
@@ -3048,10 +3048,10 @@ class AppLocalizationsSl extends AppLocalizations {
   String get institutionHubApplicationMissionRequired => 'Opisi poslanstvo z vsaj 20 znaki.';
 
   @override
-  String get institutionHubApplicationWalletRequired => 'Pred oddajo povezi denarnico.';
+  String get institutionHubApplicationWalletRequired => 'Pred oddajo poveži izbirno denarnico.';
 
   @override
-  String get institutionHubApplicationSubmittedToast => 'Prijava je oddana v DAO pregled.';
+  String get institutionHubApplicationSubmittedToast => 'Prijava je oddana v skupnostni pregled.';
 
   @override
   String get institutionHubApplicationSubmitUnavailableToast => 'Prijave trenutno ni mogoce oddati.';
@@ -3077,7 +3077,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get institutionHubArtistSubmissionConflictDescription => 'Za to denarnico je zaznana umetniška prijava. Počisti jo v nastavitvah, preden nadaljuješ kot institucija.';
 
   @override
-  String get institutionHubApplicationCardSubtitle => 'Oddaj organizacijo v DAO pregled in odkleni institucijska orodja.';
+  String get institutionHubApplicationCardSubtitle => 'Oddaj organizacijo v skupnostni pregled in odkleni institucijska orodja.';
 
   @override
   String get institutionHubDaoStatusApproved => 'ODOBRENO';
@@ -3095,19 +3095,19 @@ class AppLocalizationsSl extends AppLocalizations {
   String get institutionHubDaoStatusNotApplied => 'NI PRIJAVLJENO';
 
   @override
-  String get institutionHubCtaApprovedByDao => 'Odobril DAO';
+  String get institutionHubCtaApprovedByDao => 'Odobreno v skupnostnem pregledu';
 
   @override
-  String get institutionHubCtaPendingDaoReview => 'Čaka na DAO pregled';
+  String get institutionHubCtaPendingDaoReview => 'Čaka na skupnostni pregled';
 
   @override
-  String get institutionHubCtaConnectWalletToApply => 'Povezi denarnico za prijavo';
+  String get institutionHubCtaConnectWalletToApply => 'Poveži izbirno denarnico za prijavo';
 
   @override
-  String get institutionHubDaoStatusSyncedLabel => 'Stanje sinhronizirano iz DAO';
+  String get institutionHubDaoStatusSyncedLabel => 'Stanje sinhronizirano iz skupnostnega pregleda';
 
   @override
-  String get institutionHubDaoReviewQueueMessage => 'Tvoja prijava čaka v vrsti za DAO pregled.';
+  String get institutionHubDaoReviewQueueMessage => 'Tvoja prijava čaka v vrsti za skupnostni pregled.';
 
   @override
   String get institutionHubApprovedToolsMessage => 'Cestitke! Institucijska orodja so odobrena.';
@@ -3116,10 +3116,10 @@ class AppLocalizationsSl extends AppLocalizations {
   String get institutionHubRejectedResubmitMessage => 'Zadnja prijava je bila zavrnjena. Ponovno jo lahko oddas s popravki.';
 
   @override
-  String get web3MarketplaceP1Title => 'Dobrodošel/a na tržnici';
+  String get web3MarketplaceP1Title => 'Digitalni kulturni artefakti';
 
   @override
-  String get web3MarketplaceP1Description => 'Odkrij digitalna dela in zbirke umetnikov ter institucij, nato jih zbiraj ali ponudi naprej z jasno sledljivostjo izvora.';
+  String get web3MarketplaceP1Description => 'Ta izbirna plast zbirateljske predmete obravnava kot digitalne spominke, zapise provenience in eksperimentalne arhivske objekte, povezane z umetninami.';
 
   @override
   String get web3MarketplaceP1Feature1 => 'Brskaj po zbirateljskih predmetih';
@@ -3191,7 +3191,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get web3FeaturesP1Title => 'Izbirna denarnica računa';
 
   @override
-  String get web3FeaturesP1Description => 'Denarnica lahko podpira dolgoročni dostop, atribucijo in prihodnje sodelovanje, ko to izbereš. Osnovno odkrivanje in skupnostno brskanje se ne začneta z denarnico.';
+  String get web3FeaturesP1Description => 'Ta korak je izbiren. Denarnica lahko podpira dolgoročni dostop, pripis, digitalno lastništvo in prihodnje sodelovanje, ko to izbereš. Osnovno odkrivanje in skupnost se ne začneta z denarnico.';
 
   @override
   String get web3FeaturesP1Feature1 => 'Dolgoročna kontinuiteta računa';
@@ -3206,10 +3206,10 @@ class AppLocalizationsSl extends AppLocalizations {
   String get web3FeaturesP1Feature4 => 'Dostop, ki ga lahko obnoviš in preneseš';
 
   @override
-  String get web3FeaturesP2Title => 'Tržnica digitalnih zbirk';
+  String get web3FeaturesP2Title => 'Katalog digitalnih artefaktov';
 
   @override
-  String get web3FeaturesP2Description => 'Brskaj, zbiraj in ponujaj digitalna dela na tržnici, povezani z umetniki, umetninami in preverljivim izvorom.';
+  String get web3FeaturesP2Description => 'Brskaj po digitalnih kulturnih artefaktih, povezanih z ustvarjalci, umetninami, institucijami in provenienco.';
 
   @override
   String get web3FeaturesP2Feature1 => 'Brskaj po izpostavljenih izdajah';
@@ -3239,7 +3239,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get web3FeaturesP3Feature2 => 'Ustvarjaj AR označevalce';
 
   @override
-  String get web3FeaturesP3Feature3 => 'Po želji objavi zbirateljske predmete (NFT)';
+  String get web3FeaturesP3Feature3 => 'Izbirno objavi digitalne artefakte';
 
   @override
   String get web3FeaturesP3Feature4 => 'Spremljaj vpoglede in odziv';
@@ -3260,7 +3260,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get web3FeaturesP4Feature2 => 'Oddaj predloge izboljšav';
 
   @override
-  String get web3FeaturesP4Feature3 => 'Za sodelovanje zbiraj KUB8 točke';
+  String get web3FeaturesP4Feature3 => 'Prejmi priznanje za sodelovanje';
 
   @override
   String get web3FeaturesP4Feature4 => 'Spremljaj razprave in rezultate';
@@ -3394,13 +3394,13 @@ class AppLocalizationsSl extends AppLocalizations {
   String get mapLocationUnavailableToast => 'Vaše lokacije ni mogoče določiti.';
 
   @override
-  String get mapMarkerCreateWalletRequired => 'Poveži denarnico in ustvari umetnino, da lahko postaviš označevalec.';
+  String get mapMarkerCreateWalletRequired => 'Ustvari profil in izbirni lastniški dostop, preden postaviš označevalec za svojo umetnino.';
 
   @override
-  String get mapMarkerCreateNoArArtworks => 'Za tvojo denarnico ni AR-pripravljenih umetnin. Najprej ustvari eno, nato lahko postaviš označevalec.';
+  String get mapMarkerCreateNoArArtworks => 'S tem računom še ni povezanih umetnin, pripravljenih za zemljevid. Najprej ustvari umetnino, nato jo postavi na odprti zemljevid umetnosti.';
 
   @override
-  String get mapMarkerDialogTitle => 'Ustvari označevalec';
+  String get mapMarkerDialogTitle => 'Dodaj na odprti zemljevid umetnosti';
 
   @override
   String get mapMarkerDialogRefreshSubjectsTooltip => 'Osveži predmete';
@@ -3448,7 +3448,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get mapMarkerDialogMarkerLayerLabel => 'Sloj označevalca';
 
   @override
-  String get mapMarkerDialogPublicMarkerTitle => 'Javni označevalec';
+  String get mapMarkerDialogPublicMarkerTitle => 'Javni kulturni označevalec';
 
   @override
   String get mapMarkerDialogPublicMarkerSubtitle => 'Viden vsem raziskovalcem na zemljevidu';
@@ -3548,7 +3548,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get mapMarkerClaimOwnerReviewActionsTitle => 'Pregled lastnika';
 
   @override
-  String get mapMarkerClaimDaoReviewActionsTitle => 'DAO pregled';
+  String get mapMarkerClaimDaoReviewActionsTitle => 'Skupnostni pregled';
 
   @override
   String get mapMarkerClaimActionApprove => 'Odobri';
@@ -3557,13 +3557,13 @@ class AppLocalizationsSl extends AppLocalizations {
   String get mapMarkerClaimActionReject => 'Zavrni';
 
   @override
-  String get mapMarkerClaimActionEscalate => 'Posreduj DAO';
+  String get mapMarkerClaimActionEscalate => 'Posreduj v skupnostni pregled';
 
   @override
-  String get mapMarkerClaimActionApproveDao => 'Odobri (DAO)';
+  String get mapMarkerClaimActionApproveDao => 'Odobri (skupnost)';
 
   @override
-  String get mapMarkerClaimActionRejectDao => 'Zavrni (DAO)';
+  String get mapMarkerClaimActionRejectDao => 'Zavrni (skupnost)';
 
   @override
   String get mapMarkerClaimNoteLabel => 'Opomba (neobvezno)';
@@ -3589,7 +3589,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get mapMarkerClaimStatusPendingOwnerReview => 'Čaka na pregled lastnika';
 
   @override
-  String get mapMarkerClaimStatusPendingDaoReview => 'Čaka na DAO pregled';
+  String get mapMarkerClaimStatusPendingDaoReview => 'Čaka na skupnostni pregled';
 
   @override
   String get mapMarkerClaimStatusApproved => 'Odobreno';
@@ -3598,13 +3598,13 @@ class AppLocalizationsSl extends AppLocalizations {
   String get mapMarkerClaimStatusRejectedOwner => 'Lastnik je zavrnil';
 
   @override
-  String get mapMarkerClaimStatusRejectedDao => 'DAO je zavrnil';
+  String get mapMarkerClaimStatusRejectedDao => 'Zavrnjeno v skupnostnem pregledu';
 
   @override
   String get mapMarkerClaimStageOwnerReview => 'Pregled lastnika';
 
   @override
-  String get mapMarkerClaimStageDaoReview => 'DAO pregled';
+  String get mapMarkerClaimStageDaoReview => 'Skupnostni pregled';
 
   @override
   String get mapMarkerClaimStageResolved => 'Zaključeno';
@@ -3751,10 +3751,10 @@ class AppLocalizationsSl extends AppLocalizations {
   String get mapExhibitionsUnavailableToast => 'Razstave trenutno niso na voljo.';
 
   @override
-  String get mapTutorialStepMapTitle => 'Zemljevid';
+  String get mapTutorialStepMapTitle => 'Odprti zemljevid umetnosti';
 
   @override
-  String get mapTutorialStepMapBody => 'Premikaj in približuj za raziskovanje. Tapni označevalec za podrobnosti in dejanja.';
+  String get mapTutorialStepMapBody => 'Odkrij umetnost v javnem prostoru, razstave, institucije in zgodbe ustvarjalcev na skupnostno ustvarjenem kulturnem zemljevidu.';
 
   @override
   String get mapTutorialStepMarkersTitle => 'Označevalci in vrste';
@@ -3826,7 +3826,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get mapTravelModeTutorialEnable => 'Vključi način potovanja';
 
   @override
-  String get mapNearbyArtTitle => 'Umetnost v bližini';
+  String get mapNearbyArtTitle => 'Umetnost in kraji v bližini';
 
   @override
   String mapResultsDiscoveredLabel(Object count, Object percent) {
@@ -3943,7 +3943,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get mapSortRarity => 'Redkost';
 
   @override
-  String get mapSortHighestRewards => 'Največ nagrad';
+  String get mapSortHighestRewards => 'Največ priznanj';
 
   @override
   String get mapSortMostViewed => 'Največ ogledov';
@@ -5227,7 +5227,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get connectWalletSecureAccessTitle => 'Zavaruj denarnico';
 
   @override
-  String get connectWalletChooseTitle => 'Poveži denarnico';
+  String get connectWalletChooseTitle => 'Poveži izbirno denarnico';
 
   @override
   String get connectWalletChooseDescription => 'Izberi, kako želiš nastaviti denarnico računa. Ustvari ali uvozi lokalno obnovitveno frazo ali poveži zunanjo denarnico za podpisovanje.';
@@ -5489,19 +5489,19 @@ class AppLocalizationsSl extends AppLocalizations {
   String get connectWalletWalletConnectFailedToast => 'Povezava z zunanjo denarnico ni uspela';
 
   @override
-  String get walletHomeTitle => 'Moja denarnica';
+  String get walletHomeTitle => 'Izbirna denarniška plast';
 
   @override
   String get walletHomeLoadingLabel => 'Nalaganje denarnice…';
 
   @override
-  String get walletHomeNoWalletDescription => 'Za začetek poveži ali obnovi denarnico svojega računa.';
+  String get walletHomeNoWalletDescription => 'Ta korak je izbiren. Denarnico poveži ali obnovi samo za digitalno lastništvo, pripis in orodja sodelovanja.';
 
   @override
   String get walletHomeSignedOutTitle => 'Denarnica ni povezana';
 
   @override
-  String get walletHomeSignedOutDescription => 'Prijavi se ter poveži ali obnovi denarnico, da vidiš stanja, zbirke in dejanja, zaščitena z denarnico.';
+  String get walletHomeSignedOutDescription => 'Prijavi se za uporabo profila. Denarnico poveži ali obnovi le, ko želiš stanja, digitalne artefakte ali dejanja, zaščitena z denarnico.';
 
   @override
   String get walletHomeAccountShellTitle => 'Račun je prijavljen, denarnica ni obnovljena';
@@ -5545,10 +5545,10 @@ class AppLocalizationsSl extends AppLocalizations {
   String get walletHomeActionSwap => 'Zamenjaj';
 
   @override
-  String get walletHomeActionNfts => 'NFT';
+  String get walletHomeActionNfts => 'Artefakti';
 
   @override
-  String get walletHomeQuickActionsTitle => 'Dejanja denarnice';
+  String get walletHomeQuickActionsTitle => 'Izbirna dejanja denarnice';
 
   @override
   String get walletHomeQuickActionsSubtitle => 'Poslji, prejmi, zamenjaj ali odpri zbirateljske predmete.';
@@ -5758,7 +5758,7 @@ class AppLocalizationsSl extends AppLocalizations {
   }
 
   @override
-  String get walletHomeRewardsTitle => 'Nagrade KUB8';
+  String get walletHomeRewardsTitle => 'Priznanja KUB8';
 
   @override
   String walletHomeRewardsDescription(Object balance) {
@@ -6087,7 +6087,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get sendTokenInvalidAddressBeforeSendToast => 'Pred pošiljanjem vnesi veljaven Solana naslov.';
 
   @override
-  String get sendTokenConnectWalletBeforeSendToast => 'Pred pošiljanjem poveži denarnico.';
+  String get sendTokenConnectWalletBeforeSendToast => 'Pred pošiljanjem žetonov poveži izbirno denarnico.';
 
   @override
   String get qrScannerTitle => 'Skeniraj QR kodo';
@@ -6748,7 +6748,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get artistCreatorSelectImageToast => 'Prosim, izberi sliko';
 
   @override
-  String get artistCreatorConnectWalletToPublishToast => 'Poveži denarnico za objavo umetnine.';
+  String get artistCreatorConnectWalletToPublishToast => 'Za objavo umetnine, vezane na denarnico, poveži izbirno denarnico.';
 
   @override
   String get artistCreatorSelectCoverImageToast => 'Prosim, izberi naslovno sliko.';
@@ -6826,7 +6826,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get artistStudioCrossRoleConflictDescription => 'Za to denarnico smo zaznali obstoječi institucijski zapis. Pred prijavo kot umetnik ga počisti v nastavitvah.';
 
   @override
-  String get artistStudioDaoCardTitle => 'Umetniška prijava (DAO)';
+  String get artistStudioDaoCardTitle => 'Prijava ustvarjalca (skupnostni pregled)';
 
   @override
   String get artistStudioDaoCardSubtitle => 'Svojo prakso oddaj v skupnostni pregled prek DAO. Tako art.kubus odpira umetniška orodja in prihodnje načine sodelovanja.';
@@ -6856,7 +6856,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get artistStudioReviewRejectedInfo => 'Tvoja zadnja prijava je bila zavrnjena. Lahko jo znova oddaš z dopolnitvami.';
 
   @override
-  String get artistStudioConnectWalletToSubmitForDaoReview => 'Poveži denarnico, da oddaš prijavo v DAO pregled.';
+  String get artistStudioConnectWalletToSubmitForDaoReview => 'Pred oddajo v skupnostni pregled poveži izbirno denarnico.';
 
   @override
   String get artistStudioCtaConnectWalletToApply => 'Poveži denarnico za prijavo';
@@ -6871,7 +6871,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get artistStudioCtaResubmitForReview => 'Ponovno oddaj v pregled';
 
   @override
-  String get artistStudioCtaApplyForDaoReview => 'Prijavi za pregled DAO';
+  String get artistStudioCtaApplyForDaoReview => 'Prijavi se v skupnostni pregled';
 
   @override
   String get artistPromotionRequiresWalletReason => 'Poveži odobreno umetniško denarnico za zahtevo promocije profila.';
@@ -7080,7 +7080,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get desktopArtistStudioStatSales => 'Prodaje';
 
   @override
-  String get desktopInstitutionPromotionWalletRequiredReason => 'Za ustvarjanje promocij poveži denarnico.';
+  String get desktopInstitutionPromotionWalletRequiredReason => 'Za ustvarjanje promocij poveži izbirno denarnico.';
 
   @override
   String get desktopInstitutionPromotionArtistConflictReason => 'Ta denarnica je preverjena kot umetniška. Za promocijo vsebin institucije uporabi institucijsko denarnico.';
@@ -7368,10 +7368,10 @@ class AppLocalizationsSl extends AppLocalizations {
   }
 
   @override
-  String get marketplaceConnectWalletTitle => 'Poveži denarnico';
+  String get marketplaceConnectWalletTitle => 'Izbirna povezava denarnice';
 
   @override
-  String get marketplaceConnectWalletDescription => 'Poveži Solana denarnico za ogled svojih zbirateljskih predmetov (NFT).';
+  String get marketplaceConnectWalletDescription => 'Denarnico Solana poveži samo, če želiš videti digitalne kulturne artefakte, vezane na denarnico.';
 
   @override
   String get marketplaceSettingsShowArOnlyTitle => 'Prikazi samo AR zbirke';
@@ -7395,7 +7395,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get marketplaceFeaturedCollectionsSubtitle => 'Kurirane izdaje in AR serije iz skupnosti.';
 
   @override
-  String get marketplaceNoMintedNftsTitle => 'Še ni izdanih NFT-jev';
+  String get marketplaceNoMintedNftsTitle => 'Digitalnih artefaktov še ni';
 
   @override
   String get marketplaceNoMintedNftsDescription => 'Objave na tržnici se prikažejo, ko je umetnina izdana kot NFT.';
@@ -7413,7 +7413,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get marketplaceNoTrendingNftsDescription => 'Preveri pozneje, ko bo dejavnost NFT-jev večja.';
 
   @override
-  String get marketplaceMyCollectionTitle => 'Moja NFT zbirka';
+  String get marketplaceMyCollectionTitle => 'Moji digitalni artefakti';
 
   @override
   String marketplaceMyCollectionCount(Object count) {
@@ -7538,7 +7538,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get marketplaceSoldOutLabel => 'Razprodano';
 
   @override
-  String get marketplaceMintNftButtonLabel => 'Izdaj NFT';
+  String get marketplaceMintNftButtonLabel => 'Ustvari artefakt';
 
   @override
   String get marketplaceArRequiredTitle => 'AR je obvezen';
@@ -7550,7 +7550,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get marketplaceGoToArButton => 'Pojdi na AR';
 
   @override
-  String get marketplaceMintDialogTitle => 'Izdaj NFT';
+  String get marketplaceMintDialogTitle => 'Ustvari digitalni artefakt';
 
   @override
   String marketplaceMintConfirmCollectionDescription(Object collection) {
@@ -7739,7 +7739,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get daoReviewDetailsVotingManagedByDao => 'Odločitve o pregledu upravlja DAO postopek.';
 
   @override
-  String get daoReviewQueueTitle => 'Čakalna vrsta za DAO pregled';
+  String get daoReviewQueueTitle => 'Čakalna vrsta skupnostnega pregleda';
 
   @override
   String get daoReviewVotingHandledByDaoHelper => 'Glasovanje poteka neposredno prek DAO; za odločanje uporabi predloge.';
@@ -7840,7 +7840,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get daoProposalFillRequiredFieldsToast => 'Prosim, izpolni vsa obvezna polja';
 
   @override
-  String get daoProposalWalletRequiredToast => 'Za oddajo predlogov poveži denarnico.';
+  String get daoProposalWalletRequiredToast => 'Za oddajo predlogov poveži izbirno denarnico.';
 
   @override
   String get daoProposalSubmittedToast => 'Predlog je oddan v DAO';
@@ -7855,7 +7855,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get daoQuorumPending => 'Kvorum ni dosežen';
 
   @override
-  String get daoVoteWalletRequiredToast => 'Pred glasovanjem poveži denarnico';
+  String get daoVoteWalletRequiredToast => 'Pred glasovanjem poveži izbirno denarnico.';
 
   @override
   String get daoVoteSubmittedYesToast => 'Glas ZA oddan';
@@ -8340,7 +8340,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get communityDiscoverFeedUnavailableToast => 'Vir Odkrij ni na voljo. Poskusi znova pozneje.';
 
   @override
-  String get communityScreenTitle => 'Poveži se';
+  String get communityScreenTitle => 'Skupnost';
 
   @override
   String get communityFollowingTab => 'Spremljam';
@@ -8358,7 +8358,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get communityFeedEmptyTitle => 'Še ni objav';
 
   @override
-  String get communityFeedEmptyDescription => 'Spremljaj ustvarjalce, da se njihove objave prikažejo tukaj.';
+  String get communityFeedEmptyDescription => 'Sledi ustvarjalcem, institucijam in skupinam, da vidiš njihove posodobitve.';
 
   @override
   String get communityDiscoverEmptyTitle => 'Za zdaj ni nič za odkriti';
@@ -8398,7 +8398,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get communityGroupsDirectoryTitle => 'Imenik skupin';
 
   @override
-  String get communityGroupsDirectoryDescription => 'Najdi usmerjene prostore za kritike, objave, dogodke in sodelovanja.';
+  String get communityGroupsDirectoryDescription => 'Poišči osredotočene prostore za kritike, razstave, javno umetnost, dogodke in sodelovanja.';
 
   @override
   String get communityClearSearchTooltip => 'Počisti iskanje';
@@ -8658,7 +8658,7 @@ class AppLocalizationsSl extends AppLocalizations {
   }
 
   @override
-  String get communityArtFeedHeaderTitle => 'Umetniški vir';
+  String get communityArtFeedHeaderTitle => 'Skupnostni tok umetnosti';
 
   @override
   String communityArtFeedRadiusSubtitle(Object radius) {
@@ -8709,7 +8709,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get communityNamePlaceHint => 'npr. Mestni park';
 
   @override
-  String get communityConnectWalletFirstToast => 'Najprej poveži denarnico.';
+  String get communityConnectWalletFirstToast => 'Najprej se prijavi; denarniški dostop je potreben samo za dejanja, vezana na denarnico.';
 
   @override
   String get communityUnableToAuthenticateToast => 'Overitev ni uspela. Poskusi znova.';
@@ -8862,13 +8862,13 @@ class AppLocalizationsSl extends AppLocalizations {
   String get homeDefaultDisplayName => 'prijatelj';
 
   @override
-  String get homeWelcomeSubtitle => 'kubus - tvoj sopotnik v umetnosti.';
+  String get homeWelcomeSubtitle => 'Odprta umetniška platforma za odkrivanje, ustvarjalce, institucije in skupnost.';
 
   @override
-  String get homeExploreWeb3Button => 'Izbirna denarniška orodja';
+  String get homeExploreWeb3Button => 'Izbirna infrastruktura';
 
   @override
-  String get homeQuickActionsTitle => 'Hitra dejanja';
+  String get homeQuickActionsTitle => 'Začni tukaj';
 
   @override
   String get homeRecentlyUsedLabel => 'Nedavno uporabljeno';
@@ -8877,10 +8877,10 @@ class AppLocalizationsSl extends AppLocalizations {
   String get homeQuickActionsEmptyDescription => 'Začni raziskovati in kubus bo tukaj hranil uporabne bližnjice.';
 
   @override
-  String get homeYourStatsTitle => 'Tvoja statistika';
+  String get homeYourStatsTitle => 'Tvoja kulturna dejavnost';
 
   @override
-  String get homeNoStatsAvailableTitle => 'Tvoja prva umetnina te čaka.';
+  String get homeNoStatsAvailableTitle => 'Začni odkrivati lokalno umetnost.';
 
   @override
   String get homeNoStatsAvailableDescription => 'Začni pot odkrivanja in kubus bo tukaj zbiral tvoje obiske.';
@@ -8971,7 +8971,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get homeRecentActivityTitle => 'Nedavna aktivnost';
 
   @override
-  String get homeNoRecentActivityTitle => 'Tvoja prva umetnina te čaka.';
+  String get homeNoRecentActivityTitle => 'Začni z odprtim zemljevidom umetnosti.';
 
   @override
   String get homeNoRecentActivityDescription => 'Začni pot odkrivanja. kubus bo tukaj zbiral tvoje obiske.';
@@ -9034,7 +9034,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get desktopHomeWelcomeFallbackName => 'Dobrodošel/a v art.kubus';
 
   @override
-  String get desktopHomeDiscoverArtTitle => 'kubus - tvoj sopotnik v umetnosti.';
+  String get desktopHomeDiscoverArtTitle => 'Odprta umetniška platforma.';
 
   @override
   String get desktopHomeDiscoverArtDescription => 'Odkrivaj umetnine, kraje, ustvarjalce in institucije v javnem prostoru in na spletu. Denarniška orodja so izbirna, AR plasti pa v razvoju.';
@@ -9161,13 +9161,13 @@ class AppLocalizationsSl extends AppLocalizations {
   String get desktopHomeUnreadNotificationsLabel => 'neprebrana obvestila';
 
   @override
-  String get homeWeb3SectionTitle => 'Izbirna denarniška orodja';
+  String get homeWeb3SectionTitle => 'Izbirna infrastruktura';
 
   @override
-  String get homeAccountRequiredLabel => 'Potrebna denarnica';
+  String get homeAccountRequiredLabel => 'Izbirna denarnica';
 
   @override
-  String get homeWeb3DaoTitle => 'DAO';
+  String get homeWeb3DaoTitle => 'Raziskave upravljanja';
 
   @override
   String get homeWeb3DaoSubtitle => 'Upravljanje in glasovanje';
@@ -9185,7 +9185,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get homeWeb3InstitutionSubtitle => 'Dogodki in zbirke';
 
   @override
-  String get homeWeb3MarketplaceTitle => 'Zbirateljski predmeti';
+  String get homeWeb3MarketplaceTitle => 'Digitalni artefakti';
 
   @override
   String get homeWeb3MarketplaceSubtitle => 'Odkrij in zbiraj';
@@ -10133,13 +10133,13 @@ class AppLocalizationsSl extends AppLocalizations {
   String get desktopShellNavOrganize => 'Organiziraj';
 
   @override
-  String get desktopShellNavGovern => 'Upravljaj';
+  String get desktopShellNavGovern => 'Raziskave';
 
   @override
-  String get desktopShellNavTrade => 'Trguj';
+  String get desktopShellNavTrade => 'Artefakti';
 
   @override
-  String get desktopShellNavWeb3 => 'Web3';
+  String get desktopShellNavWeb3 => 'Infrastruktura';
 
   @override
   String get navigationScreenCreateAr => 'Ustvari AR';
@@ -10154,10 +10154,10 @@ class AppLocalizationsSl extends AppLocalizations {
   String get navigationScreenProfile => 'Profil';
 
   @override
-  String get navigationScreenMarketplace => 'Tržnica';
+  String get navigationScreenMarketplace => 'Digitalni artefakti';
 
   @override
-  String get navigationScreenWallet => 'Denarnica';
+  String get navigationScreenWallet => 'Izbirna denarnica';
 
   @override
   String get navigationScreenAnalytics => 'Analitika';
@@ -10172,7 +10172,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get navigationScreenAchievements => 'Dosežki';
 
   @override
-  String get navigationScreenDaoHub => 'DAO središče';
+  String get navigationScreenDaoHub => 'Raziskave upravljanja';
 
   @override
   String get navigationScreenArtistStudio => 'Umetniški studio';
@@ -10181,22 +10181,22 @@ class AppLocalizationsSl extends AppLocalizations {
   String get navigationScreenInstitutionHub => 'Institucijsko središče';
 
   @override
-  String get daoHubAppBarTitle => 'DAO';
+  String get daoHubAppBarTitle => 'Raziskave upravljanja';
 
   @override
-  String get labsDaoSemanticLabel => 'DAO Lab';
+  String get labsDaoSemanticLabel => 'Laboratorij raziskav upravljanja';
 
   @override
-  String get labsMarketplaceSemanticLabel => 'Lab tržnice';
+  String get labsMarketplaceSemanticLabel => 'Laboratorij digitalnih artefaktov';
 
   @override
   String get daoHubHeaderSubtitle => 'Skupnostno upravljanje za umetnike, institucije in kulturno sodelovanje';
 
   @override
-  String get daoHubInfoDialogTitle => 'Kako deluje DAO';
+  String get daoHubInfoDialogTitle => 'Kako delujejo raziskave upravljanja';
 
   @override
-  String get daoHubInfoDialogBody => 'DAO skupnosti omogoča, da predlaga in soodloča o odločitvah platforme. Glasovalna moč sledi tvojemu sodelovanju KUB8, po potrebi pa jo lahko delegiraš osebi, ki ji zaupaš.';
+  String get daoHubInfoDialogBody => 'Ta laboratorij skupnosti daje pregleden način za predlaganje, pregledovanje in razpravo o odločitvah platforme. KUB8 beleži sodelovanje in priznanje; ni finančna vrednost.';
 
   @override
   String get daoHubTabActiveProposals => 'Predlogi';
@@ -10468,10 +10468,10 @@ class AppLocalizationsSl extends AppLocalizations {
   String get profileEditErrorToast => 'Nekaj je šlo narobe. Poskusi znova.';
 
   @override
-  String get profileEditNoWalletUploadAvatarToast => 'Denarnica ni povezana. Poveži denarnico za nalaganje avatarja.';
+  String get profileEditNoWalletUploadAvatarToast => 'Najprej se prijavi; denarniški dostop je potreben samo za dejanja profila, vezana na denarnico.';
 
   @override
-  String get profileEditNoWalletUploadCoverToast => 'Denarnica ni povezana. Poveži denarnico za nalaganje naslovne slike.';
+  String get profileEditNoWalletUploadCoverToast => 'Najprej se prijavi; denarniški dostop je potreben samo za dejanja profila, vezana na denarnico.';
 
   @override
   String get profileEditAvatarCopiedToClipboardToast => 'URL avatarja kopiran v odložišče';
@@ -11092,7 +11092,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get profileNoBioYetTitle => 'Brez opisa';
 
   @override
-  String get profileNoBioYetDescription => 'Tapni \"Uredi profil\" za dodajanje kratkega opisa.';
+  String get profileNoBioYetDescription => 'Tapni "Uredi profil" za dodajanje kratkega opisa.';
 
   @override
   String get profileNoPostsYetDescription => 'Deli svoj pogled s skupnostjo, da se prikaže tukaj.';
@@ -11767,19 +11767,19 @@ class AppLocalizationsSl extends AppLocalizations {
   String get onboardingWelcomeDiscoverTitle => 'Odkrij umetnost s kubusom';
 
   @override
-  String get onboardingWelcomeDiscoverBody => 'Raziskuj umetnine, razstave, javna dela in ustvarjalne prostore na skupnostnem zemljevidu.';
+  String get onboardingWelcomeDiscoverBody => 'Raziskuj umetnine, razstave, javna dela, institucije in ustvarjalne prostore na odprtem zemljevidu umetnosti.';
 
   @override
   String get onboardingWelcomeCreateTitle => 'Prispevaj v arhiv';
 
   @override
-  String get onboardingWelcomeCreateBody => 'Predstavi prakso, objavi dela, dodaj kontekst in sodeluj v rastoči umetniški skupnosti.';
+  String get onboardingWelcomeCreateBody => 'Deli prakso, objavi umetnine, dodaj kontekst in sodeluj v skupnostno vodenem kulturnem arhivu.';
 
   @override
   String get onboardingWelcomeJoinTitle => 'Pripravljen/a?';
 
   @override
-  String get onboardingWelcomeJoinBody => 'Začni raziskovati ali ustvari račun.';
+  String get onboardingWelcomeJoinBody => 'Začni raziskovati, profil pa ustvari, ko želiš sodelovati.';
 
   @override
   String get promotionBuilderTitle => 'Povečaj vidnost';
