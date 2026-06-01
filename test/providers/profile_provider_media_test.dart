@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -9,6 +11,7 @@ class _FakeProfileApi implements ProfileBackendApi {
   Map<String, dynamic>? lastSavedProfile;
   Map<String, dynamic>? nextSaveResponse;
   Object? saveError;
+  Object? uploadError;
 
   @override
   String get baseUrl => 'https://api.kubus.site';
@@ -62,6 +65,10 @@ class _FakeProfileApi implements ProfileBackendApi {
     required String fileType,
     Map<String, String>? metadata,
   }) async {
+    final error = uploadError;
+    if (error != null) {
+      throw error;
+    }
     return <String, dynamic>{
       'uploadedUrl': '/uploads/profiles/avatars/$fileName',
     };
@@ -260,5 +267,59 @@ void main() {
     expect(saved, isFalse);
     expect(provider.isLoading, isFalse);
     expect(provider.error, contains('network timeout'));
+  });
+
+  test('ProfileProvider saveProfile timeout keeps current profile values',
+      () async {
+    final api = _FakeProfileApi();
+    final provider = ProfileProvider(apiService: api);
+
+    await provider.saveProfile(
+      walletAddress: 'ArtistWallet111111111111111111111111111111111',
+      username: 'artist_user',
+      displayName: 'Artist User',
+      bio: 'Existing bio',
+      avatar: '/uploads/profiles/avatars/current.png',
+      coverImage: '/uploads/profiles/cover/current.png',
+      reloadStats: false,
+    );
+
+    api.saveError = TimeoutException('profile save timed out');
+    final saved = await provider.saveProfile(
+      walletAddress: 'ArtistWallet111111111111111111111111111111111',
+      username: 'artist_user',
+      displayName: 'Changed User',
+      bio: 'Changed bio',
+      reloadStats: false,
+    );
+
+    expect(saved, isFalse);
+    expect(provider.isLoading, isFalse);
+    expect(provider.error, contains('Profile save timed out'));
+    expect(provider.currentUser?.displayName, 'Artist User');
+    expect(provider.currentUser?.bio, 'Existing bio');
+    expect(provider.currentUser?.avatar,
+        'https://api.kubus.site/uploads/profiles/avatars/current.png');
+    expect(provider.currentUser?.coverImage,
+        'https://api.kubus.site/uploads/profiles/cover/current.png');
+  });
+
+  test('ProfileProvider avatar upload timeout remains typed and debuggable',
+      () async {
+    final api = _FakeProfileApi()
+      ..uploadError = TimeoutException('avatar upload timed out');
+    final provider = ProfileProvider(apiService: api);
+
+    await expectLater(
+      provider.uploadAvatarBytes(
+        fileBytes: <int>[1, 2, 3],
+        fileName: 'avatar.png',
+        walletAddress: 'ArtistWallet111111111111111111111111111111111',
+      ),
+      throwsA(isA<TimeoutException>()),
+    );
+
+    expect(provider.lastUploadDebug?['error'],
+        contains('avatar upload timed out'));
   });
 }

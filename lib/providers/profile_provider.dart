@@ -1037,6 +1037,11 @@ class ProfileProvider extends foundation.ChangeNotifier {
       } catch (_) {}
       ProfilePackageMutationTracker.profileChanged(walletAddress);
       return true;
+    } on TimeoutException catch (e) {
+      _error =
+          'Profile save timed out. Your connection may be slow. Please retry.';
+      debugPrint('ProfileProvider.saveProfile timed out: $e');
+      return false;
     } catch (e) {
       // Detect 429 response message and provide a friendly error
       final errMsg = e.toString();
@@ -1143,6 +1148,12 @@ class ProfileProvider extends foundation.ChangeNotifier {
       } catch (_) {}
       ProfilePackageMutationTracker.profileMediaChanged(walletAddress);
       return true;
+    } on TimeoutException catch (e) {
+      _error =
+          'Profile save timed out. Your connection may be slow. Please retry.';
+      debugPrint('ProfileProvider.saveProfileMedia timed out: $e');
+      notifyListeners();
+      return false;
     } catch (e) {
       _error = 'Failed to save profile media: $e';
       debugPrint('Error saving profile media: $e');
@@ -1213,6 +1224,14 @@ class ProfileProvider extends foundation.ChangeNotifier {
       }
 
       return raster;
+    } on TimeoutException catch (e, stackTrace) {
+      debugPrint('ProfileProvider.uploadAvatar timed out: $e');
+      _lastUploadDebug = {
+        'error': e.toString(),
+        'stackTrace': stackTrace.toString(),
+      };
+      notifyListeners();
+      rethrow;
     } catch (e) {
       debugPrint('Error uploading avatar: $e');
       // Return empty string so the UI uses local initials instead of synthetic URLs
@@ -1301,6 +1320,14 @@ class ProfileProvider extends foundation.ChangeNotifier {
       }
 
       return raster;
+    } on TimeoutException catch (e, stackTrace) {
+      debugPrint('ProfileProvider.uploadAvatarBytes timed out: $e');
+      _lastUploadDebug = {
+        'error': e.toString(),
+        'stackTrace': stackTrace.toString(),
+      };
+      notifyListeners();
+      rethrow;
     } catch (e, stackTrace) {
       debugPrint(
           'ProfileProvider.uploadAvatarBytes: error uploading avatar bytes: $e');
@@ -1312,6 +1339,31 @@ class ProfileProvider extends foundation.ChangeNotifier {
       notifyListeners();
       return '';
     }
+  }
+
+  Future<Map<String, dynamic>> uploadProfileCoverBytes({
+    required List<int> fileBytes,
+    required String fileName,
+    required String walletAddress,
+  }) {
+    final service = _apiService;
+    if (service is BackendApiService) {
+      return service.uploadFile(
+        fileBytes: fileBytes,
+        fileName: fileName,
+        fileType: 'cover',
+        metadata: {'uploadFolder': 'profiles/cover'},
+        walletAddress: walletAddress,
+      );
+    }
+
+    return BackendApiService().uploadFile(
+      fileBytes: fileBytes,
+      fileName: fileName,
+      fileType: 'cover',
+      metadata: {'uploadFolder': 'profiles/cover'},
+      walletAddress: walletAddress,
+    );
   }
 
   /// Create profile when wallet is created

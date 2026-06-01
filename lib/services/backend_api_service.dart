@@ -253,6 +253,7 @@ class BackendApiService
   Future<void>? _authInitFuture;
   final Map<String, DateTime> _rateLimitResets = {};
   final Map<String, DateTime> _debugLogThrottle = <String, DateTime>{};
+  Duration? _lastMultipartTimeoutForTesting;
 
   bool? _exhibitionsApiAvailable;
   bool? _institutionsApiAvailable;
@@ -419,6 +420,10 @@ class BackendApiService
     _authToken = token;
     _authWalletCanonical = _tryExtractWalletFromToken(token);
   }
+
+  @visibleForTesting
+  Duration? get lastMultipartTimeoutForTesting =>
+      _lastMultipartTimeoutForTesting;
 
   void _debugLogThrottled(
     String key,
@@ -953,6 +958,7 @@ class BackendApiService
     bool allowImplicitBackendFailover = true,
     Set<String>? attemptedBackendOrigins,
   }) async {
+    _lastMultipartTimeoutForTesting = timeout;
     final attemptedOrigins = Set<String>.from(
       attemptedBackendOrigins ?? const <String>{},
     );

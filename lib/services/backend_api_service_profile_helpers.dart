@@ -214,8 +214,8 @@ Future<Map<String, dynamic>?> _backendApiFindProfileByUsernameImpl(
   final sanitized = username.trim().replaceFirst(RegExp(r'^@+'), '');
   if (sanitized.isEmpty) return null;
   try {
-    final response =
-        await service.search(query: sanitized, type: 'profiles', limit: 10, page: 1);
+    final response = await service.search(
+        query: sanitized, type: 'profiles', limit: 10, page: 1);
     if (response['success'] != true) return null;
     final normalizedTarget = sanitized.toLowerCase();
     final resultsPayload = response['results'];
@@ -231,10 +231,10 @@ Future<Map<String, dynamic>?> _backendApiFindProfileByUsernameImpl(
     for (final entry in profiles) {
       if (entry is! Map<String, dynamic>) continue;
       final rawUsername = (entry['username'] ??
-              entry['walletAddress'] ??
-              entry['wallet_address'] ??
-              entry['wallet'])
-          ?.toString() ??
+                  entry['walletAddress'] ??
+                  entry['wallet_address'] ??
+                  entry['wallet'])
+              ?.toString() ??
           '';
       if (rawUsername.isEmpty) continue;
       final normalized =
@@ -248,8 +248,7 @@ Future<Map<String, dynamic>?> _backendApiFindProfileByUsernameImpl(
       return profiles.first as Map<String, dynamic>;
     }
   } catch (e) {
-    AppConfig.debugPrint(
-        'BackendApiService.findProfileByUsername failed: $e');
+    AppConfig.debugPrint('BackendApiService.findProfileByUsername failed: $e');
   }
   return null;
 }
@@ -280,6 +279,7 @@ Future<Map<String, dynamic>> _backendApiSaveProfileImpl(
         uri,
         headers: service._getHeaders(includeAuth: true),
         body: jsonEncode(profileData),
+        timeout: AppConfig.profileSaveTimeout,
       );
 
       if (response.statusCode == 200) {
@@ -323,6 +323,10 @@ Future<Map<String, dynamic>> _backendApiSaveProfileImpl(
         body: response.body,
       );
     } catch (e) {
+      if (e is TimeoutException) {
+        AppConfig.debugPrint('BackendApiService.saveProfile timed out: $e');
+        rethrow;
+      }
       if (e is BackendApiRequestException &&
           (e.statusCode == 401 || e.statusCode == 403)) {
         rethrow;

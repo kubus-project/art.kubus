@@ -261,6 +261,7 @@ Future<Map<String, dynamic>> _backendApiUploadFileImpl(
       final response = await service._sendMultipart(
         buildRequest,
         includeAuth: true,
+        timeout: AppConfig.uploadRequestTimeout,
       );
 
       service._debugLogThrottled(
@@ -535,6 +536,7 @@ Future<Map<String, dynamic>> _backendApiUploadAvatarToProfileImpl(
       final response = await service._sendMultipart(
         buildRequest,
         includeAuth: true,
+        timeout: AppConfig.uploadRequestTimeout,
       );
 
       service._debugLogThrottled(

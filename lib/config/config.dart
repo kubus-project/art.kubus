@@ -388,6 +388,8 @@ class AppConfig {
 
   /// Loading and retry settings
   static const Duration requestTimeout = Duration(seconds: 30);
+  static const Duration uploadRequestTimeout = Duration(seconds: 90);
+  static const Duration profileSaveTimeout = Duration(seconds: 45);
   static const int maxRetryAttempts = 3;
   static const Duration retryDelay = Duration(seconds: 2);
 

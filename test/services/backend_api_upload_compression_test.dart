@@ -74,6 +74,14 @@ void main() {
     );
 
     expect(result['uploadedUrl'], '/uploads/cover.jpg');
+    expect(
+      BackendApiService().lastMultipartTimeoutForTesting,
+      AppConfig.uploadRequestTimeout,
+    );
+    expect(
+      BackendApiService().lastMultipartTimeoutForTesting,
+      isNot(AppConfig.requestTimeout),
+    );
     expect(body, contains('clientCompressionApplied'));
     expect(body, contains('true'));
     expect(body, contains('clientCompressionOriginalBytes'));
@@ -161,6 +169,10 @@ void main() {
     );
 
     expect(result['uploadedUrl'], '/uploads/avatar.png');
+    expect(
+      BackendApiService().lastMultipartTimeoutForTesting,
+      AppConfig.uploadRequestTimeout,
+    );
     expect(requestHosts, <String>[primaryHost, standbyHost]);
   });
 
