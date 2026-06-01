@@ -301,7 +301,7 @@ void main() {
     expect(provider.currentUser?.avatar,
         'https://api.kubus.site/uploads/profiles/avatars/current.png');
     expect(provider.currentUser?.coverImage,
-        'https://api.kubus.site/uploads/profiles/cover/current.png');
+        '/uploads/profiles/cover/current.png');
   });
 
   test('ProfileProvider avatar upload timeout remains typed and debuggable',

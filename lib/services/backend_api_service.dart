@@ -958,7 +958,6 @@ class BackendApiService
     bool allowImplicitBackendFailover = true,
     Set<String>? attemptedBackendOrigins,
   }) async {
-    _lastMultipartTimeoutForTesting = timeout;
     final attemptedOrigins = Set<String>.from(
       attemptedBackendOrigins ?? const <String>{},
     );
@@ -1310,6 +1309,7 @@ class BackendApiService
     bool allowImplicitBackendFailover = true,
     Set<String>? attemptedBackendOrigins,
   }) async {
+    _lastMultipartTimeoutForTesting = timeout;
     final attemptedOrigins = Set<String>.from(
       attemptedBackendOrigins ?? const <String>{},
     );
