@@ -1321,6 +1321,9 @@ class AppLocalizationsSl extends AppLocalizations {
   String get onboardingFlowRoleTitle => 'Izberi svojo vlogo';
 
   @override
+  String get onboardingFlowRoleRequiredHint => 'Pred nadaljevanjem izberi, kako želiš uporabljati art.kubus.';
+
+  @override
   String get onboardingFlowRoleBody => 'Izberi poudarke, ki jih želiš videti. Kasneje lahko to spremeniš v Nastavitvah.';
 
   @override

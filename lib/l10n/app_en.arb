@@ -530,6 +530,7 @@
   "onboardingFlowWalletBackupContinueHint": "Reveal your phrase and confirm the backup to continue.",
   "onboardingFlowRoleTitle": "Pick your role",
   "onboardingFlowRoleBody": "Choose the highlights you want. You can change this later in Settings.",
+  "onboardingFlowRoleRequiredHint": "Choose how you want to use art.kubus before continuing.",
   "onboardingFlowPermissionsTitle": "Choose what to enable",
   "onboardingFlowPermissionsBody": "Enable location for nearby public art, camera for optional AR layers in development, and notifications for artists, institutions, exhibitions, and community updates.",
   "onboardingFlowContinueWithoutPermissions": "Continue",

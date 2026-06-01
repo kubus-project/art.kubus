@@ -211,6 +211,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   Timer? _verificationPollTimer;
   DateTime? _verificationPollStartedAt;
   bool _verificationPollInFlight = false;
+  bool _verificationConfirmInFlight = false;
   bool _emailVerifiedConfirmed = false;
   bool _autoAdvancingVerification = false;
   bool _finishSignInPromptShown = false;
@@ -318,6 +319,18 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   }
 
   bool get _isWelcomePhase => _branch == _OnboardingBranch.none;
+
+  @visibleForTesting
+  String get debugCurrentStepId => _stepId(_currentStep);
+
+  @visibleForTesting
+  Set<String> get debugCompletedStepIds => _completed.map(_stepId).toSet();
+
+  @visibleForTesting
+  bool get debugVerificationConfirmInFlight => _verificationConfirmInFlight;
+
+  @visibleForTesting
+  Future<void> debugTriggerPrimaryAction() => _onPrimaryAction();
 
   UserPersona? get _effectivePersona {
     final profileProvider =
@@ -1707,106 +1720,133 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   Future<void> _confirmVerificationAndContinue() async {
     final messenger = ScaffoldMessenger.of(context);
     final l10n = AppLocalizations.of(context)!;
-    _refreshAuthDerivedSteps();
+    if (_verificationConfirmInFlight) return;
 
-    if (_verificationRequired) {
-      var verified = _emailVerifiedConfirmed;
-      final emailToCheck = (_pendingVerificationEmail ?? '').trim();
-      if (emailToCheck.isNotEmpty) {
-        try {
-          final status = await BackendApiService()
-              .getEmailVerificationStatus(email: emailToCheck);
-          verified = status['verified'] == true;
-          if (mounted && _emailVerifiedConfirmed != verified) {
-            setState(() {
+    setState(() {
+      _verificationConfirmInFlight = true;
+    });
+
+    try {
+      _refreshAuthDerivedSteps();
+
+      if (_verificationRequired) {
+        var verified = _emailVerifiedConfirmed;
+        final emailToCheck = (_pendingVerificationEmail ?? '').trim();
+        if (emailToCheck.isNotEmpty) {
+          try {
+            final status = await BackendApiService()
+                .getEmailVerificationStatus(email: emailToCheck);
+            verified = status['verified'] == true;
+            if (mounted && _emailVerifiedConfirmed != verified) {
+              setState(() {
+                _emailVerifiedConfirmed = verified;
+              });
+            } else {
               _emailVerifiedConfirmed = verified;
-            });
-          } else {
-            _emailVerifiedConfirmed = verified;
+            }
+          } catch (_) {
+            // Keep local confirmation state when backend is temporarily unavailable.
           }
-        } catch (_) {
-          // Keep local confirmation state when backend is temporarily unavailable.
         }
-      }
 
-      if (!verified) {
-        if (!mounted) return;
-        messenger.showKubusSnackBar(
-          SnackBar(content: Text(l10n.authVerifyEmailSignInHint)),
-          tone: KubusSnackBarTone.warning,
-        );
-        return;
-      }
-
-      if (!_sessionMatchesPendingVerificationEmail()) {
-        _finishSignInPromptShown = true;
-        messenger.showKubusSnackBar(
-          SnackBar(
-            content: Text(l10n.onboardingFlowVerifySignInPrompt),
-          ),
-          tone: KubusSnackBarTone.warning,
-        );
-        return;
-      }
-
-      if (!_verifiedSigningInMessageShown) {
-        _verifiedSigningInMessageShown = true;
-        messenger.showKubusSnackBar(
-          SnackBar(content: Text(l10n.onboardingFlowVerifySigningIn)),
-          tone: KubusSnackBarTone.neutral,
-        );
-      }
-
-      await BackendApiService().restoreExistingSession(allowRefresh: false);
-      await _syncWalletSessionIntoProviders();
-      await _syncWalletBackupRequirement();
-      try {
-        await _refreshProfileForCurrentSessionWallet();
-      } catch (error) {
-        if (kDebugMode) {
-          debugPrint(
-              'OnboardingFlowScreen._confirmVerificationAndContinue profile refresh failed: $error');
+        if (!verified) {
+          if (!mounted) return;
+          messenger.showKubusSnackBar(
+            SnackBar(content: Text(l10n.authVerifyEmailSignInHint)),
+            tone: KubusSnackBarTone.warning,
+          );
+          return;
         }
+
+        if (!_sessionMatchesPendingVerificationEmail()) {
+          _finishSignInPromptShown = true;
+          messenger.showKubusSnackBar(
+            SnackBar(
+              content: Text(l10n.onboardingFlowVerifySignInPrompt),
+            ),
+            tone: KubusSnackBarTone.warning,
+          );
+          return;
+        }
+
+        if (!_verifiedSigningInMessageShown) {
+          _verifiedSigningInMessageShown = true;
+          messenger.showKubusSnackBar(
+            SnackBar(content: Text(l10n.onboardingFlowVerifySigningIn)),
+            tone: KubusSnackBarTone.neutral,
+          );
+        }
+
+        await BackendApiService().restoreExistingSession(allowRefresh: false);
+        await _syncWalletSessionIntoProviders();
+        await _syncWalletBackupRequirement();
+        try {
+          await _refreshProfileForCurrentSessionWallet();
+        } catch (error) {
+          if (kDebugMode) {
+            debugPrint(
+                'OnboardingFlowScreen._confirmVerificationAndContinue profile refresh failed: $error');
+          }
+          messenger.showKubusSnackBar(
+            SnackBar(
+              content: Text(l10n.onboardingFlowProfileRefreshPending),
+            ),
+            tone: KubusSnackBarTone.warning,
+          );
+        }
+
+        if (!_sessionMatchesPendingVerificationEmail()) {
+          messenger.showKubusSnackBar(
+            SnackBar(
+              content: Text(l10n.onboardingFlowVerifySessionMismatch),
+            ),
+            tone: KubusSnackBarTone.error,
+          );
+          return;
+        }
+
+        _clearPendingEmailVerificationState();
+        await _persistLocalDrafts();
         messenger.showKubusSnackBar(
           SnackBar(
-            content: Text(l10n.onboardingFlowProfileRefreshPending),
+            content: Text(l10n.onboardingFlowVerifySignedInSuccess),
           ),
-          tone: KubusSnackBarTone.warning,
+          tone: KubusSnackBarTone.success,
         );
       }
 
-      if (!_sessionMatchesPendingVerificationEmail()) {
-        messenger.showKubusSnackBar(
-          SnackBar(
-            content: Text(l10n.onboardingFlowVerifySessionMismatch),
-          ),
-          tone: KubusSnackBarTone.error,
-        );
-        return;
+      if (!mounted) return;
+
+      if (_steps.contains(_OnboardingStep.verifyEmail)) {
+        _completed.add(_OnboardingStep.verifyEmail);
+        _deferred.remove(_OnboardingStep.verifyEmail);
+        await _persistProgress();
       }
 
-      _clearPendingEmailVerificationState();
-      await _persistLocalDrafts();
-      messenger.showKubusSnackBar(
-        SnackBar(
-          content: Text(l10n.onboardingFlowVerifySignedInSuccess),
-        ),
-        tone: KubusSnackBarTone.success,
-      );
-    }
-
-    if (!mounted) return;
-
-    if (_steps.contains(_OnboardingStep.verifyEmail)) {
-      await _markCompleted(_OnboardingStep.verifyEmail);
-    }
-
-    await _syncLocalProfileDraftToBackendIfPossible();
-
-    if (mounted) {
+      if (!mounted) return;
       setState(() {
+        _refreshAuthDerivedSteps();
         _currentIndex = _nextIncompleteIndex();
       });
+      _syncStepSideEffects();
+    } catch (error, stackTrace) {
+      if (kDebugMode) {
+        debugPrint(
+            'OnboardingFlowScreen._confirmVerificationAndContinue failed: $error\n$stackTrace');
+      }
+      if (!mounted) return;
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.commonActionFailedToast)),
+        tone: KubusSnackBarTone.error,
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _verificationConfirmInFlight = false;
+        });
+      } else {
+        _verificationConfirmInFlight = false;
+      }
     }
   }
 
@@ -2104,11 +2144,10 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         await _confirmVerificationAndContinue();
         return;
       case _OnboardingStep.role:
-        if (_completed.contains(_OnboardingStep.role)) {
-          await _markCompleted(_OnboardingStep.role);
-        } else {
-          await _deferCurrentStep();
-        }
+        _showVerificationSnack(
+          AppLocalizations.of(context)!.onboardingFlowRoleRequiredHint,
+          tone: KubusSnackBarTone.warning,
+        );
         return;
       case _OnboardingStep.profile:
         if (_completed.contains(_OnboardingStep.profile)) {
@@ -2362,7 +2401,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
               _emailVerifiedConfirmed &&
               !_sessionMatchesPendingVerificationEmail(),
           isRefreshingVerification:
-              _verificationPollInFlight || _autoAdvancingVerification,
+              _verificationPollInFlight ||
+              _verificationConfirmInFlight ||
+              _autoAdvancingVerification,
           onRefreshVerification: _handleManualVerificationRefresh,
           onAuthSuccess: _handleEmbeddedSignInSuccess,
           onVerificationRequired: _handleEmbeddedSignInNeedsVerification,
@@ -3151,6 +3192,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
 
   bool get _isPrimaryActionEnabled {
     switch (_currentStep) {
+      case _OnboardingStep.verifyEmail:
+        return !_verificationConfirmInFlight;
       case _OnboardingStep.walletBackupIntro:
         return _hasAllRequiredWalletBackups;
       default:

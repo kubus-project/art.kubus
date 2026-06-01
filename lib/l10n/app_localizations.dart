@@ -2321,6 +2321,12 @@ abstract class AppLocalizations {
   /// **'Choose the highlights you want. You can change this later in Settings.'**
   String get onboardingFlowRoleBody;
 
+  /// No description provided for @onboardingFlowRoleRequiredHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose how you want to use art.kubus before continuing.'**
+  String get onboardingFlowRoleRequiredHint;
+
   /// No description provided for @onboardingFlowPermissionsTitle.
   ///
   /// In en, this message translates to:

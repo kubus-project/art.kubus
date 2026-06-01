@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:art_kubus/config/config.dart';
@@ -85,6 +86,24 @@ void _installBackendMock(
   BackendApiService().setHttpClient(MockClient(handler));
 }
 
+String _buildJwt({
+  required String email,
+  String? walletAddress,
+}) {
+  final payload = base64Url
+      .encode(
+        utf8.encode(
+          jsonEncode(<String, Object>{
+            'email': email,
+            if (walletAddress != null) 'walletAddress': walletAddress,
+            'sub': 'test',
+          }),
+        ),
+      )
+      .replaceAll('=', '');
+  return 'e30.$payload.';
+}
+
 Future<void> _pumpUntilFound(
   WidgetTester tester,
   Finder finder, {
@@ -94,6 +113,18 @@ Future<void> _pumpUntilFound(
   while (DateTime.now().isBefore(deadline)) {
     await tester.pump(const Duration(milliseconds: 120));
     if (finder.evaluate().isNotEmpty) return;
+  }
+}
+
+Future<void> _pumpUntilCondition(
+  WidgetTester tester,
+  bool Function() condition, {
+  Duration timeout = const Duration(seconds: 4),
+}) async {
+  final deadline = DateTime.now().add(timeout);
+  while (DateTime.now().isBefore(deadline)) {
+    await tester.pump(const Duration(milliseconds: 120));
+    if (condition()) return;
   }
 }
 
@@ -316,6 +347,233 @@ void main() {
       ),
       findsWidgets,
     );
+  });
+
+  testWidgets('verified email completes only verifyEmail and advances to role',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 1024));
+    addTearDown(() async => tester.binding.setSurfaceSize(null));
+
+    const email = 'verified-role@example.com';
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'onboarding_verification_email_v3': email,
+    });
+    BackendApiService().setAuthTokenForTesting(_buildJwt(email: email));
+
+    var statusChecks = 0;
+    _installBackendMock((request) async {
+      if (request.url.path == '/api/auth/email-status') {
+        statusChecks += 1;
+        return http.Response(
+          jsonEncode(<String, dynamic>{
+            'success': true,
+            'verified': statusChecks >= 2,
+          }),
+          200,
+          headers: <String, String>{'content-type': 'application/json'},
+        );
+      }
+      return http.Response(
+        jsonEncode(<String, dynamic>{'success': true}),
+        200,
+        headers: <String, String>{'content-type': 'application/json'},
+      );
+    });
+
+    await tester.pumpWidget(
+      _buildTestApp(
+        child: const OnboardingFlowScreen(initialStepId: 'verifyEmail'),
+        locale: const Locale('en'),
+        size: const Size(390, 1024),
+      ),
+    );
+    await _pumpOnboardingReady(tester);
+    await _pumpUntilCondition(tester, () => statusChecks >= 1);
+    expect(statusChecks, greaterThanOrEqualTo(1));
+
+    await tester.tap(find.text('I verified / Continue').last);
+    await _pumpUntilFound(tester, find.text('Pick your role'));
+
+    expect(find.text('Pick your role'), findsOneWidget);
+    expect(find.text('Create your profile'), findsNothing);
+    expect(find.text('Choose what to enable'), findsNothing);
+    expect(find.text("You're all set"), findsNothing);
+
+    final prefs = await SharedPreferences.getInstance();
+    final completed =
+        prefs.getStringList('onboarding_completed_steps_v2') ?? const [];
+    expect(completed, contains('account'));
+    expect(completed, contains('verifyEmail'));
+    expect(completed, isNot(contains('role')));
+    expect(completed, isNot(contains('profile')));
+    expect(completed, isNot(contains('done')));
+  });
+
+  testWidgets('verification confirm does not sync stale profile draft',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 1024));
+    addTearDown(() async => tester.binding.setSurfaceSize(null));
+
+    const email = 'draft-sync@example.com';
+    final profileProvider = ProfileProvider()
+      ..setCurrentUser(UserProfile(
+        id: 'profile_draft_sync',
+        walletAddress: '0xdraftsync',
+        username: 'draft_sync',
+        displayName: 'Draft Sync',
+        bio: '',
+        avatar: '',
+        createdAt: DateTime(2026, 3, 16),
+        updatedAt: DateTime(2026, 3, 16),
+      ));
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'onboarding_verification_email_v3': email,
+      'onboarding_profile_draft_v3': jsonEncode(<String, String>{
+        'displayName': 'Stale Draft',
+        'username': 'stale_draft',
+      }),
+    });
+    BackendApiService().setAuthTokenForTesting(_buildJwt(email: email));
+
+    var statusChecks = 0;
+    var profileSaves = 0;
+    _installBackendMock((request) async {
+      if (request.url.path == '/api/auth/email-status') {
+        statusChecks += 1;
+        return http.Response(
+          jsonEncode(<String, dynamic>{
+            'success': true,
+            'verified': statusChecks >= 2,
+          }),
+          200,
+          headers: <String, String>{'content-type': 'application/json'},
+        );
+      }
+      if (request.method == 'POST' && request.url.path == '/api/profiles') {
+        profileSaves += 1;
+      }
+      return http.Response(
+        jsonEncode(<String, dynamic>{'success': true}),
+        200,
+        headers: <String, String>{'content-type': 'application/json'},
+      );
+    });
+
+    await tester.pumpWidget(
+      _buildTestApp(
+        child: const OnboardingFlowScreen(initialStepId: 'verifyEmail'),
+        locale: const Locale('en'),
+        size: const Size(390, 1024),
+        profileProvider: profileProvider,
+      ),
+    );
+    await _pumpOnboardingReady(tester);
+    await _pumpUntilCondition(tester, () => statusChecks >= 1);
+    expect(statusChecks, greaterThanOrEqualTo(1));
+
+    await tester.tap(find.text('I verified / Continue').last);
+    await _pumpUntilFound(tester, find.text('Pick your role'));
+
+    expect(find.text('Pick your role'), findsOneWidget);
+    expect(profileSaves, 0);
+  });
+
+  testWidgets('primary action on role does not skip or defer role',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 1024));
+    addTearDown(() async => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      _buildTestApp(
+        child: const OnboardingFlowScreen(initialStepId: 'role'),
+        locale: const Locale('en'),
+        size: const Size(390, 1024),
+      ),
+    );
+    await _pumpOnboardingReady(tester);
+    expect(find.text('Pick your role'), findsOneWidget);
+
+    final state = tester.state(find.byType(OnboardingFlowScreen)) as dynamic;
+    await state.debugTriggerPrimaryAction();
+    await tester.pump();
+
+    expect(state.debugCurrentStepId, 'role');
+    expect(state.debugCompletedStepIds, isNot(contains('role')));
+    expect(state.debugCompletedStepIds, isNot(contains('profile')));
+    expect(
+      find.text('Choose how you want to use art.kubus before continuing.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('verification confirm resets loading state after failure',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 1024));
+    addTearDown(() async => tester.binding.setSurfaceSize(null));
+
+    const email = 'confirm-fails@example.com';
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'onboarding_verification_email_v3': email,
+    });
+    BackendApiService().setAuthTokenForTesting(
+      _buildJwt(email: email, walletAddress: '0xconfirmfails'),
+    );
+
+    var statusChecks = 0;
+    final confirmStatusReady = Completer<void>();
+    _installBackendMock((request) async {
+      if (request.url.path == '/api/auth/email-status') {
+        statusChecks += 1;
+        if (statusChecks == 1) {
+          return http.Response(
+            jsonEncode(<String, dynamic>{
+              'success': true,
+              'verified': false,
+            }),
+            200,
+            headers: <String, String>{'content-type': 'application/json'},
+          );
+        }
+        await confirmStatusReady.future;
+        return http.Response(
+          jsonEncode(<String, dynamic>{
+            'success': true,
+            'verified': true,
+          }),
+          200,
+          headers: <String, String>{'content-type': 'application/json'},
+        );
+      }
+      return http.Response(
+        jsonEncode(<String, dynamic>{'success': true}),
+        200,
+        headers: <String, String>{'content-type': 'application/json'},
+      );
+    });
+
+    await tester.pumpWidget(
+      _buildTestApp(
+        child: const OnboardingFlowScreen(initialStepId: 'verifyEmail'),
+        locale: const Locale('en'),
+        size: const Size(390, 1024),
+      ),
+    );
+    await _pumpOnboardingReady(tester);
+    await _pumpUntilCondition(tester, () => statusChecks >= 1);
+    expect(statusChecks, greaterThanOrEqualTo(1));
+
+    final state = tester.state(find.byType(OnboardingFlowScreen)) as dynamic;
+    final action = state.debugTriggerPrimaryAction() as Future<void>;
+    await tester.pump();
+
+    expect(state.debugVerificationConfirmInFlight, isTrue);
+
+    confirmStatusReady.complete();
+    await action;
+    await tester.pump();
+
+    expect(state.debugVerificationConfirmInFlight, isFalse);
+    expect(find.text('Pick your role'), findsNothing);
   });
 
   testWidgets(

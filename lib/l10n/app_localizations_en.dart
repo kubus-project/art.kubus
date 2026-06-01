@@ -1324,6 +1324,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingFlowRoleBody => 'Choose the highlights you want. You can change this later in Settings.';
 
   @override
+  String get onboardingFlowRoleRequiredHint => 'Choose how you want to use art.kubus before continuing.';
+
+  @override
   String get onboardingFlowPermissionsTitle => 'Choose what to enable';
 
   @override
