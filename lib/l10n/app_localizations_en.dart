@@ -15,6 +15,284 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appTaglineSupport => 'Discover public art, artists, institutions and community stories through an open cultural map.';
 
   @override
+  String get exploreOnlyAppTitle => 'art.kubus - Explore';
+
+  @override
+  String get exploreOnlyConnectWalletAction => 'Connect optional wallet';
+
+  @override
+  String get exploreOnlyModeBanner => 'You are in public discovery mode. Profiles, community and the open art map work without a wallet; optional wallet tools can be enabled later.';
+
+  @override
+  String get exploreOnlyDiscoverTitle => 'Discover art';
+
+  @override
+  String get exploreOnlyCollectionsTitle => 'Browse collections';
+
+  @override
+  String get exploreOnlyCollectionsDescription => 'Explore artworks, public-space stories and cultural archive records.';
+
+  @override
+  String get exploreOnlyArTitle => 'AR layers';
+
+  @override
+  String get exploreOnlyArDescription => 'View optional AR layers when artists or institutions enable them.';
+
+  @override
+  String get exploreOnlyCommunityTitle => 'Community';
+
+  @override
+  String get exploreOnlyCommunityDescription => 'Follow artists, institutions and discussions around public art.';
+
+  @override
+  String get exploreOnlyArtifactsTitle => 'Digital artifacts';
+
+  @override
+  String get exploreOnlyArtifactsDescription => 'Discover optional archive objects connected to artworks.';
+
+  @override
+  String get walletPromptTitle => 'Connect optional wallet';
+
+  @override
+  String get walletPromptBody => 'This optional infrastructure feature uses a wallet for attribution and archive records.';
+
+  @override
+  String get walletPromptIntro => 'Set up wallet access only if you want:';
+
+  @override
+  String get walletPromptFeatureArchiveObjects => 'Digital archive objects';
+
+  @override
+  String get walletPromptFeatureCreateArtworks => 'Create and document artworks';
+
+  @override
+  String get walletPromptFeatureCommunity => 'Wallet-linked participation records';
+
+  @override
+  String get walletPromptMaybeLater => 'Maybe later';
+
+  @override
+  String get walletPromptSetUpAction => 'Set up optional wallet';
+
+  @override
+  String get walletHomeArchiveObjectFallbackTitle => 'Archive object';
+
+  @override
+  String get walletHomeCollectibleFallbackTitle => 'Collectible';
+
+  @override
+  String get walletHomeConnectWalletToFetchCollectibles => 'Connect your wallet to fetch collectibles.';
+
+  @override
+  String get artworkDraftCoverRequired => 'Cover image is required.';
+
+  @override
+  String get artworkDraftCoverUploadFailed => 'Failed to upload cover image.';
+
+  @override
+  String get artworkDraftGalleryUploadFailed => 'Failed to upload a gallery image. Please try again.';
+
+  @override
+  String get artworkDraftTitleDescriptionRequired => 'Title and description are required.';
+
+  @override
+  String get artworkDraftAttendanceUnavailable => 'Attendance records are currently unavailable.';
+
+  @override
+  String get artworkDraftAttendanceIdOrUrlRequired => 'Please provide an attendance event ID or record URL.';
+
+  @override
+  String get artworkDraftCoordinatesRequired => 'Please provide both latitude and longitude (or leave both empty).';
+
+  @override
+  String get artworkDraftCoordinatesInvalid => 'Location coordinates are invalid.';
+
+  @override
+  String get artworkDraftAttendanceImageUploadFailed => 'Failed to upload attendance record image. Please try again.';
+
+  @override
+  String get artworkDraftPublishFailed => 'Failed to publish artwork. Please try again.';
+
+  @override
+  String get archiveObjectCreatedToast => 'Archive object created.';
+
+  @override
+  String get archiveObjectCreateFailed => 'Failed to create archive object.';
+
+  @override
+  String get archiveObjectCreationPleaseWait => 'This may take a few moments.';
+
+  @override
+  String archiveObjectSeriesDefaultDescription(Object artworkTitle, Object artistName) {
+    return 'Archive object series for $artworkTitle by $artistName';
+  }
+
+  @override
+  String get archiveObjectSeriesCreateFailed => 'Failed to create archive object series';
+
+  @override
+  String get archiveObjectSeriesNotFound => 'Archive object series not found';
+
+  @override
+  String get archiveObjectSeriesSoldOut => 'Series is sold out';
+
+  @override
+  String archiveObjectCreatedReason(Object artworkTitle, Object tokenId) {
+    return 'Created archive object for "$artworkTitle" (Edition #$tokenId)';
+  }
+
+  @override
+  String get artworkCreatorAttendanceRecordUrlOptionalLabel => 'Attendance record URL (optional)';
+
+  @override
+  String archiveObjectCreateFailedWithError(Object error) {
+    return 'Failed to create archive object: $error';
+  }
+
+  @override
+  String archiveObjectCreateError(Object error) {
+    return 'Error creating archive object: $error';
+  }
+
+  @override
+  String communityAchievementUnlockedToast(Object title, Object extra, Object amount, Object currency) {
+    return 'Achievement unlocked\n$title$extra\n+$amount $currency recognition';
+  }
+
+  @override
+  String get communityViewAchievementsAction => 'View achievements';
+
+  @override
+  String get markerBadgePromoted => 'Promoted';
+
+  @override
+  String get markerBadgeAttendanceRecord => 'Attendance record';
+
+  @override
+  String get markerDescriptionSemanticLabel => 'marker description';
+
+  @override
+  String get recentActivityRecognitionRecordedTitle => 'Recognition Recorded';
+
+  @override
+  String get recentActivityArchiveObjectUpdateTitle => 'Archive Object Update';
+
+  @override
+  String recentActivityRecognitionAmountDescription(Object amount) {
+    return '+$amount KUB8 recognition';
+  }
+
+  @override
+  String get recentActivityNewRecognitionDescription => 'You have new recognition';
+
+  @override
+  String recentActivityArchiveObjectStatusDescription(Object status, Object title) {
+    return 'Archive object $status for $title';
+  }
+
+  @override
+  String get recentActivityFallbackArtworkTitle => 'an artwork';
+
+  @override
+  String get notificationSomeoneFallback => 'Someone';
+
+  @override
+  String get notificationAchievementFallback => 'Achievement';
+
+  @override
+  String get notificationRecognitionRecordedTitle => 'Recognition recorded';
+
+  @override
+  String get pushArchiveObjectCreatingTitle => 'Creating archive object...';
+
+  @override
+  String pushArchiveObjectCreatingBody(Object artworkTitle) {
+    return 'Creating archive object for "$artworkTitle"';
+  }
+
+  @override
+  String get pushArchiveObjectCreatedTitle => 'Archive object created';
+
+  @override
+  String pushArchiveObjectCreatedBody(Object artworkTitle) {
+    return '"$artworkTitle" now has an optional archive record';
+  }
+
+  @override
+  String get pushArchiveObjectCreationFailedTitle => 'Creation failed';
+
+  @override
+  String pushArchiveObjectCreationFailedBody(Object artworkTitle) {
+    return 'Could not create "$artworkTitle" archive object. Please try again.';
+  }
+
+  @override
+  String get pushArchiveObjectCreationChannelName => 'Archive Object Creation';
+
+  @override
+  String get pushArchiveObjectCreationChannelDescription => 'Notifications for digital archive object creation';
+
+  @override
+  String get pushRecognitionChannelName => 'Recognition';
+
+  @override
+  String get pushRecognitionChannelDescription => 'Notifications for contribution recognition';
+
+  @override
+  String get analyticsMetricArchiveObjectsCreatedLabel => 'Archive objects created';
+
+  @override
+  String get analyticsMetricArchiveObjectsCreatedDescription => 'Digital archive objects connected to artworks.';
+
+  @override
+  String get analyticsMetricKub8RecognitionLabel => 'KUB8 recognition';
+
+  @override
+  String get analyticsMetricKub8RecognitionDescription => 'KUB8 recorded through contribution recognition.';
+
+  @override
+  String get analyticsPresetArtistSubtitle => 'Artwork reach, community response, AR activity, and recognition.';
+
+  @override
+  String get analyticsPresetInstitutionSubtitle => 'Visitor reach, hosted programs, exhibitions, and recognition.';
+
+  @override
+  String get analyticsExportNoDataToast => 'No analytics data available to export.';
+
+  @override
+  String get analyticsExportFailedToast => 'Unable to export analytics.';
+
+  @override
+  String collectiblesLoadFailed(Object error) {
+    return 'Failed to load collectibles: $error';
+  }
+
+  @override
+  String get collectiblesItemNotFound => 'Collectible not found';
+
+  @override
+  String get collectiblesInvalidListingPrice => 'Invalid listing price';
+
+  @override
+  String get collectiblesArtworkProviderUnavailable => 'Artwork provider is unavailable';
+
+  @override
+  String get collectiblesListingUpdateFailed => 'Failed to update listing on canonical artwork record';
+
+  @override
+  String collectiblesListFailed(Object error) {
+    return 'Failed to list collectible: $error';
+  }
+
+  @override
+  String collectiblesRemoveListingFailed(Object error) {
+    return 'Failed to remove collectible from sale: $error';
+  }
+
+  @override
+  String get collectiblesMockDataDisabled => 'Mock collectible data is disabled in canonical mode. Use indexed artwork mint records.';
+
+  @override
   String get appTitle => 'art.kubus';
 
   @override

@@ -1,9 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../l10n/app_localizations.dart';
+import '../l10n/app_localizations_en.dart';
+import '../l10n/app_localizations_sl.dart';
 import '../services/backend_api_service.dart';
 import '../services/socket_service.dart';
 import '../services/push_notification_service.dart';
@@ -54,6 +58,12 @@ class NotificationProvider extends ChangeNotifier {
   bool get _hasAuthToken => (_backend.getAuthToken() ?? '').isNotEmpty;
   bool get _hasAuthContext =>
       _hasAuthToken || ((_currentWallet ?? '').isNotEmpty);
+
+  AppLocalizations get _l10n {
+    final languageCode =
+        ui.PlatformDispatcher.instance.locale.languageCode.toLowerCase();
+    return languageCode == 'sl' ? AppLocalizationsSl() : AppLocalizationsEn();
+  }
 
   // Only community notifications (messages handled by ChatProvider)
   int get unreadCount => _communityUnreadCount;
@@ -792,6 +802,7 @@ class NotificationProvider extends ChangeNotifier {
 
       // Show local notification for community interactions and other types
       try {
+        final l10n = _l10n;
         await _pushService.initialize();
         await _pushService.waitForPermissionSettlement();
         final canDisplayLocally = await _pushService.refreshPermissionStatus();
@@ -809,26 +820,26 @@ class NotificationProvider extends ChangeNotifier {
             await _pushService.showCommunityInteractionNotification(
                 postId: postId ?? '',
                 type: 'comment',
-                userName: userName ?? 'Someone',
+                userName: userName ?? l10n.notificationSomeoneFallback,
                 comment: comment);
             break;
           case 'like':
             await _pushService.showCommunityInteractionNotification(
                 postId: postId ?? '',
                 type: 'like',
-                userName: userName ?? 'Someone');
+                userName: userName ?? l10n.notificationSomeoneFallback);
             break;
           case 'share':
             await _pushService.showCommunityInteractionNotification(
                 postId: postId ?? '',
                 type: 'share',
-                userName: userName ?? 'Someone');
+                userName: userName ?? l10n.notificationSomeoneFallback);
             break;
           case 'mention':
             await _pushService.showCommunityInteractionNotification(
                 postId: postId ?? '',
                 type: 'mention',
-                userName: userName ?? 'Someone');
+                userName: userName ?? l10n.notificationSomeoneFallback);
             break;
           case 'follow':
           case 'follower':
@@ -839,14 +850,14 @@ class NotificationProvider extends ChangeNotifier {
             if (followerId.isNotEmpty) {
               await _pushService.showFollowerNotification(
                 userId: followerId,
-                userName: userName ?? 'Someone',
+                userName: userName ?? l10n.notificationSomeoneFallback,
                 userAvatar: userAvatar ?? data['avatar']?.toString(),
               );
             }
             break;
           case 'reward':
             await _pushService.showRewardNotification(
-                title: 'Recognition recorded',
+                title: l10n.notificationRecognitionRecordedTitle,
                 amount: payload['amount'] ?? 0,
                 reason: payload['reason'] ?? '');
             break;
@@ -878,7 +889,7 @@ class NotificationProvider extends ChangeNotifier {
           case 'achievement':
             await _pushService.showAchievementNotification(
                 achievementId: payload['achievementId']?.toString() ?? '',
-                title: payload['title'] ?? 'Achievement',
+                title: payload['title'] ?? l10n.notificationAchievementFallback,
                 description: payload['description'] ?? '',
                 rewardTokens: payload['rewardTokens'] ?? 0);
             break;

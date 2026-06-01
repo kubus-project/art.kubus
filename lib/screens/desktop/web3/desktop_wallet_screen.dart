@@ -1101,6 +1101,8 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
   }
 
   Future<void> _loadNfts() async {
+    final l10n = AppLocalizations.of(context)!;
+
     setState(() {
       _isLoadingNfts = true;
       _nftError = null;
@@ -1110,7 +1112,11 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
           Provider.of<WalletProvider>(context, listen: false);
       final walletAddress = (walletProvider.currentWalletAddress ?? '').trim();
       if (walletAddress.isEmpty) {
-        throw Exception('Connect your wallet to fetch collectibles.');
+        setState(() {
+          _nftError = l10n.walletHomeConnectWalletToFetchCollectibles;
+          _isLoadingNfts = false;
+        });
+        return;
       }
 
       final collectiblesProvider =
@@ -1149,8 +1155,8 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
           'status': collectible.status.name,
           'transactionHash': collectible.transactionHash,
           'transaction_hash': collectible.transactionHash,
-          'name': series?.name ?? 'Collectible',
-          'title': series?.name ?? 'Collectible',
+          'name': series?.name ?? l10n.walletHomeCollectibleFallbackTitle,
+          'title': series?.name ?? l10n.walletHomeCollectibleFallbackTitle,
           'imageUrl': resolvedImage,
           'image': resolvedImage,
           'creator': series?.creatorAddress,
@@ -1268,8 +1274,10 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
       itemCount: _nfts.length,
       itemBuilder: (context, index) {
         final nft = _nfts[index];
-        final title =
-            (nft['name'] ?? nft['title'] ?? 'Archive object').toString();
+        final title = (nft['name'] ??
+                nft['title'] ??
+                l10n.walletHomeArchiveObjectFallbackTitle)
+            .toString();
         final imageUrl =
             (nft['image'] ?? nft['imageUrl'] ?? nft['preview'])?.toString();
         final creator = (nft['creator'] ?? nft['artist'] ?? '').toString();

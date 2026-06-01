@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../providers/analytics_filters_provider.dart';
 import 'analytics_entity_registry.dart';
 import 'analytics_metric_registry.dart';
@@ -80,6 +81,17 @@ class AnalyticsPreset {
     }
     return metrics.first;
   }
+
+  String localizedSubtitle(AppLocalizations l10n) {
+    switch (kind) {
+      case AnalyticsPresetKind.artist:
+        return l10n.analyticsPresetArtistSubtitle;
+      case AnalyticsPresetKind.institution:
+        return l10n.analyticsPresetInstitutionSubtitle;
+      default:
+        return subtitle;
+    }
+  }
 }
 
 class AnalyticsPresets {
@@ -146,8 +158,7 @@ class AnalyticsPresets {
     kind: AnalyticsPresetKind.artist,
     contextKey: AnalyticsFiltersProvider.artistContextKey,
     title: 'Artist analytics',
-    subtitle:
-        'Artwork reach, community response, AR activity, and recognition.',
+    subtitle: 'analyticsPresetArtistSubtitle',
     scopeLabel: 'Artist studio',
     entityType: AnalyticsEntityType.user,
     icon: Icons.palette_outlined,
@@ -177,7 +188,7 @@ class AnalyticsPresets {
     kind: AnalyticsPresetKind.institution,
     contextKey: AnalyticsFiltersProvider.institutionContextKey,
     title: 'Institution analytics',
-    subtitle: 'Visitor reach, hosted programs, exhibitions, and recognition.',
+    subtitle: 'analyticsPresetInstitutionSubtitle',
     scopeLabel: 'Institution hub',
     entityType: AnalyticsEntityType.user,
     icon: Icons.account_balance_outlined,

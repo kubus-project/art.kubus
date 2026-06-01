@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 
+import '../l10n/app_localizations.dart';
 import '../config/config.dart';
 import '../models/artwork.dart';
 import '../services/backend_api_service.dart';
@@ -433,6 +434,7 @@ class ArtworkDraftsProvider extends ChangeNotifier {
   Future<Artwork?> submitDraft({
     required String draftId,
     required String walletAddress,
+    required AppLocalizations l10n,
   }) async {
     final draft = _drafts[draftId];
     if (draft == null) return null;
@@ -449,7 +451,7 @@ class ArtworkDraftsProvider extends ChangeNotifier {
     try {
       final coverBytes = draft.coverBytes;
       if (coverBytes == null) {
-        draft.submitError = 'Cover image is required.';
+        draft.submitError = l10n.artworkDraftCoverRequired;
         return null;
       }
 
@@ -474,7 +476,7 @@ class ArtworkDraftsProvider extends ChangeNotifier {
       final coverUrl = coverUpload['uploadedUrl'] as String? ??
           coverUpload['data']?['url'] as String?;
       if (coverUrl == null || coverUrl.trim().isEmpty) {
-        draft.submitError = 'Failed to upload cover image.';
+        draft.submitError = l10n.artworkDraftCoverUploadFailed;
         return null;
       }
 
@@ -504,8 +506,7 @@ class ArtworkDraftsProvider extends ChangeNotifier {
         final url = uploaded['uploadedUrl'] as String? ??
             uploaded['data']?['url'] as String?;
         if (url == null || url.trim().isEmpty) {
-          draft.submitError =
-              'Failed to upload a gallery image. Please try again.';
+          draft.submitError = l10n.artworkDraftGalleryUploadFailed;
           return null;
         }
         galleryUrls.add(url);
@@ -526,7 +527,7 @@ class ArtworkDraftsProvider extends ChangeNotifier {
       final title = draft.title.trim();
       final description = draft.description.trim();
       if (title.isEmpty || description.isEmpty) {
-        draft.submitError = 'Title and description are required.';
+        draft.submitError = l10n.artworkDraftTitleDescriptionRequired;
         return null;
       }
 
@@ -537,20 +538,18 @@ class ArtworkDraftsProvider extends ChangeNotifier {
 
       if (poapMode == ArtworkPoapMode.existingPoap) {
         if (!AppConfig.isFeatureEnabled('attendance')) {
-          draft.submitError =
-              'Attendance records are currently unavailable.';
+          draft.submitError = l10n.artworkDraftAttendanceUnavailable;
           return null;
         }
         if (poapEventId.isEmpty && poapClaimUrl.isEmpty) {
-          draft.submitError =
-              'Please provide an attendance event ID or record URL.';
+          draft.submitError = l10n.artworkDraftAttendanceIdOrUrlRequired;
           return null;
         }
       }
 
       if (poapMode == ArtworkPoapMode.kubusPoap &&
           !AppConfig.isFeatureEnabled('attendance')) {
-        draft.submitError = 'Attendance records are currently unavailable.';
+        draft.submitError = l10n.artworkDraftAttendanceUnavailable;
         return null;
       }
 
@@ -558,12 +557,11 @@ class ArtworkDraftsProvider extends ChangeNotifier {
       final lng = draft.locationEnabled ? draft.longitude : null;
       if (draft.locationEnabled && (lat != null || lng != null)) {
         if (lat == null || lng == null) {
-          draft.submitError =
-              'Please provide both latitude and longitude (or leave both empty).';
+          draft.submitError = l10n.artworkDraftCoordinatesRequired;
           return null;
         }
         if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-          draft.submitError = 'Location coordinates are invalid.';
+          draft.submitError = l10n.artworkDraftCoordinatesInvalid;
           return null;
         }
       }
@@ -596,8 +594,7 @@ class ArtworkDraftsProvider extends ChangeNotifier {
           poapImageUrl = uploaded['uploadedUrl'] as String? ??
               uploaded['data']?['url'] as String?;
           if (poapImageUrl == null || poapImageUrl.trim().isEmpty) {
-            draft.submitError =
-                'Failed to upload attendance record image. Please try again.';
+            draft.submitError = l10n.artworkDraftAttendanceImageUploadFailed;
             return null;
           }
         } else {
@@ -655,7 +652,7 @@ class ArtworkDraftsProvider extends ChangeNotifier {
       );
 
       if (artwork == null) {
-        draft.submitError = 'Failed to publish artwork. Please try again.';
+        draft.submitError = l10n.artworkDraftPublishFailed;
         return null;
       }
 
@@ -672,7 +669,7 @@ class ArtworkDraftsProvider extends ChangeNotifier {
       if (kDebugMode) {
         debugPrint('ArtworkDraftsProvider: submitDraft failed: $e');
       }
-      draft.submitError = 'Failed to publish artwork. Please try again.';
+      draft.submitError = l10n.artworkDraftPublishFailed;
       return null;
     } finally {
       draft.isSubmitting = false;

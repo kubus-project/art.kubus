@@ -1,8 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 
+import '../l10n/app_localizations.dart';
+import '../l10n/app_localizations_en.dart';
+import '../l10n/app_localizations_sl.dart';
 import '../models/recent_activity.dart';
 import '../services/backend_api_service.dart';
 import '../services/push_notification_service.dart';
@@ -38,6 +42,12 @@ class RecentActivityProvider extends ChangeNotifier {
 
   int _debugRefreshCount = 0;
   int _debugRefreshSkipped = 0;
+
+  AppLocalizations get _l10n {
+    final languageCode =
+        ui.PlatformDispatcher.instance.locale.languageCode.toLowerCase();
+    return languageCode == 'sl' ? AppLocalizationsSl() : AppLocalizationsEn();
+  }
 
   List<RecentActivity> get activities => List.unmodifiable(_activities);
   List<RecentActivity> get unreadActivities =>
@@ -216,7 +226,7 @@ class RecentActivityProvider extends ChangeNotifier {
         _string(sender['wallet']) ??
         _string(sender['id']);
     final actorFormatted = CreatorDisplayFormat.format(
-      fallbackLabel: 'Someone',
+      fallbackLabel: _l10n.notificationSomeoneFallback,
       displayName: actorDisplayName,
       username: actorUsername,
       wallet: actorWallet,
@@ -354,6 +364,7 @@ class RecentActivityProvider extends ChangeNotifier {
 
   String _defaultTitle(
       ActivityCategory category, String? actor, Map<String, dynamic> data) {
+    final l10n = _l10n;
     switch (category) {
       case ActivityCategory.like:
         return 'New Like';
@@ -362,7 +373,7 @@ class RecentActivityProvider extends ChangeNotifier {
       case ActivityCategory.discovery:
         return 'Artwork Discovered';
       case ActivityCategory.reward:
-        return 'Recognition Recorded';
+        return l10n.recentActivityRecognitionRecordedTitle;
       case ActivityCategory.follow:
         return 'New Follower';
       case ActivityCategory.share:
@@ -370,7 +381,7 @@ class RecentActivityProvider extends ChangeNotifier {
       case ActivityCategory.mention:
         return 'You were mentioned';
       case ActivityCategory.nft:
-        return 'Archive Object Update';
+        return l10n.recentActivityArchiveObjectUpdateTitle;
       case ActivityCategory.ar:
         return 'AR Event';
       case ActivityCategory.save:
@@ -389,7 +400,8 @@ class RecentActivityProvider extends ChangeNotifier {
 
   String _defaultDescription(
       ActivityCategory category, String? actor, Map<String, dynamic> data) {
-    final actorName = actor ?? 'Someone';
+    final l10n = _l10n;
+    final actorName = actor ?? l10n.notificationSomeoneFallback;
     switch (category) {
       case ActivityCategory.like:
         return '$actorName liked your ${data['targetType'] ?? 'post'}';
@@ -405,8 +417,8 @@ class RecentActivityProvider extends ChangeNotifier {
         final amount =
             data['amount'] ?? data['rewards'] ?? data['rewardTokens'];
         return amount != null
-            ? '+$amount KUB8 recognition'
-            : 'You have new recognition';
+            ? l10n.recentActivityRecognitionAmountDescription(amount)
+            : l10n.recentActivityNewRecognitionDescription;
       case ActivityCategory.follow:
         return '$actorName started following you';
       case ActivityCategory.share:
@@ -415,7 +427,10 @@ class RecentActivityProvider extends ChangeNotifier {
         return '$actorName mentioned you';
       case ActivityCategory.nft:
         final status = data['status'] ?? 'update';
-        return 'Archive object $status for ${data['artworkTitle'] ?? 'an artwork'}';
+        return l10n.recentActivityArchiveObjectStatusDescription(
+          status,
+          data['artworkTitle'] ?? l10n.recentActivityFallbackArtworkTitle,
+        );
       case ActivityCategory.ar:
         return data['eventTitle']?.toString() ?? 'New AR activity nearby';
       case ActivityCategory.save:

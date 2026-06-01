@@ -17,6 +17,7 @@ import '../providers/locale_provider.dart';
 import '../providers/deep_link_provider.dart';
 import '../providers/auth_deep_link_provider.dart';
 import '../providers/deferred_onboarding_provider.dart';
+import '../l10n/app_localizations.dart';
 import '../services/backend_api_service.dart';
 import '../services/app_bootstrap_service.dart';
 import '../services/auth_onboarding_service.dart';
@@ -632,13 +633,15 @@ class ExploreOnlyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('art.kubus - Explore'),
+        title: Text(l10n.exploreOnlyAppTitle),
         actions: [
           TextButton(
             onPressed: () => _showWalletPrompt(context),
-            child: const Text('Connect optional wallet'),
+            child: Text(l10n.exploreOnlyConnectWalletAction),
           ),
         ],
       ),
@@ -649,7 +652,7 @@ class ExploreOnlyApp extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
             child: Text(
-              'You\'re in explore-only mode. Connect a wallet to access all features.',
+              l10n.exploreOnlyModeBanner,
               style: Theme.of(context).textTheme.bodyMedium,
               textAlign: TextAlign.center,
             ),
@@ -661,38 +664,38 @@ class ExploreOnlyApp extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Discover Art',
+                    l10n.exploreOnlyDiscoverTitle,
                     style: Theme.of(context).textTheme.headlineMedium,
                   ),
                   const SizedBox(height: 16),
                   _buildFeatureCard(
                     context,
-                    'Browse Collections',
-                    'Explore amazing art collections from around the world',
+                    l10n.exploreOnlyCollectionsTitle,
+                    l10n.exploreOnlyCollectionsDescription,
                     Icons.collections,
                     () => _showWalletPrompt(context),
                   ),
                   const SizedBox(height: 12),
                   _buildFeatureCard(
                     context,
-                    'AR Experience',
-                    'View artworks in augmented reality',
+                    l10n.exploreOnlyArTitle,
+                    l10n.exploreOnlyArDescription,
                     Icons.view_in_ar,
                     () => _showWalletPrompt(context),
                   ),
                   const SizedBox(height: 12),
                   _buildFeatureCard(
                     context,
-                    'Community',
-                    'Join the art community discussions',
+                    l10n.exploreOnlyCommunityTitle,
+                    l10n.exploreOnlyCommunityDescription,
                     Icons.people,
                     () => _showWalletPrompt(context),
                   ),
                   const SizedBox(height: 12),
                   _buildFeatureCard(
                     context,
-                    'Digital artifacts',
-                    'Discover optional archive objects connected to artworks',
+                    l10n.exploreOnlyArtifactsTitle,
+                    l10n.exploreOnlyArtifactsDescription,
                     Icons.store,
                     () => _showWalletPrompt(context),
                   ),
@@ -705,7 +708,7 @@ class ExploreOnlyApp extends StatelessWidget {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showWalletPrompt(context),
         icon: const Icon(Icons.account_balance_wallet),
-        label: const Text('Connect optional wallet'),
+        label: Text(l10n.exploreOnlyConnectWalletAction),
       ),
     );
   }
@@ -747,6 +750,8 @@ class WalletPromptScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return KubusAlertDialog(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
@@ -758,7 +763,7 @@ class WalletPromptScreen extends StatelessWidget {
             color: Theme.of(context).primaryColor,
           ),
           const SizedBox(width: 8),
-          const Text('Connect optional wallet'),
+          Text(l10n.walletPromptTitle),
         ],
       ),
       content: Column(
@@ -777,43 +782,42 @@ class WalletPromptScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          const Text(
-            'This optional infrastructure feature uses a wallet for attribution and archive records.',
-            style: TextStyle(fontSize: 16),
+          Text(
+            l10n.walletPromptBody,
+            style: const TextStyle(fontSize: 16),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Set up wallet access only if you want:',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+          Text(
+            l10n.walletPromptIntro,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 12),
-          // Features list
-          const Column(
+          Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  Icon(Icons.check_circle, color: Colors.green, size: 16),
-                  SizedBox(width: 8),
-                  Text('• Digital archive objects'),
+                  const Icon(Icons.check_circle, color: Colors.green, size: 16),
+                  const SizedBox(width: 8),
+                  Text(l10n.walletPromptFeatureArchiveObjects),
                 ],
               ),
-              SizedBox(height: 4),
+              const SizedBox(height: 4),
               Row(
                 children: [
-                  Icon(Icons.check_circle, color: Colors.green, size: 16),
-                  SizedBox(width: 8),
-                  Text('• Create your own artworks'),
+                  const Icon(Icons.check_circle, color: Colors.green, size: 16),
+                  const SizedBox(width: 8),
+                  Text(l10n.walletPromptFeatureCreateArtworks),
                 ],
               ),
-              SizedBox(height: 4),
+              const SizedBox(height: 4),
               Row(
                 children: [
-                  Icon(Icons.check_circle, color: Colors.green, size: 16),
-                  SizedBox(width: 8),
-                  Text('• Community interactions'),
+                  const Icon(Icons.check_circle, color: Colors.green, size: 16),
+                  const SizedBox(width: 8),
+                  Text(l10n.walletPromptFeatureCommunity),
                 ],
               ),
             ],
@@ -823,7 +827,7 @@ class WalletPromptScreen extends StatelessWidget {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Maybe Later'),
+          child: Text(l10n.walletPromptMaybeLater),
         ),
         ElevatedButton.icon(
           onPressed: () {
@@ -839,7 +843,7 @@ class WalletPromptScreen extends StatelessWidget {
             );
           },
           icon: const Icon(Icons.arrow_forward),
-          label: const Text('Set up optional wallet'),
+          label: Text(l10n.walletPromptSetUpAction),
           style: ElevatedButton.styleFrom(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           ),

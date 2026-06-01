@@ -5009,13 +5009,19 @@ class _CommunityScreenState extends State<CommunityScreen>
         final extra = achievementResult.unlocked.length > 1
             ? ' +${achievementResult.unlocked.length - 1}'
             : '';
+        final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showKubusSnackBar(
           SnackBar(
             content: Text(
-              'Achievement unlocked\n${first.title}$extra\n+${first.kub8Reward.round()} ${first.rewardCurrency} recognition',
+              l10n.communityAchievementUnlockedToast(
+                first.title,
+                extra,
+                first.kub8Reward.round(),
+                first.rewardCurrency,
+              ),
             ),
             action: SnackBarAction(
-              label: 'View achievements',
+              label: l10n.communityViewAchievementsAction,
               onPressed: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(

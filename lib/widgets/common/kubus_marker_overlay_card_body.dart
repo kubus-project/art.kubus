@@ -11,6 +11,7 @@ extension _KubusMarkerOverlayCardBodyParts on KubusMarkerOverlayCard {
     required bool isPromoted,
     required String? distanceText,
   }) {
+    final l10n = AppLocalizations.of(context)!;
     final badges = <Widget>[];
 
     if (distanceText != null && distanceText.trim().isNotEmpty) {
@@ -26,7 +27,7 @@ extension _KubusMarkerOverlayCardBodyParts on KubusMarkerOverlayCard {
     if (isPromoted) {
       badges.add(
         _OverlayMetaBadge(
-          label: 'Promoted',
+          label: l10n.markerBadgePromoted,
           icon: Icons.star,
           accent: KubusColorRoles.of(context).achievementGold,
         ),
@@ -61,7 +62,7 @@ extension _KubusMarkerOverlayCardBodyParts on KubusMarkerOverlayCard {
     if (canPresentExhibition) {
       badges.add(
         _OverlayMetaBadge(
-          label: 'Attendance record',
+          label: l10n.markerBadgeAttendanceRecord,
           icon: Icons.verified_outlined,
           accent: baseColor,
         ),
@@ -87,7 +88,7 @@ extension _KubusMarkerOverlayCardBodyParts on KubusMarkerOverlayCard {
     if (visibleDescription.isEmpty) return const SizedBox.shrink();
 
     return Semantics(
-      label: 'marker_description',
+      label: AppLocalizations.of(context)!.markerDescriptionSemanticLabel,
       child: Tooltip(
         message: visibleDescription,
         waitDuration: const Duration(milliseconds: 500),

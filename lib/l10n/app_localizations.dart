@@ -107,6 +107,174 @@ abstract class AppLocalizations {
   /// **'A guide for discovering art, places, and people around you.'**
   String get appTaglineSupport;
 
+  String get exploreOnlyAppTitle;
+
+  String get exploreOnlyConnectWalletAction;
+
+  String get exploreOnlyModeBanner;
+
+  String get exploreOnlyDiscoverTitle;
+
+  String get exploreOnlyCollectionsTitle;
+
+  String get exploreOnlyCollectionsDescription;
+
+  String get exploreOnlyArTitle;
+
+  String get exploreOnlyArDescription;
+
+  String get exploreOnlyCommunityTitle;
+
+  String get exploreOnlyCommunityDescription;
+
+  String get exploreOnlyArtifactsTitle;
+
+  String get exploreOnlyArtifactsDescription;
+
+  String get walletPromptTitle;
+
+  String get walletPromptBody;
+
+  String get walletPromptIntro;
+
+  String get walletPromptFeatureArchiveObjects;
+
+  String get walletPromptFeatureCreateArtworks;
+
+  String get walletPromptFeatureCommunity;
+
+  String get walletPromptMaybeLater;
+
+  String get walletPromptSetUpAction;
+
+  String get walletHomeArchiveObjectFallbackTitle;
+
+  String get walletHomeCollectibleFallbackTitle;
+
+  String get walletHomeConnectWalletToFetchCollectibles;
+
+  String get artworkDraftCoverRequired;
+
+  String get artworkDraftCoverUploadFailed;
+
+  String get artworkDraftGalleryUploadFailed;
+
+  String get artworkDraftTitleDescriptionRequired;
+
+  String get artworkDraftAttendanceUnavailable;
+
+  String get artworkDraftAttendanceIdOrUrlRequired;
+
+  String get artworkDraftCoordinatesRequired;
+
+  String get artworkDraftCoordinatesInvalid;
+
+  String get artworkDraftAttendanceImageUploadFailed;
+
+  String get artworkDraftPublishFailed;
+
+  String get archiveObjectCreatedToast;
+
+  String get archiveObjectCreateFailed;
+
+  String get archiveObjectCreationPleaseWait;
+
+  String archiveObjectSeriesDefaultDescription(Object artworkTitle, Object artistName);
+
+  String get archiveObjectSeriesCreateFailed;
+
+  String get archiveObjectSeriesNotFound;
+
+  String get archiveObjectSeriesSoldOut;
+
+  String archiveObjectCreatedReason(Object artworkTitle, Object tokenId);
+
+  String get artworkCreatorAttendanceRecordUrlOptionalLabel;
+
+  String archiveObjectCreateFailedWithError(Object error);
+
+  String archiveObjectCreateError(Object error);
+
+  String communityAchievementUnlockedToast(Object title, Object extra, Object amount, Object currency);
+
+  String get communityViewAchievementsAction;
+
+  String get markerBadgePromoted;
+
+  String get markerBadgeAttendanceRecord;
+
+  String get markerDescriptionSemanticLabel;
+
+  String get recentActivityRecognitionRecordedTitle;
+
+  String get recentActivityArchiveObjectUpdateTitle;
+
+  String recentActivityRecognitionAmountDescription(Object amount);
+
+  String get recentActivityNewRecognitionDescription;
+
+  String recentActivityArchiveObjectStatusDescription(Object status, Object title);
+
+  String get recentActivityFallbackArtworkTitle;
+
+  String get notificationSomeoneFallback;
+
+  String get notificationAchievementFallback;
+
+  String get notificationRecognitionRecordedTitle;
+
+  String get pushArchiveObjectCreatingTitle;
+
+  String pushArchiveObjectCreatingBody(Object artworkTitle);
+
+  String get pushArchiveObjectCreatedTitle;
+
+  String pushArchiveObjectCreatedBody(Object artworkTitle);
+
+  String get pushArchiveObjectCreationFailedTitle;
+
+  String pushArchiveObjectCreationFailedBody(Object artworkTitle);
+
+  String get pushArchiveObjectCreationChannelName;
+
+  String get pushArchiveObjectCreationChannelDescription;
+
+  String get pushRecognitionChannelName;
+
+  String get pushRecognitionChannelDescription;
+
+  String get analyticsMetricArchiveObjectsCreatedLabel;
+
+  String get analyticsMetricArchiveObjectsCreatedDescription;
+
+  String get analyticsMetricKub8RecognitionLabel;
+
+  String get analyticsMetricKub8RecognitionDescription;
+
+  String get analyticsPresetArtistSubtitle;
+
+  String get analyticsPresetInstitutionSubtitle;
+
+  String get analyticsExportNoDataToast;
+
+  String get analyticsExportFailedToast;
+
+  String collectiblesLoadFailed(Object error);
+
+  String get collectiblesItemNotFound;
+
+  String get collectiblesInvalidListingPrice;
+
+  String get collectiblesArtworkProviderUnavailable;
+
+  String get collectiblesListingUpdateFailed;
+
+  String collectiblesListFailed(Object error);
+
+  String collectiblesRemoveListingFailed(Object error);
+
+  String get collectiblesMockDataDisabled;
+
   /// No description provided for @appTitle.
   ///
   /// In en, this message translates to:

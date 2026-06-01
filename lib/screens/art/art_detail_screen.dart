@@ -2628,6 +2628,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
     }
 
     if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
 
     showKubusDialog(
       context: context,
@@ -2646,7 +2647,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                     tileSize: 8.0)),
             const SizedBox(height: 16),
             Text(
-              'Creating archive object...',
+              l10n.pushArchiveObjectCreatingTitle,
               style: KubusTypography.inter(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
@@ -2698,7 +2699,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Archive object created.',
+                      l10n.archiveObjectCreatedToast,
                       style: KubusTypography.inter(fontWeight: FontWeight.w600),
                     ),
                   ),
@@ -2712,7 +2713,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
           ScaffoldMessenger.of(context).showKubusSnackBar(
             SnackBar(
               content: Text(
-                'Failed to create archive object: ${result.error}',
+                l10n.archiveObjectCreateFailedWithError(result.error ?? ''),
                 style: KubusTypography.inter(),
               ),
               backgroundColor: Colors.red,
@@ -2727,7 +2728,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         ScaffoldMessenger.of(context).showKubusSnackBar(
           SnackBar(
             content: Text(
-              'Error creating archive object: $e',
+              l10n.archiveObjectCreateError(e),
               style: KubusTypography.inter(),
             ),
             backgroundColor: Colors.red,

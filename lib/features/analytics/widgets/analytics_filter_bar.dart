@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../providers/analytics_filters_provider.dart';
 import '../../../utils/design_tokens.dart';
 import '../analytics_metric_registry.dart';
@@ -23,6 +24,7 @@ class AnalyticsFilterBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     final compact = MediaQuery.sizeOf(context).width < 720;
     final selectedMetric =
         metrics.any((metric) => metric.id == selectedMetricId)
@@ -42,7 +44,7 @@ class AnalyticsFilterBar extends StatelessWidget {
       initialValue: selectedMetric.isEmpty ? null : selectedMetric,
       isDense: compact,
       decoration: InputDecoration(
-        labelText: 'Metric',
+        labelText: l10n.analyticsMetricLabel,
         filled: true,
         fillColor: scheme.surfaceContainerHighest.withValues(alpha: 0.45),
         border: OutlineInputBorder(
@@ -57,7 +59,7 @@ class AnalyticsFilterBar extends StatelessWidget {
         return DropdownMenuItem<String>(
           value: metric.id,
           child: Text(
-            metric.label,
+            metric.localizedLabel(l10n),
             overflow: TextOverflow.ellipsis,
           ),
         );

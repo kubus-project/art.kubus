@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'notification_helper.dart';
@@ -7,6 +8,9 @@ import 'notification_show_helper.dart' as webshow;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../l10n/app_localizations.dart';
+import '../l10n/app_localizations_en.dart';
+import '../l10n/app_localizations_sl.dart';
 import '../models/art_marker.dart';
 
 /// Push notification service for AR proximity alerts and community updates
@@ -22,6 +26,12 @@ class PushNotificationService {
   bool _permissionGranted = false;
   bool _permissionRequestInProgress = false;
   Completer<void>? _permissionRequestCompleter;
+
+  AppLocalizations get _l10n {
+    final languageCode =
+        ui.PlatformDispatcher.instance.locale.languageCode.toLowerCase();
+    return languageCode == 'sl' ? AppLocalizationsSl() : AppLocalizationsEn();
+  }
   
   // Callbacks for notification actions
   Function(String)? onNotificationTap;
@@ -262,7 +272,7 @@ class PushNotificationService {
       presentSound: true,
     );
 
-    const NotificationDetails details = NotificationDetails(
+    final NotificationDetails details = NotificationDetails(
       android: androidDetails,
       iOS: iosDetails,
     );
@@ -309,7 +319,7 @@ class PushNotificationService {
       presentSound: true,
     );
 
-    const NotificationDetails details = NotificationDetails(
+    final NotificationDetails details = NotificationDetails(
       android: androidDetails,
       iOS: iosDetails,
     );
@@ -382,7 +392,7 @@ class PushNotificationService {
       presentSound: true,
     );
 
-    const NotificationDetails details = NotificationDetails(
+    final NotificationDetails details = NotificationDetails(
       android: androidDetails,
       iOS: iosDetails,
     );
@@ -409,6 +419,7 @@ class PushNotificationService {
     required String reason,
   }) async {
     if (!_permissionGranted) return;
+    final l10n = _l10n;
     if (kIsWeb) {
       try {
         final mapData = {'type': 'reward', 'amount': amount, 'reason': reason, 'actionUrl': 'app://rewards'};
@@ -419,10 +430,10 @@ class PushNotificationService {
       }
     }
 
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+    final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       'rewards',
-      'Recognition',
-      channelDescription: 'Notifications for contribution recognition',
+      l10n.pushRecognitionChannelName,
+      channelDescription: l10n.pushRecognitionChannelDescription,
       importance: Importance.high,
       priority: Priority.high,
       showWhen: true,
@@ -437,7 +448,7 @@ class PushNotificationService {
       presentSound: true,
     );
 
-    const NotificationDetails details = NotificationDetails(
+    final NotificationDetails details = NotificationDetails(
       android: androidDetails,
       iOS: iosDetails,
     );
@@ -480,6 +491,7 @@ class PushNotificationService {
     String? transactionId,
   }) async {
     if (!_permissionGranted) return;
+    final l10n = _l10n;
     if (kIsWeb) {
       try {
         final mapData = {'type': 'nft_minting', 'artworkId': artworkId, 'artworkTitle': artworkTitle, 'status': status, 'transactionId': transactionId, 'actionUrl': 'app://artwork/$artworkId'};
@@ -487,16 +499,16 @@ class PushNotificationService {
         String bodyText = '';
         switch (status) {
           case 'started':
-            titleText = 'Creating archive object...';
-            bodyText = 'Creating archive object for "$artworkTitle"';
+            titleText = l10n.pushArchiveObjectCreatingTitle;
+            bodyText = l10n.pushArchiveObjectCreatingBody(artworkTitle);
             break;
           case 'success':
-            titleText = 'Archive object created';
-            bodyText = '"$artworkTitle" now has an optional archive record';
+            titleText = l10n.pushArchiveObjectCreatedTitle;
+            bodyText = l10n.pushArchiveObjectCreatedBody(artworkTitle);
             break;
           case 'failed':
-            titleText = 'Creation failed';
-            bodyText = 'Could not create "$artworkTitle" archive object. Please try again.';
+            titleText = l10n.pushArchiveObjectCreationFailedTitle;
+            bodyText = l10n.pushArchiveObjectCreationFailedBody(artworkTitle);
             break;
         }
         await webshow.showNotification(titleText, bodyText, mapData);
@@ -506,10 +518,10 @@ class PushNotificationService {
       }
     }
 
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+    final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       'nft_minting',
-      'Archive Object Creation',
-      channelDescription: 'Notifications for digital archive object creation',
+      l10n.pushArchiveObjectCreationChannelName,
+      channelDescription: l10n.pushArchiveObjectCreationChannelDescription,
       importance: Importance.high,
       priority: Priority.high,
       showWhen: true,
@@ -524,7 +536,7 @@ class PushNotificationService {
       presentSound: true,
     );
 
-    const NotificationDetails details = NotificationDetails(
+    final NotificationDetails details = NotificationDetails(
       android: androidDetails,
       iOS: iosDetails,
     );
@@ -542,16 +554,16 @@ class PushNotificationService {
     
     switch (status) {
       case 'started':
-        title = 'Creating archive object...';
-        body = 'Creating archive object for "$artworkTitle"';
+        title = l10n.pushArchiveObjectCreatingTitle;
+        body = l10n.pushArchiveObjectCreatingBody(artworkTitle);
         break;
       case 'success':
-        title = 'Archive object created';
-        body = '"$artworkTitle" now has an optional archive record';
+        title = l10n.pushArchiveObjectCreatedTitle;
+        body = l10n.pushArchiveObjectCreatedBody(artworkTitle);
         break;
       case 'failed':
-        title = 'Creation failed';
-        body = 'Could not create "$artworkTitle" archive object. Please try again.';
+        title = l10n.pushArchiveObjectCreationFailedTitle;
+        body = l10n.pushArchiveObjectCreationFailedBody(artworkTitle);
         break;
     }
 

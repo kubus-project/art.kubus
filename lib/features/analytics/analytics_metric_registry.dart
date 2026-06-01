@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import 'analytics_entity_registry.dart';
 
 enum AnalyticsMetricFormat {
@@ -67,6 +68,28 @@ class AnalyticsMetricDefinition {
         return '${value.toStringAsFixed(value >= 10 ? 0 : 1)}%';
       case AnalyticsMetricFormat.kub8:
         return '${AnalyticsMetricRegistry.formatCompact(value)} KUB8';
+    }
+  }
+
+  String localizedLabel(AppLocalizations l10n) {
+    switch (id) {
+      case 'nftsMinted':
+        return l10n.analyticsMetricArchiveObjectsCreatedLabel;
+      case 'achievementTokensTotal':
+        return l10n.analyticsMetricKub8RecognitionLabel;
+      default:
+        return label;
+    }
+  }
+
+  String localizedDescription(AppLocalizations l10n) {
+    switch (id) {
+      case 'nftsMinted':
+        return l10n.analyticsMetricArchiveObjectsCreatedDescription;
+      case 'achievementTokensTotal':
+        return l10n.analyticsMetricKub8RecognitionDescription;
+      default:
+        return description;
     }
   }
 }
@@ -187,8 +210,8 @@ class AnalyticsMetricRegistry {
     ),
     AnalyticsMetricDefinition(
       id: 'nftsMinted',
-      label: 'Archive objects created',
-      description: 'Digital archive objects connected to artworks.',
+      label: 'analyticsMetricArchiveObjectsCreatedLabel',
+      description: 'analyticsMetricArchiveObjectsCreatedDescription',
       icon: Icons.token_outlined,
       format: AnalyticsMetricFormat.compact,
       supportedEntities: userEntity,
@@ -215,8 +238,8 @@ class AnalyticsMetricRegistry {
     ),
     AnalyticsMetricDefinition(
       id: 'achievementTokensTotal',
-      label: 'KUB8 recognition',
-      description: 'KUB8 recorded through contribution recognition.',
+      label: 'analyticsMetricKub8RecognitionLabel',
+      description: 'analyticsMetricKub8RecognitionDescription',
       icon: Icons.payments_outlined,
       format: AnalyticsMetricFormat.kub8,
       supportedEntities: userEntity,

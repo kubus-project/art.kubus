@@ -15,6 +15,284 @@ class AppLocalizationsSl extends AppLocalizations {
   String get appTaglineSupport => 'Odkrivaj javno umetnost, ustvarjalce, institucije in zgodbe skupnosti prek odprtega kulturnega zemljevida.';
 
   @override
+  String get exploreOnlyAppTitle => 'art.kubus - Raziskuj';
+
+  @override
+  String get exploreOnlyConnectWalletAction => 'Poveži izbirno denarnico';
+
+  @override
+  String get exploreOnlyModeBanner => 'Uporabljaš javni način odkrivanja. Profili, skupnost in odprti zemljevid umetnosti delujejo brez denarnice; izbirna denarniška orodja lahko omogočiš kasneje.';
+
+  @override
+  String get exploreOnlyDiscoverTitle => 'Odkrij umetnost';
+
+  @override
+  String get exploreOnlyCollectionsTitle => 'Brskaj po zbirkah';
+
+  @override
+  String get exploreOnlyCollectionsDescription => 'Raziskuj umetnine, zgodbe javnega prostora in zapise kulturnega arhiva.';
+
+  @override
+  String get exploreOnlyArTitle => 'AR plasti';
+
+  @override
+  String get exploreOnlyArDescription => 'Oglej si izbirne AR plasti, ko jih omogočijo ustvarjalci ali institucije.';
+
+  @override
+  String get exploreOnlyCommunityTitle => 'Skupnost';
+
+  @override
+  String get exploreOnlyCommunityDescription => 'Sledi ustvarjalcem, institucijam in razpravam o javni umetnosti.';
+
+  @override
+  String get exploreOnlyArtifactsTitle => 'Digitalni artefakti';
+
+  @override
+  String get exploreOnlyArtifactsDescription => 'Odkrij izbirne arhivske objekte, povezane z umetninami.';
+
+  @override
+  String get walletPromptTitle => 'Poveži izbirno denarnico';
+
+  @override
+  String get walletPromptBody => 'Ta izbirna infrastrukturna funkcija uporablja denarnico za atribucijo in arhivske zapise.';
+
+  @override
+  String get walletPromptIntro => 'Dostop do denarnice nastavi le, če želiš:';
+
+  @override
+  String get walletPromptFeatureArchiveObjects => 'Digitalne arhivske objekte';
+
+  @override
+  String get walletPromptFeatureCreateArtworks => 'Ustvarjati in dokumentirati umetnine';
+
+  @override
+  String get walletPromptFeatureCommunity => 'Zapise sodelovanja, vezane na denarnico';
+
+  @override
+  String get walletPromptMaybeLater => 'Morda kasneje';
+
+  @override
+  String get walletPromptSetUpAction => 'Nastavi izbirno denarnico';
+
+  @override
+  String get walletHomeArchiveObjectFallbackTitle => 'Arhivski objekt';
+
+  @override
+  String get walletHomeCollectibleFallbackTitle => 'Zbirateljski predmet';
+
+  @override
+  String get walletHomeConnectWalletToFetchCollectibles => 'Poveži denarnico za nalaganje zbirateljskih predmetov.';
+
+  @override
+  String get artworkDraftCoverRequired => 'Naslovna slika je obvezna.';
+
+  @override
+  String get artworkDraftCoverUploadFailed => 'Naslovne slike ni bilo mogoče naložiti.';
+
+  @override
+  String get artworkDraftGalleryUploadFailed => 'Slike galerije ni bilo mogoče naložiti. Poskusi znova.';
+
+  @override
+  String get artworkDraftTitleDescriptionRequired => 'Naslov in opis sta obvezna.';
+
+  @override
+  String get artworkDraftAttendanceUnavailable => 'Zapisi prisotnosti trenutno niso na voljo.';
+
+  @override
+  String get artworkDraftAttendanceIdOrUrlRequired => 'Vnesi ID dogodka za zapis prisotnosti ali povezavo do zapisa.';
+
+  @override
+  String get artworkDraftCoordinatesRequired => 'Vnesi zemljepisno širino in dolžino ali obe polji pusti prazni.';
+
+  @override
+  String get artworkDraftCoordinatesInvalid => 'Koordinate lokacije niso veljavne.';
+
+  @override
+  String get artworkDraftAttendanceImageUploadFailed => 'Slike zapisa prisotnosti ni bilo mogoče naložiti. Poskusi znova.';
+
+  @override
+  String get artworkDraftPublishFailed => 'Umetnine ni bilo mogoče objaviti. Poskusi znova.';
+
+  @override
+  String get archiveObjectCreatedToast => 'Arhivski objekt je ustvarjen.';
+
+  @override
+  String get archiveObjectCreateFailed => 'Arhivskega objekta ni bilo mogoče ustvariti.';
+
+  @override
+  String get archiveObjectCreationPleaseWait => 'To lahko traja nekaj trenutkov.';
+
+  @override
+  String archiveObjectSeriesDefaultDescription(Object artworkTitle, Object artistName) {
+    return 'Serija arhivskih objektov za $artworkTitle, avtor: $artistName';
+  }
+
+  @override
+  String get archiveObjectSeriesCreateFailed => 'Serije arhivskih objektov ni bilo mogoče ustvariti';
+
+  @override
+  String get archiveObjectSeriesNotFound => 'Serija arhivskih objektov ni najdena';
+
+  @override
+  String get archiveObjectSeriesSoldOut => 'Serija je razprodana';
+
+  @override
+  String archiveObjectCreatedReason(Object artworkTitle, Object tokenId) {
+    return 'Ustvarjen arhivski objekt za "$artworkTitle" (izdaja #$tokenId)';
+  }
+
+  @override
+  String get artworkCreatorAttendanceRecordUrlOptionalLabel => 'URL zapisa prisotnosti (izbirno)';
+
+  @override
+  String archiveObjectCreateFailedWithError(Object error) {
+    return 'Arhivskega objekta ni bilo mogoče ustvariti: $error';
+  }
+
+  @override
+  String archiveObjectCreateError(Object error) {
+    return 'Napaka pri ustvarjanju arhivskega objekta: $error';
+  }
+
+  @override
+  String communityAchievementUnlockedToast(Object title, Object extra, Object amount, Object currency) {
+    return 'Dosežek odklenjen\n$title$extra\n+$amount $currency priznanja';
+  }
+
+  @override
+  String get communityViewAchievementsAction => 'Prikaži dosežke';
+
+  @override
+  String get markerBadgePromoted => 'Izpostavljeno';
+
+  @override
+  String get markerBadgeAttendanceRecord => 'Zapis prisotnosti';
+
+  @override
+  String get markerDescriptionSemanticLabel => 'opis označevalca';
+
+  @override
+  String get recentActivityRecognitionRecordedTitle => 'Priznanje zabeleženo';
+
+  @override
+  String get recentActivityArchiveObjectUpdateTitle => 'Posodobitev arhivskega objekta';
+
+  @override
+  String recentActivityRecognitionAmountDescription(Object amount) {
+    return '+$amount KUB8 priznanja';
+  }
+
+  @override
+  String get recentActivityNewRecognitionDescription => 'Imaš novo priznanje';
+
+  @override
+  String recentActivityArchiveObjectStatusDescription(Object status, Object title) {
+    return 'Arhivski objekt $status za $title';
+  }
+
+  @override
+  String get recentActivityFallbackArtworkTitle => 'umetnino';
+
+  @override
+  String get notificationSomeoneFallback => 'Nekdo';
+
+  @override
+  String get notificationAchievementFallback => 'Dosežek';
+
+  @override
+  String get notificationRecognitionRecordedTitle => 'Priznanje zabeleženo';
+
+  @override
+  String get pushArchiveObjectCreatingTitle => 'Ustvarjanje arhivskega objekta ...';
+
+  @override
+  String pushArchiveObjectCreatingBody(Object artworkTitle) {
+    return 'Ustvarjanje arhivskega objekta za "$artworkTitle"';
+  }
+
+  @override
+  String get pushArchiveObjectCreatedTitle => 'Arhivski objekt je ustvarjen';
+
+  @override
+  String pushArchiveObjectCreatedBody(Object artworkTitle) {
+    return '"$artworkTitle" ima zdaj izbirni arhivski zapis';
+  }
+
+  @override
+  String get pushArchiveObjectCreationFailedTitle => 'Ustvarjanje ni uspelo';
+
+  @override
+  String pushArchiveObjectCreationFailedBody(Object artworkTitle) {
+    return 'Arhivskega objekta za "$artworkTitle" ni bilo mogoče ustvariti. Poskusi znova.';
+  }
+
+  @override
+  String get pushArchiveObjectCreationChannelName => 'Ustvarjanje arhivskega objekta';
+
+  @override
+  String get pushArchiveObjectCreationChannelDescription => 'Obvestila o ustvarjanju digitalnih arhivskih objektov';
+
+  @override
+  String get pushRecognitionChannelName => 'Priznanja';
+
+  @override
+  String get pushRecognitionChannelDescription => 'Obvestila o priznanjih za prispevke';
+
+  @override
+  String get analyticsMetricArchiveObjectsCreatedLabel => 'Ustvarjeni arhivski objekti';
+
+  @override
+  String get analyticsMetricArchiveObjectsCreatedDescription => 'Digitalni arhivski objekti, povezani z umetninami.';
+
+  @override
+  String get analyticsMetricKub8RecognitionLabel => 'KUB8 priznanja';
+
+  @override
+  String get analyticsMetricKub8RecognitionDescription => 'KUB8, zabeležen kot priznanje za prispevke.';
+
+  @override
+  String get analyticsPresetArtistSubtitle => 'Doseg umetnin, odziv skupnosti, AR aktivnost in priznanja.';
+
+  @override
+  String get analyticsPresetInstitutionSubtitle => 'Doseg obiskovalcev, programi, razstave in priznanja.';
+
+  @override
+  String get analyticsExportNoDataToast => 'Za izvoz ni na voljo analitičnih podatkov.';
+
+  @override
+  String get analyticsExportFailedToast => 'Analitike ni bilo mogoče izvoziti.';
+
+  @override
+  String collectiblesLoadFailed(Object error) {
+    return 'Zbirateljskih predmetov ni bilo mogoče naložiti: $error';
+  }
+
+  @override
+  String get collectiblesItemNotFound => 'Zbirateljski predmet ni najden';
+
+  @override
+  String get collectiblesInvalidListingPrice => 'Cena objave ni veljavna';
+
+  @override
+  String get collectiblesArtworkProviderUnavailable => 'Ponudnik umetnin ni na voljo';
+
+  @override
+  String get collectiblesListingUpdateFailed => 'Objave na kanoničnem zapisu umetnine ni bilo mogoče posodobiti';
+
+  @override
+  String collectiblesListFailed(Object error) {
+    return 'Zbirateljskega predmeta ni bilo mogoče objaviti: $error';
+  }
+
+  @override
+  String collectiblesRemoveListingFailed(Object error) {
+    return 'Zbirateljskega predmeta ni bilo mogoče odstraniti iz prodaje: $error';
+  }
+
+  @override
+  String get collectiblesMockDataDisabled => 'Lažni podatki zbirateljskih predmetov so v kanoničnem načinu onemogočeni. Uporabi indeksirane zapise izdaj umetnin.';
+
+  @override
   String get appTitle => 'art.kubus';
 
   @override

@@ -1,4 +1,9 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/foundation.dart';
+import '../l10n/app_localizations.dart';
+import '../l10n/app_localizations_en.dart';
+import '../l10n/app_localizations_sl.dart';
 import '../models/artwork.dart';
 import '../models/collectible.dart';
 import '../services/backend_api_service.dart';
@@ -16,6 +21,12 @@ class CollectiblesProvider with ChangeNotifier {
   final BackendApiService _backendApiService;
   ArtworkProvider? _artworkProvider;
   final Map<String, List<Map<String, dynamic>>> _walletCollectibleIndex = {};
+
+  AppLocalizations get _l10n {
+    final languageCode =
+        ui.PlatformDispatcher.instance.locale.languageCode.toLowerCase();
+    return languageCode == 'sl' ? AppLocalizationsSl() : AppLocalizationsEn();
+  }
 
   bool _isLoading = false;
   String? _error;
@@ -74,7 +85,7 @@ class CollectiblesProvider with ChangeNotifier {
 
       notifyListeners();
     } catch (e) {
-      _setError('Failed to load collectibles: $e');
+      _setError(_l10n.collectiblesLoadFailed(e));
     } finally {
       _setLoading(false);
     }
@@ -352,22 +363,22 @@ class CollectiblesProvider with ChangeNotifier {
     try {
       final collectible = allCollectibles.firstWhere(
         (c) => c.id == collectibleId,
-        orElse: () => throw StateError('Collectible not found'),
+        orElse: () => throw StateError(_l10n.collectiblesItemNotFound),
       );
 
       final artworkId = _resolveArtworkIdForCollectible(collectible);
       if (artworkId == null || artworkId.isEmpty) {
-        throw Exception('Collectible not found');
+        throw Exception(_l10n.collectiblesItemNotFound);
       }
 
       final parsed = double.tryParse(price.trim());
       if (parsed == null || parsed <= 0) {
-        throw Exception('Invalid listing price');
+        throw Exception(_l10n.collectiblesInvalidListingPrice);
       }
 
       final artworkProvider = _artworkProvider;
       if (artworkProvider == null) {
-        throw Exception('Artwork provider is unavailable');
+        throw Exception(_l10n.collectiblesArtworkProviderUnavailable);
       }
 
       final updated = await artworkProvider.updateArtwork(artworkId, {
@@ -376,12 +387,12 @@ class CollectiblesProvider with ChangeNotifier {
       });
 
       if (updated == null) {
-        throw Exception('Failed to update listing on canonical artwork record');
+        throw Exception(_l10n.collectiblesListingUpdateFailed);
       }
 
       notifyListeners();
     } catch (e) {
-      _setError('Failed to list collectible: $e');
+      _setError(_l10n.collectiblesListFailed(e));
       rethrow;
     } finally {
       _setLoading(false);
@@ -396,17 +407,17 @@ class CollectiblesProvider with ChangeNotifier {
     try {
       final collectible = allCollectibles.firstWhere(
         (c) => c.id == collectibleId,
-        orElse: () => throw StateError('Collectible not found'),
+        orElse: () => throw StateError(_l10n.collectiblesItemNotFound),
       );
 
       final artworkId = _resolveArtworkIdForCollectible(collectible);
       if (artworkId == null || artworkId.isEmpty) {
-        throw Exception('Collectible not found');
+        throw Exception(_l10n.collectiblesItemNotFound);
       }
 
       final artworkProvider = _artworkProvider;
       if (artworkProvider == null) {
-        throw Exception('Artwork provider is unavailable');
+        throw Exception(_l10n.collectiblesArtworkProviderUnavailable);
       }
 
       final updated = await artworkProvider.updateArtwork(artworkId, {
@@ -414,12 +425,12 @@ class CollectiblesProvider with ChangeNotifier {
       });
 
       if (updated == null) {
-        throw Exception('Failed to update listing on canonical artwork record');
+        throw Exception(_l10n.collectiblesListingUpdateFailed);
       }
 
       notifyListeners();
     } catch (e) {
-      _setError('Failed to remove collectible from sale: $e');
+      _setError(_l10n.collectiblesRemoveListingFailed(e));
       rethrow;
     } finally {
       _setLoading(false);
@@ -440,7 +451,7 @@ class CollectiblesProvider with ChangeNotifier {
     }
 
     final idx = _legacyCollectibles.indexWhere((c) => c.id == collectibleId);
-    if (idx == -1) throw StateError('Collectible not found');
+    if (idx == -1) throw StateError(_l10n.collectiblesItemNotFound);
 
     final existing = _legacyCollectibles[idx];
     final updated = existing.copyWith(
@@ -458,9 +469,7 @@ class CollectiblesProvider with ChangeNotifier {
   // Initialize with mock data
   Future<void> initializeMockData() async {
     if (!kDebugMode) {
-      _setError(
-        'Mock collectible data is disabled in canonical mode. Use indexed artwork mint records.',
-      );
+      _setError(_l10n.collectiblesMockDataDisabled);
       return;
     }
 

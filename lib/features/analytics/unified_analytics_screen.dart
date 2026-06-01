@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../models/stats/stats_models.dart';
 import '../../providers/analytics_filters_provider.dart';
 import '../../providers/dao_provider.dart';
@@ -75,6 +76,7 @@ class _UnifiedAnalyticsScreenState extends State<UnifiedAnalyticsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final preset = AnalyticsPresets.byKind(_activePresetKind);
     final availablePresets = _availablePresets();
     final statsProvider = context.watch<StatsProvider>();
@@ -290,19 +292,20 @@ class _UnifiedAnalyticsScreenState extends State<UnifiedAnalyticsScreen> {
     );
 
     final overviewCards = _overviewCards(
+      l10n: l10n,
       snapshot: snapshot,
       overviewMetrics: overviewMetrics,
       selectedMetric: selectedMetric,
       summary: summary,
     );
-    final insights = _insights(selectedMetric, summary, timeframe);
+    final insights = _insights(selectedMetric, summary, timeframe, l10n);
     final comparisons = _comparisons(selectedMetric, summary);
 
     return AnalyticsShellScaffold(
       embedded: widget.embedded,
       header: AnalyticsHeader(
         title: preset.title,
-        subtitle: preset.subtitle,
+        subtitle: preset.localizedSubtitle(l10n),
         scopeLabel: preset.scopeLabel,
         icon: preset.icon,
         scopeBadge: capabilities.scope.label,
@@ -484,6 +487,7 @@ class _UnifiedAnalyticsScreenState extends State<UnifiedAnalyticsScreen> {
   }
 
   List<AnalyticsOverviewCardData> _overviewCards({
+    required AppLocalizations l10n,
     required StatsSnapshot? snapshot,
     required List<AnalyticsMetricDefinition> overviewMetrics,
     required AnalyticsMetricDefinition selectedMetric,
@@ -496,10 +500,10 @@ class _UnifiedAnalyticsScreenState extends State<UnifiedAnalyticsScreen> {
       cards.add(
         AnalyticsOverviewCardData(
           metricId: metric.id,
-          title: metric.label,
+          title: metric.localizedLabel(l10n),
           value: metric.formatValue(raw ?? 0),
           icon: metric.icon,
-          subtitle: metric.description,
+          subtitle: metric.localizedDescription(l10n),
         ),
       );
     }
@@ -510,12 +514,12 @@ class _UnifiedAnalyticsScreenState extends State<UnifiedAnalyticsScreen> {
       cards.add(
         AnalyticsOverviewCardData(
           metricId: selectedMetric.id,
-          title: selectedMetric.label,
+          title: selectedMetric.localizedLabel(l10n),
           value: selectedMetric.formatValue(
             raw ?? (summary.hasData ? summary.currentTotal : 0),
           ),
           icon: selectedMetric.icon,
-          subtitle: selectedMetric.description,
+          subtitle: selectedMetric.localizedDescription(l10n),
           changeLabel:
               summary.hasData ? _formatChange(summary.changePercent) : null,
           isPositive: summary.changePercent == null
@@ -531,16 +535,18 @@ class _UnifiedAnalyticsScreenState extends State<UnifiedAnalyticsScreen> {
     AnalyticsMetricDefinition metric,
     AnalyticsSeriesSummary summary,
     String timeframe,
+    AppLocalizations l10n,
   ) {
     if (!summary.hasData) return const <AnalyticsInsightData>[];
     final activeBuckets = summary.values.where((value) => value > 0).length;
     final totalBuckets = summary.values.length;
     final trend = summary.changePercent;
+    final metricLabel = metric.localizedLabel(l10n);
     final insights = <AnalyticsInsightData>[
       AnalyticsInsightData(
         title: 'Active ${timeframe.toUpperCase()} pattern',
         description:
-            '$activeBuckets of $totalBuckets buckets recorded ${metric.label.toLowerCase()}.',
+            '$activeBuckets of $totalBuckets buckets recorded ${metricLabel.toLowerCase()}.',
         icon: Icons.calendar_today_outlined,
       ),
       AnalyticsInsightData(
@@ -553,9 +559,9 @@ class _UnifiedAnalyticsScreenState extends State<UnifiedAnalyticsScreen> {
     if (trend != null) {
       insights.add(
         AnalyticsInsightData(
-          title: trend >= 0 ? 'Momentum improved' : 'Momentum softened',
-          description:
-              '${metric.label} is ${_formatChange(trend)} versus the previous period.',
+        title: trend >= 0 ? 'Momentum improved' : 'Momentum softened',
+        description:
+              '$metricLabel is ${_formatChange(trend)} versus the previous period.',
           icon: trend >= 0
               ? Icons.arrow_upward_outlined
               : Icons.arrow_downward_outlined,
@@ -607,9 +613,11 @@ class _UnifiedAnalyticsScreenState extends State<UnifiedAnalyticsScreen> {
   }) async {
     final messenger = ScaffoldMessenger.of(context);
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+    final metricLabel = metric.localizedLabel(l10n);
     final text = StringBuffer()
       ..writeln(preset.title)
-      ..writeln('Metric: ${metric.label}')
+      ..writeln('Metric: $metricLabel')
       ..writeln('Period: ${timeframe.toUpperCase()}')
       ..writeln('Total: ${metric.formatValue(summary.currentTotal)}')
       ..writeln('Change: ${_formatChange(summary.changePercent)}');
@@ -622,7 +630,7 @@ class _UnifiedAnalyticsScreenState extends State<UnifiedAnalyticsScreen> {
       if (!mounted) return;
       messenger.showKubusSnackBar(
         SnackBar(
-          content: const Text('Unable to share analytics on this device.'),
+          content: Text(l10n.analyticsShareUnavailable),
           backgroundColor: scheme.error,
         ),
       );
@@ -637,10 +645,12 @@ class _UnifiedAnalyticsScreenState extends State<UnifiedAnalyticsScreen> {
   }) async {
     final messenger = ScaffoldMessenger.of(context);
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+    final metricLabel = metric.localizedLabel(l10n);
     if (!summary.hasData) {
       messenger.showKubusSnackBar(
         SnackBar(
-          content: const Text('No analytics data available to export.'),
+          content: Text(l10n.analyticsExportNoDataToast),
           backgroundColor: scheme.error,
         ),
       );
@@ -666,14 +676,14 @@ class _UnifiedAnalyticsScreenState extends State<UnifiedAnalyticsScreen> {
       await SharePlus.instance.share(
         ShareParams(
           text: buffer.toString(),
-          subject: '${preset.title} ${metric.label} export',
+          subject: '${preset.title} $metricLabel export',
         ),
       );
     } catch (_) {
       if (!mounted) return;
       messenger.showKubusSnackBar(
         SnackBar(
-          content: const Text('Unable to export analytics.'),
+          content: Text(l10n.analyticsExportFailedToast),
           backgroundColor: scheme.error,
         ),
       );

@@ -1,6 +1,10 @@
 import 'dart:convert';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../l10n/app_localizations.dart';
+import '../l10n/app_localizations_en.dart';
+import '../l10n/app_localizations_sl.dart';
 import '../models/collectible.dart';
 import '../services/push_notification_service.dart';
 import '../services/collectibles_storage.dart';
@@ -27,6 +31,12 @@ class NFTMintingService {
 
   final PushNotificationService _notificationService = PushNotificationService();
   final CollectiblesStorage _collectiblesStorage = CollectiblesStorage();
+
+  AppLocalizations get _l10n {
+    final languageCode =
+        ui.PlatformDispatcher.instance.locale.languageCode.toLowerCase();
+    return languageCode == 'sl' ? AppLocalizationsSl() : AppLocalizationsEn();
+  }
   
   // Ongoing minting operations
   final Map<String, MintingStatus> _mintingOperations = {};
@@ -112,6 +122,7 @@ class NFTMintingService {
     Map<String, dynamic>? properties,
   }) async {
     try {
+      final l10n = _l10n;
       // Update status
       _mintingOperations[artworkId] = MintingStatus.inProgress;
       
@@ -139,7 +150,7 @@ class NFTMintingService {
             artworkId: artworkId,
             name: seriesName ?? '$artworkTitle Collection',
             description:
-                seriesDescription ?? 'Archive object series for $artworkTitle by $artistName',
+                seriesDescription ?? l10n.archiveObjectSeriesDefaultDescription(artworkTitle, artistName),
             creatorAddress: ownerAddress,
             totalSupply: totalSupply,
             rarity: rarity,
@@ -154,7 +165,7 @@ class NFTMintingService {
 
           if (!seriesResult.success || seriesResult.seriesId == null) {
             throw Exception(
-                seriesResult.error ?? 'Failed to create archive object series');
+                seriesResult.error ?? l10n.archiveObjectSeriesCreateFailed);
           }
 
           finalSeriesId = seriesResult.seriesId!;
@@ -181,11 +192,11 @@ class NFTMintingService {
       // Step 4: Record mint locally
       final seriesIndex = seriesList.indexWhere((s) => s.id == finalSeriesId);
       if (seriesIndex == -1) {
-        throw Exception('Archive object series not found');
+        throw Exception(l10n.archiveObjectSeriesNotFound);
       }
       final series = seriesList[seriesIndex];
       if (series.isSoldOut) {
-        throw Exception('Series is sold out');
+        throw Exception(l10n.archiveObjectSeriesSoldOut);
       }
 
       final tokenId = '${series.mintedCount + 1}';
@@ -224,10 +235,9 @@ class NFTMintingService {
 
       // Award tokens for minting
       await _notificationService.showRewardNotification(
-        title: 'Archive object created',
+        title: l10n.pushArchiveObjectCreatedTitle,
         amount: 50,
-        reason:
-            'Created archive object for "$artworkTitle" (Edition #$tokenId)',
+        reason: l10n.archiveObjectCreatedReason(artworkTitle, tokenId),
       );
       
       // Check NFT minting achievements

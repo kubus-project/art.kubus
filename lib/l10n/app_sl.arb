@@ -2,6 +2,161 @@
   "@@locale": "sl",
   "appTagline": "kubus - tvoj sopotnik v umetnosti.",
   "appTaglineSupport": "Odkrivaj javno umetnost, ustvarjalce, institucije in zgodbe skupnosti prek odprtega kulturnega zemljevida.",
+  "exploreOnlyAppTitle": "art.kubus - Raziskuj",
+  "exploreOnlyConnectWalletAction": "Poveži izbirno denarnico",
+  "exploreOnlyModeBanner": "Uporabljaš javni način odkrivanja. Profili, skupnost in odprti zemljevid umetnosti delujejo brez denarnice; izbirna denarniška orodja lahko omogočiš kasneje.",
+  "exploreOnlyDiscoverTitle": "Odkrij umetnost",
+  "exploreOnlyCollectionsTitle": "Brskaj po zbirkah",
+  "exploreOnlyCollectionsDescription": "Raziskuj umetnine, zgodbe javnega prostora in zapise kulturnega arhiva.",
+  "exploreOnlyArTitle": "AR plasti",
+  "exploreOnlyArDescription": "Oglej si izbirne AR plasti, ko jih omogočijo ustvarjalci ali institucije.",
+  "exploreOnlyCommunityTitle": "Skupnost",
+  "exploreOnlyCommunityDescription": "Sledi ustvarjalcem, institucijam in razpravam o javni umetnosti.",
+  "exploreOnlyArtifactsTitle": "Digitalni artefakti",
+  "exploreOnlyArtifactsDescription": "Odkrij izbirne arhivske objekte, povezane z umetninami.",
+  "walletPromptTitle": "Poveži izbirno denarnico",
+  "walletPromptBody": "Ta izbirna infrastrukturna funkcija uporablja denarnico za atribucijo in arhivske zapise.",
+  "walletPromptIntro": "Dostop do denarnice nastavi le, če želiš:",
+  "walletPromptFeatureArchiveObjects": "Digitalne arhivske objekte",
+  "walletPromptFeatureCreateArtworks": "Ustvarjati in dokumentirati umetnine",
+  "walletPromptFeatureCommunity": "Zapise sodelovanja, vezane na denarnico",
+  "walletPromptMaybeLater": "Morda kasneje",
+  "walletPromptSetUpAction": "Nastavi izbirno denarnico",
+  "walletHomeArchiveObjectFallbackTitle": "Arhivski objekt",
+  "walletHomeCollectibleFallbackTitle": "Zbirateljski predmet",
+  "walletHomeConnectWalletToFetchCollectibles": "Poveži denarnico za nalaganje zbirateljskih predmetov.",
+  "artworkDraftCoverRequired": "Naslovna slika je obvezna.",
+  "artworkDraftCoverUploadFailed": "Naslovne slike ni bilo mogoče naložiti.",
+  "artworkDraftGalleryUploadFailed": "Slike galerije ni bilo mogoče naložiti. Poskusi znova.",
+  "artworkDraftTitleDescriptionRequired": "Naslov in opis sta obvezna.",
+  "artworkDraftAttendanceUnavailable": "Zapisi prisotnosti trenutno niso na voljo.",
+  "artworkDraftAttendanceIdOrUrlRequired": "Vnesi ID dogodka za zapis prisotnosti ali povezavo do zapisa.",
+  "artworkDraftCoordinatesRequired": "Vnesi zemljepisno širino in dolžino ali obe polji pusti prazni.",
+  "artworkDraftCoordinatesInvalid": "Koordinate lokacije niso veljavne.",
+  "artworkDraftAttendanceImageUploadFailed": "Slike zapisa prisotnosti ni bilo mogoče naložiti. Poskusi znova.",
+  "artworkDraftPublishFailed": "Umetnine ni bilo mogoče objaviti. Poskusi znova.",
+  "archiveObjectCreatedToast": "Arhivski objekt je ustvarjen.",
+  "archiveObjectCreateFailed": "Arhivskega objekta ni bilo mogoče ustvariti.",
+  "archiveObjectCreationPleaseWait": "To lahko traja nekaj trenutkov.",
+  "archiveObjectSeriesDefaultDescription": "Serija arhivskih objektov za {artworkTitle}, avtor: {artistName}",
+  "@archiveObjectSeriesDefaultDescription": {
+    "placeholders": {
+      "artworkTitle": {},
+      "artistName": {}
+    }
+  },
+  "archiveObjectSeriesCreateFailed": "Serije arhivskih objektov ni bilo mogoče ustvariti",
+  "archiveObjectSeriesNotFound": "Serija arhivskih objektov ni najdena",
+  "archiveObjectSeriesSoldOut": "Serija je razprodana",
+  "archiveObjectCreatedReason": "Ustvarjen arhivski objekt za \"{artworkTitle}\" (izdaja #{tokenId})",
+  "@archiveObjectCreatedReason": {
+    "placeholders": {
+      "artworkTitle": {},
+      "tokenId": {}
+    }
+  },
+  "artworkCreatorAttendanceRecordUrlOptionalLabel": "URL zapisa prisotnosti (izbirno)",
+  "archiveObjectCreateFailedWithError": "Arhivskega objekta ni bilo mogoče ustvariti: {error}",
+  "@archiveObjectCreateFailedWithError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "archiveObjectCreateError": "Napaka pri ustvarjanju arhivskega objekta: {error}",
+  "@archiveObjectCreateError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "communityAchievementUnlockedToast": "Dosežek odklenjen\n{title}{extra}\n+{amount} {currency} priznanja",
+  "@communityAchievementUnlockedToast": {
+    "placeholders": {
+      "title": {},
+      "extra": {},
+      "amount": {},
+      "currency": {}
+    }
+  },
+  "communityViewAchievementsAction": "Prikaži dosežke",
+  "markerBadgePromoted": "Izpostavljeno",
+  "markerBadgeAttendanceRecord": "Zapis prisotnosti",
+  "markerDescriptionSemanticLabel": "opis označevalca",
+  "recentActivityRecognitionRecordedTitle": "Priznanje zabeleženo",
+  "recentActivityArchiveObjectUpdateTitle": "Posodobitev arhivskega objekta",
+  "recentActivityRecognitionAmountDescription": "+{amount} KUB8 priznanja",
+  "@recentActivityRecognitionAmountDescription": {
+    "placeholders": {
+      "amount": {}
+    }
+  },
+  "recentActivityNewRecognitionDescription": "Imaš novo priznanje",
+  "recentActivityArchiveObjectStatusDescription": "Arhivski objekt {status} za {title}",
+  "@recentActivityArchiveObjectStatusDescription": {
+    "placeholders": {
+      "status": {},
+      "title": {}
+    }
+  },
+  "recentActivityFallbackArtworkTitle": "umetnino",
+  "notificationSomeoneFallback": "Nekdo",
+  "notificationAchievementFallback": "Dosežek",
+  "notificationRecognitionRecordedTitle": "Priznanje zabeleženo",
+  "pushArchiveObjectCreatingTitle": "Ustvarjanje arhivskega objekta ...",
+  "pushArchiveObjectCreatingBody": "Ustvarjanje arhivskega objekta za \"{artworkTitle}\"",
+  "@pushArchiveObjectCreatingBody": {
+    "placeholders": {
+      "artworkTitle": {}
+    }
+  },
+  "pushArchiveObjectCreatedTitle": "Arhivski objekt je ustvarjen",
+  "pushArchiveObjectCreatedBody": "\"{artworkTitle}\" ima zdaj izbirni arhivski zapis",
+  "@pushArchiveObjectCreatedBody": {
+    "placeholders": {
+      "artworkTitle": {}
+    }
+  },
+  "pushArchiveObjectCreationFailedTitle": "Ustvarjanje ni uspelo",
+  "pushArchiveObjectCreationFailedBody": "Arhivskega objekta za \"{artworkTitle}\" ni bilo mogoče ustvariti. Poskusi znova.",
+  "@pushArchiveObjectCreationFailedBody": {
+    "placeholders": {
+      "artworkTitle": {}
+    }
+  },
+  "pushArchiveObjectCreationChannelName": "Ustvarjanje arhivskega objekta",
+  "pushArchiveObjectCreationChannelDescription": "Obvestila o ustvarjanju digitalnih arhivskih objektov",
+  "pushRecognitionChannelName": "Priznanja",
+  "pushRecognitionChannelDescription": "Obvestila o priznanjih za prispevke",
+  "analyticsMetricArchiveObjectsCreatedLabel": "Ustvarjeni arhivski objekti",
+  "analyticsMetricArchiveObjectsCreatedDescription": "Digitalni arhivski objekti, povezani z umetninami.",
+  "analyticsMetricKub8RecognitionLabel": "KUB8 priznanja",
+  "analyticsMetricKub8RecognitionDescription": "KUB8, zabeležen kot priznanje za prispevke.",
+  "analyticsPresetArtistSubtitle": "Doseg umetnin, odziv skupnosti, AR aktivnost in priznanja.",
+  "analyticsPresetInstitutionSubtitle": "Doseg obiskovalcev, programi, razstave in priznanja.",
+  "analyticsExportNoDataToast": "Za izvoz ni na voljo analitičnih podatkov.",
+  "analyticsExportFailedToast": "Analitike ni bilo mogoče izvoziti.",
+  "collectiblesLoadFailed": "Zbirateljskih predmetov ni bilo mogoče naložiti: {error}",
+  "@collectiblesLoadFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "collectiblesItemNotFound": "Zbirateljski predmet ni najden",
+  "collectiblesInvalidListingPrice": "Cena objave ni veljavna",
+  "collectiblesArtworkProviderUnavailable": "Ponudnik umetnin ni na voljo",
+  "collectiblesListingUpdateFailed": "Objave na kanoničnem zapisu umetnine ni bilo mogoče posodobiti",
+  "collectiblesListFailed": "Zbirateljskega predmeta ni bilo mogoče objaviti: {error}",
+  "@collectiblesListFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "collectiblesRemoveListingFailed": "Zbirateljskega predmeta ni bilo mogoče odstraniti iz prodaje: {error}",
+  "@collectiblesRemoveListingFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "collectiblesMockDataDisabled": "Lažni podatki zbirateljskih predmetov so v kanoničnem načinu onemogočeni. Uporabi indeksirane zapise izdaj umetnin.",
   "appTitle": "art.kubus",
   "appExitConfirmBackHint": "Za izhod iz aplikacije še enkrat povleci ali pritisni nazaj.",
   "commonCancel": "Prekliči",

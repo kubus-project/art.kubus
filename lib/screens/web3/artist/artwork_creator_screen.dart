@@ -502,8 +502,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
 
     if (latText.isEmpty || lngText.isEmpty) {
       ScaffoldMessenger.of(context).showKubusSnackBar(
-        const SnackBar(
-            content: Text('Please provide both latitude and longitude.')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.artworkDraftCoordinatesRequired)),
       );
       return false;
     }
@@ -512,7 +511,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
     final lng = double.tryParse(lngText);
     if (lat == null || lng == null || !_validateLatLng(lat, lng)) {
       ScaffoldMessenger.of(context).showKubusSnackBar(
-        const SnackBar(content: Text('Location coordinates are invalid.')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.artworkDraftCoordinatesInvalid)),
       );
       return false;
     }
@@ -543,7 +542,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
 
     if (draft.coverBytes == null) {
       messenger.showKubusSnackBar(
-        const SnackBar(content: Text('Cover image is required.')),
+        SnackBar(content: Text(l10n.artworkDraftCoverRequired)),
       );
       return;
     }
@@ -560,6 +559,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
     final created = await drafts.submitDraft(
       draftId: widget.draftId,
       walletAddress: wallet,
+      l10n: l10n,
     );
     if (!mounted) return;
     if (created == null) {
@@ -646,6 +646,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
   Future<void> _mintNftForCreated({
     required ArtworkDraftState draft,
   }) async {
+    final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
     final scheme = Theme.of(context).colorScheme;
     final wallet = _resolveWalletAddress(context);
@@ -654,7 +655,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
 
     if (wallet.isEmpty) {
       messenger.showKubusSnackBar(
-        const SnackBar(content: Text('Please connect your wallet first.')),
+        SnackBar(content: Text(l10n.walletActionConnectWalletRequiredToast)),
       );
       return;
     }
@@ -678,17 +679,17 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
       builder: (context) => AlertDialog(
         backgroundColor: scheme.surface,
         title: Text(
-          'Creating archive object...',
+          l10n.pushArchiveObjectCreatingTitle,
           style: KubusTextStyles.detailSectionTitle,
         ),
         content: Row(
-          children: const [
-            SizedBox(
+          children: [
+            const SizedBox(
                 width: 18,
                 height: 18,
                 child: InlineLoading(shape: BoxShape.circle, tileSize: 3.5)),
-            SizedBox(width: KubusSpacing.md),
-            Expanded(child: Text('This may take a few moments.')),
+            const SizedBox(width: KubusSpacing.md),
+            Expanded(child: Text(l10n.archiveObjectCreationPleaseWait)),
           ],
         ),
       ),
@@ -718,21 +719,23 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
 
       if (result.success) {
         messenger.showKubusSnackBar(
-          const SnackBar(content: Text('Archive object created.')),
+          SnackBar(content: Text(l10n.archiveObjectCreatedToast)),
         );
       } else {
         messenger.showKubusSnackBar(
           SnackBar(
-              content:
-                  Text(result.error ?? 'Failed to create archive object.')),
+            content: Text(
+              result.error ??
+                  l10n.archiveObjectCreateFailed,
+            ),
+          ),
         );
       }
     } catch (_) {
       if (!mounted) return;
       Navigator.of(context).pop();
       messenger.showKubusSnackBar(
-        const SnackBar(
-            content: Text('Failed to create archive object. Please try again.')),
+        SnackBar(content: Text(l10n.archiveObjectCreateFailed)),
       );
     }
   }
@@ -1054,6 +1057,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
     required Color accent,
   }) {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
 
     return CreatorSection(
       title: 'Optional features',
@@ -1223,7 +1227,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
             ),
             const CreatorFieldSpacing(),
             CreatorTextField(
-              label: 'Attendance record URL (optional)',
+              label: l10n.artworkCreatorAttendanceRecordUrlOptionalLabel,
               hint: 'A link people can open to save the badge.',
               accentColor: accent,
               controller: _poapClaimUrlController,
@@ -1359,7 +1363,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
         ] else ...[
           const CreatorFieldSpacing(),
           Text(
-            'Attendance records are currently unavailable.',
+            l10n.artworkDraftAttendanceUnavailable,
             style: KubusTextStyles.detailBody.copyWith(
               color: scheme.onSurface.withValues(alpha: 0.7),
             ),

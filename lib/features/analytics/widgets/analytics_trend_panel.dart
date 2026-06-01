@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../widgets/charts/stats_interactive_line_chart.dart';
 import '../../../widgets/inline_loading.dart';
@@ -29,6 +30,7 @@ class AnalyticsTrendPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     final compact = MediaQuery.sizeOf(context).width < 720;
     final height = compact ? 260.0 : 360.0;
 
@@ -49,7 +51,7 @@ class AnalyticsTrendPanel extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '${metric.label} trend',
+                      '${metric.localizedLabel(l10n)} trend',
                       style: KubusTypography.inter(
                         fontSize: compact ? 18 : 22,
                         fontWeight: FontWeight.w800,

@@ -2,6 +2,161 @@
   "@@locale": "en",
   "appTagline": "kubus - your art companion.",
   "appTaglineSupport": "Discover public art, artists, institutions and community stories through an open cultural map.",
+  "exploreOnlyAppTitle": "art.kubus - Explore",
+  "exploreOnlyConnectWalletAction": "Connect optional wallet",
+  "exploreOnlyModeBanner": "You are in public discovery mode. Profiles, community and the open art map work without a wallet; optional wallet tools can be enabled later.",
+  "exploreOnlyDiscoverTitle": "Discover art",
+  "exploreOnlyCollectionsTitle": "Browse collections",
+  "exploreOnlyCollectionsDescription": "Explore artworks, public-space stories and cultural archive records.",
+  "exploreOnlyArTitle": "AR layers",
+  "exploreOnlyArDescription": "View optional AR layers when artists or institutions enable them.",
+  "exploreOnlyCommunityTitle": "Community",
+  "exploreOnlyCommunityDescription": "Follow artists, institutions and discussions around public art.",
+  "exploreOnlyArtifactsTitle": "Digital artifacts",
+  "exploreOnlyArtifactsDescription": "Discover optional archive objects connected to artworks.",
+  "walletPromptTitle": "Connect optional wallet",
+  "walletPromptBody": "This optional infrastructure feature uses a wallet for attribution and archive records.",
+  "walletPromptIntro": "Set up wallet access only if you want:",
+  "walletPromptFeatureArchiveObjects": "Digital archive objects",
+  "walletPromptFeatureCreateArtworks": "Create and document artworks",
+  "walletPromptFeatureCommunity": "Wallet-linked participation records",
+  "walletPromptMaybeLater": "Maybe later",
+  "walletPromptSetUpAction": "Set up optional wallet",
+  "walletHomeArchiveObjectFallbackTitle": "Archive object",
+  "walletHomeCollectibleFallbackTitle": "Collectible",
+  "walletHomeConnectWalletToFetchCollectibles": "Connect your wallet to fetch collectibles.",
+  "artworkDraftCoverRequired": "Cover image is required.",
+  "artworkDraftCoverUploadFailed": "Failed to upload cover image.",
+  "artworkDraftGalleryUploadFailed": "Failed to upload a gallery image. Please try again.",
+  "artworkDraftTitleDescriptionRequired": "Title and description are required.",
+  "artworkDraftAttendanceUnavailable": "Attendance records are currently unavailable.",
+  "artworkDraftAttendanceIdOrUrlRequired": "Please provide an attendance event ID or record URL.",
+  "artworkDraftCoordinatesRequired": "Please provide both latitude and longitude (or leave both empty).",
+  "artworkDraftCoordinatesInvalid": "Location coordinates are invalid.",
+  "artworkDraftAttendanceImageUploadFailed": "Failed to upload attendance record image. Please try again.",
+  "artworkDraftPublishFailed": "Failed to publish artwork. Please try again.",
+  "archiveObjectCreatedToast": "Archive object created.",
+  "archiveObjectCreateFailed": "Failed to create archive object.",
+  "archiveObjectCreationPleaseWait": "This may take a few moments.",
+  "archiveObjectSeriesDefaultDescription": "Archive object series for {artworkTitle} by {artistName}",
+  "@archiveObjectSeriesDefaultDescription": {
+    "placeholders": {
+      "artworkTitle": {},
+      "artistName": {}
+    }
+  },
+  "archiveObjectSeriesCreateFailed": "Failed to create archive object series",
+  "archiveObjectSeriesNotFound": "Archive object series not found",
+  "archiveObjectSeriesSoldOut": "Series is sold out",
+  "archiveObjectCreatedReason": "Created archive object for \"{artworkTitle}\" (Edition #{tokenId})",
+  "@archiveObjectCreatedReason": {
+    "placeholders": {
+      "artworkTitle": {},
+      "tokenId": {}
+    }
+  },
+  "artworkCreatorAttendanceRecordUrlOptionalLabel": "Attendance record URL (optional)",
+  "archiveObjectCreateFailedWithError": "Failed to create archive object: {error}",
+  "@archiveObjectCreateFailedWithError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "archiveObjectCreateError": "Error creating archive object: {error}",
+  "@archiveObjectCreateError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "communityAchievementUnlockedToast": "Achievement unlocked\n{title}{extra}\n+{amount} {currency} recognition",
+  "@communityAchievementUnlockedToast": {
+    "placeholders": {
+      "title": {},
+      "extra": {},
+      "amount": {},
+      "currency": {}
+    }
+  },
+  "communityViewAchievementsAction": "View achievements",
+  "markerBadgePromoted": "Promoted",
+  "markerBadgeAttendanceRecord": "Attendance record",
+  "markerDescriptionSemanticLabel": "marker description",
+  "recentActivityRecognitionRecordedTitle": "Recognition Recorded",
+  "recentActivityArchiveObjectUpdateTitle": "Archive Object Update",
+  "recentActivityRecognitionAmountDescription": "+{amount} KUB8 recognition",
+  "@recentActivityRecognitionAmountDescription": {
+    "placeholders": {
+      "amount": {}
+    }
+  },
+  "recentActivityNewRecognitionDescription": "You have new recognition",
+  "recentActivityArchiveObjectStatusDescription": "Archive object {status} for {title}",
+  "@recentActivityArchiveObjectStatusDescription": {
+    "placeholders": {
+      "status": {},
+      "title": {}
+    }
+  },
+  "recentActivityFallbackArtworkTitle": "an artwork",
+  "notificationSomeoneFallback": "Someone",
+  "notificationAchievementFallback": "Achievement",
+  "notificationRecognitionRecordedTitle": "Recognition recorded",
+  "pushArchiveObjectCreatingTitle": "Creating archive object...",
+  "pushArchiveObjectCreatingBody": "Creating archive object for \"{artworkTitle}\"",
+  "@pushArchiveObjectCreatingBody": {
+    "placeholders": {
+      "artworkTitle": {}
+    }
+  },
+  "pushArchiveObjectCreatedTitle": "Archive object created",
+  "pushArchiveObjectCreatedBody": "\"{artworkTitle}\" now has an optional archive record",
+  "@pushArchiveObjectCreatedBody": {
+    "placeholders": {
+      "artworkTitle": {}
+    }
+  },
+  "pushArchiveObjectCreationFailedTitle": "Creation failed",
+  "pushArchiveObjectCreationFailedBody": "Could not create \"{artworkTitle}\" archive object. Please try again.",
+  "@pushArchiveObjectCreationFailedBody": {
+    "placeholders": {
+      "artworkTitle": {}
+    }
+  },
+  "pushArchiveObjectCreationChannelName": "Archive Object Creation",
+  "pushArchiveObjectCreationChannelDescription": "Notifications for digital archive object creation",
+  "pushRecognitionChannelName": "Recognition",
+  "pushRecognitionChannelDescription": "Notifications for contribution recognition",
+  "analyticsMetricArchiveObjectsCreatedLabel": "Archive objects created",
+  "analyticsMetricArchiveObjectsCreatedDescription": "Digital archive objects connected to artworks.",
+  "analyticsMetricKub8RecognitionLabel": "KUB8 recognition",
+  "analyticsMetricKub8RecognitionDescription": "KUB8 recorded through contribution recognition.",
+  "analyticsPresetArtistSubtitle": "Artwork reach, community response, AR activity, and recognition.",
+  "analyticsPresetInstitutionSubtitle": "Visitor reach, hosted programs, exhibitions, and recognition.",
+  "analyticsExportNoDataToast": "No analytics data available to export.",
+  "analyticsExportFailedToast": "Unable to export analytics.",
+  "collectiblesLoadFailed": "Failed to load collectibles: {error}",
+  "@collectiblesLoadFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "collectiblesItemNotFound": "Collectible not found",
+  "collectiblesInvalidListingPrice": "Invalid listing price",
+  "collectiblesArtworkProviderUnavailable": "Artwork provider is unavailable",
+  "collectiblesListingUpdateFailed": "Failed to update listing on canonical artwork record",
+  "collectiblesListFailed": "Failed to list collectible: {error}",
+  "@collectiblesListFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "collectiblesRemoveListingFailed": "Failed to remove collectible from sale: {error}",
+  "@collectiblesRemoveListingFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "collectiblesMockDataDisabled": "Mock collectible data is disabled in canonical mode. Use indexed artwork mint records.",
   "appTitle": "art.kubus",
   "appExitConfirmBackHint": "Swipe or press back again to exit the app.",
   "commonCancel": "Cancel",
