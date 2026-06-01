@@ -27,6 +27,24 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+class AuthEmailRegistrationCapture {
+  const AuthEmailRegistrationCapture({
+    required this.email,
+    this.typedUsername,
+    this.backendUsername,
+    this.displayName,
+    this.walletAddress,
+    this.response,
+  });
+
+  final String email;
+  final String? typedUsername;
+  final String? backendUsername;
+  final String? displayName;
+  final String? walletAddress;
+  final Map<String, dynamic>? response;
+}
+
 class AuthMethodsPanel extends StatefulWidget {
   const AuthMethodsPanel({
     super.key,
@@ -34,6 +52,7 @@ class AuthMethodsPanel extends StatefulWidget {
     this.onAuthSuccess,
     this.onVerificationRequired,
     this.onEmailRegistrationAttempted,
+    this.onEmailRegistrationCaptured,
     this.onEmailCredentialsCaptured,
     this.preferredEmailGreetingName,
     this.prepareProvisionalProfileBeforeRegister = false,
@@ -46,6 +65,8 @@ class AuthMethodsPanel extends StatefulWidget {
   final Future<void> Function()? onAuthSuccess;
   final ValueChanged<String>? onVerificationRequired;
   final ValueChanged<String>? onEmailRegistrationAttempted;
+  final Future<void> Function(AuthEmailRegistrationCapture capture)?
+      onEmailRegistrationCaptured;
   final Future<void> Function(String email, String password)?
       onEmailCredentialsCaptured;
   final String? preferredEmailGreetingName;
@@ -323,7 +344,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
         throw Exception(l10n.authSignerProvisioningFailed);
       }
       final api = BackendApiService();
-      await api
+      final registrationResponse = await api
           .registerWithEmail(
             email: email,
             password: password,
@@ -334,7 +355,40 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
           .timeout(const Duration(seconds: 16));
       AppConfig.debugPrint(
           'AuthMethodsPanel._registerWithEmail: registerWithEmail completed');
+      final responseData =
+          (registrationResponse['data'] as Map<String, dynamic>?) ??
+              registrationResponse;
+      final responseUser =
+          (responseData['user'] as Map<String, dynamic>?) ?? responseData;
+      final backendUsername = (responseUser['username'] ?? '')
+          .toString()
+          .replaceFirst(RegExp(r'^@+'), '')
+          .trim();
+      final backendDisplayName =
+          (responseUser['displayName'] ?? responseUser['display_name'] ?? '')
+              .toString()
+              .trim();
+      final backendWallet =
+          (responseUser['walletAddress'] ?? responseUser['wallet_address'] ?? '')
+              .toString()
+              .trim();
       widget.onEmailRegistrationAttempted?.call(email);
+      if (widget.onEmailRegistrationCaptured != null) {
+        await widget.onEmailRegistrationCaptured!(
+          AuthEmailRegistrationCapture(
+            email: email,
+            typedUsername: username.isEmpty ? null : username,
+            backendUsername: backendUsername.isEmpty ? null : backendUsername,
+            displayName: backendDisplayName.isNotEmpty
+                ? backendDisplayName
+                : effectiveDisplayName,
+            walletAddress: backendWallet.isNotEmpty
+                ? backendWallet
+                : provisionalWalletAddress,
+            response: registrationResponse,
+          ),
+        );
+      }
       if (widget.onEmailCredentialsCaptured != null) {
         await widget.onEmailCredentialsCaptured!(email, password);
       }

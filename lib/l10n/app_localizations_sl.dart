@@ -1327,6 +1327,12 @@ class AppLocalizationsSl extends AppLocalizations {
   String get onboardingFlowRoleBody => 'Izberi poudarke, ki jih želiš videti. Kasneje lahko to spremeniš v Nastavitvah.';
 
   @override
+  String get onboardingFlowRoleSaving => 'Vloga se shranjuje ...';
+
+  @override
+  String get onboardingFlowRoleSaveFailed => 'Vloge ni bilo mogoče shraniti. Poskusi znova.';
+
+  @override
   String get onboardingFlowPermissionsTitle => 'Izberi, kaj želiš omogočiti';
 
   @override

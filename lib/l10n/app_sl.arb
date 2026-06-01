@@ -531,6 +531,8 @@
   "onboardingFlowRoleTitle": "Izberi svojo vlogo",
   "onboardingFlowRoleRequiredHint": "Pred nadaljevanjem izberi, kako želiš uporabljati art.kubus.",
   "onboardingFlowRoleBody": "Izberi poudarke, ki jih želiš videti. Kasneje lahko to spremeniš v Nastavitvah.",
+  "onboardingFlowRoleSaving": "Vloga se shranjuje ...",
+  "onboardingFlowRoleSaveFailed": "Vloge ni bilo mogoče shraniti. Poskusi znova.",
   "onboardingFlowPermissionsTitle": "Izberi, kaj želiš omogočiti",
   "onboardingFlowPermissionsBody": "Omogoči lokacijo za javno umetnost v bližini, kamero za izbirne AR plasti v razvoju in obvestila za ustvarjalce, institucije, razstave ter skupnost.",
   "onboardingFlowContinueWithoutPermissions": "Nadaljuj",

@@ -472,8 +472,11 @@ class ProfileProvider extends foundation.ChangeNotifier {
     } catch (_) {}
   }
 
-  Future<void> setUserPersona(UserPersona persona,
-      {bool persistToBackend = true}) async {
+  Future<void> setUserPersona(
+    UserPersona persona, {
+    bool persistToBackend = true,
+    bool throwOnBackendFailure = false,
+  }) async {
     final wallet = _currentWalletAddress;
     if (wallet == null || wallet.isEmpty) return;
 
@@ -499,9 +502,14 @@ class ProfileProvider extends foundation.ChangeNotifier {
 
     if (!persistToBackend) return;
     try {
-      await saveProfile(walletAddress: wallet, preferences: nextPrefs);
+      final saved =
+          await saveProfile(walletAddress: wallet, preferences: nextPrefs);
+      if (!saved && throwOnBackendFailure) {
+        throw StateError('Failed to persist user persona');
+      }
     } catch (_) {
       // Keep local preference even if backend update fails.
+      if (throwOnBackendFailure) rethrow;
     }
   }
 

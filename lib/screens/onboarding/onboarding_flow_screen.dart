@@ -24,6 +24,7 @@ import 'package:art_kubus/services/wallet_session_sync_service.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/utils/dao_role_verification.dart';
 import 'package:art_kubus/utils/media_url_resolver.dart';
+import 'package:art_kubus/utils/wallet_utils.dart';
 import 'package:art_kubus/utils/wallet_backup_status.dart';
 import 'package:art_kubus/widgets/app_logo.dart';
 import 'package:art_kubus/widgets/auth_entry_controls.dart';
@@ -201,6 +202,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   String _pendingVerificationSignupMethod = _emailSignupMethod;
   String? _permissionHint;
   UserPersona? _selectedPersona;
+  UserPersona? _personaSelectionInFlight;
   Map<String, String> _localProfileDraft = <String, String>{};
   _DaoApplicationDraftRecord? _daoDraft;
   DAOReview? _daoReview;
@@ -216,6 +218,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   bool _autoAdvancingVerification = false;
   bool _finishSignInPromptShown = false;
   bool _verifiedSigningInMessageShown = false;
+  String? _capturedVerificationEmail;
+  String? _capturedVerificationPassword;
   bool _requiresWalletBackupStep = false;
   String? _flowScopeKey;
   WalletBackupStatusSnapshot _walletBackupStatus =
@@ -332,10 +336,55 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   @visibleForTesting
   Future<void> debugTriggerPrimaryAction() => _onPrimaryAction();
 
-  UserPersona? get _effectivePersona {
+  @visibleForTesting
+  String? get debugLocalProfileDraftUsername =>
+      _localProfileDraft['username'];
+
+  @visibleForTesting
+  Future<void> debugCaptureEmailRegistration({
+    required String email,
+    String? typedUsername,
+    String? backendUsername,
+    String? displayName,
+    String? walletAddress,
+  }) {
+    return _handleEmbeddedEmailRegistrationCaptured(
+      AuthEmailRegistrationCapture(
+        email: email,
+        typedUsername: typedUsername,
+        backendUsername: backendUsername,
+        displayName: displayName,
+        walletAddress: walletAddress,
+      ),
+    );
+  }
+
+  @visibleForTesting
+  Future<void> debugCaptureEmailCredentials({
+    required String email,
+    required String password,
+  }) {
+    return _handleEmbeddedEmailCredentialsCaptured(email, password);
+  }
+
+  UserPersona? get _trustedProviderPersona {
+    if (_pendingEmailVerification) return null;
     final profileProvider =
         Provider.of<ProfileProvider>(context, listen: false);
-    return _selectedPersona ?? profileProvider.userPersona;
+    if (!profileProvider.isSignedIn) return null;
+    final providerWallet =
+        (profileProvider.currentUser?.walletAddress ?? '').trim();
+    if (providerWallet.isEmpty) return null;
+    final sessionWallet = _currentSessionWalletAddress();
+    if (sessionWallet.isNotEmpty &&
+        !WalletUtils.equals(providerWallet, sessionWallet)) {
+      return null;
+    }
+    return profileProvider.userPersona;
+  }
+
+  UserPersona? get _effectivePersona {
+    return _selectedPersona ?? _trustedProviderPersona;
   }
 
   bool get _requiresDaoReviewStep {
@@ -366,6 +415,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _verificationPollTimer?.cancel();
+    _capturedVerificationPassword = null;
     super.dispose();
   }
 
@@ -516,6 +566,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     _emailVerifiedConfirmed = false;
     _finishSignInPromptShown = false;
     _verifiedSigningInMessageShown = false;
+    _capturedVerificationEmail = null;
+    _capturedVerificationPassword = null;
   }
 
   void _hydrateLocalDrafts(SharedPreferences prefs) {
@@ -748,6 +800,171 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       loadProfile: true,
     );
     await _syncWalletBackupRequirement();
+  }
+
+  String _cleanProfileValue(Object? value) {
+    return (value ?? '').toString().replaceAll(RegExp(r'\s+'), ' ').trim();
+  }
+
+  Map<String, dynamic> _userFromAuthPayload(Map<String, dynamic> payload) {
+    final data = (payload['data'] as Map<String, dynamic>?) ?? payload;
+    return (data['user'] as Map<String, dynamic>?) ?? data;
+  }
+
+  Future<void> _handleEmbeddedEmailCredentialsCaptured(
+    String email,
+    String password,
+  ) async {
+    final normalizedEmail = email.trim();
+    if (normalizedEmail.isEmpty || password.isEmpty) return;
+    _capturedVerificationEmail = normalizedEmail;
+    _capturedVerificationPassword = password;
+  }
+
+  Future<void> _handleEmbeddedEmailRegistrationCaptured(
+    AuthEmailRegistrationCapture capture,
+  ) async {
+    final email = capture.email.trim();
+    if (email.isNotEmpty) {
+      _setPendingEmailVerification(email);
+    }
+
+    final backendUsername =
+        _cleanProfileValue(capture.backendUsername).replaceFirst(
+      RegExp(r'^@+'),
+      '',
+    );
+    final typedUsername =
+        _cleanProfileValue(capture.typedUsername).replaceFirst(
+      RegExp(r'^@+'),
+      '',
+    );
+    final existingDraftUsername =
+        _cleanProfileValue(_localProfileDraft['username']).replaceFirst(
+      RegExp(r'^@+'),
+      '',
+    );
+    final providerUsername = _cleanProfileValue(
+      Provider.of<ProfileProvider>(context, listen: false)
+          .currentUser
+          ?.username,
+    ).replaceFirst(RegExp(r'^@+'), '');
+    final resolvedUsername = <String>[
+      backendUsername,
+      typedUsername,
+      existingDraftUsername,
+      providerUsername,
+    ].firstWhere((value) => value.isNotEmpty, orElse: () => '');
+
+    final resolvedDisplayName = _cleanProfileValue(capture.displayName);
+    final walletAddress = _cleanProfileValue(capture.walletAddress);
+
+    _localProfileDraft = <String, String>{
+      ..._localProfileDraft,
+      if (resolvedUsername.isNotEmpty) 'username': resolvedUsername,
+      if (resolvedDisplayName.isNotEmpty) 'displayName': resolvedDisplayName,
+    };
+    if (walletAddress.isNotEmpty) {
+      BackendApiService().setPreferredWalletAddress(walletAddress);
+    }
+    await _persistLocalDrafts();
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  Future<void> _mergeProfileDraftFromCurrentUserIfMissing() async {
+    final user =
+        Provider.of<ProfileProvider>(context, listen: false).currentUser;
+    if (user == null) return;
+    final currentUsername =
+        _cleanProfileValue(user.username).replaceFirst(RegExp(r'^@+'), '');
+    final currentDisplayName = _cleanProfileValue(user.displayName);
+    var changed = false;
+    final existingUsername =
+        _cleanProfileValue(_localProfileDraft['username']);
+    final existingDisplayName =
+        _cleanProfileValue(_localProfileDraft['displayName']);
+    if (existingUsername.isEmpty && currentUsername.isNotEmpty) {
+      _localProfileDraft = <String, String>{
+        ..._localProfileDraft,
+        'username': currentUsername,
+      };
+      changed = true;
+    }
+    if (existingDisplayName.isEmpty && currentDisplayName.isNotEmpty) {
+      _localProfileDraft = <String, String>{
+        ..._localProfileDraft,
+        'displayName': currentDisplayName,
+      };
+      changed = true;
+    }
+    if (changed) {
+      await _persistLocalDrafts();
+    }
+  }
+
+  Future<void> _mergeProfileDraftFromAuthPayloadIfMissing(
+    Map<String, dynamic> payload,
+  ) async {
+    final user = _userFromAuthPayload(payload);
+    final username = _cleanProfileValue(user['username']).replaceFirst(
+      RegExp(r'^@+'),
+      '',
+    );
+    final displayName = _cleanProfileValue(
+      user['displayName'] ?? user['display_name'],
+    );
+    var changed = false;
+    if (_cleanProfileValue(_localProfileDraft['username']).isEmpty &&
+        username.isNotEmpty) {
+      _localProfileDraft = <String, String>{
+        ..._localProfileDraft,
+        'username': username,
+      };
+      changed = true;
+    }
+    if (_cleanProfileValue(_localProfileDraft['displayName']).isEmpty &&
+        displayName.isNotEmpty) {
+      _localProfileDraft = <String, String>{
+        ..._localProfileDraft,
+        'displayName': displayName,
+      };
+      changed = true;
+    }
+    if (changed) {
+      await _persistLocalDrafts();
+    }
+  }
+
+  Future<void> _syncSessionProvidersAndProfile({
+    Map<String, dynamic>? authPayload,
+    String? preferredWalletAddress,
+  }) async {
+    await BackendApiService().restoreExistingSession(allowRefresh: false);
+    if (!mounted) return;
+    final user = authPayload == null ? null : _userFromAuthPayload(authPayload);
+    final payloadWallet =
+        _cleanProfileValue(user?['walletAddress'] ?? user?['wallet_address']);
+    await _syncWalletSessionIntoProviders(
+      preferredWalletAddress: preferredWalletAddress ??
+          (payloadWallet.isEmpty ? null : payloadWallet),
+      userId: user?['id'],
+    );
+    if (!mounted) return;
+    await _syncWalletBackupRequirement();
+    try {
+      await _refreshProfileForCurrentSessionWallet()
+          .timeout(const Duration(seconds: 6));
+    } catch (error) {
+      if (kDebugMode) {
+        debugPrint(
+          'OnboardingFlowScreen._syncSessionProvidersAndProfile profile refresh failed: $error',
+        );
+      }
+    }
+    await _mergeProfileDraftFromCurrentUserIfMissing();
+    _refreshAuthDerivedSteps();
   }
 
   void _showVerificationSnack(
@@ -1064,15 +1281,37 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       if (_autoAdvancingVerification) return;
 
       if (!_sessionMatchesPendingVerificationEmail()) {
-        _verificationPollTimer?.cancel();
-        _verificationPollTimer = null;
-        _verificationPollStartedAt = null;
-        if (!_finishSignInPromptShown) {
-          _finishSignInPromptShown = true;
-          _showVerificationSnack(
-            l10n.onboardingFlowVerifySignInPrompt,
-            tone: KubusSnackBarTone.warning,
-          );
+        final pendingEmail = (_pendingVerificationEmail ?? '').trim();
+        final capturedEmail = (_capturedVerificationEmail ?? '').trim();
+        final canUseCapturedCredentials = pendingEmail.isNotEmpty &&
+            (_capturedVerificationPassword ?? '').isNotEmpty &&
+            capturedEmail.toLowerCase() == pendingEmail.toLowerCase();
+        if (canUseCapturedCredentials && !_autoAdvancingVerification) {
+          setState(() {
+            _autoAdvancingVerification = true;
+          });
+          try {
+            await _confirmVerificationAndContinue();
+          } finally {
+            if (mounted) {
+              setState(() {
+                _autoAdvancingVerification = false;
+              });
+            } else {
+              _autoAdvancingVerification = false;
+            }
+          }
+        } else {
+          _verificationPollTimer?.cancel();
+          _verificationPollTimer = null;
+          _verificationPollStartedAt = null;
+          if (!_finishSignInPromptShown) {
+            _finishSignInPromptShown = true;
+            _showVerificationSnack(
+              l10n.onboardingFlowVerifySignInPrompt,
+              tone: KubusSnackBarTone.warning,
+            );
+          }
         }
         return;
       }
@@ -1645,21 +1884,20 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     var shouldPersistDrafts = false;
     if (authDecision.normalizedPendingEmail != null) {
       // Pending email matched; clear verification state.
+      if (_steps.contains(_OnboardingStep.verifyEmail)) {
+        _completed.add(_OnboardingStep.verifyEmail);
+        _deferred.remove(_OnboardingStep.verifyEmail);
+      }
       _clearPendingEmailVerificationState();
       shouldPersistDrafts = true;
     }
 
-    await _syncWalletSessionIntoProviders(
+    await _mergeProfileDraftFromAuthPayloadIfMissing(payload);
+    await _syncSessionProvidersAndProfile(
+      authPayload: payload,
       preferredWalletAddress: signedInWallet.isEmpty ? null : signedInWallet,
-      userId: user['id'],
     );
-    await _syncWalletBackupRequirement();
-    _refreshAuthDerivedSteps();
-    try {
-      await _refreshProfileForCurrentSessionWallet();
-    } catch (_) {
-      // Keep onboarding resilient; verification flow will retry profile sync.
-    }
+    if (!mounted) return;
     if (shouldPersistDrafts) {
       await _persistLocalDrafts();
     }
@@ -1731,6 +1969,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
 
       if (_verificationRequired) {
         var verified = _emailVerifiedConfirmed;
+        var sessionSyncedAfterCapturedLogin = false;
         final emailToCheck = (_pendingVerificationEmail ?? '').trim();
         if (emailToCheck.isNotEmpty) {
           try {
@@ -1759,14 +1998,55 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         }
 
         if (!_sessionMatchesPendingVerificationEmail()) {
-          _finishSignInPromptShown = true;
-          messenger.showKubusSnackBar(
-            SnackBar(
-              content: Text(l10n.onboardingFlowVerifySignInPrompt),
-            ),
-            tone: KubusSnackBarTone.warning,
-          );
-          return;
+          final pendingEmail = (_pendingVerificationEmail ?? '').trim();
+          final capturedEmail = (_capturedVerificationEmail ?? '').trim();
+          final capturedPassword = _capturedVerificationPassword ?? '';
+          final canUseCapturedCredentials = pendingEmail.isNotEmpty &&
+              capturedPassword.isNotEmpty &&
+              capturedEmail.toLowerCase() == pendingEmail.toLowerCase();
+
+          if (canUseCapturedCredentials) {
+            if (!_verifiedSigningInMessageShown) {
+              _verifiedSigningInMessageShown = true;
+              messenger.showKubusSnackBar(
+                SnackBar(content: Text(l10n.onboardingFlowVerifySigningIn)),
+                tone: KubusSnackBarTone.neutral,
+              );
+            }
+            try {
+              final loginPayload = await BackendApiService()
+                  .loginWithEmail(
+                    email: pendingEmail,
+                    password: capturedPassword,
+                  )
+                  .timeout(const Duration(seconds: 12));
+              await _mergeProfileDraftFromAuthPayloadIfMissing(loginPayload);
+              await _syncSessionProvidersAndProfile(authPayload: loginPayload);
+              if (!mounted) return;
+              sessionSyncedAfterCapturedLogin = true;
+            } catch (error, stackTrace) {
+              if (kDebugMode) {
+                debugPrint(
+                  'OnboardingFlowScreen._confirmVerificationAndContinue captured login failed: $error\n$stackTrace',
+                );
+              }
+              _finishSignInPromptShown = true;
+              messenger.showKubusSnackBar(
+                SnackBar(content: Text(l10n.onboardingFlowVerifySignInPrompt)),
+                tone: KubusSnackBarTone.warning,
+              );
+              return;
+            }
+          } else {
+            _finishSignInPromptShown = true;
+            messenger.showKubusSnackBar(
+              SnackBar(
+                content: Text(l10n.onboardingFlowVerifySignInPrompt),
+              ),
+              tone: KubusSnackBarTone.warning,
+            );
+            return;
+          }
         }
 
         if (!_verifiedSigningInMessageShown) {
@@ -1777,22 +2057,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           );
         }
 
-        await BackendApiService().restoreExistingSession(allowRefresh: false);
-        await _syncWalletSessionIntoProviders();
-        await _syncWalletBackupRequirement();
-        try {
-          await _refreshProfileForCurrentSessionWallet();
-        } catch (error) {
-          if (kDebugMode) {
-            debugPrint(
-                'OnboardingFlowScreen._confirmVerificationAndContinue profile refresh failed: $error');
-          }
-          messenger.showKubusSnackBar(
-            SnackBar(
-              content: Text(l10n.onboardingFlowProfileRefreshPending),
-            ),
-            tone: KubusSnackBarTone.warning,
-          );
+        if (!sessionSyncedAfterCapturedLogin) {
+          await _syncSessionProvidersAndProfile();
+          if (!mounted) return;
         }
 
         if (!_sessionMatchesPendingVerificationEmail()) {
@@ -1869,17 +2136,67 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   }
 
   Future<void> _applyPersonaSelection(UserPersona persona) async {
+    if (_personaSelectionInFlight != null) return;
     final profileProvider =
         Provider.of<ProfileProvider>(context, listen: false);
-    _selectedPersona = persona;
-    _daoDraft = _normalizeDaoDraftForPersona(persona);
-    _daoReview = null;
-    await _persistLocalDrafts();
-    if ((profileProvider.currentUser?.walletAddress ?? '').trim().isNotEmpty) {
-      await profileProvider.setUserPersona(persona, persistToBackend: true);
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() {
+      _selectedPersona = persona;
+      _personaSelectionInFlight = persona;
+      _daoDraft = _normalizeDaoDraftForPersona(persona);
+      _daoReview = null;
+    });
+    try {
+      await _persistLocalDrafts();
+      final wallet =
+          (profileProvider.currentUser?.walletAddress ?? '').trim();
+      if (wallet.isNotEmpty) {
+        await profileProvider
+            .setUserPersona(
+              persona,
+              persistToBackend: true,
+              throwOnBackendFailure: true,
+            )
+            .timeout(const Duration(seconds: 8));
+        try {
+          await profileProvider.loadProfile(wallet).timeout(
+                const Duration(seconds: 6),
+              );
+        } catch (error) {
+          if (kDebugMode) {
+            debugPrint(
+              'OnboardingFlowScreen._applyPersonaSelection profile refresh failed: $error',
+            );
+          }
+        }
+      }
+      if (!mounted) return;
+      await _markCompleted(_OnboardingStep.role);
+    } catch (error, stackTrace) {
+      if (kDebugMode) {
+        debugPrint(
+          'OnboardingFlowScreen._applyPersonaSelection failed: $error\n$stackTrace',
+        );
+      }
+      if (!mounted) return;
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.onboardingFlowRoleSaveFailed)),
+        tone: KubusSnackBarTone.error,
+      );
+      setState(() {
+        _selectedPersona = persona;
+        _daoDraft = _normalizeDaoDraftForPersona(persona);
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _personaSelectionInFlight = null;
+        });
+      } else {
+        _personaSelectionInFlight = null;
+      }
     }
-    if (!mounted) return;
-    await _markCompleted(_OnboardingStep.role);
   }
 
   Future<void> _handleWalletBackupStep() async {
@@ -2144,6 +2461,18 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         await _confirmVerificationAndContinue();
         return;
       case _OnboardingStep.role:
+        if (_personaSelectionInFlight != null) {
+          _showVerificationSnack(
+            AppLocalizations.of(context)!.onboardingFlowRoleSaving,
+            tone: KubusSnackBarTone.neutral,
+          );
+          return;
+        }
+        final persona = _selectedPersona ?? _trustedProviderPersona;
+        if (persona != null && !_completed.contains(_OnboardingStep.role)) {
+          await _applyPersonaSelection(persona);
+          return;
+        }
         _showVerificationSnack(
           AppLocalizations.of(context)!.onboardingFlowRoleRequiredHint,
           tone: KubusSnackBarTone.warning,
@@ -2385,6 +2714,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           onAuthCompleted: _handleEmbeddedRegistrationSuccess,
           onEmailRegistrationAttempted:
               _handleEmbeddedEmailRegistrationAttempted,
+          onEmailRegistrationCaptured: _handleEmbeddedEmailRegistrationCaptured,
+          onEmailCredentialsCaptured: _handleEmbeddedEmailCredentialsCaptured,
           onVerificationRequired: _handleEmbeddedVerificationRequired,
           onSignInSuccess: _handleEmbeddedSignInSuccess,
           onSignInNeedsVerification: _handleEmbeddedSignInNeedsVerification,
@@ -2410,14 +2741,13 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         );
         break;
       case _OnboardingStep.role:
-        final profileProvider =
-            Provider.of<ProfileProvider>(context, listen: false);
-        final personaSelection =
-            _selectedPersona ?? profileProvider.userPersona;
+        final personaSelection = _selectedPersona ?? _trustedProviderPersona;
         content = _RoleStep(
           title: l10n.onboardingFlowRoleTitle,
           body: l10n.onboardingFlowRoleBody,
           selectedPersona: personaSelection,
+          loadingPersona: _personaSelectionInFlight,
+          enabled: _personaSelectionInFlight == null,
           onSelectPersona: _applyPersonaSelection,
         );
         break;
@@ -2429,9 +2759,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           body: l10n.onboardingFlowProfileBody,
           persona: _effectivePersona,
           initialDisplayName:
-              (user?.displayName ?? _localProfileDraft['displayName'] ?? ''),
+              (_localProfileDraft['displayName'] ?? user?.displayName ?? ''),
           initialUsername:
-              (user?.username ?? _localProfileDraft['username'] ?? ''),
+              (_localProfileDraft['username'] ?? user?.username ?? ''),
           initialBio: (user?.bio ?? _localProfileDraft['bio'] ?? ''),
           initialAvatarUrl:
               (user?.avatar ?? _localProfileDraft['avatar'] ?? ''),
@@ -3210,6 +3540,8 @@ class _AccountStep extends StatefulWidget {
     required this.profileDisplayName,
     required this.onAuthCompleted,
     required this.onEmailRegistrationAttempted,
+    required this.onEmailRegistrationCaptured,
+    required this.onEmailCredentialsCaptured,
     required this.onVerificationRequired,
     required this.onSignInSuccess,
     required this.onSignInNeedsVerification,
@@ -3221,6 +3553,10 @@ class _AccountStep extends StatefulWidget {
   final String profileDisplayName;
   final Future<void> Function() onAuthCompleted;
   final Future<void> Function(String email) onEmailRegistrationAttempted;
+  final Future<void> Function(AuthEmailRegistrationCapture capture)
+      onEmailRegistrationCaptured;
+  final Future<void> Function(String email, String password)
+      onEmailCredentialsCaptured;
   final Future<void> Function(String email) onVerificationRequired;
   final Future<void> Function(Map<String, dynamic>) onSignInSuccess;
   final Future<void> Function(String email) onSignInNeedsVerification;
@@ -3301,6 +3637,10 @@ class _AccountStepState extends State<_AccountStep> {
                       prepareProvisionalProfileBeforeRegister: false,
                       onEmailRegistrationAttempted: (email) =>
                           unawaited(widget.onEmailRegistrationAttempted(email)),
+                      onEmailRegistrationCaptured:
+                          widget.onEmailRegistrationCaptured,
+                      onEmailCredentialsCaptured:
+                          widget.onEmailCredentialsCaptured,
                       onVerificationRequired: widget.onVerificationRequired,
                       onSwitchToSignIn: () {
                         setState(() => _showSignIn = true);
@@ -4704,12 +5044,16 @@ class _RoleStep extends StatefulWidget {
     required this.title,
     required this.body,
     required this.selectedPersona,
+    required this.loadingPersona,
+    required this.enabled,
     required this.onSelectPersona,
   });
 
   final String title;
   final String body;
   final UserPersona? selectedPersona;
+  final UserPersona? loadingPersona;
+  final bool enabled;
   final Future<void> Function(UserPersona persona) onSelectPersona;
 
   @override
@@ -4723,6 +5067,14 @@ class _RoleStepState extends State<_RoleStep> {
   void initState() {
     super.initState();
     _selectedPersona = widget.selectedPersona;
+  }
+
+  @override
+  void didUpdateWidget(covariant _RoleStep oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.selectedPersona != oldWidget.selectedPersona) {
+      _selectedPersona = widget.selectedPersona;
+    }
   }
 
   Future<void> _selectPersona(UserPersona persona) async {
@@ -4767,6 +5119,8 @@ class _RoleStepState extends State<_RoleStep> {
                       const SizedBox(height: 12),
                       UserPersonaPickerContent(
                         selectedPersona: _selectedPersona,
+                        loadingPersona: widget.loadingPersona,
+                        enabled: widget.enabled,
                         onSelect: _selectPersona,
                       ),
                     ],

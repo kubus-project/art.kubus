@@ -1327,6 +1327,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingFlowRoleRequiredHint => 'Choose how you want to use art.kubus before continuing.';
 
   @override
+  String get onboardingFlowRoleSaving => 'Saving your role...';
+
+  @override
+  String get onboardingFlowRoleSaveFailed => 'We could not save your role. Please try again.';
+
+  @override
   String get onboardingFlowPermissionsTitle => 'Choose what to enable';
 
   @override

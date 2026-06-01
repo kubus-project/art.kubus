@@ -2327,6 +2327,18 @@ abstract class AppLocalizations {
   /// **'Choose how you want to use art.kubus before continuing.'**
   String get onboardingFlowRoleRequiredHint;
 
+  /// No description provided for @onboardingFlowRoleSaving.
+  ///
+  /// In en, this message translates to:
+  /// **'Saving your role...'**
+  String get onboardingFlowRoleSaving;
+
+  /// No description provided for @onboardingFlowRoleSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not save your role. Please try again.'**
+  String get onboardingFlowRoleSaveFailed;
+
   /// No description provided for @onboardingFlowPermissionsTitle.
   ///
   /// In en, this message translates to:
