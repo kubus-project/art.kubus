@@ -16,7 +16,9 @@ String? signerBackedGoogleWalletAddress({
   String? currentWalletAddress,
 }) {
   final normalizedWallet = (currentWalletAddress ?? '').trim();
-  if (!hasSigner || normalizedWallet.isEmpty || _isLinkedAuthPlaceholderWallet(normalizedWallet)) {
+  if (!hasSigner ||
+      normalizedWallet.isEmpty ||
+      _isLinkedAuthPlaceholderWallet(normalizedWallet)) {
     return null;
   }
   return normalizedWallet;
@@ -55,42 +57,36 @@ Future<Map<String, dynamic>> loginWithGoogleWalletRecovery({
   required String? walletAddress,
   required Future<String?> Function() createSignerBackedWallet,
 }) async {
-  var provisionedWallet = (walletAddress ?? '').trim();
-  if (provisionedWallet.isEmpty || _isLinkedAuthPlaceholderWallet(provisionedWallet)) {
-    provisionedWallet = (await createSignerBackedWallet())?.trim() ?? '';
-    if (provisionedWallet.isEmpty || _isLinkedAuthPlaceholderWallet(provisionedWallet)) {
-      throw Exception('Signer-backed wallet provisioning failed');
-    }
-  }
+  final normalizedWallet = (walletAddress ?? '').trim();
+  final realWallet = normalizedWallet.isNotEmpty &&
+          !_isLinkedAuthPlaceholderWallet(normalizedWallet)
+      ? normalizedWallet
+      : null;
 
-  try {
-    return await api.loginWithGoogle(
-      idToken: googleResult.idToken,
-      code: googleResult.serverAuthCode,
-      email: googleResult.email,
-      username: null,
-      walletAddress: provisionedWallet,
-      displayName: googleResult.displayName,
-    );
-  } catch (error) {
-    if (!isWalletRequiredForNewGoogleAccount(error)) {
-      rethrow;
-    }
-
-    if (provisionedWallet.isEmpty || _isLinkedAuthPlaceholderWallet(provisionedWallet)) {
-      provisionedWallet = (await createSignerBackedWallet())?.trim() ?? '';
-      if (provisionedWallet.isEmpty || _isLinkedAuthPlaceholderWallet(provisionedWallet)) {
-        throw Exception('Signer-backed wallet provisioning failed');
-      }
-    }
-
+  Future<Map<String, dynamic>> login({String? wallet}) {
     return api.loginWithGoogle(
       idToken: googleResult.idToken,
       code: googleResult.serverAuthCode,
       email: googleResult.email,
       username: null,
-      walletAddress: provisionedWallet,
+      walletAddress: wallet,
       displayName: googleResult.displayName,
     );
+  }
+
+  try {
+    return await login(wallet: realWallet);
+  } catch (error) {
+    if (!isWalletRequiredForNewGoogleAccount(error)) {
+      rethrow;
+    }
+
+    final provisionedWallet = (await createSignerBackedWallet())?.trim() ?? '';
+    if (provisionedWallet.isEmpty ||
+        _isLinkedAuthPlaceholderWallet(provisionedWallet)) {
+      throw Exception('Signer-backed wallet provisioning failed');
+    }
+
+    return login(wallet: provisionedWallet);
   }
 }

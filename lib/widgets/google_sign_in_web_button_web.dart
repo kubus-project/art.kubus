@@ -10,11 +10,11 @@ import 'kubus_auth_method_button.dart';
 
 /// Web Google Sign-In button.
 ///
-/// The google_sign_in_web plugin does not support programmatic
-/// [GoogleSignIn.authenticate] on web; its platform implementation requires
-/// [web.renderButton] for user-initiated sign-in. The official GIS button is
-/// therefore rendered visibly and kept clickable, with only the surrounding
-/// shell matching Kubus auth layout and loading treatment.
+/// google_sign_in_web 1.1.0 reports supportsAuthenticate() => false and throws
+/// from [GoogleSignIn.authenticate] on web. Its platform implementation
+/// requires [web.renderButton] for user-initiated sign-in, so the official GIS
+/// button is rendered visibly as the click target instead of being nested in a
+/// Kubus-styled shell.
 class GoogleSignInWebButton extends StatefulWidget {
   const GoogleSignInWebButton({
     super.key,
@@ -106,6 +106,15 @@ class _GoogleSignInWebButtonState extends State<GoogleSignInWebButton> {
           );
         }
 
+        if (widget.isLoading) {
+          return KubusAuthMethodButton(
+            onPressed: null,
+            isLoading: true,
+            label: l10n.authContinueWithGoogleLabel,
+            loadingLabel: l10n.authGoogleConnectingLabel,
+          );
+        }
+
         return LayoutBuilder(
           builder: (context, constraints) {
             final brightness = widget.colorScheme.brightness;
@@ -137,17 +146,14 @@ class _GoogleSignInWebButtonState extends State<GoogleSignInWebButton> {
               _cachedMinWidth = officialWidth;
             }
 
-            return KubusAuthMethodButtonShell(
-              isLoading: widget.isLoading,
-              loadingLabel: l10n.authGoogleConnectingLabel,
-              child: AbsorbPointer(
-                absorbing: widget.isLoading,
-                child: Center(
-                  child: SizedBox(
-                    width: officialWidth,
-                    height: 44,
-                    child: _cachedOfficialButton!,
-                  ),
+            return SizedBox(
+              width: double.infinity,
+              height: 44,
+              child: Center(
+                child: SizedBox(
+                  width: officialWidth,
+                  height: 44,
+                  child: _cachedOfficialButton!,
                 ),
               ),
             );

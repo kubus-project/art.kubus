@@ -217,17 +217,21 @@ void main() {
     expect(find.byType(KubusAuthMethodButton), findsWidgets);
   });
 
-  test('web Google button keeps visible GIS hit target clickable', () {
+  test(
+      'web Google button renders official GIS target without nested Kubus shell',
+      () {
     final source = File('lib/widgets/google_sign_in_web_button_web.dart')
         .readAsStringSync();
 
     expect(source, contains('web.renderButton('));
-    expect(source, contains('KubusAuthMethodButtonShell('));
-    expect(source, contains('AbsorbPointer('));
-    expect(source, contains('absorbing: widget.isLoading'));
+    expect(source, contains('supportsAuthenticate() => false'));
+    expect(source, contains('height: 44'));
+    expect(source, isNot(contains('KubusAuthMethodButtonShell(')));
+    expect(source, isNot(contains('AbsorbPointer(')));
     expect(source, isNot(contains('Opacity(')));
     expect(source, isNot(contains('opacity: 0')));
     expect(source, isNot(contains('IgnorePointer(')));
     expect(source, isNot(contains('invisible hit target')));
+    expect(source, isNot(contains('onPressed: () {}')));
   });
 }

@@ -70,15 +70,11 @@ void main() {
     expect(isWalletRequiredForNewGoogleAccount(error), isFalse);
   });
 
-  test('retries google login after provisioning a signer-backed wallet',
+  test('existing google login with no wallet does not provision a wallet',
       () async {
     final api = BackendApiService();
-    var loginAttempts = 0;
-    String? firstWalletAddress;
-    String? secondWalletAddress;
-    String? firstDisplayName;
-    String? secondDisplayName;
     var walletProvisionCalls = 0;
+    String? sentWalletAddress;
 
     api.setHttpClient(
       MockClient((request) async {
@@ -95,8 +91,124 @@ void main() {
                     (jsonDecode(body) as Map),
                   )
                 : <String, dynamic>{};
+        sentWalletAddress = decoded['walletAddress']?.toString();
+        return http.Response(
+          '{"success":true,"data":{"token":"jwt-token"}}',
+          200,
+          headers: <String, String>{'content-type': 'application/json'},
+        );
+      }),
+    );
+
+    final result = await loginWithGoogleWalletRecovery(
+      api: api,
+      googleResult: GoogleAuthResult(
+        idToken: 'google-id-token',
+        email: 'new-user@example.com',
+        displayName: 'New User',
+      ),
+      walletAddress: null,
+      createSignerBackedWallet: () async {
+        walletProvisionCalls += 1;
+        return 'wallet-created-123';
+      },
+    );
+
+    expect(result['success'], isTrue);
+    expect(sentWalletAddress, isNull);
+    expect(walletProvisionCalls, 0);
+  });
+
+  test(
+      'existing google login with linked_auth wallet does not provision a wallet',
+      () async {
+    final api = BackendApiService();
+    var walletProvisionCalls = 0;
+    String? sentWalletAddress;
+
+    api.setHttpClient(
+      MockClient((request) async {
+        final decoded =
+            Map<String, dynamic>.from(jsonDecode(request.body) as Map);
+        sentWalletAddress = decoded['walletAddress']?.toString();
+        return http.Response(
+          '{"success":true,"data":{"token":"jwt-token"}}',
+          200,
+          headers: <String, String>{'content-type': 'application/json'},
+        );
+      }),
+    );
+
+    final result = await loginWithGoogleWalletRecovery(
+      api: api,
+      googleResult: GoogleAuthResult(
+        idToken: 'google-id-token',
+        email: 'existing-user@example.com',
+        displayName: 'Existing User',
+      ),
+      walletAddress: 'linked_auth:placeholder',
+      createSignerBackedWallet: () async {
+        walletProvisionCalls += 1;
+        return 'wallet-created-123';
+      },
+    );
+
+    expect(result['success'], isTrue);
+    expect(sentWalletAddress, isNull);
+    expect(walletProvisionCalls, 0);
+  });
+
+  test('passes real wallet through on the first backend attempt', () async {
+    final api = BackendApiService();
+    String? sentWalletAddress;
+
+    api.setHttpClient(
+      MockClient((request) async {
+        final decoded =
+            Map<String, dynamic>.from(jsonDecode(request.body) as Map);
+        sentWalletAddress = decoded['walletAddress']?.toString();
+        return http.Response(
+          '{"success":true,"data":{"token":"jwt-token"}}',
+          200,
+          headers: <String, String>{'content-type': 'application/json'},
+        );
+      }),
+    );
+
+    final result = await loginWithGoogleWalletRecovery(
+      api: api,
+      googleResult: GoogleAuthResult(
+        idToken: 'google-id-token',
+        email: 'wallet-user@example.com',
+        displayName: 'Wallet User',
+      ),
+      walletAddress: ' wallet-existing-123 ',
+      createSignerBackedWallet: () async => 'wallet-created-123',
+    );
+
+    expect(result['success'], isTrue);
+    expect(sentWalletAddress, 'wallet-existing-123');
+  });
+
+  test('provisions and retries only after backend requires wallet', () async {
+    final api = BackendApiService();
+    var loginAttempts = 0;
+    String? firstWalletAddress;
+    String? secondWalletAddress;
+    String? firstDisplayName;
+    String? secondDisplayName;
+    var walletProvisionCalls = 0;
+
+    api.setHttpClient(
+      MockClient((request) async {
+        if (request.url.path != '/api/auth/login/google') {
+          return http.Response('Not found', 404);
+        }
+
+        final decoded =
+            Map<String, dynamic>.from(jsonDecode(request.body) as Map);
         loginAttempts += 1;
-        final walletAddress = (decoded['walletAddress'] ?? '').toString();
+        final walletAddress = decoded['walletAddress']?.toString();
         final displayName = (decoded['displayName'] ?? '').toString();
         if (loginAttempts == 1) {
           firstWalletAddress = walletAddress;
@@ -134,42 +246,11 @@ void main() {
 
     expect(result['success'], isTrue);
     expect(loginAttempts, 2);
-    expect(firstWalletAddress, 'wallet-created-123');
+    expect(firstWalletAddress, isNull);
     expect(secondWalletAddress, 'wallet-created-123');
     expect(firstDisplayName, 'New User');
     expect(secondDisplayName, 'New User');
     expect(walletProvisionCalls, 1);
-  });
-
-  test('does not call backend login when wallet provisioning fails', () async {
-    final api = BackendApiService();
-    var loginAttempts = 0;
-
-    api.setHttpClient(
-      MockClient((request) async {
-        loginAttempts += 1;
-        return http.Response(
-          '{"success":true,"data":{"token":"jwt-token"}}',
-          200,
-          headers: <String, String>{'content-type': 'application/json'},
-        );
-      }),
-    );
-
-    await expectLater(
-      () => loginWithGoogleWalletRecovery(
-        api: api,
-        googleResult: GoogleAuthResult(
-          idToken: 'google-id-token',
-          email: 'new-user@example.com',
-          displayName: 'New User',
-        ),
-        walletAddress: 'linked_auth:placeholder',
-        createSignerBackedWallet: () async => null,
-      ),
-      throwsA(isA<Exception>()),
-    );
-    expect(loginAttempts, 0);
   });
 
   test('does not retry google login for non-wallet backend errors', () async {
@@ -202,6 +283,76 @@ void main() {
       ),
       throwsA(isA<BackendApiRequestException>()),
     );
-    expect(walletProvisionCalls, 1);
+    expect(walletProvisionCalls, 0);
+  });
+
+  test('throws if provisioned wallet is empty after wallet requirement',
+      () async {
+    final api = BackendApiService();
+
+    api.setHttpClient(
+      MockClient((request) async {
+        return http.Response(
+          '{"success":false,"errorCode":"WALLET_REQUIRED_FOR_NEW_ACCOUNT"}',
+          400,
+          headers: <String, String>{'content-type': 'application/json'},
+        );
+      }),
+    );
+
+    await expectLater(
+      () => loginWithGoogleWalletRecovery(
+        api: api,
+        googleResult: GoogleAuthResult(
+          idToken: 'google-id-token',
+          email: 'new-user@example.com',
+          displayName: 'New User',
+        ),
+        walletAddress: null,
+        createSignerBackedWallet: () async => ' ',
+      ),
+      throwsA(
+        isA<Exception>().having(
+          (error) => error.toString(),
+          'message',
+          contains('Signer-backed wallet provisioning failed'),
+        ),
+      ),
+    );
+  });
+
+  test('throws if provisioned wallet is linked_auth after wallet requirement',
+      () async {
+    final api = BackendApiService();
+
+    api.setHttpClient(
+      MockClient((request) async {
+        return http.Response(
+          '{"success":false,"errorCode":"WALLET_REQUIRED_FOR_NEW_ACCOUNT"}',
+          400,
+          headers: <String, String>{'content-type': 'application/json'},
+        );
+      }),
+    );
+
+    await expectLater(
+      () => loginWithGoogleWalletRecovery(
+        api: api,
+        googleResult: GoogleAuthResult(
+          idToken: 'google-id-token',
+          email: 'new-user@example.com',
+          displayName: 'New User',
+        ),
+        walletAddress: null,
+        createSignerBackedWallet: () async => 'linked_auth:newplaceholder',
+      ),
+      throwsA(
+        isA<Exception>().having(
+          (error) => error.toString(),
+          'message',
+          contains('Signer-backed wallet provisioning failed'),
+        ),
+      ),
+    );
   });
 }
