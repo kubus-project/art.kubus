@@ -189,6 +189,7 @@ class AuthMethodsPanelRegistrationMethods extends StatelessWidget {
                     variant: KubusButtonVariant.secondary,
                     foregroundColor: colorScheme.onSurface,
                     borderColor: walletBorder,
+                    isFullWidth: true,
                   ),
               ],
             ),

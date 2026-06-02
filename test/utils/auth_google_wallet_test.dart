@@ -119,6 +119,41 @@ void main() {
     expect(walletProvisionCalls, 0);
   });
 
+  test('server auth code login uses code endpoint without id token', () async {
+    final api = BackendApiService();
+    String? requestPath;
+    Map<String, dynamic>? sentBody;
+
+    api.setHttpClient(
+      MockClient((request) async {
+        requestPath = request.url.path;
+        sentBody = Map<String, dynamic>.from(jsonDecode(request.body) as Map);
+        return http.Response(
+          '{"success":true,"data":{"token":"jwt-token"}}',
+          200,
+          headers: <String, String>{'content-type': 'application/json'},
+        );
+      }),
+    );
+
+    final result = await loginWithGoogleWalletRecovery(
+      api: api,
+      googleResult: GoogleAuthResult(
+        idToken: '',
+        serverAuthCode: 'google-server-code',
+        email: '',
+        displayName: null,
+      ),
+      walletAddress: null,
+      createSignerBackedWallet: () async => 'wallet-created-123',
+    );
+
+    expect(result['success'], isTrue);
+    expect(requestPath, '/api/auth/login/google/code');
+    expect(sentBody?['code'], 'google-server-code');
+    expect(sentBody?.containsKey('idToken'), isFalse);
+  });
+
   test(
       'existing google login with linked_auth wallet does not provision a wallet',
       () async {

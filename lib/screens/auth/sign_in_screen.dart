@@ -829,6 +829,7 @@ class _SignInScreenState extends State<SignInScreen> {
             variant: KubusButtonVariant.secondary,
             backgroundColor: emailSurface,
             foregroundColor: colorScheme.onSurface,
+            isFullWidth: true,
           ),
           if (enableWallet) SizedBox(height: methodGap),
         ],
@@ -855,6 +856,7 @@ class _SignInScreenState extends State<SignInScreen> {
             variant: KubusButtonVariant.secondary,
             foregroundColor: colorScheme.onSurface,
             borderColor: walletBorder,
+            isFullWidth: true,
           ),
         ],
         if (showEmailForm) ...[

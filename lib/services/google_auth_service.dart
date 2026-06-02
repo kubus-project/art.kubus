@@ -22,12 +22,27 @@ class GoogleAuthResult {
   final String? displayName;
 }
 
+class _GoogleAuthConfigurationException implements Exception {
+  const _GoogleAuthConfigurationException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
+}
+
 class GoogleAuthService {
   GoogleAuthService._();
   static final GoogleAuthService _instance = GoogleAuthService._();
   factory GoogleAuthService() => _instance;
 
   bool _initialized = false;
+
+  static const List<String> _webServerAuthScopes = <String>[
+    'openid',
+    'email',
+    'profile',
+  ];
 
   bool get _isApplePlatform =>
       !kIsWeb &&
@@ -107,7 +122,9 @@ class GoogleAuthService {
     final idToken = auth.idToken;
 
     if (idToken == null || idToken.isEmpty) {
-      throw Exception('Google sign-in failed: No ID token returned.');
+      throw const _GoogleAuthConfigurationException(
+        'Google sign-in configuration error: No ID token returned.',
+      );
     }
 
     return GoogleAuthResult(
@@ -138,20 +155,55 @@ class GoogleAuthService {
     await ensureInitialized();
 
     try {
-      try {
-        final account = await GoogleSignIn.instance.authenticate();
-        return resultFromAccount(account);
-      } catch (e) {
-        if (kDebugMode) {
-          debugPrint('GoogleAuthService: authenticate failed: $e');
+      if (kIsWeb) {
+        final serverAuth =
+            await GoogleSignIn.instance.authorizationClient.authorizeServer(
+          _webServerAuthScopes,
+        );
+        final code = (serverAuth?.serverAuthCode ?? '').trim();
+        if (code.isEmpty) {
+          return null;
         }
-        return null;
+        return GoogleAuthResult(
+          idToken: '',
+          serverAuthCode: code,
+          email: '',
+          displayName: null,
+        );
       }
-    } on Exception {
+
+      final account = await GoogleSignIn.instance.authenticate();
+      return resultFromAccount(account);
+    } on _GoogleAuthConfigurationException {
       rethrow;
+    } on GoogleSignInException catch (e) {
+      if (_isConfigurationException(e)) {
+        throw Exception(_configurationExceptionMessage(e));
+      }
+      if (kDebugMode) {
+        debugPrint('GoogleAuthService: sign-in cancelled or unavailable: $e');
+      }
+      return null;
     } catch (e) {
-      throw Exception('Google sign-in failed: $e');
+      if (kDebugMode) {
+        debugPrint('GoogleAuthService: sign-in failed: $e');
+      }
+      return null;
     }
+  }
+
+  bool _isConfigurationException(GoogleSignInException exception) {
+    return exception.code ==
+            GoogleSignInExceptionCode.clientConfigurationError ||
+        exception.code == GoogleSignInExceptionCode.providerConfigurationError;
+  }
+
+  String _configurationExceptionMessage(GoogleSignInException exception) {
+    final description = (exception.description ?? '').trim();
+    if (description.isEmpty) {
+      return 'Google sign-in configuration error: ${exception.code.name}.';
+    }
+    return 'Google sign-in configuration error: $description';
   }
 
   /// Sign out the current user.

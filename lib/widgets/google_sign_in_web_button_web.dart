@@ -1,19 +1,10 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-import 'package:google_sign_in_web/web_only.dart' as web;
 
-import '../l10n/app_localizations.dart';
 import '../services/google_auth_service.dart';
-import 'kubus_auth_method_button.dart';
+import 'google_sign_in_button.dart';
 
 /// Web Google Sign-In button.
-///
-/// google_sign_in_web 1.1.0 reports supportsAuthenticate() => false and throws
-/// from [GoogleSignIn.authenticate] on web. Its platform implementation
-/// requires [web.renderButton] for user-initiated sign-in.
-class GoogleSignInWebButton extends StatefulWidget {
+class GoogleSignInWebButton extends StatelessWidget {
   const GoogleSignInWebButton({
     super.key,
     required this.onAuthResult,
@@ -28,135 +19,20 @@ class GoogleSignInWebButton extends StatefulWidget {
   final ColorScheme colorScheme;
 
   @override
-  State<GoogleSignInWebButton> createState() => _GoogleSignInWebButtonState();
-}
-
-class _GoogleSignInWebButtonState extends State<GoogleSignInWebButton> {
-  static Future<void>? _sharedInitializeFuture;
-
-  StreamSubscription<GoogleSignInAuthenticationEvent>? _authEventsSub;
-  late final Future<void> _initializeFuture;
-  bool _handlingAuthEvent = false;
-  bool _reportedInitError = false;
-  Widget? _cachedOfficialButton;
-  Brightness? _cachedBrightness;
-  double? _cachedMinWidth;
-
-  @override
-  void initState() {
-    super.initState();
-    _initializeFuture =
-        _sharedInitializeFuture ??= GoogleAuthService().ensureInitialized();
-    _authEventsSub = GoogleSignIn.instance.authenticationEvents.listen(
-      (event) async {
-        if (event is! GoogleSignInAuthenticationEventSignIn) {
-          return;
-        }
-        if (_handlingAuthEvent) {
-          return;
-        }
-
-        _handlingAuthEvent = true;
-        try {
-          final result = GoogleAuthService().resultFromAccount(event.user);
-          await widget.onAuthResult(result);
-        } catch (error) {
-          widget.onAuthError?.call(error);
-        } finally {
-          _handlingAuthEvent = false;
-        }
-      },
-      onError: (Object error) {
-        widget.onAuthError?.call(error);
-      },
-    );
-  }
-
-  @override
-  void dispose() {
-    unawaited(_authEventsSub?.cancel());
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-
-    return FutureBuilder<void>(
-      future: _initializeFuture,
-      builder: (context, snapshot) {
-        if (snapshot.hasError) {
-          if (!_reportedInitError) {
-            _reportedInitError = true;
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (!mounted) return;
-              widget.onAuthError?.call(snapshot.error!);
-            });
+    return GoogleSignInButton(
+      isLoading: isLoading,
+      colorScheme: colorScheme,
+      onPressed: () async {
+        try {
+          final result = await GoogleAuthService().signIn();
+          if (result == null) {
+            return;
           }
-          return KubusAuthMethodButtonSkeleton(
-            label: l10n.authContinueWithGoogleLabel,
-          );
+          await onAuthResult(result);
+        } catch (error) {
+          onAuthError?.call(error);
         }
-
-        if (snapshot.connectionState != ConnectionState.done) {
-          return KubusAuthMethodButtonSkeleton(
-            label: l10n.authContinueWithGoogleLabel,
-          );
-        }
-
-        if (widget.isLoading) {
-          return KubusAuthMethodButton(
-            onPressed: null,
-            isLoading: true,
-            label: l10n.authContinueWithGoogleLabel,
-            loadingLabel: l10n.authGoogleConnectingLabel,
-          );
-        }
-
-        return LayoutBuilder(
-          builder: (context, constraints) {
-            final brightness = widget.colorScheme.brightness;
-            final availableWidth =
-                constraints.maxWidth.isFinite ? constraints.maxWidth : 400.0;
-            final officialWidth =
-                availableWidth.clamp(240.0, 400.0).toDouble();
-            final shouldRecreateButton = _cachedOfficialButton == null ||
-                _cachedBrightness != brightness ||
-                _cachedMinWidth == null ||
-                (_cachedMinWidth! - officialWidth).abs() > 1;
-
-            if (shouldRecreateButton) {
-              _cachedOfficialButton = web.renderButton(
-                configuration: web.GSIButtonConfiguration(
-                  type: web.GSIButtonType.standard,
-                  size: web.GSIButtonSize.large,
-                  text: web.GSIButtonText.continueWith,
-                  shape: web.GSIButtonShape.rectangular,
-                  theme: brightness == Brightness.dark
-                      ? web.GSIButtonTheme.filledBlack
-                      : web.GSIButtonTheme.outline,
-                  logoAlignment: web.GSIButtonLogoAlignment.left,
-                  minimumWidth: officialWidth,
-                ),
-              );
-              _cachedBrightness = brightness;
-              _cachedMinWidth = officialWidth;
-            }
-
-            return SizedBox(
-              width: double.infinity,
-              height: 56,
-              child: Align(
-                alignment: Alignment.center,
-                child: SizedBox(
-                  width: officialWidth,
-                  height: 44,
-                  child: _cachedOfficialButton!,
-                ),
-              ),
-            );
-          },
-        );
       },
     );
   }
