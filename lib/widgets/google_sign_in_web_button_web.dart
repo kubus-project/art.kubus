@@ -6,9 +6,17 @@ import 'package:google_sign_in_web/web_only.dart' as web;
 
 import '../l10n/app_localizations.dart';
 import '../services/google_auth_service.dart';
+import 'google_sign_in_button.dart';
 import 'kubus_auth_method_button.dart';
 
-/// Web Google Sign-In button rendered by official GIS SDK UI.
+/// Web Google Sign-In button.
+///
+/// The google_sign_in_web plugin does not support programmatic
+/// [GoogleSignIn.authenticate] on web; its platform implementation requires
+/// [web.renderButton] for user-initiated sign-in. To keep that supported path
+/// while matching the Kubus auth UI, the SDK-rendered button is kept as an
+/// invisible hit target and a pointer-transparent Kubus button is rendered
+/// above it.
 class GoogleSignInWebButton extends StatefulWidget {
   const GoogleSignInWebButton({
     super.key,
@@ -131,18 +139,37 @@ class _GoogleSignInWebButtonState extends State<GoogleSignInWebButton> {
               _cachedMinWidth = officialWidth;
             }
 
-            return KubusAuthMethodButtonShell(
-              isLoading: widget.isLoading,
-              loadingLabel: l10n.authGoogleConnectingLabel,
-              child: AbsorbPointer(
-                absorbing: widget.isLoading,
-                child: Center(
-                  child: SizedBox(
-                    width: officialWidth,
-                    height: 44,
-                    child: _cachedOfficialButton!,
+            return SizedBox(
+              height: 56,
+              width: double.infinity,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  AbsorbPointer(
+                    absorbing: widget.isLoading,
+                    child: Center(
+                      child: SizedBox(
+                        width: officialWidth,
+                        height: 44,
+                        child: Opacity(
+                          opacity: 0,
+                          alwaysIncludeSemantics: false,
+                          child: _cachedOfficialButton!,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                  IgnorePointer(
+                    child: GoogleSignInButton(
+                      key: const ValueKey<String>(
+                        'kubus-google-web-visible-button',
+                      ),
+                      onPressed: () async {},
+                      isLoading: widget.isLoading,
+                      colorScheme: widget.colorScheme,
+                    ),
+                  ),
+                ],
               ),
             );
           },

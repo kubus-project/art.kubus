@@ -17,6 +17,7 @@ class KubusAuthMethodButton extends StatelessWidget {
     this.isFullWidth = true,
     this.backgroundColor,
     this.foregroundColor,
+    this.borderColor,
     this.variant = KubusButtonVariant.secondary,
     this.height = 56,
   }) : assert(icon == null || leading == null);
@@ -30,6 +31,7 @@ class KubusAuthMethodButton extends StatelessWidget {
   final bool isFullWidth;
   final Color? backgroundColor;
   final Color? foregroundColor;
+  final Color? borderColor;
   final KubusButtonVariant variant;
   final double height;
 
@@ -40,6 +42,7 @@ class KubusAuthMethodButton extends StatelessWidget {
       variant: variant,
       backgroundColor: backgroundColor,
       foregroundColor: foregroundColor,
+      borderColor: borderColor,
       enabled: !isLoading && onPressed != null,
     );
     final labelText = isLoading ? (loadingLabel ?? label) : label;
@@ -130,6 +133,7 @@ class KubusAuthMethodButton extends StatelessWidget {
       variant: variant,
       backgroundColor: backgroundColor,
       foregroundColor: foregroundColor,
+      borderColor: borderColor,
       enabled: !isLoading && onPressed != null,
       height: height,
       child: buttonChild,
@@ -151,6 +155,7 @@ class KubusAuthMethodButtonShell extends StatelessWidget {
     this.variant = KubusButtonVariant.secondary,
     this.backgroundColor,
     this.foregroundColor,
+    this.borderColor,
     this.enabled = true,
     this.height = 56,
   });
@@ -161,6 +166,7 @@ class KubusAuthMethodButtonShell extends StatelessWidget {
   final KubusButtonVariant variant;
   final Color? backgroundColor;
   final Color? foregroundColor;
+  final Color? borderColor;
   final bool enabled;
   final double height;
 
@@ -172,6 +178,7 @@ class KubusAuthMethodButtonShell extends StatelessWidget {
       variant: variant,
       backgroundColor: backgroundColor,
       foregroundColor: foregroundColor,
+      borderColor: borderColor,
       enabled: isInteractive,
     );
     final allowBlur = GlassCapabilitiesProvider.watchAllowBlurEnabled(context);
@@ -289,6 +296,7 @@ class KubusAuthMethodButtonStyle {
     required KubusButtonVariant variant,
     Color? backgroundColor,
     Color? foregroundColor,
+    Color? borderColor,
     required bool enabled,
   }) {
     final theme = Theme.of(context);
@@ -316,14 +324,15 @@ class KubusAuthMethodButtonStyle {
           alpha: enabled ? (isDark ? 0.92 : 0.98) : (isDark ? 0.74 : 0.82),
         ),
     };
-    final borderColor = switch (variant) {
-      KubusButtonVariant.primary => effectiveBackground.withValues(
-          alpha: enabled ? (isDark ? 0.72 : 0.30) : (isDark ? 0.34 : 0.18),
-        ),
-      KubusButtonVariant.secondary => scheme.outlineVariant.withValues(
-          alpha: isDark ? (enabled ? 0.24 : 0.14) : (enabled ? 0.16 : 0.10),
-        ),
-    };
+    final resolvedBorderColor = borderColor ??
+        switch (variant) {
+          KubusButtonVariant.primary => effectiveBackground.withValues(
+              alpha: enabled ? (isDark ? 0.72 : 0.30) : (isDark ? 0.34 : 0.18),
+            ),
+          KubusButtonVariant.secondary => scheme.outlineVariant.withValues(
+              alpha: isDark ? (enabled ? 0.24 : 0.14) : (enabled ? 0.16 : 0.10),
+            ),
+        };
 
     return KubusAuthMethodButtonStyle(
       foregroundColor: effectiveForeground,
@@ -331,7 +340,7 @@ class KubusAuthMethodButtonStyle {
       fallbackColor: variant == KubusButtonVariant.primary
           ? effectiveBackground.withValues(alpha: enabled ? 1.0 : 0.82)
           : glassTint,
-      borderColor: borderColor,
+      borderColor: resolvedBorderColor,
       radius: KubusRadius.circular(KubusRadius.sm),
       isDark: isDark,
     );

@@ -6,6 +6,7 @@ import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'package:art_kubus/widgets/email_registration_form.dart';
 import 'package:art_kubus/widgets/google_sign_in_button.dart';
 import 'package:art_kubus/widgets/google_sign_in_web_button.dart';
+import 'package:art_kubus/widgets/kubus_auth_method_button.dart';
 import 'package:art_kubus/widgets/kubus_button.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -65,11 +66,8 @@ class AuthMethodsPanelRegistrationMethods extends StatelessWidget {
       colorScheme.primary,
       isDark ? 0.18 : 0.10,
     )!;
-    final walletSurface = Color.lerp(
-      colorScheme.surface,
-      roles.web3MarketplaceAccent,
-      isDark ? 0.24 : 0.14,
-    )!;
+    final walletAccent = roles.web3MarketplaceAccent;
+    final walletBorder = walletAccent.withValues(alpha: isDark ? 0.34 : 0.26);
     final secondarySurface = colorScheme.surface.withValues(
       alpha: isDark ? 0.18 : 0.78,
     );
@@ -147,7 +145,8 @@ class AuthMethodsPanelRegistrationMethods extends StatelessWidget {
                 color: colorScheme.outlineVariant.withValues(alpha: 0.2),
               ),
             ),
-            padding: EdgeInsets.all(compactLayout ? KubusSpacing.sm : KubusSpacing.md),
+            padding: EdgeInsets.all(
+                compactLayout ? KubusSpacing.sm : KubusSpacing.md),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -180,14 +179,16 @@ class AuthMethodsPanelRegistrationMethods extends StatelessWidget {
                   SizedBox(height: methodGap),
                 ],
                 if (enableWallet)
-                  KubusButton(
+                  KubusAuthMethodButton(
                     onPressed: onShowConnectWalletModal,
-                    icon: Icons.account_balance_wallet_outlined,
-                    label: l10n.authConnectWalletButton,
+                    leading: Icon(
+                      Icons.account_balance_wallet_outlined,
+                      color: walletAccent,
+                    ),
+                    label: l10n.authUseWalletInstead,
                     variant: KubusButtonVariant.secondary,
-                    backgroundColor: walletSurface,
                     foregroundColor: colorScheme.onSurface,
-                    isFullWidth: true,
+                    borderColor: walletBorder,
                   ),
               ],
             ),
@@ -327,7 +328,7 @@ class AuthMethodsPanelMethodDivider extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final resolvedLabel =
-      label ?? AppLocalizations.of(context)!.authHighlightOptionalWeb3;
+        label ?? AppLocalizations.of(context)!.authHighlightOptionalWeb3;
 
     return Row(
       children: [

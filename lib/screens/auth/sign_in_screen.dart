@@ -705,8 +705,8 @@ class _SignInScreenState extends State<SignInScreen> {
     required bool enableGoogle,
   }) {
     final l10n = AppLocalizations.of(context)!;
-    final roles = KubusColorRoles.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final roles = KubusColorRoles.of(context);
     final showEmailForm = _showCompactEmailForm;
     final viewportSize = MediaQuery.sizeOf(context);
     final keyboardVisible = KeyboardInsetResolver.isKeyboardVisible(context);
@@ -718,11 +718,8 @@ class _SignInScreenState extends State<SignInScreen> {
     final methodGap = compactLayout ? KubusSpacing.sm : KubusSpacing.md;
     final emailSurface = Color.lerp(
         colorScheme.surface, colorScheme.primary, isDark ? 0.18 : 0.10)!;
-    final walletSurface = Color.lerp(
-      colorScheme.surface,
-      roles.web3MarketplaceAccent,
-      isDark ? 0.24 : 0.14,
-    )!;
+    final walletAccent = roles.web3MarketplaceAccent;
+    final walletBorder = walletAccent.withValues(alpha: isDark ? 0.34 : 0.26);
     final hasPrimaryMethods = enableGoogle || enableEmail;
 
     final authMethods = Column(
@@ -850,11 +847,14 @@ class _SignInScreenState extends State<SignInScreen> {
           const SizedBox(height: KubusSpacing.sm),
           KubusAuthMethodButton(
             onPressed: () => unawaited(_showConnectWalletFlow()),
-            icon: Icons.account_balance_wallet_outlined,
+            leading: Icon(
+              Icons.account_balance_wallet_outlined,
+              color: walletAccent,
+            ),
             label: l10n.authUseWalletInstead,
             variant: KubusButtonVariant.secondary,
-            backgroundColor: walletSurface,
             foregroundColor: colorScheme.onSurface,
+            borderColor: walletBorder,
           ),
         ],
         if (showEmailForm) ...[

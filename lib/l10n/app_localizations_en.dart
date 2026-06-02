@@ -1090,7 +1090,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authConnectWalletButton => 'Connect wallet';
 
   @override
-  String get authUseWalletInstead => 'Use wallet instead';
+  String get authUseWalletInstead => 'Use wallet';
 
   @override
   String get authSelfCustodyWalletHint => 'Already using a self-custody wallet? Connect it to continue with your existing art.kubus identity.';
@@ -10402,7 +10402,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopShellNavOrganize => 'Organize';
 
   @override
-  String get desktopShellNavGovern => 'Research';
+  String get desktopShellNavGovern => 'Govern';
 
   @override
   String get desktopShellNavTrade => 'Artifacts';

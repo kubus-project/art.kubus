@@ -452,7 +452,7 @@
     }
   },
   "authConnectWalletButton": "Connect wallet",
-  "authUseWalletInstead": "Use wallet instead",
+  "authUseWalletInstead": "Use wallet",
   "authSelfCustodyWalletHint": "Already using a self-custody wallet? Connect it to continue with your existing art.kubus identity.",
   "authConnectWalletModalTitle": "Connect wallet",
   "authConnectWalletModalDescriptionSignIn": "Approve a signature to use Wallet on this device. Sign-in itself has no fee.",

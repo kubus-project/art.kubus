@@ -2192,7 +2192,7 @@ abstract class AppLocalizations {
   /// No description provided for @authUseWalletInstead.
   ///
   /// In en, this message translates to:
-  /// **'Use wallet instead'**
+  /// **'Use wallet'**
   String get authUseWalletInstead;
 
   /// No description provided for @authSelfCustodyWalletHint.
@@ -19796,7 +19796,7 @@ abstract class AppLocalizations {
   /// No description provided for @desktopShellNavGovern.
   ///
   /// In en, this message translates to:
-  /// **'Research'**
+  /// **'Govern'**
   String get desktopShellNavGovern;
 
   /// No description provided for @desktopShellNavTrade.

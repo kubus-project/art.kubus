@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/providers/cache_provider.dart';
 import 'package:art_kubus/providers/locale_provider.dart';
@@ -8,7 +10,10 @@ import 'package:art_kubus/providers/themeprovider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/screens/auth/sign_in_screen.dart';
 import 'package:art_kubus/screens/web3/wallet/connectwallet_screen.dart';
+import 'package:art_kubus/utils/kubus_color_roles.dart';
+import 'package:art_kubus/widgets/auth_methods_panel_sections.dart';
 import 'package:art_kubus/widgets/google_sign_in_button.dart';
+import 'package:art_kubus/widgets/kubus_auth_method_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -73,7 +78,7 @@ void main() {
 
     expect(find.text('Continue with Google'), findsOneWidget);
     expect(find.text('Continue with email'), findsOneWidget);
-    expect(find.text('Use wallet instead'), findsOneWidget);
+    expect(find.text('Use wallet'), findsOneWidget);
     expect(find.text('Show other options'), findsNothing);
   });
 
@@ -134,7 +139,7 @@ void main() {
     await tester.pumpWidget(
       _buildApp(child: const SignInScreen(embedded: true)),
     );
-    await tester.tap(find.text('Use wallet instead'));
+    await tester.tap(find.text('Use wallet'));
     await tester.pump();
 
     expect(find.byType(ConnectWallet), findsOneWidget);
@@ -168,7 +173,58 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(find.text('Continue with Google'), findsOneWidget);
       expect(find.text('Continue with email'), findsOneWidget);
-      expect(find.text('Use wallet instead'), findsOneWidget);
+      expect(find.text('Use wallet'), findsOneWidget);
     }
+  });
+
+  testWidgets('registration alternatives use Kubus auth method buttons',
+      (tester) async {
+    await tester.pumpWidget(
+      _buildApp(
+        child: Builder(
+          builder: (context) {
+            final scheme = Theme.of(context).colorScheme;
+            return AuthMethodsPanelRegistrationMethods(
+              embedded: true,
+              colorScheme: scheme,
+              roles: KubusColorRoles.of(context),
+              showCompactEmailForm: false,
+              showInlineWalletFlow: false,
+              compactLayout: true,
+              enableWallet: true,
+              enableEmail: true,
+              enableGoogle: true,
+              showAlternativeMethods: true,
+              isGoogleSubmitting: false,
+              emailFormShell: const SizedBox.shrink(),
+              inlineWalletSurface: const SizedBox.shrink(),
+              onShowCompactEmailForm: () {},
+              onToggleAlternativeMethods: (_) {},
+              onShowConnectWalletModal: () {},
+              onGooglePressed: () {},
+              onWebGoogleAuthResult: (_) async {},
+              onWebGoogleAuthError: (_) {},
+            );
+          },
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byType(GoogleSignInButton), findsOneWidget);
+    expect(find.text('Continue with Google'), findsOneWidget);
+    expect(find.text('Use wallet'), findsOneWidget);
+    expect(find.byType(KubusAuthMethodButton), findsWidgets);
+  });
+
+  test('web Google button keeps GIS as hidden hit target only', () {
+    final source = File('lib/widgets/google_sign_in_web_button_web.dart')
+        .readAsStringSync();
+
+    expect(source, contains('web.renderButton('));
+    expect(source, contains('Opacity('));
+    expect(source, contains('opacity: 0'));
+    expect(source, contains('GoogleSignInButton('));
+    expect(source, contains('invisible hit target'));
   });
 }
