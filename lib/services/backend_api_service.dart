@@ -79,13 +79,32 @@ class BackendApiRequestException implements Exception {
     this.body,
   });
 
+  String get userMessage {
+    if (statusCode == 504 || statusCode == 524) {
+      final lowerPath = path.toLowerCase();
+      if (lowerPath.contains('upload') ||
+          lowerPath.contains('avatar') ||
+          lowerPath.contains('cover')) {
+        return 'Upload timed out. Try a smaller image or retry.';
+      }
+      return 'Server timed out. Your connection is okay, but art.kubus API '
+          'did not respond in time.';
+    }
+    if (statusCode == 502 ||
+        statusCode == 503 ||
+        statusCode == 522 ||
+        statusCode == 523 ||
+        statusCode == 530) {
+      return 'Server is temporarily unavailable.';
+    }
+    final trimmedBody = (body ?? '').trim();
+    if (trimmedBody.isNotEmpty) return trimmedBody;
+    return 'Request failed: $statusCode';
+  }
+
   @override
   String toString() {
-    final trimmedBody = (body ?? '').trim();
-    if (trimmedBody.isEmpty) {
-      return 'BackendApiRequestException($statusCode $path)';
-    }
-    return 'BackendApiRequestException($statusCode $path): $trimmedBody';
+    return userMessage;
   }
 }
 
