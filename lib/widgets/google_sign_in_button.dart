@@ -56,34 +56,76 @@ class _GoogleGlyphPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final strokeWidth = size.width * 0.16;
-    final inset = strokeWidth * 0.9;
-    final rect = Offset(inset, inset) &
-        Size(size.width - inset * 2, size.height - inset * 2);
-    Paint segment(Color color) => Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.butt;
-
-    canvas.drawArc(rect, -0.05, 1.08, false, segment(_blue));
-    canvas.drawArc(rect, 1.03, 1.10, false, segment(_green));
-    canvas.drawArc(rect, 2.12, 0.82, false, segment(_yellow));
-    canvas.drawArc(rect, 2.92, 1.18, false, segment(_red));
-
-    final centerY = size.height * 0.51;
-    canvas.drawLine(
-      Offset(size.width * 0.52, centerY),
-      Offset(size.width * 0.86, centerY),
-      segment(_blue)..strokeCap = StrokeCap.square,
-    );
-    canvas.drawLine(
-      Offset(size.width * 0.78, centerY),
-      Offset(size.width * 0.78, size.height * 0.66),
-      segment(_blue)..strokeCap = StrokeCap.square,
-    );
+    canvas.save();
+    canvas.scale(size.width / 18, size.height / 18);
+    _drawPath(canvas, _blue, _bluePath());
+    _drawPath(canvas, _green, _greenPath());
+    _drawPath(canvas, _yellow, _yellowPath());
+    _drawPath(canvas, _red, _redPath());
+    canvas.restore();
   }
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+
+  void _drawPath(Canvas canvas, Color color, Path path) {
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = color
+        ..style = PaintingStyle.fill,
+    );
+  }
+
+  Path _bluePath() {
+    return Path()
+      ..moveTo(17.64, 9.20)
+      ..cubicTo(17.64, 8.57, 17.58, 7.95, 17.48, 7.36)
+      ..lineTo(9.0, 7.36)
+      ..lineTo(9.0, 10.85)
+      ..lineTo(13.84, 10.85)
+      ..cubicTo(13.63, 11.97, 13.0, 12.93, 12.05, 13.56)
+      ..lineTo(12.05, 15.82)
+      ..lineTo(14.96, 15.82)
+      ..cubicTo(16.66, 14.25, 17.64, 11.95, 17.64, 9.20)
+      ..close();
+  }
+
+  Path _greenPath() {
+    return Path()
+      ..moveTo(9.0, 18.0)
+      ..cubicTo(11.43, 18.0, 13.47, 17.19, 14.96, 15.82)
+      ..lineTo(12.05, 13.56)
+      ..cubicTo(11.24, 14.10, 10.21, 14.42, 9.0, 14.42)
+      ..cubicTo(6.66, 14.42, 4.67, 12.84, 3.96, 10.71)
+      ..lineTo(0.96, 10.71)
+      ..lineTo(0.96, 13.04)
+      ..cubicTo(2.44, 15.98, 5.48, 18.0, 9.0, 18.0)
+      ..close();
+  }
+
+  Path _yellowPath() {
+    return Path()
+      ..moveTo(3.96, 10.71)
+      ..cubicTo(3.78, 10.17, 3.68, 9.59, 3.68, 9.0)
+      ..cubicTo(3.68, 8.41, 3.78, 7.83, 3.96, 7.29)
+      ..lineTo(3.96, 4.96)
+      ..lineTo(0.96, 4.96)
+      ..cubicTo(0.35, 6.17, 0.0, 7.55, 0.0, 9.0)
+      ..cubicTo(0.0, 10.45, 0.35, 11.83, 0.96, 13.04)
+      ..lineTo(3.96, 10.71)
+      ..close();
+  }
+
+  Path _redPath() {
+    return Path()
+      ..moveTo(9.0, 3.58)
+      ..cubicTo(10.32, 3.58, 11.51, 4.03, 12.44, 4.93)
+      ..lineTo(15.02, 2.34)
+      ..cubicTo(13.46, 0.89, 11.43, 0.0, 9.0, 0.0)
+      ..cubicTo(5.48, 0.0, 2.44, 2.02, 0.96, 4.96)
+      ..lineTo(3.96, 7.29)
+      ..cubicTo(4.67, 5.16, 6.66, 3.58, 9.0, 3.58)
+      ..close();
+  }
 }
