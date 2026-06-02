@@ -793,6 +793,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     } catch (_) {
       displayUrl = url;
     }
+    displayUrl = _normalizeMediaUrl(displayUrl) ?? displayUrl;
 
     return Image.network(
       displayUrl,

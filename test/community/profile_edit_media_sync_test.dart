@@ -87,9 +87,22 @@ class _FakeProfileApi implements ProfileBackendApi {
   Future<bool> isFollowing(String walletAddress) async => false;
 }
 
+final Object _useInitialProfileAvatar = Object();
+
 class _ProfileEditTestProvider extends ProfileProvider {
-  _ProfileEditTestProvider() : super(apiService: _FakeProfileApi()) {
-    setCurrentUser(_initialProfile);
+  _ProfileEditTestProvider({
+    Object? avatar = _useInitialProfileAvatar,
+    String? coverImage,
+  }) : super(apiService: _FakeProfileApi()) {
+    final avatarValue = identical(avatar, _useInitialProfileAvatar)
+        ? _initialProfile.avatar
+        : avatar?.toString() ?? '';
+    setCurrentUser(
+      _initialProfile.copyWith(
+        avatar: avatarValue,
+        coverImage: coverImage ?? _initialProfile.coverImage,
+      ),
+    );
   }
 
   static final _initialProfile = UserProfile(
@@ -441,7 +454,12 @@ void main() {
     await tester.pump();
 
     expect(provider.savedAvatar, '/uploads/profiles/avatars/fresh.png');
+    expect(provider.savedCover, isNull);
     expect(provider.loadProfileCalls, 1);
+    expect(
+      state.debugAvatarUrl,
+      'https://api.kubus.site/uploads/profiles/avatars/fresh.png',
+    );
     expect(state.debugIsUploadingAvatar, isFalse);
     expect(state.debugAvatarChanged, isFalse);
     expect(state.debugHasLocalAvatarBytes, isFalse);
@@ -461,9 +479,26 @@ void main() {
     await tester.pump();
 
     expect(provider.savedCover, '/uploads/profiles/cover/fresh-cover.png');
+    expect(provider.savedAvatar, isNull);
     expect(provider.loadProfileCalls, 1);
     expect(state.debugIsUploadingCover, isFalse);
     expect(state.debugCoverChanged, isFalse);
     expect(state.debugHasLocalCoverBytes, isFalse);
+  });
+
+  testWidgets('mobile edit profile initializes with null, empty, or generated avatar',
+      (tester) async {
+    for (final avatar in <String?>[
+      null,
+      '',
+      '/api/avatar/ArtistWallet111111111111111111111111111111111?style=identicon&format=png',
+      'https://api.dicebear.com/9.x/identicon/png?seed=ArtistWallet111111111111111111111111111111111',
+    ]) {
+      final provider = _ProfileEditTestProvider(avatar: avatar);
+      await _pumpEditScreen(tester, provider, const mobile.ProfileEditScreen());
+      final state =
+          tester.state(find.byType(mobile.ProfileEditScreen)) as dynamic;
+      expect(state.debugAvatarUrl, isNull);
+    }
   });
 }

@@ -137,6 +137,16 @@ void main() {
       isNull,
     );
     expect(
+      ProfileMediaRefUtils.toPersistableAvatarRef('/uploads/a.png'),
+      '/uploads/a.png',
+    );
+    expect(
+      ProfileMediaRefUtils.toPersistableAvatarRef('uploads/a.png'),
+      '/uploads/a.png',
+    );
+    expect(ProfileMediaRefUtils.toPersistableAvatarRef(null), isNull);
+    expect(ProfileMediaRefUtils.toPersistableAvatarRef(''), isNull);
+    expect(
       ProfileMediaRefUtils.toPersistableCoverRef(
         'https://api.kubus.site/uploads/profiles/cover/one.png',
       ),
