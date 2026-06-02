@@ -502,7 +502,9 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
 
     if (latText.isEmpty || lngText.isEmpty) {
       ScaffoldMessenger.of(context).showKubusSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context)!.artworkDraftCoordinatesRequired)),
+        SnackBar(
+            content: Text(
+                AppLocalizations.of(context)!.artworkDraftCoordinatesRequired)),
       );
       return false;
     }
@@ -511,7 +513,9 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
     final lng = double.tryParse(lngText);
     if (lat == null || lng == null || !_validateLatLng(lat, lng)) {
       ScaffoldMessenger.of(context).showKubusSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context)!.artworkDraftCoordinatesInvalid)),
+        SnackBar(
+            content: Text(
+                AppLocalizations.of(context)!.artworkDraftCoordinatesInvalid)),
       );
       return false;
     }
@@ -725,8 +729,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
         messenger.showKubusSnackBar(
           SnackBar(
             content: Text(
-              result.error ??
-                  l10n.archiveObjectCreateFailed,
+              result.error ?? l10n.archiveObjectCreateFailed,
             ),
           ),
         );
@@ -793,7 +796,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
         ),
         const CreatorFieldSpacing(),
         CreatorTextField(
-          label: 'Tags (optional)',
+          label: 'Tags',
           hint: 'comma-separated (e.g. community, mural, river)',
           accentColor: accent,
           controller: _tagsController,
@@ -903,7 +906,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
           const CreatorFieldSpacing(),
           CreatorTextField(
             controller: _locationNameController,
-            label: 'Place name (optional)',
+            label: 'Place name',
             hint: 'e.g. River Walk, Downtown',
             accentColor: accent,
             onChanged: (v) => drafts.updateLocation(
@@ -1060,22 +1063,22 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
     final l10n = AppLocalizations.of(context)!;
 
     return CreatorSection(
-      title: 'Optional features',
+      title: 'Publishing layers',
       children: [
         CreatorInfoBox(
           text:
-              'Web3 and AR are optional. Your artwork can be published without them.',
+              'Publish the artwork first, then add AR layers, archive records, or attendance recognition when they support the work.',
           accentColor: accent,
         ),
         const CreatorFieldSpacing(),
 
-        // --- Digital archive object toggle ---
+        // --- Digital archive record toggle ---
         CreatorSwitchTile(
-          title: 'Create digital archive object',
+          title: 'Create digital archive record',
           subtitle: (AppConfig.isFeatureEnabled('web3') &&
                   AppConfig.isFeatureEnabled('nftMinting'))
               ? 'You can create it after publishing (wallet required).'
-              : 'Digital archive object creation is currently unavailable.',
+              : 'Digital archive record creation is currently unavailable.',
           value: draft.mintNftAfterPublish,
           onChanged: (AppConfig.isFeatureEnabled('web3') &&
                   AppConfig.isFeatureEnabled('nftMinting') &&
@@ -1218,7 +1221,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
           if (draft.poapMode == ArtworkPoapMode.existingPoap) ...[
             const CreatorFieldSpacing(),
             CreatorTextField(
-              label: 'Attendance event ID (optional)',
+              label: 'Attendance event ID',
               hint: 'If you have an Event ID, paste it here.',
               accentColor: accent,
               controller: _poapEventIdController,
@@ -1678,7 +1681,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
           OutlinedButton.icon(
             onPressed: () => unawaited(_mintNftForCreated(draft: draft)),
             icon: const Icon(Icons.auto_awesome_outlined),
-            label: const Text('Create archive object series'),
+            label: const Text('Create archive record series'),
           ),
         ],
         const CreatorFieldSpacing(),
@@ -1755,7 +1758,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
         label: 'Location checked',
         description: _isLocationEnabled(draft)
             ? 'Coordinates are set for map placement.'
-            : 'Optional for draft-only submissions.',
+            : 'Needed only when this artwork is ready for the map.',
         complete: hasLocation,
         icon: Icons.place_outlined,
       ),
@@ -1763,7 +1766,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
         label: 'Gallery is prepared',
         description: hasGallery
             ? '${draft.gallery.length} supporting image(s) attached.'
-            : 'Optional but helpful for richer presentation.',
+            : 'Add supporting images for a richer presentation.',
         complete: hasGallery,
         icon: Icons.collections_outlined,
       ),

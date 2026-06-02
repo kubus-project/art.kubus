@@ -36,7 +36,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exploreOnlyArTitle => 'AR layers';
 
   @override
-  String get exploreOnlyArDescription => 'View optional AR layers when artists or institutions enable them.';
+  String get exploreOnlyArDescription => 'View AR layers when artists or institutions enable them.';
 
   @override
   String get exploreOnlyCommunityTitle => 'Community';
@@ -57,7 +57,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletPromptBody => 'A wallet connects your profile to attribution, archive records, digital editions and governance tools. Discovery and community remain open without it.';
 
   @override
-  String get walletPromptIntro => 'Connect wallet access if you want:';
+  String get walletPromptIntro => 'Use Wallet for:';
 
   @override
   String get walletPromptFeatureArchiveObjects => 'Archive records and digital editions';
@@ -66,7 +66,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletPromptFeatureCreateArtworks => 'Create and document artworks';
 
   @override
-  String get walletPromptFeatureCommunity => 'Wallet-linked participation records';
+  String get walletPromptFeatureCommunity => 'Participation records';
 
   @override
   String get walletPromptMaybeLater => 'Maybe later';
@@ -75,10 +75,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletPromptSetUpAction => 'Set up wallet';
 
   @override
-  String get walletHomeArchiveObjectFallbackTitle => 'Archive object';
+  String get walletHomeArchiveObjectFallbackTitle => 'Archive record';
 
   @override
-  String get walletHomeCollectibleFallbackTitle => 'Collectible';
+  String get walletHomeCollectibleFallbackTitle => 'Digital edition';
 
   @override
   String get walletHomeConnectWalletToFetchCollectibles => 'Connect your wallet to load digital editions.';
@@ -114,44 +114,44 @@ class AppLocalizationsEn extends AppLocalizations {
   String get artworkDraftPublishFailed => 'Failed to publish artwork. Please try again.';
 
   @override
-  String get archiveObjectCreatedToast => 'Archive object created.';
+  String get archiveObjectCreatedToast => 'Archive record created.';
 
   @override
-  String get archiveObjectCreateFailed => 'Failed to create archive object.';
+  String get archiveObjectCreateFailed => 'Failed to create archive record.';
 
   @override
   String get archiveObjectCreationPleaseWait => 'This may take a few moments.';
 
   @override
   String archiveObjectSeriesDefaultDescription(Object artworkTitle, Object artistName) {
-    return 'Archive object series for $artworkTitle by $artistName';
+    return 'Archive records for $artworkTitle by $artistName';
   }
 
   @override
-  String get archiveObjectSeriesCreateFailed => 'Failed to create archive object series';
+  String get archiveObjectSeriesCreateFailed => 'Failed to create archive record series';
 
   @override
-  String get archiveObjectSeriesNotFound => 'Archive object series not found';
+  String get archiveObjectSeriesNotFound => 'Archive record series not found';
 
   @override
   String get archiveObjectSeriesSoldOut => 'Series is sold out';
 
   @override
   String archiveObjectCreatedReason(Object artworkTitle, Object tokenId) {
-    return 'Created archive object for \"$artworkTitle\" (Edition #$tokenId)';
+    return 'Created archive record for \"$artworkTitle\" (edition #$tokenId)';
   }
 
   @override
-  String get artworkCreatorAttendanceRecordUrlOptionalLabel => 'Attendance record URL (optional)';
+  String get artworkCreatorAttendanceRecordUrlOptionalLabel => 'Attendance record URL';
 
   @override
   String archiveObjectCreateFailedWithError(Object error) {
-    return 'Failed to create archive object: $error';
+    return 'Failed to create archive record: $error';
   }
 
   @override
   String archiveObjectCreateError(Object error) {
-    return 'Error creating archive object: $error';
+    return 'Error creating archive record: $error';
   }
 
   @override
@@ -172,10 +172,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get markerDescriptionSemanticLabel => 'marker description';
 
   @override
-  String get recentActivityRecognitionRecordedTitle => 'Recognition Recorded';
+  String get recentActivityRecognitionRecordedTitle => 'Recognition recorded';
 
   @override
-  String get recentActivityArchiveObjectUpdateTitle => 'Archive Object Update';
+  String get recentActivityArchiveObjectUpdateTitle => 'Archive record update';
 
   @override
   String recentActivityRecognitionAmountDescription(Object amount) {
@@ -187,7 +187,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String recentActivityArchiveObjectStatusDescription(Object status, Object title) {
-    return 'Archive object $status for $title';
+    return 'Archive record $status for $title';
   }
 
   @override
@@ -203,19 +203,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notificationRecognitionRecordedTitle => 'Recognition recorded';
 
   @override
-  String get pushArchiveObjectCreatingTitle => 'Creating archive object...';
+  String get pushArchiveObjectCreatingTitle => 'Creating archive record...';
 
   @override
   String pushArchiveObjectCreatingBody(Object artworkTitle) {
-    return 'Creating archive object for \"$artworkTitle\"';
+    return 'Creating archive record for \"$artworkTitle\"';
   }
 
   @override
-  String get pushArchiveObjectCreatedTitle => 'Archive object created';
+  String get pushArchiveObjectCreatedTitle => 'Archive record created';
 
   @override
   String pushArchiveObjectCreatedBody(Object artworkTitle) {
-    return '\"$artworkTitle\" now has an optional archive record';
+    return '\"$artworkTitle\" now has an archive record';
   }
 
   @override
@@ -223,14 +223,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String pushArchiveObjectCreationFailedBody(Object artworkTitle) {
-    return 'Could not create \"$artworkTitle\" archive object. Please try again.';
+    return 'Could not create an archive record for \"$artworkTitle\". Please try again.';
   }
 
   @override
-  String get pushArchiveObjectCreationChannelName => 'Archive Object Creation';
+  String get pushArchiveObjectCreationChannelName => 'Archive record creation';
 
   @override
-  String get pushArchiveObjectCreationChannelDescription => 'Notifications for digital archive object creation';
+  String get pushArchiveObjectCreationChannelDescription => 'Notifications for archive record creation';
 
   @override
   String get pushRecognitionChannelName => 'Recognition';
@@ -239,10 +239,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pushRecognitionChannelDescription => 'Notifications for contribution recognition';
 
   @override
-  String get analyticsMetricArchiveObjectsCreatedLabel => 'Archive objects created';
+  String get analyticsMetricArchiveObjectsCreatedLabel => 'Archive records created';
 
   @override
-  String get analyticsMetricArchiveObjectsCreatedDescription => 'Digital archive objects connected to artworks.';
+  String get analyticsMetricArchiveObjectsCreatedDescription => 'Archive records connected to artworks.';
 
   @override
   String get analyticsMetricKub8RecognitionLabel => 'KUB8 recognition';
@@ -264,11 +264,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String collectiblesLoadFailed(Object error) {
-    return 'Failed to load collectibles: $error';
+    return 'Failed to load digital editions: $error';
   }
 
   @override
-  String get collectiblesItemNotFound => 'Collectible not found';
+  String get collectiblesItemNotFound => 'Digital edition not found';
 
   @override
   String get collectiblesInvalidListingPrice => 'Invalid listing price';
@@ -281,16 +281,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String collectiblesListFailed(Object error) {
-    return 'Failed to list collectible: $error';
+    return 'Failed to list digital edition: $error';
   }
 
   @override
   String collectiblesRemoveListingFailed(Object error) {
-    return 'Failed to remove collectible from sale: $error';
+    return 'Failed to remove digital edition from sale: $error';
   }
 
   @override
-  String get collectiblesMockDataDisabled => 'Mock collectible data is disabled in canonical mode. Use indexed artwork mint records.';
+  String get collectiblesMockDataDisabled => 'Mock digital edition data is disabled in canonical mode. Use indexed artwork mint records.';
 
   @override
   String get appTitle => 'art.kubus';
@@ -836,7 +836,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authSignInTitle => 'Sign in to art.kubus';
 
   @override
-  String get authSignInSubtitle => 'Start with art discovery, artists, institutions, and community. Wallet tools are optional.';
+  String get authSignInSubtitle => 'Start with art discovery, artists, institutions, and community. Add Wallet when you need archive records, editions, or governance.';
 
   @override
   String get authRegisterTitle => 'Create your account';
@@ -860,7 +860,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authHighlightKeysLocal => 'Private keys stay with you';
 
   @override
-  String get authHighlightOptionalWeb3 => 'Digital ownership and participation stay optional';
+  String get authHighlightOptionalWeb3 => 'Wallet, editions, and governance when needed';
 
   @override
   String get authSignedInProfileRefreshSoon => 'Signed in. Your profile will refresh shortly.';
@@ -1099,10 +1099,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authConnectWalletModalTitle => 'Connect wallet';
 
   @override
-  String get authConnectWalletModalDescriptionSignIn => 'This step is optional. Approve a signature only if you want wallet-based access on this device. No fee is required to sign in.';
+  String get authConnectWalletModalDescriptionSignIn => 'Approve a signature to use Wallet on this device. Sign-in itself has no fee.';
 
   @override
-  String get authConnectWalletModalDescriptionRegister => 'This step is optional. Approve a signature only if you want wallet-based access after creating your profile. No fee is required.';
+  String get authConnectWalletModalDescriptionRegister => 'Approve a signature to use Wallet after creating your profile. No fee is required.';
 
   @override
   String get authWalletOptionWalletConnect => 'WalletConnect';
@@ -1255,13 +1255,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingFlowProfileBody => 'Add a name and a photo so people can recognize you.';
 
   @override
-  String get onboardingFlowWalletBackupIntroTitle => 'Optional ownership layer backup';
+  String get onboardingFlowWalletBackupIntroTitle => 'Wallet backup';
 
   @override
-  String get onboardingFlowWalletBackupIntroBody => 'This step is optional. Some account paths create a wallet for digital ownership, attribution, and future participation. It is separate from public discovery and community access.';
+  String get onboardingFlowWalletBackupIntroBody => 'Some account paths create a wallet for attribution, archive records, digital editions, and future participation. Public discovery and community access remain available without Wallet.';
 
   @override
-  String get onboardingFlowWalletBackupIntroWeb3Warning => 'This step is optional. Basic discovery, profiles, and community do not require connecting a wallet.';
+  String get onboardingFlowWalletBackupIntroWeb3Warning => 'Discovery, profiles, and community do not require connecting a wallet.';
 
   @override
   String get onboardingFlowWalletBackupIntroSecretWarning => 'If you use encrypted backup, store the two secrets separately: the recovery phrase restores the wallet, and the recovery password unlocks the encrypted backup.';
@@ -1303,7 +1303,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingFlowWalletBackupTitle => 'Back up your recovery phrase';
 
   @override
-  String get onboardingFlowWalletBackupBody => 'This phrase restores optional account-linked wallet access for digital ownership and future participation on a new device.';
+  String get onboardingFlowWalletBackupBody => 'This phrase restores account-linked Wallet access for digital ownership and future participation on a new device.';
 
   @override
   String get onboardingFlowWalletBackupPrivacyWarning => 'Keep it private. Anyone with this phrase can fully control your wallet.';
@@ -1342,7 +1342,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingFlowPermissionsTitle => 'Choose what to enable';
 
   @override
-  String get onboardingFlowPermissionsBody => 'Enable location for nearby public art, camera for optional AR layers in development, and notifications for artists, institutions, exhibitions, and community updates.';
+  String get onboardingFlowPermissionsBody => 'Enable location for nearby public art, camera for AR layers in development, and notifications for artists, institutions, exhibitions, and community updates.';
 
   @override
   String get onboardingFlowContinueWithoutPermissions => 'Continue';
@@ -1549,13 +1549,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingCreateSubtitle => 'Contribute to the cultural archive';
 
   @override
-  String get onboardingCreateDescription => 'Publish artworks, document practice, add context, and prepare optional AR layers when they support the work.';
+  String get onboardingCreateDescription => 'Publish artworks, document practice, add context, and prepare AR layers when they support the work.';
 
   @override
   String get onboardingCommunityTitle => 'Join the art community';
 
   @override
-  String get onboardingCommunitySubtitle => 'Participation before infrastructure';
+  String get onboardingCommunitySubtitle => 'Community first';
 
   @override
   String get onboardingCommunityDescription => 'Follow artists and institutions, discuss work, collaborate, and make local cultural activity more visible.';
@@ -1652,7 +1652,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get permissionsCameraBenefit1 => 'Preview AR layers when pilots are available';
 
   @override
-  String get permissionsCameraBenefit2 => 'Prepare optional virtual placements';
+  String get permissionsCameraBenefit2 => 'Prepare virtual placements';
 
   @override
   String get permissionsCameraBenefit3 => 'Take photos to share';
@@ -1667,7 +1667,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get permissionsNotificationsSubtitle => 'Stay connected';
 
   @override
-  String get permissionsNotificationsDescription => 'Get updates about new artworks, exhibitions, events and community activity. Optional participation records can be enabled later.';
+  String get permissionsNotificationsDescription => 'Get updates about new artworks, exhibitions, events and community activity. Participation records can be enabled later.';
 
   @override
   String get permissionsNotificationsBenefit1 => 'New artwork updates';
@@ -1772,7 +1772,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopSettingsLocationHint => 'City, Country';
 
   @override
-  String get desktopSettingsWalletSectionSubtitle => 'Manage optional ownership access, recovery, and wallet-linked features';
+  String get desktopSettingsWalletSectionSubtitle => 'Manage Wallet access, recovery, and participation features';
 
   @override
   String get desktopSettingsViewWalletButton => 'View wallet';
@@ -1853,10 +1853,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopSettingsAchievementFirstDiscoveryDescription => 'Discover your first public artwork';
 
   @override
-  String get desktopSettingsAchievementArtCollectorTitle => 'Art collector';
+  String get desktopSettingsAchievementArtCollectorTitle => 'Art explorer';
 
   @override
-  String get desktopSettingsAchievementArtCollectorDescription => 'View 10 AR artworks';
+  String get desktopSettingsAchievementArtCollectorDescription => 'View 10 artworks with AR layers';
 
   @override
   String get desktopSettingsAchievementCommunityMemberTitle => 'Community member';
@@ -1871,10 +1871,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopSettingsAchievementEventExplorerDescription => 'Attend 5 art events';
 
   @override
-  String get desktopSettingsAchievementNftCreatorTitle => 'First digital archive object';
+  String get desktopSettingsAchievementNftCreatorTitle => 'First digital edition';
 
   @override
-  String get desktopSettingsAchievementNftCreatorDescription => 'Create your first optional digital archive object';
+  String get desktopSettingsAchievementNftCreatorDescription => 'Create your first digital edition';
 
   @override
   String get desktopSettingsHelpSupportTitle => 'Help & support';
@@ -1910,19 +1910,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopSettingsFeatureArDiscoveryTitle => 'AR layers in development';
 
   @override
-  String get desktopSettingsFeatureArDiscoveryDescription => 'Prepare for optional AR previews as pilots become available.';
+  String get desktopSettingsFeatureArDiscoveryDescription => 'Prepare AR previews as pilots become available.';
 
   @override
   String get desktopSettingsFeatureWeb3IntegrationTitle => 'Wallet and Web3 access';
 
   @override
-  String get desktopSettingsFeatureWeb3IntegrationDescription => 'Connect a wallet only if you want attribution, digital archive objects or future participation tools. Basic discovery and community do not require it.';
+  String get desktopSettingsFeatureWeb3IntegrationDescription => 'Connect Wallet for attribution, archive records, digital editions, or future participation tools. Basic discovery and community do not require it.';
 
   @override
-  String get desktopSettingsFeatureNftMintingTitle => 'Digital archive objects';
+  String get desktopSettingsFeatureNftMintingTitle => 'Digital editions';
 
   @override
-  String get desktopSettingsFeatureNftMintingDescription => 'Create and manage optional digital records connected to artworks, visits or contributions.';
+  String get desktopSettingsFeatureNftMintingDescription => 'Create and manage digital records connected to artworks, visits or contributions.';
 
   @override
   String get desktopSettingsFeatureCommunityTitle => 'Community';
@@ -3119,7 +3119,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3ArtistStudioP2Title => 'Artwork gallery';
 
   @override
-  String get web3ArtistStudioP2Description => 'Present artworks and optional digital cultural artifacts. Upload, organize, and describe your practice.';
+  String get web3ArtistStudioP2Description => 'Present artworks and digital cultural artifacts. Upload, organize, and describe your practice.';
 
   @override
   String get web3ArtistStudioP2Feature1 => 'Upload and organize artworks';
@@ -3424,7 +3424,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3MarketplaceP1Feature3 => 'Understand provenance';
 
   @override
-  String get web3MarketplaceP1Feature4 => 'Keep ownership optional';
+  String get web3MarketplaceP1Feature4 => 'Keep ownership tools clear';
 
   @override
   String get web3MarketplaceP2Title => 'Discover with context';
@@ -3463,7 +3463,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3MarketplaceP3Feature4 => 'Track interest and activity';
 
   @override
-  String get web3MarketplaceP4Title => 'Optional collecting';
+  String get web3MarketplaceP4Title => 'Digital editions';
 
   @override
   String get web3MarketplaceP4Description => 'Collecting is a supporting layer. You can use art.kubus for discovery, community, and cultural access without collecting.';
@@ -3484,7 +3484,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3FeaturesP1Title => 'Wallet account';
 
   @override
-  String get web3FeaturesP1Description => 'This step is optional. A wallet can support long-term access, attribution, digital ownership, and future participation when you choose. Basic discovery and community do not start with a wallet.';
+  String get web3FeaturesP1Description => 'A wallet can support long-term access, attribution, digital ownership, and future participation. Basic discovery and community do not start with Wallet.';
 
   @override
   String get web3FeaturesP1Feature1 => 'Long-term account continuity';
@@ -3687,7 +3687,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mapLocationUnavailableToast => 'Unable to determine your location.';
 
   @override
-  String get mapMarkerCreateWalletRequired => 'Create a profile and optional ownership access before placing a marker tied to your own artwork.';
+  String get mapMarkerCreateWalletRequired => 'Create a profile and Wallet access before placing a marker tied to your own artwork.';
 
   @override
   String get mapMarkerCreateNoArArtworks => 'No map-ready artworks are linked to this account yet. Create an artwork first, then place it on the open art map.';
@@ -4166,7 +4166,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopMapArtworkTypeArArt => 'AR art';
 
   @override
-  String get desktopMapArtworkTypeNfts => 'Archive objects';
+  String get desktopMapArtworkTypeNfts => 'Archive records';
 
   @override
   String get desktopMapArtworkTypeModels3d => '3D models';
@@ -5647,7 +5647,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get connectWalletWeb3GuideFeatureSecureDescription => 'You control the keys, not us';
 
   @override
-  String get connectWalletWeb3GuideFeatureNftsTitle => 'Collectibles';
+  String get connectWalletWeb3GuideFeatureNftsTitle => 'Digital editions';
 
   @override
   String get connectWalletWeb3GuideFeatureNftsDescription => 'Collect and keep digital works connected to artists and places';
@@ -5724,7 +5724,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get connectWalletWalletConnectUriHint => 'External wallet session';
 
   @override
-  String get connectWalletWalletConnectSecurityNote => 'External wallets sign in their own app. The encrypted backup is optional convenience, not custody.';
+  String get connectWalletWalletConnectSecurityNote => 'External wallets sign in their own app. The encrypted backup supports recovery; it is not custody.';
 
   @override
   String get connectWalletWalletConnectScanQrButton => 'Scan QR code';
@@ -5774,7 +5774,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletHomeLoadingLabel => 'Loading your wallet…';
 
   @override
-  String get walletHomeNoWalletDescription => 'This step is optional. Connect or restore a wallet only for digital ownership, attribution, and participation tools.';
+  String get walletHomeNoWalletDescription => 'Connect or restore a wallet when you need digital ownership, attribution, or participation tools.';
 
   @override
   String get walletHomeSignedOutTitle => 'Wallet not connected';
@@ -5786,7 +5786,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletHomeAccountShellTitle => 'Profile active, wallet not restored';
 
   @override
-  String get walletHomeAccountShellDescription => 'Your account session is available. This device only needs wallet access for optional ownership and participation actions.';
+  String get walletHomeAccountShellDescription => 'Your account session is available. This device needs Wallet only for ownership and participation actions.';
 
   @override
   String get walletHomeRestoreWalletAction => 'Restore wallet';
@@ -6029,7 +6029,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletHomeNftLoadFailedTitle => 'Could not load digital editions';
 
   @override
-  String get walletHomeNoCollectiblesDescription => 'Digital cultural artifacts will appear here when they are linked to this wallet.';
+  String get walletHomeNoCollectiblesDescription => 'Digital editions will appear here when they are linked to this wallet.';
 
   @override
   String walletHomeCollectibleByline(Object creator) {
@@ -6048,7 +6048,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletHomeStakeTitle => 'Fee support setup';
 
   @override
-  String get walletHomeStakeDescription => 'Prepare SOL for future transaction fees when optional publishing or artifact actions require it.';
+  String get walletHomeStakeDescription => 'Prepare SOL for future transaction fees when publishing or artifact actions require it.';
 
   @override
   String get walletHomeStakeAction => 'Set up support';
@@ -6523,7 +6523,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get artworkDetailHideComments => 'Hide comments';
 
   @override
-  String get artworkDetailMintNft => 'Create archive object';
+  String get artworkDetailMintNft => 'Create archive record';
 
   @override
   String get eventCreatorNoInstitutionAvailableMessage => 'No institution is available for this event yet.';
@@ -7675,7 +7675,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get marketplaceNoMintedNftsTitle => 'No digital editions available yet';
 
   @override
-  String get marketplaceNoMintedNftsDescription => 'Artifact listings appear once an artwork is issued as an optional digital cultural object.';
+  String get marketplaceNoMintedNftsDescription => 'Listings appear once an artwork is issued as a digital cultural object.';
 
   @override
   String get marketplaceTrendingThisWeekTitle => 'Active this week';
@@ -7871,7 +7871,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get marketplaceRemoveFromSaleTooltip => 'Remove from sale';
 
   @override
-  String get marketplaceRemoveFromSaleFailedToast => 'Unable to remove archive object from listing right now.';
+  String get marketplaceRemoveFromSaleFailedToast => 'Unable to remove this digital edition from listing right now.';
 
   @override
   String get marketplaceValueNotListedLabel => 'Not listed';
@@ -7886,10 +7886,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get marketplaceOwnedCollectionTitle => 'Owned collection';
 
   @override
-  String get marketplaceOwnedCollectionSubtitle => 'Collectibles currently held by this wallet.';
+  String get marketplaceOwnedCollectionSubtitle => 'Digital editions currently held by this wallet.';
 
   @override
-  String get marketplaceListedForSaleSubtitle => 'Collectibles currently visible to marketplace buyers.';
+  String get marketplaceListedForSaleSubtitle => 'Digital editions currently visible to marketplace buyers.';
 
   @override
   String get marketplaceArOnlyFilterActiveLabel => 'AR only';
@@ -7915,7 +7915,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get marketplacePropertyMintedByLabel => 'Issued by';
 
   @override
-  String get marketplaceNftCollectibleLabel => 'Digital archive object';
+  String get marketplaceNftCollectibleLabel => 'Digital edition';
 
   @override
   String get collectibleRarityCommon => 'Common';
@@ -7936,7 +7936,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get collectibleRarityMythic => 'Mythic';
 
   @override
-  String get collectibleStatusMinted => 'Issued as archive object';
+  String get collectibleStatusMinted => 'Issued as archive record';
 
   @override
   String get collectibleStatusListed => 'Listed';
@@ -9105,7 +9105,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get downloadAppDefaultDescription => 'Mobile AR pilots are in development and will stay optional.';
+  String get downloadAppDefaultDescription => 'Mobile AR pilots are in development.';
 
   @override
   String get downloadAppFeatureViewInAr => 'Preview AR layers when available';
@@ -9310,7 +9310,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopHomeDiscoverArtTitle => 'Open art platform.';
 
   @override
-  String get desktopHomeDiscoverArtDescription => 'Discover artworks, places, creators, and institutions across public space and online. Wallet tools are optional, and AR layers are in development.';
+  String get desktopHomeDiscoverArtDescription => 'Discover artworks, places, creators, and institutions across public space and online. Wallet tools are available when needed, and AR layers are in development.';
 
   @override
   String get desktopHomeYourActivityTitle => 'Your Activity';
@@ -9325,7 +9325,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopHomeStatArSessions => 'AR Sessions';
 
   @override
-  String get desktopHomeStatNftsCollected => 'Digital collectibles';
+  String get desktopHomeStatNftsCollected => 'Digital editions';
 
   @override
   String get desktopHomeStatKub8Earned => 'KUB8 recognition';
@@ -9580,7 +9580,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletBackupProtectionRecoveryPhraseHeadline => 'Recovery phrase backup is still required.';
 
   @override
-  String get walletBackupProtectionRecoveryPhraseBody => 'Store the recovery phrase offline so you do not lose access to this wallet, your account continuity, and the collectibles, points, and future rights tied to it.';
+  String get walletBackupProtectionRecoveryPhraseBody => 'Store the recovery phrase offline so you do not lose access to this wallet, account continuity, digital editions, points, and future rights tied to it.';
 
   @override
   String get walletBackupProtectionEncryptedHeadline => 'Encrypted server backup is configured.';
@@ -9652,7 +9652,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletSecurityRecoveryNeededLabel => 'Recovery';
 
   @override
-  String get walletSecurityBackendBackupClarifier => 'Email or Google sign-in can restore account access only. Transfers still require wallet access on this device or a connected external wallet. Encrypted backend backup is optional convenience and never gives the backend control of your wallet.';
+  String get walletSecurityBackendBackupClarifier => 'Email or Google sign-in can restore account access only. Transfers still require Wallet access on this device or a connected external wallet. Encrypted backend backup supports recovery and never gives the backend control of your wallet.';
 
   @override
   String get walletSecuritySignedOutMethod => 'Signed out';
@@ -10966,7 +10966,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get userProfileAchievementCategoryAr => 'AR';
 
   @override
-  String get userProfileAchievementCategoryNft => 'Archive object';
+  String get userProfileAchievementCategoryNft => 'Archive records';
 
   @override
   String get userProfileAchievementCategoryCommunity => 'Community';
@@ -11962,7 +11962,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopProfilePerformanceCreatedTitle => 'Created';
 
   @override
-  String get desktopProfilePerformanceNftsOwnedTitle => 'Archive objects held';
+  String get desktopProfilePerformanceNftsOwnedTitle => 'Archive records held';
 
   @override
   String get desktopProfileAchievementsSubtitle => 'Your progress and milestones';
@@ -12311,7 +12311,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get recognitionBadgePanelInstitutional => 'Institutional';
 
   @override
-  String get recognitionBadgePanelCollectibleProof => 'Collectible proof';
+  String get recognitionBadgePanelCollectibleProof => 'Edition proof';
 
   @override
   String get recognitionBadgePanelMinted => 'Issued';

@@ -2450,7 +2450,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         builder: (context, setState) => KubusAlertDialog(
           backgroundColor: Theme.of(context).colorScheme.surface,
           title: Text(
-            'Create archive object series',
+            'Create archive record series',
             style: KubusTypography.inter(
               fontWeight: FontWeight.bold,
               color: Theme.of(context).colorScheme.onSurface,
@@ -2462,7 +2462,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Create an optional digital archive object series for this artwork',
+                  'Create a digital archive record series for this artwork.',
                   style: KubusTypography.inter(
                     fontSize: 14,
                     color: Theme.of(context).colorScheme.onSurface,
@@ -2530,7 +2530,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                 DropdownButtonFormField<CollectibleType>(
                   initialValue: selectedType,
                   decoration: InputDecoration(
-                    labelText: 'Archive object type',
+                    labelText: 'Archive record type',
                     labelStyle: KubusTypography.inter(),
                     border: const OutlineInputBorder(),
                   ),
@@ -2586,7 +2586,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                   type: selectedType,
                 );
               },
-              child: Text('Create archive object',
+              child: Text('Create archive record',
                   style: KubusTypography.inter(fontWeight: FontWeight.w600)),
             ),
           ],
