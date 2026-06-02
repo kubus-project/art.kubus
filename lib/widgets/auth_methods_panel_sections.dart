@@ -198,6 +198,13 @@ class AuthMethodsPanelRegistrationMethods extends StatelessWidget {
         ],
       ],
     );
+    final constrainedRegisterMethods = Align(
+      alignment: Alignment.center,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 400),
+        child: registerMethods,
+      ),
+    );
 
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 220),
@@ -209,7 +216,9 @@ class AuthMethodsPanelRegistrationMethods extends StatelessWidget {
               ? 'register-wallet-inline'
               : 'register-auth-forms',
         ),
-        child: showInlineWalletFlow ? inlineWalletSurface : registerMethods,
+        child: showInlineWalletFlow
+            ? inlineWalletSurface
+            : constrainedRegisterMethods,
       ),
     );
   }

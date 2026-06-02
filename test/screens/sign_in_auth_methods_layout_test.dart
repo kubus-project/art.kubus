@@ -217,16 +217,33 @@ void main() {
     expect(find.byType(KubusAuthMethodButton), findsWidgets);
   });
 
-  test('web Google button shows Kubus surface over transparent GIS target', () {
+  test('web Google button uses visible official GIS button without transparent overlay',
+      () {
     final source = File('lib/widgets/google_sign_in_web_button_web.dart')
         .readAsStringSync();
 
     expect(source, contains('web.renderButton('));
-    expect(source, contains('supportsAuthenticate() => false'));
-    expect(source, contains('KubusAuthMethodButtonShell('));
-    expect(source, contains('transparent activation layer'));
-    expect(source, contains('Opacity('));
-    expect(source, contains('opacity: 0,'));
-    expect(source, contains('_KubusGoogleButtonSurface'));
+    expect(source, contains('authenticationEvents.listen'));
+    expect(source, isNot(contains('transparent activation layer')));
+    expect(source, isNot(contains('Opacity(')));
+    expect(source, isNot(contains('opacity: 0')));
+    expect(source, isNot(contains('_KubusGoogleButtonSurface')));
+    expect(source, contains('width: double.infinity'));
+    expect(source, contains('clamp(240.0, 400.0)'));
+  });
+
+  test('auth method panels keep Google email and wallet in the same width system',
+      () {
+    final signInSource =
+        File('lib/screens/auth/sign_in_screen.dart').readAsStringSync();
+    final panelSource =
+        File('lib/widgets/auth_methods_panel_sections.dart').readAsStringSync();
+
+    expect(signInSource, contains('GoogleSignInWebButton'));
+    expect(panelSource, contains('GoogleSignInWebButton'));
+    expect(
+      panelSource,
+      contains('crossAxisAlignment: CrossAxisAlignment.stretch'),
+    );
   });
 }

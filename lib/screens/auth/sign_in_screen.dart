@@ -878,6 +878,13 @@ class _SignInScreenState extends State<SignInScreen> {
         ],
       ],
     );
+    final constrainedAuthMethods = Align(
+      alignment: Alignment.center,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 400),
+        child: authMethods,
+      ),
+    );
 
     final inlineWallet = ConnectWallet(
       embedded: true,
@@ -897,7 +904,7 @@ class _SignInScreenState extends State<SignInScreen> {
         key: ValueKey<String>(
           _showInlineWalletFlow ? 'signin-wallet-inline' : 'signin-auth-forms',
         ),
-        child: _showInlineWalletFlow ? inlineWallet : authMethods,
+        child: _showInlineWalletFlow ? inlineWallet : constrainedAuthMethods,
       ),
     );
   }

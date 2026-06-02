@@ -6,16 +6,13 @@ import 'package:google_sign_in_web/web_only.dart' as web;
 
 import '../l10n/app_localizations.dart';
 import '../services/google_auth_service.dart';
-import '../utils/design_tokens.dart';
 import 'kubus_auth_method_button.dart';
 
 /// Web Google Sign-In button.
 ///
 /// google_sign_in_web 1.1.0 reports supportsAuthenticate() => false and throws
 /// from [GoogleSignIn.authenticate] on web. Its platform implementation
-/// requires [web.renderButton] for user-initiated sign-in. Keep that rendered
-/// element as a transparent activation layer while the visible button remains
-/// Kubus-styled.
+/// requires [web.renderButton] for user-initiated sign-in.
 class GoogleSignInWebButton extends StatefulWidget {
   const GoogleSignInWebButton({
     super.key,
@@ -119,11 +116,10 @@ class _GoogleSignInWebButtonState extends State<GoogleSignInWebButton> {
         return LayoutBuilder(
           builder: (context, constraints) {
             final brightness = widget.colorScheme.brightness;
-            final maxWidth =
+            final availableWidth =
                 constraints.maxWidth.isFinite ? constraints.maxWidth : 400.0;
             final officialWidth =
-                (maxWidth < 240.0 ? maxWidth : maxWidth.clamp(240.0, 400.0))
-                    .toDouble();
+                availableWidth.clamp(240.0, 400.0).toDouble();
             final shouldRecreateButton = _cachedOfficialButton == null ||
                 _cachedBrightness != brightness ||
                 _cachedMinWidth == null ||
@@ -150,86 +146,18 @@ class _GoogleSignInWebButtonState extends State<GoogleSignInWebButton> {
             return SizedBox(
               width: double.infinity,
               height: 56,
-              child: Center(
+              child: Align(
+                alignment: Alignment.center,
                 child: SizedBox(
                   width: officialWidth,
-                  height: 56,
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      _KubusGoogleButtonSurface(
-                        label: l10n.authContinueWithGoogleLabel,
-                        colorScheme: widget.colorScheme,
-                      ),
-                      Opacity(
-                        opacity: 0,
-                        alwaysIncludeSemantics: false,
-                        child: SizedBox.expand(
-                          child: _cachedOfficialButton!,
-                        ),
-                      ),
-                    ],
-                  ),
+                  height: 44,
+                  child: _cachedOfficialButton!,
                 ),
               ),
             );
           },
         );
       },
-    );
-  }
-}
-
-class _KubusGoogleButtonSurface extends StatelessWidget {
-  const _KubusGoogleButtonSurface({
-    required this.label,
-    required this.colorScheme,
-  });
-
-  final String label;
-  final ColorScheme colorScheme;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = colorScheme.brightness == Brightness.dark;
-    final foreground = isDark ? Colors.white : const Color(0xFF1F1F1F);
-
-    return KubusAuthMethodButtonShell(
-      foregroundColor: foreground,
-      child: Center(
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              SizedBox(
-                width: 22,
-                height: 22,
-                child: Center(
-                  child: Text(
-                    'G',
-                    style: KubusTypography.inter(
-                      fontSize: KubusHeaderMetrics.screenSubtitle,
-                      fontWeight: FontWeight.w800,
-                      color: foreground,
-                      height: 1,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: KubusSpacing.sm),
-              Text(
-                label,
-                style: KubusTypography.textTheme.labelLarge?.copyWith(
-                  color: foreground,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }
