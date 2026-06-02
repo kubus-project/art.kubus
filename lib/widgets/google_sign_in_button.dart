@@ -39,9 +39,8 @@ class _GoogleGlyph extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const SizedBox(
-      width: 22,
-      height: 22,
+    return const SizedBox.square(
+      dimension: KubusAuthMethodMetrics.iconSize,
       child: CustomPaint(painter: _GoogleGlyphPainter()),
     );
   }
@@ -57,9 +56,10 @@ class _GoogleGlyphPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final strokeWidth = size.width * 0.18;
-    final rect = Offset(strokeWidth / 2, strokeWidth / 2) &
-        Size(size.width - strokeWidth, size.height - strokeWidth);
+    final strokeWidth = size.width * 0.16;
+    final inset = strokeWidth * 0.9;
+    final rect = Offset(inset, inset) &
+        Size(size.width - inset * 2, size.height - inset * 2);
     Paint segment(Color color) => Paint()
       ..color = color
       ..style = PaintingStyle.stroke
@@ -74,12 +74,12 @@ class _GoogleGlyphPainter extends CustomPainter {
     final centerY = size.height * 0.51;
     canvas.drawLine(
       Offset(size.width * 0.52, centerY),
-      Offset(size.width * 0.91, centerY),
+      Offset(size.width * 0.86, centerY),
       segment(_blue)..strokeCap = StrokeCap.square,
     );
     canvas.drawLine(
-      Offset(size.width * 0.82, centerY),
-      Offset(size.width * 0.82, size.height * 0.68),
+      Offset(size.width * 0.78, centerY),
+      Offset(size.width * 0.78, size.height * 0.66),
       segment(_blue)..strokeCap = StrokeCap.square,
     );
   }

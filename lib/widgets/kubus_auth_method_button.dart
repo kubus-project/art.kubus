@@ -5,6 +5,14 @@ import '../utils/design_tokens.dart';
 import 'glass_components.dart';
 import 'kubus_button.dart';
 
+class KubusAuthMethodMetrics {
+  const KubusAuthMethodMetrics._();
+
+  static const double height = 56;
+  static const double iconSlot = 24;
+  static const double iconSize = 20;
+}
+
 class KubusAuthMethodButton extends StatelessWidget {
   const KubusAuthMethodButton({
     super.key,
@@ -19,7 +27,7 @@ class KubusAuthMethodButton extends StatelessWidget {
     this.foregroundColor,
     this.borderColor,
     this.variant = KubusButtonVariant.secondary,
-    this.height = 56,
+    this.height = KubusAuthMethodMetrics.height,
   }) : assert(icon == null || leading == null);
 
   final VoidCallback? onPressed;
@@ -52,13 +60,17 @@ class KubusAuthMethodButton extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              SizedBox(
-                height: 20,
-                width: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.5,
-                  valueColor:
-                      AlwaysStoppedAnimation<Color>(style.foregroundColor),
+              SizedBox.square(
+                dimension: KubusAuthMethodMetrics.iconSlot,
+                child: Center(
+                  child: SizedBox.square(
+                    dimension: KubusAuthMethodMetrics.iconSize,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      valueColor:
+                          AlwaysStoppedAnimation<Color>(style.foregroundColor),
+                    ),
+                  ),
                 ),
               ),
               if (loadingLabel != null) ...[
@@ -84,16 +96,29 @@ class KubusAuthMethodButton extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 if (leading != null) ...[
-                  IconTheme(
-                    data: IconThemeData(
-                      color: style.foregroundColor,
-                      size: 20,
+                  SizedBox.square(
+                    dimension: KubusAuthMethodMetrics.iconSlot,
+                    child: Center(
+                      child: IconTheme(
+                        data: IconThemeData(
+                          color: style.foregroundColor,
+                          size: KubusAuthMethodMetrics.iconSize,
+                        ),
+                        child: leading!,
+                      ),
                     ),
-                    child: leading!,
                   ),
                   const SizedBox(width: KubusSpacing.sm),
                 ] else if (icon != null) ...[
-                  Icon(icon, size: 20),
+                  SizedBox.square(
+                    dimension: KubusAuthMethodMetrics.iconSlot,
+                    child: Center(
+                      child: Icon(
+                        icon,
+                        size: KubusAuthMethodMetrics.iconSize,
+                      ),
+                    ),
+                  ),
                   const SizedBox(width: KubusSpacing.sm),
                 ],
                 Text(
@@ -157,7 +182,7 @@ class KubusAuthMethodButtonShell extends StatelessWidget {
     this.foregroundColor,
     this.borderColor,
     this.enabled = true,
-    this.height = 56,
+    this.height = KubusAuthMethodMetrics.height,
   });
 
   final Widget child;
@@ -231,7 +256,7 @@ class KubusAuthMethodButtonSkeleton extends StatelessWidget {
     super.key,
     this.label,
     this.variant = KubusButtonVariant.secondary,
-    this.height = 56,
+    this.height = KubusAuthMethodMetrics.height,
   });
 
   final String? label;
@@ -247,12 +272,17 @@ class KubusAuthMethodButtonSkeleton extends StatelessWidget {
       child: Center(
         child: label == null
             ? SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    Theme.of(context).colorScheme.onSurface,
+                width: KubusAuthMethodMetrics.iconSlot,
+                height: KubusAuthMethodMetrics.iconSlot,
+                child: Center(
+                  child: SizedBox.square(
+                    dimension: KubusAuthMethodMetrics.iconSize,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        Theme.of(context).colorScheme.onSurface,
+                      ),
+                    ),
                   ),
                 ),
               )
@@ -364,13 +394,17 @@ class _KubusAuthLoadingOverlay extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2.5,
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  style.foregroundColor,
+            SizedBox.square(
+              dimension: KubusAuthMethodMetrics.iconSlot,
+              child: Center(
+                child: SizedBox.square(
+                  dimension: KubusAuthMethodMetrics.iconSize,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      style.foregroundColor,
+                    ),
+                  ),
                 ),
               ),
             ),

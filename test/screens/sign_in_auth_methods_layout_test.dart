@@ -60,6 +60,10 @@ Future<void> _setSurfaceSize(WidgetTester tester, Size size) async {
   addTearDown(() async => tester.binding.setSurfaceSize(null));
 }
 
+Size _authButtonSize(WidgetTester tester, String label) {
+  return tester.getSize(find.widgetWithText(ElevatedButton, label));
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -113,6 +117,53 @@ void main() {
     await tester.tap(find.byType(GoogleSignInButton));
     await tester.pump();
     expect(pressed, isFalse);
+  });
+
+  testWidgets('Kubus auth method buttons use fixed full-width metrics',
+      (tester) async {
+    await tester.pumpWidget(
+      _buildApp(
+        child: const SizedBox(
+          width: 320,
+          child: KubusAuthMethodButton(
+            onPressed: null,
+            icon: Icons.email_outlined,
+            label: 'Email',
+          ),
+        ),
+      ),
+    );
+
+    expect(_authButtonSize(tester, 'Email'), const Size(320, 56));
+  });
+
+  testWidgets('Google button uses a fixed-size painted logo, not text glyph',
+      (tester) async {
+    await tester.pumpWidget(
+      _buildApp(
+        child: GoogleSignInButton(
+          onPressed: () async {},
+          isLoading: false,
+          colorScheme: ThemeData.light().colorScheme,
+        ),
+      ),
+    );
+
+    expect(
+      find.byWidgetPredicate((widget) => widget is Text && widget.data == 'G'),
+      findsNothing,
+    );
+    final googlePaint = find.descendant(
+      of: find.byType(GoogleSignInButton),
+      matching: find.byType(CustomPaint),
+    );
+    expect(
+      googlePaint.evaluate().map((element) {
+        final renderBox = element.renderObject! as RenderBox;
+        return renderBox.size;
+      }).contains(const Size(20, 20)),
+      isTrue,
+    );
   });
 
   testWidgets('email method opens compact form and focuses email field',
@@ -215,6 +266,52 @@ void main() {
     expect(find.text('Continue with Google'), findsOneWidget);
     expect(find.text('Use wallet'), findsOneWidget);
     expect(find.byType(KubusAuthMethodButton), findsWidgets);
+  });
+
+  testWidgets('registration auth method buttons share identical size',
+      (tester) async {
+    await tester.pumpWidget(
+      _buildApp(
+        child: SizedBox(
+          width: 600,
+          child: Builder(
+            builder: (context) {
+              final scheme = Theme.of(context).colorScheme;
+              return AuthMethodsPanelRegistrationMethods(
+                embedded: true,
+                colorScheme: scheme,
+                roles: KubusColorRoles.of(context),
+                showCompactEmailForm: false,
+                showInlineWalletFlow: false,
+                compactLayout: true,
+                enableWallet: true,
+                enableEmail: true,
+                enableGoogle: true,
+                showAlternativeMethods: true,
+                isGoogleSubmitting: false,
+                emailFormShell: const SizedBox.shrink(),
+                inlineWalletSurface: const SizedBox.shrink(),
+                onShowCompactEmailForm: () {},
+                onToggleAlternativeMethods: (_) {},
+                onShowConnectWalletModal: () {},
+                onGooglePressed: () {},
+                onWebGoogleAuthResult: (_) async {},
+                onWebGoogleAuthError: (_) {},
+              );
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final emailSize = _authButtonSize(tester, 'Continue with email');
+    final googleSize = _authButtonSize(tester, 'Continue with Google');
+    final walletSize = _authButtonSize(tester, 'Use wallet');
+
+    expect(emailSize, googleSize);
+    expect(emailSize, walletSize);
+    expect(emailSize.height, KubusAuthMethodMetrics.height);
   });
 
   test('web Google button uses the custom auth button without GIS rendering',
