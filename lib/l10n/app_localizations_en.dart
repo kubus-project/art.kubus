@@ -12,7 +12,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appTagline => 'kubus - your art companion.';
 
   @override
-  String get appTaglineSupport => 'Discover public art, artists, institutions and community stories through an open cultural map.';
+  String get appTaglineSupport => 'Discover public art, artists, institutions and community stories on an open cultural map.';
 
   @override
   String get exploreOnlyAppTitle => 'art.kubus - Explore';
@@ -21,7 +21,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exploreOnlyConnectWalletAction => 'Connect wallet';
 
   @override
-  String get exploreOnlyModeBanner => 'You are in public discovery mode. Profiles, community and the open art map work without a wallet; wallet tools can be enabled later.';
+  String get exploreOnlyModeBanner => 'You are exploring the public map. Profiles, community and discovery work without a wallet. Connect one later for archive records, digital editions and governance.';
 
   @override
   String get exploreOnlyDiscoverTitle => 'Discover art';
@@ -57,7 +57,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletPromptBody => 'A wallet connects your profile to attribution, archive records, digital editions and governance tools. Discovery and community remain open without it.';
 
   @override
-  String get walletPromptIntro => 'Use Wallet for:';
+  String get walletPromptIntro => 'Connect a wallet for:';
 
   @override
   String get walletPromptFeatureArchiveObjects => 'Archive records and digital editions';
@@ -66,7 +66,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletPromptFeatureCreateArtworks => 'Create and document artworks';
 
   @override
-  String get walletPromptFeatureCommunity => 'Participation records';
+  String get walletPromptFeatureCommunity => 'Participation and governance records';
 
   @override
   String get walletPromptMaybeLater => 'Maybe later';
@@ -1303,7 +1303,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingFlowWalletBackupTitle => 'Back up your recovery phrase';
 
   @override
-  String get onboardingFlowWalletBackupBody => 'This phrase restores account-linked Wallet access for digital ownership and future participation on a new device.';
+  String get onboardingFlowWalletBackupBody => 'This phrase restores wallet access for digital ownership, archive records and future participation on a new device.';
 
   @override
   String get onboardingFlowWalletBackupPrivacyWarning => 'Keep it private. Anyone with this phrase can fully control your wallet.';
@@ -1555,10 +1555,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingCommunityTitle => 'Join the art community';
 
   @override
-  String get onboardingCommunitySubtitle => 'Community first';
+  String get onboardingCommunitySubtitle => 'Community, collaboration and governance';
 
   @override
-  String get onboardingCommunityDescription => 'Follow artists and institutions, discuss work, collaborate, and make local cultural activity more visible.';
+  String get onboardingCommunityDescription => 'Follow artists and institutions, discuss works, collaborate and take part in shaping the platform.';
 
   @override
   String get onboardingCollectiblesTitle => 'Archive records and digital editions';
@@ -1667,7 +1667,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get permissionsNotificationsSubtitle => 'Stay connected';
 
   @override
-  String get permissionsNotificationsDescription => 'Get updates about new artworks, exhibitions, events and community activity. Participation records can be enabled later.';
+  String get permissionsNotificationsDescription => 'Get updates about new artworks, exhibitions, events, community activity and participation records.';
 
   @override
   String get permissionsNotificationsBenefit1 => 'New artwork updates';
@@ -1772,7 +1772,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopSettingsLocationHint => 'City, Country';
 
   @override
-  String get desktopSettingsWalletSectionSubtitle => 'Manage Wallet access, recovery, and participation features';
+  String get desktopSettingsWalletSectionSubtitle => 'Manage wallet access, recovery and ownership tools.';
 
   @override
   String get desktopSettingsViewWalletButton => 'View wallet';
@@ -1856,7 +1856,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopSettingsAchievementArtCollectorTitle => 'Art explorer';
 
   @override
-  String get desktopSettingsAchievementArtCollectorDescription => 'View 10 artworks with AR layers';
+  String get desktopSettingsAchievementArtCollectorDescription => 'Discover 10 artworks or AR layers.';
 
   @override
   String get desktopSettingsAchievementCommunityMemberTitle => 'Community member';

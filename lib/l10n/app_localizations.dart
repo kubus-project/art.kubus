@@ -104,7 +104,7 @@ abstract class AppLocalizations {
   /// No description provided for @appTaglineSupport.
   ///
   /// In en, this message translates to:
-  /// **'Discover public art, artists, institutions and community stories through an open cultural map.'**
+  /// **'Discover public art, artists, institutions and community stories on an open cultural map.'**
   String get appTaglineSupport;
 
   /// No description provided for @exploreOnlyAppTitle.
@@ -122,7 +122,7 @@ abstract class AppLocalizations {
   /// No description provided for @exploreOnlyModeBanner.
   ///
   /// In en, this message translates to:
-  /// **'You are in public discovery mode. Profiles, community and the open art map work without a wallet; wallet tools can be enabled later.'**
+  /// **'You are exploring the public map. Profiles, community and discovery work without a wallet. Connect one later for archive records, digital editions and governance.'**
   String get exploreOnlyModeBanner;
 
   /// No description provided for @exploreOnlyDiscoverTitle.
@@ -194,7 +194,7 @@ abstract class AppLocalizations {
   /// No description provided for @walletPromptIntro.
   ///
   /// In en, this message translates to:
-  /// **'Use Wallet for:'**
+  /// **'Connect a wallet for:'**
   String get walletPromptIntro;
 
   /// No description provided for @walletPromptFeatureArchiveObjects.
@@ -212,7 +212,7 @@ abstract class AppLocalizations {
   /// No description provided for @walletPromptFeatureCommunity.
   ///
   /// In en, this message translates to:
-  /// **'Participation records'**
+  /// **'Participation and governance records'**
   String get walletPromptFeatureCommunity;
 
   /// No description provided for @walletPromptMaybeLater.
@@ -2618,7 +2618,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingFlowWalletBackupBody.
   ///
   /// In en, this message translates to:
-  /// **'This phrase restores account-linked Wallet access for digital ownership and future participation on a new device.'**
+  /// **'This phrase restores wallet access for digital ownership, archive records and future participation on a new device.'**
   String get onboardingFlowWalletBackupBody;
 
   /// No description provided for @onboardingFlowWalletBackupPrivacyWarning.
@@ -3110,13 +3110,13 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingCommunitySubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Community first'**
+  /// **'Community, collaboration and governance'**
   String get onboardingCommunitySubtitle;
 
   /// No description provided for @onboardingCommunityDescription.
   ///
   /// In en, this message translates to:
-  /// **'Follow artists and institutions, discuss work, collaborate, and make local cultural activity more visible.'**
+  /// **'Follow artists and institutions, discuss works, collaborate and take part in shaping the platform.'**
   String get onboardingCommunityDescription;
 
   /// No description provided for @onboardingCollectiblesTitle.
@@ -3326,7 +3326,7 @@ abstract class AppLocalizations {
   /// No description provided for @permissionsNotificationsDescription.
   ///
   /// In en, this message translates to:
-  /// **'Get updates about new artworks, exhibitions, events and community activity. Participation records can be enabled later.'**
+  /// **'Get updates about new artworks, exhibitions, events, community activity and participation records.'**
   String get permissionsNotificationsDescription;
 
   /// No description provided for @permissionsNotificationsBenefit1.
@@ -3536,7 +3536,7 @@ abstract class AppLocalizations {
   /// No description provided for @desktopSettingsWalletSectionSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Manage Wallet access, recovery, and participation features'**
+  /// **'Manage wallet access, recovery and ownership tools.'**
   String get desktopSettingsWalletSectionSubtitle;
 
   /// No description provided for @desktopSettingsViewWalletButton.
@@ -3704,7 +3704,7 @@ abstract class AppLocalizations {
   /// No description provided for @desktopSettingsAchievementArtCollectorDescription.
   ///
   /// In en, this message translates to:
-  /// **'View 10 artworks with AR layers'**
+  /// **'Discover 10 artworks or AR layers.'**
   String get desktopSettingsAchievementArtCollectorDescription;
 
   /// No description provided for @desktopSettingsAchievementCommunityMemberTitle.
