@@ -16,6 +16,7 @@ import '../../services/telemetry/telemetry_service.dart';
 import '../../widgets/google_sign_in_button.dart';
 import '../../widgets/google_sign_in_web_button.dart';
 import '../../widgets/secure_account_password_prompt.dart';
+import '../../widgets/kubus_auth_method_button.dart';
 import '../../widgets/kubus_button.dart';
 import '../../widgets/auth_entry_shell.dart';
 import '../../widgets/auth/post_auth_loading_screen.dart';
@@ -67,7 +68,6 @@ class _SignInScreenState extends State<SignInScreen> {
   String _googleAuthDiagStage = 'idle';
   String? _googleAuthDiagCode;
   bool _showCompactEmailForm = false;
-  bool _showAlternativeMethods = false;
   bool _walletFlowOpening = false;
   bool _showInlineWalletFlow = false;
   int _walletInlineInitialStep = 0;
@@ -545,7 +545,6 @@ class _SignInScreenState extends State<SignInScreen> {
           _walletInlineInitialStep = initialStep;
           _walletInlineRequiredWalletAddress = requiredWalletAddress;
           _showCompactEmailForm = false;
-          _showAlternativeMethods = false;
         });
       }
 
@@ -724,12 +723,7 @@ class _SignInScreenState extends State<SignInScreen> {
       roles.web3MarketplaceAccent,
       isDark ? 0.24 : 0.14,
     )!;
-    final secondarySurface = colorScheme.surface.withValues(
-      alpha: isDark ? 0.18 : 0.78,
-    );
-    final hasSecondaryMethods = enableGoogle || enableEmail;
-    final shouldShowSecondaryMethods =
-        !showEmailForm && (!enableWallet || _showAlternativeMethods);
+    final hasPrimaryMethods = enableGoogle || enableEmail;
 
     final authMethods = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -754,162 +748,115 @@ class _SignInScreenState extends State<SignInScreen> {
           ),
           SizedBox(height: compactLayout ? KubusSpacing.md : KubusSpacing.lg),
         ],
-        if (!showEmailForm && enableWallet) ...[
-          KubusButton(
-            onPressed: () => unawaited(_showConnectWalletFlow()),
-            icon: Icons.account_balance_wallet_outlined,
-            label: l10n.authConnectWalletButton,
-            variant: KubusButtonVariant.primary,
-            backgroundColor: walletSurface,
+        if (!showEmailForm && enableGoogle) ...[
+          if (kIsWeb)
+            GoogleSignInWebButton(
+              colorScheme: colorScheme,
+              isLoading: _isGoogleSubmitting,
+              onAuthResult: (GoogleAuthResult googleResult) async {
+                if (mounted) {
+                  setState(() => _isGoogleSubmitting = true);
+                }
+                _setGoogleAuthDiagnostics('web_auth_event');
+                try {
+                  unawaited(
+                    TelemetryService().trackSignInAttempt(method: 'google'),
+                  );
+                  await _completeGoogleSignIn(googleResult);
+                  _setGoogleAuthDiagnostics('success');
+                  unawaited(
+                    TelemetryService().trackSignInSuccess(method: 'google'),
+                  );
+                } catch (error) {
+                  _setGoogleAuthDiagnostics(
+                    'web_error',
+                    code: _googleErrorCode(error),
+                  );
+                  unawaited(
+                    TelemetryService().trackSignInFailure(
+                      method: 'google',
+                      errorClass: error.runtimeType.toString(),
+                    ),
+                  );
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showKubusSnackBar(
+                      SnackBar(content: Text(l10n.authGoogleSignInFailed)),
+                    );
+                  }
+                } finally {
+                  if (mounted) {
+                    setState(() => _isGoogleSubmitting = false);
+                  }
+                }
+              },
+              onAuthError: (Object error) {
+                _setGoogleAuthDiagnostics(
+                  'web_plugin_error',
+                  code: _googleErrorCode(error),
+                );
+                unawaited(
+                  TelemetryService().trackSignInFailure(
+                    method: 'google',
+                    errorClass: error.runtimeType.toString(),
+                  ),
+                );
+                if (!mounted) return;
+                setState(() => _isGoogleSubmitting = false);
+                ScaffoldMessenger.of(context).showKubusSnackBar(
+                  SnackBar(content: Text(l10n.authGoogleSignInFailed)),
+                );
+              },
+            )
+          else
+            GoogleSignInButton(
+              onPressed: _signInWithGoogle,
+              isLoading: _isGoogleSubmitting,
+              colorScheme: colorScheme,
+            ),
+          if (enableEmail || enableWallet) SizedBox(height: methodGap),
+        ],
+        if (!showEmailForm && enableEmail) ...[
+          KubusAuthMethodButton(
+            onPressed: () {
+              setState(() {
+                _showCompactEmailForm = true;
+              });
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) {
+                  _emailFocusNode.requestFocus();
+                }
+              });
+            },
+            icon: Icons.email_outlined,
+            label: l10n.authContinueWithEmail,
+            variant: KubusButtonVariant.secondary,
+            backgroundColor: emailSurface,
             foregroundColor: colorScheme.onSurface,
-            isFullWidth: true,
           ),
-          if (hasSecondaryMethods) ...[
-            SizedBox(height: methodGap),
+          if (enableWallet) SizedBox(height: methodGap),
+        ],
+        if (!showEmailForm && enableWallet) ...[
+          if (hasPrimaryMethods) ...[
             _buildMethodDivider(l10n.commonOr),
             SizedBox(height: methodGap),
-            TextButton.icon(
-              onPressed: () {
-                setState(() {
-                  _showAlternativeMethods = !_showAlternativeMethods;
-                });
-              },
-              style: TextButton.styleFrom(
-                foregroundColor: colorScheme.onSurface.withValues(alpha: 0.82),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: KubusSpacing.sm,
-                  vertical: KubusSpacing.xs,
-                ),
-              ),
-              icon: Icon(
-                _showAlternativeMethods
-                    ? Icons.expand_less_rounded
-                    : Icons.expand_more_rounded,
-              ),
-              label: Text(
-                _showAlternativeMethods
-                    ? l10n.authHideOtherOptions
-                    : l10n.authShowOtherOptions,
-              ),
-            ),
-            if (_showAlternativeMethods) SizedBox(height: methodGap),
           ],
-        ],
-        if (shouldShowSecondaryMethods)
-          Container(
-            decoration: BoxDecoration(
-              color: secondarySurface,
-              borderRadius: BorderRadius.circular(KubusRadius.lg),
-              border: Border.all(
-                color: colorScheme.outlineVariant.withValues(alpha: 0.2),
-              ),
-            ),
-            padding: EdgeInsets.all(
-                compactLayout ? KubusSpacing.sm : KubusSpacing.md),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  l10n.authOtherOptionsLabel,
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: colorScheme.onSurface.withValues(alpha: 0.78),
-                        fontWeight: FontWeight.w700,
-                      ),
+          Text(
+            l10n.authSelfCustodyWalletHint,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurface.withValues(alpha: 0.64),
+                  height: 1.35,
                 ),
-                SizedBox(height: methodGap),
-                if (enableGoogle) ...[
-                  if (kIsWeb)
-                    GoogleSignInWebButton(
-                      colorScheme: colorScheme,
-                      isLoading: _isGoogleSubmitting,
-                      onAuthResult: (GoogleAuthResult googleResult) async {
-                        if (mounted) {
-                          setState(() => _isGoogleSubmitting = true);
-                        }
-                        _setGoogleAuthDiagnostics('web_auth_event');
-                        try {
-                          unawaited(
-                            TelemetryService()
-                                .trackSignInAttempt(method: 'google'),
-                          );
-                          await _completeGoogleSignIn(googleResult);
-                          _setGoogleAuthDiagnostics('success');
-                          unawaited(
-                            TelemetryService()
-                                .trackSignInSuccess(method: 'google'),
-                          );
-                        } catch (error) {
-                          _setGoogleAuthDiagnostics(
-                            'web_error',
-                            code: _googleErrorCode(error),
-                          );
-                          unawaited(
-                            TelemetryService().trackSignInFailure(
-                              method: 'google',
-                              errorClass: error.runtimeType.toString(),
-                            ),
-                          );
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showKubusSnackBar(
-                              SnackBar(
-                                  content: Text(l10n.authGoogleSignInFailed)),
-                            );
-                          }
-                        } finally {
-                          if (mounted) {
-                            setState(() => _isGoogleSubmitting = false);
-                          }
-                        }
-                      },
-                      onAuthError: (Object error) {
-                        _setGoogleAuthDiagnostics(
-                          'web_plugin_error',
-                          code: _googleErrorCode(error),
-                        );
-                        unawaited(
-                          TelemetryService().trackSignInFailure(
-                            method: 'google',
-                            errorClass: error.runtimeType.toString(),
-                          ),
-                        );
-                        if (!mounted) return;
-                        setState(() => _isGoogleSubmitting = false);
-                        ScaffoldMessenger.of(context).showKubusSnackBar(
-                          SnackBar(content: Text(l10n.authGoogleSignInFailed)),
-                        );
-                      },
-                    )
-                  else
-                    GoogleSignInButton(
-                      onPressed: _signInWithGoogle,
-                      isLoading: _isGoogleSubmitting,
-                      colorScheme: colorScheme,
-                    ),
-                  SizedBox(height: methodGap),
-                ],
-                if (enableEmail)
-                  KubusButton(
-                    onPressed: () {
-                      setState(() {
-                        _showCompactEmailForm = true;
-                        _showAlternativeMethods = true;
-                      });
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        if (mounted) {
-                          _emailFocusNode.requestFocus();
-                        }
-                      });
-                    },
-                    icon: Icons.email_outlined,
-                    label: l10n.authSignInWithEmail,
-                    variant: KubusButtonVariant.secondary,
-                    backgroundColor: emailSurface,
-                    foregroundColor: colorScheme.onSurface,
-                    isFullWidth: true,
-                  ),
-              ],
-            ),
           ),
+          const SizedBox(height: KubusSpacing.sm),
+          KubusAuthMethodButton(
+            onPressed: () => unawaited(_showConnectWalletFlow()),
+            icon: Icons.account_balance_wallet_outlined,
+            label: l10n.authUseWalletInstead,
+            variant: KubusButtonVariant.secondary,
+            backgroundColor: walletSurface,
+            foregroundColor: colorScheme.onSurface,
+          ),
+        ],
         if (showEmailForm) ...[
           _buildEmailForm(),
           SizedBox(height: methodGap),

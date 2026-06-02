@@ -34,7 +34,10 @@ void main() {
     await tester.pumpWidget(_buildApp(size: const Size(390, 844)));
     await tester.pump(const Duration(milliseconds: 700));
 
-    final openEmailForm = find.text('Sign in with email');
+    var openEmailForm = find.text('Continue with email');
+    if (openEmailForm.evaluate().isEmpty) {
+      openEmailForm = find.text('Sign in with email');
+    }
     if (openEmailForm.evaluate().isNotEmpty) {
       await tester.tap(openEmailForm.first);
       await tester.pump();
@@ -72,7 +75,8 @@ void main() {
     await tester.pump(const Duration(milliseconds: 700));
 
     final orLabel = find.byWidgetPredicate(
-      (widget) => widget is Text && (widget.data ?? '').trim().toLowerCase() == 'or',
+      (widget) =>
+          widget is Text && (widget.data ?? '').trim().toLowerCase() == 'or',
       description: 'localized "or" divider label',
     );
     expect(orLabel, findsWidgets);
@@ -114,8 +118,7 @@ void main() {
 
     final ElevatedButton primaryAction =
         tester.widget<ElevatedButton>(find.byType(ElevatedButton).first);
-    final hoverOverlay = primaryAction.style
-        ?.overlayColor
+    final hoverOverlay = primaryAction.style?.overlayColor
         ?.resolve(<WidgetState>{WidgetState.hovered});
     expect(hoverOverlay, isNotNull);
   });

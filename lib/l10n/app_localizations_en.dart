@@ -1090,6 +1090,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authConnectWalletButton => 'Connect wallet';
 
   @override
+  String get authUseWalletInstead => 'Use wallet instead';
+
+  @override
+  String get authSelfCustodyWalletHint => 'Already using a self-custody wallet? Connect it to continue with your existing art.kubus identity.';
+
+  @override
   String get authConnectWalletModalTitle => 'Connect wallet';
 
   @override

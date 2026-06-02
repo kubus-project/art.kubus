@@ -452,6 +452,8 @@
     }
   },
   "authConnectWalletButton": "Poveži denarnico",
+  "authUseWalletInstead": "Uporabi denarnico",
+  "authSelfCustodyWalletHint": "Če že uporabljaš samoupravljano denarnico, jo poveži za nadaljevanje z obstoječo identiteto art.kubus.",
   "authConnectWalletModalTitle": "Poveži denarnico",
   "authConnectWalletModalDescriptionSignIn": "Ta korak je izbiren. Podpis odobri samo, če želiš denarniški dostop na tej napravi. Za prijavo ni provizije.",
   "authConnectWalletModalDescriptionRegister": "Ta korak je izbiren. Podpis odobri samo, če želiš denarniški dostop po ustvarjanju profila. Provizije ni.",

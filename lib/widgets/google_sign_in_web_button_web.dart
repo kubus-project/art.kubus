@@ -4,8 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:google_sign_in_web/web_only.dart' as web;
 
+import '../l10n/app_localizations.dart';
 import '../services/google_auth_service.dart';
-import '../utils/design_tokens.dart';
+import 'kubus_auth_method_button.dart';
 
 /// Web Google Sign-In button rendered by official GIS SDK UI.
 class GoogleSignInWebButton extends StatefulWidget {
@@ -75,6 +76,8 @@ class _GoogleSignInWebButtonState extends State<GoogleSignInWebButton> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return FutureBuilder<void>(
       future: _initializeFuture,
       builder: (context, snapshot) {
@@ -86,73 +89,63 @@ class _GoogleSignInWebButtonState extends State<GoogleSignInWebButton> {
               widget.onAuthError?.call(snapshot.error!);
             });
           }
-          return const SizedBox(height: 42);
+          return KubusAuthMethodButtonSkeleton(
+            label: l10n.authContinueWithGoogleLabel,
+          );
         }
 
         if (snapshot.connectionState != ConnectionState.done) {
-          return const SizedBox(height: 56);
+          return KubusAuthMethodButtonSkeleton(
+            label: l10n.authContinueWithGoogleLabel,
+          );
         }
 
-        return SizedBox(
-          height: 56,
-          width: double.infinity,
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final brightness = widget.colorScheme.brightness;
-              final maxWidth = constraints.maxWidth.isFinite
-                  ? constraints.maxWidth
-                  : 400.0;
-              final minWidth = maxWidth.clamp(260.0, 400.0);
-              final shouldRecreateButton = _cachedOfficialButton == null ||
-                  _cachedBrightness != brightness ||
-                  _cachedMinWidth == null ||
-                  (_cachedMinWidth! - minWidth).abs() > 1;
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final brightness = widget.colorScheme.brightness;
+            final maxWidth =
+                constraints.maxWidth.isFinite ? constraints.maxWidth : 400.0;
+            final officialWidth =
+                (maxWidth < 240.0 ? maxWidth : maxWidth.clamp(240.0, 400.0))
+                    .toDouble();
+            final shouldRecreateButton = _cachedOfficialButton == null ||
+                _cachedBrightness != brightness ||
+                _cachedMinWidth == null ||
+                (_cachedMinWidth! - officialWidth).abs() > 1;
 
-              if (shouldRecreateButton) {
-                _cachedOfficialButton = web.renderButton(
-                  configuration: web.GSIButtonConfiguration(
-                    type: web.GSIButtonType.standard,
-                    size: web.GSIButtonSize.large,
-                    text: web.GSIButtonText.continueWith,
-                    shape: web.GSIButtonShape.rectangular,
-                    theme: brightness == Brightness.dark
-                        ? web.GSIButtonTheme.filledBlack
-                        : web.GSIButtonTheme.outline,
-                    logoAlignment: web.GSIButtonLogoAlignment.left,
-                    minimumWidth: minWidth,
-                  ),
-                );
-                _cachedBrightness = brightness;
-                _cachedMinWidth = minWidth;
-              }
+            if (shouldRecreateButton) {
+              _cachedOfficialButton = web.renderButton(
+                configuration: web.GSIButtonConfiguration(
+                  type: web.GSIButtonType.standard,
+                  size: web.GSIButtonSize.large,
+                  text: web.GSIButtonText.continueWith,
+                  shape: web.GSIButtonShape.rectangular,
+                  theme: brightness == Brightness.dark
+                      ? web.GSIButtonTheme.filledBlack
+                      : web.GSIButtonTheme.outline,
+                  logoAlignment: web.GSIButtonLogoAlignment.left,
+                  minimumWidth: officialWidth,
+                ),
+              );
+              _cachedBrightness = brightness;
+              _cachedMinWidth = officialWidth;
+            }
 
-              return Stack(
-                fit: StackFit.expand,
-                children: [
-                  AbsorbPointer(
-                    absorbing: widget.isLoading,
+            return KubusAuthMethodButtonShell(
+              isLoading: widget.isLoading,
+              loadingLabel: l10n.authGoogleConnectingLabel,
+              child: AbsorbPointer(
+                absorbing: widget.isLoading,
+                child: Center(
+                  child: SizedBox(
+                    width: officialWidth,
+                    height: 44,
                     child: _cachedOfficialButton!,
                   ),
-                  if (widget.isLoading)
-                    Container(
-                      width: double.infinity,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        color: widget.colorScheme.surface.withValues(alpha: 0.22),
-                        borderRadius: BorderRadius.circular(KubusRadius.sm),
-                      ),
-                      child: const Center(
-                        child: SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                      ),
-                    ),
-                ],
-              );
-            },
-          ),
+                ),
+              ),
+            );
+          },
         );
       },
     );

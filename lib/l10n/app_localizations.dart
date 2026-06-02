@@ -2189,6 +2189,18 @@ abstract class AppLocalizations {
   /// **'Connect wallet'**
   String get authConnectWalletButton;
 
+  /// No description provided for @authUseWalletInstead.
+  ///
+  /// In en, this message translates to:
+  /// **'Use wallet instead'**
+  String get authUseWalletInstead;
+
+  /// No description provided for @authSelfCustodyWalletHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Already using a self-custody wallet? Connect it to continue with your existing art.kubus identity.'**
+  String get authSelfCustodyWalletHint;
+
   /// No description provided for @authConnectWalletModalTitle.
   ///
   /// In en, this message translates to:

@@ -1090,6 +1090,12 @@ class AppLocalizationsSl extends AppLocalizations {
   String get authConnectWalletButton => 'Poveži denarnico';
 
   @override
+  String get authUseWalletInstead => 'Uporabi denarnico';
+
+  @override
+  String get authSelfCustodyWalletHint => 'Če že uporabljaš samoupravljano denarnico, jo poveži za nadaljevanje z obstoječo identiteto art.kubus.';
+
+  @override
   String get authConnectWalletModalTitle => 'Poveži denarnico';
 
   @override
