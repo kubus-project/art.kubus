@@ -32,7 +32,7 @@ class KubusMapMarkerOverlayLayer extends StatelessWidget {
 
   final VoidCallback onDismiss;
 
-  /// Optional layer painted behind the animated overlay content.
+  /// Backdrop painted behind the animated overlay content.
   ///
   /// Used for effects like the mobile marker tap ripple.
   final Widget? underlay;

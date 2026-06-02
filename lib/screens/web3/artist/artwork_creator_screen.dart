@@ -1074,7 +1074,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
           title: 'Create digital archive object',
           subtitle: (AppConfig.isFeatureEnabled('web3') &&
                   AppConfig.isFeatureEnabled('nftMinting'))
-              ? 'You can create it after publishing (optional wallet required).'
+              ? 'You can create it after publishing (wallet required).'
               : 'Digital archive object creation is currently unavailable.',
           value: draft.mintNftAfterPublish,
           onChanged: (AppConfig.isFeatureEnabled('web3') &&

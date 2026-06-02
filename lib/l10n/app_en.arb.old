@@ -2653,7 +2653,7 @@
   "artistStudioCrossRoleConflictTitle": "Role conflict detected",
   "artistStudioCrossRoleConflictDescription": "We detected an existing institution record for this wallet. Clear it from settings before applying as an artist.",
   "artistStudioDaoCardTitle": "Artist application (DAO)",
-  "artistStudioDaoCardSubtitle": "Submit your practice for community review through the DAO. This is part of how art.kubus opens artist tools and future participation.",
+  "artistStudioDaoCardSubtitle": "Submit your practice for governance review. This is how art.kubus opens artist tools while keeping the platform community-led.",
   "artistStudioDaoStatusApproved": "APPROVED",
   "artistStudioDaoStatusPending": "PENDING",
   "artistStudioDaoStatusRejected": "REJECTED",

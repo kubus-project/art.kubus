@@ -18,10 +18,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exploreOnlyAppTitle => 'art.kubus - Explore';
 
   @override
-  String get exploreOnlyConnectWalletAction => 'Connect optional wallet';
+  String get exploreOnlyConnectWalletAction => 'Connect wallet';
 
   @override
-  String get exploreOnlyModeBanner => 'You are in public discovery mode. Profiles, community and the open art map work without a wallet; optional wallet tools can be enabled later.';
+  String get exploreOnlyModeBanner => 'You are in public discovery mode. Profiles, community and the open art map work without a wallet; wallet tools can be enabled later.';
 
   @override
   String get exploreOnlyDiscoverTitle => 'Discover art';
@@ -45,22 +45,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exploreOnlyCommunityDescription => 'Follow artists, institutions and discussions around public art.';
 
   @override
-  String get exploreOnlyArtifactsTitle => 'Digital artifacts';
+  String get exploreOnlyArtifactsTitle => 'Digital editions';
 
   @override
-  String get exploreOnlyArtifactsDescription => 'Discover optional archive objects connected to artworks.';
+  String get exploreOnlyArtifactsDescription => 'Discover archive records and digital editions connected to artworks.';
 
   @override
-  String get walletPromptTitle => 'Connect optional wallet';
+  String get walletPromptTitle => 'Connect wallet';
 
   @override
-  String get walletPromptBody => 'This optional infrastructure feature uses a wallet for attribution and archive records.';
+  String get walletPromptBody => 'A wallet connects your profile to attribution, archive records, digital editions and governance tools. Discovery and community remain open without it.';
 
   @override
-  String get walletPromptIntro => 'Set up wallet access only if you want:';
+  String get walletPromptIntro => 'Connect wallet access if you want:';
 
   @override
-  String get walletPromptFeatureArchiveObjects => 'Digital archive objects';
+  String get walletPromptFeatureArchiveObjects => 'Archive records and digital editions';
 
   @override
   String get walletPromptFeatureCreateArtworks => 'Create and document artworks';
@@ -72,7 +72,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletPromptMaybeLater => 'Maybe later';
 
   @override
-  String get walletPromptSetUpAction => 'Set up optional wallet';
+  String get walletPromptSetUpAction => 'Set up wallet';
 
   @override
   String get walletHomeArchiveObjectFallbackTitle => 'Archive object';
@@ -81,7 +81,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletHomeCollectibleFallbackTitle => 'Collectible';
 
   @override
-  String get walletHomeConnectWalletToFetchCollectibles => 'Connect your wallet to fetch collectibles.';
+  String get walletHomeConnectWalletToFetchCollectibles => 'Connect your wallet to load digital editions.';
 
   @override
   String get artworkDraftCoverRequired => 'Cover image is required.';
@@ -138,7 +138,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String archiveObjectCreatedReason(Object artworkTitle, Object tokenId) {
-    return 'Created archive object for "$artworkTitle" (Edition #$tokenId)';
+    return 'Created archive object for \"$artworkTitle\" (Edition #$tokenId)';
   }
 
   @override
@@ -207,7 +207,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String pushArchiveObjectCreatingBody(Object artworkTitle) {
-    return 'Creating archive object for "$artworkTitle"';
+    return 'Creating archive object for \"$artworkTitle\"';
   }
 
   @override
@@ -215,7 +215,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String pushArchiveObjectCreatedBody(Object artworkTitle) {
-    return '"$artworkTitle" now has an optional archive record';
+    return '\"$artworkTitle\" now has an optional archive record';
   }
 
   @override
@@ -223,7 +223,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String pushArchiveObjectCreationFailedBody(Object artworkTitle) {
-    return 'Could not create "$artworkTitle" archive object. Please try again.';
+    return 'Could not create \"$artworkTitle\" archive object. Please try again.';
   }
 
   @override
@@ -845,7 +845,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authRegisterSubtitle => 'Create a profile first. Discovery, community, and local art access work without a wallet.';
 
   @override
-  String get authHighlightSignInMethods => 'Email, Google, or optional wallet sign-in';
+  String get authHighlightSignInMethods => 'Email, Google, or wallet sign-in';
 
   @override
   String get authHighlightNoFees => 'No fee is required to sign in';
@@ -854,7 +854,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authHighlightControl => 'Explore art and community without a wallet';
 
   @override
-  String get authHighlightOnboardingOptions => 'Choose email, Google, or optional wallet sign-in';
+  String get authHighlightOnboardingOptions => 'Choose email, Google, or wallet sign-in';
 
   @override
   String get authHighlightKeysLocal => 'Private keys stay with you';
@@ -1087,10 +1087,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get authConnectWalletButton => 'Connect optional wallet';
+  String get authConnectWalletButton => 'Connect wallet';
 
   @override
-  String get authConnectWalletModalTitle => 'Connect an optional wallet';
+  String get authConnectWalletModalTitle => 'Connect wallet';
 
   @override
   String get authConnectWalletModalDescriptionSignIn => 'This step is optional. Approve a signature only if you want wallet-based access on this device. No fee is required to sign in.';
@@ -1207,7 +1207,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingFlowWelcomeTitle => 'art.kubus is an open art platform.';
 
   @override
-  String get onboardingFlowWelcomeBody => 'Start with discovery, public-space art, artists, institutions, and community. Profile setup comes first; wallet tools can wait.';
+  String get onboardingFlowWelcomeBody => 'Start with art, places, and community. Account setup and wallet tools can wait.';
 
   @override
   String get onboardingFlowWelcomeInfoAccount => 'Create a profile when you want a personal feed, follows, and community participation.';
@@ -1225,7 +1225,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingFlowAccountTitle => 'Create your profile first';
 
   @override
-  String get onboardingFlowAccountBody => 'Use email, Google, or optional wallet sign-in. Discovery, map browsing, and community access work without a wallet.';
+  String get onboardingFlowAccountBody => 'Use email, Google, or wallet sign-in. Discovery, map browsing, and community access work without a wallet.';
 
   @override
   String get onboardingFlowAccountVerifyHint => 'If you registered with email, verify your email before signing in.';
@@ -1425,7 +1425,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingFlowProfileAvatarPickFailed => 'Unable to select avatar right now.';
 
   @override
-  String get onboardingFlowProfileInstitutionIntro => 'Add the organization details people should see first. Community review comes right after this.';
+  String get onboardingFlowProfileInstitutionIntro => 'Add the organization details people should see first. Community governance review comes right after this.';
 
   @override
   String get onboardingFlowProfileCreatorIntro => 'Set up your public creator profile now so your review submission has the right context.';
@@ -1472,19 +1472,19 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get onboardingFlowDaoReviewTitle => 'Community review';
+  String get onboardingFlowDaoReviewTitle => 'Governance review';
 
   @override
-  String get onboardingFlowDaoReviewInstitutionBody => 'Submit your institution details for community review before account setup is completed.';
+  String get onboardingFlowDaoReviewInstitutionBody => 'Submit your institution details for community governance review before account setup is completed.';
 
   @override
-  String get onboardingFlowDaoReviewArtistBody => 'Submit your practice for community review before account setup is completed.';
+  String get onboardingFlowDaoReviewArtistBody => 'Submit your practice for community governance review before account setup is completed.';
 
   @override
   String get onboardingFlowDaoReviewCompleteFormError => 'Complete the review form before continuing.';
 
   @override
-  String get onboardingFlowDaoReviewSubmitFailed => 'Unable to submit the community review right now.';
+  String get onboardingFlowDaoReviewSubmitFailed => 'Unable to submit the governance review right now.';
 
   @override
   String onboardingFlowDaoReviewStatus(Object status) {
@@ -1516,7 +1516,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingFlowDaoReviewReviewerNotes => 'Reviewer notes';
 
   @override
-  String get onboardingFlowDaoReviewSubmitAction => 'Submit for community review';
+  String get onboardingFlowDaoReviewSubmitAction => 'Submit for governance review';
 
   @override
   String get onboardingWelcomeTitle => 'art.kubus is an open art platform.';
@@ -1525,7 +1525,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingWelcomeSubtitle => 'Community-first cultural discovery';
 
   @override
-  String get onboardingWelcomeDescription => 'Discover local art, artists, institutions, exhibitions, and public-space works. art.kubus is a research-development prototype for open cultural infrastructure; wallets, AR, governance, and recognition records are optional layers.';
+  String get onboardingWelcomeDescription => 'Discover local art, creators, institutions, exhibitions and works in public space. art.kubus connects the map, community, AR, wallet, archive records and governance into one open cultural infrastructure.';
 
   @override
   String get onboardingExploreTitle => 'Explore the open art map';
@@ -1555,13 +1555,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingCommunityDescription => 'Follow artists and institutions, discuss work, collaborate, and make local cultural activity more visible.';
 
   @override
-  String get onboardingCollectiblesTitle => 'Digital souvenirs and participation records';
+  String get onboardingCollectiblesTitle => 'Archive records and digital editions';
 
   @override
-  String get onboardingCollectiblesSubtitle => 'Optional cultural archive layer';
+  String get onboardingCollectiblesSubtitle => 'Cultural memory, visits and ownership';
 
   @override
-  String get onboardingCollectiblesDescription => 'When you visit or contribute to public art, kubus can optionally record that participation as a digital souvenir or archive record. Discovery and community work without a wallet.';
+  String get onboardingCollectiblesDescription => 'When you visit or contribute to public art, kubus can record that context as an archive record or digital edition. Discovery and community remain open without a wallet.';
 
   @override
   String get onboardingGrantPermissions => 'Grant permissions';
@@ -1907,7 +1907,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopSettingsFeatureArDiscoveryDescription => 'Prepare for optional AR previews as pilots become available.';
 
   @override
-  String get desktopSettingsFeatureWeb3IntegrationTitle => 'Optional wallet layer';
+  String get desktopSettingsFeatureWeb3IntegrationTitle => 'Wallet and Web3 access';
 
   @override
   String get desktopSettingsFeatureWeb3IntegrationDescription => 'Connect a wallet only if you want attribution, digital archive objects or future participation tools. Basic discovery and community do not require it.';
@@ -2096,10 +2096,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsRoleInstitutionSubtitle => 'Show institution sections (events, collections)';
 
   @override
-  String get settingsWalletSectionTitle => 'Optional wallet layer';
+  String get settingsWalletSectionTitle => 'Wallet';
 
   @override
-  String get settingsWalletConnectionTileTitle => 'Wallet connection (optional)';
+  String get settingsWalletConnectionTileTitle => 'Wallet connection';
 
   @override
   String get settingsWalletConnectionConnected => 'Connected';
@@ -2128,7 +2128,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletActionSignInRequiredToast => 'Sign in to continue.';
 
   @override
-  String get walletActionConnectWalletRequiredToast => 'Connect an optional wallet to continue with this wallet-linked action.';
+  String get walletActionConnectWalletRequiredToast => 'Connect a wallet to continue with this wallet-linked action.';
 
   @override
   String get walletActionAccountShellNeedsWalletToast => 'Your account is signed in, but this device still needs the wallet restored or connected before this action can continue.';
@@ -2605,7 +2605,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsTermsDialogTitle => 'Terms of service';
 
   @override
-  String get settingsTermsDialogBody => 'By using art.kubus, you agree to these terms:\n\n1. art.kubus is an open art platform and research-development prototype.\n2. You are responsible for protecting any optional wallet, recovery phrase, and recovery passwords you choose to use.\n3. Wallet-based actions can be final and irreversible.\n4. Discovery, community participation, and public cultural access should be used responsibly.\n5. We may update these terms over time.\n\nFor the complete terms, visit our website.';
+  String get settingsTermsDialogBody => 'By using art.kubus, you agree to these terms:\n\n1. art.kubus is an open art platform and research-development prototype.\n2. You are responsible for protecting any wallet, recovery phrase, and recovery passwords you choose to use.\n3. Wallet-based actions can be final and irreversible.\n4. Discovery, community participation, and public cultural access should be used responsibly.\n5. We may update these terms over time.\n\nFor the complete terms, visit our website.';
 
   @override
   String get settingsPrivacyPolicyDialogTitle => 'Privacy policy';
@@ -2835,10 +2835,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsEmailPreferencesActivityCommunitySubtitle => 'Replies, mentions, and updates from community spaces';
 
   @override
-  String get settingsEmailPreferencesActivityDaoTitle => 'Governance research activity';
+  String get settingsEmailPreferencesActivityDaoTitle => 'Governance activity';
 
   @override
-  String get settingsEmailPreferencesActivityDaoSubtitle => 'Updates about community review, proposals, and participation research';
+  String get settingsEmailPreferencesActivityDaoSubtitle => 'Updates about governance review, proposals, and community participation';
 
   @override
   String get settingsEmailPreferencesActivityArtistHubTitle => 'Artist Hub activity';
@@ -2904,10 +2904,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsInAppNotificationsCommunitySubtitle => 'In-app notifications for comments, likes, follows, and shares.';
 
   @override
-  String get settingsInAppNotificationsDaoTitle => 'Governance research notifications';
+  String get settingsInAppNotificationsDaoTitle => 'Governance notifications';
 
   @override
-  String get settingsInAppNotificationsDaoSubtitle => 'In-app notifications for community review and governance research decisions.';
+  String get settingsInAppNotificationsDaoSubtitle => 'In-app notifications for governance review and platform decisions.';
 
   @override
   String get settingsInAppNotificationsArtistHubTitle => 'Artist hub notifications';
@@ -3002,13 +3002,13 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get web3OnboardingKeyFeaturesTitle => 'Optional infrastructure layers:';
+  String get web3OnboardingKeyFeaturesTitle => 'Platform tools:';
 
   @override
-  String get web3FeatureWeb3Title => 'Optional ownership and archive tools';
+  String get web3FeatureWeb3Title => 'Wallet and archive tools';
 
   @override
-  String get web3FeatureMarketplaceTitle => 'Digital cultural artifacts';
+  String get web3FeatureMarketplaceTitle => 'Digital editions';
 
   @override
   String get web3FeatureArtistStudioTitle => 'Artist studio';
@@ -3017,10 +3017,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3FeatureInstitutionHubTitle => 'Institution hub';
 
   @override
-  String get web3FeatureGovernanceTitle => 'Governance research';
+  String get web3FeatureGovernanceTitle => 'Community governance';
 
   @override
-  String get web3DaoP1Title => 'Community governance research';
+  String get web3DaoP1Title => 'Community governance';
 
   @override
   String get web3DaoP1Description => 'Take part in experimental community decision-making that helps shape art.kubus. It is participation infrastructure, not a financial product.';
@@ -3287,7 +3287,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get institutionHubTabAnalytics => 'Analytics';
 
   @override
-  String get institutionHubSeparateWalletsTip => 'Tip: Use separate optional wallets for artist and institution roles to keep community review contexts clear.';
+  String get institutionHubSeparateWalletsTip => 'Tip: Use separate wallets for artist and institution roles to keep governance review contexts clear.';
 
   @override
   String get institutionHubApplyForReviewAction => 'Apply for review';
@@ -3335,10 +3335,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get institutionHubApplicationMissionRequired => 'Describe your mission in at least 20 characters.';
 
   @override
-  String get institutionHubApplicationWalletRequired => 'Connect an optional wallet before submitting.';
+  String get institutionHubApplicationWalletRequired => 'Connect a wallet before submitting.';
 
   @override
-  String get institutionHubApplicationSubmittedToast => 'Application submitted for community review.';
+  String get institutionHubApplicationSubmittedToast => 'Application submitted for governance review.';
 
   @override
   String get institutionHubApplicationSubmitUnavailableToast => 'Unable to submit application right now.';
@@ -3364,7 +3364,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get institutionHubArtistSubmissionConflictDescription => 'We detected an artist submission for this wallet. Clear it from settings before continuing as an institution.';
 
   @override
-  String get institutionHubApplicationCardSubtitle => 'Submit your organization for community review and unlock institutional tooling.';
+  String get institutionHubApplicationCardSubtitle => 'Submit your organization for governance review and unlock institutional tooling.';
 
   @override
   String get institutionHubDaoStatusApproved => 'APPROVED';
@@ -3382,19 +3382,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get institutionHubDaoStatusNotApplied => 'NOT APPLIED';
 
   @override
-  String get institutionHubCtaApprovedByDao => 'Approved by community review';
+  String get institutionHubCtaApprovedByDao => 'Approved by governance review';
 
   @override
-  String get institutionHubCtaPendingDaoReview => 'Pending community review';
+  String get institutionHubCtaPendingDaoReview => 'Pending governance review';
 
   @override
-  String get institutionHubCtaConnectWalletToApply => 'Connect optional wallet to apply';
+  String get institutionHubCtaConnectWalletToApply => 'Connect wallet to apply';
 
   @override
-  String get institutionHubDaoStatusSyncedLabel => 'Status synced from community review';
+  String get institutionHubDaoStatusSyncedLabel => 'Status synced from governance review';
 
   @override
-  String get institutionHubDaoReviewQueueMessage => 'Your submission is in the community review queue.';
+  String get institutionHubDaoReviewQueueMessage => 'Your submission is in the governance review queue.';
 
   @override
   String get institutionHubApprovedToolsMessage => 'Congratulations! Approved for institution tools.';
@@ -3406,7 +3406,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3MarketplaceP1Title => 'Digital cultural artifacts';
 
   @override
-  String get web3MarketplaceP1Description => 'This optional layer treats collectibles as digital souvenirs, provenance records, and experimental archival objects connected to artworks.';
+  String get web3MarketplaceP1Description => 'Archive records and digital editions connect artworks with provenance, visits and cultural memory.';
 
   @override
   String get web3MarketplaceP1Feature1 => 'Browse cultural artifacts';
@@ -3475,7 +3475,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3MarketplaceP4Feature4 => 'Join the art community';
 
   @override
-  String get web3FeaturesP1Title => 'Optional account wallet';
+  String get web3FeaturesP1Title => 'Wallet account';
 
   @override
   String get web3FeaturesP1Description => 'This step is optional. A wallet can support long-term access, attribution, digital ownership, and future participation when you choose. Basic discovery and community do not start with a wallet.';
@@ -3484,7 +3484,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3FeaturesP1Feature1 => 'Long-term account continuity';
 
   @override
-  String get web3FeaturesP1Feature2 => 'Digital artifacts, visit proofs, and future rights research';
+  String get web3FeaturesP1Feature2 => 'Digital editions, visit proofs, and future rights research';
 
   @override
   String get web3FeaturesP1Feature3 => 'Keys stay with you';
@@ -3493,7 +3493,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3FeaturesP1Feature4 => 'Access you can restore and move';
 
   @override
-  String get web3FeaturesP2Title => 'Digital artifact catalog';
+  String get web3FeaturesP2Title => 'Digital edition catalog';
 
   @override
   String get web3FeaturesP2Description => 'Browse digital cultural artifacts connected to artists, artworks, institutions, and provenance.';
@@ -3517,7 +3517,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3FeaturesP3Title => 'Artist studio';
 
   @override
-  String get web3FeaturesP3Description => 'Create and manage artworks, build your portfolio, and publish digital artifacts only when a project calls for them.';
+  String get web3FeaturesP3Description => 'Create and manage artworks, build your portfolio, and publish digital editions when a project calls for them.';
 
   @override
   String get web3FeaturesP3Feature1 => 'Upload and organize artworks';
@@ -3526,7 +3526,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3FeaturesP3Feature2 => 'Create AR markers';
 
   @override
-  String get web3FeaturesP3Feature3 => 'Optionally publish digital artifacts';
+  String get web3FeaturesP3Feature3 => 'Publish digital editions';
 
   @override
   String get web3FeaturesP3Feature4 => 'Track discovery and response';
@@ -3835,7 +3835,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mapMarkerClaimOwnerReviewActionsTitle => 'Owner review';
 
   @override
-  String get mapMarkerClaimDaoReviewActionsTitle => 'Community review';
+  String get mapMarkerClaimDaoReviewActionsTitle => 'Governance review';
 
   @override
   String get mapMarkerClaimActionApprove => 'Approve';
@@ -3844,7 +3844,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mapMarkerClaimActionReject => 'Reject';
 
   @override
-  String get mapMarkerClaimActionEscalate => 'Escalate to community review';
+  String get mapMarkerClaimActionEscalate => 'Escalate to governance review';
 
   @override
   String get mapMarkerClaimActionApproveDao => 'Approve (community)';
@@ -3876,7 +3876,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mapMarkerClaimStatusPendingOwnerReview => 'Pending owner review';
 
   @override
-  String get mapMarkerClaimStatusPendingDaoReview => 'Pending community review';
+  String get mapMarkerClaimStatusPendingDaoReview => 'Pending governance review';
 
   @override
   String get mapMarkerClaimStatusApproved => 'Approved';
@@ -3885,13 +3885,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mapMarkerClaimStatusRejectedOwner => 'Rejected by owner';
 
   @override
-  String get mapMarkerClaimStatusRejectedDao => 'Rejected by community review';
+  String get mapMarkerClaimStatusRejectedDao => 'Rejected by governance review';
 
   @override
   String get mapMarkerClaimStageOwnerReview => 'Owner review';
 
   @override
-  String get mapMarkerClaimStageDaoReview => 'Community review';
+  String get mapMarkerClaimStageDaoReview => 'Governance review';
 
   @override
   String get mapMarkerClaimStageResolved => 'Resolved';
@@ -5500,7 +5500,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get connectWalletSecureAccessTitle => 'Secure your wallet';
 
   @override
-  String get connectWalletChooseTitle => 'Connect an optional wallet';
+  String get connectWalletChooseTitle => 'Connect wallet';
 
   @override
   String get connectWalletChooseDescription => 'Choose how to set up your account wallet. Create or import a local recovery phrase, or connect an external wallet for signing.';
@@ -5762,7 +5762,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get connectWalletWalletConnectFailedToast => 'Failed to connect external wallet';
 
   @override
-  String get walletHomeTitle => 'Optional wallet layer';
+  String get walletHomeTitle => 'Wallet';
 
   @override
   String get walletHomeLoadingLabel => 'Loading your wallet…';
@@ -5774,7 +5774,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletHomeSignedOutTitle => 'Wallet not connected';
 
   @override
-  String get walletHomeSignedOutDescription => 'Sign in to use your profile. Connect or restore a wallet only when you want balances, digital artifacts, or wallet-protected actions.';
+  String get walletHomeSignedOutDescription => 'Sign in to use your profile. Connect or restore a wallet when you want balances, digital editions, or wallet-protected actions.';
 
   @override
   String get walletHomeAccountShellTitle => 'Profile active, wallet not restored';
@@ -5786,7 +5786,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletHomeRestoreWalletAction => 'Restore wallet';
 
   @override
-  String get walletHomeCreateWalletAction => 'Create optional wallet';
+  String get walletHomeCreateWalletAction => 'Create wallet';
 
   @override
   String get walletHomeImportWalletAction => 'Import wallet';
@@ -5821,10 +5821,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletHomeActionNfts => 'Artifacts';
 
   @override
-  String get walletHomeQuickActionsTitle => 'Optional wallet actions';
+  String get walletHomeQuickActionsTitle => 'Wallet actions';
 
   @override
-  String get walletHomeQuickActionsSubtitle => 'Send, receive, swap, or open digital artifacts from one place when wallet tools are enabled.';
+  String get walletHomeQuickActionsSubtitle => 'Send, receive, swap, or open digital editions from one place when wallet tools are enabled.';
 
   @override
   String get walletHomeSendAction => 'Send';
@@ -5845,10 +5845,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletHomeDesktopSwapSubtitle => 'Exchange tokens';
 
   @override
-  String get walletHomeDesktopNftsSubtitle => 'Open digital artifacts and account-linked pieces';
+  String get walletHomeDesktopNftsSubtitle => 'Open digital editions and account-linked pieces';
 
   @override
-  String get walletHomeDesktopRailSubtitle => 'Optional wallet status, activity, and balances stay visible while you work.';
+  String get walletHomeDesktopRailSubtitle => 'Wallet status, activity, and balances stay visible while you work.';
 
   @override
   String get walletHomeSecureWalletAction => 'Secure wallet';
@@ -5990,7 +5990,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletHomeYourTokensTitle => 'Wallet tokens';
 
   @override
-  String get walletHomeYourTokensSubtitle => 'Balances currently associated with this optional wallet.';
+  String get walletHomeYourTokensSubtitle => 'Balances currently associated with this wallet.';
 
   @override
   String get walletHomeNoTokensTitle => 'No tokens yet';
@@ -6002,7 +6002,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletHomeRecentTransactionsTitle => 'Wallet activity';
 
   @override
-  String get walletHomeRecentTransactionsSubtitle => 'Latest optional wallet activity and confirmations.';
+  String get walletHomeRecentTransactionsSubtitle => 'Latest wallet activity and confirmations.';
 
   @override
   String get walletHomeDesktopRecentActivityTitle => 'Recent activity';
@@ -6020,7 +6020,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletHomeDesktopTabStaking => 'Staking';
 
   @override
-  String get walletHomeNftLoadFailedTitle => 'Could not load digital artifacts';
+  String get walletHomeNftLoadFailedTitle => 'Could not load digital editions';
 
   @override
   String get walletHomeNoCollectiblesDescription => 'Digital cultural artifacts will appear here when they are linked to this wallet.';
@@ -6035,7 +6035,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String walletHomeRewardsDescription(Object balance) {
-    return '$balance KUB8 available from achievements';
+    return '$balance KUB8 recorded from achievements';
   }
 
   @override
@@ -6080,7 +6080,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletHomeTxUnstakeLabel => 'Unstaked';
 
   @override
-  String get walletHomeTxGovernanceVoteLabel => 'Governance research vote';
+  String get walletHomeTxGovernanceVoteLabel => 'Governance vote';
 
   @override
   String get receiveTokenTitle => 'Receive tokens';
@@ -6360,7 +6360,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sendTokenInvalidAddressBeforeSendToast => 'Enter a valid Solana address before sending.';
 
   @override
-  String get sendTokenConnectWalletBeforeSendToast => 'Connect your optional wallet before sending tokens.';
+  String get sendTokenConnectWalletBeforeSendToast => 'Connect your wallet before sending tokens.';
 
   @override
   String get qrScannerTitle => 'Scan QR code';
@@ -7019,7 +7019,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get artistCreatorSelectImageToast => 'Please select an image';
 
   @override
-  String get artistCreatorConnectWalletToPublishToast => 'Connect an optional wallet to publish wallet-linked artwork.';
+  String get artistCreatorConnectWalletToPublishToast => 'Connect a wallet to publish wallet-linked artwork.';
 
   @override
   String get artistCreatorSelectCoverImageToast => 'Please select a cover image.';
@@ -7097,10 +7097,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get artistStudioCrossRoleConflictDescription => 'We detected an existing institution record for this wallet. Clear it from settings before applying as an artist.';
 
   @override
-  String get artistStudioDaoCardTitle => 'Artist application (community review)';
+  String get artistStudioDaoCardTitle => 'Artist application (governance review)';
 
   @override
-  String get artistStudioDaoCardSubtitle => 'Submit your practice for community review. This is how art.kubus opens artist tools while keeping the platform community-led.';
+  String get artistStudioDaoCardSubtitle => 'Submit your practice for governance review. This is how art.kubus opens artist tools while keeping the platform community-led.';
 
   @override
   String get artistStudioDaoStatusApproved => 'APPROVED';
@@ -7115,34 +7115,34 @@ class AppLocalizationsEn extends AppLocalizations {
   String get artistStudioDaoStatusNotApplied => 'NOT APPLIED';
 
   @override
-  String get artistStudioStatusSyncedFromDao => 'Status synced from community review';
+  String get artistStudioStatusSyncedFromDao => 'Status synced from governance review';
 
   @override
-  String get artistStudioReviewPendingInfo => 'Your submission is in the community review queue. We will let you know when the review is complete.';
+  String get artistStudioReviewPendingInfo => 'Your submission is in the governance review queue. We will let you know when the review is complete.';
 
   @override
-  String get artistStudioReviewApprovedInfo => 'Your practice has been approved through community review. Studio tools are ready.';
+  String get artistStudioReviewApprovedInfo => 'Your practice has been approved through governance review. Studio tools are ready.';
 
   @override
   String get artistStudioReviewRejectedInfo => 'Your last submission was rejected. You can resubmit with updates.';
 
   @override
-  String get artistStudioConnectWalletToSubmitForDaoReview => 'Connect an optional wallet before submitting for community review.';
+  String get artistStudioConnectWalletToSubmitForDaoReview => 'Connect a wallet before submitting for governance review.';
 
   @override
   String get artistStudioCtaConnectWalletToApply => 'Connect a wallet to apply';
 
   @override
-  String get artistStudioCtaApprovedByDao => 'Approved by community review';
+  String get artistStudioCtaApprovedByDao => 'Approved by governance review';
 
   @override
-  String get artistStudioCtaPendingDaoReview => 'Pending community review';
+  String get artistStudioCtaPendingDaoReview => 'Pending governance review';
 
   @override
   String get artistStudioCtaResubmitForReview => 'Resubmit for review';
 
   @override
-  String get artistStudioCtaApplyForDaoReview => 'Apply for community review';
+  String get artistStudioCtaApplyForDaoReview => 'Apply for governance review';
 
   @override
   String get artistPromotionRequiresWalletReason => 'Connect an approved artist wallet to request profile promotion.';
@@ -7184,7 +7184,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get artistStudioTabAnalytics => 'Analytics';
 
   @override
-  String get artistStudioUnlocksAfterDaoApprovalToast => 'Artist Studio unlocks after community review approval.';
+  String get artistStudioUnlocksAfterDaoApprovalToast => 'Artist Studio unlocks after governance review approval.';
 
   @override
   String get artistStudioSeparateWalletsTip => 'Use separate wallets for artist and institution roles if you want to keep access and review paths clearly separated.';
@@ -7193,7 +7193,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get artistStudioLockedTitle => 'Artist Studio is locked';
 
   @override
-  String get artistStudioLockedDescription => 'Apply for community review to unlock studio tools for publishing, showcasing, and tracking your work.';
+  String get artistStudioLockedDescription => 'Apply for governance review to unlock studio tools for publishing, showcasing, and tracking your work.';
 
   @override
   String get artistStudioSettingsTitle => 'Studio Settings';
@@ -7202,7 +7202,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get artistStudioApplicationModalTitle => 'Artist application';
 
   @override
-  String get artistStudioApplicationModalSubtitle => 'Share a snapshot of your practice. Submissions are routed to the community review queue.';
+  String get artistStudioApplicationModalSubtitle => 'Share a snapshot of your practice. Submissions are routed to the governance review queue.';
 
   @override
   String get artistStudioApplicationFieldPortfolioLabel => 'Portfolio or website';
@@ -7225,13 +7225,13 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get artistStudioApplicationWalletRequiredToast => 'Connect an optional wallet before submitting for review.';
+  String get artistStudioApplicationWalletRequiredToast => 'Connect a wallet before submitting for review.';
 
   @override
   String get artistStudioApplicationReviewTitle => 'Artist application';
 
   @override
-  String get artistStudioApplicationSubmittedToast => 'Application submitted to community reviewers.';
+  String get artistStudioApplicationSubmittedToast => 'Application submitted to governance reviewers.';
 
   @override
   String get artistStudioApplicationUnableToSubmitToast => 'Unable to submit application right now.';
@@ -7351,7 +7351,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopArtistStudioStatSales => 'Sales';
 
   @override
-  String get desktopInstitutionPromotionWalletRequiredReason => 'Connect an optional wallet to create promotions.';
+  String get desktopInstitutionPromotionWalletRequiredReason => 'Connect a wallet to create promotions.';
 
   @override
   String get desktopInstitutionPromotionArtistConflictReason => 'This wallet is verified as an artist. Use an institution wallet to promote institution content.';
@@ -7639,10 +7639,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get marketplaceConnectWalletTitle => 'Optional wallet connection';
+  String get marketplaceConnectWalletTitle => 'Wallet connection';
 
   @override
-  String get marketplaceConnectWalletDescription => 'Connect a Solana wallet only if you want to view wallet-linked digital cultural artifacts.';
+  String get marketplaceConnectWalletDescription => 'Connect a Solana wallet to view digital editions linked to your account.';
 
   @override
   String get marketplaceSettingsShowArOnlyTitle => 'Show AR-only collections';
@@ -7663,10 +7663,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get marketplaceFeaturedCollectionsTitle => 'Featured collections';
 
   @override
-  String get marketplaceFeaturedCollectionsSubtitle => 'Curated digital artifacts and AR-ready series from the community.';
+  String get marketplaceFeaturedCollectionsSubtitle => 'Curated digital editions and AR-ready series from the community.';
 
   @override
-  String get marketplaceNoMintedNftsTitle => 'No digital artifacts available yet';
+  String get marketplaceNoMintedNftsTitle => 'No digital editions available yet';
 
   @override
   String get marketplaceNoMintedNftsDescription => 'Artifact listings appear once an artwork is issued as an optional digital cultural object.';
@@ -7684,7 +7684,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get marketplaceNoTrendingNftsDescription => 'Check back later as cultural artifact activity grows.';
 
   @override
-  String get marketplaceMyCollectionTitle => 'My digital artifacts';
+  String get marketplaceMyCollectionTitle => 'My digital editions';
 
   @override
   String marketplaceMyCollectionCount(Object count) {
@@ -7695,7 +7695,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get marketplaceListedForSaleTitle => 'Available listing';
 
   @override
-  String get marketplaceListNftForSaleTitle => 'List digital artifact';
+  String get marketplaceListNftForSaleTitle => 'List digital edition';
 
   @override
   String get marketplacePriceKub8Label => 'Price (KUB8)';
@@ -7710,7 +7710,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get marketplaceTokenIdLabel => 'Token ID';
 
   @override
-  String get marketplaceMintedLabel => 'Issued as digital artifact';
+  String get marketplaceMintedLabel => 'Issued as digital edition';
 
   @override
   String get marketplaceTotalSupplyLabel => 'Total supply';
@@ -7725,10 +7725,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get marketplaceOwnedNftListedStatus => 'Owned artifact - Listed';
 
   @override
-  String get marketplaceEmptyCollectionTitle => 'No collectibles yet';
+  String get marketplaceEmptyCollectionTitle => 'No digital editions yet';
 
   @override
-  String get marketplaceEmptyCollectionDescription => 'Create optional digital artifacts from artworks and keep them here.';
+  String get marketplaceEmptyCollectionDescription => 'Create digital editions from artworks and keep them here.';
 
   @override
   String get marketplaceExploreArArtButton => 'Explore art map';
@@ -7746,13 +7746,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get marketplaceRemoveFromSaleTitle => 'Remove from sale';
 
   @override
-  String get marketplaceRemoveFromSaleConfirmBody => 'Remove this digital artifact from listings?';
+  String get marketplaceRemoveFromSaleConfirmBody => 'Remove this digital edition from listings?';
 
   @override
   String get marketplaceRemoveFromSaleSuccessToast => 'Artifact removed from listing.';
 
   @override
-  String get marketplaceMintConnectWalletTitle => 'Optional wallet required for artifacts';
+  String get marketplaceMintConnectWalletTitle => 'Wallet required for digital editions';
 
   @override
   String get marketplaceMintConnectWalletDescription => 'Connect a wallet only if you want to create digital cultural artifacts from artworks.';
@@ -7761,7 +7761,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get marketplaceMintSuccessTitle => 'Digital artifact created';
 
   @override
-  String get marketplaceMintSuccessDescription => 'Your digital cultural artifact is ready. You can view it in your wallet.';
+  String get marketplaceMintSuccessDescription => 'Your digital edition is ready. You can view it in your wallet.';
 
   @override
   String get marketplaceViewInWalletButton => 'View in wallet';
@@ -7770,7 +7770,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get marketplaceMintFailedTitle => 'Creation failed';
 
   @override
-  String get marketplaceMintFailedDescription => 'Unable to create a digital artifact right now. Please try again.';
+  String get marketplaceMintFailedDescription => 'The digital edition could not be created right now. Please try again.';
 
   @override
   String get marketplaceArBadgeLabel => 'AR';
@@ -7797,10 +7797,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get marketplaceCardActionView => 'View';
 
   @override
-  String get marketplaceNftArtworkStatus => 'Digital artifact artwork';
+  String get marketplaceNftArtworkStatus => 'Digital edition artwork';
 
   @override
-  String get marketplaceNftArtworkStatusArEnabled => 'Digital artifact artwork - AR enabled';
+  String get marketplaceNftArtworkStatusArEnabled => 'Digital edition artwork - AR enabled';
 
   @override
   String get marketplaceMintUnavailableLabel => 'Mint unavailable';
@@ -7821,11 +7821,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get marketplaceGoToArButton => 'Go to AR';
 
   @override
-  String get marketplaceMintDialogTitle => 'Create digital artifact';
+  String get marketplaceMintDialogTitle => 'Create digital edition';
 
   @override
   String marketplaceMintConfirmCollectionDescription(Object collection) {
-    return 'You are about to create a digital artifact from the \"$collection\" collection.';
+    return 'You are creating a digital edition from the \"$collection\" collection.';
   }
 
   @override
@@ -8010,7 +8010,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get daoReviewDetailsVotingManagedByDao => 'Review decisions are managed by the DAO review process.';
 
   @override
-  String get daoReviewQueueTitle => 'DAO Review Queue';
+  String get daoReviewQueueTitle => 'Governance review queue';
 
   @override
   String get daoReviewVotingHandledByDaoHelper => 'Voting is handled directly by the DAO; use proposals to decide.';
@@ -8111,7 +8111,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get daoProposalFillRequiredFieldsToast => 'Please fill in all required fields';
 
   @override
-  String get daoProposalWalletRequiredToast => 'Connect an optional wallet to submit proposals.';
+  String get daoProposalWalletRequiredToast => 'Connect a wallet to submit proposals.';
 
   @override
   String get daoProposalSubmittedToast => 'Proposal submitted to DAO';
@@ -8126,7 +8126,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get daoQuorumPending => 'Quorum pending';
 
   @override
-  String get daoVoteWalletRequiredToast => 'Connect an optional wallet before voting.';
+  String get daoVoteWalletRequiredToast => 'Connect a wallet before voting.';
 
   @override
   String get daoVoteSubmittedYesToast => 'Vote Yes submitted';
@@ -9132,7 +9132,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeWelcomeSubtitle => 'Open art platform for discovery, artists, institutions, and community.';
 
   @override
-  String get homeExploreWeb3Button => 'Optional infrastructure';
+  String get homeExploreWeb3Button => 'Wallet and Web3 access';
 
   @override
   String get homeQuickActionsTitle => 'Start Here';
@@ -9426,13 +9426,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopHomeUnreadNotificationsLabel => 'unread notifications';
 
   @override
-  String get homeWeb3SectionTitle => 'Optional infrastructure';
+  String get homeWeb3SectionTitle => 'Wallet and Web3 access';
 
   @override
-  String get homeAccountRequiredLabel => 'Optional wallet';
+  String get homeAccountRequiredLabel => 'Wallet';
 
   @override
-  String get homeWeb3DaoTitle => 'Governance research';
+  String get homeWeb3DaoTitle => 'Community governance';
 
   @override
   String get homeWeb3DaoSubtitle => 'Community proposals';
@@ -9450,7 +9450,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeWeb3InstitutionSubtitle => 'Programs and exhibitions';
 
   @override
-  String get homeWeb3MarketplaceTitle => 'Digital artifacts';
+  String get homeWeb3MarketplaceTitle => 'Digital editions';
 
   @override
   String get homeWeb3MarketplaceSubtitle => 'Archive and collect';
@@ -10417,10 +10417,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navigationScreenProfile => 'Profile';
 
   @override
-  String get navigationScreenMarketplace => 'Digital Artifacts';
+  String get navigationScreenMarketplace => 'Digital Editions';
 
   @override
-  String get navigationScreenWallet => 'Optional Wallet';
+  String get navigationScreenWallet => 'Wallet';
 
   @override
   String get navigationScreenAnalytics => 'Analytics';
@@ -10435,7 +10435,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navigationScreenAchievements => 'Achievements';
 
   @override
-  String get navigationScreenDaoHub => 'Governance Research';
+  String get navigationScreenDaoHub => 'Community Governance';
 
   @override
   String get navigationScreenArtistStudio => 'Artist Studio';
@@ -10444,19 +10444,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navigationScreenInstitutionHub => 'Institution Hub';
 
   @override
-  String get daoHubAppBarTitle => 'Governance research';
+  String get daoHubAppBarTitle => 'Community governance';
 
   @override
-  String get labsDaoSemanticLabel => 'Governance Research Lab';
+  String get labsDaoSemanticLabel => 'Community Governance';
 
   @override
-  String get labsMarketplaceSemanticLabel => 'Digital Artifact Lab';
+  String get labsMarketplaceSemanticLabel => 'Digital Editions';
 
   @override
   String get daoHubHeaderSubtitle => 'Experimental community governance for artists, institutions, and cultural participation';
 
   @override
-  String get daoHubInfoDialogTitle => 'How governance research works';
+  String get daoHubInfoDialogTitle => 'How community governance works';
 
   @override
   String get daoHubInfoDialogBody => 'This lab gives the community a transparent way to propose, review, and discuss platform decisions. KUB8 records participation and recognition; it is not financial value.';
@@ -10480,7 +10480,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get daoCreateProposalTitle => 'Create new proposal';
 
   @override
-  String get daoCreateProposalSubtitle => 'Submit a proposal for community review';
+  String get daoCreateProposalSubtitle => 'Submit a proposal for governance review';
 
   @override
   String get daoCreateProposalFieldTitleLabel => 'Proposal title';
@@ -10552,7 +10552,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopGovernanceQuickActionVoteTitle => 'Review proposals';
 
   @override
-  String get desktopGovernanceQuickActionVoteSubtitle => 'Participate in governance research';
+  String get desktopGovernanceQuickActionVoteSubtitle => 'Shape the platform';
 
   @override
   String get desktopGovernanceQuickActionAnalyticsTitle => 'Analytics';
@@ -10561,7 +10561,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopGovernanceQuickActionAnalyticsSubtitle => 'View participation signals';
 
   @override
-  String get desktopGovernanceAnalyticsScreenTitle => 'Governance Research Analytics';
+  String get desktopGovernanceAnalyticsScreenTitle => 'Governance Analytics';
 
   @override
   String get desktopGovernanceSidebarStatisticsTitle => 'Research Statistics';
@@ -10719,10 +10719,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileEditVerifiedInstitutionTitle => 'Verified institution';
 
   @override
-  String get profileEditVerifiedArtistSubtitle => 'Your artist status is verified through community review';
+  String get profileEditVerifiedArtistSubtitle => 'Your artist status is verified through governance review';
 
   @override
-  String get profileEditVerifiedInstitutionSubtitle => 'Your institution status is verified through community review';
+  String get profileEditVerifiedInstitutionSubtitle => 'Your institution status is verified through governance review';
 
   @override
   String get profileEditProfileUpdatedToast => 'Profile updated successfully!';
@@ -11351,7 +11351,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileNoBioYetTitle => 'No bio yet';
 
   @override
-  String get profileNoBioYetDescription => 'Tap "Edit Profile" to add a short bio about yourself.';
+  String get profileNoBioYetDescription => 'Tap \"Edit Profile\" to add a short bio about yourself.';
 
   @override
   String get profileNoPostsYetDescription => 'Share your perspective with the community to see it here.';
@@ -12457,6 +12457,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String exhibitionDetailAttendanceRewardPending(Object amount) {
-    return '+$amount KUB8 (pending)';
+    return '+$amount KUB8 recognition (pending)';
   }
 }

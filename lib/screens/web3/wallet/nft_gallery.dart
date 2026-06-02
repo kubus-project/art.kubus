@@ -141,7 +141,7 @@ class _NFTGalleryState extends State<NFTGallery> {
                   width: double.infinity,
                   child: EmptyStateCard(
                     icon: Icons.diamond_outlined,
-                    title: 'No digital artifacts yet',
+                    title: 'No digital editions yet',
                     description:
                         'Create digital archive objects from artworks to see them here.',
                     showAction: false,

@@ -104,175 +104,511 @@ abstract class AppLocalizations {
   /// No description provided for @appTaglineSupport.
   ///
   /// In en, this message translates to:
-  /// **'A guide for discovering art, places, and people around you.'**
+  /// **'Discover public art, artists, institutions and community stories through an open cultural map.'**
   String get appTaglineSupport;
 
+  /// No description provided for @exploreOnlyAppTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'art.kubus - Explore'**
   String get exploreOnlyAppTitle;
 
+  /// No description provided for @exploreOnlyConnectWalletAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect wallet'**
   String get exploreOnlyConnectWalletAction;
 
+  /// No description provided for @exploreOnlyModeBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'You are in public discovery mode. Profiles, community and the open art map work without a wallet; wallet tools can be enabled later.'**
   String get exploreOnlyModeBanner;
 
+  /// No description provided for @exploreOnlyDiscoverTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Discover art'**
   String get exploreOnlyDiscoverTitle;
 
+  /// No description provided for @exploreOnlyCollectionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse collections'**
   String get exploreOnlyCollectionsTitle;
 
+  /// No description provided for @exploreOnlyCollectionsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Explore artworks, public-space stories and cultural archive records.'**
   String get exploreOnlyCollectionsDescription;
 
+  /// No description provided for @exploreOnlyArTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'AR layers'**
   String get exploreOnlyArTitle;
 
+  /// No description provided for @exploreOnlyArDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'View optional AR layers when artists or institutions enable them.'**
   String get exploreOnlyArDescription;
 
+  /// No description provided for @exploreOnlyCommunityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Community'**
   String get exploreOnlyCommunityTitle;
 
+  /// No description provided for @exploreOnlyCommunityDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow artists, institutions and discussions around public art.'**
   String get exploreOnlyCommunityDescription;
 
+  /// No description provided for @exploreOnlyArtifactsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Digital editions'**
   String get exploreOnlyArtifactsTitle;
 
+  /// No description provided for @exploreOnlyArtifactsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Discover archive records and digital editions connected to artworks.'**
   String get exploreOnlyArtifactsDescription;
 
+  /// No description provided for @walletPromptTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect wallet'**
   String get walletPromptTitle;
 
+  /// No description provided for @walletPromptBody.
+  ///
+  /// In en, this message translates to:
+  /// **'A wallet connects your profile to attribution, archive records, digital editions and governance tools. Discovery and community remain open without it.'**
   String get walletPromptBody;
 
+  /// No description provided for @walletPromptIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect wallet access if you want:'**
   String get walletPromptIntro;
 
+  /// No description provided for @walletPromptFeatureArchiveObjects.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive records and digital editions'**
   String get walletPromptFeatureArchiveObjects;
 
+  /// No description provided for @walletPromptFeatureCreateArtworks.
+  ///
+  /// In en, this message translates to:
+  /// **'Create and document artworks'**
   String get walletPromptFeatureCreateArtworks;
 
+  /// No description provided for @walletPromptFeatureCommunity.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet-linked participation records'**
   String get walletPromptFeatureCommunity;
 
+  /// No description provided for @walletPromptMaybeLater.
+  ///
+  /// In en, this message translates to:
+  /// **'Maybe later'**
   String get walletPromptMaybeLater;
 
+  /// No description provided for @walletPromptSetUpAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Set up wallet'**
   String get walletPromptSetUpAction;
 
+  /// No description provided for @walletHomeArchiveObjectFallbackTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive object'**
   String get walletHomeArchiveObjectFallbackTitle;
 
+  /// No description provided for @walletHomeCollectibleFallbackTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Collectible'**
   String get walletHomeCollectibleFallbackTitle;
 
+  /// No description provided for @walletHomeConnectWalletToFetchCollectibles.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect your wallet to load digital editions.'**
   String get walletHomeConnectWalletToFetchCollectibles;
 
+  /// No description provided for @artworkDraftCoverRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Cover image is required.'**
   String get artworkDraftCoverRequired;
 
+  /// No description provided for @artworkDraftCoverUploadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to upload cover image.'**
   String get artworkDraftCoverUploadFailed;
 
+  /// No description provided for @artworkDraftGalleryUploadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to upload a gallery image. Please try again.'**
   String get artworkDraftGalleryUploadFailed;
 
+  /// No description provided for @artworkDraftTitleDescriptionRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Title and description are required.'**
   String get artworkDraftTitleDescriptionRequired;
 
+  /// No description provided for @artworkDraftAttendanceUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Attendance records are currently unavailable.'**
   String get artworkDraftAttendanceUnavailable;
 
+  /// No description provided for @artworkDraftAttendanceIdOrUrlRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please provide an attendance event ID or record URL.'**
   String get artworkDraftAttendanceIdOrUrlRequired;
 
+  /// No description provided for @artworkDraftCoordinatesRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please provide both latitude and longitude (or leave both empty).'**
   String get artworkDraftCoordinatesRequired;
 
+  /// No description provided for @artworkDraftCoordinatesInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Location coordinates are invalid.'**
   String get artworkDraftCoordinatesInvalid;
 
+  /// No description provided for @artworkDraftAttendanceImageUploadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to upload attendance record image. Please try again.'**
   String get artworkDraftAttendanceImageUploadFailed;
 
+  /// No description provided for @artworkDraftPublishFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to publish artwork. Please try again.'**
   String get artworkDraftPublishFailed;
 
+  /// No description provided for @archiveObjectCreatedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive object created.'**
   String get archiveObjectCreatedToast;
 
+  /// No description provided for @archiveObjectCreateFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to create archive object.'**
   String get archiveObjectCreateFailed;
 
+  /// No description provided for @archiveObjectCreationPleaseWait.
+  ///
+  /// In en, this message translates to:
+  /// **'This may take a few moments.'**
   String get archiveObjectCreationPleaseWait;
 
+  /// No description provided for @archiveObjectSeriesDefaultDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive object series for {artworkTitle} by {artistName}'**
   String archiveObjectSeriesDefaultDescription(Object artworkTitle, Object artistName);
 
+  /// No description provided for @archiveObjectSeriesCreateFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to create archive object series'**
   String get archiveObjectSeriesCreateFailed;
 
+  /// No description provided for @archiveObjectSeriesNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive object series not found'**
   String get archiveObjectSeriesNotFound;
 
+  /// No description provided for @archiveObjectSeriesSoldOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Series is sold out'**
   String get archiveObjectSeriesSoldOut;
 
+  /// No description provided for @archiveObjectCreatedReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Created archive object for \"{artworkTitle}\" (Edition #{tokenId})'**
   String archiveObjectCreatedReason(Object artworkTitle, Object tokenId);
 
+  /// No description provided for @artworkCreatorAttendanceRecordUrlOptionalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Attendance record URL (optional)'**
   String get artworkCreatorAttendanceRecordUrlOptionalLabel;
 
+  /// No description provided for @archiveObjectCreateFailedWithError.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to create archive object: {error}'**
   String archiveObjectCreateFailedWithError(Object error);
 
+  /// No description provided for @archiveObjectCreateError.
+  ///
+  /// In en, this message translates to:
+  /// **'Error creating archive object: {error}'**
   String archiveObjectCreateError(Object error);
 
+  /// No description provided for @communityAchievementUnlockedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Achievement unlocked\n{title}{extra}\n+{amount} {currency} recognition'**
   String communityAchievementUnlockedToast(Object title, Object extra, Object amount, Object currency);
 
+  /// No description provided for @communityViewAchievementsAction.
+  ///
+  /// In en, this message translates to:
+  /// **'View achievements'**
   String get communityViewAchievementsAction;
 
+  /// No description provided for @markerBadgePromoted.
+  ///
+  /// In en, this message translates to:
+  /// **'Promoted'**
   String get markerBadgePromoted;
 
+  /// No description provided for @markerBadgeAttendanceRecord.
+  ///
+  /// In en, this message translates to:
+  /// **'Attendance record'**
   String get markerBadgeAttendanceRecord;
 
+  /// No description provided for @markerDescriptionSemanticLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'marker description'**
   String get markerDescriptionSemanticLabel;
 
+  /// No description provided for @recentActivityRecognitionRecordedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Recognition Recorded'**
   String get recentActivityRecognitionRecordedTitle;
 
+  /// No description provided for @recentActivityArchiveObjectUpdateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive Object Update'**
   String get recentActivityArchiveObjectUpdateTitle;
 
+  /// No description provided for @recentActivityRecognitionAmountDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'+{amount} KUB8 recognition'**
   String recentActivityRecognitionAmountDescription(Object amount);
 
+  /// No description provided for @recentActivityNewRecognitionDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'You have new recognition'**
   String get recentActivityNewRecognitionDescription;
 
+  /// No description provided for @recentActivityArchiveObjectStatusDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive object {status} for {title}'**
   String recentActivityArchiveObjectStatusDescription(Object status, Object title);
 
+  /// No description provided for @recentActivityFallbackArtworkTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'an artwork'**
   String get recentActivityFallbackArtworkTitle;
 
+  /// No description provided for @notificationSomeoneFallback.
+  ///
+  /// In en, this message translates to:
+  /// **'Someone'**
   String get notificationSomeoneFallback;
 
+  /// No description provided for @notificationAchievementFallback.
+  ///
+  /// In en, this message translates to:
+  /// **'Achievement'**
   String get notificationAchievementFallback;
 
+  /// No description provided for @notificationRecognitionRecordedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Recognition recorded'**
   String get notificationRecognitionRecordedTitle;
 
+  /// No description provided for @pushArchiveObjectCreatingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Creating archive object...'**
   String get pushArchiveObjectCreatingTitle;
 
+  /// No description provided for @pushArchiveObjectCreatingBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Creating archive object for \"{artworkTitle}\"'**
   String pushArchiveObjectCreatingBody(Object artworkTitle);
 
+  /// No description provided for @pushArchiveObjectCreatedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive object created'**
   String get pushArchiveObjectCreatedTitle;
 
+  /// No description provided for @pushArchiveObjectCreatedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'\"{artworkTitle}\" now has an optional archive record'**
   String pushArchiveObjectCreatedBody(Object artworkTitle);
 
+  /// No description provided for @pushArchiveObjectCreationFailedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Creation failed'**
   String get pushArchiveObjectCreationFailedTitle;
 
+  /// No description provided for @pushArchiveObjectCreationFailedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not create \"{artworkTitle}\" archive object. Please try again.'**
   String pushArchiveObjectCreationFailedBody(Object artworkTitle);
 
+  /// No description provided for @pushArchiveObjectCreationChannelName.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive Object Creation'**
   String get pushArchiveObjectCreationChannelName;
 
+  /// No description provided for @pushArchiveObjectCreationChannelDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications for digital archive object creation'**
   String get pushArchiveObjectCreationChannelDescription;
 
+  /// No description provided for @pushRecognitionChannelName.
+  ///
+  /// In en, this message translates to:
+  /// **'Recognition'**
   String get pushRecognitionChannelName;
 
+  /// No description provided for @pushRecognitionChannelDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications for contribution recognition'**
   String get pushRecognitionChannelDescription;
 
+  /// No description provided for @analyticsMetricArchiveObjectsCreatedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive objects created'**
   String get analyticsMetricArchiveObjectsCreatedLabel;
 
+  /// No description provided for @analyticsMetricArchiveObjectsCreatedDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Digital archive objects connected to artworks.'**
   String get analyticsMetricArchiveObjectsCreatedDescription;
 
+  /// No description provided for @analyticsMetricKub8RecognitionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'KUB8 recognition'**
   String get analyticsMetricKub8RecognitionLabel;
 
+  /// No description provided for @analyticsMetricKub8RecognitionDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'KUB8 recorded through contribution recognition.'**
   String get analyticsMetricKub8RecognitionDescription;
 
+  /// No description provided for @analyticsPresetArtistSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Artwork reach, community response, AR activity, and recognition.'**
   String get analyticsPresetArtistSubtitle;
 
+  /// No description provided for @analyticsPresetInstitutionSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Visitor reach, hosted programs, exhibitions, and recognition.'**
   String get analyticsPresetInstitutionSubtitle;
 
+  /// No description provided for @analyticsExportNoDataToast.
+  ///
+  /// In en, this message translates to:
+  /// **'No analytics data available to export.'**
   String get analyticsExportNoDataToast;
 
+  /// No description provided for @analyticsExportFailedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to export analytics.'**
   String get analyticsExportFailedToast;
 
+  /// No description provided for @collectiblesLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load collectibles: {error}'**
   String collectiblesLoadFailed(Object error);
 
+  /// No description provided for @collectiblesItemNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Collectible not found'**
   String get collectiblesItemNotFound;
 
+  /// No description provided for @collectiblesInvalidListingPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid listing price'**
   String get collectiblesInvalidListingPrice;
 
+  /// No description provided for @collectiblesArtworkProviderUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Artwork provider is unavailable'**
   String get collectiblesArtworkProviderUnavailable;
 
+  /// No description provided for @collectiblesListingUpdateFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to update listing on canonical artwork record'**
   String get collectiblesListingUpdateFailed;
 
+  /// No description provided for @collectiblesListFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to list collectible: {error}'**
   String collectiblesListFailed(Object error);
 
+  /// No description provided for @collectiblesRemoveListingFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to remove collectible from sale: {error}'**
   String collectiblesRemoveListingFailed(Object error);
 
+  /// No description provided for @collectiblesMockDataDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Mock collectible data is disabled in canonical mode. Use indexed artwork mint records.'**
   String get collectiblesMockDataDisabled;
 
   /// No description provided for @appTitle.
@@ -1094,7 +1430,7 @@ abstract class AppLocalizations {
   /// No description provided for @exhibitionDetailBadgeNotClaimed.
   ///
   /// In en, this message translates to:
-  /// **'Not claimed'**
+  /// **'Not recorded'**
   String get exhibitionDetailBadgeNotClaimed;
 
   /// No description provided for @exhibitionCreatorEndDateAfterStartError.
@@ -1352,7 +1688,7 @@ abstract class AppLocalizations {
   /// No description provided for @authSignInSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Start exploring art, places, and community. Wallet features are optional.'**
+  /// **'Start with art discovery, artists, institutions, and community. Wallet tools are optional.'**
   String get authSignInSubtitle;
 
   /// No description provided for @authRegisterTitle.
@@ -1364,13 +1700,13 @@ abstract class AppLocalizations {
   /// No description provided for @authRegisterSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Create a profile to personalize your art companion. Wallet features can wait.'**
+  /// **'Create a profile first. Discovery, community, and local art access work without a wallet.'**
   String get authRegisterSubtitle;
 
   /// No description provided for @authHighlightSignInMethods.
   ///
   /// In en, this message translates to:
-  /// **'Email, Google, or optional wallet sign-in'**
+  /// **'Email, Google, or wallet sign-in'**
   String get authHighlightSignInMethods;
 
   /// No description provided for @authHighlightNoFees.
@@ -1382,13 +1718,13 @@ abstract class AppLocalizations {
   /// No description provided for @authHighlightControl.
   ///
   /// In en, this message translates to:
-  /// **'Basic exploration works without a wallet'**
+  /// **'Explore art and community without a wallet'**
   String get authHighlightControl;
 
   /// No description provided for @authHighlightOnboardingOptions.
   ///
   /// In en, this message translates to:
-  /// **'Choose email, Google, or optional wallet sign-in'**
+  /// **'Choose email, Google, or wallet sign-in'**
   String get authHighlightOnboardingOptions;
 
   /// No description provided for @authHighlightKeysLocal.
@@ -1400,7 +1736,7 @@ abstract class AppLocalizations {
   /// No description provided for @authHighlightOptionalWeb3.
   ///
   /// In en, this message translates to:
-  /// **'Future participation features stay optional'**
+  /// **'Digital ownership and participation stay optional'**
   String get authHighlightOptionalWeb3;
 
   /// No description provided for @authSignedInProfileRefreshSoon.
@@ -1856,19 +2192,19 @@ abstract class AppLocalizations {
   /// No description provided for @authConnectWalletModalTitle.
   ///
   /// In en, this message translates to:
-  /// **'Connect a wallet'**
+  /// **'Connect wallet'**
   String get authConnectWalletModalTitle;
 
   /// No description provided for @authConnectWalletModalDescriptionSignIn.
   ///
   /// In en, this message translates to:
-  /// **'Approve a signature in your wallet app to confirm it is you. No fee is required to sign in.'**
+  /// **'This step is optional. Approve a signature only if you want wallet-based access on this device. No fee is required to sign in.'**
   String get authConnectWalletModalDescriptionSignIn;
 
   /// No description provided for @authConnectWalletModalDescriptionRegister.
   ///
   /// In en, this message translates to:
-  /// **'Approve a signature in your wallet app to confirm it is you. No fee is required to finish registration.'**
+  /// **'This step is optional. Approve a signature only if you want wallet-based access after creating your profile. No fee is required.'**
   String get authConnectWalletModalDescriptionRegister;
 
   /// No description provided for @authWalletOptionWalletConnect.
@@ -2084,31 +2420,31 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingFlowWelcomeTitle.
   ///
   /// In en, this message translates to:
-  /// **'kubus - your art companion.'**
+  /// **'art.kubus is an open art platform.'**
   String get onboardingFlowWelcomeTitle;
 
   /// No description provided for @onboardingFlowWelcomeBody.
   ///
   /// In en, this message translates to:
-  /// **'Start with art, places, and community. Account setup and optional wallet tools can wait.'**
+  /// **'Start with art, places, and community. Account setup and wallet tools can wait.'**
   String get onboardingFlowWelcomeBody;
 
   /// No description provided for @onboardingFlowWelcomeInfoAccount.
   ///
   /// In en, this message translates to:
-  /// **'Create a profile when you want a personal feed and contributions.'**
+  /// **'Create a profile when you want a personal feed, follows, and community participation.'**
   String get onboardingFlowWelcomeInfoAccount;
 
   /// No description provided for @onboardingFlowWelcomeInfoCreate.
   ///
   /// In en, this message translates to:
-  /// **'Add context, publish works, or keep exploring.'**
+  /// **'Share artworks, add cultural context, or keep exploring the open art map.'**
   String get onboardingFlowWelcomeInfoCreate;
 
   /// No description provided for @onboardingFlowWelcomeInfoFollow.
   ///
   /// In en, this message translates to:
-  /// **'Follow places, stories, and artists to personalize your feed.'**
+  /// **'Follow artists, institutions, exhibitions, and public-space art.'**
   String get onboardingFlowWelcomeInfoFollow;
 
   /// No description provided for @onboardingFlowWelcomeInfoTime.
@@ -2120,13 +2456,13 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingFlowAccountTitle.
   ///
   /// In en, this message translates to:
-  /// **'Create your account'**
+  /// **'Create your profile first'**
   String get onboardingFlowAccountTitle;
 
   /// No description provided for @onboardingFlowAccountBody.
   ///
   /// In en, this message translates to:
-  /// **'Use email, Google, or optional wallet sign-in. Basic exploration works without a wallet, and account-linked recovery is explained before you enable it.'**
+  /// **'Use email, Google, or wallet sign-in. Discovery, map browsing, and community access work without a wallet.'**
   String get onboardingFlowAccountBody;
 
   /// No description provided for @onboardingFlowAccountVerifyHint.
@@ -2174,19 +2510,19 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingFlowWalletBackupIntroTitle.
   ///
   /// In en, this message translates to:
-  /// **'Protect account recovery'**
+  /// **'Optional ownership layer backup'**
   String get onboardingFlowWalletBackupIntroTitle;
 
   /// No description provided for @onboardingFlowWalletBackupIntroBody.
   ///
   /// In en, this message translates to:
-  /// **'Some sign-in paths create an account wallet for long-term access and future participation. It is separate from basic exploration. Back up the recovery phrase if you choose these account-linked features.'**
+  /// **'This step is optional. Some account paths create a wallet for digital ownership, attribution, and future participation. It is separate from public discovery and community access.'**
   String get onboardingFlowWalletBackupIntroBody;
 
   /// No description provided for @onboardingFlowWalletBackupIntroWeb3Warning.
   ///
   /// In en, this message translates to:
-  /// **'This backup protects account-linked features. Basic discovery does not require connecting a wallet.'**
+  /// **'This step is optional. Basic discovery, profiles, and community do not require connecting a wallet.'**
   String get onboardingFlowWalletBackupIntroWeb3Warning;
 
   /// No description provided for @onboardingFlowWalletBackupIntroSecretWarning.
@@ -2270,7 +2606,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingFlowWalletBackupBody.
   ///
   /// In en, this message translates to:
-  /// **'This phrase restores account-linked wallet access and future optional features on a new device.'**
+  /// **'This phrase restores optional account-linked wallet access for digital ownership and future participation on a new device.'**
   String get onboardingFlowWalletBackupBody;
 
   /// No description provided for @onboardingFlowWalletBackupPrivacyWarning.
@@ -2282,7 +2618,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingFlowWalletBackupLossWarning.
   ///
   /// In en, this message translates to:
-  /// **'If you lose it, we cannot restore account-linked wallet access for you. Basic public exploration still works.'**
+  /// **'If you lose it, we cannot restore wallet-linked access for you. Public discovery and community browsing still work.'**
   String get onboardingFlowWalletBackupLossWarning;
 
   /// No description provided for @onboardingFlowWalletBackupAction.
@@ -2348,7 +2684,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingFlowPermissionsBody.
   ///
   /// In en, this message translates to:
-  /// **'Enable location to discover nearby art, camera for AR layers in development, and notifications for community updates.'**
+  /// **'Enable location for nearby public art, camera for optional AR layers in development, and notifications for artists, institutions, exhibitions, and community updates.'**
   String get onboardingFlowPermissionsBody;
 
   /// No description provided for @onboardingFlowContinueWithoutPermissions.
@@ -2390,7 +2726,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingFlowDoneBody.
   ///
   /// In en, this message translates to:
-  /// **'Your space is ready. Start exploring art, places, and community.'**
+  /// **'Your space is ready. Start discovering public art, artists, institutions, and community activity.'**
   String get onboardingFlowDoneBody;
 
   /// No description provided for @onboardingFlowOpenProfile.
@@ -2522,7 +2858,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingFlowProfileInstitutionIntro.
   ///
   /// In en, this message translates to:
-  /// **'Add the organization details people should see first. Community review comes right after this.'**
+  /// **'Add the organization details people should see first. Community governance review comes right after this.'**
   String get onboardingFlowProfileInstitutionIntro;
 
   /// No description provided for @onboardingFlowProfileCreatorIntro.
@@ -2612,19 +2948,19 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingFlowDaoReviewTitle.
   ///
   /// In en, this message translates to:
-  /// **'Community review'**
+  /// **'Governance review'**
   String get onboardingFlowDaoReviewTitle;
 
   /// No description provided for @onboardingFlowDaoReviewInstitutionBody.
   ///
   /// In en, this message translates to:
-  /// **'Submit your institution details for community review before account setup is completed.'**
+  /// **'Submit your institution details for community governance review before account setup is completed.'**
   String get onboardingFlowDaoReviewInstitutionBody;
 
   /// No description provided for @onboardingFlowDaoReviewArtistBody.
   ///
   /// In en, this message translates to:
-  /// **'Submit your practice for community review before account setup is completed.'**
+  /// **'Submit your practice for community governance review before account setup is completed.'**
   String get onboardingFlowDaoReviewArtistBody;
 
   /// No description provided for @onboardingFlowDaoReviewCompleteFormError.
@@ -2636,7 +2972,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingFlowDaoReviewSubmitFailed.
   ///
   /// In en, this message translates to:
-  /// **'Unable to submit the community review right now.'**
+  /// **'Unable to submit the governance review right now.'**
   String get onboardingFlowDaoReviewSubmitFailed;
 
   /// No description provided for @onboardingFlowDaoReviewStatus.
@@ -2696,97 +3032,97 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingFlowDaoReviewSubmitAction.
   ///
   /// In en, this message translates to:
-  /// **'Submit for community review'**
+  /// **'Submit for governance review'**
   String get onboardingFlowDaoReviewSubmitAction;
 
   /// No description provided for @onboardingWelcomeTitle.
   ///
   /// In en, this message translates to:
-  /// **'kubus - your art companion.'**
+  /// **'art.kubus is an open art platform.'**
   String get onboardingWelcomeTitle;
 
   /// No description provided for @onboardingWelcomeSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Art, places, and community together'**
+  /// **'Community-first cultural discovery'**
   String get onboardingWelcomeSubtitle;
 
   /// No description provided for @onboardingWelcomeDescription.
   ///
   /// In en, this message translates to:
-  /// **'Discover artworks, places, creators, and institutions with kubus as your guide. Wallet features are optional. AR, governance, settlement, and rewards are developing step by step.'**
+  /// **'Discover local art, creators, institutions, exhibitions and works in public space. art.kubus connects the map, community, AR, wallet, archive records and governance into one open cultural infrastructure.'**
   String get onboardingWelcomeDescription;
 
   /// No description provided for @onboardingExploreTitle.
   ///
   /// In en, this message translates to:
-  /// **'Explore artworks'**
+  /// **'Explore the open art map'**
   String get onboardingExploreTitle;
 
   /// No description provided for @onboardingExploreSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Find art around you'**
+  /// **'Discover local and public-space art'**
   String get onboardingExploreSubtitle;
 
   /// No description provided for @onboardingExploreDescription.
   ///
   /// In en, this message translates to:
-  /// **'Use the map to discover artworks and markers nearby. Every location can tell a story.'**
+  /// **'Use the community-generated cultural map to find artworks, exhibitions, institutions, artists, and public-space stories nearby.'**
   String get onboardingExploreDescription;
 
   /// No description provided for @onboardingCreateTitle.
   ///
   /// In en, this message translates to:
-  /// **'Create and share'**
+  /// **'Share art and context'**
   String get onboardingCreateTitle;
 
   /// No description provided for @onboardingCreateSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Express your creativity'**
+  /// **'Contribute to the cultural archive'**
   String get onboardingCreateSubtitle;
 
   /// No description provided for @onboardingCreateDescription.
   ///
   /// In en, this message translates to:
-  /// **'Share your practice, add context, and prepare future AR layers when they are ready.'**
+  /// **'Publish artworks, document practice, add context, and prepare optional AR layers when they support the work.'**
   String get onboardingCreateDescription;
 
   /// No description provided for @onboardingCommunityTitle.
   ///
   /// In en, this message translates to:
-  /// **'Join the community'**
+  /// **'Join the art community'**
   String get onboardingCommunityTitle;
 
   /// No description provided for @onboardingCommunitySubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Collaborate by default'**
+  /// **'Participation before infrastructure'**
   String get onboardingCommunitySubtitle;
 
   /// No description provided for @onboardingCommunityDescription.
   ///
   /// In en, this message translates to:
-  /// **'Follow artists, message, and collaborate on projects - cooperation is the default where it makes sense.'**
+  /// **'Follow artists and institutions, discuss work, collaborate, and make local cultural activity more visible.'**
   String get onboardingCommunityDescription;
 
   /// No description provided for @onboardingCollectiblesTitle.
   ///
   /// In en, this message translates to:
-  /// **'Collectibles (optional)'**
+  /// **'Archive records and digital editions'**
   String get onboardingCollectiblesTitle;
 
   /// No description provided for @onboardingCollectiblesSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Proofs of visit and collectibles'**
+  /// **'Cultural memory, visits and ownership'**
   String get onboardingCollectiblesSubtitle;
 
   /// No description provided for @onboardingCollectiblesDescription.
   ///
   /// In en, this message translates to:
-  /// **'Use your wallet to collect digital collectibles (NFT) and proofs of visit (POAP) when you choose. Discovery and community work regardless.'**
+  /// **'When you visit or contribute to public art, kubus can record that context as an archive record or digital edition. Discovery and community remain open without a wallet.'**
   String get onboardingCollectiblesDescription;
 
   /// No description provided for @onboardingGrantPermissions.
@@ -2978,7 +3314,7 @@ abstract class AppLocalizations {
   /// No description provided for @permissionsNotificationsDescription.
   ///
   /// In en, this message translates to:
-  /// **'Get updates about new artworks, exhibitions, events, and community activity, plus wallet-based updates like collectibles (NFT) and proofs of visit (POAP).'**
+  /// **'Get updates about new artworks, exhibitions, events and community activity. Optional participation records can be enabled later.'**
   String get permissionsNotificationsDescription;
 
   /// No description provided for @permissionsNotificationsBenefit1.
@@ -2996,7 +3332,7 @@ abstract class AppLocalizations {
   /// No description provided for @permissionsNotificationsBenefit3.
   ///
   /// In en, this message translates to:
-  /// **'Collectibles and visit proofs'**
+  /// **'Participation records and exhibition updates'**
   String get permissionsNotificationsBenefit3;
 
   /// No description provided for @permissionsNotificationsBenefit4.
@@ -3188,7 +3524,7 @@ abstract class AppLocalizations {
   /// No description provided for @desktopSettingsWalletSectionSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Manage your account wallet, recovery access, and connected features'**
+  /// **'Manage optional ownership access, recovery, and wallet-linked features'**
   String get desktopSettingsWalletSectionSubtitle;
 
   /// No description provided for @desktopSettingsViewWalletButton.
@@ -3308,7 +3644,7 @@ abstract class AppLocalizations {
   /// No description provided for @desktopSettingsAchievementsSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Track your progress, milestones, and community recognition'**
+  /// **'Track milestones and signals of participation without presenting them as financial incentives'**
   String get desktopSettingsAchievementsSubtitle;
 
   /// No description provided for @desktopSettingsAchievementsStatArtworksDiscovered.
@@ -3332,7 +3668,7 @@ abstract class AppLocalizations {
   /// No description provided for @desktopSettingsAchievementsStatKub8PointsEarned.
   ///
   /// In en, this message translates to:
-  /// **'KUB8 points collected'**
+  /// **'Contribution recognition'**
   String get desktopSettingsAchievementsStatKub8PointsEarned;
 
   /// No description provided for @desktopSettingsAchievementFirstDiscoveryTitle.
@@ -3344,7 +3680,7 @@ abstract class AppLocalizations {
   /// No description provided for @desktopSettingsAchievementFirstDiscoveryDescription.
   ///
   /// In en, this message translates to:
-  /// **'Discover your first AR artwork'**
+  /// **'Discover your first public artwork'**
   String get desktopSettingsAchievementFirstDiscoveryDescription;
 
   /// No description provided for @desktopSettingsAchievementArtCollectorTitle.
@@ -3386,13 +3722,13 @@ abstract class AppLocalizations {
   /// No description provided for @desktopSettingsAchievementNftCreatorTitle.
   ///
   /// In en, this message translates to:
-  /// **'Digital collectible creator'**
+  /// **'First digital archive object'**
   String get desktopSettingsAchievementNftCreatorTitle;
 
   /// No description provided for @desktopSettingsAchievementNftCreatorDescription.
   ///
   /// In en, this message translates to:
-  /// **'Create your first digital collectible'**
+  /// **'Create your first optional digital archive object'**
   String get desktopSettingsAchievementNftCreatorDescription;
 
   /// No description provided for @desktopSettingsHelpSupportTitle.
@@ -3470,25 +3806,25 @@ abstract class AppLocalizations {
   /// No description provided for @desktopSettingsFeatureWeb3IntegrationTitle.
   ///
   /// In en, this message translates to:
-  /// **'Wallet integration (Solana)'**
+  /// **'Wallet and Web3 access'**
   String get desktopSettingsFeatureWeb3IntegrationTitle;
 
   /// No description provided for @desktopSettingsFeatureWeb3IntegrationDescription.
   ///
   /// In en, this message translates to:
-  /// **'Account wallet on Solana, with KUB8 points and future participation features'**
+  /// **'Connect a wallet only if you want attribution, digital archive objects or future participation tools. Basic discovery and community do not require it.'**
   String get desktopSettingsFeatureWeb3IntegrationDescription;
 
   /// No description provided for @desktopSettingsFeatureNftMintingTitle.
   ///
   /// In en, this message translates to:
-  /// **'Collectibles (NFT)'**
+  /// **'Digital archive objects'**
   String get desktopSettingsFeatureNftMintingTitle;
 
   /// No description provided for @desktopSettingsFeatureNftMintingDescription.
   ///
   /// In en, this message translates to:
-  /// **'Create and manage digital art collectibles'**
+  /// **'Create and manage optional digital records connected to artworks, visits or contributions.'**
   String get desktopSettingsFeatureNftMintingDescription;
 
   /// No description provided for @desktopSettingsFeatureCommunityTitle.
@@ -3500,7 +3836,7 @@ abstract class AppLocalizations {
   /// No description provided for @desktopSettingsFeatureCommunityDescription.
   ///
   /// In en, this message translates to:
-  /// **'Connect with artists and collectors'**
+  /// **'Connect with artists, institutions, and art lovers'**
   String get desktopSettingsFeatureCommunityDescription;
 
   /// No description provided for @desktopSettingsFeatureInstitutionsTitle.
@@ -3884,7 +4220,7 @@ abstract class AppLocalizations {
   /// No description provided for @walletActionConnectWalletRequiredToast.
   ///
   /// In en, this message translates to:
-  /// **'Connect your wallet to continue.'**
+  /// **'Connect a wallet to continue with this wallet-linked action.'**
   String get walletActionConnectWalletRequiredToast;
 
   /// No description provided for @walletActionAccountShellNeedsWalletToast.
@@ -4262,7 +4598,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsLogoutTileSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Disconnect wallet and clear session'**
+  /// **'Sign out and clear this device session'**
   String get settingsLogoutTileSubtitle;
 
   /// No description provided for @settingsResetAppTileTitle.
@@ -4802,7 +5138,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsTermsDialogBody.
   ///
   /// In en, this message translates to:
-  /// **'By using art.kubus, you agree to these terms:\n\n1. You are responsible for protecting your wallet, recovery phrase, and any recovery passwords.\n2. We do not store your private keys or recovery phrase for you.\n3. Wallet-based actions and transactions can be final and irreversible.\n4. Use the app responsibly and keep your recovery details safe.\n5. We may update these terms over time.\n\nFor the complete terms, visit our website.'**
+  /// **'By using art.kubus, you agree to these terms:\n\n1. art.kubus is an open art platform and research-development prototype.\n2. You are responsible for protecting any wallet, recovery phrase, and recovery passwords you choose to use.\n3. Wallet-based actions can be final and irreversible.\n4. Discovery, community participation, and public cultural access should be used responsibly.\n5. We may update these terms over time.\n\nFor the complete terms, visit our website.'**
   String get settingsTermsDialogBody;
 
   /// No description provided for @settingsPrivacyPolicyDialogTitle.
@@ -5258,13 +5594,13 @@ abstract class AppLocalizations {
   /// No description provided for @settingsEmailPreferencesActivityDaoTitle.
   ///
   /// In en, this message translates to:
-  /// **'DAO activity'**
+  /// **'Governance activity'**
   String get settingsEmailPreferencesActivityDaoTitle;
 
   /// No description provided for @settingsEmailPreferencesActivityDaoSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Governance updates, proposals, and voting reminders'**
+  /// **'Updates about governance review, proposals, and community participation'**
   String get settingsEmailPreferencesActivityDaoSubtitle;
 
   /// No description provided for @settingsEmailPreferencesActivityArtistHubTitle.
@@ -5396,13 +5732,13 @@ abstract class AppLocalizations {
   /// No description provided for @settingsInAppNotificationsDaoTitle.
   ///
   /// In en, this message translates to:
-  /// **'DAO notifications'**
+  /// **'Governance notifications'**
   String get settingsInAppNotificationsDaoTitle;
 
   /// No description provided for @settingsInAppNotificationsDaoSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'In-app notifications for DAO form reviews and governance decisions.'**
+  /// **'In-app notifications for governance review and platform decisions.'**
   String get settingsInAppNotificationsDaoSubtitle;
 
   /// No description provided for @settingsInAppNotificationsArtistHubTitle.
@@ -5540,13 +5876,13 @@ abstract class AppLocalizations {
   /// No description provided for @settingsShowCollectionTitle.
   ///
   /// In en, this message translates to:
-  /// **'Show collection'**
+  /// **'Show cultural artifacts'**
   String get settingsShowCollectionTitle;
 
   /// No description provided for @settingsShowCollectionSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Show your digital collectibles publicly on your profile'**
+  /// **'Show your digital cultural artifacts publicly on your profile'**
   String get settingsShowCollectionSubtitle;
 
   /// No description provided for @settingsAllowMessagesTitle.
@@ -5588,19 +5924,19 @@ abstract class AppLocalizations {
   /// No description provided for @web3OnboardingKeyFeaturesTitle.
   ///
   /// In en, this message translates to:
-  /// **'Key features:'**
+  /// **'Platform tools:'**
   String get web3OnboardingKeyFeaturesTitle;
 
   /// No description provided for @web3FeatureWeb3Title.
   ///
   /// In en, this message translates to:
-  /// **'Optional wallet and archive tools'**
+  /// **'Wallet and archive tools'**
   String get web3FeatureWeb3Title;
 
   /// No description provided for @web3FeatureMarketplaceTitle.
   ///
   /// In en, this message translates to:
-  /// **'Digital collectibles'**
+  /// **'Digital editions'**
   String get web3FeatureMarketplaceTitle;
 
   /// No description provided for @web3FeatureArtistStudioTitle.
@@ -5624,31 +5960,31 @@ abstract class AppLocalizations {
   /// No description provided for @web3DaoP1Title.
   ///
   /// In en, this message translates to:
-  /// **'Welcome to community decision-making'**
+  /// **'Community governance'**
   String get web3DaoP1Title;
 
   /// No description provided for @web3DaoP1Description.
   ///
   /// In en, this message translates to:
-  /// **'Take part in community decisions that shape art.kubus. This is governance as participation, not speculation.'**
+  /// **'Take part in experimental community decision-making that helps shape art.kubus. It is participation infrastructure, not a financial product.'**
   String get web3DaoP1Description;
 
   /// No description provided for @web3DaoP1Feature1.
   ///
   /// In en, this message translates to:
-  /// **'Vote on community proposals'**
+  /// **'Review community proposals'**
   String get web3DaoP1Feature1;
 
   /// No description provided for @web3DaoP1Feature2.
   ///
   /// In en, this message translates to:
-  /// **'Create and submit proposals'**
+  /// **'Submit ideas with context'**
   String get web3DaoP1Feature2;
 
   /// No description provided for @web3DaoP1Feature3.
   ///
   /// In en, this message translates to:
-  /// **'Collect KUB8 points for participation'**
+  /// **'Receive recognition for participation'**
   String get web3DaoP1Feature3;
 
   /// No description provided for @web3DaoP1Feature4.
@@ -5660,25 +5996,25 @@ abstract class AppLocalizations {
   /// No description provided for @web3DaoP2Title.
   ///
   /// In en, this message translates to:
-  /// **'Your voting power'**
+  /// **'Participation signals'**
   String get web3DaoP2Title;
 
   /// No description provided for @web3DaoP2Description.
   ///
   /// In en, this message translates to:
-  /// **'Voting power can reflect Season 0 participation (KUB8 points). It is about contribution and recognition, not financial value.'**
+  /// **'Participation signals can reflect Season 0 recognition. They acknowledge contribution and visibility, not financial value.'**
   String get web3DaoP2Description;
 
   /// No description provided for @web3DaoP2Feature1.
   ///
   /// In en, this message translates to:
-  /// **'Voting power can follow your KUB8 points'**
+  /// **'Signals can follow KUB8 recognition'**
   String get web3DaoP2Feature1;
 
   /// No description provided for @web3DaoP2Feature2.
   ///
   /// In en, this message translates to:
-  /// **'Vote on active proposals'**
+  /// **'Participate in active proposals'**
   String get web3DaoP2Feature2;
 
   /// No description provided for @web3DaoP2Feature3.
@@ -5696,7 +6032,7 @@ abstract class AppLocalizations {
   /// No description provided for @web3DaoP3Title.
   ///
   /// In en, this message translates to:
-  /// **'Create proposals'**
+  /// **'Submit community proposals'**
   String get web3DaoP3Title;
 
   /// No description provided for @web3DaoP3Description.
@@ -5732,13 +6068,13 @@ abstract class AppLocalizations {
   /// No description provided for @web3DaoP4Title.
   ///
   /// In en, this message translates to:
-  /// **'Ready to participate'**
+  /// **'Ready to contribute'**
   String get web3DaoP4Title;
 
   /// No description provided for @web3DaoP4Description.
   ///
   /// In en, this message translates to:
-  /// **'Review active proposals, follow the discussion, and vote when you are ready.'**
+  /// **'Review proposals, follow the discussion, and participate when you are ready.'**
   String get web3DaoP4Description;
 
   /// No description provided for @web3DaoP4Feature1.
@@ -5810,7 +6146,7 @@ abstract class AppLocalizations {
   /// No description provided for @web3ArtistStudioP2Description.
   ///
   /// In en, this message translates to:
-  /// **'Showcase your creations and digital collectibles (NFT). Upload, organize, and present your work.'**
+  /// **'Present artworks and optional digital cultural artifacts. Upload, organize, and describe your practice.'**
   String get web3ArtistStudioP2Description;
 
   /// No description provided for @web3ArtistStudioP2Feature1.
@@ -5864,7 +6200,7 @@ abstract class AppLocalizations {
   /// No description provided for @web3ArtistStudioP3Feature3.
   ///
   /// In en, this message translates to:
-  /// **'Add discovery recognition (KUB8 points)'**
+  /// **'Add recognition for discoveries'**
   String get web3ArtistStudioP3Feature3;
 
   /// No description provided for @web3ArtistStudioP3Feature4.
@@ -5894,7 +6230,7 @@ abstract class AppLocalizations {
   /// No description provided for @web3ArtistStudioP4Feature2.
   ///
   /// In en, this message translates to:
-  /// **'Track KUB8 points progress'**
+  /// **'Track contribution recognition'**
   String get web3ArtistStudioP4Feature2;
 
   /// No description provided for @web3ArtistStudioP4Feature3.
@@ -5942,7 +6278,7 @@ abstract class AppLocalizations {
   /// No description provided for @web3ArtistStudioP5Feature4.
   ///
   /// In en, this message translates to:
-  /// **'Start collecting KUB8 points'**
+  /// **'Build contribution recognition'**
   String get web3ArtistStudioP5Feature4;
 
   /// No description provided for @web3InstitutionHubP1Title.
@@ -6158,7 +6494,7 @@ abstract class AppLocalizations {
   /// Advisory helper text shown in Institution Hub role-blocked state, recommending separate wallets for artist vs institution roles.
   ///
   /// In en, this message translates to:
-  /// **'Tip: Use separate wallets for artist and institution roles to avoid DAO conflicts.'**
+  /// **'Tip: Use separate wallets for artist and institution roles to keep governance review contexts clear.'**
   String get institutionHubSeparateWalletsTip;
 
   /// Primary call-to-action label in Institution Hub locked state to start DAO review application.
@@ -6200,7 +6536,7 @@ abstract class AppLocalizations {
   /// No description provided for @institutionHubApplicationSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Share your mission, programming focus, and how you plan to collaborate with the DAO.'**
+  /// **'Share your mission, programming focus, and how you plan to collaborate with the community.'**
   String get institutionHubApplicationSubtitle;
 
   /// No description provided for @institutionHubApplicationOrganizationLabel.
@@ -6254,13 +6590,13 @@ abstract class AppLocalizations {
   /// No description provided for @institutionHubApplicationWalletRequired.
   ///
   /// In en, this message translates to:
-  /// **'Connect your wallet before submitting.'**
+  /// **'Connect a wallet before submitting.'**
   String get institutionHubApplicationWalletRequired;
 
   /// No description provided for @institutionHubApplicationSubmittedToast.
   ///
   /// In en, this message translates to:
-  /// **'Application submitted for DAO review.'**
+  /// **'Application submitted for governance review.'**
   String get institutionHubApplicationSubmittedToast;
 
   /// No description provided for @institutionHubApplicationSubmitUnavailableToast.
@@ -6308,7 +6644,7 @@ abstract class AppLocalizations {
   /// No description provided for @institutionHubApplicationCardSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Submit your organization for DAO review and unlock institutional tooling.'**
+  /// **'Submit your organization for governance review and unlock institutional tooling.'**
   String get institutionHubApplicationCardSubtitle;
 
   /// No description provided for @institutionHubDaoStatusApproved.
@@ -6344,13 +6680,13 @@ abstract class AppLocalizations {
   /// No description provided for @institutionHubCtaApprovedByDao.
   ///
   /// In en, this message translates to:
-  /// **'Approved by DAO'**
+  /// **'Approved by governance review'**
   String get institutionHubCtaApprovedByDao;
 
   /// No description provided for @institutionHubCtaPendingDaoReview.
   ///
   /// In en, this message translates to:
-  /// **'Pending DAO review'**
+  /// **'Pending governance review'**
   String get institutionHubCtaPendingDaoReview;
 
   /// No description provided for @institutionHubCtaConnectWalletToApply.
@@ -6362,13 +6698,13 @@ abstract class AppLocalizations {
   /// No description provided for @institutionHubDaoStatusSyncedLabel.
   ///
   /// In en, this message translates to:
-  /// **'Status synced from DAO'**
+  /// **'Status synced from governance review'**
   String get institutionHubDaoStatusSyncedLabel;
 
   /// No description provided for @institutionHubDaoReviewQueueMessage.
   ///
   /// In en, this message translates to:
-  /// **'Your submission is in the DAO review queue.'**
+  /// **'Your submission is in the governance review queue.'**
   String get institutionHubDaoReviewQueueMessage;
 
   /// No description provided for @institutionHubApprovedToolsMessage.
@@ -6386,49 +6722,49 @@ abstract class AppLocalizations {
   /// No description provided for @web3MarketplaceP1Title.
   ///
   /// In en, this message translates to:
-  /// **'Welcome to the marketplace'**
+  /// **'Digital cultural artifacts'**
   String get web3MarketplaceP1Title;
 
   /// No description provided for @web3MarketplaceP1Description.
   ///
   /// In en, this message translates to:
-  /// **'Discover digital works and collectibles from artists and institutions, then collect or offer them with clear provenance.'**
+  /// **'Archive records and digital editions connect artworks with provenance, visits and cultural memory.'**
   String get web3MarketplaceP1Description;
 
   /// No description provided for @web3MarketplaceP1Feature1.
   ///
   /// In en, this message translates to:
-  /// **'Browse collectibles'**
+  /// **'Browse cultural artifacts'**
   String get web3MarketplaceP1Feature1;
 
   /// No description provided for @web3MarketplaceP1Feature2.
   ///
   /// In en, this message translates to:
-  /// **'Buy and sell securely'**
+  /// **'See artist and artwork context'**
   String get web3MarketplaceP1Feature2;
 
   /// No description provided for @web3MarketplaceP1Feature3.
   ///
   /// In en, this message translates to:
-  /// **'Discover featured artworks'**
+  /// **'Understand provenance'**
   String get web3MarketplaceP1Feature3;
 
   /// No description provided for @web3MarketplaceP1Feature4.
   ///
   /// In en, this message translates to:
-  /// **'Support creators you like'**
+  /// **'Keep ownership optional'**
   String get web3MarketplaceP1Feature4;
 
   /// No description provided for @web3MarketplaceP2Title.
   ///
   /// In en, this message translates to:
-  /// **'Discover great art'**
+  /// **'Discover with context'**
   String get web3MarketplaceP2Title;
 
   /// No description provided for @web3MarketplaceP2Description.
   ///
   /// In en, this message translates to:
-  /// **'Explore curated collections and filter by category, rarity, and provenance.'**
+  /// **'Explore artifacts through artists, institutions, exhibitions, and public-space stories instead of trading hype.'**
   String get web3MarketplaceP2Description;
 
   /// No description provided for @web3MarketplaceP2Feature1.
@@ -6458,13 +6794,13 @@ abstract class AppLocalizations {
   /// No description provided for @web3MarketplaceP3Title.
   ///
   /// In en, this message translates to:
-  /// **'List your creations'**
+  /// **'Support artists carefully'**
   String get web3MarketplaceP3Title;
 
   /// No description provided for @web3MarketplaceP3Description.
   ///
   /// In en, this message translates to:
-  /// **'Artists can publish digital collectibles when a work or series is meant to live in that format. Add context, price, and availability.'**
+  /// **'When enabled, offers and listings support artist projects and cultural archiving. They are not the core app experience.'**
   String get web3MarketplaceP3Description;
 
   /// No description provided for @web3MarketplaceP3Feature1.
@@ -6494,13 +6830,13 @@ abstract class AppLocalizations {
   /// No description provided for @web3MarketplaceP4Title.
   ///
   /// In en, this message translates to:
-  /// **'Start exploring'**
+  /// **'Optional collecting'**
   String get web3MarketplaceP4Title;
 
   /// No description provided for @web3MarketplaceP4Description.
   ///
   /// In en, this message translates to:
-  /// **'Explore collections, make a purchase when you are ready, or publish a work for others to collect.'**
+  /// **'Collecting is a supporting layer. You can use art.kubus for discovery, community, and cultural access without collecting.'**
   String get web3MarketplaceP4Description;
 
   /// No description provided for @web3MarketplaceP4Feature1.
@@ -6524,19 +6860,19 @@ abstract class AppLocalizations {
   /// No description provided for @web3MarketplaceP4Feature4.
   ///
   /// In en, this message translates to:
-  /// **'Join the creative community'**
+  /// **'Join the art community'**
   String get web3MarketplaceP4Feature4;
 
   /// No description provided for @web3FeaturesP1Title.
   ///
   /// In en, this message translates to:
-  /// **'Optional account wallet'**
+  /// **'Wallet account'**
   String get web3FeaturesP1Title;
 
   /// No description provided for @web3FeaturesP1Description.
   ///
   /// In en, this message translates to:
-  /// **'A wallet can support long-term access, attribution, and future participation when you choose. Basic discovery and community browsing do not start with a wallet.'**
+  /// **'This step is optional. A wallet can support long-term access, attribution, digital ownership, and future participation when you choose. Basic discovery and community do not start with a wallet.'**
   String get web3FeaturesP1Description;
 
   /// No description provided for @web3FeaturesP1Feature1.
@@ -6548,7 +6884,7 @@ abstract class AppLocalizations {
   /// No description provided for @web3FeaturesP1Feature2.
   ///
   /// In en, this message translates to:
-  /// **'Collectibles, visit proofs, and future rights'**
+  /// **'Digital editions, visit proofs, and future rights research'**
   String get web3FeaturesP1Feature2;
 
   /// No description provided for @web3FeaturesP1Feature3.
@@ -6566,25 +6902,25 @@ abstract class AppLocalizations {
   /// No description provided for @web3FeaturesP2Title.
   ///
   /// In en, this message translates to:
-  /// **'Collectibles marketplace'**
+  /// **'Digital edition catalog'**
   String get web3FeaturesP2Title;
 
   /// No description provided for @web3FeaturesP2Description.
   ///
   /// In en, this message translates to:
-  /// **'Browse, collect, and offer digital works in a marketplace connected to artists, artworks, and provenance.'**
+  /// **'Browse digital cultural artifacts connected to artists, artworks, institutions, and provenance.'**
   String get web3FeaturesP2Description;
 
   /// No description provided for @web3FeaturesP2Feature1.
   ///
   /// In en, this message translates to:
-  /// **'Browse featured drops'**
+  /// **'Browse featured cultural artifacts'**
   String get web3FeaturesP2Feature1;
 
   /// No description provided for @web3FeaturesP2Feature2.
   ///
   /// In en, this message translates to:
-  /// **'Search by category and rarity'**
+  /// **'Search by artist, artwork, or context'**
   String get web3FeaturesP2Feature2;
 
   /// No description provided for @web3FeaturesP2Feature3.
@@ -6596,7 +6932,7 @@ abstract class AppLocalizations {
   /// No description provided for @web3FeaturesP2Feature4.
   ///
   /// In en, this message translates to:
-  /// **'Buy and sell securely'**
+  /// **'Support artists when enabled'**
   String get web3FeaturesP2Feature4;
 
   /// No description provided for @web3FeaturesP2Feature5.
@@ -6614,7 +6950,7 @@ abstract class AppLocalizations {
   /// No description provided for @web3FeaturesP3Description.
   ///
   /// In en, this message translates to:
-  /// **'Create and manage digital works, build your portfolio, and publish collectibles when a project calls for them.'**
+  /// **'Create and manage artworks, build your portfolio, and publish digital editions when a project calls for them.'**
   String get web3FeaturesP3Description;
 
   /// No description provided for @web3FeaturesP3Feature1.
@@ -6632,13 +6968,13 @@ abstract class AppLocalizations {
   /// No description provided for @web3FeaturesP3Feature3.
   ///
   /// In en, this message translates to:
-  /// **'Optionally publish collectibles (NFT)'**
+  /// **'Publish digital editions'**
   String get web3FeaturesP3Feature3;
 
   /// No description provided for @web3FeaturesP3Feature4.
   ///
   /// In en, this message translates to:
-  /// **'Track insights and engagement'**
+  /// **'Track discovery and response'**
   String get web3FeaturesP3Feature4;
 
   /// No description provided for @web3FeaturesP3Feature5.
@@ -6662,19 +6998,19 @@ abstract class AppLocalizations {
   /// No description provided for @web3FeaturesP4Feature1.
   ///
   /// In en, this message translates to:
-  /// **'Vote on proposals'**
+  /// **'Review proposals'**
   String get web3FeaturesP4Feature1;
 
   /// No description provided for @web3FeaturesP4Feature2.
   ///
   /// In en, this message translates to:
-  /// **'Submit suggestions'**
+  /// **'Submit suggestions with context'**
   String get web3FeaturesP4Feature2;
 
   /// No description provided for @web3FeaturesP4Feature3.
   ///
   /// In en, this message translates to:
-  /// **'Collect KUB8 points for participation'**
+  /// **'Receive recognition for participation'**
   String get web3FeaturesP4Feature3;
 
   /// No description provided for @web3FeaturesP4Feature4.
@@ -6734,31 +7070,31 @@ abstract class AppLocalizations {
   /// No description provided for @web3FeaturesP6Title.
   ///
   /// In en, this message translates to:
-  /// **'KUB8 recognition records'**
+  /// **'Contribution recognition'**
   String get web3FeaturesP6Title;
 
   /// No description provided for @web3FeaturesP6Description.
   ///
   /// In en, this message translates to:
-  /// **'KUB8 points track Season 0 participation and recognition. They are not money, not a tradable asset, and not live payouts.'**
+  /// **'KUB8 records Season 0 participation and recognition. They are not money, not a tradable asset, and not a live payment promise.'**
   String get web3FeaturesP6Description;
 
   /// No description provided for @web3FeaturesP6Feature1.
   ///
   /// In en, this message translates to:
-  /// **'Collect points for participation and discoveries'**
+  /// **'Record participation and discoveries'**
   String get web3FeaturesP6Feature1;
 
   /// No description provided for @web3FeaturesP6Feature2.
   ///
   /// In en, this message translates to:
-  /// **'Track progress over the season'**
+  /// **'Track contribution progress over the season'**
   String get web3FeaturesP6Feature2;
 
   /// No description provided for @web3FeaturesP6Feature3.
   ///
   /// In en, this message translates to:
-  /// **'Unlock badges and recognition'**
+  /// **'Unlock badges and community recognition'**
   String get web3FeaturesP6Feature3;
 
   /// No description provided for @web3FeaturesP6Feature4.
@@ -6770,7 +7106,7 @@ abstract class AppLocalizations {
   /// No description provided for @web3FeaturesP6Feature5.
   ///
   /// In en, this message translates to:
-  /// **'Non-transferable season points'**
+  /// **'Non-transferable participation records'**
   String get web3FeaturesP6Feature5;
 
   /// No description provided for @commonApply.
@@ -6806,7 +7142,7 @@ abstract class AppLocalizations {
   /// No description provided for @commonKub8PointsReward.
   ///
   /// In en, this message translates to:
-  /// **'+{points} KUB8 points'**
+  /// **'+{points} KUB8 recognition'**
   String commonKub8PointsReward(Object points);
 
   /// No description provided for @commonDistanceKm.
@@ -6878,7 +7214,7 @@ abstract class AppLocalizations {
   /// No description provided for @mapArArtworkNearbyTitle.
   ///
   /// In en, this message translates to:
-  /// **'AR artwork nearby!'**
+  /// **'Artwork nearby'**
   String get mapArArtworkNearbyTitle;
 
   /// No description provided for @mapArArtworkNearbySubtitle.
@@ -6914,19 +7250,19 @@ abstract class AppLocalizations {
   /// No description provided for @mapMarkerCreateWalletRequired.
   ///
   /// In en, this message translates to:
-  /// **'Connect your wallet and create an artwork to place a marker.'**
+  /// **'Create a profile and optional ownership access before placing a marker tied to your own artwork.'**
   String get mapMarkerCreateWalletRequired;
 
   /// No description provided for @mapMarkerCreateNoArArtworks.
   ///
   /// In en, this message translates to:
-  /// **'No artworks found for your wallet. Create one first to place a marker.'**
+  /// **'No map-ready artworks are linked to this account yet. Create an artwork first, then place it on the open art map.'**
   String get mapMarkerCreateNoArArtworks;
 
   /// No description provided for @mapMarkerDialogTitle.
   ///
   /// In en, this message translates to:
-  /// **'Create marker'**
+  /// **'Add to open art map'**
   String get mapMarkerDialogTitle;
 
   /// No description provided for @mapMarkerDialogRefreshSubjectsTooltip.
@@ -6938,7 +7274,7 @@ abstract class AppLocalizations {
   /// No description provided for @mapMarkerDialogAttachHint.
   ///
   /// In en, this message translates to:
-  /// **'Attach an existing subject and AR asset to this location.'**
+  /// **'Attach an existing artwork, institution, exhibition, or AR asset to this location.'**
   String get mapMarkerDialogAttachHint;
 
   /// No description provided for @mapMarkerDialogSubjectTypeLabel.
@@ -7010,7 +7346,7 @@ abstract class AppLocalizations {
   /// No description provided for @mapMarkerDialogPublicMarkerTitle.
   ///
   /// In en, this message translates to:
-  /// **'Public marker'**
+  /// **'Public cultural marker'**
   String get mapMarkerDialogPublicMarkerTitle;
 
   /// No description provided for @mapMarkerDialogPublicMarkerSubtitle.
@@ -7148,13 +7484,13 @@ abstract class AppLocalizations {
   /// No description provided for @mapMarkerClaimsDialogTitle.
   ///
   /// In en, this message translates to:
-  /// **'Street art claims'**
+  /// **'Public art ownership requests'**
   String get mapMarkerClaimsDialogTitle;
 
   /// No description provided for @mapMarkerClaimSubmitTitle.
   ///
   /// In en, this message translates to:
-  /// **'Submit claim'**
+  /// **'Submit request'**
   String get mapMarkerClaimSubmitTitle;
 
   /// No description provided for @mapMarkerClaimReasonLabel.
@@ -7178,19 +7514,19 @@ abstract class AppLocalizations {
   /// No description provided for @mapMarkerClaimSubmitButton.
   ///
   /// In en, this message translates to:
-  /// **'Submit claim'**
+  /// **'Submit request'**
   String get mapMarkerClaimSubmitButton;
 
   /// No description provided for @mapMarkerClaimLoading.
   ///
   /// In en, this message translates to:
-  /// **'Loading claims...'**
+  /// **'Loading requests...'**
   String get mapMarkerClaimLoading;
 
   /// No description provided for @mapMarkerClaimNoClaims.
   ///
   /// In en, this message translates to:
-  /// **'No claims yet.'**
+  /// **'No requests yet.'**
   String get mapMarkerClaimNoClaims;
 
   /// No description provided for @mapMarkerClaimOwnerReviewActionsTitle.
@@ -7202,7 +7538,7 @@ abstract class AppLocalizations {
   /// No description provided for @mapMarkerClaimDaoReviewActionsTitle.
   ///
   /// In en, this message translates to:
-  /// **'DAO review'**
+  /// **'Governance review'**
   String get mapMarkerClaimDaoReviewActionsTitle;
 
   /// No description provided for @mapMarkerClaimActionApprove.
@@ -7220,19 +7556,19 @@ abstract class AppLocalizations {
   /// No description provided for @mapMarkerClaimActionEscalate.
   ///
   /// In en, this message translates to:
-  /// **'Escalate to DAO'**
+  /// **'Escalate to governance review'**
   String get mapMarkerClaimActionEscalate;
 
   /// No description provided for @mapMarkerClaimActionApproveDao.
   ///
   /// In en, this message translates to:
-  /// **'Approve (DAO)'**
+  /// **'Approve (community)'**
   String get mapMarkerClaimActionApproveDao;
 
   /// No description provided for @mapMarkerClaimActionRejectDao.
   ///
   /// In en, this message translates to:
-  /// **'Reject (DAO)'**
+  /// **'Reject (community)'**
   String get mapMarkerClaimActionRejectDao;
 
   /// No description provided for @mapMarkerClaimNoteLabel.
@@ -7244,7 +7580,7 @@ abstract class AppLocalizations {
   /// No description provided for @mapMarkerClaimSubmittedToast.
   ///
   /// In en, this message translates to:
-  /// **'Street art claim submitted.'**
+  /// **'Street art ownership request submitted.'**
   String get mapMarkerClaimSubmittedToast;
 
   /// No description provided for @mapMarkerClaimActionSuccessToast.
@@ -7256,13 +7592,13 @@ abstract class AppLocalizations {
   /// No description provided for @mapMarkerClaimNotEligibleToast.
   ///
   /// In en, this message translates to:
-  /// **'Only verified artists can submit claims.'**
+  /// **'Only verified artists can submit ownership requests.'**
   String get mapMarkerClaimNotEligibleToast;
 
   /// No description provided for @mapMarkerClaimAlreadyActiveToast.
   ///
   /// In en, this message translates to:
-  /// **'You already have an active claim for this marker.'**
+  /// **'You already have an active request for this marker.'**
   String get mapMarkerClaimAlreadyActiveToast;
 
   /// No description provided for @mapMarkerClaimReasonMinError.
@@ -7280,7 +7616,7 @@ abstract class AppLocalizations {
   /// No description provided for @mapMarkerClaimStatusPendingDaoReview.
   ///
   /// In en, this message translates to:
-  /// **'Pending DAO review'**
+  /// **'Pending governance review'**
   String get mapMarkerClaimStatusPendingDaoReview;
 
   /// No description provided for @mapMarkerClaimStatusApproved.
@@ -7298,7 +7634,7 @@ abstract class AppLocalizations {
   /// No description provided for @mapMarkerClaimStatusRejectedDao.
   ///
   /// In en, this message translates to:
-  /// **'Rejected by DAO'**
+  /// **'Rejected by governance review'**
   String get mapMarkerClaimStatusRejectedDao;
 
   /// No description provided for @mapMarkerClaimStageOwnerReview.
@@ -7310,7 +7646,7 @@ abstract class AppLocalizations {
   /// No description provided for @mapMarkerClaimStageDaoReview.
   ///
   /// In en, this message translates to:
-  /// **'DAO review'**
+  /// **'Governance review'**
   String get mapMarkerClaimStageDaoReview;
 
   /// No description provided for @mapMarkerClaimStageResolved.
@@ -7412,7 +7748,7 @@ abstract class AppLocalizations {
   /// No description provided for @mapArtDiscoveredTitle.
   ///
   /// In en, this message translates to:
-  /// **'Art discovered!'**
+  /// **'Artwork discovered'**
   String get mapArtDiscoveredTitle;
 
   /// No description provided for @desktopMapTitleDiscover.
@@ -7604,19 +7940,19 @@ abstract class AppLocalizations {
   /// Title for the first step of the interactive map tutorial (coach marks).
   ///
   /// In en, this message translates to:
-  /// **'Your map'**
+  /// **'Open art map'**
   String get mapTutorialStepMapTitle;
 
   /// Body text for the first step of the interactive map tutorial (coach marks).
   ///
   /// In en, this message translates to:
-  /// **'Pan and zoom to explore. Tap a marker to see details and actions.'**
+  /// **'Discover public-space art, exhibitions, institutions, and artist stories on a community-generated cultural map.'**
   String get mapTutorialStepMapBody;
 
   /// Title for the markers/types step of the interactive map tutorial.
   ///
   /// In en, this message translates to:
-  /// **'Markers & types'**
+  /// **'Cultural markers'**
   String get mapTutorialStepMarkersTitle;
 
   /// Body text for the markers/types step of the interactive map tutorial.
@@ -7628,7 +7964,7 @@ abstract class AppLocalizations {
   /// Title for the create-marker step of the interactive map tutorial.
   ///
   /// In en, this message translates to:
-  /// **'Create a marker'**
+  /// **'Add a marker'**
   String get mapTutorialStepCreateMarkerTitle;
 
   /// Body text for the create-marker step of the interactive map tutorial.
@@ -7640,7 +7976,7 @@ abstract class AppLocalizations {
   /// Title for the nearby-art step of the interactive map tutorial.
   ///
   /// In en, this message translates to:
-  /// **'Nearby art'**
+  /// **'Nearby art and places'**
   String get mapTutorialStepNearbyTitle;
 
   /// Body text for the nearby-art step of the interactive map tutorial (mobile).
@@ -7754,7 +8090,7 @@ abstract class AppLocalizations {
   /// No description provided for @mapNearbyArtTitle.
   ///
   /// In en, this message translates to:
-  /// **'Nearby art'**
+  /// **'Nearby art and places'**
   String get mapNearbyArtTitle;
 
   /// No description provided for @mapResultsDiscoveredLabel.
@@ -7766,7 +8102,7 @@ abstract class AppLocalizations {
   /// No description provided for @mapEmptyNoArtworksTitle.
   ///
   /// In en, this message translates to:
-  /// **'No artworks nearby'**
+  /// **'No nearby cultural markers'**
   String get mapEmptyNoArtworksTitle;
 
   /// No description provided for @mapEmptyNoArtworksDescription.
@@ -7844,7 +8180,7 @@ abstract class AppLocalizations {
   /// No description provided for @desktopMapArtworkTypeNfts.
   ///
   /// In en, this message translates to:
-  /// **'NFTs'**
+  /// **'Archive objects'**
   String get desktopMapArtworkTypeNfts;
 
   /// No description provided for @desktopMapArtworkTypeModels3d.
@@ -7964,7 +8300,7 @@ abstract class AppLocalizations {
   /// No description provided for @mapSortHighestRewards.
   ///
   /// In en, this message translates to:
-  /// **'Highest rewards'**
+  /// **'Most recognition'**
   String get mapSortHighestRewards;
 
   /// No description provided for @mapSortMostViewed.
@@ -8960,7 +9296,7 @@ abstract class AppLocalizations {
   /// No description provided for @profileAchievementsPreviewSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Milestones earned through activity across art.kubus.'**
+  /// **'Milestones recognized through activity across art.kubus.'**
   String get profileAchievementsPreviewSubtitle;
 
   /// No description provided for @userProfileAchievementsProgressLabel.
@@ -10256,7 +10592,7 @@ abstract class AppLocalizations {
   /// No description provided for @connectWalletChooseTitle.
   ///
   /// In en, this message translates to:
-  /// **'Connect your wallet'**
+  /// **'Connect wallet'**
   String get connectWalletChooseTitle;
 
   /// No description provided for @connectWalletChooseDescription.
@@ -10760,7 +11096,7 @@ abstract class AppLocalizations {
   /// No description provided for @walletHomeTitle.
   ///
   /// In en, this message translates to:
-  /// **'My wallet'**
+  /// **'Wallet'**
   String get walletHomeTitle;
 
   /// No description provided for @walletHomeLoadingLabel.
@@ -10772,31 +11108,31 @@ abstract class AppLocalizations {
   /// No description provided for @walletHomeNoWalletDescription.
   ///
   /// In en, this message translates to:
-  /// **'Connect or restore your account wallet to get started.'**
+  /// **'This step is optional. Connect or restore a wallet only for digital ownership, attribution, and participation tools.'**
   String get walletHomeNoWalletDescription;
 
   /// No description provided for @walletHomeSignedOutTitle.
   ///
   /// In en, this message translates to:
-  /// **'No wallet connected'**
+  /// **'Wallet not connected'**
   String get walletHomeSignedOutTitle;
 
   /// No description provided for @walletHomeSignedOutDescription.
   ///
   /// In en, this message translates to:
-  /// **'Sign in and connect or restore your wallet to view balances, collectibles, and wallet-protected actions.'**
+  /// **'Sign in to use your profile. Connect or restore a wallet when you want balances, digital editions, or wallet-protected actions.'**
   String get walletHomeSignedOutDescription;
 
   /// No description provided for @walletHomeAccountShellTitle.
   ///
   /// In en, this message translates to:
-  /// **'Account signed in, wallet not restored'**
+  /// **'Profile active, wallet not restored'**
   String get walletHomeAccountShellTitle;
 
   /// No description provided for @walletHomeAccountShellDescription.
   ///
   /// In en, this message translates to:
-  /// **'Your account session is available, but this device still needs the wallet restored or connected before wallet activity can continue.'**
+  /// **'Your account session is available. This device only needs wallet access for optional ownership and participation actions.'**
   String get walletHomeAccountShellDescription;
 
   /// No description provided for @walletHomeRestoreWalletAction.
@@ -10826,7 +11162,7 @@ abstract class AppLocalizations {
   /// No description provided for @walletHomeTotalBalanceLabel.
   ///
   /// In en, this message translates to:
-  /// **'Total balance'**
+  /// **'Wallet balance'**
   String get walletHomeTotalBalanceLabel;
 
   /// No description provided for @walletHomeDesktopSurfaceLabel.
@@ -10868,7 +11204,7 @@ abstract class AppLocalizations {
   /// No description provided for @walletHomeActionNfts.
   ///
   /// In en, this message translates to:
-  /// **'NFTs'**
+  /// **'Artifacts'**
   String get walletHomeActionNfts;
 
   /// No description provided for @walletHomeQuickActionsTitle.
@@ -10880,7 +11216,7 @@ abstract class AppLocalizations {
   /// No description provided for @walletHomeQuickActionsSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Send, receive, swap, or open collectibles from one place.'**
+  /// **'Send, receive, swap, or open digital editions from one place when wallet tools are enabled.'**
   String get walletHomeQuickActionsSubtitle;
 
   /// No description provided for @walletHomeSendAction.
@@ -10922,13 +11258,13 @@ abstract class AppLocalizations {
   /// No description provided for @walletHomeDesktopNftsSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Open collectibles and account-linked pieces'**
+  /// **'Open digital editions and account-linked pieces'**
   String get walletHomeDesktopNftsSubtitle;
 
   /// No description provided for @walletHomeDesktopRailSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Session status, activity mix, and balances stay visible while you work.'**
+  /// **'Wallet status, activity, and balances stay visible while you work.'**
   String get walletHomeDesktopRailSubtitle;
 
   /// No description provided for @walletHomeSecureWalletAction.
@@ -10970,7 +11306,7 @@ abstract class AppLocalizations {
   /// No description provided for @availabilityNodeIntro.
   ///
   /// In en, this message translates to:
-  /// **'This token lets your node register, send heartbeats, commit to CIDs, and read reward status. It does not control your wallet or spend funds.'**
+  /// **'This token lets your node register, send heartbeats, commit to CIDs, and read recognition status. It does not control your wallet or spend funds.'**
   String get availabilityNodeIntro;
 
   /// No description provided for @availabilityNodeDescription.
@@ -11198,7 +11534,7 @@ abstract class AppLocalizations {
   /// No description provided for @walletHomeYourTokensTitle.
   ///
   /// In en, this message translates to:
-  /// **'Your tokens'**
+  /// **'Wallet tokens'**
   String get walletHomeYourTokensTitle;
 
   /// No description provided for @walletHomeYourTokensSubtitle.
@@ -11216,13 +11552,13 @@ abstract class AppLocalizations {
   /// No description provided for @walletHomeNoTokensDescription.
   ///
   /// In en, this message translates to:
-  /// **'Token balances will appear after the wallet receives assets.'**
+  /// **'Token balances will appear if this wallet receives assets.'**
   String get walletHomeNoTokensDescription;
 
   /// No description provided for @walletHomeRecentTransactionsTitle.
   ///
   /// In en, this message translates to:
-  /// **'Recent transactions'**
+  /// **'Wallet activity'**
   String get walletHomeRecentTransactionsTitle;
 
   /// No description provided for @walletHomeRecentTransactionsSubtitle.
@@ -11252,7 +11588,7 @@ abstract class AppLocalizations {
   /// No description provided for @walletHomeDesktopTabNfts.
   ///
   /// In en, this message translates to:
-  /// **'NFTs'**
+  /// **'Artifacts'**
   String get walletHomeDesktopTabNfts;
 
   /// No description provided for @walletHomeDesktopTabStaking.
@@ -11264,13 +11600,13 @@ abstract class AppLocalizations {
   /// No description provided for @walletHomeNftLoadFailedTitle.
   ///
   /// In en, this message translates to:
-  /// **'Could not load NFTs'**
+  /// **'Could not load digital editions'**
   String get walletHomeNftLoadFailedTitle;
 
   /// No description provided for @walletHomeNoCollectiblesDescription.
   ///
   /// In en, this message translates to:
-  /// **'Mint or purchase NFTs to see them here.'**
+  /// **'Digital cultural artifacts will appear here when they are linked to this wallet.'**
   String get walletHomeNoCollectiblesDescription;
 
   /// No description provided for @walletHomeCollectibleByline.
@@ -11282,31 +11618,31 @@ abstract class AppLocalizations {
   /// No description provided for @walletHomeRewardsTitle.
   ///
   /// In en, this message translates to:
-  /// **'KUB8 rewards'**
+  /// **'KUB8 recognition'**
   String get walletHomeRewardsTitle;
 
   /// No description provided for @walletHomeRewardsDescription.
   ///
   /// In en, this message translates to:
-  /// **'{balance} KUB8 available from achievements'**
+  /// **'{balance} KUB8 recorded from achievements'**
   String walletHomeRewardsDescription(Object balance);
 
   /// No description provided for @walletHomeStakeTitle.
   ///
   /// In en, this message translates to:
-  /// **'Stake SOL for gas savings'**
+  /// **'Fee support setup'**
   String get walletHomeStakeTitle;
 
   /// No description provided for @walletHomeStakeDescription.
   ///
   /// In en, this message translates to:
-  /// **'Lock SOL to cover future transaction fees and keep your gallery publishing smooth.'**
+  /// **'Prepare SOL for future transaction fees when optional publishing or artifact actions require it.'**
   String get walletHomeStakeDescription;
 
   /// No description provided for @walletHomeStakeAction.
   ///
   /// In en, this message translates to:
-  /// **'Stake now'**
+  /// **'Set up support'**
   String get walletHomeStakeAction;
 
   /// No description provided for @walletHomeRefreshRatesAction.
@@ -12146,7 +12482,7 @@ abstract class AppLocalizations {
   /// No description provided for @artworkDetailMintNft.
   ///
   /// In en, this message translates to:
-  /// **'Mint as NFT'**
+  /// **'Create archive object'**
   String get artworkDetailMintNft;
 
   /// No description provided for @eventCreatorNoInstitutionAvailableMessage.
@@ -13082,7 +13418,7 @@ abstract class AppLocalizations {
   /// No description provided for @artistCreatorConnectWalletToPublishToast.
   ///
   /// In en, this message translates to:
-  /// **'Connect your wallet to publish artwork.'**
+  /// **'Connect a wallet to publish wallet-linked artwork.'**
   String get artistCreatorConnectWalletToPublishToast;
 
   /// No description provided for @artistCreatorSelectCoverImageToast.
@@ -13238,13 +13574,13 @@ abstract class AppLocalizations {
   /// No description provided for @artistStudioDaoCardTitle.
   ///
   /// In en, this message translates to:
-  /// **'Artist application (DAO)'**
+  /// **'Artist application (governance review)'**
   String get artistStudioDaoCardTitle;
 
   /// No description provided for @artistStudioDaoCardSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Submit your practice for community review through the DAO. This is part of how art.kubus opens artist tools and future participation.'**
+  /// **'Submit your practice for governance review. This is how art.kubus opens artist tools while keeping the platform community-led.'**
   String get artistStudioDaoCardSubtitle;
 
   /// No description provided for @artistStudioDaoStatusApproved.
@@ -13274,19 +13610,19 @@ abstract class AppLocalizations {
   /// No description provided for @artistStudioStatusSyncedFromDao.
   ///
   /// In en, this message translates to:
-  /// **'Status synced from DAO'**
+  /// **'Status synced from governance review'**
   String get artistStudioStatusSyncedFromDao;
 
   /// No description provided for @artistStudioReviewPendingInfo.
   ///
   /// In en, this message translates to:
-  /// **'Your submission is in the DAO review queue. We\'ll let you know when the review is complete.'**
+  /// **'Your submission is in the governance review queue. We will let you know when the review is complete.'**
   String get artistStudioReviewPendingInfo;
 
   /// No description provided for @artistStudioReviewApprovedInfo.
   ///
   /// In en, this message translates to:
-  /// **'Your practice has been approved through DAO review. Studio tools are ready.'**
+  /// **'Your practice has been approved through governance review. Studio tools are ready.'**
   String get artistStudioReviewApprovedInfo;
 
   /// No description provided for @artistStudioReviewRejectedInfo.
@@ -13298,7 +13634,7 @@ abstract class AppLocalizations {
   /// No description provided for @artistStudioConnectWalletToSubmitForDaoReview.
   ///
   /// In en, this message translates to:
-  /// **'Connect your wallet to submit for DAO review.'**
+  /// **'Connect a wallet before submitting for governance review.'**
   String get artistStudioConnectWalletToSubmitForDaoReview;
 
   /// No description provided for @artistStudioCtaConnectWalletToApply.
@@ -13310,13 +13646,13 @@ abstract class AppLocalizations {
   /// No description provided for @artistStudioCtaApprovedByDao.
   ///
   /// In en, this message translates to:
-  /// **'Approved by DAO'**
+  /// **'Approved by governance review'**
   String get artistStudioCtaApprovedByDao;
 
   /// No description provided for @artistStudioCtaPendingDaoReview.
   ///
   /// In en, this message translates to:
-  /// **'Pending DAO review'**
+  /// **'Pending governance review'**
   String get artistStudioCtaPendingDaoReview;
 
   /// No description provided for @artistStudioCtaResubmitForReview.
@@ -13328,7 +13664,7 @@ abstract class AppLocalizations {
   /// No description provided for @artistStudioCtaApplyForDaoReview.
   ///
   /// In en, this message translates to:
-  /// **'Apply for DAO review'**
+  /// **'Apply for governance review'**
   String get artistStudioCtaApplyForDaoReview;
 
   /// No description provided for @artistPromotionRequiresWalletReason.
@@ -13412,7 +13748,7 @@ abstract class AppLocalizations {
   /// No description provided for @artistStudioUnlocksAfterDaoApprovalToast.
   ///
   /// In en, this message translates to:
-  /// **'Artist Studio unlocks after DAO approval.'**
+  /// **'Artist Studio unlocks after governance review approval.'**
   String get artistStudioUnlocksAfterDaoApprovalToast;
 
   /// No description provided for @artistStudioSeparateWalletsTip.
@@ -13430,7 +13766,7 @@ abstract class AppLocalizations {
   /// No description provided for @artistStudioLockedDescription.
   ///
   /// In en, this message translates to:
-  /// **'Apply for DAO review to unlock the studio tools used for publishing, showcasing, and tracking your work.'**
+  /// **'Apply for governance review to unlock studio tools for publishing, showcasing, and tracking your work.'**
   String get artistStudioLockedDescription;
 
   /// No description provided for @artistStudioSettingsTitle.
@@ -13448,7 +13784,7 @@ abstract class AppLocalizations {
   /// No description provided for @artistStudioApplicationModalSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Share a snapshot of your practice. Submissions are routed to the DAO review queue.'**
+  /// **'Share a snapshot of your practice. Submissions are routed to the governance review queue.'**
   String get artistStudioApplicationModalSubtitle;
 
   /// No description provided for @artistStudioApplicationFieldPortfolioLabel.
@@ -13478,7 +13814,7 @@ abstract class AppLocalizations {
   /// No description provided for @artistStudioApplicationValidationMedium.
   ///
   /// In en, this message translates to:
-  /// **'Let the DAO know what you create'**
+  /// **'Let reviewers know what you create'**
   String get artistStudioApplicationValidationMedium;
 
   /// No description provided for @artistStudioApplicationValidationStatementMinChars.
@@ -13490,7 +13826,7 @@ abstract class AppLocalizations {
   /// No description provided for @artistStudioApplicationWalletRequiredToast.
   ///
   /// In en, this message translates to:
-  /// **'Connect your wallet before submitting to the DAO.'**
+  /// **'Connect a wallet before submitting for review.'**
   String get artistStudioApplicationWalletRequiredToast;
 
   /// No description provided for @artistStudioApplicationReviewTitle.
@@ -13502,7 +13838,7 @@ abstract class AppLocalizations {
   /// No description provided for @artistStudioApplicationSubmittedToast.
   ///
   /// In en, this message translates to:
-  /// **'Application submitted to DAO reviewers.'**
+  /// **'Application submitted to governance reviewers.'**
   String get artistStudioApplicationSubmittedToast;
 
   /// No description provided for @artistStudioApplicationUnableToSubmitToast.
@@ -13742,7 +14078,7 @@ abstract class AppLocalizations {
   /// No description provided for @desktopInstitutionPromotionWalletRequiredReason.
   ///
   /// In en, this message translates to:
-  /// **'Connect your wallet to create promotions.'**
+  /// **'Connect a wallet to create promotions.'**
   String get desktopInstitutionPromotionWalletRequiredReason;
 
   /// No description provided for @desktopInstitutionPromotionArtistConflictReason.
@@ -14282,13 +14618,13 @@ abstract class AppLocalizations {
   /// No description provided for @marketplaceConnectWalletTitle.
   ///
   /// In en, this message translates to:
-  /// **'Connect your wallet'**
+  /// **'Wallet connection'**
   String get marketplaceConnectWalletTitle;
 
   /// No description provided for @marketplaceConnectWalletDescription.
   ///
   /// In en, this message translates to:
-  /// **'Connect a Solana wallet to view your collectibles (NFT).'**
+  /// **'Connect a Solana wallet to view digital editions linked to your account.'**
   String get marketplaceConnectWalletDescription;
 
   /// No description provided for @marketplaceSettingsShowArOnlyTitle.
@@ -14330,67 +14666,67 @@ abstract class AppLocalizations {
   /// No description provided for @marketplaceFeaturedCollectionsSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Curated mints and AR-ready series from the community.'**
+  /// **'Curated digital editions and AR-ready series from the community.'**
   String get marketplaceFeaturedCollectionsSubtitle;
 
   /// No description provided for @marketplaceNoMintedNftsTitle.
   ///
   /// In en, this message translates to:
-  /// **'No NFTs available yet'**
+  /// **'No digital editions available yet'**
   String get marketplaceNoMintedNftsTitle;
 
   /// No description provided for @marketplaceNoMintedNftsDescription.
   ///
   /// In en, this message translates to:
-  /// **'Marketplace listings appear once an artwork is issued as an NFT.'**
+  /// **'Artifact listings appear once an artwork is issued as an optional digital cultural object.'**
   String get marketplaceNoMintedNftsDescription;
 
   /// No description provided for @marketplaceTrendingThisWeekTitle.
   ///
   /// In en, this message translates to:
-  /// **'Trending this week'**
+  /// **'Active this week'**
   String get marketplaceTrendingThisWeekTitle;
 
   /// No description provided for @marketplaceTrendingThisWeekSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Listings with the strongest collector activity right now.'**
+  /// **'Artifacts with recent community attention.'**
   String get marketplaceTrendingThisWeekSubtitle;
 
   /// No description provided for @marketplaceNoTrendingNftsTitle.
   ///
   /// In en, this message translates to:
-  /// **'No trending NFTs yet'**
+  /// **'No active artifacts yet'**
   String get marketplaceNoTrendingNftsTitle;
 
   /// No description provided for @marketplaceNoTrendingNftsDescription.
   ///
   /// In en, this message translates to:
-  /// **'Check back later as NFT activity picks up.'**
+  /// **'Check back later as cultural artifact activity grows.'**
   String get marketplaceNoTrendingNftsDescription;
 
   /// No description provided for @marketplaceMyCollectionTitle.
   ///
   /// In en, this message translates to:
-  /// **'My NFT collection'**
+  /// **'My digital editions'**
   String get marketplaceMyCollectionTitle;
 
   /// No description provided for @marketplaceMyCollectionCount.
   ///
   /// In en, this message translates to:
-  /// **'{count} NFTs'**
+  /// **'{count} artifacts'**
   String marketplaceMyCollectionCount(Object count);
 
   /// No description provided for @marketplaceListedForSaleTitle.
   ///
   /// In en, this message translates to:
-  /// **'Listed for sale'**
+  /// **'Available listing'**
   String get marketplaceListedForSaleTitle;
 
   /// No description provided for @marketplaceListNftForSaleTitle.
   ///
   /// In en, this message translates to:
-  /// **'List NFT for sale'**
+  /// **'List digital edition'**
   String get marketplaceListNftForSaleTitle;
 
   /// No description provided for @marketplacePriceKub8Label.
@@ -14420,7 +14756,7 @@ abstract class AppLocalizations {
   /// No description provided for @marketplaceMintedLabel.
   ///
   /// In en, this message translates to:
-  /// **'Issued as NFT'**
+  /// **'Issued as digital edition'**
   String get marketplaceMintedLabel;
 
   /// No description provided for @marketplaceTotalSupplyLabel.
@@ -14438,37 +14774,37 @@ abstract class AppLocalizations {
   /// No description provided for @marketplaceOwnedNftStatus.
   ///
   /// In en, this message translates to:
-  /// **'Owned NFT'**
+  /// **'Owned artifact'**
   String get marketplaceOwnedNftStatus;
 
   /// No description provided for @marketplaceOwnedNftListedStatus.
   ///
   /// In en, this message translates to:
-  /// **'Owned NFT · Listed for sale'**
+  /// **'Owned artifact - Listed'**
   String get marketplaceOwnedNftListedStatus;
 
   /// No description provided for @marketplaceEmptyCollectionTitle.
   ///
   /// In en, this message translates to:
-  /// **'No collectibles yet'**
+  /// **'No digital editions yet'**
   String get marketplaceEmptyCollectionTitle;
 
   /// No description provided for @marketplaceEmptyCollectionDescription.
   ///
   /// In en, this message translates to:
-  /// **'Create collectibles (NFT) from AR artworks and keep them here.'**
+  /// **'Create digital editions from artworks and keep them here.'**
   String get marketplaceEmptyCollectionDescription;
 
   /// No description provided for @marketplaceExploreArArtButton.
   ///
   /// In en, this message translates to:
-  /// **'Explore AR art'**
+  /// **'Explore art map'**
   String get marketplaceExploreArArtButton;
 
   /// No description provided for @marketplaceListForSaleButton.
   ///
   /// In en, this message translates to:
-  /// **'List for sale'**
+  /// **'List artifact'**
   String get marketplaceListForSaleButton;
 
   /// No description provided for @marketplaceListForSaleSuccessToast.
@@ -14480,7 +14816,7 @@ abstract class AppLocalizations {
   /// No description provided for @marketplaceListForSaleFailedToast.
   ///
   /// In en, this message translates to:
-  /// **'Unable to list NFT for sale right now.'**
+  /// **'Unable to list artifact right now.'**
   String get marketplaceListForSaleFailedToast;
 
   /// No description provided for @marketplaceRemoveFromSaleTitle.
@@ -14492,37 +14828,37 @@ abstract class AppLocalizations {
   /// No description provided for @marketplaceRemoveFromSaleConfirmBody.
   ///
   /// In en, this message translates to:
-  /// **'Remove this NFT from the marketplace?'**
+  /// **'Remove this digital edition from listings?'**
   String get marketplaceRemoveFromSaleConfirmBody;
 
   /// No description provided for @marketplaceRemoveFromSaleSuccessToast.
   ///
   /// In en, this message translates to:
-  /// **'NFT removed from sale.'**
+  /// **'Artifact removed from listing.'**
   String get marketplaceRemoveFromSaleSuccessToast;
 
   /// No description provided for @marketplaceMintConnectWalletTitle.
   ///
   /// In en, this message translates to:
-  /// **'Wallet required'**
+  /// **'Wallet required for digital editions'**
   String get marketplaceMintConnectWalletTitle;
 
   /// No description provided for @marketplaceMintConnectWalletDescription.
   ///
   /// In en, this message translates to:
-  /// **'Connect a wallet to create collectibles (NFT) from AR artworks.'**
+  /// **'Connect a wallet only if you want to create digital cultural artifacts from artworks.'**
   String get marketplaceMintConnectWalletDescription;
 
   /// No description provided for @marketplaceMintSuccessTitle.
   ///
   /// In en, this message translates to:
-  /// **'Collectible created'**
+  /// **'Digital artifact created'**
   String get marketplaceMintSuccessTitle;
 
   /// No description provided for @marketplaceMintSuccessDescription.
   ///
   /// In en, this message translates to:
-  /// **'Your collectible (NFT) is ready. You can view it in your wallet.'**
+  /// **'Your digital edition is ready. You can view it in your wallet.'**
   String get marketplaceMintSuccessDescription;
 
   /// No description provided for @marketplaceViewInWalletButton.
@@ -14540,7 +14876,7 @@ abstract class AppLocalizations {
   /// No description provided for @marketplaceMintFailedDescription.
   ///
   /// In en, this message translates to:
-  /// **'Unable to create a collectible (NFT) right now. Please try again.'**
+  /// **'The digital edition could not be created right now. Please try again.'**
   String get marketplaceMintFailedDescription;
 
   /// No description provided for @marketplaceArBadgeLabel.
@@ -14594,13 +14930,13 @@ abstract class AppLocalizations {
   /// No description provided for @marketplaceNftArtworkStatus.
   ///
   /// In en, this message translates to:
-  /// **'NFT Artwork'**
+  /// **'Digital edition artwork'**
   String get marketplaceNftArtworkStatus;
 
   /// No description provided for @marketplaceNftArtworkStatusArEnabled.
   ///
   /// In en, this message translates to:
-  /// **'NFT Artwork · AR Enabled'**
+  /// **'Digital edition artwork - AR enabled'**
   String get marketplaceNftArtworkStatusArEnabled;
 
   /// No description provided for @marketplaceMintUnavailableLabel.
@@ -14618,19 +14954,19 @@ abstract class AppLocalizations {
   /// No description provided for @marketplaceMintNftButtonLabel.
   ///
   /// In en, this message translates to:
-  /// **'Mint NFT'**
+  /// **'Create artifact'**
   String get marketplaceMintNftButtonLabel;
 
   /// No description provided for @marketplaceArRequiredTitle.
   ///
   /// In en, this message translates to:
-  /// **'AR Required'**
+  /// **'Location visit required'**
   String get marketplaceArRequiredTitle;
 
   /// No description provided for @marketplaceArRequiredDescription.
   ///
   /// In en, this message translates to:
-  /// **'This NFT requires AR interaction with the physical artwork. Please visit the artwork location and use the AR scanner to mint your NFT.'**
+  /// **'This artifact requires interaction with the physical artwork location. Visit the artwork and use the AR scanner if the artist enabled it.'**
   String get marketplaceArRequiredDescription;
 
   /// No description provided for @marketplaceGoToArButton.
@@ -14642,13 +14978,13 @@ abstract class AppLocalizations {
   /// No description provided for @marketplaceMintDialogTitle.
   ///
   /// In en, this message translates to:
-  /// **'Mint NFT'**
+  /// **'Create digital edition'**
   String get marketplaceMintDialogTitle;
 
   /// No description provided for @marketplaceMintConfirmCollectionDescription.
   ///
   /// In en, this message translates to:
-  /// **'You are about to mint an NFT from \"{collection}\" collection.'**
+  /// **'You are creating a digital edition from the \"{collection}\" collection.'**
   String marketplaceMintConfirmCollectionDescription(Object collection);
 
   /// No description provided for @marketplaceMintPriceLabel.
@@ -14714,7 +15050,7 @@ abstract class AppLocalizations {
   /// No description provided for @marketplaceRemoveFromSaleFailedToast.
   ///
   /// In en, this message translates to:
-  /// **'Unable to remove NFT from sale right now.'**
+  /// **'Unable to remove archive object from listing right now.'**
   String get marketplaceRemoveFromSaleFailedToast;
 
   /// No description provided for @marketplaceValueNotListedLabel.
@@ -14798,7 +15134,7 @@ abstract class AppLocalizations {
   /// No description provided for @marketplaceNftCollectibleLabel.
   ///
   /// In en, this message translates to:
-  /// **'NFT collectible'**
+  /// **'Digital archive object'**
   String get marketplaceNftCollectibleLabel;
 
   /// No description provided for @collectibleRarityCommon.
@@ -14840,7 +15176,7 @@ abstract class AppLocalizations {
   /// No description provided for @collectibleStatusMinted.
   ///
   /// In en, this message translates to:
-  /// **'Issued as NFT'**
+  /// **'Issued as archive object'**
   String get collectibleStatusMinted;
 
   /// No description provided for @collectibleStatusListed.
@@ -14996,7 +15332,7 @@ abstract class AppLocalizations {
   /// No description provided for @daoReviewQueueTitle.
   ///
   /// In en, this message translates to:
-  /// **'DAO Review Queue'**
+  /// **'Governance review queue'**
   String get daoReviewQueueTitle;
 
   /// No description provided for @daoReviewVotingHandledByDaoHelper.
@@ -15182,7 +15518,7 @@ abstract class AppLocalizations {
   /// No description provided for @daoProposalWalletRequiredToast.
   ///
   /// In en, this message translates to:
-  /// **'Connect your wallet to submit proposals.'**
+  /// **'Connect a wallet to submit proposals.'**
   String get daoProposalWalletRequiredToast;
 
   /// No description provided for @daoProposalSubmittedToast.
@@ -15212,7 +15548,7 @@ abstract class AppLocalizations {
   /// No description provided for @daoVoteWalletRequiredToast.
   ///
   /// In en, this message translates to:
-  /// **'Connect your wallet before voting'**
+  /// **'Connect a wallet before voting.'**
   String get daoVoteWalletRequiredToast;
 
   /// No description provided for @daoVoteSubmittedYesToast.
@@ -16082,7 +16418,7 @@ abstract class AppLocalizations {
   /// No description provided for @communityScreenTitle.
   ///
   /// In en, this message translates to:
-  /// **'Connect'**
+  /// **'Community'**
   String get communityScreenTitle;
 
   /// No description provided for @communityFollowingTab.
@@ -16118,7 +16454,7 @@ abstract class AppLocalizations {
   /// No description provided for @communityFeedEmptyDescription.
   ///
   /// In en, this message translates to:
-  /// **'Follow creators to see their updates here.'**
+  /// **'Follow artists, institutions, and groups to see updates here.'**
   String get communityFeedEmptyDescription;
 
   /// No description provided for @communityDiscoverEmptyTitle.
@@ -16130,7 +16466,7 @@ abstract class AppLocalizations {
   /// No description provided for @communityDiscoverEmptyDescription.
   ///
   /// In en, this message translates to:
-  /// **'Check back soon for new posts.'**
+  /// **'New discussions, artworks, and cultural updates will appear here.'**
   String get communityDiscoverEmptyDescription;
 
   /// No description provided for @communityNewPostsBanner.
@@ -16178,7 +16514,7 @@ abstract class AppLocalizations {
   /// No description provided for @communityGroupsDirectoryDescription.
   ///
   /// In en, this message translates to:
-  /// **'Find focused spaces for critiques, drops, events, and collaborations.'**
+  /// **'Find focused spaces for critiques, exhibitions, public art, events, and collaborations.'**
   String get communityGroupsDirectoryDescription;
 
   /// No description provided for @communityClearSearchTooltip.
@@ -16436,7 +16772,7 @@ abstract class AppLocalizations {
   /// No description provided for @communityComposerTextHint.
   ///
   /// In en, this message translates to:
-  /// **'Share what you\'re making, discovering, or working on…'**
+  /// **'Share what you are discovering, making, documenting, or discussing...'**
   String get communityComposerTextHint;
 
   /// No description provided for @communityComposerTagsLabel.
@@ -16448,7 +16784,7 @@ abstract class AppLocalizations {
   /// No description provided for @communityComposerTagsHint.
   ///
   /// In en, this message translates to:
-  /// **'Add topic (e.g. kub8, spatial)'**
+  /// **'Add topic (e.g. public-art, archive)'**
   String get communityComposerTagsHint;
 
   /// No description provided for @communityComposerMentionsLabel.
@@ -16490,7 +16826,7 @@ abstract class AppLocalizations {
   /// No description provided for @communityComposerGroupOptionalHelper.
   ///
   /// In en, this message translates to:
-  /// **'Optional · Join a group to unlock curator chats.'**
+  /// **'Optional - Join a group to unlock focused community discussions.'**
   String get communityComposerGroupOptionalHelper;
 
   /// No description provided for @communityComposerPostingInGroupHelper.
@@ -16586,7 +16922,7 @@ abstract class AppLocalizations {
   /// No description provided for @communityComposerCategoryPostDescription.
   ///
   /// In en, this message translates to:
-  /// **'Share an update with the community'**
+  /// **'Share an update with the art community'**
   String get communityComposerCategoryPostDescription;
 
   /// No description provided for @communityComposerCategoryArtDropLabel.
@@ -16598,7 +16934,7 @@ abstract class AppLocalizations {
   /// No description provided for @communityComposerCategoryArtDropDescription.
   ///
   /// In en, this message translates to:
-  /// **'Share a new artwork or collection'**
+  /// **'Share a new artwork, exhibition, or collection'**
   String get communityComposerCategoryArtDropDescription;
 
   /// No description provided for @communityComposerCategoryArtReviewLabel.
@@ -16610,7 +16946,7 @@ abstract class AppLocalizations {
   /// No description provided for @communityComposerCategoryArtReviewDescription.
   ///
   /// In en, this message translates to:
-  /// **'Share a review or critique'**
+  /// **'Share a review, context, or critique'**
   String get communityComposerCategoryArtReviewDescription;
 
   /// No description provided for @communityComposerCategoryEventLabel.
@@ -16622,7 +16958,7 @@ abstract class AppLocalizations {
   /// No description provided for @communityComposerCategoryEventDescription.
   ///
   /// In en, this message translates to:
-  /// **'Announce a meetup or event'**
+  /// **'Announce an exhibition, workshop, or public event'**
   String get communityComposerCategoryEventDescription;
 
   /// No description provided for @communityComposerCategoryQuestionLabel.
@@ -16658,7 +16994,7 @@ abstract class AppLocalizations {
   /// No description provided for @communityArtFeedHeaderTitle.
   ///
   /// In en, this message translates to:
-  /// **'Art feed'**
+  /// **'Community art feed'**
   String get communityArtFeedHeaderTitle;
 
   /// No description provided for @communityArtFeedRadiusSubtitle.
@@ -16688,13 +17024,13 @@ abstract class AppLocalizations {
   /// No description provided for @communityArtFeedLocationNeededDescription.
   ///
   /// In en, this message translates to:
-  /// **'Enable location to see art activations near you.'**
+  /// **'Enable location to see public art and activations near you.'**
   String get communityArtFeedLocationNeededDescription;
 
   /// No description provided for @communityArtFeedNoNearbyActivationsTitle.
   ///
   /// In en, this message translates to:
-  /// **'No nearby art activations'**
+  /// **'No nearby public art activations'**
   String get communityArtFeedNoNearbyActivationsTitle;
 
   /// No description provided for @communityArtFeedNoNearbyActivationsDescription.
@@ -16718,7 +17054,7 @@ abstract class AppLocalizations {
   /// No description provided for @communityArtFeedAboutBody.
   ///
   /// In en, this message translates to:
-  /// **'The art feed shows location-based art activations shared by the community near you.'**
+  /// **'The art feed shows location-based artworks, exhibitions, and cultural activations shared by the community near you.'**
   String get communityArtFeedAboutBody;
 
   /// No description provided for @communityArtFeedAboutButton.
@@ -16748,7 +17084,7 @@ abstract class AppLocalizations {
   /// No description provided for @communityConnectWalletFirstToast.
   ///
   /// In en, this message translates to:
-  /// **'Please connect your wallet first.'**
+  /// **'Sign in first; wallet access is only needed for wallet-linked actions.'**
   String get communityConnectWalletFirstToast;
 
   /// No description provided for @communityUnableToAuthenticateToast.
@@ -17042,19 +17378,19 @@ abstract class AppLocalizations {
   /// No description provided for @homeWelcomeSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'kubus - your art companion.'**
+  /// **'Open art platform for discovery, artists, institutions, and community.'**
   String get homeWelcomeSubtitle;
 
   /// No description provided for @homeExploreWeb3Button.
   ///
   /// In en, this message translates to:
-  /// **'Optional wallet tools'**
+  /// **'Wallet and Web3 access'**
   String get homeExploreWeb3Button;
 
   /// No description provided for @homeQuickActionsTitle.
   ///
   /// In en, this message translates to:
-  /// **'Quick Actions'**
+  /// **'Start Here'**
   String get homeQuickActionsTitle;
 
   /// No description provided for @homeRecentlyUsedLabel.
@@ -17072,25 +17408,25 @@ abstract class AppLocalizations {
   /// No description provided for @homeYourStatsTitle.
   ///
   /// In en, this message translates to:
-  /// **'Your Stats'**
+  /// **'Your Cultural Activity'**
   String get homeYourStatsTitle;
 
   /// No description provided for @homeNoStatsAvailableTitle.
   ///
   /// In en, this message translates to:
-  /// **'Your first artwork is waiting.'**
+  /// **'Start discovering local art.'**
   String get homeNoStatsAvailableTitle;
 
   /// No description provided for @homeNoStatsAvailableDescription.
   ///
   /// In en, this message translates to:
-  /// **'Start a discovery path and kubus will collect your visits here.'**
+  /// **'Open the art map, follow artists, or explore institutions to build your cultural activity.'**
   String get homeNoStatsAvailableDescription;
 
   /// No description provided for @homeStatArtworks.
   ///
   /// In en, this message translates to:
-  /// **'Artworks'**
+  /// **'Artworks shared'**
   String get homeStatArtworks;
 
   /// No description provided for @homeStatFollowers.
@@ -17144,7 +17480,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeStatArSessions.
   ///
   /// In en, this message translates to:
-  /// **'AR Sessions'**
+  /// **'AR layers'**
   String get homeStatArSessions;
 
   /// No description provided for @homeStatFollowing.
@@ -17174,13 +17510,13 @@ abstract class AppLocalizations {
   /// No description provided for @homeViewAdvancedButton.
   ///
   /// In en, this message translates to:
-  /// **'View Advanced'**
+  /// **'View details'**
   String get homeViewAdvancedButton;
 
   /// No description provided for @homeRecentMilestonesTitle.
   ///
   /// In en, this message translates to:
-  /// **'Recent Milestones'**
+  /// **'Recent Recognition'**
   String get homeRecentMilestonesTitle;
 
   /// No description provided for @homeStatsNoMilestonesYet.
@@ -17252,13 +17588,13 @@ abstract class AppLocalizations {
   /// No description provided for @homeNoRecentActivityTitle.
   ///
   /// In en, this message translates to:
-  /// **'Your first artwork is waiting.'**
+  /// **'Start with the open art map.'**
   String get homeNoRecentActivityTitle;
 
   /// No description provided for @homeNoRecentActivityDescription.
   ///
   /// In en, this message translates to:
-  /// **'Start a discovery path. kubus will collect your visits here.'**
+  /// **'Discover local art, follow artists, and contribute to the community archive.'**
   String get homeNoRecentActivityDescription;
 
   /// No description provided for @homeUnableToLoadActivityTitle.
@@ -17270,7 +17606,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeFeaturedArtworksTitle.
   ///
   /// In en, this message translates to:
-  /// **'Featured Artworks'**
+  /// **'Featured Artworks and Places'**
   String get homeFeaturedArtworksTitle;
 
   /// No description provided for @homeNoFeaturedArtworksTitle.
@@ -17288,7 +17624,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeActivityTitle.
   ///
   /// In en, this message translates to:
-  /// **'Activity'**
+  /// **'Community Activity'**
   String get homeActivityTitle;
 
   /// No description provided for @homeMarkAllReadButton.
@@ -17348,7 +17684,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeMockNotificationRewardsBody.
   ///
   /// In en, this message translates to:
-  /// **'You have new recognition to review.'**
+  /// **'You have new participation recognition to review.'**
   String get homeMockNotificationRewardsBody;
 
   /// No description provided for @commonExplore.
@@ -17378,7 +17714,7 @@ abstract class AppLocalizations {
   /// No description provided for @desktopHomeDiscoverArtTitle.
   ///
   /// In en, this message translates to:
-  /// **'kubus - your art companion.'**
+  /// **'Open art platform.'**
   String get desktopHomeDiscoverArtTitle;
 
   /// No description provided for @desktopHomeDiscoverArtDescription.
@@ -17420,7 +17756,7 @@ abstract class AppLocalizations {
   /// No description provided for @desktopHomeStatKub8Earned.
   ///
   /// In en, this message translates to:
-  /// **'KUB8 points'**
+  /// **'KUB8 recognition'**
   String get desktopHomeStatKub8Earned;
 
   /// No description provided for @desktopHomeQuickActionsSubtitle.
@@ -17612,25 +17948,25 @@ abstract class AppLocalizations {
   /// No description provided for @homeWeb3SectionTitle.
   ///
   /// In en, this message translates to:
-  /// **'Optional wallet tools'**
+  /// **'Wallet and Web3 access'**
   String get homeWeb3SectionTitle;
 
   /// No description provided for @homeAccountRequiredLabel.
   ///
   /// In en, this message translates to:
-  /// **'Wallet required'**
+  /// **'Wallet'**
   String get homeAccountRequiredLabel;
 
   /// No description provided for @homeWeb3DaoTitle.
   ///
   /// In en, this message translates to:
-  /// **'DAO'**
+  /// **'Community governance'**
   String get homeWeb3DaoTitle;
 
   /// No description provided for @homeWeb3DaoSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Governance & voting'**
+  /// **'Community proposals'**
   String get homeWeb3DaoSubtitle;
 
   /// No description provided for @homeWeb3ArtistTitle.
@@ -17642,7 +17978,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeWeb3ArtistSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Create & manage'**
+  /// **'Publish and document'**
   String get homeWeb3ArtistSubtitle;
 
   /// No description provided for @homeWeb3InstitutionTitle.
@@ -17654,19 +17990,19 @@ abstract class AppLocalizations {
   /// No description provided for @homeWeb3InstitutionSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Events & collections'**
+  /// **'Programs and exhibitions'**
   String get homeWeb3InstitutionSubtitle;
 
   /// No description provided for @homeWeb3MarketplaceTitle.
   ///
   /// In en, this message translates to:
-  /// **'Collectibles'**
+  /// **'Digital editions'**
   String get homeWeb3MarketplaceTitle;
 
   /// No description provided for @homeWeb3MarketplaceSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Discover & collect'**
+  /// **'Archive and collect'**
   String get homeWeb3MarketplaceSubtitle;
 
   /// No description provided for @homeMockNotificationFriendRequestTitle.
@@ -17708,7 +18044,7 @@ abstract class AppLocalizations {
   /// No description provided for @season0BannerTap.
   ///
   /// In en, this message translates to:
-  /// **'Learn more about the launch program'**
+  /// **'Read more about the launch program'**
   String get season0BannerTap;
 
   /// No description provided for @season0ScreenTitle.
@@ -17768,7 +18104,7 @@ abstract class AppLocalizations {
   /// No description provided for @season0PointsLabel.
   ///
   /// In en, this message translates to:
-  /// **'KUB8 points'**
+  /// **'KUB8 recognition'**
   String get season0PointsLabel;
 
   /// No description provided for @season0PointsTooltip.
@@ -19448,19 +19784,19 @@ abstract class AppLocalizations {
   /// No description provided for @desktopShellNavGovern.
   ///
   /// In en, this message translates to:
-  /// **'Govern'**
+  /// **'Research'**
   String get desktopShellNavGovern;
 
   /// No description provided for @desktopShellNavTrade.
   ///
   /// In en, this message translates to:
-  /// **'Trade'**
+  /// **'Artifacts'**
   String get desktopShellNavTrade;
 
   /// No description provided for @desktopShellNavWeb3.
   ///
   /// In en, this message translates to:
-  /// **'Web3'**
+  /// **'Infrastructure'**
   String get desktopShellNavWeb3;
 
   /// No description provided for @navigationScreenCreateAr.
@@ -19490,7 +19826,7 @@ abstract class AppLocalizations {
   /// No description provided for @navigationScreenMarketplace.
   ///
   /// In en, this message translates to:
-  /// **'Marketplace'**
+  /// **'Digital Editions'**
   String get navigationScreenMarketplace;
 
   /// No description provided for @navigationScreenWallet.
@@ -19526,7 +19862,7 @@ abstract class AppLocalizations {
   /// No description provided for @navigationScreenDaoHub.
   ///
   /// In en, this message translates to:
-  /// **'DAO Hub'**
+  /// **'Community Governance'**
   String get navigationScreenDaoHub;
 
   /// No description provided for @navigationScreenArtistStudio.
@@ -19544,37 +19880,37 @@ abstract class AppLocalizations {
   /// No description provided for @daoHubAppBarTitle.
   ///
   /// In en, this message translates to:
-  /// **'DAO'**
+  /// **'Community governance'**
   String get daoHubAppBarTitle;
 
   /// No description provided for @labsDaoSemanticLabel.
   ///
   /// In en, this message translates to:
-  /// **'DAO Lab'**
+  /// **'Community Governance'**
   String get labsDaoSemanticLabel;
 
   /// No description provided for @labsMarketplaceSemanticLabel.
   ///
   /// In en, this message translates to:
-  /// **'Marketplace Lab'**
+  /// **'Digital Editions'**
   String get labsMarketplaceSemanticLabel;
 
   /// No description provided for @daoHubHeaderSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Community governance for artists, institutions, and cultural participation'**
+  /// **'Experimental community governance for artists, institutions, and cultural participation'**
   String get daoHubHeaderSubtitle;
 
   /// No description provided for @daoHubInfoDialogTitle.
   ///
   /// In en, this message translates to:
-  /// **'How the DAO works'**
+  /// **'How community governance works'**
   String get daoHubInfoDialogTitle;
 
   /// No description provided for @daoHubInfoDialogBody.
   ///
   /// In en, this message translates to:
-  /// **'The DAO gives the community a way to propose and vote on platform decisions. Voting power follows your KUB8 participation, and you can delegate to someone you trust when needed.'**
+  /// **'This lab gives the community a transparent way to propose, review, and discuss platform decisions. KUB8 records participation and recognition; it is not financial value.'**
   String get daoHubInfoDialogBody;
 
   /// No description provided for @daoHubTabActiveProposals.
@@ -19616,7 +19952,7 @@ abstract class AppLocalizations {
   /// No description provided for @daoCreateProposalSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Submit a proposal for the community to vote on'**
+  /// **'Submit a proposal for governance review'**
   String get daoCreateProposalSubtitle;
 
   /// No description provided for @daoCreateProposalFieldTitleLabel.
@@ -19730,7 +20066,7 @@ abstract class AppLocalizations {
   /// No description provided for @desktopGovernanceSidebarOverviewTitle.
   ///
   /// In en, this message translates to:
-  /// **'DAO Overview'**
+  /// **'Research overview'**
   String get desktopGovernanceSidebarOverviewTitle;
 
   /// No description provided for @desktopGovernanceSidebarQuickActionsTitle.
@@ -19754,13 +20090,13 @@ abstract class AppLocalizations {
   /// No description provided for @desktopGovernanceQuickActionVoteTitle.
   ///
   /// In en, this message translates to:
-  /// **'Vote on proposals'**
+  /// **'Review proposals'**
   String get desktopGovernanceQuickActionVoteTitle;
 
   /// No description provided for @desktopGovernanceQuickActionVoteSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Participate in governance'**
+  /// **'Shape the platform'**
   String get desktopGovernanceQuickActionVoteSubtitle;
 
   /// No description provided for @desktopGovernanceQuickActionAnalyticsTitle.
@@ -19772,19 +20108,19 @@ abstract class AppLocalizations {
   /// No description provided for @desktopGovernanceQuickActionAnalyticsSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'View DAO performance'**
+  /// **'View participation signals'**
   String get desktopGovernanceQuickActionAnalyticsSubtitle;
 
   /// No description provided for @desktopGovernanceAnalyticsScreenTitle.
   ///
   /// In en, this message translates to:
-  /// **'DAO Analytics'**
+  /// **'Governance Analytics'**
   String get desktopGovernanceAnalyticsScreenTitle;
 
   /// No description provided for @desktopGovernanceSidebarStatisticsTitle.
   ///
   /// In en, this message translates to:
-  /// **'DAO Statistics'**
+  /// **'Research Statistics'**
   String get desktopGovernanceSidebarStatisticsTitle;
 
   /// No description provided for @desktopGovernanceSidebarRecentActivityTitle.
@@ -20090,13 +20426,13 @@ abstract class AppLocalizations {
   /// No description provided for @profileEditVerifiedArtistSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Your artist status is verified by the DAO'**
+  /// **'Your artist status is verified through governance review'**
   String get profileEditVerifiedArtistSubtitle;
 
   /// No description provided for @profileEditVerifiedInstitutionSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Your institution status is verified by the DAO'**
+  /// **'Your institution status is verified through governance review'**
   String get profileEditVerifiedInstitutionSubtitle;
 
   /// No description provided for @profileEditProfileUpdatedToast.
@@ -20114,13 +20450,13 @@ abstract class AppLocalizations {
   /// No description provided for @profileEditNoWalletUploadAvatarToast.
   ///
   /// In en, this message translates to:
-  /// **'No wallet connected. Connect your wallet to upload avatar.'**
+  /// **'Sign in first; wallet access is only needed for wallet-linked profile actions.'**
   String get profileEditNoWalletUploadAvatarToast;
 
   /// No description provided for @profileEditNoWalletUploadCoverToast.
   ///
   /// In en, this message translates to:
-  /// **'No wallet connected. Connect your wallet to upload cover image.'**
+  /// **'Sign in first; wallet access is only needed for wallet-linked profile actions.'**
   String get profileEditNoWalletUploadCoverToast;
 
   /// No description provided for @profileEditAvatarCopiedToClipboardToast.
@@ -20564,7 +20900,7 @@ abstract class AppLocalizations {
   /// No description provided for @userProfileAchievementCategoryNft.
   ///
   /// In en, this message translates to:
-  /// **'NFT'**
+  /// **'Archive object'**
   String get userProfileAchievementCategoryNft;
 
   /// No description provided for @userProfileAchievementCategoryCommunity.
@@ -22340,7 +22676,7 @@ abstract class AppLocalizations {
   /// No description provided for @desktopProfilePerformanceNftsOwnedTitle.
   ///
   /// In en, this message translates to:
-  /// **'NFTs owned'**
+  /// **'Archive objects held'**
   String get desktopProfilePerformanceNftsOwnedTitle;
 
   /// No description provided for @desktopProfileAchievementsSubtitle.
@@ -22448,7 +22784,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingWelcomeDiscoverBody.
   ///
   /// In en, this message translates to:
-  /// **'Explore artworks, exhibitions, public works, and creative spaces on the community map.'**
+  /// **'Explore artworks, exhibitions, public works, institutions, and creative spaces on the open art map.'**
   String get onboardingWelcomeDiscoverBody;
 
   /// No description provided for @onboardingWelcomeCreateTitle.
@@ -22460,7 +22796,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingWelcomeCreateBody.
   ///
   /// In en, this message translates to:
-  /// **'Share practice, publish artworks, add context, and take part in a growing art community.'**
+  /// **'Share practice, publish artworks, add context, and take part in a community-driven cultural archive.'**
   String get onboardingWelcomeCreateBody;
 
   /// No description provided for @onboardingWelcomeJoinTitle.
@@ -22472,7 +22808,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingWelcomeJoinBody.
   ///
   /// In en, this message translates to:
-  /// **'Start exploring or create your account.'**
+  /// **'Start exploring, then create a profile when you want to participate.'**
   String get onboardingWelcomeJoinBody;
 
   /// Title for the promotion builder sheet
@@ -22898,7 +23234,7 @@ abstract class AppLocalizations {
   /// No description provided for @recognitionBadgePanelEmpty.
   ///
   /// In en, this message translates to:
-  /// **'No recognition yet. Visit events and take part in approvals to earn badges.'**
+  /// **'No recognition yet. Visit events and take part in approvals to receive badges.'**
   String get recognitionBadgePanelEmpty;
 
   /// No description provided for @recognitionBadgePanelAttendance.
@@ -23012,7 +23348,7 @@ abstract class AppLocalizations {
   /// No description provided for @exhibitionDetailPoapTitle.
   ///
   /// In en, this message translates to:
-  /// **'Attendance badge (POAP)'**
+  /// **'Attendance record'**
   String get exhibitionDetailPoapTitle;
 
   /// No description provided for @exhibitionDetailPoapDescription.
@@ -23030,13 +23366,13 @@ abstract class AppLocalizations {
   /// No description provided for @exhibitionDetailPoapNotClaimedStatus.
   ///
   /// In en, this message translates to:
-  /// **'Ready to claim'**
+  /// **'Ready to record'**
   String get exhibitionDetailPoapNotClaimedStatus;
 
   /// No description provided for @exhibitionDetailPoapSignedOutHint.
   ///
   /// In en, this message translates to:
-  /// **'Sign in to claim this proof of visit badge.'**
+  /// **'Sign in to record this proof of visit badge.'**
   String get exhibitionDetailPoapSignedOutHint;
 
   /// No description provided for @exhibitionDetailPoapClaimAction.
@@ -23054,13 +23390,13 @@ abstract class AppLocalizations {
   /// No description provided for @exhibitionDetailPoapClaimSuccessToast.
   ///
   /// In en, this message translates to:
-  /// **'Badge claimed.'**
+  /// **'Attendance record saved.'**
   String get exhibitionDetailPoapClaimSuccessToast;
 
   /// No description provided for @exhibitionDetailPoapClaimFailedToast.
   ///
   /// In en, this message translates to:
-  /// **'Unable to claim badge right now.'**
+  /// **'Unable to save attendance record right now.'**
   String get exhibitionDetailPoapClaimFailedToast;
 
   /// No description provided for @scanProofDetectedToast.
@@ -23084,7 +23420,7 @@ abstract class AppLocalizations {
   /// No description provided for @scanProofAlreadyClaimedToast.
   ///
   /// In en, this message translates to:
-  /// **'Visit proof already claimed.'**
+  /// **'Visit proof already recorded.'**
   String get scanProofAlreadyClaimedToast;
 
   /// No description provided for @scanProofExpiredToast.
@@ -23102,7 +23438,7 @@ abstract class AppLocalizations {
   /// No description provided for @exhibitionDetailPoapEligibilityClaimed.
   ///
   /// In en, this message translates to:
-  /// **'Already claimed'**
+  /// **'Already recorded'**
   String get exhibitionDetailPoapEligibilityClaimed;
 
   /// No description provided for @exhibitionDetailPoapEligibilityVerified.
@@ -23126,7 +23462,7 @@ abstract class AppLocalizations {
   /// No description provided for @exhibitionDetailPoapEligibilityClaimReadyHint.
   ///
   /// In en, this message translates to:
-  /// **'Your attendance is verified. You can claim this badge now.'**
+  /// **'Your attendance is verified. You can save this badge now.'**
   String get exhibitionDetailPoapEligibilityClaimReadyHint;
 
   /// No description provided for @exhibitionDetailPoapEligibilityNotPublished.
@@ -23138,7 +23474,7 @@ abstract class AppLocalizations {
   /// No description provided for @exhibitionDetailPoapEligibilityNotPublishedHint.
   ///
   /// In en, this message translates to:
-  /// **'Publish this exhibition before attendees can claim the badge.'**
+  /// **'Publish this exhibition before attendees can save the badge.'**
   String get exhibitionDetailPoapEligibilityNotPublishedHint;
 
   /// No description provided for @exhibitionDetailPoapEligibilityMarkerLinkRequired.
@@ -23150,7 +23486,7 @@ abstract class AppLocalizations {
   /// No description provided for @exhibitionDetailPoapEligibilityMarkerLinkHint.
   ///
   /// In en, this message translates to:
-  /// **'Open the linked marker or QR path to unlock claim eligibility.'**
+  /// **'Open the linked marker or QR path to unlock badge eligibility.'**
   String get exhibitionDetailPoapEligibilityMarkerLinkHint;
 
   /// No description provided for @exhibitionDetailPoapEligibilityAttendanceRequired.
@@ -23162,7 +23498,7 @@ abstract class AppLocalizations {
   /// No description provided for @exhibitionDetailPoapEligibilityAttendanceHint.
   ///
   /// In en, this message translates to:
-  /// **'Visit the exhibition marker to verify attendance before claiming.'**
+  /// **'Visit the exhibition marker to verify attendance before saving.'**
   String get exhibitionDetailPoapEligibilityAttendanceHint;
 
   /// No description provided for @exhibitionDetailPoapProofTypeMarkerAttendance.
@@ -23228,7 +23564,7 @@ abstract class AppLocalizations {
   /// No description provided for @exhibitionDetailAttendanceRewardPending.
   ///
   /// In en, this message translates to:
-  /// **'+{amount} KUB8 (pending)'**
+  /// **'+{amount} KUB8 recognition (pending)'**
   String exhibitionDetailAttendanceRewardPending(Object amount);
 }
 

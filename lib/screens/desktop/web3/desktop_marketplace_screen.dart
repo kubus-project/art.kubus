@@ -22,7 +22,7 @@ import '../components/desktop_widgets.dart';
 import '../../art/ar_screen.dart';
 import 'desktop_wallet_screen.dart';
 
-/// Desktop digital artifacts screen with archive object grid
+/// Desktop digital editions screen with archive object grid
 /// Features advanced filtering, sorting, and collection browsing
 class DesktopMarketplaceScreen extends StatefulWidget {
   const DesktopMarketplaceScreen({super.key});
@@ -146,7 +146,7 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'Digital Artifacts',
+                'Digital Editions',
                 style: KubusTextStyles.screenTitle.copyWith(
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
@@ -737,7 +737,7 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                 ),
                 const SizedBox(height: KubusSpacing.lg),
                 Text(
-                  'No digital artifacts found',
+                  'No digital editions found',
                   style: KubusTextStyles.detailCardTitle.copyWith(
                     color: Theme.of(context)
                         .colorScheme
