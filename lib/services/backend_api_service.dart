@@ -2423,6 +2423,7 @@ class BackendApiService
     String? username,
     String? walletAddress,
     String? displayName,
+    String origin = 'signin',
   }) =>
       _backendApiLoginWithGoogle(
         this,
@@ -2432,6 +2433,7 @@ class BackendApiService
         username: username,
         walletAddress: walletAddress,
         displayName: displayName,
+        origin: origin,
       );
 
   /// Deprecated compatibility bridge.

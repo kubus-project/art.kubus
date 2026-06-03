@@ -471,18 +471,25 @@ Future<Map<String, dynamic>> _backendApiLoginWithGoogle(
   String? username,
   String? walletAddress,
   String? displayName,
+  String origin = 'signin',
 }) async {
   try {
-    if ((code == null || code.isEmpty) &&
-        (idToken == null || idToken.isEmpty)) {
-      throw Exception(
-        'Either auth code or idToken is required for Google login',
-      );
+    final normalizedIdToken = (idToken ?? '').trim();
+    final normalizedCode = (code ?? '').trim();
+    final hasIdToken = normalizedIdToken.isNotEmpty;
+    final hasServerAuthCode = normalizedCode.isNotEmpty;
+
+    if (!hasIdToken && !hasServerAuthCode) {
+      throw Exception('Google sign-in did not return credentials');
     }
 
-    final isCodeFlow = code != null && code.isNotEmpty;
+    final isCodeFlow = !hasIdToken && hasServerAuthCode;
     final endpoint =
         isCodeFlow ? '/api/auth/login/google/code' : '/api/auth/login/google';
+    AppConfig.debugPrint(
+      'BackendApiService.loginWithGoogle selecting endpoint=$endpoint '
+      'hasIdToken=$hasIdToken hasServerAuthCode=$hasServerAuthCode',
+    );
     final uri = service._buildApiUri(service.baseUrl, endpoint);
     final key = service._rateLimitKey('POST', uri);
 
@@ -491,8 +498,9 @@ Future<Map<String, dynamic>> _backendApiLoginWithGoogle(
     }
 
     final body = {
-      if (isCodeFlow) 'code': code,
-      if (!isCodeFlow && idToken != null) 'idToken': idToken,
+      if (isCodeFlow) 'code': normalizedCode,
+      if (!isCodeFlow) 'idToken': normalizedIdToken,
+      'origin': origin,
       if (email != null && email.isNotEmpty) 'email': email,
       if (username != null && username.isNotEmpty) 'username': username,
       if (walletAddress != null && walletAddress.isNotEmpty)

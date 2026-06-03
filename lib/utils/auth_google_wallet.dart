@@ -56,6 +56,7 @@ Future<Map<String, dynamic>> loginWithGoogleWalletRecovery({
   required GoogleAuthResult googleResult,
   required String? walletAddress,
   required Future<String?> Function() createSignerBackedWallet,
+  String origin = 'signin',
 }) async {
   final normalizedWallet = (walletAddress ?? '').trim();
   final realWallet = normalizedWallet.isNotEmpty &&
@@ -71,6 +72,7 @@ Future<Map<String, dynamic>> loginWithGoogleWalletRecovery({
       username: null,
       walletAddress: wallet,
       displayName: googleResult.displayName,
+      origin: origin,
     );
   }
 

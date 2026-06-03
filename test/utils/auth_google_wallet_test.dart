@@ -154,6 +154,68 @@ void main() {
     expect(sentBody?.containsKey('idToken'), isFalse);
   });
 
+  test('id token login uses id-token endpoint even when auth code exists',
+      () async {
+    final api = BackendApiService();
+    String? requestPath;
+    Map<String, dynamic>? sentBody;
+
+    api.setHttpClient(
+      MockClient((request) async {
+        requestPath = request.url.path;
+        sentBody = Map<String, dynamic>.from(jsonDecode(request.body) as Map);
+        return http.Response(
+          '{"success":true,"data":{"token":"jwt-token"}}',
+          200,
+          headers: <String, String>{'content-type': 'application/json'},
+        );
+      }),
+    );
+
+    final result = await loginWithGoogleWalletRecovery(
+      api: api,
+      googleResult: GoogleAuthResult(
+        idToken: 'google-id-token',
+        serverAuthCode: 'google-server-code',
+        email: 'id-token-user@example.com',
+        displayName: 'ID Token User',
+      ),
+      walletAddress: null,
+      createSignerBackedWallet: () async => 'wallet-created-123',
+    );
+
+    expect(result['success'], isTrue);
+    expect(requestPath, '/api/auth/login/google');
+    expect(sentBody?['idToken'], 'google-id-token');
+    expect(sentBody?['origin'], 'signin');
+    expect(sentBody?.containsKey('code'), isFalse);
+  });
+
+  test('google login fails locally when no credential is returned', () async {
+    final api = BackendApiService();
+
+    expect(
+      () => loginWithGoogleWalletRecovery(
+        api: api,
+        googleResult: GoogleAuthResult(
+          idToken: '',
+          serverAuthCode: '',
+          email: '',
+          displayName: null,
+        ),
+        walletAddress: null,
+        createSignerBackedWallet: () async => 'wallet-created-123',
+      ),
+      throwsA(
+        isA<Exception>().having(
+          (error) => error.toString(),
+          'message',
+          contains('Google sign-in did not return credentials'),
+        ),
+      ),
+    );
+  });
+
   test(
       'existing google login with linked_auth wallet does not provision a wallet',
       () async {

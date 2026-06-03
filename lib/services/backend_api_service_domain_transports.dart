@@ -131,6 +131,7 @@ class BackendAuthSessionTransport {
     String? username,
     String? walletAddress,
     String? displayName,
+    String origin = 'signin',
   }) {
     return _service.loginWithGoogle(
       idToken: idToken,
@@ -139,6 +140,7 @@ class BackendAuthSessionTransport {
       username: username,
       walletAddress: walletAddress,
       displayName: displayName,
+      origin: origin,
     );
   }
 }
