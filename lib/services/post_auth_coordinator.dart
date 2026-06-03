@@ -158,6 +158,31 @@ class PostAuthCoordinator {
             );
           }
         }
+        if (origin == AuthOrigin.google &&
+            expectedWallet.isEmpty &&
+            resolvedWallet.isNotEmpty &&
+            normalizedUserId.isNotEmpty) {
+          if (!context.mounted) {
+            return const PostAuthResult(completed: false);
+          }
+          try {
+            await const WalletSessionSyncService().bindAuthenticatedWallet(
+              context: context,
+              walletAddress: resolvedWallet,
+              userId: normalizedUserId,
+              warmUp: true,
+              loadProfile: false,
+              syncBackend: true,
+            );
+            if (!context.mounted) {
+              return const PostAuthResult(completed: false);
+            }
+          } catch (e) {
+            AppConfig.debugPrint(
+              'PostAuthCoordinator: Google wallet bind after provisioning failed: $e',
+            );
+          }
+        }
 
         // Update normalized wallet for remaining stages
         if (resolvedWallet.isNotEmpty) {
