@@ -26,6 +26,11 @@ class _FakeProfileApi implements ProfileBackendApi {
   }
 
   @override
+  Future<Map<String, dynamic>> getMyProfile() async {
+    return <String, dynamic>{'success': false, 'status': 404};
+  }
+
+  @override
   Future<Map<String, dynamic>?> getDAOReview({
     required String idOrWallet,
   }) async {
@@ -210,7 +215,10 @@ class _ProfileEditTestProvider extends ProfileProvider {
   }) async {}
 
   @override
-  Future<void> loadProfile(String walletAddress) async {
+  Future<void> loadProfile(
+    String walletAddress, {
+    bool allowWalletAutoRegister = false,
+  }) async {
     loadProfileCalls += 1;
   }
 }

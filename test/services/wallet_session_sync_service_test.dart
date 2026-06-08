@@ -33,7 +33,10 @@ class _ThrowingProfileProvider extends ProfileProvider {
   bool loadAttempted = false;
 
   @override
-  Future<void> loadProfile(String walletAddress) async {
+  Future<void> loadProfile(
+    String walletAddress, {
+    bool allowWalletAutoRegister = false,
+  }) async {
     loadAttempted = true;
     throw Exception('profile refresh failed');
   }
@@ -139,11 +142,59 @@ void main() {
       syncBackendWallet: (wallet) async {
         bindRequests += 1;
         capturedWallet = wallet;
+        return null;
       },
     );
 
     expect(bindRequests, 1);
     expect(capturedWallet, 'wallet-backend-sync');
+  });
+
+  testWidgets('bindAuthenticatedWallet persists refreshed auth session',
+      (tester) async {
+    final walletProvider = _ThrowingWalletProvider();
+    final profileProvider = _ThrowingProfileProvider();
+    final chatProvider = _RecordingChatProvider();
+    late BuildContext buildContext;
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<WalletProvider>.value(value: walletProvider),
+          ChangeNotifierProvider<ProfileProvider>.value(value: profileProvider),
+          ChangeNotifierProvider<ChatProvider>.value(value: chatProvider),
+        ],
+        child: MaterialApp(
+          home: Builder(
+            builder: (context) {
+              buildContext = context;
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    await const WalletSessionSyncService().bindAuthenticatedWallet(
+      context: buildContext,
+      walletAddress: 'wallet-token-refresh',
+      userId: 'user-42',
+      warmUp: false,
+      loadProfile: false,
+      syncBackend: true,
+      syncBackendWallet: (_) async => <String, dynamic>{
+        'success': true,
+        'data': <String, dynamic>{
+          'token': 'refreshed-access-token',
+          'refreshToken': 'refreshed-refresh-token',
+        },
+      },
+    );
+
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString('jwt_token'), 'refreshed-access-token');
+    expect(prefs.getString('refresh_token'), 'refreshed-refresh-token');
   });
 
   testWidgets(

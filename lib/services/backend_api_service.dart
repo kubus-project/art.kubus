@@ -165,6 +165,7 @@ abstract class ProfileBackendApi {
     String? username,
   });
 
+  Future<Map<String, dynamic>> getMyProfile();
   Future<Map<String, dynamic>> getProfileByWallet(String walletAddress);
   Future<Map<String, dynamic>> saveProfile(Map<String, dynamic> profileData);
 

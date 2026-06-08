@@ -1,12 +1,81 @@
 import 'dart:convert';
 
 import 'package:art_kubus/services/backend_api_service.dart';
+import 'package:art_kubus/providers/profile_provider.dart';
+import 'package:art_kubus/providers/saved_items_provider.dart';
+import 'package:art_kubus/providers/security_gate_provider.dart';
+import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/services/google_auth_service.dart';
+import 'package:art_kubus/services/auth_redirect_controller.dart';
+import 'package:art_kubus/services/post_auth_coordinator.dart';
 import 'package:art_kubus/utils/auth_google_wallet.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+class _RecordingProfileProvider extends ProfileProvider {
+  int authenticatedLoads = 0;
+  int walletLoads = 0;
+  bool? lastAllowWalletAutoRegister;
+  Object? authenticatedError;
+
+  @override
+  Future<void> loadAuthenticatedProfile() async {
+    authenticatedLoads += 1;
+    final error = authenticatedError;
+    if (error != null) throw error;
+  }
+
+  @override
+  Future<void> loadProfile(
+    String walletAddress, {
+    bool allowWalletAutoRegister = false,
+  }) async {
+    walletLoads += 1;
+    lastAllowWalletAutoRegister = allowWalletAutoRegister;
+  }
+}
+
+class _NoopSavedItemsProvider extends SavedItemsProvider {
+  @override
+  Future<void> refreshFromBackend() async {}
+}
+
+Future<BuildContext> _pumpPostAuthContext(
+  WidgetTester tester,
+  _RecordingProfileProvider profileProvider,
+) async {
+  late BuildContext buildContext;
+  await tester.pumpWidget(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider<WalletProvider>(
+          create: (_) => WalletProvider(deferInit: true),
+        ),
+        ChangeNotifierProvider<ProfileProvider>.value(value: profileProvider),
+        ChangeNotifierProvider<SavedItemsProvider>(
+          create: (_) => _NoopSavedItemsProvider(),
+        ),
+        ChangeNotifierProvider<SecurityGateProvider>(
+          create: (_) => SecurityGateProvider(),
+        ),
+      ],
+      child: MaterialApp(
+        home: Builder(
+          builder: (context) {
+            buildContext = context;
+            return const SizedBox.shrink();
+          },
+        ),
+      ),
+    ),
+  );
+  await tester.pump();
+  return buildContext;
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -152,6 +221,87 @@ void main() {
     expect(requestPath, '/api/auth/login/google/code');
     expect(sentBody?['code'], 'google-server-code');
     expect(sentBody?.containsKey('idToken'), isFalse);
+  });
+
+  testWidgets(
+      'Google post-auth hydrates authenticated profile instead of wallet profile',
+      (tester) async {
+    final profileProvider = _RecordingProfileProvider();
+    final context = await _pumpPostAuthContext(tester, profileProvider);
+
+    await const PostAuthCoordinator().complete(
+      context: context,
+      origin: AuthOrigin.google,
+      payload: const <String, dynamic>{
+        'data': {
+          'user': {
+            'id': 'google-user-1',
+            'email': 'google@example.com',
+          },
+        },
+      },
+      modalReauth: true,
+      onStageChanged: (_) {},
+    );
+
+    expect(profileProvider.authenticatedLoads, 1);
+    expect(profileProvider.walletLoads, 0);
+  });
+
+  testWidgets('Google profile 404 does not use wallet auto-register fallback',
+      (tester) async {
+    final profileProvider = _RecordingProfileProvider()
+      ..authenticatedError = const BackendApiRequestException(
+        statusCode: 404,
+        path: '/api/profiles/me',
+        body: '{"success":false,"error":"Profile not found"}',
+      );
+    final context = await _pumpPostAuthContext(tester, profileProvider);
+
+    await const PostAuthCoordinator().complete(
+      context: context,
+      origin: AuthOrigin.google,
+      payload: const <String, dynamic>{
+        'data': {
+          'user': {
+            'id': 'google-user-404',
+            'email': 'missing-profile@example.com',
+          },
+        },
+      },
+      modalReauth: true,
+      onStageChanged: (_) {},
+    );
+
+    expect(profileProvider.authenticatedLoads, 1);
+    expect(profileProvider.walletLoads, 0);
+    expect(profileProvider.lastAllowWalletAutoRegister, isNull);
+  });
+
+  testWidgets('Wallet post-auth still allows wallet auto-register',
+      (tester) async {
+    final profileProvider = _RecordingProfileProvider();
+    final context = await _pumpPostAuthContext(tester, profileProvider);
+
+    await const PostAuthCoordinator().complete(
+      context: context,
+      origin: AuthOrigin.wallet,
+      payload: const <String, dynamic>{
+        'data': {
+          'user': {
+            'id': 'wallet-user-1',
+            'walletAddress': 'wallet-explicit-1',
+          },
+        },
+      },
+      walletAddress: 'wallet-explicit-1',
+      modalReauth: true,
+      onStageChanged: (_) {},
+    );
+
+    expect(profileProvider.authenticatedLoads, 0);
+    expect(profileProvider.walletLoads, 1);
+    expect(profileProvider.lastAllowWalletAutoRegister, isTrue);
   });
 
   test('onboarding google code login sends onboarding origin to code endpoint',

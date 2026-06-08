@@ -92,7 +92,7 @@ class AuthRedirectController {
                 ),
       hasAuthenticatedSession: true,
       hasHydratedProfile: hasHydratedProfile,
-      requiresWalletBackup: requiresWalletBackup,
+      requiresWalletBackup: requiresWalletBackup && targetWallet.isNotEmpty,
       heuristicNextStepId: heuristicNextStepId,
       persona: persona,
       payload: payload,
@@ -147,6 +147,7 @@ class AuthRedirectController {
 
     final requiresWalletBackup =
         AppConfig.isFeatureEnabled('walletBackupOnboarding') &&
+            (targetWallet ?? '').isNotEmpty &&
             walletProvider.authority.mnemonicBackupRequired;
     final result = await resolvePostAuthRedirect(
       prefs: prefs,

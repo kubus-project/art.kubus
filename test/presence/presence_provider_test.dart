@@ -68,6 +68,11 @@ class _FakeProfileApi implements ProfileBackendApi {
   }
 
   @override
+  Future<Map<String, dynamic>> getMyProfile() async {
+    return {'success': false, 'status': 404};
+  }
+
+  @override
   Future<Map<String, dynamic>> saveProfile(
       Map<String, dynamic> profileData) async {
     return {};

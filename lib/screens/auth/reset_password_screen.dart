@@ -33,6 +33,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   late final TextEditingController _passwordController;
   late final TextEditingController _confirmController;
   bool _submitting = false;
+  bool _completed = false;
+  bool _showPassword = false;
+  bool _showConfirmPassword = false;
   String? _inlineError;
 
   @override
@@ -83,10 +86,12 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       await BackendApiService()
           .resetPassword(token: token, newPassword: password);
       if (!mounted) return;
+      setState(() => _completed = true);
+      _passwordController.clear();
+      _confirmController.clear();
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(content: Text(l10n.authResetPasswordSuccessToast)),
       );
-      Navigator.of(context).pushNamedAndRemoveUntil('/sign-in', (_) => false);
     } catch (_) {
       if (!mounted) return;
       setState(() => _inlineError = l10n.authResetPasswordFailedInline);
@@ -103,24 +108,70 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     required AppLocalizations l10n,
   }) {
     final scheme = Theme.of(context).colorScheme;
+    if (_completed) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Icon(
+            Icons.check_circle_outline,
+            color: KubusColorRoles.of(context).positiveAction,
+            size: 44,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            l10n.authResetPasswordSuccessToast,
+            textAlign: TextAlign.center,
+            style: KubusTextStyles.sectionTitle.copyWith(
+              color: scheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 16),
+          KubusButton(
+            onPressed: _goToSignIn,
+            icon: Icons.login_rounded,
+            label: l10n.commonSignIn,
+            isFullWidth: true,
+          ),
+        ],
+      );
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         TextField(
           controller: _passwordController,
-          obscureText: true,
+          obscureText: !_showPassword,
           decoration: InputDecoration(
             labelText: l10n.commonPassword,
             border: const OutlineInputBorder(),
+            suffixIcon: IconButton(
+              onPressed: () =>
+                  setState(() => _showPassword = !_showPassword),
+              icon: Icon(
+                _showPassword
+                    ? Icons.visibility_off_outlined
+                    : Icons.visibility_outlined,
+              ),
+            ),
           ),
         ),
         const SizedBox(height: 12),
         TextField(
           controller: _confirmController,
-          obscureText: true,
+          obscureText: !_showConfirmPassword,
           decoration: InputDecoration(
             labelText: l10n.commonConfirmPassword,
             border: const OutlineInputBorder(),
+            suffixIcon: IconButton(
+              onPressed: () => setState(
+                () => _showConfirmPassword = !_showConfirmPassword,
+              ),
+              icon: Icon(
+                _showConfirmPassword
+                    ? Icons.visibility_off_outlined
+                    : Icons.visibility_outlined,
+              ),
+            ),
           ),
         ),
         const SizedBox(height: 12),

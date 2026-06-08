@@ -4,7 +4,9 @@ import 'promotion.dart';
 
 class UserProfile {
   final String id;
+  final String? userId;
   final String walletAddress;
+  final String? publicActorId;
   final String username;
   final String displayName;
   final String bio;
@@ -22,7 +24,9 @@ class UserProfile {
 
   UserProfile({
     required this.id,
+    this.userId,
     required this.walletAddress,
+    this.publicActorId,
     required this.username,
     required this.displayName,
     required this.bio,
@@ -41,7 +45,9 @@ class UserProfile {
 
   UserProfile copyWith({
     String? id,
+    String? userId,
     String? walletAddress,
+    String? publicActorId,
     String? username,
     String? displayName,
     String? bio,
@@ -59,7 +65,9 @@ class UserProfile {
   }) {
     return UserProfile(
       id: id ?? this.id,
+      userId: userId ?? this.userId,
       walletAddress: walletAddress ?? this.walletAddress,
+      publicActorId: publicActorId ?? this.publicActorId,
       username: username ?? this.username,
       displayName: displayName ?? this.displayName,
       bio: bio ?? this.bio,
@@ -108,7 +116,9 @@ class UserProfile {
 
     return UserProfile(
       id: (json['id'] ?? '').toString(),
+      userId: (json['userId'] ?? json['user_id'])?.toString(),
       walletAddress: (json['walletAddress'] ?? json['wallet_address'] ?? '').toString(),
+      publicActorId: (json['publicActorId'] ?? json['public_actor_id'])?.toString(),
       username: (json['username'] ?? '').toString(),
       displayName: (json['displayName'] ?? json['display_name'] ?? '').toString(),
       bio: (json['bio'] ?? '').toString(),
@@ -138,7 +148,9 @@ class UserProfile {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      if (userId != null) 'userId': userId,
       'walletAddress': walletAddress,
+      if (publicActorId != null) 'publicActorId': publicActorId,
       'username': username,
       'displayName': displayName,
       'bio': bio,

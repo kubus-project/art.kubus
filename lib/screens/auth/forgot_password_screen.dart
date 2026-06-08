@@ -28,6 +28,7 @@ class ForgotPasswordScreen extends StatefulWidget {
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   late final TextEditingController _emailController;
   bool _submitting = false;
+  bool _submitted = false;
   String? _inlineError;
 
   @override
@@ -63,6 +64,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     try {
       await BackendApiService().forgotPassword(email: email);
       if (!mounted) return;
+      setState(() => _submitted = true);
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(content: Text(l10n.authForgotPasswordSentToast)),
       );
@@ -82,6 +84,44 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     required AppLocalizations l10n,
   }) {
     final scheme = Theme.of(context).colorScheme;
+    if (_submitted) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Icon(
+            Icons.mark_email_read_outlined,
+            color: KubusColorRoles.of(context).positiveAction,
+            size: 44,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            l10n.authForgotPasswordSentToast,
+            textAlign: TextAlign.center,
+            style: KubusTextStyles.sectionTitle.copyWith(
+              color: scheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 16),
+          KubusButton(
+            onPressed: _submitting ? null : _submit,
+            isLoading: _submitting,
+            icon: _submitting ? null : Icons.refresh_rounded,
+            label: l10n.authForgotPasswordSendButton,
+            isFullWidth: true,
+          ),
+          const SizedBox(height: 12),
+          TextButton(
+            onPressed: _goToSignIn,
+            child: Text(
+              l10n.commonSignIn,
+              style: KubusTextStyles.sectionTitle.copyWith(
+                color: scheme.onSurface.withValues(alpha: 0.7),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [

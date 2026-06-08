@@ -329,8 +329,10 @@ class ProfileProvider extends foundation.ChangeNotifier {
   UserProfile? get profile => _currentUser; // Alias for compatibility
   List<UserProfile> get followingUsers => _followingUsers;
   List<UserProfile> get followers => _followers;
-  bool get isSignedIn =>
-      _walletProvider?.authority.accountSignedIn ?? _isSignedIn;
+  bool get isSignedIn => _isSignedIn || _currentUser != null;
+  bool get hasWallet =>
+      (_currentUser?.walletAddress.trim().isNotEmpty ?? false) ||
+      (_walletProvider?.currentWalletAddress?.trim().isNotEmpty ?? false);
   bool get isLoading => _isLoading;
   bool get hasHydratedProfile => _hasHydratedProfile;
   String? get error => _error;
@@ -608,27 +610,98 @@ class ProfileProvider extends foundation.ChangeNotifier {
   }
 
   /// Load profile by wallet address
-  Future<void> loadProfile(String walletAddress) async {
+  Future<void> loadAuthenticatedProfile() async {
     final requestEpoch = ++_profileLoadEpoch;
     bool isCurrentLoad() => requestEpoch == _profileLoadEpoch;
     _isLoading = true;
     _error = null;
     _hasHydratedProfile = false;
-    // Immediately set a provisional profile so UI can show a stable identicon
-    // and a shortened wallet display name without waiting for the backend.
+    notifyListeners();
+
     try {
-      final provisional = UserProfile(
-        id: 'profile_${walletAddress.substring(0, 8)}',
-        walletAddress: walletAddress,
-        username: _generateUsername(walletAddress),
-        displayName: _shortWallet(walletAddress),
-        bio: '',
-        avatar: '',
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
-      _currentUser = provisional;
-    } catch (_) {}
+      final response = await _apiService.getMyProfile();
+      if (!isCurrentLoad()) return;
+      if (response['success'] == false) {
+        throw Exception(response['error'] ??
+            'Authenticated profile request failed: ${response['status'] ?? 'unknown'}');
+      }
+      final raw = response['data'] is Map
+          ? Map<String, dynamic>.from(response['data'] as Map)
+          : Map<String, dynamic>.from(response);
+      _currentUser = UserProfile.fromJson(raw);
+      try {
+        final av = _currentUser?.avatar ?? '';
+        final resolved = _resolveUrl(av);
+        _currentUser =
+            _currentUser?.copyWith(avatar: _convertSvgToRaster(resolved));
+      } catch (_) {}
+
+      _isSignedIn = true;
+      _hasHydratedProfile = true;
+      final accountKey =
+          (_currentUser?.userId ?? _currentUser?.id ?? '').trim();
+      final preferenceKey = (_currentUser?.walletAddress.trim().isNotEmpty ??
+              false)
+          ? _currentUser!.walletAddress
+          : accountKey;
+      final mergedPrefs = _mergePreferencesWithLocalPersona(preferenceKey);
+      _currentUser = _currentUser?.copyWith(preferences: mergedPrefs);
+      await _persistPreferences(mergedPrefs);
+      if (accountKey.isNotEmpty) {
+        try {
+          final prefs = await _ensurePrefs();
+          await prefs.setString('user_id', accountKey);
+        } catch (_) {}
+      }
+
+      final walletAddress = _currentUser?.walletAddress.trim() ?? '';
+      if (walletAddress.isNotEmpty) {
+        await _applyDaoReviewRoles(walletAddress);
+        if (!isCurrentLoad()) return;
+        await _loadBackendStats(walletAddress);
+        if (!isCurrentLoad()) return;
+        try {
+          final prefs = await _ensurePrefs();
+          await prefs.setString('wallet_address', walletAddress);
+        } catch (_) {}
+      }
+
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      _error = 'Failed to load authenticated profile: $e';
+      _isLoading = false;
+      _hasHydratedProfile = false;
+      debugPrint('Error loading authenticated profile: $e');
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  Future<void> loadProfile(
+    String walletAddress, {
+    bool allowWalletAutoRegister = false,
+  }) async {
+    final requestEpoch = ++_profileLoadEpoch;
+    bool isCurrentLoad() => requestEpoch == _profileLoadEpoch;
+    _isLoading = true;
+    _error = null;
+    _hasHydratedProfile = false;
+    if (allowWalletAutoRegister) {
+      try {
+        final provisional = UserProfile(
+          id: 'profile_${walletAddress.substring(0, 8)}',
+          walletAddress: walletAddress,
+          username: _generateUsername(walletAddress),
+          displayName: _shortWallet(walletAddress),
+          bio: '',
+          avatar: '',
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+        _currentUser = provisional;
+      } catch (_) {}
+    }
     notifyListeners();
 
     try {
@@ -731,7 +804,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
                 lowerError.contains('request failed: 404') ||
                 lowerError.contains('profile not found');
 
-        if (!shouldAutoRegister) {
+        if (!shouldAutoRegister || !allowWalletAutoRegister) {
           debugPrint(
               'ProfileProvider: Profile fetch failed (no auto-register): $e');
           rethrow;

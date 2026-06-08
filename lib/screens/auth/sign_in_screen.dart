@@ -217,10 +217,12 @@ class _SignInScreenState extends State<SignInScreen> {
             .toString()
             .trim();
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-
+    final walletFallbackAllowed = origin == AuthOrigin.wallet;
     final normalizedWalletAddress = walletAddressFromPayload.isNotEmpty
         ? walletAddressFromPayload
-        : (walletProvider.currentWalletAddress ?? '').trim();
+        : (walletFallbackAllowed
+            ? (walletProvider.currentWalletAddress ?? '').trim()
+            : '');
 
     // Set post-auth state immediately. This will cause rebuild() to show
     // PostAuthLoadingScreen instead of auth form.
@@ -492,7 +494,7 @@ class _SignInScreenState extends State<SignInScreen> {
       result = await loginWithGoogleWalletRecovery(
         api: api,
         googleResult: googleResult,
-        walletAddress: _signerBackedWalletForGoogleAuth(),
+        walletAddress: null,
         createSignerBackedWallet: _createSignerBackedWallet,
         origin: widget.googleAuthOrigin,
       );
@@ -512,14 +514,6 @@ class _SignInScreenState extends State<SignInScreen> {
     _setGoogleAuthDiagnostics('profile_hydration');
     await _handleAuthSuccess(result, origin: AuthOrigin.google);
     _setGoogleAuthDiagnostics('success');
-  }
-
-  String? _signerBackedWalletForGoogleAuth() {
-    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-    return signerBackedGoogleWalletAddress(
-      hasSigner: walletProvider.hasSigner,
-      currentWalletAddress: walletProvider.currentWalletAddress,
-    );
   }
 
   Future<void> _showConnectWalletFlow({

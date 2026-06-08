@@ -132,6 +132,9 @@ class _FakeProfileApi implements ProfileBackendApi {
   Future<Map<String, dynamic>> getProfileByWallet(String walletAddress) => throw UnimplementedError();
 
   @override
+  Future<Map<String, dynamic>> getMyProfile() => throw UnimplementedError();
+
+  @override
   Future<Map<String, dynamic>> updateProfile(String walletAddress, Map<String, dynamic> updates) =>
       throw UnimplementedError();
 

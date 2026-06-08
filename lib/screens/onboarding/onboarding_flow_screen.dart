@@ -756,6 +756,11 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       _requiresWalletBackupStep = false;
       return;
     }
+    if (walletAddress.trim().isEmpty) {
+      _walletBackupStatus = const WalletBackupStatusSnapshot.noWallet();
+      _requiresWalletBackupStep = false;
+      return;
+    }
     _walletBackupStatus = await WalletBackupStatusResolver.resolve(
       walletProvider: walletProvider,
       walletAddress: walletAddress,
@@ -1548,7 +1553,10 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       return;
     }
     if (step == _OnboardingStep.verifyEmail) {
-      await _markCompleted(_OnboardingStep.verifyEmail);
+      _showSnack(
+        AppLocalizations.of(context)!.authVerifyEmailStatusPending,
+        tone: KubusSnackBarTone.neutral,
+      );
       return;
     }
 
@@ -3636,7 +3644,6 @@ class _AccountStepState extends State<_AccountStep> {
                           widget.profileDisplayName.trim().isEmpty
                               ? null
                               : widget.profileDisplayName.trim(),
-                      prepareProvisionalProfileBeforeRegister: false,
                       onEmailRegistrationAttempted: (email) =>
                           unawaited(widget.onEmailRegistrationAttempted(email)),
                       onEmailRegistrationCaptured:

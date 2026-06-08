@@ -84,6 +84,11 @@ class PostAuthCoordinator {
         payload: payload,
       );
       final normalizedUserId = (userId ?? user['id'] ?? '').toString().trim();
+      final expectedWalletFromPayload = _expectedWalletFromPayload(data, user);
+      final accountAuthWithoutWallet =
+          (origin == AuthOrigin.google || origin == AuthOrigin.emailPassword) &&
+              expectedWalletFromPayload.isEmpty &&
+              (walletAddress ?? '').trim().isEmpty;
 
       setStage(PostAuthStage.preparingSession);
       if (normalizedUserId.isNotEmpty) {
@@ -95,21 +100,27 @@ class PostAuthCoordinator {
       if (!modalReauth) {
         // Ensure wallet is provisioned from the auth payload before session sync
         String? provisionedWallet = normalizedWallet;
-        final expectedWallet = _expectedWalletFromPayload(data, user);
+        final expectedWallet = expectedWalletFromPayload;
+        if (accountAuthWithoutWallet) {
+          normalizedWallet = '';
+          provisionedWallet = null;
+        }
 
         if (!context.mounted) {
           return const PostAuthResult(completed: false);
         }
 
-        try {
-          provisionedWallet = await _ensureWalletProvisioned(
-            context: context,
-            existingWallet:
-                normalizedWallet.isEmpty ? expectedWallet : normalizedWallet,
-          );
-        } catch (e) {
-          AppConfig.debugPrint(
-              'PostAuthCoordinator: wallet provisioning failed: $e');
+        if (!accountAuthWithoutWallet) {
+          try {
+            provisionedWallet = await _ensureWalletProvisioned(
+              context: context,
+              existingWallet:
+                  normalizedWallet.isEmpty ? expectedWallet : normalizedWallet,
+            );
+          } catch (e) {
+            AppConfig.debugPrint(
+                'PostAuthCoordinator: wallet provisioning failed: $e');
+          }
         }
 
         var resolvedWallet = (provisionedWallet ?? '').toString().trim();
@@ -159,6 +170,7 @@ class PostAuthCoordinator {
           }
         }
         if (origin == AuthOrigin.google &&
+            !accountAuthWithoutWallet &&
             expectedWallet.isEmpty &&
             resolvedWallet.isNotEmpty &&
             normalizedUserId.isNotEmpty) {
@@ -226,13 +238,61 @@ class PostAuthCoordinator {
       }
 
       setStage(PostAuthStage.loadingProfile);
-      final walletForProfile = normalizedWallet.isNotEmpty
-          ? normalizedWallet
-          : (walletProvider.currentWalletAddress ?? '').trim();
-      if (walletForProfile.isNotEmpty) {
+      var walletForProfile = accountAuthWithoutWallet
+          ? ''
+          : (normalizedWallet.isNotEmpty
+              ? normalizedWallet
+              : (walletProvider.currentWalletAddress ?? '').trim());
+      if (origin == AuthOrigin.google || origin == AuthOrigin.emailPassword) {
         try {
           await profileProvider
-              .loadProfile(walletForProfile)
+              .loadAuthenticatedProfile()
+              .timeout(const Duration(seconds: 5));
+          final hydratedWallet =
+              (profileProvider.currentUser?.walletAddress ?? '').trim();
+          if (hydratedWallet.isNotEmpty) {
+            walletForProfile = hydratedWallet;
+            normalizedWallet = hydratedWallet;
+          }
+        } catch (e) {
+          AppConfig.debugPrint(
+            'PostAuthCoordinator: authenticated profile load skipped/failed: $e',
+          );
+        }
+
+        if (!modalReauth && walletForProfile.isEmpty && context.mounted) {
+          try {
+            final provisionedWallet = await _ensureWalletProvisioned(
+              context: context,
+            );
+            final resolvedWallet =
+                (provisionedWallet ?? walletProvider.currentWalletAddress ?? '')
+                    .trim();
+            if (resolvedWallet.isNotEmpty && context.mounted) {
+              await const WalletSessionSyncService().bindAuthenticatedWallet(
+                context: context,
+                walletAddress: resolvedWallet,
+                userId: normalizedUserId,
+                warmUp: true,
+                loadProfile: true,
+                syncBackend: true,
+              );
+              walletForProfile = resolvedWallet;
+              normalizedWallet = resolvedWallet;
+            }
+          } catch (e) {
+            AppConfig.debugPrint(
+              'PostAuthCoordinator: wallet setup remains pending after account auth: $e',
+            );
+          }
+        }
+      } else if (walletForProfile.isNotEmpty) {
+        try {
+          await profileProvider
+              .loadProfile(
+                walletForProfile,
+                allowWalletAutoRegister: origin == AuthOrigin.wallet,
+              )
               .timeout(const Duration(seconds: 5));
         } catch (e) {
           AppConfig.debugPrint(

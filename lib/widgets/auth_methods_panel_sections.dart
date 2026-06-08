@@ -68,9 +68,6 @@ class AuthMethodsPanelRegistrationMethods extends StatelessWidget {
     )!;
     final walletAccent = roles.web3MarketplaceAccent;
     final walletBorder = walletAccent.withValues(alpha: isDark ? 0.34 : 0.26);
-    final hasAlternativeMethods = enableGoogle || enableWallet;
-    final shouldShowAlternativeMethods =
-        !showCompactEmailForm && (showAlternativeMethods || !enableEmail);
     final methodGap = compactLayout ? KubusSpacing.sm : KubusSpacing.md;
 
     final registerMethods = Column(
@@ -98,6 +95,22 @@ class AuthMethodsPanelRegistrationMethods extends StatelessWidget {
           ),
           SizedBox(height: compactLayout ? KubusSpacing.md : KubusSpacing.lg),
         ],
+        if (!showCompactEmailForm && enableGoogle) ...[
+          if (kIsWeb)
+            GoogleSignInWebButton(
+              colorScheme: colorScheme,
+              isLoading: isGoogleSubmitting,
+              onAuthResult: onWebGoogleAuthResult,
+              onAuthError: onWebGoogleAuthError,
+            )
+          else
+            GoogleSignInButton(
+              onPressed: () async => onGooglePressed(),
+              isLoading: isGoogleSubmitting,
+              colorScheme: colorScheme,
+            ),
+          if (enableEmail || enableWallet) SizedBox(height: methodGap),
+        ],
         if (!showCompactEmailForm && enableEmail) ...[
           KubusAuthMethodButton(
             onPressed: onShowCompactEmailForm,
@@ -108,73 +121,25 @@ class AuthMethodsPanelRegistrationMethods extends StatelessWidget {
             foregroundColor: colorScheme.onSurface,
             isFullWidth: true,
           ),
-          if (hasAlternativeMethods) ...[
-            SizedBox(height: methodGap),
-            TextButton.icon(
-              onPressed: () =>
-                  onToggleAlternativeMethods(!showAlternativeMethods),
-              style: TextButton.styleFrom(
-                foregroundColor: colorScheme.onSurface.withValues(alpha: 0.82),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: KubusSpacing.sm,
-                  vertical: KubusSpacing.xs,
-                ),
-              ),
-              icon: Icon(
-                showAlternativeMethods
-                    ? Icons.expand_less_rounded
-                    : Icons.expand_more_rounded,
-              ),
-              label: Text(
-                showAlternativeMethods
-                    ? l10n.authHideOtherOptions
-                    : l10n.authShowOtherOptions,
-              ),
-            ),
-          ],
+          if (enableWallet) SizedBox(height: methodGap),
         ],
-        if (shouldShowAlternativeMethods && hasAlternativeMethods) ...[
-          Text(
-            l10n.authOtherOptionsLabel,
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: colorScheme.onSurface.withValues(alpha: 0.78),
-                  fontWeight: FontWeight.w700,
-                ),
-          ),
-          SizedBox(height: methodGap),
-          if (enableGoogle) ...[
-            if (kIsWeb)
-              GoogleSignInWebButton(
-                colorScheme: colorScheme,
-                isLoading: isGoogleSubmitting,
-                onAuthResult: onWebGoogleAuthResult,
-                onAuthError: onWebGoogleAuthError,
-              )
-            else
-              GoogleSignInButton(
-                onPressed: () async => onGooglePressed(),
-                isLoading: isGoogleSubmitting,
-                colorScheme: colorScheme,
-              ),
-          ],
-          if (enableGoogle && enableWallet) ...[
-            SizedBox(height: methodGap),
+        if (!showCompactEmailForm && enableWallet) ...[
+          if (enableGoogle || enableEmail) ...[
             AuthMethodsPanelMethodDivider(label: l10n.commonOr),
             SizedBox(height: methodGap),
           ],
-          if (enableWallet)
-            KubusAuthMethodButton(
-              onPressed: onShowConnectWalletModal,
-              leading: Icon(
-                Icons.account_balance_wallet_outlined,
-                color: walletAccent,
-              ),
-              label: l10n.authUseWalletInstead,
-              variant: KubusButtonVariant.secondary,
-              foregroundColor: colorScheme.onSurface,
-              borderColor: walletBorder,
-              isFullWidth: true,
+          KubusAuthMethodButton(
+            onPressed: onShowConnectWalletModal,
+            leading: Icon(
+              Icons.account_balance_wallet_outlined,
+              color: walletAccent,
             ),
+            label: l10n.authUseWalletInstead,
+            variant: KubusButtonVariant.secondary,
+            foregroundColor: colorScheme.onSurface,
+            borderColor: walletBorder,
+            isFullWidth: true,
+          ),
         ],
         if (showCompactEmailForm) ...[
           emailFormShell,

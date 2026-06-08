@@ -30,6 +30,7 @@ class SecureAccountScreen extends StatefulWidget {
 
 enum _SecureAccountMode {
   loading,
+  loadError,
   addEmailAndPassword,
   addPasswordOnly,
   secured,
@@ -91,7 +92,9 @@ class _SecureAccountScreenState extends State<SecureAccountScreen> {
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _mode = _SecureAccountMode.addEmailAndPassword;
+        _mode = _SecureAccountMode.loadError;
+        _inlineError = AppLocalizations.of(context)!
+            .authResetPasswordFailedInline;
       });
     }
   }
@@ -196,23 +199,18 @@ class _SecureAccountScreenState extends State<SecureAccountScreen> {
         );
       } else {
         final walletAddress = _resolveWalletAddress();
-        if (walletAddress.isEmpty) {
-          messenger.showKubusSnackBar(
-            SnackBar(content: Text(l10n.authConnectWalletModalTitle)),
-          );
-          return;
-        }
-
         try {
           await api
-              .ensureAuthLoaded(walletAddress: walletAddress)
+              .ensureAuthLoaded(
+                walletAddress: walletAddress.isEmpty ? null : walletAddress,
+              )
               .timeout(const Duration(seconds: 8));
         } catch (_) {}
 
         final response = await api.registerWithEmail(
           email: email,
           password: password,
-          walletAddress: walletAddress,
+          walletAddress: walletAddress.isEmpty ? null : walletAddress,
           includeAuth: true,
         );
         await api.syncSecureAccountStatusFromResponse(response);
@@ -521,6 +519,54 @@ class _SecureAccountScreenState extends State<SecureAccountScreen> {
     );
   }
 
+  Widget _buildLoadErrorState({
+    required AppLocalizations l10n,
+    required ColorScheme scheme,
+  }) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Icon(
+          Icons.error_outline_rounded,
+          color: scheme.error,
+          size: 44,
+        ),
+        const SizedBox(height: KubusSpacing.md),
+        Text(
+          _inlineError ?? l10n.authResetPasswordFailedInline,
+          textAlign: TextAlign.center,
+          style: KubusTextStyles.sectionTitle.copyWith(
+            color: scheme.onSurface,
+          ),
+        ),
+        const SizedBox(height: KubusSpacing.lg),
+        KubusButton(
+          onPressed: () {
+            setState(() {
+              _mode = _SecureAccountMode.loading;
+              _inlineError = null;
+            });
+            unawaited(_loadStatus());
+          },
+          icon: Icons.refresh_rounded,
+          label: l10n.commonRetry,
+          isFullWidth: true,
+        ),
+        const SizedBox(height: KubusSpacing.xs),
+        TextButton(
+          onPressed: _close,
+          child: Text(
+            l10n.commonBack,
+            style: KubusTextStyles.sectionTitle.copyWith(
+              color: scheme.onSurface.withValues(alpha: 0.72),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -546,6 +592,8 @@ class _SecureAccountScreenState extends State<SecureAccountScreen> {
       body = _buildSuccessState(l10n: l10n, scheme: scheme);
     } else if (_mode == _SecureAccountMode.loading) {
       body = const Center(child: CircularProgressIndicator());
+    } else if (_mode == _SecureAccountMode.loadError) {
+      body = _buildLoadErrorState(l10n: l10n, scheme: scheme);
     } else if (_mode == _SecureAccountMode.secured) {
       body = _buildSecuredState(l10n: l10n, scheme: scheme);
     } else {

@@ -36,6 +36,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
   bool _verifying = false;
   bool _verified = false;
   bool _resending = false;
+  bool _checkingStatus = false;
   String? _inlineError;
 
   @override
@@ -134,8 +135,49 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
     Navigator.of(context).pushNamedAndRemoveUntil('/sign-in', (_) => false);
   }
 
-  void _goToMain() {
-    Navigator.of(context).pushNamedAndRemoveUntil('/main', (_) => false);
+  void _continueAfterVerified() {
+    final api = BackendApiService();
+    final hasSession = (api.getAuthToken() ?? '').trim().isNotEmpty;
+    Navigator.of(context).pushNamedAndRemoveUntil(
+      hasSession ? '/main' : '/sign-in',
+      (_) => false,
+    );
+  }
+
+  Future<void> _checkVerificationStatus() async {
+    final l10n = AppLocalizations.of(context)!;
+    final email = _emailController.text.trim();
+    if (email.isEmpty) {
+      setState(() => _inlineError = l10n.authVerifyEmailEnterEmailInline);
+      return;
+    }
+    setState(() {
+      _checkingStatus = true;
+      _inlineError = null;
+    });
+    try {
+      final response =
+          await BackendApiService().getEmailVerificationStatus(email: email);
+      final payload = response['data'] is Map<String, dynamic>
+          ? response['data'] as Map<String, dynamic>
+          : response;
+      final verified =
+          payload['emailVerified'] == true || payload['verified'] == true;
+      if (!mounted) return;
+      if (verified) {
+        setState(() => _verified = true);
+        ScaffoldMessenger.of(context).showKubusSnackBar(
+          SnackBar(content: Text(l10n.authVerifyEmailSuccessToast)),
+        );
+      } else {
+        setState(() => _inlineError = l10n.authVerifyEmailStatusPending);
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _inlineError = l10n.authVerifyEmailFailedInline);
+    } finally {
+      if (mounted) setState(() => _checkingStatus = false);
+    }
   }
 
   Widget _buildForm({
@@ -190,9 +232,12 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
         ),
         const SizedBox(height: 12),
         KubusButton(
-          onPressed: _goToMain,
-          icon: Icons.arrow_forward_rounded,
-          label: l10n.commonContinue,
+          onPressed: _verified
+              ? _continueAfterVerified
+              : (_checkingStatus ? null : _checkVerificationStatus),
+          isLoading: _checkingStatus,
+          icon: _verified ? Icons.arrow_forward_rounded : Icons.refresh_rounded,
+          label: _verified ? l10n.commonContinue : l10n.commonRefresh,
           isFullWidth: true,
         ),
         const SizedBox(height: 6),
@@ -247,7 +292,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
         footer: Align(
           alignment: Alignment.centerLeft,
           child: TextButton(
-            onPressed: _goToMain,
+            onPressed: _goToSignIn,
             child: Text(
               l10n.commonBack,
               style: KubusTypography.inter(
