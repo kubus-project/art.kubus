@@ -154,6 +154,45 @@ void main() {
     expect(sentBody?.containsKey('idToken'), isFalse);
   });
 
+  test('onboarding google code login sends onboarding origin to code endpoint',
+      () async {
+    final api = BackendApiService();
+    String? requestPath;
+    Map<String, dynamic>? sentBody;
+
+    api.setHttpClient(
+      MockClient((request) async {
+        requestPath = request.url.path;
+        sentBody = Map<String, dynamic>.from(jsonDecode(request.body) as Map);
+        return http.Response(
+          '{"success":true,"data":{"token":"jwt-token","isNewUser":true}}',
+          200,
+          headers: <String, String>{'content-type': 'application/json'},
+        );
+      }),
+    );
+
+    final result = await loginWithGoogleWalletRecovery(
+      api: api,
+      googleResult: GoogleAuthResult(
+        idToken: '',
+        serverAuthCode: 'google-server-code',
+        email: '',
+        displayName: null,
+      ),
+      walletAddress: 'wallet-onboarding-1',
+      createSignerBackedWallet: () async => 'wallet-created-123',
+      origin: 'onboarding',
+    );
+
+    expect(result['success'], isTrue);
+    expect(requestPath, '/api/auth/login/google/code');
+    expect(sentBody?['origin'], 'onboarding');
+    expect(sentBody?['walletAddress'], 'wallet-onboarding-1');
+    expect(sentBody?['code'], 'google-server-code');
+    expect(sentBody?.containsKey('idToken'), isFalse);
+  });
+
   test('id token login uses id-token endpoint even when auth code exists',
       () async {
     final api = BackendApiService();

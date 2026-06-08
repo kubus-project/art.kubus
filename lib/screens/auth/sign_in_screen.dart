@@ -37,6 +37,7 @@ class SignInScreen extends StatefulWidget {
     this.onAuthSuccess,
     this.embedded = false,
     this.openWalletFlowOnStart = false,
+    this.googleAuthOrigin = 'signin',
     this.onVerificationRequired,
     this.onSwitchToRegister,
     this.postAuthCoordinator = const PostAuthCoordinator(),
@@ -48,6 +49,7 @@ class SignInScreen extends StatefulWidget {
   final FutureOr<void> Function(Map<String, dynamic> payload)? onAuthSuccess;
   final bool embedded;
   final bool openWalletFlowOnStart;
+  final String googleAuthOrigin;
   final ValueChanged<String>? onVerificationRequired;
   final VoidCallback? onSwitchToRegister;
   final PostAuthCoordinator postAuthCoordinator;
@@ -391,6 +393,9 @@ class _SignInScreenState extends State<SignInScreen> {
 
   Future<void> _signInWithGoogle() async {
     final l10n = AppLocalizations.of(context)!;
+    if (_isGoogleSubmitting) {
+      return;
+    }
     if (!AppConfig.enableGoogleAuth) {
       _setGoogleAuthDiagnostics('disabled', code: 'feature_flag_off');
       ScaffoldMessenger.of(context).showKubusSnackBar(
@@ -489,6 +494,7 @@ class _SignInScreenState extends State<SignInScreen> {
         googleResult: googleResult,
         walletAddress: _signerBackedWalletForGoogleAuth(),
         createSignerBackedWallet: _createSignerBackedWallet,
+        origin: widget.googleAuthOrigin,
       );
     } catch (e) {
       _setGoogleAuthDiagnostics('backend_error', code: _googleErrorCode(e));
@@ -751,6 +757,9 @@ class _SignInScreenState extends State<SignInScreen> {
               colorScheme: colorScheme,
               isLoading: _isGoogleSubmitting,
               onAuthResult: (GoogleAuthResult googleResult) async {
+                if (_isGoogleSubmitting) {
+                  return;
+                }
                 if (mounted) {
                   setState(() => _isGoogleSubmitting = true);
                 }

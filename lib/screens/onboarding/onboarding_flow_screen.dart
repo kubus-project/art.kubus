@@ -3618,6 +3618,7 @@ class _AccountStepState extends State<_AccountStep> {
               child: _showSignIn
                   ? SignInScreen(
                       embedded: true,
+                      googleAuthOrigin: 'onboarding',
                       onAuthSuccess: widget.onSignInSuccess,
                       onVerificationRequired: (email) => unawaited(
                         widget.onSignInNeedsVerification(email),
@@ -3628,6 +3629,7 @@ class _AccountStepState extends State<_AccountStep> {
                     )
                   : AuthMethodsPanel(
                       embedded: true,
+                      googleAuthOrigin: 'onboarding',
                       onAuthSuccess: widget.onAuthCompleted,
                       requireUsernameForEmailRegistration: true,
                       preferredEmailGreetingName:

@@ -21,6 +21,7 @@ class RegisterScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return AuthMethodsPanel(
       embedded: embedded,
+      googleAuthOrigin: embedded ? 'onboarding' : 'register',
       onAuthSuccess: onAuthCompleted,
       onVerificationRequired: onVerificationRequired,
       onError: onError,

@@ -57,6 +57,7 @@ class AuthMethodsPanel extends StatefulWidget {
     this.preferredEmailGreetingName,
     this.prepareProvisionalProfileBeforeRegister = false,
     this.requireUsernameForEmailRegistration = false,
+    this.googleAuthOrigin = 'signin',
     this.onError,
     this.onSwitchToSignIn,
   });
@@ -72,6 +73,7 @@ class AuthMethodsPanel extends StatefulWidget {
   final String? preferredEmailGreetingName;
   final bool prepareProvisionalProfileBeforeRegister;
   final bool requireUsernameForEmailRegistration;
+  final String googleAuthOrigin;
   final ValueChanged<Object>? onError;
   final VoidCallback? onSwitchToSignIn;
 
@@ -631,6 +633,9 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
 
   Future<void> _registerWithGoogle() async {
     final l10n = AppLocalizations.of(context)!;
+    if (_isGoogleSubmitting) {
+      return;
+    }
     if (!AppConfig.enableGoogleAuth) {
       ScaffoldMessenger.of(context).showKubusSnackBar(
           SnackBar(content: Text(l10n.authGoogleSignInDisabled)));
@@ -657,6 +662,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
         googleResult: googleResult,
         walletAddress: _signerBackedWalletForGoogleAuth(),
         createSignerBackedWallet: _createSignerBackedWallet,
+        origin: widget.googleAuthOrigin,
       );
       await _handleAuthSuccess(result, origin: AuthOrigin.google);
       unawaited(TelemetryService().trackSignUpSuccess(method: 'google'));
@@ -833,6 +839,9 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
       onShowConnectWalletModal: _showConnectWalletModal,
       onGooglePressed: _registerWithGoogle,
       onWebGoogleAuthResult: (GoogleAuthResult googleResult) async {
+        if (_isGoogleSubmitting) {
+          return;
+        }
         unawaited(
           TelemetryService().trackSignUpAttempt(method: 'google'),
         );
@@ -846,6 +855,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
             googleResult: googleResult,
             walletAddress: _signerBackedWalletForGoogleAuth(),
             createSignerBackedWallet: _createSignerBackedWallet,
+            origin: widget.googleAuthOrigin,
           );
           if (!mounted) return;
           await _handleAuthSuccess(result, origin: AuthOrigin.google);
