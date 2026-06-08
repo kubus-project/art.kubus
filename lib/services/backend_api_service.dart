@@ -2715,6 +2715,7 @@ class BackendApiService
 
   /// Get current authenticated profile
   /// GET /api/profiles/me
+  @override
   Future<Map<String, dynamic>> getMyProfile() async {
     try {
       final response = await _get(

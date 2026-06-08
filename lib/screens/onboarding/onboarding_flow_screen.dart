@@ -747,8 +747,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     final prefs = await SharedPreferences.getInstance();
     final walletAddress = await _resolveWalletForBackupCheck(prefs: prefs);
+    final normalizedWalletAddress = (walletAddress ?? '').trim();
     _flowScopeKey = OnboardingStateService.buildAuthOnboardingScopeKey(
-      walletAddress: walletAddress,
+      walletAddress: normalizedWalletAddress,
       userId: (prefs.getString('user_id') ?? '').trim(),
     );
     if (!_walletBackupOnboardingEnabled) {
@@ -756,17 +757,28 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       _requiresWalletBackupStep = false;
       return;
     }
-    if (walletAddress.trim().isEmpty) {
+    if (normalizedWalletAddress.isEmpty) {
       _walletBackupStatus = const WalletBackupStatusSnapshot.noWallet();
       _requiresWalletBackupStep = false;
       return;
     }
     _walletBackupStatus = await WalletBackupStatusResolver.resolve(
       walletProvider: walletProvider,
-      walletAddress: walletAddress,
+      walletAddress: normalizedWalletAddress,
       refreshRemote: true,
     );
     _requiresWalletBackupStep = !_hasAllRequiredWalletBackups;
+  }
+
+  void _showSnack(
+    String message, {
+    KubusSnackBarTone tone = KubusSnackBarTone.neutral,
+  }) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showKubusSnackBar(
+      SnackBar(content: Text(message)),
+      tone: tone,
+    );
   }
 
   bool _sessionMatchesPendingVerificationEmail() {

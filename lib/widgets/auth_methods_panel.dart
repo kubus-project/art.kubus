@@ -18,6 +18,7 @@ import 'package:art_kubus/widgets/auth/post_auth_loading_screen.dart';
 import 'package:art_kubus/widgets/auth_methods_panel_helpers.dart';
 import 'package:art_kubus/widgets/auth_methods_panel_sections.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import 'package:art_kubus/widgets/secure_account_password_prompt.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -190,10 +191,9 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
         embedded: widget.embedded,
         modalReauth: false,
         requiresWalletBackup: false,
-        onBeforeSavedItemsSync:
-            (origin == AuthOrigin.google || origin == AuthOrigin.wallet)
-                ? null
-                : () => maybeShowGooglePasswordUpgradePrompt(context, payload),
+        onBeforeSavedItemsSync: origin == AuthOrigin.google
+            ? () => maybeShowGooglePasswordUpgradePrompt(context, payload)
+            : null,
         onAuthSuccess: widget.onAuthSuccess == null
             ? null
             : (_) async {

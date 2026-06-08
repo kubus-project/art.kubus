@@ -92,7 +92,7 @@ class _FakeProfileApi implements ProfileBackendApi {
   Future<bool> isFollowing(String walletAddress) async => false;
 }
 
-final Object _useInitialProfileAvatar = Object();
+const Object _useInitialProfileAvatar = Object();
 
 class _ProfileEditTestProvider extends ProfileProvider {
   _ProfileEditTestProvider({
