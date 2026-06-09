@@ -75,26 +75,30 @@ void main() {
         ),
       ),
     );
+    final l10n = AppLocalizations.of(
+      tester.element(find.byType(WalletCustodyStatusPanel)),
+    )!;
 
-    expect(find.text('Wallet security status'), findsOneWidget);
-    expect(find.text('Encrypted backup available'), findsOneWidget);
-    expect(find.text('Account sign-in'), findsOneWidget);
+    expect(find.text(l10n.walletSecurityStatusTitle), findsOneWidget);
+    expect(
+      find.text(l10n.walletSessionStateEncryptedBackupAvailable),
+      findsOneWidget,
+    );
+    expect(find.text(l10n.walletSecuritySignInMethodLabel), findsOneWidget);
     expect(find.text('Email (artist@example.com)'), findsOneWidget);
-    expect(find.text('Signer status'), findsOneWidget);
+    expect(find.text(l10n.walletSecuritySignerStatusLabel), findsOneWidget);
     expect(
-      find.text('Restore available from encrypted backup'),
+      find.text(l10n.walletSecuritySignerRestoreAvailableValue),
       findsOneWidget,
     );
-    expect(find.text('Configured'), findsOneWidget);
-    expect(find.text('Restore signer'), findsOneWidget);
-    expect(find.text('Connect external wallet'), findsOneWidget);
+    expect(find.text(l10n.walletSecurityConfigured), findsOneWidget);
+    expect(find.text(l10n.walletSecurityRestoreSignerAction), findsOneWidget);
+    expect(find.text(l10n.walletSecurityConnectExternalAction), findsOneWidget);
     expect(
-      find.textContaining('Encrypted backend backup is optional convenience'),
-      findsOneWidget,
-    );
+        find.text(l10n.walletSecurityBackendBackupClarifier), findsOneWidget);
 
-    await tester.tap(find.text('Restore signer'));
-    await tester.tap(find.text('Connect external wallet'));
+    await tester.tap(find.text(l10n.walletSecurityRestoreSignerAction));
+    await tester.tap(find.text(l10n.walletSecurityConnectExternalAction));
 
     expect(restoreTapped, isTrue);
     expect(connectTapped, isTrue);
@@ -119,13 +123,20 @@ void main() {
         locale: const Locale('sl'),
       ),
     );
+    final l10n = AppLocalizations.of(
+      tester.element(find.byType(WalletCustodyStatusPanel)),
+    )!;
 
-    expect(find.text('Varnostno stanje denarnice'), findsOneWidget);
-    expect(find.text('Zunanja denarnica je pripravljena'), findsWidgets);
-    expect(find.text('Prijava v račun'), findsOneWidget);
+    expect(find.text(l10n.walletSecurityStatusTitle), findsOneWidget);
+    expect(find.text(l10n.walletSessionStateExternalWalletReady), findsWidgets);
+    expect(find.text(l10n.walletSecuritySignInMethodLabel), findsOneWidget);
     expect(find.text('Google (artist@example.com)'), findsOneWidget);
-    expect(find.text('Stanje podpisnika'), findsOneWidget);
-    expect(find.text('Povezano: Phantom'), findsOneWidget);
-    expect(find.text('Ni potrebna'), findsOneWidget);
+    expect(find.text(l10n.walletSecuritySignerStatusLabel), findsOneWidget);
+    expect(
+      find.text(l10n.walletSecurityExternalWalletConnectedValue('Phantom')),
+      findsOneWidget,
+    );
+    expect(
+        find.text(l10n.walletSecurityRecoveryNotNeededValue), findsOneWidget);
   });
 }

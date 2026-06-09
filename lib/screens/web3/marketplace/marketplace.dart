@@ -531,7 +531,7 @@ class _MarketplaceState extends State<Marketplace>
     return LayoutBuilder(
       builder: (context, constraints) {
         final crossAxisCount = constraints.maxWidth > 620 ? 3 : 2;
-        final childAspectRatio = constraints.maxWidth > 620 ? 0.74 : 0.68;
+        final childAspectRatio = constraints.maxWidth > 620 ? 0.74 : 0.62;
 
         return GridView.builder(
           shrinkWrap: true,
@@ -737,7 +737,7 @@ class _MarketplaceState extends State<Marketplace>
                 ),
                 const SizedBox(height: KubusSpacing.md),
                 SizedBox(
-                  height: 240,
+                  height: 300,
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
                     itemCount: myCollectiblesForSale.length,
@@ -749,7 +749,7 @@ class _MarketplaceState extends State<Marketplace>
                         return const SizedBox.shrink();
                       }
                       return Container(
-                        width: 172,
+                        width: 190,
                         margin: const EdgeInsets.only(right: KubusSpacing.md),
                         child: _buildCollectibleCard(collectible, entry,
                             isForSale: true),
@@ -777,7 +777,7 @@ class _MarketplaceState extends State<Marketplace>
                 builder: (context, constraints) {
                   final crossAxisCount = constraints.maxWidth > 600 ? 3 : 2;
                   final childAspectRatio =
-                      constraints.maxWidth > 600 ? 0.74 : 0.68;
+                      constraints.maxWidth > 600 ? 0.74 : 0.52;
 
                   return GridView.builder(
                     shrinkWrap: true,
@@ -848,7 +848,7 @@ class _MarketplaceState extends State<Marketplace>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
-                      flex: 3,
+                      flex: 2,
                       child: Container(
                         width: double.infinity,
                         decoration: BoxDecoration(
@@ -934,7 +934,7 @@ class _MarketplaceState extends State<Marketplace>
                       ),
                     ),
                     Expanded(
-                      flex: 2,
+                      flex: 3,
                       child: Padding(
                         padding: const EdgeInsets.all(8),
                         child: Column(
@@ -1659,7 +1659,7 @@ class _MarketplaceState extends State<Marketplace>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
-                      flex: 3,
+                      flex: 2,
                       child: Container(
                         width: double.infinity,
                         decoration: BoxDecoration(
@@ -1773,7 +1773,7 @@ class _MarketplaceState extends State<Marketplace>
                       ),
                     ),
                     Expanded(
-                      flex: 2,
+                      flex: 3,
                       child: Padding(
                         padding: const EdgeInsets.all(10),
                         child: Column(
@@ -1855,7 +1855,7 @@ class _MarketplaceState extends State<Marketplace>
                               ),
                               const SizedBox(height: 4),
                             ],
-                            const Spacer(),
+                            const SizedBox(height: 6),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [

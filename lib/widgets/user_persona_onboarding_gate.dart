@@ -63,7 +63,9 @@ class _UserPersonaOnboardingGateState extends State<UserPersonaOnboardingGate> {
         prefs,
         scopeKey: flowScopeKey,
       );
-      if (hasScopedPending) {
+      final hasGlobalPending =
+          OnboardingStateService.hasPendingAuthOnboardingSync(prefs);
+      if (hasScopedPending || hasGlobalPending) {
         return;
       }
 

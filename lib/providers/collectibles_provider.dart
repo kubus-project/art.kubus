@@ -1,6 +1,7 @@
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
+import 'package:latlong2/latlong.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/app_localizations_en.dart';
 import '../l10n/app_localizations_sl.dart';
@@ -162,7 +163,9 @@ class CollectiblesProvider with ChangeNotifier {
       Collectible collectible) {
     final artworkId = _resolveArtworkIdForCollectible(collectible);
     if (artworkId == null || artworkId.isEmpty) return null;
-    final artwork = _artworkProvider?.getArtworkById(artworkId);
+    final series = _seriesForCollectible(collectible);
+    final artwork = _artworkProvider?.getArtworkById(artworkId) ??
+        (series == null ? null : _synthesizedArtworkForSeries(series));
     if (artwork == null) return null;
 
     final linkedCollectibles = allCollectibles.where((candidate) {
@@ -170,8 +173,6 @@ class CollectiblesProvider with ChangeNotifier {
       return candidateArtworkId == artworkId &&
           candidate.status != CollectibleStatus.burned;
     }).toList(growable: false);
-
-    final series = getSeriesByArtworkId(artworkId);
 
     final hasMintedProof =
         _hasBackendMintedProof(artwork) || linkedCollectibles.isNotEmpty;
@@ -281,7 +282,8 @@ class CollectiblesProvider with ChangeNotifier {
       );
     }
 
-    final id = 'legacy_series_${artworkId}_${DateTime.now().microsecondsSinceEpoch}';
+    final id =
+        'legacy_series_${artworkId}_${DateTime.now().microsecondsSinceEpoch}';
     final createdAt = DateTime.now();
     final series = CollectibleSeries(
       id: id,
@@ -345,7 +347,8 @@ class CollectiblesProvider with ChangeNotifier {
     // update minted count on the legacy series
     final idx = _legacySeries.indexWhere((s) => s.id == seriesId);
     if (idx != -1) {
-      final updated = _legacySeries[idx].copyWith(mintedCount: _legacySeries[idx].mintedCount + 1);
+      final updated = _legacySeries[idx]
+          .copyWith(mintedCount: _legacySeries[idx].mintedCount + 1);
       _legacySeries[idx] = updated;
     }
 
@@ -374,6 +377,19 @@ class CollectiblesProvider with ChangeNotifier {
       final parsed = double.tryParse(price.trim());
       if (parsed == null || parsed <= 0) {
         throw Exception(_l10n.collectiblesInvalidListingPrice);
+      }
+
+      final legacyIndex =
+          _legacyCollectibles.indexWhere((item) => item.id == collectibleId);
+      if (legacyIndex != -1) {
+        _legacyCollectibles[legacyIndex] =
+            _legacyCollectibles[legacyIndex].copyWith(
+          status: CollectibleStatus.listed,
+          currentListingPrice: parsed.toString(),
+          listedAt: DateTime.now(),
+        );
+        notifyListeners();
+        return;
       }
 
       final artworkProvider = _artworkProvider;
@@ -507,23 +523,46 @@ class CollectiblesProvider with ChangeNotifier {
     final canonicalCollectibles = _buildCanonicalCollectibles();
     final entries = <MarketplaceArtworkEntry>[];
     for (final artwork in artworkProvider.artworks) {
-      if (!artwork.isActive ||
-          !artwork.isPublic ||
-          !_hasBackendMintedProof(artwork)) {
+      if (!artwork.isActive || !artwork.isPublic) {
         continue;
       }
 
-      final series = getSeriesByArtworkId(artwork.id);
-      final linkedCollectibles = canonicalCollectibles.where((candidate) {
-        final candidateArtworkId = _resolveArtworkIdForCollectible(candidate);
-        return candidateArtworkId == artwork.id;
+      final localMintedSeries = _legacySeries.where((series) {
+        if (series.artworkId != artwork.id) return false;
+        return _legacyCollectibles.any((collectible) =>
+            collectible.seriesId == series.id &&
+            collectible.status != CollectibleStatus.burned);
       }).toList(growable: false);
+
+      if (localMintedSeries.isNotEmpty) {
+        for (final series in localMintedSeries) {
+          final linkedCollectibles = canonicalCollectibles.where((candidate) {
+            return candidate.seriesId == series.id &&
+                candidate.status != CollectibleStatus.burned;
+          }).toList(growable: false);
+          entries.add(
+            _createMarketplaceEntry(
+              artwork: artwork,
+              series: series,
+              linkedCollectibles: linkedCollectibles,
+              hasMintedProof: true,
+            ),
+          );
+        }
+        continue;
+      }
+
+      if (!_hasBackendMintedProof(artwork)) continue;
 
       entries.add(
         _createMarketplaceEntry(
           artwork: artwork,
-          series: series,
-          linkedCollectibles: linkedCollectibles,
+          series: getSeriesByArtworkId(artwork.id),
+          linkedCollectibles: canonicalCollectibles.where((candidate) {
+            final candidateArtworkId =
+                _resolveArtworkIdForCollectible(candidate);
+            return candidateArtworkId == artwork.id;
+          }).toList(growable: false),
           hasMintedProof: true,
         ),
       );
@@ -610,6 +649,10 @@ class CollectiblesProvider with ChangeNotifier {
         ),
       );
     }
+    for (final legacy in _legacySeries) {
+      if (series.any((candidate) => candidate.id == legacy.id)) continue;
+      series.add(legacy);
+    }
     return series;
   }
 
@@ -661,8 +704,38 @@ class CollectiblesProvider with ChangeNotifier {
       );
     }
 
+    for (final legacy in _legacyCollectibles) {
+      if (collectibles.any((candidate) => candidate.id == legacy.id)) continue;
+      collectibles.add(legacy);
+    }
+
     collectibles.sort((a, b) => b.mintedAt.compareTo(a.mintedAt));
     return collectibles;
+  }
+
+  CollectibleSeries? _seriesForCollectible(Collectible collectible) {
+    for (final series in allSeries) {
+      if (series.id == collectible.seriesId) return series;
+    }
+    return null;
+  }
+
+  Artwork _synthesizedArtworkForSeries(CollectibleSeries series) {
+    return Artwork(
+      id: series.artworkId,
+      title: series.name,
+      artist: series.creatorAddress,
+      description: series.description,
+      imageUrl: series.imageUrl,
+      position: const LatLng(0, 0),
+      rewards: 0,
+      createdAt: series.createdAt,
+      isNft: true,
+      isPublic: true,
+      isActive: true,
+      price: series.mintPrice,
+      currency: 'KUB8',
+    );
   }
 
   List<Collectible> _applyWalletCollectibleIndex(

@@ -5,6 +5,7 @@ import 'package:art_kubus/providers/artwork_provider.dart';
 import 'package:art_kubus/providers/collectibles_provider.dart';
 import 'package:art_kubus/providers/navigation_provider.dart';
 import 'package:art_kubus/providers/themeprovider.dart';
+import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/providers/web3provider.dart';
 import 'package:art_kubus/screens/desktop/web3/desktop_marketplace_screen.dart';
 import 'package:art_kubus/screens/web3/marketplace/marketplace.dart';
@@ -67,6 +68,7 @@ Widget _buildApp({
   required NavigationProvider navigationProvider,
   required Web3Provider web3Provider,
 }) {
+  final walletProvider = WalletProvider(deferInit: true);
   return MultiProvider(
     providers: [
       ChangeNotifierProvider.value(value: artworkProvider),
@@ -74,6 +76,7 @@ Widget _buildApp({
       ChangeNotifierProvider.value(value: themeProvider),
       ChangeNotifierProvider.value(value: navigationProvider),
       ChangeNotifierProvider.value(value: web3Provider),
+      ChangeNotifierProvider.value(value: walletProvider),
     ],
     child: MaterialApp(
       locale: const Locale('en'),

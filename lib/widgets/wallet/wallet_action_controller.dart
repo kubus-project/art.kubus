@@ -161,16 +161,19 @@ class WalletActionController {
     WalletActionSurface surface = WalletActionSurface.walletHome,
   }) {
     final canTransact = authority.canTransact;
+    final hasWallet = authority.hasWalletIdentity;
     return <WalletActionConfig>[
       WalletActionConfig(
         type: WalletActionType.send,
         title: l10n.walletHomeSendAction,
-        subtitle: l10n.walletHomeDesktopSendSubtitle,
+        subtitle: canTransact
+            ? l10n.walletHomeDesktopSendSubtitle
+            : l10n.walletSessionSignerMissing,
         icon: Icons.arrow_upward_rounded,
         color: roles.negativeAction,
         run: onSend,
-        enabled: canTransact,
-        disabledReason: l10n.walletSessionSignerMissing,
+        enabled: hasWallet,
+        disabledReason: l10n.walletHomeSignedOutTitle,
       ),
       WalletActionConfig(
         type: WalletActionType.receive,
@@ -186,12 +189,14 @@ class WalletActionController {
         WalletActionConfig(
           type: WalletActionType.swap,
           title: l10n.walletHomeSwapAction,
-          subtitle: l10n.walletHomeDesktopSwapSubtitle,
+          subtitle: canTransact
+              ? l10n.walletHomeDesktopSwapSubtitle
+              : l10n.walletSessionSignerMissing,
           icon: Icons.swap_horiz_rounded,
           color: roles.positiveAction,
           run: onSwap,
-          enabled: canTransact,
-          disabledReason: l10n.walletSessionSignerMissing,
+          enabled: hasWallet,
+          disabledReason: l10n.walletHomeSignedOutTitle,
         ),
       if (includeNfts && onNfts != null)
         WalletActionConfig(

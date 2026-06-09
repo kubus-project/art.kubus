@@ -34,7 +34,7 @@ class _FakeWalletProvider extends WalletProvider {
     required this.isReadOnlySessionValue,
     required this.mnemonicBackupRequiredValue,
     this.backupDefinition,
-  })  : super(deferInit: true);
+  }) : super(deferInit: true);
 
   String? walletAddressValue;
   bool hasWalletIdentityValue;
@@ -305,7 +305,7 @@ void main() {
 
     expect(
       snapshot.settingsSummary(l10n),
-      'Read-only wallet session on this device',
+      'Encrypted backup available to restore signing on this device',
     );
   });
 

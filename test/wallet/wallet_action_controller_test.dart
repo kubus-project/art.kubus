@@ -142,7 +142,7 @@ void main() {
       actions
           .firstWhere((action) => action.type == WalletActionType.send)
           .enabled,
-      isFalse,
+      isTrue,
     );
   });
 

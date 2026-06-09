@@ -12,8 +12,10 @@ import 'package:art_kubus/providers/saved_items_provider.dart';
 import 'package:art_kubus/providers/task_provider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/screens/art/art_detail_screen.dart';
+import 'package:art_kubus/models/saved_item.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/collab_api.dart';
+import 'package:art_kubus/services/saved_items_repository.dart';
 import 'package:art_kubus/widgets/inline_loading.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -45,7 +47,8 @@ class _FakeArtworkBackendApi implements ArtworkBackendApi {
   }
 
   @override
-  Future<Artwork?> updateArtwork(String artworkId, Map<String, dynamic> updates) {
+  Future<Artwork?> updateArtwork(
+      String artworkId, Map<String, dynamic> updates) {
     throw UnimplementedError();
   }
 
@@ -131,14 +134,17 @@ class _FakeCollabApi implements CollabApi {
   String? getAuthToken() => null;
 
   @override
-  Future<List<CollabMember>> listCollaborators(String entityType, String entityId) async =>
+  Future<List<CollabMember>> listCollaborators(
+          String entityType, String entityId) async =>
       const <CollabMember>[];
 
   @override
-  Future<List<CollabInvite>> listMyCollabInvites() async => const <CollabInvite>[];
+  Future<List<CollabInvite>> listMyCollabInvites() async =>
+      const <CollabInvite>[];
 
   @override
-  Future<CollabInvite?> inviteCollaborator(String entityType, String entityId, String invitedIdentifier, String role) {
+  Future<CollabInvite?> inviteCollaborator(String entityType, String entityId,
+      String invitedIdentifier, String role) {
     throw UnimplementedError();
   }
 
@@ -153,14 +159,24 @@ class _FakeCollabApi implements CollabApi {
   }
 
   @override
-  Future<void> updateCollaboratorRole(String entityType, String entityId, String memberUserId, String role) {
+  Future<void> updateCollaboratorRole(
+      String entityType, String entityId, String memberUserId, String role) {
     throw UnimplementedError();
   }
 
   @override
-  Future<void> removeCollaborator(String entityType, String entityId, String memberUserId) {
+  Future<void> removeCollaborator(
+      String entityType, String entityId, String memberUserId) {
     throw UnimplementedError();
   }
+}
+
+class _NoopSavedItemsRepository extends SavedItemsRepository {
+  @override
+  Future<Map<String, bool>> getSavedBatchStatus(
+    Iterable<SavedItemRecord> items,
+  ) async =>
+      const <String, bool>{};
 }
 
 void main() {
@@ -170,7 +186,8 @@ void main() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
   });
 
-  testWidgets('Confirm attendance button toggles with proximity', (tester) async {
+  testWidgets('Confirm attendance button toggles with proximity',
+      (tester) async {
     const artworkId = 'art_1';
     const markerId = 'aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa';
 
@@ -231,7 +248,11 @@ void main() {
           ChangeNotifierProvider.value(value: profileProvider),
           ChangeNotifierProvider.value(value: walletProvider),
           ChangeNotifierProvider.value(value: TaskProvider()),
-          ChangeNotifierProvider(create: (_) => SavedItemsProvider()),
+          ChangeNotifierProvider(
+            create: (_) => SavedItemsProvider(
+              repository: _NoopSavedItemsRepository(),
+            ),
+          ),
           ChangeNotifierProvider(
             create: (_) => CollabProvider(api: _FakeCollabApi()),
           ),
@@ -248,12 +269,17 @@ void main() {
       ),
     );
 
-    final l10n = AppLocalizations.of(tester.element(find.byType(ArtDetailScreen)))!;
+    final l10n =
+        AppLocalizations.of(tester.element(find.byType(ArtDetailScreen)))!;
 
-    // Wait for the detail screen to complete its post-frame artwork load.
-    for (var i = 0; i < 8; i++) {
+    // Wait for the detail screen to complete its post-frame artwork load and
+    // render the scrollable body before asking the tester to scroll it.
+    for (var i = 0; i < 40; i++) {
       await tester.pump(const Duration(milliseconds: 50));
-      if (find.byType(InlineLoading).evaluate().isEmpty) break;
+      if (find.byType(Scrollable).evaluate().isNotEmpty &&
+          find.byType(InlineLoading).evaluate().isEmpty) {
+        break;
+      }
     }
 
     await tester.scrollUntilVisible(
@@ -263,7 +289,8 @@ void main() {
     );
     await tester.pump(const Duration(milliseconds: 50));
 
-    expect(find.text(l10n.exhibitionDetailAttendanceConfirmAction), findsOneWidget);
+    expect(find.text(l10n.exhibitionDetailAttendanceConfirmAction),
+        findsOneWidget);
 
     attendanceProvider.updateProximity(
       markerId: markerId,
@@ -276,6 +303,7 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text(l10n.exhibitionDetailAttendanceConfirmAction), findsNothing);
+    expect(
+        find.text(l10n.exhibitionDetailAttendanceConfirmAction), findsNothing);
   });
 }

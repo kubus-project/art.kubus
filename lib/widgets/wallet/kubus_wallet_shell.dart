@@ -362,7 +362,7 @@ class KubusWalletActionCard extends StatelessWidget {
                         size: KubusChromeMetrics.heroIcon,
                       ),
               ),
-              const Spacer(),
+              const SizedBox(height: KubusSpacing.xl),
               Text(
                 title,
                 style: KubusTextStyles.detailCardTitle.copyWith(

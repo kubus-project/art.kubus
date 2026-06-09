@@ -692,6 +692,7 @@ class _WalletHomeState extends State<WalletHome> {
             (config) => SizedBox(
               width: actionWidth,
               child: KubusWalletActionCard.fromConfig(
+                key: Key('wallet_home_action_${config.type.name}'),
                 config: config,
                 minHeight: isCompact ? 132 : 150,
               ),

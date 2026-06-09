@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:art_kubus/providers/attestation_provider.dart';
 import 'package:art_kubus/providers/email_preferences_provider.dart';
 import 'package:art_kubus/providers/glass_capabilities_provider.dart';
 import 'package:art_kubus/providers/locale_provider.dart';
@@ -30,8 +31,8 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 String _buildWalletToken(String walletAddress) {
-  final header =
-      base64Url.encode(utf8.encode(jsonEncode(<String, String>{'alg': 'none'})));
+  final header = base64Url
+      .encode(utf8.encode(jsonEncode(<String, String>{'alg': 'none'})));
   final payload = base64Url.encode(
     utf8.encode(
       jsonEncode(<String, String>{'walletAddress': walletAddress}),
@@ -115,7 +116,8 @@ Future<
   final glassCapabilitiesProvider = GlassCapabilitiesProvider();
 
   if (withAuthenticatedSession) {
-    BackendApiService().setAuthTokenForTesting(_buildWalletToken(derived.address));
+    BackendApiService()
+        .setAuthTokenForTesting(_buildWalletToken(derived.address));
   }
 
   return (
@@ -166,6 +168,7 @@ Widget _wrapWithApp({
         create: (_) =>
             EmailPreferencesProvider(backendApi: BackendApiService()),
       ),
+      ChangeNotifierProvider(create: (_) => AttestationProvider()),
     ],
     child: MaterialApp(
       locale: const Locale('en'),
@@ -258,7 +261,8 @@ void main() {
     BackendApiService().setHttpClient(
       MockClient((_) async {
         return http.Response(
-          jsonEncode(<String, dynamic>{'success': true, 'data': <String, dynamic>{}}),
+          jsonEncode(
+              <String, dynamic>{'success': true, 'data': <String, dynamic>{}}),
           200,
           headers: <String, String>{'content-type': 'application/json'},
         );
@@ -363,7 +367,7 @@ void main() {
     expect(find.text(l10n.commonReconnect), findsOneWidget);
   });
 
-  testWidgets('read-only wallet home reroutes send and swap to reconnect',
+  testWidgets('read-only wallet home reroutes send to reconnect',
       (tester) async {
     tester.view.devicePixelRatio = 1.0;
     await tester.binding.setSurfaceSize(const Size(1200, 900));
@@ -401,20 +405,10 @@ void main() {
     );
     await tester.ensureVisible(sendButton);
     await tester.tap(sendInkWell, warnIfMissed: false);
-    await _pumpUntil(tester, () => find.text('connect-wallet').evaluate().isNotEmpty);
+    await _pumpUntil(
+        tester, () => find.text('connect-wallet').evaluate().isNotEmpty);
 
-    await tester.pageBack();
-    await _pumpUntil(tester, () => find.text('connect-wallet').evaluate().isEmpty);
-    await _pumpFrames(tester, count: 2);
-
-    final swapButton = find.byKey(const Key('wallet_home_action_swap'));
-    final swapInkWell = find.descendant(
-      of: swapButton,
-      matching: find.byType(InkWell),
-    );
-    await tester.ensureVisible(swapButton);
-    await tester.tap(swapInkWell, warnIfMissed: false);
-    await _pumpUntil(tester, () => find.text('connect-wallet').evaluate().isNotEmpty);
+    expect(find.byKey(const Key('wallet_home_action_swap')), findsNothing);
   });
 
   testWidgets(
@@ -457,7 +451,7 @@ void main() {
     expect(find.text('connect-wallet'), findsNothing);
   });
 
-  testWidgets('token swap screen shows reconnect prompt in read-only mode',
+  testWidgets('token swap screen shows disabled state when feature is off',
       (tester) async {
     tester.view.devicePixelRatio = 1.0;
     await tester.binding.setSurfaceSize(const Size(1200, 900));
@@ -486,12 +480,10 @@ void main() {
 
     final l10n = AppLocalizations.of(tester.element(find.byType(TokenSwap)))!;
 
-    expect(find.text(l10n.settingsBackupStatusReadOnly), findsOneWidget);
-    expect(find.text(l10n.walletReconnectManualRequiredToast), findsOneWidget);
-
-    await tester.tap(find.widgetWithText(ElevatedButton, l10n.commonReconnect));
-    await _pumpFrames(tester, count: 4);
-
-    expect(find.text('connect-wallet'), findsOneWidget);
+    expect(find.text(l10n.walletSwapTemporarilyDisabledTitle), findsOneWidget);
+    expect(
+      find.text(l10n.walletSwapTemporarilyDisabledDescription),
+      findsOneWidget,
+    );
   });
 }

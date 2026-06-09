@@ -1,4 +1,5 @@
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:art_kubus/l10n/app_localizations_en.dart';
 import 'package:art_kubus/screens/auth/sign_in_screen.dart';
 import 'package:art_kubus/widgets/auth_methods_panel.dart';
 import 'package:flutter/material.dart';
@@ -23,22 +24,37 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   Future<void> openWalletEntryMenuIfNeeded(WidgetTester tester) async {
-    final connectWallet = find.text('Connect wallet');
-    if (connectWallet.evaluate().isNotEmpty) {
-      await tester.tap(connectWallet.first);
-      await tester.pumpAndSettle();
-      return;
+    final l10n = AppLocalizationsEn();
+    final walletEntryLabels = <String>{
+      l10n.authUseWalletInstead,
+      l10n.authConnectWalletButton,
+    };
+
+    for (final label in walletEntryLabels) {
+      final button = find.text(label);
+      if (button.evaluate().isNotEmpty) {
+        await tester.tap(button.first);
+        await tester.pumpAndSettle();
+        return;
+      }
     }
 
-    final showOtherOptions = find.text('Show other options');
+    final showOtherOptions = find.text(l10n.authShowOtherOptions);
     if (showOtherOptions.evaluate().isNotEmpty) {
       await tester.tap(showOtherOptions.first);
       await tester.pumpAndSettle();
     }
 
-    final revealedConnectWallet = find.text('Connect wallet');
-    expect(revealedConnectWallet, findsWidgets);
-    await tester.tap(revealedConnectWallet.first);
+    Finder? revealedWalletEntry;
+    for (final label in walletEntryLabels) {
+      final button = find.text(label);
+      if (button.evaluate().isNotEmpty) {
+        revealedWalletEntry = button;
+        break;
+      }
+    }
+    expect(revealedWalletEntry, isNotNull);
+    await tester.tap(revealedWalletEntry!.first);
     await tester.pumpAndSettle();
   }
 
@@ -55,10 +71,12 @@ void main() {
 
     await openWalletEntryMenuIfNeeded(tester);
 
-    expect(find.text('Connect external wallet'), findsOneWidget);
-    expect(find.text('Create a new wallet'), findsOneWidget);
-    expect(find.text('Link existing wallet'), findsOneWidget);
-    expect(find.text('Advanced'), findsNWidgets(2));
+    final l10n = AppLocalizationsEn();
+    expect(
+        find.text(l10n.connectWalletOptionWalletConnectTitle), findsOneWidget);
+    expect(find.text(l10n.connectWalletCreateTitle), findsOneWidget);
+    expect(find.text(l10n.connectWalletLinkExistingTitle), findsOneWidget);
+    expect(find.text(l10n.connectWalletAdvancedBadge), findsNWidgets(2));
   });
 
   testWidgets(
@@ -74,9 +92,11 @@ void main() {
 
     await openWalletEntryMenuIfNeeded(tester);
 
-    expect(find.text('Connect external wallet'), findsOneWidget);
-    expect(find.text('Create a new wallet'), findsOneWidget);
-    expect(find.text('Link existing wallet'), findsOneWidget);
-    expect(find.text('Advanced'), findsNWidgets(2));
+    final l10n = AppLocalizationsEn();
+    expect(
+        find.text(l10n.connectWalletOptionWalletConnectTitle), findsOneWidget);
+    expect(find.text(l10n.connectWalletCreateTitle), findsOneWidget);
+    expect(find.text(l10n.connectWalletLinkExistingTitle), findsOneWidget);
+    expect(find.text(l10n.connectWalletAdvancedBadge), findsNWidgets(2));
   });
 }
