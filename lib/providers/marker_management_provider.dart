@@ -27,6 +27,8 @@ class MarkerManagementProvider extends ChangeNotifier {
   static const Duration _cacheTtl = Duration(seconds: 30);
   DateTime? _lastFetch;
   Future<void>? _inFlightRefresh;
+  final Map<String, Future<ArtMarker?>> _createInFlightByNonce =
+      <String, Future<ArtMarker?>>{};
 
   bool get initialized => _initialized;
   bool get isLoading => _loading;
@@ -285,6 +287,26 @@ class MarkerManagementProvider extends ChangeNotifier {
       clientNonce = null;
     }
 
+    final nonceKey = clientNonce?.trim();
+    if (nonceKey != null && nonceKey.isNotEmpty) {
+      final existing = _createInFlightByNonce[nonceKey];
+      if (existing != null) return existing;
+
+      final future = _createMarkerInternal(normalizedPayload, nonceKey);
+      _createInFlightByNonce[nonceKey] = future;
+      future.whenComplete(() {
+        _createInFlightByNonce.remove(nonceKey);
+      });
+      return future;
+    }
+
+    return _createMarkerInternal(normalizedPayload, clientNonce);
+  }
+
+  Future<ArtMarker?> _createMarkerInternal(
+    Map<String, dynamic> normalizedPayload,
+    String? clientNonce,
+  ) async {
     try {
       final created = await _api
           .createArtMarkerRecord(normalizedPayload)

@@ -112,7 +112,9 @@ class _FakeMarkerApi implements MarkerBackendApi {
 }
 
 ArtMarker _marker(String id,
-    {String name = 'Old', String createdBy = 'wallet_1'}) {
+    {String name = 'Old',
+    String createdBy = 'wallet_1',
+    Map<String, dynamic>? metadata}) {
   return ArtMarker(
     id: id,
     name: name,
@@ -121,6 +123,7 @@ ArtMarker _marker(String id,
     type: ArtMarkerType.other,
     createdAt: DateTime.utc(2025, 1, 1),
     createdBy: createdBy,
+    metadata: metadata,
   );
 }
 
@@ -283,5 +286,37 @@ void main() {
 
     expect(updated, isNull);
     expect(provider.markers.firstWhere((m) => m.id == 'm1').name, 'Old');
+  });
+
+  test('MarkerManagementProvider.createMarker dedupes in-flight client nonce',
+      () async {
+    final api = _FakeMarkerApi();
+    final provider = MarkerManagementProvider(
+        api: api, mapMarkerService: MapMarkerService());
+
+    api.createCompleter = Completer<ArtMarker?>();
+    final payload = <String, dynamic>{
+      'name': 'New',
+      'latitude': 1,
+      'longitude': 2,
+      'metadata': <String, dynamic>{'clientNonce': 'nonce-1'},
+    };
+
+    final first = provider.createMarker(payload);
+    final second = provider.createMarker(payload);
+
+    expect(api.createCalls, 1);
+
+    api.createCompleter!.complete(_marker(
+      'm-new',
+      name: 'New',
+      metadata: <String, dynamic>{'clientNonce': 'nonce-1'},
+    ));
+
+    final results = await Future.wait(<Future<ArtMarker?>>[first, second]);
+    expect(results[0]?.id, 'm-new');
+    expect(results[1]?.id, 'm-new');
+    expect(api.createCalls, 1);
+    expect(provider.markers.where((m) => m.id == 'm-new').length, 1);
   });
 }

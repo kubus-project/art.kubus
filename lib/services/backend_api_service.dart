@@ -7529,8 +7529,11 @@ class BackendApiService
         }
         return null;
       }
-      throw Exception(
-          'Failed to create event: ${response.statusCode} ${response.body}');
+      throw BackendApiRequestException(
+        statusCode: response.statusCode,
+        path: uri.path,
+        body: response.body,
+      );
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.createEvent failed: $e');
       rethrow;
@@ -7565,8 +7568,11 @@ class BackendApiService
         }
         return null;
       }
-      throw Exception(
-          'Failed to update event: ${response.statusCode} ${response.body}');
+      throw BackendApiRequestException(
+        statusCode: response.statusCode,
+        path: uri.path,
+        body: response.body,
+      );
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.updateEvent failed: $e');
       rethrow;

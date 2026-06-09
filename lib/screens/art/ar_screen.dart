@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:art_kubus/models/event.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -1351,7 +1352,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
           artworks: artworkProvider.artworks,
           exhibitions: const [],
           institutions: institutionProvider.institutions,
-          events: institutionProvider.events,
+          events: institutionProvider.events.whereType<KubusEvent>().toList(),
           delegates: daoProvider.delegates,
         ),
     };

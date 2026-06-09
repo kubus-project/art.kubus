@@ -1544,6 +1544,7 @@ class WalletProvider extends ChangeNotifier {
     bool allowReplacingWalletIdentity = false,
     String? browserWalletId,
     bool preferBrowserWallet = true,
+    bool syncBackend = true,
   }) async {
     final result = await ExternalWalletSignerService.instance.connect(
       context,
@@ -1555,6 +1556,7 @@ class WalletProvider extends ChangeNotifier {
         address: result.address,
         walletName: result.walletName,
         allowReplacingWalletIdentity: allowReplacingWalletIdentity,
+        syncBackend: syncBackend,
       );
       return result;
     } catch (_) {
@@ -1573,6 +1575,7 @@ class WalletProvider extends ChangeNotifier {
     required String address,
     String? walletName,
     bool allowReplacingWalletIdentity = false,
+    bool syncBackend = true,
   }) async {
     final sanitized = address.trim();
     if (sanitized.isEmpty) {
@@ -1590,7 +1593,7 @@ class WalletProvider extends ChangeNotifier {
       await setReadOnlyWalletIdentity(
         sanitized,
         loadData: true,
-        syncBackend: true,
+        syncBackend: syncBackend,
       );
     }
 
@@ -3187,7 +3190,9 @@ class WalletProvider extends ChangeNotifier {
   }
 
   // Wallet Management
-  Future<Map<String, String>> createWallet() async {
+  Future<Map<String, String>> createWallet({
+    bool syncBackend = true,
+  }) async {
     _lastError = null;
     _sessionPhase = WalletSessionPhase.restoring;
     final mnemonic = _solanaWalletService.generateMnemonic();
@@ -3232,10 +3237,12 @@ class WalletProvider extends ChangeNotifier {
     } catch (e) {
       _walletLog('createWallet: loadData failed: $e');
     }
-    try {
-      await _syncBackendData(address);
-    } catch (e) {
-      _walletLog('createWallet: sync backend failed: $e');
+    if (syncBackend) {
+      try {
+        await _syncBackendData(address);
+      } catch (e) {
+        _walletLog('createWallet: sync backend failed: $e');
+      }
     }
 
     // Cache mnemonic for reuse
@@ -3271,6 +3278,7 @@ class WalletProvider extends ChangeNotifier {
     String mnemonic, {
     DerivedKeyPairResult? preDerived,
     bool markBackedUp = true,
+    bool syncBackend = true,
   }) async {
     _walletLog('importWalletFromMnemonic start');
     _lastError = null;
@@ -3319,7 +3327,7 @@ class WalletProvider extends ChangeNotifier {
       // Even if loading fails, we have the address
     }
 
-    if (_currentWalletAddress != null) {
+    if (syncBackend && _currentWalletAddress != null) {
       try {
         await _syncBackendData(_currentWalletAddress!);
         _walletLog('backend data synced');

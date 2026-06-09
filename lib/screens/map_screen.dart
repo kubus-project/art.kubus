@@ -4647,25 +4647,28 @@ class _MapScreenState extends State<MapScreen>
       return;
     }
 
-    if (!AppConfig.isFeatureEnabled('exhibitions') ||
-        BackendApiService().exhibitionsApiAvailable == false) {
-      if (isExhibitionMarker) {
-        messenger.showKubusSnackBar(
-          SnackBar(content: Text(l10n.mapExhibitionsUnavailableToast)),
-          tone: KubusSnackBarTone.warning,
-        );
-        setState(() {});
-        return;
-      }
+    if (!AppConfig.isFeatureEnabled('exhibitions')) {
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.mapExhibitionsUnavailableToast)),
+        tone: KubusSnackBarTone.warning,
+      );
+      setState(() {});
+      return;
+    }
+
+    if (BackendApiService().exhibitionsApiAvailable == false &&
+        !isExhibitionMarker) {
       await _openMarkerDetail(marker, artwork);
       return;
     }
 
+    Object? fetchError;
     final fetched = await (() async {
       try {
         return await exhibitionsProvider.fetchExhibition(resolved.id,
             force: true);
-      } catch (_) {
+      } catch (e) {
+        fetchError = e;
         return null;
       }
     })();
@@ -4673,15 +4676,21 @@ class _MapScreenState extends State<MapScreen>
     if (!mounted) return;
 
     if (fetched == null) {
-      messenger.showKubusSnackBar(
-        SnackBar(content: Text(l10n.mapExhibitionsUnavailableToast)),
-        tone: KubusSnackBarTone.warning,
-      );
-      // Force rebuild so we can hide exhibition UI if the API just got marked unavailable.
-      setState(() {});
-      if (!isExhibitionMarker) {
-        await _openMarkerDetail(marker, artwork);
+      final serviceUnavailable = fetchError is BackendApiRequestException &&
+          ((fetchError as BackendApiRequestException).statusCode == 503 ||
+              (fetchError as BackendApiRequestException).statusCode == 502 ||
+              (fetchError as BackendApiRequestException).statusCode == 522 ||
+              (fetchError as BackendApiRequestException).statusCode == 523 ||
+              (fetchError as BackendApiRequestException).statusCode == 524 ||
+              (fetchError as BackendApiRequestException).statusCode == 530);
+      if (serviceUnavailable) {
+        messenger.showKubusSnackBar(
+          SnackBar(content: Text(l10n.mapExhibitionsUnavailableToast)),
+          tone: KubusSnackBarTone.warning,
+        );
+        setState(() {});
       }
+      await _showMarkerInfoFallback(marker);
       return;
     }
 
@@ -4690,6 +4699,7 @@ class _MapScreenState extends State<MapScreen>
         builder: (_) => ExhibitionDetailScreen(
           exhibitionId: resolved.id,
           attendanceMarkerId: marker.id,
+          initialExhibition: fetched,
         ),
       ),
     );

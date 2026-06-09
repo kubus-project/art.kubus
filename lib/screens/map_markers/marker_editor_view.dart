@@ -20,6 +20,7 @@ import '../../providers/tile_providers.dart';
 import '../../providers/wallet_provider.dart';
 import '../../services/backend_api_service.dart';
 import '../../services/storage_config.dart';
+import '../../services/telemetry/telemetry_uuid.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/map_marker_subject_loader.dart';
 import '../../utils/marker_subject_utils.dart';
@@ -75,6 +76,7 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
   bool _requiresProximity = true;
   bool _isCommunity = false;
   bool _saving = false;
+  late final String _draftClientNonce = TelemetryUuid.v4();
   final Set<String> _deleteDialogOpenMarkerIds = <String>{};
   final Set<String> _deleteInFlightMarkerIds = <String>{};
   Uint8List? _coverImageBytes;
@@ -785,6 +787,10 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
         double.tryParse(_activationRadiusController.text.trim()) ?? 50;
     final category = _categoryController.text.trim();
     final markerType = _markerType.name;
+    final existingMetadata = widget.marker?.metadata ?? const <String, dynamic>{};
+    final existingClientNonce =
+        existingMetadata['clientNonce']?.toString().trim();
+    final existingClientCreatedAtMs = existingMetadata['clientCreatedAtMs'];
 
     final artworkId = _subjectType == MarkerSubjectType.artwork
         ? _subject?.id
@@ -796,6 +802,10 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
       if (_subject != null) ...{
         'subjectId': _subject!.id,
         'subjectTitle': _subject!.title,
+        if (_subjectType == MarkerSubjectType.exhibition) ...{
+          'exhibitionId': _subject!.id,
+          'exhibitionTitle': _subject!.title,
+        },
         if (subjectSubtitleRaw.isNotEmpty)
           'subjectSubtitle': _truncateMetadataText(
             subjectSubtitleRaw,
@@ -814,6 +824,13 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
         'community': 'community',
       },
       'visibility': _isPublic ? 'public' : 'private',
+      'clientNonce': widget.isNew
+          ? _draftClientNonce
+          : ((existingClientNonce != null && existingClientNonce.isNotEmpty)
+              ? existingClientNonce
+              : _draftClientNonce),
+      'clientCreatedAtMs': existingClientCreatedAtMs ??
+          DateTime.now().millisecondsSinceEpoch,
       if (widget.isNew) 'createdFrom': 'manage_markers',
     };
 
@@ -886,51 +903,26 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
         return;
       }
 
-      if (exhibitionsProvider != null) {
-        final prevMarker = widget.marker;
-        final prevExhibitionId = prevMarker?.isExhibitionSubject == true
-            ? (prevMarker?.subjectId ??
-                prevMarker?.resolvedExhibitionSummary?.id)
-            : prevMarker?.resolvedExhibitionSummary?.id;
-        final nextExhibitionId =
-            _subjectType == MarkerSubjectType.exhibition ? _subject?.id : null;
-
-        if ((prevExhibitionId ?? '').trim().isNotEmpty &&
-            prevExhibitionId != nextExhibitionId) {
-          try {
-            await exhibitionsProvider.unlinkExhibitionMarker(
-                prevExhibitionId!, saved.id);
-          } catch (_) {
-            // Non-fatal (endpoint might not exist or user might not have permissions).
-          }
-        }
-
-        if ((nextExhibitionId ?? '').trim().isNotEmpty) {
-          try {
-            await exhibitionsProvider
-                .linkExhibitionMarkers(nextExhibitionId!, [saved.id]);
-          } catch (_) {
-            // Non-fatal.
-          }
-
-          final nextLinkedArtworkId =
-              (_linkedArtwork?.id ?? _linkedArtworkId ?? '').trim();
-          if (nextLinkedArtworkId.isNotEmpty) {
-            try {
-              await exhibitionsProvider.linkExhibitionArtworks(
-                  nextExhibitionId!, [nextLinkedArtworkId]);
-            } catch (_) {
-              // Non-fatal.
-            }
-          }
-        }
-      }
+      final prevMarker = widget.marker;
+      final prevExhibitionId = prevMarker?.isExhibitionSubject == true
+          ? (prevMarker?.subjectId ?? prevMarker?.resolvedExhibitionSummary?.id)
+          : prevMarker?.resolvedExhibitionSummary?.id;
+      final nextExhibitionId =
+          _subjectType == MarkerSubjectType.exhibition ? _subject?.id : null;
+      final nextLinkedArtworkId =
+          (_linkedArtwork?.id ?? _linkedArtworkId ?? '').trim();
+      final shouldSyncExhibitionLink = exhibitionsProvider != null &&
+          (((prevExhibitionId ?? '').trim().isNotEmpty &&
+                  prevExhibitionId != nextExhibitionId) ||
+              (nextExhibitionId ?? '').trim().isNotEmpty);
 
       messenger.showKubusSnackBar(
         SnackBar(
-            content: Text(widget.isNew
-                ? l10n.manageMarkersCreatedToast
-                : l10n.manageMarkersUpdatedToast)),
+            content: Text(shouldSyncExhibitionLink
+                ? 'Marker saved, exhibition link syncing...'
+                : (widget.isNew
+                    ? l10n.manageMarkersCreatedToast
+                    : l10n.manageMarkersUpdatedToast))),
       );
       try {
         widget.onSaved?.call(saved);
@@ -939,6 +931,16 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
           debugPrint(
               'MarkerEditorView: onSaved callback failed after successful save: $e');
         }
+      }
+
+      if (shouldSyncExhibitionLink) {
+        unawaited(_syncExhibitionMarkerLinks(
+          exhibitionsProvider: exhibitionsProvider,
+          savedMarkerId: saved.id,
+          previousExhibitionId: prevExhibitionId,
+          nextExhibitionId: nextExhibitionId,
+          nextLinkedArtworkId: nextLinkedArtworkId,
+        ));
       }
     } catch (e) {
       if (!mounted) return;
@@ -951,6 +953,43 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
       if (mounted) {
         setState(() => _saving = false);
       }
+    }
+  }
+
+  Future<void> _syncExhibitionMarkerLinks({
+    required ExhibitionsProvider? exhibitionsProvider,
+    required String savedMarkerId,
+    required String? previousExhibitionId,
+    required String? nextExhibitionId,
+    required String nextLinkedArtworkId,
+  }) async {
+    final provider = exhibitionsProvider;
+    if (provider == null) return;
+
+    final prevId = (previousExhibitionId ?? '').trim();
+    final nextId = (nextExhibitionId ?? '').trim();
+    try {
+      if (prevId.isNotEmpty && prevId != nextId) {
+        await provider.unlinkExhibitionMarker(prevId, savedMarkerId);
+      }
+
+      if (nextId.isNotEmpty) {
+        await provider.linkExhibitionMarkers(nextId, [savedMarkerId]);
+        if (nextLinkedArtworkId.isNotEmpty) {
+          await provider.linkExhibitionArtworks(nextId, [nextLinkedArtworkId]);
+        }
+      }
+    } catch (e, stackTrace) {
+      if (kDebugMode) {
+        debugPrint('MarkerEditorView: exhibition link sync failed: $e');
+        debugPrintStack(stackTrace: stackTrace);
+      }
+      if (!mounted || nextId.isEmpty) return;
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+        const SnackBar(
+          content: Text('Marker saved, but exhibition link sync failed.'),
+        ),
+      );
     }
   }
 
@@ -1467,12 +1506,28 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
                         controller: _descriptionController,
                         decoration: _creatorInputDecoration(scheme,
                             labelText: l10n.mapMarkerDialogDescriptionLabel),
-                        minLines: 2,
-                        maxLines: 4,
+                        minLines: 4,
+                        maxLines:
+                            MediaQuery.sizeOf(context).width >= 900 ? 14 : 10,
+                        maxLength:
+                            CreatorDescriptionTextField.maxDescriptionLength,
+                        keyboardType: TextInputType.multiline,
+                        textInputAction: TextInputAction.newline,
+                        scrollPadding: const EdgeInsets.only(
+                          left: 20,
+                          right: 20,
+                          top: 20,
+                          bottom: 120,
+                        ),
                         validator: (value) {
                           final v = (value ?? '').trim();
                           if (v.isEmpty) {
                             return l10n.mapMarkerDialogEnterDescriptionError;
+                          }
+                          if (v.length >
+                              CreatorDescriptionTextField
+                                  .maxDescriptionLength) {
+                            return l10n.manageMarkersSaveFailed;
                           }
                           if (v.length < 10) {
                             return l10n

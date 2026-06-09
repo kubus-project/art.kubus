@@ -2,7 +2,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:art_kubus/core/app_initializer_helper.dart';
 
 void main() {
-  test('pending auth onboarding with verification email -> onboarding:verifyEmail', () {
+  test(
+      'pending auth onboarding with verification email -> onboarding:verifyEmail',
+      () {
     final decision = decideStartupRoute(
       hasPendingAuthOnboarding: true,
       hasValidSession: false,
@@ -16,7 +18,9 @@ void main() {
     expect(decision.onboardingInitialStepId, 'verifyEmail');
   });
 
-  test('pending auth onboarding without verification email -> onboarding:account', () {
+  test(
+      'pending auth onboarding without verification email -> onboarding:account',
+      () {
     final decision = decideStartupRoute(
       hasPendingAuthOnboarding: true,
       hasValidSession: false,
@@ -30,7 +34,9 @@ void main() {
     expect(decision.onboardingInitialStepId, 'account');
   });
 
-  test('pending auth onboarding with valid session -> none (deferred to resolver)', () {
+  test(
+      'pending auth onboarding with valid session -> none (deferred to resolver)',
+      () {
     final decision = decideStartupRoute(
       hasPendingAuthOnboarding: true,
       hasValidSession: true,
@@ -83,5 +89,37 @@ void main() {
 
     expect(decision.route, StartupRouteType.main);
   });
-}
 
+  test('Google onboarding guard without session routes to account', () {
+    final decision = decideStartupRoute(
+      hasPendingAuthOnboarding: false,
+      hasValidSession: false,
+      hasPendingVerificationEmailFlag: false,
+      pendingVerificationEmail: null,
+      shouldSkipOnboarding: true,
+      shouldShowSignIn: true,
+      hasActiveGoogleOnboardingGuard: true,
+    );
+
+    expect(decision.route, StartupRouteType.onboarding);
+    expect(decision.onboardingInitialStepId, 'account');
+  });
+
+  test(
+      'Google onboarding guard with session and missing wallet routes to walletConnect',
+      () {
+    final decision = decideStartupRoute(
+      hasPendingAuthOnboarding: true,
+      hasValidSession: true,
+      hasPendingVerificationEmailFlag: false,
+      pendingVerificationEmail: null,
+      shouldSkipOnboarding: false,
+      shouldShowSignIn: false,
+      hasActiveGoogleOnboardingGuard: true,
+      hasWallet: false,
+    );
+
+    expect(decision.route, StartupRouteType.onboarding);
+    expect(decision.onboardingInitialStepId, 'walletConnect');
+  });
+}

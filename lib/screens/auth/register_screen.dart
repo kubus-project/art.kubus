@@ -22,7 +22,11 @@ class RegisterScreen extends StatelessWidget {
     return AuthMethodsPanel(
       embedded: embedded,
       googleAuthOrigin: embedded ? 'onboarding' : 'register',
-      onAuthSuccess: onAuthCompleted,
+      onAuthSuccess: onAuthCompleted == null
+          ? null
+          : (_) async {
+              await onAuthCompleted!();
+            },
       onVerificationRequired: onVerificationRequired,
       onError: onError,
       onSwitchToSignIn: onSwitchToSignIn,

@@ -59,7 +59,7 @@ class AuthMethodsPanel extends StatefulWidget {
   });
 
   final bool embedded;
-  final Future<void> Function()? onAuthSuccess;
+  final Future<void> Function(Map<String, dynamic> payload)? onAuthSuccess;
   final ValueChanged<String>? onVerificationRequired;
   final ValueChanged<String>? onEmailRegistrationAttempted;
   final Future<void> Function(AuthEmailRegistrationCapture capture)?
@@ -196,15 +196,11 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
         embedded: widget.embedded,
         modalReauth: false,
         requiresWalletBackup: false,
-        onBeforeSavedItemsSync:
-            (origin == AuthOrigin.google || origin == AuthOrigin.googleOnboarding)
+        onBeforeSavedItemsSync: (origin == AuthOrigin.google ||
+                origin == AuthOrigin.googleOnboarding)
             ? () => maybeShowGooglePasswordUpgradePrompt(context, payload)
             : null,
-        onAuthSuccess: widget.onAuthSuccess == null
-            ? null
-            : (_) async {
-                await widget.onAuthSuccess!();
-              },
+        onAuthSuccess: widget.onAuthSuccess,
       );
     }
     // For embedded flows, local build() will show PostAuthLoadingScreen
@@ -362,14 +358,17 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
           (responseUser['displayName'] ?? responseUser['display_name'] ?? '')
               .toString()
               .trim();
-      final backendWallet =
-          (responseUser['walletAddress'] ?? responseUser['wallet_address'] ?? '')
-              .toString()
-              .trim();
-      final backendUserId =
-          (responseUser['userId'] ?? responseUser['user_id'] ?? responseUser['id'] ?? '')
-              .toString()
-              .trim();
+      final backendWallet = (responseUser['walletAddress'] ??
+              responseUser['wallet_address'] ??
+              '')
+          .toString()
+          .trim();
+      final backendUserId = (responseUser['userId'] ??
+              responseUser['user_id'] ??
+              responseUser['id'] ??
+              '')
+          .toString()
+          .trim();
       widget.onEmailRegistrationAttempted?.call(email);
       if (widget.onEmailRegistrationCaptured != null) {
         await widget.onEmailRegistrationCaptured!(
@@ -490,8 +489,14 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
     unawaited(TelemetryService().trackSignUpAttempt(method: 'google'));
     setState(() => _isGoogleSubmitting = true);
     try {
+      if (widget.googleAuthOrigin == 'onboarding') {
+        await OnboardingStateService.markGoogleOnboardingRegistrationStarted();
+      }
       final googleResult = await GoogleAuthService().signIn();
       if (googleResult == null) {
+        if (widget.googleAuthOrigin == 'onboarding') {
+          await OnboardingStateService.clearGoogleOnboardingRegistrationGuard();
+        }
         unawaited(TelemetryService()
             .trackSignUpFailure(method: 'google', errorClass: 'cancelled'));
         setState(() => _isGoogleSubmitting = false);
@@ -502,7 +507,9 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
         api: api,
         googleResult: googleResult,
         walletAddress: null,
-        createSignerBackedWallet: _createSignerBackedWallet,
+        createSignerBackedWallet: widget.googleAuthOrigin == 'onboarding'
+            ? () async => null
+            : _createSignerBackedWallet,
         origin: widget.googleAuthOrigin,
       );
       await _handleAuthSuccess(result, origin: _googlePostAuthOrigin);
@@ -604,11 +611,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
         presentation: widget.embedded
             ? PostAuthLoadingPresentation.inline
             : PostAuthLoadingPresentation.fullScreen,
-        onAuthSuccess: widget.onAuthSuccess == null
-            ? null
-            : (_) async {
-                await widget.onAuthSuccess!();
-              },
+        onAuthSuccess: widget.onAuthSuccess,
       );
     }
 
@@ -682,12 +685,18 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
           setState(() => _isGoogleSubmitting = true);
         }
         try {
+          if (widget.googleAuthOrigin == 'onboarding') {
+            await OnboardingStateService
+                .markGoogleOnboardingRegistrationStarted();
+          }
           final api = BackendApiService();
           final result = await loginWithGoogleWalletRecovery(
             api: api,
             googleResult: googleResult,
             walletAddress: null,
-            createSignerBackedWallet: _createSignerBackedWallet,
+            createSignerBackedWallet: widget.googleAuthOrigin == 'onboarding'
+                ? () async => null
+                : _createSignerBackedWallet,
             origin: widget.googleAuthOrigin,
           );
           if (!mounted) return;
@@ -702,6 +711,11 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
         }
       },
       onWebGoogleAuthError: (Object error) {
+        if (widget.googleAuthOrigin == 'onboarding') {
+          unawaited(
+            OnboardingStateService.clearGoogleOnboardingRegistrationGuard(),
+          );
+        }
         widget.onError?.call(error);
         unawaited(
           TelemetryService().trackSignUpFailure(

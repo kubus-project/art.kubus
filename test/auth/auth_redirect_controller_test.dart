@@ -72,7 +72,7 @@ void main() {
 
     expect(result.state, PostAuthRouteState.onboardingRequired);
     expect(result.routeName, '/onboarding');
-    expect(result.onboardingStepId, 'walletSecurity');
+    expect(result.onboardingStepId, 'walletConnect');
   });
 
   test('existing email user routes to requested redirect', () async {

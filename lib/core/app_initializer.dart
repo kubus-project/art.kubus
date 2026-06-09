@@ -260,8 +260,8 @@ class _AppInitializerState extends State<AppInitializer> {
       bool hasValidSession = sessionStatus == StoredSessionStatus.valid;
       if (sessionStatus == StoredSessionStatus.refreshRequired) {
         try {
-          hasValidSession =
-              await BackendApiService().restoreExistingSession(allowRefresh: false);
+          hasValidSession = await BackendApiService()
+              .restoreExistingSession(allowRefresh: false);
         } catch (e) {
           AppConfig.debugPrint(
               'AppInitializer: restoreExistingSession failed: $e');
@@ -336,6 +336,10 @@ class _AppInitializerState extends State<AppInitializer> {
             );
       final pendingAuthOnboardingStepId =
           pendingAuthOnboardingResume.nextStepId;
+      final hasActiveGoogleOnboardingGuard =
+          OnboardingStateService.hasActiveGoogleOnboardingRegistrationGuardSync(
+        prefs,
+      );
 
       if (kDebugMode) {
         debugPrint('AppInitializer: flags');
@@ -487,12 +491,38 @@ class _AppInitializerState extends State<AppInitializer> {
         final pendingVerificationEmail =
             prefs.getString('onboarding_verification_email_v3');
 
+        if (hasActiveGoogleOnboardingGuard && hasValidSession) {
+          final hydratedProfileWallet =
+              (profileProvider.currentUser?.walletAddress ?? '').trim();
+          final hasResolvedWallet = hydratedProfileWallet.isNotEmpty ||
+              (walletAddress ?? '').trim().isNotEmpty;
+          if (!hasResolvedWallet) {
+            if (kDebugMode) {
+              debugPrint(
+                'AppInitializer: route -> OnboardingFlowScreen (Google onboarding guard, walletConnect)',
+              );
+            }
+            _didNavigate = true;
+            navigator.pushReplacement(
+              MaterialPageRoute(
+                builder: (context) => OnboardingFlowScreen(
+                  forceDesktop: isDesktop,
+                  initialStepId: 'walletConnect',
+                ),
+                settings: const RouteSettings(name: '/onboarding'),
+              ),
+            );
+            return;
+          }
+        }
+
         final startupDecision = decideStartupRoute(
           hasPendingAuthOnboarding: hasPendingAuthOnboarding,
           hasValidSession: hasValidSession,
           hasPendingVerificationEmailFlag: hasPendingVerificationEmail,
           pendingVerificationEmail: pendingVerificationEmail,
-          shouldSkipOnboarding: false, // This branch runs before shouldSkipOnboarding
+          shouldSkipOnboarding:
+              false, // This branch runs before shouldSkipOnboarding
           shouldShowSignIn: false,
         );
 
@@ -528,6 +558,55 @@ class _AppInitializerState extends State<AppInitializer> {
           if (kDebugMode) {
             debugPrint(
                 'AppInitializer: route -> OnboardingFlowScreen (pending auth onboarding resume)');
+          }
+          _didNavigate = true;
+          navigator.pushReplacement(
+            MaterialPageRoute(
+              builder: (context) => OnboardingFlowScreen(
+                forceDesktop: isDesktop,
+                initialStepId: pendingAuthOnboardingStepId,
+              ),
+              settings: const RouteSettings(name: '/onboarding'),
+            ),
+          );
+          return;
+        }
+      }
+
+      if (hasActiveGoogleOnboardingGuard) {
+        final hydratedProfileWallet =
+            (profileProvider.currentUser?.walletAddress ?? '').trim();
+        final hasResolvedWallet = hydratedProfileWallet.isNotEmpty ||
+            (walletAddress ?? '').trim().isNotEmpty;
+        if (!hasValidSession || !hasResolvedWallet) {
+          final initialStepId = hasValidSession && !hasResolvedWallet
+              ? 'walletConnect'
+              : 'account';
+          if (kDebugMode) {
+            debugPrint(
+              'AppInitializer: route -> OnboardingFlowScreen (Google onboarding guard, initialStep=$initialStepId)',
+            );
+          }
+          _didNavigate = true;
+          navigator.pushReplacement(
+            MaterialPageRoute(
+              builder: (context) => OnboardingFlowScreen(
+                forceDesktop: isDesktop,
+                initialStepId: initialStepId,
+              ),
+              settings: const RouteSettings(name: '/onboarding'),
+            ),
+          );
+          return;
+        }
+
+        if (pendingAuthOnboardingResume.requiresStructuredOnboarding &&
+            pendingAuthOnboardingStepId != null &&
+            pendingAuthOnboardingStepId.isNotEmpty) {
+          if (kDebugMode) {
+            debugPrint(
+              'AppInitializer: route -> OnboardingFlowScreen (Google onboarding guard resume)',
+            );
           }
           _didNavigate = true;
           navigator.pushReplacement(

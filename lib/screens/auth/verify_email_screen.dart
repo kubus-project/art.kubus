@@ -16,6 +16,7 @@ import '../../widgets/glass_components.dart';
 import '../desktop/auth/desktop_auth_shell.dart';
 import '../desktop/desktop_shell.dart';
 import '../../services/backend_api_service.dart';
+import 'email_verification_success_screen.dart';
 
 class VerifyEmailScreen extends StatefulWidget {
   const VerifyEmailScreen({
@@ -67,9 +68,15 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
       if (!mounted) return;
       setState(() => _verified = true);
       if (!mounted) return;
-      final l10n = AppLocalizations.of(context)!;
-      ScaffoldMessenger.of(context).showKubusSnackBar(
-        SnackBar(content: Text(l10n.authVerifyEmailSuccessToast)),
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => EmailVerificationSuccessScreen(
+            email: _emailController.text.trim().isEmpty
+                ? widget.email
+                : _emailController.text.trim(),
+          ),
+          settings: const RouteSettings(name: '/verify-email/success'),
+        ),
       );
     } catch (_) {
       if (!mounted) return;
@@ -136,11 +143,15 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
   }
 
   void _continueAfterVerified() {
-    final api = BackendApiService();
-    final hasSession = (api.getAuthToken() ?? '').trim().isNotEmpty;
-    Navigator.of(context).pushNamedAndRemoveUntil(
-      hasSession ? '/main' : '/sign-in',
-      (_) => false,
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (_) => EmailVerificationSuccessScreen(
+          email: _emailController.text.trim().isEmpty
+              ? widget.email
+              : _emailController.text.trim(),
+        ),
+        settings: const RouteSettings(name: '/verify-email/success'),
+      ),
     );
   }
 
@@ -166,8 +177,13 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
       if (!mounted) return;
       if (verified) {
         setState(() => _verified = true);
-        ScaffoldMessenger.of(context).showKubusSnackBar(
-          SnackBar(content: Text(l10n.authVerifyEmailSuccessToast)),
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => EmailVerificationSuccessScreen(
+              email: email,
+            ),
+            settings: const RouteSettings(name: '/verify-email/success'),
+          ),
         );
       } else {
         setState(() => _inlineError = l10n.authVerifyEmailStatusPending);

@@ -21,7 +21,7 @@ class AuthOnboardingService {
     'verifyEmail',
     'role',
     'profile',
-    'walletSecurity',
+    'walletConnect',
     'walletBackupIntro',
     'walletBackup',
     'daoReview',
@@ -34,7 +34,7 @@ class AuthOnboardingService {
     'verifyEmail',
     'role',
     'profile',
-    'walletSecurity',
+    'walletConnect',
     'walletBackupIntro',
     'walletBackup',
     'daoReview',
@@ -53,8 +53,14 @@ class AuthOnboardingService {
   }
 
   static bool isAccountStepId(String? value) {
-    final normalized = (value ?? '').trim();
+    final normalized = normalizeStepId(value);
     return normalized.isNotEmpty && _accountStepIdSet.contains(normalized);
+  }
+
+  static String normalizeStepId(String? value) {
+    final normalized = (value ?? '').trim();
+    if (normalized == 'walletSecurity') return 'walletConnect';
+    return normalized;
   }
 
   static Future<StructuredOnboardingResumeState>
@@ -80,11 +86,11 @@ class AuthOnboardingService {
     );
     final completedSteps = progress.completedSteps
         .where(isAccountStepId)
-        .map((step) => step.trim())
+        .map(normalizeStepId)
         .toSet();
     final deferredSteps = progress.deferredSteps
         .where(isAccountStepId)
-        .map((step) => step.trim())
+        .map(normalizeStepId)
         .toSet();
     if (completedSteps.contains('walletBackup')) {
       completedSteps.add('walletBackupIntro');
@@ -99,7 +105,7 @@ class AuthOnboardingService {
     final walletBackupOnboardingEnabled =
         AppConfig.isFeatureEnabled('walletBackupOnboarding');
     String? normalizedHeuristic = isAccountStepId(heuristicNextStepId)
-        ? heuristicNextStepId!.trim()
+        ? normalizeStepId(heuristicNextStepId)
         : null;
     if (!walletBackupOnboardingEnabled &&
         normalizedHeuristic == 'walletBackup') {
@@ -163,7 +169,7 @@ class AuthOnboardingService {
     if (requiresWalletSetup) {
       return const StructuredOnboardingResumeState(
         requiresStructuredOnboarding: true,
-        nextStepId: 'walletSecurity',
+        nextStepId: 'walletConnect',
       );
     }
 
@@ -207,7 +213,7 @@ class AuthOnboardingService {
       if (requiresVerifyEmail) 'verifyEmail',
       'role',
       'profile',
-      if (requiresWalletSetup) 'walletSecurity',
+      if (requiresWalletSetup) 'walletConnect',
       if (requiresWalletBackup) 'walletBackupIntro',
       if (requiresWalletBackup) 'walletBackup',
       if (requiresDaoReview) 'daoReview',

@@ -22,6 +22,7 @@ class ExhibitionCreatorScreen extends StatefulWidget {
   /// surrounding shell (e.g. [DesktopSubScreen]) already provides one.
   final bool embedded;
   final Exhibition? initialExhibition;
+  final String? eventId;
   final bool forceDraftOnly;
   final VoidCallback? onCreated;
 
@@ -29,6 +30,7 @@ class ExhibitionCreatorScreen extends StatefulWidget {
     super.key,
     this.embedded = false,
     this.initialExhibition,
+    this.eventId,
     this.forceDraftOnly = false,
     this.onCreated,
   });
@@ -49,6 +51,7 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
   bool _published = false;
   bool _submitting = false;
   Exhibition? _createdExhibition;
+  String? _eventId;
 
   Uint8List? _coverBytes;
   String? _coverFileName;
@@ -73,6 +76,7 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
     _titleController.text = initial.title;
     _descriptionController.text = initial.description ?? '';
     _locationController.text = initial.locationName ?? '';
+    _eventId = initial.eventId;
     _startsAt = initial.startsAt;
     _endsAt = initial.endsAt;
     _published = initial.isPublished;
@@ -178,10 +182,16 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
                   },
                 ),
                 const CreatorFieldSpacing(),
-                CreatorTextField(
+                CreatorDescriptionTextField(
                   controller: _descriptionController,
                   label: l10n.exhibitionCreatorDescriptionLabel,
-                  maxLines: 4,
+                  validator: (value) {
+                    if ((value ?? '').length >
+                        CreatorDescriptionTextField.maxDescriptionLength) {
+                      return l10n.exhibitionCreatorCreateFailedWithError;
+                    }
+                    return null;
+                  },
                 ),
                 const CreatorFieldSpacing(),
                 CreatorTextField(
@@ -497,6 +507,7 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
     final title = _titleController.text.trim();
     final description = _descriptionController.text.trim();
     final locationName = _locationController.text.trim();
+    final eventId = (_eventId ?? widget.eventId ?? '').trim();
 
     if (_endsAt != null && _startsAt != null && _endsAt!.isBefore(_startsAt!)) {
       messenger.showKubusSnackBar(
@@ -532,6 +543,7 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
         'status': widget.forceDraftOnly
             ? 'draft'
             : (_published ? 'published' : 'draft'),
+        if (eventId.isNotEmpty) 'eventId': eventId,
         if (coverUrl != null && coverUrl.isNotEmpty) 'coverUrl': coverUrl,
       };
 

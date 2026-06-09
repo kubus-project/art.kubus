@@ -2,8 +2,10 @@ import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
 import '../models/artwork.dart';
 import '../models/dao.dart';
+import '../models/event.dart';
 import '../models/institution.dart';
 import '../models/exhibition.dart';
+import '../providers/events_provider.dart';
 import '../providers/exhibitions_provider.dart';
 import '../providers/artwork_provider.dart';
 import '../providers/dao_provider.dart';
@@ -16,7 +18,7 @@ class MarkerSubjectData {
   final List<Artwork> artworks;
   final List<Exhibition> exhibitions;
   final List<Institution> institutions;
-  final List<Event> events;
+  final List<KubusEvent> events;
   final List<Delegate> delegates;
   final bool wasRefreshed;
 
@@ -41,6 +43,7 @@ class MarkerSubjectLoader {
   MarkerSubjectData snapshot() {
     final artworkProvider = context.read<ArtworkProvider>();
     final institutionProvider = context.read<InstitutionProvider>();
+    final eventsProvider = _tryReadEventsProvider();
     final daoProvider = context.read<DAOProvider>();
     final exhibitionsProvider = context.read<ExhibitionsProvider>();
     final walletProvider = context.read<WalletProvider>();
@@ -52,7 +55,8 @@ class MarkerSubjectLoader {
           ? List<Exhibition>.from(exhibitionsProvider.exhibitions)
           : const <Exhibition>[],
       institutions: List<Institution>.from(institutionProvider.institutions),
-      events: List<Event>.from(institutionProvider.events),
+      events: List<KubusEvent>.from(
+          eventsProvider?.events ?? const <KubusEvent>[]),
       delegates: List<Delegate>.from(daoProvider.delegates),
     );
   }
@@ -60,6 +64,7 @@ class MarkerSubjectLoader {
   Future<MarkerSubjectData?> refresh({bool force = false}) async {
     final artworkProvider = context.read<ArtworkProvider>();
     final institutionProvider = context.read<InstitutionProvider>();
+    final eventsProvider = _tryReadEventsProvider();
     final daoProvider = context.read<DAOProvider>();
     final exhibitionsProvider = context.read<ExhibitionsProvider>();
     final walletProvider = context.read<WalletProvider>();
@@ -68,7 +73,9 @@ class MarkerSubjectLoader {
     final shouldLoadArtworks = force || artworkProvider.artworks.isEmpty;
     final shouldLoadWalletArtworks = wallet != null && wallet.isNotEmpty;
     final shouldLoadInstitutions =
-        force || institutionProvider.institutions.isEmpty || institutionProvider.events.isEmpty;
+        force || institutionProvider.institutions.isEmpty;
+    final shouldLoadEvents =
+        eventsProvider != null && (force || !eventsProvider.initialized);
     final shouldLoadDelegates = force || daoProvider.delegates.isEmpty;
     final exhibitionsEnabled = AppConfig.isFeatureEnabled('exhibitions');
     final shouldLoadExhibitions = exhibitionsEnabled && (force || !exhibitionsProvider.initialized);
@@ -82,6 +89,9 @@ class MarkerSubjectLoader {
     }
     if (shouldLoadInstitutions) {
       fetches.add(institutionProvider.refreshData());
+    }
+    if (shouldLoadEvents) {
+      fetches.add(eventsProvider.initialize(refresh: true));
     }
     if (shouldLoadDelegates) {
       fetches.add(daoProvider.refreshData(force: true));
@@ -103,12 +113,21 @@ class MarkerSubjectLoader {
             ? List<Exhibition>.from(exhibitionsProvider.exhibitions)
             : const <Exhibition>[],
         institutions: List<Institution>.from(institutionProvider.institutions),
-        events: List<Event>.from(institutionProvider.events),
+        events: List<KubusEvent>.from(
+            eventsProvider?.events ?? const <KubusEvent>[]),
         delegates: List<Delegate>.from(daoProvider.delegates),
         wasRefreshed: true,
       );
     } catch (e) {
       debugPrint('MarkerSubjectLoader.refresh error: $e');
+      return null;
+    }
+  }
+
+  EventsProvider? _tryReadEventsProvider() {
+    try {
+      return context.read<EventsProvider>();
+    } catch (_) {
       return null;
     }
   }

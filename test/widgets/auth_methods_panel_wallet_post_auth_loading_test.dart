@@ -286,7 +286,7 @@ void main() {
         child: Scaffold(
           body: AuthMethodsPanel(
             embedded: true,
-            onAuthSuccess: () async {
+            onAuthSuccess: (_) async {
               callbackCount++;
             },
           ),

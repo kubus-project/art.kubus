@@ -101,7 +101,7 @@ class _RecordingWalletProvider extends WalletProvider {
   bool get hasSigner => (_currentWallet ?? '').isNotEmpty;
 
   @override
-  Future<Map<String, String>> createWallet() async {
+  Future<Map<String, String>> createWallet({bool syncBackend = true}) async {
     createWalletCalls += 1;
     if (failCreate) {
       throw Exception('wallet creation failed');
@@ -423,7 +423,7 @@ void main() {
 
     expect(result.completed, isTrue);
     expect(result.onboardingStepId, isNotNull);
-    expect(result.onboardingStepId, 'walletSecurity');
+    expect(result.onboardingStepId, 'walletConnect');
     expect(walletProvider.createWalletCalls, 0);
     expect(bindRequests, 0);
     expect(boundWallet, isNull);
@@ -465,7 +465,7 @@ void main() {
     );
 
     expect(result.completed, isTrue);
-    expect(result.onboardingStepId, 'walletSecurity');
+    expect(result.onboardingStepId, 'walletConnect');
     expect(result.routeName, '/onboarding');
     expect(walletProvider.createWalletCalls, 0);
     expect(profileProvider.walletLoads, 0);

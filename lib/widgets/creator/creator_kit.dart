@@ -457,9 +457,12 @@ class CreatorTextField extends StatelessWidget {
   final TextEditingController? controller;
   final String label;
   final String? hint;
+  final int? minLines;
   final int maxLines;
+  final int? maxLength;
   final TextInputType? keyboardType;
   final TextInputAction? textInputAction;
+  final EdgeInsets scrollPadding;
   final String? Function(String?)? validator;
   final ValueChanged<String>? onChanged;
   final bool enabled;
@@ -470,9 +473,12 @@ class CreatorTextField extends StatelessWidget {
     this.controller,
     required this.label,
     this.hint,
+    this.minLines,
     this.maxLines = 1,
+    this.maxLength,
     this.keyboardType,
     this.textInputAction,
+    this.scrollPadding = const EdgeInsets.all(20.0),
     this.validator,
     this.onChanged,
     this.enabled = true,
@@ -496,9 +502,12 @@ class CreatorTextField extends StatelessWidget {
         const SizedBox(height: KubusSpacing.xs),
         TextFormField(
           controller: controller,
+          minLines: minLines,
           maxLines: maxLines,
+          maxLength: maxLength,
           keyboardType: keyboardType,
           textInputAction: textInputAction,
+          scrollPadding: scrollPadding,
           validator: validator,
           onChanged: onChanged,
           enabled: enabled,
@@ -533,6 +542,56 @@ class CreatorTextField extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class CreatorDescriptionTextField extends StatelessWidget {
+  static const int maxDescriptionLength = 10000;
+
+  final TextEditingController? controller;
+  final String label;
+  final String? hint;
+  final String? Function(String?)? validator;
+  final ValueChanged<String>? onChanged;
+  final bool enabled;
+  final Color? accentColor;
+  final int? maxLength;
+
+  const CreatorDescriptionTextField({
+    super.key,
+    this.controller,
+    required this.label,
+    this.hint,
+    this.validator,
+    this.onChanged,
+    this.enabled = true,
+    this.accentColor,
+    this.maxLength = maxDescriptionLength,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDesktop = MediaQuery.sizeOf(context).width >= 900;
+    return CreatorTextField(
+      controller: controller,
+      label: label,
+      hint: hint,
+      minLines: 4,
+      maxLines: isDesktop ? 14 : 10,
+      maxLength: maxLength,
+      keyboardType: TextInputType.multiline,
+      textInputAction: TextInputAction.newline,
+      scrollPadding: const EdgeInsets.only(
+        left: 20,
+        right: 20,
+        top: 20,
+        bottom: 120,
+      ),
+      validator: validator,
+      onChanged: onChanged,
+      enabled: enabled,
+      accentColor: accentColor,
     );
   }
 }

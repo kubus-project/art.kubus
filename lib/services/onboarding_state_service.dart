@@ -41,6 +41,13 @@ class OnboardingStateService {
       'onboarding_completed_steps_v2';
   static const String _onboardingDeferredStepsKey =
       'onboarding_deferred_steps_v2';
+  static const String onboardingGoogleRegistrationInProgressKey =
+      'onboarding_google_registration_in_progress_v1';
+  static const String onboardingGoogleRegistrationStartedAtKey =
+      'onboarding_google_registration_started_at_v1';
+  static const String onboardingGoogleRegistrationModeKey =
+      'onboarding_google_registration_mode_v1';
+  static const Duration googleRegistrationGuardTimeout = Duration(minutes: 10);
 
   static String _scopedKey(String key, String? flowScopeKey) {
     final scope = (flowScopeKey ?? '').trim();
@@ -302,5 +309,52 @@ class OnboardingStateService {
       return;
     }
     await _clearPendingAuthOnboardingForScope(p, scopeKey: normalizedScope);
+  }
+
+  static bool hasActiveGoogleOnboardingRegistrationGuardSync(
+    SharedPreferences prefs, {
+    DateTime? now,
+  }) {
+    final active =
+        prefs.getBool(onboardingGoogleRegistrationInProgressKey) ?? false;
+    if (!active) return false;
+    final startedAtMs =
+        prefs.getInt(onboardingGoogleRegistrationStartedAtKey) ?? 0;
+    if (startedAtMs <= 0) return false;
+    final startedAt = DateTime.fromMillisecondsSinceEpoch(startedAtMs);
+    final elapsed = (now ?? DateTime.now()).difference(startedAt);
+    return elapsed >= Duration.zero &&
+        elapsed <= googleRegistrationGuardTimeout;
+  }
+
+  static Future<bool> hasActiveGoogleOnboardingRegistrationGuard({
+    SharedPreferences? prefs,
+    DateTime? now,
+  }) async {
+    final p = prefs ?? await SharedPreferences.getInstance();
+    return hasActiveGoogleOnboardingRegistrationGuardSync(p, now: now);
+  }
+
+  static Future<void> markGoogleOnboardingRegistrationStarted({
+    SharedPreferences? prefs,
+    String mode = 'create',
+  }) async {
+    final p = prefs ?? await SharedPreferences.getInstance();
+    await p.setBool(onboardingGoogleRegistrationInProgressKey, true);
+    await p.setInt(
+      onboardingGoogleRegistrationStartedAtKey,
+      DateTime.now().millisecondsSinceEpoch,
+    );
+    await p.setString(onboardingGoogleRegistrationModeKey, mode);
+    await markAuthOnboardingPending(prefs: p);
+  }
+
+  static Future<void> clearGoogleOnboardingRegistrationGuard({
+    SharedPreferences? prefs,
+  }) async {
+    final p = prefs ?? await SharedPreferences.getInstance();
+    await p.remove(onboardingGoogleRegistrationInProgressKey);
+    await p.remove(onboardingGoogleRegistrationStartedAtKey);
+    await p.remove(onboardingGoogleRegistrationModeKey);
   }
 }

@@ -1,4 +1,5 @@
 import '../models/artwork.dart';
+import '../models/event.dart';
 import '../models/institution.dart';
 import '../models/dao.dart';
 import '../models/exhibition.dart';
@@ -41,7 +42,7 @@ List<MarkerSubjectOption> buildSubjectOptions({
   required List<Artwork> artworks,
   required List<Exhibition> exhibitions,
   required List<Institution> institutions,
-  required List<Event> events,
+  required List<KubusEvent> events,
   required List<Delegate> delegates,
 }) {
   switch (type) {
@@ -106,9 +107,18 @@ List<MarkerSubjectOption> buildSubjectOptions({
               type: type,
               id: event.id,
               title: event.title,
-              subtitle:
-                  '${event.location} -> ${formatEventDate(event.startDate)}',
-              metadata: {'institutionId': event.institutionId},
+              subtitle: [
+                if ((event.locationName ?? '').trim().isNotEmpty)
+                  event.locationName!.trim(),
+                if (event.startsAt != null) formatEventDate(event.startsAt!),
+              ].join(' -> '),
+              metadata: {
+                if ((event.status ?? '').trim().isNotEmpty)
+                  'status': event.status,
+                if ((event.city ?? '').trim().isNotEmpty) 'city': event.city,
+                if ((event.country ?? '').trim().isNotEmpty)
+                  'country': event.country,
+              },
             ),
           )
           .toList();

@@ -300,4 +300,28 @@ void main() {
     expect(state.requiresStructuredOnboarding, isTrue);
     expect(state.nextStepId, 'daoReview');
   });
+
+  test('maps legacy walletSecurity progress to walletConnect', () async {
+    final prefs = await SharedPreferences.getInstance();
+
+    final state = await AuthOnboardingService.resolveStructuredOnboardingResume(
+      prefs: prefs,
+      hasPendingAuthOnboarding: true,
+      hasAuthenticatedSession: true,
+      hasHydratedProfile: true,
+      requiresWalletSetup: false,
+      requiresWalletBackup: false,
+      heuristicNextStepId: 'walletSecurity',
+      persona: 'lover',
+      flowScopeKey: testScope,
+    );
+
+    expect(AuthOnboardingService.isAccountStepId('walletSecurity'), isTrue);
+    expect(
+      AuthOnboardingService.normalizeStepId('walletSecurity'),
+      'walletConnect',
+    );
+    expect(state.requiresStructuredOnboarding, isTrue);
+    expect(state.nextStepId, 'walletConnect');
+  });
 }

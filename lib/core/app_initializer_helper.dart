@@ -9,7 +9,7 @@ class StartupDecision {
 
 /// Lightweight decision helper used by tests to reproduce AppInitializer routing
 /// choices for the specific branches we care about in unit tests.
-/// 
+///
 /// This helper does NOT make decisions about:
 /// - Deep links / auth links (handled separately in AppInitializer)
 /// - Valid-session structured onboarding resume (handled separately with resolver)
@@ -21,7 +21,30 @@ StartupDecision decideStartupRoute({
   required String? pendingVerificationEmail,
   required bool shouldSkipOnboarding,
   required bool shouldShowSignIn,
+  bool hasActiveGoogleOnboardingGuard = false,
+  bool hasWallet = false,
+  String? structuredOnboardingStepId,
 }) {
+  if (hasActiveGoogleOnboardingGuard) {
+    if (!hasValidSession) {
+      return const StartupDecision(
+        route: StartupRouteType.onboarding,
+        onboardingInitialStepId: 'account',
+      );
+    }
+    if (!hasWallet) {
+      return const StartupDecision(
+        route: StartupRouteType.onboarding,
+        onboardingInitialStepId: 'walletConnect',
+      );
+    }
+    final step = (structuredOnboardingStepId ?? '').trim();
+    return StartupDecision(
+      route: StartupRouteType.onboarding,
+      onboardingInitialStepId: step.isEmpty ? null : step,
+    );
+  }
+
   // Pending auth onboarding WITH a valid session: defer to AppInitializer's
   // structured resume logic (resolver). Return none so AppInitializer continues.
   if (hasPendingAuthOnboarding && hasValidSession) {
@@ -35,7 +58,8 @@ StartupDecision decideStartupRoute({
         (pendingVerificationEmail?.trim() ?? '').isNotEmpty) {
       initial = 'verifyEmail';
     }
-    return StartupDecision(route: StartupRouteType.onboarding, onboardingInitialStepId: initial);
+    return StartupDecision(
+        route: StartupRouteType.onboarding, onboardingInitialStepId: initial);
   }
 
   // Pending verification flag true but empty email -> use account, not verifyEmail
@@ -43,7 +67,9 @@ StartupDecision decideStartupRoute({
 
   // Returning/skip onboarding behavior
   if (shouldSkipOnboarding) {
-    if (shouldShowSignIn) return const StartupDecision(route: StartupRouteType.signIn);
+    if (shouldShowSignIn) {
+      return const StartupDecision(route: StartupRouteType.signIn);
+    }
     return const StartupDecision(route: StartupRouteType.main);
   }
 

@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/exhibition.dart';
-import '../models/institution.dart';
+import '../models/event.dart';
 import '../providers/artwork_drafts_provider.dart';
 import '../providers/artwork_provider.dart';
 import '../screens/art/artwork_edit_screen.dart';
@@ -130,6 +130,7 @@ class CreatorShellNavigation {
   static Future<void> openExhibitionCreatorWorkspace(
     BuildContext context, {
     Exhibition? initialExhibition,
+    String? eventId,
     VoidCallback? onCreated,
   }) async {
     final shellScope = DesktopShellScope.of(context);
@@ -137,6 +138,7 @@ class CreatorShellNavigation {
         shellScope != null || DesktopBreakpoints.isDesktop(context);
     final screen = ExhibitionCreatorScreen(
       initialExhibition: initialExhibition,
+      eventId: eventId,
       onCreated: onCreated,
       embedded: isDesktop,
     );
@@ -250,7 +252,7 @@ class CreatorShellNavigation {
 
   static Future<void> openEventCreatorWorkspace(
     BuildContext context, {
-    Event? initialEvent,
+    KubusEvent? initialEvent,
   }) async {
     final shellScope = DesktopShellScope.of(context);
     final isDesktop =

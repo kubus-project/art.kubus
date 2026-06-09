@@ -48,6 +48,7 @@ class _BackupEventFallbackWalletProvider extends WalletProvider {
     String mnemonic, {
     DerivedKeyPairResult? preDerived,
     bool markBackedUp = true,
+    bool syncBackend = true,
   }) async {
     importedMnemonic = mnemonic;
     setCurrentWalletAddressForTesting(backupDefinition.walletAddress);

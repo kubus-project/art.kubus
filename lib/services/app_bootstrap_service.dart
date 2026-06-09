@@ -13,6 +13,7 @@ import '../providers/chat_provider.dart';
 import '../providers/collectibles_provider.dart';
 import '../providers/community_hub_provider.dart';
 import '../providers/collab_provider.dart';
+import '../providers/events_provider.dart';
 import '../providers/exhibitions_provider.dart';
 import '../providers/institution_provider.dart';
 import '../providers/navigation_provider.dart';
@@ -59,6 +60,7 @@ class AppBootstrapService {
     final cacheProvider = context.read<CacheProvider>();
     final savedItemsProvider = context.read<SavedItemsProvider>();
     final collectiblesProvider = context.read<CollectiblesProvider>();
+    final eventsProvider = context.read<EventsProvider>();
     final exhibitionsProvider = context.read<ExhibitionsProvider>();
     final institutionProvider = context.read<InstitutionProvider>();
     final taskProvider = context.read<TaskProvider>();
@@ -116,6 +118,7 @@ class AppBootstrapService {
           'institutions',
           () => institutionProvider.initialize(
               seedMockIfEmpty: AppConfig.isDevelopment)),
+      _runTask('events', () => eventsProvider.initialize(refresh: true)),
     ];
 
     if (AppConfig.isFeatureEnabled('collabInvites') && hasAuth) {

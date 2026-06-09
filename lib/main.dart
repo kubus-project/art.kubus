@@ -74,6 +74,7 @@ import 'screens/auth/secure_account_screen.dart';
 import 'screens/auth/forgot_password_screen.dart';
 import 'screens/auth/reset_password_screen.dart';
 import 'screens/auth/verify_email_screen.dart';
+import 'screens/auth/email_verification_success_screen.dart';
 import 'screens/art/ar_screen.dart';
 import 'screens/art/art_detail_screen.dart';
 import 'screens/desktop/art/desktop_artwork_detail_screen.dart';
@@ -926,6 +927,16 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
             token: token?.trim().isNotEmpty == true ? token!.trim() : null,
           );
         },
+        '/verify-email/success': (context) {
+          final args = ModalRoute.of(context)?.settings.arguments;
+          String? email;
+          if (args is Map) {
+            email = args['email']?.toString();
+          }
+          return EmailVerificationSuccessScreen(
+            email: email?.trim().isNotEmpty == true ? email!.trim() : null,
+          );
+        },
         '/forgot-password': (context) {
           final args = ModalRoute.of(context)?.settings.arguments;
           String? email;
@@ -994,6 +1005,21 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
           ),
         );
       }
+    }
+
+    if (uri.path == '/verify-email/success') {
+      final email = (uri.queryParameters['email'] ?? '').trim();
+      return MaterialPageRoute(
+        builder: (_) => EmailVerificationSuccessScreen(
+          email: email.isEmpty ? null : email,
+        ),
+        settings: RouteSettings(
+          name: '/verify-email/success',
+          arguments: {
+            if (email.isNotEmpty) 'email': email,
+          },
+        ),
+      );
     }
 
     if (uri.path == '/reset-password') {

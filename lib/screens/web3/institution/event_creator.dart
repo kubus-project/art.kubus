@@ -1,23 +1,25 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../../config/config.dart';
-import '../../../models/institution.dart';
+import '../../../models/event.dart';
+import '../../../providers/events_provider.dart';
 import '../../../providers/institution_provider.dart';
-import '../../../providers/profile_provider.dart';
-import '../../../providers/web3provider.dart';
+import '../../../services/backend_api_service.dart';
+import '../../../utils/creator_shell_navigation.dart';
 import '../../events/event_detail_screen.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/kubus_color_roles.dart';
-import '../../../utils/wallet_utils.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import '../../desktop/desktop_shell.dart';
 import '../../../widgets/creator/creator_kit.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 
 class EventCreator extends StatefulWidget {
-  final Event? initialEvent;
+  final KubusEvent? initialEvent;
 
   /// When `true` the screen wraps in a frosted glass body because the
   /// surrounding shell (e.g. [DesktopSubScreen]) already provides a header
@@ -55,7 +57,7 @@ class _EventCreatorState extends State<EventCreator>
   bool _allowRegistration = true;
   int _currentStep = 0;
   bool _submitting = false;
-  Event? _createdEvent;
+  KubusEvent? _createdEvent;
 
   bool get _isEditing => widget.initialEvent != null;
 
@@ -87,22 +89,20 @@ class _EventCreatorState extends State<EventCreator>
 
     final initial = widget.initialEvent;
     if (initial != null) {
-      _institutionId = initial.institutionId;
       _titleController.text = initial.title;
-      _descriptionController.text = initial.description;
-      _locationController.text = initial.location;
-      _priceController.text = initial.price?.toString() ?? '';
-      _capacityController.text = initial.capacity?.toString() ?? '';
-      _startDate = DateTime(initial.startDate.year, initial.startDate.month,
-          initial.startDate.day);
-      _endDate = DateTime(
-          initial.endDate.year, initial.endDate.month, initial.endDate.day);
-      _startTime = TimeOfDay.fromDateTime(initial.startDate);
-      _endTime = TimeOfDay.fromDateTime(initial.endDate);
-      _eventType = _eventTypeCode(initial.type);
-      _category = _categoryCode(initial.category);
-      _isPublic = initial.isPublic;
-      _allowRegistration = initial.allowRegistration;
+      _descriptionController.text = initial.description ?? '';
+      _locationController.text = initial.locationName ?? '';
+      if (initial.startsAt != null) {
+        _startDate = DateTime(initial.startsAt!.year, initial.startsAt!.month,
+            initial.startsAt!.day);
+        _startTime = TimeOfDay.fromDateTime(initial.startsAt!);
+      }
+      if (initial.endsAt != null) {
+        _endDate = DateTime(
+            initial.endsAt!.year, initial.endsAt!.month, initial.endsAt!.day);
+        _endTime = TimeOfDay.fromDateTime(initial.endsAt!);
+      }
+      _isPublic = initial.isPublished;
     }
   }
 
@@ -352,6 +352,19 @@ class _EventCreatorState extends State<EventCreator>
                   icon: const Icon(Icons.open_in_new_outlined),
                   label: Text(l10n.eventCreatorQuickActionOpenEvent),
                 ),
+                const SizedBox(height: KubusSpacing.sm),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    unawaited(
+                      CreatorShellNavigation.openExhibitionCreatorWorkspace(
+                        context,
+                        eventId: createdId,
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.museum_outlined),
+                  label: const Text('Create exhibition for this event'),
+                ),
               ],
             ],
           ),
@@ -471,14 +484,17 @@ class _EventCreatorState extends State<EventCreator>
               },
             ),
             const SizedBox(height: KubusSpacing.md),
-            _buildTextField(
+            CreatorDescriptionTextField(
               controller: _descriptionController,
               label: l10n.commonDescription,
               hint: l10n.eventCreatorDescriptionHint,
-              maxLines: 4,
               validator: (value) {
                 if (value?.isEmpty ?? true) {
                   return l10n.eventCreatorDescriptionRequiredError;
+                }
+                if ((value ?? '').length >
+                    CreatorDescriptionTextField.maxDescriptionLength) {
+                  return l10n.eventCreatorSaveFailedToast;
                 }
                 return null;
               },
@@ -1130,11 +1146,12 @@ class _EventCreatorState extends State<EventCreator>
 
     final l10n = AppLocalizations.of(context)!;
 
-    final provider = context.read<InstitutionProvider>();
-    final institutions = provider.institutions;
+    final institutionProvider = context.read<InstitutionProvider>();
+    final eventsProvider = context.read<EventsProvider>();
+    final institutions = institutionProvider.institutions;
     final institutionId = (_institutionId != null && _institutionId!.isNotEmpty)
         ? _institutionId!
-        : provider.selectedInstitution?.id ??
+        : institutionProvider.selectedInstitution?.id ??
             (institutions.isNotEmpty ? institutions.first.id : null);
 
     if (institutionId == null || institutionId.isEmpty) {
@@ -1144,7 +1161,7 @@ class _EventCreatorState extends State<EventCreator>
       return;
     }
 
-    final institution = provider.getInstitutionById(institutionId);
+    final institution = institutionProvider.getInstitutionById(institutionId);
     if (institution == null) {
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
@@ -1179,57 +1196,38 @@ class _EventCreatorState extends State<EventCreator>
     if (_submitting) return;
     setState(() => _submitting = true);
 
-    final priceText = _priceController.text.trim();
-    final capacityText = _capacityController.text.trim();
-    final price = priceText.isEmpty ? null : double.tryParse(priceText);
-    final capacity = capacityText.isEmpty ? null : int.tryParse(capacityText);
-
-    final profileProvider = context.read<ProfileProvider>();
-    final web3Provider = context.read<Web3Provider>();
-    final createdBy = WalletUtils.coalesce(
-      walletAddress: profileProvider.currentUser?.walletAddress,
-      wallet: web3Provider.walletAddress,
-    );
-
     final initial = widget.initialEvent;
-    final event = Event(
-      id: initial?.id ?? 'evt_${DateTime.now().millisecondsSinceEpoch}',
-      title: _titleController.text.trim(),
-      description: _descriptionController.text.trim(),
-      type: _parseEventType(_eventType),
-      category: _parseEventCategory(_category),
-      institutionId: institutionId,
-      institution: institution,
-      startDate: startAt,
-      endDate: endAt,
-      location: _locationController.text.trim(),
-      latitude: institution.latitude,
-      longitude: institution.longitude,
-      price: price,
-      capacity: capacity,
-      currentAttendees: initial?.currentAttendees ?? 0,
-      isPublic: _isPublic,
-      allowRegistration: _allowRegistration,
-      imageUrls: initial?.imageUrls ?? const [],
-      featuredArtworkIds: initial?.featuredArtworkIds ?? const [],
-      artistIds: initial?.artistIds ?? const [],
-      createdAt: initial?.createdAt ?? DateTime.now(),
-      createdBy: (initial?.createdBy.isNotEmpty == true)
-          ? initial!.createdBy
-          : (createdBy.isNotEmpty ? createdBy : 'local_user'),
-    );
+    final payload = <String, dynamic>{
+      'title': _titleController.text.trim(),
+      'description': _descriptionController.text.trim(),
+      'startsAt': startAt.toIso8601String(),
+      'endsAt': endAt.toIso8601String(),
+      'locationName': _locationController.text.trim(),
+      'status': _isPublic ? 'published' : 'draft',
+      'lat': institution.latitude,
+      'lng': institution.longitude,
+    };
 
     try {
+      final KubusEvent? saved;
       if (_isEditing) {
-        await provider.updateEvent(event);
+        saved = await eventsProvider.updateEvent(initial!.id, payload);
       } else {
-        await provider.createEvent(event);
+        saved = await eventsProvider.createEvent(payload);
+      }
+
+      if (saved == null) {
+        throw const BackendApiRequestException(
+          statusCode: 500,
+          path: '/api/events',
+          body: 'Event save returned no event.',
+        );
       }
 
       if (!mounted) return;
       final shellScope = DesktopShellScope.of(context);
       setState(() {
-        _createdEvent = event;
+        _createdEvent = saved;
       });
       final l10n = AppLocalizations.of(context)!;
       showKubusDialog(
@@ -1255,6 +1253,19 @@ class _EventCreatorState extends State<EventCreator>
                     .withValues(alpha: 0.75)),
           ),
           actions: [
+            if (!_isEditing)
+              OutlinedButton(
+                onPressed: () {
+                  Navigator.pop(dialogContext);
+                  unawaited(
+                    CreatorShellNavigation.openExhibitionCreatorWorkspace(
+                      context,
+                      eventId: saved?.id,
+                    ),
+                  );
+                },
+                child: const Text('Create exhibition for this event'),
+              ),
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(dialogContext);
@@ -1280,10 +1291,11 @@ class _EventCreatorState extends State<EventCreator>
         debugPrint('EventCreator: Failed to save event: $e');
       }
       if (!mounted) return;
+      final message = e is BackendApiRequestException
+          ? e.userMessage
+          : AppLocalizations.of(context)!.eventCreatorSaveFailedToast;
       ScaffoldMessenger.of(context).showKubusSnackBar(
-        SnackBar(
-            content: Text(
-                AppLocalizations.of(context)!.eventCreatorSaveFailedToast)),
+        SnackBar(content: Text(message)),
       );
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -1361,79 +1373,9 @@ class _EventCreatorState extends State<EventCreator>
     return '${_startTime!.format(context)} - ${_endTime!.format(context)}';
   }
 
-  EventType _parseEventType(String code) {
-    switch (code.toLowerCase()) {
-      case 'workshop':
-        return EventType.workshop;
-      case 'conference':
-      case 'talk':
-        return EventType.conference;
-      case 'performance':
-        return EventType.performance;
-      case 'gallery_opening':
-        return EventType.galleryOpening;
-      case 'auction':
-        return EventType.auction;
-      case 'exhibition':
-      default:
-        return EventType.exhibition;
-    }
-  }
 
-  EventCategory _parseEventCategory(String code) {
-    switch (code.toLowerCase()) {
-      case 'art':
-        return EventCategory.art;
-      case 'digital_art':
-      case 'digital':
-        return EventCategory.digital;
-      case 'photography':
-        return EventCategory.photography;
-      case 'sculpture':
-        return EventCategory.sculpture;
-      case 'mixed_media':
-      case 'mixedmedia':
-        return EventCategory.mixedMedia;
-      case 'installation':
-        return EventCategory.installation;
-      default:
-        return EventCategory.art;
-    }
-  }
 
-  String _eventTypeCode(EventType type) {
-    switch (type) {
-      case EventType.exhibition:
-        return 'exhibition';
-      case EventType.workshop:
-        return 'workshop';
-      case EventType.conference:
-        return 'conference';
-      case EventType.performance:
-        return 'performance';
-      case EventType.galleryOpening:
-        return 'gallery_opening';
-      case EventType.auction:
-        return 'auction';
-    }
-  }
 
-  String _categoryCode(EventCategory category) {
-    switch (category) {
-      case EventCategory.art:
-        return 'art';
-      case EventCategory.photography:
-        return 'photography';
-      case EventCategory.sculpture:
-        return 'sculpture';
-      case EventCategory.digital:
-        return 'digital_art';
-      case EventCategory.mixedMedia:
-        return 'mixed_media';
-      case EventCategory.installation:
-        return 'installation';
-    }
-  }
 
   List<String> _eventTypeOptions() => const <String>[
         'exhibition',

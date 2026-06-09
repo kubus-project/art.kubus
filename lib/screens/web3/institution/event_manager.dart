@@ -5,15 +5,13 @@ import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../../services/share/share_service.dart';
 import '../../../services/share/share_types.dart';
-import '../../../models/institution.dart';
-import '../../../providers/institution_provider.dart';
-import '../../../providers/profile_provider.dart';
-import '../../../providers/web3provider.dart';
+import '../../../models/event.dart';
+import '../../../providers/events_provider.dart';
+import '../../../services/backend_api_service.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/creator_shell_navigation.dart';
 import '../../../utils/kubus_color_roles.dart';
-import '../../../utils/wallet_utils.dart';
-import '../../../widgets/inline_loading.dart';
+import '../../events/event_detail_screen.dart';
 import '../../../widgets/empty_state_card.dart';
 import '../../../widgets/creator/creator_kit.dart';
 import '../../../widgets/common/subject_options_sheet.dart';
@@ -69,8 +67,8 @@ class _EventManagerState extends State<EventManager>
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final institutionProvider = context.watch<InstitutionProvider>();
-    final filteredEvents = _getFilteredEvents(institutionProvider.events);
+    final eventsProvider = context.watch<EventsProvider>();
+    final filteredEvents = _getFilteredEvents(eventsProvider.events);
 
     Widget body = FadeTransition(
       opacity: _fadeAnimation,
@@ -80,7 +78,7 @@ class _EventManagerState extends State<EventManager>
           children: [
             _buildHeader(l10n),
             _buildFilterBar(l10n),
-            _buildStatsRow(institutionProvider.events, l10n),
+            _buildStatsRow(eventsProvider.events, l10n),
             Expanded(child: _buildEventsList(filteredEvents, l10n)),
           ],
         ),
@@ -168,11 +166,9 @@ class _EventManagerState extends State<EventManager>
     );
   }
 
-  Widget _buildStatsRow(List<Event> events, AppLocalizations l10n) {
+  Widget _buildStatsRow(List<KubusEvent> events, AppLocalizations l10n) {
     final totalEvents = events.length;
-    final activeEvents = events.where((e) => e.isActive).length;
-    final totalRegistrations =
-        events.fold<int>(0, (sum, event) => sum + event.currentAttendees);
+    final activeEvents = events.where(_eventIsActive).length;
 
     return Padding(
       padding: const EdgeInsets.all(KubusSpacing.md),
@@ -186,7 +182,7 @@ class _EventManagerState extends State<EventManager>
                   l10n.eventManagerStatActiveNow, activeEvents.toString())),
           Expanded(
               child: _buildStatItem(l10n.eventManagerStatRegistrations,
-                  totalRegistrations.toString())),
+                  '0')),
         ],
       ),
     );
@@ -221,7 +217,7 @@ class _EventManagerState extends State<EventManager>
     );
   }
 
-  Widget _buildEventsList(List<Event> events, AppLocalizations l10n) {
+  Widget _buildEventsList(List<KubusEvent> events, AppLocalizations l10n) {
     if (events.isEmpty) {
       return Center(
         child: EmptyStateCard(
@@ -241,15 +237,10 @@ class _EventManagerState extends State<EventManager>
     );
   }
 
-  Widget _buildEventCard(Event event, AppLocalizations l10n) {
+  Widget _buildEventCard(KubusEvent event, AppLocalizations l10n) {
     final scheme = Theme.of(context).colorScheme;
     final status = _statusForEvent(event);
     final statusColor = _statusColor(status, scheme);
-
-    final capacity = event.capacity ?? 0;
-    final hasCapacity = capacity > 0;
-    final occupancyPercentage =
-        hasCapacity ? (event.currentAttendees / capacity) : 0.0;
 
     return LiquidGlassCard(
       margin: const EdgeInsets.only(bottom: KubusSpacing.sm),
@@ -279,7 +270,7 @@ class _EventManagerState extends State<EventManager>
           ),
           const SizedBox(height: KubusSpacing.xs),
           Text(
-            event.description,
+            event.description ?? '',
             style: KubusTextStyles.detailCaption.copyWith(
               color: scheme.onSurface.withValues(alpha: 0.7),
             ),
@@ -294,7 +285,7 @@ class _EventManagerState extends State<EventManager>
               const SizedBox(width: KubusSpacing.xs),
               Flexible(
                 child: Text(
-                  event.location,
+                  event.locationName ?? '',
                   style: KubusTextStyles.detailCaption.copyWith(
                     color: scheme.onSurface.withValues(alpha: 0.6),
                   ),
@@ -307,61 +298,11 @@ class _EventManagerState extends State<EventManager>
               const SizedBox(width: KubusSpacing.xs),
               Flexible(
                 child: Text(
-                  _formatDate(event.startDate),
+                  _formatDate(event.startsAt),
                   style: KubusTextStyles.detailCaption.copyWith(
                     color: scheme.onSurface.withValues(alpha: 0.6),
                   ),
                   overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: KubusSpacing.sm),
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      hasCapacity
-                          ? l10n.eventManagerOccupancyLabel(
-                              event.currentAttendees,
-                              capacity,
-                            )
-                          : l10n.eventManagerAttendeesLabel(
-                              event.currentAttendees,
-                            ),
-                      style: KubusTextStyles.detailCaption.copyWith(
-                        color: scheme.onSurface.withValues(alpha: 0.7),
-                      ),
-                    ),
-                    const SizedBox(height: KubusSpacing.xs),
-                    if (hasCapacity)
-                      SizedBox(
-                        height: 6,
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(KubusRadius.xs),
-                          child: InlineLoading(
-                            progress: occupancyPercentage,
-                            tileSize: 6.0,
-                            color: occupancyPercentage > 0.8
-                                ? scheme.error
-                                : KubusColorRoles.of(context)
-                                    .web3InstitutionAccent,
-                            duration: const Duration(milliseconds: 700),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: KubusSpacing.sm),
-              Text(
-                _formatPrice(event.price, l10n),
-                style: KubusTextStyles.detailLabel.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: KubusColorRoles.of(context).web3InstitutionAccent,
                 ),
               ),
             ],
@@ -385,9 +326,9 @@ class _EventManagerState extends State<EventManager>
     );
   }
 
-  _EventStatus _statusForEvent(Event event) {
-    if (event.isActive) return _EventStatus.active;
-    if (event.isUpcoming) return _EventStatus.upcoming;
+  _EventStatus _statusForEvent(KubusEvent event) {
+    if (_eventIsActive(event)) return _EventStatus.active;
+    if (_eventIsUpcoming(event)) return _EventStatus.upcoming;
     return _EventStatus.completed;
   }
 
@@ -427,37 +368,35 @@ class _EventManagerState extends State<EventManager>
     }
   }
 
-  String _formatDate(DateTime date) {
+  String _formatDate(DateTime? date) {
+    if (date == null) return '';
     return MaterialLocalizations.of(context).formatShortDate(date);
   }
 
-  String _formatPrice(double? price, AppLocalizations l10n) {
-    if (price == null || price == 0) return l10n.commonFree;
-    return '\$${price.toStringAsFixed(2)}';
-  }
-
-  List<Event> _getFilteredEvents(List<Event> events) {
+  List<KubusEvent> _getFilteredEvents(List<KubusEvent> events) {
     final query = _searchQuery.trim().toLowerCase();
     final filtered = events.where((e) {
       if (query.isEmpty) return true;
       return e.title.toLowerCase().contains(query) ||
-          e.description.toLowerCase().contains(query) ||
-          e.location.toLowerCase().contains(query);
+          (e.description ?? '').toLowerCase().contains(query) ||
+          (e.locationName ?? '').toLowerCase().contains(query);
     }).toList();
 
     switch (_selectedFilter) {
       case 'upcoming':
-        return filtered.where((e) => e.isUpcoming).toList();
+        return filtered.where(_eventIsUpcoming).toList();
       case 'active':
-        return filtered.where((e) => e.isActive).toList();
+        return filtered.where(_eventIsActive).toList();
       case 'completed':
-        return filtered.where((e) => !e.isUpcoming && !e.isActive).toList();
+        return filtered
+            .where((e) => !_eventIsUpcoming(e) && !_eventIsActive(e))
+            .toList();
       default:
         return filtered;
     }
   }
 
-  Future<void> _showEventOptions(Event event) async {
+  Future<void> _showEventOptions(KubusEvent event) async {
     final l10n = AppLocalizations.of(context)!;
     final canManage = _canManageEvent(event);
     await showSubjectOptionsSheet(
@@ -486,6 +425,13 @@ class _EventManagerState extends State<EventManager>
         ),
         if (canManage)
           SubjectOptionsAction(
+            id: 'linked_exhibition',
+            icon: Icons.museum_outlined,
+            label: 'Create linked exhibition',
+            onSelected: () => _createLinkedExhibition(event),
+          ),
+        if (canManage)
+          SubjectOptionsAction(
             id: 'delete',
             icon: Icons.delete_outline,
             label: l10n.commonDelete,
@@ -496,42 +442,25 @@ class _EventManagerState extends State<EventManager>
     );
   }
 
-  bool _canManageEvent(Event event) {
-    final createdBy = event.createdBy.trim().toLowerCase();
-    if (createdBy.isEmpty || createdBy == 'local_user') return true;
-
-    final profileProvider = context.read<ProfileProvider>();
-    final web3Provider = context.read<Web3Provider>();
-    final wallet = WalletUtils.coalesce(
-      walletAddress: profileProvider.currentUser?.walletAddress,
-      wallet: web3Provider.walletAddress,
-    );
-    final normalizedWallet = WalletUtils.canonical(wallet);
-    return normalizedWallet.isNotEmpty &&
-        WalletUtils.equals(normalizedWallet, event.createdBy);
+  bool _canManageEvent(KubusEvent event) {
+    final role = (event.myRole ?? '').trim().toLowerCase();
+    return role.isEmpty ||
+        role == 'owner' ||
+        role == 'admin' ||
+        role == 'publisher' ||
+        role == 'editor';
   }
 
   void _showNotifications() {
     final l10n = AppLocalizations.of(context)!;
-    final provider = context.read<InstitutionProvider>();
+    final provider = context.read<EventsProvider>();
     final now = DateTime.now();
     final alerts = <Map<String, String>>[];
 
     for (final event in provider.events) {
-      final capacity = event.capacity;
-      if (capacity != null && capacity > 0) {
-        final pct = event.currentAttendees / capacity;
-        if (pct >= 0.9) {
-          alerts.add({
-            'message': l10n.eventManagerCapacityAlert(
-              event.title,
-              (pct * 100).toStringAsFixed(0),
-            ),
-            'time': l10n.commonNow,
-          });
-        }
-      }
-      final diff = event.startDate.difference(now);
+      final startsAt = event.startsAt;
+      if (startsAt == null) continue;
+      final diff = startsAt.difference(now);
       if (diff.inHours >= 0 && diff.inHours <= 48) {
         alerts.add({
           'message':
@@ -671,7 +600,7 @@ class _EventManagerState extends State<EventManager>
     );
   }
 
-  void _editEvent(Event event) {
+  void _editEvent(KubusEvent event) {
     unawaited(
       CreatorShellNavigation.openEventCreatorWorkspace(
         context,
@@ -680,55 +609,13 @@ class _EventManagerState extends State<EventManager>
     );
   }
 
-  void _viewEvent(Event event) {
-    final l10n = AppLocalizations.of(context)!;
-    showKubusDialog(
-      context: context,
-      builder: (context) {
-        final scheme = Theme.of(context).colorScheme;
-        return KubusAlertDialog(
-          backgroundColor: scheme.surfaceContainerHighest,
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(KubusRadius.lg)),
-          title: Text(event.title,
-              style: KubusTextStyles.detailSectionTitle.copyWith(
-                color: scheme.onSurface,
-              )),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(event.description,
-                  style: KubusTextStyles.detailBody.copyWith(
-                    color: scheme.onSurface.withValues(alpha: 0.8),
-                  )),
-              const SizedBox(height: KubusSpacing.sm),
-              Text('${l10n.eventCreatorLocationLabel}: ${event.location}',
-                  style: KubusTextStyles.detailBody.copyWith(
-                    color: scheme.onSurface.withValues(alpha: 0.8),
-                  )),
-              Text(
-                  '${l10n.eventCreatorDateTimeTitle}: ${_formatDate(event.startDate)} - ${_formatDate(event.endDate)}',
-                  style: KubusTextStyles.detailBody.copyWith(
-                    color: scheme.onSurface.withValues(alpha: 0.8),
-                  )),
-              Text('${l10n.commonPrice}: ${_formatPrice(event.price, l10n)}',
-                  style: KubusTextStyles.detailBody.copyWith(
-                    color: scheme.onSurface.withValues(alpha: 0.8),
-                  )),
-            ],
-          ),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text(AppLocalizations.of(context)!.commonClose)),
-          ],
-        );
-      },
+  void _viewEvent(KubusEvent event) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => EventDetailScreen(eventId: event.id)),
     );
   }
 
-  void _shareEvent(Event event) {
+  void _shareEvent(KubusEvent event) {
     ShareService().showShareSheet(
       context,
       target: ShareTarget.event(eventId: event.id, title: event.title),
@@ -736,7 +623,16 @@ class _EventManagerState extends State<EventManager>
     );
   }
 
-  Future<void> _deleteEvent(Event event) async {
+  void _createLinkedExhibition(KubusEvent event) {
+    unawaited(
+      CreatorShellNavigation.openExhibitionCreatorWorkspace(
+        context,
+        eventId: event.id,
+      ),
+    );
+  }
+
+  Future<void> _deleteEvent(KubusEvent event) async {
     if (_deleteDialogOpenEventIds.contains(event.id) ||
         _deleteInFlightEventIds.contains(event.id)) {
       return;
@@ -781,7 +677,7 @@ class _EventManagerState extends State<EventManager>
     await _performEventDelete(event);
   }
 
-  Future<void> _performEventDelete(Event event) async {
+  Future<void> _performEventDelete(KubusEvent event) async {
     if (_deleteInFlightEventIds.contains(event.id)) {
       return;
     }
@@ -790,7 +686,7 @@ class _EventManagerState extends State<EventManager>
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
     try {
-      final provider = context.read<InstitutionProvider>();
+      final provider = context.read<EventsProvider>();
       await provider.deleteEvent(event.id);
       if (!mounted) return;
       messenger.showKubusSnackBar(
@@ -798,9 +694,12 @@ class _EventManagerState extends State<EventManager>
       );
     } catch (e) {
       if (!mounted) return;
+      final message = e is BackendApiRequestException
+          ? e.userMessage
+          : l10n.commonActionFailedToast;
       messenger.showKubusSnackBar(
         SnackBar(
-          content: Text(l10n.commonActionFailedToast),
+          content: Text(message),
           backgroundColor: Theme.of(context).colorScheme.errorContainer,
         ),
       );
@@ -811,3 +710,17 @@ class _EventManagerState extends State<EventManager>
 }
 
 enum _EventStatus { upcoming, active, completed }
+
+bool _eventIsUpcoming(KubusEvent event) {
+  final startsAt = event.startsAt;
+  if (startsAt == null) return false;
+  return DateTime.now().isBefore(startsAt);
+}
+
+bool _eventIsActive(KubusEvent event) {
+  final startsAt = event.startsAt;
+  final endsAt = event.endsAt;
+  if (startsAt == null || endsAt == null) return event.isPublished;
+  final now = DateTime.now();
+  return now.isAfter(startsAt) && now.isBefore(endsAt);
+}

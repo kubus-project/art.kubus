@@ -96,8 +96,7 @@ void main() {
     expect(migratedProgress.completedSteps, equals(unsccopedCompletedSteps));
   });
 
-  test(
-      'REGRESSION: migrates unscoped progress when scoped exists but is empty',
+  test('REGRESSION: migrates unscoped progress when scoped exists but is empty',
       () async {
     final prefs = await SharedPreferences.getInstance();
     final unsccopedCompletedSteps = <String>{'account', 'role'};
@@ -140,8 +139,7 @@ void main() {
     expect(migrated.completedSteps, equals(unsccopedCompletedSteps));
   });
 
-  test(
-      'REGRESSION: prefers scoped progress over unscoped when both exist',
+  test('REGRESSION: prefers scoped progress over unscoped when both exist',
       () async {
     final prefs = await SharedPreferences.getInstance();
     final unsccopedCompletedSteps = <String>{'account'};
@@ -175,8 +173,7 @@ void main() {
     expect(progress.completedSteps, equals(scopedCompletedSteps));
   });
 
-  test(
-      'REGRESSION: does not migrate empty unscoped progress to scoped keys',
+  test('REGRESSION: does not migrate empty unscoped progress to scoped keys',
       () async {
     final prefs = await SharedPreferences.getInstance();
 
@@ -205,8 +202,7 @@ void main() {
     expect(prefs.containsKey(scopedVersionKey), isFalse);
   });
 
-  test(
-      'REGRESSION: unscoped progress migration respects version mismatch',
+  test('REGRESSION: unscoped progress migration respects version mismatch',
       () async {
     final prefs = await SharedPreferences.getInstance();
     final unsccopedCompletedSteps = <String>{'account'};
@@ -230,5 +226,48 @@ void main() {
     // Should be empty because unscoped version doesn't match
     expect(progress.completedSteps, isEmpty);
     expect(progress.deferredSteps, isEmpty);
+  });
+
+  test('Google onboarding registration guard is active before timeout',
+      () async {
+    final prefs = await SharedPreferences.getInstance();
+    final now = DateTime(2026, 1, 1, 12);
+    await prefs.setBool(
+      OnboardingStateService.onboardingGoogleRegistrationInProgressKey,
+      true,
+    );
+    await prefs.setInt(
+      OnboardingStateService.onboardingGoogleRegistrationStartedAtKey,
+      now.subtract(const Duration(minutes: 9)).millisecondsSinceEpoch,
+    );
+
+    expect(
+      OnboardingStateService.hasActiveGoogleOnboardingRegistrationGuardSync(
+        prefs,
+        now: now,
+      ),
+      isTrue,
+    );
+  });
+
+  test('Google onboarding registration guard expires after timeout', () async {
+    final prefs = await SharedPreferences.getInstance();
+    final now = DateTime(2026, 1, 1, 12);
+    await prefs.setBool(
+      OnboardingStateService.onboardingGoogleRegistrationInProgressKey,
+      true,
+    );
+    await prefs.setInt(
+      OnboardingStateService.onboardingGoogleRegistrationStartedAtKey,
+      now.subtract(const Duration(minutes: 11)).millisecondsSinceEpoch,
+    );
+
+    expect(
+      OnboardingStateService.hasActiveGoogleOnboardingRegistrationGuardSync(
+        prefs,
+        now: now,
+      ),
+      isFalse,
+    );
   });
 }
