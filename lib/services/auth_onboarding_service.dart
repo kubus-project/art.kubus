@@ -21,6 +21,7 @@ class AuthOnboardingService {
     'verifyEmail',
     'role',
     'profile',
+    'walletSecurity',
     'walletBackupIntro',
     'walletBackup',
     'daoReview',
@@ -33,6 +34,7 @@ class AuthOnboardingService {
     'verifyEmail',
     'role',
     'profile',
+    'walletSecurity',
     'walletBackupIntro',
     'walletBackup',
     'daoReview',
@@ -140,6 +142,7 @@ class AuthOnboardingService {
       final nextStepId = _nextIncompleteStepId(
         hasAuthenticatedSession: hasAuthenticatedSession,
         requiresVerifyEmail: requiresVerifyEmail,
+        requiresWalletSetup: requiresWalletSetup,
         requiresWalletBackup: requiresWalletBackupStep,
         requiresDaoReview: requiresDaoReview,
         completedSteps: completedSteps,
@@ -160,7 +163,7 @@ class AuthOnboardingService {
     if (requiresWalletSetup) {
       return const StructuredOnboardingResumeState(
         requiresStructuredOnboarding: true,
-        nextStepId: 'account',
+        nextStepId: 'walletSecurity',
       );
     }
 
@@ -194,6 +197,7 @@ class AuthOnboardingService {
   static String? _nextIncompleteStepId({
     required bool hasAuthenticatedSession,
     required bool requiresVerifyEmail,
+    required bool requiresWalletSetup,
     required bool requiresWalletBackup,
     required bool requiresDaoReview,
     required Set<String> completedSteps,
@@ -203,6 +207,7 @@ class AuthOnboardingService {
       if (requiresVerifyEmail) 'verifyEmail',
       'role',
       'profile',
+      if (requiresWalletSetup) 'walletSecurity',
       if (requiresWalletBackup) 'walletBackupIntro',
       if (requiresWalletBackup) 'walletBackup',
       if (requiresDaoReview) 'daoReview',

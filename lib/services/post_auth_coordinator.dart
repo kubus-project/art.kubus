@@ -85,19 +85,17 @@ class PostAuthCoordinator {
       );
       final normalizedUserId = (userId ?? user['id'] ?? '').toString().trim();
       final expectedWalletFromPayload = _expectedWalletFromPayload(data, user);
-      final isGoogleAuth = origin == AuthOrigin.google ||
-          origin == AuthOrigin.googleOnboarding;
-      final isAccountAuth =
-          isGoogleAuth || origin == AuthOrigin.emailPassword;
+      final isGoogleAuth =
+          origin == AuthOrigin.google || origin == AuthOrigin.googleOnboarding;
+      final isAccountAuth = isGoogleAuth || origin == AuthOrigin.emailPassword;
       final isGoogleOnboarding = origin == AuthOrigin.googleOnboarding;
       final payloadRequiresWalletSetup = _payloadRequiresWalletSetup(
         payload: payload,
         data: data,
       );
-      final accountAuthWithoutWallet =
-          isAccountAuth &&
-              expectedWalletFromPayload.isEmpty &&
-              (walletAddress ?? '').trim().isEmpty;
+      final accountAuthWithoutWallet = isAccountAuth &&
+          expectedWalletFromPayload.isEmpty &&
+          (walletAddress ?? '').trim().isEmpty;
 
       setStage(PostAuthStage.preparingSession);
       if (normalizedUserId.isNotEmpty) {
@@ -106,7 +104,7 @@ class PostAuthCoordinator {
       }
 
       setStage(PostAuthStage.securingWallet);
-      if (!modalReauth) {
+      if (!modalReauth && !isGoogleOnboarding) {
         // Ensure wallet is provisioned from the auth payload before session sync
         String? provisionedWallet = normalizedWallet;
         final expectedWallet = expectedWalletFromPayload;
@@ -257,9 +255,10 @@ class PostAuthCoordinator {
         }
 
         if (!modalReauth &&
+            !isGoogleOnboarding &&
             walletForProfile.isEmpty &&
             context.mounted &&
-            (isGoogleOnboarding || !payloadRequiresWalletSetup)) {
+            !payloadRequiresWalletSetup) {
           try {
             final provisionedWallet = await _ensureWalletProvisioned(
               context: context,
@@ -267,22 +266,18 @@ class PostAuthCoordinator {
             final resolvedWallet =
                 (provisionedWallet ?? walletProvider.currentWalletAddress ?? '')
                     .trim();
-            if (resolvedWallet.isEmpty && isGoogleOnboarding) {
-              return const PostAuthResult(
-                completed: false,
-                error: 'wallet-setup-required',
-              );
-            }
             if (resolvedWallet.isNotEmpty && context.mounted) {
-              await const WalletSessionSyncService().bindAuthenticatedWallet(
-                context: context,
-                walletAddress: resolvedWallet,
-                userId: normalizedUserId,
-                warmUp: !isGoogleOnboarding,
-                loadProfile: false,
-                syncBackend: true,
-                requireBackendSync: isGoogleOnboarding,
-              ).timeout(const Duration(seconds: 12));
+              await const WalletSessionSyncService()
+                  .bindAuthenticatedWallet(
+                    context: context,
+                    walletAddress: resolvedWallet,
+                    userId: normalizedUserId,
+                    warmUp: true,
+                    loadProfile: false,
+                    syncBackend: true,
+                    requireBackendSync: false,
+                  )
+                  .timeout(const Duration(seconds: 12));
               if (!context.mounted) {
                 return const PostAuthResult(completed: false);
               }
@@ -291,23 +286,11 @@ class PostAuthCoordinator {
                   .timeout(const Duration(seconds: 5));
               final hydratedWallet =
                   (profileProvider.currentUser?.walletAddress ?? '').trim();
-              if (isGoogleOnboarding && hydratedWallet.isEmpty) {
-                return const PostAuthResult(
-                  completed: false,
-                  error: 'wallet-bind-profile-refresh-failed',
-                );
-              }
               walletForProfile = resolvedWallet;
               normalizedWallet =
                   hydratedWallet.isNotEmpty ? hydratedWallet : resolvedWallet;
             }
           } catch (e) {
-            if (isGoogleOnboarding) {
-              return PostAuthResult(
-                completed: false,
-                error: e,
-              );
-            }
             AppConfig.debugPrint(
               'PostAuthCoordinator: wallet setup remains pending after account auth: $e',
             );

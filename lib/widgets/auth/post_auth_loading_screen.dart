@@ -156,7 +156,7 @@ class _PostAuthLoadingScreenState extends State<PostAuthLoadingScreen> {
       running: _running,
       error: _error,
       onRetry: _running ? null : _runFlow,
-      onBackToSignIn: _goBackToSignIn,
+      onBackToSignIn: widget.embedded ? null : _goBackToSignIn,
       compact: !isFullScreen,
     );
 
@@ -346,10 +346,11 @@ class PostAuthLoadingContent extends StatelessWidget {
                   onPressed: running ? null : onRetry,
                   child: Text(l10n.postAuthRetry),
                 ),
-                ElevatedButton(
-                  onPressed: onBackToSignIn,
-                  child: Text(l10n.postAuthBackToSignIn),
-                ),
+                if (onBackToSignIn != null)
+                  ElevatedButton(
+                    onPressed: onBackToSignIn,
+                    child: Text(l10n.postAuthBackToSignIn),
+                  ),
               ],
             ),
           ],

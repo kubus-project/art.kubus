@@ -130,6 +130,29 @@ void main() {
     expect(find.text('Back to sign-in'), findsOneWidget);
   });
 
+  testWidgets('embedded post-auth failure shows retry without sign-in action', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _buildApp(
+        PostAuthLoadingScreen(
+          payload: const <String, dynamic>{},
+          origin: AuthOrigin.googleOnboarding,
+          embedded: true,
+          coordinator: const _FailingPostAuthCoordinator(),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    expect(find.text("We couldn't finish signing you in"), findsOneWidget);
+    expect(find.text('Retry'), findsOneWidget);
+    expect(find.text('Back to sign-in'), findsNothing);
+  });
+
   testWidgets('fires onAuthSuccess only after the coordinator completes', (
     tester,
   ) async {
@@ -310,8 +333,7 @@ void main() {
     expect(find.byType(PostAuthLoadingScreen), findsOneWidget);
   });
 
-  testWidgets('does not show password prompt for Google auth',
-      (tester) async {
+  testWidgets('does not show password prompt for Google auth', (tester) async {
     final completer = Completer<PostAuthResult>();
 
     await tester.pumpWidget(

@@ -368,7 +368,7 @@ void main() {
   });
 
   testWidgets(
-      'Google onboarding with requiresWalletSetup creates and binds wallet',
+      'Google onboarding with requiresWalletSetup defers wallet setup to onboarding',
       (tester) async {
     final api = BackendApiService();
     var bindRequests = 0;
@@ -423,18 +423,19 @@ void main() {
 
     expect(result.completed, isTrue);
     expect(result.onboardingStepId, isNotNull);
-    expect(walletProvider.createWalletCalls, 1);
-    expect(bindRequests, 1);
-    expect(boundWallet, 'wallet-created-123');
-    expect(profileProvider.authenticatedLoads, 2);
+    expect(result.onboardingStepId, 'walletSecurity');
+    expect(walletProvider.createWalletCalls, 0);
+    expect(bindRequests, 0);
+    expect(boundWallet, isNull);
+    expect(profileProvider.authenticatedLoads, 1);
     expect(profileProvider.walletLoads, 0);
 
     final prefs = await SharedPreferences.getInstance();
-    expect(prefs.getString('jwt_token'), 'refreshed-token');
+    expect(prefs.getString('jwt_token'), isNot('refreshed-token'));
   });
 
   testWidgets(
-      'Google onboarding wallet creation failure returns retry state without sign-in redirect',
+      'Google onboarding wallet setup pending still returns onboarding retry route',
       (tester) async {
     final walletProvider = _RecordingWalletProvider(failCreate: true);
     final profileProvider = _RecordingProfileProvider();
@@ -463,9 +464,10 @@ void main() {
       onStageChanged: (_) {},
     );
 
-    expect(result.completed, isFalse);
-    expect(result.routeName, isNull);
-    expect(walletProvider.createWalletCalls, 1);
+    expect(result.completed, isTrue);
+    expect(result.onboardingStepId, 'walletSecurity');
+    expect(result.routeName, '/onboarding');
+    expect(walletProvider.createWalletCalls, 0);
     expect(profileProvider.walletLoads, 0);
   });
 

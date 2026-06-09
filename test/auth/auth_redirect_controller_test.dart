@@ -51,7 +51,7 @@ void main() {
     expect(result.routeName, isNot(contains('password')));
   });
 
-  test('Google onboarding requiring wallet setup stays on account step',
+  test('Google onboarding requiring wallet setup routes to wallet security',
       () async {
     final prefs = await SharedPreferences.getInstance();
     final result = await const AuthRedirectController().resolvePostAuthRedirect(
@@ -72,7 +72,7 @@ void main() {
 
     expect(result.state, PostAuthRouteState.onboardingRequired);
     expect(result.routeName, '/onboarding');
-    expect(result.onboardingStepId, 'account');
+    expect(result.onboardingStepId, 'walletSecurity');
   });
 
   test('existing email user routes to requested redirect', () async {

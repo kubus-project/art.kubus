@@ -35,6 +35,7 @@ class ConnectWallet extends StatefulWidget {
   final String? requiredWalletAddress;
   final bool embedded;
   final bool authInline;
+  final bool authenticatedAccountLinkingOnly;
   final ValueChanged<Object?>? onFlowComplete;
   final VoidCallback? onRequestClose;
 
@@ -45,6 +46,7 @@ class ConnectWallet extends StatefulWidget {
     this.requiredWalletAddress,
     this.embedded = false,
     this.authInline = false,
+    this.authenticatedAccountLinkingOnly = false,
     this.onFlowComplete,
     this.onRequestClose,
   });
@@ -224,9 +226,41 @@ class _ConnectWalletState extends State<ConnectWallet>
     ));
   }
 
+  Future<void> _completeAuthenticatedAccountWalletLink(
+    String walletAddress,
+  ) async {
+    final normalizedWallet = walletAddress.trim();
+    if (normalizedWallet.isEmpty) {
+      throw StateError('Wallet address is required.');
+    }
+
+    final profileProvider =
+        Provider.of<ProfileProvider?>(context, listen: false);
+    final userId = profileProvider?.currentUser?.userId;
+    await const WalletSessionSyncService().bindAuthenticatedWallet(
+      context: context,
+      walletAddress: normalizedWallet,
+      userId: userId,
+      warmUp: false,
+      loadProfile: true,
+      syncBackend: true,
+      requireBackendSync: true,
+    );
+    if (!mounted) return;
+    await profileProvider?.loadAuthenticatedProfile();
+    _closeFlow(<String, dynamic>{
+      'walletAddress': normalizedWallet,
+      if ((userId ?? '').toString().trim().isNotEmpty) 'userId': userId,
+    });
+  }
+
   void _closeConnectedWalletFlow() {
     final walletProvider = Provider.of<WalletProvider?>(context, listen: false);
     final walletAddress = walletProvider?.currentWalletAddress?.trim() ?? '';
+    if (widget.authenticatedAccountLinkingOnly && walletAddress.isNotEmpty) {
+      unawaited(_completeAuthenticatedAccountWalletLink(walletAddress));
+      return;
+    }
     if (_isAuthEntryFlow && walletAddress.isNotEmpty) {
       _closeSuccessfulAuthFlow(walletAddress: walletAddress);
       return;
@@ -1942,6 +1976,11 @@ class _ConnectWalletState extends State<ConnectWallet>
       final address = await walletProvider.importWalletFromMnemonic(mnemonic);
 
       if (mounted) {
+        if (widget.authenticatedAccountLinkingOnly) {
+          await _completeAuthenticatedAccountWalletLink(address);
+          return;
+        }
+
         await _ensureWalletAccountAndProfile(
           address: address,
           profileProvider: profileProvider,
@@ -2441,6 +2480,11 @@ class _ConnectWalletState extends State<ConnectWallet>
       if (!mounted) return;
       final address = result.address;
 
+      if (widget.authenticatedAccountLinkingOnly) {
+        await _completeAuthenticatedAccountWalletLink(address);
+        return;
+      }
+
       if (profileProvider != null) {
         try {
           await _ensureWalletAccountAndProfile(
@@ -2558,6 +2602,11 @@ class _ConnectWalletState extends State<ConnectWallet>
           setState(() {
             _isLoading = false;
           });
+          return;
+        }
+
+        if (widget.authenticatedAccountLinkingOnly) {
+          await _completeAuthenticatedAccountWalletLink(address);
           return;
         }
 

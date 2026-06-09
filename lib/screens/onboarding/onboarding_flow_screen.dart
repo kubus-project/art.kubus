@@ -11,6 +11,7 @@ import 'package:art_kubus/providers/themeprovider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/screens/auth/sign_in_screen.dart';
 import 'package:art_kubus/screens/desktop/desktop_shell.dart';
+import 'package:art_kubus/screens/web3/wallet/connectwallet_screen.dart';
 import 'package:art_kubus/screens/web3/wallet/mnemonic_reveal_screen.dart';
 import 'package:art_kubus/services/auth_onboarding_service.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
@@ -56,6 +57,7 @@ enum _OnboardingStep {
   verifyEmail,
   role,
   profile,
+  walletSecurity,
   walletBackupIntro,
   walletBackup,
   daoReview,
@@ -241,6 +243,12 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           (_encryptedBackupRequiredForOnboarding &&
               _walletBackupStatus.hasEncryptedServerBackup)) &&
       !_hasAllRequiredWalletBackups;
+  bool get _accountRequiresWalletSetup {
+    final profileProvider =
+        Provider.of<ProfileProvider>(context, listen: false);
+    if (!profileProvider.isSignedIn) return false;
+    return (profileProvider.currentUser?.walletAddress ?? '').trim().isEmpty;
+  }
 
   _StepPalette _paletteForStep(_OnboardingStep step) {
     switch (step) {
@@ -279,6 +287,12 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           start: Color(0xFF00796B),
           end: Color(0xFF4DB6AC),
           accent: KubusColors.accentTealDark,
+        );
+      case _OnboardingStep.walletSecurity:
+        return const _StepPalette(
+          start: Color(0xFF0F766E),
+          end: Color(0xFF2563EB),
+          accent: Color(0xFF67E8F9),
         );
       case _OnboardingStep.walletBackupIntro:
         return const _StepPalette(
@@ -1012,6 +1026,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           if (_verificationRequired) _OnboardingStep.verifyEmail,
           _OnboardingStep.role,
           _OnboardingStep.profile,
+          if (_accountRequiresWalletSetup) _OnboardingStep.walletSecurity,
           if (_walletBackupOnboardingEnabled && _requiresWalletBackupStep)
             _OnboardingStep.walletBackupIntro,
           if (_walletBackupOnboardingEnabled && _requiresWalletBackupStep)
@@ -2238,6 +2253,38 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     );
   }
 
+  Future<void> _handleWalletSecurityLinked(Object? result) async {
+    final profileProvider =
+        Provider.of<ProfileProvider>(context, listen: false);
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+
+    try {
+      await profileProvider
+          .loadAuthenticatedProfile()
+          .timeout(const Duration(seconds: 6));
+      await _syncWalletBackupRequirement();
+      _refreshAuthDerivedSteps();
+      if (!mounted) return;
+      final walletAddress =
+          (profileProvider.currentUser?.walletAddress ?? '').trim();
+      if (walletAddress.isEmpty) {
+        messenger.showKubusSnackBar(
+          SnackBar(content: Text(l10n.connectWalletWalletConnectFailedToast)),
+          tone: KubusSnackBarTone.error,
+        );
+        return;
+      }
+      await _markCompleted(_OnboardingStep.walletSecurity);
+    } catch (error) {
+      if (!mounted) return;
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(error.toString())),
+        tone: KubusSnackBarTone.error,
+      );
+    }
+  }
+
   Future<bool> _openMnemonicRevealFlow() async {
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
@@ -2505,6 +2552,12 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         } else {
           await _deferCurrentStep();
         }
+        return;
+      case _OnboardingStep.walletSecurity:
+        _showVerificationSnack(
+          AppLocalizations.of(context)!.connectWalletChooseDescription,
+          tone: KubusSnackBarTone.neutral,
+        );
         return;
       case _OnboardingStep.walletBackupIntro:
         if (await _completeWalletBackupStepsIfReady()) {
@@ -2792,6 +2845,13 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           onAvatarStaged: _stageAvatarForLaterUpload,
         );
         break;
+      case _OnboardingStep.walletSecurity:
+        content = _WalletSecurityStep(
+          title: l10n.connectWalletChooseTitle,
+          body: l10n.connectWalletChooseDescription,
+          onWalletLinked: _handleWalletSecurityLinked,
+        );
+        break;
       case _OnboardingStep.walletBackupIntro:
         content = _WalletBackupIntroStep(
           title: l10n.onboardingFlowWalletBackupIntroTitle,
@@ -2955,6 +3015,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         return Icons.tune_outlined;
       case _OnboardingStep.profile:
         return Icons.badge_outlined;
+      case _OnboardingStep.walletSecurity:
+        return Icons.account_balance_wallet_outlined;
       case _OnboardingStep.walletBackupIntro:
         return Icons.shield_moon_outlined;
       case _OnboardingStep.walletBackup:
@@ -2997,6 +3059,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
 
     if (_currentStep == _OnboardingStep.role ||
         _currentStep == _OnboardingStep.profile ||
+        _currentStep == _OnboardingStep.walletSecurity ||
         _currentStep == _OnboardingStep.walletBackupIntro ||
         _currentStep == _OnboardingStep.walletBackup ||
         _currentStep == _OnboardingStep.daoReview) {
@@ -3074,6 +3137,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           return l10n.onboardingFlowRoleTitle;
         case _OnboardingStep.profile:
           return l10n.onboardingFlowProfileTitle;
+        case _OnboardingStep.walletSecurity:
+          return l10n.connectWalletChooseTitle;
         case _OnboardingStep.walletBackupIntro:
           return l10n.onboardingFlowWalletBackupIntroTitle;
         case _OnboardingStep.walletBackup:
@@ -3527,6 +3592,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       case _OnboardingStep.account:
       case _OnboardingStep.role:
       case _OnboardingStep.profile:
+      case _OnboardingStep.walletSecurity:
       case _OnboardingStep.walletBackupIntro:
       case _OnboardingStep.daoReview:
       case _OnboardingStep.accountPermissions:
@@ -3546,6 +3612,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         return !_verificationConfirmInFlight;
       case _OnboardingStep.walletBackupIntro:
         return _hasAllRequiredWalletBackups;
+      case _OnboardingStep.walletSecurity:
+        return false;
       default:
         return true;
     }
@@ -5413,6 +5481,42 @@ class _WalletBackupStep extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+class _WalletSecurityStep extends StatelessWidget {
+  const _WalletSecurityStep({
+    required this.title,
+    required this.body,
+    required this.onWalletLinked,
+  });
+
+  final String title;
+  final String body;
+  final ValueChanged<Object?> onWalletLinked;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        AuthTitleRow(
+          title: title,
+          subtitle: body,
+          compact: MediaQuery.sizeOf(context).height < 720,
+          foregroundColor: Colors.white,
+          subtitleColor: Colors.white.withValues(alpha: 0.85),
+        ),
+        const SizedBox(height: KubusSpacing.md),
+        Expanded(
+          child: ConnectWallet(
+            embedded: true,
+            authenticatedAccountLinkingOnly: true,
+            onFlowComplete: onWalletLinked,
+          ),
+        ),
+      ],
     );
   }
 }
