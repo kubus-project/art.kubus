@@ -105,6 +105,10 @@ class _PostAuthLoadingScreenState extends State<PostAuthLoadingScreen> {
       }
     }
 
+    if (widget.embedded) {
+      return;
+    }
+
     if (!mounted) return;
     final navigator = Navigator.of(context);
     if (result.onboardingStepId != null &&

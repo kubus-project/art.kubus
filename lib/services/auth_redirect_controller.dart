@@ -13,6 +13,7 @@ import 'onboarding_state_service.dart';
 enum AuthOrigin {
   emailPassword,
   google,
+  googleOnboarding,
   wallet,
   restoredSession,
 }
@@ -73,6 +74,7 @@ class AuthRedirectController {
     String? persona,
     bool removeAuthStack = true,
     AuthOrigin origin = AuthOrigin.emailPassword,
+    bool requiresWalletSetup = false,
   }) async {
     final targetWallet = (walletAddress ?? '').toString().trim();
     final flowScopeKey = OnboardingStateService.buildAuthOnboardingScopeKey(
@@ -93,6 +95,10 @@ class AuthRedirectController {
       hasAuthenticatedSession: true,
       hasHydratedProfile: hasHydratedProfile,
       requiresWalletBackup: requiresWalletBackup && targetWallet.isNotEmpty,
+      requiresWalletSetup: (requiresWalletSetup ||
+              _payloadRequiresWalletSetup(payload)) &&
+          targetWallet.isEmpty &&
+          origin == AuthOrigin.googleOnboarding,
       heuristicNextStepId: heuristicNextStepId,
       persona: persona,
       payload: payload,
@@ -120,6 +126,26 @@ class AuthRedirectController {
       removeAuthStack: removeAuthStack,
       arguments: redirectArguments,
     );
+  }
+
+  bool _payloadRequiresWalletSetup(Map<String, dynamic> payload) {
+    bool readBool(Map<String, dynamic> source, String key) {
+      final value = source[key];
+      if (value is bool) return value;
+      if (value is num) return value != 0;
+      if (value is String) {
+        final normalized = value.trim().toLowerCase();
+        return normalized == 'true' || normalized == '1' || normalized == 'yes';
+      }
+      return false;
+    }
+
+    final data = payload['data'];
+    final envelope = data is Map
+        ? Map<String, dynamic>.from(data)
+        : <String, dynamic>{};
+    return readBool(payload, 'requiresWalletSetup') ||
+        readBool(envelope, 'requiresWalletSetup');
   }
 
   Future<bool> routeAfterAuth({

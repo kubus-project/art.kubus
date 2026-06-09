@@ -1,6 +1,8 @@
 import 'dart:convert';
 
 import 'package:art_kubus/services/backend_api_service.dart';
+import 'package:art_kubus/models/user_profile.dart';
+import 'package:art_kubus/providers/chat_provider.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/saved_items_provider.dart';
 import 'package:art_kubus/providers/security_gate_provider.dart';
@@ -21,6 +23,34 @@ class _RecordingProfileProvider extends ProfileProvider {
   int walletLoads = 0;
   bool? lastAllowWalletAutoRegister;
   Object? authenticatedError;
+  final List<String> authenticatedWallets;
+
+  _RecordingProfileProvider({
+    this.authenticatedWallets = const <String>[''],
+  });
+
+  @override
+  UserProfile? get currentUser {
+    final index = authenticatedLoads <= 0
+        ? 0
+        : (authenticatedLoads - 1)
+            .clamp(0, authenticatedWallets.length - 1)
+            .toInt();
+    return UserProfile(
+      id: 'profile-user',
+      userId: 'profile-user',
+      walletAddress: authenticatedWallets[index],
+      username: 'profile-user',
+      displayName: 'Profile User',
+      bio: '',
+      avatar: '',
+      createdAt: DateTime(2025),
+      updatedAt: DateTime(2025),
+    );
+  }
+
+  @override
+  bool get hasHydratedProfile => authenticatedLoads > 0;
 
   @override
   Future<void> loadAuthenticatedProfile() async {
@@ -44,16 +74,72 @@ class _NoopSavedItemsProvider extends SavedItemsProvider {
   Future<void> refreshFromBackend() async {}
 }
 
+class _NoopChatProvider extends ChatProvider {
+  String? lastWallet;
+
+  @override
+  Future<void> setCurrentWallet(String wallet) async {
+    lastWallet = wallet;
+  }
+}
+
+class _RecordingWalletProvider extends WalletProvider {
+  _RecordingWalletProvider({
+    this.failCreate = false,
+  }) : super(deferInit: true);
+
+  static const String _createdWallet = 'wallet-created-123';
+  final bool failCreate;
+  int createWalletCalls = 0;
+  int readOnlyIdentityCalls = 0;
+  String? _currentWallet;
+
+  @override
+  String? get currentWalletAddress => _currentWallet;
+
+  @override
+  bool get hasSigner => (_currentWallet ?? '').isNotEmpty;
+
+  @override
+  Future<Map<String, String>> createWallet() async {
+    createWalletCalls += 1;
+    if (failCreate) {
+      throw Exception('wallet creation failed');
+    }
+    _currentWallet = _createdWallet;
+    return <String, String>{
+      'address': _createdWallet,
+      'mnemonic': 'test mnemonic',
+    };
+  }
+
+  @override
+  Future<void> setReadOnlyWalletIdentity(
+    String address, {
+    bool persist = true,
+    bool loadData = true,
+    bool syncBackend = false,
+  }) async {
+    readOnlyIdentityCalls += 1;
+    _currentWallet = address;
+  }
+
+  @override
+  Future<bool> hasPin() async => true;
+}
+
 Future<BuildContext> _pumpPostAuthContext(
   WidgetTester tester,
-  _RecordingProfileProvider profileProvider,
-) async {
+  _RecordingProfileProvider profileProvider, {
+  WalletProvider? walletProvider,
+  ChatProvider? chatProvider,
+}) async {
   late BuildContext buildContext;
   await tester.pumpWidget(
     MultiProvider(
       providers: [
         ChangeNotifierProvider<WalletProvider>(
-          create: (_) => WalletProvider(deferInit: true),
+          create: (_) => walletProvider ?? WalletProvider(deferInit: true),
         ),
         ChangeNotifierProvider<ProfileProvider>.value(value: profileProvider),
         ChangeNotifierProvider<SavedItemsProvider>(
@@ -61,6 +147,9 @@ Future<BuildContext> _pumpPostAuthContext(
         ),
         ChangeNotifierProvider<SecurityGateProvider>(
           create: (_) => SecurityGateProvider(),
+        ),
+        ChangeNotifierProvider<ChatProvider>(
+          create: (_) => chatProvider ?? _NoopChatProvider(),
         ),
       ],
       child: MaterialApp(
@@ -276,6 +365,147 @@ void main() {
     expect(profileProvider.authenticatedLoads, 1);
     expect(profileProvider.walletLoads, 0);
     expect(profileProvider.lastAllowWalletAutoRegister, isNull);
+  });
+
+  testWidgets(
+      'Google onboarding with requiresWalletSetup creates and binds wallet',
+      (tester) async {
+    final api = BackendApiService();
+    var bindRequests = 0;
+    String? boundWallet;
+
+    api.setHttpClient(
+      MockClient((request) async {
+        if (request.url.path == '/api/auth/bind-wallet') {
+          bindRequests += 1;
+          final body =
+              Map<String, dynamic>.from(jsonDecode(request.body) as Map);
+          boundWallet = body['walletAddress']?.toString();
+          return http.Response(
+            '{"success":true,"data":{"token":"refreshed-token","user":{"id":"google-user-setup","walletAddress":"wallet-created-123"}}}',
+            200,
+            headers: <String, String>{'content-type': 'application/json'},
+          );
+        }
+        return http.Response('Not found', 404);
+      }),
+    );
+
+    final walletProvider = _RecordingWalletProvider();
+    final profileProvider = _RecordingProfileProvider(
+      authenticatedWallets: const <String>['', 'wallet-created-123'],
+    );
+    final context = await _pumpPostAuthContext(
+      tester,
+      profileProvider,
+      walletProvider: walletProvider,
+    );
+
+    final result = await const PostAuthCoordinator().complete(
+      context: context,
+      origin: AuthOrigin.googleOnboarding,
+      embedded: true,
+      payload: const <String, dynamic>{
+        'success': true,
+        'data': <String, dynamic>{
+          'token': 'initial-token',
+          'requiresWalletSetup': true,
+          'isNewUser': true,
+          'user': <String, dynamic>{
+            'id': 'google-user-setup',
+            'email': 'setup@example.com',
+            'walletAddress': null,
+          },
+        },
+      },
+      onStageChanged: (_) {},
+    );
+
+    expect(result.completed, isTrue);
+    expect(result.onboardingStepId, isNotNull);
+    expect(walletProvider.createWalletCalls, 1);
+    expect(bindRequests, 1);
+    expect(boundWallet, 'wallet-created-123');
+    expect(profileProvider.authenticatedLoads, 2);
+    expect(profileProvider.walletLoads, 0);
+
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString('jwt_token'), 'refreshed-token');
+  });
+
+  testWidgets(
+      'Google onboarding wallet creation failure returns retry state without sign-in redirect',
+      (tester) async {
+    final walletProvider = _RecordingWalletProvider(failCreate: true);
+    final profileProvider = _RecordingProfileProvider();
+    final context = await _pumpPostAuthContext(
+      tester,
+      profileProvider,
+      walletProvider: walletProvider,
+    );
+
+    final result = await const PostAuthCoordinator().complete(
+      context: context,
+      origin: AuthOrigin.googleOnboarding,
+      embedded: true,
+      payload: const <String, dynamic>{
+        'success': true,
+        'data': <String, dynamic>{
+          'token': 'initial-token',
+          'requiresWalletSetup': true,
+          'isNewUser': true,
+          'user': <String, dynamic>{
+            'id': 'google-user-setup',
+            'email': 'setup@example.com',
+          },
+        },
+      },
+      onStageChanged: (_) {},
+    );
+
+    expect(result.completed, isFalse);
+    expect(result.routeName, isNull);
+    expect(walletProvider.createWalletCalls, 1);
+    expect(profileProvider.walletLoads, 0);
+  });
+
+  testWidgets(
+      'Google onboarding existing wallet user does not create duplicate wallet',
+      (tester) async {
+    final walletProvider = _RecordingWalletProvider();
+    final profileProvider = _RecordingProfileProvider(
+      authenticatedWallets: const <String>['wallet-existing-123'],
+    );
+    final context = await _pumpPostAuthContext(
+      tester,
+      profileProvider,
+      walletProvider: walletProvider,
+    );
+
+    final result = await const PostAuthCoordinator().complete(
+      context: context,
+      origin: AuthOrigin.googleOnboarding,
+      embedded: true,
+      payload: const <String, dynamic>{
+        'success': true,
+        'data': <String, dynamic>{
+          'token': 'initial-token',
+          'requiresWalletSetup': false,
+          'isNewUser': false,
+          'user': <String, dynamic>{
+            'id': 'google-user-existing',
+            'email': 'existing@example.com',
+            'walletAddress': 'wallet-existing-123',
+          },
+        },
+      },
+      walletAddress: 'wallet-existing-123',
+      onStageChanged: (_) {},
+    );
+
+    expect(result.completed, isTrue);
+    expect(walletProvider.createWalletCalls, 0);
+    expect(profileProvider.walletLoads, 0);
   });
 
   testWidgets('Wallet post-auth still allows wallet auto-register',

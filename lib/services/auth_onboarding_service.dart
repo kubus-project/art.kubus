@@ -62,6 +62,7 @@ class AuthOnboardingService {
     required bool hasAuthenticatedSession,
     required bool hasHydratedProfile,
     required bool requiresWalletBackup,
+    bool requiresWalletSetup = false,
     required String? heuristicNextStepId,
     required String? persona,
     String? flowScopeKey,
@@ -117,6 +118,7 @@ class AuthOnboardingService {
     final shouldResume = hasPendingAuthOnboarding ||
         payloadIsNewAccount ||
         hasSavedProgress ||
+        requiresWalletSetup ||
         requiresWalletBackupStep ||
         explicitTrustedHeuristic;
 
@@ -152,6 +154,13 @@ class AuthOnboardingService {
       return StructuredOnboardingResumeState(
         requiresStructuredOnboarding: true,
         nextStepId: normalizedHeuristic,
+      );
+    }
+
+    if (requiresWalletSetup) {
+      return const StructuredOnboardingResumeState(
+        requiresStructuredOnboarding: true,
+        nextStepId: 'account',
       );
     }
 

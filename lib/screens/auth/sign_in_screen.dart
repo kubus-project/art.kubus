@@ -83,6 +83,11 @@ class _SignInScreenState extends State<SignInScreen> {
   String? _postAuthWalletAddress;
   Object? _postAuthUserId;
 
+  AuthOrigin get _googlePostAuthOrigin =>
+      widget.googleAuthOrigin == 'onboarding'
+          ? AuthOrigin.googleOnboarding
+          : AuthOrigin.google;
+
   @override
   void initState() {
     super.initState();
@@ -512,7 +517,7 @@ class _SignInScreenState extends State<SignInScreen> {
 
     if (!mounted) return;
     _setGoogleAuthDiagnostics('profile_hydration');
-    await _handleAuthSuccess(result, origin: AuthOrigin.google);
+    await _handleAuthSuccess(result, origin: _googlePostAuthOrigin);
     _setGoogleAuthDiagnostics('success');
   }
 
@@ -681,7 +686,9 @@ class _SignInScreenState extends State<SignInScreen> {
       requiresWalletBackup: false,
       presentation: presentation,
       onBeforeSavedItemsSync:
-          (origin == AuthOrigin.google || origin == AuthOrigin.wallet)
+          (origin == AuthOrigin.google ||
+                  origin == AuthOrigin.googleOnboarding ||
+                  origin == AuthOrigin.wallet)
               ? null
               : () => maybeShowGooglePasswordUpgradePrompt(context, payload),
       onAuthSuccess: widget.onAuthSuccess == null

@@ -63,11 +63,36 @@ class _BlockingPostAuthCoordinator extends PostAuthCoordinator {
   }
 }
 
-Widget _buildApp(Widget child) {
+class _RecordingNavigatorObserver extends NavigatorObserver {
+  int pushCount = 0;
+  int replacementCount = 0;
+  int removeCount = 0;
+
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    pushCount += 1;
+    super.didPush(route, previousRoute);
+  }
+
+  @override
+  void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
+    replacementCount += 1;
+    super.didReplace(newRoute: newRoute, oldRoute: oldRoute);
+  }
+
+  @override
+  void didRemove(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    removeCount += 1;
+    super.didRemove(route, previousRoute);
+  }
+}
+
+Widget _buildApp(Widget child, {List<NavigatorObserver>? observers}) {
   return MaterialApp(
     locale: const Locale('en'),
     supportedLocales: AppLocalizations.supportedLocales,
     localizationsDelegates: AppLocalizations.localizationsDelegates,
+    navigatorObservers: observers ?? const <NavigatorObserver>[],
     onGenerateRoute: (settings) {
       return MaterialPageRoute<void>(
         settings: settings,
@@ -138,6 +163,83 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 10));
     expect(successCalls, equals(1));
+  });
+
+  testWidgets(
+      'embedded post-auth success calls onAuthSuccess without global navigation',
+      (tester) async {
+    final completer = Completer<PostAuthResult>();
+    final observer = _RecordingNavigatorObserver();
+    var successCalls = 0;
+
+    await tester.pumpWidget(
+      _buildApp(
+        PostAuthLoadingScreen(
+          payload: const <String, dynamic>{'data': <String, dynamic>{}},
+          origin: AuthOrigin.googleOnboarding,
+          embedded: true,
+          coordinator: _BlockingPostAuthCoordinator(completer),
+          onAuthSuccess: (_) async {
+            successCalls += 1;
+          },
+        ),
+        observers: <NavigatorObserver>[observer],
+      ),
+    );
+
+    await tester.pump();
+    observer.pushCount = 0;
+
+    completer.complete(
+      const PostAuthResult(
+        completed: true,
+        routeName: '/main',
+        replaceStack: true,
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 10));
+
+    expect(successCalls, 1);
+    expect(observer.pushCount, 0);
+    expect(observer.replacementCount, 0);
+    expect(observer.removeCount, 0);
+    expect(find.byType(PostAuthLoadingScreen), findsOneWidget);
+  });
+
+  testWidgets('non-embedded post-auth success still navigates', (tester) async {
+    final completer = Completer<PostAuthResult>();
+    var successCalls = 0;
+
+    await tester.pumpWidget(
+      _buildApp(
+        PostAuthLoadingScreen(
+          payload: const <String, dynamic>{'data': <String, dynamic>{}},
+          origin: AuthOrigin.google,
+          coordinator: _BlockingPostAuthCoordinator(completer),
+          onAuthSuccess: (_) async {
+            successCalls += 1;
+          },
+        ),
+      ),
+    );
+
+    await tester.pump();
+
+    completer.complete(
+      const PostAuthResult(
+        completed: true,
+        routeName: '/main',
+        replaceStack: true,
+      ),
+    );
+
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    expect(successCalls, 1);
+    expect(find.text('route:/main'), findsOneWidget);
   });
 
   testWidgets(

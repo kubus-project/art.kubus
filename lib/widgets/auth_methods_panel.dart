@@ -102,6 +102,11 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
   String? _postAuthWalletAddress;
   Object? _postAuthUserId;
 
+  AuthOrigin get _googlePostAuthOrigin =>
+      widget.googleAuthOrigin == 'onboarding'
+          ? AuthOrigin.googleOnboarding
+          : AuthOrigin.google;
+
   @override
   void dispose() {
     final completer = _walletFlowCompleter;
@@ -191,7 +196,8 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
         embedded: widget.embedded,
         modalReauth: false,
         requiresWalletBackup: false,
-        onBeforeSavedItemsSync: origin == AuthOrigin.google
+        onBeforeSavedItemsSync:
+            (origin == AuthOrigin.google || origin == AuthOrigin.googleOnboarding)
             ? () => maybeShowGooglePasswordUpgradePrompt(context, payload)
             : null,
         onAuthSuccess: widget.onAuthSuccess == null
@@ -499,7 +505,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
         createSignerBackedWallet: _createSignerBackedWallet,
         origin: widget.googleAuthOrigin,
       );
-      await _handleAuthSuccess(result, origin: AuthOrigin.google);
+      await _handleAuthSuccess(result, origin: _googlePostAuthOrigin);
       unawaited(TelemetryService().trackSignUpSuccess(method: 'google'));
     } catch (e) {
       widget.onError?.call(e);
@@ -685,7 +691,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
             origin: widget.googleAuthOrigin,
           );
           if (!mounted) return;
-          await _handleAuthSuccess(result, origin: AuthOrigin.google);
+          await _handleAuthSuccess(result, origin: _googlePostAuthOrigin);
           unawaited(
             TelemetryService().trackSignUpSuccess(method: 'google'),
           );

@@ -63,6 +63,7 @@ class WalletSessionSyncService {
     bool warmUp = true,
     bool loadProfile = true,
     bool syncBackend = false,
+    bool requireBackendSync = false,
     Future<Object?> Function(String walletAddress)? syncBackendWallet,
   }) async {
     final normalizedWallet = walletAddress.trim();
@@ -93,18 +94,21 @@ class WalletSessionSyncService {
     }
 
     if (syncBackend) {
-      await _runNonFatal(
-        'backend wallet bind',
-        () async {
-          final response = await (syncBackendWallet ??
-                  (wallet) => backendApi
-                      .bindAuthenticatedWallet(wallet)
-                      .timeout(_walletBindTimeout))(
-                normalizedWallet,
-              );
-          await _persistAuthResponse(backendApi, response);
-        },
-      );
+      Future<void> bindBackendWallet() async {
+        final response = await (syncBackendWallet ??
+                (wallet) => backendApi
+                    .bindAuthenticatedWallet(wallet)
+                    .timeout(_walletBindTimeout))(
+              normalizedWallet,
+            );
+        await _persistAuthResponse(backendApi, response);
+      }
+
+      if (requireBackendSync) {
+        await bindBackendWallet();
+      } else {
+        await _runNonFatal('backend wallet bind', bindBackendWallet);
+      }
     }
 
     if ((walletProvider.currentWalletAddress ?? '').trim() !=

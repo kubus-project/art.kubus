@@ -85,8 +85,17 @@ class PostAuthCoordinator {
       );
       final normalizedUserId = (userId ?? user['id'] ?? '').toString().trim();
       final expectedWalletFromPayload = _expectedWalletFromPayload(data, user);
+      final isGoogleAuth = origin == AuthOrigin.google ||
+          origin == AuthOrigin.googleOnboarding;
+      final isAccountAuth =
+          isGoogleAuth || origin == AuthOrigin.emailPassword;
+      final isGoogleOnboarding = origin == AuthOrigin.googleOnboarding;
+      final payloadRequiresWalletSetup = _payloadRequiresWalletSetup(
+        payload: payload,
+        data: data,
+      );
       final accountAuthWithoutWallet =
-          (origin == AuthOrigin.google || origin == AuthOrigin.emailPassword) &&
+          isAccountAuth &&
               expectedWalletFromPayload.isEmpty &&
               (walletAddress ?? '').trim().isEmpty;
 
@@ -145,7 +154,7 @@ class PostAuthCoordinator {
           if (!context.mounted) {
             return const PostAuthResult(completed: false);
           }
-          final shouldSyncBackendWallet = origin == AuthOrigin.google &&
+          final shouldSyncBackendWallet = isGoogleAuth &&
               expectedWallet.isNotEmpty &&
               resolvedWallet.isNotEmpty &&
               !WalletUtils.equals(expectedWallet, resolvedWallet);
@@ -169,7 +178,7 @@ class PostAuthCoordinator {
             );
           }
         }
-        if (origin == AuthOrigin.google &&
+        if (isGoogleAuth &&
             !accountAuthWithoutWallet &&
             expectedWallet.isEmpty &&
             resolvedWallet.isNotEmpty &&
@@ -230,7 +239,7 @@ class PostAuthCoordinator {
           : (normalizedWallet.isNotEmpty
               ? normalizedWallet
               : (walletProvider.currentWalletAddress ?? '').trim());
-      if (origin == AuthOrigin.google || origin == AuthOrigin.emailPassword) {
+      if (isAccountAuth) {
         try {
           await profileProvider
               .loadAuthenticatedProfile()
@@ -247,7 +256,10 @@ class PostAuthCoordinator {
           );
         }
 
-        if (!modalReauth && walletForProfile.isEmpty && context.mounted) {
+        if (!modalReauth &&
+            walletForProfile.isEmpty &&
+            context.mounted &&
+            (isGoogleOnboarding || !payloadRequiresWalletSetup)) {
           try {
             final provisionedWallet = await _ensureWalletProvisioned(
               context: context,
@@ -255,19 +267,47 @@ class PostAuthCoordinator {
             final resolvedWallet =
                 (provisionedWallet ?? walletProvider.currentWalletAddress ?? '')
                     .trim();
+            if (resolvedWallet.isEmpty && isGoogleOnboarding) {
+              return const PostAuthResult(
+                completed: false,
+                error: 'wallet-setup-required',
+              );
+            }
             if (resolvedWallet.isNotEmpty && context.mounted) {
               await const WalletSessionSyncService().bindAuthenticatedWallet(
                 context: context,
                 walletAddress: resolvedWallet,
                 userId: normalizedUserId,
-                warmUp: true,
-                loadProfile: true,
+                warmUp: !isGoogleOnboarding,
+                loadProfile: false,
                 syncBackend: true,
+                requireBackendSync: isGoogleOnboarding,
               );
+              if (!context.mounted) {
+                return const PostAuthResult(completed: false);
+              }
+              await profileProvider
+                  .loadAuthenticatedProfile()
+                  .timeout(const Duration(seconds: 5));
+              final hydratedWallet =
+                  (profileProvider.currentUser?.walletAddress ?? '').trim();
+              if (isGoogleOnboarding && hydratedWallet.isEmpty) {
+                return const PostAuthResult(
+                  completed: false,
+                  error: 'wallet-bind-profile-refresh-failed',
+                );
+              }
               walletForProfile = resolvedWallet;
-              normalizedWallet = resolvedWallet;
+              normalizedWallet =
+                  hydratedWallet.isNotEmpty ? hydratedWallet : resolvedWallet;
             }
           } catch (e) {
+            if (isGoogleOnboarding) {
+              return PostAuthResult(
+                completed: false,
+                error: e,
+              );
+            }
             AppConfig.debugPrint(
               'PostAuthCoordinator: wallet setup remains pending after account auth: $e',
             );
@@ -331,6 +371,8 @@ class PostAuthCoordinator {
         payload: payload,
         hasHydratedProfile: profileProvider.hasHydratedProfile,
         requiresWalletBackup: requiresWalletBackup,
+        requiresWalletSetup:
+            payloadRequiresWalletSetup && walletForProfile.isEmpty,
         walletAddress: walletForProfile.isEmpty ? null : walletForProfile,
         userId: normalizedUserId.isEmpty ? null : normalizedUserId,
         redirectRoute: redirectRoute,
@@ -386,6 +428,26 @@ class PostAuthCoordinator {
             '')
         .toString()
         .trim();
+  }
+
+  bool _payloadRequiresWalletSetup({
+    required Map<String, dynamic> payload,
+    required Map<String, dynamic>? data,
+  }) {
+    bool readBool(Map<String, dynamic>? source, String key) {
+      if (source == null) return false;
+      final value = source[key];
+      if (value is bool) return value;
+      if (value is num) return value != 0;
+      if (value is String) {
+        final normalized = value.trim().toLowerCase();
+        return normalized == 'true' || normalized == '1' || normalized == 'yes';
+      }
+      return false;
+    }
+
+    return readBool(payload, 'requiresWalletSetup') ||
+        readBool(data, 'requiresWalletSetup');
   }
 
   /// Ensure wallet is provisioned for the authenticated user.
