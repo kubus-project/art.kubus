@@ -31,6 +31,7 @@ class _ThrowingWalletProvider extends WalletProvider {
 
 class _ThrowingProfileProvider extends ProfileProvider {
   bool loadAttempted = false;
+  bool authenticatedLoadAttempted = false;
 
   @override
   Future<void> loadProfile(
@@ -39,6 +40,12 @@ class _ThrowingProfileProvider extends ProfileProvider {
   }) async {
     loadAttempted = true;
     throw Exception('profile refresh failed');
+  }
+
+  @override
+  Future<void> loadAuthenticatedProfile() async {
+    authenticatedLoadAttempted = true;
+    throw Exception('authenticated profile refresh failed');
   }
 }
 
@@ -103,8 +110,7 @@ void main() {
     expect(prefs.getString('user_id'), 'user-42');
   });
 
-  testWidgets(
-      'bindAuthenticatedWallet can sync the wallet back to the backend',
+  testWidgets('bindAuthenticatedWallet can sync the wallet back to the backend',
       (tester) async {
     var bindRequests = 0;
     String? capturedWallet;
@@ -148,6 +154,7 @@ void main() {
 
     expect(bindRequests, 1);
     expect(capturedWallet, 'wallet-backend-sync');
+    expect(profileProvider.authenticatedLoadAttempted, isTrue);
   });
 
   testWidgets('bindAuthenticatedWallet persists refreshed auth session',
@@ -176,29 +183,30 @@ void main() {
     );
     await tester.pump();
 
-    await const WalletSessionSyncService().bindAuthenticatedWallet(
-      context: buildContext,
-      walletAddress: 'wallet-token-refresh',
-      userId: 'user-42',
-      warmUp: false,
-      loadProfile: false,
-      syncBackend: true,
-      syncBackendWallet: (_) async => <String, dynamic>{
-        'success': true,
-        'data': <String, dynamic>{
-          'token': 'refreshed-access-token',
-          'refreshToken': 'refreshed-refresh-token',
+    await tester.runAsync(() async {
+      await const WalletSessionSyncService().bindAuthenticatedWallet(
+        context: buildContext,
+        walletAddress: 'wallet-token-refresh',
+        userId: 'user-42',
+        warmUp: false,
+        loadProfile: false,
+        syncBackend: true,
+        syncBackendWallet: (_) async => <String, dynamic>{
+          'success': true,
+          'data': <String, dynamic>{
+            'token': 'refreshed-access-token',
+            'refreshToken': 'refreshed-refresh-token',
+          },
         },
-      },
-    );
+      );
+    });
 
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.getString('jwt_token'), 'refreshed-access-token');
     expect(prefs.getString('refresh_token'), 'refreshed-refresh-token');
   });
 
-  testWidgets(
-      'bindAuthenticatedWallet ignores linked_auth placeholder wallets',
+  testWidgets('bindAuthenticatedWallet ignores linked_auth placeholder wallets',
       (tester) async {
     final walletProvider = _ThrowingWalletProvider();
     final profileProvider = _ThrowingProfileProvider();

@@ -69,10 +69,20 @@ class ProfileProvider extends foundation.ChangeNotifier {
 
     _boundWalletAddress = nextWallet;
     _profileLoadEpoch += 1;
-    _clearProfileState();
+    final hasAccountProfile =
+        (_currentUser?.userId?.trim().isNotEmpty ?? false);
 
-    if (nextWallet.isNotEmpty) {
-      unawaited(loadProfile(nextWallet));
+    if (hasAccountProfile) {
+      if (nextWallet.isNotEmpty &&
+          (_currentUser?.walletAddress.trim().isEmpty ?? true)) {
+        _currentUser = _currentUser?.copyWith(walletAddress: nextWallet);
+      }
+      unawaited(loadAuthenticatedProfile());
+    } else {
+      _clearProfileState();
+      if (nextWallet.isNotEmpty) {
+        unawaited(loadProfile(nextWallet));
+      }
     }
     notifyListeners();
   }
@@ -407,8 +417,6 @@ class ProfileProvider extends foundation.ChangeNotifier {
 
   bool get needsStructuredRoleSelection {
     if (!_isSignedIn || !_hasHydratedProfile) return false;
-    final wallet = (_currentUser?.walletAddress ?? '').trim();
-    if (wallet.isEmpty) return false;
     return !hasSelectedStructuredRole;
   }
 
@@ -640,10 +648,10 @@ class ProfileProvider extends foundation.ChangeNotifier {
       _hasHydratedProfile = true;
       final accountKey =
           (_currentUser?.userId ?? _currentUser?.id ?? '').trim();
-      final preferenceKey = (_currentUser?.walletAddress.trim().isNotEmpty ??
-              false)
-          ? _currentUser!.walletAddress
-          : accountKey;
+      final preferenceKey =
+          (_currentUser?.walletAddress.trim().isNotEmpty ?? false)
+              ? _currentUser!.walletAddress
+              : accountKey;
       final mergedPrefs = _mergePreferencesWithLocalPersona(preferenceKey);
       _currentUser = _currentUser?.copyWith(preferences: mergedPrefs);
       await _persistPreferences(mergedPrefs);

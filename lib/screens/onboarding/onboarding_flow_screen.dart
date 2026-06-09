@@ -337,8 +337,11 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   Future<void> debugTriggerPrimaryAction() => _onPrimaryAction();
 
   @visibleForTesting
-  String? get debugLocalProfileDraftUsername =>
-      _localProfileDraft['username'];
+  String? get debugLocalProfileDraftUsername => _localProfileDraft['username'];
+
+  @visibleForTesting
+  String? get debugLocalProfileDraftDisplayName =>
+      _localProfileDraft['displayName'];
 
   @visibleForTesting
   Future<void> debugCaptureEmailRegistration({
@@ -790,19 +793,10 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     return sessionEmail == pending;
   }
 
-  Future<void> _refreshProfileForCurrentSessionWallet() async {
-    final wallet = _currentSessionWalletAddress();
-    if (wallet.isEmpty) return;
-    final profileProvider =
-        Provider.of<ProfileProvider>(context, listen: false);
-    await profileProvider.loadProfile(wallet);
-    await _syncWalletBackupRequirement();
-    _refreshAuthDerivedSteps();
-  }
-
   Future<void> _syncWalletSessionIntoProviders({
     String? preferredWalletAddress,
     Object? userId,
+    bool loadProfile = true,
   }) async {
     final sessionWallet = (preferredWalletAddress ?? '').trim().isNotEmpty
         ? (preferredWalletAddress ?? '').trim()
@@ -814,7 +808,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       walletAddress: sessionWallet,
       userId: userId,
       warmUp: false,
-      loadProfile: true,
+      loadProfile: loadProfile,
     );
     await _syncWalletBackupRequirement();
   }
@@ -898,8 +892,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         _cleanProfileValue(user.username).replaceFirst(RegExp(r'^@+'), '');
     final currentDisplayName = _cleanProfileValue(user.displayName);
     var changed = false;
-    final existingUsername =
-        _cleanProfileValue(_localProfileDraft['username']);
+    final existingUsername = _cleanProfileValue(_localProfileDraft['username']);
     final existingDisplayName =
         _cleanProfileValue(_localProfileDraft['displayName']);
     if (existingUsername.isEmpty && currentUsername.isNotEmpty) {
@@ -958,7 +951,11 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     Map<String, dynamic>? authPayload,
     String? preferredWalletAddress,
   }) async {
-    await BackendApiService().restoreExistingSession(allowRefresh: false);
+    final profileProvider =
+        Provider.of<ProfileProvider>(context, listen: false);
+    await BackendApiService()
+        .restoreExistingSession(allowRefresh: false)
+        .timeout(const Duration(seconds: 3));
     if (!mounted) return;
     final user = authPayload == null ? null : _userFromAuthPayload(authPayload);
     final payloadWallet =
@@ -967,16 +964,18 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       preferredWalletAddress: preferredWalletAddress ??
           (payloadWallet.isEmpty ? null : payloadWallet),
       userId: user?['id'],
-    );
+      loadProfile: false,
+    ).timeout(const Duration(seconds: 8));
     if (!mounted) return;
     await _syncWalletBackupRequirement();
     try {
-      await _refreshProfileForCurrentSessionWallet()
+      await profileProvider
+          .loadAuthenticatedProfile()
           .timeout(const Duration(seconds: 6));
     } catch (error) {
       if (kDebugMode) {
         debugPrint(
-          'OnboardingFlowScreen._syncSessionProvidersAndProfile profile refresh failed: $error',
+          'OnboardingFlowScreen._syncSessionProvidersAndProfile authenticated profile refresh failed: $error',
         );
       }
     }
@@ -1537,7 +1536,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       _daoReview = null;
       _daoDraft = null;
     }
-    _completed.removeWhere((step) => !_steps.contains(step));
+    _completed.removeWhere(
+      (step) => !_steps.contains(step) && step != _OnboardingStep.verifyEmail,
+    );
     _deferred.removeWhere((step) => !_steps.contains(step));
     if (_currentIndex >= _steps.length) {
       _currentIndex = _steps.isEmpty ? 0 : (_steps.length - 1);
@@ -1986,6 +1987,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
 
     try {
       _refreshAuthDerivedSteps();
+      final hadVerifyEmailStep = _steps.contains(_OnboardingStep.verifyEmail);
 
       if (_verificationRequired) {
         var verified = _emailVerifiedConfirmed;
@@ -2104,7 +2106,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
 
       if (!mounted) return;
 
-      if (_steps.contains(_OnboardingStep.verifyEmail)) {
+      if (hadVerifyEmailStep || _steps.contains(_OnboardingStep.verifyEmail)) {
         _completed.add(_OnboardingStep.verifyEmail);
         _deferred.remove(_OnboardingStep.verifyEmail);
         await _persistProgress();
@@ -2169,8 +2171,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     });
     try {
       await _persistLocalDrafts();
-      final wallet =
-          (profileProvider.currentUser?.walletAddress ?? '').trim();
+      final wallet = (profileProvider.currentUser?.walletAddress ?? '').trim();
       if (wallet.isNotEmpty) {
         await profileProvider
             .setUserPersona(
@@ -2751,8 +2752,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           requiresFinishSignIn: _verificationRequired &&
               _emailVerifiedConfirmed &&
               !_sessionMatchesPendingVerificationEmail(),
-          isRefreshingVerification:
-              _verificationPollInFlight ||
+          isRefreshingVerification: _verificationPollInFlight ||
               _verificationConfirmInFlight ||
               _autoAdvancingVerification,
           onRefreshVerification: _handleManualVerificationRefresh,
@@ -4277,8 +4277,7 @@ class _InlineVerificationPanelState extends State<_InlineVerificationPanel> {
           ),
           const SizedBox(height: KubusSpacing.xs),
           Text(
-            AppLocalizations.of(context)!
-                .onboardingFlowVerifySignInDescription,
+            AppLocalizations.of(context)!.onboardingFlowVerifySignInDescription,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: scheme.onSurface.withValues(alpha: 0.78),
                 ),
@@ -4680,15 +4679,16 @@ class _InlineProfileStepState extends State<_InlineProfileStep> {
     final isInstitution = widget.persona == UserPersona.institution;
     final isCreator = widget.persona == UserPersona.creator;
     final introBody = isInstitution
-      ? l10n.onboardingFlowProfileInstitutionIntro
+        ? l10n.onboardingFlowProfileInstitutionIntro
         : isCreator
-        ? l10n.onboardingFlowProfileCreatorIntro
+            ? l10n.onboardingFlowProfileCreatorIntro
             : widget.body;
     final displayNameLabel = isInstitution
-      ? l10n.onboardingFlowProfileOrganizationNameLabel
+        ? l10n.onboardingFlowProfileOrganizationNameLabel
         : l10n.desktopSettingsDisplayNameLabel;
-    final bioLabel =
-      isInstitution ? l10n.onboardingFlowProfileInstitutionBioLabel : l10n.desktopSettingsBioLabel;
+    final bioLabel = isInstitution
+        ? l10n.onboardingFlowProfileInstitutionBioLabel
+        : l10n.desktopSettingsBioLabel;
     const fieldGap = KubusSpacing.sm;
 
     return Column(
@@ -4927,8 +4927,8 @@ class _DaoReviewStepState extends State<_DaoReviewStep> {
         verification.isApprovedFor(role) || verification.isPendingFor(role);
     final status = widget.review?.status.toLowerCase() ?? '';
     final statusLabel = status.isEmpty
-      ? null
-      : l10n.onboardingFlowDaoReviewStatus(status.toUpperCase());
+        ? null
+        : l10n.onboardingFlowDaoReviewStatus(status.toUpperCase());
     const fieldGap = KubusSpacing.sm;
 
     return Column(

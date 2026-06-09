@@ -466,7 +466,7 @@ void main() {
     expect(provider.loadProfileCalls, 1);
     expect(
       state.debugAvatarUrl,
-      'https://api.kubus.site/uploads/profiles/avatars/fresh.png',
+      '/uploads/profiles/avatars/fresh.png',
     );
     expect(state.debugIsUploadingAvatar, isFalse);
     expect(state.debugAvatarChanged, isFalse);
@@ -494,7 +494,8 @@ void main() {
     expect(state.debugHasLocalCoverBytes, isFalse);
   });
 
-  testWidgets('mobile edit profile initializes with null, empty, or generated avatar',
+  testWidgets(
+      'mobile edit profile initializes with null, empty, or generated avatar',
       (tester) async {
     for (final avatar in <String?>[
       null,

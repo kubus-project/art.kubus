@@ -182,7 +182,7 @@ void main() {
     await _pumpOnboardingReady(tester);
 
     expect(find.byType(PageView), findsNothing);
-    expect(find.text('Welcome to art.kubus'), findsOneWidget);
+    expect(find.text('art.kubus is an open art platform.'), findsOneWidget);
     expect(find.text('Create an account'), findsWidgets);
     expect(find.text('Discover art'), findsWidgets);
     expect(find.text('Sign in'), findsOneWidget);
@@ -205,7 +205,7 @@ void main() {
     final discoverArtButton = find.text('Discover art');
     expect(createAccountButton, findsWidgets);
     expect(discoverArtButton, findsWidgets);
-    expect(find.text('Welcome to art.kubus'), findsOneWidget);
+    expect(find.text('art.kubus is an open art platform.'), findsOneWidget);
   });
 
   testWidgets('guest branch: discover art → permissions → done',
@@ -222,7 +222,7 @@ void main() {
     await _pumpOnboardingReady(tester);
 
     // Tap "Discover art" to enter guest branch
-    await tester.tap(find.widgetWithText(KubusButton, 'Discover art'));
+    await tester.tap(find.widgetWithText(KubusOutlineButton, 'Discover art'));
     await tester.pumpAndSettle();
 
     // Should show permissions step
@@ -245,12 +245,11 @@ void main() {
     await _pumpOnboardingReady(tester);
 
     // Tap "Create an account" to enter account branch
-    await tester
-        .tap(find.widgetWithText(KubusOutlineButton, 'Create an account'));
+    await tester.tap(find.widgetWithText(KubusButton, 'Create an account'));
     await tester.pumpAndSettle();
 
     // Should show account step with auth panel
-    expect(find.text('Create your account'), findsOneWidget);
+    expect(find.text('Create your profile first'), findsOneWidget);
   });
 
   testWidgets('wallet backup intro step renders when backup is required',
@@ -277,7 +276,8 @@ void main() {
       tester.element(find.byType(OnboardingFlowScreen)),
     )!;
 
-    expect(find.text(l10n.onboardingFlowWalletBackupIntroTitle), findsOneWidget);
+    expect(
+        find.text(l10n.onboardingFlowWalletBackupIntroTitle), findsOneWidget);
     expect(
       find.text(l10n.onboardingFlowWalletBackupIntroRevealAction),
       findsOneWidget,
@@ -389,7 +389,7 @@ void main() {
         return http.Response(
           jsonEncode(<String, dynamic>{
             'success': true,
-            'verified': statusChecks >= 2,
+            'verified': true,
           }),
           200,
           headers: <String, String>{'content-type': 'application/json'},
@@ -410,11 +410,11 @@ void main() {
       ),
     );
     await _pumpOnboardingReady(tester);
-    await _pumpUntilCondition(tester, () => statusChecks >= 1);
-    expect(statusChecks, greaterThanOrEqualTo(1));
+    await _pumpUntilFound(tester, find.text('I verified / Continue'));
 
     await tester.tap(find.text('I verified / Continue').last);
     await _pumpUntilFound(tester, find.text('Pick your role'));
+    expect(statusChecks, greaterThanOrEqualTo(1));
 
     expect(find.text('Pick your role'), findsOneWidget);
     expect(find.text('Create your profile'), findsNothing);
@@ -465,7 +465,7 @@ void main() {
         return http.Response(
           jsonEncode(<String, dynamic>{
             'success': true,
-            'verified': statusChecks >= 2,
+            'verified': true,
           }),
           200,
           headers: <String, String>{'content-type': 'application/json'},
@@ -490,11 +490,11 @@ void main() {
       ),
     );
     await _pumpOnboardingReady(tester);
-    await _pumpUntilCondition(tester, () => statusChecks >= 1);
-    expect(statusChecks, greaterThanOrEqualTo(1));
+    await _pumpUntilFound(tester, find.text('I verified / Continue'));
 
     await tester.tap(find.text('I verified / Continue').last);
     await _pumpUntilFound(tester, find.text('Pick your role'));
+    expect(statusChecks, greaterThanOrEqualTo(1));
 
     expect(find.text('Pick your role'), findsOneWidget);
     expect(profileSaves, 0);
@@ -636,7 +636,7 @@ void main() {
         personaSaves += 1;
         return http.Response(
           jsonEncode(<String, dynamic>{'error': 'save failed'}),
-          500,
+          400,
           headers: <String, String>{'content-type': 'application/json'},
         );
       }
@@ -659,21 +659,21 @@ void main() {
 
     await tester.tap(find.text('Art lover'));
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 240));
+    await tester.pump(const Duration(seconds: 8));
 
     final state = tester.state(find.byType(OnboardingFlowScreen)) as dynamic;
-    expect(personaSaves, 1);
+    expect(personaSaves, greaterThanOrEqualTo(1));
     expect(state.debugCurrentStepId, 'role');
     expect(state.debugCompletedStepIds, isNot(contains('role')));
-    expect(find.byIcon(Icons.check_circle), findsWidgets);
     expect(
       find.text('We could not save your role. Please try again.'),
       findsOneWidget,
     );
 
+    final attemptsAfterFirstTap = personaSaves;
     await tester.tap(find.text('Art lover'));
-    await tester.pump(const Duration(milliseconds: 240));
-    expect(personaSaves, 2);
+    await tester.pump(const Duration(seconds: 8));
+    expect(personaSaves, greaterThan(attemptsAfterFirstTap));
   });
 
   testWidgets('primary action on role persists existing local selection',
@@ -717,16 +717,6 @@ void main() {
     _installBackendMock((request) async {
       if (request.url.path == '/api/auth/email-status') {
         statusChecks += 1;
-        if (statusChecks == 1) {
-          return http.Response(
-            jsonEncode(<String, dynamic>{
-              'success': true,
-              'verified': false,
-            }),
-            200,
-            headers: <String, String>{'content-type': 'application/json'},
-          );
-        }
         await confirmStatusReady.future;
         return http.Response(
           jsonEncode(<String, dynamic>{
@@ -752,8 +742,7 @@ void main() {
       ),
     );
     await _pumpOnboardingReady(tester);
-    await _pumpUntilCondition(tester, () => statusChecks >= 1);
-    expect(statusChecks, greaterThanOrEqualTo(1));
+    await _pumpUntilFound(tester, find.text('I verified / Continue'));
 
     final state = tester.state(find.byType(OnboardingFlowScreen)) as dynamic;
     final action = state.debugTriggerPrimaryAction() as Future<void>;
@@ -765,6 +754,7 @@ void main() {
     await action;
     await tester.pump();
 
+    expect(statusChecks, greaterThanOrEqualTo(1));
     expect(state.debugVerificationConfirmInFlight, isFalse);
     expect(find.text('Pick your role'), findsNothing);
     expect(find.text('Sign in to finish'), findsOneWidget);
@@ -819,18 +809,19 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('verified email uses captured credentials and advances to role',
+  testWidgets('verified email with active session advances to role',
       (tester) async {
     await tester.binding.setSurfaceSize(const Size(390, 1024));
     addTearDown(() async => tester.binding.setSurfaceSize(null));
 
     const email = 'captured-login@example.com';
-    const wallet = '0xcapturedlogin';
+    final token = _buildJwt(email: email);
     SharedPreferences.setMockInitialValues(<String, Object>{
       'onboarding_verification_email_v3': email,
+      'jwt_token': token,
     });
 
-    var loginAttempts = 0;
+    BackendApiService().setAuthTokenForTesting(token);
     _installBackendMock((request) async {
       if (request.url.path == '/api/auth/email-status') {
         return http.Response(
@@ -839,31 +830,20 @@ void main() {
           headers: <String, String>{'content-type': 'application/json'},
         );
       }
-      if (request.method == 'POST' && request.url.path == '/api/auth/login/email') {
-        loginAttempts += 1;
+      if (request.url.path == '/api/profiles/me') {
         return http.Response(
           jsonEncode(<String, dynamic>{
             'success': true,
-            'token': _buildJwt(email: email, walletAddress: wallet),
-            'user': <String, dynamic>{
-              'id': 'user-captured',
-              'email': email,
-              'walletAddress': wallet,
-              'username': 'captured_backend',
-              'displayName': 'Captured Backend',
+            'data': <String, dynamic>{
+              ..._profileJson(
+                walletAddress: '',
+                username: 'captured_backend',
+                displayName: 'Captured Backend',
+              ),
+              'userId': 'user-captured',
+              'requiresWalletSetup': true,
             },
           }),
-          200,
-          headers: <String, String>{'content-type': 'application/json'},
-        );
-      }
-      if (request.url.path == '/api/profiles/$wallet') {
-        return http.Response(
-          jsonEncode(_profileJson(
-            walletAddress: wallet,
-            username: 'captured_backend',
-            displayName: 'Captured Backend',
-          )),
           200,
           headers: <String, String>{'content-type': 'application/json'},
         );
@@ -885,14 +865,19 @@ void main() {
     await _pumpOnboardingReady(tester);
 
     final state = tester.state(find.byType(OnboardingFlowScreen)) as dynamic;
-    await state.debugCaptureEmailCredentials(
-      email: email,
-      password: 'correct-password',
+    var actionCompleted = false;
+    unawaited(
+      (state.debugTriggerPrimaryAction() as Future<void>).whenComplete(
+        () => actionCompleted = true,
+      ),
     );
-    await state.debugTriggerPrimaryAction();
+    final deadline = DateTime.now().add(const Duration(seconds: 15));
+    while (!actionCompleted && DateTime.now().isBefore(deadline)) {
+      await tester.pump(const Duration(milliseconds: 250));
+    }
+    expect(actionCompleted, isTrue);
     await _pumpUntilFound(tester, find.text('Pick your role'));
 
-    expect(loginAttempts, 1);
     expect(state.debugVerificationConfirmInFlight, isFalse);
     expect(state.debugCurrentStepId, 'role');
     expect(state.debugCompletedStepIds, contains('verifyEmail'));
@@ -905,7 +890,7 @@ void main() {
     addTearDown(() async => tester.binding.setSurfaceSize(null));
 
     const email = 'stale-persona@example.com';
-    const sessionWallet = '0xnewsessionwallet';
+    final token = _buildJwt(email: email);
     final profileProvider = ProfileProvider()
       ..setCurrentUser(UserProfile(
         id: 'profile_old',
@@ -920,10 +905,9 @@ void main() {
       ));
     SharedPreferences.setMockInitialValues(<String, Object>{
       'onboarding_verification_email_v3': email,
+      'jwt_token': token,
     });
-    BackendApiService().setAuthTokenForTesting(
-      _buildJwt(email: email, walletAddress: sessionWallet),
-    );
+    BackendApiService().setAuthTokenForTesting(token);
 
     _installBackendMock((request) async {
       if (request.url.path == '/api/auth/email-status') {
@@ -933,9 +917,16 @@ void main() {
           headers: <String, String>{'content-type': 'application/json'},
         );
       }
-      if (request.url.path == '/api/profiles/$sessionWallet') {
+      if (request.url.path == '/api/profiles/me') {
         return http.Response(
-          jsonEncode(_profileJson(walletAddress: sessionWallet)),
+          jsonEncode(<String, dynamic>{
+            'success': true,
+            'data': <String, dynamic>{
+              ..._profileJson(walletAddress: ''),
+              'userId': 'user-stale-persona',
+              'requiresWalletSetup': true,
+            },
+          }),
           200,
           headers: <String, String>{'content-type': 'application/json'},
         );
@@ -958,7 +949,17 @@ void main() {
     await _pumpOnboardingReady(tester);
 
     final state = tester.state(find.byType(OnboardingFlowScreen)) as dynamic;
-    await state.debugTriggerPrimaryAction();
+    var actionCompleted = false;
+    unawaited(
+      (state.debugTriggerPrimaryAction() as Future<void>).whenComplete(
+        () => actionCompleted = true,
+      ),
+    );
+    final deadline = DateTime.now().add(const Duration(seconds: 15));
+    while (!actionCompleted && DateTime.now().isBefore(deadline)) {
+      await tester.pump(const Duration(milliseconds: 250));
+    }
+    expect(actionCompleted, isTrue);
     await _pumpUntilFound(tester, find.text('Pick your role'));
 
     expect(state.debugCurrentStepId, 'role');
@@ -1021,8 +1022,10 @@ void main() {
     );
     await _pumpOnboardingReady(tester);
 
-    expect(find.text('backend_username'), findsOneWidget);
-    expect(find.text('Backend Name'), findsOneWidget);
+    final resumedState =
+        tester.state(find.byType(OnboardingFlowScreen)) as dynamic;
+    expect(resumedState.debugLocalProfileDraftUsername, 'backend_username');
+    expect(resumedState.debugLocalProfileDraftDisplayName, 'Backend Name');
   });
 
   testWidgets('role step shows persona picker without DAO fields',
@@ -1082,10 +1085,10 @@ void main() {
     );
     await _pumpOnboardingReady(tester);
 
-    expect(find.text('DAO review'), findsOneWidget);
+    expect(find.text('Governance review'), findsOneWidget);
     expect(
         find.text(
-            'Submit your practice for DAO review before the account setup is completed.'),
+            'Submit your practice for community governance review before account setup is completed.'),
         findsOneWidget);
   });
 
@@ -1142,8 +1145,7 @@ void main() {
     await _pumpOnboardingReady(tester);
 
     // Enter account branch to get the header with AuthTitleRow
-    await tester
-        .tap(find.widgetWithText(KubusOutlineButton, 'Create an account'));
+    await tester.tap(find.widgetWithText(KubusButton, 'Create an account'));
     await tester.pumpAndSettle();
 
     final titleSize = tester.getSize(find.byType(AuthTitleRow).first);

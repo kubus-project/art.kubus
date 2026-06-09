@@ -162,56 +162,7 @@ class AuthEntryShell extends StatelessWidget {
                                                             CrossAxisAlignment
                                                                 .stretch,
                                                         children: [
-                                                          if (!keyboardVisible)
-                                                            ...[
-                                                              Text(
-                                                                subtitle,
-                                                                style: theme
-                                                                    .textTheme
-                                                                    .bodyMedium
-                                                                    ?.copyWith(
-                                                                  color: theme
-                                                                      .colorScheme
-                                                                      .onSurface
-                                                                      .withValues(
-                                                                          alpha:
-                                                                              0.72),
-                                                                  height: 1.45,
-                                                                ),
-                                                              ),
-                                                              const SizedBox(
-                                                                height:
-                                                                    KubusSpacing
-                                                                        .md,
-                                                              ),
-                                                            ],
-                                                          _FormSurface(
-                                                            footer:
-                                                                keyboardVisible
-                                                                    ? null
-                                                                    : footer,
-                                                            compact:
-                                                                compactSurface,
-                                                            child: form,
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                  )
-                                                : ConstrainedBox(
-                                                    constraints:
-                                                        const BoxConstraints(
-                                                      maxWidth: 560,
-                                                    ),
-                                                    child: Column(
-                                                      mainAxisSize:
-                                                          MainAxisSize.min,
-                                                      crossAxisAlignment:
-                                                          CrossAxisAlignment
-                                                              .stretch,
-                                                      children: [
-                                                        if (!keyboardVisible)
-                                                          ...[
+                                                          if (!keyboardVisible) ...[
                                                             Text(
                                                               subtitle,
                                                               style: theme
@@ -233,16 +184,84 @@ class AuthEntryShell extends StatelessWidget {
                                                                       .md,
                                                             ),
                                                           ],
-                                                        _FormSurface(
-                                                          footer:
-                                                              keyboardVisible
-                                                                  ? null
-                                                                  : footer,
-                                                          compact:
-                                                              compactSurface,
-                                                          child: form,
-                                                        ),
-                                                      ],
+                                                          _FormSurface(
+                                                            footer:
+                                                                keyboardVisible
+                                                                    ? null
+                                                                    : footer,
+                                                            compact:
+                                                                compactSurface,
+                                                            child: form,
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  )
+                                                : ConstrainedBox(
+                                                    constraints:
+                                                        const BoxConstraints(
+                                                      maxWidth: 560,
+                                                    ),
+                                                    child: LayoutBuilder(
+                                                      builder: (context,
+                                                          mobileConstraints) {
+                                                        final contentWidth =
+                                                            mobileConstraints
+                                                                        .maxWidth <
+                                                                    560
+                                                                ? mobileConstraints
+                                                                    .maxWidth
+                                                                : 560.0;
+                                                        return FittedBox(
+                                                          fit: BoxFit.scaleDown,
+                                                          alignment: Alignment
+                                                              .topCenter,
+                                                          child: SizedBox(
+                                                            width: contentWidth,
+                                                            child: Column(
+                                                              mainAxisSize:
+                                                                  MainAxisSize
+                                                                      .min,
+                                                              crossAxisAlignment:
+                                                                  CrossAxisAlignment
+                                                                      .stretch,
+                                                              children: [
+                                                                if (!keyboardVisible) ...[
+                                                                  Text(
+                                                                    subtitle,
+                                                                    style: theme
+                                                                        .textTheme
+                                                                        .bodyMedium
+                                                                        ?.copyWith(
+                                                                      color: theme
+                                                                          .colorScheme
+                                                                          .onSurface
+                                                                          .withValues(
+                                                                              alpha: 0.72),
+                                                                      height:
+                                                                          1.45,
+                                                                    ),
+                                                                  ),
+                                                                  const SizedBox(
+                                                                    height:
+                                                                        KubusSpacing
+                                                                            .md,
+                                                                  ),
+                                                                ],
+                                                                _FormSurface(
+                                                                  footer:
+                                                                      keyboardVisible
+                                                                          ? null
+                                                                          : footer,
+                                                                  compact:
+                                                                      compactSurface,
+                                                                  child: form,
+                                                                ),
+                                                              ],
+                                                            ),
+                                                          ),
+                                                        );
+                                                      },
                                                     ),
                                                   ),
                                           ),

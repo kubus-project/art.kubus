@@ -222,19 +222,6 @@ class PostAuthCoordinator {
             );
           }
         }
-
-        final securityOk = await const PostAuthSecuritySetupService()
-            .ensurePostAuthSecuritySetup(
-          navigator: navigator,
-          walletProvider: walletProvider,
-          securityGateProvider: securityGateProvider,
-        );
-        if (!context.mounted || !securityOk) {
-          return const PostAuthResult(
-            completed: false,
-            error: 'security-setup-cancelled',
-          );
-        }
       }
 
       setStage(PostAuthStage.loadingProfile);
@@ -298,6 +285,26 @@ class PostAuthCoordinator {
           AppConfig.debugPrint(
             'PostAuthCoordinator: profile load skipped/failed: $e',
           );
+        }
+      }
+
+      if (!modalReauth) {
+        final walletForSecurity = walletForProfile.isNotEmpty
+            ? walletForProfile
+            : (walletProvider.currentWalletAddress ?? '').trim();
+        if (walletForSecurity.isNotEmpty) {
+          final securityOk = await const PostAuthSecuritySetupService()
+              .ensurePostAuthSecuritySetup(
+            navigator: navigator,
+            walletProvider: walletProvider,
+            securityGateProvider: securityGateProvider,
+          );
+          if (!context.mounted || !securityOk) {
+            return const PostAuthResult(
+              completed: false,
+              error: 'security-setup-cancelled',
+            );
+          }
         }
       }
 
