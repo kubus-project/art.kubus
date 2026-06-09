@@ -54,7 +54,7 @@ jobs:
   flutter:
     name: Flutter (test + web build)
     needs: changes
-    if: ${{ needs.changes.outputs.flutter == 'true' || needs.changes.outputs.workflows == 'true' }}
+    if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
 
@@ -145,7 +145,7 @@ jobs:
   backend:
     name: Backend (lint + tests)
     needs: changes
-    if: ${{ needs.changes.outputs.backend == 'true' }}
+    if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -181,7 +181,7 @@ jobs:
       - name: Install dependencies
         if: ${{ steps.present.outputs.ok == 'true' }}
         working-directory: backend
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
 
       - name: Lint
         if: ${{ steps.present.outputs.ok == 'true' }}
