@@ -242,8 +242,9 @@ class DAOProvider extends ChangeNotifier {
       }
     } catch (e) {
       debugPrint('DAOProvider.createProposal error: $e');
+      rethrow;
     }
-    return null;
+    throw StateError('DAO proposal creation did not return a proposal.');
   }
 
   Future<DAOReview?> submitReview({

@@ -14,6 +14,7 @@ import '../../../widgets/empty_state_card.dart';
 import '../../../models/dao.dart';
 import '../../../utils/wallet_utils.dart';
 import '../../../utils/wallet_action_guard.dart';
+import '../../../utils/dao_action_state.dart';
 import '../../../config/config.dart';
 import '../../../utils/app_color_utils.dart';
 import '../../../utils/kubus_color_roles.dart';
@@ -59,7 +60,7 @@ class _GovernanceHubState extends State<GovernanceHub>
   int? _hoveredTabIndex;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
-  String? _reviewActionId;
+  final DaoActionState _daoActionState = DaoActionState();
   VoidCallback? _selectedIndexListener;
 
   // Proposal creation form controllers
@@ -657,7 +658,7 @@ class _GovernanceHubState extends State<GovernanceHub>
               );
     final isPending = normalizedStatus == 'pending';
     final canModerate = moderationEnabled && !isOwnSubmission && isPending;
-    final isActionInFlight = _reviewActionId == review.id;
+    final isActionInFlight = _daoActionState.reviewActionId == review.id;
 
     return Container(
       margin: const EdgeInsets.only(bottom: KubusSpacing.sm + KubusSpacing.xs),
@@ -795,7 +796,8 @@ class _GovernanceHubState extends State<GovernanceHub>
                                     borderRadius: BorderRadius.circular(10)),
                               ),
                               child: isActionInFlight &&
-                                      _reviewActionId == review.id
+                                      _daoActionState.reviewActionId ==
+                                          review.id
                                   ? SizedBox(
                                       width: 16,
                                       height: 16,
@@ -833,7 +835,8 @@ class _GovernanceHubState extends State<GovernanceHub>
                                     borderRadius: BorderRadius.circular(10)),
                               ),
                               child: isActionInFlight &&
-                                      _reviewActionId == review.id
+                                      _daoActionState.reviewActionId ==
+                                          review.id
                                   ? SizedBox(
                                       width: 16,
                                       height: 16,
@@ -966,9 +969,7 @@ class _GovernanceHubState extends State<GovernanceHub>
       return;
     }
 
-    setState(() {
-      _reviewActionId = review.id;
-    });
+    setState(() => _daoActionState.beginReview(review.id));
 
     try {
       final updated = await context.read<DAOProvider>().decideReview(
@@ -1004,7 +1005,7 @@ class _GovernanceHubState extends State<GovernanceHub>
     } finally {
       if (mounted) {
         setState(() {
-          _reviewActionId = null;
+          _daoActionState.endReview();
         });
       }
     }
@@ -1031,7 +1032,7 @@ class _GovernanceHubState extends State<GovernanceHub>
     final canModerate = AppConfig.isFeatureEnabled('daoReviewDecisions') &&
         !isOwnSubmission &&
         isPending;
-    final isActionInFlight = _reviewActionId == review.id;
+    final isActionInFlight = _daoActionState.reviewActionId == review.id;
 
     final colorScheme = Theme.of(context).colorScheme;
     showKubusDialog(
@@ -1269,36 +1270,27 @@ class _GovernanceHubState extends State<GovernanceHub>
           Row(
             children: [
               Expanded(
-                child: ElevatedButton(
-                  onPressed: () => _submitProposalVote(proposal.id, true),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: color,
-                    foregroundColor: Theme.of(context).colorScheme.onSurface,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(KubusRadius.sm),
-                    ),
-                  ),
-                  child: Text(AppLocalizations.of(context)!.daoVoteYesButton),
+                child: _buildVoteButton(
+                  proposal: proposal,
+                  isYes: true,
+                  backgroundColor: color,
+                  foregroundColor: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: ElevatedButton(
-                  onPressed: () => _submitProposalVote(proposal.id, false),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        Theme.of(context).colorScheme.surfaceContainerHighest,
-                    foregroundColor: Theme.of(context).colorScheme.onSurface,
-                    side: BorderSide(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.3)),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(KubusRadius.sm),
-                    ),
+                child: _buildVoteButton(
+                  proposal: proposal,
+                  isYes: false,
+                  backgroundColor:
+                      Theme.of(context).colorScheme.surfaceContainerHighest,
+                  foregroundColor: Theme.of(context).colorScheme.onSurface,
+                  side: BorderSide(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.3),
                   ),
-                  child: Text(AppLocalizations.of(context)!.daoVoteNoButton),
                 ),
               ),
             ],
@@ -1540,7 +1532,9 @@ class _GovernanceHubState extends State<GovernanceHub>
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: _submitProposal,
+                onPressed: _daoActionState.proposalSubmitInFlight
+                    ? null
+                    : _submitProposal,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _daoAccent,
                   foregroundColor: scheme.onPrimary,
@@ -1549,17 +1543,68 @@ class _GovernanceHubState extends State<GovernanceHub>
                     borderRadius: BorderRadius.circular(KubusRadius.md),
                   ),
                 ),
-                child: Text(
-                  l10n.daoCreateProposalSubmitButtonLabel,
-                  style: KubusTextStyles.navLabel.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+                child: _daoActionState.proposalSubmitInFlight
+                    ? SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            scheme.onPrimary,
+                          ),
+                        ),
+                      )
+                    : Text(
+                        l10n.daoCreateProposalSubmitButtonLabel,
+                        style: KubusTextStyles.navLabel.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildVoteButton({
+    required Proposal proposal,
+    required bool isYes,
+    required Color backgroundColor,
+    required Color foregroundColor,
+    BorderSide? side,
+  }) {
+    final actionId = DaoActionState.proposalVoteActionId(proposal.id, isYes);
+    final isCurrentAction = _daoActionState.voteActionId == actionId;
+    final isAnyVoteInFlight = _daoActionState.voteActionId != null;
+
+    return ElevatedButton(
+      onPressed: isAnyVoteInFlight
+          ? null
+          : () => _submitProposalVote(proposal.id, isYes),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: backgroundColor,
+        foregroundColor: foregroundColor,
+        side: side,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(KubusRadius.sm),
+        ),
+      ),
+      child: isCurrentAction
+          ? SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(foregroundColor),
+              ),
+            )
+          : Text(
+              isYes
+                  ? AppLocalizations.of(context)!.daoVoteYesButton
+                  : AppLocalizations.of(context)!.daoVoteNoButton,
+            ),
     );
   }
 
@@ -1700,7 +1745,8 @@ class _GovernanceHubState extends State<GovernanceHub>
             ],
           ),
           const SizedBox(height: 12),
-          _buildRequirementItem(l10n.daoProposalRequirementWalletConnected,
+          _buildRequirementItem(
+              l10n.daoProposalRequirementWalletConnected,
               Provider.of<WalletProvider>(context, listen: false)
                   .authority
                   .canTransact),
@@ -1739,6 +1785,7 @@ class _GovernanceHubState extends State<GovernanceHub>
   }
 
   Future<void> _submitProposal() async {
+    if (_daoActionState.proposalSubmitInFlight) return;
     final messenger = ScaffoldMessenger.of(context);
     final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
@@ -1797,8 +1844,11 @@ class _GovernanceHubState extends State<GovernanceHub>
 
     final votingDays = int.tryParse(_votingPeriodController.text.trim()) ?? 7;
 
+    if (!_daoActionState.beginProposalSubmit()) return;
+    setState(() {});
+
     try {
-      final proposal = await daoProvider.createProposal(
+      await daoProvider.createProposal(
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
         type: selectedType,
@@ -1806,7 +1856,6 @@ class _GovernanceHubState extends State<GovernanceHub>
       );
 
       if (!mounted) return;
-      if (proposal == null) return;
 
       _clearForm();
       _setSelectedIndex(0);
@@ -1827,6 +1876,10 @@ class _GovernanceHubState extends State<GovernanceHub>
           backgroundColor: scheme.error,
         ),
       );
+    } finally {
+      if (mounted) {
+        setState(() => _daoActionState.endProposalSubmit());
+      }
     }
   }
 
@@ -2886,6 +2939,7 @@ class _GovernanceHubState extends State<GovernanceHub>
   }
 
   Future<void> _submitProposalVote(String proposalId, bool isYes) async {
+    if (_daoActionState.voteActionId != null) return;
     final daoProvider = context.read<DAOProvider>();
     final web3Provider = context.read<Web3Provider>();
     final walletProvider = context.read<WalletProvider>();
@@ -2915,6 +2969,9 @@ class _GovernanceHubState extends State<GovernanceHub>
       return;
     }
 
+    if (!_daoActionState.beginVote(proposalId, isYes)) return;
+    setState(() {});
+
     try {
       await daoProvider.castVote(
         proposalId: proposalId,
@@ -2942,6 +2999,10 @@ class _GovernanceHubState extends State<GovernanceHub>
           backgroundColor: scheme.error,
         ),
       );
+    } finally {
+      if (mounted) {
+        setState(() => _daoActionState.endVote());
+      }
     }
   }
 
