@@ -70,6 +70,22 @@ class SavedItemsRepository {
 
   Future<void> replayPendingMutations() => _replayOutbox();
 
+  Future<List<SavedItemRecord>> loadPendingSaves() async {
+    final prefs = await _preferences;
+    return _decodeMutations(prefs.getString(_outboxKey))
+        .where((mutation) => !mutation.deleteOnly && mutation.item != null)
+        .map((mutation) => mutation.item!)
+        .toList(growable: false);
+  }
+
+  Future<Set<String>> loadPendingDeleteKeys() async {
+    final prefs = await _preferences;
+    return _decodeMutations(prefs.getString(_outboxKey))
+        .where((mutation) => mutation.deleteOnly)
+        .map((mutation) => mutation.itemKey)
+        .toSet();
+  }
+
   Future<Map<String, bool>> getSavedBatchStatus(
     Iterable<SavedItemRecord> items,
   ) async {
@@ -173,6 +189,7 @@ class _SavedMutationRecord {
   final String id;
 
   String get key => '${deleteOnly ? 'delete' : 'save'}:${type.storageKey}:$id';
+  String get itemKey => '${type.storageKey}:$id';
 
   Map<String, dynamic> toJson() => {
         'action': deleteOnly ? 'delete' : 'save',

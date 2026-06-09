@@ -11,14 +11,20 @@ class _FakeSavedItemsRepository extends SavedItemsRepository {
     List<SavedItemRecord> cachedItems = const <SavedItemRecord>[],
     List<SavedItemRecord> backendItems = const <SavedItemRecord>[],
     Map<String, bool> statusMap = const <String, bool>{},
+    List<SavedItemRecord> pendingSaves = const <SavedItemRecord>[],
+    Set<String> pendingDeleteKeys = const <String>{},
   })  : _cachedItems = List<SavedItemRecord>.from(cachedItems),
         _backendItems = List<SavedItemRecord>.from(backendItems),
         _statusMap = Map<String, bool>.from(statusMap),
+        _pendingSaves = List<SavedItemRecord>.from(pendingSaves),
+        _pendingDeleteKeys = Set<String>.from(pendingDeleteKeys),
         super(api: BackendApiService());
 
   List<SavedItemRecord> _cachedItems;
   List<SavedItemRecord> _backendItems;
   Map<String, bool> _statusMap;
+  final List<SavedItemRecord> _pendingSaves;
+  final Set<String> _pendingDeleteKeys;
   bool clearCachedStateCalled = false;
 
   set backendItems(List<SavedItemRecord> value) {
@@ -36,6 +42,23 @@ class _FakeSavedItemsRepository extends SavedItemsRepository {
   @override
   Future<void> cacheItems(List<SavedItemRecord> items) async {
     _cachedItems = List<SavedItemRecord>.from(items);
+  }
+
+  @override
+  Future<SavedItemRecord> save(SavedItemRecord item) async {
+    _pendingDeleteKeys.remove('${item.type.storageKey}:${item.id}');
+    _backendItems.removeWhere(
+      (existing) => existing.type == item.type && existing.id == item.id,
+    );
+    _backendItems.add(item);
+    return item;
+  }
+
+  @override
+  Future<void> unsave(SavedItemType type, String id) async {
+    _backendItems.removeWhere(
+      (existing) => existing.type == type && existing.id == id,
+    );
   }
 
   @override
@@ -66,6 +89,14 @@ class _FakeSavedItemsRepository extends SavedItemsRepository {
 
   @override
   Future<void> replayPendingMutations() async {}
+
+  @override
+  Future<List<SavedItemRecord>> loadPendingSaves() async =>
+      List<SavedItemRecord>.from(_pendingSaves);
+
+  @override
+  Future<Set<String>> loadPendingDeleteKeys() async =>
+      Set<String>.from(_pendingDeleteKeys);
 
   @override
   Future<void> clearCachedState() async {
@@ -169,7 +200,7 @@ void main() {
     expect(provider.savedMarkersCount, equals(0));
   });
 
-  test('backend refresh merges saved state without wiping cached types', () async {
+  test('backend refresh removes stale cached items', () async {
     final repository = _FakeSavedItemsRepository(
       cachedItems: <SavedItemRecord>[
         SavedItemRecord(
@@ -192,10 +223,55 @@ void main() {
     final provider = SavedItemsProvider(repository: repository);
     await provider.initialize();
 
-    expect(provider.isArtistSaved('artist-1'), isTrue);
+    expect(provider.isArtistSaved('artist-1'), isFalse);
     expect(provider.isPostSaved('post-1'), isTrue);
-    expect(provider.savedArtistsCount, equals(1));
+    expect(provider.savedArtistsCount, equals(0));
     expect(provider.savedPostsCount, equals(1));
+  });
+
+  test('backend refresh preserves pending offline save', () async {
+    final repository = _FakeSavedItemsRepository(
+      cachedItems: <SavedItemRecord>[
+        SavedItemRecord(
+          type: SavedItemType.artist,
+          id: 'artist-pending',
+          savedAt: DateTime(2025, 1, 1),
+          title: 'Pending artist',
+        ),
+      ],
+      pendingSaves: <SavedItemRecord>[
+        SavedItemRecord(
+          type: SavedItemType.artist,
+          id: 'artist-pending',
+          savedAt: DateTime(2025, 1, 1),
+          title: 'Pending artist',
+        ),
+      ],
+    );
+
+    final provider = SavedItemsProvider(repository: repository);
+    await provider.initialize();
+
+    expect(provider.isArtistSaved('artist-pending'), isTrue);
+  });
+
+  test('backend refresh does not resurrect pending offline unsave', () async {
+    final repository = _FakeSavedItemsRepository(
+      backendItems: <SavedItemRecord>[
+        SavedItemRecord(
+          type: SavedItemType.marker,
+          id: 'marker-unsaved',
+          savedAt: DateTime(2025, 1, 1),
+          title: 'Backend marker',
+        ),
+      ],
+      pendingDeleteKeys: <String>{'marker:marker-unsaved'},
+    );
+
+    final provider = SavedItemsProvider(repository: repository);
+    await provider.initialize();
+
+    expect(provider.isMarkerSaved('marker-unsaved'), isFalse);
   });
 
   test('batch hydration updates visible saved status from backend', () async {
@@ -216,7 +292,36 @@ void main() {
     expect(provider.isMarkerSaved('marker-3'), isTrue);
   });
 
-  test('community feed hydration sets post bookmark state from provider', () async {
+  test('batch hydration removes stale visible saved status from backend',
+      () async {
+    final repository = _FakeSavedItemsRepository(
+      cachedItems: <SavedItemRecord>[
+        SavedItemRecord(
+          type: SavedItemType.communityPost,
+          id: 'post-stale',
+          savedAt: DateTime(2025, 1, 1),
+          title: 'Stale post',
+        ),
+      ],
+      statusMap: <String, bool>{'community_post:post-stale': false},
+    );
+
+    final provider = SavedItemsProvider(repository: repository);
+    await provider.initialize();
+    expect(provider.isPostSaved('post-stale'), isFalse);
+
+    await provider.setPostSaved('post-stale', true);
+    expect(provider.isPostSaved('post-stale'), isTrue);
+
+    await provider.hydrateSavedBatchStatus(<SavedItemType, Iterable<String>>{
+      SavedItemType.communityPost: ['post-stale'],
+    });
+
+    expect(provider.isPostSaved('post-stale'), isFalse);
+  });
+
+  test('community feed hydration sets post bookmark state from provider',
+      () async {
     final repository = _FakeSavedItemsRepository(
       statusMap: <String, bool>{'community_post:post-42': true},
     );

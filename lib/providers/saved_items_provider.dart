@@ -112,11 +112,23 @@ class SavedItemsProvider extends ChangeNotifier {
     _isSyncing = true;
     notifyListeners();
     try {
-      final page = await _repository.loadBackendItems(limit: 100);
-      _upsertAll(page.items);
+      await _repository.replayPendingMutations();
+      final pendingSaves = await _repository.loadPendingSaves();
+      final pendingDeleteKeys = await _repository.loadPendingDeleteKeys();
+      for (final type in SavedItemType.values) {
+        final page = await _repository.loadBackendItems(type: type, limit: 100);
+        _nextCursorByType[type] = page.nextCursor;
+        _typePageLoaded[type] = true;
+        _hasMoreByType[type] = page.nextCursor != null;
+        _replaceTypeWithBackendPage(
+          type: type,
+          serverItems: page.items,
+          pendingSaves: pendingSaves,
+          pendingDeleteKeys: pendingDeleteKeys,
+        );
+      }
       await _repository.cacheItems(_sortedRecords());
       await _saveLegacyCompatKeys();
-      await _repository.replayPendingMutations();
     } catch (_) {
       // Cached state remains authoritative for offline display until replay.
     } finally {
@@ -137,10 +149,24 @@ class SavedItemsProvider extends ChangeNotifier {
       limit: 50,
       cursor: cursor,
     );
+    final pendingSaves = await _repository.loadPendingSaves();
+    final pendingDeleteKeys = await _repository.loadPendingDeleteKeys();
     _nextCursorByType[type] = page.nextCursor;
     _typePageLoaded[type] = true;
     _hasMoreByType[type] = page.nextCursor != null;
-    _upsertAll(page.items);
+    if (cursor == null) {
+      _replaceTypeWithBackendPage(
+        type: type,
+        serverItems: page.items,
+        pendingSaves: pendingSaves,
+        pendingDeleteKeys: pendingDeleteKeys,
+      );
+    } else {
+      _upsertAll(
+        page.items.where((item) => !pendingDeleteKeys.contains(_itemKey(item))),
+      );
+      _upsertAll(pendingSaves.where((item) => item.type == type));
+    }
     await _repository.cacheItems(_sortedRecords());
     notifyListeners();
   }
@@ -431,7 +457,8 @@ class SavedItemsProvider extends ChangeNotifier {
   bool isArtistSaved(String artistId) =>
       _itemsByType[SavedItemType.artist]!.containsKey(artistId.trim());
   bool isInstitutionSaved(String institutionId) =>
-      _itemsByType[SavedItemType.institution]!.containsKey(institutionId.trim());
+      _itemsByType[SavedItemType.institution]!
+          .containsKey(institutionId.trim());
   bool isGroupSaved(String groupId) =>
       _itemsByType[SavedItemType.group]!.containsKey(groupId.trim());
   bool isMarkerSaved(String markerId) =>
@@ -460,27 +487,28 @@ class SavedItemsProvider extends ChangeNotifier {
       getSavedTimestamp(exhibitionId, type: SavedItemType.exhibition);
   DateTime? getPostSavedAt(String postId) =>
       getSavedTimestamp(postId, type: SavedItemType.communityPost);
-    DateTime? getArtistSavedAt(String artistId) =>
+  DateTime? getArtistSavedAt(String artistId) =>
       getSavedTimestamp(artistId, type: SavedItemType.artist);
-    DateTime? getInstitutionSavedAt(String institutionId) =>
+  DateTime? getInstitutionSavedAt(String institutionId) =>
       getSavedTimestamp(institutionId, type: SavedItemType.institution);
-    DateTime? getGroupSavedAt(String groupId) =>
+  DateTime? getGroupSavedAt(String groupId) =>
       getSavedTimestamp(groupId, type: SavedItemType.group);
-    DateTime? getMarkerSavedAt(String markerId) =>
+  DateTime? getMarkerSavedAt(String markerId) =>
       getSavedTimestamp(markerId, type: SavedItemType.marker);
 
-  Future<void> removeArtwork(String artworkId) => setArtworkSaved(artworkId, false);
+  Future<void> removeArtwork(String artworkId) =>
+      setArtworkSaved(artworkId, false);
   Future<void> removeEvent(String eventId) => setEventSaved(eventId, false);
   Future<void> removeCollection(String collectionId) =>
       setCollectionSaved(collectionId, false);
   Future<void> removeExhibition(String exhibitionId) =>
       setExhibitionSaved(exhibitionId, false);
   Future<void> removePost(String postId) => setPostSaved(postId, false);
-    Future<void> removeArtist(String artistId) => setArtistSaved(artistId, false);
-    Future<void> removeInstitution(String institutionId) =>
+  Future<void> removeArtist(String artistId) => setArtistSaved(artistId, false);
+  Future<void> removeInstitution(String institutionId) =>
       setInstitutionSaved(institutionId, false);
-    Future<void> removeGroup(String groupId) => setGroupSaved(groupId, false);
-    Future<void> removeMarker(String markerId) => setMarkerSaved(markerId, false);
+  Future<void> removeGroup(String groupId) => setGroupSaved(groupId, false);
+  Future<void> removeMarker(String markerId) => setMarkerSaved(markerId, false);
   Future<void> removeItem(SavedItemType type, String id) =>
       _setSaved(type, id, false);
 
@@ -544,9 +572,10 @@ class SavedItemsProvider extends ChangeNotifier {
   Future<void> reloadFromDisk() => refreshFromBackend();
 
   Future<void> reconcileVisibleItems(Iterable<SavedItemRecord> items) async {
-    final visibleItems = items.where((item) => item.id.trim().isNotEmpty).toList(
-          growable: false,
-        );
+    final visibleItems =
+        items.where((item) => item.id.trim().isNotEmpty).toList(
+              growable: false,
+            );
     if (visibleItems.isEmpty) return;
 
     final statusMap = await _repository.getSavedBatchStatus(visibleItems);
@@ -683,9 +712,26 @@ class SavedItemsProvider extends ChangeNotifier {
     _upsertAll(records);
   }
 
-  void _upsertAll(List<SavedItemRecord> records) {
+  void _upsertAll(Iterable<SavedItemRecord> records) {
     for (final record in records) {
       _upsert(record);
+    }
+  }
+
+  void _replaceTypeWithBackendPage({
+    required SavedItemType type,
+    required List<SavedItemRecord> serverItems,
+    required List<SavedItemRecord> pendingSaves,
+    required Set<String> pendingDeleteKeys,
+  }) {
+    final bucket = _itemsByType[type]!;
+    bucket.clear();
+    for (final item in serverItems) {
+      if (pendingDeleteKeys.contains(_itemKey(item))) continue;
+      _upsert(item);
+    }
+    for (final item in pendingSaves.where((item) => item.type == type)) {
+      _upsert(item);
     }
   }
 
@@ -693,6 +739,8 @@ class SavedItemsProvider extends ChangeNotifier {
     if (record.id.trim().isEmpty) return;
     _itemsByType[record.type]![record.id] = record;
   }
+
+  String _itemKey(SavedItemRecord item) => '${item.type.storageKey}:${item.id}';
 
   List<SavedItemRecord> _mergeRecords(List<SavedItemRecord> records) {
     final byKey = <String, SavedItemRecord>{};
