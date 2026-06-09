@@ -282,7 +282,7 @@ class PostAuthCoordinator {
                 loadProfile: false,
                 syncBackend: true,
                 requireBackendSync: isGoogleOnboarding,
-              );
+              ).timeout(const Duration(seconds: 12));
               if (!context.mounted) {
                 return const PostAuthResult(completed: false);
               }

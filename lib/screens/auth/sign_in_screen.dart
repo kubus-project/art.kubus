@@ -686,11 +686,9 @@ class _SignInScreenState extends State<SignInScreen> {
       requiresWalletBackup: false,
       presentation: presentation,
       onBeforeSavedItemsSync:
-          (origin == AuthOrigin.google ||
-                  origin == AuthOrigin.googleOnboarding ||
-                  origin == AuthOrigin.wallet)
-              ? null
-              : () => maybeShowGooglePasswordUpgradePrompt(context, payload),
+          (origin == AuthOrigin.google || origin == AuthOrigin.googleOnboarding)
+              ? () => maybeShowGooglePasswordUpgradePrompt(context, payload)
+              : null,
       onAuthSuccess: widget.onAuthSuccess == null
           ? null
           : (payload) async {
