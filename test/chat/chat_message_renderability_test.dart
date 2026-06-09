@@ -50,7 +50,7 @@ void main() {
     expect(message.isRenderable, isFalse);
   });
 
-  test('message with reactions is renderable even if empty', () {
+  test('message with only reactions is not renderable', () {
     final message = ChatMessage(
       id: 'msg-4',
       conversationId: 'conv-1',
@@ -69,7 +69,7 @@ void main() {
       createdAt: DateTime(2025, 1, 1),
     );
 
-    expect(message.isRenderable, isTrue);
+    expect(message.isRenderable, isFalse);
   });
 
   test('message with reply is renderable even if empty', () {

@@ -962,6 +962,11 @@ class ChatProvider extends ChangeNotifier {
   }
 
   @visibleForTesting
+  void handleMessageReactionForTesting(Map<String, dynamic> data) {
+    _onMessageReaction(data);
+  }
+
+  @visibleForTesting
   void setCurrentWalletForTesting(String? wallet) {
     _currentWallet = wallet;
   }
@@ -1545,9 +1550,8 @@ class ChatProvider extends ChangeNotifier {
         payload['file'] != null ||
         payload['url'] != null;
     final hasReply = payload['replyTo'] is Map || payload['reply_to'] is Map;
-    final hasReactions = (payload['reactions'] as List?)?.isNotEmpty == true;
 
-    return hasBody || hasRenderableAttachment || hasReply || hasReactions;
+    return hasBody || hasRenderableAttachment || hasReply;
   }
 
   bool _isNonMessageEventPayload(Map<String, dynamic> data) {

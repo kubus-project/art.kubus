@@ -15,9 +15,13 @@ class MessageReply {
 
   factory MessageReply.fromJson(Map<String, dynamic> j) {
     return MessageReply(
-      messageId: (j['messageId'] ?? j['message_id'] ?? j['id'] ?? '').toString(),
-      senderWallet: (j['senderWallet'] ?? j['sender_wallet'] ?? j['wallet'] ?? '').toString(),
-      senderDisplayName: j['senderDisplayName'] as String? ?? j['sender_display_name'] as String?,
+      messageId:
+          (j['messageId'] ?? j['message_id'] ?? j['id'] ?? '').toString(),
+      senderWallet:
+          (j['senderWallet'] ?? j['sender_wallet'] ?? j['wallet'] ?? '')
+              .toString(),
+      senderDisplayName: j['senderDisplayName'] as String? ??
+          j['sender_display_name'] as String?,
       message: j['message'] as String?,
     );
   }
@@ -37,11 +41,16 @@ class MessageReaction {
   factory MessageReaction.fromJson(Map<String, dynamic> j) {
     final emoji = (j['emoji'] ?? '').toString();
     final countValue = j['count'];
-    final int count = countValue is int ? countValue : int.tryParse(countValue?.toString() ?? '0') ?? 0;
+    final int count = countValue is int
+        ? countValue
+        : int.tryParse(countValue?.toString() ?? '0') ?? 0;
     List<String> reactors = const [];
     final rawReactors = j['reactors'];
     if (rawReactors is List) {
-      reactors = rawReactors.map((e) => e?.toString() ?? '').where((e) => e.isNotEmpty).toList();
+      reactors = rawReactors
+          .map((e) => e?.toString() ?? '')
+          .where((e) => e.isNotEmpty)
+          .toList();
     }
     return MessageReaction(emoji: emoji, count: count, reactors: reactors);
   }
@@ -93,8 +102,7 @@ class ChatMessage {
     return false;
   }
 
-  bool get isRenderable =>
-      hasRenderableContent || replyTo != null || reactions.isNotEmpty;
+  bool get isRenderable => hasRenderableContent || replyTo != null;
 
   ChatMessage({
     required this.id,
@@ -122,7 +130,9 @@ class ChatMessage {
         data = null;
       } else if (rawData is String) {
         try {
-          final parsed = rawData.isNotEmpty ? (jsonDecode(rawData) as Map<String, dynamic>?) : null;
+          final parsed = rawData.isNotEmpty
+              ? (jsonDecode(rawData) as Map<String, dynamic>?)
+              : null;
           data = parsed;
         } catch (_) {
           data = null;
@@ -132,7 +142,6 @@ class ChatMessage {
       } else {
         data = null;
       }
-
     } catch (_) {
       data = null;
     }
@@ -146,12 +155,18 @@ class ChatMessage {
       } else if (rawReaders is String) {
         try {
           final parsed = jsonDecode(rawReaders) as List<dynamic>;
-          readersList = parsed.map((e) => e is Map ? Map<String, dynamic>.from(e) : <String, dynamic>{}).toList();
+          readersList = parsed
+              .map((e) =>
+                  e is Map ? Map<String, dynamic>.from(e) : <String, dynamic>{})
+              .toList();
         } catch (_) {
           readersList = [];
         }
       } else if (rawReaders is List) {
-        readersList = rawReaders.map((e) => e is Map ? Map<String, dynamic>.from(e) : <String, dynamic>{}).toList();
+        readersList = rawReaders
+            .map((e) =>
+                e is Map ? Map<String, dynamic>.from(e) : <String, dynamic>{})
+            .toList();
       } else {
         readersList = [];
       }
@@ -177,12 +192,17 @@ class ChatMessage {
     // Parse reply preview if present
     MessageReply? replyTo;
     try {
-      final rawReply = j['replyTo'] ?? j['reply_to'] ?? j['replyPreview'] ?? j['reply_preview'];
+      final rawReply = j['replyTo'] ??
+          j['reply_to'] ??
+          j['replyPreview'] ??
+          j['reply_preview'];
       if (rawReply is Map) {
         replyTo = MessageReply.fromJson(Map<String, dynamic>.from(rawReply));
       } else if (rawReply is String && rawReply.isNotEmpty) {
         final parsed = jsonDecode(rawReply);
-        if (parsed is Map<String, dynamic>) replyTo = MessageReply.fromJson(parsed);
+        if (parsed is Map<String, dynamic>) {
+          replyTo = MessageReply.fromJson(parsed);
+        }
       }
     } catch (_) {
       replyTo = null;
@@ -194,15 +214,16 @@ class ChatMessage {
       final rawReactions = j['reactions'];
       if (rawReactions is List) {
         reactionList = rawReactions
-          .whereType<Map>()
-          .map((e) => MessageReaction.fromJson(Map<String, dynamic>.from(e)))
-          .toList();
+            .whereType<Map>()
+            .map((e) => MessageReaction.fromJson(Map<String, dynamic>.from(e)))
+            .toList();
       } else if (rawReactions is String && rawReactions.isNotEmpty) {
         final parsed = jsonDecode(rawReactions);
         if (parsed is List) {
           reactionList = parsed
               .whereType<Map>()
-              .map((e) => MessageReaction.fromJson(Map<String, dynamic>.from(e)))
+              .map(
+                  (e) => MessageReaction.fromJson(Map<String, dynamic>.from(e)))
               .toList();
         }
       }
@@ -211,20 +232,41 @@ class ChatMessage {
     }
 
     // Ensure id is present and fallback to a synthetic id if not
-    final rawId = j['id'] ?? j['message_id'] ?? j['messageId'] ?? j['uuid'] ?? j['tempId'];
-    final idStr = (rawId != null) ? rawId.toString() : DateTime.now().millisecondsSinceEpoch.toString();
+    final rawId = j['id'] ??
+        j['message_id'] ??
+        j['messageId'] ??
+        j['uuid'] ??
+        j['tempId'];
+    final idStr = (rawId != null)
+        ? rawId.toString()
+        : DateTime.now().millisecondsSinceEpoch.toString();
     return ChatMessage(
       id: idStr,
-      conversationId: (j['conversation_id'] as String?) ?? (j['conversationId'] as String? ?? ''),
-      senderWallet: (j['sender_wallet'] ?? j['senderWallet'] ?? j['wallet'] ?? j['from']) as String? ?? '',
-      senderUsername: (j['username'] ?? j['sender_username'] ?? j['senderUsername']) as String?,
-      senderDisplayName: (j['display_name'] ?? j['sender_display_name'] ?? j['senderDisplayName']) as String?,
-      senderAvatar: (j['avatar_url'] ?? j['avatar'] ?? j['senderAvatar']) as String?,
+      conversationId: (j['conversation_id'] as String?) ??
+          (j['conversationId'] as String? ?? ''),
+      senderWallet: (j['sender_wallet'] ??
+              j['senderWallet'] ??
+              j['wallet'] ??
+              j['from']) as String? ??
+          '',
+      senderUsername: (j['username'] ??
+          j['sender_username'] ??
+          j['senderUsername']) as String?,
+      senderDisplayName: (j['display_name'] ??
+          j['sender_display_name'] ??
+          j['senderDisplayName']) as String?,
+      senderAvatar:
+          (j['avatar_url'] ?? j['avatar'] ?? j['senderAvatar']) as String?,
       message: _extractMessageText(j),
       data: data,
       replyTo: replyTo,
       reactions: reactionList,
-      readersCount: (j['readers_count'] ?? j['readersCount']) is int ? (j['readers_count'] ?? j['readersCount']) as int : int.tryParse((j['readers_count'] ?? j['readersCount'])?.toString() ?? '0') ?? 0,
+      readersCount: (j['readers_count'] ?? j['readersCount']) is int
+          ? (j['readers_count'] ?? j['readersCount']) as int
+          : int.tryParse(
+                  (j['readers_count'] ?? j['readersCount'])?.toString() ??
+                      '0') ??
+              0,
       readByCurrent: (j['read_by_current'] ?? j['readByCurrent']) == true,
       readers: readersList,
       createdAt: createdAt,

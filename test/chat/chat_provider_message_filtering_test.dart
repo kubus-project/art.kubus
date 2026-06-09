@@ -61,114 +61,165 @@ void main() {
     expect(messages.single.isRenderable, isTrue);
   });
 
-    test('raw notification payload is ignored and does not affect unread', () {
-      final provider = ChatProvider();
-      provider.setCurrentWalletForTesting('wallet-self');
+  test('raw notification payload is ignored and does not affect unread', () {
+    final provider = ChatProvider();
+    provider.setCurrentWalletForTesting('wallet-self');
 
-      provider.handleIncomingMessageForTesting(<String, dynamic>{
-        'event': 'notification:new',
-        'raw': <String, dynamic>{
-          'id': 'notif-1',
-          'conversationId': 'conv-raw',
-          'message': 'should never render',
-        },
-      });
-
-      expect(provider.messages['conv-raw'], isNull);
-      expect(provider.totalUnread, equals(0));
+    provider.handleIncomingMessageForTesting(<String, dynamic>{
+      'event': 'notification:new',
+      'raw': <String, dynamic>{
+        'id': 'notif-1',
+        'conversationId': 'conv-raw',
+        'message': 'should never render',
+      },
     });
 
-    test('read receipt payload is ignored', () {
-      final provider = ChatProvider();
-      provider.setCurrentWalletForTesting('wallet-self');
+    expect(provider.messages['conv-raw'], isNull);
+    expect(provider.totalUnread, equals(0));
+  });
 
-      provider.handleIncomingMessageForTesting(<String, dynamic>{
-        'event': 'message:read',
-        'data': <String, dynamic>{
-          'conversationId': 'conv-2',
-          'reader': 'wallet-self',
-          'read_at': '2025-01-01T00:00:00.000Z',
-        },
-      });
+  test('read receipt payload is ignored', () {
+    final provider = ChatProvider();
+    provider.setCurrentWalletForTesting('wallet-self');
 
-      expect(provider.messages['conv-2'], isNull);
-      expect(provider.totalUnread, equals(0));
+    provider.handleIncomingMessageForTesting(<String, dynamic>{
+      'event': 'message:read',
+      'data': <String, dynamic>{
+        'conversationId': 'conv-2',
+        'reader': 'wallet-self',
+        'read_at': '2025-01-01T00:00:00.000Z',
+      },
     });
 
-    test('conversation and member update payloads are ignored', () {
-      final provider = ChatProvider();
-      provider.setCurrentWalletForTesting('wallet-self');
+    expect(provider.messages['conv-2'], isNull);
+    expect(provider.totalUnread, equals(0));
+  });
 
-      provider.handleIncomingMessageForTesting(<String, dynamic>{
-        'event': 'chat:conversation-updated',
-        'data': <String, dynamic>{
-          'conversationId': 'conv-3',
-          'title': 'Updated title',
-        },
-      });
+  test('conversation and member update payloads are ignored', () {
+    final provider = ChatProvider();
+    provider.setCurrentWalletForTesting('wallet-self');
 
-      provider.handleIncomingMessageForTesting(<String, dynamic>{
-        'event': 'chat:members-updated',
-        'data': <String, dynamic>{
-          'conversationId': 'conv-3',
-          'members': ['wallet-self', 'wallet-other'],
-        },
-      });
-
-      expect(provider.messages['conv-3'], isNull);
-      expect(provider.totalUnread, equals(0));
+    provider.handleIncomingMessageForTesting(<String, dynamic>{
+      'event': 'chat:conversation-updated',
+      'data': <String, dynamic>{
+        'conversationId': 'conv-3',
+        'title': 'Updated title',
+      },
     });
 
-    test('reaction payload is ignored', () {
-      final provider = ChatProvider();
-      provider.setCurrentWalletForTesting('wallet-self');
-
-      provider.handleIncomingMessageForTesting(<String, dynamic>{
-        'event': 'message:reaction',
-        'payload': <String, dynamic>{
-          'conversationId': 'conv-4',
-          'messageId': 'msg-4',
-          'reactions': ['👍'],
-        },
-      });
-
-      expect(provider.messages['conv-4'], isNull);
-      expect(provider.totalUnread, equals(0));
+    provider.handleIncomingMessageForTesting(<String, dynamic>{
+      'event': 'chat:members-updated',
+      'data': <String, dynamic>{
+        'conversationId': 'conv-3',
+        'members': ['wallet-self', 'wallet-other'],
+      },
     });
 
-    test('valid message:received payload is inserted once', () {
-      final provider = ChatProvider();
-      provider.setCurrentWalletForTesting('wallet-self');
+    expect(provider.messages['conv-3'], isNull);
+    expect(provider.totalUnread, equals(0));
+  });
 
-      provider.handleIncomingMessageForTesting(<String, dynamic>{
-        'event': 'message:received',
-        'data': <String, dynamic>{
-          'message': <String, dynamic>{
-            'id': 'msg-valid-1',
-            'conversationId': 'conv-valid',
-            'senderWallet': 'wallet-other',
-            'message': 'hello there',
-            'createdAt': '2025-01-01T00:00:00.000Z',
-          },
-        },
-      });
+  test('reaction payload is ignored', () {
+    final provider = ChatProvider();
+    provider.setCurrentWalletForTesting('wallet-self');
 
-      provider.handleIncomingMessageForTesting(<String, dynamic>{
-        'event': 'message:received',
-        'data': <String, dynamic>{
-          'message': <String, dynamic>{
-            'id': 'msg-valid-1',
-            'conversationId': 'conv-valid',
-            'senderWallet': 'wallet-other',
-            'message': 'hello there',
-            'createdAt': '2025-01-01T00:00:00.000Z',
-          },
-        },
-      });
-
-      final messages = provider.messages['conv-valid'];
-      expect(messages, hasLength(1));
-      expect(messages!.single.id, 'msg-valid-1');
-      expect(provider.unreadCounts['conv-valid'], 1);
+    provider.handleIncomingMessageForTesting(<String, dynamic>{
+      'event': 'message:reaction',
+      'payload': <String, dynamic>{
+        'conversationId': 'conv-4',
+        'messageId': 'msg-4',
+        'reactions': ['👍'],
+      },
     });
+
+    expect(provider.messages['conv-4'], isNull);
+    expect(provider.totalUnread, equals(0));
+  });
+
+  test('reaction-only payload without event name is ignored', () {
+    final provider = ChatProvider();
+    provider.setCurrentWalletForTesting('wallet-self');
+
+    provider.handleIncomingMessageForTesting(<String, dynamic>{
+      'conversationId': 'conv-4b',
+      'messageId': 'msg-4b',
+      'reactions': [
+        <String, dynamic>{
+          'emoji': 'like',
+          'count': 1,
+          'reactors': ['wallet-self'],
+        },
+      ],
+    });
+
+    expect(provider.messages['conv-4b'], isNull);
+    expect(provider.totalUnread, equals(0));
+  });
+
+  test('reaction event updates existing message', () {
+    final provider = ChatProvider();
+    provider.messages['conv-reaction'] = <ChatMessage>[
+      ChatMessage(
+        id: 'msg-reaction',
+        conversationId: 'conv-reaction',
+        senderWallet: 'wallet-other',
+        message: 'Hello there',
+        createdAt: DateTime.parse('2025-01-01T00:00:00.000Z'),
+      ),
+    ];
+
+    provider.handleMessageReactionForTesting(<String, dynamic>{
+      'conversationId': 'conv-reaction',
+      'messageId': 'msg-reaction',
+      'reactions': [
+        <String, dynamic>{
+          'emoji': 'like',
+          'count': 2,
+          'reactors': ['wallet-a', 'wallet-b'],
+        },
+      ],
+    });
+
+    final message = provider.messages['conv-reaction']!.single;
+    expect(message.message, 'Hello there');
+    expect(message.reactions, hasLength(1));
+    expect(message.reactions.single.emoji, 'like');
+    expect(message.reactions.single.count, 2);
+  });
+
+  test('valid message:received payload is inserted once', () {
+    final provider = ChatProvider();
+    provider.setCurrentWalletForTesting('wallet-self');
+
+    provider.handleIncomingMessageForTesting(<String, dynamic>{
+      'event': 'message:received',
+      'data': <String, dynamic>{
+        'message': <String, dynamic>{
+          'id': 'msg-valid-1',
+          'conversationId': 'conv-valid',
+          'senderWallet': 'wallet-other',
+          'message': 'hello there',
+          'createdAt': '2025-01-01T00:00:00.000Z',
+        },
+      },
+    });
+
+    provider.handleIncomingMessageForTesting(<String, dynamic>{
+      'event': 'message:received',
+      'data': <String, dynamic>{
+        'message': <String, dynamic>{
+          'id': 'msg-valid-1',
+          'conversationId': 'conv-valid',
+          'senderWallet': 'wallet-other',
+          'message': 'hello there',
+          'createdAt': '2025-01-01T00:00:00.000Z',
+        },
+      },
+    });
+
+    final messages = provider.messages['conv-valid'];
+    expect(messages, hasLength(1));
+    expect(messages!.single.id, 'msg-valid-1');
+    expect(provider.unreadCounts['conv-valid'], 1);
+  });
 }
