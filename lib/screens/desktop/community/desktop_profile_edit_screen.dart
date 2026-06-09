@@ -164,17 +164,11 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
     final nextCoverDisplay = _normalizeMediaUrl(profile?.coverImage);
 
     setState(() {
-      if (!_isUploadingAvatar &&
-          !_avatarChanged &&
-          nextAvatar != null &&
-          nextAvatar.isNotEmpty) {
+      if (!_isUploadingAvatar && !_avatarChanged) {
         _avatarUrl = nextAvatar;
       }
 
-      if (!_isUploadingCover &&
-          !_coverChanged &&
-          nextCoverDisplay != null &&
-          nextCoverDisplay.isNotEmpty) {
+      if (!_isUploadingCover && !_coverChanged) {
         _coverImageUrl = nextCoverDisplay;
       }
     });
@@ -1142,51 +1136,53 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
       });
 
       unawaited(profileProvider.loadProfile(wallet));
-      final displayAvatarUrl =
-          _normalizeMediaUrl(persistableAvatar) ?? persistableAvatar;
-      final uri = Uri.tryParse(displayAvatarUrl);
-      messenger.showKubusSnackBar(
-        SnackBar(
-          duration: const Duration(seconds: 6),
-          content: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  displayAvatarUrl,
-                  overflow: TextOverflow.ellipsis,
+      if (kDebugMode) {
+        final displayAvatarUrl =
+            _normalizeMediaUrl(persistableAvatar) ?? persistableAvatar;
+        final uri = Uri.tryParse(displayAvatarUrl);
+        messenger.showKubusSnackBar(
+          SnackBar(
+            duration: const Duration(seconds: 6),
+            content: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    displayAvatarUrl,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.copy, size: 20, color: Colors.white),
-                onPressed: () async {
-                  final activeMessenger = ScaffoldMessenger.of(context);
-                  await Clipboard.setData(
-                      ClipboardData(text: displayAvatarUrl));
-                  if (!mounted) return;
-                  activeMessenger.showKubusSnackBar(
-                    SnackBar(
-                      content:
-                          Text(l10n.profileEditAvatarCopiedToClipboardToast),
-                      duration: const Duration(seconds: 1),
-                    ),
-                  );
-                },
-              ),
-            ],
-          ),
-          action: uri != null
-              ? SnackBarAction(
-                  label: l10n.commonOpen,
+                IconButton(
+                  icon: const Icon(Icons.copy, size: 20, color: Colors.white),
                   onPressed: () async {
-                    try {
-                      await launchUrl(uri,
-                          mode: LaunchMode.externalApplication);
-                    } catch (_) {}
+                    final activeMessenger = ScaffoldMessenger.of(context);
+                    await Clipboard.setData(
+                        ClipboardData(text: displayAvatarUrl));
+                    if (!mounted) return;
+                    activeMessenger.showKubusSnackBar(
+                      SnackBar(
+                        content:
+                            Text(l10n.profileEditAvatarCopiedToClipboardToast),
+                        duration: const Duration(seconds: 1),
+                      ),
+                    );
                   },
-                )
-              : null,
-        ),
-      );
+                ),
+              ],
+            ),
+            action: uri != null
+                ? SnackBarAction(
+                    label: l10n.commonOpen,
+                    onPressed: () async {
+                      try {
+                        await launchUrl(uri,
+                            mode: LaunchMode.externalApplication);
+                      } catch (_) {}
+                    },
+                  )
+                : null,
+          ),
+        );
+      }
 
       if (!mounted) return;
       messenger.showKubusSnackBar(
@@ -1204,9 +1200,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
       if (!mounted) return;
       messenger.showKubusSnackBar(
         SnackBar(
-          content: const Text(
-            'Profile image upload timed out. Please try a smaller image or retry.',
-          ),
+          content: Text(l10n.profileEditAvatarUploadTimeoutToast),
           backgroundColor: colorScheme.error,
         ),
       );
@@ -1224,7 +1218,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
       );
 
       final debug = profileProvider.lastUploadDebug;
-      if (debug != null) {
+      if (kDebugMode && debug != null) {
         final pretty = const JsonEncoder.withIndent('  ').convert(debug);
         showKubusDialog<void>(
           context: context,
@@ -1383,9 +1377,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
       if (!mounted) return;
       messenger.showKubusSnackBar(
         SnackBar(
-          content: const Text(
-            'Cover image upload timed out. Please try a smaller image or retry.',
-          ),
+          content: Text(l10n.profileEditCoverUploadTimeoutToast),
           backgroundColor: colorScheme.error,
         ),
       );
@@ -1506,7 +1498,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
     } catch (e) {
       if (!mounted) return;
       final errorText = e.toString().contains('Profile save timed out')
-          ? 'Profile save timed out. Your connection may be slow. Please retry.'
+          ? l10n.profileEditSaveTimeoutToast
           : l10n.profileEditErrorToast;
       if (kDebugMode) {
         debugPrint('DesktopProfileEditScreen: profile save failed: $e');

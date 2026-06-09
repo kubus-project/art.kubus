@@ -10779,6 +10779,9 @@ class AppLocalizationsSl extends AppLocalizations {
   String get profileEditAvatarUploadFailedToast => 'Nalaganje avatarja ni uspelo. Poskusi znova.';
 
   @override
+  String get profileEditAvatarUploadTimeoutToast => 'Nalaganje profilne slike je poteklo. Poskusi z manjšo sliko ali znova.';
+
+  @override
   String get profileEditCoverUploadedSavedToast => 'Naslovna slika naložena!';
 
   @override
@@ -10786,6 +10789,12 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get profileEditCoverUploadFailedToast => 'Nalaganje naslovne slike ni uspelo. Poskusi znova.';
+
+  @override
+  String get profileEditCoverUploadTimeoutToast => 'Nalaganje naslovne slike je poteklo. Poskusi z manjšo sliko ali znova.';
+
+  @override
+  String get profileEditSaveTimeoutToast => 'Shranjevanje profila je poteklo. Povezava je morda počasna. Poskusi znova.';
 
   @override
   String get profileEditPickImageFailedToast => 'Slike ni bilo mogoče izbrati. Poskusi znova.';

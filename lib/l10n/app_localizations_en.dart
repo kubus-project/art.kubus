@@ -10755,6 +10755,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileEditAvatarUploadFailedToast => 'Avatar upload failed. Please try again.';
 
   @override
+  String get profileEditAvatarUploadTimeoutToast => 'Profile image upload timed out. Please try a smaller image or retry.';
+
+  @override
   String get profileEditCoverUploadedSavedToast => 'Cover image uploaded!';
 
   @override
@@ -10762,6 +10765,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get profileEditCoverUploadFailedToast => 'Cover image upload failed. Please try again.';
+
+  @override
+  String get profileEditCoverUploadTimeoutToast => 'Cover image upload timed out. Please try a smaller image or retry.';
+
+  @override
+  String get profileEditSaveTimeoutToast => 'Profile save timed out. Your connection may be slow. Please retry.';
 
   @override
   String get profileEditPickImageFailedToast => 'Could not select the image. Please try again.';

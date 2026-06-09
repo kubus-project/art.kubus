@@ -275,7 +275,7 @@ void main() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
   });
 
-  testWidgets('mobile edit profile listener ignores provisional empty media',
+  testWidgets('mobile edit profile listener clears provider-cleared media',
       (tester) async {
     final api = _FakeProfileApi();
     final provider = await _seedProfile(api);
@@ -311,6 +311,18 @@ void main() {
     );
     await tester.pump();
 
+    expect(state.debugAvatarUrl, isNull);
+    expect(state.debugCoverImageUrl, isNull);
+  });
+
+  testWidgets('desktop edit profile listener clears provider-cleared media',
+      (tester) async {
+    final api = _FakeProfileApi();
+    final provider = await _seedProfile(api);
+    await _pumpEditScreen(tester, provider, const desktop.ProfileEditScreen());
+
+    final state =
+        tester.state(find.byType(desktop.ProfileEditScreen)) as dynamic;
     expect(
       state.debugAvatarUrl,
       'https://api.kubus.site/uploads/profiles/avatars/current.png',
@@ -319,6 +331,28 @@ void main() {
       state.debugCoverImageUrl,
       'https://api.kubus.site/uploads/profiles/cover/current.png',
     );
+
+    api.nextSaveResponse = <String, dynamic>{
+      'walletAddress': 'ArtistWallet111111111111111111111111111111111',
+      'username': 'artist_user',
+      'displayName': 'Artist User',
+      'bio': 'Cleared media',
+      'avatar': '',
+      'coverImage': '',
+      'createdAt': '2026-03-31T00:00:00.000Z',
+      'updatedAt': '2026-03-31T00:00:00.000Z',
+    };
+    await provider.saveProfile(
+      walletAddress: 'ArtistWallet111111111111111111111111111111111',
+      username: 'artist_user',
+      displayName: 'Artist User',
+      bio: 'Cleared media',
+      reloadStats: false,
+    );
+    await tester.pump();
+
+    expect(state.debugAvatarUrl, isNull);
+    expect(state.debugCoverImageUrl, isNull);
   });
 
   testWidgets(
@@ -445,6 +479,51 @@ void main() {
         provider.currentUser?.avatar, '/uploads/profiles/avatars/current.png');
     expect(provider.currentUser?.coverImage,
         '/uploads/profiles/cover/current.png');
+  });
+
+  testWidgets('missing wallet avatar upload resets spinner and preview',
+      (tester) async {
+    final provider = _ProfileEditTestProvider();
+    provider.setCurrentUser(
+      _ProfileEditTestProvider._initialProfile.copyWith(walletAddress: ''),
+    );
+    await _pumpEditScreen(tester, provider, const mobile.ProfileEditScreen());
+
+    final state =
+        tester.state(find.byType(mobile.ProfileEditScreen)) as dynamic;
+    await state.debugUploadAvatarBytesForTesting(
+      bytes: Uint8List.fromList(<int>[1, 2, 3]),
+      fileName: 'avatar.png',
+      mimeType: 'image/png',
+    );
+    await tester.pump();
+
+    expect(state.debugIsUploadingAvatar, isFalse);
+    expect(state.debugAvatarChanged, isFalse);
+    expect(state.debugHasLocalAvatarBytes, isFalse);
+    expect(find.textContaining('Sign in first'), findsOneWidget);
+  });
+
+  testWidgets('missing wallet cover upload resets spinner and preview',
+      (tester) async {
+    final provider = _ProfileEditTestProvider();
+    provider.setCurrentUser(
+      _ProfileEditTestProvider._initialProfile.copyWith(walletAddress: ''),
+    );
+    await _pumpEditScreen(tester, provider, const mobile.ProfileEditScreen());
+
+    final state =
+        tester.state(find.byType(mobile.ProfileEditScreen)) as dynamic;
+    await state.debugUploadCoverBytesForTesting(
+      bytes: Uint8List.fromList(<int>[1, 2, 3]),
+      fileName: 'cover.png',
+    );
+    await tester.pump();
+
+    expect(state.debugIsUploadingCover, isFalse);
+    expect(state.debugCoverChanged, isFalse);
+    expect(state.debugHasLocalCoverBytes, isFalse);
+    expect(find.textContaining('Sign in first'), findsOneWidget);
   });
 
   testWidgets('successful avatar upload saves avatar and reloads profile',
