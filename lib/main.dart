@@ -882,6 +882,40 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
                   attendanceMarkerId: attendanceMarkerId,
                 );
         },
+        '/exhibition': (context) {
+          final args = ModalRoute.of(context)?.settings.arguments;
+          String? exhibitionId;
+          String? attendanceMarkerId;
+          if (args is Map) {
+            final raw =
+                args['exhibitionId'] ?? args['id'] ?? args['exhibition_id'];
+            if (raw != null) {
+              exhibitionId = raw.toString();
+            }
+            final rawMarker = args['attendanceMarkerId'] ??
+                args['markerId'] ??
+                args['marker_id'];
+            if (rawMarker != null) {
+              attendanceMarkerId = rawMarker.toString();
+            }
+          } else if (args is String) {
+            exhibitionId = args;
+          }
+          exhibitionId = exhibitionId?.trim();
+          attendanceMarkerId = attendanceMarkerId?.trim();
+          if (exhibitionId == null || exhibitionId.isEmpty) {
+            final l10n = AppLocalizations.of(context)!;
+            return Scaffold(
+              body: Center(child: Text(l10n.exhibitionNotFound)),
+            );
+          }
+          return ExhibitionDetailScreen(
+            exhibitionId: exhibitionId,
+            attendanceMarkerId: (attendanceMarkerId?.isNotEmpty ?? false)
+                ? attendanceMarkerId
+                : null,
+          );
+        },
         '/connect-wallet': (context) => DesktopBreakpoints.isDesktop(context)
             ? const DesktopConnectWalletScreen()
             : const ConnectWallet(),
@@ -1051,6 +1085,40 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
           },
         ),
       );
+    }
+
+    // Canonical exhibition URLs: /exhibition?id=<id> and /exhibition/<id>.
+    // Share links (/x/<id>) keep flowing through ShareDeepLinkParser below.
+    if (uri.path == '/exhibition' || uri.path.startsWith('/exhibition/')) {
+      String exhibitionId = (uri.queryParameters['id'] ??
+              uri.queryParameters['exhibitionId'] ??
+              uri.queryParameters['exhibition_id'] ??
+              '')
+          .trim();
+      if (exhibitionId.isEmpty &&
+          uri.pathSegments.length >= 2 &&
+          uri.pathSegments.first == 'exhibition') {
+        exhibitionId = uri.pathSegments[1].trim();
+      }
+      final markerId = (uri.queryParameters['markerId'] ??
+              uri.queryParameters['marker_id'] ??
+              '')
+          .trim();
+      if (exhibitionId.isNotEmpty) {
+        return MaterialPageRoute(
+          builder: (_) => ExhibitionDetailScreen(
+            exhibitionId: exhibitionId,
+            attendanceMarkerId: markerId.isEmpty ? null : markerId,
+          ),
+          settings: RouteSettings(
+            name: '/exhibition',
+            arguments: {
+              'exhibitionId': exhibitionId,
+              if (markerId.isNotEmpty) 'attendanceMarkerId': markerId,
+            },
+          ),
+        );
+      }
     }
 
     final target = const ShareDeepLinkParser().parse(uri);

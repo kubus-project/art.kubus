@@ -12512,4 +12512,217 @@ class AppLocalizationsSl extends AppLocalizations {
   String exhibitionDetailAttendanceRewardPending(Object amount) {
     return '+$amount priznanja KUB8 (v obdelavi)';
   }
+
+  @override
+  String get mapMarkerMoreInfo => 'Več informacij';
+
+  @override
+  String get exhibitionDetailOpenPageCta => 'Odpri stran razstave';
+
+  @override
+  String get exhibitionNotFound => 'Razstave ni mogoče najti';
+
+  @override
+  String get exhibitionDetailProgramTitle => 'Program';
+
+  @override
+  String get exhibitionDetailProgramEmpty => 'Tej razstavi še ni dodanih dogodkov.';
+
+  @override
+  String get exhibitionDetailProgramOpenEvent => 'Odpri dogodek';
+
+  @override
+  String get exhibitionDetailProgramLinkEvent => 'Poveži dogodek';
+
+  @override
+  String get exhibitionDetailProgramCreateEvent => 'Ustvari dogodek';
+
+  @override
+  String get exhibitionDetailProgramManage => 'Uredi program';
+
+  @override
+  String get exhibitionDetailProgramRemoveEvent => 'Odstrani iz programa';
+
+  @override
+  String get exhibitionDetailPoapNoneConfiguredOwnerHint => 'Značka POAP še ni nastavljena. Omogoči jo v urejevalniku razstave.';
+
+  @override
+  String get eventRelationTypeOpening => 'Otvoritev';
+
+  @override
+  String get eventRelationTypeArtistTalk => 'Pogovor z umetnikom';
+
+  @override
+  String get eventRelationTypeGuidedTour => 'Vodeni ogled';
+
+  @override
+  String get eventRelationTypeWorkshop => 'Delavnica';
+
+  @override
+  String get eventRelationTypePerformance => 'Performans';
+
+  @override
+  String get eventRelationTypeLecture => 'Predavanje';
+
+  @override
+  String get eventRelationTypeScreening => 'Projekcija';
+
+  @override
+  String get eventRelationTypeProgram => 'Program';
+
+  @override
+  String get eventRelationTypeOther => 'Drugo';
+
+  @override
+  String get eventDetailLinkedExhibitionsTitle => 'Povezane razstave';
+
+  @override
+  String get eventDetailOpenExhibitionCta => 'Odpri razstavo';
+
+  @override
+  String get eventDetailLinkExhibition => 'Poveži razstavo';
+
+  @override
+  String get eventDetailCreateExhibition => 'Ustvari razstavo';
+
+  @override
+  String get eventDetailManageLinks => 'Uredi povezave';
+
+  @override
+  String get eventDetailUnlinkExhibition => 'Odstrani povezavo z razstavo';
+
+  @override
+  String get eventDetailPoapTitle => 'POAP dogodka';
+
+  @override
+  String get eventDetailPoapDescription => 'Značka prisotnosti za ta dogodek.';
+
+  @override
+  String get eventDetailPoapEligibilityNotPublished => 'Dogodek ni objavljen';
+
+  @override
+  String get eventDetailPoapEligibilityNotPublishedHint => 'Značko POAP dogodka bo mogoče prevzeti, ko bo dogodek objavljen.';
+
+  @override
+  String get eventDetailPoapScanProofRequired => 'Potrebno je dokazilo s skeniranjem';
+
+  @override
+  String get eventDetailPoapScanProofRequiredHint => 'Za prevzem značke skeniraj QR kodo na dogodku.';
+
+  @override
+  String get eventDetailPoapCheckInFirstHint => 'Za prevzem značke se najprej prijavi na lokaciji dogodka.';
+
+  @override
+  String get eventDetailPoapClaimFailedToast => 'Značke POAP dogodka ni bilo mogoče prevzeti. Poskusi znova.';
+
+  @override
+  String get eventDetailPoapClaimSuccessToast => 'Značka POAP dogodka prevzeta!';
+
+  @override
+  String get creatorPoapSectionTitle => 'Značka POAP';
+
+  @override
+  String get creatorPoapSectionSubtitle => 'Nagradi obiskovalce z značko prisotnosti.';
+
+  @override
+  String get creatorPoapEnableTitle => 'Omogoči značko POAP';
+
+  @override
+  String get creatorPoapEnableSubtitle => 'Obiskovalci lahko prevzamejo značko prisotnosti.';
+
+  @override
+  String get creatorPoapTitleLabel => 'Naslov značke';
+
+  @override
+  String get creatorPoapDescriptionLabel => 'Opis značke';
+
+  @override
+  String get creatorPoapIconLabel => 'Ikona značke';
+
+  @override
+  String get creatorPoapRarityLabel => 'Redkost';
+
+  @override
+  String get creatorPoapRewardLabel => 'Nagrada KUB8';
+
+  @override
+  String get creatorPoapProofTypeLabel => 'Dokazilo za prevzem';
+
+  @override
+  String get creatorPoapProofMarkerAttendance => 'Prisotnost pri označevalcu';
+
+  @override
+  String get creatorPoapProofScan => 'Dokazilo QR / skeniranje';
+
+  @override
+  String get creatorPoapPreviewLabel => 'Predogled';
+
+  @override
+  String get creatorPoapTitleRequired => 'Naslov značke je obvezen';
+
+  @override
+  String get creatorPoapSyncFailedWarning => 'Shranjeno, vendar značke POAP ni bilo mogoče posodobiti. Poskusi znova v urejevalniku.';
+
+  @override
+  String get creatorRelationSyncFailedWarning => 'Shranjeno, vendar povezovanja ni bilo mogoče dokončati. Poskusi znova v urejevalniku.';
+
+  @override
+  String get poapRarityCommon => 'Običajna';
+
+  @override
+  String get poapRarityUncommon => 'Neobičajna';
+
+  @override
+  String get poapRarityRare => 'Redka';
+
+  @override
+  String get poapRarityEpic => 'Epska';
+
+  @override
+  String get poapRarityLegendary => 'Legendarna';
+
+  @override
+  String get eventCreatorLinkedExhibitionsTitle => 'Povezane razstave';
+
+  @override
+  String get eventCreatorLinkedExhibitionsSubtitle => 'Poveži ta dogodek z eno ali več razstavami.';
+
+  @override
+  String get eventCreatorLinkedExhibitionsEmpty => 'Nobena razstava ni izbrana.';
+
+  @override
+  String get eventCreatorAddExhibition => 'Poveži razstavo';
+
+  @override
+  String get eventCreatorCreateExhibitionForEvent => 'Ustvari razstavo za ta dogodek';
+
+  @override
+  String get eventCreatorNoExhibitionsToLink => 'Ne upravljaš še nobene razstave.';
+
+  @override
+  String get exhibitionCreatorProgramTitle => 'Program / povezani dogodki';
+
+  @override
+  String get exhibitionCreatorProgramSubtitle => 'Dodaj otvoritve, pogovore, vodene oglede in druge dogodke.';
+
+  @override
+  String get exhibitionCreatorProgramEmpty => 'Ni še povezanih dogodkov.';
+
+  @override
+  String get exhibitionCreatorAttachEvent => 'Poveži dogodek';
+
+  @override
+  String get exhibitionCreatorCreateEventForExhibition => 'Ustvari dogodek';
+
+  @override
+  String get exhibitionCreatorNoEventsToLink => 'Ne upravljaš še nobenega dogodka.';
+
+  @override
+  String get exhibitionCreatorRelationTypeLabel => 'Vrsta povezave';
+
+  @override
+  String get selectEventsDialogTitle => 'Izberi dogodke';
+
+  @override
+  String get selectExhibitionsDialogTitle => 'Izberi razstave';
 }

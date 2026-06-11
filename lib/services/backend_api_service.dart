@@ -7994,6 +7994,250 @@ class BackendApiService
     }
   }
 
+  /// List linked program events for an exhibition
+  /// GET /api/exhibitions/:id/events
+  Future<List<KubusEvent>> listExhibitionEvents(String exhibitionId,
+      {int limit = 50, int offset = 0}) async {
+    try {
+      try {
+        await _ensureAuthWithStoredWallet();
+      } catch (_) {}
+      final uri = Uri.parse('$baseUrl/api/exhibitions/$exhibitionId/events')
+          .replace(queryParameters: {
+        'limit': '$limit',
+        'offset': '$offset',
+      });
+      final decoded =
+          await _fetchJson(uri, includeAuth: true, allowOrbitFallback: false);
+      final payload = decoded['data'] ?? decoded;
+      if (payload is Map<String, dynamic>) {
+        final list = payload['events'];
+        if (list is List) {
+          return list
+              .whereType<Map<String, dynamic>>()
+              .map(KubusEvent.fromJson)
+              .toList();
+        }
+      }
+      return const [];
+    } catch (e) {
+      AppConfig.debugPrint('BackendApiService.listExhibitionEvents failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Link events to an exhibition program
+  /// POST /api/exhibitions/:id/events { eventIds, relationType?, sortOrder? }
+  Future<Map<String, dynamic>> linkExhibitionEvents(
+    String exhibitionId,
+    List<String> eventIds, {
+    String? relationType,
+    int? sortOrder,
+  }) async {
+    await _ensureAuthBeforeRequest();
+    final uri = Uri.parse('$baseUrl/api/exhibitions/$exhibitionId/events');
+    final response = await _post(
+      uri,
+      headers: _getHeaders(),
+      body: jsonEncode({
+        'eventIds': eventIds,
+        if ((relationType ?? '').trim().isNotEmpty)
+          'relationType': relationType!.trim(),
+        if (sortOrder != null) 'sortOrder': sortOrder,
+      }),
+      isIdempotent: true,
+    );
+    if (_isSuccessStatus(response.statusCode)) {
+      return response.body.isNotEmpty
+          ? (jsonDecode(response.body) as Map<String, dynamic>)
+          : {'success': true};
+    }
+    throw BackendApiRequestException(
+      statusCode: response.statusCode,
+      path: uri.path,
+      body: response.body,
+    );
+  }
+
+  /// Unlink an event from an exhibition program
+  /// DELETE /api/exhibitions/:id/events/:eventId
+  Future<Map<String, dynamic>> unlinkExhibitionEvent(
+      String exhibitionId, String eventId) async {
+    await _ensureAuthBeforeRequest();
+    final uri =
+        Uri.parse('$baseUrl/api/exhibitions/$exhibitionId/events/$eventId');
+    final response =
+        await _delete(uri, headers: _getHeaders(), isIdempotent: true);
+    if (_isSuccessStatus(response.statusCode)) {
+      return response.body.isNotEmpty
+          ? (jsonDecode(response.body) as Map<String, dynamic>)
+          : {'success': true};
+    }
+    throw BackendApiRequestException(
+      statusCode: response.statusCode,
+      path: uri.path,
+      body: response.body,
+    );
+  }
+
+  /// Link exhibitions to an event
+  /// POST /api/events/:id/exhibitions { exhibitionIds, relationType? }
+  Future<Map<String, dynamic>> linkEventExhibitions(
+    String eventId,
+    List<String> exhibitionIds, {
+    String? relationType,
+  }) async {
+    await _ensureAuthBeforeRequest();
+    final uri = Uri.parse('$baseUrl/api/events/$eventId/exhibitions');
+    final response = await _post(
+      uri,
+      headers: _getHeaders(),
+      body: jsonEncode({
+        'exhibitionIds': exhibitionIds,
+        if ((relationType ?? '').trim().isNotEmpty)
+          'relationType': relationType!.trim(),
+      }),
+      isIdempotent: true,
+    );
+    if (_isSuccessStatus(response.statusCode)) {
+      return response.body.isNotEmpty
+          ? (jsonDecode(response.body) as Map<String, dynamic>)
+          : {'success': true};
+    }
+    throw BackendApiRequestException(
+      statusCode: response.statusCode,
+      path: uri.path,
+      body: response.body,
+    );
+  }
+
+  /// Unlink an exhibition from an event
+  /// DELETE /api/events/:id/exhibitions/:exhibitionId
+  Future<Map<String, dynamic>> unlinkEventExhibition(
+      String eventId, String exhibitionId) async {
+    await _ensureAuthBeforeRequest();
+    final uri =
+        Uri.parse('$baseUrl/api/events/$eventId/exhibitions/$exhibitionId');
+    final response =
+        await _delete(uri, headers: _getHeaders(), isIdempotent: true);
+    if (_isSuccessStatus(response.statusCode)) {
+      return response.body.isNotEmpty
+          ? (jsonDecode(response.body) as Map<String, dynamic>)
+          : {'success': true};
+    }
+    throw BackendApiRequestException(
+      statusCode: response.statusCode,
+      path: uri.path,
+      body: response.body,
+    );
+  }
+
+  /// Fetch first-class event POAP status
+  /// GET /api/events/:id/poap
+  Future<EventPoapStatus?> getEventPoap(String eventId) async {
+    try {
+      try {
+        await _ensureAuthWithStoredWallet();
+      } catch (_) {}
+      final uri = Uri.parse('$baseUrl/api/events/$eventId/poap');
+      final decoded =
+          await _fetchJson(uri, includeAuth: true, allowOrbitFallback: false);
+      final payload = decoded['data'] ?? decoded;
+      if (payload is Map<String, dynamic>) {
+        return EventPoapStatus.fromJson(payload);
+      }
+      return null;
+    } catch (e) {
+      AppConfig.debugPrint('BackendApiService.getEventPoap failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Claim event POAP
+  /// POST /api/events/:id/poap/claim
+  Future<EventPoapStatus?> claimEventPoap(
+    String eventId, {
+    String? attendanceMarkerId,
+    String? claimProofToken,
+    String? proofSource,
+  }) async {
+    try {
+      await _ensureAuthBeforeRequest();
+      final uri = Uri.parse('$baseUrl/api/events/$eventId/poap/claim');
+      final response = await _post(
+        uri,
+        headers: _getHeaders(),
+        body: jsonEncode({
+          if ((attendanceMarkerId ?? '').trim().isNotEmpty)
+            'attendanceMarkerId': attendanceMarkerId!.trim(),
+          if ((claimProofToken ?? '').trim().isNotEmpty)
+            'claimProofToken': claimProofToken!.trim(),
+          if ((proofSource ?? '').trim().isNotEmpty)
+            'proofSource': proofSource!.trim(),
+        }),
+      );
+      final decoded =
+          response.body.isNotEmpty ? jsonDecode(response.body) : null;
+      if (_isSuccessStatus(response.statusCode)) {
+        if (decoded is Map<String, dynamic>) {
+          final payload = decoded['data'] ?? decoded;
+          if (payload is Map<String, dynamic>) {
+            return EventPoapStatus.fromJson(payload);
+          }
+        }
+        return null;
+      }
+      throw BackendApiRequestException(
+        statusCode: response.statusCode,
+        path: uri.path,
+        body: response.body,
+      );
+    } catch (e) {
+      AppConfig.debugPrint('BackendApiService.claimEventPoap failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Configure event POAP badge (owner/editor only)
+  /// PUT /api/events/:id/poap
+  Future<Map<String, dynamic>> upsertEventPoap(
+      String eventId, Map<String, dynamic> payload) async {
+    await _ensureAuthBeforeRequest();
+    final uri = Uri.parse('$baseUrl/api/events/$eventId/poap');
+    final response = await _put(uri,
+        headers: _getHeaders(), body: jsonEncode(payload), isIdempotent: true);
+    if (_isSuccessStatus(response.statusCode)) {
+      return response.body.isNotEmpty
+          ? (jsonDecode(response.body) as Map<String, dynamic>)
+          : {'success': true};
+    }
+    throw BackendApiRequestException(
+      statusCode: response.statusCode,
+      path: uri.path,
+      body: response.body,
+    );
+  }
+
+  /// Configure exhibition POAP badge (owner/editor only)
+  /// PUT /api/exhibitions/:id/poap
+  Future<Map<String, dynamic>> upsertExhibitionPoap(
+      String exhibitionId, Map<String, dynamic> payload) async {
+    await _ensureAuthBeforeRequest();
+    final uri = Uri.parse('$baseUrl/api/exhibitions/$exhibitionId/poap');
+    final response = await _put(uri,
+        headers: _getHeaders(), body: jsonEncode(payload), isIdempotent: true);
+    if (_isSuccessStatus(response.statusCode)) {
+      return response.body.isNotEmpty
+          ? (jsonDecode(response.body) as Map<String, dynamic>)
+          : {'success': true};
+    }
+    throw BackendApiRequestException(
+      statusCode: response.statusCode,
+      path: uri.path,
+      body: response.body,
+    );
+  }
+
   // ==================== Collaboration ====================
 
   /// Invite a collaborator

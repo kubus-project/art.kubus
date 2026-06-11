@@ -793,7 +793,12 @@ class KubusMarkerOverlayHelpers {
       onCardTap: onOpenDetails,
       onTitleTap: onOpenDetails,
       primaryActionIcon: primaryActionIcon(presentation.primaryTarget),
-      primaryActionLabel: l10n.commonViewDetails,
+      // Exhibition markers open the more-info surface (desktop sidebar /
+      // mobile full page) rather than a generic detail view.
+      primaryActionLabel: presentation.primaryTarget ==
+              MapMarkerOverlayPrimaryTarget.exhibition
+          ? l10n.mapMarkerMoreInfo
+          : l10n.commonViewDetails,
       actions: actions,
       stackCount: stackCount,
       stackIndex: stackIndex,

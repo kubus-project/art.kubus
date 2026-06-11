@@ -832,6 +832,10 @@ class CreatorSwitchTile extends StatelessWidget {
 /// The caller owns the bytes + file name state and provides callbacks.
 class CreatorCoverImagePicker extends StatelessWidget {
   final Uint8List? imageBytes;
+
+  /// Existing remote image shown when no new bytes have been picked yet
+  /// (e.g. editing an entity whose cover/icon is already uploaded).
+  final String? imageUrl;
   final String uploadLabel;
   final String changeLabel;
   final String removeTooltip;
@@ -842,6 +846,7 @@ class CreatorCoverImagePicker extends StatelessWidget {
   const CreatorCoverImagePicker({
     super.key,
     required this.imageBytes,
+    this.imageUrl,
     required this.uploadLabel,
     required this.changeLabel,
     required this.removeTooltip,
@@ -853,7 +858,8 @@ class CreatorCoverImagePicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final hasImage = imageBytes != null;
+    final hasImage =
+        imageBytes != null || (imageUrl?.trim().isNotEmpty ?? false);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -891,10 +897,19 @@ class CreatorCoverImagePicker extends StatelessWidget {
               height: 150,
               width: double.infinity,
               color: scheme.surfaceContainerHighest,
-              child: Image.memory(
-                imageBytes!,
-                fit: BoxFit.cover,
-              ),
+              child: imageBytes != null
+                  ? Image.memory(
+                      imageBytes!,
+                      fit: BoxFit.cover,
+                    )
+                  : Image.network(
+                      imageUrl!.trim(),
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Icon(
+                        Icons.broken_image_outlined,
+                        color: scheme.onSurface.withValues(alpha: 0.4),
+                      ),
+                    ),
             ),
           ),
         ],

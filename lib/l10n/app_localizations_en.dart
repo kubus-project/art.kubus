@@ -12474,4 +12474,217 @@ class AppLocalizationsEn extends AppLocalizations {
   String exhibitionDetailAttendanceRewardPending(Object amount) {
     return '+$amount KUB8 recognition (pending)';
   }
+
+  @override
+  String get mapMarkerMoreInfo => 'More info';
+
+  @override
+  String get exhibitionDetailOpenPageCta => 'Open exhibition page';
+
+  @override
+  String get exhibitionNotFound => 'Exhibition not found';
+
+  @override
+  String get exhibitionDetailProgramTitle => 'Program';
+
+  @override
+  String get exhibitionDetailProgramEmpty => 'No events linked to this exhibition yet.';
+
+  @override
+  String get exhibitionDetailProgramOpenEvent => 'Open event';
+
+  @override
+  String get exhibitionDetailProgramLinkEvent => 'Link event';
+
+  @override
+  String get exhibitionDetailProgramCreateEvent => 'Create event';
+
+  @override
+  String get exhibitionDetailProgramManage => 'Manage program';
+
+  @override
+  String get exhibitionDetailProgramRemoveEvent => 'Remove from program';
+
+  @override
+  String get exhibitionDetailPoapNoneConfiguredOwnerHint => 'No POAP badge is configured yet. Enable one in the exhibition editor.';
+
+  @override
+  String get eventRelationTypeOpening => 'Opening';
+
+  @override
+  String get eventRelationTypeArtistTalk => 'Artist talk';
+
+  @override
+  String get eventRelationTypeGuidedTour => 'Guided tour';
+
+  @override
+  String get eventRelationTypeWorkshop => 'Workshop';
+
+  @override
+  String get eventRelationTypePerformance => 'Performance';
+
+  @override
+  String get eventRelationTypeLecture => 'Lecture';
+
+  @override
+  String get eventRelationTypeScreening => 'Screening';
+
+  @override
+  String get eventRelationTypeProgram => 'Program';
+
+  @override
+  String get eventRelationTypeOther => 'Other';
+
+  @override
+  String get eventDetailLinkedExhibitionsTitle => 'Linked exhibitions';
+
+  @override
+  String get eventDetailOpenExhibitionCta => 'Open exhibition';
+
+  @override
+  String get eventDetailLinkExhibition => 'Link exhibition';
+
+  @override
+  String get eventDetailCreateExhibition => 'Create exhibition';
+
+  @override
+  String get eventDetailManageLinks => 'Manage links';
+
+  @override
+  String get eventDetailUnlinkExhibition => 'Unlink exhibition';
+
+  @override
+  String get eventDetailPoapTitle => 'Event POAP';
+
+  @override
+  String get eventDetailPoapDescription => 'Proof-of-attendance badge for this event.';
+
+  @override
+  String get eventDetailPoapEligibilityNotPublished => 'Event not published';
+
+  @override
+  String get eventDetailPoapEligibilityNotPublishedHint => 'The event POAP can be claimed once the event is published.';
+
+  @override
+  String get eventDetailPoapScanProofRequired => 'Scan proof required';
+
+  @override
+  String get eventDetailPoapScanProofRequiredHint => 'Scan the QR code at the event to claim this badge.';
+
+  @override
+  String get eventDetailPoapCheckInFirstHint => 'Check in at the event location to claim this badge.';
+
+  @override
+  String get eventDetailPoapClaimFailedToast => 'Could not claim the event POAP. Please try again.';
+
+  @override
+  String get eventDetailPoapClaimSuccessToast => 'Event POAP claimed!';
+
+  @override
+  String get creatorPoapSectionTitle => 'POAP badge';
+
+  @override
+  String get creatorPoapSectionSubtitle => 'Reward attendees with a proof-of-attendance badge.';
+
+  @override
+  String get creatorPoapEnableTitle => 'Enable POAP badge';
+
+  @override
+  String get creatorPoapEnableSubtitle => 'Visitors can claim a proof-of-attendance badge.';
+
+  @override
+  String get creatorPoapTitleLabel => 'Badge title';
+
+  @override
+  String get creatorPoapDescriptionLabel => 'Badge description';
+
+  @override
+  String get creatorPoapIconLabel => 'Badge icon';
+
+  @override
+  String get creatorPoapRarityLabel => 'Rarity';
+
+  @override
+  String get creatorPoapRewardLabel => 'KUB8 reward';
+
+  @override
+  String get creatorPoapProofTypeLabel => 'Claim proof';
+
+  @override
+  String get creatorPoapProofMarkerAttendance => 'Marker attendance';
+
+  @override
+  String get creatorPoapProofScan => 'QR / scan proof';
+
+  @override
+  String get creatorPoapPreviewLabel => 'Preview';
+
+  @override
+  String get creatorPoapTitleRequired => 'Badge title is required';
+
+  @override
+  String get creatorPoapSyncFailedWarning => 'Saved, but the POAP badge could not be updated. Try again from the editor.';
+
+  @override
+  String get creatorRelationSyncFailedWarning => 'Saved, but linking could not be completed. Try again from the editor.';
+
+  @override
+  String get poapRarityCommon => 'Common';
+
+  @override
+  String get poapRarityUncommon => 'Uncommon';
+
+  @override
+  String get poapRarityRare => 'Rare';
+
+  @override
+  String get poapRarityEpic => 'Epic';
+
+  @override
+  String get poapRarityLegendary => 'Legendary';
+
+  @override
+  String get eventCreatorLinkedExhibitionsTitle => 'Linked exhibitions';
+
+  @override
+  String get eventCreatorLinkedExhibitionsSubtitle => 'Attach this event to one or more exhibitions.';
+
+  @override
+  String get eventCreatorLinkedExhibitionsEmpty => 'No exhibitions selected.';
+
+  @override
+  String get eventCreatorAddExhibition => 'Link exhibition';
+
+  @override
+  String get eventCreatorCreateExhibitionForEvent => 'Create exhibition for this event';
+
+  @override
+  String get eventCreatorNoExhibitionsToLink => 'You don\'t manage any exhibitions yet.';
+
+  @override
+  String get exhibitionCreatorProgramTitle => 'Program / linked events';
+
+  @override
+  String get exhibitionCreatorProgramSubtitle => 'Add openings, talks, tours and other events to this exhibition.';
+
+  @override
+  String get exhibitionCreatorProgramEmpty => 'No events linked yet.';
+
+  @override
+  String get exhibitionCreatorAttachEvent => 'Link event';
+
+  @override
+  String get exhibitionCreatorCreateEventForExhibition => 'Create event';
+
+  @override
+  String get exhibitionCreatorNoEventsToLink => 'You don\'t manage any events yet.';
+
+  @override
+  String get exhibitionCreatorRelationTypeLabel => 'Relation type';
+
+  @override
+  String get selectEventsDialogTitle => 'Select events';
+
+  @override
+  String get selectExhibitionsDialogTitle => 'Select exhibitions';
 }

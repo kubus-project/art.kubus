@@ -3100,7 +3100,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                         },
                         icon: AppColorUtils.exhibitionIcon,
                         iconSize: 20,
-                        label: l10n.commonViewDetails,
+                        label: l10n.exhibitionDetailOpenPageCta,
                         backgroundColor: exhibitionAccent,
                         foregroundColor: ThemeData.estimateBrightnessForColor(
                                     exhibitionAccent) ==
@@ -4679,13 +4679,14 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       event: linkedEvent,
     );
     final exhibitionsFeatureEnabled = AppConfig.isFeatureEnabled('exhibitions');
-    final exhibitionsApiAvailable = BackendApiService().exhibitionsApiAvailable;
+    // A stale exhibitionsApiAvailable=false flag must not suppress a marker
+    // that carries a valid exhibition id; the open flow retries the fetch and
+    // falls back to marker info on a real failure.
     final canPresentExhibition = presentation.primaryTarget ==
             MapMarkerOverlayPrimaryTarget.exhibition &&
         exhibitionsFeatureEnabled &&
         primaryExhibition != null &&
-        primaryExhibition.id.isNotEmpty &&
-        exhibitionsApiAvailable != false;
+        primaryExhibition.id.isNotEmpty;
 
     final distanceText = KubusMarkerOverlayHelpers.resolveDistanceText(
       userLocation: _userLocation,
@@ -5103,10 +5104,16 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           force: true,
         );
         if (exhibition != null) {
-          await exhibitionsProvider.fetchExhibitionPoap(
-            resolved.id,
-            force: true,
-          );
+          // POAP is optional; a missing badge (404) must not make the
+          // exhibition itself look unavailable.
+          try {
+            await exhibitionsProvider.fetchExhibitionPoap(
+              resolved.id,
+              force: true,
+            );
+          } catch (e) {
+            debugPrint('DesktopMapScreen: exhibition POAP fetch failed: $e');
+          }
         }
         return exhibition;
       } catch (e) {
@@ -5286,7 +5293,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       builder: (dialogContext) => KubusAlertDialog(
         backgroundColor: scheme.surface,
         title: Text(
-          marker.name,
+          marker.subjectTitle?.trim().isNotEmpty == true
+              ? marker.subjectTitle!.trim()
+              : marker.name,
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(

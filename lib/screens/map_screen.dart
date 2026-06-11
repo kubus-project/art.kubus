@@ -4365,14 +4365,14 @@ class _MapScreenState extends State<MapScreen>
       );
       final exhibitionsFeatureEnabled =
           AppConfig.isFeatureEnabled('exhibitions');
-      final exhibitionsApiAvailable =
-          BackendApiService().exhibitionsApiAvailable;
+      // A stale exhibitionsApiAvailable=false flag must not suppress a marker
+      // that carries a valid exhibition id; the open flow retries the fetch
+      // and falls back to marker info on a real failure.
       final canPresentExhibition = presentation.primaryTarget ==
               MapMarkerOverlayPrimaryTarget.exhibition &&
           exhibitionsFeatureEnabled &&
           pagePrimaryExhibition != null &&
-          pagePrimaryExhibition.id.isNotEmpty &&
-          exhibitionsApiAvailable != false;
+          pagePrimaryExhibition.id.isNotEmpty;
 
       final pageDistanceText = KubusMarkerOverlayHelpers.resolveDistanceText(
         userLocation: _currentPosition,
@@ -4753,7 +4753,9 @@ class _MapScreenState extends State<MapScreen>
       builder: (dialogContext) => KubusAlertDialog(
         backgroundColor: scheme.surface,
         title: Text(
-          marker.name,
+          marker.subjectTitle?.trim().isNotEmpty == true
+              ? marker.subjectTitle!.trim()
+              : marker.name,
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
           style: GoogleFonts.outfit(

@@ -8,13 +8,19 @@ import 'dart:typed_data';
 import 'package:art_kubus/l10n/app_localizations.dart';
 
 import '../../config/config.dart';
+import '../../models/event.dart';
 import '../../models/exhibition.dart';
+import '../../providers/events_provider.dart';
 import '../../providers/exhibitions_provider.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/creator_shell_navigation.dart';
 import '../desktop/desktop_shell.dart';
 import '../../widgets/creator/creator_kit.dart';
+import '../../widgets/creator/creator_poap_section.dart';
+import 'exhibition_detail_screen.dart' show localizedEventRelationTypeLabel;
+import 'package:art_kubus/widgets/glass_components.dart'
+    show showKubusDialog, KubusAlertDialog;
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class ExhibitionCreatorScreen extends StatefulWidget {
@@ -57,14 +63,103 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
   String? _coverFileName;
   bool _seededInitialExhibition = false;
 
+  // Program / linked events state. Selections are persisted through the
+  // relation endpoints after the exhibition itself is saved.
+  final List<KubusEvent> _linkedEvents = <KubusEvent>[];
+  final Map<String, String> _relationTypeByEventId = <String, String>{};
+  final Set<String> _removedEventIds = <String>{};
+  final Set<String> _initiallyLinkedEventIds = <String>{};
+
+  late final CreatorPoapConfig _poapConfig = CreatorPoapConfig();
+  bool _poapPreviouslyConfigured = false;
+  bool _remoteStateRequested = false;
+
+  static const List<String> _relationTypeOptions = <String>[
+    'program',
+    'opening',
+    'artist_talk',
+    'guided_tour',
+    'workshop',
+    'performance',
+    'lecture',
+    'screening',
+    'other',
+  ];
+
   bool get _isEditing => widget.initialExhibition != null;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _loadRemoteCreatorState();
+    });
+  }
 
   @override
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
     _locationController.dispose();
+    _poapConfig.dispose();
     super.dispose();
+  }
+
+  /// When editing, hydrate the program list and POAP config from the backend.
+  /// Failures stay local — the editor remains usable for the core fields.
+  Future<void> _loadRemoteCreatorState() async {
+    if (_remoteStateRequested) return;
+    _remoteStateRequested = true;
+    final initial = widget.initialExhibition;
+    if (initial == null) return;
+    final provider = context.read<ExhibitionsProvider>();
+
+    try {
+      final events =
+          await provider.listExhibitionEvents(initial.id, refresh: true);
+      if (!mounted) return;
+      setState(() {
+        _linkedEvents
+          ..clear()
+          ..addAll(events);
+        _initiallyLinkedEventIds
+          ..clear()
+          ..addAll(events.map((e) => e.id));
+        for (final event in events) {
+          _relationTypeByEventId[event.id] = event.relationType ?? 'program';
+        }
+      });
+    } catch (e) {
+      debugPrint('ExhibitionCreator: program load failed: $e');
+    }
+
+    try {
+      final poap = await provider.fetchExhibitionPoap(initial.id, force: true);
+      if (!mounted || poap == null) return;
+      setState(() {
+        _poapPreviouslyConfigured = true;
+        _poapConfig
+          ..enabled = true
+          ..rarity = poap.poap.rarity.trim().isNotEmpty
+              ? poap.poap.rarity.trim().toLowerCase()
+              : 'common'
+          ..iconUrl = poap.poap.iconUrl;
+        if (!kPoapRarities.contains(_poapConfig.rarity)) {
+          _poapConfig.rarity = 'common';
+        }
+        _poapConfig.titleController.text = poap.poap.title;
+        _poapConfig.descriptionController.text = poap.poap.description ?? '';
+        _poapConfig.rewardController.text =
+            poap.poap.rewardKub8 > 0 ? poap.poap.rewardKub8.toString() : '';
+        if ((poap.proofType ?? '') == 'scan_proof') {
+          _poapConfig.proofType = 'scan_proof';
+        }
+      });
+    } catch (e) {
+      // 404 simply means no POAP is configured yet.
+      debugPrint('ExhibitionCreator: POAP load failed: $e');
+    }
   }
 
   void _seedInitialExhibitionIfNeeded() {
@@ -115,6 +210,325 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
         SnackBar(content: Text(l10n.commonActionFailedToast)),
       );
     }
+  }
+
+  Future<void> _pickPoapIcon() async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+
+    try {
+      final picked = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+        withData: true,
+      );
+      final file = picked?.files.single;
+      final bytes = file?.bytes;
+      final name = (file?.name ?? '').trim();
+
+      if (!mounted) return;
+      if (bytes == null || bytes.isEmpty) return;
+
+      setState(() {
+        _poapConfig.iconBytes = bytes;
+        _poapConfig.iconFileName = name.isNotEmpty ? name : 'poap_icon.png';
+      });
+    } catch (_) {
+      if (!mounted) return;
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.commonActionFailedToast)),
+      );
+    }
+  }
+
+  Future<void> _showAttachEventDialog() async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    final eventsProvider = context.read<EventsProvider>();
+
+    if (!eventsProvider.initialized) {
+      try {
+        await eventsProvider.initialize();
+      } catch (_) {
+        // Provider reports its own errors.
+      }
+    }
+    if (!mounted) return;
+
+    bool canManageEvent(KubusEvent event) {
+      final role = (event.myRole ?? '').trim().toLowerCase();
+      return role == 'owner' ||
+          role == 'admin' ||
+          role == 'publisher' ||
+          role == 'editor' ||
+          role == 'curator';
+    }
+
+    final selectedIds = _linkedEvents.map((e) => e.id).toSet();
+    final candidates = eventsProvider.events
+        .where((e) => canManageEvent(e) && !selectedIds.contains(e.id))
+        .toList();
+
+    if (candidates.isEmpty) {
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.exhibitionCreatorNoEventsToLink)),
+      );
+      return;
+    }
+
+    final picked = <String>{};
+    final confirmed = await showKubusDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setLocalState) {
+            return KubusAlertDialog(
+              title: Text(l10n.selectEventsDialogTitle,
+                  style: KubusTypography.inter(fontWeight: FontWeight.w700)),
+              content: SizedBox(
+                width: 520,
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: candidates.length,
+                  itemBuilder: (context, index) {
+                    final event = candidates[index];
+                    final checked = picked.contains(event.id);
+                    return CheckboxListTile(
+                      value: checked,
+                      onChanged: (v) {
+                        setLocalState(() {
+                          if (v == true) {
+                            picked.add(event.id);
+                          } else {
+                            picked.remove(event.id);
+                          }
+                        });
+                      },
+                      title: Text(
+                        event.title,
+                        style:
+                            KubusTypography.inter(fontWeight: FontWeight.w600),
+                      ),
+                      controlAffinity: ListTileControlAffinity.leading,
+                      contentPadding: EdgeInsets.zero,
+                    );
+                  },
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(false),
+                  child:
+                      Text(l10n.commonCancel, style: KubusTypography.inter()),
+                ),
+                FilledButton(
+                  onPressed: picked.isEmpty
+                      ? null
+                      : () => Navigator.of(dialogContext).pop(true),
+                  child: Text(l10n.commonLink,
+                      style:
+                          KubusTypography.inter(fontWeight: FontWeight.w600)),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (confirmed != true || picked.isEmpty || !mounted) return;
+
+    setState(() {
+      for (final id in picked) {
+        final event = candidates.firstWhere((e) => e.id == id);
+        _linkedEvents.add(event);
+        _relationTypeByEventId[id] = 'program';
+        _removedEventIds.remove(id);
+      }
+    });
+  }
+
+  void _removeLinkedEvent(KubusEvent event) {
+    setState(() {
+      _linkedEvents.removeWhere((e) => e.id == event.id);
+      _relationTypeByEventId.remove(event.id);
+      if (_initiallyLinkedEventIds.contains(event.id)) {
+        _removedEventIds.add(event.id);
+      }
+    });
+  }
+
+  /// Syncs program links and the POAP badge after the exhibition save
+  /// succeeded. Returns true when everything synced; the caller surfaces a
+  /// secondary warning otherwise without failing the main save.
+  Future<bool> _syncRelationsAndPoap(Exhibition saved) async {
+    final provider = context.read<ExhibitionsProvider>();
+    var allSynced = true;
+
+    // Group additions by relation type so one request covers each group.
+    final toAdd = _linkedEvents
+        .where((e) => !_initiallyLinkedEventIds.contains(e.id))
+        .toList();
+    final byRelation = <String, List<String>>{};
+    for (final event in toAdd) {
+      final relation = _relationTypeByEventId[event.id] ?? 'program';
+      byRelation.putIfAbsent(relation, () => <String>[]).add(event.id);
+    }
+    for (final entry in byRelation.entries) {
+      try {
+        await provider.linkExhibitionEvents(
+          saved.id,
+          entry.value,
+          relationType: entry.key,
+        );
+      } catch (e) {
+        debugPrint('ExhibitionCreator: link events sync failed: $e');
+        allSynced = false;
+      }
+    }
+
+    for (final eventId in _removedEventIds) {
+      try {
+        await provider.unlinkExhibitionEvent(saved.id, eventId);
+      } catch (e) {
+        debugPrint('ExhibitionCreator: unlink event sync failed: $e');
+        allSynced = false;
+      }
+    }
+
+    if (_poapConfig.enabled || _poapPreviouslyConfigured) {
+      try {
+        String? uploadedIconUrl;
+        if (_poapConfig.iconBytes != null) {
+          uploadedIconUrl = await provider.uploadExhibitionCover(
+            bytes: _poapConfig.iconBytes!,
+            fileName: _poapConfig.iconFileName ?? 'poap_icon.png',
+          );
+        }
+        await provider.upsertExhibitionPoap(
+          saved.id,
+          _poapConfig.toPayload(uploadedIconUrl: uploadedIconUrl),
+        );
+        _poapPreviouslyConfigured = _poapConfig.enabled;
+      } catch (e) {
+        debugPrint('ExhibitionCreator: POAP sync failed: $e');
+        allSynced = false;
+      }
+    }
+
+    return allSynced;
+  }
+
+  Widget _buildProgramSection(AppLocalizations l10n, ColorScheme scheme) {
+    return CreatorSection(
+      title: l10n.exhibitionCreatorProgramTitle,
+      children: [
+        Text(
+          l10n.exhibitionCreatorProgramSubtitle,
+          style: KubusTextStyles.detailCaption.copyWith(
+            color: scheme.onSurface.withValues(alpha: 0.7),
+          ),
+        ),
+        const CreatorFieldSpacing(),
+        if (_linkedEvents.isEmpty)
+          Text(
+            l10n.exhibitionCreatorProgramEmpty,
+            style: KubusTextStyles.detailCaption.copyWith(
+              color: scheme.onSurface.withValues(alpha: 0.6),
+            ),
+          )
+        else
+          ..._linkedEvents.map(
+            (event) => Padding(
+              padding: const EdgeInsets.only(bottom: KubusSpacing.sm),
+              child: Container(
+                padding: const EdgeInsets.all(KubusSpacing.sm),
+                decoration: BoxDecoration(
+                  color: scheme.onSurface.withValues(alpha: 0.04),
+                  borderRadius: BorderRadius.circular(KubusRadius.md),
+                  border: Border.all(
+                      color: scheme.outline.withValues(alpha: 0.25)),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            event.title,
+                            style: KubusTypography.inter(
+                                fontWeight: FontWeight.w600),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: KubusSpacing.xs),
+                          DropdownButton<String>(
+                            value: _relationTypeOptions.contains(
+                                    _relationTypeByEventId[event.id])
+                                ? _relationTypeByEventId[event.id]
+                                : 'program',
+                            isDense: true,
+                            underline: const SizedBox(),
+                            dropdownColor: scheme.surfaceContainerHighest,
+                            style: KubusTextStyles.detailCaption
+                                .copyWith(color: scheme.onSurface),
+                            items: _relationTypeOptions
+                                .map((code) => DropdownMenuItem<String>(
+                                      value: code,
+                                      child: Text(
+                                        localizedEventRelationTypeLabel(
+                                            l10n, code),
+                                      ),
+                                    ))
+                                .toList(),
+                            onChanged: _submitting ||
+                                    _initiallyLinkedEventIds
+                                        .contains(event.id)
+                                ? null
+                                : (value) {
+                                    if (value == null) return;
+                                    setState(() {
+                                      _relationTypeByEventId[event.id] = value;
+                                    });
+                                  },
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: l10n.commonRemove,
+                      onPressed:
+                          _submitting ? null : () => _removeLinkedEvent(event),
+                      icon: const Icon(Icons.link_off_outlined, size: 18),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        const CreatorFieldSpacing(),
+        Wrap(
+          spacing: KubusSpacing.sm,
+          runSpacing: KubusSpacing.xs,
+          children: [
+            OutlinedButton.icon(
+              onPressed: _submitting ? null : _showAttachEventDialog,
+              icon: const Icon(Icons.link_outlined, size: 18),
+              label: Text(l10n.exhibitionCreatorAttachEvent),
+            ),
+            OutlinedButton.icon(
+              onPressed: _submitting
+                  ? null
+                  : () => unawaited(
+                        CreatorShellNavigation.openEventCreatorWorkspace(
+                            context),
+                      ),
+              icon: const Icon(Icons.add_outlined, size: 18),
+              label: Text(l10n.exhibitionCreatorCreateEventForExhibition),
+            ),
+          ],
+        ),
+      ],
+    );
   }
 
   @override
@@ -227,6 +641,12 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
 
             const CreatorSectionSpacing(),
 
+            // --- Program / linked events section ---
+            if (AppConfig.isFeatureEnabled('events')) ...[
+              _buildProgramSection(l10n, scheme),
+              const CreatorSectionSpacing(),
+            ],
+
             // --- Visibility toggle ---
             CreatorSwitchTile(
               title: l10n.exhibitionCreatorPublishTitle,
@@ -262,6 +682,16 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
                   enabled: !_submitting,
                 ),
               ],
+            ),
+
+            const CreatorSectionSpacing(),
+
+            // --- POAP badge section ---
+            CreatorPoapSection(
+              config: _poapConfig,
+              enabled: !_submitting,
+              onChanged: () => setState(() {}),
+              onPickIcon: _pickPoapIcon,
             ),
 
             const CreatorSectionSpacing(),
@@ -557,6 +987,18 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
         messenger.showKubusSnackBar(
             SnackBar(content: Text(l10n.exhibitionCreatorCreateFailed)));
         return;
+      }
+
+      // The exhibition itself is saved; program links and POAP sync are
+      // secondary. A sync failure shows a warning but never turns the save
+      // into a failure.
+      final relationsSynced = await _syncRelationsAndPoap(saved);
+      if (!mounted) return;
+      if (!relationsSynced) {
+        messenger.showKubusSnackBar(
+          SnackBar(content: Text(l10n.creatorRelationSyncFailedWarning)),
+          tone: KubusSnackBarTone.warning,
+        );
       }
 
       if (widget.embedded) {

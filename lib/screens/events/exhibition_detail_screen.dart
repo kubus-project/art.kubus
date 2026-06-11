@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 
+import '../../models/event.dart';
 import '../../models/exhibition.dart';
 import '../../models/promotion.dart';
 import '../../models/artwork.dart';
@@ -12,6 +13,7 @@ import '../../providers/artwork_provider.dart';
 import '../../providers/attendance_provider.dart';
 import '../../providers/attestation_provider.dart';
 import '../../providers/collab_provider.dart';
+import '../../providers/events_provider.dart';
 import '../../providers/exhibitions_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../screens/collab/invites_inbox_screen.dart';
@@ -33,6 +35,7 @@ import '../../config/config.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import '../../widgets/promotion/promotion_builder_sheet.dart';
 import '../../widgets/common/subject_options_sheet.dart';
+import 'event_detail_screen.dart';
 
 class ExhibitionDetailScreen extends StatefulWidget {
   final String exhibitionId;
@@ -90,10 +93,21 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
     final provider = context.read<ExhibitionsProvider>();
     try {
       await provider.fetchExhibition(widget.exhibitionId, force: true);
-      await provider.fetchExhibitionPoap(widget.exhibitionId, force: true);
-      await _maybeAutoClaimPoap();
     } catch (_) {
       // Provider handles errors.
+    }
+    // Program events and POAP are optional sections; their failures stay
+    // local to their cards and never block the page.
+    try {
+      await provider.listExhibitionEvents(widget.exhibitionId, refresh: true);
+    } catch (e) {
+      debugPrint('ExhibitionDetailScreen: program load failed: $e');
+    }
+    try {
+      await provider.fetchExhibitionPoap(widget.exhibitionId, force: true);
+      await _maybeAutoClaimPoap();
+    } catch (e) {
+      debugPrint('ExhibitionDetailScreen: POAP load failed: $e');
     }
   }
 
@@ -737,6 +751,183 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
     }
   }
 
+  void _openEvent(KubusEvent event) {
+    final shellScope = DesktopShellScope.of(context);
+    if (shellScope != null) {
+      shellScope.pushScreen(
+        DesktopSubScreen(
+          title: event.title,
+          child: EventDetailScreen(eventId: event.id, initialEvent: event),
+        ),
+      );
+      return;
+    }
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => EventDetailScreen(eventId: event.id, initialEvent: event),
+      ),
+    );
+  }
+
+  Future<void> _showLinkEventsDialog(Exhibition exhibition) async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    final eventsProvider = context.read<EventsProvider>();
+    final exhibitionsProvider = context.read<ExhibitionsProvider>();
+
+    if (!eventsProvider.initialized) {
+      try {
+        await eventsProvider.initialize();
+      } catch (_) {
+        // Provider reports its own errors; fall through to what we have.
+      }
+    }
+    if (!mounted) return;
+
+    bool canManageEvent(KubusEvent event) {
+      final role = (event.myRole ?? '').trim().toLowerCase();
+      return role == 'owner' ||
+          role == 'admin' ||
+          role == 'publisher' ||
+          role == 'editor' ||
+          role == 'curator';
+    }
+
+    final alreadyLinked = exhibitionsProvider
+        .programEventsFor(exhibition.id)
+        .map((e) => e.id)
+        .toSet();
+    final candidates = eventsProvider.events
+        .where((e) => canManageEvent(e) && !alreadyLinked.contains(e.id))
+        .toList();
+
+    if (candidates.isEmpty) {
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.exhibitionCreatorNoEventsToLink)),
+      );
+      return;
+    }
+
+    final selectedIds = <String>{};
+    final confirmed = await showKubusDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setLocalState) {
+            return KubusAlertDialog(
+              title: Text(l10n.selectEventsDialogTitle,
+                  style: KubusTypography.inter(fontWeight: FontWeight.w700)),
+              content: SizedBox(
+                width: 520,
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: candidates.length,
+                  itemBuilder: (context, index) {
+                    final event = candidates[index];
+                    final checked = selectedIds.contains(event.id);
+                    return CheckboxListTile(
+                      value: checked,
+                      onChanged: (v) {
+                        setLocalState(() {
+                          if (v == true) {
+                            selectedIds.add(event.id);
+                          } else {
+                            selectedIds.remove(event.id);
+                          }
+                        });
+                      },
+                      title: Text(
+                        event.title,
+                        style:
+                            KubusTypography.inter(fontWeight: FontWeight.w600),
+                      ),
+                      controlAffinity: ListTileControlAffinity.leading,
+                      contentPadding: EdgeInsets.zero,
+                    );
+                  },
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(false),
+                  child:
+                      Text(l10n.commonCancel, style: KubusTypography.inter()),
+                ),
+                FilledButton(
+                  onPressed: selectedIds.isEmpty
+                      ? null
+                      : () => Navigator.of(dialogContext).pop(true),
+                  child: Text(l10n.commonLink,
+                      style:
+                          KubusTypography.inter(fontWeight: FontWeight.w600)),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (confirmed != true || selectedIds.isEmpty) return;
+
+    try {
+      await exhibitionsProvider.linkExhibitionEvents(
+          exhibition.id, selectedIds.toList());
+      if (!mounted) return;
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.commonSavedToast)),
+        tone: KubusSnackBarTone.success,
+      );
+    } on BackendApiRequestException catch (e) {
+      if (!mounted) return;
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(e.userMessage)),
+        tone: KubusSnackBarTone.error,
+      );
+    } catch (e) {
+      debugPrint('ExhibitionDetailScreen: link events failed: $e');
+      if (!mounted) return;
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.commonActionFailedToast)),
+        tone: KubusSnackBarTone.error,
+      );
+    }
+  }
+
+  Future<void> _unlinkProgramEvent(
+      Exhibition exhibition, KubusEvent event) async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    final provider = context.read<ExhibitionsProvider>();
+    try {
+      await provider.unlinkExhibitionEvent(exhibition.id, event.id);
+      if (!mounted) return;
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.commonSavedToast)),
+        tone: KubusSnackBarTone.success,
+      );
+    } catch (e) {
+      debugPrint('ExhibitionDetailScreen: unlink event failed: $e');
+      if (!mounted) return;
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.commonActionFailedToast)),
+        tone: KubusSnackBarTone.error,
+      );
+    }
+  }
+
+  Future<void> _createProgramEvent(Exhibition exhibition) async {
+    await CreatorShellNavigation.openEventCreatorWorkspace(context);
+    if (!mounted) return;
+    // Refresh in case the creator linked the new event to this exhibition.
+    unawaited(
+      context
+          .read<ExhibitionsProvider>()
+          .listExhibitionEvents(exhibition.id, refresh: true)
+          .catchError((_) => const <KubusEvent>[]),
+    );
+  }
+
   Widget _buildAttendanceConfirmSection() {
     final l10n = AppLocalizations.of(context)!;
     if (!AppConfig.isFeatureEnabled('attendance')) {
@@ -981,6 +1172,8 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                       poap: poap,
                       isSignedIn: isSignedIn,
                       isClaimingPoap: _isClaimingPoap,
+                      isPoapLoading: provider.isPoapLoading,
+                      canManage: canManage,
                       onClaimPoap:
                           poap?.claimed == true ? null : _claimExhibitionPoap,
                       showAttendanceHint:
@@ -1012,6 +1205,15 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                   ),
                 );
 
+                final programCard = _ProgramSection(
+                  exhibition: ex,
+                  canManage: canManage,
+                  onOpenEvent: _openEvent,
+                  onLinkEvent: () => _showLinkEventsDialog(ex),
+                  onCreateEvent: () => _createProgramEvent(ex),
+                  onUnlinkEvent: (event) => _unlinkProgramEvent(ex, event),
+                );
+
                 final collab = CollaborationPanel(
                   entityType: 'exhibitions',
                   entityId: widget.exhibitionId,
@@ -1033,6 +1235,8 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                                   topActions,
                                   details,
                                   const SizedBox(height: DetailSpacing.lg),
+                                  programCard,
+                                  const SizedBox(height: DetailSpacing.lg),
                                   artworksCard,
                                 ],
                               ),
@@ -1042,7 +1246,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                           ],
                         ),
                       ),
-                      if (provider.isLoading)
+                      if (provider.isDetailLoading)
                         Positioned(
                           top: 0,
                           left: 0,
@@ -1058,10 +1262,12 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                     topActions,
                     details,
                     const SizedBox(height: DetailSpacing.lg),
+                    programCard,
+                    const SizedBox(height: DetailSpacing.lg),
                     artworksCard,
                     const SizedBox(height: DetailSpacing.lg),
                     collab,
-                    if (provider.isLoading)
+                    if (provider.isDetailLoading)
                       Padding(
                         padding: const EdgeInsets.only(top: DetailSpacing.lg),
                         child: LinearProgressIndicator(color: scheme.primary),
@@ -1176,6 +1382,8 @@ class _ExhibitionDetailsCard extends StatelessWidget {
     required this.isClaimingPoap,
     required this.onClaimPoap,
     required this.showAttendanceHint,
+    this.isPoapLoading = false,
+    this.canManage = false,
   });
 
   final Exhibition exhibition;
@@ -1184,6 +1392,8 @@ class _ExhibitionDetailsCard extends StatelessWidget {
   final bool isClaimingPoap;
   final VoidCallback? onClaimPoap;
   final bool showAttendanceHint;
+  final bool isPoapLoading;
+  final bool canManage;
 
   @override
   Widget build(BuildContext context) {
@@ -1356,6 +1566,34 @@ class _ExhibitionDetailsCard extends StatelessWidget {
               style: DetailTypography.body(context),
             ),
           ],
+          if (poap?.poap == null && isPoapLoading) ...[
+            const SizedBox(height: DetailSpacing.lg),
+            const Center(
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+          ] else if (poap?.poap == null && canManage) ...[
+            const SizedBox(height: DetailSpacing.lg),
+            Divider(color: scheme.outlineVariant.withValues(alpha: 0.4)),
+            const SizedBox(height: DetailSpacing.md),
+            Row(
+              children: [
+                Icon(Icons.confirmation_number_outlined,
+                    size: 18,
+                    color: scheme.onSurface.withValues(alpha: 0.55)),
+                const SizedBox(width: DetailSpacing.sm),
+                Expanded(
+                  child: Text(
+                    l10n.exhibitionDetailPoapNoneConfiguredOwnerHint,
+                    style: DetailTypography.caption(context),
+                  ),
+                ),
+              ],
+            ),
+          ],
           if (poap?.poap != null) ...[
             const SizedBox(height: DetailSpacing.lg),
             Divider(color: scheme.outlineVariant.withValues(alpha: 0.4)),
@@ -1405,6 +1643,234 @@ class _ExhibitionDetailsCard extends StatelessWidget {
     if (v == 'published') return l10n.commonPublished;
     if (v == 'draft') return l10n.commonDraft;
     return v;
+  }
+}
+
+String localizedEventRelationTypeLabel(AppLocalizations l10n, String? raw) {
+  switch ((raw ?? '').trim().toLowerCase()) {
+    case 'opening':
+      return l10n.eventRelationTypeOpening;
+    case 'artist_talk':
+      return l10n.eventRelationTypeArtistTalk;
+    case 'guided_tour':
+      return l10n.eventRelationTypeGuidedTour;
+    case 'workshop':
+      return l10n.eventRelationTypeWorkshop;
+    case 'performance':
+      return l10n.eventRelationTypePerformance;
+    case 'lecture':
+      return l10n.eventRelationTypeLecture;
+    case 'screening':
+      return l10n.eventRelationTypeScreening;
+    case 'other':
+      return l10n.eventRelationTypeOther;
+    case 'program':
+    case 'legacy':
+    default:
+      return l10n.eventRelationTypeProgram;
+  }
+}
+
+class _ProgramSection extends StatelessWidget {
+  const _ProgramSection({
+    required this.exhibition,
+    required this.canManage,
+    required this.onOpenEvent,
+    required this.onLinkEvent,
+    required this.onCreateEvent,
+    required this.onUnlinkEvent,
+  });
+
+  final Exhibition exhibition;
+  final bool canManage;
+  final ValueChanged<KubusEvent> onOpenEvent;
+  final VoidCallback onLinkEvent;
+  final VoidCallback onCreateEvent;
+  final ValueChanged<KubusEvent> onUnlinkEvent;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    final provider = context.watch<ExhibitionsProvider>();
+    final events = provider.programEventsFor(exhibition.id);
+    final eventsProvider = context.watch<EventsProvider>();
+
+    return DetailCard(
+      borderRadius: DetailRadius.md,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: SectionHeader(
+                  title: l10n.exhibitionDetailProgramTitle,
+                  trailing: null,
+                ),
+              ),
+              if (provider.isRelationSyncing)
+                const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+            ],
+          ),
+          const SizedBox(height: DetailSpacing.sm),
+          if (events.isEmpty)
+            Text(
+              l10n.exhibitionDetailProgramEmpty,
+              style: DetailTypography.caption(context),
+            )
+          else
+            ...events.expand((event) sync* {
+              yield _ProgramEventCard(
+                event: event,
+                hasPoap: eventsProvider.poapStatusFor(event.id) != null,
+                canManage: canManage,
+                onOpen: () => onOpenEvent(event),
+                onUnlink: () => onUnlinkEvent(event),
+              );
+              if (event != events.last) {
+                yield const SizedBox(height: DetailSpacing.sm);
+              }
+            }),
+          if (canManage) ...[
+            const SizedBox(height: DetailSpacing.md),
+            Wrap(
+              spacing: DetailSpacing.sm,
+              runSpacing: DetailSpacing.xs,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: onLinkEvent,
+                  icon: const Icon(Icons.link_outlined, size: 18),
+                  label: Text(l10n.exhibitionDetailProgramLinkEvent),
+                ),
+                OutlinedButton.icon(
+                  onPressed: onCreateEvent,
+                  icon: const Icon(Icons.add_outlined, size: 18),
+                  label: Text(l10n.exhibitionDetailProgramCreateEvent),
+                ),
+              ],
+            ),
+          ],
+          if (events.isEmpty && !canManage)
+            const SizedBox.shrink()
+          else if (events.isNotEmpty && canManage) ...[
+            const SizedBox(height: DetailSpacing.xs),
+            Text(
+              l10n.exhibitionDetailProgramManage,
+              style: DetailTypography.caption(context).copyWith(
+                color: scheme.onSurface.withValues(alpha: 0.6),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ProgramEventCard extends StatelessWidget {
+  const _ProgramEventCard({
+    required this.event,
+    required this.hasPoap,
+    required this.canManage,
+    required this.onOpen,
+    required this.onUnlink,
+  });
+
+  final KubusEvent event;
+  final bool hasPoap;
+  final bool canManage;
+  final VoidCallback onOpen;
+  final VoidCallback onUnlink;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+
+    String? dateLabel;
+    if (event.startsAt != null) {
+      dateLabel = MaterialLocalizations.of(context)
+          .formatMediumDate(event.startsAt!.toLocal());
+    }
+    final location = (event.locationName ?? '').trim();
+    final statusLabel = (event.status ?? '').trim().toLowerCase() == 'published'
+        ? l10n.commonPublished
+        : ((event.status ?? '').trim().toLowerCase() == 'draft'
+            ? l10n.commonDraft
+            : null);
+
+    return DetailCard(
+      borderRadius: DetailRadius.sm,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(event.title,
+                        style: DetailTypography.cardTitle(context)),
+                    const SizedBox(height: DetailSpacing.xs),
+                    Wrap(
+                      spacing: DetailSpacing.sm,
+                      runSpacing: DetailSpacing.xs,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Text(
+                          localizedEventRelationTypeLabel(
+                              l10n, event.relationType),
+                          style: DetailTypography.caption(context).copyWith(
+                            color: scheme.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        if (dateLabel != null)
+                          Text(dateLabel,
+                              style: DetailTypography.caption(context)),
+                        if (location.isNotEmpty)
+                          Text(location,
+                              style: DetailTypography.caption(context)),
+                        if (statusLabel != null)
+                          Text(statusLabel,
+                              style: DetailTypography.caption(context)),
+                        if (hasPoap)
+                          Icon(Icons.confirmation_number_outlined,
+                              size: 14,
+                              color:
+                                  scheme.onSurface.withValues(alpha: 0.65)),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              if (canManage)
+                IconButton(
+                  tooltip: l10n.exhibitionDetailProgramRemoveEvent,
+                  onPressed: onUnlink,
+                  icon: const Icon(Icons.link_off_outlined, size: 18),
+                ),
+            ],
+          ),
+          const SizedBox(height: DetailSpacing.sm),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: onOpen,
+              icon: const Icon(Icons.event_outlined, size: 18),
+              label: Text(l10n.exhibitionDetailProgramOpenEvent),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

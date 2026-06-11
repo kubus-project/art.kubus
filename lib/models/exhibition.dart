@@ -32,6 +32,13 @@ class Exhibition {
   final UserSummaryDto? host;
   final List<String> artworkIds;
 
+  /// Linked program event ids (exhibition_events join table, including the
+  /// legacy single eventId until data is migrated).
+  final List<String> eventIds;
+
+  /// Expanded linked events when the backend returns them inline.
+  final List<KubusEvent> linkedEvents;
+
   const Exhibition({
     required this.id,
     this.eventId,
@@ -49,6 +56,8 @@ class Exhibition {
     this.myRole,
     this.host,
     this.artworkIds = const <String>[],
+    this.eventIds = const <String>[],
+    this.linkedEvents = const <KubusEvent>[],
   });
 
   bool get isPublished => (status ?? '').toLowerCase() == 'published';
@@ -61,6 +70,31 @@ class Exhibition {
       for (final v in artworkIdsRaw) {
         final s = v?.toString().trim();
         if (s != null && s.isNotEmpty) artworkIds.add(s);
+      }
+    }
+    final eventIdsRaw = json['eventIds'] ?? json['event_ids'];
+    final eventIds = <String>[];
+    if (eventIdsRaw is List) {
+      for (final v in eventIdsRaw) {
+        final s = v?.toString().trim();
+        if (s != null && s.isNotEmpty) eventIds.add(s);
+      }
+    }
+    final legacyEventId = (json['eventId'] ?? json['event_id'])?.toString().trim();
+    if (legacyEventId != null &&
+        legacyEventId.isNotEmpty &&
+        !eventIds.contains(legacyEventId)) {
+      eventIds.add(legacyEventId);
+    }
+    final linkedEventsRaw = json['linkedEvents'] ?? json['linked_events'];
+    final linkedEvents = <KubusEvent>[];
+    if (linkedEventsRaw is List) {
+      for (final v in linkedEventsRaw) {
+        if (v is Map<String, dynamic>) {
+          linkedEvents.add(KubusEvent.fromJson(v));
+        } else if (v is Map) {
+          linkedEvents.add(KubusEvent.fromJson(Map<String, dynamic>.from(v)));
+        }
       }
     }
     return Exhibition(
@@ -88,6 +122,8 @@ class Exhibition {
       myRole: (json['myRole'] ?? json['my_role'])?.toString(),
       host: hostRaw is Map<String, dynamic> ? UserSummaryDto.fromJson(hostRaw) : null,
       artworkIds: artworkIds,
+      eventIds: eventIds,
+      linkedEvents: linkedEvents,
     );
   }
 
@@ -109,6 +145,7 @@ class Exhibition {
       'myRole': myRole,
       'host': host?.toJson(),
       'artworkIds': artworkIds,
+      'eventIds': eventIds,
     };
   }
 
@@ -129,6 +166,8 @@ class Exhibition {
     String? myRole,
     UserSummaryDto? host,
     List<String>? artworkIds,
+    List<String>? eventIds,
+    List<KubusEvent>? linkedEvents,
   }) {
     return Exhibition(
       id: id ?? this.id,
@@ -147,6 +186,8 @@ class Exhibition {
       myRole: myRole ?? this.myRole,
       host: host ?? this.host,
       artworkIds: artworkIds ?? this.artworkIds,
+      eventIds: eventIds ?? this.eventIds,
+      linkedEvents: linkedEvents ?? this.linkedEvents,
     );
   }
 }

@@ -1,12 +1,15 @@
 import 'dart:async';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../../config/config.dart';
 import '../../../models/event.dart';
+import '../../../models/exhibition.dart';
 import '../../../providers/events_provider.dart';
+import '../../../providers/exhibitions_provider.dart';
 import '../../../providers/institution_provider.dart';
 import '../../../services/backend_api_service.dart';
 import '../../../utils/creator_shell_navigation.dart';
@@ -16,6 +19,7 @@ import '../../../utils/kubus_color_roles.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import '../../desktop/desktop_shell.dart';
 import '../../../widgets/creator/creator_kit.dart';
+import '../../../widgets/creator/creator_poap_section.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 
 class EventCreator extends StatefulWidget {
@@ -58,6 +62,16 @@ class _EventCreatorState extends State<EventCreator>
   int _currentStep = 0;
   bool _submitting = false;
   KubusEvent? _createdEvent;
+
+  // Linked exhibitions state, persisted via the relation endpoint after the
+  // event itself is saved.
+  final List<Exhibition> _linkedExhibitions = <Exhibition>[];
+  final Set<String> _removedExhibitionIds = <String>{};
+  final Set<String> _initiallyLinkedExhibitionIds = <String>{};
+
+  late final CreatorPoapConfig _poapConfig = CreatorPoapConfig();
+  bool _poapPreviouslyConfigured = false;
+  bool _remoteStateRequested = false;
 
   bool get _isEditing => widget.initialEvent != null;
 
@@ -104,6 +118,64 @@ class _EventCreatorState extends State<EventCreator>
       }
       _isPublic = initial.isPublished;
     }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _loadRemoteCreatorState();
+    });
+  }
+
+  /// When editing, hydrate linked exhibitions and the POAP config from the
+  /// backend. Failures stay local — the editor remains usable.
+  Future<void> _loadRemoteCreatorState() async {
+    if (_remoteStateRequested) return;
+    _remoteStateRequested = true;
+    final initial = widget.initialEvent;
+    if (initial == null) return;
+    final eventsProvider = context.read<EventsProvider>();
+
+    try {
+      final linked =
+          await eventsProvider.loadEventExhibitions(initial.id, refresh: true);
+      if (!mounted) return;
+      setState(() {
+        _linkedExhibitions
+          ..clear()
+          ..addAll(linked);
+        _initiallyLinkedExhibitionIds
+          ..clear()
+          ..addAll(linked.map((e) => e.id));
+      });
+    } catch (e) {
+      debugPrint('EventCreator: linked exhibitions load failed: $e');
+    }
+
+    try {
+      final poap = await eventsProvider.fetchEventPoap(initial.id, force: true);
+      if (!mounted || poap == null) return;
+      setState(() {
+        _poapPreviouslyConfigured = true;
+        _poapConfig
+          ..enabled = true
+          ..rarity = poap.poap.rarity.trim().isNotEmpty
+              ? poap.poap.rarity.trim().toLowerCase()
+              : 'common'
+          ..iconUrl = poap.poap.iconUrl;
+        if (!kPoapRarities.contains(_poapConfig.rarity)) {
+          _poapConfig.rarity = 'common';
+        }
+        _poapConfig.titleController.text = poap.poap.title;
+        _poapConfig.descriptionController.text = poap.poap.description ?? '';
+        _poapConfig.rewardController.text =
+            poap.poap.rewardKub8 > 0 ? poap.poap.rewardKub8.toString() : '';
+        if ((poap.poap.proofType ?? poap.proofType ?? '') == 'scan_proof') {
+          _poapConfig.proofType = 'scan_proof';
+        }
+      });
+    } catch (e) {
+      // 404 simply means no POAP is configured yet.
+      debugPrint('EventCreator: POAP load failed: $e');
+    }
   }
 
   @override
@@ -129,7 +201,197 @@ class _EventCreatorState extends State<EventCreator>
     _locationController.dispose();
     _priceController.dispose();
     _capacityController.dispose();
+    _poapConfig.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickPoapIcon() async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final picked = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+        withData: true,
+      );
+      final file = picked?.files.single;
+      final bytes = file?.bytes;
+      final name = (file?.name ?? '').trim();
+
+      if (!mounted) return;
+      if (bytes == null || bytes.isEmpty) return;
+
+      setState(() {
+        _poapConfig.iconBytes = bytes;
+        _poapConfig.iconFileName = name.isNotEmpty ? name : 'poap_icon.png';
+      });
+    } catch (_) {
+      if (!mounted) return;
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.commonActionFailedToast)),
+      );
+    }
+  }
+
+  Future<void> _showLinkExhibitionDialog() async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    final exhibitionsProvider = context.read<ExhibitionsProvider>();
+
+    try {
+      await exhibitionsProvider.loadExhibitions(mine: true, refresh: true);
+    } catch (_) {
+      // Provider reports its own errors.
+    }
+    if (!mounted) return;
+
+    final selectedIds = _linkedExhibitions.map((e) => e.id).toSet();
+    final candidates = exhibitionsProvider.myExhibitions
+        .where((e) => !selectedIds.contains(e.id))
+        .toList();
+
+    if (candidates.isEmpty) {
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.eventCreatorNoExhibitionsToLink)),
+      );
+      return;
+    }
+
+    final picked = <String>{};
+    final confirmed = await showKubusDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setLocalState) {
+            return KubusAlertDialog(
+              title: Text(l10n.selectExhibitionsDialogTitle,
+                  style: KubusTypography.inter(fontWeight: FontWeight.w700)),
+              content: SizedBox(
+                width: 520,
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: candidates.length,
+                  itemBuilder: (context, index) {
+                    final exhibition = candidates[index];
+                    final checked = picked.contains(exhibition.id);
+                    return CheckboxListTile(
+                      value: checked,
+                      onChanged: (v) {
+                        setLocalState(() {
+                          if (v == true) {
+                            picked.add(exhibition.id);
+                          } else {
+                            picked.remove(exhibition.id);
+                          }
+                        });
+                      },
+                      title: Text(
+                        exhibition.title,
+                        style:
+                            KubusTypography.inter(fontWeight: FontWeight.w600),
+                      ),
+                      controlAffinity: ListTileControlAffinity.leading,
+                      contentPadding: EdgeInsets.zero,
+                    );
+                  },
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(false),
+                  child:
+                      Text(l10n.commonCancel, style: KubusTypography.inter()),
+                ),
+                FilledButton(
+                  onPressed: picked.isEmpty
+                      ? null
+                      : () => Navigator.of(dialogContext).pop(true),
+                  child: Text(l10n.commonLink,
+                      style:
+                          KubusTypography.inter(fontWeight: FontWeight.w600)),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (confirmed != true || picked.isEmpty || !mounted) return;
+
+    setState(() {
+      for (final id in picked) {
+        final exhibition = candidates.firstWhere((e) => e.id == id);
+        _linkedExhibitions.add(exhibition);
+        _removedExhibitionIds.remove(id);
+      }
+    });
+  }
+
+  void _removeLinkedExhibition(Exhibition exhibition) {
+    setState(() {
+      _linkedExhibitions.removeWhere((e) => e.id == exhibition.id);
+      if (_initiallyLinkedExhibitionIds.contains(exhibition.id)) {
+        _removedExhibitionIds.add(exhibition.id);
+      }
+    });
+  }
+
+  /// Syncs exhibition links and the POAP badge after the event save
+  /// succeeded. Returns true when everything synced; the caller surfaces a
+  /// secondary warning otherwise without failing the main save.
+  Future<bool> _syncRelationsAndPoap(KubusEvent saved) async {
+    final eventsProvider = context.read<EventsProvider>();
+    var allSynced = true;
+
+    final toAdd = _linkedExhibitions
+        .where((e) => !_initiallyLinkedExhibitionIds.contains(e.id))
+        .map((e) => e.id)
+        .toList();
+    if (toAdd.isNotEmpty) {
+      try {
+        await eventsProvider.linkEventExhibitions(saved.id, toAdd);
+      } catch (e) {
+        debugPrint('EventCreator: link exhibitions sync failed: $e');
+        allSynced = false;
+      }
+    }
+
+    for (final exhibitionId in _removedExhibitionIds) {
+      try {
+        await eventsProvider.unlinkEventExhibition(saved.id, exhibitionId);
+      } catch (e) {
+        debugPrint('EventCreator: unlink exhibition sync failed: $e');
+        allSynced = false;
+      }
+    }
+
+    if (_poapConfig.enabled || _poapPreviouslyConfigured) {
+      try {
+        String? uploadedIconUrl;
+        if (_poapConfig.iconBytes != null) {
+          final result = await BackendApiService().uploadFile(
+            fileBytes: _poapConfig.iconBytes!,
+            fileName: _poapConfig.iconFileName ?? 'poap_icon.png',
+            fileType: 'image',
+            metadata: const <String, String>{'folder': 'events/poap'},
+          );
+          final url = result['uploadedUrl']?.toString();
+          if (url != null && url.trim().isNotEmpty) {
+            uploadedIconUrl = url.trim();
+          }
+        }
+        await eventsProvider.upsertEventPoap(
+          saved.id,
+          _poapConfig.toPayload(uploadedIconUrl: uploadedIconUrl),
+        );
+        _poapPreviouslyConfigured = _poapConfig.enabled;
+      } catch (e) {
+        debugPrint('EventCreator: POAP sync failed: $e');
+        allSynced = false;
+      }
+    }
+
+    return allSynced;
   }
 
   @override
@@ -238,6 +500,24 @@ class _EventCreatorState extends State<EventCreator>
             : l10n.eventCreatorReadyCapacityPending,
         complete: hasCapacity,
         icon: Icons.groups_outlined,
+      ),
+      // Informational only — neither blocks saving the event.
+      DesktopCreatorReadinessItem(
+        label: l10n.eventCreatorLinkedExhibitionsTitle,
+        description: _linkedExhibitions.isNotEmpty
+            ? l10n.eventDetailLinkedExhibitionsSummary(
+                _linkedExhibitions.length)
+            : l10n.eventCreatorLinkedExhibitionsEmpty,
+        complete: _linkedExhibitions.isNotEmpty,
+        icon: Icons.museum_outlined,
+      ),
+      DesktopCreatorReadinessItem(
+        label: l10n.creatorPoapSectionTitle,
+        description: _poapConfig.enabled
+            ? l10n.creatorPoapEnableSubtitle
+            : l10n.creatorPoapSectionSubtitle,
+        complete: _poapConfig.enabled && _poapConfig.hasTitle,
+        icon: Icons.confirmation_number_outlined,
       ),
     ];
 
@@ -363,7 +643,7 @@ class _EventCreatorState extends State<EventCreator>
                     );
                   },
                   icon: const Icon(Icons.museum_outlined),
-                  label: const Text('Create exhibition for this event'),
+                  label: Text(l10n.eventCreatorCreateExhibitionForEvent),
                 ),
               ],
             ],
@@ -638,8 +918,105 @@ class _EventCreatorState extends State<EventCreator>
             onChanged: (value) => setState(() => _allowRegistration = value),
             activeColor: KubusColorRoles.of(context).web3InstitutionAccent,
           ),
+          if (AppConfig.isFeatureEnabled('exhibitions')) ...[
+            const SizedBox(height: KubusSpacing.lg),
+            _buildLinkedExhibitionsSection(l10n),
+          ],
+          const SizedBox(height: KubusSpacing.lg),
+          CreatorPoapSection(
+            config: _poapConfig,
+            enabled: !_submitting,
+            accentColor: KubusColorRoles.of(context).web3InstitutionAccent,
+            onChanged: () => setState(() {}),
+            onPickIcon: _pickPoapIcon,
+          ),
         ],
       ),
+    );
+  }
+
+  Widget _buildLinkedExhibitionsSection(AppLocalizations l10n) {
+    final scheme = Theme.of(context).colorScheme;
+    return CreatorSection(
+      title: l10n.eventCreatorLinkedExhibitionsTitle,
+      children: [
+        Text(
+          l10n.eventCreatorLinkedExhibitionsSubtitle,
+          style: KubusTextStyles.detailCaption.copyWith(
+            color: scheme.onSurface.withValues(alpha: 0.7),
+          ),
+        ),
+        const CreatorFieldSpacing(),
+        if (_linkedExhibitions.isEmpty)
+          Text(
+            l10n.eventCreatorLinkedExhibitionsEmpty,
+            style: KubusTextStyles.detailCaption.copyWith(
+              color: scheme.onSurface.withValues(alpha: 0.6),
+            ),
+          )
+        else
+          ..._linkedExhibitions.map(
+            (exhibition) => Padding(
+              padding: const EdgeInsets.only(bottom: KubusSpacing.sm),
+              child: Container(
+                padding: const EdgeInsets.all(KubusSpacing.sm),
+                decoration: BoxDecoration(
+                  color: scheme.onSurface.withValues(alpha: 0.04),
+                  borderRadius: BorderRadius.circular(KubusRadius.md),
+                  border: Border.all(
+                      color: scheme.outline.withValues(alpha: 0.25)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.museum_outlined,
+                        size: 18,
+                        color: scheme.onSurface.withValues(alpha: 0.65)),
+                    const SizedBox(width: KubusSpacing.sm),
+                    Expanded(
+                      child: Text(
+                        exhibition.title,
+                        style:
+                            KubusTypography.inter(fontWeight: FontWeight.w600),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: l10n.commonRemove,
+                      onPressed: _submitting
+                          ? null
+                          : () => _removeLinkedExhibition(exhibition),
+                      icon: const Icon(Icons.link_off_outlined, size: 18),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        const CreatorFieldSpacing(),
+        Wrap(
+          spacing: KubusSpacing.sm,
+          runSpacing: KubusSpacing.xs,
+          children: [
+            OutlinedButton.icon(
+              onPressed: _submitting ? null : _showLinkExhibitionDialog,
+              icon: const Icon(Icons.link_outlined, size: 18),
+              label: Text(l10n.eventCreatorAddExhibition),
+            ),
+            OutlinedButton.icon(
+              onPressed: _submitting || _createdEvent == null
+                  ? null
+                  : () => unawaited(
+                        CreatorShellNavigation.openExhibitionCreatorWorkspace(
+                          context,
+                          eventId: _createdEvent!.id,
+                        ),
+                      ),
+              icon: const Icon(Icons.add_outlined, size: 18),
+              label: Text(l10n.eventDetailCreateExhibition),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -1229,6 +1606,23 @@ class _EventCreatorState extends State<EventCreator>
       setState(() {
         _createdEvent = saved;
       });
+
+      // The event itself is saved; linked exhibitions and POAP sync are
+      // secondary. A sync failure shows a warning but never turns the save
+      // into a failure.
+      final relationsSynced = await _syncRelationsAndPoap(saved);
+      if (!mounted) return;
+      if (!relationsSynced) {
+        ScaffoldMessenger.of(context).showKubusSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context)!.creatorRelationSyncFailedWarning,
+            ),
+          ),
+          tone: KubusSnackBarTone.warning,
+        );
+      }
+
       final l10n = AppLocalizations.of(context)!;
       showKubusDialog(
         context: context,
@@ -1264,7 +1658,7 @@ class _EventCreatorState extends State<EventCreator>
                     ),
                   );
                 },
-                child: const Text('Create exhibition for this event'),
+                child: Text(l10n.eventCreatorCreateExhibitionForEvent),
               ),
             ElevatedButton(
               onPressed: () {

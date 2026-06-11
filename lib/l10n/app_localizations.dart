@@ -62,25 +62,15 @@ import 'app_localizations_sl.dart';
 /// be consistent with the languages listed in the AppLocalizations.supportedLocales
 /// property.
 abstract class AppLocalizations {
-  AppLocalizations(String locale)
-      : localeName = _canonicalSupportedLocale(locale.toString());
+  AppLocalizations(String locale) : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
-
-  static String _canonicalSupportedLocale(String locale) {
-    final canonical = intl.Intl.canonicalizedLocale(locale);
-    final languageCode = canonical.split('_').first.toLowerCase();
-    if (languageCode == 'en') return 'en';
-    if (languageCode == 'sl') return 'sl';
-    return 'sl';
-  }
 
   static AppLocalizations? of(BuildContext context) {
     return Localizations.of<AppLocalizations>(context, AppLocalizations);
   }
 
-  static const LocalizationsDelegate<AppLocalizations> delegate =
-      _AppLocalizationsDelegate();
+  static const LocalizationsDelegate<AppLocalizations> delegate = _AppLocalizationsDelegate();
 
   /// A list of this localizations delegate along with the default localizations
   /// delegates.
@@ -92,8 +82,7 @@ abstract class AppLocalizations {
   /// Additional delegates can be added by appending to this list in
   /// MaterialApp. This list does not have to be used at all if a custom list
   /// of delegates is preferred or required.
-  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
-      <LocalizationsDelegate<dynamic>>[
+  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates = <LocalizationsDelegate<dynamic>>[
     delegate,
     GlobalMaterialLocalizations.delegate,
     GlobalCupertinoLocalizations.delegate,
@@ -338,8 +327,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Archive records for {artworkTitle} by {artistName}'**
-  String archiveObjectSeriesDefaultDescription(
-      Object artworkTitle, Object artistName);
+  String archiveObjectSeriesDefaultDescription(Object artworkTitle, Object artistName);
 
   /// No description provided for @archiveObjectSeriesCreateFailed.
   ///
@@ -387,8 +375,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Achievement unlocked\n{title}{extra}\n+{amount} {currency} recognition'**
-  String communityAchievementUnlockedToast(
-      Object title, Object extra, Object amount, Object currency);
+  String communityAchievementUnlockedToast(Object title, Object extra, Object amount, Object currency);
 
   /// No description provided for @communityViewAchievementsAction.
   ///
@@ -442,8 +429,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Archive record {status} for {title}'**
-  String recentActivityArchiveObjectStatusDescription(
-      Object status, Object title);
+  String recentActivityArchiveObjectStatusDescription(Object status, Object title);
 
   /// No description provided for @recentActivityFallbackArtworkTitle.
   ///
@@ -4235,8 +4221,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Account: {accountStatus} · Wallet: {walletStatus} · Access: {signerStatus}'**
-  String walletSessionStatusSummary(
-      Object accountStatus, Object walletStatus, Object signerStatus);
+  String walletSessionStatusSummary(Object accountStatus, Object walletStatus, Object signerStatus);
 
   /// No description provided for @walletActionSignInRequiredToast.
   ///
@@ -11916,8 +11901,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{token} · {amount} · {date}'**
-  String receiveTokenSidebarTransferSubtitle(
-      Object token, Object amount, Object date);
+  String receiveTokenSidebarTransferSubtitle(Object token, Object amount, Object date);
 
   /// No description provided for @sendTokenTitle.
   ///
@@ -12013,8 +11997,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{token} · {amount} · {date}'**
-  String sendTokenSidebarRecipientSubtitle(
-      Object token, Object amount, Object date);
+  String sendTokenSidebarRecipientSubtitle(Object token, Object amount, Object date);
 
   /// No description provided for @sendTokenSidebarSummaryTitle.
   ///
@@ -12188,8 +12171,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{amount} {token} submitted. Tx: {signature}'**
-  String sendTokenSendSuccessWithSignatureToast(
-      Object amount, Object token, Object signature);
+  String sendTokenSendSuccessWithSignatureToast(Object amount, Object token, Object signature);
 
   /// No description provided for @sendTokenSendFailedToast.
   ///
@@ -15057,8 +15039,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Open details for {title}, token {tokenId}'**
-  String marketplaceOpenCollectibleDetailsSemantic(
-      Object title, Object tokenId);
+  String marketplaceOpenCollectibleDetailsSemantic(Object title, Object tokenId);
 
   /// No description provided for @marketplaceShareTooltip.
   ///
@@ -15868,8 +15849,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Are you sure you want to delegate your {votingPower} voting power to {delegateName}?'**
-  String daoDelegateVotingPowerDialogBody(
-      Object votingPower, Object delegateName);
+  String daoDelegateVotingPowerDialogBody(Object votingPower, Object delegateName);
 
   /// No description provided for @daoDelegationBenefitsTitle.
   ///
@@ -19103,8 +19083,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Swap submitted: {fromToken} ? {toToken}. Tx: {signature}'**
-  String walletSwapSubmittedToastWithSignature(
-      Object fromToken, Object toToken, Object signature);
+  String walletSwapSubmittedToastWithSignature(Object fromToken, Object toToken, Object signature);
 
   /// No description provided for @walletTransactionConfirmationsLabel.
   ///
@@ -22494,8 +22473,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Activity was recorded on {activeBuckets} of {totalBuckets} buckets.'**
-  String analyticsRecommendationConsistencyDescription(
-      Object activeBuckets, Object totalBuckets);
+  String analyticsRecommendationConsistencyDescription(Object activeBuckets, Object totalBuckets);
 
   /// No description provided for @analyticsRecommendationReverseDecline.
   ///
@@ -22819,8 +22797,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{totalVotes} votes · {supportPct}% support'**
-  String daoProposalVotesSupportSummaryLabel(
-      Object totalVotes, Object supportPct);
+  String daoProposalVotesSupportSummaryLabel(Object totalVotes, Object supportPct);
 
   /// No description provided for @commonSearchHint.
   ///
@@ -23619,10 +23596,435 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'+{amount} KUB8 recognition (pending)'**
   String exhibitionDetailAttendanceRewardPending(Object amount);
+
+  /// No description provided for @mapMarkerMoreInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'More info'**
+  String get mapMarkerMoreInfo;
+
+  /// No description provided for @exhibitionDetailOpenPageCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Open exhibition page'**
+  String get exhibitionDetailOpenPageCta;
+
+  /// No description provided for @exhibitionNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Exhibition not found'**
+  String get exhibitionNotFound;
+
+  /// No description provided for @exhibitionDetailProgramTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Program'**
+  String get exhibitionDetailProgramTitle;
+
+  /// No description provided for @exhibitionDetailProgramEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No events linked to this exhibition yet.'**
+  String get exhibitionDetailProgramEmpty;
+
+  /// No description provided for @exhibitionDetailProgramOpenEvent.
+  ///
+  /// In en, this message translates to:
+  /// **'Open event'**
+  String get exhibitionDetailProgramOpenEvent;
+
+  /// No description provided for @exhibitionDetailProgramLinkEvent.
+  ///
+  /// In en, this message translates to:
+  /// **'Link event'**
+  String get exhibitionDetailProgramLinkEvent;
+
+  /// No description provided for @exhibitionDetailProgramCreateEvent.
+  ///
+  /// In en, this message translates to:
+  /// **'Create event'**
+  String get exhibitionDetailProgramCreateEvent;
+
+  /// No description provided for @exhibitionDetailProgramManage.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage program'**
+  String get exhibitionDetailProgramManage;
+
+  /// No description provided for @exhibitionDetailProgramRemoveEvent.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from program'**
+  String get exhibitionDetailProgramRemoveEvent;
+
+  /// No description provided for @exhibitionDetailPoapNoneConfiguredOwnerHint.
+  ///
+  /// In en, this message translates to:
+  /// **'No POAP badge is configured yet. Enable one in the exhibition editor.'**
+  String get exhibitionDetailPoapNoneConfiguredOwnerHint;
+
+  /// No description provided for @eventRelationTypeOpening.
+  ///
+  /// In en, this message translates to:
+  /// **'Opening'**
+  String get eventRelationTypeOpening;
+
+  /// No description provided for @eventRelationTypeArtistTalk.
+  ///
+  /// In en, this message translates to:
+  /// **'Artist talk'**
+  String get eventRelationTypeArtistTalk;
+
+  /// No description provided for @eventRelationTypeGuidedTour.
+  ///
+  /// In en, this message translates to:
+  /// **'Guided tour'**
+  String get eventRelationTypeGuidedTour;
+
+  /// No description provided for @eventRelationTypeWorkshop.
+  ///
+  /// In en, this message translates to:
+  /// **'Workshop'**
+  String get eventRelationTypeWorkshop;
+
+  /// No description provided for @eventRelationTypePerformance.
+  ///
+  /// In en, this message translates to:
+  /// **'Performance'**
+  String get eventRelationTypePerformance;
+
+  /// No description provided for @eventRelationTypeLecture.
+  ///
+  /// In en, this message translates to:
+  /// **'Lecture'**
+  String get eventRelationTypeLecture;
+
+  /// No description provided for @eventRelationTypeScreening.
+  ///
+  /// In en, this message translates to:
+  /// **'Screening'**
+  String get eventRelationTypeScreening;
+
+  /// No description provided for @eventRelationTypeProgram.
+  ///
+  /// In en, this message translates to:
+  /// **'Program'**
+  String get eventRelationTypeProgram;
+
+  /// No description provided for @eventRelationTypeOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get eventRelationTypeOther;
+
+  /// No description provided for @eventDetailLinkedExhibitionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Linked exhibitions'**
+  String get eventDetailLinkedExhibitionsTitle;
+
+  /// No description provided for @eventDetailOpenExhibitionCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Open exhibition'**
+  String get eventDetailOpenExhibitionCta;
+
+  /// No description provided for @eventDetailLinkExhibition.
+  ///
+  /// In en, this message translates to:
+  /// **'Link exhibition'**
+  String get eventDetailLinkExhibition;
+
+  /// No description provided for @eventDetailCreateExhibition.
+  ///
+  /// In en, this message translates to:
+  /// **'Create exhibition'**
+  String get eventDetailCreateExhibition;
+
+  /// No description provided for @eventDetailManageLinks.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage links'**
+  String get eventDetailManageLinks;
+
+  /// No description provided for @eventDetailUnlinkExhibition.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlink exhibition'**
+  String get eventDetailUnlinkExhibition;
+
+  /// No description provided for @eventDetailPoapTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Event POAP'**
+  String get eventDetailPoapTitle;
+
+  /// No description provided for @eventDetailPoapDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Proof-of-attendance badge for this event.'**
+  String get eventDetailPoapDescription;
+
+  /// No description provided for @eventDetailPoapEligibilityNotPublished.
+  ///
+  /// In en, this message translates to:
+  /// **'Event not published'**
+  String get eventDetailPoapEligibilityNotPublished;
+
+  /// No description provided for @eventDetailPoapEligibilityNotPublishedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'The event POAP can be claimed once the event is published.'**
+  String get eventDetailPoapEligibilityNotPublishedHint;
+
+  /// No description provided for @eventDetailPoapScanProofRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan proof required'**
+  String get eventDetailPoapScanProofRequired;
+
+  /// No description provided for @eventDetailPoapScanProofRequiredHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan the QR code at the event to claim this badge.'**
+  String get eventDetailPoapScanProofRequiredHint;
+
+  /// No description provided for @eventDetailPoapCheckInFirstHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Check in at the event location to claim this badge.'**
+  String get eventDetailPoapCheckInFirstHint;
+
+  /// No description provided for @eventDetailPoapClaimFailedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not claim the event POAP. Please try again.'**
+  String get eventDetailPoapClaimFailedToast;
+
+  /// No description provided for @eventDetailPoapClaimSuccessToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Event POAP claimed!'**
+  String get eventDetailPoapClaimSuccessToast;
+
+  /// No description provided for @creatorPoapSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'POAP badge'**
+  String get creatorPoapSectionTitle;
+
+  /// No description provided for @creatorPoapSectionSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reward attendees with a proof-of-attendance badge.'**
+  String get creatorPoapSectionSubtitle;
+
+  /// No description provided for @creatorPoapEnableTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable POAP badge'**
+  String get creatorPoapEnableTitle;
+
+  /// No description provided for @creatorPoapEnableSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Visitors can claim a proof-of-attendance badge.'**
+  String get creatorPoapEnableSubtitle;
+
+  /// No description provided for @creatorPoapTitleLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Badge title'**
+  String get creatorPoapTitleLabel;
+
+  /// No description provided for @creatorPoapDescriptionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Badge description'**
+  String get creatorPoapDescriptionLabel;
+
+  /// No description provided for @creatorPoapIconLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Badge icon'**
+  String get creatorPoapIconLabel;
+
+  /// No description provided for @creatorPoapRarityLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Rarity'**
+  String get creatorPoapRarityLabel;
+
+  /// No description provided for @creatorPoapRewardLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'KUB8 reward'**
+  String get creatorPoapRewardLabel;
+
+  /// No description provided for @creatorPoapProofTypeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Claim proof'**
+  String get creatorPoapProofTypeLabel;
+
+  /// No description provided for @creatorPoapProofMarkerAttendance.
+  ///
+  /// In en, this message translates to:
+  /// **'Marker attendance'**
+  String get creatorPoapProofMarkerAttendance;
+
+  /// No description provided for @creatorPoapProofScan.
+  ///
+  /// In en, this message translates to:
+  /// **'QR / scan proof'**
+  String get creatorPoapProofScan;
+
+  /// No description provided for @creatorPoapPreviewLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview'**
+  String get creatorPoapPreviewLabel;
+
+  /// No description provided for @creatorPoapTitleRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Badge title is required'**
+  String get creatorPoapTitleRequired;
+
+  /// No description provided for @creatorPoapSyncFailedWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved, but the POAP badge could not be updated. Try again from the editor.'**
+  String get creatorPoapSyncFailedWarning;
+
+  /// No description provided for @creatorRelationSyncFailedWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved, but linking could not be completed. Try again from the editor.'**
+  String get creatorRelationSyncFailedWarning;
+
+  /// No description provided for @poapRarityCommon.
+  ///
+  /// In en, this message translates to:
+  /// **'Common'**
+  String get poapRarityCommon;
+
+  /// No description provided for @poapRarityUncommon.
+  ///
+  /// In en, this message translates to:
+  /// **'Uncommon'**
+  String get poapRarityUncommon;
+
+  /// No description provided for @poapRarityRare.
+  ///
+  /// In en, this message translates to:
+  /// **'Rare'**
+  String get poapRarityRare;
+
+  /// No description provided for @poapRarityEpic.
+  ///
+  /// In en, this message translates to:
+  /// **'Epic'**
+  String get poapRarityEpic;
+
+  /// No description provided for @poapRarityLegendary.
+  ///
+  /// In en, this message translates to:
+  /// **'Legendary'**
+  String get poapRarityLegendary;
+
+  /// No description provided for @eventCreatorLinkedExhibitionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Linked exhibitions'**
+  String get eventCreatorLinkedExhibitionsTitle;
+
+  /// No description provided for @eventCreatorLinkedExhibitionsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Attach this event to one or more exhibitions.'**
+  String get eventCreatorLinkedExhibitionsSubtitle;
+
+  /// No description provided for @eventCreatorLinkedExhibitionsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No exhibitions selected.'**
+  String get eventCreatorLinkedExhibitionsEmpty;
+
+  /// No description provided for @eventCreatorAddExhibition.
+  ///
+  /// In en, this message translates to:
+  /// **'Link exhibition'**
+  String get eventCreatorAddExhibition;
+
+  /// No description provided for @eventCreatorCreateExhibitionForEvent.
+  ///
+  /// In en, this message translates to:
+  /// **'Create exhibition for this event'**
+  String get eventCreatorCreateExhibitionForEvent;
+
+  /// No description provided for @eventCreatorNoExhibitionsToLink.
+  ///
+  /// In en, this message translates to:
+  /// **'You don\'t manage any exhibitions yet.'**
+  String get eventCreatorNoExhibitionsToLink;
+
+  /// No description provided for @exhibitionCreatorProgramTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Program / linked events'**
+  String get exhibitionCreatorProgramTitle;
+
+  /// No description provided for @exhibitionCreatorProgramSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add openings, talks, tours and other events to this exhibition.'**
+  String get exhibitionCreatorProgramSubtitle;
+
+  /// No description provided for @exhibitionCreatorProgramEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No events linked yet.'**
+  String get exhibitionCreatorProgramEmpty;
+
+  /// No description provided for @exhibitionCreatorAttachEvent.
+  ///
+  /// In en, this message translates to:
+  /// **'Link event'**
+  String get exhibitionCreatorAttachEvent;
+
+  /// No description provided for @exhibitionCreatorCreateEventForExhibition.
+  ///
+  /// In en, this message translates to:
+  /// **'Create event'**
+  String get exhibitionCreatorCreateEventForExhibition;
+
+  /// No description provided for @exhibitionCreatorNoEventsToLink.
+  ///
+  /// In en, this message translates to:
+  /// **'You don\'t manage any events yet.'**
+  String get exhibitionCreatorNoEventsToLink;
+
+  /// No description provided for @exhibitionCreatorRelationTypeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Relation type'**
+  String get exhibitionCreatorRelationTypeLabel;
+
+  /// No description provided for @selectEventsDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select events'**
+  String get selectEventsDialogTitle;
+
+  /// No description provided for @selectExhibitionsDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select exhibitions'**
+  String get selectExhibitionsDialogTitle;
 }
 
-class _AppLocalizationsDelegate
-    extends LocalizationsDelegate<AppLocalizations> {
+class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
   const _AppLocalizationsDelegate();
 
   @override
@@ -23631,25 +24033,25 @@ class _AppLocalizationsDelegate
   }
 
   @override
-  bool isSupported(Locale locale) =>
-      <String>['en', 'sl'].contains(locale.languageCode);
+  bool isSupported(Locale locale) => <String>['en', 'sl'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
 }
 
 AppLocalizations lookupAppLocalizations(Locale locale) {
+
+
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
-    case 'en':
-      return AppLocalizationsEn();
-    case 'sl':
-      return AppLocalizationsSl();
+    case 'en': return AppLocalizationsEn();
+    case 'sl': return AppLocalizationsSl();
   }
 
   throw FlutterError(
-      'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
-      'an issue with the localizations generation tool. Please file an issue '
-      'on GitHub with a reproducible sample app and the gen-l10n configuration '
-      'that was used.');
+    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+    'an issue with the localizations generation tool. Please file an issue '
+    'on GitHub with a reproducible sample app and the gen-l10n configuration '
+    'that was used.'
+  );
 }

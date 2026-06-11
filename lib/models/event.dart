@@ -66,6 +66,11 @@ class KubusEvent {
   final String? myRole; // viewer|editor|publisher|admin|owner (server-defined)
   final UserSummaryDto? host;
 
+  /// Program relation context, present when this event was loaded through an
+  /// exhibition program (opening|artist_talk|guided_tour|workshop|...).
+  final String? relationType;
+  final int sortOrder;
+
   const KubusEvent({
     required this.id,
     required this.title,
@@ -83,6 +88,8 @@ class KubusEvent {
     this.updatedAt,
     this.myRole,
     this.host,
+    this.relationType,
+    this.sortOrder = 0,
   });
 
   bool get isPublished => (status ?? '').toLowerCase() == 'published';
@@ -106,6 +113,8 @@ class KubusEvent {
       updatedAt: _parseDateTime(json['updatedAt'] ?? json['updated_at']),
       myRole: (json['myRole'] ?? json['my_role'])?.toString(),
       host: hostRaw is Map<String, dynamic> ? UserSummaryDto.fromJson(hostRaw) : null,
+      relationType: (json['relationType'] ?? json['relation_type'])?.toString(),
+      sortOrder: (_toNum(json['sortOrder'] ?? json['sort_order']))?.toInt() ?? 0,
     );
   }
 
@@ -127,6 +136,8 @@ class KubusEvent {
       'updatedAt': updatedAt?.toIso8601String(),
       'myRole': myRole,
       'host': host?.toJson(),
+      if (relationType != null) 'relationType': relationType,
+      'sortOrder': sortOrder,
     };
   }
 
@@ -147,6 +158,8 @@ class KubusEvent {
     DateTime? updatedAt,
     String? myRole,
     UserSummaryDto? host,
+    String? relationType,
+    int? sortOrder,
   }) {
     return KubusEvent(
       id: id ?? this.id,
@@ -165,6 +178,151 @@ class KubusEvent {
       updatedAt: updatedAt ?? this.updatedAt,
       myRole: myRole ?? this.myRole,
       host: host ?? this.host,
+      relationType: relationType ?? this.relationType,
+      sortOrder: sortOrder ?? this.sortOrder,
+    );
+  }
+}
+
+/// First-class POAP badge owned by an event (mirrors the exhibition POAP
+/// payload returned by `GET /api/events/:id/poap`).
+class EventPoap {
+  final String id;
+  final String code;
+  final String title;
+  final String? description;
+  final String? iconUrl;
+  final int rewardKub8;
+  final String rarity;
+  final String eventId;
+  final String? proofType; // marker_attendance | scan_proof
+  final bool isPoap;
+  final DateTime? createdAt;
+
+  const EventPoap({
+    required this.id,
+    required this.code,
+    required this.title,
+    this.description,
+    this.iconUrl,
+    required this.rewardKub8,
+    required this.rarity,
+    required this.eventId,
+    this.proofType,
+    required this.isPoap,
+    this.createdAt,
+  });
+
+  factory EventPoap.fromJson(Map<String, dynamic> json, {String? eventId}) {
+    final rewardRaw = json['rewardKub8'] ?? json['reward_kub8'] ?? 0;
+    return EventPoap(
+      id: (json['id'] ?? '').toString(),
+      code: (json['code'] ?? '').toString(),
+      title: (json['title'] ?? json['name'] ?? '').toString(),
+      description: json['description']?.toString(),
+      iconUrl: (json['iconUrl'] ?? json['icon_url'] ?? json['icon'])?.toString(),
+      rewardKub8: rewardRaw is num
+          ? rewardRaw.toInt()
+          : int.tryParse(rewardRaw.toString()) ?? 0,
+      rarity: (json['rarity'] ?? 'common').toString(),
+      eventId: (eventId ??
+              json['subjectId'] ??
+              json['subject_id'] ??
+              json['eventId'] ??
+              json['event_id'] ??
+              '')
+          .toString(),
+      proofType: (json['proofType'] ?? json['proof_type'])?.toString(),
+      isPoap: (json['isPoap'] ?? json['is_poap'] ?? false) == true,
+      createdAt: _parseDateTime(json['createdAt'] ?? json['created_at']),
+    );
+  }
+}
+
+class EventPoapStatus {
+  final String eventId;
+  final String? eventStatus;
+  final EventPoap poap;
+  final bool claimed;
+  final String? eligibilityState;
+  final String? eligibilityReason;
+  final bool canClaim;
+  final String? proofType;
+  final int linkedMarkerCount;
+  final String? latestAttendanceMarkerId;
+  final DateTime? latestAttendanceAt;
+  final int unlockedAchievementsCount;
+  final double? totalKub8Earned;
+
+  const EventPoapStatus({
+    required this.eventId,
+    required this.eventStatus,
+    required this.poap,
+    required this.claimed,
+    this.eligibilityState,
+    this.eligibilityReason,
+    this.canClaim = false,
+    this.proofType,
+    this.linkedMarkerCount = 0,
+    this.latestAttendanceMarkerId,
+    this.latestAttendanceAt,
+    this.unlockedAchievementsCount = 0,
+    this.totalKub8Earned,
+  });
+
+  factory EventPoapStatus.fromJson(Map<String, dynamic> json) {
+    final poapRaw = json['poap'];
+    final eligibilityRaw = json['eligibility'];
+    final eligibility = eligibilityRaw is Map<String, dynamic>
+        ? eligibilityRaw
+        : (eligibilityRaw is Map
+            ? Map<String, dynamic>.from(eligibilityRaw)
+            : null);
+    final latestAttendanceRaw = eligibility?['latestAttendance'];
+    final latestAttendance = latestAttendanceRaw is Map<String, dynamic>
+        ? latestAttendanceRaw
+        : (latestAttendanceRaw is Map
+            ? Map<String, dynamic>.from(latestAttendanceRaw)
+            : null);
+    final achievementRaw = json['achievement'];
+    final achievement = achievementRaw is Map<String, dynamic>
+        ? achievementRaw
+        : (achievementRaw is Map
+            ? Map<String, dynamic>.from(achievementRaw)
+            : null);
+    final unlockedRaw = achievement?['unlocked'];
+    final markerCountRaw = eligibility?['linkedMarkerCount'] ??
+        eligibility?['linked_marker_count'] ??
+        0;
+
+    final eventId =
+        (json['eventId'] ?? json['event_id'] ?? '').toString();
+    return EventPoapStatus(
+      eventId: eventId,
+      eventStatus: (json['eventStatus'] ?? json['event_status'])?.toString(),
+      poap: poapRaw is Map<String, dynamic>
+          ? EventPoap.fromJson(poapRaw, eventId: eventId)
+          : EventPoap.fromJson(const {}, eventId: eventId),
+      claimed: json['claimed'] == true,
+      eligibilityState:
+          (eligibility?['state'] ?? eligibility?['eligibilityState'])?.toString(),
+      eligibilityReason:
+          (eligibility?['reason'] ?? eligibility?['eligibilityReason'])?.toString(),
+      canClaim: (eligibility?['canClaim'] == true) ||
+          (eligibility?['can_claim'] == true),
+      proofType:
+          (eligibility?['proofType'] ?? eligibility?['proof_type'])?.toString(),
+      linkedMarkerCount: markerCountRaw is num
+          ? markerCountRaw.toInt()
+          : int.tryParse(markerCountRaw.toString()) ?? 0,
+      latestAttendanceMarkerId:
+          (latestAttendance?['markerId'] ?? latestAttendance?['marker_id'])
+              ?.toString(),
+      latestAttendanceAt: _parseDateTime(
+          latestAttendance?['attendedAt'] ?? latestAttendance?['attended_at']),
+      unlockedAchievementsCount: unlockedRaw is List ? unlockedRaw.length : 0,
+      totalKub8Earned:
+          (_toNum(achievement?['totalKub8Earned']))?.toDouble(),
     );
   }
 }
