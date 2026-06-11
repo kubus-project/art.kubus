@@ -1488,6 +1488,50 @@ class WalletProvider extends ChangeNotifier {
     _accountEmail = null;
   }
 
+  /// Commits a wallet identity that has ALREADY been verified as linked to
+  /// the authenticated account (`/api/auth/bind-wallet` followed by an
+  /// `/api/profiles/me` check confirming the same users.id owns the wallet).
+  ///
+  /// This is the only provider entry point account-link flows may use after a
+  /// verified bind. It updates local identity state and prefs only. It never:
+  ///  * loads wallet data or syncs backend data (no `_loadData` /
+  ///    `_syncBackendData`, so no `registerWalletBootstrap`),
+  ///  * calls `ensureBackendSessionForActiveSigner` or any wallet
+  ///    login/register endpoint,
+  ///  * creates a profile, or
+  ///  * replaces the account auth token.
+  Future<void> commitVerifiedAccountLinkedWalletIdentity(
+    String walletAddress, {
+    bool persist = true,
+    bool notify = true,
+  }) async {
+    final sanitized = walletAddress.trim();
+    if (sanitized.isEmpty) return;
+
+    _currentWalletAddress = sanitized;
+    SolanaWalletConnectService.instance.updateActiveWalletAddress(sanitized);
+
+    if (persist) {
+      try {
+        await _persistWalletIdentity(sanitized);
+      } catch (e) {
+        _walletLog(
+            'commitVerifiedAccountLinkedWalletIdentity: persist failed: $e');
+      }
+    }
+    _setPreferredWalletForIdentity(sanitized);
+
+    try {
+      await isMnemonicBackupRequired(walletAddress: sanitized);
+    } catch (_) {}
+
+    _sessionPhase = WalletSessionPhase.ready;
+    _clearLastError();
+    if (notify) {
+      notifyListeners();
+    }
+  }
+
   Future<void> setReadOnlyWalletIdentity(
     String address, {
     bool persist = true,

@@ -176,32 +176,11 @@ class PostAuthCoordinator {
             );
           }
         }
-        if (isGoogleAuth &&
-            !accountAuthWithoutWallet &&
-            expectedWallet.isEmpty &&
-            resolvedWallet.isNotEmpty &&
-            normalizedUserId.isNotEmpty) {
-          if (!context.mounted) {
-            return const PostAuthResult(completed: false);
-          }
-          try {
-            await const WalletSessionSyncService().bindAuthenticatedWallet(
-              context: context,
-              walletAddress: resolvedWallet,
-              userId: normalizedUserId,
-              warmUp: true,
-              loadProfile: false,
-              syncBackend: true,
-            );
-            if (!context.mounted) {
-              return const PostAuthResult(completed: false);
-            }
-          } catch (e) {
-            AppConfig.debugPrint(
-              'PostAuthCoordinator: Google wallet bind after provisioning failed: $e',
-            );
-          }
-        }
+        // NOTE: No wallet is ever auto-created or auto-bound for Google/email
+        // accounts here. When the authenticated account has no wallet, the
+        // redirect below routes into the dedicated WalletSetup step, which
+        // binds the wallet to the same users.id through the verified
+        // account-link transaction.
 
         // Update normalized wallet for remaining stages
         if (resolvedWallet.isNotEmpty) {
@@ -254,48 +233,6 @@ class PostAuthCoordinator {
           );
         }
 
-        if (!modalReauth &&
-            !isGoogleOnboarding &&
-            walletForProfile.isEmpty &&
-            context.mounted &&
-            !payloadRequiresWalletSetup) {
-          try {
-            final provisionedWallet = await _ensureWalletProvisioned(
-              context: context,
-            );
-            final resolvedWallet =
-                (provisionedWallet ?? walletProvider.currentWalletAddress ?? '')
-                    .trim();
-            if (resolvedWallet.isNotEmpty && context.mounted) {
-              await const WalletSessionSyncService()
-                  .bindAuthenticatedWallet(
-                    context: context,
-                    walletAddress: resolvedWallet,
-                    userId: normalizedUserId,
-                    warmUp: true,
-                    loadProfile: false,
-                    syncBackend: true,
-                    requireBackendSync: false,
-                  )
-                  .timeout(const Duration(seconds: 12));
-              if (!context.mounted) {
-                return const PostAuthResult(completed: false);
-              }
-              await profileProvider
-                  .loadAuthenticatedProfile()
-                  .timeout(const Duration(seconds: 5));
-              final hydratedWallet =
-                  (profileProvider.currentUser?.walletAddress ?? '').trim();
-              walletForProfile = resolvedWallet;
-              normalizedWallet =
-                  hydratedWallet.isNotEmpty ? hydratedWallet : resolvedWallet;
-            }
-          } catch (e) {
-            AppConfig.debugPrint(
-              'PostAuthCoordinator: wallet setup remains pending after account auth: $e',
-            );
-          }
-        }
       } else if (walletForProfile.isNotEmpty) {
         try {
           await profileProvider
@@ -354,8 +291,11 @@ class PostAuthCoordinator {
         payload: payload,
         hasHydratedProfile: profileProvider.hasHydratedProfile,
         requiresWalletBackup: requiresWalletBackup,
-        requiresWalletSetup:
-            payloadRequiresWalletSetup && walletForProfile.isEmpty,
+        // Account-auth sessions without a wallet always enter the dedicated
+        // WalletSetup step; wallet-origin sessions already have one.
+        requiresWalletSetup: !modalReauth &&
+            (payloadRequiresWalletSetup || isAccountAuth) &&
+            walletForProfile.isEmpty,
         walletAddress: walletForProfile.isEmpty ? null : walletForProfile,
         userId: normalizedUserId.isEmpty ? null : normalizedUserId,
         redirectRoute: redirectRoute,
@@ -503,22 +443,10 @@ class PostAuthCoordinator {
       return null;
     }
 
-    // No target wallet, try to create a signer-backed wallet
-    return _createSignerBackedWallet(walletProvider: walletProvider);
-  }
-
-  Future<String?> _createSignerBackedWallet({
-    required WalletProvider walletProvider,
-  }) async {
-    try {
-      final result = await walletProvider.createWallet();
-      final address = (result['address'] ?? '').trim();
-      return address.isEmpty ? null : address;
-    } catch (e) {
-      AppConfig.debugPrint(
-          'PostAuthCoordinator: signer-backed wallet creation failed: $e');
-      return null;
-    }
+    // No target wallet: never create one implicitly. Wallet creation happens
+    // only in the dedicated WalletSetup step (account-link mode) or in the
+    // explicit wallet sign-in flow.
+    return null;
   }
 
   Future<bool> _attemptEncryptedBackupRecovery({

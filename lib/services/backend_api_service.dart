@@ -1018,6 +1018,17 @@ class BackendApiService
       includeAuth: includeAuth,
     );
 
+    if (kDebugMode && includeAuth && !resolvedHeaders.containsKey('Authorization')) {
+      // Debug-only visibility into protected requests that go out without a
+      // token. Never logs the token value itself.
+      _debugLogThrottled(
+        'auth_header_missing_${uri.path}',
+        'BackendApiService: protected request without Authorization '
+            '(path=${uri.path}, includeAuth=$includeAuth, tokenPresent=${(_authToken ?? '').trim().isNotEmpty})',
+        throttle: const Duration(seconds: 10),
+      );
+    }
+
     // Minimal, scoped HTTP tracing for debugging auth/403 issues on web.
     // Guarded by AppConfig.enableNetworkLogging and only logs marker endpoints
     // to avoid noisy console output.
@@ -9072,9 +9083,49 @@ class BackendApiService
     }
   }
 
-  /// Delete the current user's off-chain account data (profile + community content).
+  /// Delete the authenticated account (`users.id` from the JWT).
+  ///
+  /// This is the only correct way to delete an account from settings. It
+  /// requires a valid backend token and never selects the account by wallet
+  /// address. Throws when unauthenticated or when the backend rejects the
+  /// request.
+  /// DELETE /api/auth/me
+  Future<void> deleteMyAccount() async {
+    final token = (_authToken ?? '').trim();
+    if (token.isEmpty) {
+      await loadAuthToken();
+    }
+    if ((_authToken ?? '').trim().isEmpty) {
+      throw Exception(
+          'Authentication required: sign in again before deleting your account.');
+    }
+    try {
+      final response = await _delete(
+        Uri.parse('$baseUrl/api/auth/me'),
+        headers: _getHeaders(),
+        isIdempotent: true,
+      );
+      if (response.statusCode != 200 && response.statusCode != 204) {
+        throw BackendApiRequestException(
+          statusCode: response.statusCode,
+          path: '/api/auth/me',
+          body: response.body,
+        );
+      }
+      await clearAuth();
+    } catch (e) {
+      AppConfig.debugPrint('BackendApiService.deleteMyAccount failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Delete wallet-scoped off-chain data (profile + community content) for
+  /// the wallet in the current session token.
+  ///
+  /// LEGACY + WALLET-SCOPED ONLY: this does NOT delete the authenticated
+  /// account. Use [deleteMyAccount] for account deletion.
   /// DELETE /api/profiles/me
-  Future<void> deleteMyAccountData({String? walletAddress}) async {
+  Future<void> deleteMyWalletScopedData({String? walletAddress}) async {
     try {
       await _ensureAuthBeforeRequest(walletAddress: walletAddress);
       final response = await _delete(
@@ -9087,10 +9138,17 @@ class BackendApiService
             'Failed to delete account data: ${response.statusCode}');
       }
     } catch (e) {
-      AppConfig.debugPrint('BackendApiService.deleteMyAccountData failed: $e');
+      AppConfig.debugPrint(
+          'BackendApiService.deleteMyWalletScopedData failed: $e');
       rethrow;
     }
   }
+
+  /// Deprecated name kept for compatibility; wallet-scoped data only.
+  @Deprecated('Use deleteMyAccount for account deletion or '
+      'deleteMyWalletScopedData for wallet-scoped data removal.')
+  Future<void> deleteMyAccountData({String? walletAddress}) =>
+      deleteMyWalletScopedData(walletAddress: walletAddress);
 
   // ==================== Search Endpoints ====================
 

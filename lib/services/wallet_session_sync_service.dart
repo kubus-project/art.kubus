@@ -202,12 +202,16 @@ class WalletSessionSyncService {
             .timeout(_profileRefreshTimeout),
       );
     } else if (loadProfile) {
+      // Read-only profile refresh. Auto-registering a wallet profile here
+      // could create a second wallet-root account while a Google/email
+      // session is active; wallet accounts are only created through the
+      // explicit wallet challenge/sign/login flow.
       await _runNonFatal(
         'profile refresh',
         () => profileProvider
             .loadProfile(
               normalizedWallet,
-              allowWalletAutoRegister: true,
+              allowWalletAutoRegister: false,
             )
             .timeout(_profileRefreshTimeout),
       );

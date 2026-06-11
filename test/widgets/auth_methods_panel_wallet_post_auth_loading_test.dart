@@ -135,7 +135,38 @@ void main() {
     await _drainPostAuthTimers(tester);
   });
 
-  testWidgets('wallet success path using test seam shows loading inline',
+  testWidgets('wallet result with backend token shows loading inline',
+      (tester) async {
+    final walletProvider = WalletProvider(deferInit: true);
+
+    await tester.pumpWidget(
+      _buildApp(
+        child: const Scaffold(body: AuthMethodsPanel(embedded: true)),
+        walletProvider: walletProvider,
+      ),
+    );
+
+    await tester.runAsync(() async {
+      final state = tester.state(find.byType(AuthMethodsPanel)) as dynamic;
+      await state.debugHandleWalletFlowResult(
+        <String, dynamic>{
+          'success': true,
+          'token': _buildJwtWithWallet('wallet-from-result'),
+          'data': <String, dynamic>{'walletAddress': 'wallet-from-result'},
+        },
+      );
+    });
+    await tester.pump();
+
+    expect(find.byType(PostAuthLoadingScreen), findsOneWidget);
+    final loading = tester
+        .widget<PostAuthLoadingScreen>(find.byType(PostAuthLoadingScreen));
+    expect(loading.walletAddress, 'wallet-from-result');
+
+    await _drainPostAuthTimers(tester);
+  });
+
+  testWidgets('wallet-only result without token leaves auth methods visible',
       (tester) async {
     final walletProvider = WalletProvider(deferInit: true);
 
@@ -155,12 +186,12 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.byType(PostAuthLoadingScreen), findsOneWidget);
-    final loading = tester
-        .widget<PostAuthLoadingScreen>(find.byType(PostAuthLoadingScreen));
-    expect(loading.walletAddress, 'wallet-from-result');
-
-    await _drainPostAuthTimers(tester);
+    final l10n = AppLocalizations.of(
+      tester.element(find.byType(AuthMethodsPanel)),
+    )!;
+    expect(find.byType(PostAuthLoadingScreen), findsNothing);
+    expect(find.byType(AuthMethodsPanel), findsOneWidget);
+    expect(find.text(l10n.authWalletSignInFailed), findsOneWidget);
   });
 
   testWidgets('wallet cancel leaves auth methods visible', (tester) async {
@@ -243,14 +274,27 @@ void main() {
     expect(reportedError, 'bad');
   });
 
-  testWidgets('null wallet result uses session token wallet fallback',
+  testWidgets(
+      'null wallet result with fresh token enters loading after /me verifies',
       (tester) async {
     final api = BackendApiService();
     api.setAuthTokenForTesting(_buildJwtWithWallet('wallet-from-token'));
     api.setHttpClient(
       MockClient((request) async {
         if (request.url.path == '/api/profiles/me') {
-          return http.Response('server error', 500);
+          return http.Response(
+            jsonEncode(<String, Object?>{
+              'success': true,
+              'data': <String, Object?>{
+                'userId': 'user-1',
+                'walletAddress': 'wallet-from-token',
+              },
+            }),
+            200,
+            headers: const <String, String>{
+              'content-type': 'application/json',
+            },
+          );
         }
         return http.Response('Not found', 404);
       }),
@@ -265,7 +309,10 @@ void main() {
       ),
     );
 
-    await _handleWalletResult(tester, null);
+    await tester.runAsync(() async {
+      final state = tester.state(find.byType(AuthMethodsPanel)) as dynamic;
+      await state.debugHandleWalletFlowResult(null);
+    });
     await tester.pump();
 
     expect(find.byType(PostAuthLoadingScreen), findsOneWidget);
@@ -295,10 +342,15 @@ void main() {
       ),
     );
 
-    await _handleWalletResult(
-      tester,
-      const <String, dynamic>{'walletAddress': 'wallet-before-complete'},
-    );
+    await tester.runAsync(() async {
+      final state = tester.state(find.byType(AuthMethodsPanel)) as dynamic;
+      await state.debugHandleWalletFlowResult(
+        <String, dynamic>{
+          'token': _buildJwtWithWallet('wallet-before-complete'),
+          'walletAddress': 'wallet-before-complete',
+        },
+      );
+    });
     await tester.pump();
 
     expect(find.byType(PostAuthLoadingScreen), findsOneWidget);

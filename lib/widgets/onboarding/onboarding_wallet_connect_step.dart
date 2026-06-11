@@ -416,7 +416,7 @@ class _OnboardingWalletConnectStepState
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Connect your wallet',
+          'Set up your wallet',
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                 color: Colors.white,
                 fontWeight: FontWeight.w800,

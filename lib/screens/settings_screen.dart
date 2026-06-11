@@ -2728,12 +2728,11 @@ class _SettingsScreenState extends State<SettingsScreen>
                 final profileProvider =
                     Provider.of<ProfileProvider>(context, listen: false);
 
-                // Delete server-side profile/community data (wallet remains functional)
+                // Delete the authenticated account (users.id), never just
+                // wallet-scoped data. Requires a valid backend token; local
+                // state is only cleared after the backend confirms.
                 try {
-                  final wallet = walletProvider.currentWalletAddress ??
-                      profileProvider.currentUser?.walletAddress;
-                  await BackendApiService()
-                      .deleteMyAccountData(walletAddress: wallet);
+                  await BackendApiService().deleteMyAccount();
                 } catch (e) {
                   debugPrint('SettingsScreen: backend deletion failed: $e');
                   messenger.showKubusSnackBar(
@@ -2741,6 +2740,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                         content:
                             Text(l10n.settingsDeleteAccountBackendFailedToast)),
                   );
+                  if (!mounted) return;
+                  dialogNavigator.pop();
+                  return;
                 }
 
                 await SettingsService.resetApp(

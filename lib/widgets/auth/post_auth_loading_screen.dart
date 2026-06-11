@@ -1,7 +1,9 @@
 import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/screens/onboarding/onboarding_flow_screen.dart';
+import 'package:art_kubus/services/auth_gating_service.dart';
 import 'package:art_kubus/services/auth_redirect_controller.dart';
+import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/post_auth_coordinator.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/utils/kubus_color_roles.dart';
@@ -143,8 +145,16 @@ class _PostAuthLoadingScreenState extends State<PostAuthLoadingScreen> {
 
   Future<void> _goBackToSignIn() async {
     if (!mounted) return;
-    await Navigator.of(context)
-        .pushNamedAndRemoveUntil('/sign-in', (_) => false);
+    // A valid backend token means the user IS authenticated — post-auth setup
+    // failed, not auth itself. Never bounce an authenticated session back to
+    // /sign-in; open the main shell instead and let it recover.
+    final token = (BackendApiService().getAuthToken() ?? '').trim();
+    final isAuthenticated =
+        token.isNotEmpty && AuthGatingService.isAccessTokenValid(token);
+    await Navigator.of(context).pushNamedAndRemoveUntil(
+      isAuthenticated ? '/main' : '/sign-in',
+      (_) => false,
+    );
   }
 
   @override

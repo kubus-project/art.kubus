@@ -507,6 +507,8 @@
   "onboardingFlowVerifyLastBody": "V nabiralniku poišči sporočilo in potrdi e-pošto, da dokončaš ustvarjanje računa.",
   "onboardingFlowProfileTitle": "Ustvari svoj profil",
   "onboardingFlowProfileBody": "Dodaj ime in fotografijo, da te drugi lažje prepoznajo.",
+  "onboardingStepWalletSetupTitle": "Nastavite denarnico",
+  "onboardingStepWalletSecurityTitle": "Zavarujte denarnico",
   "onboardingFlowWalletBackupIntroTitle": "Varnostna kopija denarnice",
   "onboardingFlowWalletBackupIntroBody": "Nekateri načini računa ustvarijo denarnico za pripis, arhivske zapise, digitalne izdaje in prihodnje sodelovanje. Javno odkrivanje in skupnost ostaneta dostopna brez denarnice.",
   "onboardingFlowWalletBackupIntroWeb3Warning": "Odkrivanje, profili in skupnost ne zahtevajo povezane denarnice.",

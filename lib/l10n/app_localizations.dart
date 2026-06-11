@@ -2519,6 +2519,18 @@ abstract class AppLocalizations {
   /// **'Add a name and a photo so people can recognize you.'**
   String get onboardingFlowProfileBody;
 
+  /// No description provided for @onboardingStepWalletSetupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Set up your wallet'**
+  String get onboardingStepWalletSetupTitle;
+
+  /// No description provided for @onboardingStepWalletSecurityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Secure your wallet'**
+  String get onboardingStepWalletSecurityTitle;
+
   /// No description provided for @onboardingFlowWalletBackupIntroTitle.
   ///
   /// In en, this message translates to:

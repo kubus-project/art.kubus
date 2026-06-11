@@ -275,15 +275,15 @@ class AccountWalletLinkService {
 
     _backendApi.setPreferredWalletAddress(walletAddress);
 
-    if (walletProvider != null &&
-        !WalletUtils.equals(
-            walletProvider.currentWalletAddress, walletAddress)) {
+    if (walletProvider != null) {
+      // After a verified bind only the safe commit path may run: it never
+      // loads wallet data, never syncs backend data, and never touches the
+      // account auth token (setReadOnlyWalletIdentity(loadData: true) is
+      // prohibited here — its data sync can bootstrap a second account).
       await _runNonFatal(
         'wallet identity commit',
-        () => walletProvider.setReadOnlyWalletIdentity(
+        () => walletProvider.commitVerifiedAccountLinkedWalletIdentity(
           walletAddress,
-          loadData: true,
-          syncBackend: false,
         ),
       );
     }

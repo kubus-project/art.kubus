@@ -1255,6 +1255,12 @@ class AppLocalizationsSl extends AppLocalizations {
   String get onboardingFlowProfileBody => 'Dodaj ime in fotografijo, da te drugi lažje prepoznajo.';
 
   @override
+  String get onboardingStepWalletSetupTitle => 'Nastavite denarnico';
+
+  @override
+  String get onboardingStepWalletSecurityTitle => 'Zavarujte denarnico';
+
+  @override
   String get onboardingFlowWalletBackupIntroTitle => 'Varnostna kopija denarnice';
 
   @override

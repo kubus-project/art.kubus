@@ -385,19 +385,6 @@ class _SignInScreenState extends State<SignInScreen> {
     }
   }
 
-  Future<String?> _createSignerBackedWallet() async {
-    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-    try {
-      final result = await walletProvider.createWallet();
-      final address = (result['address'] ?? '').trim();
-      return address.isEmpty ? null : address;
-    } catch (e) {
-      AppConfig.debugPrint(
-          'SignInScreen: signer-backed wallet creation failed: $e');
-      return null;
-    }
-  }
-
   Future<void> _signInWithGoogle() async {
     final l10n = AppLocalizations.of(context)!;
     if (_isGoogleSubmitting) {
@@ -496,11 +483,13 @@ class _SignInScreenState extends State<SignInScreen> {
     // for existing users and only uses walletAddress when creating a new user.
     late final Map<String, dynamic> result;
     try {
+      // Never auto-create a wallet during Google auth. Wallet setup is a
+      // dedicated post-auth step that binds to the authenticated users.id.
       result = await loginWithGoogleWalletRecovery(
         api: api,
         googleResult: googleResult,
         walletAddress: null,
-        createSignerBackedWallet: _createSignerBackedWallet,
+        createSignerBackedWallet: () async => null,
         origin: widget.googleAuthOrigin,
       );
     } catch (e) {

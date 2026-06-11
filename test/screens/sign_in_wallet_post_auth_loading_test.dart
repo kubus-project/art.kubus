@@ -133,7 +133,39 @@ void main() {
     await _drainPostAuthTimers(tester);
   });
 
-  testWidgets('wallet success path using test seam shows loading',
+  testWidgets('wallet result with backend token shows loading',
+      (tester) async {
+    final walletProvider = WalletProvider(deferInit: true);
+
+    await tester.pumpWidget(
+      _buildApp(
+        child: const SignInScreen(embedded: true),
+        walletProvider: walletProvider,
+      ),
+    );
+
+    await tester.runAsync(() async {
+      final state = tester.state(find.byType(SignInScreen)) as dynamic;
+      await state.debugHandleWalletFlowResult(
+        <String, dynamic>{
+          'token': _buildJwtWithWallet('wallet-from-result'),
+          'wallet_address': 'wallet-from-result',
+        },
+      );
+    });
+    await tester.pump();
+
+    expect(find.byType(PostAuthLoadingScreen), findsOneWidget);
+    final loading = tester
+        .widget<PostAuthLoadingScreen>(find.byType(PostAuthLoadingScreen));
+    expect(loading.origin, AuthOrigin.wallet);
+    expect(loading.walletAddress, 'wallet-from-result');
+
+    await _drainPostAuthTimers(tester);
+  });
+
+  testWidgets(
+      'wallet-only result without backend token never enters loading shell',
       (tester) async {
     final walletProvider = WalletProvider(deferInit: true);
 
@@ -150,13 +182,12 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.byType(PostAuthLoadingScreen), findsOneWidget);
-    final loading = tester
-        .widget<PostAuthLoadingScreen>(find.byType(PostAuthLoadingScreen));
-    expect(loading.origin, AuthOrigin.wallet);
-    expect(loading.walletAddress, 'wallet-from-result');
-
-    await _drainPostAuthTimers(tester);
+    final l10n = AppLocalizations.of(
+      tester.element(find.byType(SignInScreen)),
+    )!;
+    expect(find.byType(PostAuthLoadingScreen), findsNothing);
+    expect(find.byType(SignInScreen), findsOneWidget);
+    expect(find.text(l10n.authWalletSignInFailed), findsOneWidget);
   });
 
   testWidgets('wallet cancel path keeps auth form and does not show loading',
@@ -230,14 +261,27 @@ void main() {
     expect(find.text(l10n.authWalletSignInFailed), findsOneWidget);
   });
 
-  testWidgets('null wallet result uses session token wallet fallback',
+  testWidgets(
+      'null wallet result with fresh token enters loading after /me verifies',
       (tester) async {
     final api = BackendApiService();
     api.setAuthTokenForTesting(_buildJwtWithWallet('wallet-from-token'));
     api.setHttpClient(
       MockClient((request) async {
         if (request.url.path == '/api/profiles/me') {
-          return http.Response('server error', 500);
+          return http.Response(
+            jsonEncode(<String, Object?>{
+              'success': true,
+              'data': <String, Object?>{
+                'userId': 'user-1',
+                'walletAddress': 'wallet-from-token',
+              },
+            }),
+            200,
+            headers: const <String, String>{
+              'content-type': 'application/json',
+            },
+          );
         }
         return http.Response('Not found', 404);
       }),
@@ -252,7 +296,10 @@ void main() {
       ),
     );
 
-    await _handleWalletResult(tester, null);
+    await tester.runAsync(() async {
+      final state = tester.state(find.byType(SignInScreen)) as dynamic;
+      await state.debugHandleWalletFlowResult(null);
+    });
     await tester.pump();
 
     expect(find.byType(PostAuthLoadingScreen), findsOneWidget);
@@ -264,7 +311,9 @@ void main() {
     await _drainPostAuthTimers(tester);
   });
 
-  testWidgets('null wallet result uses fallback wallet', (tester) async {
+  testWidgets(
+      'null wallet result with fallback wallet only stays on the auth form',
+      (tester) async {
     final walletProvider = WalletProvider(deferInit: true);
 
     await tester.pumpWidget(
@@ -281,12 +330,10 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.byType(PostAuthLoadingScreen), findsOneWidget);
-    final loading = tester
-        .widget<PostAuthLoadingScreen>(find.byType(PostAuthLoadingScreen));
-    expect(loading.walletAddress, 'wallet-from-fallback');
-
-    await _drainPostAuthTimers(tester);
+    // A wallet address alone is never authentication: the flow is treated as
+    // cancelled, no loading shell, no authenticated routing.
+    expect(find.byType(PostAuthLoadingScreen), findsNothing);
+    expect(find.byType(SignInScreen), findsOneWidget);
   });
 
   testWidgets('email auth regression still shows loading', (tester) async {
@@ -353,7 +400,11 @@ void main() {
     final loading = tester
         .widget<PostAuthLoadingScreen>(find.byType(PostAuthLoadingScreen));
     expect(loading.origin, AuthOrigin.google);
-    expect(loading.onBeforeSavedItemsSync, isNull);
+    // Google sign-ins delegate the password-upgrade decision to
+    // maybeShowGooglePasswordUpgradePrompt via onBeforeSavedItemsSync; the
+    // prompt itself only appears when the backend security status asks for
+    // it, so no dialog is shown here.
+    expect(find.byType(AlertDialog), findsNothing);
 
     await _drainPostAuthTimers(tester);
   });

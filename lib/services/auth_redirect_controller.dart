@@ -95,10 +95,15 @@ class AuthRedirectController {
       hasAuthenticatedSession: true,
       hasHydratedProfile: hasHydratedProfile,
       requiresWalletBackup: requiresWalletBackup && targetWallet.isNotEmpty,
+      // Wallet setup applies to all Google/email account sessions without a
+      // wallet — standalone sign-in/registration and onboarding alike. Wallet
+      // origin sessions already proved a wallet, so they are exempt.
       requiresWalletSetup: (requiresWalletSetup ||
               _payloadRequiresWalletSetup(payload)) &&
           targetWallet.isEmpty &&
-          origin == AuthOrigin.googleOnboarding,
+          (origin == AuthOrigin.google ||
+              origin == AuthOrigin.googleOnboarding ||
+              origin == AuthOrigin.emailPassword),
       heuristicNextStepId: heuristicNextStepId,
       persona: persona,
       payload: payload,

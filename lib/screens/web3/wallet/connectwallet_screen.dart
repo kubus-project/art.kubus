@@ -262,7 +262,16 @@ class _ConnectWalletState extends State<ConnectWallet>
       return;
     }
     if (_isAuthEntryFlow && walletAddress.isNotEmpty) {
-      _closeSuccessfulAuthFlow(walletAddress: walletAddress);
+      unawaited(() async {
+        if (!await _ensureBackendSessionForAuthEntry(
+          address: walletAddress,
+          walletProvider: walletProvider,
+        )) {
+          _showWalletAuthNoSessionError();
+          return;
+        }
+        _closeSuccessfulAuthFlow(walletAddress: walletAddress);
+      }());
       return;
     }
     _closeFlow();
@@ -496,6 +505,56 @@ class _ConnectWalletState extends State<ConnectWallet>
       await profileProvider.loadProfile(address);
     } catch (_) {}
     _emitProfileUpdate(profileProvider);
+  }
+
+  /// Hard gate for auth-entry flows: wallet sign-in/registration succeeds only
+  /// when the backend issued a JWT for [address]. A connected signer or local
+  /// wallet alone never counts as authentication.
+  ///
+  /// Returns true when a backend session token exists. When it returns false
+  /// the caller must keep the user in the wallet flow with a retry state and
+  /// must NOT close the flow as an auth success.
+  Future<bool> _ensureBackendSessionForAuthEntry({
+    required String address,
+    required WalletProvider? walletProvider,
+  }) async {
+    if (!_isAuthEntryFlow) return true;
+    final api = BackendApiService();
+
+    bool hasSessionForWallet() {
+      final token = (api.getAuthToken() ?? '').trim();
+      if (token.isEmpty) return false;
+      final authWallet = (api.getCurrentAuthWalletAddress() ?? '').trim();
+      return authWallet.isEmpty || WalletUtils.equals(authWallet, address);
+    }
+
+    if (hasSessionForWallet()) return true;
+    if (walletProvider != null) {
+      try {
+        await walletProvider.ensureBackendSessionForActiveSigner(
+          walletAddress: address,
+        );
+      } catch (e) {
+        debugPrint('connectwallet: auth-entry session ensure failed: $e');
+      }
+    }
+    return hasSessionForWallet();
+  }
+
+  void _showWalletAuthNoSessionError() {
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
+    setState(() {
+      _isLoading = false;
+    });
+    ScaffoldMessenger.of(context).showKubusSnackBar(
+      SnackBar(
+        content: Text(l10n.authWalletSignInFailed),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+    _trackWalletAuthFailure('wallet_backend_session_missing');
   }
 
   Future<void> _runPostWalletConnectRefresh(String walletAddress) async {
@@ -2023,6 +2082,13 @@ class _ConnectWalletState extends State<ConnectWallet>
             ),
           );
         }
+        if (!await _ensureBackendSessionForAuthEntry(
+          address: address,
+          walletProvider: walletProvider,
+        )) {
+          _showWalletAuthNoSessionError();
+          return;
+        }
         _trackWalletAuthSuccess();
         _closeSuccessfulAuthFlow(walletAddress: address);
       }
@@ -2531,6 +2597,13 @@ class _ConnectWalletState extends State<ConnectWallet>
           ),
         );
       }
+      if (!await _ensureBackendSessionForAuthEntry(
+        address: address,
+        walletProvider: walletProvider,
+      )) {
+        _showWalletAuthNoSessionError();
+        return;
+      }
       _trackWalletAuthSuccess();
       _closeSuccessfulAuthFlow(walletAddress: address);
     } catch (e) {
@@ -2650,6 +2723,13 @@ class _ConnectWalletState extends State<ConnectWallet>
                 behavior: SnackBarBehavior.floating,
               ),
             );
+          }
+          if (!await _ensureBackendSessionForAuthEntry(
+            address: address,
+            walletProvider: walletProvider,
+          )) {
+            _showWalletAuthNoSessionError();
+            return;
           }
           _trackWalletAuthSuccess();
           _closeSuccessfulAuthFlow(walletAddress: address);

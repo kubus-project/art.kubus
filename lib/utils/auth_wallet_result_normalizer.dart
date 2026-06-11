@@ -27,6 +27,23 @@ class NormalizedWalletAuthResult {
   bool get isFailure => reason != null;
 }
 
+const String _noTokenFailureReason =
+    'Wallet sign-in did not produce a backend session. '
+    'Please try again — no transaction was sent.';
+
+/// Normalizes the result of a wallet connect/sign-in flow into an auth
+/// outcome.
+///
+/// Backend JWT is the only authority for authentication. Success requires:
+///  * the route result to carry a session token
+///    (`token` / `accessToken` / `authToken`, also nested under `data`,
+///    `auth` or `session`), which is persisted onto [api]; or
+///  * [api] already holding a token that the wallet flow just persisted,
+///    in which case `/api/profiles/me` must confirm the session.
+///
+/// A wallet address, a connected signer, or local wallet prefs are NEVER
+/// sufficient — wallet-only results fail so the caller shows a retry state
+/// instead of routing into the authenticated shell without a JWT.
 Future<NormalizedWalletAuthResult> normalizeWalletAuthResult({
   required Object? routeResult,
   required BackendApiService api,
@@ -34,19 +51,19 @@ Future<NormalizedWalletAuthResult> normalizeWalletAuthResult({
   bool hadAuthBeforeOpen = false,
 }) async {
   final fallbackWallet = _clean(fallbackWalletAddress);
-  final authTokenExists = _clean(api.getAuthToken()).isNotEmpty;
+  final apiToken = _clean(api.getAuthToken());
   final currentAuthWallet = _clean(api.getCurrentAuthWalletAddress());
 
-  void logResult(String result) {
+  void logResult(String result, {String? detail}) {
     if (!kDebugMode) return;
     AppConfig.debugPrint(
       'AuthWalletResultNormalizer: routeResultType=${routeResult.runtimeType}, '
       'routeResultIsMap=${routeResult is Map}, '
-      'authTokenExists=$authTokenExists, '
+      'authTokenExists=${apiToken.isNotEmpty}, '
       'currentAuthWalletExists=${currentAuthWallet.isNotEmpty}, '
       'fallbackWalletExists=${fallbackWallet.isNotEmpty}, '
       'hadAuthBeforeOpen=$hadAuthBeforeOpen, '
-      'result=$result',
+      'result=$result${detail == null ? '' : ', detail=$detail'}',
     );
   }
 
@@ -54,90 +71,149 @@ Future<NormalizedWalletAuthResult> normalizeWalletAuthResult({
     final map = _stringKeyedMap(routeResult);
     final failureReason = _explicitFailureReason(map);
     if (failureReason != null) {
-      logResult('failure');
+      logResult('failure', detail: 'explicit-failure');
       return NormalizedWalletAuthResult.failed(failureReason);
     }
 
+    final payloadToken = _extractToken(map);
     final walletAddress = _firstNonEmpty([
       _extractWalletAddress(map),
       currentAuthWallet,
       fallbackWallet,
     ]);
-    if (!_hasAuthEvidence(map, walletAddress: walletAddress)) {
-      logResult('failure');
-      return const NormalizedWalletAuthResult.failed(
-        'Wallet authentication result did not include user, token, or wallet information',
+
+    if (payloadToken.isNotEmpty) {
+      // The wallet flow returned a session token: persist it so
+      // getAuthToken()/Authorization headers see it immediately.
+      if (payloadToken != apiToken) {
+        try {
+          await api.setAuthToken(payloadToken);
+        } catch (e) {
+          if (kDebugMode) {
+            AppConfig.debugPrint(
+              'AuthWalletResultNormalizer: token persistence failed (${e.runtimeType})',
+            );
+          }
+        }
+        final refreshToken = _extractRefreshToken(map);
+        if (refreshToken.isNotEmpty) {
+          try {
+            await api.setRefreshToken(refreshToken);
+          } catch (_) {}
+        }
+      }
+      logResult('success', detail: 'payload-token');
+      return NormalizedWalletAuthResult.success(
+        _standardAuthPayload(map, walletAddress: walletAddress),
+        walletAddress: walletAddress.isEmpty ? null : walletAddress,
       );
     }
-    final payload = _standardAuthPayload(
-      map,
-      walletAddress: walletAddress,
-    );
-    logResult('success');
-    return NormalizedWalletAuthResult.success(
-      payload,
-      walletAddress: walletAddress.isEmpty ? null : walletAddress,
-    );
+
+    // No token in the payload. A backend token persisted by the wallet flow
+    // itself (challenge/sign/login) is the only other acceptable evidence,
+    // and it must be able to load /api/profiles/me.
+    if (apiToken.isNotEmpty) {
+      final verified = await _verifyTokenWithProfile(api, logResult);
+      if (verified != null) {
+        final mergedWallet = _firstNonEmpty([
+          _extractWalletAddress(map),
+          _walletFromMap(verified),
+          currentAuthWallet,
+          fallbackWallet,
+        ]);
+        logResult('success', detail: 'api-token-verified');
+        return NormalizedWalletAuthResult.success(
+          _standardAuthPayload(
+            <String, dynamic>{
+              ...map,
+              'data': <String, dynamic>{
+                if (map['data'] is Map) ..._stringKeyedMap(map['data'] as Map),
+                'user': <String, dynamic>{
+                  ...verified,
+                  if (map['data'] is Map &&
+                      (map['data'] as Map)['user'] is Map)
+                    ..._stringKeyedMap((map['data'] as Map)['user'] as Map),
+                },
+              },
+            },
+            walletAddress: mergedWallet,
+          ),
+          walletAddress: mergedWallet.isEmpty ? null : mergedWallet,
+        );
+      }
+      logResult('failure', detail: 'api-token-unverified');
+      return const NormalizedWalletAuthResult.failed(_noTokenFailureReason);
+    }
+
+    logResult('failure', detail: 'wallet-only-result');
+    return const NormalizedWalletAuthResult.failed(_noTokenFailureReason);
   }
 
   if (routeResult != null) {
-    logResult('failure');
+    logResult('failure', detail: 'unexpected-type');
     return NormalizedWalletAuthResult.failed(
       'Unexpected wallet authentication result: ${routeResult.runtimeType}',
     );
   }
 
-  if (authTokenExists) {
-    try {
-      final profile = await api.getMyProfile();
-      final profileData = profile['data'];
-      if (profile['success'] == true && profileData is Map) {
-        final profileMap = _stringKeyedMap(profileData);
-        final walletAddress = _firstNonEmpty([
-          _extractWalletAddress(profileMap),
-          currentAuthWallet,
-          fallbackWallet,
-        ]);
-        logResult('success');
-        return NormalizedWalletAuthResult.success(
-          _standardAuthPayload(
-            <String, dynamic>{
-              'data': {'user': profileMap}
-            },
-            walletAddress: walletAddress,
-          ),
-          walletAddress: walletAddress.isEmpty ? null : walletAddress,
-        );
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        AppConfig.debugPrint(
-          'AuthWalletResultNormalizer: getMyProfile failed; using wallet evidence when available (${e.runtimeType})',
-        );
-      }
-    }
-
-    final walletAddress = _firstNonEmpty([currentAuthWallet, fallbackWallet]);
-    if (walletAddress.isNotEmpty) {
-      logResult('success');
-      return NormalizedWalletAuthResult.success(
-        _walletOnlyPayload(walletAddress),
-        walletAddress: walletAddress,
-      );
-    }
+  // The flow closed without a result. If the app already had a session before
+  // the wallet flow opened, nothing new was authenticated — treat as cancel.
+  if (hadAuthBeforeOpen) {
+    logResult('cancel', detail: 'had-auth-before-open');
+    return const NormalizedWalletAuthResult.cancelled();
   }
 
-  final walletAddress = _firstNonEmpty([currentAuthWallet, fallbackWallet]);
-  if (walletAddress.isNotEmpty) {
-    logResult('success');
-    return NormalizedWalletAuthResult.success(
-      _walletOnlyPayload(walletAddress),
-      walletAddress: walletAddress,
-    );
+  // A token that appeared during the flow (persisted by wallet login) is
+  // acceptable only when /api/profiles/me confirms it.
+  if (apiToken.isNotEmpty) {
+    final verified = await _verifyTokenWithProfile(api, logResult);
+    if (verified != null) {
+      final walletAddress = _firstNonEmpty([
+        _walletFromMap(verified),
+        currentAuthWallet,
+        fallbackWallet,
+      ]);
+      logResult('success', detail: 'null-result-api-token-verified');
+      return NormalizedWalletAuthResult.success(
+        <String, dynamic>{
+          'data': <String, dynamic>{
+            'user': <String, dynamic>{
+              ...verified,
+              if (walletAddress.isNotEmpty) 'walletAddress': walletAddress,
+            },
+          },
+        },
+        walletAddress: walletAddress.isEmpty ? null : walletAddress,
+      );
+    }
+    logResult('failure', detail: 'null-result-api-token-unverified');
+    return const NormalizedWalletAuthResult.failed(_noTokenFailureReason);
   }
 
   logResult('cancel');
   return const NormalizedWalletAuthResult.cancelled();
+}
+
+/// Returns the `/api/profiles/me` user map when the current token works,
+/// or null when the backend rejects/cannot confirm the session.
+Future<Map<String, dynamic>?> _verifyTokenWithProfile(
+  BackendApiService api,
+  void Function(String result, {String? detail}) logResult,
+) async {
+  try {
+    final profile = await api.getMyProfile();
+    final profileData = profile['data'];
+    if (profile['success'] == true && profileData is Map) {
+      return _stringKeyedMap(profileData);
+    }
+  } catch (e) {
+    if (kDebugMode) {
+      AppConfig.debugPrint(
+        'AuthWalletResultNormalizer: getMyProfile verification failed (${e.runtimeType})',
+      );
+    }
+  }
+  return null;
 }
 
 String? _explicitFailureReason(Map<String, dynamic> map) {
@@ -177,6 +253,37 @@ String _failureCodeReason(String code) {
   return '';
 }
 
+String _extractToken(Map<String, dynamic> source) {
+  final data =
+      source['data'] is Map ? _stringKeyedMap(source['data'] as Map) : null;
+  final auth =
+      source['auth'] is Map ? _stringKeyedMap(source['auth'] as Map) : null;
+  final session = source['session'] is Map
+      ? _stringKeyedMap(source['session'] as Map)
+      : null;
+  return _firstNonEmpty([
+    _clean(source['token']),
+    _clean(source['accessToken']),
+    _clean(source['authToken']),
+    if (data != null) _clean(data['token']),
+    if (data != null) _clean(data['accessToken']),
+    if (data != null) _clean(data['authToken']),
+    if (auth != null) _clean(auth['token']),
+    if (session != null) _clean(session['token']),
+  ]);
+}
+
+String _extractRefreshToken(Map<String, dynamic> source) {
+  final data =
+      source['data'] is Map ? _stringKeyedMap(source['data'] as Map) : null;
+  return _firstNonEmpty([
+    _clean(source['refreshToken']),
+    _clean(source['refresh_token']),
+    if (data != null) _clean(data['refreshToken']),
+    if (data != null) _clean(data['refresh_token']),
+  ]);
+}
+
 Map<String, dynamic> _standardAuthPayload(
   Map<String, dynamic> source, {
   required String walletAddress,
@@ -214,14 +321,6 @@ Map<String, dynamic> _standardAuthPayload(
   };
 }
 
-Map<String, dynamic> _walletOnlyPayload(String walletAddress) {
-  return <String, dynamic>{
-    'data': <String, dynamic>{
-      'user': <String, dynamic>{'walletAddress': walletAddress},
-    },
-  };
-}
-
 bool _looksLikeUserData(Map<String, dynamic> map) {
   return [
     'id',
@@ -233,32 +332,6 @@ bool _looksLikeUserData(Map<String, dynamic> map) {
     'displayName',
     'email',
   ].any(map.containsKey);
-}
-
-bool _hasAuthEvidence(
-  Map<String, dynamic> source, {
-  required String walletAddress,
-}) {
-  if (walletAddress.trim().isNotEmpty) return true;
-
-  final data = source['data'] is Map
-      ? _stringKeyedMap(source['data'] as Map)
-      : <String, dynamic>{};
-  final user = data['user'] is Map
-      ? _stringKeyedMap(data['user'] as Map)
-      : source['user'] is Map
-          ? _stringKeyedMap(source['user'] as Map)
-          : <String, dynamic>{};
-  final profile = source['profile'] is Map
-      ? _stringKeyedMap(source['profile'] as Map)
-      : <String, dynamic>{};
-
-  return _clean(source['token']).isNotEmpty ||
-      _clean(source['authToken']).isNotEmpty ||
-      _clean(source['accessToken']).isNotEmpty ||
-      _looksLikeUserData(user) ||
-      _looksLikeUserData(profile) ||
-      _looksLikeUserData(data);
 }
 
 String _extractWalletAddress(Map<String, dynamic> source) {

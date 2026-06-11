@@ -507,6 +507,8 @@
   "onboardingFlowVerifyLastBody": "Check your inbox and verify your email to finish creating your account.",
   "onboardingFlowProfileTitle": "Create your profile",
   "onboardingFlowProfileBody": "Add a name and a photo so people can recognize you.",
+  "onboardingStepWalletSetupTitle": "Set up your wallet",
+  "onboardingStepWalletSecurityTitle": "Secure your wallet",
   "onboardingFlowWalletBackupIntroTitle": "Wallet backup",
   "onboardingFlowWalletBackupIntroBody": "Some account paths create a wallet for attribution, archive records, digital editions, and future participation. Public discovery and community access remain available without Wallet.",
   "onboardingFlowWalletBackupIntroWeb3Warning": "Discovery, profiles, and community do not require connecting a wallet.",

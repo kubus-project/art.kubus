@@ -301,26 +301,33 @@ void main() {
     expect(state.nextStepId, 'daoReview');
   });
 
-  test('maps legacy walletSecurity progress to walletConnect', () async {
+  test('maps public walletSetup/walletSecurity ids onto internal steps',
+      () async {
     final prefs = await SharedPreferences.getInstance();
+
+    expect(
+      AuthOnboardingService.normalizeStepId('walletSetup'),
+      'walletConnect',
+    );
+    expect(
+      AuthOnboardingService.normalizeStepId('walletSecurity'),
+      'walletBackupIntro',
+    );
+    expect(AuthOnboardingService.isAccountStepId('walletSetup'), isTrue);
+    expect(AuthOnboardingService.isAccountStepId('walletSecurity'), isTrue);
 
     final state = await AuthOnboardingService.resolveStructuredOnboardingResume(
       prefs: prefs,
       hasPendingAuthOnboarding: true,
       hasAuthenticatedSession: true,
       hasHydratedProfile: true,
-      requiresWalletSetup: false,
+      requiresWalletSetup: true,
       requiresWalletBackup: false,
-      heuristicNextStepId: 'walletSecurity',
+      heuristicNextStepId: 'walletSetup',
       persona: 'lover',
       flowScopeKey: testScope,
     );
 
-    expect(AuthOnboardingService.isAccountStepId('walletSecurity'), isTrue);
-    expect(
-      AuthOnboardingService.normalizeStepId('walletSecurity'),
-      'walletConnect',
-    );
     expect(state.requiresStructuredOnboarding, isTrue);
     expect(state.nextStepId, 'walletConnect');
   });

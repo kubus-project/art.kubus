@@ -1,9 +1,23 @@
+import 'dart:convert';
+
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/screens/web3/wallet/connectwallet_screen.dart';
+import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+
+String _jwtWithWallet(String walletAddress) {
+  final payload = base64Url
+      .encode(utf8.encode(jsonEncode(<String, Object?>{
+        'walletAddress': walletAddress,
+        'sub': 'test-user',
+        'exp': (DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600,
+      })))
+      .replaceAll('=', '');
+  return 'e30.$payload.';
+}
 
 Widget _buildApp({
   required ConnectWallet child,
@@ -114,8 +128,13 @@ void main() {
     expect(_dataUser(completedResult)['walletAddress'], 'wallet-4');
   });
 
-  testWidgets('auth-entry connected close returns current wallet payload',
-      (tester) async {
+  testWidgets(
+      'auth-entry connected close with a backend session returns current '
+      'wallet payload', (tester) async {
+    BackendApiService()
+        .setAuthTokenForTesting(_jwtWithWallet('wallet-connected'));
+    addTearDown(() => BackendApiService().setAuthTokenForTesting(null));
+
     Object? completedResult;
     await tester.pumpWidget(
       _buildApp(
@@ -134,9 +153,44 @@ void main() {
     ).setCurrentWalletAddressForTesting('wallet-connected');
 
     _state(tester).debugCloseConnectedWalletFlow();
+    await tester.pump();
 
     expect(completedResult, isA<Map<String, dynamic>>());
     expect(_dataUser(completedResult)['walletAddress'], 'wallet-connected');
+  });
+
+  testWidgets(
+      'auth-entry connected close WITHOUT a backend session never completes '
+      'as auth success', (tester) async {
+    BackendApiService().setAuthTokenForTesting(null);
+
+    Object? completedResult;
+    var completions = 0;
+    await tester.pumpWidget(
+      _buildApp(
+        child: ConnectWallet(
+          embedded: true,
+          authInline: true,
+          onFlowComplete: (result) {
+            completions += 1;
+            completedResult = result;
+          },
+        ),
+      ),
+    );
+    Provider.of<WalletProvider>(
+      tester.element(find.byType(ConnectWallet)),
+      listen: false,
+    ).setCurrentWalletAddressForTesting('wallet-connected');
+
+    _state(tester).debugCloseConnectedWalletFlow();
+    await tester.pump();
+    await tester.pump();
+
+    // A connected signer alone is not authentication: the flow stays open
+    // with a retry state instead of handing a success payload to the caller.
+    expect(completions, 0);
+    expect(completedResult, isNull);
   });
 
   testWidgets('non-auth success close preserves response behavior',

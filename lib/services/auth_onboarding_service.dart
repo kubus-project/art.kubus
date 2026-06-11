@@ -59,7 +59,11 @@ class AuthOnboardingService {
 
   static String normalizeStepId(String? value) {
     final normalized = (value ?? '').trim();
-    if (normalized == 'walletSecurity') return 'walletConnect';
+    // Public step names map onto the internal flow steps:
+    // walletSetup ("Set up your wallet") -> walletConnect
+    // walletSecurity ("Secure your wallet") -> walletBackupIntro
+    if (normalized == 'walletSetup') return 'walletConnect';
+    if (normalized == 'walletSecurity') return 'walletBackupIntro';
     return normalized;
   }
 

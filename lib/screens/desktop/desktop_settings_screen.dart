@@ -1439,17 +1439,20 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
               final profileProvider =
                   Provider.of<ProfileProvider>(context, listen: false);
 
+              // Delete the authenticated account (users.id), never just
+              // wallet-scoped data. Local state is only cleared after the
+              // backend confirms the deletion.
               try {
-                final wallet = walletProvider.currentWalletAddress ??
-                    profileProvider.currentUser?.walletAddress;
-                await BackendApiService()
-                    .deleteMyAccountData(walletAddress: wallet);
+                await BackendApiService().deleteMyAccount();
               } catch (e) {
                 debugPrint(
                     'DesktopSettingsScreen: backend deletion failed: $e');
                 messenger.showKubusSnackBar(SnackBar(
                     content:
                         Text(l10n.settingsDeleteAccountBackendFailedToast)));
+                if (!mounted) return;
+                navigator.pop();
+                return;
               }
 
               await SettingsService.resetApp(

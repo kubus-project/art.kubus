@@ -456,21 +456,6 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
     }
   }
 
-  Future<String?> _createSignerBackedWallet({String? desiredUsername}) async {
-    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-    try {
-      final result = await walletProvider
-          .createWallet()
-          .timeout(const Duration(seconds: 12));
-      final address = (result['address'] ?? '').trim();
-      return address.isEmpty ? null : address;
-    } catch (e) {
-      AppConfig.debugPrint(
-          'AuthMethodsPanel: signer-backed wallet creation failed: $e');
-      return null;
-    }
-  }
-
   Future<void> _registerWithGoogle() async {
     final l10n = AppLocalizations.of(context)!;
     if (_isGoogleSubmitting) {
@@ -503,13 +488,13 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
         return;
       }
       final api = BackendApiService();
+      // Never auto-create a wallet during Google registration. Wallet setup
+      // is a dedicated step that binds to the authenticated users.id.
       final result = await loginWithGoogleWalletRecovery(
         api: api,
         googleResult: googleResult,
         walletAddress: null,
-        createSignerBackedWallet: widget.googleAuthOrigin == 'onboarding'
-            ? () async => null
-            : _createSignerBackedWallet,
+        createSignerBackedWallet: () async => null,
         origin: widget.googleAuthOrigin,
       );
       await _handleAuthSuccess(result, origin: _googlePostAuthOrigin);
@@ -694,9 +679,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
             api: api,
             googleResult: googleResult,
             walletAddress: null,
-            createSignerBackedWallet: widget.googleAuthOrigin == 'onboarding'
-                ? () async => null
-                : _createSignerBackedWallet,
+            createSignerBackedWallet: () async => null,
             origin: widget.googleAuthOrigin,
           );
           if (!mounted) return;

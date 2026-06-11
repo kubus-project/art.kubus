@@ -28,6 +28,29 @@ String? _wallet(NormalizedWalletAuthResult result) {
   return user?['walletAddress'] as String?;
 }
 
+MockClient _profileMeClient({
+  String walletAddress = 'profile-wallet',
+  String userId = 'profile-user',
+}) {
+  return MockClient((request) async {
+    if (request.url.path == '/api/profiles/me') {
+      return http.Response(
+        jsonEncode(<String, Object?>{
+          'success': true,
+          'data': <String, Object?>{
+            'id': 'profile-1',
+            'userId': userId,
+            'walletAddress': walletAddress,
+          },
+        }),
+        200,
+        headers: const <String, String>{'content-type': 'application/json'},
+      );
+    }
+    return http.Response('Not found', 404);
+  });
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -44,287 +67,270 @@ void main() {
     api.setAuthTokenForTesting(null);
   });
 
-  test('typed Map with data.user returns success', () async {
-    final result = await normalizeWalletAuthResult(
-      routeResult: const <String, dynamic>{
-        'data': <String, dynamic>{
-          'user': <String, dynamic>{'id': 'u1', 'walletAddress': 'abc'},
+  group('token-bearing results succeed', () {
+    test("{'token': ...} succeeds and persists the token", () async {
+      final token = _jwtWithWallet('abc');
+      final result = await normalizeWalletAuthResult(
+        routeResult: <String, dynamic>{
+          'token': token,
+          'data': <String, dynamic>{
+            'user': <String, dynamic>{'id': 'u1', 'walletAddress': 'abc'},
+          },
         },
-      },
-      api: api,
-    );
+        api: api,
+      );
 
-    expect(result.isSuccess, isTrue);
-    expect(_wallet(result), 'abc');
-  });
+      expect(result.isSuccess, isTrue);
+      expect(_wallet(result), 'abc');
+      expect(api.getAuthToken(), token);
+    });
 
-  test('untyped Map with data.user returns success', () async {
-    final result = await normalizeWalletAuthResult(
-      routeResult: const <Object, Object>{
-        'data': <Object, Object>{
-          'user': <Object, Object>{'id': 'u1', 'walletAddress': 'abc'},
+    test("{'data': {'token': ...}} succeeds", () async {
+      final token = _jwtWithWallet('abc');
+      final result = await normalizeWalletAuthResult(
+        routeResult: <String, dynamic>{
+          'data': <String, dynamic>{
+            'token': token,
+            'user': <String, dynamic>{'id': 'u1', 'walletAddress': 'abc'},
+          },
         },
-      },
-      api: api,
-    );
+        api: api,
+      );
 
-    expect(result.isSuccess, isTrue);
-    expect(_wallet(result), 'abc');
+      expect(result.isSuccess, isTrue);
+      expect(_wallet(result), 'abc');
+      expect(api.getAuthToken(), token);
+    });
+
+    test("{'accessToken': ...} succeeds", () async {
+      final result = await normalizeWalletAuthResult(
+        routeResult: <String, dynamic>{'accessToken': _jwtWithWallet('abc')},
+        api: api,
+      );
+
+      expect(result.isSuccess, isTrue);
+    });
+
+    test("{'authToken': ...} succeeds", () async {
+      final result = await normalizeWalletAuthResult(
+        routeResult: <String, dynamic>{'authToken': _jwtWithWallet('abc')},
+        api: api,
+      );
+
+      expect(result.isSuccess, isTrue);
+    });
+
+    test("{'auth': {'token': ...}} succeeds", () async {
+      final result = await normalizeWalletAuthResult(
+        routeResult: <String, dynamic>{
+          'auth': <String, dynamic>{'token': _jwtWithWallet('abc')},
+        },
+        api: api,
+      );
+
+      expect(result.isSuccess, isTrue);
+    });
+
+    test("{'session': {'token': ...}} succeeds", () async {
+      final result = await normalizeWalletAuthResult(
+        routeResult: <String, dynamic>{
+          'session': <String, dynamic>{'token': _jwtWithWallet('abc')},
+        },
+        api: api,
+      );
+
+      expect(result.isSuccess, isTrue);
+    });
   });
 
-  test("{'user': {...}} normalizes to data.user", () async {
-    final result = await normalizeWalletAuthResult(
-      routeResult: const <String, dynamic>{
-        'user': <String, dynamic>{'id': 'u1', 'walletAddress': 'abc'},
-      },
-      api: api,
-    );
+  group('wallet-only results fail without a backend token', () {
+    test('data.user with wallet but no token fails', () async {
+      final result = await normalizeWalletAuthResult(
+        routeResult: const <String, dynamic>{
+          'data': <String, dynamic>{
+            'user': <String, dynamic>{'id': 'u1', 'walletAddress': 'abc'},
+          },
+        },
+        api: api,
+      );
 
-    expect(result.isSuccess, isTrue);
-    expect((result.payload!['data'] as Map)['user'], isA<Map>());
-    expect(_wallet(result), 'abc');
+      expect(result.isFailure, isTrue);
+    });
+
+    test("{'walletAddress': 'abc'} fails", () async {
+      final result = await normalizeWalletAuthResult(
+        routeResult: const <String, dynamic>{'walletAddress': 'abc'},
+        api: api,
+      );
+
+      expect(result.isFailure, isTrue);
+    });
+
+    test("{'address': 'abc'} fails", () async {
+      final result = await normalizeWalletAuthResult(
+        routeResult: const <String, dynamic>{'address': 'abc'},
+        api: api,
+      );
+
+      expect(result.isFailure, isTrue);
+    });
+
+    test('fallbackWalletAddress alone is never success', () async {
+      final result = await normalizeWalletAuthResult(
+        routeResult: null,
+        api: api,
+        fallbackWalletAddress: 'fallback-wallet',
+      );
+
+      expect(result.isSuccess, isFalse);
+      expect(result.isCancelled, isTrue);
+    });
+
+    test('profile-only result without token fails', () async {
+      final result = await normalizeWalletAuthResult(
+        routeResult: const <String, dynamic>{
+          'profile': <String, dynamic>{'id': 'p1'},
+        },
+        api: api,
+      );
+
+      expect(result.isFailure, isTrue);
+    });
   });
 
-  test("{'walletAddress': 'abc'} normalizes to data.user.walletAddress",
-      () async {
-    final result = await normalizeWalletAuthResult(
-      routeResult: const <String, dynamic>{'walletAddress': 'abc'},
-      api: api,
-    );
+  group('wallet result without payload token but with persisted api token', () {
+    test('succeeds when /api/profiles/me confirms the session', () async {
+      api.setAuthTokenForTesting(_jwtWithWallet('token-wallet'));
+      api.setHttpClient(_profileMeClient(walletAddress: 'profile-wallet'));
 
-    expect(result.isSuccess, isTrue);
-    expect(_wallet(result), 'abc');
+      final result = await normalizeWalletAuthResult(
+        routeResult: const <String, dynamic>{
+          'data': <String, dynamic>{
+            'user': <String, dynamic>{'id': 'u1', 'walletAddress': 'abc'},
+          },
+        },
+        api: api,
+      );
+
+      expect(result.isSuccess, isTrue);
+      expect(_wallet(result), 'abc');
+    });
+
+    test('fails when /api/profiles/me rejects the session', () async {
+      api.setAuthTokenForTesting(_jwtWithWallet('token-wallet'));
+      api.setHttpClient(
+        MockClient((_) async => http.Response('Unauthorized', 401)),
+      );
+
+      final result = await normalizeWalletAuthResult(
+        routeResult: const <String, dynamic>{
+          'data': <String, dynamic>{
+            'user': <String, dynamic>{'id': 'u1', 'walletAddress': 'abc'},
+          },
+        },
+        api: api,
+      );
+
+      expect(result.isFailure, isTrue);
+    });
   });
 
-  test("{'wallet_address': 'abc'} normalizes to data.user.walletAddress",
-      () async {
-    final result = await normalizeWalletAuthResult(
-      routeResult: const <String, dynamic>{'wallet_address': 'abc'},
-      api: api,
-    );
+  group('explicit failures', () {
+    test("{'success': false, 'error': 'bad'} returns failure", () async {
+      final result = await normalizeWalletAuthResult(
+        routeResult: const <String, dynamic>{
+          'success': false,
+          'error': 'bad',
+        },
+        api: api,
+      );
 
-    expect(result.isSuccess, isTrue);
-    expect(_wallet(result), 'abc');
+      expect(result.isFailure, isTrue);
+      expect(result.reason, 'bad');
+    });
+
+    test("{'success': true} without token returns failure", () async {
+      final result = await normalizeWalletAuthResult(
+        routeResult: const <String, dynamic>{'success': true},
+        api: api,
+      );
+
+      expect(result.isFailure, isTrue);
+    });
+
+    test('non-map route result returns failure', () async {
+      final result = await normalizeWalletAuthResult(
+        routeResult: 'unexpected',
+        api: api,
+      );
+
+      expect(result.isFailure, isTrue);
+    });
+
+    test('failure reason does not include secret values', () async {
+      const secretValue = 'secret-token-value';
+      final result = await normalizeWalletAuthResult(
+        routeResult: const <String, dynamic>{
+          'success': true,
+          'unexpected': secretValue,
+        },
+        api: api,
+      );
+
+      expect(result.isFailure, isTrue);
+      expect(result.reason, isNot(contains(secretValue)));
+    });
   });
 
-  test("{'address': 'abc'} normalizes to data.user.walletAddress", () async {
-    final result = await normalizeWalletAuthResult(
-      routeResult: const <String, dynamic>{'address': 'abc'},
-      api: api,
-    );
+  group('null route result (flow closed without payload)', () {
+    test('with fresh token and /me success returns success', () async {
+      api.setAuthTokenForTesting(_jwtWithWallet('token-wallet'));
+      api.setHttpClient(_profileMeClient(walletAddress: 'profile-wallet'));
 
-    expect(result.isSuccess, isTrue);
-    expect(_wallet(result), 'abc');
-  });
+      final result = await normalizeWalletAuthResult(
+        routeResult: null,
+        api: api,
+      );
 
-  test("{'success': true, 'data': {'walletAddress': 'abc'}} succeeds",
-      () async {
-    final result = await normalizeWalletAuthResult(
-      routeResult: const <String, dynamic>{
-        'success': true,
-        'data': <String, dynamic>{'walletAddress': 'abc'},
-      },
-      api: api,
-    );
+      expect(result.isSuccess, isTrue);
+      expect(_wallet(result), 'profile-wallet');
+    });
 
-    expect(result.isSuccess, isTrue);
-    expect(_wallet(result), 'abc');
-  });
+    test('with fresh token but failing /me returns failure', () async {
+      api.setAuthTokenForTesting(_jwtWithWallet('token-wallet'));
+      api.setHttpClient(
+        MockClient((_) async => http.Response('server error', 500)),
+      );
 
-  test("{'success': false, 'error': 'bad'} returns failure", () async {
-    final result = await normalizeWalletAuthResult(
-      routeResult: const <String, dynamic>{
-        'success': false,
-        'error': 'bad',
-      },
-      api: api,
-    );
+      final result = await normalizeWalletAuthResult(
+        routeResult: null,
+        api: api,
+      );
 
-    expect(result.isFailure, isTrue);
-    expect(result.reason, 'bad');
-  });
+      expect(result.isFailure, isTrue);
+    });
 
-  test("{'success': true} returns failure without auth evidence", () async {
-    final result = await normalizeWalletAuthResult(
-      routeResult: const <String, dynamic>{'success': true},
-      api: api,
-    );
+    test('with pre-existing auth token returns cancelled', () async {
+      api.setAuthTokenForTesting(_jwtWithWallet('token-wallet'));
+      api.setHttpClient(_profileMeClient());
 
-    expect(result.isFailure, isTrue);
-    expect(result.reason, contains('did not include user'));
-  });
+      final result = await normalizeWalletAuthResult(
+        routeResult: null,
+        api: api,
+        hadAuthBeforeOpen: true,
+      );
 
-  test("{'foo': 'bar'} returns failure without auth evidence", () async {
-    final result = await normalizeWalletAuthResult(
-      routeResult: const <String, dynamic>{'foo': 'bar'},
-      api: api,
-    );
+      expect(result.isCancelled, isTrue);
+    });
 
-    expect(result.isFailure, isTrue);
-  });
+    test('with no token, wallet, or fallback returns cancelled', () async {
+      final result = await normalizeWalletAuthResult(
+        routeResult: null,
+        api: api,
+      );
 
-  test("{'data': {}} returns failure without auth evidence", () async {
-    final result = await normalizeWalletAuthResult(
-      routeResult: const <String, dynamic>{'data': <String, dynamic>{}},
-      api: api,
-    );
-
-    expect(result.isFailure, isTrue);
-  });
-
-  test("{'data': {'user': {}}} returns failure without auth evidence",
-      () async {
-    final result = await normalizeWalletAuthResult(
-      routeResult: const <String, dynamic>{
-        'data': <String, dynamic>{'user': <String, dynamic>{}},
-      },
-      api: api,
-    );
-
-    expect(result.isFailure, isTrue);
-  });
-
-  test("{'token': 'token-value'} returns success", () async {
-    final result = await normalizeWalletAuthResult(
-      routeResult: const <String, dynamic>{'token': 'token-value'},
-      api: api,
-    );
-
-    expect(result.isSuccess, isTrue);
-    expect(result.payload?['token'], 'token-value');
-  });
-
-  test("{'authToken': 'token-value'} returns success", () async {
-    final result = await normalizeWalletAuthResult(
-      routeResult: const <String, dynamic>{'authToken': 'token-value'},
-      api: api,
-    );
-
-    expect(result.isSuccess, isTrue);
-    expect(result.payload?['authToken'], 'token-value');
-  });
-
-  test("{'profile': {'id': 'p1'}} returns success", () async {
-    final result = await normalizeWalletAuthResult(
-      routeResult: const <String, dynamic>{
-        'profile': <String, dynamic>{'id': 'p1'},
-      },
-      api: api,
-    );
-
-    expect(result.isSuccess, isTrue);
-    final data = result.payload?['data'] as Map<String, dynamic>?;
-    final user = data?['user'] as Map<String, dynamic>?;
-    expect(user?['id'], 'p1');
-  });
-
-  test('malformed Map failure reason does not include secret values', () async {
-    const secretValue = 'secret-token-value';
-    final result = await normalizeWalletAuthResult(
-      routeResult: const <String, dynamic>{
-        'success': true,
-        'unexpected': secretValue,
-      },
-      api: api,
-    );
-
-    expect(result.isFailure, isTrue);
-    expect(result.reason, isNot(contains(secretValue)));
-  });
-
-  test('explicit success true with walletAddress still succeeds', () async {
-    final result = await normalizeWalletAuthResult(
-      routeResult: const <String, dynamic>{
-        'success': true,
-        'walletAddress': 'abc',
-      },
-      api: api,
-    );
-
-    expect(result.isSuccess, isTrue);
-    expect(_wallet(result), 'abc');
-  });
-
-  test('explicit success true with user id still succeeds', () async {
-    final result = await normalizeWalletAuthResult(
-      routeResult: const <String, dynamic>{
-        'success': true,
-        'user': <String, dynamic>{'id': 'u1'},
-      },
-      api: api,
-    );
-
-    expect(result.isSuccess, isTrue);
-    final data = result.payload?['data'] as Map<String, dynamic>?;
-    final user = data?['user'] as Map<String, dynamic>?;
-    expect(user?['id'], 'u1');
-  });
-
-  test('null result with auth token and getMyProfile success returns success',
-      () async {
-    api.setAuthTokenForTesting(_jwtWithWallet('token-wallet'));
-    api.setHttpClient(
-      MockClient((request) async {
-        expect(request.url.path, '/api/profiles/me');
-        return http.Response(
-          jsonEncode(<String, Object?>{
-            'success': true,
-            'data': <String, Object?>{
-              'id': 'profile-1',
-              'walletAddress': 'profile-wallet',
-            },
-          }),
-          200,
-          headers: const <String, String>{'content-type': 'application/json'},
-        );
-      }),
-    );
-
-    final result = await normalizeWalletAuthResult(
-      routeResult: null,
-      api: api,
-    );
-
-    expect(result.isSuccess, isTrue);
-    expect(_wallet(result), 'profile-wallet');
-  });
-
-  test(
-      'null result with token, profile failure, and current auth wallet succeeds',
-      () async {
-    api.setAuthTokenForTesting(_jwtWithWallet('token-wallet'));
-    api.setHttpClient(
-      MockClient((_) async => http.Response('server error', 500)),
-    );
-
-    final result = await normalizeWalletAuthResult(
-      routeResult: null,
-      api: api,
-    );
-
-    expect(result.isSuccess, isTrue);
-    expect(_wallet(result), 'token-wallet');
-  });
-
-  test('null result with fallbackWalletAddress returns success', () async {
-    final result = await normalizeWalletAuthResult(
-      routeResult: null,
-      api: api,
-      fallbackWalletAddress: 'fallback-wallet',
-    );
-
-    expect(result.isSuccess, isTrue);
-    expect(_wallet(result), 'fallback-wallet');
-  });
-
-  test('null result with no token, wallet, or fallback returns cancelled',
-      () async {
-    final result = await normalizeWalletAuthResult(
-      routeResult: null,
-      api: api,
-    );
-
-    expect(result.isCancelled, isTrue);
+      expect(result.isCancelled, isTrue);
+    });
   });
 
   test('debug output does not include token values', () async {

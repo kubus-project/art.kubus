@@ -21,6 +21,16 @@ class _RecordingWalletProvider extends WalletProvider {
         );
 
   String? boundIdentity;
+  bool readOnlyIdentityUsed = false;
+
+  @override
+  Future<void> commitVerifiedAccountLinkedWalletIdentity(
+    String walletAddress, {
+    bool persist = true,
+    bool notify = true,
+  }) async {
+    boundIdentity = walletAddress;
+  }
 
   @override
   Future<void> setReadOnlyWalletIdentity(
@@ -29,7 +39,9 @@ class _RecordingWalletProvider extends WalletProvider {
     bool loadData = true,
     bool syncBackend = false,
   }) async {
-    boundIdentity = address;
+    // The account-link transaction must never use this path: loadData/sync
+    // can bootstrap a second wallet-root account.
+    readOnlyIdentityUsed = true;
   }
 }
 
@@ -162,6 +174,9 @@ void main() {
     expect(prefs.getString('user_id'), kUserId);
 
     expect(walletProvider.boundIdentity, kWallet);
+    expect(walletProvider.readOnlyIdentityUsed, isFalse,
+        reason: 'verified link must use the safe commit path, never '
+            'setReadOnlyWalletIdentity(loadData: true)');
     expect(profileProvider.authenticatedLoadAttempted, isTrue);
     expect(profileProvider.autoRegisterAttempted, isFalse);
     expect(chatProvider.lastWallet, kWallet);

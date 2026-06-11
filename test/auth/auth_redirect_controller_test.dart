@@ -75,6 +75,67 @@ void main() {
     expect(result.onboardingStepId, 'walletConnect');
   });
 
+  test('standalone Google sign-in without wallet routes to wallet setup',
+      () async {
+    final prefs = await SharedPreferences.getInstance();
+    final result = await const AuthRedirectController().resolvePostAuthRedirect(
+      prefs: prefs,
+      payload: <String, dynamic>{
+        'data': <String, dynamic>{
+          'requiresWalletSetup': true,
+          'user': <String, dynamic>{'id': 'google-standalone-no-wallet'},
+        },
+      },
+      hasHydratedProfile: true,
+      requiresWalletBackup: false,
+      walletAddress: null,
+      userId: 'google-standalone-no-wallet',
+      origin: AuthOrigin.google,
+    );
+
+    expect(result.state, PostAuthRouteState.onboardingRequired);
+    expect(result.routeName, '/onboarding');
+    expect(result.onboardingStepId, 'walletConnect');
+  });
+
+  test('standalone email sign-in without wallet routes to wallet setup',
+      () async {
+    final prefs = await SharedPreferences.getInstance();
+    final result = await const AuthRedirectController().resolvePostAuthRedirect(
+      prefs: prefs,
+      payload: const <String, dynamic>{},
+      hasHydratedProfile: true,
+      requiresWalletBackup: false,
+      requiresWalletSetup: true,
+      walletAddress: null,
+      userId: 'email-user-no-wallet',
+      origin: AuthOrigin.emailPassword,
+    );
+
+    expect(result.state, PostAuthRouteState.onboardingRequired);
+    expect(result.routeName, '/onboarding');
+    expect(result.onboardingStepId, 'walletConnect');
+  });
+
+  test('wallet origin is never routed into wallet setup', () async {
+    final prefs = await SharedPreferences.getInstance();
+    final result = await const AuthRedirectController().resolvePostAuthRedirect(
+      prefs: prefs,
+      payload: <String, dynamic>{
+        'data': <String, dynamic>{'requiresWalletSetup': true},
+      },
+      hasHydratedProfile: true,
+      requiresWalletBackup: false,
+      requiresWalletSetup: true,
+      walletAddress: null,
+      userId: 'wallet-user-1',
+      origin: AuthOrigin.wallet,
+    );
+
+    expect(result.state, PostAuthRouteState.ready);
+    expect(result.routeName, '/main');
+  });
+
   test('existing email user routes to requested redirect', () async {
     final prefs = await SharedPreferences.getInstance();
     final result = await const AuthRedirectController().resolvePostAuthRedirect(

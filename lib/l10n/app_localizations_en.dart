@@ -1255,6 +1255,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingFlowProfileBody => 'Add a name and a photo so people can recognize you.';
 
   @override
+  String get onboardingStepWalletSetupTitle => 'Set up your wallet';
+
+  @override
+  String get onboardingStepWalletSecurityTitle => 'Secure your wallet';
+
+  @override
   String get onboardingFlowWalletBackupIntroTitle => 'Wallet backup';
 
   @override

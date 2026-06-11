@@ -2870,7 +2870,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         break;
       case _OnboardingStep.walletConnect:
         content = _WalletConnectStep(
-          title: l10n.connectWalletChooseTitle,
+          title: l10n.onboardingStepWalletSetupTitle,
           body: l10n.connectWalletChooseDescription,
           onWalletLinked: _handleWalletConnectLinked,
         );
@@ -3161,9 +3161,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         case _OnboardingStep.profile:
           return l10n.onboardingFlowProfileTitle;
         case _OnboardingStep.walletConnect:
-          return l10n.connectWalletChooseTitle;
+          return l10n.onboardingStepWalletSetupTitle;
         case _OnboardingStep.walletBackupIntro:
-          return l10n.onboardingFlowWalletBackupIntroTitle;
+          return l10n.onboardingStepWalletSecurityTitle;
         case _OnboardingStep.walletBackup:
           return l10n.onboardingFlowWalletBackupTitle;
         case _OnboardingStep.daoReview:
