@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
-import 'package:art_kubus/services/wallet_session_sync_service.dart';
+import 'package:art_kubus/services/account_wallet_link_service.dart';
+import 'package:art_kubus/services/backend_api_service.dart';
+import 'package:art_kubus/services/onboarding_state_service.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:art_kubus/widgets/kubus_button.dart';
@@ -17,13 +19,43 @@ enum OnboardingWalletConnectAction {
   connect,
 }
 
+/// Link transaction phases shown in the WalletConnect status timeline.
+enum OnboardingWalletLinkPhase {
+  ready,
+  creatingWallet,
+  walletReady,
+  linking,
+  linked,
+  failed,
+}
+
+/// Snapshot of the authenticated account taken before any wallet operation,
+/// used both for the strict bind and to roll back local state on failure.
+class _AccountLinkSnapshot {
+  const _AccountLinkSnapshot({
+    required this.userId,
+    required this.token,
+    required this.prefsStrings,
+    required this.prefsBools,
+  });
+
+  final String userId;
+  final String token;
+  final Map<String, String?> prefsStrings;
+  final Map<String, bool?> prefsBools;
+}
+
 class OnboardingWalletConnectStep extends StatefulWidget {
   const OnboardingWalletConnectStep({
     super.key,
     required this.onWalletLinked,
+    this.linkService,
   });
 
   final Future<void> Function(String walletAddress) onWalletLinked;
+
+  /// Test seam: overrides the strict account-link transaction transport.
+  final AccountWalletLinkService? linkService;
 
   @override
   State<OnboardingWalletConnectStep> createState() =>
@@ -32,9 +64,19 @@ class OnboardingWalletConnectStep extends StatefulWidget {
 
 class _OnboardingWalletConnectStepState
     extends State<OnboardingWalletConnectStep> {
+  static const List<String> _snapshotStringKeys = <String>[
+    'wallet_address',
+    'walletAddress',
+    'wallet',
+    'user_id',
+  ];
+  static const List<String> _snapshotBoolKeys = <String>['has_wallet'];
+
   final TextEditingController _mnemonicController = TextEditingController();
   OnboardingWalletConnectAction? _busyAction;
+  OnboardingWalletLinkPhase _phase = OnboardingWalletLinkPhase.ready;
   String? _linkedWallet;
+  String? _localWallet;
   String? _error;
   bool _showImport = false;
 
@@ -44,7 +86,7 @@ class _OnboardingWalletConnectStepState
     super.dispose();
   }
 
-  Future<String?> _currentUserId() async {
+  Future<String?> _resolveCurrentUserId() async {
     final user = context.read<ProfileProvider>().currentUser;
     final fromProfile = (user?.userId ?? user?.id ?? '').trim();
     if (fromProfile.isNotEmpty) return fromProfile;
@@ -53,28 +95,59 @@ class _OnboardingWalletConnectStepState
     return fromPrefs.isEmpty ? null : fromPrefs;
   }
 
-  Future<void> _bindWallet(String walletAddress) async {
-    final normalizedWallet = walletAddress.trim();
-    if (normalizedWallet.isEmpty) {
-      throw StateError('Wallet address missing after wallet action.');
+  Future<_AccountLinkSnapshot?> _captureAccountSnapshot() async {
+    final userId = await _resolveCurrentUserId();
+    if (!mounted) return null;
+    final backendApi = BackendApiService();
+    var token = (backendApi.getAuthToken() ?? '').trim();
+    if (token.isEmpty) {
+      try {
+        await backendApi.loadAuthToken();
+      } catch (_) {}
+      token = (backendApi.getAuthToken() ?? '').trim();
     }
-    final userId = await _currentUserId();
-    if (!mounted) return;
-    await const WalletSessionSyncService().bindAuthenticatedWallet(
-      context: context,
-      walletAddress: normalizedWallet,
-      userId: userId,
-      warmUp: false,
-      loadProfile: true,
-      syncBackend: true,
-      requireBackendSync: true,
+    if ((userId ?? '').isEmpty || token.isEmpty) {
+      return null;
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    final prefsStrings = <String, String?>{
+      for (final key in _snapshotStringKeys) key: prefs.getString(key),
+    };
+    final prefsBools = <String, bool?>{
+      for (final key in _snapshotBoolKeys) key: prefs.getBool(key),
+    };
+    return _AccountLinkSnapshot(
+      userId: userId!,
+      token: token,
+      prefsStrings: prefsStrings,
+      prefsBools: prefsBools,
     );
-    if (!mounted) return;
-    setState(() {
-      _linkedWallet = normalizedWallet;
-      _error = null;
-    });
-    await widget.onWalletLinked(normalizedWallet);
+  }
+
+  Future<void> _restoreSnapshot(_AccountLinkSnapshot snapshot) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      for (final entry in snapshot.prefsStrings.entries) {
+        final value = entry.value;
+        if (value == null) {
+          await prefs.remove(entry.key);
+        } else {
+          await prefs.setString(entry.key, value);
+        }
+      }
+      for (final entry in snapshot.prefsBools.entries) {
+        final value = entry.value;
+        if (value == null) {
+          await prefs.remove(entry.key);
+        } else {
+          await prefs.setBool(entry.key, value);
+        }
+      }
+    } catch (_) {}
+    try {
+      await BackendApiService().setAuthToken(snapshot.token);
+    } catch (_) {}
   }
 
   Future<void> _runWalletAction(
@@ -88,19 +161,97 @@ class _OnboardingWalletConnectStepState
       });
       return;
     }
+
+    // 1. Capture the authenticated account before touching wallet state.
+    final snapshot = await _captureAccountSnapshot();
+    if (!mounted) return;
+    if (snapshot == null) {
+      setState(() {
+        _phase = OnboardingWalletLinkPhase.failed;
+        _error =
+            'Your account session could not be confirmed. Go back to the '
+            'account step and sign in again — do not create a new account.';
+      });
+      return;
+    }
+
+    // Persist the account-link guard so an app refresh recovers into this
+    // step instead of falling back to sign-in.
+    await OnboardingStateService.markAccountLinkStarted(
+      userId: snapshot.userId,
+    );
+    if (!mounted) return;
+
+    final profileSnapshot = context.read<ProfileProvider>().currentUser;
     setState(() {
       _busyAction = action;
+      _phase = OnboardingWalletLinkPhase.creatingWallet;
       _error = null;
     });
+
     try {
+      // 2. Local wallet operation only — no backend auth may happen here.
       final walletProvider = context.read<WalletProvider>();
-      final address = await operation(walletProvider).timeout(
+      final address = (await operation(walletProvider).timeout(
         const Duration(seconds: 30),
-      );
-      await _bindWallet(address);
-    } catch (error) {
+      ))
+          .trim();
+      if (address.isEmpty) {
+        throw StateError('Wallet action did not return an address.');
+      }
       if (!mounted) return;
       setState(() {
+        _localWallet = address;
+        _phase = OnboardingWalletLinkPhase.walletReady;
+      });
+
+      // 3. Restore the original account auth before the backend bind, in
+      // case the wallet operation touched session state.
+      final backendApi = BackendApiService();
+      await backendApi.setAuthToken(snapshot.token);
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('user_id', snapshot.userId);
+      } catch (_) {}
+
+      if (!mounted) return;
+      setState(() {
+        _phase = OnboardingWalletLinkPhase.linking;
+      });
+
+      // 4-7. Strict bind + verification through /api/profiles/me.
+      final service = widget.linkService ?? AccountWalletLinkService();
+      final result = await service.linkWalletToCurrentAccount(
+        context: context,
+        walletAddress: address,
+        expectedUserId: snapshot.userId,
+        originalAuthToken: snapshot.token,
+      );
+
+      // 8. Verified: the original account owns the wallet.
+      await OnboardingStateService.clearAccountLinkGuard();
+      if (!mounted) return;
+      setState(() {
+        _linkedWallet = result.walletAddress;
+        _phase = OnboardingWalletLinkPhase.linked;
+        _error = null;
+      });
+      await widget.onWalletLinked(result.walletAddress);
+    } catch (error) {
+      // Roll back wallet/session pollution and stay on this step. The guard
+      // stays active so a refresh recovers into WalletConnect, never sign-in.
+      await _restoreSnapshot(snapshot);
+      if (profileSnapshot != null && mounted) {
+        try {
+          await context
+              .read<ProfileProvider>()
+              .loadAuthenticatedProfile()
+              .timeout(const Duration(seconds: 5));
+        } catch (_) {}
+      }
+      if (!mounted) return;
+      setState(() {
+        _phase = OnboardingWalletLinkPhase.failed;
         _error = _messageForError(error);
       });
     } finally {
@@ -125,14 +276,7 @@ class _OnboardingWalletConnectStepState
   Future<void> _createWallet() {
     return _runWalletAction(
       OnboardingWalletConnectAction.create,
-      (walletProvider) async {
-        final result = await walletProvider.createWallet(syncBackend: false);
-        final address = (result['address'] ?? '').trim();
-        if (address.isEmpty) {
-          throw StateError('Created wallet did not return an address.');
-        }
-        return address;
-      },
+      (walletProvider) => walletProvider.createWalletForAccountLink(),
     );
   }
 
@@ -148,44 +292,64 @@ class _OnboardingWalletConnectStepState
     }
     return _runWalletAction(
       OnboardingWalletConnectAction.import,
-      (walletProvider) => walletProvider.importWalletFromMnemonic(
-        mnemonic,
-        markBackedUp: true,
-        syncBackend: false,
-      ),
+      (walletProvider) => walletProvider.importWalletForAccountLink(mnemonic),
     );
   }
 
   Future<void> _connectExternalWallet() {
     return _runWalletAction(
       OnboardingWalletConnectAction.connect,
-      (walletProvider) async {
-        final result = await walletProvider.connectExternalWallet(
-          context,
-          allowReplacingWalletIdentity: true,
-          syncBackend: false,
-        );
-        return result.address.trim();
-      },
+      (walletProvider) =>
+          walletProvider.connectExternalWalletForAccountLink(context),
     );
+  }
+
+  String _truncateWallet(String wallet) {
+    final normalized = wallet.trim();
+    if (normalized.length <= 14) return normalized;
+    return '${normalized.substring(0, 6)}…${normalized.substring(normalized.length - 6)}';
   }
 
   @override
   Widget build(BuildContext context) {
     final isDesktop = MediaQuery.sizeOf(context).width >= 900;
-    final currentUser = context.watch<ProfileProvider>().currentUser;
-    final linkedWallet =
-        _linkedWallet ?? (currentUser?.walletAddress ?? '').trim();
+    final profileProvider = context.watch<ProfileProvider>();
+    final currentUser = profileProvider.currentUser;
+
+    // Trust the hydrated profile wallet only when it belongs to the same
+    // account that is signed in here — never local wallet state alone.
+    final profileUserId = (currentUser?.userId ?? currentUser?.id ?? '').trim();
+    final profileWallet = (currentUser?.walletAddress ?? '').trim();
+    final verifiedWallet = (_linkedWallet ?? '').trim().isNotEmpty
+        ? _linkedWallet!.trim()
+        : ((profileWallet.isNotEmpty &&
+                profileUserId.isNotEmpty &&
+                profileProvider.hasHydratedProfile)
+            ? profileWallet
+            : '');
+    final isLinked = verifiedWallet.isNotEmpty;
+
     final accountLabel = (currentUser?.displayName ?? '').trim().isNotEmpty
         ? currentUser!.displayName.trim()
         : ((currentUser?.username ?? '').trim().isNotEmpty
             ? currentUser!.username.trim()
-            : ((currentUser?.userId ?? currentUser?.id ?? '').trim()));
+            : profileUserId);
+    final accountEmail = (currentUser?.username ?? '').trim().isNotEmpty &&
+            (currentUser?.username ?? '').trim() != accountLabel
+        ? '@${currentUser!.username.trim().replaceFirst(RegExp(r'^@+'), '')}'
+        : '';
 
-    final status = _WalletConnectStatus(
+    final status = _WalletConnectStatusPanel(
       accountLabel:
           accountLabel.isEmpty ? 'Authenticated account' : accountLabel,
-      walletAddress: linkedWallet,
+      accountEmail: accountEmail,
+      accountId: profileUserId.isEmpty ? null : _truncateWallet(profileUserId),
+      phase: isLinked && _phase != OnboardingWalletLinkPhase.failed
+          ? OnboardingWalletLinkPhase.linked
+          : _phase,
+      localWallet:
+          (_localWallet ?? '').isEmpty ? null : _truncateWallet(_localWallet!),
+      linkedWallet: isLinked ? _truncateWallet(verifiedWallet) : null,
       error: _error,
     );
 
@@ -260,7 +424,7 @@ class _OnboardingWalletConnectStepState
         ),
         const SizedBox(height: KubusSpacing.sm),
         Text(
-          'This wallet will become your public Web3 identity on art.kubus.',
+          'Your wallet becomes your public Web3 identity on art.kubus.',
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                 color: Colors.white.withValues(alpha: 0.86),
                 height: 1.42,
@@ -287,7 +451,7 @@ class _OnboardingWalletConnectStepState
             child: LiquidGlassCard(
               padding: const EdgeInsets.all(KubusSpacing.lg),
               borderRadius: BorderRadius.circular(KubusRadius.lg),
-              child: intro,
+              child: SingleChildScrollView(child: intro),
             ),
           ),
           const SizedBox(width: KubusSpacing.md),
@@ -317,21 +481,98 @@ class _OnboardingWalletConnectStepState
   }
 }
 
-class _WalletConnectStatus extends StatelessWidget {
-  const _WalletConnectStatus({
+enum _TimelineState { pending, active, done, failed }
+
+class _WalletConnectStatusPanel extends StatelessWidget {
+  const _WalletConnectStatusPanel({
     required this.accountLabel,
-    required this.walletAddress,
+    required this.accountEmail,
+    required this.accountId,
+    required this.phase,
+    required this.localWallet,
+    required this.linkedWallet,
     required this.error,
   });
 
   final String accountLabel;
-  final String walletAddress;
+  final String accountEmail;
+  final String? accountId;
+  final OnboardingWalletLinkPhase phase;
+  final String? localWallet;
+  final String? linkedWallet;
   final String? error;
+
+  _TimelineState get _localWalletState {
+    switch (phase) {
+      case OnboardingWalletLinkPhase.ready:
+        return _TimelineState.pending;
+      case OnboardingWalletLinkPhase.creatingWallet:
+        return _TimelineState.active;
+      case OnboardingWalletLinkPhase.failed:
+        return localWallet == null
+            ? _TimelineState.failed
+            : _TimelineState.done;
+      case OnboardingWalletLinkPhase.walletReady:
+      case OnboardingWalletLinkPhase.linking:
+      case OnboardingWalletLinkPhase.linked:
+        return _TimelineState.done;
+    }
+  }
+
+  _TimelineState get _accountLinkState {
+    switch (phase) {
+      case OnboardingWalletLinkPhase.ready:
+      case OnboardingWalletLinkPhase.creatingWallet:
+      case OnboardingWalletLinkPhase.walletReady:
+        return _TimelineState.pending;
+      case OnboardingWalletLinkPhase.linking:
+        return _TimelineState.active;
+      case OnboardingWalletLinkPhase.linked:
+        return _TimelineState.done;
+      case OnboardingWalletLinkPhase.failed:
+        return localWallet == null
+            ? _TimelineState.pending
+            : _TimelineState.failed;
+    }
+  }
+
+  _TimelineState get _verificationState {
+    switch (phase) {
+      case OnboardingWalletLinkPhase.linking:
+        return _TimelineState.active;
+      case OnboardingWalletLinkPhase.linked:
+        return _TimelineState.done;
+      case OnboardingWalletLinkPhase.failed:
+        return localWallet == null
+            ? _TimelineState.pending
+            : _TimelineState.failed;
+      case OnboardingWalletLinkPhase.ready:
+      case OnboardingWalletLinkPhase.creatingWallet:
+      case OnboardingWalletLinkPhase.walletReady:
+        return _TimelineState.pending;
+    }
+  }
+
+  String get _statusHeadline {
+    switch (phase) {
+      case OnboardingWalletLinkPhase.ready:
+        return 'Choose a wallet action to continue.';
+      case OnboardingWalletLinkPhase.creatingWallet:
+        return 'Creating local wallet…';
+      case OnboardingWalletLinkPhase.walletReady:
+        return 'Local wallet ready — preparing account link.';
+      case OnboardingWalletLinkPhase.linking:
+        return 'Linking wallet to your account and verifying…';
+      case OnboardingWalletLinkPhase.linked:
+        return 'Wallet linked to this account.';
+      case OnboardingWalletLinkPhase.failed:
+        return 'Wallet link failed. Your account was not changed.';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final linked = walletAddress.trim().isNotEmpty;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(KubusSpacing.md),
@@ -343,26 +584,89 @@ class _WalletConnectStatus extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _StatusLine(
-            icon: Icons.person_outline,
-            label: 'Linked account',
-            value: accountLabel,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.person_outline, color: Colors.white, size: 18),
+              const SizedBox(width: KubusSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Login account',
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                            color: Colors.white.withValues(alpha: 0.66),
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      accountLabel,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Colors.white.withValues(alpha: 0.92),
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                    if (accountEmail.isNotEmpty)
+                      Text(
+                        accountEmail,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Colors.white.withValues(alpha: 0.7),
+                            ),
+                      ),
+                    if (accountId != null)
+                      Text(
+                        'Account ID $accountId',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Colors.white.withValues(alpha: 0.5),
+                            ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: KubusSpacing.md),
+          _TimelineRow(
+            label: 'Local wallet',
+            detail: localWallet,
+            state: _localWalletState,
+          ),
+          const SizedBox(height: KubusSpacing.xs),
+          _TimelineRow(
+            label: 'Account link',
+            detail: null,
+            state: _accountLinkState,
+          ),
+          const SizedBox(height: KubusSpacing.xs),
+          _TimelineRow(
+            label: 'Verification',
+            detail: linkedWallet == null
+                ? null
+                : 'Verified linked wallet $linkedWallet',
+            state: phase == OnboardingWalletLinkPhase.linked
+                ? _TimelineState.done
+                : _verificationState,
           ),
           const SizedBox(height: KubusSpacing.sm),
-          _StatusLine(
-            icon: linked ? Icons.check_circle_outline : Icons.link_outlined,
-            label: 'Wallet status',
-            value: linked
-                ? walletAddress
-                : 'Choose a wallet action to continue after it is linked.',
+          Text(
+            _statusHeadline,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: phase == OnboardingWalletLinkPhase.failed
+                      ? scheme.error
+                      : Colors.white.withValues(alpha: 0.86),
+                  fontWeight: FontWeight.w600,
+                  height: 1.35,
+                ),
           ),
           if (error != null) ...[
-            const SizedBox(height: KubusSpacing.sm),
+            const SizedBox(height: KubusSpacing.xs),
             Text(
               error!,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: scheme.error,
-                    fontWeight: FontWeight.w600,
+                    height: 1.35,
                   ),
             ),
           ],
@@ -372,23 +676,59 @@ class _WalletConnectStatus extends StatelessWidget {
   }
 }
 
-class _StatusLine extends StatelessWidget {
-  const _StatusLine({
-    required this.icon,
+class _TimelineRow extends StatelessWidget {
+  const _TimelineRow({
     required this.label,
-    required this.value,
+    required this.detail,
+    required this.state,
   });
 
-  final IconData icon;
   final String label;
-  final String value;
+  final String? detail;
+  final _TimelineState state;
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    Widget marker;
+    switch (state) {
+      case _TimelineState.pending:
+        marker = Icon(
+          Icons.radio_button_unchecked,
+          size: 16,
+          color: Colors.white.withValues(alpha: 0.4),
+        );
+        break;
+      case _TimelineState.active:
+        marker = const SizedBox(
+          width: 16,
+          height: 16,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        );
+        break;
+      case _TimelineState.done:
+        marker = const Icon(
+          Icons.check_circle_outline,
+          size: 16,
+          color: Colors.white,
+        );
+        break;
+      case _TimelineState.failed:
+        marker = Icon(
+          Icons.error_outline,
+          size: 16,
+          color: scheme.error,
+        );
+        break;
+    }
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, color: Colors.white, size: 18),
+        Padding(
+          padding: const EdgeInsets.only(top: 1),
+          child: marker,
+        ),
         const SizedBox(width: KubusSpacing.sm),
         Expanded(
           child: Column(
@@ -396,19 +736,18 @@ class _StatusLine extends StatelessWidget {
             children: [
               Text(
                 label,
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: Colors.white.withValues(alpha: 0.66),
-                      fontWeight: FontWeight.w700,
-                    ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                value,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Colors.white.withValues(alpha: 0.9),
-                      height: 1.35,
+                      color: Colors.white.withValues(alpha: 0.88),
+                      fontWeight: FontWeight.w600,
                     ),
               ),
+              if ((detail ?? '').isNotEmpty)
+                Text(
+                  detail!,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.white.withValues(alpha: 0.62),
+                      ),
+                ),
             ],
           ),
         ),

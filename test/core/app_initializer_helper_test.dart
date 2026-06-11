@@ -122,4 +122,55 @@ void main() {
     expect(decision.route, StartupRouteType.onboarding);
     expect(decision.onboardingInitialStepId, 'walletConnect');
   });
+
+  test('account-link guard without session never routes to sign-in', () {
+    final decision = decideStartupRoute(
+      hasPendingAuthOnboarding: false,
+      hasValidSession: false,
+      hasPendingVerificationEmailFlag: false,
+      pendingVerificationEmail: null,
+      shouldSkipOnboarding: true,
+      shouldShowSignIn: true,
+      hasActiveAccountLinkGuard: true,
+    );
+
+    expect(decision.route, StartupRouteType.onboarding);
+    expect(decision.onboardingInitialStepId, 'account');
+  });
+
+  test('account-link guard with session and no wallet routes to walletConnect',
+      () {
+    final decision = decideStartupRoute(
+      hasPendingAuthOnboarding: false,
+      hasValidSession: true,
+      hasPendingVerificationEmailFlag: false,
+      pendingVerificationEmail: null,
+      shouldSkipOnboarding: false,
+      shouldShowSignIn: true,
+      hasActiveAccountLinkGuard: true,
+      hasWallet: false,
+    );
+
+    expect(decision.route, StartupRouteType.onboarding);
+    expect(decision.onboardingInitialStepId, 'walletConnect');
+  });
+
+  test(
+      'account-link guard with session and wallet resumes structured onboarding',
+      () {
+    final decision = decideStartupRoute(
+      hasPendingAuthOnboarding: false,
+      hasValidSession: true,
+      hasPendingVerificationEmailFlag: false,
+      pendingVerificationEmail: null,
+      shouldSkipOnboarding: false,
+      shouldShowSignIn: false,
+      hasActiveAccountLinkGuard: true,
+      hasWallet: true,
+      structuredOnboardingStepId: 'walletBackupIntro',
+    );
+
+    expect(decision.route, StartupRouteType.onboarding);
+    expect(decision.onboardingInitialStepId, 'walletBackupIntro');
+  });
 }

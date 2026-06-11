@@ -340,6 +340,12 @@ class _AppInitializerState extends State<AppInitializer> {
           OnboardingStateService.hasActiveGoogleOnboardingRegistrationGuardSync(
         prefs,
       );
+      final hasActiveAccountLinkGuard =
+          OnboardingStateService.hasActiveAccountLinkGuardSync(prefs);
+      // Either guard means an account already exists (or is being created):
+      // startup must never fall back to /sign-in while one is active.
+      final hasActiveOnboardingGuard =
+          hasActiveGoogleOnboardingGuard || hasActiveAccountLinkGuard;
 
       if (kDebugMode) {
         debugPrint('AppInitializer: flags');
@@ -491,7 +497,7 @@ class _AppInitializerState extends State<AppInitializer> {
         final pendingVerificationEmail =
             prefs.getString('onboarding_verification_email_v3');
 
-        if (hasActiveGoogleOnboardingGuard && hasValidSession) {
+        if (hasActiveOnboardingGuard && hasValidSession) {
           final hydratedProfileWallet =
               (profileProvider.currentUser?.walletAddress ?? '').trim();
           final hasResolvedWallet = hydratedProfileWallet.isNotEmpty ||
@@ -499,7 +505,7 @@ class _AppInitializerState extends State<AppInitializer> {
           if (!hasResolvedWallet) {
             if (kDebugMode) {
               debugPrint(
-                'AppInitializer: route -> OnboardingFlowScreen (Google onboarding guard, walletConnect)',
+                'AppInitializer: route -> OnboardingFlowScreen (onboarding guard, walletConnect)',
               );
             }
             _didNavigate = true;
@@ -573,7 +579,7 @@ class _AppInitializerState extends State<AppInitializer> {
         }
       }
 
-      if (hasActiveGoogleOnboardingGuard) {
+      if (hasActiveOnboardingGuard) {
         final hydratedProfileWallet =
             (profileProvider.currentUser?.walletAddress ?? '').trim();
         final hasResolvedWallet = hydratedProfileWallet.isNotEmpty ||
@@ -584,7 +590,7 @@ class _AppInitializerState extends State<AppInitializer> {
               : 'account';
           if (kDebugMode) {
             debugPrint(
-              'AppInitializer: route -> OnboardingFlowScreen (Google onboarding guard, initialStep=$initialStepId)',
+              'AppInitializer: route -> OnboardingFlowScreen (onboarding guard, initialStep=$initialStepId)',
             );
           }
           _didNavigate = true;

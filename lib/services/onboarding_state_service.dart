@@ -48,6 +48,13 @@ class OnboardingStateService {
   static const String onboardingGoogleRegistrationModeKey =
       'onboarding_google_registration_mode_v1';
   static const Duration googleRegistrationGuardTimeout = Duration(minutes: 10);
+  static const String onboardingAccountLinkInProgressKey =
+      'onboarding_account_link_in_progress_v1';
+  static const String onboardingAccountLinkUserIdKey =
+      'onboarding_account_link_user_id_v1';
+  static const String onboardingAccountLinkStartedAtKey =
+      'onboarding_account_link_started_at_v1';
+  static const Duration accountLinkGuardTimeout = Duration(minutes: 10);
 
   static String _scopedKey(String key, String? flowScopeKey) {
     final scope = (flowScopeKey ?? '').trim();
@@ -356,5 +363,57 @@ class OnboardingStateService {
     await p.remove(onboardingGoogleRegistrationInProgressKey);
     await p.remove(onboardingGoogleRegistrationStartedAtKey);
     await p.remove(onboardingGoogleRegistrationModeKey);
+  }
+
+  /// Account-link guard: active while onboarding WalletConnect is linking a
+  /// wallet to an existing authenticated account. While active (and not
+  /// expired) startup routing must never send the user to /sign-in — the
+  /// account exists; routing recovers into onboarding instead.
+  static bool hasActiveAccountLinkGuardSync(
+    SharedPreferences prefs, {
+    DateTime? now,
+  }) {
+    final active = prefs.getBool(onboardingAccountLinkInProgressKey) ?? false;
+    if (!active) return false;
+    final startedAtMs = prefs.getInt(onboardingAccountLinkStartedAtKey) ?? 0;
+    if (startedAtMs <= 0) return false;
+    final startedAt = DateTime.fromMillisecondsSinceEpoch(startedAtMs);
+    final elapsed = (now ?? DateTime.now()).difference(startedAt);
+    return elapsed >= Duration.zero && elapsed <= accountLinkGuardTimeout;
+  }
+
+  static Future<bool> hasActiveAccountLinkGuard({
+    SharedPreferences? prefs,
+    DateTime? now,
+  }) async {
+    final p = prefs ?? await SharedPreferences.getInstance();
+    return hasActiveAccountLinkGuardSync(p, now: now);
+  }
+
+  static String? accountLinkGuardUserIdSync(SharedPreferences prefs) {
+    final userId = (prefs.getString(onboardingAccountLinkUserIdKey) ?? '').trim();
+    return userId.isEmpty ? null : userId;
+  }
+
+  static Future<void> markAccountLinkStarted({
+    SharedPreferences? prefs,
+    required String userId,
+  }) async {
+    final p = prefs ?? await SharedPreferences.getInstance();
+    await p.setBool(onboardingAccountLinkInProgressKey, true);
+    await p.setString(onboardingAccountLinkUserIdKey, userId.trim());
+    await p.setInt(
+      onboardingAccountLinkStartedAtKey,
+      DateTime.now().millisecondsSinceEpoch,
+    );
+  }
+
+  static Future<void> clearAccountLinkGuard({
+    SharedPreferences? prefs,
+  }) async {
+    final p = prefs ?? await SharedPreferences.getInstance();
+    await p.remove(onboardingAccountLinkInProgressKey);
+    await p.remove(onboardingAccountLinkUserIdKey);
+    await p.remove(onboardingAccountLinkStartedAtKey);
   }
 }

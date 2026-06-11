@@ -73,8 +73,9 @@ class _EmailVerificationSuccessScreenState
       final hasSession = await _hasValidSession(prefs);
       final guardActive =
           OnboardingStateService.hasActiveGoogleOnboardingRegistrationGuardSync(
-        prefs,
-      );
+                prefs,
+              ) ||
+              OnboardingStateService.hasActiveAccountLinkGuardSync(prefs);
 
       if (!mounted) return;
       if (!hasSession && !guardActive) {

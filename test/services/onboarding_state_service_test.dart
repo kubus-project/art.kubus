@@ -270,4 +270,59 @@ void main() {
       isFalse,
     );
   });
+
+  test('account-link guard records the user id and is active before timeout',
+      () async {
+    final prefs = await SharedPreferences.getInstance();
+    await OnboardingStateService.markAccountLinkStarted(
+      prefs: prefs,
+      userId: 'user-google-42',
+    );
+
+    expect(
+      OnboardingStateService.hasActiveAccountLinkGuardSync(prefs),
+      isTrue,
+    );
+    expect(
+      OnboardingStateService.accountLinkGuardUserIdSync(prefs),
+      'user-google-42',
+    );
+  });
+
+  test('account-link guard expires after timeout', () async {
+    final prefs = await SharedPreferences.getInstance();
+    final now = DateTime(2026, 1, 1, 12);
+    await prefs.setBool(
+      OnboardingStateService.onboardingAccountLinkInProgressKey,
+      true,
+    );
+    await prefs.setInt(
+      OnboardingStateService.onboardingAccountLinkStartedAtKey,
+      now.subtract(const Duration(minutes: 11)).millisecondsSinceEpoch,
+    );
+
+    expect(
+      OnboardingStateService.hasActiveAccountLinkGuardSync(prefs, now: now),
+      isFalse,
+    );
+  });
+
+  test('clearing the account-link guard removes all guard keys', () async {
+    final prefs = await SharedPreferences.getInstance();
+    await OnboardingStateService.markAccountLinkStarted(
+      prefs: prefs,
+      userId: 'user-google-42',
+    );
+    await OnboardingStateService.clearAccountLinkGuard(prefs: prefs);
+
+    expect(
+      OnboardingStateService.hasActiveAccountLinkGuardSync(prefs),
+      isFalse,
+    );
+    expect(OnboardingStateService.accountLinkGuardUserIdSync(prefs), isNull);
+    expect(
+      prefs.getInt(OnboardingStateService.onboardingAccountLinkStartedAtKey),
+      isNull,
+    );
+  });
 }

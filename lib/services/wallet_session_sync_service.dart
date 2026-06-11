@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/chat_provider.dart';
 import '../providers/profile_provider.dart';
 import '../providers/wallet_provider.dart';
+import 'account_wallet_link_service.dart';
 import 'app_bootstrap_service.dart';
 import 'backend_api_service.dart';
 
@@ -56,6 +57,20 @@ class WalletSessionSyncService {
     }
   }
 
+  /// Binds [walletAddress] into local session state and (optionally) the
+  /// backend account.
+  ///
+  /// Two modes:
+  ///
+  /// * Default (wallet-auth) mode keeps the historical behavior used by
+  ///   wallet-rooted sign-in flows. It writes wallet prefs eagerly and may
+  ///   auto-register a wallet profile. It MUST NOT be called from onboarding
+  ///   Google/email flows — those flows must use [accountLinkMode] so a
+  ///   wallet can never replace or duplicate the signed-in account.
+  /// * [accountLinkMode] runs the strict [AccountWalletLinkService]
+  ///   transaction: no prefs, no preferred-wallet routing change, and no
+  ///   provider identity update happen before `/api/auth/bind-wallet` is
+  ///   verified through `/api/profiles/me` for [expectedUserId].
   Future<void> bindAuthenticatedWallet({
     required BuildContext context,
     required String walletAddress,
@@ -64,10 +79,64 @@ class WalletSessionSyncService {
     bool loadProfile = true,
     bool syncBackend = false,
     bool requireBackendSync = false,
+    bool accountLinkMode = false,
+    String? expectedUserId,
+    String? originalAuthToken,
+    String? originalRefreshToken,
     Future<Object?> Function(String walletAddress)? syncBackendWallet,
+    Future<Map<String, dynamic>> Function()? fetchAuthenticatedProfile,
   }) async {
     final normalizedWallet = walletAddress.trim();
     if (normalizedWallet.isEmpty || normalizedWallet.toLowerCase().startsWith('linked_auth:')) return;
+
+    if (accountLinkMode) {
+      if (!syncBackend || !requireBackendSync) {
+        throw ArgumentError(
+          'accountLinkMode requires syncBackend and requireBackendSync.',
+        );
+      }
+      final normalizedExpectedUserId = (expectedUserId ?? '').trim();
+      final normalizedOriginalToken = (originalAuthToken ?? '').trim();
+      if (normalizedExpectedUserId.isEmpty) {
+        throw ArgumentError('accountLinkMode requires expectedUserId.');
+      }
+      if (normalizedOriginalToken.isEmpty) {
+        throw ArgumentError('accountLinkMode requires originalAuthToken.');
+      }
+      Future<Map<String, dynamic>> Function(String wallet)? bindOverride;
+      if (syncBackendWallet != null) {
+        bindOverride = (wallet) async {
+          final response = await syncBackendWallet(wallet);
+          return response is Map
+              ? Map<String, dynamic>.from(response)
+              : <String, dynamic>{};
+        };
+      }
+      await AccountWalletLinkService(
+        bindWallet: bindOverride,
+        fetchMyProfile: fetchAuthenticatedProfile,
+      ).linkWalletToCurrentAccount(
+        context: context,
+        walletAddress: normalizedWallet,
+        expectedUserId: normalizedExpectedUserId,
+        originalAuthToken: normalizedOriginalToken,
+        originalRefreshToken: originalRefreshToken,
+      );
+      if (warmUp) {
+        if (!context.mounted) return;
+        await _runNonFatal(
+          'bootstrap warm-up',
+          () => const AppBootstrapService()
+              .warmUp(
+                context: context,
+                walletAddress: normalizedWallet,
+              )
+              .timeout(_warmUpTimeout),
+        );
+      }
+      return;
+    }
+
     final walletProvider = context.read<WalletProvider>();
     final profileProvider = context.read<ProfileProvider>();
     final chatProvider = context.read<ChatProvider>();

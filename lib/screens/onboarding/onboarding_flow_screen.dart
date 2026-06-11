@@ -2264,6 +2264,10 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         Provider.of<ProfileProvider>(context, listen: false);
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
+    final expectedUserId = (profileProvider.currentUser?.userId ??
+            profileProvider.currentUser?.id ??
+            '')
+        .trim();
 
     try {
       await profileProvider
@@ -2272,15 +2276,28 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       await _syncWalletBackupRequirement();
       _refreshAuthDerivedSteps();
       if (!mounted) return;
-      final walletAddress =
+      final linkedWallet =
           (profileProvider.currentUser?.walletAddress ?? '').trim();
-      if (walletAddress.isEmpty) {
+      final reloadedUserId = (profileProvider.currentUser?.userId ??
+              profileProvider.currentUser?.id ??
+              '')
+          .trim();
+      // The step already verified the link; this is a final consistency
+      // check that the authenticated account still owns the wallet and the
+      // account id did not change underneath us.
+      final userIdStable = expectedUserId.isEmpty ||
+          reloadedUserId.isEmpty ||
+          reloadedUserId == expectedUserId;
+      if (linkedWallet.isEmpty ||
+          !WalletUtils.equals(linkedWallet, walletAddress) ||
+          !userIdStable) {
         messenger.showKubusSnackBar(
           SnackBar(content: Text(l10n.connectWalletWalletConnectFailedToast)),
           tone: KubusSnackBarTone.error,
         );
         return;
       }
+      await OnboardingStateService.clearAccountLinkGuard();
       await _markCompleted(_OnboardingStep.walletConnect);
     } catch (error) {
       if (!mounted) return;

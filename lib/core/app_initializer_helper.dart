@@ -22,10 +22,14 @@ StartupDecision decideStartupRoute({
   required bool shouldSkipOnboarding,
   required bool shouldShowSignIn,
   bool hasActiveGoogleOnboardingGuard = false,
+  bool hasActiveAccountLinkGuard = false,
   bool hasWallet = false,
   String? structuredOnboardingStepId,
 }) {
-  if (hasActiveGoogleOnboardingGuard) {
+  // While either onboarding guard is active the account already exists (or a
+  // Google registration is mid-flight): never route to /sign-in. Recover into
+  // onboarding at the step that matches the session/wallet state instead.
+  if (hasActiveGoogleOnboardingGuard || hasActiveAccountLinkGuard) {
     if (!hasValidSession) {
       return const StartupDecision(
         route: StartupRouteType.onboarding,

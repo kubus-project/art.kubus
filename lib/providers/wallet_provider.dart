@@ -811,12 +811,24 @@ class WalletProvider extends ChangeNotifier {
     _encryptedWalletBackupStatusKnown = false;
   }
 
+  /// While true, wallet create/import/connect keeps the wallet purely local:
+  /// no wallet identity prefs are written and the API layer's preferred
+  /// wallet is left untouched, so auth request routing still belongs to the
+  /// signed-in account until the strict bind-wallet verification commits.
+  bool _suppressAccountLinkIdentityPersistence = false;
+
   Future<void> _persistWalletIdentity(String address) async {
+    if (_suppressAccountLinkIdentityPersistence) return;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('wallet_address', address);
     await prefs.setString('walletAddress', address);
     await prefs.setString('wallet', address);
     await prefs.setBool('has_wallet', true);
+  }
+
+  void _setPreferredWalletForIdentity(String address) {
+    if (_suppressAccountLinkIdentityPersistence) return;
+    _apiService.setPreferredWalletAddress(address);
   }
 
   String _walletScopedPreferenceKey({
@@ -1512,7 +1524,7 @@ class WalletProvider extends ChangeNotifier {
         _walletLog('setReadOnlyWalletIdentity: persist failed: $e');
       }
     }
-    _apiService.setPreferredWalletAddress(sanitized);
+    _setPreferredWalletForIdentity(sanitized);
 
     try {
       await isMnemonicBackupRequired(walletAddress: sanitized);
@@ -1600,7 +1612,7 @@ class WalletProvider extends ChangeNotifier {
     _externalSignerAddress = sanitized;
     final label = (walletName ?? '').trim();
     _externalSignerName = label.isEmpty ? 'External wallet' : label;
-    _apiService.setPreferredWalletAddress(sanitized);
+    _setPreferredWalletForIdentity(sanitized);
     notifyListeners();
   }
 
@@ -3226,7 +3238,7 @@ class WalletProvider extends ChangeNotifier {
     // Persist address for other providers/screens
     try {
       await _persistWalletIdentity(address);
-      _apiService.setPreferredWalletAddress(address);
+      _setPreferredWalletForIdentity(address);
     } catch (e) {
       _walletLog('failed to persist wallet address: $e');
     }
@@ -3308,7 +3320,7 @@ class WalletProvider extends ChangeNotifier {
     // Save to SharedPreferences for profile provider
     try {
       await _persistWalletIdentity(_currentWalletAddress!);
-      _apiService.setPreferredWalletAddress(_currentWalletAddress);
+      _setPreferredWalletForIdentity(_currentWalletAddress!);
       _walletLog('wallet address saved to SharedPreferences');
     } catch (e) {
       _walletLog('failed to save wallet address to SharedPreferences: $e');
@@ -3358,6 +3370,60 @@ class WalletProvider extends ChangeNotifier {
     notifyListeners();
 
     return _currentWalletAddress!;
+  }
+
+  /// Runs [operation] with account-link suppression so the wallet stays a
+  /// purely local signer: no wallet identity prefs, no preferred-wallet auth
+  /// routing change, no backend register/login. Used by onboarding
+  /// WalletConnect before the strict bind-wallet transaction verifies the
+  /// link against the signed-in account.
+  Future<T> _runWalletOperationForAccountLink<T>(
+    Future<T> Function() operation,
+  ) async {
+    _suppressAccountLinkIdentityPersistence = true;
+    try {
+      return await operation();
+    } finally {
+      _suppressAccountLinkIdentityPersistence = false;
+    }
+  }
+
+  /// Creates a local wallet for account-link flows. Never calls backend
+  /// register/login and never persists wallet identity prefs.
+  Future<String> createWalletForAccountLink() {
+    return _runWalletOperationForAccountLink(() async {
+      final result = await createWallet(syncBackend: false);
+      final address = (result['address'] ?? '').trim();
+      if (address.isEmpty) {
+        throw StateError('Created wallet did not return an address.');
+      }
+      return address;
+    });
+  }
+
+  /// Imports a local wallet for account-link flows. Never calls backend
+  /// register/login and never persists wallet identity prefs.
+  Future<String> importWalletForAccountLink(String mnemonic) {
+    return _runWalletOperationForAccountLink(() {
+      return importWalletFromMnemonic(
+        mnemonic,
+        markBackedUp: true,
+        syncBackend: false,
+      );
+    });
+  }
+
+  /// Connects an external wallet for account-link flows. Never calls backend
+  /// register/login and never persists wallet identity prefs.
+  Future<String> connectExternalWalletForAccountLink(BuildContext context) {
+    return _runWalletOperationForAccountLink(() async {
+      final result = await connectExternalWallet(
+        context,
+        allowReplacingWalletIdentity: true,
+        syncBackend: false,
+      );
+      return result.address.trim();
+    });
   }
 
   Future<void> connectWalletWithAddress(String address) async {

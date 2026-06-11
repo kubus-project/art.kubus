@@ -1,4 +1,5 @@
 import 'package:art_kubus/providers/chat_provider.dart';
+import 'package:art_kubus/services/account_wallet_link_service.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/services/solana_wallet_service.dart';
@@ -242,6 +243,199 @@ void main() {
 
     expect(walletProvider.restoreAttempted, isFalse);
     expect(profileProvider.loadAttempted, isFalse);
+    expect(chatProvider.lastWallet, isNull);
+  });
+
+  testWidgets(
+      'accountLinkMode rejects calls without required backend sync or account '
+      'state', (tester) async {
+    final walletProvider = _ThrowingWalletProvider();
+    final profileProvider = _ThrowingProfileProvider();
+    final chatProvider = _RecordingChatProvider();
+    late BuildContext buildContext;
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<WalletProvider>.value(value: walletProvider),
+          ChangeNotifierProvider<ProfileProvider>.value(value: profileProvider),
+          ChangeNotifierProvider<ChatProvider>.value(value: chatProvider),
+        ],
+        child: MaterialApp(
+          home: Builder(
+            builder: (context) {
+              buildContext = context;
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    const wallet = 'walletlinkedtestaddress0000000000001';
+
+    expect(
+      () => const WalletSessionSyncService().bindAuthenticatedWallet(
+        context: buildContext,
+        walletAddress: wallet,
+        warmUp: false,
+        accountLinkMode: true,
+        // Missing syncBackend/requireBackendSync.
+        expectedUserId: 'user-42',
+        originalAuthToken: 'token-1',
+      ),
+      throwsArgumentError,
+    );
+    expect(
+      () => const WalletSessionSyncService().bindAuthenticatedWallet(
+        context: buildContext,
+        walletAddress: wallet,
+        warmUp: false,
+        syncBackend: true,
+        requireBackendSync: true,
+        accountLinkMode: true,
+        originalAuthToken: 'token-1',
+      ),
+      throwsArgumentError,
+    );
+    expect(
+      () => const WalletSessionSyncService().bindAuthenticatedWallet(
+        context: buildContext,
+        walletAddress: wallet,
+        warmUp: false,
+        syncBackend: true,
+        requireBackendSync: true,
+        accountLinkMode: true,
+        expectedUserId: 'user-42',
+      ),
+      throwsArgumentError,
+    );
+  });
+
+  testWidgets(
+      'accountLinkMode does not write wallet prefs before bind and commits '
+      'only after verified /profiles/me', (tester) async {
+    final walletProvider = _ThrowingWalletProvider();
+    final profileProvider = _ThrowingProfileProvider();
+    final chatProvider = _RecordingChatProvider();
+    late BuildContext buildContext;
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<WalletProvider>.value(value: walletProvider),
+          ChangeNotifierProvider<ProfileProvider>.value(value: profileProvider),
+          ChangeNotifierProvider<ChatProvider>.value(value: chatProvider),
+        ],
+        child: MaterialApp(
+          home: Builder(
+            builder: (context) {
+              buildContext = context;
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    const wallet = 'walletlinkedtestaddress0000000000001';
+    String? walletPrefAtBindTime = 'sentinel';
+
+    await tester.runAsync(() async {
+      await const WalletSessionSyncService().bindAuthenticatedWallet(
+        context: buildContext,
+        walletAddress: wallet,
+        warmUp: false,
+        syncBackend: true,
+        requireBackendSync: true,
+        accountLinkMode: true,
+        expectedUserId: 'user-42',
+        originalAuthToken: 'original-token-1',
+        syncBackendWallet: (boundWallet) async {
+          final prefs = await SharedPreferences.getInstance();
+          walletPrefAtBindTime = prefs.getString('wallet_address');
+          return <String, dynamic>{'success': true};
+        },
+        fetchAuthenticatedProfile: () async => <String, dynamic>{
+          'success': true,
+          'data': <String, dynamic>{
+            'userId': 'user-42',
+            'walletAddress': wallet,
+          },
+        },
+      );
+    });
+
+    // No wallet prefs may exist while the bind request is in flight.
+    expect(walletPrefAtBindTime, isNull);
+
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString('wallet_address'), wallet);
+    expect(prefs.getString('user_id'), 'user-42');
+    expect(chatProvider.lastWallet, wallet);
+  });
+
+  testWidgets(
+      'accountLinkMode verification mismatch leaves no wallet prefs behind',
+      (tester) async {
+    final walletProvider = _ThrowingWalletProvider();
+    final profileProvider = _ThrowingProfileProvider();
+    final chatProvider = _RecordingChatProvider();
+    late BuildContext buildContext;
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<WalletProvider>.value(value: walletProvider),
+          ChangeNotifierProvider<ProfileProvider>.value(value: profileProvider),
+          ChangeNotifierProvider<ChatProvider>.value(value: chatProvider),
+        ],
+        child: MaterialApp(
+          home: Builder(
+            builder: (context) {
+              buildContext = context;
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    const wallet = 'walletlinkedtestaddress0000000000001';
+    Object? thrown;
+
+    await tester.runAsync(() async {
+      try {
+        await const WalletSessionSyncService().bindAuthenticatedWallet(
+          context: buildContext,
+          walletAddress: wallet,
+          warmUp: false,
+          syncBackend: true,
+          requireBackendSync: true,
+          accountLinkMode: true,
+          expectedUserId: 'user-42',
+          originalAuthToken: 'original-token-1',
+          syncBackendWallet: (_) async => <String, dynamic>{'success': true},
+          fetchAuthenticatedProfile: () async => <String, dynamic>{
+            'success': true,
+            'data': <String, dynamic>{
+              'userId': 'user-wallet-root-99',
+              'walletAddress': wallet,
+            },
+          },
+        );
+      } catch (error) {
+        thrown = error;
+      }
+    });
+
+    expect(thrown, isA<AccountWalletLinkVerificationException>());
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString('wallet_address'), isNull);
+    expect(prefs.getBool('has_wallet'), isNull);
     expect(chatProvider.lastWallet, isNull);
   });
 }
