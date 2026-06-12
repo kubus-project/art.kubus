@@ -348,13 +348,19 @@ class _CollectionCreatorState extends State<CollectionCreator> {
                 },
               ),
               const CreatorFieldSpacing(),
-              CreatorTextField(
+              CreatorDescriptionTextField(
                 controller: _descriptionController,
                 label: l10n.collectionSettingsDescriptionLabel,
                 hint: l10n.collectionSettingsDescriptionHint,
-                maxLines: 4,
-                textInputAction: TextInputAction.newline,
                 accentColor: studioAccent,
+                enabled: !_isSubmitting,
+                validator: (value) {
+                  if ((value ?? '').length >
+                      CreatorDescriptionTextField.maxDescriptionLength) {
+                    return l10n.creatorDescriptionTooLongError;
+                  }
+                  return null;
+                },
               ),
             ],
           ),
@@ -643,10 +649,10 @@ class _CollectionCreatorState extends State<CollectionCreator> {
       title: l10n.collectionCreatorAddArtworksTitle,
       children: [
         // Search field
-        CreatorTextField(
-          label: l10n.collectionCreatorSearchArtworksLabel,
+        CreatorSearchField(
           hint: l10n.collectionCreatorSearchArtworksHint,
           accentColor: accent,
+          enabled: !_isSubmitting,
           onChanged: (v) => setState(() => _artworkSearchQuery = v),
         ),
 

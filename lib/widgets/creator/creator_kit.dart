@@ -360,87 +360,192 @@ class CreatorFooterActions extends StatelessWidget {
     this.accentColor,
   });
 
+  /// Below this width the actions stack vertically so labels stay readable.
+  static const double stackBreakpoint = 420;
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final accent = accentColor ?? scheme.primary;
 
+    final primaryButton = ElevatedButton(
+      onPressed: primaryLoading ? null : onPrimary,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: accent,
+        foregroundColor: scheme.onPrimary,
+        padding: const EdgeInsets.symmetric(vertical: KubusSpacing.md),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(KubusRadius.md),
+        ),
+        disabledBackgroundColor: accent.withValues(alpha: 0.5),
+      ),
+      child: primaryLoading
+          ? SizedBox(
+              height: 18,
+              width: 18,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(scheme.onPrimary),
+              ),
+            )
+          : Text(
+              primaryLabel,
+              style: KubusTextStyles.detailButton.copyWith(
+                color: scheme.onPrimary,
+              ),
+            ),
+    );
+
+    final secondaryButton = secondaryLabel == null
+        ? null
+        : OutlinedButton(
+            onPressed: onSecondary,
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: KubusSpacing.md),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(KubusRadius.md),
+              ),
+            ),
+            child: Text(
+              secondaryLabel!,
+              style: KubusTextStyles.detailButton,
+            ),
+          );
+
+    final destructiveButton = destructiveLabel == null
+        ? null
+        : OutlinedButton(
+            onPressed: onDestructive,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: scheme.error,
+              side: BorderSide(
+                color: scheme.error.withValues(alpha: 0.5),
+              ),
+              padding: const EdgeInsets.symmetric(vertical: KubusSpacing.md),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(KubusRadius.md),
+              ),
+            ),
+            child: Text(
+              destructiveLabel!,
+              style: KubusTextStyles.detailButton.copyWith(
+                color: scheme.error,
+              ),
+            ),
+          );
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: KubusSpacing.sm),
-      child: Row(
-        children: [
-          if (secondaryLabel != null) ...[
-            Expanded(
-              child: OutlinedButton(
-                onPressed: onSecondary,
-                style: OutlinedButton.styleFrom(
-                  padding:
-                      const EdgeInsets.symmetric(vertical: KubusSpacing.md),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(KubusRadius.md),
-                  ),
-                ),
-                child: Text(
-                  secondaryLabel!,
-                  style: KubusTextStyles.detailButton,
-                ),
-              ),
-            ),
-            const SizedBox(width: KubusSpacing.sm),
-          ],
-          Expanded(
-            child: ElevatedButton(
-              onPressed: primaryLoading ? null : onPrimary,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: accent,
-                foregroundColor: scheme.onPrimary,
-                padding: const EdgeInsets.symmetric(vertical: KubusSpacing.md),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(KubusRadius.md),
-                ),
-                disabledBackgroundColor: accent.withValues(alpha: 0.5),
-              ),
-              child: primaryLoading
-                  ? SizedBox(
-                      height: 18,
-                      width: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor:
-                            AlwaysStoppedAnimation<Color>(scheme.onPrimary),
-                      ),
-                    )
-                  : Text(
-                      primaryLabel,
-                      style: KubusTextStyles.detailButton.copyWith(
-                        color: scheme.onPrimary,
-                      ),
-                    ),
-            ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final actionCount = 1 +
+              (secondaryButton != null ? 1 : 0) +
+              (destructiveButton != null ? 1 : 0);
+          final shouldStack =
+              actionCount > 1 && constraints.maxWidth < stackBreakpoint;
+
+          if (shouldStack) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                primaryButton,
+                if (secondaryButton != null) ...[
+                  const SizedBox(height: KubusSpacing.sm),
+                  secondaryButton,
+                ],
+                if (destructiveButton != null) ...[
+                  const SizedBox(height: KubusSpacing.sm),
+                  destructiveButton,
+                ],
+              ],
+            );
+          }
+
+          return Row(
+            children: [
+              if (secondaryButton != null) ...[
+                Expanded(child: secondaryButton),
+                const SizedBox(width: KubusSpacing.sm),
+              ],
+              Expanded(child: primaryButton),
+              if (destructiveButton != null) ...[
+                const SizedBox(width: KubusSpacing.sm),
+                destructiveButton,
+              ],
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// CreatorSearchField
+// ---------------------------------------------------------------------------
+
+/// A compact search input shared by manager list headers and selection
+/// sections so search affordances look identical across creator surfaces.
+class CreatorSearchField extends StatelessWidget {
+  final TextEditingController? controller;
+  final String hint;
+  final ValueChanged<String>? onChanged;
+  final VoidCallback? onClear;
+  final bool enabled;
+  final Color? accentColor;
+
+  const CreatorSearchField({
+    super.key,
+    this.controller,
+    required this.hint,
+    this.onChanged,
+    this.onClear,
+    this.enabled = true,
+    this.accentColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final accent = accentColor ?? scheme.primary;
+    final hasText = controller?.text.trim().isNotEmpty ?? false;
+
+    return TextField(
+      controller: controller,
+      enabled: enabled,
+      onChanged: onChanged,
+      style: TextStyle(color: scheme.onSurface),
+      decoration: InputDecoration(
+        prefixIcon: const Icon(Icons.search),
+        suffixIcon: (onClear != null && hasText)
+            ? IconButton(
+                icon: const Icon(Icons.close, size: 18),
+                onPressed: enabled ? onClear : null,
+              )
+            : null,
+        hintText: hint,
+        hintStyle: TextStyle(
+          color: scheme.onSurface.withValues(alpha: 0.4),
+        ),
+        isDense: true,
+        filled: true,
+        fillColor: scheme.onSurface.withValues(alpha: 0.04),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(KubusRadius.md),
+          borderSide: BorderSide(
+            color: scheme.outline.withValues(alpha: 0.25),
           ),
-          if (destructiveLabel != null) ...[
-            const SizedBox(width: KubusSpacing.sm),
-            OutlinedButton(
-              onPressed: onDestructive,
-              style: OutlinedButton.styleFrom(
-                foregroundColor: scheme.error,
-                side: BorderSide(
-                  color: scheme.error.withValues(alpha: 0.5),
-                ),
-                padding: const EdgeInsets.symmetric(vertical: KubusSpacing.md),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(KubusRadius.md),
-                ),
-              ),
-              child: Text(
-                destructiveLabel!,
-                style: KubusTextStyles.detailButton.copyWith(
-                  color: scheme.error,
-                ),
-              ),
-            ),
-          ],
-        ],
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(KubusRadius.md),
+          borderSide: BorderSide(
+            color: scheme.outline.withValues(alpha: 0.25),
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(KubusRadius.md),
+          borderSide: BorderSide(color: accent),
+        ),
       ),
     );
   }
@@ -467,6 +572,9 @@ class CreatorTextField extends StatelessWidget {
   final ValueChanged<String>? onChanged;
   final bool enabled;
   final Color? accentColor;
+  final String? helperText;
+  final Widget? prefixIcon;
+  final Widget? suffixIcon;
 
   const CreatorTextField({
     super.key,
@@ -483,6 +591,9 @@ class CreatorTextField extends StatelessWidget {
     this.onChanged,
     this.enabled = true,
     this.accentColor,
+    this.helperText,
+    this.prefixIcon,
+    this.suffixIcon,
   });
 
   @override
@@ -511,12 +622,23 @@ class CreatorTextField extends StatelessWidget {
           validator: validator,
           onChanged: onChanged,
           enabled: enabled,
-          style: TextStyle(color: scheme.onSurface),
+          style: TextStyle(
+            color: enabled
+                ? scheme.onSurface
+                : scheme.onSurface.withValues(alpha: 0.55),
+          ),
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: TextStyle(
               color: scheme.onSurface.withValues(alpha: 0.4),
             ),
+            helperText: helperText,
+            helperMaxLines: 2,
+            helperStyle: KubusTextStyles.detailCaption.copyWith(
+              color: scheme.onSurface.withValues(alpha: 0.6),
+            ),
+            prefixIcon: prefixIcon,
+            suffixIcon: suffixIcon,
             filled: true,
             fillColor: scheme.onSurface.withValues(alpha: 0.04),
             border: OutlineInputBorder(
@@ -538,6 +660,12 @@ class CreatorTextField extends StatelessWidget {
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(KubusRadius.md),
               borderSide: BorderSide(color: scheme.error),
+            ),
+            disabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(KubusRadius.md),
+              borderSide: BorderSide(
+                color: scheme.outline.withValues(alpha: 0.15),
+              ),
             ),
           ),
         ),
@@ -945,7 +1073,7 @@ class CreatorDateField extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final dateText = value == null
         ? notSetLabel
-        : '${value!.year.toString().padLeft(4, '0')}-${value!.month.toString().padLeft(2, '0')}-${value!.day.toString().padLeft(2, '0')}';
+        : MaterialLocalizations.of(context).formatShortDate(value!);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

@@ -565,6 +565,13 @@ class ExhibitionsProvider extends ChangeNotifier {
     } else {
       _exhibitions.add(exhibition);
     }
+    // Keep the "mine" list in sync when one of its entries changes, so list
+    // screens reflect edits without a full reload. New entries are added via
+    // an explicit mine refresh, which also resolves the caller's role.
+    final myIdx = _myExhibitions.indexWhere((e) => e.id == exhibition.id);
+    if (myIdx >= 0) {
+      _myExhibitions[myIdx] = exhibition;
+    }
     if (notify) notifyListeners();
   }
 

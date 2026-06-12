@@ -599,10 +599,11 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
                 CreatorDescriptionTextField(
                   controller: _descriptionController,
                   label: l10n.exhibitionCreatorDescriptionLabel,
+                  enabled: !_submitting,
                   validator: (value) {
                     if ((value ?? '').length >
                         CreatorDescriptionTextField.maxDescriptionLength) {
-                      return l10n.exhibitionCreatorCreateFailedWithError;
+                      return l10n.creatorDescriptionTooLongError;
                     }
                     return null;
                   },
@@ -788,6 +789,24 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
             : l10n.exhibitionCreatorReadyVisibilityPrivate,
         complete: true,
         icon: isPublic ? Icons.public_outlined : Icons.lock_outline,
+      ),
+      // Informational only — neither blocks saving the exhibition.
+      if (AppConfig.isFeatureEnabled('events'))
+        DesktopCreatorReadinessItem(
+          label: l10n.exhibitionCreatorProgramTitle,
+          description: _linkedEvents.isNotEmpty
+              ? l10n.exhibitionCreatorProgramLinkedCount(_linkedEvents.length)
+              : l10n.exhibitionCreatorProgramEmpty,
+          complete: _linkedEvents.isNotEmpty,
+          icon: Icons.event_note_outlined,
+        ),
+      DesktopCreatorReadinessItem(
+        label: l10n.creatorPoapSectionTitle,
+        description: _poapConfig.enabled
+            ? l10n.creatorPoapEnableSubtitle
+            : l10n.creatorPoapSectionSubtitle,
+        complete: _poapConfig.enabled && _poapConfig.hasTitle,
+        icon: Icons.confirmation_number_outlined,
       ),
     ];
 
@@ -1000,6 +1019,9 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
           tone: KubusSnackBarTone.warning,
         );
       }
+
+      // Keep the "My exhibitions" list in sync without blocking the save UX.
+      unawaited(provider.loadExhibitions(mine: true, refresh: true));
 
       if (widget.embedded) {
         setState(() {

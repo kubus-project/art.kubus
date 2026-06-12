@@ -53,6 +53,27 @@ class _ManageMarkersScreenState extends State<ManageMarkersScreen> {
     return marker.isPublic ? l10n.manageMarkersStatusPublic : l10n.manageMarkersStatusPrivate;
   }
 
+  String _markerTypeLabel(AppLocalizations l10n, ArtMarkerType type) {
+    switch (type) {
+      case ArtMarkerType.artwork:
+        return l10n.mapMarkerLayerArtwork;
+      case ArtMarkerType.institution:
+        return l10n.mapMarkerLayerInstitution;
+      case ArtMarkerType.event:
+        return l10n.mapMarkerLayerEvent;
+      case ArtMarkerType.residency:
+        return l10n.mapMarkerLayerResidency;
+      case ArtMarkerType.drop:
+        return l10n.mapMarkerLayerDropReward;
+      case ArtMarkerType.experience:
+        return l10n.mapMarkerLayerArExperience;
+      case ArtMarkerType.other:
+        return l10n.mapMarkerLayerOther;
+      case ArtMarkerType.streetArt:
+        return l10n.mapMarkerLayerStreetArt;
+    }
+  }
+
   Color _statusColor(ColorScheme scheme, ArtMarker marker) {
     if (!marker.isActive) return scheme.outline;
     return marker.isPublic ? scheme.primary : scheme.secondary;
@@ -134,28 +155,11 @@ class _ManageMarkersScreenState extends State<ManageMarkersScreen> {
               child: Row(
                 children: [
                   Expanded(
-                    child: TextField(
+                    child: CreatorSearchField(
                       controller: _searchController,
-                      decoration: InputDecoration(
-                        prefixIcon: const Icon(Icons.search),
-                        hintText: l10n.manageMarkersSearchHint,
-                        isDense: true,
-                        filled: true,
-                        fillColor: scheme.onSurface.withValues(alpha: 0.04),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(KubusRadius.md),
-                          borderSide: BorderSide.none,
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(KubusRadius.md),
-                          borderSide: BorderSide.none,
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(KubusRadius.md),
-                          borderSide: BorderSide(color: scheme.primary),
-                        ),
-                      ),
+                      hint: l10n.manageMarkersSearchHint,
                       onChanged: (_) => setState(() {}),
+                      onClear: () => setState(_searchController.clear),
                     ),
                   ),
                   const SizedBox(width: KubusSpacing.md),
@@ -195,19 +199,39 @@ class _ManageMarkersScreenState extends State<ManageMarkersScreen> {
 
           return ListTile(
             selected: selected,
+            selectedTileColor: scheme.primary.withValues(alpha: 0.08),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(KubusRadius.sm),
+              side: selected
+                  ? BorderSide(color: scheme.primary.withValues(alpha: 0.35))
+                  : BorderSide.none,
+            ),
             title: Text(
               marker.name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: KubusTextStyles.actionTileTitle,
             ),
-            subtitle: Text(
-              [
-                if (subjectLabel.isNotEmpty) subjectLabel,
-                '${marker.position.latitude.toStringAsFixed(4)}, ${marker.position.longitude.toStringAsFixed(4)}',
-              ].join(' \u00b7 '),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  [
+                    if (subjectLabel.isNotEmpty) subjectLabel,
+                    _markerTypeLabel(l10n, marker.type),
+                  ].join(' \u00b7 '),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  '${marker.position.latitude.toStringAsFixed(4)}, ${marker.position.longitude.toStringAsFixed(4)}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: KubusTextStyles.detailCaption.copyWith(
+                    color: scheme.onSurface.withValues(alpha: 0.5),
+                  ),
+                ),
+              ],
             ),
             trailing: Column(
               mainAxisAlignment: MainAxisAlignment.center,

@@ -5606,6 +5606,15 @@
   "creatorPoapTitleRequired": "Badge title is required",
   "creatorPoapSyncFailedWarning": "Saved, but the POAP badge could not be updated. Try again from the editor.",
   "creatorRelationSyncFailedWarning": "Saved, but linking could not be completed. Try again from the editor.",
+  "creatorDescriptionTooLongError": "Description is too long (maximum 10,000 characters).",
+  "markerEditorSavedLinkSyncingToast": "Marker saved, syncing exhibition link…",
+  "markerEditorLinkSyncFailedWarning": "Marker saved, but the exhibition link could not be synced. Try again from the editor.",
+  "exhibitionCreatorProgramLinkedCount": "Linked events: {count}",
+  "@exhibitionCreatorProgramLinkedCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
   "poapRarityCommon": "Common",
   "poapRarityUncommon": "Uncommon",
   "poapRarityRare": "Rare",

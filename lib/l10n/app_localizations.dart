@@ -62,9 +62,27 @@ import 'app_localizations_sl.dart';
 /// be consistent with the languages listed in the AppLocalizations.supportedLocales
 /// property.
 abstract class AppLocalizations {
-  AppLocalizations(String locale) : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+  AppLocalizations(String locale)
+      : localeName = _safeCanonicalizedLocale(locale.toString());
 
   final String localeName;
+
+  // Hand-applied patch (see test/l10n/app_localizations_locale_guard_test.dart):
+  // re-apply after every `flutter gen-l10n` run. Guards against invalid locale
+  // tags ("undefined", "null", "") coming from web/host environments.
+  static String _safeCanonicalizedLocale(String rawLocale) {
+    final normalized = rawLocale.trim();
+    if (normalized.isEmpty ||
+        normalized.toLowerCase() == 'undefined' ||
+        normalized.toLowerCase() == 'null') {
+      return intl.Intl.canonicalizedLocale('sl');
+    }
+    try {
+      return intl.Intl.canonicalizedLocale(normalized);
+    } catch (_) {
+      return intl.Intl.canonicalizedLocale('sl');
+    }
+  }
 
   static AppLocalizations? of(BuildContext context) {
     return Localizations.of<AppLocalizations>(context, AppLocalizations);
@@ -23914,6 +23932,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Saved, but linking could not be completed. Try again from the editor.'**
   String get creatorRelationSyncFailedWarning;
+
+  /// No description provided for @creatorDescriptionTooLongError.
+  ///
+  /// In en, this message translates to:
+  /// **'Description is too long (maximum 10,000 characters).'**
+  String get creatorDescriptionTooLongError;
+
+  /// No description provided for @markerEditorSavedLinkSyncingToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Marker saved, syncing exhibition link…'**
+  String get markerEditorSavedLinkSyncingToast;
+
+  /// No description provided for @markerEditorLinkSyncFailedWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Marker saved, but the exhibition link could not be synced. Try again from the editor.'**
+  String get markerEditorLinkSyncFailedWarning;
+
+  /// No description provided for @exhibitionCreatorProgramLinkedCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Linked events: {count}'**
+  String exhibitionCreatorProgramLinkedCount(Object count);
 
   /// No description provided for @poapRarityCommon.
   ///

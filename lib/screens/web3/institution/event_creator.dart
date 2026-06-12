@@ -693,7 +693,7 @@ class _EventCreatorState extends State<EventCreator>
           ),
           const Spacer(),
           IconButton(
-            icon: Icon(Icons.help_outline, color: scheme.onPrimary),
+            icon: Icon(Icons.help_outline, color: scheme.onSurface),
             onPressed: () => _showHelp(),
           ),
         ],
@@ -702,25 +702,10 @@ class _EventCreatorState extends State<EventCreator>
   }
 
   Widget _buildProgressIndicator() {
-    final scheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.lg),
-      child: Row(
-        children: List.generate(4, (index) {
-          return Expanded(
-            child: Container(
-              height: KubusSpacing.xs,
-              margin: EdgeInsets.only(right: index < 3 ? KubusSpacing.sm : 0),
-              decoration: BoxDecoration(
-                color: index <= _currentStep
-                    ? KubusColorRoles.of(context).web3InstitutionAccent
-                    : scheme.onSurface.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(KubusRadius.xs),
-              ),
-            ),
-          );
-        }),
-      ),
+    return CreatorProgressBar(
+      totalSteps: 4,
+      currentStep: _currentStep,
+      activeColor: KubusColorRoles.of(context).web3InstitutionAccent,
     );
   }
 
@@ -752,10 +737,12 @@ class _EventCreatorState extends State<EventCreator>
             const SizedBox(height: KubusSpacing.lg),
             _buildInstitutionSelector(),
             const SizedBox(height: KubusSpacing.md),
-            _buildTextField(
+            CreatorTextField(
               controller: _titleController,
               label: l10n.eventCreatorTitleLabel,
               hint: l10n.eventCreatorTitleHint,
+              accentColor: KubusColorRoles.of(context).web3InstitutionAccent,
+              enabled: !_submitting,
               validator: (value) {
                 if (value?.isEmpty ?? true) {
                   return l10n.eventCreatorTitleRequiredError;
@@ -768,32 +755,62 @@ class _EventCreatorState extends State<EventCreator>
               controller: _descriptionController,
               label: l10n.commonDescription,
               hint: l10n.eventCreatorDescriptionHint,
+              accentColor: KubusColorRoles.of(context).web3InstitutionAccent,
+              enabled: !_submitting,
               validator: (value) {
                 if (value?.isEmpty ?? true) {
                   return l10n.eventCreatorDescriptionRequiredError;
                 }
                 if ((value ?? '').length >
                     CreatorDescriptionTextField.maxDescriptionLength) {
-                  return l10n.eventCreatorSaveFailedToast;
+                  return l10n.creatorDescriptionTooLongError;
                 }
                 return null;
               },
             ),
             const SizedBox(height: KubusSpacing.md),
-            _buildDropdown(
+            CreatorDropdown<String>(
               label: l10n.eventCreatorEventTypeLabel,
               value: _eventType,
-              items: _eventTypeOptions(),
-              itemLabelBuilder: (code) => _eventTypeLabel(code, l10n),
-              onChanged: (value) => setState(() => _eventType = value!),
+              accentColor: KubusColorRoles.of(context).web3InstitutionAccent,
+              enabled: !_submitting,
+              items: _eventTypeOptions()
+                  .map(
+                    (code) => DropdownMenuItem<String>(
+                      value: code,
+                      child: Text(
+                        _eventTypeLabel(code, l10n),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  )
+                  .toList(growable: false),
+              onChanged: (value) {
+                if (value == null) return;
+                setState(() => _eventType = value);
+              },
             ),
             const SizedBox(height: KubusSpacing.md),
-            _buildDropdown(
+            CreatorDropdown<String>(
               label: l10n.eventCreatorCategoryLabel,
               value: _category,
-              items: _categoryOptions(),
-              itemLabelBuilder: (code) => _categoryLabel(code, l10n),
-              onChanged: (value) => setState(() => _category = value!),
+              accentColor: KubusColorRoles.of(context).web3InstitutionAccent,
+              enabled: !_submitting,
+              items: _categoryOptions()
+                  .map(
+                    (code) => DropdownMenuItem<String>(
+                      value: code,
+                      child: Text(
+                        _categoryLabel(code, l10n),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  )
+                  .toList(growable: false),
+              onChanged: (value) {
+                if (value == null) return;
+                setState(() => _category = value);
+              },
             ),
           ],
         ),
@@ -811,49 +828,59 @@ class _EventCreatorState extends State<EventCreator>
           _buildSectionTitle(l10n.eventCreatorDateTimeTitle),
           const SizedBox(height: KubusSpacing.lg),
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: _buildDateField(
+                child: CreatorDateField(
                   label: l10n.eventCreatorStartDateLabel,
-                  date: _startDate,
-                  onTap: () => _selectDate(true),
+                  value: _startDate,
+                  notSetLabel: l10n.eventCreatorSelectDateLabel,
+                  onPick: () => _selectDate(true),
+                  onClear: () => setState(() => _startDate = null),
                 ),
               ),
               const SizedBox(width: KubusSpacing.md),
               Expanded(
-                child: _buildTimeField(
+                child: CreatorTimeField(
                   label: l10n.eventCreatorStartTimeLabel,
-                  time: _startTime,
-                  onTap: () => _selectTime(true),
+                  value: _startTime,
+                  notSetLabel: l10n.eventCreatorSelectTimeLabel,
+                  onPick: () => _selectTime(true),
                 ),
               ),
             ],
           ),
           const SizedBox(height: KubusSpacing.md),
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: _buildDateField(
+                child: CreatorDateField(
                   label: l10n.eventCreatorEndDateLabel,
-                  date: _endDate,
-                  onTap: () => _selectDate(false),
+                  value: _endDate,
+                  notSetLabel: l10n.eventCreatorSelectDateLabel,
+                  onPick: () => _selectDate(false),
+                  onClear: () => setState(() => _endDate = null),
                 ),
               ),
               const SizedBox(width: KubusSpacing.md),
               Expanded(
-                child: _buildTimeField(
+                child: CreatorTimeField(
                   label: l10n.eventCreatorEndTimeLabel,
-                  time: _endTime,
-                  onTap: () => _selectTime(false),
+                  value: _endTime,
+                  notSetLabel: l10n.eventCreatorSelectTimeLabel,
+                  onPick: () => _selectTime(false),
                 ),
               ),
             ],
           ),
           const SizedBox(height: KubusSpacing.lg),
-          _buildTextField(
+          CreatorTextField(
             controller: _locationController,
             label: l10n.eventCreatorLocationLabel,
             hint: l10n.eventCreatorLocationHint,
+            accentColor: KubusColorRoles.of(context).web3InstitutionAccent,
+            enabled: !_submitting,
             validator: (value) {
               if (value?.isEmpty ?? true) {
                 return l10n.eventCreatorLocationRequiredError;
@@ -876,13 +903,17 @@ class _EventCreatorState extends State<EventCreator>
           _buildSectionTitle(l10n.eventCreatorDetailsTitle),
           const SizedBox(height: KubusSpacing.lg),
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: _buildTextField(
+                child: CreatorTextField(
                   controller: _capacityController,
                   label: l10n.eventCreatorCapacityLabel,
                   hint: l10n.eventCreatorCapacityHint,
                   keyboardType: TextInputType.number,
+                  accentColor:
+                      KubusColorRoles.of(context).web3InstitutionAccent,
+                  enabled: !_submitting,
                   validator: (value) {
                     if (value?.isEmpty ?? true) {
                       return l10n.eventCreatorCapacityRequiredError;
@@ -893,11 +924,14 @@ class _EventCreatorState extends State<EventCreator>
               ),
               const SizedBox(width: KubusSpacing.md),
               Expanded(
-                child: _buildTextField(
+                child: CreatorTextField(
                   controller: _priceController,
                   label: l10n.eventCreatorPriceLabel,
                   hint: l10n.eventCreatorPriceHint,
                   keyboardType: TextInputType.number,
+                  accentColor:
+                      KubusColorRoles.of(context).web3InstitutionAccent,
+                  enabled: !_submitting,
                 ),
               ),
             ],
@@ -1101,6 +1135,20 @@ class _EventCreatorState extends State<EventCreator>
               _isPublic ? l10n.commonEnabled : l10n.commonDisabled),
           _buildReviewItem(l10n.eventCreatorReviewRegistrationLabel,
               _allowRegistration ? l10n.commonEnabled : l10n.commonDisabled),
+          if (AppConfig.isFeatureEnabled('exhibitions'))
+            _buildReviewItem(
+                l10n.eventCreatorLinkedExhibitionsTitle,
+                _linkedExhibitions.isNotEmpty
+                    ? l10n.eventDetailLinkedExhibitionsSummary(
+                        _linkedExhibitions.length)
+                    : l10n.eventCreatorLinkedExhibitionsEmpty),
+          _buildReviewItem(
+              l10n.creatorPoapSectionTitle,
+              _poapConfig.enabled && _poapConfig.hasTitle
+                  ? l10n.commonEnabled
+                  : (_poapConfig.enabled
+                      ? l10n.creatorPoapTitleRequired
+                      : l10n.commonOff)),
         ],
       ),
     );
@@ -1121,10 +1169,14 @@ class _EventCreatorState extends State<EventCreator>
               ),
             ),
           ),
-          Text(
-            value,
-            style: KubusTextStyles.detailLabel.copyWith(
-              color: scheme.onSurface,
+          Expanded(
+            child: Text(
+              value,
+              style: KubusTextStyles.detailLabel.copyWith(
+                color: scheme.onSurface,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
@@ -1139,60 +1191,6 @@ class _EventCreatorState extends State<EventCreator>
       style: KubusTextStyles.detailSectionTitle.copyWith(
         color: scheme.onSurface,
       ),
-    );
-  }
-
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String label,
-    required String hint,
-    int maxLines = 1,
-    TextInputType? keyboardType,
-    String? Function(String?)? validator,
-  }) {
-    final scheme = Theme.of(context).colorScheme;
-    final accent = KubusColorRoles.of(context).web3InstitutionAccent;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: KubusTextStyles.detailLabel.copyWith(
-            color: scheme.onSurface,
-          ),
-        ),
-        const SizedBox(height: KubusSpacing.xs),
-        TextFormField(
-          controller: controller,
-          maxLines: maxLines,
-          keyboardType: keyboardType,
-          validator: validator,
-          style: TextStyle(color: scheme.onSurface),
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle:
-                TextStyle(color: scheme.onSurface.withValues(alpha: 0.4)),
-            filled: true,
-            fillColor: scheme.onSurface.withValues(alpha: 0.04),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(KubusRadius.md),
-              borderSide:
-                  BorderSide(color: scheme.outline.withValues(alpha: 0.25)),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(KubusRadius.md),
-              borderSide:
-                  BorderSide(color: scheme.outline.withValues(alpha: 0.25)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(KubusRadius.md),
-              borderSide: BorderSide(
-                color: accent,
-              ),
-            ),
-          ),
-        ),
-      ],
     );
   }
 
@@ -1239,191 +1237,23 @@ class _EventCreatorState extends State<EventCreator>
           });
         }
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              l10n.eventCreatorInstitutionLabel,
-              style: KubusTextStyles.detailLabel.copyWith(
-                color: scheme.onSurface,
-              ),
-            ),
-            const SizedBox(height: KubusSpacing.xs),
-            Container(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: KubusSpacing.sm + KubusSpacing.xs),
-              decoration: BoxDecoration(
-                color: scheme.onSurface.withValues(alpha: 0.04),
-                borderRadius: BorderRadius.circular(KubusRadius.md),
-                border:
-                    Border.all(color: scheme.outline.withValues(alpha: 0.25)),
-              ),
-              child: DropdownButton<String>(
-                value: selectedId,
-                isExpanded: true,
-                underline: const SizedBox(),
-                dropdownColor: scheme.surfaceContainerHighest,
-                style: TextStyle(color: scheme.onSurface),
-                items: institutions.map((institution) {
-                  return DropdownMenuItem<String>(
-                    value: institution.id,
-                    child:
-                        Text(institution.name, overflow: TextOverflow.ellipsis),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  if (value == null) return;
-                  setState(() => _institutionId = value);
-                },
-              ),
-            ),
-          ],
+        return CreatorDropdown<String>(
+          label: l10n.eventCreatorInstitutionLabel,
+          value: selectedId,
+          accentColor: KubusColorRoles.of(context).web3InstitutionAccent,
+          enabled: !_submitting,
+          items: institutions.map((institution) {
+            return DropdownMenuItem<String>(
+              value: institution.id,
+              child: Text(institution.name, overflow: TextOverflow.ellipsis),
+            );
+          }).toList(growable: false),
+          onChanged: (value) {
+            if (value == null) return;
+            setState(() => _institutionId = value);
+          },
         );
       },
-    );
-  }
-
-  Widget _buildDropdown({
-    required String label,
-    required String value,
-    required List<String> items,
-    required String Function(String) itemLabelBuilder,
-    required void Function(String?) onChanged,
-  }) {
-    final scheme = Theme.of(context).colorScheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: KubusTextStyles.detailLabel.copyWith(
-            color: scheme.onSurface,
-          ),
-        ),
-        const SizedBox(height: KubusSpacing.xs),
-        Container(
-          padding: const EdgeInsets.symmetric(
-              horizontal: KubusSpacing.sm + KubusSpacing.xs),
-          decoration: BoxDecoration(
-            color: scheme.onSurface.withValues(alpha: 0.04),
-            borderRadius: BorderRadius.circular(KubusRadius.md),
-            border: Border.all(color: scheme.outline.withValues(alpha: 0.25)),
-          ),
-          child: DropdownButton<String>(
-            value: value,
-            isExpanded: true,
-            underline: const SizedBox(),
-            dropdownColor:
-                Theme.of(context).colorScheme.surfaceContainerHighest,
-            style: TextStyle(color: scheme.onSurface),
-            items: items.map((item) {
-              return DropdownMenuItem<String>(
-                value: item,
-                child: Text(itemLabelBuilder(item)),
-              );
-            }).toList(),
-            onChanged: onChanged,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDateField({
-    required String label,
-    required DateTime? date,
-    required VoidCallback onTap,
-  }) {
-    final scheme = Theme.of(context).colorScheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: KubusTextStyles.detailLabel.copyWith(
-            color: scheme.onSurface,
-          ),
-        ),
-        const SizedBox(height: KubusSpacing.xs),
-        GestureDetector(
-          onTap: onTap,
-          child: Container(
-            padding: const EdgeInsets.all(KubusSpacing.sm + KubusSpacing.xs),
-            decoration: BoxDecoration(
-              color: scheme.onSurface.withValues(alpha: 0.04),
-              borderRadius: BorderRadius.circular(KubusRadius.md),
-              border: Border.all(color: scheme.outline.withValues(alpha: 0.25)),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.calendar_today,
-                    color: scheme.onSurface.withValues(alpha: 0.6), size: 16),
-                const SizedBox(width: KubusSpacing.sm),
-                Text(
-                  date != null
-                      ? MaterialLocalizations.of(context).formatShortDate(date)
-                      : AppLocalizations.of(context)!
-                          .eventCreatorSelectDateLabel,
-                  style: TextStyle(
-                    color: date != null
-                        ? scheme.onSurface
-                        : scheme.onSurface.withValues(alpha: 0.4),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTimeField({
-    required String label,
-    required TimeOfDay? time,
-    required VoidCallback onTap,
-  }) {
-    final scheme = Theme.of(context).colorScheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: KubusTextStyles.detailLabel.copyWith(
-            color: scheme.onSurface,
-          ),
-        ),
-        const SizedBox(height: KubusSpacing.xs),
-        GestureDetector(
-          onTap: onTap,
-          child: Container(
-            padding: const EdgeInsets.all(KubusSpacing.sm + KubusSpacing.xs),
-            decoration: BoxDecoration(
-              color: scheme.onSurface.withValues(alpha: 0.04),
-              borderRadius: BorderRadius.circular(KubusRadius.md),
-              border: Border.all(color: scheme.outline.withValues(alpha: 0.25)),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.access_time,
-                    color: scheme.onSurface.withValues(alpha: 0.6), size: 16),
-                const SizedBox(width: KubusSpacing.sm),
-                Text(
-                  time != null
-                      ? time.format(context)
-                      : AppLocalizations.of(context)!
-                          .eventCreatorSelectTimeLabel,
-                  style: TextStyle(
-                    color: time != null
-                        ? scheme.onSurface
-                        : scheme.onSurface.withValues(alpha: 0.4),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
     );
   }
 
@@ -1712,6 +1542,20 @@ class _EventCreatorState extends State<EventCreator>
       _category = 'art';
       _isPublic = true;
       _allowRegistration = true;
+      _createdEvent = null;
+      _linkedExhibitions.clear();
+      _removedExhibitionIds.clear();
+      _initiallyLinkedExhibitionIds.clear();
+      _poapConfig
+        ..enabled = false
+        ..rarity = 'common'
+        ..iconBytes = null
+        ..iconFileName = null
+        ..iconUrl = null;
+      _poapConfig.titleController.clear();
+      _poapConfig.descriptionController.clear();
+      _poapConfig.rewardController.clear();
+      _poapPreviouslyConfigured = false;
     });
   }
 

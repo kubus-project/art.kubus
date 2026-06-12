@@ -34,8 +34,10 @@ class _EventManagerState extends State<EventManager>
     with TickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
+  final TextEditingController _searchController = TextEditingController();
   String _selectedFilter = 'all';
   String _searchQuery = '';
+  bool _refreshing = false;
   final Set<String> _deleteDialogOpenEventIds = <String>{};
   final Set<String> _deleteInFlightEventIds = <String>{};
 
@@ -61,7 +63,24 @@ class _EventManagerState extends State<EventManager>
   @override
   void dispose() {
     _animationController.dispose();
+    _searchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _refreshEvents() async {
+    if (_refreshing) return;
+    setState(() => _refreshing = true);
+    try {
+      await context.read<EventsProvider>().loadEvents(refresh: true);
+    } catch (_) {
+      // Provider keeps its own error state.
+    } finally {
+      if (mounted) setState(() => _refreshing = false);
+    }
+  }
+
+  void _createEvent() {
+    unawaited(CreatorShellNavigation.openEventCreatorWorkspace(context));
   }
 
   @override
@@ -91,37 +110,82 @@ class _EventManagerState extends State<EventManager>
 
   Widget _buildHeader(AppLocalizations l10n) {
     final scheme = Theme.of(context).colorScheme;
+    final isWide = MediaQuery.sizeOf(context).width >= 720;
     return Padding(
       padding: const EdgeInsets.all(KubusSpacing.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            l10n.eventManagerTitle,
-            style: KubusTextStyles.mobileAppBarTitle.copyWith(
-              color: scheme.onSurface,
-            ),
-          ),
-          const SizedBox(height: KubusSpacing.xs),
-          Text(
-            l10n.eventManagerSubtitle,
-            style: KubusTextStyles.detailCaption.copyWith(
-              color: scheme.onSurface.withValues(alpha: 0.7),
-            ),
-          ),
-          const SizedBox(height: KubusSpacing.sm),
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.eventManagerTitle,
+                      style: KubusTextStyles.mobileAppBarTitle.copyWith(
+                        color: scheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: KubusSpacing.xs),
+                    Text(
+                      l10n.eventManagerSubtitle,
+                      style: KubusTextStyles.detailCaption.copyWith(
+                        color: scheme.onSurface.withValues(alpha: 0.7),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: KubusSpacing.sm),
               IconButton(
-                icon: Icon(Icons.notifications,
+                tooltip: l10n.commonNotifications,
+                icon: Icon(Icons.notifications_outlined,
                     color: scheme.onSurface, size: 20),
                 onPressed: () => _showNotifications(),
               ),
               IconButton(
-                icon: Icon(Icons.search, color: scheme.onSurface, size: 20),
-                onPressed: () => _showSearchDialog(),
+                tooltip: l10n.commonRefresh,
+                icon: _refreshing
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Icon(Icons.refresh, color: scheme.onSurface, size: 20),
+                onPressed: _refreshing ? null : _refreshEvents,
               ),
+              if (isWide) ...[
+                const SizedBox(width: KubusSpacing.xs),
+                FilledButton.icon(
+                  onPressed: _createEvent,
+                  icon: const Icon(Icons.add, size: 18),
+                  label: Text(l10n.eventCreatorShellCreateTitle),
+                  style: FilledButton.styleFrom(
+                    backgroundColor:
+                        KubusColorRoles.of(context).web3InstitutionAccent,
+                  ),
+                ),
+              ] else
+                IconButton(
+                  tooltip: l10n.eventCreatorShellCreateTitle,
+                  icon: Icon(Icons.add, color: scheme.onSurface, size: 20),
+                  onPressed: _createEvent,
+                ),
             ],
+          ),
+          const SizedBox(height: KubusSpacing.sm),
+          CreatorSearchField(
+            controller: _searchController,
+            hint: l10n.eventManagerSearchHint,
+            accentColor: KubusColorRoles.of(context).web3InstitutionAccent,
+            onChanged: (value) => setState(() => _searchQuery = value),
+            onClear: () => setState(() {
+              _searchController.clear();
+              _searchQuery = '';
+            }),
           ),
         ],
       ),
@@ -224,15 +288,42 @@ class _EventManagerState extends State<EventManager>
           icon: Icons.event_busy,
           title: l10n.eventManagerEmptyTitle,
           description: l10n.eventManagerEmptyDescription,
+          showAction: true,
+          actionLabel: l10n.eventCreatorShellCreateTitle,
+          onAction: _createEvent,
         ),
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.md),
-      itemCount: events.length,
-      itemBuilder: (context, index) {
-        return _buildEventCard(events[index], l10n);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth >= 1280
+            ? 3
+            : (constraints.maxWidth >= 880 ? 2 : 1);
+
+        if (columns == 1) {
+          return ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.md),
+            itemCount: events.length,
+            itemBuilder: (context, index) {
+              return _buildEventCard(events[index], l10n);
+            },
+          );
+        }
+
+        return GridView.builder(
+          padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.md),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: columns,
+            mainAxisExtent: 200,
+            crossAxisSpacing: KubusSpacing.md,
+            mainAxisSpacing: KubusSpacing.md,
+          ),
+          itemCount: events.length,
+          itemBuilder: (context, index) {
+            return _buildEventCard(events[index], l10n);
+          },
+        );
       },
     );
   }
@@ -241,11 +332,14 @@ class _EventManagerState extends State<EventManager>
     final scheme = Theme.of(context).colorScheme;
     final status = _statusForEvent(event);
     final statusColor = _statusColor(status, scheme);
+    final linkedExhibitions =
+        context.read<EventsProvider>().exhibitionsForEvent(event.id);
 
     return LiquidGlassCard(
       margin: const EdgeInsets.only(bottom: KubusSpacing.sm),
       padding: const EdgeInsets.all(KubusSpacing.md),
       borderRadius: BorderRadius.circular(KubusRadius.lg),
+      onTap: () => _viewEvent(event),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -309,8 +403,26 @@ class _EventManagerState extends State<EventManager>
           ),
           const SizedBox(height: KubusSpacing.sm),
           Row(
-            mainAxisAlignment: MainAxisAlignment.end,
             children: [
+              if (linkedExhibitions.isNotEmpty)
+                Flexible(
+                  child: CreatorStatusBadge(
+                    label: l10n.eventDetailLinkedExhibitionsSummary(
+                        linkedExhibitions.length),
+                    color: scheme.tertiary,
+                  ),
+                ),
+              const Spacer(),
+              if (_canManageEvent(event))
+                IconButton(
+                  tooltip: l10n.commonEdit,
+                  onPressed: () => _editEvent(event),
+                  icon: Icon(
+                    Icons.edit_outlined,
+                    size: 20,
+                    color: scheme.onSurface.withValues(alpha: 0.75),
+                  ),
+                ),
               IconButton(
                 tooltip: l10n.commonMore,
                 onPressed: () => _showEventOptions(event),
@@ -427,7 +539,7 @@ class _EventManagerState extends State<EventManager>
           SubjectOptionsAction(
             id: 'linked_exhibition',
             icon: Icons.museum_outlined,
-            label: 'Create linked exhibition',
+            label: l10n.eventCreatorCreateExhibitionForEvent,
             onSelected: () => _createLinkedExhibition(event),
           ),
         if (canManage)
@@ -540,60 +652,6 @@ class _EventManagerState extends State<EventManager>
                 ),
               ],
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showSearchDialog() {
-    final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
-    showKubusDialog(
-      context: context,
-      builder: (context) => KubusAlertDialog(
-        backgroundColor: scheme.surfaceContainerHighest,
-        title: Text(l10n.eventManagerSearchTitle,
-            style: KubusTextStyles.detailSectionTitle.copyWith(
-              color: scheme.onSurface,
-            )),
-        content: TextField(
-          decoration: InputDecoration(
-            hintText: l10n.eventManagerSearchHint,
-            hintStyle: KubusTextStyles.detailCaption.copyWith(
-              color: scheme.onSurface.withValues(alpha: 0.54),
-            ),
-            filled: true,
-            fillColor: scheme.onSurface.withValues(alpha: 0.04),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(KubusRadius.md),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(KubusRadius.md),
-              borderSide: BorderSide(
-                color: scheme.outline.withValues(alpha: 0.3),
-              ),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(KubusRadius.md),
-              borderSide: BorderSide(color: scheme.primary),
-            ),
-          ),
-          style: KubusTextStyles.detailBody.copyWith(
-            color: scheme.onSurface,
-          ),
-          onChanged: (value) {
-            setState(() => _searchQuery = value);
-          },
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(AppLocalizations.of(context)!.commonCancel),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(l10n.commonSearch),
           ),
         ],
       ),

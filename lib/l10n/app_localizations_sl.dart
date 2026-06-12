@@ -12673,6 +12673,20 @@ class AppLocalizationsSl extends AppLocalizations {
   String get creatorRelationSyncFailedWarning => 'Shranjeno, vendar povezovanja ni bilo mogoče dokončati. Poskusi znova v urejevalniku.';
 
   @override
+  String get creatorDescriptionTooLongError => 'Opis je predolg (največ 10.000 znakov).';
+
+  @override
+  String get markerEditorSavedLinkSyncingToast => 'Označevalnik je shranjen, povezava z razstavo se usklajuje …';
+
+  @override
+  String get markerEditorLinkSyncFailedWarning => 'Označevalnik je shranjen, vendar povezave z razstavo ni bilo mogoče uskladiti. Poskusi znova v urejevalniku.';
+
+  @override
+  String exhibitionCreatorProgramLinkedCount(Object count) {
+    return 'Povezani dogodki: $count';
+  }
+
+  @override
   String get poapRarityCommon => 'Običajna';
 
   @override

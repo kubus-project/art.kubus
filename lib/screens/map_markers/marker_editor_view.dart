@@ -919,7 +919,7 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
       messenger.showKubusSnackBar(
         SnackBar(
             content: Text(shouldSyncExhibitionLink
-                ? 'Marker saved, exhibition link syncing...'
+                ? l10n.markerEditorSavedLinkSyncingToast
                 : (widget.isNew
                     ? l10n.manageMarkersCreatedToast
                     : l10n.manageMarkersUpdatedToast))),
@@ -986,9 +986,12 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
       }
       if (!mounted || nextId.isEmpty) return;
       ScaffoldMessenger.of(context).showKubusSnackBar(
-        const SnackBar(
-          content: Text('Marker saved, but exhibition link sync failed.'),
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context)!.markerEditorLinkSyncFailedWarning,
+          ),
         ),
+        tone: KubusSnackBarTone.warning,
       );
     }
   }
@@ -1178,7 +1181,7 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
 
             // ---- Map (kept outside any CreatorSection) ----
             SizedBox(
-              height: 220,
+              height: MediaQuery.sizeOf(context).width >= 900 ? 320 : 220,
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(KubusRadius.lg),
                 child: ArtMapView(
@@ -1257,16 +1260,18 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
                       const CreatorFieldSpacing(),
 
                       // Subject type dropdown
-                      DropdownButtonFormField<MarkerSubjectType>(
-                        isExpanded: true,
-                        initialValue: _subjectType,
-                        decoration: _creatorInputDecoration(scheme,
-                            labelText: l10n.mapMarkerDialogSubjectTypeLabel),
+                      CreatorDropdown<MarkerSubjectType>(
+                        label: l10n.mapMarkerDialogSubjectTypeLabel,
+                        value: _subjectType,
+                        enabled: !_saving,
                         items: _allowedSubjectTypes
                             .map(
                               (type) => DropdownMenuItem<MarkerSubjectType>(
                                 value: type,
-                                child: Text(_subjectTypeLabel(l10n, type)),
+                                child: Text(
+                                  _subjectTypeLabel(l10n, type),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
                             )
                             .toList(growable: false),
@@ -1461,22 +1466,24 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
                   CreatorSection(
                     title: l10n.commonDetails,
                     children: [
-                      TextFormField(
+                      CreatorTextField(
                         controller: _categoryController,
-                        decoration: _creatorInputDecoration(scheme,
-                            labelText: l10n.mapMarkerDialogCategoryLabel),
+                        label: l10n.mapMarkerDialogCategoryLabel,
+                        enabled: !_saving,
                       ),
                       const CreatorFieldSpacing(),
-                      DropdownButtonFormField<ArtMarkerType>(
-                        isExpanded: true,
-                        initialValue: _markerType,
-                        decoration: _creatorInputDecoration(scheme,
-                            labelText: l10n.mapMarkerDialogMarkerLayerLabel),
+                      CreatorDropdown<ArtMarkerType>(
+                        label: l10n.mapMarkerDialogMarkerLayerLabel,
+                        value: _markerType,
+                        enabled: !_saving,
                         items: _allowedMarkerTypes
                             .map(
                               (type) => DropdownMenuItem(
                                 value: type,
-                                child: Text(_describeMarkerType(l10n, type)),
+                                child: Text(
+                                  _describeMarkerType(l10n, type),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
                             )
                             .toList(growable: false),
@@ -1486,10 +1493,10 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
                         },
                       ),
                       const CreatorFieldSpacing(),
-                      TextFormField(
+                      CreatorTextField(
                         controller: _nameController,
-                        decoration: _creatorInputDecoration(scheme,
-                            labelText: l10n.mapMarkerDialogMarkerTitleLabel),
+                        label: l10n.mapMarkerDialogMarkerTitleLabel,
+                        enabled: !_saving,
                         validator: (value) {
                           final v = (value ?? '').trim();
                           if (v.isEmpty) {
@@ -1502,23 +1509,10 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
                         },
                       ),
                       const CreatorFieldSpacing(),
-                      TextFormField(
+                      CreatorDescriptionTextField(
                         controller: _descriptionController,
-                        decoration: _creatorInputDecoration(scheme,
-                            labelText: l10n.mapMarkerDialogDescriptionLabel),
-                        minLines: 4,
-                        maxLines:
-                            MediaQuery.sizeOf(context).width >= 900 ? 14 : 10,
-                        maxLength:
-                            CreatorDescriptionTextField.maxDescriptionLength,
-                        keyboardType: TextInputType.multiline,
-                        textInputAction: TextInputAction.newline,
-                        scrollPadding: const EdgeInsets.only(
-                          left: 20,
-                          right: 20,
-                          top: 20,
-                          bottom: 120,
-                        ),
+                        label: l10n.mapMarkerDialogDescriptionLabel,
+                        enabled: !_saving,
                         validator: (value) {
                           final v = (value ?? '').trim();
                           if (v.isEmpty) {
@@ -1527,7 +1521,7 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
                           if (v.length >
                               CreatorDescriptionTextField
                                   .maxDescriptionLength) {
-                            return l10n.manageMarkersSaveFailed;
+                            return l10n.creatorDescriptionTooLongError;
                           }
                           if (v.length < 10) {
                             return l10n
@@ -1565,12 +1559,13 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
                     title: l10n.desktopSettingsLocationLabel,
                     children: [
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Expanded(
-                            child: TextFormField(
+                            child: CreatorTextField(
                               controller: _latController,
-                              decoration: _creatorInputDecoration(scheme,
-                                  labelText: l10n.mapMarkerDialogLatitudeLabel),
+                              label: l10n.mapMarkerDialogLatitudeLabel,
+                              enabled: !_saving,
                               keyboardType:
                                   const TextInputType.numberWithOptions(
                                       decimal: true, signed: true),
@@ -1579,11 +1574,10 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
                           ),
                           const SizedBox(width: KubusSpacing.md),
                           Expanded(
-                            child: TextFormField(
+                            child: CreatorTextField(
                               controller: _lngController,
-                              decoration: _creatorInputDecoration(scheme,
-                                  labelText:
-                                      l10n.mapMarkerDialogLongitudeLabel),
+                              label: l10n.mapMarkerDialogLongitudeLabel,
+                              enabled: !_saving,
                               keyboardType:
                                   const TextInputType.numberWithOptions(
                                       decimal: true, signed: true),
@@ -1602,10 +1596,10 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
                   CreatorSection(
                     title: l10n.settingsTitle,
                     children: [
-                      TextFormField(
+                      CreatorTextField(
                         controller: _activationRadiusController,
-                        decoration: _creatorInputDecoration(scheme,
-                            labelText: l10n.manageMarkersActivationRadiusLabel),
+                        label: l10n.manageMarkersActivationRadiusLabel,
+                        enabled: !_saving,
                         keyboardType: const TextInputType.numberWithOptions(
                             decimal: true),
                       ),

@@ -67,7 +67,9 @@ class _ExhibitionListScreenState extends State<ExhibitionListScreen>
   Future<void> _refresh() async {
     final provider = context.read<ExhibitionsProvider>();
     try {
-      await provider.loadExhibitions(refresh: true);
+      // The list screen renders the user's own/collaborating exhibitions, so
+      // load the "mine" list instead of the public discovery list.
+      await provider.loadExhibitions(mine: true, refresh: true);
     } catch (_) {
       // Provider keeps error state
     }
@@ -445,6 +447,12 @@ class _ExhibitionListScreenState extends State<ExhibitionListScreen>
             ),
           ),
           const SizedBox(width: 12),
+          if (widget.embedded)
+            IconButton(
+              tooltip: l10n.commonRefresh,
+              onPressed: _refresh,
+              icon: const Icon(Icons.refresh),
+            ),
           FilledButton.icon(
             onPressed: _createExhibition,
             icon: const Icon(Icons.add, size: 18),
@@ -484,12 +492,13 @@ class _MyExhibitionsTab extends StatelessWidget {
     final provider = context.watch<ExhibitionsProvider>();
     final scheme = Theme.of(context).colorScheme;
 
-    // Filter exhibitions where user is host/owner
-    final myExhibitions = provider.exhibitions
+    // The provider's "mine" list contains the user's own and collaborating
+    // exhibitions; everything that is not a collaborator role belongs here.
+    final myExhibitions = provider.myExhibitions
         .where((e) => _isOwnerOrHost(e.myRole))
         .toList(growable: false);
 
-    if (provider.isLoading && myExhibitions.isEmpty) {
+    if (provider.isMyExhibitionsLoading && myExhibitions.isEmpty) {
       return Center(child: CircularProgressIndicator(color: scheme.primary));
     }
 
@@ -508,25 +517,23 @@ class _MyExhibitionsTab extends StatelessWidget {
 
     return RefreshIndicator(
       onRefresh: onRefresh,
-      child: ListView.builder(
-        padding: const EdgeInsets.all(KubusSpacing.md),
-        itemCount: myExhibitions.length,
-        itemBuilder: (context, index) {
-          final exhibition = myExhibitions[index];
-          return _ExhibitionCard(
-            exhibition: exhibition,
-            onTap: () => onTap(exhibition),
-            onOptions: () => onOptions(exhibition),
-            roleLabel: l10n.exhibitionListRoleHost,
-          );
-        },
+      child: _ExhibitionCardCollection(
+        exhibitions: myExhibitions,
+        cardBuilder: (exhibition) => _ExhibitionCard(
+          exhibition: exhibition,
+          onTap: () => onTap(exhibition),
+          onOptions: () => onOptions(exhibition),
+          roleLabel: l10n.exhibitionListRoleHost,
+        ),
       ),
     );
   }
 
   bool _isOwnerOrHost(String? role) {
     final r = (role ?? '').trim().toLowerCase();
-    return r == 'owner' || r == 'host' || r == 'admin';
+    // The mine list only contains the user's exhibitions, so an unset role
+    // still means the user owns/hosts the exhibition.
+    return r.isEmpty || r == 'owner' || r == 'host' || r == 'admin';
   }
 }
 
@@ -548,12 +555,12 @@ class _CollaboratingTab extends StatelessWidget {
     final provider = context.watch<ExhibitionsProvider>();
     final scheme = Theme.of(context).colorScheme;
 
-    // Filter exhibitions where user is collaborator (not owner)
-    final collaborating = provider.exhibitions
+    // Filter the user's exhibitions where they collaborate but are not host.
+    final collaborating = provider.myExhibitions
         .where((e) => _isCollaborator(e.myRole))
         .toList(growable: false);
 
-    if (provider.isLoading && collaborating.isEmpty) {
+    if (provider.isMyExhibitionsLoading && collaborating.isEmpty) {
       return Center(child: CircularProgressIndicator(color: scheme.primary));
     }
 
@@ -568,18 +575,14 @@ class _CollaboratingTab extends StatelessWidget {
 
     return RefreshIndicator(
       onRefresh: onRefresh,
-      child: ListView.builder(
-        padding: const EdgeInsets.all(KubusSpacing.md),
-        itemCount: collaborating.length,
-        itemBuilder: (context, index) {
-          final exhibition = collaborating[index];
-          return _ExhibitionCard(
-            exhibition: exhibition,
-            onTap: () => onTap(exhibition),
-            onOptions: () => onOptions(exhibition),
-            roleLabel: _labelForRole(l10n, exhibition.myRole),
-          );
-        },
+      child: _ExhibitionCardCollection(
+        exhibitions: collaborating,
+        cardBuilder: (exhibition) => _ExhibitionCard(
+          exhibition: exhibition,
+          onTap: () => onTap(exhibition),
+          onOptions: () => onOptions(exhibition),
+          roleLabel: _labelForRole(l10n, exhibition.myRole),
+        ),
       ),
     );
   }
@@ -607,6 +610,46 @@ class _CollaboratingTab extends StatelessWidget {
       default:
         return l10n.exhibitionListRoleCollaborator;
     }
+  }
+}
+
+/// Renders exhibition cards as a single-column list on narrow widths and a
+/// two-column grid on desktop-sized embedded layouts.
+class _ExhibitionCardCollection extends StatelessWidget {
+  final List<Exhibition> exhibitions;
+  final Widget Function(Exhibition) cardBuilder;
+
+  const _ExhibitionCardCollection({
+    required this.exhibitions,
+    required this.cardBuilder,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 900) {
+          return ListView.builder(
+            padding: const EdgeInsets.all(KubusSpacing.md),
+            itemCount: exhibitions.length,
+            itemBuilder: (context, index) => cardBuilder(exhibitions[index]),
+          );
+        }
+
+        final columns = constraints.maxWidth >= 1320 ? 3 : 2;
+        return GridView.builder(
+          padding: const EdgeInsets.all(KubusSpacing.md),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: columns,
+            mainAxisExtent: 210,
+            crossAxisSpacing: KubusSpacing.md,
+            mainAxisSpacing: KubusSpacing.xs,
+          ),
+          itemCount: exhibitions.length,
+          itemBuilder: (context, index) => cardBuilder(exhibitions[index]),
+        );
+      },
+    );
   }
 }
 

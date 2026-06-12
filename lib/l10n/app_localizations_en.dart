@@ -12635,6 +12635,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get creatorRelationSyncFailedWarning => 'Saved, but linking could not be completed. Try again from the editor.';
 
   @override
+  String get creatorDescriptionTooLongError => 'Description is too long (maximum 10,000 characters).';
+
+  @override
+  String get markerEditorSavedLinkSyncingToast => 'Marker saved, syncing exhibition link…';
+
+  @override
+  String get markerEditorLinkSyncFailedWarning => 'Marker saved, but the exhibition link could not be synced. Try again from the editor.';
+
+  @override
+  String exhibitionCreatorProgramLinkedCount(Object count) {
+    return 'Linked events: $count';
+  }
+
+  @override
   String get poapRarityCommon => 'Common';
 
   @override
