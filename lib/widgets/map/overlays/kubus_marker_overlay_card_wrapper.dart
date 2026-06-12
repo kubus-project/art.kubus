@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../../../utils/app_animations.dart';
 import '../../map_overlay_blocker.dart';
 
 enum KubusMarkerOverlayPlacementStrategy {
@@ -16,6 +17,16 @@ class KubusMarkerOverlayAnimationConfig {
     this.duration = const Duration(milliseconds: 220),
     this.curve = Curves.easeOutCubic,
   });
+
+  /// Resolves the entrance motion from [AppAnimationTheme] so overlay cards
+  /// share the app-wide motion tokens instead of ad-hoc durations.
+  factory KubusMarkerOverlayAnimationConfig.of(BuildContext context) {
+    final animationTheme = context.animationTheme;
+    return KubusMarkerOverlayAnimationConfig(
+      duration: animationTheme.medium,
+      curve: animationTheme.defaultCurve,
+    );
+  }
 
   final Duration duration;
   final Curve curve;
@@ -108,7 +119,7 @@ class KubusMarkerOverlayCardWrapper extends StatelessWidget {
     this.topPadding = 12,
     this.bottomPadding = 12,
     this.markerOffset = 32,
-    this.animation = const KubusMarkerOverlayAnimationConfig(),
+    this.animation,
     this.cursor = SystemMouseCursors.basic,
     this.interceptPlatformViews = true,
     this.enabled = true,
@@ -130,7 +141,9 @@ class KubusMarkerOverlayCardWrapper extends StatelessWidget {
   final double bottomPadding;
   final double markerOffset;
 
-  final KubusMarkerOverlayAnimationConfig animation;
+  /// Entrance motion override. When null, resolves from
+  /// [KubusMarkerOverlayAnimationConfig.of] (app animation theme tokens).
+  final KubusMarkerOverlayAnimationConfig? animation;
   final MouseCursor cursor;
   final bool interceptPlatformViews;
   final bool enabled;
@@ -317,13 +330,15 @@ class KubusMarkerOverlayCardWrapper extends StatelessWidget {
     BuildContext context,
     KubusMarkerOverlayLayoutState layout,
   ) {
+    final resolvedAnimation =
+        animation ?? KubusMarkerOverlayAnimationConfig.of(context);
     return MapOverlayBlocker(
       enabled: true,
       cursor: cursor,
       interceptPlatformViews: interceptPlatformViews,
       child: _OverlayEntranceFade(
-        duration: animation.duration,
-        curve: animation.curve,
+        duration: resolvedAnimation.duration,
+        curve: resolvedAnimation.curve,
         child: cardBuilder(context, layout),
       ),
     );

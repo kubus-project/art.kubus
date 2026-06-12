@@ -6,7 +6,7 @@ import '../../utils/design_tokens.dart';
 import '../glass_components.dart';
 
 /// Reusable glass icon button used across map UIs.
-class KubusGlassIconButton extends StatelessWidget {
+class KubusGlassIconButton extends StatefulWidget {
   const KubusGlassIconButton({
     super.key,
     required this.icon,
@@ -41,11 +41,24 @@ class KubusGlassIconButton extends StatelessWidget {
   final bool enableBlur;
 
   @override
+  State<KubusGlassIconButton> createState() => _KubusGlassIconButtonState();
+}
+
+class _KubusGlassIconButtonState extends State<KubusGlassIconButton> {
+  bool _hovered = false;
+  bool _focused = false;
+
+  @override
   Widget build(BuildContext context) {
+    final icon = widget.icon;
+    final onPressed = widget.onPressed;
+    final tooltip = widget.tooltip;
+    final active = widget.active;
+    final activeTint = widget.activeTint;
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
-    final accent = accentColor ?? scheme.primary;
+    final accent = widget.accentColor ?? scheme.primary;
     final idleStyle = KubusGlassStyle.resolve(
       context,
       surfaceType: KubusGlassSurfaceType.button,
@@ -58,7 +71,7 @@ class KubusGlassIconButton extends StatelessWidget {
     );
     final allowBlur =
         GlassCapabilitiesProvider.watchAllowBlurEnabled(context);
-    final resolvedRadius = borderRadius.clamp(0.0, 999.0).toDouble();
+    final resolvedRadius = widget.borderRadius.clamp(0.0, 999.0).toDouble();
     final radius = BorderRadius.circular(resolvedRadius);
     final idleTint = idleStyle.tintColor;
     final selectedBase =
@@ -69,20 +82,40 @@ class KubusGlassIconButton extends StatelessWidget {
           ? activeStyle.tintColor.a
           : KubusGlassEffects.fallbackOpaqueOpacity,
     );
-    final resolvedIconColor =
-        active ? (activeIconColor ?? accent) : (iconColor ?? scheme.onSurface);
-    final resolvedSize = size.clamp(32.0, 56.0).toDouble();
+    final resolvedIconColor = active
+        ? (widget.activeIconColor ?? accent)
+        : (widget.iconColor ?? scheme.onSurface);
+    final resolvedSize = widget.size.clamp(32.0, 56.0).toDouble();
     final resolvedIconSize =
         (resolvedSize * 0.46).clamp(16.0, 22.0).toDouble();
+    final enabled = onPressed != null;
+
+    // Visible hover/focus emphasis (desktop/web focus requirement) while the
+    // active state keeps precedence.
+    final borderColor = active
+        ? accent.withValues(alpha: 0.85)
+        : _focused && enabled
+            ? accent.withValues(alpha: 0.70)
+            : scheme.outlineVariant.withValues(
+                alpha: _hovered && enabled
+                    ? KubusGlassEffects.glassBorderOpacityStrong + 0.16
+                    : KubusGlassEffects.glassBorderOpacityStrong,
+              );
 
     Widget button = Material(
       color: Colors.transparent,
       child: InkWell(
-        mouseCursor: onPressed == null
-            ? SystemMouseCursors.basic
-            : SystemMouseCursors.click,
+        mouseCursor: enabled
+            ? SystemMouseCursors.click
+            : SystemMouseCursors.basic,
         borderRadius: radius,
         onTap: onPressed,
+        onHover: (value) {
+          if (_hovered != value) setState(() => _hovered = value);
+        },
+        onFocusChange: (value) {
+          if (_focused != value) setState(() => _focused = value);
+        },
         child: AnimatedContainer(
           duration: context.animationTheme.short,
           curve: context.animationTheme.defaultCurve,
@@ -91,12 +124,10 @@ class KubusGlassIconButton extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: radius,
             border: Border.all(
-              color: active
-                  ? accent.withValues(alpha: 0.85)
-                  : scheme.outlineVariant.withValues(
-                      alpha: KubusGlassEffects.glassBorderOpacityStrong,
-                    ),
-              width: active ? 1.25 : KubusSizes.hairline,
+              color: borderColor,
+              width: active || (_focused && enabled)
+                  ? 1.25
+                  : KubusSizes.hairline,
             ),
             boxShadow: [
               BoxShadow(
@@ -105,7 +136,7 @@ class KubusGlassIconButton extends StatelessWidget {
                       ? KubusGlassEffects.shadowOpacityDark
                       : KubusGlassEffects.shadowOpacityLight,
                 ),
-                blurRadius: active ? 16 : 14,
+                blurRadius: active || (_hovered && enabled) ? 16 : 14,
                 offset: const Offset(0, 8),
               ),
             ],
@@ -118,7 +149,7 @@ class KubusGlassIconButton extends StatelessWidget {
             showBorder: false,
             backgroundColor: active ? selectedTint : idleTint,
             fallbackMinOpacity: idleStyle.fallbackMinOpacity,
-            enableBlur: enableBlur,
+            enableBlur: widget.enableBlur,
             child: Center(
               child:
                   Icon(icon, size: resolvedIconSize, color: resolvedIconColor),
@@ -132,9 +163,9 @@ class KubusGlassIconButton extends StatelessWidget {
 
     return Tooltip(
       message: tooltip,
-      margin: tooltipMargin,
-      preferBelow: tooltipPreferBelow,
-      verticalOffset: tooltipVerticalOffset ?? 0,
+      margin: widget.tooltipMargin,
+      preferBelow: widget.tooltipPreferBelow,
+      verticalOffset: widget.tooltipVerticalOffset ?? 0,
       child: button,
     );
   }

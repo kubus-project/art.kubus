@@ -154,8 +154,7 @@ class KubusMapMarkerOverlayShell {
     double topPadding = 12,
     double bottomPadding = 12,
     double markerOffset = 32,
-    KubusMarkerOverlayAnimationConfig animation =
-        const KubusMarkerOverlayAnimationConfig(),
+    KubusMarkerOverlayAnimationConfig? animation,
     MouseCursor? cursor,
     Widget? underlay,
     bool blockMapGestures = false,

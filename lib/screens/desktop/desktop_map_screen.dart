@@ -4842,10 +4842,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         rightSidebarOpen: _isRightSidebarOpen,
         leftPanelOpen: _isLeftPanelVisible,
       ).bottomPadding,
-      animation: const overlay_wrapper.KubusMarkerOverlayAnimationConfig(
-        duration: Duration(milliseconds: 220),
-        curve: Curves.easeOutCubic,
-      ),
+      animation: overlay_wrapper.KubusMarkerOverlayAnimationConfig.of(context),
       onLayoutResolved: (resolvedLayout) {
         _handleMarkerOverlayLayoutResolved(selection, resolvedLayout);
       },

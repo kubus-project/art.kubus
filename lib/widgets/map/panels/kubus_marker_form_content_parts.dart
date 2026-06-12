@@ -263,9 +263,10 @@ class KubusMarkerFormBody extends StatelessWidget {
 /// same system as [CreatorTextField] / [CreatorDropdown].
 InputDecoration _creatorDropdownDecoration(BuildContext context) {
   final scheme = Theme.of(context).colorScheme;
-  OutlineInputBorder border(Color color) => OutlineInputBorder(
+  OutlineInputBorder border(Color color, {double width = 1}) =>
+      OutlineInputBorder(
         borderRadius: BorderRadius.circular(KubusRadius.md),
-        borderSide: BorderSide(color: color),
+        borderSide: BorderSide(color: color, width: width),
       );
   return InputDecoration(
     isDense: true,
@@ -277,8 +278,10 @@ InputDecoration _creatorDropdownDecoration(BuildContext context) {
     ),
     border: border(scheme.outline.withValues(alpha: 0.25)),
     enabledBorder: border(scheme.outline.withValues(alpha: 0.25)),
-    focusedBorder: border(scheme.primary),
+    focusedBorder: border(scheme.primary, width: 1.5),
     errorBorder: border(scheme.error),
+    focusedErrorBorder: border(scheme.error, width: 1.5),
+    disabledBorder: border(scheme.outline.withValues(alpha: 0.15)),
   );
 }
 
@@ -331,6 +334,7 @@ class KubusMarkerSubjectSection extends StatelessWidget {
         DropdownButtonFormField<MarkerSubjectType>(
           isExpanded: true,
           initialValue: selectedSubjectType,
+          borderRadius: BorderRadius.circular(KubusRadius.md),
           decoration: _creatorDropdownDecoration(context),
           items: MarkerSubjectType.values
               .where(allowedTypes.contains)
@@ -358,6 +362,7 @@ class KubusMarkerSubjectSection extends StatelessWidget {
             DropdownButtonFormField<MarkerSubjectOption>(
               isExpanded: true,
               initialValue: selectedSubject,
+              borderRadius: BorderRadius.circular(KubusRadius.md),
               decoration: _creatorDropdownDecoration(context),
               // Closed field stays single-line; the menu keeps the richer
               // two-line title + subtitle entries.
@@ -450,6 +455,7 @@ class KubusLinkedArAssetSection extends StatelessWidget {
     return DropdownButtonFormField<Artwork>(
       isExpanded: true,
       initialValue: selectedArAsset,
+      borderRadius: BorderRadius.circular(KubusRadius.md),
       decoration: _creatorDropdownDecoration(context),
       items: arEnabledArtworks
           .map(
@@ -522,6 +528,7 @@ class KubusMarkerMarkerTypeSection extends StatelessWidget {
         DropdownButtonFormField<ArtMarkerType>(
           isExpanded: true,
           initialValue: selectedMarkerType,
+          borderRadius: BorderRadius.circular(KubusRadius.md),
           decoration: _creatorDropdownDecoration(context),
           items: ArtMarkerType.values
               .where(allowedMarkerTypes.contains)

@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
+import '../../utils/app_animations.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../collaboration_panel.dart';
@@ -366,6 +367,7 @@ class CreatorFooterActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final animationTheme = context.animationTheme;
     final accent = accentColor ?? scheme.primary;
 
     final primaryButton = ElevatedButton(
@@ -379,21 +381,28 @@ class CreatorFooterActions extends StatelessWidget {
         ),
         disabledBackgroundColor: accent.withValues(alpha: 0.5),
       ),
-      child: primaryLoading
-          ? SizedBox(
-              height: 18,
-              width: 18,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(scheme.onPrimary),
+      child: AnimatedSwitcher(
+        duration: animationTheme.short,
+        switchInCurve: animationTheme.fadeCurve,
+        switchOutCurve: animationTheme.fadeCurve,
+        child: primaryLoading
+            ? SizedBox(
+                key: const ValueKey<String>('creator_footer_primary_loading'),
+                height: 18,
+                width: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(scheme.onPrimary),
+                ),
+              )
+            : Text(
+                primaryLabel,
+                key: const ValueKey<String>('creator_footer_primary_label'),
+                style: KubusTextStyles.detailButton.copyWith(
+                  color: scheme.onPrimary,
+                ),
               ),
-            )
-          : Text(
-              primaryLabel,
-              style: KubusTextStyles.detailButton.copyWith(
-                color: scheme.onPrimary,
-              ),
-            ),
+      ),
     );
 
     final secondaryButton = secondaryLabel == null
@@ -544,7 +553,7 @@ class CreatorSearchField extends StatelessWidget {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(KubusRadius.md),
-          borderSide: BorderSide(color: accent),
+          borderSide: BorderSide(color: accent, width: 1.5),
         ),
       ),
     );
@@ -657,11 +666,15 @@ class CreatorTextField extends StatelessWidget {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(KubusRadius.md),
-              borderSide: BorderSide(color: accent),
+              borderSide: BorderSide(color: accent, width: 1.5),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(KubusRadius.md),
               borderSide: BorderSide(color: scheme.error),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(KubusRadius.md),
+              borderSide: BorderSide(color: scheme.error, width: 1.5),
             ),
             disabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(KubusRadius.md),
@@ -824,7 +837,7 @@ class DesktopCreatorSubjectActionsSection extends StatelessWidget {
 
 /// A unified dropdown with above-label and the same glass-consistent styling
 /// as [CreatorTextField].
-class CreatorDropdown<T> extends StatelessWidget {
+class CreatorDropdown<T> extends StatefulWidget {
   final String label;
   final T? value;
   final List<DropdownMenuItem<T>> items;
@@ -843,14 +856,25 @@ class CreatorDropdown<T> extends StatelessWidget {
   });
 
   @override
+  State<CreatorDropdown<T>> createState() => _CreatorDropdownState<T>();
+}
+
+class _CreatorDropdownState<T> extends State<CreatorDropdown<T>> {
+  bool _focused = false;
+
+  @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final animationTheme = context.animationTheme;
+    final enabled = widget.enabled;
+    final accent = widget.accentColor ?? scheme.primary;
+    final showFocus = _focused && enabled;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          label,
+          widget.label,
           style: KubusTextStyles.detailLabel.copyWith(
             color: enabled
                 ? scheme.onSurface
@@ -858,29 +882,43 @@ class CreatorDropdown<T> extends StatelessWidget {
           ),
         ),
         const SizedBox(height: KubusSpacing.xs),
-        Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: KubusSpacing.sm + KubusSpacing.xs,
-          ),
-          decoration: BoxDecoration(
-            color: scheme.onSurface.withValues(alpha: enabled ? 0.04 : 0.02),
-            borderRadius: BorderRadius.circular(KubusRadius.md),
-            border: Border.all(
-              color: scheme.outline.withValues(alpha: enabled ? 0.25 : 0.15),
+        Focus(
+          skipTraversal: true,
+          onFocusChange: (value) {
+            if (_focused != value) setState(() => _focused = value);
+          },
+          child: AnimatedContainer(
+            duration: animationTheme.short,
+            curve: animationTheme.defaultCurve,
+            padding: const EdgeInsets.symmetric(
+              horizontal: KubusSpacing.sm + KubusSpacing.xs,
             ),
-          ),
-          child: DropdownButton<T>(
-            value: value,
-            isExpanded: true,
-            underline: const SizedBox.shrink(),
-            dropdownColor: scheme.surfaceContainerHighest,
-            style: TextStyle(
-              color: enabled
-                  ? scheme.onSurface
-                  : scheme.onSurface.withValues(alpha: 0.55),
+            decoration: BoxDecoration(
+              color: scheme.onSurface.withValues(alpha: enabled ? 0.04 : 0.02),
+              borderRadius: BorderRadius.circular(KubusRadius.md),
+              border: Border.all(
+                color: showFocus
+                    ? accent
+                    : scheme.outline
+                        .withValues(alpha: enabled ? 0.25 : 0.15),
+                width: showFocus ? 1.5 : 1,
+              ),
             ),
-            items: items,
-            onChanged: enabled ? onChanged : null,
+            child: DropdownButton<T>(
+              value: widget.value,
+              isExpanded: true,
+              underline: const SizedBox.shrink(),
+              borderRadius: BorderRadius.circular(KubusRadius.md),
+              focusColor: Colors.transparent,
+              dropdownColor: scheme.surfaceContainerHighest,
+              style: TextStyle(
+                color: enabled
+                    ? scheme.onSurface
+                    : scheme.onSurface.withValues(alpha: 0.55),
+              ),
+              items: widget.items,
+              onChanged: enabled ? widget.onChanged : null,
+            ),
           ),
         ),
       ],
@@ -920,7 +958,7 @@ class CreatorSwitchTile extends StatelessWidget {
     final subtitleColor =
         scheme.onSurface.withValues(alpha: enabled ? 0.6 : 0.4);
 
-    return Container(
+    final tile = Ink(
       padding: const EdgeInsets.all(KubusSpacing.md),
       decoration: BoxDecoration(
         color: scheme.onSurface.withValues(alpha: enabled ? 0.04 : 0.02),
@@ -954,12 +992,30 @@ class CreatorSwitchTile extends StatelessWidget {
               ],
             ),
           ),
+          // The switch stays focusable for keyboard users; the surrounding
+          // InkWell extends the touch target to the whole tile.
           Switch.adaptive(
             value: value,
             onChanged: onChanged,
             activeTrackColor: accent,
           ),
         ],
+      ),
+    );
+
+    return Semantics(
+      label: title,
+      toggled: value,
+      enabled: enabled,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(KubusRadius.md),
+          mouseCursor:
+              enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
+          onTap: enabled ? () => onChanged!(!value) : null,
+          child: tile,
+        ),
       ),
     );
   }

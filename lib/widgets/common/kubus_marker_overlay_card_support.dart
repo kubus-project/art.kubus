@@ -333,18 +333,24 @@ class _OverlayPager extends StatelessWidget {
             );
 
             return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4.0),
+              padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.xxs),
               child: onSelectIndex == null
                   ? dot
-                  : MouseRegion(
-                      cursor: SystemMouseCursors.click,
-                      child: GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: () => onSelectIndex!(dotIndex),
-                        child: SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: Center(child: dot),
+                  : Semantics(
+                      label: '${dotIndex + 1}/$count',
+                      button: true,
+                      selected: isActive,
+                      child: MouseRegion(
+                        cursor: SystemMouseCursors.click,
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () => onSelectIndex!(dotIndex),
+                          child: SizedBox(
+                            width: 18,
+                            height:
+                                KubusHeaderMetrics.actionHitArea - KubusSpacing.xs,
+                            child: Center(child: dot),
+                          ),
                         ),
                       ),
                     ),

@@ -374,6 +374,9 @@ class _MapScreenState extends State<MapScreen>
   double _markerRadiusKm = 5.0;
   bool _travelModeEnabled = false;
   bool _isometricViewEnabled = false;
+  // Mirrors desktop's `createMarkerHighlighted` so the rail button shows an
+  // active state while the marker creation dialog is open.
+  bool _isCreateMarkerFlowActive = false;
 
   static const double _nearbySheetMin = 0.16;
   static const double _nearbySheetMax = 0.85;
@@ -2795,20 +2798,28 @@ class _MapScreenState extends State<MapScreen>
                             ? MarkerSubjectType.institution
                             : MarkerSubjectType.misc;
 
-    final MapMarkerFormResult? result = await MapMarkerDialog.show(
-      context: context,
-      subjectData: subjectData,
-      onRefreshSubjects: ({bool force = false}) =>
-          _refreshMarkerSubjectData(force: force),
-      initialPosition: _currentPosition!,
-      allowManualPosition: false,
-      initialSubjectType: initialSubjectType,
-      allowedSubjectTypes: allowedSubjectTypes,
-      blockedArtworkIds: _artMarkers
-          .where((marker) => (marker.artworkId ?? '').trim().isNotEmpty)
-          .map((marker) => marker.artworkId!.trim())
-          .toSet(),
-    );
+    setState(() => _isCreateMarkerFlowActive = true);
+    final MapMarkerFormResult? result;
+    try {
+      result = await MapMarkerDialog.show(
+        context: context,
+        subjectData: subjectData,
+        onRefreshSubjects: ({bool force = false}) =>
+            _refreshMarkerSubjectData(force: force),
+        initialPosition: _currentPosition!,
+        allowManualPosition: false,
+        initialSubjectType: initialSubjectType,
+        allowedSubjectTypes: allowedSubjectTypes,
+        blockedArtworkIds: _artMarkers
+            .where((marker) => (marker.artworkId ?? '').trim().isNotEmpty)
+            .map((marker) => marker.artworkId!.trim())
+            .toSet(),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isCreateMarkerFlowActive = false);
+      }
+    }
 
     if (!mounted || result == null) return;
 
@@ -4262,10 +4273,7 @@ class _MapScreenState extends State<MapScreen>
       ).horizontalPadding,
       topPadding: _markerOverlayTopPadding,
       bottomPadding: MapOverlaySizing.defaultVerticalPadding,
-      animation: const overlay_wrapper.KubusMarkerOverlayAnimationConfig(
-        duration: Duration(milliseconds: 220),
-        curve: Curves.easeOutCubic,
-      ),
+      animation: overlay_wrapper.KubusMarkerOverlayAnimationConfig.of(context),
       onLayoutResolved: (resolvedLayout) {
         _handleMarkerOverlayLayoutResolved(selection, resolvedLayout);
       },
@@ -5163,6 +5171,7 @@ class _MapScreenState extends State<MapScreen>
           centerOnMeTooltip: l10n.mapCenterOnMeTooltip,
           createMarkerKey: _tutorialAddMarkerButtonKey,
           createMarkerTooltip: l10n.mapAddMapMarkerTooltip,
+          createMarkerHighlighted: _isCreateMarkerFlowActive,
           showTravelModeToggle: AppConfig.isFeatureEnabled('mapTravelMode'),
           travelModeKey: _tutorialTravelButtonKey,
           travelModeActive: _travelModeEnabled,
