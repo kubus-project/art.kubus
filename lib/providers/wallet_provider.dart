@@ -2040,6 +2040,15 @@ class WalletProvider extends ChangeNotifier {
   }
 
   Future<void> _syncBackendData(String address) async {
+    // Safety net: account-link wallet setup must never reach backend
+    // register/login. The local-only account-link methods are not supposed to
+    // call this at all, but guard here in case any wallet create/import/connect
+    // path is reused while account-link suppression is active.
+    if (_suppressAccountLinkIdentityPersistence) {
+      _walletLog(
+          '_syncBackendData skipped during account-link wallet setup');
+      return;
+    }
     try {
       // Profile fetch or create
       try {

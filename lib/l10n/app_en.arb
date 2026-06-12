@@ -5625,5 +5625,67 @@
   "exhibitionCreatorNoEventsToLink": "You don't manage any events yet.",
   "exhibitionCreatorRelationTypeLabel": "Relation type",
   "selectEventsDialogTitle": "Select events",
-  "selectExhibitionsDialogTitle": "Select exhibitions"
+  "selectExhibitionsDialogTitle": "Select exhibitions",
+
+  "authVerifyEmailSuccessTitle": "Email confirmed",
+  "authVerifyEmailSuccessBodyAutoContinue": "Opening your art.kubus workspace…",
+  "authVerifyEmailSuccessBodyAutoContinueWithEmail": "{email} is verified. Opening your art.kubus workspace…",
+  "@authVerifyEmailSuccessBodyAutoContinueWithEmail": {
+    "placeholders": {
+      "email": { "type": "String" }
+    }
+  },
+  "authVerifyEmailSuccessBodyManual": "Your email address is verified. Continue to finish your art.kubus setup.",
+  "authVerifyEmailSuccessBodyManualWithEmail": "{email} is verified. Continue to finish your art.kubus setup.",
+  "@authVerifyEmailSuccessBodyManualWithEmail": {
+    "placeholders": {
+      "email": { "type": "String" }
+    }
+  },
+  "authVerifyEmailContinueNow": "Continue now",
+  "authVerifyEmailContinue": "Continue",
+  "authVerifyEmailSessionFailed": "Could not continue from verification. Try again.",
+
+  "walletSetupTitle": "Set up your wallet",
+  "walletSetupSubtitle": "Your wallet becomes your public Web3 identity on art.kubus.",
+  "walletSetupAccountNote": "Your Google/email account remains your login and recovery account.",
+  "walletSetupCreateTitle": "Create new art.kubus wallet",
+  "walletSetupCreateBody": "Generate a new wallet and link it to the account you just created.",
+  "walletSetupCreateAction": "Create wallet",
+  "walletSetupImportTitle": "Import existing wallet",
+  "walletSetupImportBody": "Use a recovery phrase for a wallet you already control.",
+  "walletSetupImportAction": "Import wallet",
+  "walletSetupImportLinkAction": "Link imported wallet",
+  "walletSetupConnectTitle": "Connect external wallet",
+  "walletSetupConnectBody": "Connect a browser or mobile wallet you already use.",
+  "walletSetupConnectAction": "Connect wallet",
+  "walletSetupRecoveryPhraseLabel": "Recovery phrase",
+  "walletSetupEnterRecoveryPhraseInline": "Enter your recovery phrase to import a wallet.",
+  "walletSetupDisabledError": "Wallet connection is disabled right now.",
+  "walletSetupSessionMissingError": "Your account session could not be confirmed. Go back to the account step and sign in again — do not create a new account.",
+  "walletSetupGenericLinkError": "Wallet linking failed. Try again.",
+
+  "walletSetupStatusLoginAccount": "Login account",
+  "walletSetupStatusAccountId": "Account ID {id}",
+  "@walletSetupStatusAccountId": {
+    "placeholders": {
+      "id": { "type": "String" }
+    }
+  },
+  "walletSetupStatusAuthenticatedAccount": "Authenticated account",
+  "walletSetupStatusLocalWallet": "Local wallet",
+  "walletSetupStatusAccountLink": "Account link",
+  "walletSetupStatusVerification": "Verification",
+  "walletSetupStatusVerifiedLinked": "Verified linked wallet {wallet}",
+  "@walletSetupStatusVerifiedLinked": {
+    "placeholders": {
+      "wallet": { "type": "String" }
+    }
+  },
+  "walletSetupPhaseReady": "Choose a wallet action to continue.",
+  "walletSetupPhaseCreating": "Creating local wallet…",
+  "walletSetupPhaseWalletReady": "Local wallet ready — preparing account link.",
+  "walletSetupPhaseLinking": "Linking wallet to your account and verifying…",
+  "walletSetupPhaseLinked": "Wallet linked to this account.",
+  "walletSetupPhaseFailed": "Wallet link failed. Your account was not changed."
 }

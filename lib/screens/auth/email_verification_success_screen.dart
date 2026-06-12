@@ -23,9 +23,22 @@ class EmailVerificationSuccessScreen extends StatefulWidget {
   const EmailVerificationSuccessScreen({
     super.key,
     this.email,
+    this.autoContinue = false,
+    this.sessionEstablished = false,
+    this.autoContinueDelay = const Duration(seconds: 5),
   });
 
   final String? email;
+
+  /// When true, the screen automatically continues into the logged-in app
+  /// after [autoContinueDelay] (with a manual "Continue now" button as a skip).
+  final bool autoContinue;
+
+  /// True when a backend session token was already persisted from the
+  /// verification response, so continuation must never fall back to /sign-in.
+  final bool sessionEstablished;
+
+  final Duration autoContinueDelay;
 
   @override
   State<EmailVerificationSuccessScreen> createState() =>
@@ -36,6 +49,24 @@ class _EmailVerificationSuccessScreenState
     extends State<EmailVerificationSuccessScreen> {
   bool _continuing = false;
   String? _error;
+  Timer? _autoContinueTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.autoContinue) {
+      _autoContinueTimer = Timer(widget.autoContinueDelay, () {
+        if (!mounted) return;
+        unawaited(_continue());
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _autoContinueTimer?.cancel();
+    super.dispose();
+  }
 
   Future<bool> _hasValidSession(SharedPreferences prefs) async {
     await BackendApiService().loadAuthToken();
@@ -61,6 +92,7 @@ class _EmailVerificationSuccessScreenState
 
   Future<void> _continue() async {
     if (_continuing) return;
+    _autoContinueTimer?.cancel();
     setState(() {
       _continuing = true;
       _error = null;
@@ -70,7 +102,10 @@ class _EmailVerificationSuccessScreenState
       final navigator = Navigator.of(context);
       final isDesktop = DesktopBreakpoints.isDesktop(context);
       final prefs = await SharedPreferences.getInstance();
-      final hasSession = await _hasValidSession(prefs);
+      // When the verification response already persisted a backend session,
+      // continuation is authenticated and must never fall back to /sign-in.
+      final hasSession =
+          widget.sessionEstablished || await _hasValidSession(prefs);
       final guardActive =
           OnboardingStateService.hasActiveGoogleOnboardingRegistrationGuardSync(
                 prefs,
@@ -225,15 +260,32 @@ class _EmailVerificationSuccessScreenState
                       ),
                       const SizedBox(height: KubusSpacing.sm),
                       Text(
-                        email.isEmpty
-                            ? 'Your email address is verified. Continue to finish your art.kubus setup.'
-                            : '$email is verified. Continue to finish your art.kubus setup.',
+                        widget.autoContinue
+                            ? (email.isEmpty
+                                ? 'Opening your art.kubus workspace…'
+                                : '$email is verified. Opening your art.kubus workspace…')
+                            : (email.isEmpty
+                                ? 'Your email address is verified. Continue to finish your art.kubus setup.'
+                                : '$email is verified. Continue to finish your art.kubus setup.'),
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               color: scheme.onSurface.withValues(alpha: 0.74),
                               height: 1.42,
                             ),
                       ),
+                      if (widget.autoContinue) ...[
+                        const SizedBox(height: KubusSpacing.lg),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(KubusRadius.sm),
+                          child: LinearProgressIndicator(
+                            minHeight: 4,
+                            backgroundColor:
+                                scheme.onSurface.withValues(alpha: 0.12),
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(scheme.primary),
+                          ),
+                        ),
+                      ],
                       if (_error != null) ...[
                         const SizedBox(height: KubusSpacing.md),
                         Text(
@@ -255,7 +307,7 @@ class _EmailVerificationSuccessScreenState
                               },
                         isLoading: _continuing,
                         icon: _continuing ? null : Icons.arrow_forward_rounded,
-                        label: 'Continue',
+                        label: widget.autoContinue ? 'Continue now' : 'Continue',
                         isFullWidth: true,
                       ),
                     ],

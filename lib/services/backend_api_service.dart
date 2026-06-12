@@ -1518,6 +1518,18 @@ class BackendApiService
     await _backendApiPersistTokenFromResponse(this, body);
   }
 
+  /// Persists the backend JWT (and refresh token) returned inside an auth
+  /// success response (`data.token` / `token`). Used by auth-continuation
+  /// events such as email verification, where the verification endpoint
+  /// returns a fresh authenticated session for the same user.
+  ///
+  /// Returns true when a non-empty token was persisted.
+  Future<bool> persistAuthTokensFromResponse(Map<String, dynamic> body) async {
+    await _backendApiPersistTokenFromResponse(this, body);
+    final token = (getAuthToken() ?? '').trim();
+    return token.isNotEmpty;
+  }
+
   Map<String, dynamic> _responsePayload(Map<String, dynamic> body) {
     return _backendApiResponsePayload(body);
   }

@@ -65,6 +65,12 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
     try {
       final response = await BackendApiService().verifyEmail(token: token);
       await BackendApiService().syncSecureAccountStatusFromResponse(response);
+      // Verification is an auth-continuation event: the backend returns a fresh
+      // session token for the same user. Persist it before showing the success
+      // screen so a link opened in a clean browser/tab can return to a
+      // logged-in app instance instead of falling back to /sign-in.
+      final sessionEstablished =
+          await BackendApiService().persistAuthTokensFromResponse(response);
       if (!mounted) return;
       setState(() => _verified = true);
       if (!mounted) return;
@@ -74,6 +80,8 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
             email: _emailController.text.trim().isEmpty
                 ? widget.email
                 : _emailController.text.trim(),
+            autoContinue: true,
+            sessionEstablished: sessionEstablished,
           ),
           settings: const RouteSettings(name: '/verify-email/success'),
         ),
