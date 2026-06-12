@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/recent_activity.dart';
 import 'kubus_color_roles.dart';
 import 'design_tokens.dart';
+import 'custom_icons.dart';
 
 /// Semantic color palette for UI elements throughout the app.
 /// These provide visual variety while maintaining design consistency.
@@ -340,6 +341,8 @@ class AppColorUtils {
         return dropAccent;
       case 'experience':
         return experienceAccent;
+      case 'exhibition':
+        return exhibitionAccent;
       case 'other':
       default:
         return scheme.outline;
@@ -387,6 +390,8 @@ class AppColorUtils {
         return Icons.wallet_giftcard;
       case 'experience':
         return Icons.view_in_ar;
+      case 'exhibition':
+        return CustomIcons.wallArt;
       case 'other':
       default:
         return Icons.location_on_outlined;
@@ -394,5 +399,5 @@ class AppColorUtils {
   }
 
   /// Get icon specifically for exhibition markers
-  static IconData get exhibitionIcon => Icons.museum;
+  static IconData get exhibitionIcon => CustomIcons.wallArt;
 }

@@ -8,11 +8,90 @@ enum KubusButtonVariant {
   secondary,
 }
 
+/// Shared hover/press micro-interaction shell for kubus buttons.
+///
+/// Desktop hover gets a soft glow lift, press gets a subtle scale-down.
+/// All motion collapses to zero duration when the platform requests reduced
+/// motion (`MediaQuery.disableAnimations`).
+class _KubusButtonInteraction extends StatefulWidget {
+  const _KubusButtonInteraction({
+    required this.enabled,
+    required this.borderRadius,
+    required this.glowColor,
+    required this.child,
+  });
+
+  final bool enabled;
+  final BorderRadius borderRadius;
+  final Color glowColor;
+  final Widget child;
+
+  @override
+  State<_KubusButtonInteraction> createState() =>
+      _KubusButtonInteractionState();
+}
+
+class _KubusButtonInteractionState extends State<_KubusButtonInteraction> {
+  bool _hovered = false;
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final reduceMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    final duration =
+        reduceMotion ? Duration.zero : const Duration(milliseconds: 130);
+    final active = widget.enabled;
+    final hovered = active && _hovered;
+    final pressed = active && _pressed;
+
+    return MouseRegion(
+      cursor: active ? SystemMouseCursors.click : MouseCursor.defer,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() {
+        _hovered = false;
+        _pressed = false;
+      }),
+      child: Listener(
+        onPointerDown: (_) => setState(() => _pressed = true),
+        onPointerUp: (_) => setState(() => _pressed = false),
+        onPointerCancel: (_) => setState(() => _pressed = false),
+        child: AnimatedScale(
+          scale: pressed ? 0.985 : 1.0,
+          duration: duration,
+          curve: Curves.easeOut,
+          child: AnimatedContainer(
+            duration: duration,
+            curve: Curves.easeOut,
+            decoration: BoxDecoration(
+              borderRadius: widget.borderRadius,
+              boxShadow: hovered && !pressed
+                  ? [
+                      BoxShadow(
+                        color: widget.glowColor.withValues(alpha: 0.22),
+                        blurRadius: 18,
+                        offset: const Offset(0, 6),
+                      ),
+                    ]
+                  : const <BoxShadow>[],
+            ),
+            child: widget.child,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class KubusButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final String label;
   final IconData? icon;
   final bool isLoading;
+
+  /// When true (and not loading), the button shows a restrained success
+  /// check next to the label instead of [icon].
+  final bool isSuccess;
   final bool isFullWidth;
   final Color? backgroundColor;
   final Color? foregroundColor;
@@ -24,6 +103,7 @@ class KubusButton extends StatelessWidget {
     required this.label,
     this.icon,
     this.isLoading = false,
+    this.isSuccess = false,
     this.isFullWidth = false,
     this.backgroundColor,
     this.foregroundColor,
@@ -73,6 +153,9 @@ class KubusButton extends StatelessWidget {
         ),
     };
 
+    final displayIcon =
+        isSuccess && !isLoading ? Icons.check_rounded : icon;
+
     Widget content = isLoading
         ? SizedBox(
             height: 20,
@@ -88,8 +171,8 @@ class KubusButton extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                if (icon != null) ...[
-                  Icon(icon, size: 20),
+                if (displayIcon != null) ...[
+                  Icon(displayIcon, size: 20),
                   const SizedBox(width: KubusSpacing.sm),
                 ],
                 Text(
@@ -145,12 +228,19 @@ class KubusButton extends StatelessWidget {
             child: buttonChild,
           );
 
-    final button = Container(
-      decoration: BoxDecoration(
-        borderRadius: radius,
-        border: Border.all(color: borderColor),
+    final button = _KubusButtonInteraction(
+      enabled: isEnabled,
+      borderRadius: radius,
+      glowColor: variant == KubusButtonVariant.primary
+          ? effectiveBackground
+          : scheme.onSurface,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: radius,
+          border: Border.all(color: borderColor),
+        ),
+        child: buttonSurface,
       ),
-      child: buttonSurface,
     );
 
     if (isFullWidth) {
@@ -226,34 +316,39 @@ class KubusOutlineButton extends StatelessWidget {
             ),
           );
 
-    final button = Container(
-      decoration: BoxDecoration(
-        borderRadius: radius,
-        border: Border.all(color: borderColor),
-      ),
-      child: LiquidGlassPanel(
-        padding: EdgeInsets.zero,
-        margin: EdgeInsets.zero,
-        borderRadius: radius,
-        showBorder: false,
-        backgroundColor: glassTint,
-        child: OutlinedButton(
-          onPressed: isLoading ? null : onPressed,
-          style: OutlinedButton.styleFrom(
-            foregroundColor: contentColor,
-            backgroundColor: Colors.transparent,
-            overlayColor: contentColor.withValues(alpha: isDark ? 0.10 : 0.08),
-            shadowColor: Colors.transparent,
-            side: BorderSide.none,
-            padding: const EdgeInsets.symmetric(
-              horizontal: KubusSpacing.lg,
-              vertical: KubusSpacing.md,
+    final button = _KubusButtonInteraction(
+      enabled: isEnabled,
+      borderRadius: radius,
+      glowColor: contentColor,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: radius,
+          border: Border.all(color: borderColor),
+        ),
+        child: LiquidGlassPanel(
+          padding: EdgeInsets.zero,
+          margin: EdgeInsets.zero,
+          borderRadius: radius,
+          showBorder: false,
+          backgroundColor: glassTint,
+          child: OutlinedButton(
+            onPressed: isLoading ? null : onPressed,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: contentColor,
+              backgroundColor: Colors.transparent,
+              overlayColor: contentColor.withValues(alpha: isDark ? 0.10 : 0.08),
+              shadowColor: Colors.transparent,
+              side: BorderSide.none,
+              padding: const EdgeInsets.symmetric(
+                horizontal: KubusSpacing.lg,
+                vertical: KubusSpacing.md,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: radius,
+              ),
             ),
-            shape: RoundedRectangleBorder(
-              borderRadius: radius,
-            ),
+            child: content,
           ),
-          child: content,
         ),
       ),
     );

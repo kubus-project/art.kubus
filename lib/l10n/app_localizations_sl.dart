@@ -12775,13 +12775,13 @@ class AppLocalizationsSl extends AppLocalizations {
   String get authVerifyEmailSessionFailed => 'Nadaljevanje po potrditvi ni uspelo. Poskusi znova.';
 
   @override
-  String get walletSetupTitle => 'Nastavi denarnico';
+  String get walletSetupTitle => 'Zaščiti svojo art.kubus identiteto';
 
   @override
-  String get walletSetupSubtitle => 'Tvoja denarnica postane tvoja javna Web3 identiteta na art.kubus.';
+  String get walletSetupSubtitle => 'Ustvari denarnico. Nadzor ostane v tvojih rokah.';
 
   @override
-  String get walletSetupAccountNote => 'Tvoj Google/e-poštni račun ostaja tvoj prijavni in obnovitveni račun.';
+  String get walletSetupAccountNote => 'Še naprej se prijavljaš s svojim računom — denarnica postane tvoja javna identiteta.';
 
   @override
   String get walletSetupCreateTitle => 'Ustvari novo art.kubus denarnico';
@@ -12791,6 +12791,14 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get walletSetupCreateAction => 'Ustvari denarnico';
+
+  @override
+  String get walletSetupAlreadyHaveWallet => 'Denarnico že imam';
+
+  @override
+  String walletSetupSignedInAs(String name) {
+    return 'Prijavljen/-a kot $name';
+  }
 
   @override
   String get walletSetupImportTitle => 'Uvozi obstoječo denarnico';
@@ -12870,4 +12878,27 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get walletSetupPhaseFailed => 'Povezovanje denarnice ni uspelo. Račun ni bil spremenjen.';
+
+  @override
+  String get onboardingStageWelcome => 'Dobrodošlica';
+
+  @override
+  String get onboardingStageAccount => 'Račun';
+
+  @override
+  String get onboardingStageProfile => 'Profil';
+
+  @override
+  String get onboardingStageWallet => 'Denarnica';
+
+  @override
+  String get onboardingStageSecure => 'Zaščita';
+
+  @override
+  String get onboardingStageEnter => 'Vstopi v art.kubus';
+
+  @override
+  String onboardingStageProgress(int current, int total) {
+    return 'Korak $current od $total';
+  }
 }

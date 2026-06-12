@@ -8,7 +8,6 @@ import 'package:art_kubus/services/account_wallet_link_service.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/onboarding_state_service.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
-import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:art_kubus/widgets/kubus_button.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -79,7 +78,7 @@ class _OnboardingWalletConnectStepState
   String? _linkedWallet;
   String? _localWallet;
   String? _error;
-  bool _showImport = false;
+  bool _showMoreOptions = false;
 
   @override
   void dispose() {
@@ -284,8 +283,9 @@ class _OnboardingWalletConnectStepState
         _mnemonicController.text.trim().replaceAll(RegExp(r'\s+'), ' ');
     if (mnemonic.isEmpty) {
       setState(() {
-        _error = AppLocalizations.of(context)!.walletSetupEnterRecoveryPhraseInline;
-        _showImport = true;
+        _error =
+            AppLocalizations.of(context)!.walletSetupEnterRecoveryPhraseInline;
+        _showMoreOptions = true;
       });
       return Future<void>.value();
     }
@@ -309,10 +309,13 @@ class _OnboardingWalletConnectStepState
     return '${normalized.substring(0, 6)}…${normalized.substring(normalized.length - 6)}';
   }
 
+  bool get _reduceMotion =>
+      MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final isDesktop = MediaQuery.sizeOf(context).width >= 900;
+    final theme = Theme.of(context);
     final profileProvider = context.watch<ProfileProvider>();
     final currentUser = profileProvider.currentUser;
 
@@ -334,147 +337,236 @@ class _OnboardingWalletConnectStepState
         : ((currentUser?.username ?? '').trim().isNotEmpty
             ? currentUser!.username.trim()
             : profileUserId);
-    final accountEmail = (currentUser?.username ?? '').trim().isNotEmpty &&
-            (currentUser?.username ?? '').trim() != accountLabel
-        ? '@${currentUser!.username.trim().replaceFirst(RegExp(r'^@+'), '')}'
-        : '';
+    final resolvedAccountLabel = accountLabel.isEmpty
+        ? l10n.walletSetupStatusAuthenticatedAccount
+        : accountLabel;
 
-    final status = _WalletConnectStatusPanel(
-      accountLabel:
-          accountLabel.isEmpty ? l10n.walletSetupStatusAuthenticatedAccount : accountLabel,
-      accountEmail: accountEmail,
-      accountId: profileUserId.isEmpty ? null : _truncateWallet(profileUserId),
-      phase: isLinked && _phase != OnboardingWalletLinkPhase.failed
-          ? OnboardingWalletLinkPhase.linked
-          : _phase,
-      localWallet:
-          (_localWallet ?? '').isEmpty ? null : _truncateWallet(_localWallet!),
-      linkedWallet: isLinked ? _truncateWallet(verifiedWallet) : null,
-      error: _error,
-    );
+    final busy = _busyAction != null;
+    final showStatus = _phase != OnboardingWalletLinkPhase.ready ||
+        isLinked ||
+        (_error ?? '').isNotEmpty;
 
-    final actions = Column(
+    final content = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        _WalletConnectActionCard(
-          icon: Icons.add_card_outlined,
-          title: l10n.walletSetupCreateTitle,
-          body: l10n.walletSetupCreateBody,
-          actionLabel: l10n.walletSetupCreateAction,
-          busy: _busyAction == OnboardingWalletConnectAction.create,
-          disabled: _busyAction != null,
-          onPressed: _createWallet,
-        ),
-        const SizedBox(height: KubusSpacing.sm),
-        _WalletConnectActionCard(
-          icon: Icons.input_outlined,
-          title: l10n.walletSetupImportTitle,
-          body: l10n.walletSetupImportBody,
-          actionLabel: _showImport ? l10n.walletSetupImportLinkAction : l10n.walletSetupImportAction,
-          busy: _busyAction == OnboardingWalletConnectAction.import,
-          disabled: _busyAction != null,
-          onPressed: _showImport
-              ? _importWallet
-              : () {
-                  setState(() {
-                    _showImport = true;
-                    _error = null;
-                  });
-                  return Future<void>.value();
-                },
-          child: _showImport
-              ? Padding(
-                  padding: const EdgeInsets.only(top: KubusSpacing.sm),
-                  child: TextField(
-                    controller: _mnemonicController,
-                    minLines: 2,
-                    maxLines: 4,
-                    enabled: _busyAction == null,
-                    decoration: InputDecoration(
-                      labelText: l10n.walletSetupRecoveryPhraseLabel,
-                      border: const OutlineInputBorder(),
+        // Quiet account chip: reassures whose identity the wallet will join.
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: KubusSpacing.sm,
+              vertical: 6,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.14),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.person_outline,
+                  size: 14,
+                  color: Colors.white,
+                ),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    l10n.walletSetupSignedInAs(resolvedAccountLabel),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: Colors.white.withValues(alpha: 0.85),
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                )
-              : null,
+                ),
+              ],
+            ),
+          ),
         ),
-        const SizedBox(height: KubusSpacing.sm),
-        _WalletConnectActionCard(
-          icon: Icons.account_balance_wallet_outlined,
-          title: l10n.walletSetupConnectTitle,
-          body: l10n.walletSetupConnectBody,
-          actionLabel: l10n.walletSetupConnectAction,
-          busy: _busyAction == OnboardingWalletConnectAction.connect,
-          disabled: _busyAction != null,
-          onPressed: _connectExternalWallet,
-        ),
-      ],
-    );
-
-    final intro = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
+        const SizedBox(height: KubusSpacing.lg),
         Text(
           l10n.walletSetupTitle,
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.w800,
-              ),
+          style: theme.textTheme.headlineSmall?.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.3,
+          ),
         ),
         const SizedBox(height: KubusSpacing.sm),
         Text(
           l10n.walletSetupSubtitle,
-          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: Colors.white.withValues(alpha: 0.86),
-                height: 1.42,
-              ),
+          style: theme.textTheme.bodyLarge?.copyWith(
+            color: Colors.white.withValues(alpha: 0.86),
+            height: 1.45,
+          ),
+        ),
+        const SizedBox(height: KubusSpacing.xl),
+        KubusButton(
+          onPressed: busy || isLinked ? null : () => unawaited(_createWallet()),
+          isLoading: _busyAction == OnboardingWalletConnectAction.create,
+          isSuccess: isLinked,
+          icon: isLinked ? null : Icons.add_rounded,
+          label: l10n.walletSetupCreateAction,
+          isFullWidth: true,
         ),
         const SizedBox(height: KubusSpacing.sm),
         Text(
           l10n.walletSetupAccountNote,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.white.withValues(alpha: 0.74),
-                height: 1.4,
-              ),
+          textAlign: TextAlign.center,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: Colors.white.withValues(alpha: 0.62),
+            height: 1.4,
+          ),
         ),
-        const SizedBox(height: KubusSpacing.md),
-        status,
+        if (!isLinked) ...[
+          const SizedBox(height: KubusSpacing.md),
+          Align(
+            alignment: Alignment.center,
+            child: TextButton(
+              onPressed: busy
+                  ? null
+                  : () {
+                      setState(() {
+                        _showMoreOptions = !_showMoreOptions;
+                        if (!_showMoreOptions) _error = null;
+                      });
+                    },
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.white.withValues(alpha: 0.85),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Flexible(
+                    child: Text(
+                      l10n.walletSetupAlreadyHaveWallet,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        color: Colors.white.withValues(alpha: 0.85),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(
+                    _showMoreOptions
+                        ? Icons.expand_less_rounded
+                        : Icons.expand_more_rounded,
+                    size: 18,
+                    color: Colors.white.withValues(alpha: 0.7),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // Conditional child (not a cross-fade) so the folded options leave
+          // the tree entirely; AnimatedSize keeps the reveal smooth.
+          AnimatedSize(
+            duration: _reduceMotion
+                ? Duration.zero
+                : const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic,
+            alignment: Alignment.topCenter,
+            child: !_showMoreOptions
+                ? const SizedBox(width: double.infinity)
+                : Padding(
+                    padding: const EdgeInsets.only(top: KubusSpacing.sm),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        TextField(
+                          controller: _mnemonicController,
+                          minLines: 2,
+                          maxLines: 4,
+                          enabled: !busy,
+                          decoration: InputDecoration(
+                            labelText: l10n.walletSetupRecoveryPhraseLabel,
+                            helperText: l10n.walletSetupImportBody,
+                            border: const OutlineInputBorder(),
+                          ),
+                        ),
+                        const SizedBox(height: KubusSpacing.sm),
+                        KubusOutlineButton(
+                          onPressed:
+                              busy ? null : () => unawaited(_importWallet()),
+                          isLoading: _busyAction ==
+                              OnboardingWalletConnectAction.import,
+                          icon: Icons.input_outlined,
+                          label: l10n.walletSetupImportAction,
+                          isFullWidth: true,
+                        ),
+                        const SizedBox(height: KubusSpacing.sm),
+                        KubusOutlineButton(
+                          onPressed: busy
+                              ? null
+                              : () => unawaited(_connectExternalWallet()),
+                          isLoading: _busyAction ==
+                              OnboardingWalletConnectAction.connect,
+                          icon: Icons.account_balance_wallet_outlined,
+                          label: l10n.walletSetupConnectAction,
+                          isFullWidth: true,
+                        ),
+                      ],
+                    ),
+                  ),
+          ),
+        ],
+        // Status appears only once something is happening — progressive
+        // disclosure keeps the resting state calm.
+        AnimatedSize(
+          duration: _reduceMotion
+              ? Duration.zero
+              : const Duration(milliseconds: 200),
+          curve: Curves.easeOutCubic,
+          alignment: Alignment.topCenter,
+          child: showStatus
+              ? Padding(
+                  padding: const EdgeInsets.only(top: KubusSpacing.lg),
+                  child: _WalletConnectStatusPanel(
+                    phase: isLinked &&
+                            _phase != OnboardingWalletLinkPhase.failed
+                        ? OnboardingWalletLinkPhase.linked
+                        : _phase,
+                    localWallet: (_localWallet ?? '').isEmpty
+                        ? null
+                        : _truncateWallet(_localWallet!),
+                    linkedWallet:
+                        isLinked ? _truncateWallet(verifiedWallet) : null,
+                    error: _error,
+                  ),
+                )
+              : const SizedBox(width: double.infinity),
+        ),
       ],
     );
 
-    if (isDesktop) {
-      return Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            child: LiquidGlassCard(
-              padding: const EdgeInsets.all(KubusSpacing.lg),
-              borderRadius: BorderRadius.circular(KubusRadius.lg),
-              child: SingleChildScrollView(child: intro),
+    return SingleChildScrollView(
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 560),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              vertical: KubusSpacing.lg,
+              horizontal: KubusSpacing.xs,
+            ),
+            child: Column(
+              children: [
+                content,
+                SizedBox(
+                  height:
+                      MediaQuery.viewInsetsOf(context).bottom > 0 ? 120 : 0,
+                ),
+              ],
             ),
           ),
-          const SizedBox(width: KubusSpacing.md),
-          Expanded(
-            child: SingleChildScrollView(child: actions),
-          ),
-        ],
-      );
-    }
-
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          LiquidGlassCard(
-            padding: const EdgeInsets.all(KubusSpacing.md),
-            borderRadius: BorderRadius.circular(KubusRadius.lg),
-            child: intro,
-          ),
-          const SizedBox(height: KubusSpacing.md),
-          actions,
-          SizedBox(
-              height: MediaQuery.viewInsetsOf(context).bottom > 0 ? 120 : 0),
-        ],
+        ),
       ),
     );
   }
@@ -484,18 +576,12 @@ enum _TimelineState { pending, active, done, failed }
 
 class _WalletConnectStatusPanel extends StatelessWidget {
   const _WalletConnectStatusPanel({
-    required this.accountLabel,
-    required this.accountEmail,
-    required this.accountId,
     required this.phase,
     required this.localWallet,
     required this.linkedWallet,
     required this.error,
   });
 
-  final String accountLabel;
-  final String accountEmail;
-  final String? accountId;
   final OnboardingWalletLinkPhase phase;
   final String? localWallet;
   final String? linkedWallet;
@@ -584,50 +670,6 @@ class _WalletConnectStatusPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Icon(Icons.person_outline, color: Colors.white, size: 18),
-              const SizedBox(width: KubusSpacing.sm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l10n.walletSetupStatusLoginAccount,
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                            color: Colors.white.withValues(alpha: 0.66),
-                            fontWeight: FontWeight.w700,
-                          ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      accountLabel,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.white.withValues(alpha: 0.92),
-                            fontWeight: FontWeight.w600,
-                          ),
-                    ),
-                    if (accountEmail.isNotEmpty)
-                      Text(
-                        accountEmail,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Colors.white.withValues(alpha: 0.7),
-                            ),
-                      ),
-                    if (accountId != null)
-                      Text(
-                        l10n.walletSetupStatusAccountId(accountId!),
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Colors.white.withValues(alpha: 0.5),
-                            ),
-                      ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: KubusSpacing.md),
           _TimelineRow(
             label: l10n.walletSetupStatusLocalWallet,
             detail: localWallet,
@@ -752,91 +794,6 @@ class _TimelineRow extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _WalletConnectActionCard extends StatelessWidget {
-  const _WalletConnectActionCard({
-    required this.icon,
-    required this.title,
-    required this.body,
-    required this.actionLabel,
-    required this.busy,
-    required this.disabled,
-    required this.onPressed,
-    this.child,
-  });
-
-  final IconData icon;
-  final String title;
-  final String body;
-  final String actionLabel;
-  final bool busy;
-  final bool disabled;
-  final Future<void> Function() onPressed;
-  final Widget? child;
-
-  @override
-  Widget build(BuildContext context) {
-    return LiquidGlassCard(
-      padding: const EdgeInsets.all(KubusSpacing.md),
-      borderRadius: BorderRadius.circular(KubusRadius.lg),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(KubusRadius.md),
-                ),
-                child: Icon(icon, color: Colors.white, size: 22),
-              ),
-              const SizedBox(width: KubusSpacing.sm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w800,
-                          ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      body,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.white.withValues(alpha: 0.74),
-                            height: 1.35,
-                          ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          if (child != null) child!,
-          const SizedBox(height: KubusSpacing.md),
-          KubusButton(
-            onPressed: disabled && !busy
-                ? null
-                : () {
-                    unawaited(onPressed());
-                  },
-            isLoading: busy,
-            icon: busy ? null : Icons.arrow_forward_rounded,
-            label: actionLabel,
-            isFullWidth: true,
-          ),
-        ],
-      ),
     );
   }
 }

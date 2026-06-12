@@ -71,6 +71,17 @@ enum _OnboardingBranch {
   account,
 }
 
+/// User-facing stages. Several internal steps collapse into one stage so the
+/// flow reads as a short, calm journey instead of a long checklist.
+enum _OnboardingStage {
+  welcome,
+  account,
+  profile,
+  wallet,
+  secure,
+  enter,
+}
+
 class _StepPalette {
   const _StepPalette({
     required this.start,
@@ -1216,6 +1227,85 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   }
 
   String _stepId(_OnboardingStep step) => step.name;
+
+  _OnboardingStage _stageForStep(_OnboardingStep step) {
+    switch (step) {
+      case _OnboardingStep.welcome:
+        return _OnboardingStage.welcome;
+      case _OnboardingStep.account:
+      case _OnboardingStep.verifyEmail:
+        return _OnboardingStage.account;
+      case _OnboardingStep.role:
+      case _OnboardingStep.profile:
+        return _OnboardingStage.profile;
+      case _OnboardingStep.walletConnect:
+        return _OnboardingStage.wallet;
+      case _OnboardingStep.walletBackupIntro:
+      case _OnboardingStep.walletBackup:
+        return _OnboardingStage.secure;
+      case _OnboardingStep.guestPermissions:
+      case _OnboardingStep.daoReview:
+      case _OnboardingStep.accountPermissions:
+      case _OnboardingStep.done:
+        return _OnboardingStage.enter;
+    }
+  }
+
+  /// Stages present in the current flow, in step order, deduplicated.
+  List<_OnboardingStage> get _visibleStages {
+    final stages = <_OnboardingStage>[];
+    for (final step in _steps) {
+      final stage = _stageForStep(step);
+      if (stages.isEmpty || stages.last != stage) {
+        stages.add(stage);
+      }
+    }
+    return stages;
+  }
+
+  String _stageLabel(AppLocalizations l10n, _OnboardingStage stage) {
+    switch (stage) {
+      case _OnboardingStage.welcome:
+        return l10n.onboardingStageWelcome;
+      case _OnboardingStage.account:
+        return l10n.onboardingStageAccount;
+      case _OnboardingStage.profile:
+        return l10n.onboardingStageProfile;
+      case _OnboardingStage.wallet:
+        return l10n.onboardingStageWallet;
+      case _OnboardingStage.secure:
+        return l10n.onboardingStageSecure;
+      case _OnboardingStage.enter:
+        return l10n.onboardingStageEnter;
+    }
+  }
+
+  IconData _stageIcon(_OnboardingStage stage) {
+    switch (stage) {
+      case _OnboardingStage.welcome:
+        return Icons.explore_outlined;
+      case _OnboardingStage.account:
+        return Icons.person_add_alt_1_outlined;
+      case _OnboardingStage.profile:
+        return Icons.badge_outlined;
+      case _OnboardingStage.wallet:
+        return Icons.account_balance_wallet_outlined;
+      case _OnboardingStage.secure:
+        return Icons.shield_outlined;
+      case _OnboardingStage.enter:
+        return Icons.rocket_launch_outlined;
+    }
+  }
+
+  bool _stageCompleted(_OnboardingStage stage) {
+    final stageSteps =
+        _steps.where((step) => _stageForStep(step) == stage).toList();
+    if (stageSteps.isEmpty) return false;
+    return stageSteps.every(_completed.contains);
+  }
+
+  bool get _reduceMotion =>
+      MediaQuery.maybeOf(context)?.disableAnimations ?? false;
 
   Future<void> _persistProgress() async {
     final prefs = await SharedPreferences.getInstance();
@@ -2606,134 +2696,81 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     }
   }
 
+  /// Light header: small logo, contextual "Step x of y · Stage" label, the
+  /// auth entry controls, and a quiet skip action. No card, no gradient box —
+  /// the step content owns the page.
   Widget _buildHeader(
     AppLocalizations l10n,
     ColorScheme scheme, {
     bool compact = false,
   }) {
-    final viewportSize = MediaQuery.sizeOf(context);
-    final headerCompact = compact && viewportSize.height < 680;
-    final skipLabel = l10n.commonSkip;
-    final iconBoxSize = headerCompact ? 42.0 : 48.0;
-    final iconGlyphSize = headerCompact ? 20.0 : 24.0;
-    final titleWidget = Text(
-      l10n.onboardingFlowTitle,
-      maxLines: 1,
-      softWrap: false,
-      overflow: TextOverflow.ellipsis,
-      style: (headerCompact
-              ? Theme.of(context).textTheme.titleMedium
-              : Theme.of(context).textTheme.titleLarge)
-          ?.copyWith(
-        color: scheme.onSurface,
-        fontWeight: FontWeight.w800,
-        letterSpacing: -0.2,
-      ),
-    );
+    final stages = _visibleStages;
+    final currentStage = _stageForStep(_currentStep);
+    final stageIndex = stages.indexOf(currentStage);
+    final safeStageIndex = stageIndex < 0 ? 0 : stageIndex;
+    final showProgressLabel = stages.length > 1;
+
     final skipButton = TextButton(
       onPressed: _isSkippingFlow ? null : _skipForNow,
       style: TextButton.styleFrom(
-        foregroundColor: scheme.onSurface,
-        backgroundColor: scheme.surface.withValues(alpha: 0.72),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(999),
-        ),
+        foregroundColor: scheme.onSurface.withValues(alpha: 0.75),
         padding: const EdgeInsets.symmetric(
           horizontal: KubusSpacing.sm,
           vertical: 6,
         ),
-        minimumSize: const Size(50, 32),
+        minimumSize: const Size(44, 32),
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         visualDensity: VisualDensity.compact,
       ),
       child: Text(
-        skipLabel,
+        l10n.commonSkip,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: scheme.onSurface,
+              color: scheme.onSurface.withValues(alpha: 0.78),
               fontWeight: FontWeight.w600,
             ),
       ),
     );
 
-    if (headerCompact) {
-      return Padding(
-        padding: EdgeInsets.only(
-          top: KubusSpacing.xs,
-          bottom: KubusSpacing.xs,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Container(
-                  width: iconBoxSize,
-                  height: iconBoxSize,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(KubusRadius.lg),
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        _paletteForStep(_currentStep).start,
-                        _paletteForStep(_currentStep).end,
-                      ],
-                    ),
-                  ),
-                  child: Icon(
-                    _stepIcon(_currentStep),
-                    color: Colors.white,
-                    size: iconGlyphSize,
-                  ),
-                ),
-                const SizedBox(width: KubusSpacing.md),
-                Expanded(child: titleWidget),
-                const SizedBox(width: KubusSpacing.xs),
-                skipButton,
-              ],
-            ),
-            const SizedBox(height: KubusSpacing.xs),
-            const Align(
-              alignment: Alignment.centerRight,
-              child: AuthEntryControls(compact: true),
-            ),
-          ],
-        ),
-      );
-    }
-
     return Padding(
-      padding: EdgeInsets.only(
-        top: headerCompact ? KubusSpacing.xs : KubusSpacing.sm,
-        bottom: headerCompact ? KubusSpacing.xs : KubusSpacing.sm,
+      padding: EdgeInsets.symmetric(
+        vertical: compact ? KubusSpacing.xs : KubusSpacing.sm,
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Container(
-            width: iconBoxSize,
-            height: iconBoxSize,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(KubusRadius.lg),
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  _paletteForStep(_currentStep).start,
-                  _paletteForStep(_currentStep).end,
-                ],
-              ),
-            ),
-            child: Icon(
-              _stepIcon(_currentStep),
-              color: Colors.white,
-              size: iconGlyphSize,
-            ),
+          AppLogo(
+            width: compact ? 26 : 30,
+            height: compact ? 26 : 30,
           ),
-          const SizedBox(width: KubusSpacing.md),
+          const SizedBox(width: KubusSpacing.sm),
           Expanded(
-            child: titleWidget,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _stageLabel(l10n, currentStage),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: scheme.onSurface,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.1,
+                      ),
+                ),
+                if (showProgressLabel)
+                  Text(
+                    l10n.onboardingStageProgress(
+                      safeStageIndex + 1,
+                      stages.length,
+                    ),
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: scheme.onSurface.withValues(alpha: 0.62),
+                          fontWeight: FontWeight.w500,
+                        ),
+                  ),
+              ],
+            ),
           ),
           const SizedBox(width: KubusSpacing.sm),
           const AuthEntryControls(compact: true),
@@ -2744,33 +2781,38 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     );
   }
 
+  /// Minimal stage dots: one dot per user-facing stage, the active stage
+  /// stretched into a short line. Internal steps are intentionally not
+  /// exposed here.
   Widget _buildProgress(ColorScheme scheme) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Row(
-        children: List.generate(_steps.length, (index) {
-          final step = _steps[index];
-          final stepPalette = _paletteForStep(step);
-          final active = index == _currentIndex;
-          final done = _completed.contains(step);
-          return Expanded(
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              margin: EdgeInsets.only(
-                  right: index == _steps.length - 1 ? 0 : KubusSpacing.xs),
-              height: 6,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(999),
-                color: done
-                    ? stepPalette.accent
-                    : active
-                        ? stepPalette.accent
-                        : scheme.outline.withValues(alpha: 0.14),
-              ),
+    final stages = _visibleStages;
+    if (stages.length <= 1) return const SizedBox.shrink();
+    final currentStage = _stageForStep(_currentStep);
+    final palette = _paletteForStep(_currentStep);
+    final duration =
+        _reduceMotion ? Duration.zero : const Duration(milliseconds: 220);
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        for (var i = 0; i < stages.length; i++) ...[
+          if (i > 0) const SizedBox(width: KubusSpacing.xs),
+          AnimatedContainer(
+            duration: duration,
+            curve: Curves.easeOut,
+            width: stages[i] == currentStage ? 26 : 7,
+            height: 7,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(999),
+              color: stages[i] == currentStage
+                  ? palette.accent
+                  : _stageCompleted(stages[i])
+                      ? palette.accent.withValues(alpha: 0.55)
+                      : scheme.onSurface.withValues(alpha: 0.18),
             ),
-          );
-        }),
-      ),
+          ),
+        ],
+      ],
     );
   }
 
@@ -2869,9 +2911,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         );
         break;
       case _OnboardingStep.walletConnect:
-        content = _WalletConnectStep(
-          title: l10n.onboardingStepWalletSetupTitle,
-          body: l10n.connectWalletChooseDescription,
+        // The step renders its own calm headline/copy; no extra title row.
+        content = OnboardingWalletConnectStep(
           onWalletLinked: _handleWalletConnectLinked,
         );
         break;
@@ -3024,35 +3065,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     );
   }
 
-  IconData _stepIcon(_OnboardingStep step) {
-    switch (step) {
-      case _OnboardingStep.welcome:
-        return Icons.explore_outlined;
-      case _OnboardingStep.guestPermissions:
-        return Icons.shield_outlined;
-      case _OnboardingStep.account:
-        return Icons.person_add_alt_1_outlined;
-      case _OnboardingStep.verifyEmail:
-        return Icons.mark_email_read_outlined;
-      case _OnboardingStep.role:
-        return Icons.tune_outlined;
-      case _OnboardingStep.profile:
-        return Icons.badge_outlined;
-      case _OnboardingStep.walletConnect:
-        return Icons.account_balance_wallet_outlined;
-      case _OnboardingStep.walletBackupIntro:
-        return Icons.shield_moon_outlined;
-      case _OnboardingStep.walletBackup:
-        return Icons.vpn_key_outlined;
-      case _OnboardingStep.daoReview:
-        return Icons.fact_check_outlined;
-      case _OnboardingStep.accountPermissions:
-        return Icons.shield_outlined;
-      case _OnboardingStep.done:
-        return Icons.rocket_launch_outlined;
-    }
-  }
-
   Widget _buildBottomActions(AppLocalizations l10n, {required bool compact}) {
     if (_currentStep == _OnboardingStep.account) {
       if (_currentIndex == 0) {
@@ -3145,50 +3157,27 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     );
   }
 
+  /// Desktop stage rail: lists the user-facing stages only — internal steps
+  /// stay hidden so the journey reads as a handful of calm moves.
   Widget _buildDesktopStepRail(AppLocalizations l10n, ColorScheme scheme) {
-    final labels = _steps.map((step) {
-      switch (step) {
-        case _OnboardingStep.welcome:
-          return l10n.onboardingExploreTitle;
-        case _OnboardingStep.guestPermissions:
-          return l10n.onboardingFlowPermissionsTitle;
-        case _OnboardingStep.account:
-          return l10n.onboardingFlowAccountTitle;
-        case _OnboardingStep.verifyEmail:
-          return l10n.onboardingFlowVerifyLastTitle;
-        case _OnboardingStep.role:
-          return l10n.onboardingFlowRoleTitle;
-        case _OnboardingStep.profile:
-          return l10n.onboardingFlowProfileTitle;
-        case _OnboardingStep.walletConnect:
-          return l10n.onboardingStepWalletSetupTitle;
-        case _OnboardingStep.walletBackupIntro:
-          return l10n.onboardingStepWalletSecurityTitle;
-        case _OnboardingStep.walletBackup:
-          return l10n.onboardingFlowWalletBackupTitle;
-        case _OnboardingStep.daoReview:
-          return l10n.onboardingFlowDaoReviewTitle;
-        case _OnboardingStep.accountPermissions:
-          return l10n.onboardingFlowPermissionsTitle;
-        case _OnboardingStep.done:
-          return l10n.onboardingFlowDoneTitle;
-      }
-    }).toList(growable: false);
+    final stages = _visibleStages;
+    final currentStage = _stageForStep(_currentStep);
+    final duration =
+        _reduceMotion ? Duration.zero : const Duration(milliseconds: 180);
 
     return Container(
       key: const Key('onboarding_desktop_step_rail'),
-      width: 260,
-      padding: const EdgeInsets.all(KubusSpacing.sm),
+      width: 232,
+      padding: const EdgeInsets.symmetric(
+        horizontal: KubusSpacing.sm,
+        vertical: KubusSpacing.md,
+      ),
       decoration: BoxDecoration(
-        color: scheme.surface.withValues(alpha: 0.1),
+        color: scheme.surface.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(KubusRadius.lg),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 18,
-            offset: const Offset(0, 6),
-          ),
-        ],
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.08),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -3196,88 +3185,68 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           Padding(
             padding: const EdgeInsets.fromLTRB(
               KubusSpacing.xs,
+              0,
               KubusSpacing.xs,
-              KubusSpacing.xs,
-              KubusSpacing.sm,
+              KubusSpacing.md,
             ),
             child: Text(
               l10n.onboardingFlowTitle,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: Colors.white,
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: Colors.white.withValues(alpha: 0.92),
                     fontWeight: FontWeight.w700,
                   ),
             ),
           ),
-          Expanded(
-            child: ListView.separated(
-              itemCount: labels.length,
-              separatorBuilder: (_, __) =>
-                  const SizedBox(height: KubusSpacing.xs),
-              itemBuilder: (context, index) {
-                final step = _steps[index];
-                final isActive = index == _currentIndex;
-                final isDone = _completed.contains(step);
-                final palette = _paletteForStep(step);
-                final icon = isDone ? Icons.check_circle : _stepIcon(step);
-
-                return AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: KubusSpacing.sm,
-                    vertical: KubusSpacing.sm,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isActive
-                        ? palette.accent.withValues(alpha: 0.18)
-                        : Colors.white.withValues(alpha: 0.05),
-                    borderRadius: BorderRadius.circular(KubusRadius.md),
-                    border: Border.all(
+          for (var i = 0; i < stages.length; i++) ...[
+            if (i > 0) const SizedBox(height: KubusSpacing.xs),
+            Builder(builder: (context) {
+              final stage = stages[i];
+              final isActive = stage == currentStage;
+              final isDone = !isActive && _stageCompleted(stage);
+              final palette = _paletteForStep(_currentStep);
+              return AnimatedContainer(
+                duration: duration,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: KubusSpacing.sm,
+                  vertical: KubusSpacing.sm,
+                ),
+                decoration: BoxDecoration(
+                  color: isActive
+                      ? palette.accent.withValues(alpha: 0.14)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(KubusRadius.md),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      isDone ? Icons.check_circle_outline : _stageIcon(stage),
+                      size: 18,
                       color: isActive
-                          ? palette.accent.withValues(alpha: 0.32)
-                          : Colors.transparent,
+                          ? Colors.white
+                          : Colors.white.withValues(alpha: isDone ? 0.8 : 0.5),
                     ),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 28,
-                        height: 28,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(9),
-                          gradient: LinearGradient(
-                            colors: isDone
-                                ? <Color>[scheme.primary, scheme.primary]
-                                : <Color>[palette.start, palette.end],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                        ),
-                        child: Icon(
-                          icon,
-                          size: 16,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(width: KubusSpacing.sm),
-                      Expanded(
-                        child: Text(
-                          labels[index],
-                          maxLines: 3,
-                          style:
-                              Theme.of(context).textTheme.labelLarge?.copyWith(
-                                    color: Colors.white.withValues(alpha: 0.95),
-                                    fontWeight: isActive
-                                        ? FontWeight.w700
-                                        : FontWeight.w600,
+                    const SizedBox(width: KubusSpacing.sm),
+                    Expanded(
+                      child: Text(
+                        _stageLabel(l10n, stage),
+                        maxLines: 2,
+                        style:
+                            Theme.of(context).textTheme.labelLarge?.copyWith(
+                                  color: Colors.white.withValues(
+                                    alpha: isActive ? 0.98 : 0.66,
                                   ),
-                        ),
+                                  fontWeight: isActive
+                                      ? FontWeight.w700
+                                      : FontWeight.w500,
+                                ),
                       ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ],
+          const Spacer(),
         ],
       ),
     );
@@ -3467,6 +3436,41 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     );
   }
 
+  /// Subtle fade + slight upward slide between steps. Collapses to an
+  /// instant switch when the platform requests reduced motion.
+  Widget _animatedStepShell(Widget child) {
+    final keyed = KeyedSubtree(
+      key: ValueKey<_OnboardingStep>(_currentStep),
+      child: child,
+    );
+    if (_reduceMotion) {
+      return keyed;
+    }
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 240),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeIn,
+      layoutBuilder: (currentChild, previousChildren) => Stack(
+        fit: StackFit.expand,
+        children: <Widget>[
+          ...previousChildren,
+          if (currentChild != null) currentChild,
+        ],
+      ),
+      transitionBuilder: (child, animation) => FadeTransition(
+        opacity: animation,
+        child: SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0, 0.015),
+            end: Offset.zero,
+          ).animate(animation),
+          child: child,
+        ),
+      ),
+      child: keyed,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -3578,9 +3582,11 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
                               child: Column(
                                 children: [
                                   Expanded(
-                                    child: _isDesktop
-                                        ? _buildDesktopContent(l10n, scheme)
-                                        : _buildStepCard(l10n, scheme),
+                                    child: _animatedStepShell(
+                                      _isDesktop
+                                          ? _buildDesktopContent(l10n, scheme)
+                                          : _buildStepCard(l10n, scheme),
+                                    ),
                                   ),
                                   SizedBox(
                                     height: compactLayout
@@ -5504,38 +5510,6 @@ class _WalletBackupStep extends StatelessWidget {
           ],
         );
       },
-    );
-  }
-}
-
-class _WalletConnectStep extends StatelessWidget {
-  const _WalletConnectStep({
-    required this.title,
-    required this.body,
-    required this.onWalletLinked,
-  });
-
-  final String title;
-  final String body;
-  final Future<void> Function(String walletAddress) onWalletLinked;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        AuthTitleRow(
-          title: title,
-          subtitle: body,
-          compact: MediaQuery.sizeOf(context).height < 720,
-          foregroundColor: Colors.white,
-          subtitleColor: Colors.white.withValues(alpha: 0.85),
-        ),
-        const SizedBox(height: KubusSpacing.md),
-        Expanded(
-          child: OnboardingWalletConnectStep(onWalletLinked: onWalletLinked),
-        ),
-      ],
     );
   }
 }

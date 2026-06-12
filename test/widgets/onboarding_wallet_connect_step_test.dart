@@ -27,12 +27,21 @@ class _FakeWalletProvider extends WalletProvider {
         );
 
   int createForAccountLinkCalls = 0;
+  int importForAccountLinkCalls = 0;
+  String? lastImportedMnemonic;
   bool ensureBackendSessionCalled = false;
   bool legacyCreateWalletCalled = false;
 
   @override
   Future<String> createWalletForAccountLink() async {
     createForAccountLinkCalls += 1;
+    return kWallet;
+  }
+
+  @override
+  Future<String> importWalletForAccountLink(String mnemonic) async {
+    importForAccountLinkCalls += 1;
+    lastImportedMnemonic = mnemonic;
     return kWallet;
   }
 
@@ -279,6 +288,65 @@ void main() {
     expect(
       prefs.getBool(OnboardingStateService.onboardingAccountLinkInProgressKey),
       isTrue,
+    );
+  });
+
+  testWidgets(
+      'import wallet via "I already have a wallet" binds under the original '
+      'token with the same guarantees as create', (tester) async {
+    String? tokenAtBindTime;
+
+    final harness = await _pumpStep(
+      tester,
+      linkService: AccountWalletLinkService(
+        bindWallet: (wallet) async {
+          tokenAtBindTime = BackendApiService().getAuthToken();
+          return <String, dynamic>{
+            'success': true,
+            'data': <String, dynamic>{'token': 'post-bind-token'},
+          };
+        },
+        fetchMyProfile: () async => <String, dynamic>{
+          'success': true,
+          'data': <String, dynamic>{
+            'userId': kUserId,
+            'walletAddress': kWallet,
+          },
+        },
+      ),
+    );
+
+    // The import/connect options sit behind progressive disclosure.
+    expect(find.text('Import wallet'), findsNothing);
+    await tester.tap(find.text('I already have a wallet'));
+    // First pump starts the AnimatedSize reveal, second completes it.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    await tester.enterText(
+      find.byType(TextField),
+      'pact midnight cube orbit canvas mural prize lobby spice vivid trend echo',
+    );
+    await tester.tap(find.text('Import wallet'));
+    await _settle(tester);
+
+    expect(find.text('Wallet linked to this account.'), findsOneWidget);
+    expect(harness.linkedWallets, <String>[kWallet]);
+    expect(harness.walletProvider.importForAccountLinkCalls, 1);
+    expect(
+      harness.walletProvider.lastImportedMnemonic,
+      'pact midnight cube orbit canvas mural prize lobby spice vivid trend echo',
+    );
+    expect(tokenAtBindTime, kOriginalToken);
+    expect(harness.walletProvider.legacyCreateWalletCalled, isFalse);
+    expect(harness.walletProvider.ensureBackendSessionCalled, isFalse);
+
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString('wallet_address'), kWallet);
+    expect(prefs.getString('user_id'), kUserId);
+    expect(
+      prefs.getBool(OnboardingStateService.onboardingAccountLinkInProgressKey),
+      isNull,
     );
   });
 

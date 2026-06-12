@@ -5655,12 +5655,19 @@
   "authVerifyEmailContinue": "Continue",
   "authVerifyEmailSessionFailed": "Could not continue from verification. Try again.",
 
-  "walletSetupTitle": "Set up your wallet",
-  "walletSetupSubtitle": "Your wallet becomes your public Web3 identity on art.kubus.",
-  "walletSetupAccountNote": "Your Google/email account remains your login and recovery account.",
+  "walletSetupTitle": "Secure your art.kubus identity",
+  "walletSetupSubtitle": "Create your wallet. You stay in control.",
+  "walletSetupAccountNote": "You keep signing in with your account — the wallet becomes your public identity.",
   "walletSetupCreateTitle": "Create new art.kubus wallet",
   "walletSetupCreateBody": "Generate a new wallet and link it to the account you just created.",
   "walletSetupCreateAction": "Create wallet",
+  "walletSetupAlreadyHaveWallet": "I already have a wallet",
+  "walletSetupSignedInAs": "Signed in as {name}",
+  "@walletSetupSignedInAs": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
   "walletSetupImportTitle": "Import existing wallet",
   "walletSetupImportBody": "Use a recovery phrase for a wallet you already control.",
   "walletSetupImportAction": "Import wallet",
@@ -5696,5 +5703,19 @@
   "walletSetupPhaseWalletReady": "Local wallet ready — preparing account link.",
   "walletSetupPhaseLinking": "Linking wallet to your account and verifying…",
   "walletSetupPhaseLinked": "Wallet linked to this account.",
-  "walletSetupPhaseFailed": "Wallet link failed. Your account was not changed."
+  "walletSetupPhaseFailed": "Wallet link failed. Your account was not changed.",
+
+  "onboardingStageWelcome": "Welcome",
+  "onboardingStageAccount": "Account",
+  "onboardingStageProfile": "Profile",
+  "onboardingStageWallet": "Wallet",
+  "onboardingStageSecure": "Secure",
+  "onboardingStageEnter": "Enter art.kubus",
+  "onboardingStageProgress": "Step {current} of {total}",
+  "@onboardingStageProgress": {
+    "placeholders": {
+      "current": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  }
 }

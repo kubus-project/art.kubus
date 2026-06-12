@@ -12737,13 +12737,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authVerifyEmailSessionFailed => 'Could not continue from verification. Try again.';
 
   @override
-  String get walletSetupTitle => 'Set up your wallet';
+  String get walletSetupTitle => 'Secure your art.kubus identity';
 
   @override
-  String get walletSetupSubtitle => 'Your wallet becomes your public Web3 identity on art.kubus.';
+  String get walletSetupSubtitle => 'Create your wallet. You stay in control.';
 
   @override
-  String get walletSetupAccountNote => 'Your Google/email account remains your login and recovery account.';
+  String get walletSetupAccountNote => 'You keep signing in with your account — the wallet becomes your public identity.';
 
   @override
   String get walletSetupCreateTitle => 'Create new art.kubus wallet';
@@ -12753,6 +12753,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get walletSetupCreateAction => 'Create wallet';
+
+  @override
+  String get walletSetupAlreadyHaveWallet => 'I already have a wallet';
+
+  @override
+  String walletSetupSignedInAs(String name) {
+    return 'Signed in as $name';
+  }
 
   @override
   String get walletSetupImportTitle => 'Import existing wallet';
@@ -12832,4 +12840,27 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get walletSetupPhaseFailed => 'Wallet link failed. Your account was not changed.';
+
+  @override
+  String get onboardingStageWelcome => 'Welcome';
+
+  @override
+  String get onboardingStageAccount => 'Account';
+
+  @override
+  String get onboardingStageProfile => 'Profile';
+
+  @override
+  String get onboardingStageWallet => 'Wallet';
+
+  @override
+  String get onboardingStageSecure => 'Secure';
+
+  @override
+  String get onboardingStageEnter => 'Enter art.kubus';
+
+  @override
+  String onboardingStageProgress(int current, int total) {
+    return 'Step $current of $total';
+  }
 }

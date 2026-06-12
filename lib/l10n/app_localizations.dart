@@ -24128,19 +24128,19 @@ abstract class AppLocalizations {
   /// No description provided for @walletSetupTitle.
   ///
   /// In en, this message translates to:
-  /// **'Set up your wallet'**
+  /// **'Secure your art.kubus identity'**
   String get walletSetupTitle;
 
   /// No description provided for @walletSetupSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Your wallet becomes your public Web3 identity on art.kubus.'**
+  /// **'Create your wallet. You stay in control.'**
   String get walletSetupSubtitle;
 
   /// No description provided for @walletSetupAccountNote.
   ///
   /// In en, this message translates to:
-  /// **'Your Google/email account remains your login and recovery account.'**
+  /// **'You keep signing in with your account — the wallet becomes your public identity.'**
   String get walletSetupAccountNote;
 
   /// No description provided for @walletSetupCreateTitle.
@@ -24160,6 +24160,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Create wallet'**
   String get walletSetupCreateAction;
+
+  /// No description provided for @walletSetupAlreadyHaveWallet.
+  ///
+  /// In en, this message translates to:
+  /// **'I already have a wallet'**
+  String get walletSetupAlreadyHaveWallet;
+
+  /// No description provided for @walletSetupSignedInAs.
+  ///
+  /// In en, this message translates to:
+  /// **'Signed in as {name}'**
+  String walletSetupSignedInAs(String name);
 
   /// No description provided for @walletSetupImportTitle.
   ///
@@ -24310,6 +24322,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Wallet link failed. Your account was not changed.'**
   String get walletSetupPhaseFailed;
+
+  /// No description provided for @onboardingStageWelcome.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome'**
+  String get onboardingStageWelcome;
+
+  /// No description provided for @onboardingStageAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get onboardingStageAccount;
+
+  /// No description provided for @onboardingStageProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile'**
+  String get onboardingStageProfile;
+
+  /// No description provided for @onboardingStageWallet.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet'**
+  String get onboardingStageWallet;
+
+  /// No description provided for @onboardingStageSecure.
+  ///
+  /// In en, this message translates to:
+  /// **'Secure'**
+  String get onboardingStageSecure;
+
+  /// No description provided for @onboardingStageEnter.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter art.kubus'**
+  String get onboardingStageEnter;
+
+  /// No description provided for @onboardingStageProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Step {current} of {total}'**
+  String onboardingStageProgress(int current, int total);
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

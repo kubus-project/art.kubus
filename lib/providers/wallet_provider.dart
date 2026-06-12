@@ -3441,41 +3441,120 @@ class WalletProvider extends ChangeNotifier {
     }
   }
 
-  /// Creates a local wallet for account-link flows. Never calls backend
-  /// register/login and never persists wallet identity prefs.
+  /// Creates a local wallet for account-link flows: signer material and a
+  /// cached mnemonic only. Never calls backend register/login, never persists
+  /// wallet identity prefs, never loads wallet/backend data (`_loadData` and
+  /// `_syncBackendData` are off-limits until the strict bind verifies).
   Future<String> createWalletForAccountLink() {
     return _runWalletOperationForAccountLink(() async {
-      final result = await createWallet(syncBackend: false);
-      final address = (result['address'] ?? '').trim();
+      final mnemonic = _solanaWalletService.generateMnemonic();
+      final keyPair = await _solanaWalletService.generateKeyPairFromMnemonic(
+        mnemonic,
+        accountIndex: 0,
+        changeIndex: 0,
+        pathType: DerivationPathType.standard,
+      );
+      final address = keyPair.publicKey.trim();
       if (address.isEmpty) {
         throw StateError('Created wallet did not return an address.');
       }
+      try {
+        final hdKeyPair = await Ed25519HDKeyPair.fromMnemonic(
+          mnemonic,
+          account: 0,
+          change: 0,
+        );
+        _solanaWalletService.setActiveKeyPair(hdKeyPair);
+      } catch (e) {
+        _walletLog('account-link create: failed to set active keypair: $e');
+      }
+      await clearExternalSigner(notify: false);
+      _setEncryptedWalletBackupDefinition(null);
+      _currentWalletAddress = address;
+      SolanaWalletConnectService.instance.updateActiveWalletAddress(address);
+      try {
+        await _cacheMnemonic(mnemonic);
+      } catch (e) {
+        _walletLog('account-link create: mnemonic cache failed: $e');
+      }
+      try {
+        await setMnemonicBackupRequired(required: true, walletAddress: address);
+      } catch (e) {
+        _walletLog('account-link create: backup-required flag failed: $e');
+      }
+      _clearLastError();
+      notifyListeners();
       return address;
     });
   }
 
-  /// Imports a local wallet for account-link flows. Never calls backend
-  /// register/login and never persists wallet identity prefs.
+  /// Imports a local wallet for account-link flows: derives signer material
+  /// from the phrase only. Never calls backend register/login, never persists
+  /// wallet identity prefs, never loads wallet/backend data.
   Future<String> importWalletForAccountLink(String mnemonic) {
-    return _runWalletOperationForAccountLink(() {
-      return importWalletFromMnemonic(
-        mnemonic,
-        markBackedUp: true,
-        syncBackend: false,
-      );
+    return _runWalletOperationForAccountLink(() async {
+      final normalizedMnemonic =
+          mnemonic.trim().replaceAll(RegExp(r'\s+'), ' ');
+      if (!_solanaWalletService.validateMnemonic(normalizedMnemonic)) {
+        throw Exception('Invalid mnemonic phrase');
+      }
+      final derived =
+          await _solanaWalletService.derivePreferredKeyPair(normalizedMnemonic);
+      try {
+        _solanaWalletService.setActiveKeyPair(derived.hdKeyPair);
+      } catch (e) {
+        _walletLog('account-link import: failed to set active keypair: $e');
+      }
+      await clearExternalSigner(notify: false);
+      _setEncryptedWalletBackupDefinition(null);
+      _currentWalletAddress = derived.address;
+      SolanaWalletConnectService.instance
+          .updateActiveWalletAddress(derived.address);
+      try {
+        await _cacheMnemonic(normalizedMnemonic);
+      } catch (e) {
+        _walletLog('account-link import: mnemonic cache failed: $e');
+      }
+      try {
+        // The user typed the phrase, so they demonstrably possess the backup.
+        await markMnemonicBackedUp(walletAddress: derived.address);
+      } catch (e) {
+        _walletLog('account-link import: backup flag failed: $e');
+      }
+      _clearLastError();
+      notifyListeners();
+      return derived.address;
     });
   }
 
-  /// Connects an external wallet for account-link flows. Never calls backend
-  /// register/login and never persists wallet identity prefs.
+  /// Connects an external wallet for account-link flows: binds the external
+  /// signer locally only. Never calls backend register/login, never persists
+  /// wallet identity prefs, never loads wallet/backend data.
   Future<String> connectExternalWalletForAccountLink(BuildContext context) {
     return _runWalletOperationForAccountLink(() async {
-      final result = await connectExternalWallet(
+      final result = await ExternalWalletSignerService.instance.connect(
         context,
-        allowReplacingWalletIdentity: true,
-        syncBackend: false,
       );
-      return result.address.trim();
+      final address = result.address.trim();
+      if (address.isEmpty) {
+        await ExternalWalletSignerService.instance.disconnect();
+        throw StateError('External wallet did not return an address.');
+      }
+      final activeSignerAddress =
+          (_solanaWalletService.activePublicKey ?? '').trim();
+      if (activeSignerAddress.isNotEmpty &&
+          !WalletUtils.equals(activeSignerAddress, address)) {
+        _solanaWalletService.clearActiveKeyPair();
+        _cachedDerivedCandidate = null;
+      }
+      _externalSignerAddress = address;
+      final label = result.walletName.trim();
+      _externalSignerName = label.isEmpty ? 'External wallet' : label;
+      _currentWalletAddress = address;
+      SolanaWalletConnectService.instance.updateActiveWalletAddress(address);
+      _clearLastError();
+      notifyListeners();
+      return address;
     });
   }
 

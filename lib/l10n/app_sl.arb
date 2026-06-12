@@ -5641,12 +5641,19 @@
   "authVerifyEmailContinue": "Nadaljuj",
   "authVerifyEmailSessionFailed": "Nadaljevanje po potrditvi ni uspelo. Poskusi znova.",
 
-  "walletSetupTitle": "Nastavi denarnico",
-  "walletSetupSubtitle": "Tvoja denarnica postane tvoja javna Web3 identiteta na art.kubus.",
-  "walletSetupAccountNote": "Tvoj Google/e-poštni račun ostaja tvoj prijavni in obnovitveni račun.",
+  "walletSetupTitle": "Zaščiti svojo art.kubus identiteto",
+  "walletSetupSubtitle": "Ustvari denarnico. Nadzor ostane v tvojih rokah.",
+  "walletSetupAccountNote": "Še naprej se prijavljaš s svojim računom — denarnica postane tvoja javna identiteta.",
   "walletSetupCreateTitle": "Ustvari novo art.kubus denarnico",
   "walletSetupCreateBody": "Ustvari novo denarnico in jo poveži z računom, ki si ga pravkar ustvaril.",
   "walletSetupCreateAction": "Ustvari denarnico",
+  "walletSetupAlreadyHaveWallet": "Denarnico že imam",
+  "walletSetupSignedInAs": "Prijavljen/-a kot {name}",
+  "@walletSetupSignedInAs": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
   "walletSetupImportTitle": "Uvozi obstoječo denarnico",
   "walletSetupImportBody": "Uporabi obnovitveno frazo za denarnico, ki jo že imaš.",
   "walletSetupImportAction": "Uvozi denarnico",
@@ -5682,5 +5689,19 @@
   "walletSetupPhaseWalletReady": "Lokalna denarnica je pripravljena — pripravljam povezavo računa.",
   "walletSetupPhaseLinking": "Povezujem denarnico z računom in preverjam…",
   "walletSetupPhaseLinked": "Denarnica je povezana s tem računom.",
-  "walletSetupPhaseFailed": "Povezovanje denarnice ni uspelo. Račun ni bil spremenjen."
+  "walletSetupPhaseFailed": "Povezovanje denarnice ni uspelo. Račun ni bil spremenjen.",
+
+  "onboardingStageWelcome": "Dobrodošlica",
+  "onboardingStageAccount": "Račun",
+  "onboardingStageProfile": "Profil",
+  "onboardingStageWallet": "Denarnica",
+  "onboardingStageSecure": "Zaščita",
+  "onboardingStageEnter": "Vstopi v art.kubus",
+  "onboardingStageProgress": "Korak {current} od {total}",
+  "@onboardingStageProgress": {
+    "placeholders": {
+      "current": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  }
 }
