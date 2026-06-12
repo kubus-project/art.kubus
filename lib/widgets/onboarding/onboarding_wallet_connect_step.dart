@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:art_kubus/config/config.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/services/account_wallet_link_service.dart';
@@ -157,7 +158,7 @@ class _OnboardingWalletConnectStepState
     if (_busyAction != null) return;
     if (!AppConfig.enableWeb3 || !AppConfig.enableWalletConnect) {
       setState(() {
-        _error = 'Wallet connection is disabled right now.';
+        _error = AppLocalizations.of(context)!.walletSetupDisabledError;
       });
       return;
     }
@@ -168,9 +169,7 @@ class _OnboardingWalletConnectStepState
     if (snapshot == null) {
       setState(() {
         _phase = OnboardingWalletLinkPhase.failed;
-        _error =
-            'Your account session could not be confirmed. Go back to the '
-            'account step and sign in again — do not create a new account.';
+        _error = AppLocalizations.of(context)!.walletSetupSessionMissingError;
       });
       return;
     }
@@ -268,7 +267,7 @@ class _OnboardingWalletConnectStepState
   String _messageForError(Object error) {
     final message = error.toString().replaceFirst('Exception: ', '').trim();
     if (message.isEmpty) {
-      return 'Wallet linking failed. Try again.';
+      return AppLocalizations.of(context)!.walletSetupGenericLinkError;
     }
     return message;
   }
@@ -285,7 +284,7 @@ class _OnboardingWalletConnectStepState
         _mnemonicController.text.trim().replaceAll(RegExp(r'\s+'), ' ');
     if (mnemonic.isEmpty) {
       setState(() {
-        _error = 'Enter your recovery phrase to import a wallet.';
+        _error = AppLocalizations.of(context)!.walletSetupEnterRecoveryPhraseInline;
         _showImport = true;
       });
       return Future<void>.value();
@@ -312,6 +311,7 @@ class _OnboardingWalletConnectStepState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final isDesktop = MediaQuery.sizeOf(context).width >= 900;
     final profileProvider = context.watch<ProfileProvider>();
     final currentUser = profileProvider.currentUser;
@@ -341,7 +341,7 @@ class _OnboardingWalletConnectStepState
 
     final status = _WalletConnectStatusPanel(
       accountLabel:
-          accountLabel.isEmpty ? 'Authenticated account' : accountLabel,
+          accountLabel.isEmpty ? l10n.walletSetupStatusAuthenticatedAccount : accountLabel,
       accountEmail: accountEmail,
       accountId: profileUserId.isEmpty ? null : _truncateWallet(profileUserId),
       phase: isLinked && _phase != OnboardingWalletLinkPhase.failed
@@ -358,10 +358,9 @@ class _OnboardingWalletConnectStepState
       children: [
         _WalletConnectActionCard(
           icon: Icons.add_card_outlined,
-          title: 'Create new art.kubus wallet',
-          body:
-              'Generate a new wallet and link it to the account you just created.',
-          actionLabel: 'Create wallet',
+          title: l10n.walletSetupCreateTitle,
+          body: l10n.walletSetupCreateBody,
+          actionLabel: l10n.walletSetupCreateAction,
           busy: _busyAction == OnboardingWalletConnectAction.create,
           disabled: _busyAction != null,
           onPressed: _createWallet,
@@ -369,9 +368,9 @@ class _OnboardingWalletConnectStepState
         const SizedBox(height: KubusSpacing.sm),
         _WalletConnectActionCard(
           icon: Icons.input_outlined,
-          title: 'Import existing wallet',
-          body: 'Use a recovery phrase for a wallet you already control.',
-          actionLabel: _showImport ? 'Link imported wallet' : 'Import wallet',
+          title: l10n.walletSetupImportTitle,
+          body: l10n.walletSetupImportBody,
+          actionLabel: _showImport ? l10n.walletSetupImportLinkAction : l10n.walletSetupImportAction,
           busy: _busyAction == OnboardingWalletConnectAction.import,
           disabled: _busyAction != null,
           onPressed: _showImport
@@ -391,9 +390,9 @@ class _OnboardingWalletConnectStepState
                     minLines: 2,
                     maxLines: 4,
                     enabled: _busyAction == null,
-                    decoration: const InputDecoration(
-                      labelText: 'Recovery phrase',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: l10n.walletSetupRecoveryPhraseLabel,
+                      border: const OutlineInputBorder(),
                     ),
                   ),
                 )
@@ -402,9 +401,9 @@ class _OnboardingWalletConnectStepState
         const SizedBox(height: KubusSpacing.sm),
         _WalletConnectActionCard(
           icon: Icons.account_balance_wallet_outlined,
-          title: 'Connect external wallet',
-          body: 'Connect a browser or mobile wallet you already use.',
-          actionLabel: 'Connect wallet',
+          title: l10n.walletSetupConnectTitle,
+          body: l10n.walletSetupConnectBody,
+          actionLabel: l10n.walletSetupConnectAction,
           busy: _busyAction == OnboardingWalletConnectAction.connect,
           disabled: _busyAction != null,
           onPressed: _connectExternalWallet,
@@ -416,7 +415,7 @@ class _OnboardingWalletConnectStepState
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Set up your wallet',
+          l10n.walletSetupTitle,
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                 color: Colors.white,
                 fontWeight: FontWeight.w800,
@@ -424,7 +423,7 @@ class _OnboardingWalletConnectStepState
         ),
         const SizedBox(height: KubusSpacing.sm),
         Text(
-          'Your wallet becomes your public Web3 identity on art.kubus.',
+          l10n.walletSetupSubtitle,
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                 color: Colors.white.withValues(alpha: 0.86),
                 height: 1.42,
@@ -432,7 +431,7 @@ class _OnboardingWalletConnectStepState
         ),
         const SizedBox(height: KubusSpacing.sm),
         Text(
-          'Your Google/email account remains your login and recovery account.',
+          l10n.walletSetupAccountNote,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Colors.white.withValues(alpha: 0.74),
                 height: 1.4,
@@ -553,25 +552,26 @@ class _WalletConnectStatusPanel extends StatelessWidget {
     }
   }
 
-  String get _statusHeadline {
+  String _statusHeadline(AppLocalizations l10n) {
     switch (phase) {
       case OnboardingWalletLinkPhase.ready:
-        return 'Choose a wallet action to continue.';
+        return l10n.walletSetupPhaseReady;
       case OnboardingWalletLinkPhase.creatingWallet:
-        return 'Creating local wallet…';
+        return l10n.walletSetupPhaseCreating;
       case OnboardingWalletLinkPhase.walletReady:
-        return 'Local wallet ready — preparing account link.';
+        return l10n.walletSetupPhaseWalletReady;
       case OnboardingWalletLinkPhase.linking:
-        return 'Linking wallet to your account and verifying…';
+        return l10n.walletSetupPhaseLinking;
       case OnboardingWalletLinkPhase.linked:
-        return 'Wallet linked to this account.';
+        return l10n.walletSetupPhaseLinked;
       case OnboardingWalletLinkPhase.failed:
-        return 'Wallet link failed. Your account was not changed.';
+        return l10n.walletSetupPhaseFailed;
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     return Container(
       width: double.infinity,
@@ -594,7 +594,7 @@ class _WalletConnectStatusPanel extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Login account',
+                      l10n.walletSetupStatusLoginAccount,
                       style: Theme.of(context).textTheme.labelMedium?.copyWith(
                             color: Colors.white.withValues(alpha: 0.66),
                             fontWeight: FontWeight.w700,
@@ -617,7 +617,7 @@ class _WalletConnectStatusPanel extends StatelessWidget {
                       ),
                     if (accountId != null)
                       Text(
-                        'Account ID $accountId',
+                        l10n.walletSetupStatusAccountId(accountId!),
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: Colors.white.withValues(alpha: 0.5),
                             ),
@@ -629,29 +629,29 @@ class _WalletConnectStatusPanel extends StatelessWidget {
           ),
           const SizedBox(height: KubusSpacing.md),
           _TimelineRow(
-            label: 'Local wallet',
+            label: l10n.walletSetupStatusLocalWallet,
             detail: localWallet,
             state: _localWalletState,
           ),
           const SizedBox(height: KubusSpacing.xs),
           _TimelineRow(
-            label: 'Account link',
+            label: l10n.walletSetupStatusAccountLink,
             detail: null,
             state: _accountLinkState,
           ),
           const SizedBox(height: KubusSpacing.xs),
           _TimelineRow(
-            label: 'Verification',
+            label: l10n.walletSetupStatusVerification,
             detail: linkedWallet == null
                 ? null
-                : 'Verified linked wallet $linkedWallet',
+                : l10n.walletSetupStatusVerifiedLinked(linkedWallet!),
             state: phase == OnboardingWalletLinkPhase.linked
                 ? _TimelineState.done
                 : _verificationState,
           ),
           const SizedBox(height: KubusSpacing.sm),
           Text(
-            _statusHeadline,
+            _statusHeadline(l10n),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: phase == OnboardingWalletLinkPhase.failed
                       ? scheme.error

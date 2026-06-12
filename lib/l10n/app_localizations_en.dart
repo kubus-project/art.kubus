@@ -12693,4 +12693,129 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get selectExhibitionsDialogTitle => 'Select exhibitions';
+
+  @override
+  String get authVerifyEmailSuccessTitle => 'Email confirmed';
+
+  @override
+  String get authVerifyEmailSuccessBodyAutoContinue => 'Opening your art.kubus workspace…';
+
+  @override
+  String authVerifyEmailSuccessBodyAutoContinueWithEmail(String email) {
+    return '$email is verified. Opening your art.kubus workspace…';
+  }
+
+  @override
+  String get authVerifyEmailSuccessBodyManual => 'Your email address is verified. Continue to finish your art.kubus setup.';
+
+  @override
+  String authVerifyEmailSuccessBodyManualWithEmail(String email) {
+    return '$email is verified. Continue to finish your art.kubus setup.';
+  }
+
+  @override
+  String get authVerifyEmailContinueNow => 'Continue now';
+
+  @override
+  String get authVerifyEmailContinue => 'Continue';
+
+  @override
+  String get authVerifyEmailSessionFailed => 'Could not continue from verification. Try again.';
+
+  @override
+  String get walletSetupTitle => 'Set up your wallet';
+
+  @override
+  String get walletSetupSubtitle => 'Your wallet becomes your public Web3 identity on art.kubus.';
+
+  @override
+  String get walletSetupAccountNote => 'Your Google/email account remains your login and recovery account.';
+
+  @override
+  String get walletSetupCreateTitle => 'Create new art.kubus wallet';
+
+  @override
+  String get walletSetupCreateBody => 'Generate a new wallet and link it to the account you just created.';
+
+  @override
+  String get walletSetupCreateAction => 'Create wallet';
+
+  @override
+  String get walletSetupImportTitle => 'Import existing wallet';
+
+  @override
+  String get walletSetupImportBody => 'Use a recovery phrase for a wallet you already control.';
+
+  @override
+  String get walletSetupImportAction => 'Import wallet';
+
+  @override
+  String get walletSetupImportLinkAction => 'Link imported wallet';
+
+  @override
+  String get walletSetupConnectTitle => 'Connect external wallet';
+
+  @override
+  String get walletSetupConnectBody => 'Connect a browser or mobile wallet you already use.';
+
+  @override
+  String get walletSetupConnectAction => 'Connect wallet';
+
+  @override
+  String get walletSetupRecoveryPhraseLabel => 'Recovery phrase';
+
+  @override
+  String get walletSetupEnterRecoveryPhraseInline => 'Enter your recovery phrase to import a wallet.';
+
+  @override
+  String get walletSetupDisabledError => 'Wallet connection is disabled right now.';
+
+  @override
+  String get walletSetupSessionMissingError => 'Your account session could not be confirmed. Go back to the account step and sign in again — do not create a new account.';
+
+  @override
+  String get walletSetupGenericLinkError => 'Wallet linking failed. Try again.';
+
+  @override
+  String get walletSetupStatusLoginAccount => 'Login account';
+
+  @override
+  String walletSetupStatusAccountId(String id) {
+    return 'Account ID $id';
+  }
+
+  @override
+  String get walletSetupStatusAuthenticatedAccount => 'Authenticated account';
+
+  @override
+  String get walletSetupStatusLocalWallet => 'Local wallet';
+
+  @override
+  String get walletSetupStatusAccountLink => 'Account link';
+
+  @override
+  String get walletSetupStatusVerification => 'Verification';
+
+  @override
+  String walletSetupStatusVerifiedLinked(String wallet) {
+    return 'Verified linked wallet $wallet';
+  }
+
+  @override
+  String get walletSetupPhaseReady => 'Choose a wallet action to continue.';
+
+  @override
+  String get walletSetupPhaseCreating => 'Creating local wallet…';
+
+  @override
+  String get walletSetupPhaseWalletReady => 'Local wallet ready — preparing account link.';
+
+  @override
+  String get walletSetupPhaseLinking => 'Linking wallet to your account and verifying…';
+
+  @override
+  String get walletSetupPhaseLinked => 'Wallet linked to this account.';
+
+  @override
+  String get walletSetupPhaseFailed => 'Wallet link failed. Your account was not changed.';
 }

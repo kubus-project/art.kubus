@@ -11,6 +11,7 @@ import 'package:art_kubus/services/auth_gating_service.dart';
 import 'package:art_kubus/services/auth_onboarding_service.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/onboarding_state_service.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/widgets/app_logo.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
@@ -200,7 +201,7 @@ class _EmailVerificationSuccessScreenState
     } catch (error) {
       if (!mounted) return;
       setState(() {
-        _error = 'Could not continue from verification. Try again.';
+        _error = AppLocalizations.of(context)!.authVerifyEmailSessionFailed;
       });
     } finally {
       if (mounted) {
@@ -216,6 +217,7 @@ class _EmailVerificationSuccessScreenState
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     final email = (widget.email ?? '').trim();
 
     return AnimatedGradientBackground(
@@ -250,7 +252,7 @@ class _EmailVerificationSuccessScreenState
                       ),
                       const SizedBox(height: KubusSpacing.md),
                       Text(
-                        'Email confirmed',
+                        l10n.authVerifyEmailSuccessTitle,
                         textAlign: TextAlign.center,
                         style:
                             Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -262,11 +264,11 @@ class _EmailVerificationSuccessScreenState
                       Text(
                         widget.autoContinue
                             ? (email.isEmpty
-                                ? 'Opening your art.kubus workspace…'
-                                : '$email is verified. Opening your art.kubus workspace…')
+                                ? l10n.authVerifyEmailSuccessBodyAutoContinue
+                                : l10n.authVerifyEmailSuccessBodyAutoContinueWithEmail(email))
                             : (email.isEmpty
-                                ? 'Your email address is verified. Continue to finish your art.kubus setup.'
-                                : '$email is verified. Continue to finish your art.kubus setup.'),
+                                ? l10n.authVerifyEmailSuccessBodyManual
+                                : l10n.authVerifyEmailSuccessBodyManualWithEmail(email)),
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               color: scheme.onSurface.withValues(alpha: 0.74),
@@ -307,7 +309,7 @@ class _EmailVerificationSuccessScreenState
                               },
                         isLoading: _continuing,
                         icon: _continuing ? null : Icons.arrow_forward_rounded,
-                        label: widget.autoContinue ? 'Continue now' : 'Continue',
+                        label: widget.autoContinue ? l10n.authVerifyEmailContinueNow : l10n.authVerifyEmailContinue,
                         isFullWidth: true,
                       ),
                     ],

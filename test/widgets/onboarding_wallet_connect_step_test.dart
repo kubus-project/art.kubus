@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/providers/chat_provider.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
@@ -9,6 +10,7 @@ import 'package:art_kubus/services/onboarding_state_service.dart';
 import 'package:art_kubus/services/solana_wallet_service.dart';
 import 'package:art_kubus/widgets/onboarding/onboarding_wallet_connect_step.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -124,6 +126,12 @@ Future<_Harness> _pumpStep(
         ChangeNotifierProvider<ChatProvider>.value(value: harness.chatProvider),
       ],
       child: MaterialApp(
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: OnboardingWalletConnectStep(
             linkService: linkService,

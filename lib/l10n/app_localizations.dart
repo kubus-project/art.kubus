@@ -24034,6 +24034,240 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Select exhibitions'**
   String get selectExhibitionsDialogTitle;
+
+  /// No description provided for @authVerifyEmailSuccessTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Email confirmed'**
+  String get authVerifyEmailSuccessTitle;
+
+  /// No description provided for @authVerifyEmailSuccessBodyAutoContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Opening your art.kubus workspace…'**
+  String get authVerifyEmailSuccessBodyAutoContinue;
+
+  /// No description provided for @authVerifyEmailSuccessBodyAutoContinueWithEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'{email} is verified. Opening your art.kubus workspace…'**
+  String authVerifyEmailSuccessBodyAutoContinueWithEmail(String email);
+
+  /// No description provided for @authVerifyEmailSuccessBodyManual.
+  ///
+  /// In en, this message translates to:
+  /// **'Your email address is verified. Continue to finish your art.kubus setup.'**
+  String get authVerifyEmailSuccessBodyManual;
+
+  /// No description provided for @authVerifyEmailSuccessBodyManualWithEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'{email} is verified. Continue to finish your art.kubus setup.'**
+  String authVerifyEmailSuccessBodyManualWithEmail(String email);
+
+  /// No description provided for @authVerifyEmailContinueNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue now'**
+  String get authVerifyEmailContinueNow;
+
+  /// No description provided for @authVerifyEmailContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get authVerifyEmailContinue;
+
+  /// No description provided for @authVerifyEmailSessionFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not continue from verification. Try again.'**
+  String get authVerifyEmailSessionFailed;
+
+  /// No description provided for @walletSetupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Set up your wallet'**
+  String get walletSetupTitle;
+
+  /// No description provided for @walletSetupSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your wallet becomes your public Web3 identity on art.kubus.'**
+  String get walletSetupSubtitle;
+
+  /// No description provided for @walletSetupAccountNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Google/email account remains your login and recovery account.'**
+  String get walletSetupAccountNote;
+
+  /// No description provided for @walletSetupCreateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create new art.kubus wallet'**
+  String get walletSetupCreateTitle;
+
+  /// No description provided for @walletSetupCreateBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate a new wallet and link it to the account you just created.'**
+  String get walletSetupCreateBody;
+
+  /// No description provided for @walletSetupCreateAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Create wallet'**
+  String get walletSetupCreateAction;
+
+  /// No description provided for @walletSetupImportTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Import existing wallet'**
+  String get walletSetupImportTitle;
+
+  /// No description provided for @walletSetupImportBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Use a recovery phrase for a wallet you already control.'**
+  String get walletSetupImportBody;
+
+  /// No description provided for @walletSetupImportAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Import wallet'**
+  String get walletSetupImportAction;
+
+  /// No description provided for @walletSetupImportLinkAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Link imported wallet'**
+  String get walletSetupImportLinkAction;
+
+  /// No description provided for @walletSetupConnectTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect external wallet'**
+  String get walletSetupConnectTitle;
+
+  /// No description provided for @walletSetupConnectBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect a browser or mobile wallet you already use.'**
+  String get walletSetupConnectBody;
+
+  /// No description provided for @walletSetupConnectAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect wallet'**
+  String get walletSetupConnectAction;
+
+  /// No description provided for @walletSetupRecoveryPhraseLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Recovery phrase'**
+  String get walletSetupRecoveryPhraseLabel;
+
+  /// No description provided for @walletSetupEnterRecoveryPhraseInline.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your recovery phrase to import a wallet.'**
+  String get walletSetupEnterRecoveryPhraseInline;
+
+  /// No description provided for @walletSetupDisabledError.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet connection is disabled right now.'**
+  String get walletSetupDisabledError;
+
+  /// No description provided for @walletSetupSessionMissingError.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account session could not be confirmed. Go back to the account step and sign in again — do not create a new account.'**
+  String get walletSetupSessionMissingError;
+
+  /// No description provided for @walletSetupGenericLinkError.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet linking failed. Try again.'**
+  String get walletSetupGenericLinkError;
+
+  /// No description provided for @walletSetupStatusLoginAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Login account'**
+  String get walletSetupStatusLoginAccount;
+
+  /// No description provided for @walletSetupStatusAccountId.
+  ///
+  /// In en, this message translates to:
+  /// **'Account ID {id}'**
+  String walletSetupStatusAccountId(String id);
+
+  /// No description provided for @walletSetupStatusAuthenticatedAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Authenticated account'**
+  String get walletSetupStatusAuthenticatedAccount;
+
+  /// No description provided for @walletSetupStatusLocalWallet.
+  ///
+  /// In en, this message translates to:
+  /// **'Local wallet'**
+  String get walletSetupStatusLocalWallet;
+
+  /// No description provided for @walletSetupStatusAccountLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Account link'**
+  String get walletSetupStatusAccountLink;
+
+  /// No description provided for @walletSetupStatusVerification.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification'**
+  String get walletSetupStatusVerification;
+
+  /// No description provided for @walletSetupStatusVerifiedLinked.
+  ///
+  /// In en, this message translates to:
+  /// **'Verified linked wallet {wallet}'**
+  String walletSetupStatusVerifiedLinked(String wallet);
+
+  /// No description provided for @walletSetupPhaseReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a wallet action to continue.'**
+  String get walletSetupPhaseReady;
+
+  /// No description provided for @walletSetupPhaseCreating.
+  ///
+  /// In en, this message translates to:
+  /// **'Creating local wallet…'**
+  String get walletSetupPhaseCreating;
+
+  /// No description provided for @walletSetupPhaseWalletReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Local wallet ready — preparing account link.'**
+  String get walletSetupPhaseWalletReady;
+
+  /// No description provided for @walletSetupPhaseLinking.
+  ///
+  /// In en, this message translates to:
+  /// **'Linking wallet to your account and verifying…'**
+  String get walletSetupPhaseLinking;
+
+  /// No description provided for @walletSetupPhaseLinked.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet linked to this account.'**
+  String get walletSetupPhaseLinked;
+
+  /// No description provided for @walletSetupPhaseFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet link failed. Your account was not changed.'**
+  String get walletSetupPhaseFailed;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

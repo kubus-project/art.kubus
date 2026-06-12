@@ -5611,5 +5611,67 @@
   "exhibitionCreatorNoEventsToLink": "Ne upravljaš še nobenega dogodka.",
   "exhibitionCreatorRelationTypeLabel": "Vrsta povezave",
   "selectEventsDialogTitle": "Izberi dogodke",
-  "selectExhibitionsDialogTitle": "Izberi razstave"
+  "selectExhibitionsDialogTitle": "Izberi razstave",
+
+  "authVerifyEmailSuccessTitle": "E-pošta potrjena",
+  "authVerifyEmailSuccessBodyAutoContinue": "Odpiramo tvoje art.kubus okolje…",
+  "authVerifyEmailSuccessBodyAutoContinueWithEmail": "{email} je potrjen. Odpiramo tvoje art.kubus okolje…",
+  "@authVerifyEmailSuccessBodyAutoContinueWithEmail": {
+    "placeholders": {
+      "email": { "type": "String" }
+    }
+  },
+  "authVerifyEmailSuccessBodyManual": "Tvoj e-poštni naslov je potrjen. Nadaljuj z nastavitvijo art.kubus računa.",
+  "authVerifyEmailSuccessBodyManualWithEmail": "{email} je potrjen. Nadaljuj z nastavitvijo art.kubus računa.",
+  "@authVerifyEmailSuccessBodyManualWithEmail": {
+    "placeholders": {
+      "email": { "type": "String" }
+    }
+  },
+  "authVerifyEmailContinueNow": "Nadaljuj zdaj",
+  "authVerifyEmailContinue": "Nadaljuj",
+  "authVerifyEmailSessionFailed": "Nadaljevanje po potrditvi ni uspelo. Poskusi znova.",
+
+  "walletSetupTitle": "Nastavi denarnico",
+  "walletSetupSubtitle": "Tvoja denarnica postane tvoja javna Web3 identiteta na art.kubus.",
+  "walletSetupAccountNote": "Tvoj Google/e-poštni račun ostaja tvoj prijavni in obnovitveni račun.",
+  "walletSetupCreateTitle": "Ustvari novo art.kubus denarnico",
+  "walletSetupCreateBody": "Ustvari novo denarnico in jo poveži z računom, ki si ga pravkar ustvaril.",
+  "walletSetupCreateAction": "Ustvari denarnico",
+  "walletSetupImportTitle": "Uvozi obstoječo denarnico",
+  "walletSetupImportBody": "Uporabi obnovitveno frazo za denarnico, ki jo že imaš.",
+  "walletSetupImportAction": "Uvozi denarnico",
+  "walletSetupImportLinkAction": "Poveži uvoženo denarnico",
+  "walletSetupConnectTitle": "Poveži zunanjo denarnico",
+  "walletSetupConnectBody": "Poveži brskalniško ali mobilno denarnico, ki jo že uporabljaš.",
+  "walletSetupConnectAction": "Poveži denarnico",
+  "walletSetupRecoveryPhraseLabel": "Obnovitvena fraza",
+  "walletSetupEnterRecoveryPhraseInline": "Vnesi obnovitveno frazo za uvoz denarnice.",
+  "walletSetupDisabledError": "Povezava denarnice je trenutno onemogočena.",
+  "walletSetupSessionMissingError": "Seje tvojega računa ni bilo mogoče potrditi. Pojdi korak nazaj in se znova prijavi — ne ustvarjaj novega računa.",
+  "walletSetupGenericLinkError": "Povezovanje denarnice ni uspelo. Poskusi znova.",
+
+  "walletSetupStatusLoginAccount": "Prijavni račun",
+  "walletSetupStatusAccountId": "ID računa {id}",
+  "@walletSetupStatusAccountId": {
+    "placeholders": {
+      "id": { "type": "String" }
+    }
+  },
+  "walletSetupStatusAuthenticatedAccount": "Preverjen račun",
+  "walletSetupStatusLocalWallet": "Lokalna denarnica",
+  "walletSetupStatusAccountLink": "Povezava računa",
+  "walletSetupStatusVerification": "Preverjanje",
+  "walletSetupStatusVerifiedLinked": "Potrjena povezana denarnica {wallet}",
+  "@walletSetupStatusVerifiedLinked": {
+    "placeholders": {
+      "wallet": { "type": "String" }
+    }
+  },
+  "walletSetupPhaseReady": "Izberi dejanje za nadaljevanje.",
+  "walletSetupPhaseCreating": "Ustvarjam lokalno denarnico…",
+  "walletSetupPhaseWalletReady": "Lokalna denarnica je pripravljena — pripravljam povezavo računa.",
+  "walletSetupPhaseLinking": "Povezujem denarnico z računom in preverjam…",
+  "walletSetupPhaseLinked": "Denarnica je povezana s tem računom.",
+  "walletSetupPhaseFailed": "Povezovanje denarnice ni uspelo. Račun ni bil spremenjen."
 }

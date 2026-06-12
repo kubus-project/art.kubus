@@ -12731,4 +12731,129 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get selectExhibitionsDialogTitle => 'Izberi razstave';
+
+  @override
+  String get authVerifyEmailSuccessTitle => 'E-pošta potrjena';
+
+  @override
+  String get authVerifyEmailSuccessBodyAutoContinue => 'Odpiramo tvoje art.kubus okolje…';
+
+  @override
+  String authVerifyEmailSuccessBodyAutoContinueWithEmail(String email) {
+    return '$email je potrjen. Odpiramo tvoje art.kubus okolje…';
+  }
+
+  @override
+  String get authVerifyEmailSuccessBodyManual => 'Tvoj e-poštni naslov je potrjen. Nadaljuj z nastavitvijo art.kubus računa.';
+
+  @override
+  String authVerifyEmailSuccessBodyManualWithEmail(String email) {
+    return '$email je potrjen. Nadaljuj z nastavitvijo art.kubus računa.';
+  }
+
+  @override
+  String get authVerifyEmailContinueNow => 'Nadaljuj zdaj';
+
+  @override
+  String get authVerifyEmailContinue => 'Nadaljuj';
+
+  @override
+  String get authVerifyEmailSessionFailed => 'Nadaljevanje po potrditvi ni uspelo. Poskusi znova.';
+
+  @override
+  String get walletSetupTitle => 'Nastavi denarnico';
+
+  @override
+  String get walletSetupSubtitle => 'Tvoja denarnica postane tvoja javna Web3 identiteta na art.kubus.';
+
+  @override
+  String get walletSetupAccountNote => 'Tvoj Google/e-poštni račun ostaja tvoj prijavni in obnovitveni račun.';
+
+  @override
+  String get walletSetupCreateTitle => 'Ustvari novo art.kubus denarnico';
+
+  @override
+  String get walletSetupCreateBody => 'Ustvari novo denarnico in jo poveži z računom, ki si ga pravkar ustvaril.';
+
+  @override
+  String get walletSetupCreateAction => 'Ustvari denarnico';
+
+  @override
+  String get walletSetupImportTitle => 'Uvozi obstoječo denarnico';
+
+  @override
+  String get walletSetupImportBody => 'Uporabi obnovitveno frazo za denarnico, ki jo že imaš.';
+
+  @override
+  String get walletSetupImportAction => 'Uvozi denarnico';
+
+  @override
+  String get walletSetupImportLinkAction => 'Poveži uvoženo denarnico';
+
+  @override
+  String get walletSetupConnectTitle => 'Poveži zunanjo denarnico';
+
+  @override
+  String get walletSetupConnectBody => 'Poveži brskalniško ali mobilno denarnico, ki jo že uporabljaš.';
+
+  @override
+  String get walletSetupConnectAction => 'Poveži denarnico';
+
+  @override
+  String get walletSetupRecoveryPhraseLabel => 'Obnovitvena fraza';
+
+  @override
+  String get walletSetupEnterRecoveryPhraseInline => 'Vnesi obnovitveno frazo za uvoz denarnice.';
+
+  @override
+  String get walletSetupDisabledError => 'Povezava denarnice je trenutno onemogočena.';
+
+  @override
+  String get walletSetupSessionMissingError => 'Seje tvojega računa ni bilo mogoče potrditi. Pojdi korak nazaj in se znova prijavi — ne ustvarjaj novega računa.';
+
+  @override
+  String get walletSetupGenericLinkError => 'Povezovanje denarnice ni uspelo. Poskusi znova.';
+
+  @override
+  String get walletSetupStatusLoginAccount => 'Prijavni račun';
+
+  @override
+  String walletSetupStatusAccountId(String id) {
+    return 'ID računa $id';
+  }
+
+  @override
+  String get walletSetupStatusAuthenticatedAccount => 'Preverjen račun';
+
+  @override
+  String get walletSetupStatusLocalWallet => 'Lokalna denarnica';
+
+  @override
+  String get walletSetupStatusAccountLink => 'Povezava računa';
+
+  @override
+  String get walletSetupStatusVerification => 'Preverjanje';
+
+  @override
+  String walletSetupStatusVerifiedLinked(String wallet) {
+    return 'Potrjena povezana denarnica $wallet';
+  }
+
+  @override
+  String get walletSetupPhaseReady => 'Izberi dejanje za nadaljevanje.';
+
+  @override
+  String get walletSetupPhaseCreating => 'Ustvarjam lokalno denarnico…';
+
+  @override
+  String get walletSetupPhaseWalletReady => 'Lokalna denarnica je pripravljena — pripravljam povezavo računa.';
+
+  @override
+  String get walletSetupPhaseLinking => 'Povezujem denarnico z računom in preverjam…';
+
+  @override
+  String get walletSetupPhaseLinked => 'Denarnica je povezana s tem računom.';
+
+  @override
+  String get walletSetupPhaseFailed => 'Povezovanje denarnice ni uspelo. Račun ni bil spremenjen.';
 }
