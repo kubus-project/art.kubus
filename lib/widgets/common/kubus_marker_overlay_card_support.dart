@@ -64,33 +64,49 @@ class _OverlayIconButton extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final radius = BorderRadius.circular(KubusRadius.sm);
 
-    return Tooltip(
-      message: tooltip,
-      child: MouseRegion(
-        cursor:
-            onTap == null ? SystemMouseCursors.basic : SystemMouseCursors.click,
-        child: buildKubusMapGlassSurface(
-          context: context,
-          kind: KubusMapGlassSurfaceKind.button,
-          borderRadius: radius,
-          tintBase: scheme.surface,
-          padding: EdgeInsets.zero,
-          border: Border.all(
-            color: scheme.outlineVariant.withValues(alpha: 0.35),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: scheme.shadow.withValues(alpha: 0.12),
-              blurRadius: 14,
-              offset: const Offset(0, 8),
-            ),
-          ],
-          onTap: onTap,
-          child: SizedBox(
-            width: 34,
-            height: 34,
-            child: Center(
-              child: Icon(icon, size: 16, color: scheme.onSurface),
+    // Visual chrome stays compact (34px) while the actual tap target is
+    // expanded to the minimum interactive hit area.
+    final visual = buildKubusMapGlassSurface(
+      context: context,
+      kind: KubusMapGlassSurfaceKind.button,
+      borderRadius: radius,
+      tintBase: scheme.surface,
+      padding: EdgeInsets.zero,
+      border: Border.all(
+        color: scheme.outlineVariant.withValues(alpha: 0.35),
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: scheme.shadow.withValues(alpha: 0.12),
+          blurRadius: 14,
+          offset: const Offset(0, 8),
+        ),
+      ],
+      child: SizedBox(
+        width: 34,
+        height: 34,
+        child: Center(
+          child: Icon(icon, size: 16, color: scheme.onSurface),
+        ),
+      ),
+    );
+
+    return Semantics(
+      label: tooltip,
+      button: true,
+      child: Tooltip(
+        message: tooltip,
+        child: MouseRegion(
+          cursor: onTap == null
+              ? SystemMouseCursors.basic
+              : SystemMouseCursors.click,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: onTap,
+            child: SizedBox(
+              width: KubusHeaderMetrics.actionHitArea,
+              height: KubusHeaderMetrics.actionHitArea,
+              child: Center(child: visual),
             ),
           ),
         ),
@@ -248,35 +264,64 @@ class _OverlayPager extends StatelessWidget {
   final VoidCallback? onNext;
   final ValueChanged<int>? onSelectIndex;
 
+  Widget _buildArrow(
+    BuildContext context, {
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback? onTap,
+    required Color color,
+  }) {
+    return Semantics(
+      label: tooltip,
+      button: true,
+      child: Tooltip(
+        message: tooltip,
+        child: MouseRegion(
+          cursor:
+              onTap == null ? SystemMouseCursors.basic : SystemMouseCursors.click,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: onTap,
+            child: SizedBox(
+              width: KubusHeaderMetrics.actionHitArea,
+              height: KubusHeaderMetrics.actionHitArea - KubusSpacing.xs,
+              child: Center(
+                child: Icon(
+                  icon,
+                  size: 17,
+                  color: onTap == null ? color.withValues(alpha: 0.35) : color,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final animationTheme = context.animationTheme;
+    final materialL10n = MaterialLocalizations.of(context);
     final effectiveArrowColor = arrowColor.withValues(alpha: 0.74);
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       mainAxisSize: MainAxisSize.min,
       children: [
-        MouseRegion(
-          cursor: onPrevious == null
-              ? SystemMouseCursors.basic
-              : SystemMouseCursors.click,
-          child: GestureDetector(
-            onTap: onPrevious,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6.0),
-              child: Icon(
-                Icons.chevron_left,
-                size: 17,
-                color: effectiveArrowColor,
-              ),
-            ),
-          ),
+        _buildArrow(
+          context,
+          icon: Icons.chevron_left,
+          tooltip: materialL10n.previousPageTooltip,
+          onTap: onPrevious,
+          color: effectiveArrowColor,
         ),
         ...List.generate(
           count,
           (dotIndex) {
             final isActive = index == dotIndex;
             final dot = AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
+              duration: animationTheme.short,
+              curve: animationTheme.defaultCurve,
               width: isActive ? 11 : 5,
               height: 5,
               decoration: BoxDecoration(
@@ -306,21 +351,12 @@ class _OverlayPager extends StatelessWidget {
             );
           },
         ),
-        MouseRegion(
-          cursor: onNext == null
-              ? SystemMouseCursors.basic
-              : SystemMouseCursors.click,
-          child: GestureDetector(
-            onTap: onNext,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6.0),
-              child: Icon(
-                Icons.chevron_right,
-                size: 17,
-                color: effectiveArrowColor,
-              ),
-            ),
-          ),
+        _buildArrow(
+          context,
+          icon: Icons.chevron_right,
+          tooltip: materialL10n.nextPageTooltip,
+          onTap: onNext,
+          color: effectiveArrowColor,
         ),
       ],
     );

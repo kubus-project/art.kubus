@@ -9,7 +9,6 @@ import '../../../models/artwork.dart';
 import '../../../models/map_marker_subject.dart';
 import '../../../utils/design_tokens.dart';
 import '../../creator/creator_kit.dart';
-import '../../glass_components.dart';
 
 class KubusMarkerFormHeader extends StatelessWidget {
   const KubusMarkerFormHeader({
@@ -54,6 +53,7 @@ class KubusMarkerFormHeader extends StatelessWidget {
         ),
         IconButton(
           icon: const Icon(Icons.close),
+          tooltip: l10n.commonClose,
           onPressed: onClose,
         ),
       ],
@@ -147,7 +147,7 @@ class KubusMarkerFormBody extends StatelessWidget {
                 color: scheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: KubusSpacing.md),
             KubusMarkerSubjectSection(
               selectedSubjectType: selectedSubjectType,
               allowedTypes: allowedTypes,
@@ -157,18 +157,18 @@ class KubusMarkerFormBody extends StatelessWidget {
               onSubjectTypeChanged: onSubjectTypeChanged,
               onSubjectChanged: onSubjectChanged,
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: KubusSpacing.md),
             if (showOptionalArAsset) ...[
               KubusMarkerFormSectionTitle(
                 title: l10n.mapMarkerDialogLinkedArAssetTitle,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: KubusSpacing.sm),
               KubusLinkedArAssetSection(
                 arEnabledArtworks: arEnabledArtworks,
                 selectedArAsset: selectedArAsset,
                 onArAssetChanged: onArAssetChanged,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: KubusSpacing.md),
             ],
             KubusMarkerFormTextField(
               controller: titleController,
@@ -183,11 +183,10 @@ class KubusMarkerFormBody extends StatelessWidget {
                 return null;
               },
             ),
-            const SizedBox(height: 12),
-            KubusMarkerFormTextField(
+            const SizedBox(height: KubusSpacing.md),
+            CreatorDescriptionTextField(
               controller: descriptionController,
-              labelText: l10n.mapMarkerDialogDescriptionLabel,
-              maxLines: 3,
+              label: l10n.mapMarkerDialogDescriptionLabel,
               validator: (value) {
                 if (value == null || value.trim().isEmpty) {
                   return l10n.mapMarkerDialogEnterDescriptionError;
@@ -198,12 +197,12 @@ class KubusMarkerFormBody extends StatelessWidget {
                 return null;
               },
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: KubusSpacing.md),
             if (isStreetArtSelection) ...[
               KubusMarkerFormSectionTitle(
                 title: l10n.mapMarkerDialogCoverImageTitle,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: KubusSpacing.sm),
               KubusCoverImageSection(
                 imageBytes: coverImageBytes,
                 uploadLabel: l10n.mapMarkerDialogUploadCover,
@@ -212,39 +211,40 @@ class KubusMarkerFormBody extends StatelessWidget {
                 onPick: onPickCover,
                 onRemove: onRemoveCover,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: KubusSpacing.sm),
               Text(
                 l10n.mapMarkerDialogStreetArtCoverRequiredHint,
                 style: KubusTypography.textTheme.bodySmall?.copyWith(
                   color: scheme.onSurface.withValues(alpha: 0.72),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: KubusSpacing.md),
             ],
             KubusMarkerFormTextField(
               controller: categoryController,
               labelText: l10n.mapMarkerDialogCategoryLabel,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: KubusSpacing.md),
             KubusMarkerMarkerTypeSection(
               selectedMarkerType: selectedMarkerType,
               allowedMarkerTypes: allowedMarkerTypes,
               onMarkerTypeChanged: onMarkerTypeChanged,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: KubusSpacing.md),
             KubusMarkerFormSwitchTile(
               title: l10n.mapMarkerDialogPublicMarkerTitle,
               subtitle: l10n.mapMarkerDialogPublicMarkerSubtitle,
               value: isPublic,
               onChanged: onPublicChanged,
             ),
+            const SizedBox(height: KubusSpacing.sm),
             KubusMarkerFormSwitchTile(
               title: l10n.mapMarkerCommunityLabel,
               value: isCommunity,
               onChanged: onCommunityChanged,
             ),
             if (allowManualPosition) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: KubusSpacing.md),
               KubusMarkerPositionRow(
                 latController: latController,
                 lngController: lngController,
@@ -254,6 +254,47 @@ class KubusMarkerFormBody extends StatelessWidget {
             ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Creator-kit aligned styling for the form's dropdowns so they read as the
+/// same system as [CreatorTextField] / [CreatorDropdown].
+InputDecoration _creatorDropdownDecoration(BuildContext context) {
+  final scheme = Theme.of(context).colorScheme;
+  OutlineInputBorder border(Color color) => OutlineInputBorder(
+        borderRadius: BorderRadius.circular(KubusRadius.md),
+        borderSide: BorderSide(color: color),
+      );
+  return InputDecoration(
+    isDense: true,
+    filled: true,
+    fillColor: scheme.onSurface.withValues(alpha: 0.04),
+    contentPadding: const EdgeInsets.symmetric(
+      horizontal: KubusSpacing.sm + KubusSpacing.xs,
+      vertical: KubusSpacing.sm + KubusSpacing.xs,
+    ),
+    border: border(scheme.outline.withValues(alpha: 0.25)),
+    enabledBorder: border(scheme.outline.withValues(alpha: 0.25)),
+    focusedBorder: border(scheme.primary),
+    errorBorder: border(scheme.error),
+  );
+}
+
+class _CreatorFieldLabel extends StatelessWidget {
+  const _CreatorFieldLabel({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: KubusSpacing.xs),
+      child: Text(
+        label,
+        style: KubusTextStyles.detailLabel.copyWith(color: scheme.onSurface),
       ),
     );
   }
@@ -286,17 +327,11 @@ class KubusMarkerSubjectSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        _CreatorFieldLabel(label: l10n.mapMarkerDialogSubjectTypeLabel),
         DropdownButtonFormField<MarkerSubjectType>(
           isExpanded: true,
           initialValue: selectedSubjectType,
-          decoration: InputDecoration(
-            labelText: l10n.mapMarkerDialogSubjectTypeLabel,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(KubusRadius.sm),
-            ),
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          ),
+          decoration: _creatorDropdownDecoration(context),
           items: MarkerSubjectType.values
               .where(allowedTypes.contains)
               .map(
@@ -312,37 +347,53 @@ class KubusMarkerSubjectSection extends StatelessWidget {
             }
           },
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: KubusSpacing.md),
         if (subjectSelectionRequired)
-          if ((subjectOptionsByType[selectedSubjectType] ?? []).isNotEmpty)
+          if ((subjectOptionsByType[selectedSubjectType] ?? []).isNotEmpty) ...[
+            _CreatorFieldLabel(
+              label: l10n.mapMarkerDialogSubjectRequiredLabel(
+                _subjectTypeLabel(l10n, selectedSubjectType),
+              ),
+            ),
             DropdownButtonFormField<MarkerSubjectOption>(
               isExpanded: true,
               initialValue: selectedSubject,
-              decoration: InputDecoration(
-                labelText: l10n.mapMarkerDialogSubjectRequiredLabel(
-                  _subjectTypeLabel(l10n, selectedSubjectType),
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(KubusRadius.sm),
-                ),
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              ),
+              decoration: _creatorDropdownDecoration(context),
+              // Closed field stays single-line; the menu keeps the richer
+              // two-line title + subtitle entries.
+              selectedItemBuilder: (context) =>
+                  (subjectOptionsByType[selectedSubjectType] ?? [])
+                      .map(
+                        (option) => Align(
+                          alignment: AlignmentDirectional.centerStart,
+                          child: Text(
+                            option.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      )
+                      .toList(),
               items: (subjectOptionsByType[selectedSubjectType] ?? [])
                   .map(
                     (option) => DropdownMenuItem<MarkerSubjectOption>(
                       value: option,
                       child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             option.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: KubusTypography.textTheme.titleSmall
                                 ?.copyWith(fontWeight: FontWeight.w600),
                           ),
                           if (option.subtitle.isNotEmpty)
                             Text(
                               option.subtitle,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: KubusTypography.textTheme.bodySmall
                                   ?.copyWith(fontSize: 12),
                             ),
@@ -356,8 +407,8 @@ class KubusMarkerSubjectSection extends StatelessWidget {
                   onSubjectChanged(value);
                 }
               },
-            )
-          else
+            ),
+          ] else
             KubusMarkerFormHintBox(
               text: l10n.mapMarkerDialogNoSubjectsAvailable(
                 _subjectTypeLabel(l10n, selectedSubjectType),
@@ -399,18 +450,16 @@ class KubusLinkedArAssetSection extends StatelessWidget {
     return DropdownButtonFormField<Artwork>(
       isExpanded: true,
       initialValue: selectedArAsset,
-      decoration: InputDecoration(
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(KubusRadius.sm),
-        ),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      ),
+      decoration: _creatorDropdownDecoration(context),
       items: arEnabledArtworks
           .map(
             (artwork) => DropdownMenuItem<Artwork>(
               value: artwork,
-              child: Text(artwork.title),
+              child: Text(
+                artwork.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           )
           .toList(),
@@ -466,30 +515,30 @@ class KubusMarkerMarkerTypeSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
-    return DropdownButtonFormField<ArtMarkerType>(
-      isExpanded: true,
-      initialValue: selectedMarkerType,
-      decoration: InputDecoration(
-        labelText: l10n.mapMarkerDialogMarkerLayerLabel,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(KubusRadius.sm),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _CreatorFieldLabel(label: l10n.mapMarkerDialogMarkerLayerLabel),
+        DropdownButtonFormField<ArtMarkerType>(
+          isExpanded: true,
+          initialValue: selectedMarkerType,
+          decoration: _creatorDropdownDecoration(context),
+          items: ArtMarkerType.values
+              .where(allowedMarkerTypes.contains)
+              .map(
+                (type) => DropdownMenuItem<ArtMarkerType>(
+                  value: type,
+                  child: Text(_describeMarkerType(l10n, type)),
+                ),
+              )
+              .toList(),
+          onChanged: (value) {
+            if (value != null) {
+              onMarkerTypeChanged(value);
+            }
+          },
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      ),
-      items: ArtMarkerType.values
-          .where(allowedMarkerTypes.contains)
-          .map(
-            (type) => DropdownMenuItem<ArtMarkerType>(
-              value: type,
-              child: Text(_describeMarkerType(l10n, type)),
-            ),
-          )
-          .toList(),
-      onChanged: (value) {
-        if (value != null) {
-          onMarkerTypeChanged(value);
-        }
-      },
+      ],
     );
   }
 }
@@ -510,20 +559,9 @@ class KubusMarkerFormSwitchTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SwitchListTile(
-      contentPadding: EdgeInsets.zero,
-      title: Text(
-        title,
-        style: KubusTypography.textTheme.titleSmall
-            ?.copyWith(fontWeight: FontWeight.w600),
-      ),
-      subtitle: subtitle == null
-          ? null
-          : Text(
-              subtitle!,
-              style: KubusTypography.textTheme.bodySmall
-                  ?.copyWith(fontSize: 12),
-            ),
+    return CreatorSwitchTile(
+      title: title,
+      subtitle: subtitle,
       value: value,
       onChanged: onChanged,
     );
@@ -579,7 +617,7 @@ class KubusMarkerPositionRow extends StatelessWidget {
             },
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: KubusSpacing.sm),
         if (mapCenter != null && onUseMapCenter != null)
           Align(
             alignment: Alignment.centerLeft,
@@ -607,15 +645,18 @@ class KubusMarkerFormFieldRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(child: first),
-        const SizedBox(width: 12),
+        const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
         Expanded(child: second),
       ],
     );
   }
 }
 
+/// Thin adapter so the map marker form uses the same field styling as the
+/// creator kit ([CreatorTextField]) without changing controllers/validators.
 class KubusMarkerFormTextField extends StatelessWidget {
   const KubusMarkerFormTextField({
     super.key,
@@ -634,16 +675,11 @@ class KubusMarkerFormTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextFormField(
+    return CreatorTextField(
       controller: controller,
+      label: labelText,
       maxLines: maxLines,
       keyboardType: keyboardType,
-      decoration: InputDecoration(
-        labelText: labelText,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(KubusRadius.sm),
-        ),
-      ),
       validator: validator,
     );
   }
@@ -659,20 +695,7 @@ class KubusMarkerFormHintBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return LiquidGlassCard(
-      margin: EdgeInsets.zero,
-      padding: const EdgeInsets.all(KubusSpacing.sm),
-      borderRadius: KubusRadius.circular(KubusRadius.sm),
-      child: Text(
-        text,
-        style: KubusTypography.textTheme.bodyMedium?.copyWith(
-          fontSize: 13,
-          color: scheme.onSurface.withValues(alpha: 0.78),
-        ),
-      ),
-    );
+    return CreatorInfoBox(text: text);
   }
 }
 
@@ -690,27 +713,11 @@ class KubusMarkerFormActionsRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.end,
-      children: [
-        TextButton(
-          onPressed: onCancel,
-          child: Text(
-            l10n.commonCancel,
-            style: KubusTypography.textTheme.labelLarge,
-          ),
-        ),
-        const SizedBox(width: 8),
-        ElevatedButton.icon(
-          onPressed: onSubmit,
-          icon: const Icon(Icons.add_location_alt),
-          label: Text(
-            l10n.mapMarkerDialogCreateButton,
-            style: KubusTypography.textTheme.labelLarge
-                ?.copyWith(color: Colors.white),
-          ),
-        ),
-      ],
+    return CreatorFooterActions(
+      primaryLabel: l10n.mapMarkerDialogCreateButton,
+      onPrimary: onSubmit,
+      secondaryLabel: l10n.commonCancel,
+      onSecondary: onCancel,
     );
   }
 }

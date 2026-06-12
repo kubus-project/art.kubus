@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../providers/glass_capabilities_provider.dart';
+import '../../utils/app_animations.dart';
 import '../../utils/design_tokens.dart';
 import '../glass_components.dart';
 
@@ -83,8 +84,8 @@ class KubusGlassIconButton extends StatelessWidget {
         borderRadius: radius,
         onTap: onPressed,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 140),
-          curve: Curves.easeOutCubic,
+          duration: context.animationTheme.short,
+          curve: context.animationTheme.defaultCurve,
           width: resolvedSize,
           height: resolvedSize,
           decoration: BoxDecoration(

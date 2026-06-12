@@ -607,7 +607,9 @@ class CreatorTextField extends StatelessWidget {
         Text(
           label,
           style: KubusTextStyles.detailLabel.copyWith(
-            color: scheme.onSurface,
+            color: enabled
+                ? scheme.onSurface
+                : scheme.onSurface.withValues(alpha: 0.55),
           ),
         ),
         const SizedBox(height: KubusSpacing.xs),
@@ -850,7 +852,9 @@ class CreatorDropdown<T> extends StatelessWidget {
         Text(
           label,
           style: KubusTextStyles.detailLabel.copyWith(
-            color: scheme.onSurface,
+            color: enabled
+                ? scheme.onSurface
+                : scheme.onSurface.withValues(alpha: 0.55),
           ),
         ),
         const SizedBox(height: KubusSpacing.xs),
@@ -859,10 +863,10 @@ class CreatorDropdown<T> extends StatelessWidget {
             horizontal: KubusSpacing.sm + KubusSpacing.xs,
           ),
           decoration: BoxDecoration(
-            color: scheme.onSurface.withValues(alpha: 0.04),
+            color: scheme.onSurface.withValues(alpha: enabled ? 0.04 : 0.02),
             borderRadius: BorderRadius.circular(KubusRadius.md),
             border: Border.all(
-              color: scheme.outline.withValues(alpha: 0.25),
+              color: scheme.outline.withValues(alpha: enabled ? 0.25 : 0.15),
             ),
           ),
           child: DropdownButton<T>(
@@ -870,7 +874,11 @@ class CreatorDropdown<T> extends StatelessWidget {
             isExpanded: true,
             underline: const SizedBox.shrink(),
             dropdownColor: scheme.surfaceContainerHighest,
-            style: TextStyle(color: scheme.onSurface),
+            style: TextStyle(
+              color: enabled
+                  ? scheme.onSurface
+                  : scheme.onSurface.withValues(alpha: 0.55),
+            ),
             items: items,
             onChanged: enabled ? onChanged : null,
           ),
@@ -905,14 +913,20 @@ class CreatorSwitchTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final accent = activeColor ?? scheme.primary;
+    final enabled = onChanged != null;
+    final titleColor = enabled
+        ? scheme.onSurface
+        : scheme.onSurface.withValues(alpha: 0.55);
+    final subtitleColor =
+        scheme.onSurface.withValues(alpha: enabled ? 0.6 : 0.4);
 
     return Container(
       padding: const EdgeInsets.all(KubusSpacing.md),
       decoration: BoxDecoration(
-        color: scheme.onSurface.withValues(alpha: 0.04),
+        color: scheme.onSurface.withValues(alpha: enabled ? 0.04 : 0.02),
         borderRadius: BorderRadius.circular(KubusRadius.md),
         border: Border.all(
-          color: scheme.outline.withValues(alpha: 0.12),
+          color: scheme.outline.withValues(alpha: enabled ? 0.12 : 0.08),
         ),
       ),
       child: Row(
@@ -924,7 +938,7 @@ class CreatorSwitchTile extends StatelessWidget {
                 Text(
                   title,
                   style: KubusTextStyles.detailLabel.copyWith(
-                    color: scheme.onSurface,
+                    color: titleColor,
                   ),
                 ),
                 if (subtitle != null)
@@ -933,7 +947,7 @@ class CreatorSwitchTile extends StatelessWidget {
                     child: Text(
                       subtitle!,
                       style: KubusTextStyles.detailCaption.copyWith(
-                        color: scheme.onSurface.withValues(alpha: 0.6),
+                        color: subtitleColor,
                       ),
                     ),
                   ),
@@ -1058,6 +1072,7 @@ class CreatorDateField extends StatelessWidget {
   final VoidCallback onPick;
   final VoidCallback onClear;
   final String notSetLabel;
+  final String clearTooltip;
 
   const CreatorDateField({
     super.key,
@@ -1066,6 +1081,7 @@ class CreatorDateField extends StatelessWidget {
     required this.onPick,
     required this.onClear,
     this.notSetLabel = 'Not set',
+    this.clearTooltip = 'Clear',
   });
 
   @override
@@ -1088,41 +1104,52 @@ class CreatorDateField extends StatelessWidget {
         Row(
           children: [
             Expanded(
-              child: GestureDetector(
-                onTap: onPick,
-                child: Container(
-                  padding:
-                      const EdgeInsets.all(KubusSpacing.sm + KubusSpacing.xs),
-                  decoration: BoxDecoration(
-                    color: scheme.onSurface.withValues(alpha: 0.04),
+              child: Semantics(
+                label: label,
+                value: dateText,
+                button: true,
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: onPick,
                     borderRadius: BorderRadius.circular(KubusRadius.md),
-                    border: Border.all(
-                      color: scheme.outline.withValues(alpha: 0.25),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.calendar_today_outlined,
-                        size: 16,
-                        color: scheme.onSurface.withValues(alpha: 0.6),
+                    child: Container(
+                      padding: const EdgeInsets.all(
+                        KubusSpacing.sm + KubusSpacing.xs,
                       ),
-                      const SizedBox(width: KubusSpacing.sm),
-                      Text(
-                        dateText,
-                        style: TextStyle(
-                          color: value != null
-                              ? scheme.onSurface
-                              : scheme.onSurface.withValues(alpha: 0.4),
+                      decoration: BoxDecoration(
+                        color: scheme.onSurface.withValues(alpha: 0.04),
+                        borderRadius: BorderRadius.circular(KubusRadius.md),
+                        border: Border.all(
+                          color: scheme.outline.withValues(alpha: 0.25),
                         ),
                       ),
-                    ],
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.calendar_today_outlined,
+                            size: 16,
+                            color: scheme.onSurface.withValues(alpha: 0.6),
+                          ),
+                          const SizedBox(width: KubusSpacing.sm),
+                          Text(
+                            dateText,
+                            style: TextStyle(
+                              color: value != null
+                                  ? scheme.onSurface
+                                  : scheme.onSurface.withValues(alpha: 0.4),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),
             ),
             const SizedBox(width: KubusSpacing.sm),
             IconButton(
+              tooltip: clearTooltip,
               onPressed: value == null ? null : onClear,
               icon: Icon(
                 Icons.close,
@@ -1169,34 +1196,44 @@ class CreatorTimeField extends StatelessWidget {
           ),
         ),
         const SizedBox(height: KubusSpacing.xs),
-        GestureDetector(
-          onTap: onPick,
-          child: Container(
-            padding: const EdgeInsets.all(KubusSpacing.sm + KubusSpacing.xs),
-            decoration: BoxDecoration(
-              color: scheme.onSurface.withValues(alpha: 0.04),
+        Semantics(
+          label: label,
+          value: value != null ? value!.format(context) : notSetLabel,
+          button: true,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onPick,
               borderRadius: BorderRadius.circular(KubusRadius.md),
-              border: Border.all(
-                color: scheme.outline.withValues(alpha: 0.25),
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.access_time,
-                  size: 16,
-                  color: scheme.onSurface.withValues(alpha: 0.6),
-                ),
-                const SizedBox(width: KubusSpacing.sm),
-                Text(
-                  value != null ? value!.format(context) : notSetLabel,
-                  style: TextStyle(
-                    color: value != null
-                        ? scheme.onSurface
-                        : scheme.onSurface.withValues(alpha: 0.4),
+              child: Container(
+                padding:
+                    const EdgeInsets.all(KubusSpacing.sm + KubusSpacing.xs),
+                decoration: BoxDecoration(
+                  color: scheme.onSurface.withValues(alpha: 0.04),
+                  borderRadius: BorderRadius.circular(KubusRadius.md),
+                  border: Border.all(
+                    color: scheme.outline.withValues(alpha: 0.25),
                   ),
                 ),
-              ],
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.access_time,
+                      size: 16,
+                      color: scheme.onSurface.withValues(alpha: 0.6),
+                    ),
+                    const SizedBox(width: KubusSpacing.sm),
+                    Text(
+                      value != null ? value!.format(context) : notSetLabel,
+                      style: TextStyle(
+                        color: value != null
+                            ? scheme.onSurface
+                            : scheme.onSurface.withValues(alpha: 0.4),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         ),

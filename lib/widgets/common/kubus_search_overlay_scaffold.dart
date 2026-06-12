@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../utils/app_animations.dart';
 import '../../utils/design_tokens.dart';
 import '../map/kubus_map_glass_surface.dart';
 import '../map_overlay_blocker.dart';
@@ -42,8 +43,8 @@ class KubusSearchOverlayScaffold extends StatelessWidget {
     this.sidePanelSurfaceMode = KubusSearchSidePanelSurfaceMode.glassHost,
     this.sidePanelRadius = KubusRadius.lg,
     this.sidePanelAnimated = false,
-    this.positionAnimationDuration = const Duration(milliseconds: 240),
-    this.positionAnimationCurve = Curves.easeOutCubic,
+    this.positionAnimationDuration,
+    this.positionAnimationCurve,
   });
 
   final KubusSearchOverlayLayout layout;
@@ -65,8 +66,10 @@ class KubusSearchOverlayScaffold extends StatelessWidget {
   final KubusSearchSidePanelSurfaceMode sidePanelSurfaceMode;
   final double sidePanelRadius;
   final bool sidePanelAnimated;
-  final Duration positionAnimationDuration;
-  final Curve positionAnimationCurve;
+
+  /// Panel motion; falls back to [AppAnimationTheme.medium] when unset.
+  final Duration? positionAnimationDuration;
+  final Curve? positionAnimationCurve;
 
   @override
   Widget build(BuildContext context) {
@@ -189,9 +192,10 @@ class KubusSearchOverlayScaffold extends StatelessWidget {
       );
     }
 
+    final animationTheme = context.animationTheme;
     return AnimatedPositioned(
-      duration: positionAnimationDuration,
-      curve: positionAnimationCurve,
+      duration: positionAnimationDuration ?? animationTheme.medium,
+      curve: positionAnimationCurve ?? animationTheme.defaultCurve,
       top: topInset,
       left: 0,
       right: rightInset,

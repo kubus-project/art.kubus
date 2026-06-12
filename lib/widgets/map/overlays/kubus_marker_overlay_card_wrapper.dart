@@ -321,7 +321,11 @@ class KubusMarkerOverlayCardWrapper extends StatelessWidget {
       enabled: true,
       cursor: cursor,
       interceptPlatformViews: interceptPlatformViews,
-      child: cardBuilder(context, layout),
+      child: _OverlayEntranceFade(
+        duration: animation.duration,
+        curve: animation.curve,
+        child: cardBuilder(context, layout),
+      ),
     );
   }
 
@@ -340,5 +344,35 @@ class KubusMarkerOverlayCardWrapper extends StatelessWidget {
         anchor.dy <= constraints.maxHeight * 1.5;
 
     return looksUsable ? anchor : fallback;
+  }
+}
+
+/// One-shot entrance fade for the overlay card.
+///
+/// Opacity-only by design: it must not affect layout, anchoring, or hit
+/// regions while the map keeps repositioning the card every frame.
+class _OverlayEntranceFade extends StatelessWidget {
+  const _OverlayEntranceFade({
+    required this.duration,
+    required this.curve,
+    required this.child,
+  });
+
+  final Duration duration;
+  final Curve curve;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0.0, end: 1.0),
+      duration: duration,
+      curve: curve,
+      child: child,
+      builder: (context, opacity, child) {
+        if (opacity >= 1.0) return child!;
+        return Opacity(opacity: opacity, child: child);
+      },
+    );
   }
 }

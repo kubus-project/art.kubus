@@ -29,9 +29,27 @@ extension _KubusMarkerOverlayCardMediaParts on KubusMarkerOverlayCard {
                 maxDisplayWidth: cacheWidth,
                 cacheVersion: imageVersion,
                 placeholderBuilder: (context) => Container(
-                  color: baseColor.withValues(alpha: 0.12),
-                  child: const Center(
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        baseColor.withValues(alpha: 0.10),
+                        baseColor.withValues(alpha: 0.22),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                  child: Center(
+                    child: SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          baseColor.withValues(alpha: 0.85),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
                 errorBuilder: (_, __, ___) => _imageFallback(

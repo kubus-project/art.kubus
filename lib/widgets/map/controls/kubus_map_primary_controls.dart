@@ -312,14 +312,18 @@ class KubusMapPrimaryControls extends StatelessWidget {
     );
 
     children.add(
-      KeyedSubtree(
-        key: centerOnMeKey,
-        child: _KubusSquareControlButton.mobile(
-          size: resolvedButtonSize,
-          icon: Icons.my_location,
-          tooltip: centerOnMeTooltip,
-          onTap: onCenterOnMe,
-          active: centerOnMeActive,
+      Semantics(
+        label: 'map_center_on_me',
+        button: true,
+        child: KeyedSubtree(
+          key: centerOnMeKey,
+          child: _KubusSquareControlButton.mobile(
+            size: resolvedButtonSize,
+            icon: Icons.my_location,
+            tooltip: centerOnMeTooltip,
+            onTap: onCenterOnMe,
+            active: centerOnMeActive,
+          ),
         ),
       ),
     );
@@ -338,6 +342,11 @@ class KubusMapPrimaryControls extends StatelessWidget {
             icon: createMarkerIcon ?? Icons.add_location_alt,
             tooltip: createMarkerTooltip,
             onTap: onCreateMarker,
+            // Visual parity with the desktop toolbar's
+            // `createMarkerHighlighted` state.
+            active: createMarkerHighlighted,
+            activeTint: createMarkerActiveTint,
+            activeIconColor: createMarkerActiveIconColor,
           ),
         ),
       ),
@@ -366,9 +375,9 @@ class KubusMapPrimaryControls extends StatelessWidget {
 
     Widget buildDivider() {
       return Container(
-        width: 1,
-        height: 26,
-        margin: const EdgeInsets.symmetric(horizontal: 4),
+        width: KubusSizes.hairline,
+        height: KubusSpacing.lg + KubusSpacing.xxs,
+        margin: const EdgeInsets.symmetric(horizontal: KubusSpacing.xs),
         color: scheme.outline.withValues(alpha: 0.22),
       );
     }
@@ -531,19 +540,25 @@ class KubusMapPrimaryControls extends StatelessWidget {
       ),
     );
 
-    rowChildren.add(const SizedBox(width: 6));
+    rowChildren.add(
+      const SizedBox(width: KubusSpacing.sm - KubusSpacing.xxs),
+    );
 
     rowChildren.add(
-      KeyedSubtree(
-        key: centerOnMeKey,
-        child: _KubusSquareControlButton.desktop(
-          size: resolvedButtonSize,
-          accent: accent,
-          icon: Icons.my_location,
-          tooltip: centerOnMeTooltip,
-          onTap: onCenterOnMe,
-          active: centerOnMeActive,
-          activeIconColor: AppColorUtils.contrastText(accent),
+      Semantics(
+        label: 'map_center_on_me',
+        button: true,
+        child: KeyedSubtree(
+          key: centerOnMeKey,
+          child: _KubusSquareControlButton.desktop(
+            size: resolvedButtonSize,
+            accent: accent,
+            icon: Icons.my_location,
+            tooltip: centerOnMeTooltip,
+            onTap: onCenterOnMe,
+            active: centerOnMeActive,
+            activeIconColor: AppColorUtils.contrastText(accent),
+          ),
         ),
       ),
     );
@@ -585,16 +600,16 @@ class KubusMapPrimaryControls extends StatelessWidget {
   }
 }
 
-class _KubusSquareControlButton extends StatelessWidget {
+class _KubusSquareControlButton extends StatefulWidget {
   const _KubusSquareControlButton.mobile({
     required this.size,
     required this.icon,
     required this.tooltip,
     this.onTap,
     this.active = false,
+    this.activeTint,
+    this.activeIconColor,
   })  : accent = null,
-        activeTint = null,
-        activeIconColor = null,
         _variant = _KubusSquareControlVariant.mobile;
 
   const _KubusSquareControlButton.desktop({
@@ -616,10 +631,18 @@ class _KubusSquareControlButton extends StatelessWidget {
   final VoidCallback? onTap;
   final bool active;
 
-  // Desktop styling.
   final Color? accent;
   final Color? activeTint;
   final Color? activeIconColor;
+
+  @override
+  State<_KubusSquareControlButton> createState() =>
+      _KubusSquareControlButtonState();
+}
+
+class _KubusSquareControlButtonState extends State<_KubusSquareControlButton> {
+  bool _hovered = false;
+  bool _focused = false;
 
   @override
   Widget build(BuildContext context) {
@@ -629,10 +652,11 @@ class _KubusSquareControlButton extends StatelessWidget {
 
     final radius = BorderRadius.circular(KubusRadius.md);
 
-    final resolvedOnTap = onTap;
+    final resolvedOnTap = widget.onTap;
     final bool enabled = resolvedOnTap != null;
+    final active = widget.active;
 
-    switch (_variant) {
+    switch (widget._variant) {
       case _KubusSquareControlVariant.mobile:
         final mobileAccent = scheme.primary;
         final mobileActiveIconColor =
@@ -641,50 +665,60 @@ class _KubusSquareControlButton extends StatelessWidget {
                 ? KubusColors.textPrimaryDark
                 : KubusColors.textPrimaryLight;
         return KubusGlassIconButton(
-          icon: icon,
+          icon: widget.icon,
           onPressed: resolvedOnTap,
-          tooltip: tooltip,
-          size: size,
+          tooltip: widget.tooltip,
+          size: widget.size,
           active: active,
           accentColor: mobileAccent,
           iconColor: scheme.onSurface,
-          activeIconColor: mobileActiveIconColor,
-          activeTint: mobileAccent.withValues(alpha: 0.20),
+          activeIconColor: widget.activeIconColor ?? mobileActiveIconColor,
+          activeTint:
+              widget.activeTint ?? mobileAccent.withValues(alpha: 0.20),
           borderRadius: KubusRadius.md,
           enableBlur: kubusMapBlurEnabled(context),
         );
 
       case _KubusSquareControlVariant.desktop:
-        final resolvedAccent = accent ?? scheme.primary;
-        final resolvedTintBase =
-            active ? (activeTint ?? resolvedAccent) : scheme.surface;
+        final resolvedAccent = widget.accent ?? scheme.primary;
+        final resolvedTintBase = active
+            ? (widget.activeTint ?? resolvedAccent)
+            : scheme.surface;
+        final iconBase = active
+            ? (widget.activeIconColor ?? resolvedAccent)
+            : scheme.onSurface;
         final iconCol =
-            active ? (activeIconColor ?? resolvedAccent) : scheme.onSurface;
+            enabled ? iconBase : iconBase.withValues(alpha: 0.38);
 
         final child = SizedBox(
-          width: size,
-          height: size,
+          width: widget.size,
+          height: widget.size,
           child: Center(
             child: Icon(
-              icon,
+              widget.icon,
               size: KubusHeaderMetrics.actionIcon,
               color: iconCol,
             ),
           ),
         );
 
+        final borderColor = active
+            ? resolvedAccent.withValues(alpha: 0.85)
+            : _focused
+                ? resolvedAccent.withValues(alpha: 0.70)
+                : scheme.outline.withValues(alpha: _hovered ? 0.34 : 0.18);
         final decoration = BoxDecoration(
           borderRadius: radius,
           border: Border.all(
-            color: active
-                ? resolvedAccent.withValues(alpha: 0.85)
-                : scheme.outline.withValues(alpha: 0.18),
-            width: active ? 1.25 : 1,
+            color: borderColor,
+            width: active || _focused ? 1.25 : 1,
           ),
-          boxShadow: active
+          boxShadow: (active || (_hovered && enabled))
               ? [
                   BoxShadow(
-                    color: resolvedAccent.withValues(alpha: 0.12),
+                    color: resolvedAccent.withValues(
+                      alpha: active ? 0.12 : 0.08,
+                    ),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
@@ -692,27 +726,45 @@ class _KubusSquareControlButton extends StatelessWidget {
               : null,
         );
 
-        // Requirement: pointer cursor on desktop.
-        return MouseRegion(
-          cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
-          child: AnimatedContainer(
-            duration: animationTheme.short,
-            curve: animationTheme.defaultCurve,
-            decoration: decoration,
-            child: buildKubusMapGlassSurface(
-              context: context,
-              kind: KubusMapGlassSurfaceKind.button,
-              borderRadius: radius,
-              tintBase: resolvedTintBase,
-              showBorder: false,
-              boxShadow: const <BoxShadow>[],
-              padding: EdgeInsets.zero,
-              blurPolicy: KubusMapBlurPolicy.forceMapChromeWhenCapable,
-              enablePlatformBackdropRegion: false,
-              onTap: resolvedOnTap,
-              child: tooltip.isEmpty
-                  ? child
-                  : Tooltip(message: tooltip, child: child),
+        // Requirement: pointer cursor + visible hover/focus states on desktop.
+        return FocusableActionDetector(
+          enabled: enabled,
+          mouseCursor:
+              enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
+          onShowHoverHighlight: (value) {
+            if (_hovered != value) setState(() => _hovered = value);
+          },
+          onShowFocusHighlight: (value) {
+            if (_focused != value) setState(() => _focused = value);
+          },
+          actions: <Type, Action<Intent>>{
+            ActivateIntent: CallbackAction<ActivateIntent>(
+              onInvoke: (_) {
+                resolvedOnTap?.call();
+                return null;
+              },
+            ),
+          },
+          child: ExcludeFocus(
+            child: AnimatedContainer(
+              duration: animationTheme.short,
+              curve: animationTheme.defaultCurve,
+              decoration: decoration,
+              child: buildKubusMapGlassSurface(
+                context: context,
+                kind: KubusMapGlassSurfaceKind.button,
+                borderRadius: radius,
+                tintBase: resolvedTintBase,
+                showBorder: false,
+                boxShadow: const <BoxShadow>[],
+                padding: EdgeInsets.zero,
+                blurPolicy: KubusMapBlurPolicy.forceMapChromeWhenCapable,
+                enablePlatformBackdropRegion: false,
+                onTap: resolvedOnTap,
+                child: widget.tooltip.isEmpty
+                    ? child
+                    : Tooltip(message: widget.tooltip, child: child),
+              ),
             ),
           ),
         );

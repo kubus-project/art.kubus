@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../models/art_marker.dart';
 import '../../../utils/app_color_utils.dart';
+import '../../../utils/design_tokens.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../features/map/shared/map_screen_shared_helpers.dart';
 import '../../common/kubus_glass_chip.dart';
@@ -32,8 +33,8 @@ class KubusMapMarkerLayerChips extends StatelessWidget {
     required this.l10n,
     required this.visibility,
     required this.onToggle,
-    this.spacing = 8,
-    this.runSpacing = 8,
+    this.spacing = KubusSpacing.sm,
+    this.runSpacing = KubusSpacing.sm,
   });
 
   @override
@@ -59,7 +60,7 @@ class KubusMapMarkerLayerChips extends StatelessWidget {
           icon: KubusMapMarkerHelpers.resolveArtMarkerIcon(type),
           active: selected,
           accentColor: accent,
-          borderRadius: 10,
+          borderRadius: KubusRadius.md,
           onPressed: () => onToggle(type, !selected),
         );
       }).toList(),

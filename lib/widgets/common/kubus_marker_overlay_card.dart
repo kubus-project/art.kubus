@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/art_marker.dart';
 import '../../models/artwork.dart';
+import '../../utils/app_animations.dart';
 import '../../utils/app_color_utils.dart';
 import '../../utils/artwork_media_resolver.dart';
 import '../../utils/design_tokens.dart';

@@ -173,8 +173,8 @@ class KubusMapSearchOverlayAssembly extends StatelessWidget {
     this.sidePanelSurfaceMode = KubusSearchSidePanelSurfaceMode.glassHost,
     this.sidePanelRadius = KubusRadius.lg,
     this.sidePanelAnimated = false,
-    this.positionAnimationDuration = const Duration(milliseconds: 240),
-    this.positionAnimationCurve = Curves.easeOutCubic,
+    this.positionAnimationDuration,
+    this.positionAnimationCurve,
   });
 
   final KubusSearchController controller;
@@ -200,8 +200,10 @@ class KubusMapSearchOverlayAssembly extends StatelessWidget {
   final KubusSearchSidePanelSurfaceMode sidePanelSurfaceMode;
   final double sidePanelRadius;
   final bool sidePanelAnimated;
-  final Duration positionAnimationDuration;
-  final Curve positionAnimationCurve;
+
+  /// Panel motion; falls back to [AppAnimationTheme.medium] when unset.
+  final Duration? positionAnimationDuration;
+  final Curve? positionAnimationCurve;
 
   @override
   Widget build(BuildContext context) {
