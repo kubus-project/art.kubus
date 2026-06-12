@@ -9,6 +9,7 @@ import '../core/app_navigator.dart';
 import '../services/auth_gating_service.dart';
 import '../services/auth_session_coordinator.dart';
 import '../services/backend_api_service.dart';
+import '../services/onboarding_state_service.dart';
 import '../services/pin_hashing.dart';
 import '../services/settings_service.dart';
 import '../providers/notification_provider.dart';
@@ -325,11 +326,14 @@ class SecurityGateProvider extends ChangeNotifier
     }
 
     // Don't prompt for re-auth on auth endpoints (signup, email verification, etc).
-    // These are endpoints that don't require an existing session.
+    // These are endpoints that don't require an existing session; their 401s
+    // belong to the calling screen, which surfaces them inline.
     final path = (context.path).toLowerCase();
     final isAuthEndpoint = path.contains('/auth/') &&
         (path.contains('/auth/login') ||
             path.contains('/auth/register') ||
+            path.contains('/auth/google') ||
+            path.contains('/auth/email-status') ||
             path.contains('/auth/verify-email') ||
             path.contains('/auth/resend-verification') ||
             path.contains('/auth/forgot-password') ||
@@ -351,6 +355,35 @@ class SecurityGateProvider extends ChangeNotifier
       _hasLocalAccount = AuthGatingService.hasLocalAccountSync(prefs: prefs);
       _settings ??= SettingsState.fromPrefs(prefs);
     } catch (_) {}
+
+    // While a registration/account-link transaction is in flight the
+    // onboarding flow owns auth-error UX (inline retry, guards, recovery).
+    // Hijacking navigation here is what used to eject fresh Google/email
+    // signups to /sign-in mid-onboarding.
+    if (prefs != null &&
+        (OnboardingStateService.hasActiveGoogleOnboardingRegistrationGuardSync(
+              prefs,
+            ) ||
+            OnboardingStateService.hasActiveAccountLinkGuardSync(prefs))) {
+      _cooldownUntil = DateTime.now().add(_promptCooldown);
+      return const AuthReauthResult(AuthReauthOutcome.notEnabled,
+          message: 'Onboarding transaction in flight; caller handles errors');
+    }
+
+    // A still-valid session token means this 401/403 was a route-level
+    // rejection (permissions, race, endpoint contract) — not session expiry.
+    // Never bounce a valid Google/email session back to /sign-in.
+    final inMemoryToken = (BackendApiService().getAuthToken() ?? '').trim();
+    final hasValidInMemorySession = inMemoryToken.isNotEmpty &&
+        AuthGatingService.isAccessTokenValid(inMemoryToken);
+    final hasValidStoredSession = prefs != null &&
+        AuthGatingService.evaluateStoredSession(prefs: prefs) ==
+            StoredSessionStatus.valid;
+    if (hasValidInMemorySession || hasValidStoredSession) {
+      _cooldownUntil = DateTime.now().add(_promptCooldown);
+      return const AuthReauthResult(AuthReauthOutcome.notEnabled,
+          message: 'Session still valid; not an expiry');
+    }
 
     if (prefs != null) {
       final sessionStatus =
@@ -377,10 +410,7 @@ class SecurityGateProvider extends ChangeNotifier
     if (!shouldPrompt) {
       if (_hasLocalAccount) {
         _cooldownUntil = DateTime.now().add(_promptCooldown);
-        final navigator = appNavigatorKey.currentState;
-        if (navigator != null && navigator.mounted) {
-          navigator.pushNamedAndRemoveUntil('/sign-in', (_) => false);
-        }
+        _forceSignInRedirect();
       }
       _cooldownUntil = DateTime.now().add(_promptCooldown);
       return const AuthReauthResult(AuthReauthOutcome.notEnabled,
@@ -390,10 +420,7 @@ class SecurityGateProvider extends ChangeNotifier
     if (!hasAppLock) {
       // Token expired but no app lock configured: force sign-in to restore session.
       _cooldownUntil = DateTime.now().add(_promptCooldown);
-      final navigator = appNavigatorKey.currentState;
-      if (navigator != null && navigator.mounted) {
-        navigator.pushNamedAndRemoveUntil('/sign-in', (_) => false);
-      }
+      _forceSignInRedirect();
       return const AuthReauthResult(AuthReauthOutcome.notEnabled,
           message: 'App lock not configured; sign-in required');
     }
@@ -406,6 +433,28 @@ class SecurityGateProvider extends ChangeNotifier
           message: 'Unable to start re-auth flow');
     }
     return inflight.future;
+  }
+
+  /// Forces the app to /sign-in for a session that truly cannot be restored.
+  /// Never hijacks auth/onboarding surfaces — those flows own their own
+  /// recovery UX and an automatic stack wipe there loses in-progress state.
+  void _forceSignInRedirect() {
+    final navigator = appNavigatorKey.currentState;
+    if (navigator == null || !navigator.mounted) return;
+    String? currentRouteName;
+    navigator.popUntil((route) {
+      currentRouteName = route.settings.name;
+      return true;
+    });
+    final routeName = (currentRouteName ?? '').toLowerCase();
+    if (routeName.contains('/onboarding') ||
+        routeName.contains('/sign-in') ||
+        routeName.contains('/register') ||
+        routeName.contains('/verify-email') ||
+        routeName.contains('/reset-password')) {
+      return;
+    }
+    navigator.pushNamedAndRemoveUntil('/sign-in', (_) => false);
   }
 
   Future<bool> unlockWithSignIn() async {
