@@ -1428,6 +1428,8 @@
   },
   "commonCollapse": "Skrči",
   "commonExpand": "Razširi",
+  "detailShowMore": "Pokaži več",
+  "detailShowLess": "Pokaži manj",
   "mapNearbyRadiusTitle": "Radij bližine",
   "mapNearbyRadiusTooltip": "Radij bližine ({radiusKm} km)",
   "@mapNearbyRadiusTooltip": {

@@ -764,7 +764,8 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
     }
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => EventDetailScreen(eventId: event.id, initialEvent: event),
+        builder: (_) =>
+            EventDetailScreen(eventId: event.id, initialEvent: event),
       ),
     );
   }
@@ -1135,7 +1136,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
             ),
       body: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1100),
+          constraints: const BoxConstraints(maxWidth: 1180),
           child: Padding(
             padding: const EdgeInsets.all(DetailSpacing.lg),
             child: LayoutBuilder(
@@ -1228,21 +1229,23 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Expanded(
-                              flex: 6,
+                              flex: 7,
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
                                   topActions,
                                   details,
-                                  const SizedBox(height: DetailSpacing.lg),
+                                  const SizedBox(
+                                      height: DetailSpacing.sectionGap),
                                   programCard,
-                                  const SizedBox(height: DetailSpacing.lg),
+                                  const SizedBox(
+                                      height: DetailSpacing.sectionGap),
                                   artworksCard,
                                 ],
                               ),
                             ),
-                            const SizedBox(width: DetailSpacing.lg),
-                            Expanded(flex: 5, child: collab),
+                            const SizedBox(width: DetailSpacing.xl),
+                            Expanded(flex: 4, child: collab),
                           ],
                         ),
                       ),
@@ -1261,11 +1264,11 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                   children: [
                     topActions,
                     details,
-                    const SizedBox(height: DetailSpacing.lg),
+                    const SizedBox(height: DetailSpacing.sectionGap),
                     programCard,
-                    const SizedBox(height: DetailSpacing.lg),
+                    const SizedBox(height: DetailSpacing.sectionGap),
                     artworksCard,
-                    const SizedBox(height: DetailSpacing.lg),
+                    const SizedBox(height: DetailSpacing.sectionGap),
                     collab,
                     if (provider.isDetailLoading)
                       Padding(
@@ -1511,7 +1514,7 @@ class _ExhibitionDetailsCard extends StatelessWidget {
             subtitle: hostLabel,
             trailing: null,
           ),
-          const SizedBox(height: DetailSpacing.md),
+          const SizedBox(height: DetailSpacing.lg),
           if (coverUrl != null) ...[
             ClipRRect(
               borderRadius: BorderRadius.circular(DetailRadius.sm),
@@ -1558,12 +1561,9 @@ class _ExhibitionDetailsCard extends StatelessWidget {
             compact: true,
           ),
           if ((exhibition.description ?? '').trim().isNotEmpty) ...[
-            const SizedBox(height: DetailSpacing.md),
-            Text(
-              exhibition.description!,
-              maxLines: 8,
-              overflow: TextOverflow.ellipsis,
-              style: DetailTypography.body(context),
+            const SizedBox(height: DetailSpacing.lg),
+            ExpandableDetailText(
+              text: exhibition.description!.trim(),
             ),
           ],
           if (poap?.poap == null && isPoapLoading) ...[
@@ -1582,8 +1582,7 @@ class _ExhibitionDetailsCard extends StatelessWidget {
             Row(
               children: [
                 Icon(Icons.confirmation_number_outlined,
-                    size: 18,
-                    color: scheme.onSurface.withValues(alpha: 0.55)),
+                    size: 18, color: scheme.onSurface.withValues(alpha: 0.55)),
                 const SizedBox(width: DetailSpacing.sm),
                 Expanded(
                   child: Text(
@@ -1717,7 +1716,7 @@ class _ProgramSection extends StatelessWidget {
                 ),
             ],
           ),
-          const SizedBox(height: DetailSpacing.sm),
+          const SizedBox(height: DetailSpacing.md),
           if (events.isEmpty)
             Text(
               l10n.exhibitionDetailProgramEmpty,
@@ -1733,11 +1732,11 @@ class _ProgramSection extends StatelessWidget {
                 onUnlink: () => onUnlinkEvent(event),
               );
               if (event != events.last) {
-                yield const SizedBox(height: DetailSpacing.sm);
+                yield const SizedBox(height: DetailSpacing.md);
               }
             }),
           if (canManage) ...[
-            const SizedBox(height: DetailSpacing.md),
+            const SizedBox(height: DetailSpacing.lg),
             Wrap(
               spacing: DetailSpacing.sm,
               runSpacing: DetailSpacing.xs,
@@ -1818,9 +1817,9 @@ class _ProgramEventCard extends StatelessWidget {
                   children: [
                     Text(event.title,
                         style: DetailTypography.cardTitle(context)),
-                    const SizedBox(height: DetailSpacing.xs),
+                    const SizedBox(height: DetailSpacing.sm),
                     Wrap(
-                      spacing: DetailSpacing.sm,
+                      spacing: DetailSpacing.md,
                       runSpacing: DetailSpacing.xs,
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
@@ -1844,8 +1843,7 @@ class _ProgramEventCard extends StatelessWidget {
                         if (hasPoap)
                           Icon(Icons.confirmation_number_outlined,
                               size: 14,
-                              color:
-                                  scheme.onSurface.withValues(alpha: 0.65)),
+                              color: scheme.onSurface.withValues(alpha: 0.65)),
                       ],
                     ),
                   ],

@@ -170,10 +170,8 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     }
     if (!mounted) return;
 
-    final alreadyLinked = events
-        .exhibitionsForEvent(widget.eventId)
-        .map((e) => e.id)
-        .toSet();
+    final alreadyLinked =
+        events.exhibitionsForEvent(widget.eventId).map((e) => e.id).toSet();
     final candidates = exhibitionsProvider.myExhibitions
         .where((e) => !alreadyLinked.contains(e.id))
         .toList();
@@ -337,9 +335,9 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
         ),
         body: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1100),
+            constraints: const BoxConstraints(maxWidth: 1180),
             child: Padding(
-              padding: const EdgeInsets.all(KubusSpacing.md),
+              padding: const EdgeInsets.all(DetailSpacing.lg),
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   final isWide = constraints.maxWidth >= 900;
@@ -438,13 +436,13 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
 
                   final mainChildren = <Widget>[
                     secondaryActions,
-                    const SizedBox(height: 14),
+                    const SizedBox(height: DetailSpacing.lg),
                     details,
-                    const SizedBox(height: 14),
+                    const SizedBox(height: DetailSpacing.sectionGap),
                     eventPoapCard,
-                    const SizedBox(height: 14),
+                    const SizedBox(height: DetailSpacing.sectionGap),
                     linkedExhibitionsSection,
-                    const SizedBox(height: 14),
+                    const SizedBox(height: DetailSpacing.sectionGap),
                     exhibitionPoapSection,
                   ];
 
@@ -453,7 +451,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
-                          flex: 6,
+                          flex: 7,
                           child: ListView(
                             children: [
                               ...mainChildren,
@@ -467,8 +465,8 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                             ],
                           ),
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(flex: 5, child: collab),
+                        const SizedBox(width: DetailSpacing.xl),
+                        Expanded(flex: 4, child: collab),
                       ],
                     );
                   }
@@ -476,7 +474,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                   return ListView(
                     children: [
                       ...mainChildren,
-                      const SizedBox(height: 14),
+                      const SizedBox(height: DetailSpacing.sectionGap),
                       collab,
                       if (events.isDetailLoading)
                         Padding(
@@ -530,7 +528,9 @@ class _EventDetailsCard extends StatelessWidget {
     final hostLabel = event.host == null
         ? null
         : l10n.exhibitionDetailHostedBy(
-            event.host!.displayName ?? event.host!.username ?? l10n.commonUnknown,
+            event.host!.displayName ??
+                event.host!.username ??
+                l10n.commonUnknown,
           );
 
     return DetailCard(
@@ -543,7 +543,7 @@ class _EventDetailsCard extends StatelessWidget {
             kicker: l10n.mapMarkerSubjectTypeEvent,
             subtitle: hostLabel,
           ),
-          SizedBox(height: DetailSpacing.md),
+          const SizedBox(height: DetailSpacing.lg),
           if (coverUrl != null && coverUrl.isNotEmpty) ...[
             ClipRRect(
               borderRadius: BorderRadius.circular(DetailRadius.sm),
@@ -564,7 +564,7 @@ class _EventDetailsCard extends StatelessWidget {
                 ),
               ),
             ),
-            SizedBox(height: DetailSpacing.md),
+            const SizedBox(height: DetailSpacing.lg),
           ],
           DetailMetadataBlock(
             items: [
@@ -591,12 +591,9 @@ class _EventDetailsCard extends StatelessWidget {
             ],
           ),
           if ((event.description ?? '').trim().isNotEmpty) ...[
-            SizedBox(height: DetailSpacing.md),
-            Text(
-              event.description!,
-              maxLines: 8,
-              overflow: TextOverflow.ellipsis,
-              style: DetailTypography.body(context),
+            const SizedBox(height: DetailSpacing.lg),
+            ExpandableDetailText(
+              text: event.description!.trim(),
             ),
           ],
         ],
@@ -801,7 +798,7 @@ class _LinkedExhibitionsSection extends StatelessWidget {
                 ),
             ],
           ),
-          const SizedBox(height: DetailSpacing.sm),
+          const SizedBox(height: DetailSpacing.md),
           if (exhibitions.isEmpty)
             Text(
               l10n.eventDetailLinkedExhibitionsEmpty,
@@ -816,11 +813,11 @@ class _LinkedExhibitionsSection extends StatelessWidget {
                 onUnlink: () => onUnlink(exhibition),
               );
               if (exhibition != exhibitions.last) {
-                yield const SizedBox(height: DetailSpacing.sm);
+                yield const SizedBox(height: DetailSpacing.md);
               }
             }),
           if (canManage) ...[
-            const SizedBox(height: DetailSpacing.md),
+            const SizedBox(height: DetailSpacing.lg),
             Wrap(
               spacing: DetailSpacing.sm,
               runSpacing: DetailSpacing.xs,
@@ -917,11 +914,15 @@ class _LinkedExhibitionCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(exhibition.title,
-                        style: DetailTypography.cardTitle(context)),
-                    const SizedBox(height: DetailSpacing.xs),
+                    Text(
+                      exhibition.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: DetailTypography.cardTitle(context),
+                    ),
+                    const SizedBox(height: DetailSpacing.sm),
                     Wrap(
-                      spacing: DetailSpacing.sm,
+                      spacing: DetailSpacing.md,
                       runSpacing: DetailSpacing.xs,
                       children: [
                         if (dateRange != null)
@@ -1059,9 +1060,8 @@ class _LinkedExhibitionPoapSection extends StatelessWidget {
           code: poap.poap.code,
           iconUrl: poap.poap.iconUrl,
           rarityLabel: poap.poap.rarity,
-          rewardLabel: poap.poap.rewardKub8 > 0
-              ? '+${poap.poap.rewardKub8} KUB8'
-              : null,
+          rewardLabel:
+              poap.poap.rewardKub8 > 0 ? '+${poap.poap.rewardKub8} KUB8' : null,
           stateLabel: poap.claimed
               ? l10n.exhibitionDetailPoapClaimedStatus
               : l10n.exhibitionDetailPoapNotClaimedStatus,

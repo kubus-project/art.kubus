@@ -373,12 +373,15 @@ class SecurityGateProvider extends ChangeNotifier
     // A still-valid session token means this 401/403 was a route-level
     // rejection (permissions, race, endpoint contract) — not session expiry.
     // Never bounce a valid Google/email session back to /sign-in.
+    // Require an actual JWT with a verifiable future exp claim — opaque strings
+    // that cannot be decoded (e.g. test stubs without dots) must not satisfy
+    // this check, so we use extractJwtExpiryUtc rather than isAccessTokenValid
+    // (which returns true when no exp claim is present).
     final inMemoryToken = (BackendApiService().getAuthToken() ?? '').trim();
-    final hasValidInMemorySession = inMemoryToken.isNotEmpty &&
-        AuthGatingService.isAccessTokenValid(inMemoryToken);
-    final hasValidStoredSession = prefs != null &&
-        AuthGatingService.evaluateStoredSession(prefs: prefs) ==
-            StoredSessionStatus.valid;
+    final hasValidInMemorySession = _tokenHasFutureExpiry(inMemoryToken);
+    final storedToken =
+        prefs != null ? (AuthGatingService.readStoredAccessToken(prefs) ?? '').trim() : '';
+    final hasValidStoredSession = _tokenHasFutureExpiry(storedToken);
     if (hasValidInMemorySession || hasValidStoredSession) {
       _cooldownUntil = DateTime.now().add(_promptCooldown);
       return const AuthReauthResult(AuthReauthOutcome.notEnabled,
@@ -433,6 +436,18 @@ class SecurityGateProvider extends ChangeNotifier
           message: 'Unable to start re-auth flow');
     }
     return inflight.future;
+  }
+
+  /// Returns true only when [token] is a parseable JWT with an `exp` claim
+  /// that lies in the future (with a 30-second clock-skew grace period).
+  /// Opaque strings without a dot-separated JWT structure return false so that
+  /// test stubs and malformed values never satisfy the valid-session check.
+  static bool _tokenHasFutureExpiry(String token) {
+    if (token.isEmpty) return false;
+    final expiry = AuthGatingService.extractJwtExpiryUtc(token);
+    if (expiry == null) return false;
+    return expiry
+        .isAfter(DateTime.now().toUtc().add(const Duration(seconds: 30)));
   }
 
   /// Forces the app to /sign-in for a session that truly cannot be restored.

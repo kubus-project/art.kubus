@@ -3653,6 +3653,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonExpand => 'Expand';
 
   @override
+  String get detailShowMore => 'Show more';
+
+  @override
+  String get detailShowLess => 'Show less';
+
+  @override
   String get mapNearbyRadiusTitle => 'Nearby radius';
 
   @override

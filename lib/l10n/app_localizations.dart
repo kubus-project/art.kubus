@@ -67,9 +67,6 @@ abstract class AppLocalizations {
 
   final String localeName;
 
-  // Hand-applied patch (see test/l10n/app_localizations_locale_guard_test.dart):
-  // re-apply after every `flutter gen-l10n` run. Guards against invalid locale
-  // tags ("undefined", "null", "") coming from web/host environments.
   static String _safeCanonicalizedLocale(String rawLocale) {
     final normalized = rawLocale.trim();
     if (normalized.isEmpty ||
@@ -7216,6 +7213,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Expand'**
   String get commonExpand;
+
+  /// No description provided for @detailShowMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Show more'**
+  String get detailShowMore;
+
+  /// No description provided for @detailShowLess.
+  ///
+  /// In en, this message translates to:
+  /// **'Show less'**
+  String get detailShowLess;
 
   /// No description provided for @mapNearbyRadiusTitle.
   ///

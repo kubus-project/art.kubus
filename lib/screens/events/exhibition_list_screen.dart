@@ -392,79 +392,78 @@ class _ExhibitionListScreenState extends State<ExhibitionListScreen>
     final l10n = AppLocalizations.of(context)!;
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-      padding: const EdgeInsets.all(KubusSpacing.md),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            themeProvider.accentColor.withValues(alpha: 0.15),
-            themeProvider.accentColor.withValues(alpha: 0.05),
-          ],
-        ),
         borderRadius: BorderRadius.circular(KubusRadius.lg),
         border: Border.all(
           color: themeProvider.accentColor.withValues(alpha: 0.3),
         ),
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: themeProvider.accentColor.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(KubusRadius.md),
+      child: LiquidGlassCard(
+        margin: EdgeInsets.zero,
+        padding: const EdgeInsets.all(KubusSpacing.md),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
+        showBorder: false,
+        backgroundColor: themeProvider.accentColor.withValues(alpha: 0.12),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: themeProvider.accentColor.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(KubusRadius.md),
+              ),
+              child: Icon(
+                Icons.collections_bookmark,
+                color: themeProvider.accentColor,
+                size: 22,
+              ),
             ),
-            child: Icon(
-              Icons.collections_bookmark,
-              color: themeProvider.accentColor,
-              size: 22,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.exhibitionListCreateTitle,
-                  style: KubusTypography.inter(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: scheme.onSurface,
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.exhibitionListCreateTitle,
+                    style: KubusTypography.inter(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: scheme.onSurface,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  l10n.exhibitionListCreateSubtitle,
-                  style: KubusTypography.inter(
-                    fontSize: 12,
-                    color: scheme.onSurface.withValues(alpha: 0.6),
+                  const SizedBox(height: 2),
+                  Text(
+                    l10n.exhibitionListCreateSubtitle,
+                    style: KubusTypography.inter(
+                      fontSize: 12,
+                      color: scheme.onSurface.withValues(alpha: 0.6),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: 12),
-          if (widget.embedded)
-            IconButton(
-              tooltip: l10n.commonRefresh,
-              onPressed: _refresh,
-              icon: const Icon(Icons.refresh),
+            const SizedBox(width: 12),
+            if (widget.embedded)
+              IconButton(
+                tooltip: l10n.commonRefresh,
+                onPressed: _refresh,
+                icon: const Icon(Icons.refresh),
+              ),
+            FilledButton.icon(
+              onPressed: _createExhibition,
+              icon: const Icon(Icons.add, size: 18),
+              label: Text(l10n.exhibitionListCreateNewButton,
+                  style: KubusTypography.inter(fontWeight: FontWeight.w600)),
+              style: FilledButton.styleFrom(
+                backgroundColor: themeProvider.accentColor,
+                foregroundColor: Colors.white,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              ),
             ),
-          FilledButton.icon(
-            onPressed: _createExhibition,
-            icon: const Icon(Icons.add, size: 18),
-            label: Text(l10n.exhibitionListCreateNewButton,
-                style: KubusTypography.inter(fontWeight: FontWeight.w600)),
-            style: FilledButton.styleFrom(
-              backgroundColor: themeProvider.accentColor,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -688,18 +687,25 @@ class _ExhibitionCard extends StatelessWidget {
     final isPublished = exhibition.isPublished;
     final coverUrl = MediaUrlResolver.resolve(exhibition.coverUrl);
 
-    return Card(
-      elevation: 0,
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(KubusRadius.lg),
-        side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.5)),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(KubusRadius.lg),
-        child: Padding(
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(KubusRadius.lg),
+          border: Border.all(
+            color: scheme.outlineVariant.withValues(alpha: 0.5),
+          ),
+        ),
+        child: LiquidGlassCard(
+          onTap: onTap,
+          margin: EdgeInsets.zero,
           padding: const EdgeInsets.all(KubusSpacing.md),
+          borderRadius: BorderRadius.circular(KubusRadius.lg),
+          showBorder: false,
+          backgroundColor:
+              scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
