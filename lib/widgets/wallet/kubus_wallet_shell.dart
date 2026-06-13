@@ -267,6 +267,13 @@ class KubusWalletMetaPill extends StatelessWidget {
   }
 }
 
+/// Visual density for shared wallet components.
+///
+/// - [compact] is tuned for desktop grids and sidebars: smaller icon, tighter
+///   spacing, clamped text so cards stay ~88-104 tall and visually stable.
+/// - [regular] is the default touch-friendly treatment used on mobile.
+enum KubusWalletDensity { compact, regular }
+
 class KubusWalletActionCard extends StatelessWidget {
   const KubusWalletActionCard({
     super.key,
@@ -279,12 +286,14 @@ class KubusWalletActionCard extends StatelessWidget {
     this.loading = false,
     this.disabledReason,
     this.minHeight = 144,
+    this.density = KubusWalletDensity.regular,
   });
 
   factory KubusWalletActionCard.fromConfig({
     Key? key,
     required WalletActionConfig config,
     double minHeight = 144,
+    KubusWalletDensity density = KubusWalletDensity.regular,
   }) {
     return KubusWalletActionCard(
       key: key,
@@ -297,6 +306,7 @@ class KubusWalletActionCard extends StatelessWidget {
       loading: config.loading,
       disabledReason: config.disabledReason,
       minHeight: minHeight,
+      density: density,
     );
   }
 
@@ -309,12 +319,22 @@ class KubusWalletActionCard extends StatelessWidget {
   final bool loading;
   final String? disabledReason;
   final double minHeight;
+  final KubusWalletDensity density;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final effectiveColor =
         enabled ? color : scheme.onSurface.withValues(alpha: 0.34);
+    final isCompact = density == KubusWalletDensity.compact;
+
+    final double iconBox =
+        isCompact ? 40 : KubusChromeMetrics.heroIconBox;
+    final double iconSize = isCompact ? 20 : KubusChromeMetrics.heroIcon;
+    final EdgeInsets cardPadding = EdgeInsets.all(
+      isCompact ? KubusSpacing.md : KubusSpacing.lg,
+    );
+    final double iconGap = isCompact ? KubusSpacing.sm : KubusSpacing.xl;
 
     return LiquidGlassCard(
       padding: EdgeInsets.zero,
@@ -336,21 +356,22 @@ class KubusWalletActionCard extends StatelessWidget {
           ),
         ),
         child: Padding(
-          padding: const EdgeInsets.all(KubusSpacing.lg),
+          padding: cardPadding,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               Container(
-                width: KubusChromeMetrics.heroIconBox,
-                height: KubusChromeMetrics.heroIconBox,
+                width: iconBox,
+                height: iconBox,
                 decoration: BoxDecoration(
                   color: effectiveColor.withValues(alpha: enabled ? 0.18 : 0.1),
                   borderRadius: BorderRadius.circular(KubusRadius.lg),
                 ),
                 child: loading
                     ? SizedBox(
-                        width: KubusChromeMetrics.heroIcon,
-                        height: KubusChromeMetrics.heroIcon,
+                        width: iconSize,
+                        height: iconSize,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
                           color: effectiveColor,
@@ -359,17 +380,20 @@ class KubusWalletActionCard extends StatelessWidget {
                     : Icon(
                         icon,
                         color: effectiveColor,
-                        size: KubusChromeMetrics.heroIcon,
+                        size: iconSize,
                       ),
               ),
-              const SizedBox(height: KubusSpacing.xl),
+              SizedBox(height: iconGap),
               Text(
                 title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: KubusTextStyles.detailCardTitle.copyWith(
                   color: enabled
                       ? scheme.onSurface
                       : scheme.onSurface.withValues(alpha: 0.55),
                   fontWeight: FontWeight.w700,
+                  fontSize: isCompact ? 14 : null,
                 ),
               ),
               const SizedBox(height: KubusSpacing.xs),
@@ -377,10 +401,13 @@ class KubusWalletActionCard extends StatelessWidget {
                 !enabled && (disabledReason ?? '').trim().isNotEmpty
                     ? disabledReason!.trim()
                     : subtitle,
+                maxLines: isCompact ? 2 : 3,
+                overflow: TextOverflow.ellipsis,
                 style: KubusTextStyles.detailBody.copyWith(
                   color: enabled
                       ? scheme.onSurface.withValues(alpha: 0.68)
                       : scheme.onSurface.withValues(alpha: 0.48),
+                  fontSize: isCompact ? 12 : null,
                 ),
               ),
             ],

@@ -222,107 +222,127 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
     final isAccountShellOnly =
         authority.state == WalletAuthorityState.accountShellOnly;
 
-    return Center(
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 520),
-        padding: EdgeInsets.all(DetailSpacing.xxl + DetailSpacing.lg),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 140,
-              height: 140,
-              decoration: BoxDecoration(
-                color: themeProvider.accentColor.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
+    final explanation = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 64,
+          height: 64,
+          decoration: BoxDecoration(
+            color: themeProvider.accentColor.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(DetailRadius.lg),
+          ),
+          child: Icon(
+            Icons.account_balance_wallet_outlined,
+            size: 32,
+            color: themeProvider.accentColor,
+          ),
+        ),
+        SizedBox(height: DetailSpacing.lg),
+        Text(
+          isAccountShellOnly
+              ? l10n.walletHomeAccountShellTitle
+              : l10n.walletHomeSignedOutTitle,
+          style: DetailTypography.sectionTitle(context),
+        ),
+        SizedBox(height: DetailSpacing.sm),
+        Text(
+          isAccountShellOnly
+              ? l10n.walletHomeAccountShellDescription
+              : l10n.walletHomeSignedOutDescription,
+          style: DetailTypography.body(context).copyWith(height: 1.6),
+        ),
+      ],
+    );
+
+    final actions = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ElevatedButton.icon(
+          onPressed: () => Navigator.of(context).pushNamed('/connect-wallet'),
+          icon: const Icon(Icons.add),
+          label: Text(
+            isAccountShellOnly
+                ? l10n.walletHomeRestoreWalletAction
+                : l10n.walletHomeCreateWalletAction,
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: themeProvider.accentColor,
+            foregroundColor: Colors.white,
+            padding: EdgeInsets.symmetric(vertical: KubusSpacing.md),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(KubusRadius.md),
+            ),
+          ),
+        ),
+        SizedBox(height: DetailSpacing.sm),
+        OutlinedButton.icon(
+          onPressed: () => Navigator.of(context).pushNamed('/import-wallet'),
+          icon: const Icon(Icons.download),
+          label: Text(l10n.walletHomeImportWalletAction),
+          style: OutlinedButton.styleFrom(
+            padding: EdgeInsets.symmetric(vertical: KubusSpacing.md),
+            side: BorderSide(color: themeProvider.accentColor),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(KubusRadius.md),
+            ),
+          ),
+        ),
+        SizedBox(height: DetailSpacing.xs),
+        TextButton.icon(
+          onPressed: () {
+            if (!AppConfig.enableWalletConnect || !AppConfig.enableWeb3) {
+              ScaffoldMessenger.of(context).showKubusSnackBar(
+                SnackBar(content: Text(l10n.authWalletConnectionDisabled)),
+              );
+              return;
+            }
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const ConnectWallet(initialStep: 3),
               ),
-              child: Icon(
-                Icons.account_balance_wallet_outlined,
-                size: 64,
-                color: themeProvider.accentColor,
-              ),
-            ),
-            SizedBox(height: DetailSpacing.xxl),
-            Text(
-              isAccountShellOnly
-                  ? l10n.walletHomeAccountShellTitle
-                  : l10n.walletHomeSignedOutTitle,
-              style: DetailTypography.screenTitle(context),
-            ),
-            SizedBox(height: DetailSpacing.md),
-            Text(
-              isAccountShellOnly
-                  ? l10n.walletHomeAccountShellDescription
-                  : l10n.walletHomeSignedOutDescription,
-              textAlign: TextAlign.center,
-              style: DetailTypography.body(context).copyWith(height: 1.7),
-            ),
-            SizedBox(height: DetailSpacing.xxl + DetailSpacing.sm),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.of(context).pushNamed('/connect-wallet');
-                  },
-                  icon: const Icon(Icons.add),
-                  label: Text(
-                    isAccountShellOnly
-                        ? l10n.walletHomeRestoreWalletAction
-                        : l10n.walletHomeCreateWalletAction,
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: themeProvider.accentColor,
-                    foregroundColor: Colors.white,
-                    padding: EdgeInsets.symmetric(
-                      horizontal: KubusSpacing.xxl,
-                      vertical: KubusSpacing.lg,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(KubusRadius.md),
-                    ),
-                  ),
-                ),
-                SizedBox(width: DetailSpacing.lg),
-                OutlinedButton.icon(
-                  onPressed: () {
-                    Navigator.of(context).pushNamed('/import-wallet');
-                  },
-                  icon: const Icon(Icons.download),
-                  label: Text(l10n.walletHomeImportWalletAction),
-                  style: OutlinedButton.styleFrom(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: KubusSpacing.xxl,
-                      vertical: KubusSpacing.lg,
-                    ),
-                    side: BorderSide(color: themeProvider.accentColor),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(KubusRadius.md),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: DetailSpacing.xl),
-            TextButton.icon(
-              onPressed: () {
-                final l10n = AppLocalizations.of(context)!;
-                if (!AppConfig.enableWalletConnect || !AppConfig.enableWeb3) {
-                  ScaffoldMessenger.of(context).showKubusSnackBar(
-                    SnackBar(content: Text(l10n.authWalletConnectionDisabled)),
+            );
+          },
+          icon: const Icon(Icons.account_balance_wallet_outlined, size: 20),
+          label: Text(l10n.walletSecurityConnectExternalAction),
+        ),
+      ],
+    );
+
+    return Padding(
+      padding: EdgeInsets.all(DetailSpacing.xxl),
+      child: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 880),
+          child: DesktopCard(
+            padding: EdgeInsets.all(DetailSpacing.xl),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                if (constraints.maxWidth >= 640) {
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(flex: 3, child: explanation),
+                      SizedBox(width: DetailSpacing.xxl),
+                      SizedBox(width: 240, child: actions),
+                    ],
                   );
-                  return;
                 }
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const ConnectWallet(initialStep: 3),
-                  ),
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    explanation,
+                    SizedBox(height: DetailSpacing.xl),
+                    actions,
+                  ],
                 );
               },
-              icon: const Icon(Icons.account_balance_wallet_outlined, size: 20),
-              label: Text(l10n.walletSecurityConnectExternalAction),
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -476,7 +496,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
     return DesktopCard(
       padding: EdgeInsets.zero,
       child: Container(
-        padding: EdgeInsets.all(DetailSpacing.xl + DetailSpacing.sm),
+        padding: EdgeInsets.all(DetailSpacing.xl),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
@@ -561,30 +581,23 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                 Text(
                   solBalance.toStringAsFixed(4),
                   style: KubusTypography.inter(
-                    fontSize: 52,
+                    fontSize: 34,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
                   ),
                 ),
-                SizedBox(width: DetailSpacing.md),
+                SizedBox(width: DetailSpacing.sm),
                 Padding(
-                  padding: EdgeInsets.only(bottom: DetailSpacing.md),
+                  padding: EdgeInsets.only(bottom: DetailSpacing.xs),
                   child: Text(
                     'SOL',
                     style: KubusTextStyles.sectionTitle.copyWith(
-                      fontSize: 22,
+                      fontSize: 16,
                       color: Colors.white.withValues(alpha: 0.8),
                     ),
                   ),
                 ),
               ],
-            ),
-            SizedBox(height: DetailSpacing.sm),
-            Text(
-              '≈ \$${(solBalance * 150).toStringAsFixed(2)} USD',
-              style: KubusTextStyles.sectionSubtitle.copyWith(
-                color: Colors.white.withValues(alpha: 0.7),
-              ),
             ),
             SizedBox(height: DetailSpacing.lg),
             Wrap(
@@ -696,7 +709,8 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                   width: resolvedTileWidth,
                   child: KubusWalletActionCard.fromConfig(
                     config: config,
-                    minHeight: 138,
+                    minHeight: 96,
+                    density: KubusWalletDensity.compact,
                   ),
                 ),
               )

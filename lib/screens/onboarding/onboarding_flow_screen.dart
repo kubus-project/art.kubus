@@ -2401,7 +2401,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   Future<bool> _openMnemonicRevealFlow() async {
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
-    final navigator = Navigator.of(context);
     if (!_walletBackupOnboardingEnabled) {
       return true;
     }
@@ -2416,10 +2415,41 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       return false;
     }
 
-    final completed = await navigator.push<bool>(
-      MaterialPageRoute(
-        builder: (_) => const MnemonicRevealScreen(),
-      ),
+    final completed = await showKubusDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        final l10n = AppLocalizations.of(dialogContext)!;
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(KubusSpacing.lg),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: LiquidGlassCard(
+              padding: const EdgeInsets.all(KubusSpacing.lg),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Text(
+                      l10n.mnemonicRevealTitle,
+                      style: KubusTextStyles.sectionTitle,
+                    ),
+                    const SizedBox(height: KubusSpacing.md),
+                    MnemonicRevealContent(
+                      embedded: true,
+                      onCompleted: () =>
+                          Navigator.of(dialogContext).pop(true),
+                      onClose: () => Navigator.of(dialogContext).pop(false),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
     if (!mounted) return false;
     await _syncWalletBackupRequirement();
