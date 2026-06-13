@@ -91,6 +91,9 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
     final scheme = Theme.of(context).colorScheme;
     final screenWidth = MediaQuery.of(context).size.width;
     final isLarge = screenWidth >= 1200;
+    // Adaptive rail: compact on smaller desktops so it never dominates, a touch
+    // wider on large displays where there is room for more detail.
+    final double railWidth = screenWidth >= 1360 ? 340 : 300;
 
     final sidebarGlassStyle = KubusGlassStyle.resolve(
       context,
@@ -125,7 +128,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                     // Right panel - Quick actions & recent
                     if (isLarge)
                       SizedBox(
-                        width: 360,
+                        width: railWidth,
                         child: Container(
                           decoration: BoxDecoration(
                             border: Border(
@@ -1445,19 +1448,24 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
     final recentTransactions = walletProvider.transactions.take(5).toList();
 
     return ListView(
-      padding: EdgeInsets.all(DetailSpacing.xl),
+      padding: EdgeInsets.all(DetailSpacing.lg),
       children: [
+        WalletCustodyStatusPanel(
+          authority: walletProvider.authority,
+          compact: true,
+        ),
+        SizedBox(height: DetailSpacing.lg),
         AttestationBadgePanel(
           title: l10n.walletBadgesVerificationTitle,
           subtitle: l10n.walletBadgesVerificationSubtitle,
           compact: true,
         ),
-        SizedBox(height: DetailSpacing.xxl),
+        SizedBox(height: DetailSpacing.lg),
         Text(
           l10n.walletHomeDesktopRecentActivityTitle,
           style: DetailTypography.sectionTitle(context),
         ),
-        SizedBox(height: DetailSpacing.lg),
+        SizedBox(height: DetailSpacing.md),
         if (recentTransactions.isEmpty)
           Container(
             padding: EdgeInsets.all(DetailSpacing.xl),

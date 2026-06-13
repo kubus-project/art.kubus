@@ -1037,10 +1037,14 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           _OnboardingStep.role,
           _OnboardingStep.profile,
           if (_accountRequiresWalletSetup) _OnboardingStep.walletConnect,
+          // Single user-facing wallet security step. `walletBackupIntro`
+          // aggregates recovery-phrase, encrypted-backup and passkey actions in
+          // one coherent card. The legacy `walletBackup` reveal-only step is no
+          // longer surfaced so there is never a second "create backup copy"
+          // moment; its internal enum/handlers remain for saved-progress
+          // migration and gating via `_completeWalletBackupStepsIfReady`.
           if (_walletBackupOnboardingEnabled && _requiresWalletBackupStep)
             _OnboardingStep.walletBackupIntro,
-          if (_walletBackupOnboardingEnabled && _requiresWalletBackupStep)
-            _OnboardingStep.walletBackup,
           if (_requiresDaoReviewStep) _OnboardingStep.daoReview,
           _OnboardingStep.accountPermissions,
           _OnboardingStep.done,
