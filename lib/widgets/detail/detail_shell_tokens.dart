@@ -24,6 +24,18 @@ class DetailSpacing {
   );
 
   static const double sectionGap = xl;
+
+  /// Larger gap between major detail cards for an editorial reading rhythm.
+  /// Sits one step above [sectionGap] so stacked cards breathe.
+  static const double cardGap = xxl;
+
+  /// Vertical breathing room around hero/cover imagery and editorial text
+  /// blocks. Slightly larger than [xl] so cover media never feels boxed in.
+  static const double heroGap = 28.0;
+
+  /// Roomier symmetric padding for editorial detail cards (overview, about,
+  /// POAP) so long-form content reads less like a dense tile.
+  static const EdgeInsets editorialCardPadding = EdgeInsets.all(xl);
 }
 
 /// Design system typography styles for detail surfaces.

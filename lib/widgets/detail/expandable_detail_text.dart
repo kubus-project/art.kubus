@@ -89,7 +89,7 @@ class _ExpandableDetailTextState extends State<ExpandableDetailText> {
               alignment: Alignment.topCenter,
               child: body,
             ),
-            const SizedBox(height: DetailSpacing.xs),
+            const SizedBox(height: DetailSpacing.sm),
             Align(
               alignment: Alignment.centerLeft,
               child: TextButton.icon(
@@ -97,7 +97,7 @@ class _ExpandableDetailTextState extends State<ExpandableDetailText> {
                 style: TextButton.styleFrom(
                   padding: const EdgeInsets.symmetric(
                     horizontal: DetailSpacing.sm,
-                    vertical: DetailSpacing.xs,
+                    vertical: DetailSpacing.sm,
                   ),
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,

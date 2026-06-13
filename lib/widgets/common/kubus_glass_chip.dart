@@ -42,8 +42,7 @@ class KubusGlassChip extends StatelessWidget {
       surfaceType: KubusGlassSurfaceType.button,
       tintBase: accent,
     );
-    final allowBlur =
-        GlassCapabilitiesProvider.watchAllowBlurEnabled(context);
+    final allowBlur = GlassCapabilitiesProvider.watchAllowBlurEnabled(context);
 
     final resolvedRadius = borderRadius.clamp(0.0, 999.0).toDouble();
     final radius = BorderRadius.circular(resolvedRadius);
@@ -54,63 +53,72 @@ class KubusGlassChip extends StatelessWidget {
           : KubusGlassEffects.fallbackOpaqueOpacity,
     );
 
-    return MouseRegion(
-      cursor: onPressed == null
-          ? SystemMouseCursors.basic
-          : SystemMouseCursors.click,
-      child: AnimatedContainer(
-        duration: animationTheme.short,
-        curve: animationTheme.defaultCurve,
-        decoration: BoxDecoration(
-          borderRadius: radius,
-          border: Border.all(
-            color: active
-                ? accent.withValues(alpha: 0.85)
-                : scheme.outline.withValues(
-                    alpha: KubusGlassEffects.glassBorderOpacitySubtle,
-                  ),
-            width: active ? 1.25 : 1,
+    return Semantics(
+      // Filter/layer chips are toggleable; expose the on/off state so screen
+      // readers announce selection instead of a plain button. The inner Text
+      // still provides the accessible label.
+      button: true,
+      toggled: active,
+      enabled: onPressed != null,
+      child: MouseRegion(
+        cursor: onPressed == null
+            ? SystemMouseCursors.basic
+            : SystemMouseCursors.click,
+        child: AnimatedContainer(
+          duration: animationTheme.short,
+          curve: animationTheme.defaultCurve,
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            border: Border.all(
+              color: active
+                  ? accent.withValues(alpha: 0.85)
+                  : scheme.outline.withValues(
+                      alpha: KubusGlassEffects.glassBorderOpacitySubtle,
+                    ),
+              width: active ? 1.25 : 1,
+            ),
+            boxShadow: active
+                ? [
+                    BoxShadow(
+                      color: accent.withValues(alpha: 0.12),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                : null,
           ),
-          boxShadow: active
-              ? [
-                  BoxShadow(
-                    color: accent.withValues(alpha: 0.12),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ]
-              : null,
-        ),
-        child: LiquidGlassPanel(
-          padding: const EdgeInsets.symmetric(
-            horizontal: KubusSpacing.sm + KubusSpacing.xs,
-            vertical: KubusSpacing.sm + KubusSpacing.xxs,
-          ),
-          margin: EdgeInsets.zero,
-          borderRadius: radius,
-          blurSigma: KubusGlassEffects.blurSigmaLight,
-          showBorder: false,
-          backgroundColor: active ? selectedTint : idleTint,
-          enableBlur: enableBlur,
-          onTap: onPressed,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                icon,
-                size: KubusHeaderMetrics.actionIcon - KubusSpacing.xxs,
-                color:
-                    active ? accent : scheme.onSurface.withValues(alpha: 0.65),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: (active
-                        ? theme.textTheme.labelLarge
-                        : theme.textTheme.labelMedium)
-                    ?.copyWith(color: active ? accent : scheme.onSurface),
-              ),
-            ],
+          child: LiquidGlassPanel(
+            padding: const EdgeInsets.symmetric(
+              horizontal: KubusSpacing.sm + KubusSpacing.xs,
+              vertical: KubusSpacing.sm + KubusSpacing.xxs,
+            ),
+            margin: EdgeInsets.zero,
+            borderRadius: radius,
+            blurSigma: KubusGlassEffects.blurSigmaLight,
+            showBorder: false,
+            backgroundColor: active ? selectedTint : idleTint,
+            enableBlur: enableBlur,
+            onTap: onPressed,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  icon,
+                  size: KubusHeaderMetrics.actionIcon - KubusSpacing.xxs,
+                  color: active
+                      ? accent
+                      : scheme.onSurface.withValues(alpha: 0.65),
+                ),
+                const SizedBox(width: KubusSpacing.sm),
+                Text(
+                  label,
+                  style: (active
+                          ? theme.textTheme.labelLarge
+                          : theme.textTheme.labelMedium)
+                      ?.copyWith(color: active ? accent : scheme.onSurface),
+                ),
+              ],
+            ),
           ),
         ),
       ),

@@ -1186,6 +1186,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
 
                 final artworksCard = DetailCard(
                   borderRadius: DetailRadius.md,
+                  padding: DetailSpacing.editorialCardPadding,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -1200,7 +1201,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                             : l10n.exhibitionDetailArtworksViewHint,
                         style: DetailTypography.caption(context),
                       ),
-                      const SizedBox(height: DetailSpacing.md),
+                      const SizedBox(height: DetailSpacing.lg),
                       _LinkedArtworksList(exhibition: ex),
                     ],
                   ),
@@ -1229,23 +1230,30 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Expanded(
-                              flex: 7,
+                              flex: 8,
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
                                   topActions,
                                   details,
                                   const SizedBox(
-                                      height: DetailSpacing.sectionGap),
+                                      height: DetailSpacing.cardGap),
                                   programCard,
                                   const SizedBox(
-                                      height: DetailSpacing.sectionGap),
+                                      height: DetailSpacing.cardGap),
                                   artworksCard,
                                 ],
                               ),
                             ),
                             const SizedBox(width: DetailSpacing.xl),
-                            Expanded(flex: 4, child: collab),
+                            Expanded(
+                              flex: 3,
+                              child: ConstrainedBox(
+                                constraints:
+                                    const BoxConstraints(maxWidth: 380),
+                                child: collab,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -1264,11 +1272,11 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                   children: [
                     topActions,
                     details,
-                    const SizedBox(height: DetailSpacing.sectionGap),
+                    const SizedBox(height: DetailSpacing.cardGap),
                     programCard,
-                    const SizedBox(height: DetailSpacing.sectionGap),
+                    const SizedBox(height: DetailSpacing.cardGap),
                     artworksCard,
-                    const SizedBox(height: DetailSpacing.sectionGap),
+                    const SizedBox(height: DetailSpacing.cardGap),
                     collab,
                     if (provider.isDetailLoading)
                       Padding(
@@ -1369,7 +1377,7 @@ class _LinkedArtworksListState extends State<_LinkedArtworksList> {
           },
         ),
       );
-      tiles.add(const SizedBox(height: DetailSpacing.sm));
+      tiles.add(const SizedBox(height: DetailSpacing.md));
     }
 
     if (tiles.isNotEmpty) tiles.removeLast();
@@ -1503,8 +1511,11 @@ class _ExhibitionDetailsCard extends StatelessWidget {
       }
     }
 
-    return DetailCard(
+    // Editorial overview: identity, cover, key metadata and the context count
+    // live together in one calm zone.
+    final overviewCard = DetailCard(
       borderRadius: DetailRadius.md,
+      padding: DetailSpacing.editorialCardPadding,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1514,7 +1525,7 @@ class _ExhibitionDetailsCard extends StatelessWidget {
             subtitle: hostLabel,
             trailing: null,
           ),
-          const SizedBox(height: DetailSpacing.lg),
+          const SizedBox(height: DetailSpacing.heroGap),
           if (coverUrl != null) ...[
             ClipRRect(
               borderRadius: BorderRadius.circular(DetailRadius.sm),
@@ -1533,7 +1544,7 @@ class _ExhibitionDetailsCard extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: DetailSpacing.lg),
+            const SizedBox(height: DetailSpacing.heroGap),
           ],
           DetailMetadataBlock(
             items: [
@@ -1549,7 +1560,7 @@ class _ExhibitionDetailsCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: DetailSpacing.md),
+          const SizedBox(height: DetailSpacing.lg),
           DetailContextCluster(
             items: [
               DetailContextItem(
@@ -1560,72 +1571,103 @@ class _ExhibitionDetailsCard extends StatelessWidget {
             ],
             compact: true,
           ),
-          if ((exhibition.description ?? '').trim().isNotEmpty) ...[
-            const SizedBox(height: DetailSpacing.lg),
-            ExpandableDetailText(
-              text: exhibition.description!.trim(),
-            ),
-          ],
-          if (poap?.poap == null && isPoapLoading) ...[
-            const SizedBox(height: DetailSpacing.lg),
-            const Center(
-              child: SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-            ),
-          ] else if (poap?.poap == null && canManage) ...[
-            const SizedBox(height: DetailSpacing.lg),
-            Divider(color: scheme.outlineVariant.withValues(alpha: 0.4)),
-            const SizedBox(height: DetailSpacing.md),
-            Row(
-              children: [
-                Icon(Icons.confirmation_number_outlined,
-                    size: 18, color: scheme.onSurface.withValues(alpha: 0.55)),
-                const SizedBox(width: DetailSpacing.sm),
-                Expanded(
-                  child: Text(
-                    l10n.exhibitionDetailPoapNoneConfiguredOwnerHint,
-                    style: DetailTypography.caption(context),
-                  ),
-                ),
-              ],
-            ),
-          ],
-          if (poap?.poap != null) ...[
-            const SizedBox(height: DetailSpacing.lg),
-            Divider(color: scheme.outlineVariant.withValues(alpha: 0.4)),
-            const SizedBox(height: DetailSpacing.md),
-            PoapDetailCard(
-              title: l10n.exhibitionDetailPoapTitle,
-              description: poap!.poap.description?.trim().isNotEmpty == true
-                  ? poap!.poap.description!.trim()
-                  : l10n.exhibitionDetailPoapDescription,
-              code: poap!.poap.code,
-              iconUrl: poap!.poap.iconUrl,
-              rarityLabel: poap!.poap.rarity,
-              rewardLabel: poap!.poap.rewardKub8 > 0
-                  ? '+${poap!.poap.rewardKub8} KUB8'
-                  : null,
-              stateLabel: poap!.claimed
-                  ? l10n.exhibitionDetailPoapClaimedStatus
-                  : l10n.exhibitionDetailPoapNotClaimedStatus,
-              eligibilityLabel: poapEligibilityLabel(),
-              eligibilityHint: poapEligibilityHint(),
-              signedOutHint:
-                  isSignedIn ? null : l10n.exhibitionDetailPoapSignedOutHint,
-              contextItems: buildPoapContextItems(),
-              isClaimed: poap!.claimed,
-              canClaim: !poap!.claimed && poap!.canClaim && isSignedIn,
-              isClaiming: isClaimingPoap,
-              onClaim: onClaimPoap,
-              claimActionLabel: l10n.exhibitionDetailPoapClaimAction,
-              claimingActionLabel: l10n.exhibitionDetailPoapClaimingAction,
-            ),
-          ],
         ],
       ),
+    );
+
+    // Editorial description gets its own roomy card so long copy can expand
+    // cleanly without crowding the overview metadata.
+    final hasDescription =
+        (exhibition.description ?? '').trim().isNotEmpty;
+    final aboutCard = hasDescription
+        ? DetailCard(
+            borderRadius: DetailRadius.md,
+            padding: DetailSpacing.editorialCardPadding,
+            child: ExpandableDetailText(
+              text: exhibition.description!.trim(),
+            ),
+          )
+        : null;
+
+    // POAP lives in its own section instead of being squeezed under the
+    // identity block.
+    Widget? poapCard;
+    if (poap?.poap == null && isPoapLoading) {
+      poapCard = const DetailCard(
+        borderRadius: DetailRadius.md,
+        padding: DetailSpacing.editorialCardPadding,
+        child: Center(
+          child: SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      );
+    } else if (poap?.poap == null && canManage) {
+      poapCard = DetailCard(
+        borderRadius: DetailRadius.md,
+        padding: DetailSpacing.editorialCardPadding,
+        child: Row(
+          children: [
+            Icon(Icons.confirmation_number_outlined,
+                size: 20, color: scheme.onSurface.withValues(alpha: 0.55)),
+            const SizedBox(width: DetailSpacing.md),
+            Expanded(
+              child: Text(
+                l10n.exhibitionDetailPoapNoneConfiguredOwnerHint,
+                style: DetailTypography.caption(context),
+              ),
+            ),
+          ],
+        ),
+      );
+    } else if (poap?.poap != null) {
+      poapCard = DetailCard(
+        borderRadius: DetailRadius.md,
+        padding: DetailSpacing.editorialCardPadding,
+        child: PoapDetailCard(
+          title: l10n.exhibitionDetailPoapTitle,
+          description: poap!.poap.description?.trim().isNotEmpty == true
+              ? poap!.poap.description!.trim()
+              : l10n.exhibitionDetailPoapDescription,
+          code: poap!.poap.code,
+          iconUrl: poap!.poap.iconUrl,
+          rarityLabel: poap!.poap.rarity,
+          rewardLabel: poap!.poap.rewardKub8 > 0
+              ? '+${poap!.poap.rewardKub8} KUB8'
+              : null,
+          stateLabel: poap!.claimed
+              ? l10n.exhibitionDetailPoapClaimedStatus
+              : l10n.exhibitionDetailPoapNotClaimedStatus,
+          eligibilityLabel: poapEligibilityLabel(),
+          eligibilityHint: poapEligibilityHint(),
+          signedOutHint:
+              isSignedIn ? null : l10n.exhibitionDetailPoapSignedOutHint,
+          contextItems: buildPoapContextItems(),
+          isClaimed: poap!.claimed,
+          canClaim: !poap!.claimed && poap!.canClaim && isSignedIn,
+          isClaiming: isClaimingPoap,
+          onClaim: onClaimPoap,
+          claimActionLabel: l10n.exhibitionDetailPoapClaimAction,
+          claimingActionLabel: l10n.exhibitionDetailPoapClaimingAction,
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        overviewCard,
+        if (aboutCard != null) ...[
+          const SizedBox(height: DetailSpacing.cardGap),
+          aboutCard,
+        ],
+        if (poapCard != null) ...[
+          const SizedBox(height: DetailSpacing.cardGap),
+          poapCard,
+        ],
+      ],
     );
   }
 
@@ -1697,6 +1739,7 @@ class _ProgramSection extends StatelessWidget {
 
     return DetailCard(
       borderRadius: DetailRadius.md,
+      padding: DetailSpacing.editorialCardPadding,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1716,7 +1759,7 @@ class _ProgramSection extends StatelessWidget {
                 ),
             ],
           ),
-          const SizedBox(height: DetailSpacing.md),
+          const SizedBox(height: DetailSpacing.lg),
           if (events.isEmpty)
             Text(
               l10n.exhibitionDetailProgramEmpty,
@@ -1732,7 +1775,7 @@ class _ProgramSection extends StatelessWidget {
                 onUnlink: () => onUnlinkEvent(event),
               );
               if (event != events.last) {
-                yield const SizedBox(height: DetailSpacing.md);
+                yield const SizedBox(height: DetailSpacing.lg);
               }
             }),
           if (canManage) ...[
@@ -1805,6 +1848,10 @@ class _ProgramEventCard extends StatelessWidget {
 
     return DetailCard(
       borderRadius: DetailRadius.sm,
+      padding: const EdgeInsets.symmetric(
+        horizontal: DetailSpacing.lg,
+        vertical: DetailSpacing.xl,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1817,10 +1864,10 @@ class _ProgramEventCard extends StatelessWidget {
                   children: [
                     Text(event.title,
                         style: DetailTypography.cardTitle(context)),
-                    const SizedBox(height: DetailSpacing.sm),
+                    const SizedBox(height: DetailSpacing.md),
                     Wrap(
                       spacing: DetailSpacing.md,
-                      runSpacing: DetailSpacing.xs,
+                      runSpacing: DetailSpacing.sm,
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         Text(
@@ -1857,7 +1904,7 @@ class _ProgramEventCard extends StatelessWidget {
                 ),
             ],
           ),
-          const SizedBox(height: DetailSpacing.sm),
+          const SizedBox(height: DetailSpacing.md),
           Align(
             alignment: Alignment.centerLeft,
             child: TextButton.icon(
