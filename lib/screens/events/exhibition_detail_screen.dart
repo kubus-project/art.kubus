@@ -1377,7 +1377,7 @@ class _LinkedArtworksListState extends State<_LinkedArtworksList> {
           },
         ),
       );
-      tiles.add(const SizedBox(height: DetailSpacing.md));
+      tiles.add(const SizedBox(height: DetailSpacing.lg));
     }
 
     if (tiles.isNotEmpty) tiles.removeLast();
