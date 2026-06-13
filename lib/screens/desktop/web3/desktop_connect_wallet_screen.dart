@@ -107,7 +107,13 @@ class DesktopConnectWalletScreen extends StatelessWidget {
                       ],
                     );
                   }
-                  return SingleChildScrollView(child: flowCard);
+                  // Embedded ConnectWallet uses Expanded/SizedBox.expand and
+                  // needs a bounded height; give it the available viewport
+                  // height instead of an unbounded scroll view.
+                  return SizedBox(
+                    height: constraints.maxHeight,
+                    child: flowCard,
+                  );
                 },
               ),
             ),

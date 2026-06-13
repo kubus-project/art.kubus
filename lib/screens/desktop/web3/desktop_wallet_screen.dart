@@ -17,7 +17,7 @@ import '../../../widgets/empty_state_card.dart';
 import '../../web3/wallet/token_swap.dart';
 import '../../web3/wallet/send_token_screen.dart';
 import '../../web3/wallet/receive_token_screen.dart';
-import '../../web3/wallet/connectwallet_screen.dart';
+import 'desktop_connect_wallet_screen.dart';
 import '../../../widgets/glass_components.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/kubus_color_roles.dart';
@@ -304,7 +304,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
             }
             Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (_) => const ConnectWallet(initialStep: 3),
+                builder: (_) => const DesktopConnectWalletScreen(initialStep: 3),
               ),
             );
           },
