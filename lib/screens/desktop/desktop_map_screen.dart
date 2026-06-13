@@ -97,6 +97,8 @@ import '../../widgets/map/kubus_map_marker_features.dart';
 import '../../widgets/map/controls/kubus_map_primary_controls.dart'
     show KubusMapPrimaryControlsLayout;
 import '../../widgets/map/filters/kubus_map_marker_layer_chips.dart';
+import '../../widgets/map/discovery/kubus_discovery_path_card.dart'
+    show KubusDiscoveryExpansionDirection;
 import '../../widgets/map/dialogs/kubus_map_attribution_dialog.dart';
 import '../../widgets/map/dialogs/street_art_claims_dialog.dart';
 import '../../widgets/map/glass/kubus_map_platform_backdrop_host.dart';
@@ -2093,55 +2095,47 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               ),
             ),
 
-            // Map controls (bottom-right) - absorb pointer events
+            // Discovery path card + map controls (bottom-right).
+            // The discovery card sits directly above the controls and expands
+            // upward (the bottom-anchored stack keeps the controls fixed).
             Positioned(
               left: _hasLeftDetailPanel ? 400 : 24,
               right: showLocalNearbyPanel ? (24 + 360) : 24,
               bottom: 24,
               child: Align(
                 alignment: Alignment.bottomRight,
-                child: MapOverlayBlocker(
-                  child: _buildMapControls(themeProvider),
+                child: Consumer<TaskProvider>(
+                  builder: (context, taskProvider, _) {
+                    final activeProgress =
+                        taskProvider.getActiveTaskProgress();
+                    return MapOverlayBlocker(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          if (activeProgress.isNotEmpty) ...[
+                            _buildDiscoveryCard(taskProvider),
+                            const SizedBox(height: KubusSpacing.sm),
+                          ],
+                          _buildMapControls(themeProvider),
+                        ],
+                      ),
+                    );
+                  },
                 ),
               ),
             ),
 
-            // Discovery path card (bottom-left when no panel is open)
-            Consumer<TaskProvider>(
-              builder: (context, taskProvider, _) {
-                final activeProgress = taskProvider.getActiveTaskProgress();
-                final leftOffset = _isLeftPanelVisible ? 400.0 : 24.0;
-
-                if (activeProgress.isEmpty) {
-                  // No active tasks: show attribution icon standalone in bottom-left
-                  return Positioned(
-                    left: 24,
-                    bottom: KubusSpacing.xl +
-                        KubusHeaderMetrics.actionHitArea +
-                        KubusSpacing.sm,
-                    child: MapOverlayBlocker(
-                      child: _buildDesktopAttributionButton(),
-                    ),
-                  );
-                }
-
-                // Active tasks: show column with attribution + discovery card
-                return Positioned(
-                  left: leftOffset,
-                  bottom: 24,
-                  child: MapOverlayBlocker(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildDiscoveryCard(taskProvider),
-                        const SizedBox(height: KubusSpacing.sm),
-                        _buildDesktopAttributionButton(),
-                      ],
-                    ),
-                  ),
-                );
-              },
+            // Map attribution button (standalone, bottom-left) kept separate
+            // from the discovery/control stack so it stays stable.
+            Positioned(
+              left: 24,
+              bottom: KubusSpacing.xl +
+                  KubusHeaderMetrics.actionHitArea +
+                  KubusSpacing.sm,
+              child: MapOverlayBlocker(
+                child: _buildDesktopAttributionButton(),
+              ),
             ),
 
             ValueListenableBuilder<MapUiStateSnapshot>(
@@ -3696,6 +3690,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       onToggleExpanded: () =>
           setState(() => _isDiscoveryExpanded = !_isDiscoveryExpanded),
       buildTaskRow: _buildTaskProgressRow,
+      expansionDirection: KubusDiscoveryExpansionDirection.upward,
       titleStyle: theme.textTheme.bodyMedium?.copyWith(
         fontWeight: FontWeight.w700,
         color: scheme.onSurface,

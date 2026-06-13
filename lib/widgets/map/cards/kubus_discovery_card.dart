@@ -45,6 +45,7 @@ class KubusDiscoveryCard extends StatelessWidget {
     this.expandButtonSize = 36,
     this.toggleConfigs = const <KubusDiscoveryToggleConfig>[],
     this.footer,
+    this.expansionDirection = KubusDiscoveryExpansionDirection.downward,
   });
 
   final double overallProgress;
@@ -53,6 +54,7 @@ class KubusDiscoveryCard extends StatelessWidget {
   final VoidCallback onToggleExpanded;
   final TextStyle? titleStyle;
   final TextStyle? percentStyle;
+  final KubusDiscoveryExpansionDirection expansionDirection;
 
   final EdgeInsets glassPadding;
   final BoxConstraints? constraints;
@@ -99,12 +101,22 @@ class KubusDiscoveryCard extends StatelessWidget {
       ],
     ];
 
+    // Direction-aware chevron: it always points the way the card will move when
+    // tapped. Downward-opening cards point down when collapsed; upward-opening
+    // cards point up when collapsed (and flip once expanded).
+    final isUpward =
+        expansionDirection == KubusDiscoveryExpansionDirection.upward;
+    final IconData chevronIcon = isUpward
+        ? (expanded ? Icons.keyboard_arrow_down : Icons.keyboard_arrow_up)
+        : (expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down);
+
     return KubusDiscoveryPathCard(
       overallProgress: overallProgress,
       expanded: expanded,
       taskRows: expandedRows,
+      expansionDirection: expansionDirection,
       toggleButton: KubusGlassIconButton(
-        icon: expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+        icon: chevronIcon,
         tooltip: expanded ? l10n.commonCollapse : l10n.commonExpand,
         size: expandButtonSize,
         borderRadius: KubusRadius.sm,

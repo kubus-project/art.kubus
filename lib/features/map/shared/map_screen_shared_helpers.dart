@@ -23,6 +23,7 @@ import '../../../utils/wallet_utils.dart';
 import '../../../widgets/common/kubus_marker_overlay_card.dart';
 import '../../../widgets/map_marker_style_config.dart';
 import '../../../widgets/map/cards/kubus_discovery_card.dart';
+import '../../../widgets/map/discovery/kubus_discovery_path_card.dart';
 import 'map_marker_overlay_presentation.dart';
 import 'map_overlay_sizing.dart';
 import '../map_layers_manager.dart';
@@ -544,19 +545,26 @@ class KubusMapDiscoveryCardHelpers {
     double expandButtonSize = 36,
     double badgeGap = 10,
     double tasksTopGap = 10,
+    KubusDiscoveryExpansionDirection expansionDirection =
+        KubusDiscoveryExpansionDirection.downward,
   }) {
     final progressList = activeProgress.toList(growable: false);
     if (progressList.isEmpty) return const SizedBox.shrink();
 
-    final tasksToRender = expanded ? progressList : const <TaskProgress>[];
-
+    // Always build keyed rows so the expanded area animates between a stable
+    // child and zero height (instead of inserting/removing rows, which pops).
     return KubusDiscoveryCard(
       overallProgress: overallProgress,
       expanded: expanded,
       taskRows: [
-        for (final progress in tasksToRender) buildTaskRow(progress),
+        for (final progress in progressList)
+          KeyedSubtree(
+            key: ValueKey<String>(progress.taskId),
+            child: buildTaskRow(progress),
+          ),
       ],
       onToggleExpanded: onToggleExpanded,
+      expansionDirection: expansionDirection,
       titleStyle: titleStyle,
       percentStyle: percentStyle,
       glassPadding: glassPadding,

@@ -1,9 +1,17 @@
 import 'package:flutter/material.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../../utils/app_animations.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../inline_progress.dart';
 import '../kubus_map_glass_surface.dart';
+
+/// Direction the discovery card's expandable contribution/task area grows in.
+///
+/// - [downward]: header on top, tasks reveal below it (mobile / default).
+/// - [upward]: header anchored at the bottom, tasks reveal above it so the card
+///   can sit directly above the desktop map controls without pushing them down.
+enum KubusDiscoveryExpansionDirection { downward, upward }
 
 /// Shared UI for the "Discovery path" module shown on both mobile and desktop
 /// map screens.
@@ -31,6 +39,10 @@ class KubusDiscoveryPathCard extends StatelessWidget {
   final double badgeGap;
   final double tasksTopGap;
 
+  /// Direction the expandable task area grows in. Defaults to [downward] so the
+  /// mobile/existing behaviour stays unchanged unless a caller opts in.
+  final KubusDiscoveryExpansionDirection expansionDirection;
+
   const KubusDiscoveryPathCard({
     super.key,
     required this.overallProgress,
@@ -45,6 +57,7 @@ class KubusDiscoveryPathCard extends StatelessWidget {
     this.mouseCursor = SystemMouseCursors.basic,
     this.badgeGap = 10,
     this.tasksTopGap = 10,
+    this.expansionDirection = KubusDiscoveryExpansionDirection.downward,
   });
 
   @override
@@ -64,12 +77,77 @@ class KubusDiscoveryPathCard extends StatelessWidget {
     );
 
     final radius = BorderRadius.circular(18);
+    final animation = context.animationTheme;
+    final isUpward =
+        expansionDirection == KubusDiscoveryExpansionDirection.upward;
+
+    final header = Row(
+      children: [
+        ShaderMask(
+          shaderCallback: (rect) => badgeGradient.createShader(rect),
+          blendMode: BlendMode.srcIn,
+          child: InlineProgress(
+            progress: overallProgress,
+            rows: 3,
+            cols: 5,
+            color: scheme.onSurface,
+            backgroundColor:
+                scheme.surfaceContainerHighest.withValues(alpha: 0.35),
+          ),
+        ),
+        SizedBox(width: badgeGap),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                l10n.mapDiscoveryPathTitle,
+                style: titleStyle,
+              ),
+              Text(
+                l10n.commonPercentComplete(
+                  (overallProgress * 100).round(),
+                ),
+                style: percentStyle,
+              ),
+            ],
+          ),
+        ),
+        toggleButton,
+      ],
+    );
+
+    // Stable, keyed expanded content. The rows are always built; collapsing is
+    // handled by smoothly sizing the clipped area to zero instead of swapping
+    // the subtree, which avoids layout popping / reordering jitter.
+    final expandedContent = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (!isUpward) SizedBox(height: tasksTopGap),
+        ...taskRows,
+        if (isUpward) SizedBox(height: tasksTopGap),
+      ],
+    );
+
+    final expandedArea = ClipRect(
+      child: AnimatedSize(
+        duration: animation.short,
+        curve: animation.defaultCurve,
+        alignment:
+            isUpward ? Alignment.bottomCenter : Alignment.topCenter,
+        child: expanded
+            ? SizedBox(width: double.infinity, child: expandedContent)
+            : const SizedBox(width: double.infinity, height: 0),
+      ),
+    );
 
     Widget card = Semantics(
       label: 'discovery_path',
       container: true,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 220),
+        duration: animation.medium,
+        curve: animation.defaultCurve,
         constraints: constraints,
         child: buildKubusMapGlassSurface(
           context: context,
@@ -78,59 +156,14 @@ class KubusDiscoveryPathCard extends StatelessWidget {
           tintBase: scheme.surface,
           padding: glassPadding,
           margin: EdgeInsets.zero,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  ShaderMask(
-                    shaderCallback: (rect) => badgeGradient.createShader(rect),
-                    blendMode: BlendMode.srcIn,
-                    child: InlineProgress(
-                      progress: overallProgress,
-                      rows: 3,
-                      cols: 5,
-                      color: scheme.onSurface,
-                      backgroundColor: scheme.surfaceContainerHighest
-                          .withValues(alpha: 0.35),
-                    ),
-                  ),
-                  SizedBox(width: badgeGap),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          l10n.mapDiscoveryPathTitle,
-                          style: titleStyle,
-                        ),
-                        Text(
-                          l10n.commonPercentComplete(
-                            (overallProgress * 100).round(),
-                          ),
-                          style: percentStyle,
-                        ),
-                      ],
-                    ),
-                  ),
-                  toggleButton,
-                ],
-              ),
-              AnimatedCrossFade(
-                crossFadeState: expanded
-                    ? CrossFadeState.showFirst
-                    : CrossFadeState.showSecond,
-                duration: const Duration(milliseconds: 200),
-                firstChild: Column(
-                  children: [
-                    SizedBox(height: tasksTopGap),
-                    ...taskRows,
-                  ],
-                ),
-                secondChild: const SizedBox.shrink(),
-              ),
-            ],
+          child: RepaintBoundary(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: isUpward
+                  ? [expandedArea, header]
+                  : [header, expandedArea],
+            ),
           ),
         ),
       ),
