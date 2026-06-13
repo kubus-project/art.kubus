@@ -59,6 +59,23 @@ enum ArtMapMarkerShape {
   }
 }
 
+/// One category contained in a cluster, described by the silhouette + colour
+/// used for that marker type. Used to render a combined cluster badge whose
+/// pips communicate which categories (artwork, street art, events, …) are
+/// bundled inside the cluster.
+@immutable
+class ClusterCategoryBadge {
+  const ClusterCategoryBadge({
+    required this.shape,
+    required this.color,
+    required this.count,
+  });
+
+  final ArtMapMarkerShape shape;
+  final Color color;
+  final int count;
+}
+
 /// Design tokens for cube marker sizing.
 ///
 /// For camera-relative 3D markers, use [RotatableCubeTokens] instead.
@@ -163,6 +180,7 @@ class _ClusterPngCacheKey {
     required this.shadowColorValue,
     required this.pixelRatioKey,
     required this.labelStyleKey,
+    required this.categoryKey,
   });
 
   final int baseColorValue;
@@ -171,6 +189,10 @@ class _ClusterPngCacheKey {
   final int shadowColorValue;
   final int pixelRatioKey;
   final int labelStyleKey;
+
+  /// Encodes the combined-badge composition (per-category shape + colour) so
+  /// mixed clusters with different category sets cache distinct icons.
+  final String categoryKey;
 
   @override
   bool operator ==(Object other) {
@@ -181,7 +203,8 @@ class _ClusterPngCacheKey {
             other.isDark == isDark &&
             other.shadowColorValue == shadowColorValue &&
             other.pixelRatioKey == pixelRatioKey &&
-            other.labelStyleKey == labelStyleKey);
+            other.labelStyleKey == labelStyleKey &&
+            other.categoryKey == categoryKey);
   }
 
   @override
@@ -192,6 +215,7 @@ class _ClusterPngCacheKey {
         shadowColorValue,
         pixelRatioKey,
         labelStyleKey,
+        categoryKey,
       );
 }
 
@@ -848,6 +872,7 @@ class ArtMarkerCubeIconRenderer {
     double cubeSize = 54,
     double pixelRatio = 2.0,
     TextStyle? labelStyleOverride,
+    List<ClusterCategoryBadge> categories = const <ClusterCategoryBadge>[],
   }) async {
     final style = CubeMarkerStyle.fromScheme(
       scheme: scheme,
@@ -858,6 +883,15 @@ class ArtMarkerCubeIconRenderer {
     final label = count > 99 ? '99+' : '$count';
     final iconForeground = _iconForegroundForTheme(isDark: isDark);
 
+    // Only render the combined-category ring when the cluster actually mixes
+    // more than one category; single-category clusters keep the clean badge.
+    final combinedCategories = categories.length > 1
+        ? categories
+        : const <ClusterCategoryBadge>[];
+    final categoryKey = combinedCategories
+        .map((c) => '${c.shape.index}:${c.color.toARGB32()}')
+        .join('|');
+
     final key = _ClusterPngCacheKey(
       baseColorValue: baseColor.toARGB32(),
       label: label,
@@ -865,6 +899,7 @@ class ArtMarkerCubeIconRenderer {
       shadowColorValue: scheme.shadow.toARGB32(),
       pixelRatioKey: _pixelRatioKey(pixelRatio),
       labelStyleKey: _clusterLabelStyleKey(labelStyleOverride),
+      categoryKey: categoryKey,
     );
 
     return _cachedFuture<_ClusterPngCacheKey>(
@@ -885,6 +920,8 @@ class ArtMarkerCubeIconRenderer {
           palette: palette,
           style: style,
           showGlow: showGlow,
+          categories: combinedCategories,
+          isDark: isDark,
           pixelRatio: pixelRatio,
         );
       },
@@ -912,8 +949,12 @@ class ArtMarkerCubeIconRenderer {
     required _CubePalette palette,
     required CubeMarkerStyle style,
     required bool showGlow,
+    required bool isDark,
+    List<ClusterCategoryBadge> categories = const <ClusterCategoryBadge>[],
     double pixelRatio = 2.0,
   }) async {
+    final isCombined = categories.length > 1;
+
     // Clusters use the same floating-badge language as single markers (a circle
     // body that reads as an aggregate node), so the map never mixes a separate
     // cube style with the new marker system.
@@ -924,6 +965,22 @@ class ArtMarkerCubeIconRenderer {
       paint: (canvas, logicalSize) {
         final center = Offset(logicalSize.width / 2, badgeBodyCenterY);
         const bodySize = badgeBodySize;
+
+        if (isCombined) {
+          _paintCombinedClusterBadge(
+            canvas: canvas,
+            center: center,
+            label: label,
+            labelStyle: labelStyle,
+            iconForeground: iconForeground,
+            baseColor: baseColor,
+            style: style,
+            showGlow: showGlow,
+            isDark: isDark,
+            categories: categories,
+          );
+          return;
+        }
 
         final shadowPath = _buildBadgePath(
           ArtMapMarkerShape.circle,
@@ -973,6 +1030,106 @@ class ArtMarkerCubeIconRenderer {
         );
         labelPainter.paint(canvas, labelOffset);
       },
+    );
+  }
+
+  /// Paints a combined cluster badge: a ring of small category-shaped pips
+  /// (one per dominant category, in that category's colour) around a central
+  /// count circle. This makes a mixed cluster visually communicate the variety
+  /// of categories it holds while keeping the count readable.
+  static void _paintCombinedClusterBadge({
+    required Canvas canvas,
+    required Offset center,
+    required String label,
+    required TextStyle labelStyle,
+    required Color iconForeground,
+    required Color baseColor,
+    required CubeMarkerStyle style,
+    required bool showGlow,
+    required bool isDark,
+    required List<ClusterCategoryBadge> categories,
+  }) {
+    const double centralRadius = 14.5;
+    const double ringRadius = 19.0;
+    final int pipCount = categories.length;
+    final double pipSize = pipCount <= 3 ? 16.0 : 14.0;
+
+    // Soft drop shadow grounding the whole badge.
+    canvas.drawCircle(
+      center + const Offset(0, 3.5),
+      ringRadius + pipSize / 2,
+      Paint()
+        ..color = style.shadowColor.withValues(alpha: 0.20)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 7),
+    );
+
+    if (showGlow) {
+      canvas.drawCircle(
+        center,
+        ringRadius + pipSize / 2 + 4,
+        Paint()
+          ..color = baseColor.withValues(alpha: 0.22)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 9),
+      );
+    }
+
+    // Category pips evenly distributed around the ring, starting at the top.
+    final pipOutline = iconForeground.withValues(alpha: isDark ? 0.32 : 0.85);
+    for (var i = 0; i < pipCount; i++) {
+      final angle = -math.pi / 2 + (2 * math.pi / pipCount) * i;
+      final pipCenter = Offset(
+        center.dx + math.cos(angle) * ringRadius,
+        center.dy + math.sin(angle) * ringRadius,
+      );
+      final category = categories[i];
+
+      // Tiny shadow so adjacent pips stay separated on busy map tiles.
+      final pipShadow =
+          _buildBadgePath(category.shape, pipCenter + const Offset(0, 1.0), pipSize);
+      canvas.drawPath(
+        pipShadow,
+        Paint()
+          ..color = style.shadowColor.withValues(alpha: 0.20)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2),
+      );
+
+      final pipPath = _buildBadgePath(category.shape, pipCenter, pipSize);
+      canvas.drawPath(pipPath, Paint()..color = category.color);
+      canvas.drawPath(
+        pipPath,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.0
+          ..color = pipOutline,
+      );
+    }
+
+    // Central count circle drawn on top so the number is always legible.
+    canvas.drawCircle(center, centralRadius, Paint()..color = baseColor);
+    canvas.drawCircle(
+      center,
+      centralRadius,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5
+        ..color = iconForeground.withValues(alpha: isDark ? 0.22 : 0.85),
+    );
+
+    final scaledLabelStyle = labelStyle.copyWith(
+      fontSize: (labelStyle.fontSize ?? 14.0) * 0.82,
+    );
+    final labelPainter = TextPainter(
+      text: TextSpan(text: label, style: scaledLabelStyle),
+      textAlign: TextAlign.center,
+      textDirection: TextDirection.ltr,
+    );
+    labelPainter.layout();
+    labelPainter.paint(
+      canvas,
+      Offset(
+        center.dx - labelPainter.width / 2,
+        center.dy - labelPainter.height / 2,
+      ),
     );
   }
 

@@ -33,6 +33,95 @@ class KubusClusterBucket {
   final String? sameCoordinateKey;
 }
 
+/// A single marker category present inside a cluster, with how many markers of
+/// that category the cluster contains.
+@immutable
+class KubusClusterCategory {
+  const KubusClusterCategory({required this.type, required this.count});
+
+  final ArtMarkerType type;
+  final int count;
+}
+
+/// Maximum number of distinct categories rendered into a combined cluster badge.
+///
+/// Keeps the badge legible: beyond this the remaining (least common) categories
+/// are folded into the dominant ones visually.
+const int kKubusClusterMaxBadgeCategories = 5;
+
+/// Computes the marker-category composition of [markers], dominant categories
+/// first (ties broken by enum order for stable icon ids).
+List<KubusClusterCategory> kubusClusterCategoryBreakdown(
+  List<ArtMarker> markers,
+) {
+  final counts = <ArtMarkerType, int>{};
+  for (final marker in markers) {
+    counts.update(marker.type, (value) => value + 1, ifAbsent: () => 1);
+  }
+  final entries = counts.entries.toList()
+    ..sort((a, b) {
+      final byCount = b.value.compareTo(a.value);
+      if (byCount != 0) return byCount;
+      return a.key.index.compareTo(b.key.index);
+    });
+  return <KubusClusterCategory>[
+    for (final entry in entries)
+      KubusClusterCategory(type: entry.key, count: entry.value),
+  ];
+}
+
+/// Stable signature for a cluster's category composition, used to key the
+/// combined cluster icon image. Only the dominant categories (capped at
+/// [kKubusClusterMaxBadgeCategories]) participate, matching what is rendered.
+String kubusClusterCategorySignature(
+  List<KubusClusterCategory> breakdown, {
+  int max = kKubusClusterMaxBadgeCategories,
+}) {
+  return breakdown.take(max).map((category) => category.type.name).join('-');
+}
+
+/// Bundles everything the renderer needs to draw a combined cluster badge that
+/// communicates the categories contained in [markers].
+///
+/// [signature] keys the cached icon, [badges] are the per-category shape+colour
+/// pips (dominant first, capped at [kKubusClusterMaxBadgeCategories]) and
+/// [baseColor] is the dominant category colour used for the central body.
+({
+  String signature,
+  Color baseColor,
+  List<ClusterCategoryBadge> badges,
+}) kubusClusterBadgeRenderData(
+  List<ArtMarker> markers, {
+  required ColorScheme scheme,
+  required KubusColorRoles roles,
+}) {
+  final breakdown = kubusClusterCategoryBreakdown(markers);
+  final signature = kubusClusterCategorySignature(breakdown);
+  final shown = breakdown.take(kKubusClusterMaxBadgeCategories);
+  final badges = <ClusterCategoryBadge>[
+    for (final category in shown)
+      ClusterCategoryBadge(
+        shape: ArtMapMarkerShape.forType(category.type),
+        color: AppColorUtils.markerSubjectColor(
+          markerType: category.type.name,
+          metadata: null,
+          scheme: scheme,
+          roles: roles,
+        ),
+        count: category.count,
+      ),
+  ];
+  final baseColor = badges.isNotEmpty
+      ? badges.first.color
+      : AppColorUtils.markerSubjectColor(
+          markerType: markers.first.type.name,
+          metadata: markers.first.metadata,
+          scheme: scheme,
+          roles: roles,
+        );
+  return (signature: signature, baseColor: baseColor, badges: badges);
+}
+
 /// Helper for batched icon pre-registration.
 @immutable
 class KubusIconRenderTask {
@@ -168,11 +257,12 @@ Future<void> kubusPreregisterMarkerIcons({
           );
         }
       } else {
-        final first = cluster.markers.first;
-        final typeName = first.type.name;
+        final signature = kubusClusterCategorySignature(
+          kubusClusterCategoryBreakdown(cluster.markers),
+        );
         final label = cluster.markers.length > 99 ? '99+' : '${cluster.markers.length}';
         final iconId = MapMarkerIconIds.cluster(
-          typeName: typeName,
+          categorySignature: signature,
           label: label,
           isDark: isDark,
         );
@@ -237,10 +327,12 @@ Future<void> kubusPreregisterMarkerIcons({
         }
       } else {
         final first = group.first;
-        final typeName = first.type.name;
+        final signature = kubusClusterCategorySignature(
+          kubusClusterCategoryBreakdown(group),
+        );
         final label = group.length > 99 ? '99+' : '${group.length}';
         final iconId = MapMarkerIconIds.cluster(
-          typeName: typeName,
+          categorySignature: signature,
           label: label,
           isDark: isDark,
         );
@@ -286,18 +378,17 @@ Future<void> kubusPreregisterMarkerIcons({
       try {
         Uint8List bytes;
         if (task.isCluster && task.cluster != null) {
-          final first = task.cluster!.markers.first;
-          final baseColor = AppColorUtils.markerSubjectColor(
-            markerType: first.type.name,
-            metadata: first.metadata,
+          final renderData = kubusClusterBadgeRenderData(
+            task.cluster!.markers,
             scheme: scheme,
             roles: roles,
           );
           bytes = await ArtMarkerCubeIconRenderer.renderClusterPng(
             count: task.cluster!.markers.length,
-            baseColor: baseColor,
+            baseColor: renderData.baseColor,
             scheme: scheme,
             isDark: isDark,
+            categories: renderData.badges,
             pixelRatio: pixelRatio,
           );
         } else if (task.marker != null) {

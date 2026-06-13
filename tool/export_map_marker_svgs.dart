@@ -180,7 +180,7 @@ Future<void> main(List<String> args) async {
       for (final count in clusterCounts) {
         final label = count > 99 ? '99+' : '$count';
         final iconId = MapMarkerIconIds.cluster(
-          typeName: typeName,
+          categorySignature: typeName,
           label: label,
           isDark: isDark,
         );

@@ -2098,49 +2098,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               ),
             ),
 
-            // Discovery path card + map controls (bottom-right).
-            // The discovery card sits directly above the controls and expands
-            // upward (the bottom-anchored stack keeps the controls fixed).
-            Positioned(
-              left: _hasLeftDetailPanel ? 400 : 24,
-              right: showLocalNearbyPanel ? (24 + 360) : 24,
-              bottom: 24,
-              child: Align(
-                alignment: Alignment.bottomRight,
-                child: Consumer<TaskProvider>(
-                  builder: (context, taskProvider, _) {
-                    final activeProgress =
-                        taskProvider.getActiveTaskProgress();
-                    return MapOverlayBlocker(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          if (activeProgress.isNotEmpty) ...[
-                            _buildDiscoveryCard(taskProvider),
-                            const SizedBox(height: KubusSpacing.sm),
-                          ],
-                          _buildMapControls(themeProvider),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ),
-
-            // Map attribution button (standalone, bottom-left) kept separate
-            // from the discovery/control stack so it stays stable.
-            Positioned(
-              left: 24,
-              bottom: KubusSpacing.xl +
-                  KubusHeaderMetrics.actionHitArea +
-                  KubusSpacing.sm,
-              child: MapOverlayBlocker(
-                child: _buildDesktopAttributionButton(),
-              ),
-            ),
-
             ValueListenableBuilder<MapUiStateSnapshot>(
               valueListenable: _mapUiStateCoordinator.state,
               builder: (context, uiState, _) {
@@ -2155,6 +2112,56 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   },
                 );
               },
+            ),
+
+            // Discovery path card + attribution + map controls (bottom-right).
+            //
+            // The discovery card sits directly above the controls and expands
+            // upward (the bottom-anchored stack keeps the controls fixed). The
+            // custom attribution button is bottom-aligned to the LEFT of the
+            // control toolbar instead of being left in the default
+            // MapLibre/OSM corner. This cluster is the last child in the Stack
+            // so the discovery path and controls always render above the map,
+            // side panels, glass chrome and any anchored marker overlay card.
+            Positioned(
+              left: _hasLeftDetailPanel ? 400 : 24,
+              right: showLocalNearbyPanel ? (24 + 360) : 24,
+              bottom: 24,
+              child: Align(
+                alignment: Alignment.bottomRight,
+                child: Consumer<TaskProvider>(
+                  builder: (context, taskProvider, _) {
+                    final activeProgress =
+                        taskProvider.getActiveTaskProgress();
+                    return MapOverlayBlocker(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          // Custom attribution button, left of the controls.
+                          Padding(
+                            padding: const EdgeInsets.only(
+                              right: KubusSpacing.sm,
+                            ),
+                            child: _buildDesktopAttributionButton(),
+                          ),
+                          Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              if (activeProgress.isNotEmpty) ...[
+                                _buildDiscoveryCard(taskProvider),
+                                const SizedBox(height: KubusSpacing.sm),
+                              ],
+                              _buildMapControls(themeProvider),
+                            ],
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
             ),
           ],
         ),
@@ -3547,12 +3554,26 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             ],
           ),
           const SizedBox(height: KubusSpacing.lg),
-          Text(
-            l10n.mapLayersTitle,
-            style: KubusTextStyles.navLabel.copyWith(
-              fontWeight: FontWeight.w600,
-              color: scheme.onSurface,
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  l10n.mapLayersTitle,
+                  style: KubusTextStyles.navLabel.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: scheme.onSurface,
+                  ),
+                ),
+              ),
+              Text(
+                '${_markerLayerVisibility.values.where((v) => v).length}'
+                '/${_markerLayerVisibility.length}',
+                style: KubusTypography.textTheme.bodySmall?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: KubusSpacing.md),
           KubusMapMarkerLayerChips(

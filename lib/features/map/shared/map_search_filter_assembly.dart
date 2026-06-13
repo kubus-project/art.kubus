@@ -20,11 +20,16 @@ class KubusMapFilterOption {
     required this.key,
     required this.label,
     required this.accentColor,
+    required this.icon,
   });
 
   final String key;
   final String label;
   final Color accentColor;
+
+  /// Type-specific glyph so each quick filter reads distinctly at a glance
+  /// instead of every chip sharing a generic "filter" icon.
+  final IconData icon;
 }
 
 class KubusMapFilterCatalog {
@@ -45,31 +50,37 @@ class KubusMapFilterCatalog {
         key: 'all',
         label: l10n.mapFilterAllNearby,
         accentColor: primaryAccent,
+        icon: Icons.public,
       ),
       KubusMapFilterOption(
         key: 'nearby',
         label: l10n.mapFilterWithin1Km,
         accentColor: primaryAccent,
+        icon: Icons.near_me,
       ),
       KubusMapFilterOption(
         key: 'discovered',
         label: l10n.mapFilterDiscovered,
         accentColor: accentColor ?? roles.positiveAction,
+        icon: Icons.check_circle_outline,
       ),
       KubusMapFilterOption(
         key: 'undiscovered',
         label: l10n.mapFilterUndiscovered,
         accentColor: accentColor ?? scheme.outline,
+        icon: Icons.explore_outlined,
       ),
       KubusMapFilterOption(
         key: 'ar',
         label: l10n.mapFilterArEnabled,
         accentColor: accentColor ?? scheme.secondary,
+        icon: Icons.view_in_ar,
       ),
       KubusMapFilterOption(
         key: 'favorites',
         label: l10n.mapFilterFavorites,
         accentColor: accentColor ?? roles.likeAction,
+        icon: Icons.favorite,
       ),
     ];
   }
@@ -108,7 +119,7 @@ class KubusMapFilterChipStrip extends StatelessWidget {
           padding: keyPadding,
           child: KubusGlassChip(
             label: option.label,
-            icon: Icons.filter_alt_outlined,
+            icon: option.icon,
             active: selectedKey == option.key,
             accentColor: option.accentColor,
             borderRadius: borderRadius,

@@ -5,7 +5,6 @@ import 'package:maplibre_gl/maplibre_gl.dart' as ml;
 
 import '../../models/art_marker.dart';
 import '../../features/map/shared/map_marker_collision_config.dart';
-import '../../utils/app_color_utils.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/map_marker_icon_ids.dart';
 import '../../utils/maplibre_style_utils.dart';
@@ -121,20 +120,18 @@ Future<Map<String, dynamic>> kubusClusterFeatureFor({
 }) async {
   if (shouldAbort()) return const <String, dynamic>{};
 
-  final first = cluster.markers.first;
-  final typeName = first.type.name;
   final label = cluster.markers.length > 99 ? '99+' : '${cluster.markers.length}';
-  final iconId = MapMarkerIconIds.cluster(
-    typeName: typeName,
-    label: label,
-    isDark: isDark,
-  );
-  final baseColor = AppColorUtils.markerSubjectColor(
-    markerType: typeName,
-    metadata: first.metadata,
+  final renderData = kubusClusterBadgeRenderData(
+    cluster.markers,
     scheme: scheme,
     roles: roles,
   );
+  final iconId = MapMarkerIconIds.cluster(
+    categorySignature: renderData.signature,
+    label: label,
+    isDark: isDark,
+  );
+  final baseColor = renderData.baseColor;
   final colorHex = MapLibreStyleUtils.hexRgb(baseColor);
 
   if (!registeredMapImages.contains(iconId)) {
@@ -143,6 +140,7 @@ Future<Map<String, dynamic>> kubusClusterFeatureFor({
       baseColor: baseColor,
       scheme: scheme,
       isDark: isDark,
+      categories: renderData.badges,
       pixelRatio: pixelRatio,
     );
 
