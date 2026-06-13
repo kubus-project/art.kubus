@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart';
 import '../community/community_interactions.dart';
 import '../services/backend_api_service.dart';
 import '../services/profile_package_mutation_tracker.dart';
-import 'community_comments_provider.dart';
 import 'wallet_provider.dart';
 
 class CommunityInteractionsProvider extends ChangeNotifier {
@@ -140,28 +139,12 @@ class CommunityInteractionsProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> prefetchForPosts(
-    Iterable<CommunityPost> posts, {
-    CommunityCommentsProvider? commentsProvider,
-    int commentsLimit = 8,
-    int likesLimit = 25,
-  }) async {
+  Future<void> prefetchForPosts(Iterable<CommunityPost> posts) async {
     final list = posts.where((post) => post.id.trim().isNotEmpty).toList();
     if (list.isEmpty) return;
 
     hydratePostsFromServer(list);
     unawaited(refreshPostStates(list));
-
-    if (commentsProvider != null) {
-      for (final post in list.take(commentsLimit)) {
-        unawaited(commentsProvider.loadComments(post.id));
-      }
-    }
-
-    for (final post
-        in list.where((post) => post.likeCount > 0).take(likesLimit)) {
-      unawaited(loadPostLikes(post.id));
-    }
   }
 
   Future<void> togglePostLike(CommunityPost post) async {

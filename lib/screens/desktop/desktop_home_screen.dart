@@ -416,7 +416,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         latitude: center.lat ?? 46.05,
         longitude: center.lng ?? 14.50,
         radiusKm: 50,
-        limit: 50,
+        limit: 24,
         refresh: true,
       );
     }
@@ -440,7 +440,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
 
     try {
       final posts =
-          await _backendApi.getCommunityPosts(limit: 50, sort: 'popularity');
+          await _backendApi.getCommunityPosts(limit: 24, sort: 'popularity');
       if (!mounted) return;
       setState(() {
         _popularCommunityPosts = posts;
@@ -726,8 +726,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                               ? Wrap(
                                   spacing: KubusSpacing.sm,
                                   runSpacing: KubusSpacing.xxs,
-                                  crossAxisAlignment:
-                                      WrapCrossAlignment.center,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
                                   children: [
                                     Material(
                                       color: Colors.transparent,
@@ -1015,10 +1014,10 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     final statsProvider = context.watch<StatsProvider>();
     final l10n = AppLocalizations.of(context)!;
     final walletAddress = context
-        .select<WalletProvider, String?>(
-          (provider) => provider.currentWalletAddress,
-        )
-        ?.trim() ??
+            .select<WalletProvider, String?>(
+              (provider) => provider.currentWalletAddress,
+            )
+            ?.trim() ??
         '';
     final publicSnapshot = walletAddress.isEmpty
         ? null
@@ -1193,15 +1192,14 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
   Widget _buildQuickActions() {
     final navigationProvider = Provider.of<NavigationProvider>(context);
     final persona =
-      context.select<ProfileProvider, UserPersona?>((p) => p.userPersona);
+        context.select<ProfileProvider, UserPersona?>((p) => p.userPersona);
     final currentUser =
-      context.select<ProfileProvider, UserProfile?>((p) => p.currentUser);
+        context.select<ProfileProvider, UserProfile?>((p) => p.currentUser);
     final l10n = AppLocalizations.of(context)!;
     final quickScreens = navigationProvider.getQuickActionScreens(maxItems: 12);
-    final suggestedKeys =
-        resolveSuggestedQuickActionKeys(persona, currentUser)
-            .where(HomeQuickActionRegistry.contains)
-            .toList(growable: false);
+    final suggestedKeys = resolveSuggestedQuickActionKeys(persona, currentUser)
+        .where(HomeQuickActionRegistry.contains)
+        .toList(growable: false);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

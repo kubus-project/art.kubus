@@ -30,7 +30,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:location/location.dart' as loc;
 import 'dart:io';
-import 'dart:math' as math;
 import '../../providers/themeprovider.dart';
 import '../../providers/config_provider.dart';
 import '../../providers/wallet_provider.dart';
@@ -128,11 +127,6 @@ class _CommunityScreenState extends State<CommunityScreen>
   final Map<String, TextEditingController> _inlineCommentControllers =
       <String, TextEditingController>{};
   final Map<String, String?> _inlineReplyToCommentIds = <String, String?>{};
-  // How many posts to prefetch comments for (make configurable)
-  final int _commentPrefetchCount = 8;
-  final int _prefetchConcurrencyLimit = 3;
-  final int _prefetchMaxRetries = 3;
-  final int _prefetchBaseDelayMs = 300; // milliseconds
   bool _isLoading = false;
   bool _isLoadingFollowingFeed = false;
   bool _isLoadingDiscoverFeed = false;
@@ -372,7 +366,7 @@ class _CommunityScreenState extends State<CommunityScreen>
     final savedItemsProvider = context.read<SavedItemsProvider>();
     final posts = await backendApi.getCommunityPosts(
       page: 1,
-      limit: 50,
+      limit: 24,
       followingOnly: followingOnly,
       surface: followingOnly ? 'following' : 'discover',
       sort: sort,
@@ -385,13 +379,9 @@ class _CommunityScreenState extends State<CommunityScreen>
       subjectProvider.primeFromPosts(posts);
       final interactionsProvider =
           Provider.of<CommunityInteractionsProvider>(context, listen: false);
-      final commentsProvider =
-          Provider.of<CommunityCommentsProvider>(context, listen: false);
       interactionsProvider.hydratePostsFromServer(posts);
       unawaited(interactionsProvider.prefetchForPosts(
         posts,
-        commentsProvider: commentsProvider,
-        commentsLimit: _commentPrefetchCount,
       ));
     }
 
@@ -491,11 +481,6 @@ class _CommunityScreenState extends State<CommunityScreen>
       _isLoading = false;
     });
 
-    if (_activeFeed == CommunityFeedType.following &&
-        _followingFeedPosts.isNotEmpty) {
-      _prefetchComments();
-    }
-
     if (followingPosts == null && discoverPosts != null) {
       final l10n = AppLocalizations.of(context)!;
       _showSnack(l10n.communityFollowingFeedUnavailableToast);
@@ -570,10 +555,6 @@ class _CommunityScreenState extends State<CommunityScreen>
       }
     });
 
-    if (targetFollowing && isActiveFeed && (_followingFeedPosts.isNotEmpty)) {
-      _prefetchComments();
-    }
-
     if (posts == null || posts.isEmpty) {
       if (isActiveFeed && _communityPosts.isEmpty) {
         final alternative =
@@ -623,40 +604,6 @@ class _CommunityScreenState extends State<CommunityScreen>
       if (_discoverFeedPosts.isEmpty && !_isLoadingDiscoverFeed) {
         _loadCommunityData(followingOnly: false);
       }
-    }
-  }
-
-  Future<void> _prefetchComments() async {
-    try {
-      final commentsProvider =
-          Provider.of<CommunityCommentsProvider>(context, listen: false);
-      final prefetchCount =
-          math.min(_commentPrefetchCount, _communityPosts.length);
-      final concurrency = _prefetchConcurrencyLimit;
-      for (var i = 0; i < prefetchCount; i += concurrency) {
-        final end = math.min(i + concurrency, prefetchCount);
-        final batch = _communityPosts.sublist(i, end);
-        await Future.wait(batch.map((post) async {
-          int attempt = 0;
-          while (attempt < _prefetchMaxRetries) {
-            try {
-              await commentsProvider.loadComments(post.id);
-              post.commentCount = commentsProvider.totalCountForPost(post.id);
-              ProfilePackageMutationTracker.postUpdated(post: post);
-              if (mounted) setState(() {});
-              break;
-            } catch (e) {
-              attempt++;
-              final delayMs = _prefetchBaseDelayMs * (1 << (attempt - 1));
-              debugPrint(
-                  'Prefetch comments failed for post ${post.id} (attempt $attempt): $e. Retrying in ${delayMs}ms');
-              await Future.delayed(Duration(milliseconds: delayMs));
-            }
-          }
-        }));
-      }
-    } catch (e) {
-      debugPrint('Unexpected error in _prefetchComments: $e');
     }
   }
 

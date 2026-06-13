@@ -4,6 +4,7 @@ import '../config/config.dart';
 import '../models/community_group.dart';
 import '../models/community_subject.dart';
 import '../models/achievements.dart' as achievements_model;
+import '../models/identity_summary.dart';
 import '../models/saved_item.dart';
 import '../providers/saved_items_provider.dart';
 import '../models/promotion.dart';
@@ -19,6 +20,7 @@ class CommunityPost {
   final String authorName;
   final String? authorAvatar;
   final String? authorUsername;
+  final IdentitySummary? authorIdentity;
   final String content;
   final String? imageUrl;
   final List<String> mediaUrls;
@@ -59,6 +61,7 @@ class CommunityPost {
     required this.authorName,
     this.authorAvatar,
     this.authorUsername,
+    this.authorIdentity,
     required this.content,
     this.imageUrl,
     this.mediaUrls = const [],
@@ -105,6 +108,7 @@ class CommunityPost {
     int? commentCount,
     String? authorAvatar,
     String? authorUsername,
+    IdentitySummary? authorIdentity,
     String? authorWallet,
     List<String>? mediaUrls,
     List<String>? tags,
@@ -133,6 +137,7 @@ class CommunityPost {
       authorName: authorName,
       authorAvatar: authorAvatar ?? this.authorAvatar,
       authorUsername: authorUsername ?? this.authorUsername,
+      authorIdentity: authorIdentity ?? this.authorIdentity,
       content: content ?? this.content,
       imageUrl: imageUrl ?? this.imageUrl,
       mediaUrls: mediaUrls ?? this.mediaUrls,
@@ -192,6 +197,7 @@ class Comment {
   final String? authorAvatar;
   final String? authorUsername;
   final String? authorWallet;
+  final IdentitySummary? authorIdentity;
   final String? parentCommentId;
   final String? originalContent;
   final DateTime? editedAt;
@@ -210,6 +216,7 @@ class Comment {
     this.authorAvatar,
     this.authorUsername,
     this.authorWallet,
+    this.authorIdentity,
     this.parentCommentId,
     this.originalContent,
     this.editedAt,
@@ -232,6 +239,7 @@ class Comment {
     String? authorName,
     String? authorId,
     String? authorWallet,
+    IdentitySummary? authorIdentity,
   }) {
     return Comment(
       id: id,
@@ -240,6 +248,7 @@ class Comment {
       authorAvatar: authorAvatar ?? this.authorAvatar,
       authorUsername: authorUsername ?? this.authorUsername,
       authorWallet: authorWallet ?? this.authorWallet,
+      authorIdentity: authorIdentity ?? this.authorIdentity,
       parentCommentId: parentCommentId,
       originalContent: originalContent ?? this.originalContent,
       editedAt: editedAt ?? this.editedAt,
@@ -700,10 +709,8 @@ class CommunityService {
   }
 
   // Load saved interactions
-  static Future<void> loadSavedInteractions(
-    List<CommunityPost> posts,
-    {SavedItemsProvider? savedItemsProvider}
-  ) async {
+  static Future<void> loadSavedInteractions(List<CommunityPost> posts,
+      {SavedItemsProvider? savedItemsProvider}) async {
     final prefs = await SharedPreferences.getInstance();
     final followedUsers = prefs.getStringList(_followsKey) ?? [];
 
@@ -715,7 +722,7 @@ class CommunityService {
                 type: SavedItemType.communityPost,
                 id: post.id,
                 savedAt: savedItemsProvider.getPostSavedAt(post.id) ??
-                  DateTime.now(),
+                    DateTime.now(),
                 title: post.content.trim().isEmpty
                     ? post.authorName
                     : (post.content.trim().length <= 120
@@ -725,10 +732,12 @@ class CommunityService {
                 imageUrl: (post.imageUrl?.trim().isNotEmpty ?? false)
                     ? post.imageUrl!.trim()
                     : (post.mediaUrls.isNotEmpty
-                        ? post.mediaUrls.firstWhere(
-                            (media) => media.trim().isNotEmpty,
-                            orElse: () => '',
-                          ).trim()
+                        ? post.mediaUrls
+                            .firstWhere(
+                              (media) => media.trim().isNotEmpty,
+                              orElse: () => '',
+                            )
+                            .trim()
                         : null),
                 authorId: post.authorWallet ?? post.authorId,
                 authorName: post.authorName,
@@ -738,8 +747,9 @@ class CommunityService {
                   if (post.tags.isNotEmpty) 'tags': post.tags,
                   if (post.mentions.isNotEmpty) 'mentions': post.mentions,
                   if (post.subjects.isNotEmpty)
-                    'subjects':
-                        post.subjects.map((subject) => subject.toJson()).toList(),
+                    'subjects': post.subjects
+                        .map((subject) => subject.toJson())
+                        .toList(),
                   if (post.groupId != null && post.groupId!.trim().isNotEmpty)
                     'groupId': post.groupId!.trim(),
                 },

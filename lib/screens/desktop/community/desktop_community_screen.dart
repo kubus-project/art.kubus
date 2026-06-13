@@ -361,7 +361,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       latitude: 46.05, // Default to Ljubljana
       longitude: 14.50,
       radiusKm: 50,
-      limit: 50,
+      limit: 24,
       refresh: true,
     );
     // Also load groups for sidebar
@@ -467,7 +467,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     try {
       final posts = await BackendApiService().getCommunityPosts(
         page: 1,
-        limit: 50,
+        limit: 24,
         followingOnly: false,
         surface: 'discover',
         sort: sort,
@@ -655,7 +655,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     try {
       final posts = await BackendApiService().getCommunityPosts(
         page: 1,
-        limit: 50,
+        limit: 24,
         followingOnly: true,
         surface: 'following',
         sort: sort,

@@ -15,6 +15,7 @@ import '../models/community_group.dart';
 import '../models/event.dart';
 import '../models/exhibition.dart';
 import '../models/community_subject.dart';
+import '../models/identity_summary.dart';
 import '../models/saved_item.dart';
 import '../models/attestation.dart';
 import '../models/achievements.dart' as achievements_model;
@@ -1018,7 +1019,9 @@ class BackendApiService
       includeAuth: includeAuth,
     );
 
-    if (kDebugMode && includeAuth && !resolvedHeaders.containsKey('Authorization')) {
+    if (kDebugMode &&
+        includeAuth &&
+        !resolvedHeaders.containsKey('Authorization')) {
       // Debug-only visibility into protected requests that go out without a
       // token. Never logs the token value itself.
       _debugLogThrottled(
@@ -6439,125 +6442,6 @@ class BackendApiService
                 .whereType<Map<String, dynamic>>()
                 .map(_commentFromBackendJson)
                 .toList();
-
-            // Batch fetch profiles for comment authors to fill missing name/avatar if possible
-            try {
-              final Set<String> wallets = {};
-              for (final c in flat) {
-                final candidate = (c.authorWallet ?? c.authorId).trim();
-                if (candidate.isEmpty) continue;
-                final normalized = WalletUtils.canonical(candidate);
-                if (normalized.isEmpty) continue;
-                if (['unknown', 'anonymous', 'n/a', 'none']
-                    .contains(normalized)) {
-                  continue;
-                }
-                wallets.add(normalized);
-              }
-
-              if (wallets.isNotEmpty) {
-                final profilesResp = await getProfilesBatch(wallets.toList());
-                final Map<String, Map<String, dynamic>> profilesByWallet = {};
-                if (profilesResp['success'] == true &&
-                    profilesResp['data'] is List) {
-                  final profilesList = profilesResp['data'] as List<dynamic>;
-                  for (final p
-                      in profilesList.whereType<Map<String, dynamic>>()) {
-                    final walletKey = WalletUtils.canonical(
-                        (p['walletAddress'] ??
-                                    p['wallet'] ??
-                                    p['wallet_address'] ??
-                                    p['publicKey'] ??
-                                    p['public_key'])
-                                ?.toString() ??
-                            '');
-                    if (walletKey.isNotEmpty) profilesByWallet[walletKey] = p;
-                  }
-                }
-
-                // For any remaining candidates not found by wallet batch, try GET /api/users/:userId
-                final missing = wallets
-                    .where((w) => !profilesByWallet.containsKey(w))
-                    .toList();
-                for (final candidate in missing) {
-                  try {
-                    final profileResp = await getUserProfile(candidate);
-                    if (profileResp.isNotEmpty) {
-                      final walletKey = WalletUtils.canonical(
-                          (profileResp['walletAddress'] ??
-                                      profileResp['wallet'] ??
-                                      profileResp['wallet_address'] ??
-                                      profileResp['publicKey'] ??
-                                      profileResp['public_key'])
-                                  ?.toString() ??
-                              '');
-                      final key = walletKey.isNotEmpty
-                          ? walletKey
-                          : WalletUtils.canonical(candidate);
-                      profilesByWallet[key] = profileResp;
-                    }
-                  } catch (e) {
-                    // ignore 404s or failures for non-wallet ids
-                  }
-                }
-
-                for (int i = 0; i < flat.length; i++) {
-                  final c = flat[i];
-                  final walletKey =
-                      WalletUtils.canonical(c.authorWallet ?? c.authorId);
-                  if (walletKey.isEmpty) continue;
-                  final profile = profilesByWallet[walletKey];
-                  if (profile == null) continue;
-                  try {
-                    final profileDisplayName =
-                        profile['displayName'] as String? ??
-                            profile['display_name'] as String?;
-                    final profileUsername = profile['username'] as String? ??
-                        profile['walletAddress'] as String? ??
-                        profile['wallet'] as String?;
-                    final avatarCandidate = profile['avatar'] as String? ??
-                        profile['profileImage'] as String? ??
-                        profile['profile_image'] as String? ??
-                        profile['avatarUrl'] as String? ??
-                        profile['avatar_url'] as String?;
-                    final normalizedAvatar =
-                        MediaUrlResolver.resolve(avatarCandidate);
-
-                    // Determine best display name: prioritize displayName, then username, then fallback to existing
-                    final bestDisplayName = (profileDisplayName != null &&
-                            profileDisplayName.trim().isNotEmpty)
-                        ? profileDisplayName.trim()
-                        : ((profileUsername != null &&
-                                profileUsername.trim().isNotEmpty)
-                            ? profileUsername.trim()
-                            : c.authorName);
-
-                    final updated = c.copyWith(
-                      authorAvatar: normalizedAvatar,
-                      authorUsername: profileUsername ?? c.authorUsername,
-                      authorName: bestDisplayName,
-                      authorId: (profile['walletAddress'] ??
-                              profile['wallet'] ??
-                              profile['id'] ??
-                              profile['userId'] ??
-                              c.authorId)
-                          ?.toString(),
-                      authorWallet: (profile['walletAddress'] ??
-                              profile['wallet'] ??
-                              profile['wallet_address'] ??
-                              profile['publicKey'] ??
-                              profile['public_key'])
-                          ?.toString(),
-                    );
-                    flat[i] = updated;
-                  } catch (e) {
-                    // ignore per-item enrichment errors
-                  }
-                }
-              }
-            } catch (e) {
-              // ignore enrichment failures
-            }
             return _nestComments(flat);
           }
           return <Comment>[];
