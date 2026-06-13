@@ -1,3 +1,5 @@
+import '../utils/creator_display_format.dart';
+
 enum ParticipantIdentitySource {
   fallback,
   conversationSnapshot,
@@ -28,21 +30,12 @@ class ResolvedConversationParticipant {
   final DateTime? updatedAt;
 
   String get stableDisplayLabel {
-    final display = _nonEmpty(displayName);
-    if (display != null) return display;
-
-    final handle = _nonEmpty(username);
-    if (handle != null) {
-      return handle.startsWith('@') ? handle : '@$handle';
-    }
-
-    final wallet = _nonEmpty(walletAddress);
-    if (wallet != null) return compactWalletForDisplay(wallet);
-
-    final id = _nonEmpty(userId);
-    if (id != null) return compactWalletForDisplay(id);
-
-    return 'Unknown user';
+    return CreatorDisplayFormat.format(
+      fallbackLabel: 'Unknown user',
+      displayName: displayName,
+      username: username,
+      wallet: _nonEmpty(walletAddress) ?? _nonEmpty(userId),
+    ).primary;
   }
 
   ResolvedConversationParticipant mergeFrom(
@@ -116,13 +109,6 @@ String normalizeParticipantIdentityKey({
   if (sender.isNotEmpty) return sender;
 
   return 'unknown';
-}
-
-String compactWalletForDisplay(String wallet) {
-  final trimmed = wallet.trim();
-  if (trimmed.isEmpty) return 'Unknown user';
-  if (trimmed.length <= 12) return trimmed;
-  return '${trimmed.substring(0, 6)}...${trimmed.substring(trimmed.length - 4)}';
 }
 
 String? _nonEmpty(String? value) {

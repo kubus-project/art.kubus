@@ -307,6 +307,7 @@ Future<void> kubusPreregisterMarkerIcons({
             baseColor: baseColor,
             icon: resolveMarkerIcon(marker.type),
             tier: marker.signalTier,
+            shape: ArtMapMarkerShape.forType(marker.type),
             scheme: scheme,
             roles: roles,
             isDark: isDark,

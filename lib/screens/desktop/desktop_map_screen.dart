@@ -567,6 +567,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     _renderCoordinator = MapMarkerRenderCoordinator(
       screenName: 'DesktopMapScreen',
       markerLayerId: _markerLayerId,
+      pulseLayerId: MapScreenConstants.markerPulseLayerId,
       cubeLayerId: _cubeLayerId,
       cubeIconLayerId: _cubeIconLayerId,
       cubeSourceId: _cubeSourceId,
@@ -1451,7 +1452,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     } else {
       _pausePolling();
     }
-    _renderCoordinator.updateCubeSpinTicker();
+    _renderCoordinator.updateAmbientTicker();
   }
 
   void _pausePolling() {
@@ -1584,6 +1585,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           await _syncPendingMarker();
           await _syncMapMarkers(themeProvider: themeProvider);
           await _renderCoordinator.updateRenderMode();
+          // Start the ambient dot-pulse / floating-badge bob ticker.
+          _renderCoordinator.updateAmbientTicker();
         }
       },
     );

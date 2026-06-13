@@ -15,7 +15,7 @@ import '../models/community_group.dart';
 import '../models/event.dart';
 import '../models/exhibition.dart';
 import '../models/community_subject.dart';
-import '../models/identity_summary.dart';
+import '../models/profile_identity_data.dart';
 import '../models/saved_item.dart';
 import '../models/attestation.dart';
 import '../models/achievements.dart' as achievements_model;

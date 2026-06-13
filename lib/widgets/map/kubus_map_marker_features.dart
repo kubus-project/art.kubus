@@ -8,6 +8,7 @@ import '../../features/map/shared/map_marker_collision_config.dart';
 import '../../utils/app_color_utils.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/map_marker_icon_ids.dart';
+import '../../utils/maplibre_style_utils.dart';
 import '../art_marker_cube.dart';
 import 'kubus_map_marker_rendering.dart';
 
@@ -37,6 +38,9 @@ Future<Map<String, dynamic>> kubusMarkerFeatureFor({
 
   final typeName = marker.type.name;
   final tier = marker.signalTier;
+  final shape = ArtMapMarkerShape.forType(marker.type);
+  final baseColor = resolveMarkerBaseColor(marker);
+  final colorHex = MapLibreStyleUtils.hexRgb(baseColor);
   final iconId = MapMarkerIconIds.markerBase(
     typeName: typeName,
     tierName: tier.name,
@@ -51,11 +55,11 @@ Future<Map<String, dynamic>> kubusMarkerFeatureFor({
   );
 
   if (!registeredMapImages.contains(iconId)) {
-    final baseColor = resolveMarkerBaseColor(marker);
     final bytes = await ArtMarkerCubeIconRenderer.renderMarkerPng(
       baseColor: baseColor,
       icon: resolveMarkerIcon(marker.type),
       tier: tier,
+      shape: shape,
       scheme: scheme,
       roles: roles,
       isDark: isDark,
@@ -88,6 +92,7 @@ Future<Map<String, dynamic>> kubusMarkerFeatureFor({
       'icon': iconId,
       'iconSelected': selectedIconId,
       'markerType': typeName,
+      'color': colorHex,
       'entryScale': entryScale.clamp(
         MapMarkerCollisionConfig.entryStartScale,
         1.2,
@@ -124,15 +129,15 @@ Future<Map<String, dynamic>> kubusClusterFeatureFor({
     label: label,
     isDark: isDark,
   );
+  final baseColor = AppColorUtils.markerSubjectColor(
+    markerType: typeName,
+    metadata: first.metadata,
+    scheme: scheme,
+    roles: roles,
+  );
+  final colorHex = MapLibreStyleUtils.hexRgb(baseColor);
 
   if (!registeredMapImages.contains(iconId)) {
-    final baseColor = AppColorUtils.markerSubjectColor(
-      markerType: typeName,
-      metadata: first.metadata,
-      scheme: scheme,
-      roles: roles,
-    );
-
     final bytes = await ArtMarkerCubeIconRenderer.renderClusterPng(
       count: cluster.markers.length,
       baseColor: baseColor,
@@ -166,6 +171,7 @@ Future<Map<String, dynamic>> kubusClusterFeatureFor({
       'id': id,
       'kind': 'cluster',
       'icon': iconId,
+      'color': colorHex,
       'lat': center.latitude,
       'lng': center.longitude,
       'renderMode': 'cluster',

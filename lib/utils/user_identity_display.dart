@@ -36,10 +36,7 @@ class UserIdentityDisplayUtils {
     );
 
     final username = _cleanUsername(
-      raw['username'] ??
-          raw['handle'] ??
-          raw['userName'] ??
-          raw['user_name'],
+      raw['username'] ?? raw['handle'] ?? raw['userName'] ?? raw['user_name'],
     );
 
     if (displayName.isNotEmpty) {
@@ -69,6 +66,16 @@ class UserIdentityDisplayUtils {
   static String _cleanName(dynamic value) {
     final s = (value ?? '').toString().trim();
     if (s.isEmpty) return '';
+    final lower = s.toLowerCase();
+    if (lower == 'unknown creator' ||
+        lower == 'unknown artist' ||
+        lower == 'unknown author' ||
+        lower == 'unknown' ||
+        lower == 'anonymous' ||
+        lower == 'user' ||
+        lower.startsWith('user_')) {
+      return '';
+    }
     if (WalletUtils.looksLikeWallet(s)) return '';
     return s;
   }
@@ -108,4 +115,3 @@ class UserIdentityDisplayUtils {
 
   // Intentionally no derived username helpers.
 }
-

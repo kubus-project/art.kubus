@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -29,6 +28,7 @@ class AvatarWidget extends StatefulWidget {
   final double cornerRadiusFactor;
   final bool isLoading;
   final bool allowFabricatedFallback;
+  final bool fetchMissingAvatar;
   final bool enableProfileNavigation;
   final String? heroTag;
   final bool showStatusIndicator;
@@ -45,6 +45,7 @@ class AvatarWidget extends StatefulWidget {
     this.cornerRadiusFactor = defaultCornerRadiusFactor,
     this.isLoading = false,
     this.allowFabricatedFallback = false,
+    this.fetchMissingAvatar = true,
     this.enableProfileNavigation = true,
     this.heroTag,
     this.showStatusIndicator = true,
@@ -112,11 +113,9 @@ class _AvatarWidgetState extends State<AvatarWidget>
     // 3. Fetch authoritative profile
     // Skip fetch for placeholder/unknown wallets to avoid unnecessary 404s
     final invalidWalletPlaceholders = ['unknown', 'anonymous', 'n/a', 'none'];
-    if (walletId.isEmpty || invalidWalletPlaceholders.contains(walletId)) {
-      if (kDebugMode) {
-        debugPrint(
-            'AvatarWidget: skipping profile fetch for invalid wallet "$walletId"');
-      }
+    if (walletId.isEmpty ||
+        invalidWalletPlaceholders.contains(walletId) ||
+        !widget.fetchMissingAvatar) {
       if (widget.allowFabricatedFallback) {
         if (_effectiveUrl == null || _effectiveUrl!.isEmpty) {
           setState(() {
@@ -134,7 +133,10 @@ class _AvatarWidgetState extends State<AvatarWidget>
       _loading = true;
     });
     try {
-      final u = await UserService.getUserById(cacheKey);
+      final u = await UserService.getUserById(
+        cacheKey,
+        includeAchievements: false,
+      );
       if (!mounted) return;
 
       final p = u?.profileImageUrl;
@@ -187,7 +189,8 @@ class _AvatarWidgetState extends State<AvatarWidget>
     super.didUpdateWidget(oldWidget);
     if (oldWidget.avatarUrl != widget.avatarUrl ||
         oldWidget.wallet != widget.wallet ||
-        oldWidget.allowFabricatedFallback != widget.allowFabricatedFallback) {
+        oldWidget.allowFabricatedFallback != widget.allowFabricatedFallback ||
+        oldWidget.fetchMissingAvatar != widget.fetchMissingAvatar) {
       _setup();
     }
     if (oldWidget.wallet != widget.wallet ||

@@ -37,9 +37,13 @@ class CreatorDisplayFormat {
       return CreatorDisplay(primary: '@$safeUsername', secondary: null);
     }
 
-    // Wallet is intentionally not shown unless explicitly requested by the UI.
-    // Still accept it for future diagnostics or caller logic.
-    final _ = WalletUtils.canonical(wallet);
+    final safeWallet = WalletUtils.canonical(wallet);
+    if (safeWallet.isNotEmpty) {
+      return CreatorDisplay(
+        primary: _compactWalletForDisplay(safeWallet),
+        secondary: null,
+      );
+    }
 
     return CreatorDisplay(primary: fallbackLabel, secondary: null);
   }
@@ -50,10 +54,13 @@ class CreatorDisplayFormat {
     final lower = s.toLowerCase();
     if (lower == 'unknown creator' ||
         lower == 'unknown artist' ||
+        lower == 'unknown author' ||
         lower == 'unknown' ||
-        lower == 'anonymous') {
+        lower == 'anonymous' ||
+        lower == 'user') {
       return '';
     }
+    if (lower.startsWith('user_')) return '';
     if (WalletUtils.looksLikeWallet(s)) return '';
     return s;
   }
@@ -89,5 +96,11 @@ class CreatorDisplayFormat {
       if (normalized.length > 24) normalized = normalized.substring(0, 24);
     }
     return normalized;
+  }
+
+  static String _compactWalletForDisplay(String wallet) {
+    final trimmed = wallet.trim();
+    if (trimmed.length <= 12) return trimmed;
+    return '${trimmed.substring(0, 6)}...${trimmed.substring(trimmed.length - 4)}';
   }
 }

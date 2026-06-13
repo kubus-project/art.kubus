@@ -81,7 +81,20 @@ class AppConfig {
   static const bool enableMapTravelMode = true;
 
   /// Map: optional isometric-like perspective on the map canvas.
+  ///
+  /// This now only pitches the map camera. It intentionally does NOT switch
+  /// markers into the experimental fill-extrusion "cube" representation — see
+  /// [enableMapExperimentalCubeMarkers].
   static const bool enableMapIsometricView = true;
+
+  /// Map: experimental fill-extrusion "cube" markers + viewport floating icons.
+  ///
+  /// Off by default. The default marker representation is the stable floating
+  /// badge (dot + pulse + shaped icon) rendered in screen space. The cube /
+  /// extrusion pipeline is kept behind this flag for future experiments only;
+  /// when disabled, pitching the map (isometric view) never converts markers
+  /// into cubes and no per-zoom polygon/cube geometry is computed.
+  static const bool enableMapExperimentalCubeMarkers = false;
 
   /// Map: allow public/street art marker type submissions.
   static const bool enableStreetArtMarkers = true;
@@ -488,6 +501,8 @@ class AppConfig {
         return enableMapTravelMode;
       case 'mapIsometricView':
         return enableMapIsometricView;
+      case 'mapExperimentalCubeMarkers':
+        return enableMapExperimentalCubeMarkers;
       case 'streetArtMarkers':
         return enableStreetArtMarkers;
       case 'streetArtClaims':
@@ -541,7 +556,7 @@ class AppConfig {
 class AppInfo {
   static const String appName = 'art.kubus';
   static const String version = '0.6.1';
-  static const int buildNumber = 26061304;
+  static const int buildNumber = 26061305;
   static const String buildDate = '2026-06-12';
 
   /// Get full version string

@@ -27,6 +27,7 @@ class MapMarkerRenderCoordinator {
   MapMarkerRenderCoordinator({
     required this.screenName,
     required this.markerLayerId,
+    required this.pulseLayerId,
     required this.cubeLayerId,
     required this.cubeIconLayerId,
     required this.cubeSourceId,
@@ -61,6 +62,7 @@ class MapMarkerRenderCoordinator {
 
   final String screenName;
   final String markerLayerId;
+  final String pulseLayerId;
   final String cubeLayerId;
   final String cubeIconLayerId;
   final String cubeSourceId;
@@ -93,6 +95,12 @@ class MapMarkerRenderCoordinator {
   /// Current cube icon vertical bob offset in em units.
   double cubeIconBobOffsetEm = 0.0;
 
+  /// Current ambient pulse phase (0..1) driving the soft ring around each dot.
+  double markerPulsePhase = 0.0;
+
+  /// Current floating-badge vertical bob offset in screen pixels.
+  double markerBadgeBobOffsetPx = 0.0;
+
   /// Marker layer styler instance (throttles style updates to MapLibre).
   final KubusMarkerLayerStyler markerLayerStyler = KubusMarkerLayerStyler();
 
@@ -100,10 +108,15 @@ class MapMarkerRenderCoordinator {
   // 3-D mode check
   // ---------------------------------------------------------------------------
 
-  /// Returns `true` when camera pitch exceeds the cube pitch threshold and the
-  /// isometric view feature flag is enabled.
+  /// Returns `true` only when the experimental cube-marker feature flag is on
+  /// AND camera pitch exceeds the cube pitch threshold.
+  ///
+  /// Note: this intentionally no longer keys off `mapIsometricView`. Pitching
+  /// the map (isometric view) must not convert the stable floating badges into
+  /// the experimental fill-extrusion cubes; that only happens when the cube
+  /// experiment is explicitly enabled.
   bool get is3DModeActive {
-    if (!AppConfig.isFeatureEnabled('mapIsometricView')) return false;
+    if (!AppConfig.isFeatureEnabled('mapExperimentalCubeMarkers')) return false;
     return _getLastPitch() > MapScreenConstants.cubePitchThreshold;
   }
 
@@ -120,32 +133,34 @@ class MapMarkerRenderCoordinator {
     );
   }
 
-  /// Enables or disables the cube spin ticker based on current state.
-  void updateCubeSpinTicker() {
-    final shouldSpin = _isPollingEnabled() &&
+  /// Enables or disables the ambient marker animation ticker (dot pulse +
+  /// floating-badge bob) based on current state. This runs whenever the map is
+  /// visible/active, independent of the experimental cube mode.
+  void updateAmbientTicker() {
+    final shouldAnimate = _isPollingEnabled() &&
         _isStyleInitialized() &&
-        _getMapController() != null &&
-        cubeLayerVisible &&
-        is3DModeActive;
+        _getMapController() != null;
 
-    KubusMarkerLayerAnimationHelpers.updateCubeSpinTicker(
-      shouldSpin: shouldSpin,
-      cubeIconSpinController: _getCubeSpinController(),
+    KubusMarkerLayerAnimationHelpers.updateAmbientTicker(
+      shouldAnimate: shouldAnimate,
+      controller: _getCubeSpinController(),
     );
   }
 
-  /// Called on every animation frame tick from both the selection pop and cube
-  /// spin controllers.
+  /// Called on every animation frame tick from both the selection pop and the
+  /// ambient marker controllers.
   void handleAnimationTick() {
-    final shouldSpin = cubeLayerVisible && is3DModeActive;
+    final ambientActive = _getCubeSpinController().isAnimating;
     final shouldPop = _getSelectionController().isAnimating;
 
     KubusMarkerLayerAnimationHelpers.handleMarkerLayerAnimationTick(
       mounted: _isMounted(),
       styleInitialized: _isStyleInitialized(),
-      shouldSpin: shouldSpin,
+      ambientActive: ambientActive,
+      shouldSpinCube: cubeLayerVisible && is3DModeActive,
       shouldPop: shouldPop,
-      cubeIconSpinController: _getCubeSpinController(),
+      setPulsePhase: (v) => markerPulsePhase = v,
+      setBadgeBobOffsetPx: (v) => markerBadgeBobOffsetPx = v,
       setCubeIconSpinDegrees: (v) => cubeIconSpinDegrees = v,
       setCubeIconBobOffsetEm: (v) => cubeIconBobOffsetEm = v,
       requestMarkerLayerStyleUpdate: () => requestStyleUpdate(),
@@ -168,6 +183,7 @@ class MapMarkerRenderCoordinator {
       managedLayerIds: _getManagedLayerIds(),
       markerLayerId: markerLayerId,
       cubeIconLayerId: cubeIconLayerId,
+      pulseLayerId: pulseLayerId,
       state: KubusMarkerLayerStyleState(
         pressedMarkerId: kubus.pressedMarkerId,
         hoveredMarkerId: kubus.hoveredMarkerId,
@@ -176,6 +192,8 @@ class MapMarkerRenderCoordinator {
         cubeLayerVisible: cubeLayerVisible,
         cubeIconSpinDegrees: cubeIconSpinDegrees,
         cubeIconBobOffsetEm: cubeIconBobOffsetEm,
+        markerPulsePhase: markerPulsePhase,
+        markerBadgeBobOffsetPx: markerBadgeBobOffsetPx,
       ),
       force: force,
     );
@@ -235,7 +253,7 @@ class MapMarkerRenderCoordinator {
         // Ignore source update failures during transitions.
       }
 
-      updateCubeSpinTicker();
+      updateAmbientTicker();
     }
   }
 

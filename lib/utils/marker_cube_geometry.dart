@@ -7,6 +7,13 @@ import '../models/art_marker.dart';
 import 'maplibre_style_utils.dart';
 import '../widgets/map_marker_style_config.dart';
 
+/// EXPERIMENTAL / quarantined.
+///
+/// Builds per-zoom polygon/extrusion geometry for the legacy "cube" markers.
+/// The default marker system is now the stable floating badge (dot + pulse +
+/// shaped icon) and never recalculates polygon geometry from zoom. This helper
+/// is only reached when the `mapExperimentalCubeMarkers` feature flag is enabled
+/// (`AppConfig.enableMapExperimentalCubeMarkers`); it is not used by default.
 class MarkerCubeGeometry {
   MarkerCubeGeometry._();
 

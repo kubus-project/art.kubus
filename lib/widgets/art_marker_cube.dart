@@ -22,6 +22,43 @@ export 'rotatable_cube_painter.dart'
         CubeFaceVisibility,
         CubeFace;
 
+/// Body silhouette of a floating map marker badge.
+///
+/// Different marker types get a slightly different badge shape (not only a
+/// different color) so they stay distinguishable at a glance, Pokémon-Go-stop
+/// style but cleaner / more premium.
+enum ArtMapMarkerShape {
+  roundedSquare,
+  diamond,
+  arch,
+  pill,
+  hexagon,
+  capsule,
+  portalHex,
+  circle;
+
+  static ArtMapMarkerShape forType(ArtMarkerType type) {
+    switch (type) {
+      case ArtMarkerType.artwork:
+        return ArtMapMarkerShape.roundedSquare;
+      case ArtMarkerType.streetArt:
+        return ArtMapMarkerShape.diamond;
+      case ArtMarkerType.institution:
+        return ArtMapMarkerShape.arch;
+      case ArtMarkerType.event:
+        return ArtMapMarkerShape.pill;
+      case ArtMarkerType.residency:
+        return ArtMapMarkerShape.hexagon;
+      case ArtMarkerType.drop:
+        return ArtMapMarkerShape.capsule;
+      case ArtMarkerType.experience:
+        return ArtMapMarkerShape.portalHex;
+      case ArtMarkerType.other:
+        return ArtMapMarkerShape.circle;
+    }
+  }
+}
+
 /// Design tokens for cube marker sizing.
 ///
 /// For camera-relative 3D markers, use [RotatableCubeTokens] instead.
@@ -52,6 +89,7 @@ class CubeMarkerTokens {
 class _MarkerPngCacheKey {
   const _MarkerPngCacheKey({
     required this.baseColorValue,
+    required this.shapeIndex,
     required this.iconCodePoint,
     required this.iconFamily,
     required this.iconPackage,
@@ -66,6 +104,7 @@ class _MarkerPngCacheKey {
   });
 
   final int baseColorValue;
+  final int shapeIndex;
   final int iconCodePoint;
   final String iconFamily;
   final String iconPackage;
@@ -83,6 +122,7 @@ class _MarkerPngCacheKey {
     return identical(this, other) ||
         (other is _MarkerPngCacheKey &&
             other.baseColorValue == baseColorValue &&
+            other.shapeIndex == shapeIndex &&
             other.iconCodePoint == iconCodePoint &&
             other.iconFamily == iconFamily &&
             other.iconPackage == iconPackage &&
@@ -99,6 +139,7 @@ class _MarkerPngCacheKey {
   @override
   int get hashCode => Object.hash(
         baseColorValue,
+        shapeIndex,
         iconCodePoint,
         iconFamily,
         iconPackage,
@@ -150,7 +191,7 @@ class _ClusterPngCacheKey {
         isDark,
         shadowColorValue,
         pixelRatioKey,
-      labelStyleKey,
+        labelStyleKey,
       );
 }
 
@@ -227,7 +268,6 @@ class CubeMarkerStyle {
         highlightColor,
       );
 }
-
 
 class _CubePalette {
   const _CubePalette({
@@ -353,6 +393,22 @@ class ArtMarkerCubeIconRenderer {
   /// @deprecated Use [CubeMarkerTokens.pngHeight] instead.
   static const double markerHeightAtZoom15 = CubeMarkerTokens.pngHeight;
 
+  // ---------------------------------------------------------------------------
+  // Floating badge geometry
+  // ---------------------------------------------------------------------------
+  // The badge PNG is taller than it is wide: the shaped body lives in the upper
+  // region and the bottom is intentionally empty. The symbol layer anchors this
+  // image at its bottom, so the badge appears to hover above its coordinate dot
+  // with a clean gap — no per-zoom geometry, no fake 3D cube.
+  static const double badgePngWidth = 56.0;
+  static const double badgePngHeight = 72.0;
+  static const double badgeBodySize = 44.0;
+  static const double badgeBottomGap = 18.0;
+
+  /// Vertical center of the badge body inside the PNG canvas.
+  static const double badgeBodyCenterY =
+      badgePngHeight - badgeBottomGap - (badgeBodySize / 2.0);
+
   static const int _maxMarkerCacheEntries = 320;
   static const int _maxClusterCacheEntries = 180;
 
@@ -402,6 +458,7 @@ class ArtMarkerCubeIconRenderer {
     required ColorScheme scheme,
     required KubusColorRoles roles,
     required bool isDark,
+    ArtMapMarkerShape shape = ArtMapMarkerShape.roundedSquare,
     bool forceGlow = false,
     bool showPromotionStar = false,
     double pixelRatio = 2.0,
@@ -414,6 +471,7 @@ class ArtMarkerCubeIconRenderer {
 
     final key = _MarkerPngCacheKey(
       baseColorValue: baseColor.toARGB32(),
+      shapeIndex: shape.index,
       iconCodePoint: icon.codePoint,
       iconFamily: icon.fontFamily ?? 'MaterialIcons',
       iconPackage: icon.fontPackage ?? '',
@@ -432,31 +490,154 @@ class ArtMarkerCubeIconRenderer {
       key: key,
       maxEntries: _maxMarkerCacheEntries,
       render: () async {
-      final showGlow = forceGlow ||
-          tier == ArtMarkerSignal.featured ||
-          tier == ArtMarkerSignal.legendary;
+        final showGlow = forceGlow ||
+            tier == ArtMarkerSignal.featured ||
+            tier == ArtMarkerSignal.legendary;
 
-      return _renderFlatMarkerPng(
-        baseColor: baseColor,
-        icon: icon,
-        tier: tier,
-        style: style,
-        roles: roles,
-        showGlow: showGlow,
-        forceGlow: forceGlow,
-        showPromotionStar: showPromotionStar,
-        isDark: isDark,
-        pixelRatio: pixelRatio,
-      );
-    },
+        return _renderFloatingBadgePng(
+          baseColor: baseColor,
+          icon: icon,
+          shape: shape,
+          tier: tier,
+          style: style,
+          roles: roles,
+          showGlow: showGlow,
+          forceGlow: forceGlow,
+          showPromotionStar: showPromotionStar,
+          isDark: isDark,
+          pixelRatio: pixelRatio,
+        );
+      },
     );
   }
 
-  /// Renders a flat (top-down) marker showing only the top face with shadow.
-  /// Used when isometric view is disabled.
-  static Future<Uint8List> _renderFlatMarkerPng({
+  /// Builds the body silhouette path for a badge [shape], centered on [center]
+  /// with nominal extent [size].
+  static Path _buildBadgePath(
+    ArtMapMarkerShape shape,
+    Offset center,
+    double size,
+  ) {
+    final path = Path();
+    final half = size / 2.0;
+
+    switch (shape) {
+      case ArtMapMarkerShape.roundedSquare:
+        final r = math.min(KubusRadius.md, size * 0.30);
+        path.addRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromCenter(center: center, width: size, height: size),
+            Radius.circular(r),
+          ),
+        );
+        break;
+      case ArtMapMarkerShape.diamond:
+        final d = half * 1.18;
+        path
+          ..moveTo(center.dx, center.dy - d)
+          ..lineTo(center.dx + d, center.dy)
+          ..lineTo(center.dx, center.dy + d)
+          ..lineTo(center.dx - d, center.dy)
+          ..close();
+        break;
+      case ArtMapMarkerShape.arch:
+        // Portal / arch: semicircular top, straight sides, slightly rounded base.
+        final w = size * 0.86;
+        final h = size * 1.0;
+        final left = center.dx - w / 2;
+        final right = center.dx + w / 2;
+        final top = center.dy - h / 2;
+        final bottom = center.dy + h / 2;
+        final baseR = w * 0.18;
+        path
+          ..moveTo(left, bottom - baseR)
+          ..lineTo(left, top + w / 2)
+          ..arcToPoint(
+            Offset(right, top + w / 2),
+            radius: Radius.circular(w / 2),
+            clockwise: true,
+          )
+          ..lineTo(right, bottom - baseR)
+          ..arcToPoint(
+            Offset(right - baseR, bottom),
+            radius: Radius.circular(baseR),
+            clockwise: true,
+          )
+          ..lineTo(left + baseR, bottom)
+          ..arcToPoint(
+            Offset(left, bottom - baseR),
+            radius: Radius.circular(baseR),
+            clockwise: true,
+          )
+          ..close();
+        break;
+      case ArtMapMarkerShape.pill:
+        // Horizontal ticket / stadium.
+        final w = size * 1.08;
+        final h = size * 0.66;
+        path.addRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromCenter(center: center, width: w, height: h),
+            Radius.circular(h / 2),
+          ),
+        );
+        break;
+      case ArtMapMarkerShape.hexagon:
+        _addPolygon(path, center, half * 1.12, sides: 6, rotation: -math.pi / 2);
+        break;
+      case ArtMapMarkerShape.portalHex:
+        // Flat-top hexagon (distinct orientation from the residency hexagon).
+        _addPolygon(path, center, half * 1.12, sides: 6, rotation: 0);
+        break;
+      case ArtMapMarkerShape.capsule:
+        // Vertical capsule (drop-like).
+        final w = size * 0.66;
+        final h = size * 1.04;
+        path.addRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromCenter(center: center, width: w, height: h),
+            Radius.circular(w / 2),
+          ),
+        );
+        break;
+      case ArtMapMarkerShape.circle:
+        path.addOval(Rect.fromCircle(center: center, radius: half * 1.06));
+        break;
+    }
+    return path;
+  }
+
+  static void _addPolygon(
+    Path path,
+    Offset center,
+    double radius, {
+    required int sides,
+    required double rotation,
+  }) {
+    for (var i = 0; i < sides; i++) {
+      final angle = rotation + (2 * math.pi / sides) * i;
+      final point = Offset(
+        center.dx + math.cos(angle) * radius,
+        center.dy + math.sin(angle) * radius,
+      );
+      if (i == 0) {
+        path.moveTo(point.dx, point.dy);
+      } else {
+        path.lineTo(point.dx, point.dy);
+      }
+    }
+    path.close();
+  }
+
+  /// Renders the floating badge (shaped body + glyph + shadow) into a tall PNG.
+  ///
+  /// The body lives in the upper region of the canvas with an intentional bottom
+  /// gap, so the symbol layer (anchored at the icon's bottom) makes the badge
+  /// hover above its coordinate dot.
+  static Future<Uint8List> _renderFloatingBadgePng({
     required Color baseColor,
     required IconData icon,
+    required ArtMapMarkerShape shape,
     required ArtMarkerSignal tier,
     required CubeMarkerStyle style,
     required KubusColorRoles roles,
@@ -466,84 +647,61 @@ class ArtMarkerCubeIconRenderer {
     required bool isDark,
     double pixelRatio = 2.0,
   }) async {
-    // Flat marker is a square matching the previous isometric footprint.
-    const double size = CubeMarkerTokens.pngWidth;
-    const double height = CubeMarkerTokens.pngWidth;
     final iconForeground = _iconForegroundForTheme(isDark: isDark);
 
     return _renderPng(
-      width: size,
-      height: height,
+      width: badgePngWidth,
+      height: badgePngHeight,
       pixelRatio: pixelRatio,
       paint: (canvas, logicalSize) {
-        final center = Offset(logicalSize.width / 2, logicalSize.height / 2);
-        final squareSize = CubeMarkerTokens.staticSizeAtZoom15;
-        final cornerRadius = math.min(KubusRadius.md, squareSize * 0.28);
+        final center = Offset(logicalSize.width / 2, badgeBodyCenterY);
+        const bodySize = badgeBodySize;
 
-        // Soft shadow beneath the rounded marker body (avoid boxy shadow).
-        final shadowRect = Rect.fromCenter(
-          center: center + const Offset(0, 3),
-          width: squareSize + 6,
-          height: squareSize + 6,
+        // Soft drop shadow beneath the floating body.
+        final shadowPath = _buildBadgePath(
+          shape,
+          center + const Offset(0, 3.5),
+          bodySize,
         );
-        canvas.drawRRect(
-          RRect.fromRectAndRadius(
-            shadowRect,
-            Radius.circular(cornerRadius + 2),
-          ),
+        canvas.drawPath(
+          shadowPath,
           Paint()
-            ..color = style.shadowColor.withValues(alpha: 0.20)
-            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 9),
+            ..color = style.shadowColor.withValues(alpha: 0.22)
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 7),
         );
 
-        // Draw colored glow if needed
+        // Optional colored glow for featured/legendary/selected badges.
         if (showGlow) {
-          final glowRect = Rect.fromCenter(
-            center: center,
-            width: squareSize + 14,
-            height: squareSize + 14,
-          );
-          canvas.drawRRect(
-            RRect.fromRectAndRadius(
-              glowRect,
-              Radius.circular(cornerRadius + 4),
-            ),
+          final glowPath = _buildBadgePath(shape, center, bodySize + 12);
+          canvas.drawPath(
+            glowPath,
             Paint()
               ..color = baseColor.withValues(alpha: forceGlow ? 0.42 : 0.30)
-              ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10),
+              ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 9),
           );
         }
 
-        // Draw main rounded marker body (solid subject color).
-        final bodyRect = Rect.fromCenter(
-          center: center,
-          width: squareSize,
-          height: squareSize,
-        );
-        final bodyRRect = RRect.fromRectAndRadius(
-          bodyRect,
-          Radius.circular(cornerRadius),
-        );
-        canvas.drawRRect(bodyRRect, Paint()..color = baseColor);
+        // Body fill (solid subject color).
+        final bodyPath = _buildBadgePath(shape, center, bodySize);
+        canvas.drawPath(bodyPath, Paint()..color = baseColor);
 
-        // Subtle outline for crispness (still rounded; no rectangle box).
-        canvas.drawRRect(
-          bodyRRect,
+        // Subtle outline for crispness on both light and dark maps.
+        canvas.drawPath(
+          bodyPath,
           Paint()
             ..style = PaintingStyle.stroke
             ..strokeWidth = 1.25
             ..color = iconForeground.withValues(alpha: isDark ? 0.18 : 0.12),
         );
 
-        // Draw icon directly on the subject-colored marker body.
-        // No background box - just the icon glyph.
+        // Centered icon glyph (no inner background box).
         if (icon.codePoint != 0) {
           final fontFamily = icon.fontFamily ?? 'MaterialIcons';
           final glyphPainter = TextPainter(
             text: TextSpan(
               text: String.fromCharCode(icon.codePoint),
               style: TextStyle(
-                fontSize: squareSize * 0.54,
+                fontSize: bodySize * 0.5,
                 fontFamily: fontFamily,
                 fontFamilyFallback: const <String>[
                   'MaterialIcons',
@@ -563,12 +721,13 @@ class ArtMarkerCubeIconRenderer {
           glyphPainter.paint(canvas, glyphOffset);
         }
 
-        // Draw signal ring if applicable
+        // Signal ring follows the body silhouette.
         if (tier != ArtMarkerSignal.subtle) {
-          _paintFlatSignalRing(
+          _paintSignalRing(
             canvas,
+            shape: shape,
             center: center,
-            squareSize: squareSize + 4,
+            size: bodySize + 5,
             tier: tier,
             baseColor: baseColor,
             roles: roles,
@@ -576,13 +735,14 @@ class ArtMarkerCubeIconRenderer {
         }
 
         if (showPromotionStar) {
-          _paintPromotionStar(canvas, center, squareSize);
+          _paintPromotionStar(canvas, center, bodySize);
         }
       },
     );
   }
 
-  static void _paintPromotionStar(Canvas canvas, Offset center, double squareSize) {
+  static void _paintPromotionStar(
+      Canvas canvas, Offset center, double squareSize) {
     final starCenter = Offset(
       center.dx + (squareSize * 0.31),
       center.dy - (squareSize * 0.31),
@@ -623,11 +783,12 @@ class ArtMarkerCubeIconRenderer {
     );
   }
 
-  /// Paints a signal ring for flat markers (square outline instead of circular)
-  static void _paintFlatSignalRing(
+  /// Paints a signal ring that follows the badge body silhouette.
+  static void _paintSignalRing(
     Canvas canvas, {
+    required ArtMapMarkerShape shape,
     required Offset center,
-    required double squareSize,
+    required double size,
     required ArtMarkerSignal tier,
     required Color baseColor,
     required KubusColorRoles roles,
@@ -660,26 +821,17 @@ class ArtMarkerCubeIconRenderer {
         return;
     }
 
-    final rect = Rect.fromCenter(
-      center: center,
-      width: squareSize,
-      height: squareSize,
-    );
-    final cornerRadius = math.min(KubusRadius.md, squareSize * 0.28);
-    final rrect = RRect.fromRectAndRadius(
-      rect,
-      Radius.circular(cornerRadius),
-    );
+    final ringPath = _buildBadgePath(shape, center, size);
 
-    canvas.drawRRect(
-      rrect,
+    canvas.drawPath(
+      ringPath,
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = strokeWidth
         ..color = glowColor.withValues(alpha: opacity),
     );
-    canvas.drawRRect(
-      rrect,
+    canvas.drawPath(
+      ringPath,
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = strokeWidth
@@ -721,21 +873,21 @@ class ArtMarkerCubeIconRenderer {
       maxEntries: _maxClusterCacheEntries,
       render: () async {
         final palette =
-          _CubePalette.fromBase(baseColor, edgeColor: style.edgeColor);
+            _CubePalette.fromBase(baseColor, edgeColor: style.edgeColor);
         final labelStyle = (labelStyleOverride ?? KubusTextStyles.badgeCount)
-          .copyWith(color: iconForeground);
+            .copyWith(color: iconForeground);
 
-      return _renderFlatClusterPng(
-        label: label,
-        labelStyle: labelStyle,
-        iconForeground: iconForeground,
-        baseColor: baseColor,
-        palette: palette,
-        style: style,
-        showGlow: showGlow,
-        pixelRatio: pixelRatio,
-      );
-    },
+        return _renderFlatClusterPng(
+          label: label,
+          labelStyle: labelStyle,
+          iconForeground: iconForeground,
+          baseColor: baseColor,
+          palette: palette,
+          style: style,
+          showGlow: showGlow,
+          pixelRatio: pixelRatio,
+        );
+      },
     );
   }
 
@@ -762,71 +914,53 @@ class ArtMarkerCubeIconRenderer {
     required bool showGlow,
     double pixelRatio = 2.0,
   }) async {
-    const double size = CubeMarkerTokens.pngWidth;
-    const double height = CubeMarkerTokens.pngWidth;
-
+    // Clusters use the same floating-badge language as single markers (a circle
+    // body that reads as an aggregate node), so the map never mixes a separate
+    // cube style with the new marker system.
     return _renderPng(
-      width: size,
-      height: height,
+      width: badgePngWidth,
+      height: badgePngHeight,
       pixelRatio: pixelRatio,
       paint: (canvas, logicalSize) {
-        final center = Offset(logicalSize.width / 2, logicalSize.height / 2);
-        final squareSize = CubeMarkerTokens.staticSizeAtZoom15;
-        final cornerRadius = math.min(KubusRadius.md, squareSize * 0.28);
+        final center = Offset(logicalSize.width / 2, badgeBodyCenterY);
+        const bodySize = badgeBodySize;
 
-        final shadowRect = Rect.fromCenter(
-          center: center + const Offset(0, 3),
-          width: squareSize + 6,
-          height: squareSize + 6,
+        final shadowPath = _buildBadgePath(
+          ArtMapMarkerShape.circle,
+          center + const Offset(0, 3.5),
+          bodySize,
         );
-        canvas.drawRRect(
-          RRect.fromRectAndRadius(
-            shadowRect,
-            Radius.circular(cornerRadius + 2),
-          ),
+        canvas.drawPath(
+          shadowPath,
           Paint()
-            ..color = style.shadowColor.withValues(alpha: 0.20)
-            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 9),
+            ..color = style.shadowColor.withValues(alpha: 0.22)
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 7),
         );
 
         if (showGlow) {
-          final glowRect = Rect.fromCenter(
-            center: center,
-            width: squareSize + 14,
-            height: squareSize + 14,
-          );
-          canvas.drawRRect(
-            RRect.fromRectAndRadius(
-              glowRect,
-              Radius.circular(cornerRadius + 4),
-            ),
+          final glowPath =
+              _buildBadgePath(ArtMapMarkerShape.circle, center, bodySize + 12);
+          canvas.drawPath(
+            glowPath,
             Paint()
               ..color = baseColor.withValues(alpha: 0.28)
-              ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10),
+              ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 9),
           );
         }
 
-        final bodyRect = Rect.fromCenter(
-          center: center,
-          width: squareSize,
-          height: squareSize,
-        );
-        final bodyRRect = RRect.fromRectAndRadius(
-          bodyRect,
-          Radius.circular(cornerRadius),
-        );
-        canvas.drawRRect(bodyRRect, Paint()..color = baseColor);
+        final bodyPath =
+            _buildBadgePath(ArtMapMarkerShape.circle, center, bodySize);
+        canvas.drawPath(bodyPath, Paint()..color = baseColor);
 
-        canvas.drawRRect(
-          bodyRRect,
+        canvas.drawPath(
+          bodyPath,
           Paint()
             ..style = PaintingStyle.stroke
             ..strokeWidth = 1.5
             ..color = iconForeground.withValues(alpha: 0.16),
         );
 
-        // Draw cluster count label directly on the subject-colored marker body.
-        // No background box - just the label text.
+        // Draw cluster count label directly on the subject-colored body.
         final labelPainter = TextPainter(
           text: TextSpan(text: label, style: labelStyle),
           textAlign: TextAlign.center,
@@ -888,5 +1022,4 @@ class ArtMarkerCubeIconRenderer {
     }
     return bytes.buffer.asUint8List();
   }
-
 }

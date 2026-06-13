@@ -30,6 +30,7 @@ import '../../widgets/community/community_post_card.dart';
 import '../../widgets/community/community_author_role_badges.dart';
 import '../../widgets/community/community_post_options_sheet.dart';
 import '../../widgets/community/community_subject_picker.dart';
+import '../../widgets/profile_identity_summary.dart';
 import '../../models/community_subject.dart';
 import '../../utils/community_subject_navigation.dart';
 import '../../utils/media_url_resolver.dart';
@@ -1985,10 +1986,6 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                             Widget buildComment(Comment c,
                                 {required int depth}) {
                               final isReply = depth > 0;
-                              final avatar = (c.authorAvatar != null &&
-                                      c.authorAvatar!.isNotEmpty)
-                                  ? NetworkImage(c.authorAvatar!)
-                                  : null;
 
                               final timeLine = Row(
                                 children: [
@@ -2022,20 +2019,6 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                 child: Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    CircleAvatar(
-                                      radius: isReply ? 12 : 16,
-                                      backgroundImage: avatar,
-                                      child: avatar == null
-                                          ? Text(
-                                              c.authorName.isNotEmpty
-                                                  ? c.authorName[0]
-                                                  : '?',
-                                              style: KubusTypography.inter(
-                                                  fontSize: isReply ? 12 : 14),
-                                            )
-                                          : null,
-                                    ),
-                                    const SizedBox(width: 10),
                                     Expanded(
                                       child: Column(
                                         crossAxisAlignment:
@@ -2044,11 +2027,24 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                           Row(
                                             children: [
                                               Expanded(
-                                                child: Text(
-                                                  c.authorName,
-                                                  style: KubusTypography.inter(
+                                                child: ProfileIdentitySummary(
+                                                  identity:
+                                                      c.authorIdentityData,
+                                                  avatarRadius:
+                                                      isReply ? 12 : 16,
+                                                  allowFabricatedFallback: true,
+                                                  fetchMissingAvatar: false,
+                                                  titleStyle:
+                                                      KubusTypography.inter(
                                                     fontWeight: FontWeight.w600,
                                                     fontSize: isReply ? 13 : 14,
+                                                  ),
+                                                  subtitleStyle:
+                                                      KubusTypography.inter(
+                                                    fontSize: 11,
+                                                    color: scheme.onSurface
+                                                        .withValues(
+                                                            alpha: 0.55),
                                                   ),
                                                 ),
                                               ),

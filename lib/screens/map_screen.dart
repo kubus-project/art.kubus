@@ -498,6 +498,8 @@ class _MapScreenState extends State<MapScreen>
         await _syncUserLocation();
         await _syncMapMarkers(themeProvider: themeProvider);
         await _renderCoordinator.updateRenderMode();
+        // Start the ambient dot-pulse / floating-badge bob ticker.
+        _renderCoordinator.updateAmbientTicker();
       },
     );
   }
@@ -686,6 +688,7 @@ class _MapScreenState extends State<MapScreen>
     _renderCoordinator = MapMarkerRenderCoordinator(
       screenName: 'MapScreen',
       markerLayerId: _markerLayerId,
+      pulseLayerId: MapScreenConstants.markerPulseLayerId,
       cubeLayerId: _cubeLayerId,
       cubeIconLayerId: _cubeIconLayerId,
       cubeSourceId: _cubeSourceId,
@@ -1210,7 +1213,7 @@ class _MapScreenState extends State<MapScreen>
     _mapDataCoordinator.cancelPending();
     _cubeSyncDebouncer.cancel();
 
-    _renderCoordinator.updateCubeSpinTicker();
+    _renderCoordinator.updateAmbientTicker();
     final mobileSub = _mobileLocationSubscription;
     if (mobileSub != null) {
       try {
@@ -1297,7 +1300,7 @@ class _MapScreenState extends State<MapScreen>
       _perf.timerStarted('proximity_timer');
     }
 
-    _renderCoordinator.updateCubeSpinTicker();
+    _renderCoordinator.updateAmbientTicker();
     _flushPendingMarkerRefresh();
   }
 

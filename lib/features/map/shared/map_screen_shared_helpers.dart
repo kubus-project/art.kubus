@@ -118,28 +118,33 @@ class KubusMarkerLayerAnimationHelpers {
     requestMarkerLayerStyleUpdate();
   }
 
-  static void updateCubeSpinTicker({
-    required bool shouldSpin,
-    required AnimationController cubeIconSpinController,
+  /// Starts/stops the ambient marker animation ticker (drives the dot pulse and
+  /// the floating-badge bob). Runs whenever the map is visible/active, not only
+  /// in the experimental cube mode.
+  static void updateAmbientTicker({
+    required bool shouldAnimate,
+    required AnimationController controller,
   }) {
-    if (shouldSpin) {
-      if (!cubeIconSpinController.isAnimating) {
-        cubeIconSpinController.repeat();
+    if (shouldAnimate) {
+      if (!controller.isAnimating) {
+        controller.repeat();
       }
       return;
     }
 
-    if (cubeIconSpinController.isAnimating) {
-      cubeIconSpinController.stop();
+    if (controller.isAnimating) {
+      controller.stop();
     }
   }
 
   static void handleMarkerLayerAnimationTick({
     required bool mounted,
     required bool styleInitialized,
-    required bool shouldSpin,
+    required bool ambientActive,
+    required bool shouldSpinCube,
     required bool shouldPop,
-    required AnimationController cubeIconSpinController,
+    required ValueChanged<double> setPulsePhase,
+    required ValueChanged<double> setBadgeBobOffsetPx,
     required ValueChanged<double> setCubeIconSpinDegrees,
     required ValueChanged<double> setCubeIconBobOffsetEm,
     required VoidCallback requestMarkerLayerStyleUpdate,
@@ -147,15 +152,33 @@ class KubusMarkerLayerAnimationHelpers {
     if (!mounted) return;
     if (!styleInitialized) return;
 
-    if (!shouldSpin && !shouldPop) return;
+    if (!ambientActive && !shouldPop) return;
 
-    if (shouldSpin) {
-      setCubeIconSpinDegrees(cubeIconSpinController.value * 360.0);
-      final bobMs = MapMarkerStyleConfig.cubeIconBobPeriod.inMilliseconds;
-      final t = (DateTime.now().millisecondsSinceEpoch % bobMs) / bobMs;
-      setCubeIconBobOffsetEm(
-        math.sin(t * 2 * math.pi) * MapMarkerStyleConfig.cubeIconBobAmplitudeEm,
+    if (ambientActive) {
+      final nowMs = DateTime.now().millisecondsSinceEpoch;
+
+      // Synchronized soft pulse around every dot (cheap: one layer update).
+      final pulseMs = MapMarkerStyleConfig.pulsePeriod.inMilliseconds;
+      setPulsePhase((nowMs % pulseMs) / pulseMs);
+
+      // Subtle vertical bob of the floating badge.
+      final bobMs = MapMarkerStyleConfig.badgeBobPeriod.inMilliseconds;
+      final bobT = (nowMs % bobMs) / bobMs;
+      setBadgeBobOffsetPx(
+        math.sin(bobT * 2 * math.pi) * MapMarkerStyleConfig.badgeBobAmplitudePx,
       );
+
+      // Experimental cube floating icon spin + bob (only when cube mode active).
+      if (shouldSpinCube) {
+        final spinMs = MapMarkerStyleConfig.cubeIconSpinPeriod.inMilliseconds;
+        setCubeIconSpinDegrees(((nowMs % spinMs) / spinMs) * 360.0);
+        final cubeBobMs = MapMarkerStyleConfig.cubeIconBobPeriod.inMilliseconds;
+        final cubeBobT = (nowMs % cubeBobMs) / cubeBobMs;
+        setCubeIconBobOffsetEm(
+          math.sin(cubeBobT * 2 * math.pi) *
+              MapMarkerStyleConfig.cubeIconBobAmplitudeEm,
+        );
+      }
     }
 
     requestMarkerLayerStyleUpdate();

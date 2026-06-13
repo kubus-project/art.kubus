@@ -13,11 +13,10 @@ class _RepostInnerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
-    final originalHandle = (post.authorUsername ?? '').trim();
+    final originalHandle = (post.authorIdentityData.username ?? '').trim();
 
     final radius = BorderRadius.circular(KubusRadius.md);
     final glassTint = scheme.surface.withValues(alpha: isDark ? 0.14 : 0.09);
@@ -45,21 +44,15 @@ class _RepostInnerCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: ProfileIdentitySummary(
-                      identity: ProfileIdentityData.fromValues(
-                        fallbackLabel:
-                            l10n?.commonUnknownArtist ?? 'Unknown artist',
-                        displayName: post.authorName,
-                        username: originalHandle,
-                        userId: post.authorWallet ?? post.authorId,
-                        wallet: post.authorWallet ?? post.authorId,
-                        avatarUrl: post.authorAvatar,
-                      ),
+                      identity: post.authorIdentityData,
                       layout: ProfileIdentityLayout.row,
                       avatarRadius: 16,
                       allowFabricatedFallback: true,
+                      fetchMissingAvatar: false,
                       onTap: () {
-                        final userId =
-                            (post.authorWallet ?? post.authorId).trim();
+                        final userId = (post.authorIdentityData.userId ??
+                                post.authorIdentityData.walletSeed)
+                            .trim();
                         if (userId.isEmpty) return;
                         unawaited(
                           UserProfileNavigation.open(
@@ -87,7 +80,8 @@ class _RepostInnerCard extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    _timeAgo(context, post.timestamp, AppLocalizations.of(context)),
+                    _timeAgo(
+                        context, post.timestamp, AppLocalizations.of(context)),
                     style: KubusTextStyles.compactBadge.copyWith(
                       fontSize: KubusChromeMetrics.navBadgeLabel + 2,
                       color: scheme.onSurface.withValues(alpha: 0.5),

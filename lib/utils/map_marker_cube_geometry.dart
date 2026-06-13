@@ -2,6 +2,11 @@ import 'dart:math' as math;
 
 import 'package:latlong2/latlong.dart';
 
+/// EXPERIMENTAL / quarantined. See [MarkerCubeGeometry] for context.
+///
+/// Zoom-derived cube sizing helpers used only by the experimental cube-marker
+/// path (`mapExperimentalCubeMarkers`). The default floating-badge markers use
+/// stable screen-space sizing and do not call into this.
 class MapMarkerCubeGeometry {
   MapMarkerCubeGeometry._();
 

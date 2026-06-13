@@ -13,6 +13,8 @@ abstract final class MapScreenConstants {
   static const String markerLayerId = 'kubus_marker_layer';
   static const String markerHitboxLayerId = 'kubus_marker_hitbox_layer';
   static const String markerHitboxImageId = 'kubus_hitbox_square_transparent';
+  static const String markerDotLayerId = 'kubus_marker_dot_layer';
+  static const String markerPulseLayerId = 'kubus_marker_pulse_layer';
   static const String cubeSourceId = 'kubus_marker_cubes';
   static const String cubeLayerId = 'kubus_marker_cubes_layer';
   static const String cubeIconLayerId = 'kubus_marker_cubes_icon_layer';
@@ -62,6 +64,8 @@ abstract final class MapScreenConstants {
     locationSourceId: locationSourceId,
     markerLayerId: markerLayerId,
     markerHitboxLayerId: markerHitboxLayerId,
+    markerDotLayerId: markerDotLayerId,
+    markerPulseLayerId: markerPulseLayerId,
     cubeLayerId: cubeLayerId,
     cubeIconLayerId: cubeIconLayerId,
     locationLayerId: locationLayerId,
@@ -77,6 +81,8 @@ abstract final class MapScreenConstants {
     locationSourceId: locationSourceId,
     markerLayerId: markerLayerId,
     markerHitboxLayerId: markerHitboxLayerId,
+    markerDotLayerId: markerDotLayerId,
+    markerPulseLayerId: markerPulseLayerId,
     cubeLayerId: cubeLayerId,
     cubeIconLayerId: cubeIconLayerId,
     locationLayerId: locationLayerId,

@@ -2877,24 +2877,22 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              AvatarWidget(
-                wallet: comment.authorWallet ?? comment.authorId,
-                avatarUrl: comment.authorAvatar,
-                radius: isReply ? 12 : 14,
-                allowFabricatedFallback: true,
-              ),
-              const SizedBox(width: KubusSpacing.sm),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      comment.authorName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: KubusTextStyles.actionTileTitle.copyWith(
+                    ProfileIdentitySummary(
+                      identity: comment.authorIdentityData,
+                      avatarRadius: isReply ? 12 : 14,
+                      allowFabricatedFallback: true,
+                      fetchMissingAvatar: false,
+                      titleStyle: KubusTextStyles.actionTileTitle.copyWith(
                         fontSize: isReply ? 12 : 13,
                         color: scheme.onSurface,
+                      ),
+                      subtitleStyle: KubusTextStyles.sectionSubtitle.copyWith(
+                        fontSize: isReply ? 11 : 12,
+                        color: scheme.onSurface.withValues(alpha: 0.62),
                       ),
                     ),
                     const SizedBox(height: KubusSpacing.xxs),

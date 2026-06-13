@@ -352,18 +352,31 @@ CommunityPost _backendApiCommunityPostFromBackendJson(
           : null;
   final normalizedAuthor = author ?? <String, dynamic>{};
   final stats = json['stats'] as Map<String, dynamic>?;
-  final identity = IdentitySummary.fromJson(json);
-  final rawUsername = identity.username;
-  final resolvedAuthorName = identity.label(fallback: 'Unknown author');
-  final avatarCandidate = identity.avatarUrl;
-
-  final authorWalletCandidate = identity.walletAddress ??
-      json['walletAddress'] as String? ??
-      json['wallet'] as String? ??
-      (authorRaw is String ? authorRaw : null);
-
-  bool authorIsArtistFlag = identity.isArtist;
-  bool authorIsInstitutionFlag = identity.isInstitution;
+  final rawIdentity = ProfileIdentityData.fromIdentityPayload(
+    json,
+    fallbackLabel: 'Unknown author',
+  );
+  final identity = rawIdentity.copyWith(
+    avatarUrl: MediaUrlResolver.resolve(rawIdentity.avatarUrl),
+  );
+  final rolesRaw = normalizedAuthor['roles'];
+  final roles = rolesRaw is Map
+      ? Map<String, dynamic>.from(rolesRaw)
+      : const <String, dynamic>{};
+  bool authorIsArtistFlag = communityBool(
+    roles['artist'] ??
+        normalizedAuthor['isArtist'] ??
+        normalizedAuthor['is_artist'] ??
+        json['authorIsArtist'] ??
+        json['author_is_artist'],
+  );
+  bool authorIsInstitutionFlag = communityBool(
+    roles['institution'] ??
+        normalizedAuthor['isInstitution'] ??
+        normalizedAuthor['is_institution'] ??
+        json['authorIsInstitution'] ??
+        json['author_is_institution'],
+  );
   final roleHint = (normalizedAuthor['role'] ??
           normalizedAuthor['type'] ??
           json['authorRole'] ??
@@ -572,21 +585,9 @@ CommunityPost _backendApiCommunityPostFromBackendJson(
       (json['postType'] ?? json['post_type'] ?? json['type'])?.toString();
   final originalPostId =
       (json['originalPostId'] ?? json['original_post_id'])?.toString();
-  final resolvedAuthorId = identity.userId ??
-      json['authorId']?.toString() ??
-      json['walletAddress']?.toString() ??
-      json['userId']?.toString() ??
-      authorWalletCandidate ??
-      'unknown';
-
   return CommunityPost(
     id: json['id'] as String,
-    authorId: resolvedAuthorId,
-    authorWallet: authorWalletCandidate,
-    authorName: resolvedAuthorName,
-    authorAvatar: MediaUrlResolver.resolve(avatarCandidate),
-    authorUsername: rawUsername,
-    authorIdentity: identity,
+    authorIdentityData: identity,
     content: json['content'] as String,
     imageUrl: json['imageUrl'] as String? ??
         (mediaUrls.isNotEmpty ? mediaUrls.first : null),
@@ -706,42 +707,13 @@ CommunityGroupSummary _backendApiCommunityGroupSummaryFromJson(
 }
 
 Comment _backendApiCommentFromBackendJson(Map<String, dynamic> json) {
-  final authorRaw = json['author'];
-  final identity = IdentitySummary.fromJson(json);
-  final normalizedAuthor = authorRaw is Map<String, dynamic>
-      ? authorRaw
-      : authorRaw is Map
-          ? Map<String, dynamic>.from(authorRaw)
-          : <String, dynamic>{};
-
-  final authorWallet = identity.walletAddress;
-  String? authorRawWalletFallback;
-  if (authorRaw is String && authorRaw.isNotEmpty) {
-    authorRawWalletFallback = authorRaw;
-  }
-  final rootAuthorWallet = json['authorWallet'] as String? ??
-      json['author_wallet'] as String? ??
-      json['createdByWallet'] as String? ??
-      json['created_by_wallet'] as String?;
-  final resolvedAuthorWallet =
-      authorWallet ?? rootAuthorWallet ?? authorRawWalletFallback;
-
-  final authorId = identity.userId ??
-      json['authorId']?.toString() ??
-      json['author_id']?.toString() ??
-      normalizedAuthor['id']?.toString() ??
-      normalizedAuthor['walletAddress']?.toString() ??
-      json['walletAddress']?.toString() ??
-      json['wallet_address']?.toString() ??
-      json['wallet']?.toString() ??
-      json['userId']?.toString() ??
-      json['user_id']?.toString() ??
-      resolvedAuthorWallet ??
-      'unknown';
-
-  final resolvedAuthorName = identity.label(fallback: 'Unknown author');
-  final avatarCandidate = identity.avatarUrl;
-  final authorUsername = identity.username;
+  final rawIdentity = ProfileIdentityData.fromIdentityPayload(
+    json,
+    fallbackLabel: 'Unknown author',
+  );
+  final identity = rawIdentity.copyWith(
+    avatarUrl: MediaUrlResolver.resolve(rawIdentity.avatarUrl),
+  );
 
   final originalContent = (json['originalText'] ??
           json['original_content'] ??
@@ -760,12 +732,7 @@ Comment _backendApiCommentFromBackendJson(Map<String, dynamic> json) {
 
   return Comment(
     id: (json['id'] ?? '').toString(),
-    authorId: authorId,
-    authorName: resolvedAuthorName,
-    authorAvatar: MediaUrlResolver.resolve(avatarCandidate),
-    authorUsername: authorUsername,
-    authorWallet: resolvedAuthorWallet ?? authorId,
-    authorIdentity: identity,
+    authorIdentityData: identity,
     parentCommentId: json['parentCommentId'] as String? ??
         json['parent_comment_id']?.toString(),
     originalContent:

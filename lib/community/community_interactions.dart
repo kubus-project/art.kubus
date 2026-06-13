@@ -4,7 +4,7 @@ import '../config/config.dart';
 import '../models/community_group.dart';
 import '../models/community_subject.dart';
 import '../models/achievements.dart' as achievements_model;
-import '../models/identity_summary.dart';
+import '../models/profile_identity_data.dart';
 import '../models/saved_item.dart';
 import '../providers/saved_items_provider.dart';
 import '../models/promotion.dart';
@@ -15,12 +15,7 @@ import '../utils/wallet_utils.dart';
 // Enhanced community interaction models
 class CommunityPost {
   final String id;
-  final String authorId;
-  final String? authorWallet;
-  final String authorName;
-  final String? authorAvatar;
-  final String? authorUsername;
-  final IdentitySummary? authorIdentity;
+  final ProfileIdentityData authorIdentityData;
   final String content;
   final String? imageUrl;
   final List<String> mediaUrls;
@@ -56,12 +51,12 @@ class CommunityPost {
 
   CommunityPost({
     required this.id,
-    required this.authorId,
-    this.authorWallet,
-    required this.authorName,
-    this.authorAvatar,
-    this.authorUsername,
-    this.authorIdentity,
+    String? authorId,
+    String? authorWallet,
+    String? authorName,
+    String? authorAvatar,
+    String? authorUsername,
+    ProfileIdentityData? authorIdentityData,
     required this.content,
     this.imageUrl,
     this.mediaUrls = const [],
@@ -94,7 +89,30 @@ class CommunityPost {
     this.feedPin = CommunityFeedPinMetadata.none,
     this.hybridScore,
     this.achievementResult,
-  });
+  }) : authorIdentityData = authorIdentityData ??
+            ProfileIdentityData.fromValues(
+              fallbackLabel: 'Unknown author',
+              displayName: authorName,
+              username: authorUsername,
+              userId: authorWallet ?? authorId,
+              wallet: authorWallet ?? authorId,
+              avatarUrl: authorAvatar,
+            );
+
+  String get authorId =>
+      authorIdentityData.userId ?? authorIdentityData.walletSeed;
+
+  String? get authorWallet {
+    final seed = authorIdentityData.walletSeed.trim();
+    if (seed.isEmpty || seed == authorIdentityData.label) return null;
+    return seed;
+  }
+
+  String get authorName => authorIdentityData.label;
+
+  String? get authorAvatar => authorIdentityData.avatarUrl;
+
+  String? get authorUsername => authorIdentityData.username;
 
   CommunityPost copyWith({
     String? content,
@@ -108,7 +126,7 @@ class CommunityPost {
     int? commentCount,
     String? authorAvatar,
     String? authorUsername,
-    IdentitySummary? authorIdentity,
+    ProfileIdentityData? authorIdentityData,
     String? authorWallet,
     List<String>? mediaUrls,
     List<String>? tags,
@@ -132,12 +150,15 @@ class CommunityPost {
   }) {
     return CommunityPost(
       id: id,
-      authorId: authorId,
-      authorWallet: authorWallet ?? this.authorWallet,
-      authorName: authorName,
-      authorAvatar: authorAvatar ?? this.authorAvatar,
-      authorUsername: authorUsername ?? this.authorUsername,
-      authorIdentity: authorIdentity ?? this.authorIdentity,
+      authorIdentityData: authorIdentityData ??
+          ProfileIdentityData.fromValues(
+            fallbackLabel: 'Unknown author',
+            displayName: authorName,
+            username: authorUsername ?? this.authorUsername,
+            userId: authorWallet ?? authorId,
+            wallet: authorWallet ?? this.authorWallet ?? authorId,
+            avatarUrl: authorAvatar ?? this.authorAvatar,
+          ),
       content: content ?? this.content,
       imageUrl: imageUrl ?? this.imageUrl,
       mediaUrls: mediaUrls ?? this.mediaUrls,
@@ -192,12 +213,7 @@ bool communityBool(dynamic value) {
 
 class Comment {
   final String id;
-  final String authorId;
-  final String authorName;
-  final String? authorAvatar;
-  final String? authorUsername;
-  final String? authorWallet;
-  final IdentitySummary? authorIdentity;
+  final ProfileIdentityData authorIdentityData;
   final String? parentCommentId;
   final String? originalContent;
   final DateTime? editedAt;
@@ -211,12 +227,12 @@ class Comment {
 
   Comment({
     required this.id,
-    required this.authorId,
-    required this.authorName,
-    this.authorAvatar,
-    this.authorUsername,
-    this.authorWallet,
-    this.authorIdentity,
+    String? authorId,
+    String? authorName,
+    String? authorAvatar,
+    String? authorUsername,
+    String? authorWallet,
+    ProfileIdentityData? authorIdentityData,
     this.parentCommentId,
     this.originalContent,
     this.editedAt,
@@ -225,7 +241,31 @@ class Comment {
     this.likeCount = 0,
     this.isLiked = false,
     List<Comment>? replies,
-  }) : replies = replies ?? <Comment>[];
+  })  : authorIdentityData = authorIdentityData ??
+            ProfileIdentityData.fromValues(
+              fallbackLabel: 'Unknown author',
+              displayName: authorName,
+              username: authorUsername,
+              userId: authorWallet ?? authorId,
+              wallet: authorWallet ?? authorId,
+              avatarUrl: authorAvatar,
+            ),
+        replies = replies ?? <Comment>[];
+
+  String get authorId =>
+      authorIdentityData.userId ?? authorIdentityData.walletSeed;
+
+  String get authorName => authorIdentityData.label;
+
+  String? get authorAvatar => authorIdentityData.avatarUrl;
+
+  String? get authorUsername => authorIdentityData.username;
+
+  String? get authorWallet {
+    final seed = authorIdentityData.walletSeed.trim();
+    if (seed.isEmpty || seed == authorIdentityData.label) return null;
+    return seed;
+  }
 
   Comment copyWith({
     int? likeCount,
@@ -239,16 +279,19 @@ class Comment {
     String? authorName,
     String? authorId,
     String? authorWallet,
-    IdentitySummary? authorIdentity,
+    ProfileIdentityData? authorIdentityData,
   }) {
     return Comment(
       id: id,
-      authorId: authorId ?? this.authorId,
-      authorName: authorName ?? this.authorName,
-      authorAvatar: authorAvatar ?? this.authorAvatar,
-      authorUsername: authorUsername ?? this.authorUsername,
-      authorWallet: authorWallet ?? this.authorWallet,
-      authorIdentity: authorIdentity ?? this.authorIdentity,
+      authorIdentityData: authorIdentityData ??
+          ProfileIdentityData.fromValues(
+            fallbackLabel: 'Unknown author',
+            displayName: authorName ?? this.authorName,
+            username: authorUsername ?? this.authorUsername,
+            userId: authorWallet ?? authorId ?? this.authorId,
+            wallet: authorWallet ?? this.authorWallet ?? authorId,
+            avatarUrl: authorAvatar ?? this.authorAvatar,
+          ),
       parentCommentId: parentCommentId,
       originalContent: originalContent ?? this.originalContent,
       editedAt: editedAt ?? this.editedAt,

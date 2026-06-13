@@ -159,6 +159,8 @@ class KubusMarkerLayerStyleState {
     required this.cubeLayerVisible,
     required this.cubeIconSpinDegrees,
     required this.cubeIconBobOffsetEm,
+    this.markerPulsePhase = 0.0,
+    this.markerBadgeBobOffsetPx = 0.0,
   });
 
   final String? pressedMarkerId;
@@ -171,6 +173,12 @@ class KubusMarkerLayerStyleState {
   final bool cubeLayerVisible;
   final double cubeIconSpinDegrees;
   final double cubeIconBobOffsetEm;
+
+  /// 0..1 ambient pulse phase driving the soft ring around each dot.
+  final double markerPulsePhase;
+
+  /// Current vertical bob offset (screen px) of the floating marker badge.
+  final double markerBadgeBobOffsetPx;
 }
 
 /// Centralizes marker/cube icon layer styling updates.
@@ -203,6 +211,7 @@ class KubusMarkerLayerStyler {
     required String markerLayerId,
     required String cubeIconLayerId,
     required KubusMarkerLayerStyleState state,
+    String? pulseLayerId,
     bool force = false,
   }) {
     if (controller == null) return;
@@ -229,6 +238,7 @@ class KubusMarkerLayerStyler {
         managedLayerIds: managedLayerIds,
         markerLayerId: markerLayerId,
         cubeIconLayerId: cubeIconLayerId,
+        pulseLayerId: pulseLayerId,
         state: state,
       ).whenComplete(() {
         _markerLayerStyleUpdateInFlight = false;
@@ -242,6 +252,7 @@ class KubusMarkerLayerStyler {
             managedLayerIds: managedLayerIds,
             markerLayerId: markerLayerId,
             cubeIconLayerId: cubeIconLayerId,
+            pulseLayerId: pulseLayerId,
             state: state,
             force: true,
           );
@@ -329,13 +340,18 @@ class KubusMarkerLayerStyler {
     required String markerLayerId,
     required String cubeIconLayerId,
     required KubusMarkerLayerStyleState state,
+    String? pulseLayerId,
   }) async {
     if (!styleInitialized) return;
     if (styleEpoch != getCurrentStyleEpoch()) return;
 
     final canStyleMarkerLayer = managedLayerIds.contains(markerLayerId);
     final canStyleCubeIconLayer = managedLayerIds.contains(cubeIconLayerId);
-    if (!canStyleMarkerLayer && !canStyleCubeIconLayer) return;
+    final canStylePulseLayer =
+        pulseLayerId != null && managedLayerIds.contains(pulseLayerId);
+    if (!canStyleMarkerLayer && !canStyleCubeIconLayer && !canStylePulseLayer) {
+      return;
+    }
 
     final iconImage = interactiveIconImageExpression(state);
     final iconSize = interactiveIconSizeExpression(state);
@@ -353,6 +369,17 @@ class KubusMarkerLayerStyler {
     final markerVisible = !state.cubeLayerVisible;
     final cubeIconVisible = state.cubeLayerVisible;
 
+    // Lift the selected badge above its neighbours (lower sort key draws first).
+    final selectedId = state.selectedMarkerId;
+    final Object symbolSortKey = selectedId == null
+        ? 1.0
+        : <Object>[
+            'case',
+            <Object>['==', <Object>['id'], selectedId],
+            2.0,
+            1.0,
+          ];
+
     try {
       if (canStyleMarkerLayer) {
         if (!styleInitialized || styleEpoch != getCurrentStyleEpoch()) return;
@@ -364,10 +391,37 @@ class KubusMarkerLayerStyler {
             iconOpacity: iconOpacity,
             iconAllowOverlap: true,
             iconIgnorePlacement: true,
-            iconAnchor: 'center',
-            iconPitchAlignment: 'map',
-            iconRotationAlignment: 'map',
+            // The badge floats above the dot: it is anchored at the icon's
+            // bottom (the float gap is baked into the PNG) and kept upright in
+            // screen space so it stays readable while the map is pitched or
+            // rotated. A subtle vertical bob replaces the old cube spin.
+            iconAnchor: 'bottom',
+            iconPitchAlignment: 'viewport',
+            iconRotationAlignment: 'viewport',
+            iconOffset: MapMarkerStyleConfig.badgeBobOffset(
+              state.markerBadgeBobOffsetPx,
+            ),
+            symbolSortKey: symbolSortKey,
             visibility: markerVisible ? 'visible' : 'none',
+          ),
+        );
+      }
+
+      if (canStylePulseLayer) {
+        if (!styleInitialized || styleEpoch != getCurrentStyleEpoch()) return;
+        await controller.setLayerProperties(
+          pulseLayerId,
+          ml.CircleLayerProperties(
+            circleRadius:
+                MapMarkerStyleConfig.pulseRadiusForPhase(state.markerPulsePhase),
+            circleColor: const <Object>['get', 'color'],
+            circleOpacity: markerVisible
+                ? MapMarkerStyleConfig.pulseOpacityForPhase(
+                    state.markerPulsePhase)
+                : 0.0,
+            circleBlur: 0.35,
+            circleStrokeWidth: 0.0,
+            circlePitchAlignment: 'map',
           ),
         );
       }
@@ -414,6 +468,8 @@ class MapLayersIds {
     required this.markerLayerId,
     required this.markerHitboxLayerId,
     required this.markerHitboxImageId,
+    required this.markerDotLayerId,
+    required this.markerPulseLayerId,
     required this.cubeSourceId,
     required this.cubeLayerId,
     required this.cubeIconLayerId,
@@ -427,6 +483,12 @@ class MapLayersIds {
   final String markerLayerId;
   final String markerHitboxLayerId;
   final String markerHitboxImageId;
+
+  /// Precise coordinate dot rendered at each marker/cluster point.
+  final String markerDotLayerId;
+
+  /// Soft pulsing ring rendered beneath the dot.
+  final String markerPulseLayerId;
 
   final String cubeSourceId;
   final String cubeLayerId;
@@ -745,6 +807,8 @@ class MapLayersManager {
     final existingLayerIds = await _fetchExistingLayerIds();
     await _safeRemoveLayerIfExists(existingLayerIds, _ids.markerLayerId);
     await _safeRemoveLayerIfExists(existingLayerIds, _ids.markerHitboxLayerId);
+    await _safeRemoveLayerIfExists(existingLayerIds, _ids.markerDotLayerId);
+    await _safeRemoveLayerIfExists(existingLayerIds, _ids.markerPulseLayerId);
     await _safeRemoveLayerIfExists(existingLayerIds, _ids.cubeLayerId);
     await _safeRemoveLayerIfExists(existingLayerIds, _ids.cubeIconLayerId);
     await _safeRemoveLayerIfExists(existingLayerIds, _ids.locationLayerId);
@@ -782,10 +846,12 @@ class MapLayersManager {
     _sourceIds.add(_ids.cubeSourceId);
 
     // Layer order (bottom to top):
-    // 1) cube extrusion
-    // 2) marker symbol
-    // 3) cube floating icon
-    // 4) marker hitbox
+    // 1) cube extrusion (experimental; hidden by default)
+    // 2) marker pulse ring (flat on the ground, below the dot)
+    // 3) marker coordinate dot (flat on the ground)
+    // 4) marker floating badge symbol (hovers above the dot)
+    // 5) cube floating icon (experimental; hidden by default)
+    // 6) marker hitbox (transparent, on top for reliable taps)
 
     await _controller.addFillExtrusionLayer(
       _ids.cubeSourceId,
@@ -801,6 +867,45 @@ class MapLayersManager {
     );
     _addLayerCalls += 1;
     _layerIds.add(_ids.cubeLayerId);
+
+    // Soft pulse ring beneath the dot. Radius/opacity are animated at runtime by
+    // the marker layer styler; it lies flat on the ground so it reads correctly
+    // when the map is pitched (isometric view).
+    await _controller.addCircleLayer(
+      _ids.markerSourceId,
+      _ids.markerPulseLayerId,
+      ml.CircleLayerProperties(
+        circleRadius: MapMarkerStyleConfig.pulseMinRadiusPx,
+        circleColor: const <Object>['get', 'color'],
+        circleOpacity: 0.0,
+        circleBlur: 0.35,
+        circleStrokeWidth: 0.0,
+        circlePitchAlignment: 'map',
+      ),
+    );
+    _addLayerCalls += 1;
+    _layerIds.add(_ids.markerPulseLayerId);
+
+    // Precise coordinate dot at every marker/cluster point.
+    await _controller.addCircleLayer(
+      _ids.markerSourceId,
+      _ids.markerDotLayerId,
+      ml.CircleLayerProperties(
+        circleRadius: <Object>[
+          'case',
+          <Object>['==', <Object>['get', 'kind'], 'cluster'],
+          MapMarkerStyleConfig.clusterDotRadiusPx,
+          MapMarkerStyleConfig.dotRadiusPx,
+        ],
+        circleColor: const <Object>['get', 'color'],
+        circleOpacity: 1.0,
+        circleStrokeWidth: MapMarkerStyleConfig.dotStrokeWidthPx,
+        circleStrokeColor: MapLibreStyleUtils.hexRgb(theme.locationStroke),
+        circlePitchAlignment: 'map',
+      ),
+    );
+    _addLayerCalls += 1;
+    _layerIds.add(_ids.markerDotLayerId);
 
     await _controller.addSymbolLayer(
         _ids.markerSourceId,
@@ -822,9 +927,12 @@ class MapLayersManager {
           ],
           iconAllowOverlap: true,
           iconIgnorePlacement: true,
-          iconAnchor: 'center',
-          iconPitchAlignment: 'map',
-          iconRotationAlignment: 'map',
+          // Floating badge: anchored at the icon bottom (float gap baked into
+          // the PNG) and kept upright in screen space so it stays readable under
+          // pitch + bearing rotation.
+          iconAnchor: 'bottom',
+          iconPitchAlignment: 'viewport',
+          iconRotationAlignment: 'viewport',
         ),
     );
     _addLayerCalls += 1;
@@ -909,9 +1017,12 @@ class MapLayersManager {
           iconOpacity: 0.0,
           iconAllowOverlap: true,
           iconIgnorePlacement: true,
-          iconAnchor: 'center',
-          iconPitchAlignment: 'map',
-          iconRotationAlignment: 'map',
+          // Match the floating badge anchor so the tap target covers the badge
+          // (which hovers above the coordinate point), keeping hitboxes generous
+          // and reliable.
+          iconAnchor: 'bottom',
+          iconPitchAlignment: 'viewport',
+          iconRotationAlignment: 'viewport',
         ),
       );
       _addLayerCalls += 1;
@@ -960,6 +1071,9 @@ class MapLayersManager {
           circleStrokeOpacity: 0.0,
           circleStrokeWidth: 0.0,
           circleRadius: hitboxRadius,
+          // Shift the circle up toward the floating badge (this is only the
+          // fallback path when symbol hitboxes are unavailable).
+          circleTranslate: const <Object>[0, -22],
         ),
       );
       _addLayerCalls += 1;
