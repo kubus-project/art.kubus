@@ -61,6 +61,41 @@ Widget _buildApp({
   );
 }
 
+Widget _buildEmbeddedApp({
+  required SecurityGateProvider gate,
+  required WalletProvider wallet,
+  required double width,
+}) {
+  return MultiProvider(
+    providers: [
+      ChangeNotifierProvider<ThemeProvider>(
+        create: (_) => ThemeProvider(),
+      ),
+      ChangeNotifierProvider<SecurityGateProvider>.value(value: gate),
+      ChangeNotifierProvider<WalletProvider>.value(value: wallet),
+    ],
+    child: MaterialApp(
+      locale: const Locale('en'),
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      home: Scaffold(
+        body: Center(
+          child: SizedBox(
+            width: width,
+            child: SingleChildScrollView(
+              child: MnemonicRevealContent(
+                embedded: true,
+                onCompleted: () {},
+                onClose: () {},
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -126,4 +161,36 @@ void main() {
     expect(find.text('alpha'), findsNothing);
     expect(find.text('Authentication failed'), findsOneWidget);
   });
+
+  for (final width in <double>[600, 320]) {
+    testWidgets(
+        'embedded mnemonic grid lays out without clipping at width $width',
+        (tester) async {
+      await tester.binding.setSurfaceSize(const Size(900, 1400));
+      addTearDown(() async => tester.binding.setSurfaceSize(null));
+
+      final gate = _QueuedSecurityGateProvider(<bool>[true, true]);
+      final wallet = _FakeWalletProvider(mnemonic: mnemonic);
+
+      await tester.pumpWidget(
+        _buildEmbeddedApp(gate: gate, wallet: wallet, width: width),
+      );
+      await tester.pumpAndSettle();
+
+      // Masked state must render without overflow exceptions.
+      expect(tester.takeException(), isNull);
+
+      await tester.tap(find.text('Show'));
+      await tester.pumpAndSettle();
+
+      // Revealed words render, with no layout overflow at either width.
+      expect(tester.takeException(), isNull);
+      expect(find.text('alpha'), findsOneWidget);
+      expect(find.text('theta'), findsOneWidget);
+
+      // Revealed words must never be truncated with an ellipsis.
+      final wordText = tester.widget<Text>(find.text('alpha'));
+      expect(wordText.overflow, isNot(TextOverflow.ellipsis));
+    });
+  }
 }

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
@@ -124,6 +125,63 @@ Map<String, dynamic> _profileJson({
     'createdAt': DateTime(2026, 3, 16).toIso8601String(),
     'updatedAt': DateTime(2026, 3, 16).toIso8601String(),
   };
+}
+
+/// Fake [ProfileProvider] that avoids real network/upload work so we can assert
+/// the onboarding avatar flush + hydration logic in isolation.
+class _FakeAvatarProfileProvider extends ProfileProvider {
+  _FakeAvatarProfileProvider(UserProfile user) {
+    setCurrentUser(user);
+  }
+
+  String uploadResult = 'https://cdn.example/onboarding-avatar.png';
+
+  /// When non-null, [loadAuthenticatedProfile] rewrites the avatar to this
+  /// value (use '' to simulate a backend reload that briefly drops the avatar).
+  String? reloadAvatar;
+  int reloadCount = 0;
+
+  @override
+  Future<String> uploadAvatarBytes({
+    required List<int> fileBytes,
+    required String fileName,
+    required String walletAddress,
+    String? mimeType,
+  }) async =>
+      uploadResult;
+
+  @override
+  Future<bool> saveProfile({
+    required String walletAddress,
+    String? username,
+    String? displayName,
+    String? bio,
+    String? avatar,
+    String? coverImage,
+    Map<String, String>? social,
+    List<String>? fieldOfWork,
+    int? yearsActive,
+    bool? isArtist,
+    bool? isInstitution,
+    ProfilePreferences? preferences,
+    bool reloadStats = true,
+  }) async {
+    final current = currentUser;
+    if (current != null && avatar != null) {
+      setCurrentUser(current.copyWith(avatar: avatar));
+    }
+    return true;
+  }
+
+  @override
+  Future<void> loadAuthenticatedProfile() async {
+    reloadCount += 1;
+    final current = currentUser;
+    final next = reloadAvatar;
+    if (current != null && next != null) {
+      setCurrentUser(current.copyWith(avatar: next));
+    }
+  }
 }
 
 Future<void> _pumpUntilFound(
@@ -252,9 +310,53 @@ void main() {
     expect(find.text('Create your profile first'), findsOneWidget);
   });
 
-  testWidgets('wallet backup intro step renders when backup is required',
+  testWidgets(
+      'incomplete wallet backup does not add a mandatory wallet backup step',
       (tester) async {
-    await tester.binding.setSurfaceSize(const Size(390, 844));
+    // Wallet backup is recommended, not required: even when the recovery phrase
+    // is flagged as not yet backed up, the account flow must not insert a
+    // walletBackupIntro / walletBackup gate.
+    await tester.binding.setSurfaceSize(const Size(390, 1200));
+    addTearDown(() async => tester.binding.setSurfaceSize(null));
+
+    const walletAddress = '4Nd1m5sP3v1bE7c9Q2w6z8YkLmNoPrStUvWxYzABcDeF';
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'wallet_address': walletAddress,
+      '${PreferenceKeys.walletMnemonicBackupRequiredV1Prefix}:$walletAddress':
+          true,
+    });
+
+    await tester.pumpWidget(
+      _buildTestApp(
+        child: const OnboardingFlowScreen(initialStepId: 'profile'),
+        locale: const Locale('en'),
+        size: const Size(390, 1200),
+      ),
+    );
+    await _pumpOnboardingReady(tester);
+
+    final state = tester.state(find.byType(OnboardingFlowScreen)) as dynamic;
+    final List<String> stepIds = List<String>.from(state.debugStepIds);
+
+    expect(stepIds, isNot(contains('walletBackupIntro')));
+    expect(stepIds, isNot(contains('walletBackup')));
+    // The user is never parked on a backup step.
+    expect(state.debugCurrentStepId, isNot('walletBackupIntro'));
+    expect(state.debugCurrentStepId, isNot('walletBackup'));
+
+    final l10n = AppLocalizations.of(
+      tester.element(find.byType(OnboardingFlowScreen)),
+    )!;
+    expect(find.text(l10n.onboardingFlowWalletBackupIntroTitle), findsNothing);
+  });
+
+  testWidgets(
+      'routing to legacy walletBackupIntro id does not trap the user on a backup gate',
+      (tester) async {
+    // Older builds (and AuthOnboardingService resume) may still hand us a
+    // walletBackupIntro/walletBackup initial step id. The flow must migrate
+    // forward to a real step instead of blocking on a backup gate.
+    await tester.binding.setSurfaceSize(const Size(390, 1200));
     addTearDown(() async => tester.binding.setSurfaceSize(null));
 
     const walletAddress = '4Nd1m5sP3v1bE7c9Q2w6z8YkLmNoPrStUvWxYzABcDeF';
@@ -268,56 +370,108 @@ void main() {
       _buildTestApp(
         child: const OnboardingFlowScreen(initialStepId: 'walletBackupIntro'),
         locale: const Locale('en'),
+        size: const Size(390, 1200),
       ),
     );
     await _pumpOnboardingReady(tester);
 
-    final l10n = AppLocalizations.of(
-      tester.element(find.byType(OnboardingFlowScreen)),
-    )!;
-
-    expect(
-        find.text(l10n.onboardingFlowWalletBackupIntroTitle), findsOneWidget);
-    expect(
-      find.text(l10n.onboardingFlowWalletBackupIntroRevealAction),
-      findsOneWidget,
-    );
-    await tester.scrollUntilVisible(
-      find.text('Encrypted server backup'),
-      250,
-      scrollable: find.byType(Scrollable).last,
-    );
-    await tester.pump(const Duration(milliseconds: 200));
-    expect(find.text('Encrypted server backup'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    final state = tester.state(find.byType(OnboardingFlowScreen)) as dynamic;
+    expect(state.debugStepIds, isNot(contains('walletBackupIntro')));
+    expect(state.debugCurrentStepId, isNot('walletBackupIntro'));
+    expect(state.debugCurrentStepId, isNot('walletBackup'));
   });
 
   testWidgets(
-      'wallet backup intro shows missing-backup banner when only one backup is complete',
+      'staged onboarding avatar is flushed and pinned before reaching main shell',
       (tester) async {
-    await tester.binding.setSurfaceSize(const Size(390, 844));
+    await tester.binding.setSurfaceSize(const Size(390, 1200));
     addTearDown(() async => tester.binding.setSurfaceSize(null));
 
-    const walletAddress = '4Nd1m5sP3v1bE7c9Q2w6z8YkLmNoPrStUvWxYzABcDeF';
-    SharedPreferences.setMockInitialValues(<String, Object>{
-      'wallet_address': walletAddress,
-      '${PreferenceKeys.walletMnemonicBackupRequiredV1Prefix}:$walletAddress':
-          false,
-    });
+    const wallet = '0xavataronboarding';
+    final provider = _FakeAvatarProfileProvider(
+      UserProfile(
+        id: 'profile_avatar',
+        walletAddress: wallet,
+        username: 'avatar_user',
+        displayName: 'Avatar User',
+        bio: '',
+        avatar: '',
+        createdAt: DateTime(2026, 3, 16),
+        updatedAt: DateTime(2026, 3, 16),
+      ),
+    );
 
     await tester.pumpWidget(
       _buildTestApp(
-        child: const OnboardingFlowScreen(initialStepId: 'walletBackupIntro'),
+        child: const OnboardingFlowScreen(initialStepId: 'profile'),
         locale: const Locale('en'),
+        size: const Size(390, 1200),
+        profileProvider: provider,
       ),
     );
     await _pumpOnboardingReady(tester);
 
-    expect(
-      find.byKey(const Key('onboarding_wallet_backup_missing_banner')),
-      findsOneWidget,
+    final state = tester.state(find.byType(OnboardingFlowScreen)) as dynamic;
+
+    await state.debugStageAvatar(
+      bytes: Uint8List.fromList(<int>[1, 2, 3, 4]),
+      fileName: 'avatar.png',
+      mimeType: 'image/png',
     );
-    expect(find.text('Encrypted server backup'), findsWidgets);
-    expect(find.text('Create encrypted backup'), findsWidgets);
+
+    final uploaded = await state.debugFlushPendingAvatarUpload() as String?;
+    expect(uploaded, provider.uploadResult);
+    // Flush pins the resolved avatar onto the in-memory profile + local draft.
+    expect(provider.currentUser?.avatar, provider.uploadResult);
+    expect(state.debugLocalProfileDraftAvatar, provider.uploadResult);
+
+    // Simulate a backend reload that briefly returns no avatar right after the
+    // upload: hydration must keep the uploaded URL so the shell shows it now.
+    provider.reloadAvatar = '';
+    await state.debugEnsureAvatarHydratedForMainShell(uploaded);
+    expect(provider.reloadCount, greaterThanOrEqualTo(1));
+    expect(provider.currentUser?.avatar, provider.uploadResult);
+  });
+
+  testWidgets('avatar hydration keeps a fresh reloaded avatar from the backend',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 1200));
+    addTearDown(() async => tester.binding.setSurfaceSize(null));
+
+    const wallet = '0xavatarreload';
+    final provider = _FakeAvatarProfileProvider(
+      UserProfile(
+        id: 'profile_avatar_reload',
+        walletAddress: wallet,
+        username: 'avatar_reload',
+        displayName: 'Avatar Reload',
+        bio: '',
+        avatar: '',
+        createdAt: DateTime(2026, 3, 16),
+        updatedAt: DateTime(2026, 3, 16),
+      ),
+    );
+
+    await tester.pumpWidget(
+      _buildTestApp(
+        child: const OnboardingFlowScreen(initialStepId: 'profile'),
+        locale: const Locale('en'),
+        size: const Size(390, 1200),
+        profileProvider: provider,
+      ),
+    );
+    await _pumpOnboardingReady(tester);
+
+    final state = tester.state(find.byType(OnboardingFlowScreen)) as dynamic;
+
+    const reloaded = 'https://cdn.example/reloaded-avatar.png';
+    provider.reloadAvatar = reloaded;
+    await state.debugEnsureAvatarHydratedForMainShell(
+      'https://cdn.example/uploaded-avatar.png',
+    );
+    // A valid reloaded avatar wins; the uploaded fallback does not clobber it.
+    expect(provider.currentUser?.avatar, reloaded);
   });
 
   testWidgets(

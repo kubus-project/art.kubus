@@ -355,6 +355,37 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   @visibleForTesting
   Set<String> get debugCompletedStepIds => _completed.map(_stepId).toSet();
 
+  /// Ordered ids of the steps the flow will actually present. Used by tests to
+  /// assert that wallet backup is never inserted as a mandatory onboarding step.
+  @visibleForTesting
+  List<String> get debugStepIds => _steps.map(_stepId).toList(growable: false);
+
+  @visibleForTesting
+  Future<void> debugStageAvatar({
+    required Uint8List bytes,
+    required String fileName,
+    String? mimeType,
+  }) =>
+      _stageAvatarForLaterUpload(
+        bytes: bytes,
+        fileName: fileName,
+        mimeType: mimeType,
+      );
+
+  @visibleForTesting
+  Future<String?> debugFlushPendingAvatarUpload() =>
+      _flushPendingAvatarUploadIfPossible();
+
+  @visibleForTesting
+  Future<void> debugEnsureAvatarHydratedForMainShell(String? uploadedAvatarUrl) {
+    final profileProvider =
+        Provider.of<ProfileProvider>(context, listen: false);
+    return _ensureAvatarHydratedForMainShell(profileProvider, uploadedAvatarUrl);
+  }
+
+  @visibleForTesting
+  String? get debugLocalProfileDraftAvatar => _localProfileDraft['avatar'];
+
   @visibleForTesting
   bool get debugVerificationConfirmInFlight => _verificationConfirmInFlight;
 
@@ -1037,14 +1068,17 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           _OnboardingStep.role,
           _OnboardingStep.profile,
           if (_accountRequiresWalletSetup) _OnboardingStep.walletConnect,
-          // Single user-facing wallet security step. `walletBackupIntro`
-          // aggregates recovery-phrase, encrypted-backup and passkey actions in
-          // one coherent card. The legacy `walletBackup` reveal-only step is no
-          // longer surfaced so there is never a second "create backup copy"
-          // moment; its internal enum/handlers remain for saved-progress
-          // migration and gating via `_completeWalletBackupStepsIfReady`.
-          if (_walletBackupOnboardingEnabled && _requiresWalletBackupStep)
-            _OnboardingStep.walletBackupIntro,
+          // Wallet security backup is intentionally NOT inserted as an
+          // onboarding step. Backup is recommended, not required: the account
+          // flow must never block on recovery-phrase / encrypted-backup /
+          // passkey completion. Backup status and creation remain available in
+          // WalletHome and wallet security settings after onboarding.
+          //
+          // The `walletBackupIntro` / `walletBackup` enum values and their
+          // handlers (`_completeWalletBackupStepsIfReady`, etc.) are retained
+          // only so legacy saved progress that recorded those steps migrates
+          // forward safely (`_refreshAuthDerivedSteps` prunes any completed /
+          // deferred entries that are no longer present in `_steps`).
           if (_requiresDaoReviewStep) _OnboardingStep.daoReview,
           _OnboardingStep.accountPermissions,
           _OnboardingStep.done,
@@ -2053,15 +2087,21 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     _pendingAvatarMimeType = mimeType;
   }
 
-  Future<void> _flushPendingAvatarUploadIfPossible() async {
+  /// Uploads any staged avatar bytes and persists the resulting URL.
+  ///
+  /// Returns the final displayable (resolved) avatar URL when an upload+save
+  /// succeeds, or `null` when there is nothing staged / the upload fails. The
+  /// staged bytes are only cleared after a successful upload so a failure can
+  /// still be retried later in the flow.
+  Future<String?> _flushPendingAvatarUploadIfPossible() async {
     final bytes = _pendingAvatarBytes;
     final fileName = (_pendingAvatarFileName ?? '').trim();
-    if (bytes == null || fileName.isEmpty) return;
+    if (bytes == null || fileName.isEmpty) return null;
 
     final profileProvider =
         Provider.of<ProfileProvider>(context, listen: false);
     final wallet = (profileProvider.currentUser?.walletAddress ?? '').trim();
-    if (wallet.isEmpty) return;
+    if (wallet.isEmpty) return null;
 
     try {
       final uploadedUrl = await profileProvider.uploadAvatarBytes(
@@ -2070,24 +2110,75 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         walletAddress: wallet,
         mimeType: _pendingAvatarMimeType,
       );
-      if (uploadedUrl.trim().isEmpty) return;
+      final resolvedUrl = uploadedUrl.trim();
+      if (resolvedUrl.isEmpty) return null;
 
       await profileProvider.saveProfile(
         walletAddress: wallet,
-        avatar: uploadedUrl.trim(),
+        avatar: resolvedUrl,
       );
 
       _localProfileDraft = <String, String>{
         ..._localProfileDraft,
-        'avatar': uploadedUrl.trim(),
+        'avatar': resolvedUrl,
       };
       await _persistLocalDrafts();
 
       _pendingAvatarBytes = null;
       _pendingAvatarFileName = null;
       _pendingAvatarMimeType = null;
+      return resolvedUrl;
     } catch (_) {
       // Keep staged avatar for retry after auth/session settles.
+      return null;
+    }
+  }
+
+  /// Ensures the authenticated profile state carries a displayable avatar before
+  /// the main shell mounts, so an avatar picked during onboarding shows
+  /// immediately without a manual refresh.
+  ///
+  /// [uploadedAvatarUrl] is the URL produced by the most recent flush (may be
+  /// `null` if the avatar was already flushed earlier in the flow). We rehydrate
+  /// the profile from the backend, then — only if the reload surfaces no avatar
+  /// — fall back to the best known uploaded URL so a brief backend lag right
+  /// after upload cannot leave the shell without an avatar.
+  Future<void> _ensureAvatarHydratedForMainShell(
+    ProfileProvider profileProvider,
+    String? uploadedAvatarUrl,
+  ) async {
+    // Best known displayable avatar before we rehydrate: the freshly uploaded
+    // URL, then the in-memory profile, then the persisted local draft.
+    final fallbackAvatar = <String>[
+      (uploadedAvatarUrl ?? '').trim(),
+      (profileProvider.currentUser?.avatar ?? '').trim(),
+      (_localProfileDraft['avatar'] ?? '').trim(),
+    ].firstWhere((value) => value.isNotEmpty, orElse: () => '');
+
+    final wallet = (profileProvider.currentUser?.walletAddress ?? '').trim();
+    try {
+      await profileProvider
+          .loadAuthenticatedProfile()
+          .timeout(const Duration(seconds: 6));
+    } catch (_) {
+      if (wallet.isNotEmpty) {
+        try {
+          await profileProvider
+              .loadProfile(wallet)
+              .timeout(const Duration(seconds: 6));
+        } catch (_) {
+          // Keep onboarding completion resilient if hydration is unavailable.
+        }
+      }
+    }
+
+    if (fallbackAvatar.isEmpty) return;
+    final current = profileProvider.currentUser;
+    if (current == null) return;
+    if (current.avatar.trim().isEmpty) {
+      // Reload produced no avatar; pin the uploaded URL so it renders now. This
+      // also emits a profile-updated event for any listening shell widgets.
+      profileProvider.setCurrentUser(current.copyWith(avatar: fallbackAvatar));
     }
   }
 
@@ -2428,7 +2519,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           backgroundColor: Colors.transparent,
           insetPadding: const EdgeInsets.all(KubusSpacing.lg),
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 520),
+            constraints: const BoxConstraints(maxWidth: 600),
             child: LiquidGlassCard(
               padding: const EdgeInsets.all(KubusSpacing.lg),
               child: SingleChildScrollView(
@@ -2608,7 +2699,15 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
 
       if (_isSignedIn) {
         await _syncLocalProfileDraftToBackendIfPossible();
-        await _flushPendingAvatarUploadIfPossible();
+        final uploadedAvatarUrl = await _flushPendingAvatarUploadIfPossible();
+        if (!mounted) return;
+        // Rehydrate the profile (and pin the uploaded avatar if needed) so the
+        // main shell renders the onboarding-selected avatar immediately.
+        await _ensureAvatarHydratedForMainShell(
+          profileProvider,
+          uploadedAvatarUrl,
+        );
+        if (!mounted) return;
       }
 
       await _persistLocalDrafts();

@@ -205,38 +205,66 @@ class _MnemonicRevealContentState extends State<MnemonicRevealContent> {
           : const AppLoading();
     }
 
-    final wordGrid = GridView.builder(
-      shrinkWrap: widget.embedded,
-      physics: widget.embedded ? const NeverScrollableScrollPhysics() : null,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 6,
-      ),
-      itemCount: words.length,
-      itemBuilder: (context, index) {
-        final display = _masked ? '•••••' : words[index];
-        return FrostedContainer(
-          margin: const EdgeInsets.all(KubusSpacing.xs + KubusSpacing.xxs),
+    // Responsive, non-clipping word grid. Each word lives in a chip with a
+    // stable minimum height and vertically centred number/word so neither the
+    // masked dots nor the revealed words are ever truncated. We size columns by
+    // the available width (2 on comfortable dialog/desktop widths, 1 when
+    // narrow) using a Wrap instead of a fixed-aspect GridView so tall words
+    // expand the row rather than clipping it.
+    const double wordChipSpacing = KubusSpacing.sm;
+    const double wordChipMinHeight = 46;
+    const double twoColumnBreakpoint = 360;
+
+    Widget buildWordChip(int index, double width) {
+      return SizedBox(
+        width: width,
+        child: FrostedContainer(
           padding: const EdgeInsets.symmetric(
             horizontal: KubusSpacing.sm + KubusSpacing.xs,
-            vertical: KubusSpacing.sm,
+            vertical: KubusSpacing.xs,
           ),
           backgroundColor: scheme.primary.withValues(alpha: 0.10),
-          child: Row(
-            children: [
-              Text(
-                '${index + 1}. ',
-                style: KubusTypography.textTheme.bodyMedium,
-              ),
-              Expanded(
-                child: Text(
-                  display,
-                  overflow: TextOverflow.ellipsis,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: wordChipMinHeight),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Text(
+                  '${index + 1}. ',
                   style: KubusTypography.textTheme.bodyMedium,
                 ),
-              ),
-            ],
+                Expanded(
+                  child: Text(
+                    // Masked state shows fixed-width dots; revealed words wrap
+                    // (never ellipsised) so the full phrase is always readable.
+                    _masked ? '•••••' : words[index],
+                    softWrap: true,
+                    style: KubusTypography.textTheme.bodyMedium,
+                  ),
+                ),
+              ],
+            ),
           ),
+        ),
+      );
+    }
+
+    final wordGrid = LayoutBuilder(
+      builder: (context, constraints) {
+        final maxWidth = constraints.maxWidth.isFinite
+            ? constraints.maxWidth
+            : MediaQuery.of(context).size.width;
+        final columns = maxWidth >= twoColumnBreakpoint ? 2 : 1;
+        final itemWidth = columns == 1
+            ? maxWidth
+            : (maxWidth - wordChipSpacing * (columns - 1)) / columns;
+        return Wrap(
+          spacing: wordChipSpacing,
+          runSpacing: wordChipSpacing,
+          children: <Widget>[
+            for (var index = 0; index < words.length; index++)
+              buildWordChip(index, itemWidth),
+          ],
         );
       },
     );
@@ -264,7 +292,12 @@ class _MnemonicRevealContentState extends State<MnemonicRevealContent> {
     final cardChildren = <Widget>[
       warningHeader,
       const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
-      widget.embedded ? wordGrid : Expanded(child: wordGrid),
+      // Embedded (onboarding dialog) is already inside a SingleChildScrollView,
+      // so the grid shrink-wraps. Full-screen gets its own scroll view inside
+      // the expanded card so long phrases never clip.
+      widget.embedded
+          ? wordGrid
+          : Expanded(child: SingleChildScrollView(child: wordGrid)),
     ];
 
     final phraseCard = LiquidGlassCard(
@@ -276,7 +309,11 @@ class _MnemonicRevealContentState extends State<MnemonicRevealContent> {
       ),
     );
 
-    final actionsRow = Row(
+    // Wrap (not Row) so the three actions reflow onto a second line on narrow /
+    // mobile widths instead of overflowing horizontally.
+    final actionsRow = Wrap(
+      spacing: KubusSpacing.sm + KubusSpacing.xs,
+      runSpacing: KubusSpacing.sm,
       children: [
         KubusButton(
           onPressed: _revealMnemonic,
@@ -285,13 +322,11 @@ class _MnemonicRevealContentState extends State<MnemonicRevealContent> {
           backgroundColor: scheme.primary,
           foregroundColor: scheme.onPrimary,
         ),
-        const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
         KubusOutlineButton(
           onPressed: _copyToClipboard,
           label: l10n.commonCopy,
           icon: Icons.copy,
         ),
-        const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
         KubusOutlineButton(
           onPressed: _handleClose,
           label: l10n.commonClose,
