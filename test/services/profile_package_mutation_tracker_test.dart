@@ -2,6 +2,7 @@ import 'package:art_kubus/community/community_interactions.dart';
 import 'package:art_kubus/models/achievement_progress.dart' as legacy_progress;
 import 'package:art_kubus/models/achievements.dart' as achievements;
 import 'package:art_kubus/models/profile_package.dart';
+import 'package:art_kubus/models/profile_identity_data.dart';
 import 'package:art_kubus/models/user.dart';
 import 'package:art_kubus/services/profile_package_mutation_tracker.dart';
 import 'package:art_kubus/services/profile_package_service.dart';
@@ -212,9 +213,13 @@ ProfilePackage _package(String wallet) {
 CommunityPost _post(String wallet) {
   return CommunityPost(
     id: 'post-1',
-    authorId: wallet,
-    authorWallet: wallet,
-    authorName: 'Tracker User',
+    authorIdentityData: ProfileIdentityData.fromCompactAuthor(
+      {
+        'walletAddress': wallet,
+        'displayName': 'Tracker User',
+      },
+      fallbackLabel: 'Unknown author',
+    ),
     content: 'Profile package mutation tracker test post',
     timestamp: DateTime.now(),
   );

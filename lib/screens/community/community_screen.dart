@@ -2149,17 +2149,18 @@ class _CommunityScreenState extends State<CommunityScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           ListTile(
-            leading: AvatarWidget(
-              wallet: post.authorWallet ?? post.authorId,
-              avatarUrl: post.authorAvatar,
-              radius: 22,
+            title: ProfileIdentitySummary(
+              identity: post.authorIdentityData,
+              avatarRadius: 22,
               allowFabricatedFallback: true,
-            ),
-            title: Text(
-              post.authorName,
-              style: KubusTypography.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: scheme.onPrimaryContainer),
+              fetchMissingAvatar: false,
+              titleStyle: KubusTypography.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: scheme.onPrimaryContainer,
+              ),
+              subtitleStyle: KubusTypography.textTheme.labelSmall?.copyWith(
+                color: scheme.onPrimaryContainer.withValues(alpha: 0.72),
+              ),
             ),
             subtitle: Text(
               '${_getTimeAgo(post.timestamp)} - ${post.category}',
@@ -5451,13 +5452,6 @@ class _CommunityScreenState extends State<CommunityScreen>
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            AvatarWidget(
-                              wallet: c.authorWallet ?? c.authorId,
-                              avatarUrl: c.authorAvatar,
-                              radius: isReply ? 12 : 16,
-                              allowFabricatedFallback: true,
-                            ),
-                            const SizedBox(width: 12),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -5465,12 +5459,20 @@ class _CommunityScreenState extends State<CommunityScreen>
                                   Row(
                                     children: [
                                       Expanded(
-                                        child: Text(
-                                          c.authorName,
-                                          style: KubusTypography.inter(
+                                        child: ProfileIdentitySummary(
+                                          identity: c.authorIdentityData,
+                                          avatarRadius: isReply ? 12 : 16,
+                                          allowFabricatedFallback: true,
+                                          fetchMissingAvatar: false,
+                                          titleStyle: KubusTypography.inter(
                                             fontSize: isReply ? 13 : 14,
                                             fontWeight: FontWeight.w600,
                                             color: bubbleTextColor,
+                                          ),
+                                          subtitleStyle: KubusTypography.inter(
+                                            fontSize: 11,
+                                            color: bubbleTextColor.withValues(
+                                                alpha: 0.62),
                                           ),
                                         ),
                                       ),
@@ -6189,31 +6191,31 @@ class _CommunityScreenState extends State<CommunityScreen>
                           children: [
                             Row(
                               children: [
-                                AvatarWidget(
-                                    wallet: post.authorId,
-                                    avatarUrl: post.authorAvatar,
-                                    radius: 16,
-                                    enableProfileNavigation: false),
-                                const SizedBox(width: 8),
                                 Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(post.authorName,
-                                          style: KubusTypography.inter(
-                                              fontWeight: FontWeight.w600,
-                                              fontSize: 14)),
-                                      Text(_getTimeAgo(post.timestamp),
-                                          style: KubusTypography.inter(
-                                              fontSize: 11,
-                                              color: theme.colorScheme.onSurface
-                                                  .withValues(alpha: 0.5))),
-                                    ],
+                                  child: ProfileIdentitySummary(
+                                    identity: post.authorIdentityData,
+                                    avatarRadius: 16,
+                                    allowFabricatedFallback: true,
+                                    fetchMissingAvatar: false,
+                                    titleStyle: KubusTypography.inter(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                    ),
+                                    subtitleStyle: KubusTypography.inter(
+                                      fontSize: 11,
+                                      color: theme.colorScheme.onSurface
+                                          .withValues(alpha: 0.5),
+                                    ),
                                   ),
                                 ),
                               ],
                             ),
+                            const SizedBox(height: 2),
+                            Text(_getTimeAgo(post.timestamp),
+                                style: KubusTypography.inter(
+                                    fontSize: 11,
+                                    color: theme.colorScheme.onSurface
+                                        .withValues(alpha: 0.5))),
                             const SizedBox(height: 8),
                             Text(post.content,
                                 style: KubusTypography.inter(fontSize: 14),

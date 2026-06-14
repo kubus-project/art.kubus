@@ -36,14 +36,14 @@ void main() {
       expect(r.secondary, isNull);
     });
 
-    test('never shows wallet as a name', () {
+    test('uses compact wallet fallback after rejecting wallet-like name', () {
       final r = CreatorDisplayFormat.format(
         fallbackLabel: 'Creator',
         displayName: '0x742d35Cc6634C0532925a3b844Bc9e7595f88941',
         username: null,
         wallet: '0x742d35Cc6634C0532925a3b844Bc9e7595f88941',
       );
-      expect(r.primary, 'Creator');
+      expect(r.primary, '0x742d...8941');
       expect(r.secondary, isNull);
     });
 

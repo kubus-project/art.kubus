@@ -3,6 +3,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:vector_math/vector_math_64.dart' as vector;
 import '../models/artwork.dart';
 import '../models/art_marker.dart';
+import '../models/profile_identity_data.dart';
 import '../providers/storage_provider.dart';
 import '../community/community_interactions.dart';
 import './ar_manager.dart';
@@ -241,8 +242,13 @@ class ARIntegrationService {
     try {
       final post = CommunityPost(
         id: 'post_${DateTime.now().millisecondsSinceEpoch}',
-        authorId: 'current_user',
-        authorName: authorName,
+        authorIdentityData: ProfileIdentityData.fromCompactAuthor(
+          {
+            'id': 'current_user',
+            'displayName': authorName,
+          },
+          fallbackLabel: 'Unknown author',
+        ),
         content:
             '$content\n\n🎨 Artwork: ${artwork.title}\n📍 ${artwork.position.latitude.toStringAsFixed(4)}, ${artwork.position.longitude.toStringAsFixed(4)}',
         imageUrl: imageUrl ?? artwork.imageUrl,

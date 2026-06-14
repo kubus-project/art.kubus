@@ -1566,46 +1566,34 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                           children: [
                             Row(
                               children: [
-                                AvatarWidget(
-                                    wallet: _post!.authorId,
-                                    avatarUrl: _post!.authorAvatar,
-                                    radius: 16,
-                                    enableProfileNavigation: false),
-                                const SizedBox(width: KubusSpacing.sm),
                                 Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          Flexible(
-                                            fit: FlexFit.loose,
-                                            child: Text(
-                                              _post!.authorName,
-                                              style: KubusTypography.inter(
-                                                  fontWeight: FontWeight.w600,
-                                                  fontSize: 14),
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                          CommunityAuthorRoleBadges(
-                                            post: _post!,
-                                            fontSize: 9.5,
-                                            iconOnly: true,
-                                          ),
-                                        ],
-                                      ),
-                                      Text(_timeAgo(_post!.timestamp),
-                                          style: KubusTypography.inter(
-                                              fontSize: 11,
-                                              color: theme.colorScheme.onSurface
-                                                  .withValues(alpha: 0.5))),
-                                    ],
+                                  child: ProfileIdentitySummary(
+                                    identity: _post!.authorIdentityData,
+                                    avatarRadius: 16,
+                                    allowFabricatedFallback: true,
+                                    fetchMissingAvatar: false,
+                                    titleStyle: KubusTypography.inter(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 14),
+                                    subtitleStyle: KubusTypography.inter(
+                                        fontSize: 11,
+                                        color: theme.colorScheme.onSurface
+                                            .withValues(alpha: 0.5)),
+                                    titleSuffix: CommunityAuthorRoleBadges(
+                                      post: _post!,
+                                      fontSize: 9.5,
+                                      iconOnly: true,
+                                    ),
                                   ),
                                 ),
                               ],
                             ),
+                            const SizedBox(height: 2),
+                            Text(_timeAgo(_post!.timestamp),
+                                style: KubusTypography.inter(
+                                    fontSize: 11,
+                                    color: theme.colorScheme.onSurface
+                                        .withValues(alpha: 0.5))),
                             const SizedBox(height: 8),
                             Text(_post!.content,
                                 style: KubusTypography.inter(fontSize: 14),

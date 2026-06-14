@@ -32,6 +32,7 @@ import '../../services/achievement_service.dart';
 import '../../services/ar_marker_service.dart';
 import '../../widgets/ar_marker_scanner.dart';
 import '../../community/community_interactions.dart';
+import '../../models/profile_identity_data.dart';
 import '../../utils/marker_subject_utils.dart';
 import '../download_app_screen.dart';
 import '../community/profile_screen_methods.dart';
@@ -2289,8 +2290,15 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
     // Track like in community interactions
     final post = CommunityPost(
       id: artwork['id'],
-      authorId: artwork['artworkId'] ?? artwork['id'],
-      authorName: artwork['artist'],
+      authorIdentityData: ProfileIdentityData.fromIdentityPayload(
+        {
+          'author': {
+            'id': artwork['artworkId'] ?? artwork['id'],
+            'displayName': artwork['artist'],
+          },
+        },
+        fallbackLabel: l10n.commonUnknown,
+      ),
       content: artwork['title'],
       timestamp: _parseArtworkTimestamp(artwork['timestamp']),
       isLiked: _likedArtworks.contains(artwork['id']),

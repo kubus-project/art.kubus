@@ -51,12 +51,7 @@ class CommunityPost {
 
   CommunityPost({
     required this.id,
-    String? authorId,
-    String? authorWallet,
-    String? authorName,
-    String? authorAvatar,
-    String? authorUsername,
-    ProfileIdentityData? authorIdentityData,
+    required this.authorIdentityData,
     required this.content,
     this.imageUrl,
     this.mediaUrls = const [],
@@ -89,15 +84,7 @@ class CommunityPost {
     this.feedPin = CommunityFeedPinMetadata.none,
     this.hybridScore,
     this.achievementResult,
-  }) : authorIdentityData = authorIdentityData ??
-            ProfileIdentityData.fromValues(
-              fallbackLabel: 'Unknown author',
-              displayName: authorName,
-              username: authorUsername,
-              userId: authorWallet ?? authorId,
-              wallet: authorWallet ?? authorId,
-              avatarUrl: authorAvatar,
-            );
+  });
 
   String get authorId =>
       authorIdentityData.userId ?? authorIdentityData.walletSeed;
@@ -124,10 +111,7 @@ class CommunityPost {
     bool? isFollowing,
     List<Comment>? comments,
     int? commentCount,
-    String? authorAvatar,
-    String? authorUsername,
     ProfileIdentityData? authorIdentityData,
-    String? authorWallet,
     List<String>? mediaUrls,
     List<String>? tags,
     List<String>? mentions,
@@ -150,15 +134,7 @@ class CommunityPost {
   }) {
     return CommunityPost(
       id: id,
-      authorIdentityData: authorIdentityData ??
-          ProfileIdentityData.fromValues(
-            fallbackLabel: 'Unknown author',
-            displayName: authorName,
-            username: authorUsername ?? this.authorUsername,
-            userId: authorWallet ?? authorId,
-            wallet: authorWallet ?? this.authorWallet ?? authorId,
-            avatarUrl: authorAvatar ?? this.authorAvatar,
-          ),
+      authorIdentityData: authorIdentityData ?? this.authorIdentityData,
       content: content ?? this.content,
       imageUrl: imageUrl ?? this.imageUrl,
       mediaUrls: mediaUrls ?? this.mediaUrls,
@@ -227,12 +203,7 @@ class Comment {
 
   Comment({
     required this.id,
-    String? authorId,
-    String? authorName,
-    String? authorAvatar,
-    String? authorUsername,
-    String? authorWallet,
-    ProfileIdentityData? authorIdentityData,
+    required this.authorIdentityData,
     this.parentCommentId,
     this.originalContent,
     this.editedAt,
@@ -241,16 +212,7 @@ class Comment {
     this.likeCount = 0,
     this.isLiked = false,
     List<Comment>? replies,
-  })  : authorIdentityData = authorIdentityData ??
-            ProfileIdentityData.fromValues(
-              fallbackLabel: 'Unknown author',
-              displayName: authorName,
-              username: authorUsername,
-              userId: authorWallet ?? authorId,
-              wallet: authorWallet ?? authorId,
-              avatarUrl: authorAvatar,
-            ),
-        replies = replies ?? <Comment>[];
+  }) : replies = replies ?? <Comment>[];
 
   String get authorId =>
       authorIdentityData.userId ?? authorIdentityData.walletSeed;
@@ -270,28 +232,15 @@ class Comment {
   Comment copyWith({
     int? likeCount,
     bool? isLiked,
-    String? authorAvatar,
-    String? authorUsername,
     String? content,
     String? originalContent,
     DateTime? editedAt,
     List<Comment>? replies,
-    String? authorName,
-    String? authorId,
-    String? authorWallet,
     ProfileIdentityData? authorIdentityData,
   }) {
     return Comment(
       id: id,
-      authorIdentityData: authorIdentityData ??
-          ProfileIdentityData.fromValues(
-            fallbackLabel: 'Unknown author',
-            displayName: authorName ?? this.authorName,
-            username: authorUsername ?? this.authorUsername,
-            userId: authorWallet ?? authorId ?? this.authorId,
-            wallet: authorWallet ?? this.authorWallet ?? authorId,
-            avatarUrl: authorAvatar ?? this.authorAvatar,
-          ),
+      authorIdentityData: authorIdentityData ?? this.authorIdentityData,
       parentCommentId: parentCommentId,
       originalContent: originalContent ?? this.originalContent,
       editedAt: editedAt ?? this.editedAt,
@@ -609,11 +558,18 @@ class CommunityService {
     // Optimistic UI update
     final tempComment = Comment(
       id: 'temp_${DateTime.now().millisecondsSinceEpoch}',
-      authorId: authorId,
-      authorName: authorName,
-      authorUsername: userName,
-      authorWallet: normalizedWallet,
-      authorAvatar: normalizedAvatar,
+      authorIdentityData: ProfileIdentityData.fromIdentityPayload(
+        {
+          'author': {
+            'id': authorId,
+            'walletAddress': normalizedWallet,
+            'displayName': authorName,
+            'username': userName,
+            'avatarUrl': normalizedAvatar,
+          },
+        },
+        fallbackLabel: 'Unknown author',
+      ),
       parentCommentId: parentCommentId,
       content: content,
       timestamp: DateTime.now(),

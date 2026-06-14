@@ -6,6 +6,7 @@ import 'package:art_kubus/models/achievement_preview_data_state.dart';
 import 'package:art_kubus/models/achievement_progress.dart';
 import 'package:art_kubus/models/achievements.dart' as achievements;
 import 'package:art_kubus/models/profile_package.dart';
+import 'package:art_kubus/models/profile_identity_data.dart';
 import 'package:art_kubus/models/user.dart';
 import 'package:art_kubus/providers/profile_package_controller.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
@@ -279,9 +280,13 @@ ProfileCriticalPackage _critical({
 CommunityPost _post({required String wallet}) {
   return CommunityPost(
     id: 'post-1',
-    authorId: wallet,
-    authorWallet: wallet,
-    authorName: 'Controller Profile',
+    authorIdentityData: ProfileIdentityData.fromCompactAuthor(
+      {
+        'walletAddress': wallet,
+        'displayName': 'Controller Profile',
+      },
+      fallbackLabel: 'Unknown author',
+    ),
     content: 'Post',
     timestamp: DateTime.now(),
   );

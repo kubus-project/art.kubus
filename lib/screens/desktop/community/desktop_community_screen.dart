@@ -3321,20 +3321,24 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         children: [
           Row(
             children: [
-              Flexible(
-                fit: FlexFit.loose,
-                child: Text(
-                  displayPost.authorName,
-                  style: KubusTextStyles.actionTileTitle.copyWith(
+              Expanded(
+                child: ProfileIdentitySummary(
+                  identity: displayPost.authorIdentityData,
+                  avatarRadius: 14,
+                  allowFabricatedFallback: true,
+                  fetchMissingAvatar: false,
+                  titleStyle: KubusTextStyles.actionTileTitle.copyWith(
                     color: scheme.onSurface,
                   ),
-                  overflow: TextOverflow.ellipsis,
+                  subtitleStyle: KubusTextStyles.navMetaLabel.copyWith(
+                    color: scheme.onSurface.withValues(alpha: 0.62),
+                  ),
+                  titleSuffix: CommunityAuthorRoleBadges(
+                    post: displayPost,
+                    fontSize: 8,
+                    iconOnly: true,
+                  ),
                 ),
-              ),
-              CommunityAuthorRoleBadges(
-                post: displayPost,
-                fontSize: 8,
-                iconOnly: true,
               ),
             ],
           ),

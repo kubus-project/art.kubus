@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import 'creator_display_format.dart';
 import 'wallet_utils.dart';
 
 @immutable
@@ -27,7 +28,7 @@ class UserIdentityDisplayUtils {
   const UserIdentityDisplayUtils._();
 
   static UserIdentityDisplay fromProfileMap(Map<String, dynamic> raw) {
-    final displayName = _cleanName(
+    final displayName = CreatorDisplayFormat.normalizeDisplayName(
       raw['displayName'] ??
           raw['display_name'] ??
           raw['name'] ??
@@ -35,7 +36,7 @@ class UserIdentityDisplayUtils {
           raw['full_name'],
     );
 
-    final username = _cleanUsername(
+    final username = CreatorDisplayFormat.normalizeUsername(
       raw['username'] ?? raw['handle'] ?? raw['userName'] ?? raw['user_name'],
     );
 
@@ -62,56 +63,5 @@ class UserIdentityDisplayUtils {
     // Creator summaries often use different keys (id/wallet/displayName/username).
     return fromProfileMap(raw);
   }
-
-  static String _cleanName(dynamic value) {
-    final s = (value ?? '').toString().trim();
-    if (s.isEmpty) return '';
-    final lower = s.toLowerCase();
-    if (lower == 'unknown creator' ||
-        lower == 'unknown artist' ||
-        lower == 'unknown author' ||
-        lower == 'unknown' ||
-        lower == 'anonymous' ||
-        lower == 'user' ||
-        lower.startsWith('user_')) {
-      return '';
-    }
-    if (WalletUtils.looksLikeWallet(s)) return '';
-    return s;
-  }
-
-  static String? _cleanUsername(dynamic value) {
-    var s = (value ?? '').toString().trim();
-    if (s.isEmpty) return null;
-    if (s.startsWith('@')) s = s.substring(1).trim();
-    if (s.isEmpty) return null;
-    if (WalletUtils.looksLikeWallet(s)) return null;
-
-    // Normalize to a conservative, UI-safe handle set.
-    s = s.toLowerCase();
-    final sb = StringBuffer();
-    for (final codeUnit in s.codeUnits) {
-      final c = String.fromCharCode(codeUnit);
-      final isAlphaNum = (codeUnit >= 97 && codeUnit <= 122) ||
-          (codeUnit >= 48 && codeUnit <= 57);
-      if (isAlphaNum || c == '_' || c == '.') {
-        sb.write(c);
-      } else if (c == ' ' || c == '-') {
-        sb.write('_');
-      }
-    }
-    var normalized = sb.toString();
-    normalized = normalized.replaceAll(RegExp(r'_+'), '_');
-    normalized = normalized.replaceAll(RegExp(r'^[_\.]+|[_\.]+$'), '');
-    if (normalized.length < 3) return null;
-    if (normalized.length > 24) normalized = normalized.substring(0, 24);
-    if (normalized.isEmpty) return null;
-    if (normalized.codeUnitAt(0) >= 48 && normalized.codeUnitAt(0) <= 57) {
-      normalized = 'u$normalized';
-      if (normalized.length > 24) normalized = normalized.substring(0, 24);
-    }
-    return normalized;
-  }
-
   // Intentionally no derived username helpers.
 }

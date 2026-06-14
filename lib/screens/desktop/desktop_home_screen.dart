@@ -2155,14 +2155,18 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         ? _resolvedCreatorIdentityByWallet[canonicalWallet]
         : null;
 
-    final formatted = CreatorDisplayFormat.format(
+    final identity = ProfileIdentityData.fromIdentityPayload(
+      {
+        'author': {
+          'id': userId,
+          'walletAddress': wallet,
+          'displayName': resolved?.displayName ?? creator['name']?.toString(),
+          'username': resolved?.username ?? creator['username']?.toString(),
+          'avatarUrl': avatarUrl?.toString(),
+        },
+      },
       fallbackLabel: l10n.desktopHomeCreatorFallbackName,
-      displayName: resolved?.displayName ?? creator['name']?.toString(),
-      username: resolved?.username ?? creator['username']?.toString(),
-      wallet: canonicalWallet,
     );
-    final displayName = formatted.primary;
-    final handle = formatted.secondary;
 
     _scheduleCreatorIdentityResolution([canonicalWallet]);
     return DesktopCard(
@@ -2175,14 +2179,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
       margin: const EdgeInsets.only(bottom: DetailSpacing.sm),
       borderRadius: BorderRadius.circular(DetailRadius.md),
       child: ProfileIdentitySummary(
-        identity: ProfileIdentityData.fromValues(
-          fallbackLabel: l10n.desktopHomeCreatorFallbackName,
-          displayName: displayName,
-          username: handle,
-          userId: userId,
-          wallet: wallet,
-          avatarUrl: avatarUrl?.toString(),
-        ),
+        identity: identity,
         layout: ProfileIdentityLayout.row,
         avatarRadius: 20,
         allowFabricatedFallback: true,

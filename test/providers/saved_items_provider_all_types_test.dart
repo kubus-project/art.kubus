@@ -1,5 +1,6 @@
 import 'package:art_kubus/models/saved_item.dart';
 import 'package:art_kubus/community/community_interactions.dart';
+import 'package:art_kubus/models/profile_identity_data.dart';
 import 'package:art_kubus/providers/saved_items_provider.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/saved_items_repository.dart';
@@ -328,9 +329,14 @@ void main() {
     final provider = SavedItemsProvider(repository: repository);
     final post = CommunityPost(
       id: 'post-42',
-      authorId: 'author-1',
-      authorWallet: 'wallet-1',
-      authorName: 'Artist One',
+      authorIdentityData: ProfileIdentityData.fromCompactAuthor(
+        {
+          'id': 'author-1',
+          'walletAddress': 'wallet-1',
+          'displayName': 'Artist One',
+        },
+        fallbackLabel: 'Unknown author',
+      ),
       content: 'A community post',
       timestamp: DateTime(2025, 1, 3),
       tags: const <String>[],

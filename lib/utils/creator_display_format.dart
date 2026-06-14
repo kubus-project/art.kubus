@@ -22,8 +22,8 @@ class CreatorDisplayFormat {
     String? username,
     String? wallet,
   }) {
-    final safeName = _cleanName(displayName);
-    final safeUsername = _cleanUsername(username);
+    final safeName = normalizeDisplayName(displayName);
+    final safeUsername = normalizeUsername(username);
 
     // Primary: human display name.
     if (safeName.isNotEmpty) {
@@ -40,7 +40,7 @@ class CreatorDisplayFormat {
     final safeWallet = WalletUtils.canonical(wallet);
     if (safeWallet.isNotEmpty) {
       return CreatorDisplay(
-        primary: _compactWalletForDisplay(safeWallet),
+        primary: compactWalletForDisplay(safeWallet),
         secondary: null,
       );
     }
@@ -48,7 +48,7 @@ class CreatorDisplayFormat {
     return CreatorDisplay(primary: fallbackLabel, secondary: null);
   }
 
-  static String _cleanName(String? value) {
+  static String normalizeDisplayName(dynamic value) {
     final s = (value ?? '').toString().trim();
     if (s.isEmpty) return '';
     final lower = s.toLowerCase();
@@ -65,7 +65,7 @@ class CreatorDisplayFormat {
     return s;
   }
 
-  static String? _cleanUsername(String? value) {
+  static String? normalizeUsername(dynamic value) {
     var s = (value ?? '').toString().trim();
     if (s.isEmpty) return null;
     if (s.startsWith('@')) s = s.substring(1).trim();
@@ -98,7 +98,20 @@ class CreatorDisplayFormat {
     return normalized;
   }
 
-  static String _compactWalletForDisplay(String wallet) {
+  static String? normalizePayloadText(dynamic value) {
+    final normalized = (value ?? '').toString().trim();
+    if (normalized.isEmpty) return null;
+    final lower = normalized.toLowerCase();
+    if (lower == 'unknown' ||
+        lower == 'anonymous' ||
+        lower == 'n/a' ||
+        lower == 'none') {
+      return null;
+    }
+    return normalized;
+  }
+
+  static String compactWalletForDisplay(String wallet) {
     final trimmed = wallet.trim();
     if (trimmed.length <= 12) return trimmed;
     return '${trimmed.substring(0, 6)}...${trimmed.substring(trimmed.length - 4)}';
