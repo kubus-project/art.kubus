@@ -43,11 +43,15 @@ class UserProfileNavigation {
     String? username,
   }) {
     final trimmed = userId.trim();
-    if (trimmed.isEmpty) return null;
+    final normalizedUsername = username?.trim();
+    if (trimmed.isEmpty &&
+        (normalizedUsername == null || normalizedUsername.isEmpty)) {
+      return null;
+    }
     try {
       final future = ProfilePackageService.prefetchPublicProfileCriticalPackage(
         trimmed,
-        username: username,
+        username: normalizedUsername,
       );
       unawaited(
         future.then((critical) async {
@@ -130,12 +134,16 @@ class UserProfileNavigation {
     String? heroTag,
     Future<ProfileCriticalPackage?>? initialCriticalPackageFuture,
   }) async {
+    final normalizedUsername = username?.trim();
+    if (userId.trim().isEmpty &&
+        (normalizedUsername == null || normalizedUsername.isEmpty)) {
+      return;
+    }
     final criticalFuture = initialCriticalPackageFuture ??
         _prefetchCriticalProfilePackage(
           userId,
-          username: username,
+          username: normalizedUsername,
         );
-    if (userId.trim().isEmpty) return;
 
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;

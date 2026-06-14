@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:art_kubus/models/community_group.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -12,7 +10,7 @@ import '../../utils/app_animations.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/media_url_resolver.dart';
-import '../../utils/user_profile_navigation.dart';
+import '../../utils/profile_identity_navigation.dart';
 import '../inline_loading.dart';
 import '../glass_components.dart';
 import '../profile_identity_summary.dart';
@@ -29,6 +27,7 @@ class CommunityPostCard extends StatelessWidget {
     required this.accentColor,
     required this.onOpenPostDetail,
     this.onOpenAuthorProfile,
+    this.onOpenProfileIdentity,
     this.onToggleLike,
     this.onOpenComments,
     this.onRepost,
@@ -51,6 +50,7 @@ class CommunityPostCard extends StatelessWidget {
 
   final ValueChanged<CommunityPost> onOpenPostDetail;
   final VoidCallback? onOpenAuthorProfile;
+  final ValueChanged<ProfileIdentityData>? onOpenProfileIdentity;
 
   final VoidCallback? onToggleLike;
   final VoidCallback? onOpenComments;
@@ -83,6 +83,10 @@ class CommunityPostCard extends StatelessWidget {
         final radius = BorderRadius.circular(KubusRadius.lg);
         final glassTint =
             scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10);
+        final openAuthorProfile = onOpenProfileIdentity == null
+            ? (onOpenAuthorProfile ??
+                () => openProfileIdentity(context, post.authorIdentityData))
+            : () => onOpenProfileIdentity!(post.authorIdentityData);
 
         return Container(
           margin: const EdgeInsets.only(bottom: KubusChromeMetrics.cardPadding),
@@ -111,7 +115,7 @@ class CommunityPostCard extends StatelessWidget {
                           avatarRadius: 20,
                           allowFabricatedFallback: true,
                           fetchMissingAvatar: false,
-                          onTap: onOpenAuthorProfile,
+                          onTap: openAuthorProfile,
                           titleStyle: KubusTextStyles.sectionTitle.copyWith(
                             fontSize: isSmallScreen
                                 ? KubusChromeMetrics.navLabel
@@ -243,6 +247,7 @@ class CommunityPostCard extends StatelessWidget {
                       post: post.originalPost!,
                       accentColor: accentColor,
                       onOpenPostDetail: onOpenPostDetail,
+                      onOpenProfileIdentity: onOpenProfileIdentity,
                     ),
                   ] else ...[
                     _OpenPostSurface(

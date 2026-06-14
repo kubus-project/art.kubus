@@ -27,7 +27,7 @@ import '../../utils/media_url_resolver.dart';
 import '../../utils/wallet_utils.dart';
 import '../../utils/creator_display_format.dart';
 import '../../utils/search_suggestions.dart';
-import '../../utils/user_profile_navigation.dart';
+import '../../utils/profile_identity_navigation.dart';
 import '../../widgets/app_loading.dart';
 import '../../utils/design_tokens.dart';
 import '../../widgets/avatar_widget.dart';
@@ -725,7 +725,8 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
       post: post,
       accentColor: themeProvider.accentColor,
       onOpenPostDetail: _openPostDetail,
-      onOpenAuthorProfile: () => _viewUserProfile(post.authorId),
+      onOpenProfileIdentity: (identity) =>
+          openProfileIdentity(context, identity),
       onToggleLike: () => _toggleLike(post),
       onOpenComments: () => _openPostDetail(post),
       onRepost: () {
@@ -768,10 +769,6 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
         ),
       ),
     );
-  }
-
-  void _viewUserProfile(String userId) {
-    UserProfileNavigation.open(context, userId: userId);
   }
 
   String? _currentWalletAddress() {
@@ -1472,7 +1469,8 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                   post: post,
                   accentColor: themeProvider.accentColor,
                   onOpenPostDetail: _openPostDetail,
-                  onOpenAuthorProfile: () => _viewUserProfile(post.authorId),
+                  onOpenProfileIdentity: (identity) =>
+                      openProfileIdentity(context, identity),
                   onToggleLike: () => _toggleLike(post),
                   onOpenComments: () => _openPostDetail(post),
                   onRepost: () {},

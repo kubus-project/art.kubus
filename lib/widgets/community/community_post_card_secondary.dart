@@ -5,18 +5,22 @@ class _RepostInnerCard extends StatelessWidget {
     required this.post,
     required this.accentColor,
     required this.onOpenPostDetail,
+    this.onOpenProfileIdentity,
   });
 
   final CommunityPost post;
   final Color accentColor;
   final ValueChanged<CommunityPost> onOpenPostDetail;
+  final ValueChanged<ProfileIdentityData>? onOpenProfileIdentity;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
-    final originalHandle = (post.authorIdentityData.username ?? '').trim();
+    final openAuthorProfile = onOpenProfileIdentity == null
+        ? () => openProfileIdentity(context, post.authorIdentityData)
+        : () => onOpenProfileIdentity!(post.authorIdentityData);
 
     final radius = BorderRadius.circular(KubusRadius.md);
     final glassTint = scheme.surface.withValues(alpha: isDark ? 0.14 : 0.09);
@@ -49,20 +53,7 @@ class _RepostInnerCard extends StatelessWidget {
                       avatarRadius: 16,
                       allowFabricatedFallback: true,
                       fetchMissingAvatar: false,
-                      onTap: () {
-                        final userId = (post.authorIdentityData.userId ??
-                                post.authorIdentityData.walletSeed)
-                            .trim();
-                        if (userId.isEmpty) return;
-                        unawaited(
-                          UserProfileNavigation.open(
-                            context,
-                            userId: userId,
-                            username:
-                                originalHandle.isEmpty ? null : originalHandle,
-                          ),
-                        );
-                      },
+                      onTap: openAuthorProfile,
                       titleStyle: KubusTextStyles.navMetaLabel.copyWith(
                         fontWeight: FontWeight.bold,
                         color: scheme.onSurface,

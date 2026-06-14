@@ -67,8 +67,10 @@ class ProfileIdentitySummary extends StatelessWidget {
       );
     }
 
+    final usesBuiltInNavigation =
+        onTap == null && enableProfileNavigation && identity.canOpenProfile;
     final resolvedOnTap = onTap ??
-        (enableProfileNavigation && identity.canOpenProfile
+        (usesBuiltInNavigation
             ? () {
                 prefetchHighIntent();
                 UserProfileNavigation.open(
@@ -149,11 +151,14 @@ class ProfileIdentitySummary extends StatelessWidget {
     }
 
     return MouseRegion(
-      onEnter: (_) => prefetchHighIntent(),
+      cursor: SystemMouseCursors.click,
+      onEnter: usesBuiltInNavigation ? (_) => prefetchHighIntent() : null,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: () {
-          prefetchHighIntent();
+          if (usesBuiltInNavigation) {
+            prefetchHighIntent();
+          }
           resolvedOnTap();
         },
         child: child,

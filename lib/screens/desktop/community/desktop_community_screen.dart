@@ -50,6 +50,7 @@ import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/creator_display_format.dart';
 import '../../../utils/search_suggestions.dart';
 import '../../../utils/user_profile_navigation.dart';
+import '../../../utils/profile_identity_navigation.dart';
 import '../../../utils/wallet_utils.dart';
 import '../../../utils/community_subject_navigation.dart';
 import '../../../widgets/glass_components.dart';
@@ -2812,12 +2813,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       post: post,
       accentColor: themeProvider.accentColor,
       onOpenPostDetail: _openPostDetail,
-      onOpenAuthorProfile: () => unawaited(
-        _openUserProfileModal(
-          userId: post.authorId,
-          username: post.authorUsername,
-        ),
-      ),
+      onOpenProfileIdentity: (identity) =>
+          openProfileIdentity(context, identity),
       onToggleLike: () => _togglePostLike(post),
       onOpenComments: () => _toggleInlineComments(post),
       onRepost: () => _handleRepostTap(post),
@@ -2979,6 +2976,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                       avatarRadius: isReply ? 12 : 14,
                       allowFabricatedFallback: true,
                       fetchMissingAvatar: false,
+                      onTap: () => openProfileIdentity(
+                        context,
+                        comment.authorIdentityData,
+                      ),
                       titleStyle: KubusTextStyles.actionTileTitle.copyWith(
                         fontSize: isReply ? 12 : 13,
                         color: scheme.onSurface,
@@ -3420,6 +3421,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                   avatarRadius: 14,
                   allowFabricatedFallback: true,
                   fetchMissingAvatar: false,
+                  onTap: () => openProfileIdentity(
+                    context,
+                    displayPost.authorIdentityData,
+                  ),
                   titleStyle: KubusTextStyles.actionTileTitle.copyWith(
                     color: scheme.onSurface,
                   ),

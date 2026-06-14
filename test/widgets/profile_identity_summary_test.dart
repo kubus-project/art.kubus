@@ -129,7 +129,68 @@ void main() {
     expect(find.text('Mina Creator'), findsOneWidget);
   });
 
-  testWidgets('community post card renders feed payload like and bookmark state',
+  testWidgets('ProfileIdentitySummary with explicit onTap is tappable',
+      (tester) async {
+    final requests = <String>[];
+    var taps = 0;
+    BackendApiService().setHttpClient(MockClient((request) async {
+      requests.add(request.url.path);
+      return http.Response('Unexpected profile fetch', 500);
+    }));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ProfileIdentitySummary(
+            identity: ProfileIdentityData.fromValues(
+              fallbackLabel: 'Unknown author',
+              displayName: 'Tappable Author',
+              username: 'tap-author',
+              userId: '0x${'a'.padRight(40, 'a')}',
+              wallet: '0x${'a'.padRight(40, 'a')}',
+            ),
+            fetchMissingAvatar: false,
+            onTap: () => taps += 1,
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Tappable Author'));
+    await tester.pump();
+
+    expect(taps, 1);
+    expect(requests, isEmpty);
+  });
+
+  testWidgets('community post author tap invokes profile identity callback',
+      (tester) async {
+    ProfileIdentityData? tappedIdentity;
+
+    await tester.pumpWidget(
+      communityHarness(
+        CommunityPostCard(
+          post: post(
+            id: 'tap-post',
+            displayName: 'Mina Creator',
+            username: 'mina',
+          ),
+          accentColor: Colors.teal,
+          onOpenPostDetail: (_) {},
+          onOpenProfileIdentity: (identity) => tappedIdentity = identity,
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Mina Creator'));
+    await tester.pump();
+
+    expect(tappedIdentity?.label, 'Mina Creator');
+    expect(tappedIdentity?.username, 'mina');
+  });
+
+  testWidgets(
+      'community post card renders feed payload like and bookmark state',
       (tester) async {
     await tester.pumpWidget(
       communityHarness(
@@ -213,6 +274,41 @@ void main() {
     expect(find.text('Original Artist'), findsOneWidget);
   });
 
+  testWidgets('repost original author tap invokes profile identity callback',
+      (tester) async {
+    final original = post(
+      id: 'orig2',
+      displayName: 'Original Artist',
+      content: 'Original post',
+      username: 'original',
+    );
+    final repost = post(
+      id: 'repost2',
+      displayName: 'Reposting Curator',
+      content: 'Shared this',
+      postType: 'repost',
+      originalPost: original,
+    );
+    ProfileIdentityData? tappedIdentity;
+
+    await tester.pumpWidget(
+      communityHarness(
+        CommunityPostCard(
+          post: repost,
+          accentColor: Colors.teal,
+          onOpenPostDetail: (_) {},
+          onOpenProfileIdentity: (identity) => tappedIdentity = identity,
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Original Artist'));
+    await tester.pump();
+
+    expect(tappedIdentity?.label, 'Original Artist');
+    expect(tappedIdentity?.username, 'original');
+  });
+
   testWidgets('comment author renders unified identity display name',
       (tester) async {
     final comment = Comment(
@@ -243,6 +339,99 @@ void main() {
     expect(find.text('Comment Author'), findsOneWidget);
     final avatar = tester.widget<AvatarWidget>(find.byType(AvatarWidget).first);
     expect(avatar.fetchMissingAvatar, isFalse);
+    expect(avatar.enableProfileNavigation, isFalse);
+  });
+
+  testWidgets('inline comment author tap invokes profile identity callback',
+      (tester) async {
+    var tapped = false;
+    final commentIdentity = ProfileIdentityData.fromCompactAuthor(
+      {
+        'displayName': 'Comment Author',
+        'username': 'commenter',
+        'walletAddress': '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd',
+      },
+      fallbackLabel: 'Unknown author',
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ProfileIdentitySummary(
+            identity: commentIdentity,
+            fetchMissingAvatar: false,
+            onTap: () => tapped = true,
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Comment Author'));
+    await tester.pump();
+
+    expect(tapped, isTrue);
+  });
+
+  testWidgets('art-feed author tap invokes profile identity callback',
+      (tester) async {
+    var tapped = false;
+    final artFeedIdentity = ProfileIdentityData.fromCompactAuthor(
+      {
+        'displayName': 'Art Feed Artist',
+        'username': 'art-feed',
+        'walletAddress': '0x1234512345123451234512345123451234512345',
+      },
+      fallbackLabel: 'Unknown author',
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ProfileIdentitySummary(
+            identity: artFeedIdentity,
+            fetchMissingAvatar: false,
+            onTap: () => tapped = true,
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Art Feed Artist'));
+    await tester.pump();
+
+    expect(tapped, isTrue);
+  });
+
+  testWidgets('comment author render does not prefetch profile package',
+      (tester) async {
+    final requests = <String>[];
+    BackendApiService().setHttpClient(MockClient((request) async {
+      requests.add(request.url.path);
+      return http.Response('Unexpected profile prefetch', 500);
+    }));
+    final commentIdentity = ProfileIdentityData.fromCompactAuthor(
+      {
+        'displayName': 'Quiet Comment Author',
+        'username': 'quiet-commenter',
+        'walletAddress': '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd',
+      },
+      fallbackLabel: 'Unknown author',
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ProfileIdentitySummary(
+            identity: commentIdentity,
+            fetchMissingAvatar: false,
+            onTap: () {},
+          ),
+        ),
+      ),
+    );
+
+    expect(requests, isEmpty);
+    final avatar = tester.widget<AvatarWidget>(find.byType(AvatarWidget).first);
     expect(avatar.enableProfileNavigation, isFalse);
   });
 }

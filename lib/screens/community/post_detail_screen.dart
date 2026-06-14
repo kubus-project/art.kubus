@@ -34,6 +34,7 @@ import '../../widgets/profile_identity_summary.dart';
 import '../../models/community_subject.dart';
 import '../../utils/community_subject_navigation.dart';
 import '../../utils/media_url_resolver.dart';
+import '../../utils/profile_identity_navigation.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 enum PostDetailInitialAction { edit, delete, report, options }
@@ -1572,6 +1573,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                     avatarRadius: 16,
                                     allowFabricatedFallback: true,
                                     fetchMissingAvatar: false,
+                                    onTap: () => openProfileIdentity(
+                                      context,
+                                      _post!.authorIdentityData,
+                                    ),
                                     titleStyle: KubusTypography.inter(
                                         fontWeight: FontWeight.w600,
                                         fontSize: 14),
@@ -1703,8 +1708,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                               ),
                             );
                           },
-                          // Avoid circular imports by relying on AvatarWidget's navigation.
-                          onOpenAuthorProfile: () {},
+                          onOpenProfileIdentity: (identity) =>
+                              openProfileIdentity(context, identity),
                           onToggleLike: _toggleLike,
                           onOpenComments: () {
                             FocusScope.of(context)
@@ -2022,6 +2027,11 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                                       isReply ? 12 : 16,
                                                   allowFabricatedFallback: true,
                                                   fetchMissingAvatar: false,
+                                                  onTap: () =>
+                                                      openProfileIdentity(
+                                                    context,
+                                                    c.authorIdentityData,
+                                                  ),
                                                   titleStyle:
                                                       KubusTypography.inter(
                                                     fontWeight: FontWeight.w600,

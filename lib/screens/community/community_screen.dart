@@ -75,6 +75,7 @@ import '../../widgets/community/community_likes_sheet.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/community_subject_navigation.dart';
 import '../../utils/media_url_resolver.dart';
+import '../../utils/profile_identity_navigation.dart';
 import '../../widgets/common/kubus_screen_header.dart';
 import '../../widgets/community/community_season0_banner.dart';
 import '../../widgets/community/community_search_actions.dart';
@@ -2150,6 +2151,8 @@ class _CommunityScreenState extends State<CommunityScreen>
               avatarRadius: 22,
               allowFabricatedFallback: true,
               fetchMissingAvatar: false,
+              onTap: () =>
+                  openProfileIdentity(context, post.authorIdentityData),
               titleStyle: KubusTypography.textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.w700,
                 color: scheme.onPrimaryContainer,
@@ -2355,7 +2358,8 @@ class _CommunityScreenState extends State<CommunityScreen>
               builder: (context) => PostDetailScreen(post: target)),
         );
       },
-      onOpenAuthorProfile: () => _viewUserProfile(post.authorId),
+      onOpenProfileIdentity: (identity) =>
+          openProfileIdentity(context, identity),
       onToggleLike: () => _toggleLike(index),
       onOpenComments: () => _toggleInlineComments(index),
       onRepost: () {
@@ -2467,6 +2471,10 @@ class _CommunityScreenState extends State<CommunityScreen>
                       avatarRadius: isReply ? 12 : 14,
                       allowFabricatedFallback: true,
                       fetchMissingAvatar: false,
+                      onTap: () => openProfileIdentity(
+                        context,
+                        comment.authorIdentityData,
+                      ),
                       titleStyle: KubusTextStyles.actionTileTitle.copyWith(
                         fontSize: isReply ? 12 : 13,
                         color: scheme.onSurface,
@@ -5458,6 +5466,10 @@ class _CommunityScreenState extends State<CommunityScreen>
                                           avatarRadius: isReply ? 12 : 16,
                                           allowFabricatedFallback: true,
                                           fetchMissingAvatar: false,
+                                          onTap: () => openProfileIdentity(
+                                            context,
+                                            c.authorIdentityData,
+                                          ),
                                           titleStyle: KubusTypography.inter(
                                             fontSize: isReply ? 13 : 14,
                                             fontWeight: FontWeight.w600,
@@ -6191,6 +6203,10 @@ class _CommunityScreenState extends State<CommunityScreen>
                                     avatarRadius: 16,
                                     allowFabricatedFallback: true,
                                     fetchMissingAvatar: false,
+                                    onTap: () => openProfileIdentity(
+                                      context,
+                                      post.authorIdentityData,
+                                    ),
                                     titleStyle: KubusTypography.inter(
                                       fontWeight: FontWeight.w600,
                                       fontSize: 14,
