@@ -62,24 +62,9 @@ import 'app_localizations_sl.dart';
 /// be consistent with the languages listed in the AppLocalizations.supportedLocales
 /// property.
 abstract class AppLocalizations {
-  AppLocalizations(String locale)
-      : localeName = _safeCanonicalizedLocale(locale.toString());
+  AppLocalizations(String locale) : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
-
-  static String _safeCanonicalizedLocale(String rawLocale) {
-    final normalized = rawLocale.trim();
-    if (normalized.isEmpty ||
-        normalized.toLowerCase() == 'undefined' ||
-        normalized.toLowerCase() == 'null') {
-      return intl.Intl.canonicalizedLocale('sl');
-    }
-    try {
-      return intl.Intl.canonicalizedLocale(normalized);
-    } catch (_) {
-      return intl.Intl.canonicalizedLocale('sl');
-    }
-  }
 
   static AppLocalizations? of(BuildContext context) {
     return Localizations.of<AppLocalizations>(context, AppLocalizations);

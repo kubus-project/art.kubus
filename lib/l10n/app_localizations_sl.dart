@@ -9179,7 +9179,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get homeExploreWeb3Button => 'Denarnica in Splet 3';
 
   @override
-  String get homeQuickActionsTitle => 'Začni tukaj';
+  String get homeQuickActionsTitle => 'Nedavno obiskano';
 
   @override
   String get homeRecentlyUsedLabel => 'Nedavno uporabljeno';

@@ -1,6 +1,25 @@
 <IfModule mod_headers.c>
   Header unset Content-Security-Policy
   Header set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://fonts.googleapis.com https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https: wss: blob:; media-src 'self' blob: data: https:; worker-src 'self' blob:; object-src 'none'; frame-src 'self' https://accounts.google.com;"
+
+  # --- Caching ---------------------------------------------------------------
+  # LiteSpeed defaults to "Cache-Control: private", which prevents any CDN/edge
+  # caching and offers no benefit to repeat visits. Override explicitly.
+  #
+  # App entry points + version manifests must ALWAYS revalidate so a new deploy
+  # is picked up immediately (prevents the classic "stale main.dart.js after
+  # release" bug). These are cheap 304s, and the Flutter service worker still
+  # serves them offline.
+  <FilesMatch "(^index\.html$|^flutter_bootstrap\.js$|^flutter_service_worker\.js$|^main\.dart\.js$|\.json$)">
+    Header set Cache-Control "no-cache, max-age=0, must-revalidate"
+  </FilesMatch>
+
+  # Static media / fonts / wasm change rarely; allow public caching so repeat
+  # visits (and any future CDN) can serve them without a round-trip. The Flutter
+  # service worker handles content-hash cache-busting on top of this.
+  <FilesMatch "\.(ttf|otf|woff2?|png|jpe?g|webp|svg|gif|ico|wasm)$">
+    Header set Cache-Control "public, max-age=86400"
+  </FilesMatch>
 </IfModule>
 
 <IfModule mod_rewrite.c>

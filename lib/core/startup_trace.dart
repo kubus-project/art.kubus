@@ -29,18 +29,35 @@ class StartupTrace {
   static final Stopwatch _sw = Stopwatch()..start();
   static final List<StartupTraceMark> _marks = <StartupTraceMark>[];
 
+  /// Force boot logging on in release/profile builds via
+  /// `--dart-define=KUBUS_BOOT_TRACE=true`. Useful for measuring the real cold
+  /// load of a deployed (release) web build without leaving logging on by
+  /// default.
+  static const bool _forceTrace =
+      bool.fromEnvironment('KUBUS_BOOT_TRACE', defaultValue: false);
+
+  /// Boot marks are logged in debug and profile builds (profile is the usual
+  /// mode for performance measurement) and whenever [_forceTrace] is set.
+  /// Plain release builds stay quiet unless the define opts in.
+  static bool get _shouldLog => kDebugMode || kProfileMode || _forceTrace;
+
   /// Immutable, chronologically ordered view of every recorded mark.
-  static List<StartupTraceMark> get marks => List<StartupTraceMark>.unmodifiable(_marks);
+  static List<StartupTraceMark> get marks =>
+      List<StartupTraceMark>.unmodifiable(_marks);
 
   /// Milliseconds elapsed since the trace started (process start).
   static int get elapsedMs => _sw.elapsedMilliseconds;
 
-  /// Records [label] at the current elapsed time and prints it in debug builds.
+  /// Records [label] at the current elapsed time and logs it when enabled.
   static void mark(String label) {
     final ms = _sw.elapsedMilliseconds;
     _marks.add(StartupTraceMark(label: label, elapsedMs: ms));
-    if (kDebugMode) {
-      debugPrint('[BOOT] ${ms}ms $label');
+    if (_shouldLog) {
+      // Use print() rather than debugPrint(): main() replaces debugPrint with a
+      // no-op in every non-debug build, which would otherwise swallow boot
+      // marks even when they are explicitly enabled (profile / KUBUS_BOOT_TRACE).
+      // ignore: avoid_print
+      print('[BOOT] ${ms}ms $label');
     }
   }
 

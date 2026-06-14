@@ -169,10 +169,24 @@ class _AppInitializerState extends State<AppInitializer> {
       StartupTrace.mark('config ready');
       if (!mounted) return;
 
+      // AppModeProvider.initialize() probes backend /health/writable on BOTH the
+      // primary and fallback hosts to decide live vs standby vs IPFS-fallback
+      // mode. The [BOOT] trace showed those probes dominating the critical path
+      // (~350ms between "config ready" and "wallet restore start"). The default
+      // mode is `live` (no UI degradation banner), warm-up re-runs
+      // initialize()/refreshMode() after the shell mounts, and initialize() is
+      // de-duped, so this is fallback/decentralized sync that must not block the
+      // first paint. Kick it off without awaiting; the mode self-corrects (and
+      // notifies listeners) in the background if the backend is actually
+      // degraded.
       final appModeProvider =
           Provider.of<AppModeProvider>(context, listen: false);
-      await _safeStep<void>('app_mode.initialize', appModeProvider.initialize,
-          timeout: const Duration(seconds: 8));
+      unawaited(_safeStep<void>(
+        'app_mode.initialize',
+        appModeProvider.initialize,
+        timeout: const Duration(seconds: 8),
+      ));
+      StartupTrace.mark('app_mode init kicked off (deferred)');
       if (!mounted) return;
 
       final cachedServerVersion = (configProvider.serverVersion ?? '').trim();
@@ -186,6 +200,7 @@ class _AppInitializerState extends State<AppInitializer> {
       final cacheProvider = Provider.of<CacheProvider>(context, listen: false);
       await _safeStep<void>('cache.initialize', cacheProvider.initialize,
           timeout: const Duration(seconds: 6));
+      StartupTrace.mark('cache ready');
       if (!mounted) return;
 
       // Initialize WalletProvider early to restore cached wallet (safe for fresh starts).
@@ -247,12 +262,19 @@ class _AppInitializerState extends State<AppInitializer> {
       }
       if (!mounted) return;
 
-      // Initialize SavedItemsProvider
+      // Initialize SavedItemsProvider. Saved items are NOT consumed by the
+      // route decision, and warm-up re-initializes this provider after the
+      // shell mounts. The [BOOT] trace showed its backend round-trip
+      // (/api/saved) sitting on the critical, pre-shell path — so start it here
+      // but don't block the shell route on it. Saved-state simply hydrates a
+      // moment later (unchanged from the warm-up path), with no routing impact.
       final savedItemsProvider =
           Provider.of<SavedItemsProvider>(context, listen: false);
-      await _safeStep<void>(
-          'saved_items.initialize', savedItemsProvider.initialize,
-          timeout: const Duration(seconds: 6));
+      unawaited(_safeStep<void>(
+        'saved_items.initialize',
+        savedItemsProvider.initialize,
+        timeout: const Duration(seconds: 6),
+      ));
       if (!mounted) return;
 
       // ProfileProvider always uses backend data.

@@ -16,7 +16,7 @@ publish_to: "none" # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 0.6.1+26061406
+version: 0.6.1+26061408
 
 environment:
   sdk: ">=3.6.0 <4.0.0"
@@ -177,17 +177,26 @@ flutter:
   # For details regarding adding assets from package dependencies, see
   # https://flutter.dev/assets-and-images/#from-packages
 
-  # Custom fonts for Material Symbols icons
+  # Custom fonts for Material Symbols icons.
+  #
+  # Only the "Material Symbols Outlined" family is referenced in code
+  # (lib/utils/custom_icons.dart + cube glyph fallbacks). Custom-declared fonts
+  # are NOT icon-tree-shaken by Flutter, so the full variable font (~10.4 MB)
+  # used to ship in every build. We bundle a SUBSET instead, generated from the
+  # full font with fonttools and containing only the codepoints the app renders
+  # (currently just U+E3F5 = CustomIcons.wallArt) — ~4 KB.
+  #
+  # The full variable font is kept in the repo at
+  # assets/fonts/MaterialSymbolsOutlined-VariableFont_FILL,GRAD,opsz,wght.ttf
+  # as the SOURCE for re-subsetting; it is intentionally NOT listed here so it
+  # is never bundled. When you add a new Material Symbols glyph to CustomIcons,
+  # regenerate the subset (see lib/utils/custom_icons.dart for the command).
+  # The unused Rounded (~14.7 MB) and Sharp (~8.6 MB) variable fonts were
+  # removed entirely.
   fonts:
     - family: Material Symbols Outlined
       fonts:
-        - asset: assets/fonts/MaterialSymbolsOutlined-VariableFont_FILL,GRAD,opsz,wght.ttf
-    - family: Material Symbols Rounded
-      fonts:
-        - asset: assets/fonts/MaterialSymbolsRounded-VariableFont_FILL,GRAD,opsz,wght.ttf
-    - family: Material Symbols Sharp
-      fonts:
-        - asset: assets/fonts/MaterialSymbolsSharp-VariableFont_FILL,GRAD,opsz,wght.ttf
+        - asset: assets/fonts/MaterialSymbolsOutlined-subset.ttf
 
 flutter_native_splash:
   color: "#000000"
