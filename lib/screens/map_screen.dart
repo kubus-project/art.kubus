@@ -49,6 +49,7 @@ import '../core/startup_trace.dart';
 import '../models/art_marker.dart';
 import '../models/event.dart';
 import '../widgets/map_marker_style_config.dart';
+import '../utils/app_animations.dart';
 import '../utils/artwork_navigation.dart';
 import '../utils/grid_utils.dart';
 import '../utils/artwork_media_resolver.dart';
@@ -4537,14 +4538,18 @@ class _MapScreenState extends State<MapScreen>
           ? Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (_filtersExpanded) ...[
-                  _buildFilterPanel(theme),
-                  const SizedBox(height: 10),
+                // The filter panel manages its own open/close transition via a
+                // keyed AnimatedSwitcher (see _buildFilterPanel) so it shares the
+                // same stable map-overlay lifecycle as the nearby art panel and
+                // marker info cards instead of being conditionally inserted here.
+                _buildFilterPanel(theme),
+                if (hasDiscovery) ...[
+                  if (_filtersExpanded) const SizedBox(height: 10),
+                  KeyedSubtree(
+                    key: _discoveryCardKey,
+                    child: _buildDiscoveryCard(theme, taskProvider),
+                  ),
                 ],
-                KeyedSubtree(
-                  key: _discoveryCardKey,
-                  child: _buildDiscoveryCard(theme, taskProvider),
-                ),
               ],
             )
           : null,
@@ -5066,10 +5071,45 @@ class _MapScreenState extends State<MapScreen>
     return tempMarker;
   }
 
+  /// Stable map-overlay filter panel.
+  ///
+  /// This shares the lifecycle and glass language of the working nearby art
+  /// panel and marker info cards:
+  /// - it is always present in the layout and animates its own open/close via a
+  ///   keyed [AnimatedSwitcher], so toggling never leaves stale glass/sheen and
+  ///   the panel is torn down cleanly on close;
+  /// - it routes through [KubusFilterPanel.useMapGlassSurface] with the default
+  ///   blur policy and platform backdrop region enabled, letting the centralized
+  ///   [resolveKubusMapBlurDecision] decide the surface (mobile native MapLibre
+  ///   gets the safe sheen/tint fallback, desktop/web get real/platform blur
+  ///   where safe, unsafe WebGL/Firefox falls back). The call site no longer
+  ///   hard-disables blur.
   Widget _buildFilterPanel(ThemeData theme) {
-    if (!_filtersExpanded) {
-      return const SizedBox.shrink();
-    }
+    final animation = context.animationTheme;
+    return AnimatedSwitcher(
+      duration: animation.medium,
+      switchInCurve: animation.defaultCurve,
+      switchOutCurve: animation.defaultCurve,
+      transitionBuilder: (child, anim) => FadeTransition(
+        opacity: anim,
+        child: SizeTransition(
+          sizeFactor: anim,
+          alignment: Alignment.topCenter,
+          child: child,
+        ),
+      ),
+      child: _filtersExpanded
+          ? KeyedSubtree(
+              key: const ValueKey<String>('map_filter_panel_open'),
+              child: _buildFilterPanelCard(theme),
+            )
+          : const SizedBox.shrink(
+              key: ValueKey<String>('map_filter_panel_closed'),
+            ),
+    );
+  }
+
+  Widget _buildFilterPanelCard(ThemeData theme) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = theme.colorScheme;
     final filters = KubusMapFilterCatalog.buildOptions(context);
@@ -5091,9 +5131,7 @@ class _MapScreenState extends State<MapScreen>
         color: scheme.onSurface,
       ),
       useMapGlassSurface: true,
-      mapBlurPolicy: KubusMapBlurPolicy.disabled,
-      backdropRegionId: 'mobile-map-filter-panel',
-      enablePlatformBackdropRegion: false,
+      backdropRegionId: 'map-filter-panel',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
