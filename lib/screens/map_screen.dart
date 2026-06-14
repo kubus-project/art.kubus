@@ -4846,6 +4846,7 @@ class _MapScreenState extends State<MapScreen>
       hintText: l10n.mapSearchHint,
       semanticsLabel: 'map_search_input',
       enableBlur: kubusMapBlurEnabled(context),
+      useMapGlassSurface: true,
       onSubmitted: (_) => _mapSearchController.onSubmitted(),
       trailingBuilder: (context, query) {
         if (query.trim().isNotEmpty) {

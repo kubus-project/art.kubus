@@ -24,6 +24,7 @@ class CommunityInteractionsProvider extends ChangeNotifier {
   final Map<String, CommunityEntityInteractionState> _postStates = {};
   final Map<String, DateTime> _postStateFetchedAt = {};
   final Map<String, bool> _postStateInflight = {};
+  Timer? _postStateReconcileTimer;
 
   final Map<String, Future<List<CommunityLikeUser>>> _postLikeFutures = {};
   final Map<String, List<CommunityLikeUser>> _postLikeUsers = {};
@@ -55,6 +56,7 @@ class CommunityInteractionsProvider extends ChangeNotifier {
 
   @override
   void dispose() {
+    _postStateReconcileTimer?.cancel();
     _walletDebounce?.cancel();
     _walletProvider?.removeListener(_handleWalletMaybeChanged);
     super.dispose();
@@ -161,6 +163,20 @@ class CommunityInteractionsProvider extends ChangeNotifier {
       debugPrint(
           'CommunityInteractionsProvider: hydrated ${list.length} post states from feed payload');
     }
+  }
+
+  void reconcilePostStatesAfterFirstPaint(
+    Iterable<CommunityPost> posts, {
+    Duration delay = const Duration(milliseconds: 250),
+    bool force = false,
+  }) {
+    final list = posts.where((post) => post.id.trim().isNotEmpty).toList();
+    if (list.isEmpty) return;
+
+    _postStateReconcileTimer?.cancel();
+    _postStateReconcileTimer = Timer(delay, () {
+      unawaited(refreshPostStates(list, force: force));
+    });
   }
 
   Future<void> togglePostLike(CommunityPost post) async {
@@ -312,6 +328,8 @@ class CommunityInteractionsProvider extends ChangeNotifier {
   }
 
   void _clearHydratedInteractionState() {
+    _postStateReconcileTimer?.cancel();
+    _postStateReconcileTimer = null;
     _postStates.clear();
     _postStateFetchedAt.clear();
     _postStateInflight.clear();

@@ -4,6 +4,7 @@ import '../../providers/glass_capabilities_provider.dart';
 import '../../utils/app_animations.dart';
 import '../../utils/design_tokens.dart';
 import '../glass_components.dart';
+import '../map/kubus_map_glass_surface.dart';
 
 /// Reusable glass chip used for filter/sort selections.
 class KubusGlassChip extends StatelessWidget {
@@ -31,6 +32,7 @@ class KubusGlassChip extends StatelessWidget {
     final animationTheme = context.animationTheme;
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
     final accent = accentColor ?? scheme.primary;
     final idleStyle = KubusGlassStyle.resolve(
       context,
@@ -99,25 +101,34 @@ class KubusGlassChip extends StatelessWidget {
             backgroundColor: active ? selectedTint : idleTint,
             enableBlur: enableBlur,
             onTap: onPressed,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  icon,
-                  size: KubusHeaderMetrics.actionIcon - KubusSpacing.xxs,
-                  color: active
-                      ? accent
-                      : scheme.onSurface.withValues(alpha: 0.65),
-                ),
-                const SizedBox(width: KubusSpacing.sm),
-                Text(
-                  label,
-                  style: (active
-                          ? theme.textTheme.labelLarge
-                          : theme.textTheme.labelMedium)
-                      ?.copyWith(color: active ? accent : scheme.onSurface),
-                ),
-              ],
+            // When real blur is unavailable (mobile overlays over the MapLibre
+            // platform view, or any reduced-transparency context) add the shared
+            // static sheen so quick-filter chips read as glass rather than flat
+            // tinted pills, matching the icon buttons and panels around them.
+            child: wrapWithKubusMapGlassSheen(
+              show: !(enableBlur && allowBlur),
+              borderRadius: radius,
+              isDark: isDark,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    icon,
+                    size: KubusHeaderMetrics.actionIcon - KubusSpacing.xxs,
+                    color: active
+                        ? accent
+                        : scheme.onSurface.withValues(alpha: 0.65),
+                  ),
+                  const SizedBox(width: KubusSpacing.sm),
+                  Text(
+                    label,
+                    style: (active
+                            ? theme.textTheme.labelLarge
+                            : theme.textTheme.labelMedium)
+                        ?.copyWith(color: active ? accent : scheme.onSurface),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

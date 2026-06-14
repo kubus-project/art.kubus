@@ -610,6 +610,43 @@ class KubusMapGlassMaterialSheen extends StatelessWidget {
   }
 }
 
+/// Overlays the shared static [KubusMapGlassMaterialSheen] *behind* [child] so a
+/// flat tinted [GlassSurface]/[LiquidGlassPanel] fallback reads as intentional
+/// liquid glass when real backdrop blur is unavailable (notably mobile overlays
+/// over the MapLibre platform view, or any reduced-transparency context).
+///
+/// This centralizes the sheen-wrapping that map chrome built on
+/// [LiquidGlassPanel] (search bar, filter chips, icon buttons, the search
+/// results dropdown) previously had to inline or, worse, omit. When [show] is
+/// false the [child] is returned untouched so blur-capable contexts keep the
+/// real frosted look with zero extra layers.
+///
+/// The caller is responsible for deciding [show] (typically
+/// `!(enableBlur && providerAllowsBlur)`), keeping the platform/capability
+/// decision in one place rather than scattering `defaultTargetPlatform` checks.
+Widget wrapWithKubusMapGlassSheen({
+  required Widget child,
+  required BorderRadius borderRadius,
+  required bool isDark,
+  required bool show,
+}) {
+  if (!show) return child;
+  return Stack(
+    children: <Widget>[
+      // Painted first => sits behind [child] so text/icons stay crisp on top.
+      Positioned.fill(
+        child: IgnorePointer(
+          child: KubusMapGlassMaterialSheen(
+            borderRadius: borderRadius,
+            isDark: isDark,
+          ),
+        ),
+      ),
+      child,
+    ],
+  );
+}
+
 class _KubusMapGlassBackdropTrackedSurface extends StatefulWidget {
   const _KubusMapGlassBackdropTrackedSurface({
     required this.regionId,

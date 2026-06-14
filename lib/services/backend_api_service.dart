@@ -6919,6 +6919,9 @@ class BackendApiService
   /// GET /api/achievements/user/:walletAddress
   Future<Map<String, dynamic>> getUserAchievements(String walletAddress) async {
     try {
+      if (kDebugMode) {
+        debugPrint('BackendApiService: achievements fetch user');
+      }
       final response = await _get(
         Uri.parse('$baseUrl/api/achievements/user/$walletAddress'),
         headers: _getHeaders(),
@@ -6944,6 +6947,9 @@ class BackendApiService
   Future<Map<String, dynamic>> getPublicUserAchievements(
       String walletAddress) async {
     try {
+      if (kDebugMode) {
+        debugPrint('BackendApiService: achievements fetch public user');
+      }
       final response = await _get(
         Uri.parse('$baseUrl/api/achievements/users/$walletAddress'),
         headers: _getHeaders(),
@@ -6969,6 +6975,9 @@ class BackendApiService
 
   Future<Map<String, dynamic>> getMyAchievements() async {
     try {
+      if (kDebugMode) {
+        debugPrint('BackendApiService: achievements fetch me');
+      }
       final response = await _get(
         Uri.parse('$baseUrl/api/achievements/me'),
         headers: _getHeaders(),
@@ -8328,6 +8337,9 @@ class BackendApiService
   /// GET /api/achievements
   Future<List<Map<String, dynamic>>> getAchievements() async {
     try {
+      if (kDebugMode) {
+        debugPrint('BackendApiService: achievements fetch definitions');
+      }
       final response = await _get(
         Uri.parse('$baseUrl/api/achievements'),
         headers: _getHeaders(),

@@ -428,11 +428,15 @@ class _CommunityScreenState extends State<CommunityScreen>
       posts = await _fetchCommunityFeed(
         followingOnly: targetFollowing,
       );
-      debugPrint(
-          'Loaded ${posts.length} ${targetFollowing ? 'following' : 'discover'} posts');
+      if (kDebugMode) {
+        debugPrint(
+            'CommunityScreen: loaded ${posts.length} ${targetFollowing ? 'following' : 'discover'} posts');
+      }
     } catch (e) {
-      debugPrint(
-          'Error loading ${targetFollowing ? 'following' : 'discover'} feed: $e');
+      if (kDebugMode) {
+        debugPrint(
+            'CommunityScreen: error loading ${targetFollowing ? 'following' : 'discover'} feed: $e');
+      }
     }
 
     if (!mounted) {
@@ -507,10 +511,14 @@ class _CommunityScreenState extends State<CommunityScreen>
       posts = await _fetchCommunityFeed(
         followingOnly: targetFollowing,
       );
-      debugPrint(
-          '📥 Loaded ${posts.length} ${targetFollowing ? 'following' : 'discover'} posts');
+      if (kDebugMode) {
+        debugPrint(
+            'CommunityScreen: loaded ${posts.length} ${targetFollowing ? 'following' : 'discover'} posts');
+      }
     } catch (e) {
-      debugPrint('Error loading community data: $e');
+      if (kDebugMode) {
+        debugPrint('CommunityScreen: error loading community data: $e');
+      }
     }
 
     if (!mounted) return;
@@ -599,8 +607,10 @@ class _CommunityScreenState extends State<CommunityScreen>
         try {
           await BackendApiService().ensureAuthLoaded(walletAddress: normalized);
         } catch (e) {
-          debugPrint(
-              'CommunityScreen: ensureAuthLoaded failed for $normalized: $e');
+          if (kDebugMode) {
+            debugPrint(
+                'CommunityScreen: ensureAuthLoaded failed for $normalized: $e');
+          }
         }
       }
 
@@ -707,9 +717,6 @@ class _CommunityScreenState extends State<CommunityScreen>
             _messageUnreadCount = cp.totalUnread;
             cp.addListener(_onChatProviderChanged);
           } catch (_) {}
-
-          if (!mounted) return;
-          _ensureGroupsLoaded();
         },
       ));
     });
@@ -1064,7 +1071,9 @@ class _CommunityScreenState extends State<CommunityScreen>
             .hydratePostsFromServer(_communityPosts);
       }
     } catch (e) {
-      debugPrint('Failed to refresh saved interactions on wallet change: $e');
+      if (kDebugMode) {
+        debugPrint('CommunityScreen: wallet interaction refresh failed: $e');
+      }
     }
   }
 

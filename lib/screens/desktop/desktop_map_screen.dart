@@ -2437,6 +2437,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           hintText: l10n.mapSearchHint,
           semanticsLabel: 'map_search_input',
           enableBlur: useMapBlur,
+          useMapGlassSurface: true,
           mouseCursor: SystemMouseCursors.text,
           onSubmitted: _handleSearchSubmit,
         ),

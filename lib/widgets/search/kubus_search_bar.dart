@@ -2,8 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../providers/glass_capabilities_provider.dart';
 import '../../utils/design_tokens.dart';
 import '../glass_components.dart';
+import '../map/kubus_map_glass_surface.dart';
 
 @immutable
 class KubusSearchBarStyle {
@@ -65,6 +67,7 @@ class KubusSearchBar extends StatefulWidget {
     this.animationDuration = const Duration(milliseconds: 120),
     this.animationCurve = Curves.easeOut,
     this.enableBlur = true,
+    this.useMapGlassSurface = false,
   });
 
   final String hintText;
@@ -102,6 +105,13 @@ class KubusSearchBar extends StatefulWidget {
   final Duration animationDuration;
   final Curve animationCurve;
   final bool enableBlur;
+
+  /// When `true`, the search bar applies the shared map glass material sheen on
+  /// its tinted fallback (real blur off) so it reads as liquid glass over the
+  /// MapLibre platform view, matching the filter panel, chips, controls, and
+  /// discovery card. Leave `false` for normal screens where the standard
+  /// [LiquidGlassPanel] frosted look is correct.
+  final bool useMapGlassSurface;
 
   @override
   State<KubusSearchBar> createState() => _KubusSearchBarState();
@@ -365,7 +375,17 @@ class _KubusSearchBarState extends State<KubusSearchBar> {
             backgroundColor: style.backgroundColor,
             fallbackMinOpacity: KubusGlassEffects.fallbackOpaqueOpacity,
             enableBlur: widget.enableBlur,
-            child: textField,
+            child: wrapWithKubusMapGlassSheen(
+              // On the map, when real blur is unavailable, enrich the flat tint
+              // with the shared static sheen so the search bar matches the rest
+              // of the map chrome instead of looking like a flat panel.
+              show: widget.useMapGlassSurface &&
+                  !(widget.enableBlur &&
+                      GlassCapabilitiesProvider.watchAllowBlurEnabled(context)),
+              borderRadius: style.borderRadius,
+              isDark: theme.brightness == Brightness.dark,
+              child: textField,
+            ),
           ),
         ),
       ),

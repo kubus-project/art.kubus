@@ -759,6 +759,10 @@ class CommunityService {
   // Load saved interactions
   static Future<void> loadSavedInteractions(List<CommunityPost> posts,
       {SavedItemsProvider? savedItemsProvider}) async {
+    if (kDebugMode) {
+      debugPrint(
+          'CommunityService: saved interactions fetch count=${posts.length}');
+    }
     final prefs = await SharedPreferences.getInstance();
     final followedUsers = prefs.getStringList(_followsKey) ?? [];
 

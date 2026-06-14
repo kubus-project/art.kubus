@@ -151,29 +151,21 @@ class _KubusGlassIconButtonState extends State<KubusGlassIconButton> {
             backgroundColor: active ? selectedTint : idleTint,
             fallbackMinOpacity: idleStyle.fallbackMinOpacity,
             enableBlur: widget.enableBlur,
-            child: Stack(
-              children: <Widget>[
-                // Match the panel/card glass treatment: when real blur is off
-                // (notably mobile overlays over the MapLibre platform view) add
-                // the shared static sheen so control buttons read as glass, not
-                // as flat tinted chips.
-                if (!(widget.enableBlur && allowBlur))
-                  Positioned.fill(
-                    child: IgnorePointer(
-                      child: KubusMapGlassMaterialSheen(
-                        borderRadius: radius,
-                        isDark: isDark,
-                      ),
-                    ),
-                  ),
-                Center(
-                  child: Icon(
-                    icon,
-                    size: resolvedIconSize,
-                    color: resolvedIconColor,
-                  ),
+            // Match the panel/card glass treatment: when real blur is off
+            // (notably mobile overlays over the MapLibre platform view) add the
+            // shared static sheen so control buttons read as glass, not as flat
+            // tinted chips.
+            child: wrapWithKubusMapGlassSheen(
+              show: !(widget.enableBlur && allowBlur),
+              borderRadius: radius,
+              isDark: isDark,
+              child: Center(
+                child: Icon(
+                  icon,
+                  size: resolvedIconSize,
+                  color: resolvedIconColor,
                 ),
-              ],
+              ),
             ),
           ),
         ),

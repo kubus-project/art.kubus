@@ -6,8 +6,10 @@ import '../../providers/themeprovider.dart';
 import '../../utils/artwork_media_resolver.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/media_url_resolver.dart';
+import '../../providers/glass_capabilities_provider.dart';
 import '../avatar_widget.dart';
 import '../glass_components.dart';
+import '../map/kubus_map_glass_surface.dart';
 import '../map_overlay_blocker.dart';
 import 'kubus_search_bar.dart';
 import 'kubus_search_controller.dart';
@@ -23,6 +25,7 @@ class KubusGeneralSearch extends StatefulWidget {
     this.autofocus = false,
     this.enabled = true,
     this.enableBlur = true,
+    this.useMapGlassSurface = false,
     this.mouseCursor,
     this.onSubmitted,
     this.onChanged,
@@ -37,6 +40,11 @@ class KubusGeneralSearch extends StatefulWidget {
   final bool autofocus;
   final bool enabled;
   final bool enableBlur;
+
+  /// Routes the underlying [KubusSearchBar] through the map-aware glass language
+  /// so its tinted fallback (over the MapLibre platform view) gets the shared
+  /// material sheen. Defaults to `false` for non-map usages.
+  final bool useMapGlassSurface;
   final MouseCursor? mouseCursor;
   final ValueChanged<String>? onSubmitted;
   final ValueChanged<String>? onChanged;
@@ -163,6 +171,7 @@ class _KubusGeneralSearchState extends State<KubusGeneralSearch> {
               autofocus: widget.autofocus,
               enabled: widget.enabled,
               enableBlur: widget.enableBlur,
+              useMapGlassSurface: widget.useMapGlassSurface,
               mouseCursor: widget.mouseCursor,
               onChanged: (value) {
                 widget.controller.onQueryChanged(context, value);
@@ -197,6 +206,7 @@ class KubusSearchResultsOverlay extends StatelessWidget {
     this.maxWidth = 520,
     this.maxHeight = 360,
     this.enabled = true,
+    this.useMapGlassSurface = false,
   });
 
   final KubusSearchController controller;
@@ -209,6 +219,12 @@ class KubusSearchResultsOverlay extends StatelessWidget {
   final double maxWidth;
   final double maxHeight;
   final bool enabled;
+
+  /// When `true`, the floating results panel resolves blur through the
+  /// map-aware policy and applies the shared material sheen on its fallback, so
+  /// the dropdown matches the rest of the map chrome over the MapLibre platform
+  /// view. Defaults to `false` for non-map search dropdowns.
+  final bool useMapGlassSurface;
 
   Widget _buildIconBadge(
     BuildContext context,
@@ -323,6 +339,17 @@ class KubusSearchResultsOverlay extends StatelessWidget {
           surfaceType: KubusGlassSurfaceType.panelBackground,
           tintBase: scheme.surface,
         );
+        // Over the map (mobile native platform view, unhealthy WebGL, reduced
+        // transparency) real BackdropFilter blur cannot sample the MapLibre
+        // texture, so resolve the map-aware policy and fall back to the shared
+        // material sheen instead of a flat translucent panel.
+        final panelBlurEnabled = useMapGlassSurface
+            ? kubusMapBlurEnabled(context)
+            : true;
+        final panelRadius = BorderRadius.circular(KubusRadius.lg);
+        final showSheen = useMapGlassSurface &&
+            !(panelBlurEnabled &&
+                GlassCapabilitiesProvider.watchAllowBlurEnabled(context));
 
         return Positioned.fill(
           child: Stack(
@@ -343,11 +370,16 @@ class KubusSearchResultsOverlay extends StatelessWidget {
                         vertical: KubusSpacing.sm,
                       ),
                       margin: EdgeInsets.zero,
-                      borderRadius: BorderRadius.circular(KubusRadius.lg),
+                      borderRadius: panelRadius,
                       blurSigma: surfaceStyle.blurSigma,
                       backgroundColor: surfaceStyle.tintColor,
                       fallbackMinOpacity: surfaceStyle.fallbackMinOpacity,
-                      child: Builder(
+                      enableBlur: panelBlurEnabled,
+                      child: wrapWithKubusMapGlassSheen(
+                        show: showSheen,
+                        borderRadius: panelRadius,
+                        isDark: theme.brightness == Brightness.dark,
+                        child: Builder(
                         builder: (context) {
                           if (trimmed.length < controller.config.minChars) {
                             return Padding(
@@ -453,6 +485,7 @@ class KubusSearchResultsOverlay extends StatelessWidget {
                           );
                         },
                       ),
+                    ),
                     ),
                   ),
                 ),

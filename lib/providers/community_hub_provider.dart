@@ -107,6 +107,10 @@ class CommunityHubProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
+      if (kDebugMode) {
+        debugPrint(
+            'CommunityHubProvider: groups fetch page=$targetPage refresh=$refresh search=${normalizedSearch.isNotEmpty}');
+      }
       final results = await _apiService.listCommunityGroups(
         page: targetPage,
         limit: _groupsPageSize,

@@ -576,6 +576,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   }
 
   Future<void> _loadSidebarData() async {
+    if (kDebugMode) {
+      debugPrint('DesktopCommunityScreen: sidebar/suggestions fetch');
+    }
     await Future.wait([
       _loadTrendingTopics(),
       _loadSuggestions(),

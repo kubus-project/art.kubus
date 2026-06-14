@@ -240,6 +240,9 @@ class KubusMapSearchOverlayAssembly extends StatelessWidget {
             onDismiss: onDismiss ?? controller.dismissOverlay,
             onResultTap: onResultTap,
             maxWidth: maxWidth,
+            // This assembly always floats over the live map, so route the
+            // results dropdown through the map-aware glass language too.
+            useMapGlassSurface: true,
           ),
           leading: leading,
           filterChips: filterChips,

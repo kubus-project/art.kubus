@@ -2,14 +2,40 @@ import 'package:art_kubus/models/promotion.dart';
 import 'package:art_kubus/community/community_interactions.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/providers/community_subject_provider.dart';
+import 'package:art_kubus/services/backend_api_service.dart';
+import 'package:art_kubus/services/http_client_factory.dart';
+import 'package:art_kubus/services/profile_package_service.dart';
+import 'package:art_kubus/services/user_service.dart';
+import 'package:art_kubus/utils/profile_package_prefetcher.dart';
 import 'package:art_kubus/widgets/avatar_widget.dart';
 import 'package:art_kubus/widgets/community/community_post_card.dart';
 import 'package:art_kubus/widgets/profile_identity_summary.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(() async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    ProfilePackagePrefetcher.resetForTesting();
+    ProfilePackageService.clearMemoryCacheForTesting();
+    await UserService.clearCache();
+    BackendApiService().setAuthTokenForTesting(null);
+  });
+
+  tearDown(() async {
+    ProfilePackagePrefetcher.resetForTesting();
+    ProfilePackageService.clearMemoryCacheForTesting();
+    await UserService.clearCache();
+    BackendApiService().setAuthTokenForTesting(null);
+    BackendApiService().setHttpClient(createPlatformHttpClient());
+  });
+
   Widget communityHarness(Widget child) {
     return ChangeNotifierProvider(
       create: (_) => CommunitySubjectProvider(),
@@ -101,6 +127,61 @@ void main() {
     );
 
     expect(find.text('Mina Creator'), findsOneWidget);
+  });
+
+  testWidgets('community post card renders feed payload like and bookmark state',
+      (tester) async {
+    await tester.pumpWidget(
+      communityHarness(
+        CommunityPostCard(
+          post: post(
+            id: 'postpayload',
+            displayName: 'Mina Creator',
+          ).copyWith(
+            isLiked: true,
+            isBookmarked: true,
+          ),
+          accentColor: Colors.teal,
+          onOpenPostDetail: (_) {},
+        ),
+      ),
+    );
+
+    expect(find.byIcon(Icons.favorite), findsOneWidget);
+    expect(find.byIcon(Icons.bookmark), findsOneWidget);
+    expect(find.byIcon(Icons.favorite_border), findsNothing);
+    expect(find.byIcon(Icons.bookmark_border), findsNothing);
+  });
+
+  testWidgets('feed byline does not prefetch profile package before paint',
+      (tester) async {
+    final requests = <String>[];
+    BackendApiService().setHttpClient(MockClient((request) async {
+      requests.add(request.url.path);
+      return http.Response('Unexpected profile prefetch', 500);
+    }));
+
+    await tester.pumpWidget(
+      communityHarness(
+        CommunityPostCard(
+          post: post(
+            id: 'post2',
+            displayName: 'Mina Creator',
+          ),
+          accentColor: Colors.teal,
+          onOpenPostDetail: (_) {},
+          onOpenAuthorProfile: () {},
+        ),
+      ),
+    );
+
+    expect(requests, isEmpty);
+    expect(
+      ProfilePackageService.getCachedCriticalPackage(
+        '0xpost211111111111111111111111111111111111',
+      ),
+      isNull,
+    );
   });
 
   testWidgets('repost inner card renders original author display name',

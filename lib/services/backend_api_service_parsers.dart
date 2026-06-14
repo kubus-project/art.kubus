@@ -632,9 +632,21 @@ CommunityPost _backendApiCommunityPostFromBackendJson(
         json['views'] as int? ??
         json['viewCount'] as int? ??
         0,
-    isLiked: json['isLiked'] as bool? ?? false,
-    isBookmarked: json['isBookmarked'] as bool? ?? false,
-    isFollowing: json['isFollowing'] as bool? ?? false,
+    isLiked: communityBool(
+      json['isLiked'] ??
+          json['is_liked'] ??
+          json['isLikedByCurrentUser'] ??
+          json['is_liked_by_current_user'],
+    ),
+    isBookmarked: communityBool(
+      json['isBookmarked'] ??
+          json['is_bookmarked'] ??
+          json['isSaved'] ??
+          json['is_saved'],
+    ),
+    isFollowing: communityBool(
+      json['isFollowing'] ?? json['is_following'],
+    ),
     authorIsArtist: authorIsArtistFlag,
     authorIsInstitution: authorIsInstitutionFlag,
     promotion: PromotionMetadata.readFrom(json),

@@ -84,4 +84,23 @@ void main() {
 
     expect(api.interactionStateCalls, 1);
   });
+
+  test('reconcilePostStatesAfterFirstPaint delays interaction-state refresh',
+      () async {
+    final api = _FakeBackendApiService();
+    final provider = CommunityInteractionsProvider(api: api);
+    final post = _post(id: 'post-3');
+
+    provider.hydratePostsFromServer([post]);
+    provider.reconcilePostStatesAfterFirstPaint(
+      [post],
+      delay: const Duration(milliseconds: 20),
+    );
+
+    expect(api.interactionStateCalls, 0);
+
+    await Future<void>.delayed(const Duration(milliseconds: 40));
+
+    expect(api.interactionStateCalls, 1);
+  });
 }
