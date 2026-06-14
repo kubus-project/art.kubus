@@ -4,6 +4,7 @@ import '../../providers/glass_capabilities_provider.dart';
 import '../../utils/app_animations.dart';
 import '../../utils/design_tokens.dart';
 import '../glass_components.dart';
+import '../map/kubus_map_glass_surface.dart';
 
 /// Reusable glass icon button used across map UIs.
 class KubusGlassIconButton extends StatefulWidget {
@@ -150,9 +151,29 @@ class _KubusGlassIconButtonState extends State<KubusGlassIconButton> {
             backgroundColor: active ? selectedTint : idleTint,
             fallbackMinOpacity: idleStyle.fallbackMinOpacity,
             enableBlur: widget.enableBlur,
-            child: Center(
-              child:
-                  Icon(icon, size: resolvedIconSize, color: resolvedIconColor),
+            child: Stack(
+              children: <Widget>[
+                // Match the panel/card glass treatment: when real blur is off
+                // (notably mobile overlays over the MapLibre platform view) add
+                // the shared static sheen so control buttons read as glass, not
+                // as flat tinted chips.
+                if (!(widget.enableBlur && allowBlur))
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: KubusMapGlassMaterialSheen(
+                        borderRadius: radius,
+                        isDark: isDark,
+                      ),
+                    ),
+                  ),
+                Center(
+                  child: Icon(
+                    icon,
+                    size: resolvedIconSize,
+                    color: resolvedIconColor,
+                  ),
+                ),
+              ],
             ),
           ),
         ),

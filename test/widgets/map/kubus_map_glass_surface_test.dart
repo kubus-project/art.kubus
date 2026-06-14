@@ -42,7 +42,8 @@ void main() {
     expect(decision.reason, 'flutter-backdrop-filter');
   });
 
-  testWidgets('native capable map chrome resolves to Flutter backdrop strategy',
+  testWidgets(
+      'desktop native capable map chrome resolves to Flutter backdrop strategy',
       (tester) async {
     late KubusMapBlurDecision decision;
 
@@ -54,6 +55,66 @@ void main() {
               context,
               policy: KubusMapBlurPolicy.forceMapChromeWhenCapable,
               isWebOverride: false,
+              mobileNativeOverride: false,
+            );
+            return const SizedBox.shrink();
+          },
+        ),
+      ),
+    );
+
+    expect(decision.enabled, isTrue);
+    expect(decision.strategy, KubusMapBackdropStrategy.flutterBackdropFilter);
+    expect(decision.reason, 'flutter-backdrop-filter');
+  });
+
+  testWidgets(
+      'mobile native over MapLibre uses material safe-tint fallback even when forced',
+      (tester) async {
+    late KubusMapBlurDecision decision;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) {
+            decision = resolveKubusMapBlurDecision(
+              context,
+              // Forcing map chrome must NOT re-enable real blur on mobile,
+              // because BackdropFilter cannot sample the native MapLibre view.
+              policy: KubusMapBlurPolicy.forceMapChromeWhenCapable,
+              overMapPlatformView: true,
+              isWebOverride: false,
+              mobileNativeOverride: true,
+            );
+            return const SizedBox.shrink();
+          },
+        ),
+      ),
+    );
+
+    expect(decision.enabled, isFalse);
+    expect(
+      decision.strategy,
+      KubusMapBackdropStrategy.platformViewSafeTintFallback,
+    );
+    expect(decision.reason, 'mobile-platform-view-safe-tint-fallback');
+  });
+
+  testWidgets(
+      'mobile native NOT over the map platform view keeps real blur',
+      (tester) async {
+    late KubusMapBlurDecision decision;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) {
+            decision = resolveKubusMapBlurDecision(
+              context,
+              policy: KubusMapBlurPolicy.automatic,
+              overMapPlatformView: false,
+              isWebOverride: false,
+              mobileNativeOverride: true,
             );
             return const SizedBox.shrink();
           },
@@ -380,6 +441,31 @@ void main() {
       gradient.colors.first.a,
       closeTo(KubusGlassEffects.fallbackOpaqueOpacity, 0.001),
     );
+  });
+
+  testWidgets(
+      'mobile map glass surface drops BackdropFilter and adds the sheen overlay',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark(useMaterial3: true),
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => buildKubusMapGlassSurface(
+              context: context,
+              kind: KubusMapGlassSurfaceKind.panel,
+              overMapPlatformView: true,
+              isWebOverride: false,
+              mobileNativeOverride: true,
+              child: const SizedBox(width: 120, height: 60),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byType(BackdropFilter), findsNothing);
+    expect(find.byType(KubusMapGlassMaterialSheen), findsOneWidget);
   });
 
   test('oversized map backdrop regions are rejected', () {

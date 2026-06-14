@@ -32,6 +32,26 @@ enum KubusMapBackdropStrategy {
   platformViewBackdropHost,
 }
 
+/// Whether the current target renders the map as a native platform view that
+/// Flutter's [BackdropFilter] cannot sample (Android/iOS MapLibre).
+///
+/// Desktop (windows/macOS/linux) keeps real blur because its map chrome
+/// composites with Flutter; web is handled separately via its own DOM-backed
+/// backdrop host and safe-tint paths.
+bool isMobileNativeMapPlatform({bool web = kIsWeb}) {
+  if (web) return false;
+  switch (defaultTargetPlatform) {
+    case TargetPlatform.android:
+    case TargetPlatform.iOS:
+      return true;
+    case TargetPlatform.fuchsia:
+    case TargetPlatform.linux:
+    case TargetPlatform.macOS:
+    case TargetPlatform.windows:
+      return false;
+  }
+}
+
 @immutable
 class KubusMapBlurDecision {
   const KubusMapBlurDecision({
@@ -75,10 +95,13 @@ KubusMapBlurDecision resolveKubusMapBlurDecision(
   bool? isWebOverride,
   bool? webGlHealthyOverride,
   bool? platformBackdropHostAvailableOverride,
+  bool? mobileNativeOverride,
 }) {
   final width = MediaQuery.maybeOf(context)?.size.width ?? 0;
   final allowBlur = GlassCapabilitiesProvider.watchAllowBlurEnabled(context);
   final web = isWebOverride ?? kIsWeb;
+  final mobileNative =
+      mobileNativeOverride ?? isMobileNativeMapPlatform(web: web);
   final webGlHealthy = webGlHealthyOverride ?? webGLContextHealthy.value;
   final platformBackdropHostAvailable = platformBackdropHostAvailableOverride ??
       (web &&
@@ -197,6 +220,30 @@ KubusMapBlurDecision resolveKubusMapBlurDecision(
     );
   }
 
+  // Mobile native (Android/iOS) renders MapLibre as a native platform view.
+  // Flutter's BackdropFilter cannot sample those pixels, so real blur degrades
+  // to a flat translucent panel. Force the material safe-tint fallback for any
+  // overlay that sits over the live map. This is independent of policy because
+  // there is no platform backdrop host on mobile (that path is web-only DOM).
+  if (!web && overMapPlatformView && mobileNative) {
+    return KubusMapBlurDecision(
+      enabled: false,
+      reason: 'mobile-platform-view-safe-tint-fallback',
+      strategy: KubusMapBackdropStrategy.platformViewSafeTintFallback,
+      providerAllowsBlur: allowBlur,
+      width: width,
+      policy: policy,
+      web: web,
+      overMapPlatformView: overMapPlatformView,
+      platformBackdropHostAvailable: platformBackdropHostAvailable,
+      webGlHealthy: webGlHealthy,
+      reduceEffects: reduceEffects,
+      reduceEffectsUserTouched: reduceEffectsUserTouched,
+      heuristicTriggered: heuristicTriggered,
+      autoReduceEffectsApplied: autoReduceEffectsApplied,
+    );
+  }
+
   return KubusMapBlurDecision(
     enabled: true,
     reason: 'flutter-backdrop-filter',
@@ -267,6 +314,7 @@ KubusMapGlassSurfacePreset resolveKubusMapGlassSurfacePreset(
   bool overMapPlatformView = true,
   bool? isWebOverride,
   bool? platformBackdropHostAvailableOverride,
+  bool? mobileNativeOverride,
 }) {
   final theme = Theme.of(context);
   final scheme = theme.colorScheme;
@@ -291,6 +339,7 @@ KubusMapGlassSurfacePreset resolveKubusMapGlassSurfacePreset(
     isWebOverride: isWebOverride,
     platformBackdropHostAvailableOverride:
         platformBackdropHostAvailableOverride,
+    mobileNativeOverride: mobileNativeOverride,
   );
   final resolvedBlur = useBlur &&
       blurDecision.enabled &&
@@ -381,6 +430,7 @@ Widget buildKubusMapGlassSurface({
   bool enablePlatformBackdropRegion = true,
   bool? isWebOverride,
   bool? platformBackdropHostAvailableOverride,
+  bool? mobileNativeOverride,
 }) {
   final preset = resolveKubusMapGlassSurfacePreset(
     context,
@@ -392,7 +442,10 @@ Widget buildKubusMapGlassSurface({
     isWebOverride: isWebOverride,
     platformBackdropHostAvailableOverride:
         platformBackdropHostAvailableOverride,
+    mobileNativeOverride: mobileNativeOverride,
   );
+  final theme = Theme.of(context);
+  final isDark = theme.brightness == Brightness.dark;
   final effectiveRadius = borderRadius ?? preset.borderRadius;
   final effectivePadding = padding;
   final effectiveBorder = border ??
@@ -416,6 +469,28 @@ Widget buildKubusMapGlassSurface({
       child: child,
     ),
   );
+
+  // When real backdrop blur is unavailable (notably mobile native overlays
+  // sitting over the MapLibre platform view), enrich the flat tinted fallback
+  // with a cheap, static "liquid glass" treatment: a diagonal sheen, a soft
+  // bottom-right falloff, and an inner highlight stroke. This is a single
+  // IgnorePointer decoration with no animation, so it stays jank-free while the
+  // map pans/zooms and reads as intentional glass rather than a flat panel.
+  if (!preset.useBlur) {
+    surface = Stack(
+      children: <Widget>[
+        surface,
+        Positioned.fill(
+          child: IgnorePointer(
+            child: KubusMapGlassMaterialSheen(
+              borderRadius: effectiveRadius,
+              isDark: isDark,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 
   if (kDebugMode && !preset.useBlur) {
     final key = '$kind:${preset.blurReason}';
@@ -482,6 +557,57 @@ Widget buildKubusMapGlassSurface({
     );
   }
   return surface;
+}
+
+/// Static "liquid glass" sheen drawn over the opaque tint fallback used when
+/// real backdrop blur is unavailable (e.g. mobile overlays over the MapLibre
+/// platform view).
+///
+/// Layers, from cheapest to richest:
+/// - a diagonal gradient: bright top-left highlight, neutral middle (where most
+///   text sits), and a faint bottom-right falloff for depth;
+/// - a thin inner highlight stroke that reads as a glass rim.
+///
+/// All alphas are intentionally subtle and theme-aware so text/icons stay
+/// readable (no black-on-black in dark, no washed-out white in light), and the
+/// whole thing is wrapped in [IgnorePointer] by the caller so tap targets are
+/// unaffected.
+class KubusMapGlassMaterialSheen extends StatelessWidget {
+  const KubusMapGlassMaterialSheen({
+    super.key,
+    required this.borderRadius,
+    required this.isDark,
+  });
+
+  final BorderRadius borderRadius;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    final highlight = Colors.white.withValues(alpha: isDark ? 0.07 : 0.30);
+    final falloff = Colors.black.withValues(alpha: isDark ? 0.12 : 0.05);
+    final rim = Colors.white.withValues(alpha: isDark ? 0.10 : 0.45);
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: borderRadius,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: <Color>[
+            highlight,
+            Colors.transparent,
+            falloff,
+          ],
+          stops: const <double>[0.0, 0.55, 1.0],
+        ),
+        border: Border.all(
+          color: rim,
+          width: KubusSizes.hairline,
+        ),
+      ),
+    );
+  }
 }
 
 class _KubusMapGlassBackdropTrackedSurface extends StatefulWidget {
