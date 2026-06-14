@@ -22,6 +22,7 @@ import '../providers/stats_provider.dart';
 import '../providers/task_provider.dart';
 import '../providers/wallet_provider.dart';
 import '../providers/web3provider.dart';
+import '../core/startup_trace.dart';
 import '../utils/home_activity_cards.dart';
 import 'backend_api_service.dart';
 
@@ -39,6 +40,7 @@ class AppBootstrapService {
     required BuildContext context,
     String? walletAddress,
   }) async {
+    StartupTrace.mark('deferred warm-up start');
     final backend = BackendApiService();
     final appModeProvider = context.read<AppModeProvider>();
 
@@ -182,12 +184,14 @@ class AppBootstrapService {
     }
 
     await Future.wait(p0, eagerError: false);
+    StartupTrace.mark('deferred warm-up p0 done');
 
     if (p1.isNotEmpty) {
       await Future<void>.delayed(const Duration(milliseconds: 650));
       await Future.wait(p1, eagerError: false);
     }
 
+    StartupTrace.mark('deferred warm-up end');
     if (kDebugMode) {
       debugPrint(
           'AppBootstrapService: warm-up tiers complete (p0=${p0.length}, p1=${p1.length})');

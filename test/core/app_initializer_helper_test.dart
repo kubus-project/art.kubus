@@ -173,4 +173,70 @@ void main() {
     expect(decision.route, StartupRouteType.onboarding);
     expect(decision.onboardingInitialStepId, 'walletBackupIntro');
   });
+
+  group('canSkipRedundantCriticalProfileLoad', () {
+    test('skips when hydrated profile matches the routing wallet', () {
+      expect(
+        canSkipRedundantCriticalProfileLoad(
+          hasHydratedProfile: true,
+          hydratedWalletAddress: 'Wallet123',
+          routeWalletAddress: 'Wallet123',
+        ),
+        isTrue,
+      );
+    });
+
+    test('tolerates surrounding whitespace on either wallet', () {
+      expect(
+        canSkipRedundantCriticalProfileLoad(
+          hasHydratedProfile: true,
+          hydratedWalletAddress: '  Wallet123 ',
+          routeWalletAddress: 'Wallet123',
+        ),
+        isTrue,
+      );
+    });
+
+    test('does not skip when the profile is not hydrated', () {
+      expect(
+        canSkipRedundantCriticalProfileLoad(
+          hasHydratedProfile: false,
+          hydratedWalletAddress: 'Wallet123',
+          routeWalletAddress: 'Wallet123',
+        ),
+        isFalse,
+      );
+    });
+
+    test('does not skip when the hydrated wallet differs from routing wallet',
+        () {
+      expect(
+        canSkipRedundantCriticalProfileLoad(
+          hasHydratedProfile: true,
+          hydratedWalletAddress: 'WalletA',
+          routeWalletAddress: 'WalletB',
+        ),
+        isFalse,
+      );
+    });
+
+    test('does not skip when either wallet is null or empty', () {
+      expect(
+        canSkipRedundantCriticalProfileLoad(
+          hasHydratedProfile: true,
+          hydratedWalletAddress: null,
+          routeWalletAddress: 'Wallet123',
+        ),
+        isFalse,
+      );
+      expect(
+        canSkipRedundantCriticalProfileLoad(
+          hasHydratedProfile: true,
+          hydratedWalletAddress: 'Wallet123',
+          routeWalletAddress: '   ',
+        ),
+        isFalse,
+      );
+    });
+  });
 }

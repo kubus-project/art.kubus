@@ -79,3 +79,26 @@ StartupDecision decideStartupRoute({
 
   return const StartupDecision(route: StartupRouteType.none);
 }
+
+/// Whether the synchronous, pre-shell profile load in `AppInitializer` can be
+/// skipped because `ProfileProvider.initialize()` already hydrated the profile
+/// for the exact wallet we are routing for.
+///
+/// `ProfileProvider.initialize()` performs a backend `loadProfile()` (+ stats)
+/// for the persisted wallet. The startup route decision only consumes hydrated
+/// profile state (role selection / profile completion / persona). When the
+/// hydrated wallet matches the routing wallet, repeating the network load on
+/// the critical path cannot change the route, so it is deferred to keep the
+/// splash short. A cache miss, a different wallet, an empty wallet, or a failed
+/// hydration must still load synchronously so behavior is unchanged.
+bool canSkipRedundantCriticalProfileLoad({
+  required bool hasHydratedProfile,
+  required String? hydratedWalletAddress,
+  required String? routeWalletAddress,
+}) {
+  if (!hasHydratedProfile) return false;
+  final hydrated = (hydratedWalletAddress ?? '').trim();
+  final route = (routeWalletAddress ?? '').trim();
+  if (hydrated.isEmpty || route.isEmpty) return false;
+  return hydrated == route;
+}

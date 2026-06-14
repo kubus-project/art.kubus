@@ -29,6 +29,7 @@ import '../screens/desktop/desktop_shell.dart';
 import '../widgets/app_loading.dart';
 import 'app_navigator.dart';
 import 'app_initializer_helper.dart';
+import 'startup_trace.dart';
 import 'deep_link_startup_routing.dart';
 import '../main_app.dart';
 import 'shell_entry_screen.dart';
@@ -144,12 +145,14 @@ class _AppInitializerState extends State<AppInitializer> {
     }
 
     try {
+      StartupTrace.mark('critical bootstrap start');
       // Load JWT token for backend authentication (do not block indefinitely on startup).
       await _safeStep<void>(
         'loadAuthToken',
         BackendApiService().loadAuthToken,
         timeout: const Duration(seconds: 3),
       );
+      StartupTrace.mark('auth token loaded');
       if (!mounted) return;
 
       final localeProvider =
@@ -163,6 +166,7 @@ class _AppInitializerState extends State<AppInitializer> {
           Provider.of<ConfigProvider>(context, listen: false);
       await _safeStep<void>('config.initialize', configProvider.initialize,
           timeout: const Duration(seconds: 6));
+      StartupTrace.mark('config ready');
       if (!mounted) return;
 
       final appModeProvider =
@@ -185,6 +189,7 @@ class _AppInitializerState extends State<AppInitializer> {
       if (!mounted) return;
 
       // Initialize WalletProvider early to restore cached wallet (safe for fresh starts).
+      StartupTrace.mark('wallet restore start');
       final walletProvider =
           Provider.of<WalletProvider>(context, listen: false);
       await _safeStep<void>('wallet.initialize', walletProvider.initialize,
@@ -196,6 +201,7 @@ class _AppInitializerState extends State<AppInitializer> {
         ),
         timeout: const Duration(seconds: 8),
       );
+      StartupTrace.mark('wallet restore end');
       String? walletAddress = walletProvider.currentWalletAddress;
       walletAddress = walletAddress?.trim().isNotEmpty == true
           ? walletAddress!.trim()
@@ -208,13 +214,35 @@ class _AppInitializerState extends State<AppInitializer> {
       await _safeStep<void>('profile.initialize', profileProvider.initialize,
           timeout: const Duration(seconds: 8));
       if (walletAddress != null && walletAddress.isNotEmpty) {
-        try {
-          await profileProvider
-              .loadProfile(walletAddress)
-              .timeout(const Duration(seconds: 6));
-        } catch (e) {
-          AppConfig.debugPrint(
-              'AppInitializer: ProfileProvider load failed: $e');
+        // profileProvider.initialize() already performs a backend loadProfile()
+        // + stats fetch for the persisted wallet. When that already hydrated the
+        // SAME wallet we're routing for, repeating the network load here only
+        // duplicates a round-trip on the critical (pre-shell) path without
+        // changing the route decision: the only profile fields routing consumes
+        // (hasHydratedProfile / nextStructuredOnboardingStepId / userPersona)
+        // are identical. Skip the duplicate so the splash clears sooner; the
+        // hydrated state and freshness from initialize() are fully preserved.
+        // If initialize() did not hydrate (cache miss, different wallet, or
+        // failure), fall back to the synchronous load exactly as before.
+        final alreadyHydratedForWallet = canSkipRedundantCriticalProfileLoad(
+          hasHydratedProfile: profileProvider.hasHydratedProfile,
+          hydratedWalletAddress: profileProvider.currentUser?.walletAddress,
+          routeWalletAddress: walletAddress,
+        );
+        if (alreadyHydratedForWallet) {
+          StartupTrace.mark(
+              'profile already hydrated by initialize (skip duplicate load)');
+        } else {
+          StartupTrace.mark('profile load start');
+          try {
+            await profileProvider
+                .loadProfile(walletAddress)
+                .timeout(const Duration(seconds: 6));
+          } catch (e) {
+            AppConfig.debugPrint(
+                'AppInitializer: ProfileProvider load failed: $e');
+          }
+          StartupTrace.mark('profile load end');
         }
       }
       if (!mounted) return;
@@ -368,6 +396,8 @@ class _AppInitializerState extends State<AppInitializer> {
 
       if (!mounted) return;
 
+      StartupTrace.mark('route decision ready');
+
       // Navigate based on user state and configuration
       final shouldSkipOnboarding = userSkipOnboarding && hasCompletedOnboarding;
 
@@ -471,9 +501,12 @@ class _AppInitializerState extends State<AppInitializer> {
           return;
         }
 
-        try {
-          await maybeStartWarmUp().timeout(const Duration(seconds: 15));
-        } catch (_) {}
+        // Do not block the deep-link cold-start shell on warm-up. The
+        // destination shell consumes the pending target itself and loads its
+        // own data; warm-up (markers/artworks/web3/profile refresh) runs in the
+        // background after the first frame instead of holding the splash for up
+        // to 15s.
+        unawaited(maybeStartWarmUp());
         if (!mounted) return;
         _didNavigate = true;
 
@@ -687,6 +720,7 @@ class _AppInitializerState extends State<AppInitializer> {
         ),
       );
     } finally {
+      StartupTrace.mark('critical bootstrap end (shell route pushed)');
       _startupWatchdog?.cancel();
       _startupWatchdog = null;
       if (!completer.isCompleted) completer.complete();

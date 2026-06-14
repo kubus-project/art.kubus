@@ -45,6 +45,7 @@ import '../services/map_marker_service.dart';
 import '../services/push_notification_service.dart';
 import '../services/map_attribution_helper.dart';
 import '../core/app_route_observer.dart';
+import '../core/startup_trace.dart';
 import '../models/art_marker.dart';
 import '../models/event.dart';
 import '../widgets/map_marker_style_config.dart';
@@ -508,6 +509,7 @@ class _MapScreenState extends State<MapScreen>
   @override
   void initState() {
     super.initState();
+    StartupTrace.mark('map screen init');
     MapAttributionHelper.setMobileMapEnabled(true);
     _autoFollow = widget.autoFollow;
 

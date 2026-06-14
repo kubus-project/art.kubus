@@ -62,6 +62,7 @@ import 'providers/main_tab_provider.dart';
 import 'providers/map_deep_link_provider.dart';
 import 'providers/deferred_onboarding_provider.dart';
 import 'core/app_initializer.dart';
+import 'core/startup_trace.dart';
 import 'core/app_navigator.dart';
 import 'core/shell_routes.dart';
 import 'core/url_strategy.dart';
@@ -257,11 +258,13 @@ void main() {
 
   runZonedGuarded<Future<void>>(
     () async {
+      StartupTrace.mark('main start');
       var logger = Logger();
 
       try {
         // Initialize Flutter bindings in the guarded zone.
         WidgetsFlutterBinding.ensureInitialized();
+        StartupTrace.mark('binding ready');
         if (kIsWeb && _enableWebSemantics) {
           // Opt in only for dedicated automation runs. Leaving semantics forced
           // on in production can place a Flutter overlay above DOM-backed
@@ -345,6 +348,7 @@ void main() {
       }
 
       // Run app immediately and show splash while initializing the cached user store
+      StartupTrace.mark('runApp');
       runApp(const AppLauncher());
     },
     (error, stack) {
@@ -371,6 +375,9 @@ class _AppLauncherState extends State<AppLauncher> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      StartupTrace.mark('first frame');
+    });
     _bootstrap();
   }
 
