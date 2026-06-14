@@ -31,6 +31,7 @@ class KubusGeneralSearch extends StatefulWidget {
     this.onChanged,
     this.trailingBuilder,
     this.style,
+    this.height,
   });
 
   final KubusSearchController controller;
@@ -40,6 +41,11 @@ class KubusGeneralSearch extends StatefulWidget {
   final bool autofocus;
   final bool enabled;
   final bool enableBlur;
+
+  /// Overrides the field height. Defaults to [KubusHeaderMetrics.searchBarHeight]
+  /// when null. The map uses a slightly taller field on small screens so the
+  /// search bar is more usable / easier to tap.
+  final double? height;
 
   /// Routes the underlying [KubusSearchBar] through the map-aware glass language
   /// so its tinted fallback (over the MapLibre platform view) gets the shared
@@ -162,7 +168,7 @@ class _KubusGeneralSearchState extends State<KubusGeneralSearch> {
         builder: (context, _) {
           final query = widget.controller.state.query;
           return SizedBox(
-            height: KubusHeaderMetrics.searchBarHeight,
+            height: widget.height ?? KubusHeaderMetrics.searchBarHeight,
             child: KubusSearchBar(
               semanticsLabel: widget.semanticsLabel,
               hintText: widget.hintText,
@@ -205,6 +211,7 @@ class KubusSearchResultsOverlay extends StatelessWidget {
     this.offset = const Offset(0, 52),
     this.maxWidth = 520,
     this.maxHeight = 360,
+    this.width,
     this.enabled = true,
     this.useMapGlassSurface = false,
   });
@@ -218,6 +225,12 @@ class KubusSearchResultsOverlay extends StatelessWidget {
   final Offset offset;
   final double maxWidth;
   final double maxHeight;
+
+  /// When set, the dropdown is locked to exactly this width (matching the
+  /// measured search field) instead of being free to grow up to [maxWidth].
+  /// This keeps the dropdown aligned to the field and prevents it from
+  /// appearing to "grow to the right" independently.
+  final double? width;
   final bool enabled;
 
   /// When `true`, the floating results panel resolves blur through the
@@ -362,7 +375,11 @@ class KubusSearchResultsOverlay extends StatelessWidget {
                   cursor: SystemMouseCursors.basic,
                   child: ConstrainedBox(
                     constraints: BoxConstraints(
-                      maxWidth: maxWidth,
+                      // Lock to the measured field width when provided so the
+                      // dropdown stays aligned with the search field; otherwise
+                      // fall back to the historical free maxWidth behaviour.
+                      minWidth: width ?? 0.0,
+                      maxWidth: width ?? maxWidth,
                       maxHeight: maxHeight,
                     ),
                     child: LiquidGlassPanel(

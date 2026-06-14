@@ -1,7 +1,12 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
 
+import 'package:art_kubus/features/map/shared/map_screen_shared_helpers.dart';
 import 'package:art_kubus/models/art_marker.dart';
+import 'package:art_kubus/utils/kubus_color_roles.dart';
+import 'package:art_kubus/utils/map_marker_icon_ids.dart';
+import 'package:art_kubus/widgets/art_marker_cube.dart';
 import 'package:art_kubus/widgets/map/kubus_map_marker_rendering.dart';
 
 ArtMarker _marker(
@@ -107,5 +112,128 @@ void main() {
         kubusClusterCategorySignature(kubusClusterCategoryBreakdown(markers));
 
     expect(signature.split('-').length, kKubusClusterMaxBadgeCategories);
+  });
+
+  group('cluster badge render data', () {
+    final scheme = const ColorScheme.dark();
+    const roles = KubusColorRoles.dark;
+    IconData resolveIcon(ArtMarkerType type) =>
+        KubusMapMarkerHelpers.resolveArtMarkerIcon(type);
+
+    test('mixed cluster yields distinct shapes, colours and icons', () {
+      final markers = <ArtMarker>[
+        _marker('a', const LatLng(1, 1), type: ArtMarkerType.artwork),
+        _marker('s', const LatLng(1, 1), type: ArtMarkerType.streetArt),
+        _marker('e', const LatLng(1, 1), type: ArtMarkerType.event),
+      ];
+
+      final data = kubusClusterBadgeRenderData(
+        markers,
+        scheme: scheme,
+        roles: roles,
+        resolveIcon: resolveIcon,
+      );
+
+      expect(data.badges.length, 3);
+      // Each visible category carries shape + colour + icon.
+      expect(data.badges.map((b) => b.shape).toSet().length, 3);
+      expect(data.badges.map((b) => b.color.toARGB32()).toSet().length,
+          greaterThan(1));
+      expect(data.badges.map((b) => b.icon.codePoint).toSet().length, 3);
+      // Glyphs are real (non-zero) icon code points, not just coloured pips.
+      expect(data.badges.every((b) => b.icon.codePoint != 0), isTrue);
+    });
+
+    test('single-category cluster keeps that category identity (not generic)',
+        () {
+      final markers = <ArtMarker>[
+        _marker('a', const LatLng(1, 1), type: ArtMarkerType.streetArt),
+        _marker('b', const LatLng(1, 1), type: ArtMarkerType.streetArt),
+      ];
+
+      final data = kubusClusterBadgeRenderData(
+        markers,
+        scheme: scheme,
+        roles: roles,
+        resolveIcon: resolveIcon,
+      );
+
+      expect(data.badges.length, 1);
+      final badge = data.badges.single;
+      expect(badge.shape, ArtMapMarkerShape.forType(ArtMarkerType.streetArt));
+      // Generic circle is only the no-category fallback; a real category never
+      // resolves to it here (streetArt => diamond).
+      expect(badge.shape, isNot(ArtMapMarkerShape.circle));
+      expect(badge.icon.codePoint,
+          resolveIcon(ArtMarkerType.streetArt).codePoint);
+      expect(badge.count, 2);
+    });
+
+    test('filtered marker list drives cluster composition', () {
+      final all = <ArtMarker>[
+        _marker('a', const LatLng(1, 1), type: ArtMarkerType.artwork),
+        _marker('e', const LatLng(1, 1), type: ArtMarkerType.event),
+      ];
+      // Simulate a filter that removes events.
+      final filtered =
+          all.where((m) => m.type == ArtMarkerType.artwork).toList();
+
+      final allData = kubusClusterBadgeRenderData(
+        all,
+        scheme: scheme,
+        roles: roles,
+        resolveIcon: resolveIcon,
+      );
+      final filteredData = kubusClusterBadgeRenderData(
+        filtered,
+        scheme: scheme,
+        roles: roles,
+        resolveIcon: resolveIcon,
+      );
+
+      expect(allData.badges.length, 2);
+      expect(filteredData.badges.length, 1);
+      expect(filteredData.badges.single.shape,
+          ArtMapMarkerShape.forType(ArtMarkerType.artwork));
+    });
+  });
+
+  group('cluster icon id', () {
+    test('changes when category composition changes', () {
+      final mixed = kubusClusterCategorySignature(
+        kubusClusterCategoryBreakdown(<ArtMarker>[
+          _marker('a', const LatLng(1, 1), type: ArtMarkerType.artwork),
+          _marker('e', const LatLng(1, 1), type: ArtMarkerType.event),
+        ]),
+      );
+      final single = kubusClusterCategorySignature(
+        kubusClusterCategoryBreakdown(<ArtMarker>[
+          _marker('a', const LatLng(1, 1), type: ArtMarkerType.artwork),
+        ]),
+      );
+
+      final mixedId = MapMarkerIconIds.cluster(
+        categorySignature: mixed,
+        label: '2',
+        isDark: true,
+      );
+      final singleId = MapMarkerIconIds.cluster(
+        categorySignature: single,
+        label: '2',
+        isDark: true,
+      );
+
+      expect(mixedId, isNot(singleId));
+    });
+
+    test('embeds the renderer version so stale circle icons are not reused',
+        () {
+      final id = MapMarkerIconIds.cluster(
+        categorySignature: 'artwork',
+        label: '3',
+        isDark: false,
+      );
+      expect(id, contains(MapMarkerIconIds.clusterRendererVersion));
+    });
   });
 }

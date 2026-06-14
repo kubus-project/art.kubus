@@ -45,11 +45,22 @@ class KubusSearchOverlayScaffold extends StatelessWidget {
     this.sidePanelAnimated = false,
     this.positionAnimationDuration,
     this.positionAnimationCurve,
+    this.topOverlayFieldWidth,
+    this.widthAnimationDuration,
+    this.widthAnimationCurve,
   });
 
   final KubusSearchOverlayLayout layout;
   final Widget searchField;
   final Widget? searchDropdown;
+
+  /// When set (top-overlay layout only), the search field animates to this
+  /// resolved width and is left-aligned within the overlay column. Extra
+  /// content (filters, discovery) keeps the full column width. Pass the same
+  /// value to the results dropdown so both share one width contract.
+  final double? topOverlayFieldWidth;
+  final Duration? widthAnimationDuration;
+  final Curve? widthAnimationCurve;
 
   final Widget? leading;
   final Widget? filterChips;
@@ -89,7 +100,7 @@ class KubusSearchOverlayScaffold extends StatelessWidget {
                   alignment: Alignment.topLeft,
                   child: ConstrainedBox(
                     constraints: BoxConstraints(maxWidth: maxWidth),
-                    child: _buildTopOverlayContent(),
+                    child: _buildTopOverlayContent(context),
                   ),
                 ),
               ),
@@ -102,9 +113,20 @@ class KubusSearchOverlayScaffold extends StatelessWidget {
     );
   }
 
-  Widget _buildTopOverlayContent() {
+  Widget _buildTopOverlayContent(BuildContext context) {
+    final field = topOverlayFieldWidth == null
+        ? searchField
+        : Align(
+            alignment: Alignment.centerLeft,
+            child: AnimatedContainer(
+              duration: widthAnimationDuration ?? context.animationTheme.medium,
+              curve: widthAnimationCurve ?? context.animationTheme.defaultCurve,
+              width: topOverlayFieldWidth,
+              child: searchField,
+            ),
+          );
     final children = <Widget>[
-      searchField,
+      field,
       if (filterChips != null) ...[
         SizedBox(height: sectionGap),
         filterChips!,

@@ -94,6 +94,7 @@ String kubusClusterCategorySignature(
   List<ArtMarker> markers, {
   required ColorScheme scheme,
   required KubusColorRoles roles,
+  required IconData Function(ArtMarkerType type) resolveIcon,
 }) {
   final breakdown = kubusClusterCategoryBreakdown(markers);
   final signature = kubusClusterCategorySignature(breakdown);
@@ -109,6 +110,7 @@ String kubusClusterCategorySignature(
           roles: roles,
         ),
         count: category.count,
+        icon: resolveIcon(category.type),
       ),
   ];
   final baseColor = badges.isNotEmpty
@@ -382,6 +384,7 @@ Future<void> kubusPreregisterMarkerIcons({
             task.cluster!.markers,
             scheme: scheme,
             roles: roles,
+            resolveIcon: resolveMarkerIcon,
           );
           bytes = await ArtMarkerCubeIconRenderer.renderClusterPng(
             count: task.cluster!.markers.length,

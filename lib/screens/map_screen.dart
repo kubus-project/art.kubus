@@ -4197,6 +4197,7 @@ class _MapScreenState extends State<MapScreen>
       roles: roles,
       pixelRatio: _markerPixelRatio(),
       shouldAbort: () => !mounted,
+      resolveMarkerIcon: KubusMapMarkerHelpers.resolveArtMarkerIcon,
     );
   }
 
@@ -4522,7 +4523,6 @@ class _MapScreenState extends State<MapScreen>
       hasDiscovery: hasDiscovery,
       discoveryTaskCount: discoveryTaskCount,
     );
-    final hasExtraContent = _filtersExpanded || hasDiscovery;
 
     return KubusMapSearchOverlayAssembly(
       controller: _mapSearchController,
@@ -4534,25 +4534,29 @@ class _MapScreenState extends State<MapScreen>
       onResultTap: (result) {
         unawaited(_handleSearchResultTap(result));
       },
-      extraContent: hasExtraContent
-          ? Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // The filter panel manages its own open/close transition via a
-                // keyed AnimatedSwitcher (see _buildFilterPanel) so it shares the
-                // same stable map-overlay lifecycle as the nearby art panel and
-                // marker info cards instead of being conditionally inserted here.
-                _buildFilterPanel(theme),
-                if (hasDiscovery) ...[
-                  if (_filtersExpanded) const SizedBox(height: 10),
-                  KeyedSubtree(
-                    key: _discoveryCardKey,
-                    child: _buildDiscoveryCard(theme, taskProvider),
-                  ),
-                ],
-              ],
-            )
-          : null,
+      // The extra content host is ALWAYS mounted so the filter panel keeps a
+      // stable parent (matching the nearby art panel / marker info card
+      // lifecycle). The panel's own keyed AnimatedSwitcher (see
+      // [_buildFilterPanel]) is the single open/close mechanism, so the parent
+      // never tears the whole subtree down on close — which previously left the
+      // glass/backdrop region to initialize late (looking unblurred) and could
+      // leave a ghost sheen/backdrop when the subtree was yanked mid-animation.
+      // Section gap is owned here (the scaffold gap is suppressed via
+      // sectionGap: 0) so a collapsed panel adds zero height.
+      sectionGap: 0,
+      extraContent: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildFilterPanel(theme),
+          if (hasDiscovery) ...[
+            const SizedBox(height: KubusSpacing.sm),
+            KeyedSubtree(
+              key: _discoveryCardKey,
+              child: _buildDiscoveryCard(theme, taskProvider),
+            ),
+          ],
+        ],
+      ),
     );
   }
 
@@ -4848,12 +4852,18 @@ class _MapScreenState extends State<MapScreen>
   Widget _buildSearchCard() {
     final l10n = AppLocalizations.of(context)!;
     final hintColor = Theme.of(context).colorScheme.onSurfaceVariant;
+    // Slightly taller, more tappable search bar on small screens.
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isCompact = screenWidth < 380;
+    final fieldHeight =
+        isCompact ? KubusHeaderMetrics.searchBarHeight + 6 : null;
     return KubusGeneralSearch(
       controller: _mapSearchController,
       hintText: l10n.mapSearchHint,
       semanticsLabel: 'map_search_input',
       enableBlur: kubusMapBlurEnabled(context),
       useMapGlassSurface: true,
+      height: fieldHeight,
       onSubmitted: (_) => _mapSearchController.onSubmitted(),
       trailingBuilder: (context, query) {
         if (query.trim().isNotEmpty) {
@@ -4865,41 +4875,72 @@ class _MapScreenState extends State<MapScreen>
           );
         }
 
-        return Tooltip(
-          message: _filtersExpanded
-              ? l10n.mapHideFiltersTooltip
-              : l10n.mapShowFiltersTooltip,
-          preferBelow: false,
-          verticalOffset: 18,
-          margin: const EdgeInsets.symmetric(horizontal: 24),
-          child: IconButton(
+        return _buildSearchFilterToggle(l10n, hintColor);
+      },
+    );
+  }
+
+  /// Compact filter toggle for the search bar: a small visual glass button
+  /// (~34px) inside an accessible 44px tap target, with a clear active state.
+  /// The visible button no longer fills the whole hit area, so it stops
+  /// dominating the search field while staying easy to tap.
+  Widget _buildSearchFilterToggle(AppLocalizations l10n, Color hintColor) {
+    final scheme = Theme.of(context).colorScheme;
+    final accent = context.read<ThemeProvider>().accentColor;
+    final active = _filtersExpanded;
+    const double hit = KubusHeaderMetrics.actionHitArea; // 44 — tap target
+    const double visual = 34; // smaller visible button
+    final radius = BorderRadius.circular(KubusRadius.sm);
+
+    return Tooltip(
+      message: active ? l10n.mapHideFiltersTooltip : l10n.mapShowFiltersTooltip,
+      preferBelow: false,
+      verticalOffset: 18,
+      margin: const EdgeInsets.symmetric(horizontal: 24),
+      child: SizedBox(
+        width: hit,
+        height: hit,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
             key: _tutorialFilterButtonKey,
-            icon: Icon(
-              _filtersExpanded ? Icons.filter_alt_off : Icons.filter_alt,
-              color: hintColor,
-            ),
-            style: IconButton.styleFrom(
-              minimumSize: const Size(
-                KubusHeaderMetrics.actionHitArea,
-                KubusHeaderMetrics.actionHitArea,
-              ),
-              maximumSize: const Size(
-                KubusHeaderMetrics.actionHitArea,
-                KubusHeaderMetrics.actionHitArea,
-              ),
-              padding: EdgeInsets.zero,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(KubusRadius.sm),
-              ),
-            ),
-            onPressed: () {
+            borderRadius: BorderRadius.circular(hit / 2),
+            onTap: () {
               setState(() {
                 _filtersExpanded = !_filtersExpanded;
               });
+              if (_filtersExpanded) {
+                _scheduleFilterPanelBackdropSync();
+              }
             },
+            child: Center(
+              child: AnimatedContainer(
+                duration: context.animationTheme.short,
+                curve: context.animationTheme.defaultCurve,
+                width: visual,
+                height: visual,
+                decoration: BoxDecoration(
+                  borderRadius: radius,
+                  color: active
+                      ? accent.withValues(alpha: 0.16)
+                      : scheme.surfaceContainerHighest.withValues(alpha: 0.40),
+                  border: Border.all(
+                    color: active
+                        ? accent.withValues(alpha: 0.85)
+                        : scheme.outline.withValues(alpha: 0.22),
+                    width: active ? 1.25 : 1,
+                  ),
+                ),
+                child: Icon(
+                  active ? Icons.filter_alt_off : Icons.filter_alt,
+                  size: KubusHeaderMetrics.actionIcon - 2,
+                  color: active ? accent : hintColor,
+                ),
+              ),
+            ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
@@ -5094,19 +5135,48 @@ class _MapScreenState extends State<MapScreen>
         opacity: anim,
         child: SizeTransition(
           sizeFactor: anim,
-          alignment: Alignment.topCenter,
+          // -1.0 anchors the reveal to the top edge (panel grows downward from
+          // the search bar) for a vertical size transition.
+          axisAlignment: -1.0,
           child: child,
         ),
       ),
       child: _filtersExpanded
           ? KeyedSubtree(
               key: const ValueKey<String>('map_filter_panel_open'),
-              child: _buildFilterPanelCard(theme),
+              // The gap to the search bar lives inside the animated child so the
+              // collapsed state contributes zero height (no permanent gap below
+              // the search bar) while the open state animates gap + card as one.
+              child: Padding(
+                padding: const EdgeInsets.only(top: KubusSpacing.sm),
+                child: _buildFilterPanelCard(theme),
+              ),
             )
           : const SizedBox.shrink(
               key: ValueKey<String>('map_filter_panel_closed'),
             ),
     );
+  }
+
+  /// Forces the platform backdrop region tracker to re-measure the filter panel
+  /// after its open animation settles.
+  ///
+  /// The web platform backdrop host syncs DOM regions from a post-frame
+  /// callback during widget build. While the panel is animating in via the
+  /// [AnimatedSwitcher]'s [SizeTransition], the panel's render box is not yet at
+  /// its final size and the subtree is not rebuilt, so the region would
+  /// otherwise stay stale (looking unblurred) until an unrelated interaction
+  /// triggered a rebuild. A short post-animation rebuild re-runs the tracker at
+  /// the final size. No-op on mobile/desktop, where the panel uses the
+  /// sheen/tint fallback (no DOM backdrop region).
+  void _scheduleFilterPanelBackdropSync() {
+    if (!kIsWeb) return;
+    final settle = context.animationTheme.medium +
+        const Duration(milliseconds: 32);
+    Future.delayed(settle, () {
+      if (!mounted || !_filtersExpanded) return;
+      setState(() {});
+    });
   }
 
   Widget _buildFilterPanelCard(ThemeData theme) {
@@ -5138,7 +5208,7 @@ class _MapScreenState extends State<MapScreen>
           KubusMapFilterChipStrip(
             options: filters,
             selectedKey: _artworkFilter,
-            layout: KubusMapFilterChipLayout.wrap,
+            layout: KubusMapFilterChipLayout.grid,
             onSelected: (key) {
               setState(() => _artworkFilter = key);
               // Re-filter the already-loaded markers immediately so the visible

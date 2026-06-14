@@ -12,7 +12,17 @@ import '../../../widgets/search/kubus_search_result.dart';
 enum KubusMapFilterChipLayout {
   wrap,
   row,
+
+  /// Responsive grid of full-cell chips: one column on very narrow panels,
+  /// two columns otherwise. Each chip stretches to its cell so the border
+  /// wraps the whole button area (not just icon + label) and every chip reads
+  /// with equal height/weight.
+  grid,
 }
+
+/// Consistent height for filter/layer chips so a grid reads with equal weight
+/// and keeps an accessible tap target.
+const double kKubusMapFilterChipHeight = 44.0;
 
 @immutable
 class KubusMapFilterOption {
@@ -113,6 +123,10 @@ class KubusMapFilterChipStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (layout == KubusMapFilterChipLayout.grid) {
+      return _buildGrid(context);
+    }
+
     final chips = <Widget>[
       for (final option in options)
         Padding(
@@ -148,6 +162,72 @@ class KubusMapFilterChipStrip extends StatelessWidget {
       spacing: spacing,
       runSpacing: runSpacing,
       children: chips,
+    );
+  }
+
+  Widget _buildGrid(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Unbounded width (e.g. inside an unconstrained Positioned/Row) cannot
+        // host Expanded cells; fall back to an intrinsic wrap of chips.
+        if (!constraints.maxWidth.isFinite) {
+          return Wrap(
+            spacing: spacing,
+            runSpacing: runSpacing,
+            children: <Widget>[
+              for (final option in options)
+                KubusGlassChip(
+                  label: option.label,
+                  icon: option.icon,
+                  active: selectedKey == option.key,
+                  accentColor: option.accentColor,
+                  borderRadius: borderRadius,
+                  enableBlur: enableBlur,
+                  minHeight: kKubusMapFilterChipHeight,
+                  onPressed: () => onSelected(option.key),
+                ),
+            ],
+          );
+        }
+        // One column on very narrow panels, two columns when there is room, so
+        // the borders always wrap the whole cell instead of shrink-wrapping.
+        final columns = constraints.maxWidth < 320 ? 1 : 2;
+        final rows = <Widget>[];
+        for (var i = 0; i < options.length; i += columns) {
+          final rowChildren = <Widget>[];
+          for (var c = 0; c < columns; c++) {
+            final index = i + c;
+            if (c > 0) rowChildren.add(SizedBox(width: spacing));
+            if (index >= options.length) {
+              // Pad the trailing partial row so existing cells keep their width.
+              rowChildren.add(const Expanded(child: SizedBox.shrink()));
+              continue;
+            }
+            final option = options[index];
+            rowChildren.add(
+              Expanded(
+                child: KubusGlassChip(
+                  label: option.label,
+                  icon: option.icon,
+                  active: selectedKey == option.key,
+                  accentColor: option.accentColor,
+                  borderRadius: borderRadius,
+                  enableBlur: enableBlur,
+                  fullWidth: true,
+                  minHeight: kKubusMapFilterChipHeight,
+                  onPressed: () => onSelected(option.key),
+                ),
+              ),
+            );
+          }
+          if (rows.isNotEmpty) rows.add(SizedBox(height: runSpacing));
+          rows.add(Row(children: rowChildren));
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: rows,
+        );
+      },
     );
   }
 }
@@ -228,9 +308,28 @@ class KubusMapSearchOverlayAssembly extends StatelessWidget {
                 state.results.isNotEmpty ||
                 trimmed.length >= controller.config.minChars);
 
+        // Focus-aware width contract (top-overlay/map layout only): the field is
+        // comfortable but not too wide when idle, and expands to the available
+        // safe width when focused. The same resolved width is handed to both the
+        // field (via the scaffold) and the results dropdown so they share one
+        // measured width and the dropdown never grows independently to the right.
+        double? resolvedFieldWidth;
+        if (layout == KubusSearchOverlayLayout.topOverlay) {
+          final screenWidth = MediaQuery.of(context).size.width;
+          final available = (screenWidth - panelInsets.left - panelInsets.right)
+              .clamp(0.0, maxWidth)
+              .toDouble();
+          final idleFloor = available < 240.0 ? available : 240.0;
+          final idleWidth =
+              (available * 0.82).clamp(idleFloor, available).toDouble();
+          resolvedFieldWidth =
+              controller.hasFocusedField ? available : idleWidth;
+        }
+
         return KubusSearchOverlayScaffold(
           layout: layout,
           searchField: searchField,
+          topOverlayFieldWidth: resolvedFieldWidth,
           searchDropdown: KubusSearchResultsOverlay(
             controller: controller,
             accentColor: accentColor,
@@ -240,6 +339,7 @@ class KubusMapSearchOverlayAssembly extends StatelessWidget {
             onDismiss: onDismiss ?? controller.dismissOverlay,
             onResultTap: onResultTap,
             maxWidth: maxWidth,
+            width: resolvedFieldWidth,
             // This assembly always floats over the live map, so route the
             // results dropdown through the map-aware glass language too.
             useMapGlassSurface: true,

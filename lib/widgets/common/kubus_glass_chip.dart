@@ -17,6 +17,9 @@ class KubusGlassChip extends StatelessWidget {
     this.accentColor,
     this.borderRadius = 20,
     this.enableBlur = true,
+    this.fullWidth = false,
+    this.minWidth,
+    this.minHeight,
   });
 
   final String label;
@@ -26,6 +29,18 @@ class KubusGlassChip extends StatelessWidget {
   final Color? accentColor;
   final double borderRadius;
   final bool enableBlur;
+
+  /// When `true`, the chip stretches to fill its parent's width and centres its
+  /// content so the border wraps the whole button/cell (grid-style) instead of
+  /// shrink-wrapping the icon + label. The parent must provide bounded width
+  /// (e.g. a grid cell or stretched column).
+  final bool fullWidth;
+
+  /// Minimum cell width; ignored when [fullWidth] is set.
+  final double? minWidth;
+
+  /// Consistent cell height so a row/grid of chips reads with equal weight.
+  final double? minHeight;
 
   @override
   Widget build(BuildContext context) {
@@ -48,6 +63,10 @@ class KubusGlassChip extends StatelessWidget {
 
     final resolvedRadius = borderRadius.clamp(0.0, 999.0).toDouble();
     final radius = BorderRadius.circular(resolvedRadius);
+    final constraints = BoxConstraints(
+      minWidth: fullWidth ? double.infinity : (minWidth ?? 0.0),
+      minHeight: minHeight ?? 0.0,
+    );
     final idleTint = idleStyle.tintColor;
     final selectedTint = activeStyle.tintColor.withValues(
       alpha: allowBlur
@@ -69,6 +88,7 @@ class KubusGlassChip extends StatelessWidget {
         child: AnimatedContainer(
           duration: animationTheme.short,
           curve: animationTheme.defaultCurve,
+          constraints: constraints,
           decoration: BoxDecoration(
             borderRadius: radius,
             border: Border.all(
@@ -110,7 +130,11 @@ class KubusGlassChip extends StatelessWidget {
               borderRadius: radius,
               isDark: isDark,
               child: Row(
-                mainAxisSize: MainAxisSize.min,
+                mainAxisSize:
+                    fullWidth ? MainAxisSize.max : MainAxisSize.min,
+                mainAxisAlignment: fullWidth
+                    ? MainAxisAlignment.center
+                    : MainAxisAlignment.start,
                 children: [
                   Icon(
                     icon,
@@ -120,12 +144,18 @@ class KubusGlassChip extends StatelessWidget {
                         : scheme.onSurface.withValues(alpha: 0.65),
                   ),
                   const SizedBox(width: KubusSpacing.sm),
-                  Text(
-                    label,
-                    style: (active
-                            ? theme.textTheme.labelLarge
-                            : theme.textTheme.labelMedium)
-                        ?.copyWith(color: active ? accent : scheme.onSurface),
+                  Flexible(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign:
+                          fullWidth ? TextAlign.center : TextAlign.start,
+                      style: (active
+                              ? theme.textTheme.labelLarge
+                              : theme.textTheme.labelMedium)
+                          ?.copyWith(color: active ? accent : scheme.onSurface),
+                    ),
                   ),
                 ],
               ),

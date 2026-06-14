@@ -9,6 +9,7 @@ import '../models/art_marker.dart';
 import '../utils/app_color_utils.dart';
 import '../utils/design_tokens.dart';
 import '../utils/kubus_color_roles.dart';
+import '../utils/map_marker_icon_ids.dart';
 import 'rotatable_cube_painter.dart';
 
 // Re-export rotatable cube components for convenience.
@@ -69,11 +70,17 @@ class ClusterCategoryBadge {
     required this.shape,
     required this.color,
     required this.count,
+    required this.icon,
   });
 
   final ArtMapMarkerShape shape;
   final Color color;
   final int count;
+
+  /// Glyph for this category, drawn inside the cluster pip / single-category
+  /// badge so a cluster communicates not just the shape + colour but the
+  /// category icon used by individual markers of that type.
+  final IconData icon;
 }
 
 /// Design tokens for cube marker sizing.
@@ -883,14 +890,21 @@ class ArtMarkerCubeIconRenderer {
     final label = count > 99 ? '99+' : '$count';
     final iconForeground = _iconForegroundForTheme(isDark: isDark);
 
-    // Only render the combined-category ring when the cluster actually mixes
-    // more than one category; single-category clusters keep the clean badge.
-    final combinedCategories = categories.length > 1
-        ? categories
-        : const <ClusterCategoryBadge>[];
-    final categoryKey = combinedCategories
-        .map((c) => '${c.shape.index}:${c.color.toARGB32()}')
-        .join('|');
+    // Carry every resolved category (shape + colour + glyph) through to the
+    // renderer so the badge always communicates category identity:
+    // - 2+ categories => a combined ring of category-shaped pips with glyphs;
+    // - exactly 1 category => that category's shape/colour/glyph plus count
+    //   (no generic circle);
+    // - 0 categories => last-resort generic fallback only.
+    //
+    // The cache key folds in each category's shape/colour/glyph and the visual
+    // renderer version so a composition or renderer change never reuses a stale
+    // (e.g. old generic-circle) cluster image.
+    final categoryKey = <String>[
+      MapMarkerIconIds.clusterRendererVersion,
+      for (final c in categories)
+        '${c.shape.index}:${c.color.toARGB32()}:${c.icon.codePoint}',
+    ].join('|');
 
     final key = _ClusterPngCacheKey(
       baseColorValue: baseColor.toARGB32(),
@@ -920,7 +934,7 @@ class ArtMarkerCubeIconRenderer {
           palette: palette,
           style: style,
           showGlow: showGlow,
-          categories: combinedCategories,
+          categories: categories,
           isDark: isDark,
           pixelRatio: pixelRatio,
         );
@@ -954,10 +968,13 @@ class ArtMarkerCubeIconRenderer {
     double pixelRatio = 2.0,
   }) async {
     final isCombined = categories.length > 1;
+    final isSingleCategory = categories.length == 1;
 
-    // Clusters use the same floating-badge language as single markers (a circle
-    // body that reads as an aggregate node), so the map never mixes a separate
-    // cube style with the new marker system.
+    // Clusters reuse the floating-badge language of single markers, but never a
+    // generic circle when category data is available:
+    // - mixed clusters get a ring of category-shaped pips (with glyphs);
+    // - single-category clusters take that category's shape/colour/glyph;
+    // - only a category-less cluster (data error) falls back to a plain circle.
     return _renderPng(
       width: badgePngWidth,
       height: badgePngHeight,
@@ -982,6 +999,23 @@ class ArtMarkerCubeIconRenderer {
           return;
         }
 
+        if (isSingleCategory) {
+          _paintSingleCategoryClusterBadge(
+            canvas: canvas,
+            center: center,
+            bodySize: bodySize,
+            label: label,
+            labelStyle: labelStyle,
+            iconForeground: iconForeground,
+            style: style,
+            showGlow: showGlow,
+            isDark: isDark,
+            category: categories.first,
+          );
+          return;
+        }
+
+        // Last-resort fallback (no category data): generic circle + count.
         final shadowPath = _buildBadgePath(
           ArtMapMarkerShape.circle,
           center + const Offset(0, 3.5),
@@ -1030,6 +1064,117 @@ class ArtMarkerCubeIconRenderer {
         );
         labelPainter.paint(canvas, labelOffset);
       },
+    );
+  }
+
+  /// Draws an icon [glyph] centred at [center], scaled to [size].
+  ///
+  /// Shared by the combined-cluster pips and the single-category cluster badge
+  /// so the glyph rendering matches the individual marker badges.
+  static void _paintClusterGlyph({
+    required Canvas canvas,
+    required Offset center,
+    required IconData glyph,
+    required double size,
+    required Color color,
+  }) {
+    if (glyph.codePoint == 0) return;
+    final painter = TextPainter(
+      text: TextSpan(
+        text: String.fromCharCode(glyph.codePoint),
+        style: TextStyle(
+          fontSize: size,
+          fontFamily: glyph.fontFamily ?? 'MaterialIcons',
+          fontFamilyFallback: const <String>[
+            'MaterialIcons',
+            'Material Symbols Outlined',
+          ],
+          package: glyph.fontPackage,
+          color: color,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    );
+    painter.layout();
+    painter.paint(
+      canvas,
+      Offset(center.dx - painter.width / 2, center.dy - painter.height / 2),
+    );
+  }
+
+  /// Paints a single-category cluster: the category's shape + colour (matching
+  /// individual markers of that type) with a small category glyph in the upper
+  /// body and the count centred below it, so the cluster still reads as that
+  /// category rather than a generic circle.
+  static void _paintSingleCategoryClusterBadge({
+    required Canvas canvas,
+    required Offset center,
+    required double bodySize,
+    required String label,
+    required TextStyle labelStyle,
+    required Color iconForeground,
+    required CubeMarkerStyle style,
+    required bool showGlow,
+    required bool isDark,
+    required ClusterCategoryBadge category,
+  }) {
+    final shape = category.shape;
+    final color = category.color;
+
+    final shadowPath =
+        _buildBadgePath(shape, center + const Offset(0, 3.5), bodySize);
+    canvas.drawPath(
+      shadowPath,
+      Paint()
+        ..color = style.shadowColor.withValues(alpha: 0.22)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 7),
+    );
+
+    if (showGlow) {
+      final glowPath = _buildBadgePath(shape, center, bodySize + 12);
+      canvas.drawPath(
+        glowPath,
+        Paint()
+          ..color = color.withValues(alpha: 0.28)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 9),
+      );
+    }
+
+    final bodyPath = _buildBadgePath(shape, center, bodySize);
+    canvas.drawPath(bodyPath, Paint()..color = color);
+    canvas.drawPath(
+      bodyPath,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5
+        ..color = iconForeground.withValues(alpha: 0.16),
+    );
+
+    // Small category glyph in the upper body, count centred just below it so
+    // both stay legible without overlapping.
+    _paintClusterGlyph(
+      canvas: canvas,
+      center: center - const Offset(0, 9),
+      glyph: category.icon,
+      size: bodySize * 0.30,
+      color: iconForeground.withValues(alpha: 0.92),
+    );
+
+    final countStyle = labelStyle.copyWith(
+      fontSize: (labelStyle.fontSize ?? 14.0) * 0.92,
+    );
+    final labelPainter = TextPainter(
+      text: TextSpan(text: label, style: countStyle),
+      textAlign: TextAlign.center,
+      textDirection: TextDirection.ltr,
+    );
+    labelPainter.layout();
+    labelPainter.paint(
+      canvas,
+      Offset(
+        center.dx - labelPainter.width / 2,
+        center.dy + 5 - labelPainter.height / 2,
+      ),
     );
   }
 
@@ -1101,6 +1246,16 @@ class ArtMarkerCubeIconRenderer {
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1.0
           ..color = pipOutline,
+      );
+
+      // Category glyph inside the pip so the cluster shows each contained
+      // category's icon, not just its shape + colour.
+      _paintClusterGlyph(
+        canvas: canvas,
+        center: pipCenter,
+        glyph: category.icon,
+        size: pipSize * 0.52,
+        color: iconForeground,
       );
     }
 

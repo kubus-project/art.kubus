@@ -117,6 +117,7 @@ Future<Map<String, dynamic>> kubusClusterFeatureFor({
   required KubusColorRoles roles,
   required double pixelRatio,
   required bool Function() shouldAbort,
+  required IconData Function(ArtMarkerType type) resolveMarkerIcon,
 }) async {
   if (shouldAbort()) return const <String, dynamic>{};
 
@@ -125,6 +126,7 @@ Future<Map<String, dynamic>> kubusClusterFeatureFor({
     cluster.markers,
     scheme: scheme,
     roles: roles,
+    resolveIcon: resolveMarkerIcon,
   );
   final iconId = MapMarkerIconIds.cluster(
     categorySignature: renderData.signature,

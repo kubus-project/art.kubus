@@ -1771,6 +1771,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       roles: roles,
       pixelRatio: _markerPixelRatio(),
       shouldAbort: () => !mounted,
+      resolveMarkerIcon: KubusMapMarkerHelpers.resolveArtMarkerIcon,
     );
   }
 
