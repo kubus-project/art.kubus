@@ -254,6 +254,32 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           (_encryptedBackupRequiredForOnboarding &&
               _walletBackupStatus.hasEncryptedServerBackup)) &&
       !_hasAllRequiredWalletBackups;
+
+  /// Whether the optional "Secure your wallet" step should be offered.
+  ///
+  /// Backup is a recommendation, not a gate — this only decides whether the
+  /// single, skippable [_OnboardingStep.walletBackupIntro] card is inserted.
+  /// It appears once after wallet setup when the account has a wallet (or a
+  /// generated wallet shell) and there is still something worth recommending
+  /// (incomplete backup, or passkey hardening available on web). When every
+  /// recommendation is already satisfied we omit it so a fully-secured user is
+  /// never nagged.
+  bool get _shouldOfferWalletBackupIntro {
+    if (!_walletBackupOnboardingEnabled) return false;
+    final hasWalletShell = _walletBackupStatus.walletAddress != null ||
+        _walletBackupStatus.hasWalletIdentity ||
+        _walletBackupStatus.hasAccountSession;
+    if (!hasWalletShell) return false;
+    if (!_hasAllRequiredWalletBackups) return true;
+    // Required backups are satisfied; still surface the step while web passkey
+    // hardening remains available as a stronger, optional protection.
+    final passkeyRecommendationAvailable = kIsWeb &&
+        AppConfig.isFeatureEnabled('walletBackupPasskeyWeb') &&
+        _walletBackupStatus.hasEncryptedServerBackup &&
+        !_walletBackupStatus.hasPasskeyProtection;
+    return passkeyRecommendationAvailable;
+  }
+
   bool get _accountRequiresWalletSetup {
     final profileProvider =
         Provider.of<ProfileProvider>(context, listen: false);
@@ -1068,17 +1094,22 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           _OnboardingStep.role,
           _OnboardingStep.profile,
           if (_accountRequiresWalletSetup) _OnboardingStep.walletConnect,
-          // Wallet security backup is intentionally NOT inserted as an
-          // onboarding step. Backup is recommended, not required: the account
-          // flow must never block on recovery-phrase / encrypted-backup /
-          // passkey completion. Backup status and creation remain available in
-          // WalletHome and wallet security settings after onboarding.
+          // Optional "Secure your wallet" recommendation. Inserted exactly once
+          // after wallet setup when there is a wallet / generated wallet shell
+          // and something is still worth recommending. It is non-blocking: the
+          // user can continue ("Do this later") without revealing the recovery
+          // phrase, creating an encrypted backup, or adding a passkey. Backup
+          // status and creation also remain available later in WalletHome and
+          // wallet security settings.
           //
-          // The `walletBackupIntro` / `walletBackup` enum values and their
-          // handlers (`_completeWalletBackupStepsIfReady`, etc.) are retained
-          // only so legacy saved progress that recorded those steps migrates
-          // forward safely (`_refreshAuthDerivedSteps` prunes any completed /
-          // deferred entries that are no longer present in `_steps`).
+          // The legacy `_OnboardingStep.walletBackup` step is intentionally
+          // NEVER inserted here — it is retained in the enum (with its handler
+          // `_handleWalletBackupStep`) only so older saved progress that
+          // recorded it migrates forward safely. Bootstrap promotes a completed
+          // / deferred `walletBackup` to `walletBackupIntro`, and
+          // `_refreshAuthDerivedSteps` prunes any entry no longer in `_steps`.
+          if (_shouldOfferWalletBackupIntro)
+            _OnboardingStep.walletBackupIntro,
           if (_requiresDaoReviewStep) _OnboardingStep.daoReview,
           _OnboardingStep.accountPermissions,
           _OnboardingStep.done,
@@ -2553,11 +2584,11 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   }
 
   Future<void> _handleWalletBackupIntroRevealPhrase() async {
+    // Voluntary action: refresh status and update the step's done states.
+    // Never auto-advances — the user stays on the optional step and continues
+    // with the bottom action when ready.
     await _openMnemonicRevealFlow();
     if (!mounted) return;
-    if (await _completeWalletBackupStepsIfReady()) {
-      return;
-    }
     setState(() {});
   }
 
@@ -2587,9 +2618,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         ),
         tone: KubusSnackBarTone.success,
       );
-      if (await _completeWalletBackupStepsIfReady()) {
-        return;
-      }
+      // Voluntary action: refresh status only; the user continues via the
+      // bottom action. No auto-advance / gate.
       setState(() {});
     } catch (error) {
       if (!mounted) return;
@@ -2806,11 +2836,14 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         );
         return;
       case _OnboardingStep.walletBackupIntro:
-        if (await _completeWalletBackupStepsIfReady()) {
-          return;
-        }
+        // Optional, non-blocking: continuing acknowledges the recommendation
+        // and proceeds whether or not backups were completed. Voluntary backup
+        // actions live inside the step card itself.
+        await _markCompleted(_OnboardingStep.walletBackupIntro);
         return;
       case _OnboardingStep.walletBackup:
+        // Legacy step — never inserted into `_steps`, retained only for resume
+        // safety. Kept here so a stale current-step value stays handled.
         await _handleWalletBackupStep();
         return;
       case _OnboardingStep.daoReview:
@@ -3228,7 +3261,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     if (_currentStep == _OnboardingStep.role ||
         _currentStep == _OnboardingStep.profile ||
         _currentStep == _OnboardingStep.walletConnect ||
-        _currentStep == _OnboardingStep.walletBackupIntro ||
         _currentStep == _OnboardingStep.walletBackup ||
         _currentStep == _OnboardingStep.daoReview) {
       if (_currentIndex == 0) {
@@ -3772,8 +3804,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     switch (_currentStep) {
       case _OnboardingStep.verifyEmail:
         return !_verificationConfirmInFlight;
-      case _OnboardingStep.walletBackupIntro:
-        return _hasAllRequiredWalletBackups;
       case _OnboardingStep.walletConnect:
         return false;
       default:

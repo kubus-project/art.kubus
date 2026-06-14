@@ -311,11 +311,12 @@ void main() {
   });
 
   testWidgets(
-      'incomplete wallet backup does not add a mandatory wallet backup step',
+      'incomplete wallet backup inserts the optional walletBackupIntro step once and never the legacy gate',
       (tester) async {
-    // Wallet backup is recommended, not required: even when the recovery phrase
-    // is flagged as not yet backed up, the account flow must not insert a
-    // walletBackupIntro / walletBackup gate.
+    // Wallet backup is recommended, not required: when the recovery phrase is
+    // flagged as not yet backed up, the account flow surfaces exactly one
+    // optional `walletBackupIntro` step (after wallet setup) and never the
+    // legacy `walletBackup` gate.
     await tester.binding.setSurfaceSize(const Size(390, 1200));
     addTearDown(() async => tester.binding.setSurfaceSize(null));
 
@@ -338,24 +339,29 @@ void main() {
     final state = tester.state(find.byType(OnboardingFlowScreen)) as dynamic;
     final List<String> stepIds = List<String>.from(state.debugStepIds);
 
-    expect(stepIds, isNot(contains('walletBackupIntro')));
+    // The optional intro appears exactly once; the legacy gate never does.
+    expect(stepIds.where((id) => id == 'walletBackupIntro').length, 1);
     expect(stepIds, isNot(contains('walletBackup')));
-    // The user is never parked on a backup step.
-    expect(state.debugCurrentStepId, isNot('walletBackupIntro'));
-    expect(state.debugCurrentStepId, isNot('walletBackup'));
 
-    final l10n = AppLocalizations.of(
-      tester.element(find.byType(OnboardingFlowScreen)),
-    )!;
-    expect(find.text(l10n.onboardingFlowWalletBackupIntroTitle), findsNothing);
+    // Order: ... profile → walletBackupIntro → accountPermissions → done.
+    expect(
+      stepIds.indexOf('walletBackupIntro'),
+      greaterThan(stepIds.indexOf('profile')),
+    );
+    expect(
+      stepIds.indexOf('walletBackupIntro'),
+      lessThan(stepIds.indexOf('accountPermissions')),
+    );
+
+    // The user is never parked on the backup step on entry.
+    expect(state.debugCurrentStepId, 'profile');
   });
 
   testWidgets(
-      'routing to legacy walletBackupIntro id does not trap the user on a backup gate',
+      'optional walletBackupIntro is non-blocking: continue advances without any backup',
       (tester) async {
-    // Older builds (and AuthOnboardingService resume) may still hand us a
-    // walletBackupIntro/walletBackup initial step id. The flow must migrate
-    // forward to a real step instead of blocking on a backup gate.
+    // The recovery phrase is still flagged as not backed up, yet the primary
+    // action must move forward (acting as "Do this later") instead of gating.
     await tester.binding.setSurfaceSize(const Size(390, 1200));
     addTearDown(() async => tester.binding.setSurfaceSize(null));
 
@@ -377,8 +383,48 @@ void main() {
 
     expect(tester.takeException(), isNull);
     final state = tester.state(find.byType(OnboardingFlowScreen)) as dynamic;
-    expect(state.debugStepIds, isNot(contains('walletBackupIntro')));
+    // Routing lands the user on the optional step itself.
+    expect(state.debugCurrentStepId, 'walletBackupIntro');
+
+    // Continue with no recovery-phrase / encrypted backup completed.
+    await state.debugTriggerPrimaryAction();
+    await tester.pump();
+
+    // Advanced past the backup step; it was marked complete, not gated.
     expect(state.debugCurrentStepId, isNot('walletBackupIntro'));
+    expect(state.debugCurrentStepId, isNot('walletBackup'));
+    expect(state.debugCompletedStepIds, contains('walletBackupIntro'));
+  });
+
+  testWidgets(
+      'routing to legacy walletBackup id never parks the user on the legacy gate',
+      (tester) async {
+    // Older builds (and AuthOnboardingService resume) may still hand us a
+    // legacy `walletBackup` initial step id. The flow migrates forward to a
+    // real visible step instead of trapping on the removed gate.
+    await tester.binding.setSurfaceSize(const Size(390, 1200));
+    addTearDown(() async => tester.binding.setSurfaceSize(null));
+
+    const walletAddress = '4Nd1m5sP3v1bE7c9Q2w6z8YkLmNoPrStUvWxYzABcDeF';
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'wallet_address': walletAddress,
+      '${PreferenceKeys.walletMnemonicBackupRequiredV1Prefix}:$walletAddress':
+          true,
+    });
+
+    await tester.pumpWidget(
+      _buildTestApp(
+        child: const OnboardingFlowScreen(initialStepId: 'walletBackup'),
+        locale: const Locale('en'),
+        size: const Size(390, 1200),
+      ),
+    );
+    await _pumpOnboardingReady(tester);
+
+    expect(tester.takeException(), isNull);
+    final state = tester.state(find.byType(OnboardingFlowScreen)) as dynamic;
+    // The legacy gate is never a visible step and never the current step.
+    expect(state.debugStepIds, isNot(contains('walletBackup')));
     expect(state.debugCurrentStepId, isNot('walletBackup'));
   });
 

@@ -218,8 +218,11 @@ class AuthOnboardingService {
       'role',
       'profile',
       if (requiresWalletSetup) 'walletConnect',
+      // The wallet backup recommendation is surfaced once as the optional
+      // `walletBackupIntro` step. The legacy `walletBackup` step is never
+      // emitted as a resume target — older saved progress migrates onto
+      // `walletBackupIntro` above.
       if (requiresWalletBackup) 'walletBackupIntro',
-      if (requiresWalletBackup) 'walletBackup',
       if (requiresDaoReview) 'daoReview',
       'accountPermissions',
       'done',
