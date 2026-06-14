@@ -164,6 +164,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   List<CommunityPost> _followingPosts = [];
   bool _isLoadingDiscover = false;
   bool _isLoadingFollowing = false;
+  bool _discoverFeedLoaded = false;
+  bool _followingFeedLoaded = false;
   String? _discoverError;
   String? _followingError;
 
@@ -186,6 +188,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         setState(() => _isFabExpanded = false);
       }
       setState(() {}); // refresh FAB options per tab like mobile
+      _ensureActiveTabLoaded();
     });
     _groupSearchController = TextEditingController();
     _communitySearchController = KubusSearchController(
@@ -355,24 +358,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   }
 
   Future<void> _loadFeed() async {
-    final communityProvider = context.read<CommunityHubProvider>();
-    // Load art feed with default location (can be updated with user's location)
-    await communityProvider.loadArtFeed(
-      latitude: 46.05, // Default to Ljubljana
-      longitude: 14.50,
-      radiusKm: 50,
-      limit: 24,
-      refresh: true,
-    );
-    // Also load groups for sidebar
-    if (!communityProvider.groupsInitialized) {
-      await communityProvider.loadGroups();
-    }
-    // Load discover and following feeds
-    await Future.wait([
-      _loadDiscoverFeed(),
-      _loadFollowingFeed(),
-    ]);
+    await _loadActiveFeed();
 
     // Trending topics are loaded in parallel with the feeds. When the trending
     // request finishes before the feed data is available, we end up with
@@ -381,6 +367,70 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     // counts from the local posts so the desktop sidebar stays informative.
     if (!mounted) return;
     _enrichTrendingTopicsFromFeedCounts();
+  }
+
+  Future<void> _loadActiveFeed() async {
+    final currentTab = _tabs[_tabController.index];
+    switch (currentTab) {
+      case 'following':
+        await _loadFollowingFeed();
+        break;
+      case 'groups':
+        final communityProvider = context.read<CommunityHubProvider>();
+        if (!communityProvider.groupsInitialized) {
+          await communityProvider.loadGroups();
+        }
+        break;
+      case 'art':
+        await _loadArtFeed();
+        break;
+      case 'discover':
+      default:
+        await _loadDiscoverFeed();
+        break;
+    }
+  }
+
+  void _ensureActiveTabLoaded() {
+    final currentTab = _tabs[_tabController.index];
+    switch (currentTab) {
+      case 'following':
+        if (!_followingFeedLoaded && !_isLoadingFollowing) {
+          unawaited(_loadFollowingFeed());
+        }
+        break;
+      case 'groups':
+        final communityProvider = context.read<CommunityHubProvider>();
+        if (!communityProvider.groupsInitialized &&
+            !communityProvider.groupsLoading) {
+          unawaited(communityProvider.loadGroups());
+        }
+        break;
+      case 'art':
+        final communityProvider = context.read<CommunityHubProvider>();
+        if (communityProvider.artFeedPosts.isEmpty &&
+            !communityProvider.artFeedLoading) {
+          unawaited(_loadArtFeed());
+        }
+        break;
+      case 'discover':
+      default:
+        if (!_discoverFeedLoaded && !_isLoadingDiscover) {
+          unawaited(_loadDiscoverFeed());
+        }
+        break;
+    }
+  }
+
+  Future<void> _loadArtFeed() {
+    return context.read<CommunityHubProvider>().loadArtFeed(
+          latitude: 46.05,
+          longitude: 14.50,
+          radiusKm: 50,
+          limit: 24,
+          refresh: true,
+          sort: _artSortMode,
+        );
   }
 
   void _enrichTrendingTopicsFromFeedCounts() {
@@ -479,6 +529,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       if (mounted) {
         setState(() {
           _discoverPosts = filtered;
+          _discoverFeedLoaded = true;
           _isLoadingDiscover = false;
         });
       }
@@ -486,6 +537,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       if (mounted) {
         setState(() {
           _discoverError = e.toString();
+          _discoverFeedLoaded = true;
           _isLoadingDiscover = false;
         });
       }
@@ -667,6 +719,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       if (mounted) {
         setState(() {
           _followingPosts = filtered;
+          _followingFeedLoaded = true;
           _isLoadingFollowing = false;
         });
       }
@@ -674,6 +727,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       if (mounted) {
         setState(() {
           _followingError = e.toString();
+          _followingFeedLoaded = true;
           _isLoadingFollowing = false;
         });
       }
@@ -2818,8 +2872,6 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     if (willExpand) {
       unawaited(
           context.read<CommunityCommentsProvider>().loadComments(post.id));
-      unawaited(
-          context.read<CommunityInteractionsProvider>().loadPostLikes(post.id));
     }
   }
 

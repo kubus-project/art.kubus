@@ -51,7 +51,12 @@ class CommunityPost {
 
   CommunityPost({
     required this.id,
-    required this.authorIdentityData,
+    ProfileIdentityData? authorIdentityData,
+    String? authorId,
+    String? authorWallet,
+    String? authorName,
+    String? authorAvatar,
+    String? authorUsername,
     required this.content,
     this.imageUrl,
     this.mediaUrls = const [],
@@ -84,7 +89,15 @@ class CommunityPost {
     this.feedPin = CommunityFeedPinMetadata.none,
     this.hybridScore,
     this.achievementResult,
-  });
+  }) : authorIdentityData = authorIdentityData ??
+            _legacyAuthorIdentity(
+              fallbackLabel: 'Unknown author',
+              authorId: authorId,
+              authorWallet: authorWallet,
+              authorName: authorName,
+              authorAvatar: authorAvatar,
+              authorUsername: authorUsername,
+            );
 
   String get authorId =>
       authorIdentityData.userId ?? authorIdentityData.walletSeed;
@@ -203,7 +216,12 @@ class Comment {
 
   Comment({
     required this.id,
-    required this.authorIdentityData,
+    ProfileIdentityData? authorIdentityData,
+    String? authorId,
+    String? authorName,
+    String? authorAvatar,
+    String? authorUsername,
+    String? authorWallet,
     this.parentCommentId,
     this.originalContent,
     this.editedAt,
@@ -212,7 +230,16 @@ class Comment {
     this.likeCount = 0,
     this.isLiked = false,
     List<Comment>? replies,
-  }) : replies = replies ?? <Comment>[];
+  })  : authorIdentityData = authorIdentityData ??
+            _legacyAuthorIdentity(
+              fallbackLabel: 'Unknown author',
+              authorId: authorId,
+              authorWallet: authorWallet,
+              authorName: authorName,
+              authorAvatar: authorAvatar,
+              authorUsername: authorUsername,
+            ),
+        replies = replies ?? <Comment>[];
 
   String get authorId =>
       authorIdentityData.userId ?? authorIdentityData.walletSeed;
@@ -251,6 +278,28 @@ class Comment {
       replies: replies ?? List<Comment>.from(this.replies),
     );
   }
+}
+
+ProfileIdentityData _legacyAuthorIdentity({
+  required String fallbackLabel,
+  String? authorId,
+  String? authorWallet,
+  String? authorName,
+  String? authorAvatar,
+  String? authorUsername,
+}) {
+  return ProfileIdentityData.fromIdentityPayload(
+    {
+      'author': {
+        'id': authorId,
+        'walletAddress': authorWallet,
+        'displayName': authorName,
+        'username': authorUsername,
+        'avatarUrl': authorAvatar,
+      },
+    },
+    fallbackLabel: fallbackLabel,
+  );
 }
 
 class CommunityLikeUser {

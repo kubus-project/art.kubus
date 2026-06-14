@@ -130,6 +130,8 @@ class _CommunityScreenState extends State<CommunityScreen>
   bool _isLoading = false;
   bool _isLoadingFollowingFeed = false;
   bool _isLoadingDiscoverFeed = false;
+  bool _followingFeedLoaded = false;
+  bool _discoverFeedLoaded = false;
   bool _isLoadingArtFeed = false;
   CommunityFeedType _activeFeed = CommunityFeedType.following;
   // Deduplication and local push are now handled centrally by NotificationProvider
@@ -400,43 +402,38 @@ class _CommunityScreenState extends State<CommunityScreen>
     if (_combinedFeedLoadInFlight && !force) return;
     _combinedFeedLoadInFlight = true;
     final resolvedWallet = walletAddress ?? _currentWalletAddress();
+    final targetFollowing = _activeFeed == CommunityFeedType.following;
 
     if (mounted) {
       setState(() {
         _isLoading = true;
-        _isLoadingFollowingFeed = true;
-        _isLoadingDiscoverFeed = true;
+        if (force) {
+          if (targetFollowing) {
+            _followingFeedPosts = [];
+            _followingFeedLoaded = false;
+          } else {
+            _discoverFeedPosts = [];
+            _discoverFeedLoaded = false;
+          }
+        }
+        _isLoadingFollowingFeed = targetFollowing;
+        _isLoadingDiscoverFeed = !targetFollowing;
       });
     }
 
     await _ensureBackendAuthForCommunity(resolvedWallet);
 
-    List<CommunityPost>? followingPosts;
-    List<CommunityPost>? discoverPosts;
-
-    await Future.wait([
-      () async {
-        try {
-          followingPosts = await _fetchCommunityFeed(
-            followingOnly: true,
-          );
-          debugPrint(
-              '📥 Loaded ${followingPosts?.length ?? 0} following posts');
-        } catch (e) {
-          debugPrint('Error loading following feed: $e');
-        }
-      }(),
-      () async {
-        try {
-          discoverPosts = await _fetchCommunityFeed(
-            followingOnly: false,
-          );
-          debugPrint('📥 Loaded ${discoverPosts?.length ?? 0} discover posts');
-        } catch (e) {
-          debugPrint('Error loading discover feed: $e');
-        }
-      }(),
-    ]);
+    List<CommunityPost>? posts;
+    try {
+      posts = await _fetchCommunityFeed(
+        followingOnly: targetFollowing,
+      );
+      debugPrint(
+          'Loaded ${posts.length} ${targetFollowing ? 'following' : 'discover'} posts');
+    } catch (e) {
+      debugPrint(
+          'Error loading ${targetFollowing ? 'following' : 'discover'} feed: $e');
+    }
 
     if (!mounted) {
       _combinedFeedLoadInFlight = false;
@@ -444,51 +441,32 @@ class _CommunityScreenState extends State<CommunityScreen>
     }
 
     setState(() {
-      _followingFeedPosts = followingPosts ?? [];
-      _discoverFeedPosts = discoverPosts ?? [];
-      _isLoadingFollowingFeed = false;
-      _isLoadingDiscoverFeed = false;
-
-      final bool hasFollowing = _followingFeedPosts.isNotEmpty;
-      final bool hasDiscover = _discoverFeedPosts.isNotEmpty;
-
-      if (_activeFeed == CommunityFeedType.following) {
-        if (hasFollowing) {
+      if (targetFollowing) {
+        _followingFeedPosts = posts ?? [];
+        _followingFeedLoaded = true;
+        _isLoadingFollowingFeed = false;
+        if (_activeFeed == CommunityFeedType.following) {
           _communityPosts = _followingFeedPosts;
-        } else if (hasDiscover) {
-          _activeFeed = CommunityFeedType.discover;
-          _communityPosts = _discoverFeedPosts;
-          try {
-            _tabController.animateTo(1);
-          } catch (_) {}
-        } else {
-          _communityPosts = [];
         }
       } else {
-        if (hasDiscover) {
+        _discoverFeedPosts = posts ?? [];
+        _discoverFeedLoaded = true;
+        _isLoadingDiscoverFeed = false;
+        if (_activeFeed == CommunityFeedType.discover) {
           _communityPosts = _discoverFeedPosts;
-        } else if (hasFollowing) {
-          _activeFeed = CommunityFeedType.following;
-          _communityPosts = _followingFeedPosts;
-          try {
-            _tabController.animateTo(0);
-          } catch (_) {}
-        } else {
-          _communityPosts = [];
         }
       }
 
       _isLoading = false;
     });
 
-    if (followingPosts == null && discoverPosts != null) {
+    if (posts == null && mounted) {
       final l10n = AppLocalizations.of(context)!;
-      _showSnack(l10n.communityFollowingFeedUnavailableToast);
-    } else if (discoverPosts == null &&
-        followingPosts != null &&
-        _activeFeed == CommunityFeedType.discover) {
-      final l10n = AppLocalizations.of(context)!;
-      _showSnack(l10n.communityDiscoverFeedUnavailableToast);
+      _showSnack(
+        targetFollowing
+            ? l10n.communityFollowingFeedUnavailableToast
+            : l10n.communityDiscoverFeedUnavailableToast,
+      );
     }
 
     _combinedFeedLoadInFlight = false;
@@ -540,6 +518,7 @@ class _CommunityScreenState extends State<CommunityScreen>
     setState(() {
       if (targetFollowing) {
         _followingFeedPosts = posts ?? [];
+        _followingFeedLoaded = true;
         _isLoadingFollowingFeed = false;
         if (isActiveFeed) {
           _communityPosts = _followingFeedPosts;
@@ -547,6 +526,7 @@ class _CommunityScreenState extends State<CommunityScreen>
         }
       } else {
         _discoverFeedPosts = posts ?? [];
+        _discoverFeedLoaded = true;
         _isLoadingDiscoverFeed = false;
         if (isActiveFeed) {
           _communityPosts = _discoverFeedPosts;
@@ -597,11 +577,11 @@ class _CommunityScreenState extends State<CommunityScreen>
     });
 
     if (target == CommunityFeedType.following) {
-      if (_followingFeedPosts.isEmpty && !_isLoadingFollowingFeed) {
+      if (!_followingFeedLoaded && !_isLoadingFollowingFeed) {
         _loadCommunityData(followingOnly: true);
       }
     } else {
-      if (_discoverFeedPosts.isEmpty && !_isLoadingDiscoverFeed) {
+      if (!_discoverFeedLoaded && !_isLoadingDiscoverFeed) {
         _loadCommunityData(followingOnly: false);
       }
     }
@@ -2405,8 +2385,6 @@ class _CommunityScreenState extends State<CommunityScreen>
     if (willExpand) {
       unawaited(
           context.read<CommunityCommentsProvider>().loadComments(post.id));
-      unawaited(
-          context.read<CommunityInteractionsProvider>().loadPostLikes(post.id));
     }
   }
 
