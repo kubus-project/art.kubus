@@ -40,6 +40,7 @@ class AppConfig {
   static const bool enableWalletConnect = true;
   static const bool enableEmailAuth = true;
   static const bool enableGoogleAuth = true;
+  static const bool enablePasskeySignIn = true;
 
   /// Web: enable Google One Tap prompt (GIS) when available.
   static const bool enableGoogleOneTapWeb = false;
@@ -433,6 +434,8 @@ class AppConfig {
         return enableEmailAuth;
       case 'googleAuth':
         return enableGoogleAuth;
+      case 'passkeySignIn':
+        return enablePasskeySignIn;
       case 'googleOneTapWeb':
         return enableGoogleOneTapWeb;
       case 'multiAuth':
@@ -555,9 +558,9 @@ class AppConfig {
 /// App version and build information
 class AppInfo {
   static const String appName = 'art.kubus';
-  static const String version = '0.6.1';
-  static const int buildNumber = 26061411;
-  static const String buildDate = '2026-06-14';
+  static const String version = '0.6.2';
+  static const int buildNumber = 26061501;
+  static const String buildDate = '2026-06-15';
 
   /// Get full version string
   static String get fullVersion => '$version+$buildNumber';

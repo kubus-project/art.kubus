@@ -215,6 +215,7 @@ enum AuthSignInMethod {
   email,
   google,
   wallet,
+  passkey,
 }
 
 String _authSignInMethodToStorageValue(AuthSignInMethod method) {
@@ -225,6 +226,8 @@ String _authSignInMethodToStorageValue(AuthSignInMethod method) {
       return 'google';
     case AuthSignInMethod.wallet:
       return 'wallet';
+    case AuthSignInMethod.passkey:
+      return 'passkey';
     case AuthSignInMethod.unknown:
       return '';
   }
@@ -239,6 +242,8 @@ AuthSignInMethod _authSignInMethodFromStorageValue(String? value) {
       return AuthSignInMethod.google;
     case 'wallet':
       return AuthSignInMethod.wallet;
+    case 'passkey':
+      return AuthSignInMethod.passkey;
     default:
       return AuthSignInMethod.unknown;
   }
@@ -370,6 +375,9 @@ class BackendApiService
     }
     if (provider.contains('wallet') || provider.contains('solana')) {
       return AuthSignInMethod.wallet;
+    }
+    if (provider.contains('passkey')) {
+      return AuthSignInMethod.passkey;
     }
 
     final email = (resolvedClaims['email'] ??
@@ -2362,6 +2370,17 @@ class BackendApiService
         password: password,
       );
 
+  Future<Map<String, dynamic>> getPasskeyLoginOptions({String? email}) =>
+      _backendApiGetPasskeyLoginOptions(this, email: email);
+
+  Future<Map<String, dynamic>> verifyPasskeyLogin({
+    required Map<String, dynamic> responsePayload,
+  }) =>
+      _backendApiVerifyPasskeyLogin(
+        this,
+        responsePayload: responsePayload,
+      );
+
   /// Resend email verification link
   /// POST /api/auth/resend-verification { email }
   Future<Map<String, dynamic>> _resendEmailVerificationRequest({
@@ -2506,12 +2525,22 @@ class BackendApiService
     required String walletAddress,
     required Map<String, dynamic> responsePayload,
     String? nickname,
+    String? encryptedWrappedRecoveryKey,
+    String? encryptedWrappedRecoveryKeyNonce,
+    String? prfSalt,
+    String? wrappingAlgorithm,
+    bool prfSupported = false,
   }) =>
       _backendApiVerifyWalletBackupPasskeyRegistration(
         this,
         walletAddress: walletAddress,
         responsePayload: responsePayload,
         nickname: nickname,
+        encryptedWrappedRecoveryKey: encryptedWrappedRecoveryKey,
+        encryptedWrappedRecoveryKeyNonce: encryptedWrappedRecoveryKeyNonce,
+        prfSalt: prfSalt,
+        wrappingAlgorithm: wrappingAlgorithm,
+        prfSupported: prfSupported,
       );
 
   Future<Map<String, dynamic>> getWalletBackupPasskeyAuthOptions({
@@ -2520,6 +2549,32 @@ class BackendApiService
       _backendApiGetWalletBackupPasskeyAuthOptions(
         this,
         walletAddress: walletAddress,
+      );
+
+  Future<Map<String, dynamic>> getWalletBackupPasskeyRecoveryStatus({
+    String? walletAddress,
+  }) =>
+      _backendApiGetWalletBackupPasskeyRecoveryStatus(
+        this,
+        walletAddress: walletAddress,
+      );
+
+  Future<Map<String, dynamic>> getWalletBackupPasskeyRecoverOptions({
+    required String walletAddress,
+  }) =>
+      _backendApiGetWalletBackupPasskeyRecoverOptions(
+        this,
+        walletAddress: walletAddress,
+      );
+
+  Future<Map<String, dynamic>> verifyWalletBackupPasskeyRecover({
+    required String walletAddress,
+    required Map<String, dynamic> responsePayload,
+  }) =>
+      _backendApiVerifyWalletBackupPasskeyRecover(
+        this,
+        walletAddress: walletAddress,
+        responsePayload: responsePayload,
       );
 
   Future<Map<String, dynamic>> verifyWalletBackupPasskeyAuth({

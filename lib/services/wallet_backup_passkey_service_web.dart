@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:js_interop';
+import 'dart:js_interop_unsafe';
 import 'dart:typed_data';
 
 import 'package:web/web.dart' as web;
@@ -23,6 +24,53 @@ List<String> _stringListFromJson(Object? value) {
 
 JSArray<JSString> _transportsToJs(List<String> transports) {
   return transports.map((transport) => transport.toJS).toList().toJS;
+}
+
+web.AuthenticationExtensionsClientInputs? _extensionsFromJson(
+  Map<String, dynamic> json, {
+  bool byCredential = false,
+}) {
+  final extensions = json['extensions'];
+  if (extensions is! Map) return null;
+  final prf = extensions['prf'];
+  if (prf is! Map) return null;
+
+  final eval = prf['eval'];
+  if (eval is Map) {
+    final first = (eval['first'] ?? '').toString().trim();
+    if (first.isNotEmpty) {
+      return web.AuthenticationExtensionsClientInputs(
+        prf: web.AuthenticationExtensionsPRFInputs(
+          eval: web.AuthenticationExtensionsPRFValues(
+            first: _decodeBase64Url(first).toJS,
+          ),
+        ),
+      );
+    }
+  }
+
+  final evalByCredential = prf['evalByCredential'];
+  if (byCredential && evalByCredential is Map) {
+    final jsEvalByCredential = JSObject();
+    evalByCredential.forEach((key, value) {
+      if (value is! Map) return;
+      final first = (value['first'] ?? '').toString().trim();
+      if (first.isEmpty) return;
+      jsEvalByCredential.setProperty(
+        key.toString().toJS,
+        web.AuthenticationExtensionsPRFValues(
+          first: _decodeBase64Url(first).toJS,
+        ),
+      );
+    });
+    return web.AuthenticationExtensionsClientInputs(
+      prf: web.AuthenticationExtensionsPRFInputs(
+        evalByCredential: jsEvalByCredential,
+      ),
+    );
+  }
+
+  return null;
 }
 
 web.PublicKeyCredentialDescriptor _descriptorFromJson(
@@ -93,7 +141,7 @@ web.PublicKeyCredentialCreationOptions _creationOptionsFromJson(
         );
 
   if (excludeCredentials.isEmpty) {
-    return web.PublicKeyCredentialCreationOptions(
+    final options = web.PublicKeyCredentialCreationOptions(
       rp: rpEntity,
       user: web.PublicKeyCredentialUserEntity(
         name: (user['name'] ?? '').toString(),
@@ -106,9 +154,12 @@ web.PublicKeyCredentialCreationOptions _creationOptionsFromJson(
       authenticatorSelection: authenticatorSelection,
       attestation: (json['attestation'] ?? 'none').toString(),
     );
+    final extensions = _extensionsFromJson(json);
+    if (extensions != null) options.extensions = extensions;
+    return options;
   }
 
-  return web.PublicKeyCredentialCreationOptions(
+  final options = web.PublicKeyCredentialCreationOptions(
     rp: rpEntity,
     user: web.PublicKeyCredentialUserEntity(
       name: (user['name'] ?? '').toString(),
@@ -122,6 +173,9 @@ web.PublicKeyCredentialCreationOptions _creationOptionsFromJson(
     authenticatorSelection: authenticatorSelection,
     attestation: (json['attestation'] ?? 'none').toString(),
   );
+  final extensions = _extensionsFromJson(json);
+  if (extensions != null) options.extensions = extensions;
+  return options;
 }
 
 web.PublicKeyCredentialRequestOptions _requestOptionsFromJson(
@@ -135,21 +189,58 @@ web.PublicKeyCredentialRequestOptions _requestOptionsFromJson(
       .toList(growable: false);
 
   if (allowCredentials.isEmpty) {
-    return web.PublicKeyCredentialRequestOptions(
+    final options = web.PublicKeyCredentialRequestOptions(
       challenge: _decodeBase64Url((json['challenge'] ?? '').toString()).toJS,
       timeout: (json['timeout'] as num?)?.toInt() ?? 60000,
       rpId: (json['rpId'] ?? json['rpID'] ?? '').toString(),
       userVerification: (json['userVerification'] ?? 'required').toString(),
     );
+    final extensions = _extensionsFromJson(json, byCredential: true);
+    if (extensions != null) options.extensions = extensions;
+    return options;
   }
 
-  return web.PublicKeyCredentialRequestOptions(
+  final options = web.PublicKeyCredentialRequestOptions(
     challenge: _decodeBase64Url((json['challenge'] ?? '').toString()).toJS,
     timeout: (json['timeout'] as num?)?.toInt() ?? 60000,
     rpId: (json['rpId'] ?? json['rpID'] ?? '').toString(),
     allowCredentials: allowCredentials.toJS,
     userVerification: (json['userVerification'] ?? 'required').toString(),
   );
+  final extensions = _extensionsFromJson(json, byCredential: true);
+  if (extensions != null) options.extensions = extensions;
+  return options;
+}
+
+Map<String, dynamic> _extensionResultsToJson(
+  web.PublicKeyCredential credential,
+) {
+  final results = credential.getClientExtensionResults();
+  final prf = results.getProperty<JSAny?>('prf'.toJS);
+  if (prf == null) return const <String, dynamic>{};
+  final prfObject = prf as JSObject;
+
+  bool enabled = false;
+  final enabledValue = prfObject.getProperty<JSAny?>('enabled'.toJS);
+  if (enabledValue != null && enabledValue.isA<JSBoolean>()) {
+    enabled = (enabledValue as JSBoolean).toDart;
+  }
+
+  String? firstBase64;
+  final prfResults = prfObject.getProperty<JSAny?>('results'.toJS);
+  if (prfResults != null && prfResults.isA<JSObject>()) {
+    final first = (prfResults as JSObject).getProperty<JSAny?>('first'.toJS);
+    if (first != null && first.isA<JSArrayBuffer>()) {
+      firstBase64 = _encodeBase64Url(_bufferToBytes(first as JSArrayBuffer));
+    }
+  }
+
+  return <String, dynamic>{
+    'prf': <String, dynamic>{
+      'enabled': enabled,
+      if (firstBase64 != null) 'first': firstBase64,
+    },
+  };
 }
 
 Map<String, dynamic> _registrationResponseToJson(
@@ -179,7 +270,7 @@ Map<String, dynamic> _registrationResponseToJson(
         'publicKey': _encodeBase64Url(_bufferToBytes(publicKey)),
     },
     'type': credential.type,
-    'clientExtensionResults': <String, dynamic>{},
+    'clientExtensionResults': _extensionResultsToJson(credential),
     if (credential.authenticatorAttachment != null &&
         credential.authenticatorAttachment!.isNotEmpty)
       'authenticatorAttachment': credential.authenticatorAttachment,
@@ -209,7 +300,7 @@ Map<String, dynamic> _authenticationResponseToJson(
         'userHandle': _encodeBase64Url(_bufferToBytes(userHandle)),
     },
     'type': credential.type,
-    'clientExtensionResults': <String, dynamic>{},
+    'clientExtensionResults': _extensionResultsToJson(credential),
     if (credential.authenticatorAttachment != null &&
         credential.authenticatorAttachment!.isNotEmpty)
       'authenticatorAttachment': credential.authenticatorAttachment,
@@ -217,6 +308,17 @@ Map<String, dynamic> _authenticationResponseToJson(
 }
 
 Future<bool> isWalletBackupPasskeySupported() async {
+  try {
+    final available = await web.PublicKeyCredential
+            .isUserVerifyingPlatformAuthenticatorAvailable()
+        .toDart;
+    return available.toDart;
+  } catch (_) {
+    return false;
+  }
+}
+
+Future<bool> isWalletBackupPasskeyPrfSupported() async {
   try {
     final available = await web.PublicKeyCredential
             .isUserVerifyingPlatformAuthenticatorAvailable()

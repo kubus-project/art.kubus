@@ -13,6 +13,7 @@ import '../../services/backend_api_service.dart';
 import '../../services/google_auth_service.dart';
 import '../../services/post_auth_coordinator.dart';
 import '../../services/telemetry/telemetry_service.dart';
+import '../../services/wallet_backup_passkey_service.dart';
 import '../../widgets/google_sign_in_button.dart';
 import '../../widgets/google_sign_in_web_button.dart';
 import '../../widgets/secure_account_password_prompt.dart';
@@ -65,6 +66,7 @@ class _SignInScreenState extends State<SignInScreen> {
   final _passwordFocusNode = FocusNode();
   bool _isEmailSubmitting = false;
   bool _isGoogleSubmitting = false;
+  bool _isPasskeySubmitting = false;
   bool _obscureEmailPassword = true;
   int? _googleRateLimitUntilMs;
   String _googleAuthDiagStage = 'idle';
@@ -385,6 +387,50 @@ class _SignInScreenState extends State<SignInScreen> {
     }
   }
 
+  Future<void> _signInWithPasskey() async {
+    final l10n = AppLocalizations.of(context)!;
+    if (_isPasskeySubmitting) return;
+    if (!AppConfig.isFeatureEnabled('passkeySignIn') || !kIsWeb) {
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+        SnackBar(content: Text(l10n.walletRecoveryPasskeyUnavailableTitle)),
+      );
+      return;
+    }
+    unawaited(TelemetryService().trackSignInAttempt(method: 'passkey'));
+    setState(() => _isPasskeySubmitting = true);
+    try {
+      final supported = await isWalletBackupPasskeySupported();
+      if (!supported) {
+        throw StateError('Passkeys are not available in this browser.');
+      }
+      final api = BackendApiService();
+      final options = await api.getPasskeyLoginOptions(
+        email: _emailController.text.trim().isEmpty
+            ? null
+            : _emailController.text.trim(),
+      );
+      final assertion = await getWalletBackupPasskeyAssertion(options);
+      final result = await api.verifyPasskeyLogin(
+        responsePayload: assertion,
+      );
+      if (!mounted) return;
+      await _handleAuthSuccess(result, origin: AuthOrigin.passkey);
+      unawaited(TelemetryService().trackSignInSuccess(method: 'passkey'));
+    } catch (e) {
+      unawaited(TelemetryService().trackSignInFailure(
+        method: 'passkey',
+        errorClass: e.runtimeType.toString(),
+      ));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+        SnackBar(content: Text(l10n.authPasskeySignInFailed)),
+        tone: KubusSnackBarTone.error,
+      );
+    } finally {
+      if (mounted) setState(() => _isPasskeySubmitting = false);
+    }
+  }
+
   Future<void> _signInWithGoogle() async {
     final l10n = AppLocalizations.of(context)!;
     if (_isGoogleSubmitting) {
@@ -580,6 +626,7 @@ class _SignInScreenState extends State<SignInScreen> {
     final enableWallet = AppConfig.enableWeb3 && AppConfig.enableWalletConnect;
     final enableEmail = AppConfig.enableEmailAuth;
     final enableGoogle = AppConfig.enableGoogleAuth;
+    final enablePasskey = AppConfig.isFeatureEnabled('passkeySignIn') && kIsWeb;
 
     final postAuthLoading = _postAuthActive ? _buildPostAuthLoading() : null;
 
@@ -593,6 +640,7 @@ class _SignInScreenState extends State<SignInScreen> {
           enableWallet: enableWallet,
           enableEmail: enableEmail,
           enableGoogle: enableGoogle,
+          enablePasskey: enablePasskey,
         );
 
     if (widget.embedded) {
@@ -697,6 +745,7 @@ class _SignInScreenState extends State<SignInScreen> {
     required bool enableWallet,
     required bool enableEmail,
     required bool enableGoogle,
+    required bool enablePasskey,
   }) {
     final l10n = AppLocalizations.of(context)!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -714,7 +763,7 @@ class _SignInScreenState extends State<SignInScreen> {
         colorScheme.surface, colorScheme.primary, isDark ? 0.18 : 0.10)!;
     final walletAccent = roles.web3MarketplaceAccent;
     final walletBorder = walletAccent.withValues(alpha: isDark ? 0.34 : 0.26);
-    final hasPrimaryMethods = enableGoogle || enableEmail;
+    final hasPrimaryMethods = enableGoogle || enableEmail || enablePasskey;
 
     final authMethods = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -807,7 +856,8 @@ class _SignInScreenState extends State<SignInScreen> {
               isLoading: _isGoogleSubmitting,
               colorScheme: colorScheme,
             ),
-          if (enableEmail || enableWallet) SizedBox(height: methodGap),
+          if (enableEmail || enablePasskey || enableWallet)
+            SizedBox(height: methodGap),
         ],
         if (!showEmailForm && enableEmail) ...[
           KubusAuthMethodButton(
@@ -827,6 +877,23 @@ class _SignInScreenState extends State<SignInScreen> {
             backgroundColor: emailSurface,
             foregroundColor: colorScheme.onSurface,
             isFullWidth: true,
+          ),
+          if (enablePasskey || enableWallet) SizedBox(height: methodGap),
+        ],
+        if (!showEmailForm && enablePasskey) ...[
+          KubusAuthMethodButton(
+            onPressed: _isPasskeySubmitting
+                ? null
+                : () => unawaited(_signInWithPasskey()),
+            icon: Icons.key_rounded,
+            label: l10n.authContinueWithPasskey,
+            variant: KubusButtonVariant.secondary,
+            backgroundColor: colorScheme.surface.withValues(
+              alpha: isDark ? 0.18 : 0.62,
+            ),
+            foregroundColor: colorScheme.onSurface,
+            isFullWidth: true,
+            isLoading: _isPasskeySubmitting,
           ),
           if (enableWallet) SizedBox(height: methodGap),
         ],

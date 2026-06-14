@@ -180,11 +180,21 @@ class BackendRecoveryTransport {
     required String walletAddress,
     required Map<String, dynamic> responsePayload,
     String? nickname,
+    String? encryptedWrappedRecoveryKey,
+    String? encryptedWrappedRecoveryKeyNonce,
+    String? prfSalt,
+    String? wrappingAlgorithm,
+    bool prfSupported = false,
   }) {
     return _service.verifyWalletBackupPasskeyRegistration(
       walletAddress: walletAddress,
       responsePayload: responsePayload,
       nickname: nickname,
+      encryptedWrappedRecoveryKey: encryptedWrappedRecoveryKey,
+      encryptedWrappedRecoveryKeyNonce: encryptedWrappedRecoveryKeyNonce,
+      prfSalt: prfSalt,
+      wrappingAlgorithm: wrappingAlgorithm,
+      prfSupported: prfSupported,
     );
   }
 
@@ -201,6 +211,32 @@ class BackendRecoveryTransport {
     required Map<String, dynamic> responsePayload,
   }) {
     return _service.verifyWalletBackupPasskeyAuth(
+      walletAddress: walletAddress,
+      responsePayload: responsePayload,
+    );
+  }
+
+  Future<Map<String, dynamic>> getPasskeyRecoveryStatus({
+    String? walletAddress,
+  }) {
+    return _service.getWalletBackupPasskeyRecoveryStatus(
+      walletAddress: walletAddress,
+    );
+  }
+
+  Future<Map<String, dynamic>> getPasskeyRecoverOptions({
+    required String walletAddress,
+  }) {
+    return _service.getWalletBackupPasskeyRecoverOptions(
+      walletAddress: walletAddress,
+    );
+  }
+
+  Future<Map<String, dynamic>> verifyPasskeyRecover({
+    required String walletAddress,
+    required Map<String, dynamic> responsePayload,
+  }) {
+    return _service.verifyWalletBackupPasskeyRecover(
       walletAddress: walletAddress,
       responsePayload: responsePayload,
     );
@@ -424,7 +460,7 @@ extension BackendApiDomainAccess on BackendApiService {
   BackendCollectiblesAttestationsTransport get collectibles =>
       BackendCollectiblesAttestationsTransport(this);
 
-    BackendCollectiblesAttestationsTransport get attestations =>
+  BackendCollectiblesAttestationsTransport get attestations =>
       BackendCollectiblesAttestationsTransport(this);
 
   BackendAuthLevel getCurrentAuthLevel() {

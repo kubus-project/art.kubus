@@ -181,6 +181,72 @@ Future<Map<String, dynamic>> _backendApiLoginWithEmail(
   }
 }
 
+Future<Map<String, dynamic>> _backendApiGetPasskeyLoginOptions(
+  BackendApiService service, {
+  String? email,
+}) async {
+  try {
+    const path = '/api/auth/passkey/login/options';
+    final response = await service._sendAuthRequestWithFailover(
+      'POST',
+      path,
+      includeAuth: false,
+      headers: service._getHeaders(),
+      body: jsonEncode(<String, dynamic>{
+        if ((email ?? '').trim().isNotEmpty) 'email': email!.trim(),
+      }),
+    );
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return data['data'] is Map<String, dynamic>
+          ? data['data'] as Map<String, dynamic>
+          : data;
+    }
+    throw BackendApiRequestException(
+      statusCode: response.statusCode,
+      path: path,
+      body: response.body,
+    );
+  } catch (e) {
+    AppConfig.debugPrint(
+      'BackendApiService.getPasskeyLoginOptions failed: $e',
+    );
+    rethrow;
+  }
+}
+
+Future<Map<String, dynamic>> _backendApiVerifyPasskeyLogin(
+  BackendApiService service, {
+  required Map<String, dynamic> responsePayload,
+}) async {
+  try {
+    const path = '/api/auth/passkey/login/verify';
+    final response = await service._sendAuthRequestWithFailover(
+      'POST',
+      path,
+      includeAuth: false,
+      headers: service._getHeaders(),
+      body: jsonEncode(<String, dynamic>{
+        'response': responsePayload,
+      }),
+    );
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      await service._persistTokenFromResponse(data);
+      await service.setLastSignInMethod(AuthSignInMethod.passkey);
+      return data;
+    }
+    throw BackendApiRequestException(
+      statusCode: response.statusCode,
+      path: path,
+      body: response.body,
+    );
+  } catch (e) {
+    AppConfig.debugPrint('BackendApiService.verifyPasskeyLogin failed: $e');
+    rethrow;
+  }
+}
+
 Future<Map<String, dynamic>> _backendApiResendEmailVerificationRequest(
   BackendApiService service, {
   required String email,
@@ -505,7 +571,8 @@ Future<Map<String, dynamic>> _backendApiLoginWithGoogle(
       if (username != null && username.isNotEmpty) 'username': username,
       if (walletAddress != null && walletAddress.isNotEmpty)
         'walletAddress': walletAddress,
-      if (displayName != null && displayName.isNotEmpty) 'displayName': displayName,
+      if (displayName != null && displayName.isNotEmpty)
+        'displayName': displayName,
     };
 
     final response = await service._sendAuthRequestWithFailover(
@@ -589,8 +656,7 @@ Future<Map<String, dynamic>> _backendApiBindAuthenticatedWallet(
   }
 }
 
-Future<EncryptedWalletBackupDefinition?>
-    _backendApiGetEncryptedWalletBackup(
+Future<EncryptedWalletBackupDefinition?> _backendApiGetEncryptedWalletBackup(
   BackendApiService service, {
   String? walletAddress,
 }) async {
@@ -629,8 +695,7 @@ Future<EncryptedWalletBackupDefinition?>
   }
 }
 
-Future<EncryptedWalletBackupDefinition>
-    _backendApiPutEncryptedWalletBackup(
+Future<EncryptedWalletBackupDefinition> _backendApiPutEncryptedWalletBackup(
   BackendApiService service,
   EncryptedWalletBackupDefinition definition,
 ) async {
@@ -701,8 +766,8 @@ Future<Map<String, dynamic>>
   String? nickname,
 }) async {
   try {
-    final uri =
-        Uri.parse('${service.baseUrl}/api/wallet-backup/passkey/register/options');
+    final uri = Uri.parse(
+        '${service.baseUrl}/api/wallet-backup/passkey/register/options');
     final response = await service._post(
       uri,
       includeAuth: true,
@@ -731,16 +796,20 @@ Future<Map<String, dynamic>>
   }
 }
 
-Future<Map<String, dynamic>>
-    _backendApiVerifyWalletBackupPasskeyRegistration(
+Future<Map<String, dynamic>> _backendApiVerifyWalletBackupPasskeyRegistration(
   BackendApiService service, {
   required String walletAddress,
   required Map<String, dynamic> responsePayload,
   String? nickname,
+  String? encryptedWrappedRecoveryKey,
+  String? encryptedWrappedRecoveryKeyNonce,
+  String? prfSalt,
+  String? wrappingAlgorithm,
+  bool prfSupported = false,
 }) async {
   try {
-    final uri =
-        Uri.parse('${service.baseUrl}/api/wallet-backup/passkey/register/verify');
+    final uri = Uri.parse(
+        '${service.baseUrl}/api/wallet-backup/passkey/register/verify');
     final response = await service._post(
       uri,
       includeAuth: true,
@@ -749,6 +818,15 @@ Future<Map<String, dynamic>>
         'walletAddress': walletAddress.trim(),
         if ((nickname ?? '').trim().isNotEmpty) 'nickname': nickname!.trim(),
         'response': responsePayload,
+        if ((encryptedWrappedRecoveryKey ?? '').trim().isNotEmpty)
+          'encryptedWrappedRecoveryKey': encryptedWrappedRecoveryKey!.trim(),
+        if ((encryptedWrappedRecoveryKeyNonce ?? '').trim().isNotEmpty)
+          'encryptedWrappedRecoveryKeyNonce':
+              encryptedWrappedRecoveryKeyNonce!.trim(),
+        if ((prfSalt ?? '').trim().isNotEmpty) 'prfSalt': prfSalt!.trim(),
+        if ((wrappingAlgorithm ?? '').trim().isNotEmpty)
+          'wrappingAlgorithm': wrappingAlgorithm!.trim(),
+        'prfSupported': prfSupported,
       }),
     );
     if (response.statusCode == 200 || response.statusCode == 201) {
@@ -770,12 +848,119 @@ Future<Map<String, dynamic>>
   }
 }
 
+Future<Map<String, dynamic>> _backendApiGetWalletBackupPasskeyRecoveryStatus(
+  BackendApiService service, {
+  String? walletAddress,
+}) async {
+  try {
+    final normalizedWallet = (walletAddress ?? '').trim();
+    final uri = Uri.parse('${service.baseUrl}/api/wallet/backup/passkey/status')
+        .replace(
+      queryParameters: normalizedWallet.isEmpty
+          ? null
+          : <String, String>{'walletAddress': normalizedWallet},
+    );
+    final response = await service._get(
+      uri,
+      includeAuth: true,
+      headers: service._getHeaders(includeAuth: true),
+    );
+    if (response.statusCode == 200) {
+      final raw = jsonDecode(response.body) as Map<String, dynamic>;
+      return raw['data'] is Map<String, dynamic>
+          ? raw['data'] as Map<String, dynamic>
+          : raw;
+    }
+    throw BackendApiRequestException(
+      statusCode: response.statusCode,
+      path: uri.path,
+      body: response.body,
+    );
+  } catch (e) {
+    AppConfig.debugPrint(
+      'BackendApiService.getWalletBackupPasskeyRecoveryStatus failed: $e',
+    );
+    rethrow;
+  }
+}
+
+Future<Map<String, dynamic>> _backendApiGetWalletBackupPasskeyRecoverOptions(
+  BackendApiService service, {
+  required String walletAddress,
+}) async {
+  try {
+    final uri = Uri.parse(
+        '${service.baseUrl}/api/wallet/backup/passkey/recover/options');
+    final response = await service._post(
+      uri,
+      includeAuth: true,
+      headers: service._getHeaders(includeAuth: true),
+      body: jsonEncode(<String, dynamic>{
+        'walletAddress': walletAddress.trim(),
+      }),
+    );
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final raw = jsonDecode(response.body) as Map<String, dynamic>;
+      return raw['data'] is Map<String, dynamic>
+          ? raw['data'] as Map<String, dynamic>
+          : raw;
+    }
+    throw BackendApiRequestException(
+      statusCode: response.statusCode,
+      path: uri.path,
+      body: response.body,
+    );
+  } catch (e) {
+    AppConfig.debugPrint(
+      'BackendApiService.getWalletBackupPasskeyRecoverOptions failed: $e',
+    );
+    rethrow;
+  }
+}
+
+Future<Map<String, dynamic>> _backendApiVerifyWalletBackupPasskeyRecover(
+  BackendApiService service, {
+  required String walletAddress,
+  required Map<String, dynamic> responsePayload,
+}) async {
+  try {
+    final uri = Uri.parse(
+        '${service.baseUrl}/api/wallet/backup/passkey/recover/verify');
+    final response = await service._post(
+      uri,
+      includeAuth: true,
+      headers: service._getHeaders(includeAuth: true),
+      body: jsonEncode(<String, dynamic>{
+        'walletAddress': walletAddress.trim(),
+        'response': responsePayload,
+      }),
+    );
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final raw = jsonDecode(response.body) as Map<String, dynamic>;
+      return raw['data'] is Map<String, dynamic>
+          ? raw['data'] as Map<String, dynamic>
+          : raw;
+    }
+    throw BackendApiRequestException(
+      statusCode: response.statusCode,
+      path: uri.path,
+      body: response.body,
+    );
+  } catch (e) {
+    AppConfig.debugPrint(
+      'BackendApiService.verifyWalletBackupPasskeyRecover failed: $e',
+    );
+    rethrow;
+  }
+}
+
 Future<Map<String, dynamic>> _backendApiGetWalletBackupPasskeyAuthOptions(
   BackendApiService service, {
   required String walletAddress,
 }) async {
   try {
-    final uri = Uri.parse('${service.baseUrl}/api/wallet-backup/passkey/auth/options');
+    final uri =
+        Uri.parse('${service.baseUrl}/api/wallet-backup/passkey/auth/options');
     final response = await service._post(
       uri,
       includeAuth: true,
@@ -809,7 +994,8 @@ Future<Map<String, dynamic>> _backendApiVerifyWalletBackupPasskeyAuth(
   required Map<String, dynamic> responsePayload,
 }) async {
   try {
-    final uri = Uri.parse('${service.baseUrl}/api/wallet-backup/passkey/auth/verify');
+    final uri =
+        Uri.parse('${service.baseUrl}/api/wallet-backup/passkey/auth/verify');
     final response = await service._post(
       uri,
       includeAuth: true,

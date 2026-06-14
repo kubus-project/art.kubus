@@ -234,6 +234,8 @@ class WalletCustodyStatusPanel extends StatelessWidget {
             : l10n.walletSecuritySignInMethodGoogle;
       case AuthSignInMethod.wallet:
         return l10n.walletSecuritySignInMethodWallet;
+      case AuthSignInMethod.passkey:
+        return l10n.authContinueWithPasskey;
       case AuthSignInMethod.unknown:
         return l10n.walletSecuritySignInMethodUnknown;
     }

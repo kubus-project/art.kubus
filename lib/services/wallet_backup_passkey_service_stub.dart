@@ -1,5 +1,7 @@
 Future<bool> isWalletBackupPasskeySupported() async => false;
 
+Future<bool> isWalletBackupPasskeyPrfSupported() async => false;
+
 Future<Map<String, dynamic>> createWalletBackupPasskeyCredential(
   Map<String, dynamic> creationOptions,
 ) async {

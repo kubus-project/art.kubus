@@ -15,6 +15,7 @@ enum AuthOrigin {
   google,
   googleOnboarding,
   wallet,
+  passkey,
   restoredSession,
 }
 
@@ -98,12 +99,13 @@ class AuthRedirectController {
       // Wallet setup applies to all Google/email account sessions without a
       // wallet — standalone sign-in/registration and onboarding alike. Wallet
       // origin sessions already proved a wallet, so they are exempt.
-      requiresWalletSetup: (requiresWalletSetup ||
-              _payloadRequiresWalletSetup(payload)) &&
-          targetWallet.isEmpty &&
-          (origin == AuthOrigin.google ||
-              origin == AuthOrigin.googleOnboarding ||
-              origin == AuthOrigin.emailPassword),
+      requiresWalletSetup:
+          (requiresWalletSetup || _payloadRequiresWalletSetup(payload)) &&
+              targetWallet.isEmpty &&
+              (origin == AuthOrigin.google ||
+                  origin == AuthOrigin.googleOnboarding ||
+                  origin == AuthOrigin.emailPassword ||
+                  origin == AuthOrigin.passkey),
       heuristicNextStepId: heuristicNextStepId,
       persona: persona,
       payload: payload,
@@ -146,9 +148,8 @@ class AuthRedirectController {
     }
 
     final data = payload['data'];
-    final envelope = data is Map
-        ? Map<String, dynamic>.from(data)
-        : <String, dynamic>{};
+    final envelope =
+        data is Map ? Map<String, dynamic>.from(data) : <String, dynamic>{};
     return readBool(payload, 'requiresWalletSetup') ||
         readBool(envelope, 'requiresWalletSetup');
   }

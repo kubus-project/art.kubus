@@ -22,6 +22,7 @@ import '../services/security/pin_auth_service.dart';
 import '../services/solana_walletconnect_service.dart';
 import '../services/user_service.dart';
 import '../services/wallet_backup_passkey_service.dart';
+import '../services/wallet_passkey_crypto_service.dart';
 import '../config/config.dart';
 import '../config/api_keys.dart';
 import '../utils/wallet_utils.dart';
@@ -104,6 +105,51 @@ class WalletAuthoritySnapshot {
   bool get isReadOnlyWallet => hasWalletIdentity && !canTransact;
 }
 
+class WalletPasskeyRecoveryStatus {
+  const WalletPasskeyRecoveryStatus({
+    required this.walletAddress,
+    required this.exists,
+    required this.prfSupported,
+    required this.credentialCount,
+    required this.prfCredentialCount,
+    this.lastUsedAt,
+  });
+
+  final String walletAddress;
+  final bool exists;
+  final bool prfSupported;
+  final int credentialCount;
+  final int prfCredentialCount;
+  final DateTime? lastUsedAt;
+
+  factory WalletPasskeyRecoveryStatus.fromJson(Map<String, dynamic> json) {
+    DateTime? parseDate(Object? raw) {
+      final value = (raw ?? '').toString().trim();
+      if (value.isEmpty) return null;
+      return DateTime.tryParse(value)?.toLocal();
+    }
+
+    int parseInt(Object? raw) {
+      if (raw is num) return raw.toInt();
+      return int.tryParse((raw ?? '').toString()) ?? 0;
+    }
+
+    return WalletPasskeyRecoveryStatus(
+      walletAddress: (json['walletAddress'] ?? json['wallet_address'] ?? '')
+          .toString()
+          .trim(),
+      exists: json['exists'] == true,
+      prfSupported:
+          json['prfSupported'] == true || json['prf_supported'] == true,
+      credentialCount:
+          parseInt(json['credentialCount'] ?? json['credential_count']),
+      prfCredentialCount:
+          parseInt(json['prfCredentialCount'] ?? json['prf_credential_count']),
+      lastUsedAt: parseDate(json['lastUsedAt'] ?? json['last_used_at']),
+    );
+  }
+}
+
 enum ManagedWalletReconnectOutcome {
   signerRestored,
   readOnlyRefreshed,
@@ -138,6 +184,8 @@ class WalletProvider extends ChangeNotifier {
   final LocalAuthentication _localAuth = LocalAuthentication();
   final EncryptedWalletBackupService _encryptedWalletBackupService =
       EncryptedWalletBackupService();
+  final WalletPasskeyCryptoService _walletPasskeyCryptoService =
+      WalletPasskeyCryptoService();
   late final PinAuthService _pinAuth = PinAuthService(
     store: SecureStoragePinStore(_secureStorage),
   );
@@ -1366,40 +1414,93 @@ class WalletProvider extends ChangeNotifier {
         return false;
       }
 
-      final supported = await isWalletBackupPasskeySupported();
-      if (!supported) {
+      final capability = await getPasskeyCapability();
+      if (capability == PasskeyCapability.unsupported) {
         throw const EncryptedWalletBackupException(
           'Passkeys are not available in this browser.',
         );
       }
+      if (capability != PasskeyCapability.walletRecoveryPrfSupported) {
+        throw const EncryptedWalletBackupException(
+          'Passkey recovery is not available on this device.',
+        );
+      }
 
-      final options = await _apiService.recovery.getPasskeyAuthOptions(
+      final options = await _apiService.recovery.getPasskeyRecoverOptions(
         walletAddress: targetWallet,
       );
-      final assertion = await getWalletBackupPasskeyAssertion(options);
-      final verifyResponse = await _apiService.recovery.verifyPasskeyAuth(
+      final assertion = await getWalletBackupPasskeyRecoveryAssertion(options);
+      if (!assertion.verified || assertion.response == null) {
+        throw EncryptedWalletBackupException(
+          assertion.error?.toString() ?? 'Passkey recovery was cancelled.',
+        );
+      }
+      if (!assertion.prfSupported ||
+          (assertion.prfOutputBase64 ?? '').trim().isEmpty) {
+        throw const EncryptedWalletBackupException(
+          'Passkey recovery is not available on this device.',
+        );
+      }
+      final verifyResponse = await _apiService.recovery.verifyPasskeyRecover(
         walletAddress: targetWallet,
-        responsePayload: assertion,
+        responsePayload: assertion.response!,
       );
-      await refreshEncryptedWalletBackupStatus(walletAddress: targetWallet);
 
-      // Contract note: the current backend verifies WebAuthn and returns only
-      // `{ verified, passkey }`. It does not return a passkey-unlocked local
-      // secret, wrapped DEK, or other client-decryptable material for the
-      // encrypted mnemonic payload. Returning true here without importing a
-      // signer would fake wallet recovery, so passkey auth remains a primary
-      // attempt that falls back to recovery password until that contract exists.
-      final hasDecryptMaterial = verifyResponse.containsKey('wrappedDek') ||
-          verifyResponse.containsKey('wrappedDekCiphertext') ||
-          verifyResponse.containsKey('passkeyWrappedDek') ||
-          verifyResponse.containsKey('passkeyRecoverySecret');
-      if (!hasDecryptMaterial) {
+      if (verifyResponse['verified'] != true) {
         return false;
       }
 
-      throw const EncryptedWalletBackupException(
-        'Passkey restore decrypt material is not supported by this app version.',
+      final credentialId = (assertion.credentialId ?? '').trim();
+      final recovery = options['recovery'];
+      final materials = recovery is Map ? recovery['materials'] : null;
+      Map<String, dynamic>? material;
+      if (materials is List) {
+        for (final item in materials.whereType<Map>()) {
+          final mapped = Map<String, dynamic>.from(item);
+          if ((mapped['credentialId'] ?? '').toString().trim() ==
+              credentialId) {
+            material = mapped;
+            break;
+          }
+        }
+      }
+      if (material == null) {
+        throw const EncryptedWalletBackupException(
+          'Passkey recovery material was not returned for this credential.',
+        );
+      }
+
+      final mnemonic = await _walletPasskeyCryptoService.unwrapMnemonic(
+        encryptedWrappedRecoveryKey:
+            (material['encryptedWrappedRecoveryKey'] ?? '').toString(),
+        encryptedWrappedRecoveryKeyNonce:
+            (material['encryptedWrappedRecoveryKeyNonce'] ?? '').toString(),
+        prfOutputBase64: assertion.prfOutputBase64!,
+        walletAddress: targetWallet,
+        credentialId: credentialId,
+        backupVersion: (material['backupVersion'] as num?)?.toInt() ?? 1,
+        wrappingAlgorithm: (material['wrappingAlgorithm'] ?? '').toString(),
       );
+      final derived = await _solanaWalletService.derivePreferredKeyPair(
+        mnemonic,
+      );
+      if (!WalletUtils.equals(derived.address, targetWallet)) {
+        throw const EncryptedWalletBackupException(
+          'The imported recovery phrase does not match this account wallet.',
+        );
+      }
+      await importWalletFromMnemonic(
+        mnemonic,
+        preDerived: derived,
+        markBackedUp: false,
+      );
+      await refreshEncryptedWalletBackupStatus(walletAddress: targetWallet);
+      await emitWalletBackupEventBestEffort(
+        walletAddress: targetWallet,
+        eventType: 'backup_restored',
+      );
+      return WalletUtils.equals(_currentWalletAddress, targetWallet) &&
+          hasSigner;
     } catch (e) {
       _encryptedWalletBackupError = e.toString();
       rethrow;
@@ -1430,10 +1531,22 @@ class WalletProvider extends ChangeNotifier {
       );
     }
 
-    final supported = await isWalletBackupPasskeySupported();
-    if (!supported) {
+    final capability = await getPasskeyCapability();
+    if (capability == PasskeyCapability.unsupported) {
       throw const EncryptedWalletBackupException(
         'Passkeys are not available in this browser.',
+      );
+    }
+    if (capability != PasskeyCapability.walletRecoveryPrfSupported) {
+      throw const EncryptedWalletBackupException(
+        'Passkey recovery is not available on this device.',
+      );
+    }
+
+    final mnemonic = (await readCachedMnemonic() ?? '').trim();
+    if (mnemonic.isEmpty) {
+      throw const EncryptedWalletBackupException(
+        'Recovery phrase is not available locally for passkey setup.',
       );
     }
 
@@ -1442,10 +1555,35 @@ class WalletProvider extends ChangeNotifier {
       nickname: nickname,
     );
     final credential = await createWalletBackupPasskeyCredential(options);
+    final extensions = credential['clientExtensionResults'];
+    final prf = extensions is Map ? extensions['prf'] : null;
+    final prfMap = prf is Map ? prf : const <String, dynamic>{};
+    final prfOutputBase64 = (prfMap['first'] ?? '').toString().trim();
+    if (prfOutputBase64.isEmpty) {
+      throw const EncryptedWalletBackupException(
+        'Passkey recovery is not available on this device.',
+      );
+    }
+    final wrapped = await _walletPasskeyCryptoService.wrapMnemonic(
+      mnemonic: mnemonic,
+      prfOutputBase64: prfOutputBase64,
+      walletAddress: targetWallet,
+      credentialId: (credential['id'] ?? credential['rawId'] ?? '').toString(),
+      backupVersion: 1,
+    );
+    final prfOptions = options['prf'];
+    final prfSalt =
+        prfOptions is Map ? (prfOptions['salt'] ?? '').toString() : '';
     final verifyResponse = await _apiService.recovery.verifyPasskeyRegistration(
       walletAddress: targetWallet,
       nickname: nickname,
       responsePayload: credential,
+      encryptedWrappedRecoveryKey: wrapped.encryptedWrappedRecoveryKey,
+      encryptedWrappedRecoveryKeyNonce:
+          wrapped.encryptedWrappedRecoveryKeyNonce,
+      prfSalt: prfSalt,
+      wrappingAlgorithm: wrapped.wrappingAlgorithm,
+      prfSupported: true,
     );
     await refreshEncryptedWalletBackupStatus(walletAddress: targetWallet);
 
@@ -1453,6 +1591,38 @@ class WalletProvider extends ChangeNotifier {
         ? verifyResponse['passkey'] as Map<String, dynamic>
         : verifyResponse;
     return WalletBackupPasskeyDefinition.fromJson(passkeyPayload);
+  }
+
+  Future<bool> registerWalletPasskeyRecovery({String? walletAddress}) async {
+    final label = kIsWeb ? 'This browser' : 'This device';
+    await enrollEncryptedWalletBackupPasskey(
+      nickname: label,
+      walletAddress: walletAddress,
+    );
+    return true;
+  }
+
+  Future<WalletPasskeyRecoveryStatus> refreshWalletPasskeyRecoveryStatus({
+    String? walletAddress,
+  }) async {
+    final targetWallet = (await _resolveBackupWalletAddress(
+              walletAddress: walletAddress,
+            ) ??
+            '')
+        .trim();
+    if (targetWallet.isEmpty) {
+      return const WalletPasskeyRecoveryStatus(
+        walletAddress: '',
+        exists: false,
+        prfSupported: false,
+        credentialCount: 0,
+        prfCredentialCount: 0,
+      );
+    }
+    final status = await _apiService.recovery.getPasskeyRecoveryStatus(
+      walletAddress: targetWallet,
+    );
+    return WalletPasskeyRecoveryStatus.fromJson(status);
   }
 
   Future<bool> restoreSignerFromEncryptedWalletBackup({
@@ -2114,8 +2284,7 @@ class WalletProvider extends ChangeNotifier {
     // call this at all, but guard here in case any wallet create/import/connect
     // path is reused while account-link suppression is active.
     if (_suppressAccountLinkIdentityPersistence) {
-      _walletLog(
-          '_syncBackendData skipped during account-link wallet setup');
+      _walletLog('_syncBackendData skipped during account-link wallet setup');
       return;
     }
     try {

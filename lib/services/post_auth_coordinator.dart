@@ -85,7 +85,9 @@ class PostAuthCoordinator {
       final expectedWalletFromPayload = _expectedWalletFromPayload(data, user);
       final isGoogleAuth =
           origin == AuthOrigin.google || origin == AuthOrigin.googleOnboarding;
-      final isAccountAuth = isGoogleAuth || origin == AuthOrigin.emailPassword;
+      final isAccountAuth = isGoogleAuth ||
+          origin == AuthOrigin.emailPassword ||
+          origin == AuthOrigin.passkey;
       final isGoogleOnboarding = origin == AuthOrigin.googleOnboarding;
       final payloadRequiresWalletSetup = _payloadRequiresWalletSetup(
         payload: payload,
@@ -231,7 +233,6 @@ class PostAuthCoordinator {
             'PostAuthCoordinator: authenticated profile load skipped/failed: $e',
           );
         }
-
       } else if (walletForProfile.isNotEmpty) {
         try {
           await profileProvider

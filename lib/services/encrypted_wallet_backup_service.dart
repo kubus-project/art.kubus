@@ -17,17 +17,25 @@ class EncryptedWalletBackupException implements Exception {
 
 class WalletBackupPasskeyDefinition {
   const WalletBackupPasskeyDefinition({
+    this.id,
     required this.credentialId,
     required this.transports,
     this.nickname,
+    this.prfSupported = false,
+    this.hasEncryptedRecoveryKey = false,
+    this.wrappingAlgorithm,
     this.createdAt,
     this.lastUsedAt,
     this.lastVerifiedAt,
   });
 
+  final String? id;
   final String credentialId;
   final List<String> transports;
   final String? nickname;
+  final bool prfSupported;
+  final bool hasEncryptedRecoveryKey;
+  final String? wrappingAlgorithm;
   final DateTime? createdAt;
   final DateTime? lastUsedAt;
   final DateTime? lastVerifiedAt;
@@ -45,6 +53,9 @@ class WalletBackupPasskeyDefinition {
         : const <String>[];
 
     return WalletBackupPasskeyDefinition(
+      id: (json['id'] ?? '').toString().trim().isEmpty
+          ? null
+          : json['id'].toString().trim(),
       credentialId: (json['credentialId'] ?? json['credential_id'] ?? '')
           .toString()
           .trim(),
@@ -52,6 +63,19 @@ class WalletBackupPasskeyDefinition {
       nickname: (json['nickname'] ?? '').toString().trim().isEmpty
           ? null
           : json['nickname'].toString().trim(),
+      prfSupported:
+          json['prfSupported'] == true || json['prf_supported'] == true,
+      hasEncryptedRecoveryKey: json['hasEncryptedRecoveryKey'] == true ||
+          json['has_encrypted_recovery_key'] == true,
+      wrappingAlgorithm:
+          (json['wrappingAlgorithm'] ?? json['wrapping_algorithm'] ?? '')
+                  .toString()
+                  .trim()
+                  .isEmpty
+              ? null
+              : (json['wrappingAlgorithm'] ?? json['wrapping_algorithm'])
+                  .toString()
+                  .trim(),
       createdAt: parseDate(json['createdAt'] ?? json['created_at']),
       lastUsedAt: parseDate(json['lastUsedAt'] ?? json['last_used_at']),
       lastVerifiedAt:
@@ -61,9 +85,13 @@ class WalletBackupPasskeyDefinition {
 
   Map<String, dynamic> toJson() {
     return <String, dynamic>{
+      if (id != null) 'id': id,
       'credentialId': credentialId,
       'transports': transports,
       if (nickname != null) 'nickname': nickname,
+      'prfSupported': prfSupported,
+      'hasEncryptedRecoveryKey': hasEncryptedRecoveryKey,
+      if (wrappingAlgorithm != null) 'wrappingAlgorithm': wrappingAlgorithm,
       if (createdAt != null) 'createdAt': createdAt!.toUtc().toIso8601String(),
       if (lastUsedAt != null)
         'lastUsedAt': lastUsedAt!.toUtc().toIso8601String(),

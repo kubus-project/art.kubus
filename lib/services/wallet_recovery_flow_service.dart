@@ -151,6 +151,7 @@ class WalletRecoveryFlowService {
         }
         fallbackKind = WalletRecoveryResultKind.passkeyUnavailable;
         fallbackTitle = _fallbackTitle(context, fallbackKind);
+        fallbackDescription = _passkeyUnavailableDescription(context);
       } catch (error) {
         lastError = error;
         if (!context.mounted) {
@@ -160,12 +161,28 @@ class WalletRecoveryFlowService {
             error: lastError,
           );
         }
-        fallbackKind = WalletRecoveryResultKind.passkeyFailed;
+        final errorText = error.toString().toLowerCase();
+        final unavailable = errorText.contains('not available') ||
+            errorText.contains('unavailable') ||
+            errorText.contains('prf');
+        fallbackKind = unavailable
+            ? WalletRecoveryResultKind.passkeyUnavailable
+            : WalletRecoveryResultKind.passkeyFailed;
         fallbackTitle = _fallbackTitle(context, fallbackKind);
+        if (unavailable) {
+          fallbackDescription = _passkeyUnavailableDescription(context);
+        }
       }
     }
 
-    while (context.mounted) {
+    while (true) {
+      if (!context.mounted) {
+        return WalletRecoveryResult(
+          kind: WalletRecoveryResultKind.cancelled,
+          walletAddress: targetWallet,
+          error: lastError,
+        );
+      }
       final choice = await showWalletRecoveryFallbackChoicePrompt(
         context: context,
         title: fallbackTitle,
@@ -224,12 +241,6 @@ class WalletRecoveryFlowService {
           );
       }
     }
-
-    return WalletRecoveryResult(
-      kind: WalletRecoveryResultKind.cancelled,
-      walletAddress: targetWallet,
-      error: lastError,
-    );
   }
 
   Future<WalletRecoveryResult> _recoverWithPassword({
@@ -262,13 +273,15 @@ class WalletRecoveryFlowService {
     }
 
     try {
-      final restored = await walletProvider.restoreSignerFromEncryptedWalletBackup(
+      final restored =
+          await walletProvider.restoreSignerFromEncryptedWalletBackup(
         walletAddress: walletAddress,
         recoveryPassword: recoveryPassword,
       );
       if (restored &&
           walletProvider.hasSigner &&
-          WalletUtils.equals(walletProvider.currentWalletAddress, walletAddress)) {
+          WalletUtils.equals(
+              walletProvider.currentWalletAddress, walletAddress)) {
         return WalletRecoveryResult(
           kind: WalletRecoveryResultKind.restored,
           walletAddress: walletAddress,
@@ -373,5 +386,10 @@ class WalletRecoveryFlowService {
 
   String _fallbackDescription(BuildContext context) {
     return AppLocalizations.of(context)!.walletRecoveryFallbackDescription;
+  }
+
+  String _passkeyUnavailableDescription(BuildContext context) {
+    return AppLocalizations.of(context)!
+        .walletRecoveryPasskeyUnavailableDeviceDescription;
   }
 }
