@@ -63,6 +63,11 @@ class CommunityCommentsProvider extends ChangeNotifier {
     if (!force && isLoading(postId)) return;
     if (!force && _commentsByPostId.containsKey(postId)) return;
 
+    if (kDebugMode) {
+      debugPrint(
+          'CommunityCommentsProvider: load comments postId=$postId page=$page limit=$limit force=$force');
+    }
+
     _loadingByPostId[postId] = true;
     _errorByPostId[postId] = null;
     notifyListeners();
@@ -96,8 +101,8 @@ class CommunityCommentsProvider extends ChangeNotifier {
         content: content.trim(),
         parentCommentId:
             (parentCommentId != null && parentCommentId.trim().isNotEmpty)
-            ? parentCommentId.trim()
-            : null,
+                ? parentCommentId.trim()
+                : null,
       );
     } finally {
       // Always reload to ensure nested structure + avatar/name enrichment.

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -133,6 +134,10 @@ class _AvatarWidgetState extends State<AvatarWidget>
       _loading = true;
     });
     try {
+      if (kDebugMode) {
+        debugPrint(
+            'AvatarWidget: fallback user fetch for avatar id=$cacheKey includeAchievements=false');
+      }
       final u = await UserService.getUserById(
         cacheKey,
         includeAchievements: false,

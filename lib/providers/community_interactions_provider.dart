@@ -33,6 +33,9 @@ class CommunityInteractionsProvider extends ChangeNotifier {
   final Map<String, List<CommunityLikeUser>> _commentLikeUsers = {};
   final Map<String, DateTime> _commentLikeFetchedAt = {};
 
+  CommunityEntityInteractionState? cachedPostState(String postId) =>
+      _postStates[postId];
+
   List<CommunityLikeUser>? cachedPostLikes(String postId) =>
       _postLikeUsers[postId];
 
@@ -97,6 +100,11 @@ class CommunityInteractionsProvider extends ChangeNotifier {
     }
     if (targets.isEmpty) return;
 
+    if (kDebugMode) {
+      debugPrint(
+          'CommunityInteractionsProvider: refresh post states count=${targets.length} force=$force');
+    }
+
     for (final post in targets) {
       _postStateInflight[post.id] = true;
     }
@@ -139,12 +147,20 @@ class CommunityInteractionsProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> prefetchForPosts(Iterable<CommunityPost> posts) async {
+  Future<void> prefetchForPosts(
+    Iterable<CommunityPost> posts, {
+    bool reconcile = false,
+  }) async {
     final list = posts.where((post) => post.id.trim().isNotEmpty).toList();
     if (list.isEmpty) return;
 
     hydratePostsFromServer(list);
-    unawaited(refreshPostStates(list));
+    if (reconcile) {
+      unawaited(refreshPostStates(list, force: true));
+    } else if (kDebugMode) {
+      debugPrint(
+          'CommunityInteractionsProvider: hydrated ${list.length} post states from feed payload');
+    }
   }
 
   Future<void> togglePostLike(CommunityPost post) async {
@@ -226,6 +242,11 @@ class CommunityInteractionsProvider extends ChangeNotifier {
     final inFlight = _postLikeFutures[postId];
     if (!force && inFlight != null) return inFlight;
 
+    if (kDebugMode) {
+      debugPrint(
+          'CommunityInteractionsProvider: load post likes postId=$postId force=$force');
+    }
+
     final requestEpoch = _authEpoch;
     final future = _api.getPostLikes(postId).then((users) {
       if (requestEpoch == _authEpoch) {
@@ -256,6 +277,11 @@ class CommunityInteractionsProvider extends ChangeNotifier {
 
     final inFlight = _commentLikeFutures[commentId];
     if (!force && inFlight != null) return inFlight;
+
+    if (kDebugMode) {
+      debugPrint(
+          'CommunityInteractionsProvider: load comment likes commentId=$commentId force=$force');
+    }
 
     final requestEpoch = _authEpoch;
     final future = _api.getCommentLikes(commentId).then((users) {

@@ -5,23 +5,18 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../config/config.dart';
-import '../providers/app_refresh_provider.dart';
 import '../providers/app_mode_provider.dart';
 import '../providers/artwork_provider.dart';
 import '../providers/cache_provider.dart';
-import '../providers/chat_provider.dart';
 import '../providers/collectibles_provider.dart';
-import '../providers/community_hub_provider.dart';
 import '../providers/collab_provider.dart';
 import '../providers/events_provider.dart';
 import '../providers/exhibitions_provider.dart';
 import '../providers/institution_provider.dart';
 import '../providers/navigation_provider.dart';
 import '../providers/marker_management_provider.dart';
-import '../providers/notification_provider.dart';
 import '../providers/presence_provider.dart';
 import '../providers/profile_provider.dart';
-import '../providers/recent_activity_provider.dart';
 import '../providers/saved_items_provider.dart';
 import '../providers/stats_provider.dart';
 import '../providers/task_provider.dart';
@@ -31,8 +26,8 @@ import '../utils/home_activity_cards.dart';
 import 'backend_api_service.dart';
 
 /// Centralized bootstrapper that preloads the core providers before the user
-/// reaches the main UI. This keeps home/community/notification data in sync
-/// without requiring the user to manually refresh after launch.
+/// reaches the main UI. Screen-specific providers still own heavyweight
+/// feed, notification, chat, and group loading so first paint stays lean.
 class AppBootstrapService {
   const AppBootstrapService({
     this.taskTimeout = const Duration(seconds: 12),
@@ -49,14 +44,10 @@ class AppBootstrapService {
 
     // Providers
     final artworkProvider = context.read<ArtworkProvider>();
-    final recentActivityProvider = context.read<RecentActivityProvider>();
-    final notificationProvider = context.read<NotificationProvider>();
     final navigationProvider = context.read<NavigationProvider>();
-    final communityHubProvider = context.read<CommunityHubProvider>();
     final profileProvider = context.read<ProfileProvider>();
     final walletProvider = context.read<WalletProvider>();
     final web3Provider = context.read<Web3Provider>();
-    final chatProvider = context.read<ChatProvider>();
     final cacheProvider = context.read<CacheProvider>();
     final savedItemsProvider = context.read<SavedItemsProvider>();
     final collectiblesProvider = context.read<CollectiblesProvider>();
@@ -64,7 +55,6 @@ class AppBootstrapService {
     final exhibitionsProvider = context.read<ExhibitionsProvider>();
     final institutionProvider = context.read<InstitutionProvider>();
     final taskProvider = context.read<TaskProvider>();
-    final appRefreshProvider = context.read<AppRefreshProvider>();
     final collabProvider = context.read<CollabProvider>();
     final statsProvider = context.read<StatsProvider>();
     final presenceProvider = context.read<PresenceProvider>();
@@ -134,28 +124,7 @@ class AppBootstrapService {
           'secure_account_status',
           backend.syncSecureAccountStatusToPrefs,
         ));
-        p1.add(
-          _runTask(
-            'recent_activity',
-            () => recentActivityProvider.initialize(force: true),
-          ),
-        );
-        p1.add(
-          _runTask(
-            'notifications',
-            () => notificationProvider.initialize(
-              walletOverride: resolvedWallet,
-              force: true,
-            ),
-          ),
-        );
-        p1.add(
-          _runTask('chat',
-              () => chatProvider.initialize(initialWallet: resolvedWallet)),
-        );
       }
-      p1.add(_runTask('community_groups',
-          () => communityHubProvider.loadGroups(refresh: true)));
     }
 
     if (shouldLoadWeb3) {
@@ -223,12 +192,6 @@ class AppBootstrapService {
       debugPrint(
           'AppBootstrapService: warm-up tiers complete (p0=${p0.length}, p1=${p1.length})');
     }
-
-    // Signal listeners with view-aware targeted refreshes (avoid global fan-out).
-    appRefreshProvider.triggerNotifications(onlyIfActive: true);
-    appRefreshProvider.triggerChat(onlyIfActive: true);
-    appRefreshProvider.triggerCommunity(onlyIfActive: true);
-    appRefreshProvider.triggerProfile(onlyIfActive: true);
   }
 
   Future<void> _runTask(String label, FutureOr<void> Function() task) async {

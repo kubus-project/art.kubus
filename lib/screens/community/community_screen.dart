@@ -58,7 +58,6 @@ import '../../providers/notification_provider.dart';
 import '../../providers/recent_activity_provider.dart';
 import '../../providers/chat_provider.dart';
 import 'messages_screen.dart';
-import '../../providers/saved_items_provider.dart';
 import '../../providers/navigation_provider.dart';
 import '../../utils/app_animations.dart';
 import '../../utils/activity_navigation.dart';
@@ -352,9 +351,14 @@ class _CommunityScreenState extends State<CommunityScreen>
       } else {
         await backendApi.loadAuthToken();
       }
-      debugPrint('Auth token ready for community posts');
+      if (kDebugMode) {
+        debugPrint('CommunityScreen: auth token ready for community posts');
+      }
     } catch (e) {
-      debugPrint('Auth token not ready for community posts: $e');
+      if (kDebugMode) {
+        debugPrint(
+            'CommunityScreen: auth token not ready for community posts: $e');
+      }
     }
   }
 
@@ -365,7 +369,10 @@ class _CommunityScreenState extends State<CommunityScreen>
     final backendApi = BackendApiService();
     final subjectProvider =
         Provider.of<CommunitySubjectProvider>(context, listen: false);
-    final savedItemsProvider = context.read<SavedItemsProvider>();
+    if (kDebugMode) {
+      debugPrint(
+          'CommunityScreen: active feed fetch ${followingOnly ? 'following' : 'discover'} limit=24');
+    }
     final posts = await backendApi.getCommunityPosts(
       page: 1,
       limit: 24,
@@ -373,18 +380,11 @@ class _CommunityScreenState extends State<CommunityScreen>
       surface: followingOnly ? 'following' : 'discover',
       sort: sort,
     );
-    await CommunityService.loadSavedInteractions(
-      posts,
-      savedItemsProvider: savedItemsProvider,
-    );
     if (mounted) {
       subjectProvider.primeFromPosts(posts);
       final interactionsProvider =
           Provider.of<CommunityInteractionsProvider>(context, listen: false);
       interactionsProvider.hydratePostsFromServer(posts);
-      unawaited(interactionsProvider.prefetchForPosts(
-        posts,
-      ));
     }
 
     final blocked = await BlockListService().loadBlockedWallets();
@@ -654,6 +654,67 @@ class _CommunityScreenState extends State<CommunityScreen>
     }
   }
 
+  void _startInitialCommunityLoad() {
+    unawaited(() async {
+      await _loadInitialFeeds();
+      if (!mounted) return;
+      _schedulePostFeedStartupWork();
+    }());
+  }
+
+  void _schedulePostFeedStartupWork() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(Future<void>.delayed(
+        const Duration(milliseconds: 250),
+        () async {
+          if (!mounted) return;
+
+          if (kDebugMode) {
+            debugPrint('CommunityScreen: post-feed startup work');
+          }
+
+          try {
+            Provider.of<NavigationProvider>(context, listen: false)
+                .trackScreenVisit('community');
+          } catch (_) {}
+
+          try {
+            SocketService()
+                .addNotificationListener(_onSocketNotificationForCommunity);
+          } catch (_) {}
+
+          try {
+            await SocketService().connect();
+            if (!mounted) return;
+            SocketService().addPostListener(_handleIncomingPost);
+          } catch (_) {}
+
+          try {
+            final provider =
+                Provider.of<NotificationProvider>(context, listen: false);
+            await provider.refresh();
+            if (!mounted) return;
+            setState(() {
+              _bellUnreadCount = provider.unreadCount;
+            });
+            provider.addListener(_onNotificationProviderChange);
+          } catch (_) {}
+
+          try {
+            final cp = Provider.of<ChatProvider>(context, listen: false);
+            await cp.initialize();
+            if (!mounted) return;
+            _messageUnreadCount = cp.totalUnread;
+            cp.addListener(_onChatProviderChanged);
+          } catch (_) {}
+
+          if (!mounted) return;
+          _ensureGroupsLoaded();
+        },
+      ));
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -674,13 +735,7 @@ class _CommunityScreenState extends State<CommunityScreen>
       _lastWalletAddress = Provider.of<WalletProvider>(context, listen: false)
           .currentWalletAddress;
     } catch (_) {}
-    _loadInitialFeeds();
-
-    // Track this screen visit for quick actions
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<NavigationProvider>(context, listen: false)
-          .trackScreenVisit('community');
-    });
+    _startInitialCommunityLoad();
 
     // Listen for tab changes to load appropriate content
     _tabController.addListener(() {
@@ -715,46 +770,6 @@ class _CommunityScreenState extends State<CommunityScreen>
       } catch (_) {}
     });
 
-    // Listen for socket notifications to animate bell
-    try {
-      SocketService()
-          .addNotificationListener(_onSocketNotificationForCommunity);
-    } catch (_) {}
-    // Connect socket and listen for incoming posts to prepend to feed
-    try {
-      (() async {
-        await SocketService().connect();
-        SocketService().addPostListener(_handleIncomingPost);
-      })();
-    } catch (_) {}
-
-    // Load initial unread notification count via provider
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      try {
-        final provider =
-            Provider.of<NotificationProvider>(context, listen: false);
-        await provider.refresh();
-        if (!mounted) return;
-        setState(() {
-          _bellUnreadCount = provider.unreadCount;
-        });
-        provider.addListener(_onNotificationProviderChange);
-      } catch (_) {}
-    });
-
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      try {
-        final cp = Provider.of<ChatProvider>(context, listen: false);
-        // Ensure ChatProvider is initialized so socket subscriptions and unread counts are active
-        try {
-          await cp.initialize();
-        } catch (_) {}
-        if (!mounted) return;
-        _messageUnreadCount = cp.totalUnread;
-        cp.addListener(_onChatProviderChanged);
-      } catch (_) {}
-    });
-
     // Listen for config provider changes to reload data
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final configProvider =
@@ -779,10 +794,6 @@ class _CommunityScreenState extends State<CommunityScreen>
         _lastGlobalRefreshVersion = _appRefreshProvider?.globalVersion ?? 0;
         _appRefreshProvider?.addListener(_onAppRefreshTriggered);
       } catch (_) {}
-    });
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _ensureGroupsLoaded();
     });
   }
 
@@ -1048,13 +1059,9 @@ class _CommunityScreenState extends State<CommunityScreen>
       }
 
       if (_communityPosts.isNotEmpty) {
-        final savedItemsProvider = context.read<SavedItemsProvider>();
-        await CommunityService.loadSavedInteractions(
-          _communityPosts,
-          savedItemsProvider: savedItemsProvider,
-        );
-        if (!mounted) return;
-        setState(() {});
+        context
+            .read<CommunityInteractionsProvider>()
+            .hydratePostsFromServer(_communityPosts);
       }
     } catch (e) {
       debugPrint('Failed to refresh saved interactions on wallet change: $e');

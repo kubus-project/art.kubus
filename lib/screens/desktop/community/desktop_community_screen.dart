@@ -202,11 +202,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     _messageSearchController.addListener(_handleMessageSearchChanged);
     _animationController.forward();
 
-    // Load community feed data
+    // Load community feed data first; sidebar/profile work is deferred until
+    // the active feed has had a chance to render.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadFeed();
-      _loadSidebarData();
-      unawaited(_syncFollowingWallets());
+      _startInitialCommunityLoad();
 
       try {
         _appRefreshProvider =
@@ -216,6 +215,31 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         _lastGlobalRefreshVersion = _appRefreshProvider?.globalVersion ?? 0;
         _appRefreshProvider?.addListener(_onAppRefreshTriggered);
       } catch (_) {}
+    });
+  }
+
+  void _startInitialCommunityLoad() {
+    unawaited(() async {
+      await _loadFeed();
+      if (!mounted) return;
+      _schedulePostFeedStartupWork();
+    }());
+  }
+
+  void _schedulePostFeedStartupWork() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(Future<void>.delayed(
+        const Duration(milliseconds: 250),
+        () async {
+          if (!mounted) return;
+          if (kDebugMode) {
+            debugPrint('DesktopCommunityScreen: post-feed startup work');
+          }
+          await _loadSidebarData();
+          if (!mounted) return;
+          unawaited(_syncFollowingWallets());
+        },
+      ));
     });
   }
 
@@ -515,6 +539,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       _discoverError = null;
     });
     try {
+      if (kDebugMode) {
+        debugPrint(
+            'DesktopCommunityScreen: active feed fetch discover limit=24');
+      }
       final posts = await BackendApiService().getCommunityPosts(
         page: 1,
         limit: 24,
@@ -525,6 +553,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       final filtered = await _filterBlockedPosts(posts);
       if (mounted) {
         _primeSubjectPreviews(filtered);
+        context
+            .read<CommunityInteractionsProvider>()
+            .hydratePostsFromServer(filtered);
       }
       if (mounted) {
         setState(() {
@@ -705,6 +736,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       _followingError = null;
     });
     try {
+      if (kDebugMode) {
+        debugPrint(
+            'DesktopCommunityScreen: active feed fetch following limit=24');
+      }
       final posts = await BackendApiService().getCommunityPosts(
         page: 1,
         limit: 24,
@@ -715,6 +750,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       final filtered = await _filterBlockedPosts(posts);
       if (mounted) {
         _primeSubjectPreviews(filtered);
+        context
+            .read<CommunityInteractionsProvider>()
+            .hydratePostsFromServer(filtered);
       }
       if (mounted) {
         setState(() {

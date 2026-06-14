@@ -1,5 +1,6 @@
 import '../models/user_profile.dart';
 import 'creator_display_format.dart';
+import 'wallet_utils.dart';
 
 String resolveHomeHeaderDisplayName({
   required UserProfile? user,
@@ -9,7 +10,7 @@ String resolveHomeHeaderDisplayName({
     fallbackLabel: fallbackLabel,
     displayName: user?.displayName,
     username: user?.username,
-    wallet: user?.walletAddress,
   );
-  return formatted.primary;
+  final primary = formatted.primary.trim();
+  return WalletUtils.looksLikeWallet(primary) ? fallbackLabel : primary;
 }
