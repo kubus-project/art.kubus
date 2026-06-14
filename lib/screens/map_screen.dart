@@ -17,6 +17,7 @@ import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../features/map/shared/map_screen_shared_helpers.dart';
 import '../features/map/shared/map_artwork_filtering.dart';
+import '../features/map/shared/map_marker_filtering.dart';
 import '../features/map/shared/map_marker_overlay_actions.dart';
 import '../features/map/shared/map_marker_overlay_presentation.dart';
 import '../features/map/shared/map_marker_selection_resolver.dart';
@@ -795,6 +796,11 @@ class _MapScreenState extends State<MapScreen>
     // nearby panel list by query) without reintroducing screen-local search
     // state.
     _safeSetState(() {});
+    // Compose the search query with the active quick filter on the actual map
+    // markers + clusters, not just the nearby list.
+    if (!mounted) return;
+    _applyVisibleMarkers();
+    _requestMarkerVisualSync(force: true);
   }
 
   @override
@@ -1858,7 +1864,7 @@ class _MapScreenState extends State<MapScreen>
             _artMarkers.removeWhere((m) => m.id == marker.id);
             _artMarkers.add(marker);
           });
-          _kubusMapController.setMarkers(_artMarkers);
+          _applyVisibleMarkers();
           unawaited(
               _animateMapTo(marker.position, zoom: math.max(_lastZoom, 15)));
           _showArtMarkerDialog(marker);
@@ -2056,7 +2062,7 @@ class _MapScreenState extends State<MapScreen>
         setState(() {
           _artMarkers = merged;
         });
-        _kubusMapController.setMarkers(_artMarkers);
+        _applyVisibleMarkers();
         unawaited(_syncMapMarkers(themeProvider: themeProvider));
       }
 
@@ -2120,7 +2126,7 @@ class _MapScreenState extends State<MapScreen>
         }
       });
       if (!changed) return;
-      _kubusMapController.setMarkers(_artMarkers);
+      _applyVisibleMarkers();
       unawaited(_syncMapMarkers(themeProvider: context.read<ThemeProvider>()));
       AppConfig.debugPrint('MapScreen: added marker from socket ${marker.id}');
     } catch (e) {
@@ -2161,7 +2167,7 @@ class _MapScreenState extends State<MapScreen>
       setState(() {
         _artMarkers.removeWhere((m) => m.id == markerId);
       });
-      _kubusMapController.setMarkers(_artMarkers);
+      _applyVisibleMarkers();
       unawaited(_syncMapMarkers(themeProvider: context.read<ThemeProvider>()));
     } catch (_) {}
   }
@@ -2332,6 +2338,10 @@ class _MapScreenState extends State<MapScreen>
 
     if (result != null) {
       setState(() => _markerRadiusKm = result);
+      // Radius affects the `nearby` quick filter; re-filter the loaded markers
+      // immediately so the visible map + clusters track the new radius.
+      _applyVisibleMarkers();
+      _requestMarkerVisualSync(force: true);
       await _loadArtMarkers(force: true);
     }
   }
@@ -2965,7 +2975,7 @@ class _MapScreenState extends State<MapScreen>
         setState(() {
           _artMarkers.add(marker);
         });
-        _kubusMapController.setMarkers(_artMarkers);
+        _applyVisibleMarkers();
         return true;
       } else {
         AppConfig.debugPrint(
@@ -5090,9 +5100,15 @@ class _MapScreenState extends State<MapScreen>
             layout: KubusMapFilterChipLayout.wrap,
             onSelected: (key) {
               setState(() => _artworkFilter = key);
-              // Reload markers so the nearby panel reflects the new filter immediately.
+              // Re-filter the already-loaded markers immediately so the visible
+              // map markers + clusters update even when no new data is fetched.
+              _applyVisibleMarkers();
+              _requestMarkerVisualSync(force: true);
+              // Also reload so the nearby panel + any wider-scope markers reflect
+              // the new filter.
               unawaited(_loadMarkersForCurrentView(force: true).then((_) {
                 if (!mounted) return;
+                _applyVisibleMarkers();
                 _requestMarkerVisualSync(force: true);
               }));
             },
@@ -5289,6 +5305,47 @@ class _MapScreenState extends State<MapScreen>
   String _markerQueryFiltersKey() {
     final query = _mapSearchController.state.query.trim().toLowerCase();
     return 'filter=$_artworkFilter|query=$query|travel=${_travelModeEnabled ? 1 : 0}';
+  }
+
+  /// Applies the active quick filter / search / radius to the raw loaded marker
+  /// set and pushes the resulting visible markers into the shared controller.
+  ///
+  /// The controller drives both the rendered marker icons and clustering, so
+  /// filtering here is what actually changes the visible map (and therefore the
+  /// clusters built from the filtered set).
+  void _applyVisibleMarkers() {
+    _kubusMapController.setMarkers(_computeVisibleMarkers());
+  }
+
+  List<ArtMarker> _computeVisibleMarkers() {
+    final artworkProvider = context.read<ArtworkProvider>();
+    Artwork? artworkFor(ArtMarker marker) {
+      final id = marker.artworkId;
+      if (id == null || id.isEmpty) return null;
+      return artworkProvider.getArtworkById(id);
+    }
+
+    final selectedId = _kubusMapController.selectedMarkerId;
+    return filterVisibleMapMarkers(
+      markers: _artMarkers,
+      state: MapMarkerFilterState(
+        quickFilterKey: _artworkFilter,
+        query: _mapSearchController.state.query,
+        basePosition: _currentPosition ?? _cameraCenter,
+        radiusKm: _effectiveMarkerRadiusKm,
+      ),
+      isDiscovered: (marker) => artworkFor(marker)?.isDiscovered ?? false,
+      isFavorite: (marker) {
+        final artwork = artworkFor(marker);
+        if (artwork == null) return false;
+        return artwork.isFavoriteByCurrentUser || artwork.isFavorite;
+      },
+      isArCapable: (marker) =>
+          defaultMarkerIsArCapable(marker) ||
+          (artworkFor(marker)?.arEnabled ?? false),
+      alwaysIncludeMarkerIds:
+          selectedId == null ? null : <String>{selectedId},
+    );
   }
 
   List<Artwork> _filterArtworks(

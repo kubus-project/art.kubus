@@ -66,4 +66,34 @@ void main() {
       ),
     );
   });
+
+  test(
+      'desktop suppresses native MapLibre attribution while keeping the '
+      'custom button', () {
+    final indexHtml = File('web/index.html').readAsStringSync();
+    // The native MapLibre attribution must be hidden on desktop so only the
+    // custom attribution button is visible.
+    expect(
+      indexHtml,
+      matches(
+        RegExp(
+          r'body\.kubus-desktop-map \.maplibregl-ctrl-attrib,\s*'
+          r'body\.kubus-desktop-map \.maplibregl-ctrl-attrib-button \{\s*'
+          r'display:\s*none\s*!important;',
+        ),
+      ),
+    );
+
+    final desktopSource =
+        File('lib/screens/desktop/desktop_map_screen.dart').readAsStringSync();
+    // The custom attribution button (info glass button) stays on desktop.
+    expect(desktopSource, contains('_buildDesktopAttributionButton'));
+
+    // Mobile keeps the native attribution accessible (not display:none).
+    expect(
+      indexHtml,
+      isNot(contains('body.kubus-mobile-map .maplibregl-ctrl-attrib {\n'
+          '      display: none')),
+    );
+  });
 }

@@ -1598,6 +1598,8 @@
   "mapFilterFavorites": "Priljubljene",
   "mapLayersTitle": "Sloji zemljevida",
   "mapDiscoveryPathTitle": "Pot odkrivanja",
+  "mapDiscoveryPathIdleSubtitle": "Razišči bližnjo umetnost",
+  "mapDiscoveryPathIdleHint": "Začni pot na zemljevidu",
   "mapShowListViewTooltip": "Prikaži seznam",
   "mapShowGridViewTooltip": "Prikaži mrežo",
   "mapSortResultsTooltip": "Razvrsti rezultate",

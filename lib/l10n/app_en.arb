@@ -1631,6 +1631,8 @@
   "mapFilterFavorites": "Favorites",
   "mapLayersTitle": "Map layers",
   "mapDiscoveryPathTitle": "Discovery path",
+  "mapDiscoveryPathIdleSubtitle": "Explore nearby art",
+  "mapDiscoveryPathIdleHint": "Start a route from the map",
   "mapShowListViewTooltip": "Show list view",
   "mapShowGridViewTooltip": "Show grid view",
   "mapSortResultsTooltip": "Sort results",

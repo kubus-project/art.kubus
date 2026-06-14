@@ -199,6 +199,20 @@
       -webkit-backdrop-filter: none !important;
       backdrop-filter: none !important;
     }
+
+    /*
+     * Desktop uses a single custom attribution control (the in-app "info"
+     * glass button to the left of the map controls, which opens the full
+     * attribution dialog). The native MapLibre GL JS attribution would
+     * otherwise also render in the bottom-left corner, duplicating it, so we
+     * suppress only the native attribution element here. Legal attribution
+     * stays fully accessible via the custom button. Mobile keeps the native
+     * attribution visible (rule above).
+     */
+    body.kubus-desktop-map .maplibregl-ctrl-attrib,
+    body.kubus-desktop-map .maplibregl-ctrl-attrib-button {
+      display: none !important;
+    }
   </style>
     <style id="kubus-webgl-fallback-style">
      /* Kubus dark/teal fallback for WebGL/canvas flashes. This ensures a

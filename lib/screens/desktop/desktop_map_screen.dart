@@ -73,6 +73,7 @@ import '../../features/map/controller/map_view_preferences_controller.dart';
 import '../../features/map/shared/map_marker_collision_config.dart';
 import '../../features/map/shared/map_screen_constants.dart';
 import '../../features/map/shared/map_artwork_filtering.dart';
+import '../../features/map/shared/map_marker_filtering.dart';
 import '../../features/map/shared/map_marker_overlay_actions.dart';
 import '../../features/map/shared/map_marker_overlay_presentation.dart';
 import '../../features/map/shared/map_marker_selection_resolver.dart';
@@ -2149,10 +2150,15 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                             mainAxisSize: MainAxisSize.min,
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                              if (activeProgress.isNotEmpty) ...[
-                                _buildDiscoveryCard(taskProvider),
-                                const SizedBox(height: KubusSpacing.sm),
-                              ],
+                              // Always reserve a discovery path area on desktop:
+                              // show progress when present, otherwise a compact
+                              // idle card. It sits directly above the controls
+                              // and never collides with search/filters/cards.
+                              if (activeProgress.isNotEmpty)
+                                _buildDiscoveryCard(taskProvider)
+                              else
+                                _buildDiscoveryIdleCard(),
+                              const SizedBox(height: KubusSpacing.sm),
                               _buildMapControls(themeProvider),
                             ],
                           ),
@@ -2453,9 +2459,14 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         keyPadding: EdgeInsets.zero,
         onSelected: (key) {
           setState(() => _selectedFilter = key);
-          // Reload markers so the nearby panel reflects the new filter.
+          // Re-filter the already-loaded markers immediately so the visible map
+          // markers + clusters update even when no new data is fetched.
+          _applyVisibleMarkers();
+          _requestMarkerVisualSync(force: true);
+          // Reload so the nearby panel + wider-scope markers reflect the filter.
           unawaited(_loadMarkersForCurrentView(force: true).then((_) {
             if (!mounted) return;
+            _applyVisibleMarkers();
             _requestMarkerVisualSync(force: true);
           }));
         },
@@ -3735,6 +3746,81 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     return KubusMapTaskProgressRow.build(context: context, progress: progress);
   }
 
+  /// Compact idle state for the desktop discovery path module, shown when there
+  /// is no active task progress so the discovery area is always present.
+  ///
+  /// Tapping the card opens the nearby art panel — the existing safe action for
+  /// browsing/starting discovery from the map.
+  Widget _buildDiscoveryIdleCard() {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final useMapBlur = kubusMapBlurEnabled(context);
+
+    return Semantics(
+      label: 'discovery_path_idle',
+      button: true,
+      container: true,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 340),
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: GestureDetector(
+            onTap: _isNearbyPanelOpen ? null : _openNearbyArtPanel,
+            child: buildKubusMapGlassSurface(
+              context: context,
+              kind: KubusMapGlassSurfaceKind.panel,
+              borderRadius: BorderRadius.circular(18),
+              tintBase: scheme.surface,
+              useBlur: useMapBlur,
+              padding: const EdgeInsets.all(KubusSpacing.md),
+              margin: EdgeInsets.zero,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.explore_outlined,
+                    size: 22,
+                    color: scheme.primary,
+                  ),
+                  const SizedBox(width: KubusSpacing.sm + KubusSpacing.xxs),
+                  Flexible(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n.mapDiscoveryPathTitle,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: scheme.onSurface,
+                          ),
+                        ),
+                        Text(
+                          l10n.mapDiscoveryPathIdleSubtitle,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: scheme.onSurface.withValues(alpha: 0.75),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          l10n.mapDiscoveryPathIdleHint,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildRightSidebarContent(
     ThemeProvider themeProvider,
     ArtworkProvider artworkProvider,
@@ -4026,6 +4112,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     // Rebuild to apply query-based filtering (lists/panels) in addition to the overlay.
     _perf.recordSetState('map_search');
     _safeSetState(() {});
+    // Compose the search query with the active quick filter on the actual map
+    // markers + clusters, not just the nearby list.
+    _applyVisibleMarkers();
+    _requestMarkerVisualSync(force: true);
   }
 
   void _handleSearchSubmit(String value) {
@@ -4157,6 +4247,44 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   String _markerQueryFiltersKey() {
     final query = _mapSearchController.state.query.trim().toLowerCase();
     return 'filter=$_selectedFilter|sort=$_selectedSort|query=$query|travel=${_travelModeEnabled ? 1 : 0}';
+  }
+
+  /// Applies the active quick filter / search / radius to the raw loaded marker
+  /// set and pushes the resulting visible markers into the shared controller,
+  /// which drives both rendered markers and clustering.
+  void _applyVisibleMarkers() {
+    _kubusMapController.setMarkers(_computeVisibleMarkers());
+  }
+
+  List<ArtMarker> _computeVisibleMarkers() {
+    final artworkProvider = context.read<ArtworkProvider>();
+    Artwork? artworkFor(ArtMarker marker) {
+      final id = marker.artworkId;
+      if (id == null || id.isEmpty) return null;
+      return artworkProvider.getArtworkById(id);
+    }
+
+    final selectedId = _kubusMapController.selectedMarkerId;
+    return filterVisibleMapMarkers(
+      markers: _artMarkers,
+      state: MapMarkerFilterState(
+        quickFilterKey: _selectedFilter,
+        query: _mapSearchController.state.query,
+        basePosition: _userLocation ?? _effectiveCenter,
+        radiusKm: _effectiveSearchRadiusKm,
+      ),
+      isDiscovered: (marker) => artworkFor(marker)?.isDiscovered ?? false,
+      isFavorite: (marker) {
+        final artwork = artworkFor(marker);
+        if (artwork == null) return false;
+        return artwork.isFavoriteByCurrentUser || artwork.isFavorite;
+      },
+      isArCapable: (marker) =>
+          defaultMarkerIsArCapable(marker) ||
+          (artworkFor(marker)?.arEnabled ?? false),
+      alwaysIncludeMarkerIds:
+          selectedId == null ? null : <String>{selectedId},
+    );
   }
 
   List<Artwork> _getFilteredArtworks(
@@ -4384,9 +4512,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       }
 
       // Keep the shared map controller's marker list in sync so hit testing and
-      // stacked-marker selection stays correct. The controller will refresh the
-      // selected marker/stack and schedule an anchor refresh when needed.
-      _kubusMapController.setMarkers(merged);
+      // stacked-marker selection stays correct. Filtering is applied here so the
+      // visible markers + clusters respect the active quick filter / search /
+      // radius. (`_artMarkers` already equals `merged` at this point.)
+      _applyVisibleMarkers();
 
       if (markersChanged) {
         unawaited(_syncMapMarkers(themeProvider: themeProvider));
@@ -4574,7 +4703,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       }
     });
     if (!changed) return;
-    _kubusMapController.setMarkers(_artMarkers);
+    _applyVisibleMarkers();
     unawaited(_syncMapMarkers(themeProvider: context.read<ThemeProvider>()));
   }
 
@@ -4610,7 +4739,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       return;
     }
 
-    _kubusMapController.setMarkers(_artMarkers);
+    _applyVisibleMarkers();
     _renderCoordinator.requestStyleUpdate(force: true);
     unawaited(_syncMapMarkers(themeProvider: context.read<ThemeProvider>()));
   }

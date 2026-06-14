@@ -4020,6 +4020,12 @@ class AppLocalizationsSl extends AppLocalizations {
   String get mapDiscoveryPathTitle => 'Pot odkrivanja';
 
   @override
+  String get mapDiscoveryPathIdleSubtitle => 'Razišči bližnjo umetnost';
+
+  @override
+  String get mapDiscoveryPathIdleHint => 'Začni pot na zemljevidu';
+
+  @override
   String get mapShowListViewTooltip => 'Prikaži seznam';
 
   @override

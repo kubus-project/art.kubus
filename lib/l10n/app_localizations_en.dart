@@ -4020,6 +4020,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mapDiscoveryPathTitle => 'Discovery path';
 
   @override
+  String get mapDiscoveryPathIdleSubtitle => 'Explore nearby art';
+
+  @override
+  String get mapDiscoveryPathIdleHint => 'Start a route from the map';
+
+  @override
   String get mapShowListViewTooltip => 'Show list view';
 
   @override

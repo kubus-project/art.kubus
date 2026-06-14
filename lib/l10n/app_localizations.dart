@@ -7916,6 +7916,18 @@ abstract class AppLocalizations {
   /// **'Discovery path'**
   String get mapDiscoveryPathTitle;
 
+  /// No description provided for @mapDiscoveryPathIdleSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Explore nearby art'**
+  String get mapDiscoveryPathIdleSubtitle;
+
+  /// No description provided for @mapDiscoveryPathIdleHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Start a route from the map'**
+  String get mapDiscoveryPathIdleHint;
+
   /// No description provided for @mapShowListViewTooltip.
   ///
   /// In en, this message translates to:
