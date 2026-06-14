@@ -1340,6 +1340,75 @@ class WalletProvider extends ChangeNotifier {
     return true;
   }
 
+  Future<bool> restoreSignerFromEncryptedWalletBackupPasskey({
+    String? walletAddress,
+  }) async {
+    if (!AppConfig.isFeatureEnabled('walletBackupPasskeyWeb') || !kIsWeb) {
+      return false;
+    }
+
+    final targetWallet = (await _resolveBackupWalletAddress(
+              walletAddress: walletAddress,
+            ) ??
+            '')
+        .trim();
+    if (targetWallet.isEmpty) return false;
+
+    _walletBackupRecoveryInProgress = true;
+    _encryptedWalletBackupError = null;
+    notifyListeners();
+    try {
+      final definition = await getEncryptedWalletBackup(
+        walletAddress: targetWallet,
+        refresh: true,
+      );
+      if (definition == null || definition.passkeys.isEmpty) {
+        return false;
+      }
+
+      final supported = await isWalletBackupPasskeySupported();
+      if (!supported) {
+        throw const EncryptedWalletBackupException(
+          'Passkeys are not available in this browser.',
+        );
+      }
+
+      final options = await _apiService.recovery.getPasskeyAuthOptions(
+        walletAddress: targetWallet,
+      );
+      final assertion = await getWalletBackupPasskeyAssertion(options);
+      final verifyResponse = await _apiService.recovery.verifyPasskeyAuth(
+        walletAddress: targetWallet,
+        responsePayload: assertion,
+      );
+      await refreshEncryptedWalletBackupStatus(walletAddress: targetWallet);
+
+      // Contract note: the current backend verifies WebAuthn and returns only
+      // `{ verified, passkey }`. It does not return a passkey-unlocked local
+      // secret, wrapped DEK, or other client-decryptable material for the
+      // encrypted mnemonic payload. Returning true here without importing a
+      // signer would fake wallet recovery, so passkey auth remains a primary
+      // attempt that falls back to recovery password until that contract exists.
+      final hasDecryptMaterial = verifyResponse.containsKey('wrappedDek') ||
+          verifyResponse.containsKey('wrappedDekCiphertext') ||
+          verifyResponse.containsKey('passkeyWrappedDek') ||
+          verifyResponse.containsKey('passkeyRecoverySecret');
+      if (!hasDecryptMaterial) {
+        return false;
+      }
+
+      throw const EncryptedWalletBackupException(
+        'Passkey restore decrypt material is not supported by this app version.',
+      );
+    } catch (e) {
+      _encryptedWalletBackupError = e.toString();
+      rethrow;
+    } finally {
+      _walletBackupRecoveryInProgress = false;
+      notifyListeners();
+    }
+  }
+
   Future<WalletBackupPasskeyDefinition> enrollEncryptedWalletBackupPasskey({
     required String nickname,
     String? walletAddress,

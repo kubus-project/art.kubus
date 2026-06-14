@@ -6,6 +6,7 @@ import 'package:art_kubus/providers/app_mode_provider.dart';
 import 'package:art_kubus/providers/security_gate_provider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/screens/web3/wallet/mnemonic_reveal_screen.dart';
+import 'package:art_kubus/services/wallet_recovery_flow_service.dart';
 import 'package:art_kubus/services/wallet_backup_passkey_service.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/utils/wallet_backup_status.dart';
@@ -128,12 +129,6 @@ class _WalletBackupProtectionScreenState
     final l10n = AppLocalizations.of(context)!;
 
     await _runProtectedAction(() async {
-      if (kIsWeb &&
-          AppConfig.isFeatureEnabled('walletBackupPasskeyWeb') &&
-          walletProvider.encryptedWalletBackupPasskeys.isNotEmpty) {
-        await walletProvider.authenticateEncryptedWalletBackupPasskey();
-      }
-      if (!mounted) return;
       final recoveryPassword = await showWalletBackupPasswordPrompt(
         context: context,
         title: l10n.walletBackupProtectionVerifyBackupTitle,
@@ -235,37 +230,56 @@ class _WalletBackupProtectionScreenState
 
   Future<void> _restoreSignerFromBackup() async {
     final walletProvider = context.read<WalletProvider>();
+    final gate = context.read<SecurityGateProvider>();
     final messenger = ScaffoldMessenger.of(context);
     final l10n = AppLocalizations.of(context)!;
+    final walletAddress = (walletProvider.currentWalletAddress ?? '').trim();
 
     await _runProtectedAction(() async {
-      if (kIsWeb &&
-          AppConfig.isFeatureEnabled('walletBackupPasskeyWeb') &&
-          walletProvider.encryptedWalletBackupPasskeys.isNotEmpty) {
-        await walletProvider.authenticateEncryptedWalletBackupPasskey();
+      if (walletAddress.isEmpty) {
+        messenger.showKubusSnackBar(
+          SnackBar(
+            content: Text(l10n.walletBackupProtectionSignerRestoreFailedToast),
+          ),
+          tone: KubusSnackBarTone.error,
+        );
+        return;
       }
-      if (!mounted) return;
-      final recoveryPassword = await showWalletBackupPasswordPrompt(
+
+      final result =
+          await const WalletRecoveryFlowService().recoverSignerForAccountWallet(
         context: context,
-        title: l10n.walletBackupProtectionRestoreSignerTitle,
-        description: l10n.walletBackupProtectionRestoreSignerDescription,
-        actionLabel: l10n.walletBackupProtectionRestoreSignerAction,
-      );
-      if (!mounted || recoveryPassword == null) return;
-      final restored =
-          await walletProvider.restoreSignerFromEncryptedWalletBackup(
-        recoveryPassword: recoveryPassword,
+        walletAddress: walletAddress,
+        walletProvider: walletProvider,
+        securityGateProvider: gate,
+        origin: WalletRecoveryOrigin.walletSecurityScreen,
       );
       if (!mounted) return;
+      final restored = result.restored;
+      final message = switch (result.kind) {
+        WalletRecoveryResultKind.restored =>
+          result.restoreMethod == WalletRecoveryRestoreMethod.passkey
+              ? l10n.walletBackupProtectionSignerRestoredWithPasskeyToast
+              : result.restoreMethod ==
+                      WalletRecoveryRestoreMethod.recoveryPassword
+                  ? l10n
+                      .walletBackupProtectionSignerRestoredWithPasswordToast
+                  : l10n.walletBackupProtectionSignerRestoredToast,
+        WalletRecoveryResultKind.readOnlyChosen =>
+          l10n.walletBackupProtectionSignerStillMissingToast,
+        WalletRecoveryResultKind.cancelled =>
+          l10n.walletBackupProtectionRecoveryCancelledToast,
+        _ => l10n.walletBackupProtectionSignerRestoreFailedToast,
+      };
       messenger.showKubusSnackBar(
         SnackBar(
-          content: Text(
-            restored
-                ? l10n.walletBackupProtectionSignerRestoredToast
-                : l10n.walletBackupProtectionSignerRestoreFailedToast,
-          ),
+          content: Text(message),
         ),
-        tone: restored ? KubusSnackBarTone.success : KubusSnackBarTone.error,
+        tone: restored
+            ? KubusSnackBarTone.success
+            : result.kind == WalletRecoveryResultKind.cancelled
+                ? KubusSnackBarTone.neutral
+                : KubusSnackBarTone.error,
       );
     });
   }

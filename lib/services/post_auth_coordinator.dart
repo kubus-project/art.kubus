@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -14,9 +13,8 @@ import '../services/auth_redirect_controller.dart';
 import '../services/security/post_auth_security_setup_service.dart';
 import '../services/telemetry/telemetry_service.dart';
 import '../services/wallet_session_sync_service.dart';
+import '../services/wallet_recovery_flow_service.dart';
 import '../utils/wallet_utils.dart';
-import '../widgets/wallet_backup_prompts.dart';
-import '../l10n/app_localizations.dart';
 
 enum PostAuthStage {
   preparingSession,
@@ -121,6 +119,7 @@ class PostAuthCoordinator {
           try {
             provisionedWallet = await _ensureWalletProvisioned(
               context: context,
+              securityGateProvider: securityGateProvider,
               existingWallet:
                   normalizedWallet.isEmpty ? expectedWallet : normalizedWallet,
             );
@@ -377,6 +376,7 @@ class PostAuthCoordinator {
   /// Returns the wallet address if successful, null otherwise.
   Future<String?> _ensureWalletProvisioned({
     required BuildContext context,
+    required SecurityGateProvider securityGateProvider,
     String? existingWallet,
   }) async {
     final walletProvider = context.read<WalletProvider>();
@@ -428,11 +428,27 @@ class PostAuthCoordinator {
       if (!context.mounted) {
         return null;
       }
-      final recovered = await _attemptEncryptedBackupRecovery(
-        context: context,
-        walletAddress: targetWallet,
-      );
-      if (recovered) {
+      WalletRecoveryResult result;
+      try {
+        result = await const WalletRecoveryFlowService()
+            .recoverSignerForAccountWallet(
+          context: context,
+          walletAddress: targetWallet,
+          walletProvider: walletProvider,
+          securityGateProvider: securityGateProvider,
+          origin: WalletRecoveryOrigin.postAuth,
+        );
+      } catch (e) {
+        AppConfig.debugPrint(
+          'PostAuthCoordinator: wallet recovery flow failed: $e',
+        );
+        result = WalletRecoveryResult(
+          kind: WalletRecoveryResultKind.failed,
+          walletAddress: targetWallet,
+          error: e,
+        );
+      }
+      if (result.restored) {
         final restoredWallet =
             (walletProvider.currentWalletAddress ?? '').trim();
         if (walletProvider.hasSigner &&
@@ -447,64 +463,5 @@ class PostAuthCoordinator {
     // only in the dedicated WalletSetup step (account-link mode) or in the
     // explicit wallet sign-in flow.
     return null;
-  }
-
-  Future<bool> _attemptEncryptedBackupRecovery({
-    required BuildContext context,
-    required String walletAddress,
-  }) async {
-    if (!AppConfig.isFeatureEnabled('encryptedWalletBackup')) {
-      return false;
-    }
-
-    final l10n = AppLocalizations.of(context);
-    final walletProvider = context.read<WalletProvider>();
-    final backup = await walletProvider.getEncryptedWalletBackup(
-      walletAddress: walletAddress,
-      refresh: true,
-    );
-
-    if (backup == null) {
-      return false;
-    }
-
-    try {
-      if (kIsWeb &&
-          AppConfig.isFeatureEnabled('walletBackupPasskeyWeb') &&
-          backup.passkeys.isNotEmpty) {
-        await walletProvider.authenticateEncryptedWalletBackupPasskey(
-          walletAddress: walletAddress,
-        );
-      }
-      if (!context.mounted) return false;
-
-      final recoveryPassword = await showWalletBackupPasswordPrompt(
-        context: context,
-        title: l10n?.authRestoreWalletTitle ?? 'Restore Wallet',
-        description: l10n?.authRestoreWalletBeforeSignInDescription ??
-            'Enter your wallet recovery password',
-        actionLabel: l10n?.authRestoreWalletAction ?? 'Restore',
-      );
-      if (!context.mounted || recoveryPassword == null) {
-        return false;
-      }
-
-      final gate = context.read<SecurityGateProvider>();
-      final verified = await gate.requireSensitiveActionVerification();
-      if (!context.mounted) return false;
-      if (!verified) {
-        return false;
-      }
-
-      return await walletProvider.restoreSignerFromEncryptedWalletBackup(
-        walletAddress: walletAddress,
-        recoveryPassword: recoveryPassword,
-      );
-    } catch (e) {
-      AppConfig.debugPrint(
-        'PostAuthCoordinator: encrypted backup recovery failed: $e',
-      );
-      return false;
-    }
   }
 }

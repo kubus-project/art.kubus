@@ -9857,13 +9857,25 @@ class AppLocalizationsSl extends AppLocalizations {
   String get walletBackupProtectionRestoreSignerTitle => 'Obnovi dostop do denarnice';
 
   @override
-  String get walletBackupProtectionRestoreSignerDescription => 'Vnesi obnovitveno geslo šifrirane kopije, da na tej napravi obnoviš možnost podpisovanja.';
+  String get walletBackupProtectionRestoreSignerDescription => 'Obnovi možnost podpisovanja na tej napravi. Če je na voljo passkey, ga poskusimo najprej; obnovitveno geslo je nadomestna možnost.';
 
   @override
   String get walletBackupProtectionRestoreSignerAction => 'Obnovi dostop do denarnice';
 
   @override
   String get walletBackupProtectionSignerRestoredToast => 'Dostop do denarnice je na tej napravi obnovljen.';
+
+  @override
+  String get walletBackupProtectionSignerRestoredWithPasskeyToast => 'Dostop do denarnice je obnovljen s passkeyjem.';
+
+  @override
+  String get walletBackupProtectionSignerRestoredWithPasswordToast => 'Dostop do denarnice je obnovljen z obnovitvenim geslom.';
+
+  @override
+  String get walletBackupProtectionSignerStillMissingToast => 'Dostop do denarnice je na tej napravi še vedno samo za branje.';
+
+  @override
+  String get walletBackupProtectionRecoveryCancelledToast => 'Obnova denarnice je preklicana.';
 
   @override
   String get walletBackupProtectionSignerRestoreFailedToast => 'Dostopa do denarnice ni bilo mogoče obnoviti.';
@@ -9881,7 +9893,43 @@ class AppLocalizationsSl extends AppLocalizations {
   String get walletBackupProtectionPasskeysTitle => 'Passkeyji';
 
   @override
-  String get walletBackupProtectionPasskeysBody => 'Na spletu lahko passkey pred prikazom poziva za obnovitveno geslo dodatno zaščiti dostop do šifrirane kopije.';
+  String get walletBackupProtectionPasskeysBody => 'Na spletu passkey najprej poskusimo uporabiti za obnovo denarnice. Obnovitveno geslo ostane na voljo kot nadomestna možnost.';
+
+  @override
+  String get walletRecoveryFallbackTitle => 'Obnovi dostop do denarnice';
+
+  @override
+  String get walletRecoveryPasskeyFailedTitle => 'Obnova s passkeyjem ni uspela';
+
+  @override
+  String get walletRecoveryPasskeyUnavailableTitle => 'Obnova s passkeyjem ni na voljo';
+
+  @override
+  String get walletRecoveryPasswordFailedTitle => 'Obnovitveno geslo ni uspelo';
+
+  @override
+  String get walletRecoveryNoBackupTitle => 'Šifrirana kopija ni najdena';
+
+  @override
+  String get walletRecoveryFallbackDescription => 'Izberi drug način za obnovo podpisovanja denarnice na tej napravi.';
+
+  @override
+  String get walletRecoveryUsePasswordAction => 'Uporabi obnovitveno geslo';
+
+  @override
+  String get walletRecoveryImportPhraseAction => 'Uvozi obnovitveno frazo';
+
+  @override
+  String get walletRecoveryContinueReadOnlyAction => 'Nadaljuj brez denarnice';
+
+  @override
+  String get walletRecoveryReadOnlyDescription => 'Še vedno lahko brskaš po računu, vendar bodo dejanja denarnice zaklenjena, dokler ne obnoviš podpisnika.';
+
+  @override
+  String get walletRecoveryPhraseMustMatchDescription => 'Uvožena obnovitvena fraza se mora ujemati z denarnico računa.';
+
+  @override
+  String get walletRecoveryPhraseLabel => 'Obnovitvena fraza';
 
   @override
   String get walletBackupProtectionAddPasskeyTitle => 'Dodaj passkey';

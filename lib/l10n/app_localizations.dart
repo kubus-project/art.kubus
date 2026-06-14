@@ -18734,7 +18734,7 @@ abstract class AppLocalizations {
   /// No description provided for @walletBackupProtectionRestoreSignerDescription.
   ///
   /// In en, this message translates to:
-  /// **'Enter the recovery password for the encrypted backup to restore signing access on this device.'**
+  /// **'Restore signing access on this device. Passkey recovery is tried first when available; recovery password is the fallback.'**
   String get walletBackupProtectionRestoreSignerDescription;
 
   /// No description provided for @walletBackupProtectionRestoreSignerAction.
@@ -18748,6 +18748,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Wallet access restored on this device.'**
   String get walletBackupProtectionSignerRestoredToast;
+
+  /// No description provided for @walletBackupProtectionSignerRestoredWithPasskeyToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet access restored with passkey.'**
+  String get walletBackupProtectionSignerRestoredWithPasskeyToast;
+
+  /// No description provided for @walletBackupProtectionSignerRestoredWithPasswordToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet access restored with recovery password.'**
+  String get walletBackupProtectionSignerRestoredWithPasswordToast;
+
+  /// No description provided for @walletBackupProtectionSignerStillMissingToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet access is still read-only on this device.'**
+  String get walletBackupProtectionSignerStillMissingToast;
+
+  /// No description provided for @walletBackupProtectionRecoveryCancelledToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet recovery cancelled.'**
+  String get walletBackupProtectionRecoveryCancelledToast;
 
   /// No description provided for @walletBackupProtectionSignerRestoreFailedToast.
   ///
@@ -18782,8 +18806,80 @@ abstract class AppLocalizations {
   /// No description provided for @walletBackupProtectionPasskeysBody.
   ///
   /// In en, this message translates to:
-  /// **'On web, passkeys can gate access to the encrypted backup before the recovery password prompt is shown.'**
+  /// **'On web, passkeys are tried first for wallet recovery. Recovery password remains available as a fallback.'**
   String get walletBackupProtectionPasskeysBody;
+
+  /// No description provided for @walletRecoveryFallbackTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore wallet access'**
+  String get walletRecoveryFallbackTitle;
+
+  /// No description provided for @walletRecoveryPasskeyFailedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Passkey recovery failed'**
+  String get walletRecoveryPasskeyFailedTitle;
+
+  /// No description provided for @walletRecoveryPasskeyUnavailableTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Passkey recovery unavailable'**
+  String get walletRecoveryPasskeyUnavailableTitle;
+
+  /// No description provided for @walletRecoveryPasswordFailedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Recovery password failed'**
+  String get walletRecoveryPasswordFailedTitle;
+
+  /// No description provided for @walletRecoveryNoBackupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No encrypted backup found'**
+  String get walletRecoveryNoBackupTitle;
+
+  /// No description provided for @walletRecoveryFallbackDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose another way to restore wallet signing on this device.'**
+  String get walletRecoveryFallbackDescription;
+
+  /// No description provided for @walletRecoveryUsePasswordAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Use recovery password'**
+  String get walletRecoveryUsePasswordAction;
+
+  /// No description provided for @walletRecoveryImportPhraseAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Import recovery phrase'**
+  String get walletRecoveryImportPhraseAction;
+
+  /// No description provided for @walletRecoveryContinueReadOnlyAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue without wallet'**
+  String get walletRecoveryContinueReadOnlyAction;
+
+  /// No description provided for @walletRecoveryReadOnlyDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'You can still browse your account, but wallet actions will stay locked until you restore the signer.'**
+  String get walletRecoveryReadOnlyDescription;
+
+  /// No description provided for @walletRecoveryPhraseMustMatchDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'The imported recovery phrase must match your account wallet.'**
+  String get walletRecoveryPhraseMustMatchDescription;
+
+  /// No description provided for @walletRecoveryPhraseLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Recovery phrase'**
+  String get walletRecoveryPhraseLabel;
 
   /// No description provided for @walletBackupProtectionAddPasskeyTitle.
   ///

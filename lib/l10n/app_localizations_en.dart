@@ -9835,13 +9835,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletBackupProtectionRestoreSignerTitle => 'Restore wallet access';
 
   @override
-  String get walletBackupProtectionRestoreSignerDescription => 'Enter the recovery password for the encrypted backup to restore signing access on this device.';
+  String get walletBackupProtectionRestoreSignerDescription => 'Restore signing access on this device. Passkey recovery is tried first when available; recovery password is the fallback.';
 
   @override
   String get walletBackupProtectionRestoreSignerAction => 'Restore wallet access';
 
   @override
   String get walletBackupProtectionSignerRestoredToast => 'Wallet access restored on this device.';
+
+  @override
+  String get walletBackupProtectionSignerRestoredWithPasskeyToast => 'Wallet access restored with passkey.';
+
+  @override
+  String get walletBackupProtectionSignerRestoredWithPasswordToast => 'Wallet access restored with recovery password.';
+
+  @override
+  String get walletBackupProtectionSignerStillMissingToast => 'Wallet access is still read-only on this device.';
+
+  @override
+  String get walletBackupProtectionRecoveryCancelledToast => 'Wallet recovery cancelled.';
 
   @override
   String get walletBackupProtectionSignerRestoreFailedToast => 'Unable to restore wallet access.';
@@ -9859,7 +9871,43 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletBackupProtectionPasskeysTitle => 'Passkeys';
 
   @override
-  String get walletBackupProtectionPasskeysBody => 'On web, passkeys can gate access to the encrypted backup before the recovery password prompt is shown.';
+  String get walletBackupProtectionPasskeysBody => 'On web, passkeys are tried first for wallet recovery. Recovery password remains available as a fallback.';
+
+  @override
+  String get walletRecoveryFallbackTitle => 'Restore wallet access';
+
+  @override
+  String get walletRecoveryPasskeyFailedTitle => 'Passkey recovery failed';
+
+  @override
+  String get walletRecoveryPasskeyUnavailableTitle => 'Passkey recovery unavailable';
+
+  @override
+  String get walletRecoveryPasswordFailedTitle => 'Recovery password failed';
+
+  @override
+  String get walletRecoveryNoBackupTitle => 'No encrypted backup found';
+
+  @override
+  String get walletRecoveryFallbackDescription => 'Choose another way to restore wallet signing on this device.';
+
+  @override
+  String get walletRecoveryUsePasswordAction => 'Use recovery password';
+
+  @override
+  String get walletRecoveryImportPhraseAction => 'Import recovery phrase';
+
+  @override
+  String get walletRecoveryContinueReadOnlyAction => 'Continue without wallet';
+
+  @override
+  String get walletRecoveryReadOnlyDescription => 'You can still browse your account, but wallet actions will stay locked until you restore the signer.';
+
+  @override
+  String get walletRecoveryPhraseMustMatchDescription => 'The imported recovery phrase must match your account wallet.';
+
+  @override
+  String get walletRecoveryPhraseLabel => 'Recovery phrase';
 
   @override
   String get walletBackupProtectionAddPasskeyTitle => 'Add a passkey';
