@@ -9,6 +9,7 @@ import 'package:art_kubus/services/user_service.dart';
 import 'package:art_kubus/utils/profile_package_prefetcher.dart';
 import 'package:art_kubus/widgets/avatar_widget.dart';
 import 'package:art_kubus/widgets/community/community_post_card.dart';
+import 'package:art_kubus/widgets/community/community_likes_sheet.dart';
 import 'package:art_kubus/widgets/profile_identity_summary.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -433,5 +434,110 @@ void main() {
     expect(requests, isEmpty);
     final avatar = tester.widget<AvatarWidget>(find.byType(AvatarWidget).first);
     expect(avatar.enableProfileNavigation, isFalse);
+  });
+
+  testWidgets('like list actor tap invokes profile identity callback',
+      (tester) async {
+    final tapped = <ProfileIdentityData>[];
+    final likedAt = DateTime.utc(2026, 1, 2);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Builder(
+          builder: (context) {
+            return Scaffold(
+              body: TextButton(
+                onPressed: () {
+                  showCommunityLikesSheet(
+                    context: context,
+                    title: 'Likes',
+                    loader: () async => <CommunityLikeUser>[
+                      CommunityLikeUser(
+                        userId: 'user_like_1',
+                        walletAddress: '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd',
+                        displayName: 'Like Actor',
+                        username: 'like-actor',
+                        likedAt: likedAt,
+                      ),
+                    ],
+                    formatTimeAgo: (_) => 'now',
+                    errorMessage: 'Failed',
+                    unnamedUserLabel: 'Unnamed',
+                    onOpenProfileIdentity: tapped.add,
+                  );
+                },
+                child: const Text('open likes'),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('open likes'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Like Actor'));
+    await tester.pump();
+
+    expect(tapped, hasLength(1));
+    expect(tapped.single.userId, 'user_like_1');
+    expect(tapped.single.username, 'like-actor');
+    final avatar = tester.widget<AvatarWidget>(find.byType(AvatarWidget).first);
+    expect(avatar.enableProfileNavigation, isFalse);
+  });
+
+  testWidgets('avatar tap and name tap resolve to the same identity',
+      (tester) async {
+    final tapped = <ProfileIdentityData>[];
+    final identity = ProfileIdentityData.fromCompactAuthor(
+      {
+        'id': 'same-identity',
+        'displayName': 'Same Actor',
+        'username': 'same-actor',
+        'walletAddress': '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd',
+      },
+      fallbackLabel: 'Unknown author',
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ProfileIdentitySummary(
+            identity: identity,
+            fetchMissingAvatar: false,
+            onTap: () => tapped.add(identity),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byType(AvatarWidget));
+    await tester.pump();
+    await tester.tap(find.text('Same Actor'));
+    await tester.pump();
+
+    expect(tapped, hasLength(2));
+    expect(tapped.every((value) => value.userId == 'same-identity'), isTrue);
+    expect(tapped.every((value) => value.username == 'same-actor'), isTrue);
+  });
+
+  test('repost/share list actor payload normalizes to profile identity', () {
+    final identity = communityRepostIdentityDataFromPayload(
+      <String, dynamic>{
+        'id': 'repost-user-1',
+        'walletAddress': '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd',
+        'displayName': 'Repost Actor',
+        'username': 'repost-actor',
+        'avatar': '/uploads/repost.png',
+      },
+      fallbackLabel: 'Unknown user',
+    );
+
+    expect(identity.userId, 'repost-user-1');
+    expect(identity.label, 'Repost Actor');
+    expect(identity.username, 'repost-actor');
+    expect(identity.avatarUrl, '/uploads/repost.png');
   });
 }

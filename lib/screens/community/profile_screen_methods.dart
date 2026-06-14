@@ -8,6 +8,7 @@ import '../../widgets/avatar_widget.dart';
 import 'package:provider/provider.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/artwork.dart';
+import '../../models/profile_identity_data.dart';
 import '../../providers/artwork_provider.dart';
 import '../../providers/themeprovider.dart';
 import '../../providers/wallet_provider.dart';
@@ -20,8 +21,8 @@ import '../../utils/artwork_navigation.dart';
 import '../../utils/artwork_media_resolver.dart';
 import '../../utils/creator_display_format.dart';
 import '../../utils/profile_package_prefetcher.dart';
+import '../../utils/profile_identity_navigation.dart';
 import '../../utils/search_suggestions.dart';
-import '../../utils/user_profile_navigation.dart';
 import '../../utils/wallet_utils.dart';
 import '../../widgets/common/kubus_glass_icon_button.dart';
 import '../../widgets/common/kubus_screen_header.dart';
@@ -35,6 +36,16 @@ class _ProfileListCacheEntry {
     required this.entries,
     required this.fetchedAt,
   });
+}
+
+ProfileIdentityData _profileListIdentityFromPayload(
+  Map<String, dynamic> user, {
+  required String fallbackLabel,
+}) {
+  return ProfileIdentityData.fromIdentityPayload(
+    {'author': user},
+    fallbackLabel: fallbackLabel,
+  );
 }
 
 // Helper methods for ProfileScreen
@@ -770,6 +781,12 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
         );
         final subtitle = formatted.secondary ??
             (walletAddress.isNotEmpty ? maskWallet(walletAddress) : null);
+        final identity = _profileListIdentityFromPayload(
+          follower,
+          fallbackLabel: walletAddress.isNotEmpty
+              ? maskWallet(walletAddress)
+              : l10n.commonUnknownArtist,
+        );
 
         final canNavigate = walletAddress.isNotEmpty;
 
@@ -789,18 +806,14 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
                     ? null
                     : () {
                         Navigator.pop(context);
-                        UserProfileNavigation.open(
-                          context,
-                          userId: walletAddress,
-                          username: resolvedUsername,
-                        );
+                        openProfileIdentity(context, identity);
                       },
                 contentPadding: EdgeInsets.zero,
                 leading: AvatarWidget(
                   wallet: walletAddress,
                   avatarUrl: avatarUrl,
                   radius: 28,
-                  enableProfileNavigation: canNavigate,
+                  enableProfileNavigation: false,
                 ),
                 title: Row(
                   children: [
@@ -1179,6 +1192,12 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
         );
         final subtitle = formatted.secondary ??
             (walletAddress.isNotEmpty ? maskWallet(walletAddress) : null);
+        final identity = _profileListIdentityFromPayload(
+          user,
+          fallbackLabel: walletAddress.isNotEmpty
+              ? maskWallet(walletAddress)
+              : l10n.commonUnknownArtist,
+        );
 
         final canNavigate = walletAddress.isNotEmpty;
 
@@ -1198,18 +1217,14 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
                     ? null
                     : () {
                         Navigator.pop(context);
-                        UserProfileNavigation.open(
-                          context,
-                          userId: walletAddress,
-                          username: resolvedUsername,
-                        );
+                        openProfileIdentity(context, identity);
                       },
                 contentPadding: EdgeInsets.zero,
                 leading: AvatarWidget(
                   wallet: walletAddress,
                   avatarUrl: avatarUrl,
                   radius: 28,
-                  enableProfileNavigation: canNavigate,
+                  enableProfileNavigation: false,
                 ),
                 title: Row(
                   children: [

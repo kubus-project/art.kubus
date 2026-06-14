@@ -11,23 +11,27 @@ void openProfileIdentity(
 ) {
   if (!context.mounted) return;
 
-  final userId = (identity.userId ?? '').trim();
+  final userId = identity.userId?.trim();
+  final username = identity.username?.trim();
   final label = identity.label.trim();
   final rawWalletSeed = identity.walletSeed.trim();
   final walletSeed = rawWalletSeed == label ? '' : rawWalletSeed;
-  final username = identity.username?.trim();
-  final lookupId = userId.isNotEmpty ? userId : walletSeed;
-  final hasUsername = username != null && username.isNotEmpty;
+  final navigationId = userId != null && userId.isNotEmpty
+      ? userId
+      : walletSeed.isNotEmpty
+          ? walletSeed
+          : null;
 
-  if (lookupId.isEmpty && !hasUsername) {
+  if ((navigationId == null || navigationId.isEmpty) &&
+      (username == null || username.isEmpty)) {
     return;
   }
 
   unawaited(
     UserProfileNavigation.open(
       context,
-      userId: lookupId,
-      username: hasUsername ? username : null,
+      userId: navigationId ?? '',
+      username: username != null && username.isNotEmpty ? username : null,
     ),
   );
 }

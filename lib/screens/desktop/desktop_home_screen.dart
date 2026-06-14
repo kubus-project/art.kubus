@@ -49,6 +49,7 @@ import '../../utils/home/home_quick_action_suggestions.dart';
 import '../../utils/institution_navigation.dart';
 import '../../utils/map_navigation.dart';
 import '../../utils/user_profile_navigation.dart';
+import '../../utils/profile_identity_navigation.dart';
 import 'components/desktop_widgets.dart';
 import 'components/desktop_notifications_panel.dart';
 import '../web3/wallet/connectwallet_screen.dart';
@@ -2170,11 +2171,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
 
     _scheduleCreatorIdentityResolution([canonicalWallet]);
     return DesktopCard(
-      onTap: () {
-        if (userId.isNotEmpty) {
-          unawaited(UserProfileNavigation.open(context, userId: userId));
-        }
-      },
+      onTap: () => openProfileIdentity(context, identity),
       padding: const EdgeInsets.all(DetailSpacing.sm + 2),
       margin: const EdgeInsets.only(bottom: DetailSpacing.sm),
       borderRadius: BorderRadius.circular(DetailRadius.md),
@@ -2183,6 +2180,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         layout: ProfileIdentityLayout.row,
         avatarRadius: 20,
         allowFabricatedFallback: true,
+        onTap: () => openProfileIdentity(context, identity),
         titleStyle: KubusTextStyles.detailCardTitle,
         subtitleStyle: KubusTextStyles.navMetaLabel,
         trailing: Container(

@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../community/community_interactions.dart';
 import '../../l10n/app_localizations.dart';
+import '../../models/profile_identity_data.dart';
 import '../../utils/design_tokens.dart';
+import '../../utils/profile_identity_navigation.dart';
 import '../avatar_widget.dart';
 import '../common/kubus_glass_icon_button.dart';
 import '../common/kubus_screen_header.dart';
@@ -19,7 +21,7 @@ Future<void> showCommunityLikesSheet({
   required String unnamedUserLabel,
   bool showDetailedError = false,
   bool isScrollControlled = false,
-  bool enableProfileNavigation = false,
+  ValueChanged<ProfileIdentityData>? onOpenProfileIdentity,
   bool allowFabricatedFallback = false,
 }) {
   final theme = Theme.of(context);
@@ -137,6 +139,7 @@ Future<void> showCommunityLikesSheet({
                       ),
                       itemBuilder: (context, index) {
                         final user = likes[index];
+                        final identity = user.profileIdentityData;
                         final subtitleParts = <String>[];
                         if (user.username != null &&
                             user.username!.isNotEmpty) {
@@ -146,17 +149,24 @@ Future<void> showCommunityLikesSheet({
                           subtitleParts.add(formatTimeAgo(user.likedAt!));
                         }
                         return ListTile(
+                          onTap: () {
+                            if (onOpenProfileIdentity != null) {
+                              onOpenProfileIdentity(identity);
+                            } else {
+                              openProfileIdentity(context, identity);
+                            }
+                          },
                           contentPadding: EdgeInsets.zero,
                           leading: AvatarWidget(
-                            wallet: user.walletAddress ?? user.userId,
-                            avatarUrl: user.avatarUrl,
+                            wallet: identity.walletSeed,
+                            avatarUrl: identity.avatarUrl,
                             radius: 20,
-                            enableProfileNavigation: enableProfileNavigation,
+                            enableProfileNavigation: false,
                             allowFabricatedFallback: allowFabricatedFallback,
                           ),
                           title: Text(
-                            user.displayName.isNotEmpty
-                                ? user.displayName
+                            identity.label.isNotEmpty
+                                ? identity.label
                                 : unnamedUserLabel,
                             style: KubusTypography.textTheme.bodyMedium
                                 ?.copyWith(fontWeight: FontWeight.w600),

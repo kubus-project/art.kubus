@@ -25,7 +25,6 @@ import '../../utils/app_animations.dart';
 import '../../utils/community_subject_navigation.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../utils/wallet_utils.dart';
-import '../../utils/creator_display_format.dart';
 import '../../utils/search_suggestions.dart';
 import '../../utils/profile_identity_navigation.dart';
 import '../../widgets/app_loading.dart';
@@ -1121,33 +1120,25 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                       separatorBuilder: (_, __) => const Divider(height: 1),
                       itemBuilder: (context, index) {
                         final user = likes[index];
-                        final rawUsername = (user.username ?? '').trim();
-                        final username = rawUsername.startsWith('@')
-                            ? rawUsername.substring(1).trim()
-                            : rawUsername;
                         final walletAddress = (user.walletAddress ?? '').trim();
                         final wallet = walletAddress.isNotEmpty
                             ? walletAddress
                             : user.userId.trim();
+                        final identity = user.profileIdentityData;
 
-                        final formatted = CreatorDisplayFormat.format(
-                          fallbackLabel: l10n.commonUnknown,
-                          displayName: user.displayName,
-                          username: username,
-                          wallet: wallet,
-                        );
-
-                        final subtitle = formatted.secondary ??
+                        final subtitle = identity.handle ??
                             (wallet.isNotEmpty ? maskWallet(wallet) : null);
                         return ListTile(
+                          onTap: () => openProfileIdentity(context, identity),
                           leading: AvatarWidget(
-                            wallet: wallet,
-                            avatarUrl: user.avatarUrl,
+                            wallet: identity.walletSeed,
+                            avatarUrl: identity.avatarUrl,
                             radius: 20,
                             allowFabricatedFallback: true,
+                            enableProfileNavigation: false,
                           ),
                           title: Text(
-                            formatted.primary,
+                            identity.label,
                             style: KubusTypography.inter(
                                 fontWeight: FontWeight.w600),
                           ),
@@ -1253,11 +1244,6 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                     itemBuilder: (ctx, idx) {
                       final repost = reposts[idx];
                       final user = repost['user'] as Map<String, dynamic>?;
-                      final rawUsername =
-                          (user?['username'] ?? '').toString().trim();
-                      final username = rawUsername.startsWith('@')
-                          ? rawUsername.substring(1).trim()
-                          : rawUsername;
                       final wallet = WalletUtils.coalesce(
                         walletAddress: user?['walletAddress']?.toString(),
                         wallet: user?['wallet_address']?.toString() ??
@@ -1265,46 +1251,37 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                         userId: user?['id']?.toString(),
                         fallback: '',
                       );
-                      final displayName =
-                          (user?['displayName'] ?? user?['display_name'])
-                              ?.toString()
-                              .trim();
-                      final avatar = user?['avatar'];
                       final comment = repost['repostComment'] as String?;
                       final createdAt =
                           DateTime.tryParse(repost['createdAt'] ?? '');
-
-                      final formatted = CreatorDisplayFormat.format(
-                        fallbackLabel: l10n.commonUnknown,
-                        displayName: displayName,
-                        username: username,
-                        wallet: wallet,
+                      final identity = communityRepostIdentityDataFromPayload(
+                        user,
+                        fallbackLabel: wallet.isNotEmpty
+                            ? maskWallet(wallet)
+                            : l10n.commonUnknown,
                       );
+                      final subtitle = identity.handle ??
+                          (wallet.isNotEmpty ? maskWallet(wallet) : null);
 
                       return ListTile(
+                        onTap: () => openProfileIdentity(context, identity),
                         leading: AvatarWidget(
-                          wallet: wallet.isNotEmpty
-                              ? wallet
-                              : (username.isNotEmpty
-                                  ? username
-                                  : l10n.commonUnknown),
-                          avatarUrl: avatar,
+                          wallet: identity.walletSeed,
+                          avatarUrl: identity.avatarUrl,
                           radius: 20,
                           allowFabricatedFallback: false,
+                          enableProfileNavigation: false,
                         ),
                         title: Text(
-                          formatted.primary,
+                          identity.label,
                           style: KubusTypography.inter(
                               fontWeight: FontWeight.w600),
                         ),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            if (formatted.secondary != null)
-                              Text(formatted.secondary!,
-                                  style: KubusTypography.inter(fontSize: 12))
-                            else if (wallet.isNotEmpty)
-                              Text(maskWallet(wallet),
+                            if (subtitle != null)
+                              Text(subtitle,
                                   style: KubusTypography.inter(fontSize: 12)),
                             if (comment != null && comment.isNotEmpty) ...[
                               const SizedBox(height: 4),

@@ -3685,7 +3685,6 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       errorMessage: l10n.postDetailLoadLikesFailedMessage,
       unnamedUserLabel: l10n.commonUnnamed,
       isScrollControlled: true,
-      enableProfileNavigation: true,
     );
   }
 
@@ -3767,11 +3766,6 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                     itemBuilder: (ctx, idx) {
                       final repost = reposts[idx];
                       final user = repost['user'] as Map<String, dynamic>?;
-                      final rawUsername =
-                          (user?['username'] ?? '').toString().trim();
-                      final username = rawUsername.startsWith('@')
-                          ? rawUsername.substring(1).trim()
-                          : rawUsername;
                       final wallet = WalletUtils.coalesce(
                         walletAddress: user?['walletAddress']?.toString(),
                         wallet: user?['wallet_address']?.toString() ??
@@ -3779,48 +3773,37 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                         userId: user?['id']?.toString(),
                         fallback: '',
                       );
-                      final displayName =
-                          (user?['displayName'] ?? user?['display_name'])
-                              ?.toString()
-                              .trim();
-                      final avatar = user?['avatar'];
                       final comment = repost['repostComment'] as String?;
                       final createdAt =
                           DateTime.tryParse(repost['createdAt'] ?? '');
-
-                      final formatted = CreatorDisplayFormat.format(
-                        fallbackLabel: l10n.commonUnknown,
-                        displayName: displayName,
-                        username: username,
-                        wallet: wallet,
+                      final identity = communityRepostIdentityDataFromPayload(
+                        user,
+                        fallbackLabel: wallet.isNotEmpty
+                            ? maskWallet(wallet)
+                            : l10n.commonUnknown,
                       );
+                      final subtitle = identity.handle ??
+                          (wallet.isNotEmpty ? maskWallet(wallet) : null);
 
                       return ListTile(
+                        onTap: () => openProfileIdentity(context, identity),
                         leading: AvatarWidget(
-                          wallet: wallet.isNotEmpty
-                              ? wallet
-                              : (username.isNotEmpty
-                                  ? username
-                                  : l10n.commonUnknown),
-                          avatarUrl: avatar,
+                          wallet: identity.walletSeed,
+                          avatarUrl: identity.avatarUrl,
                           radius: 20,
+                          enableProfileNavigation: false,
                           allowFabricatedFallback: false,
                         ),
                         title: Text(
-                          formatted.primary,
+                          identity.label,
                           style: KubusTextStyles.sectionTitle,
                         ),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            if (formatted.secondary != null)
+                            if (subtitle != null)
                               Text(
-                                formatted.secondary!,
-                                style: KubusTextStyles.navMetaLabel,
-                              )
-                            else if (wallet.isNotEmpty)
-                              Text(
-                                maskWallet(wallet),
+                                subtitle,
                                 style: KubusTextStyles.navMetaLabel,
                               ),
                             if (comment != null && comment.isNotEmpty) ...[
@@ -5633,6 +5616,16 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                                           l10n.desktopHomeCreatorFallbackName,
                                       fallbackUserId: wallet,
                                     );
+                                    void selectProfile() {
+                                      Navigator.of(dialogContext).pop(
+                                        profileIdentity.username != null &&
+                                                profileIdentity
+                                                    .username!.isNotEmpty
+                                            ? profileIdentity.username
+                                            : wallet,
+                                      );
+                                    }
+
                                     return ListTile(
                                       contentPadding:
                                           const EdgeInsets.symmetric(
@@ -5642,6 +5635,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                                         layout: ProfileIdentityLayout.row,
                                         avatarRadius: 20,
                                         allowFabricatedFallback: true,
+                                        onTap: selectProfile,
                                         titleStyle:
                                             KubusTextStyles.navLabel.copyWith(
                                           fontWeight: FontWeight.w600,
@@ -5664,13 +5658,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                                               .colorScheme
                                               .onSurface
                                               .withValues(alpha: 0.4)),
-                                      onTap: () => Navigator.of(dialogContext)
-                                          .pop(profileIdentity.username !=
-                                                      null &&
-                                                  profileIdentity
-                                                      .username!.isNotEmpty
-                                              ? profileIdentity.username
-                                              : wallet),
+                                      onTap: selectProfile,
                                     );
                                   },
                                 ),
@@ -6366,29 +6354,30 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                 fallbackLabel: l10n.desktopHomeCreatorFallbackName,
                 fallbackUserId: navigationId,
               );
+              final VoidCallback? openSuggestion = isInstitutionSuggestion
+                  ? (navigationId.isEmpty && walletAddress == null
+                      ? null
+                      : () => InstitutionNavigation.open(
+                            context,
+                            institutionId: navigationId,
+                            profileTargetId: walletAddress,
+                            title: identity.label,
+                            openProfileTarget: (profileTargetId) =>
+                                _openUserProfileModal(
+                              userId: profileTargetId,
+                              username: identity.username,
+                            ),
+                          ))
+                  : (navigationId.isEmpty
+                      ? null
+                      : () => _openUserProfileModal(
+                            userId: navigationId,
+                            username: identity.username,
+                          ));
               return Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: DesktopCard(
-                  onTap: isInstitutionSuggestion
-                      ? (navigationId.isEmpty && walletAddress == null
-                          ? null
-                          : () => InstitutionNavigation.open(
-                                context,
-                                institutionId: navigationId,
-                                profileTargetId: walletAddress,
-                                title: identity.label,
-                                openProfileTarget: (profileTargetId) =>
-                                    _openUserProfileModal(
-                                  userId: profileTargetId,
-                                  username: identity.username,
-                                ),
-                              ))
-                      : (navigationId.isEmpty
-                          ? null
-                          : () => _openUserProfileModal(
-                                userId: navigationId,
-                                username: identity.username,
-                              )),
+                  onTap: openSuggestion,
                   child: Row(
                     children: [
                       Expanded(
@@ -6397,6 +6386,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                           layout: ProfileIdentityLayout.row,
                           avatarRadius: 22,
                           allowFabricatedFallback: true,
+                          onTap: openSuggestion,
                           titleStyle: KubusTextStyles.detailCardTitle.copyWith(
                             fontWeight: FontWeight.w600,
                             color: Theme.of(context).colorScheme.onSurface,

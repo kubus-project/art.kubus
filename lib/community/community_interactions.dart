@@ -302,6 +302,21 @@ ProfileIdentityData _legacyAuthorIdentity({
   );
 }
 
+ProfileIdentityData communityRepostIdentityDataFromPayload(
+  Map<String, dynamic>? user, {
+  required String fallbackLabel,
+}) {
+  return ProfileIdentityData.fromIdentityPayload(
+    {
+      'author': {
+        if (user != null) ...user,
+        'userId': WalletUtils.resolveFromMap(user, fallback: ''),
+      },
+    },
+    fallbackLabel: fallbackLabel,
+  );
+}
+
 class CommunityLikeUser {
   final String userId;
   final String? walletAddress;
@@ -318,6 +333,20 @@ class CommunityLikeUser {
     this.avatarUrl,
     this.likedAt,
   });
+
+  ProfileIdentityData get profileIdentityData {
+    final normalizedUserId = userId.trim().toLowerCase() == 'unknown'
+        ? null
+        : userId.trim();
+    return ProfileIdentityData.fromValues(
+      fallbackLabel: 'Unknown user',
+      displayName: displayName,
+      username: username,
+      userId: normalizedUserId,
+      wallet: walletAddress ?? normalizedUserId,
+      avatarUrl: avatarUrl,
+    );
+  }
 }
 
 class CommunityEntityInteractionState {

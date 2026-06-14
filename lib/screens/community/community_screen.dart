@@ -11,7 +11,6 @@ import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../config/config.dart';
 import '../../utils/wallet_utils.dart';
-import '../../utils/creator_display_format.dart';
 import '../../utils/search_suggestions.dart';
 import '../../utils/user_profile_navigation.dart';
 import '../../widgets/inline_loading.dart';
@@ -4378,6 +4377,7 @@ class _CommunityScreenState extends State<CommunityScreen>
           layout: ProfileIdentityLayout.row,
           avatarRadius: 20,
           allowFabricatedFallback: true,
+          onTap: onTap,
           titleStyle: KubusTypography.inter(
             fontWeight: FontWeight.w600,
             color: scheme.onSurface,
@@ -6350,11 +6350,6 @@ class _CommunityScreenState extends State<CommunityScreen>
                     itemBuilder: (ctx, idx) {
                       final repost = reposts[idx];
                       final user = repost['user'] as Map<String, dynamic>?;
-                      final rawUsername =
-                          (user?['username'] ?? '').toString().trim();
-                      final username = rawUsername.startsWith('@')
-                          ? rawUsername.substring(1).trim()
-                          : rawUsername;
                       final wallet = WalletUtils.coalesce(
                         walletAddress: user?['walletAddress']?.toString(),
                         wallet: user?['wallet_address']?.toString() ??
@@ -6362,43 +6357,34 @@ class _CommunityScreenState extends State<CommunityScreen>
                         userId: user?['id']?.toString(),
                         fallback: '',
                       );
-                      final displayName =
-                          (user?['displayName'] ?? user?['display_name'])
-                              ?.toString()
-                              .trim();
-                      final avatar = user?['avatar'];
                       final comment = repost['repostComment'] as String?;
                       final createdAt =
                           DateTime.tryParse(repost['createdAt'] ?? '');
-
-                      final formatted = CreatorDisplayFormat.format(
-                        fallbackLabel: l10n.commonUnknown,
-                        displayName: displayName,
-                        username: username,
-                        wallet: wallet,
+                      final identity = communityRepostIdentityDataFromPayload(
+                        user,
+                        fallbackLabel: wallet.isNotEmpty
+                            ? maskWallet(wallet)
+                            : l10n.commonUnknown,
                       );
+                      final subtitle = identity.handle ??
+                          (wallet.isNotEmpty ? maskWallet(wallet) : null);
 
                       return ListTile(
+                        onTap: () => openProfileIdentity(context, identity),
                         leading: AvatarWidget(
-                            wallet: wallet.isNotEmpty
-                                ? wallet
-                                : (username.isNotEmpty
-                                    ? username
-                                    : l10n.commonUnknown),
-                            avatarUrl: avatar,
+                            wallet: identity.walletSeed,
+                            avatarUrl: identity.avatarUrl,
                             radius: 20,
-                            allowFabricatedFallback: false),
-                        title: Text(formatted.primary,
+                            allowFabricatedFallback: false,
+                            enableProfileNavigation: false),
+                        title: Text(identity.label,
                             style: KubusTypography.inter(
                                 fontWeight: FontWeight.w600)),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            if (formatted.secondary != null)
-                              Text(formatted.secondary!,
-                                  style: KubusTypography.inter(fontSize: 12))
-                            else if (wallet.isNotEmpty)
-                              Text(maskWallet(wallet),
+                            if (subtitle != null)
+                              Text(subtitle,
                                   style: KubusTypography.inter(fontSize: 12)),
                             if (comment != null && comment.isNotEmpty) ...[
                               const SizedBox(height: 4),

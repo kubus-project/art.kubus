@@ -8,7 +8,6 @@ import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/wallet_utils.dart';
-import '../../utils/creator_display_format.dart';
 import '../../utils/search_suggestions.dart';
 import '../../community/community_interactions.dart';
 import '../../widgets/avatar_widget.dart';
@@ -460,6 +459,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                               theme.colorScheme.outline.withValues(alpha: 0.3)),
                       itemBuilder: (context, index) {
                         final user = likes[index];
+                        final identity = user.profileIdentityData;
                         final subtitleParts = <String>[];
                         if (user.username != null &&
                             user.username!.isNotEmpty) {
@@ -473,15 +473,16 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                           subtitleParts.add(user.likedAt!.toIso8601String());
                         }
                         return ListTile(
+                          onTap: () => openProfileIdentity(context, identity),
                           contentPadding: EdgeInsets.zero,
                           leading: AvatarWidget(
-                              wallet: user.walletAddress ?? user.userId,
-                              avatarUrl: user.avatarUrl,
+                              wallet: identity.walletSeed,
+                              avatarUrl: identity.avatarUrl,
                               radius: 20,
-                              enableProfileNavigation: true),
+                              enableProfileNavigation: false),
                           title: Text(
-                              user.displayName.isNotEmpty
-                                  ? user.displayName
+                              identity.label.isNotEmpty
+                                  ? identity.label
                                   : l10n.commonUnnamed,
                               style: KubusTypography.inter(
                                   fontWeight: FontWeight.w600)),
@@ -605,6 +606,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                       ),
                       itemBuilder: (context, index) {
                         final user = likes[index];
+                        final identity = user.profileIdentityData;
                         final subtitleParts = <String>[];
                         if (user.username != null &&
                             user.username!.isNotEmpty) {
@@ -618,16 +620,17 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                           subtitleParts.add(user.likedAt!.toIso8601String());
                         }
                         return ListTile(
+                          onTap: () => openProfileIdentity(context, identity),
                           contentPadding: EdgeInsets.zero,
                           leading: AvatarWidget(
-                            wallet: user.walletAddress ?? user.userId,
-                            avatarUrl: user.avatarUrl,
+                            wallet: identity.walletSeed,
+                            avatarUrl: identity.avatarUrl,
                             radius: 20,
-                            enableProfileNavigation: true,
+                            enableProfileNavigation: false,
                           ),
                           title: Text(
-                            user.displayName.isNotEmpty
-                                ? user.displayName
+                            identity.label.isNotEmpty
+                                ? identity.label
                                 : l10n.commonUnnamed,
                             style: KubusTypography.inter(
                                 fontWeight: FontWeight.w600),
@@ -744,46 +747,30 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     itemBuilder: (ctx, idx) {
                       final repost = reposts[idx];
                       final user = repost['user'] as Map<String, dynamic>?;
-                      final rawUsername =
-                          (user?['username'] ?? '').toString().trim();
-                      final username = rawUsername.startsWith('@')
-                          ? rawUsername.substring(1).trim()
-                          : rawUsername;
                       final wallet =
                           WalletUtils.resolveFromMap(user, fallback: '');
-                      final displayName =
-                          (user?['displayName'] ?? user?['display_name'])
-                              ?.toString()
-                              .trim();
-                      final avatar = user?['avatar'];
                       final comment = repost['repostComment'] as String?;
                       final createdAt =
                           DateTime.tryParse(repost['createdAt'] ?? '');
-
-                      final formatted = CreatorDisplayFormat.format(
+                      final identity = communityRepostIdentityDataFromPayload(
+                        user,
                         fallbackLabel: wallet.isNotEmpty
                             ? maskWallet(wallet)
                             : l10n.commonUnknown,
-                        displayName: displayName,
-                        username: username,
-                        wallet: wallet,
                       );
-                      final subtitle = formatted.secondary ??
+                      final subtitle = identity.handle ??
                           (wallet.isNotEmpty ? maskWallet(wallet) : null);
 
                       return ListTile(
+                        onTap: () => openProfileIdentity(context, identity),
                         leading: AvatarWidget(
-                          wallet: wallet.isNotEmpty
-                              ? wallet
-                              : (username.isNotEmpty
-                                  ? username
-                                  : l10n.commonUnknown),
-                          avatarUrl: avatar,
+                          wallet: identity.walletSeed,
+                          avatarUrl: identity.avatarUrl,
                           radius: 20,
-                          enableProfileNavigation: true,
+                          enableProfileNavigation: false,
                         ),
                         title: Text(
-                          formatted.primary,
+                          identity.label,
                           style: KubusTypography.inter(
                               fontWeight: FontWeight.w600),
                         ),
