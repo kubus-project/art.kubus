@@ -374,6 +374,15 @@ class ArtMarker {
       normalized = metaLabel.trim().toLowerCase();
     }
 
+    final metadataTypeText = [
+      if (metaType is String) metaType,
+      if (metaCategory is String) metaCategory,
+      if (metaLabel is String) metaLabel,
+    ].join(' ').trim().toLowerCase();
+    if (_matchesExhibitionType(metadataTypeText)) {
+      return ArtMarkerType.exhibition;
+    }
+
     if (normalized.contains('institution') ||
         normalized.contains('museum') ||
         normalized.contains('gallery')) {

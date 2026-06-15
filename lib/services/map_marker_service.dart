@@ -726,6 +726,7 @@ class MapMarkerService {
 
   ArtMarker? _markerFromSocketPayload(Map<String, dynamic> json) {
     try {
+      final metadata = _mergeSocketMarkerMetadata(json);
       final normalized = <String, dynamic>{
         'id': json['id'] ?? json['_id'] ?? '',
         'name': json['name'] ?? json['title'] ?? json['label'] ?? '',
@@ -752,7 +753,7 @@ class MapMarkerService {
         'enablePhysics': json['enablePhysics'] ?? false,
         'enableInteraction':
             json['enableInteraction'] ?? json['enable_interaction'] ?? true,
-        'metadata': json['metadata'] ?? json['marker_data'] ?? json['meta'],
+        'metadata': metadata,
         'tags': json['tags'],
         'category':
             json['category'] ?? json['markerType'] ?? json['type'] ?? 'General',
@@ -776,6 +777,53 @@ class MapMarkerService {
       _log('MapMarkerService: _markerFromSocketPayload failed: $e');
       return null;
     }
+  }
+
+  Map<String, dynamic>? _mergeSocketMarkerMetadata(Map<String, dynamic> json) {
+    Map<String, dynamic>? metadata;
+
+    void merge(dynamic source) {
+      if (source is Map<String, dynamic>) {
+        metadata ??= <String, dynamic>{};
+        metadata!.addAll(source);
+      } else if (source is Map) {
+        metadata ??= <String, dynamic>{};
+        metadata!.addAll(Map<String, dynamic>.from(source));
+      }
+    }
+
+    merge(json['metadata']);
+    merge(json['marker_data'] ?? json['markerData']);
+    merge(json['meta']);
+
+    final subjectType = json['subjectType'] ?? json['subject_type'];
+    final subjectId = json['subjectId'] ?? json['subject_id'];
+    final subjectTitle = json['subjectTitle'] ?? json['subject_title'];
+    final subjectLabel = json['subjectLabel'] ?? json['subject_label'];
+    final subjectCategory = json['subjectCategory'] ?? json['subject_category'];
+    if (subjectType != null &&
+        (metadata?['subjectType'] ?? metadata?['subject_type']) == null) {
+      merge({'subjectType': subjectType});
+    }
+    if (subjectId != null &&
+        (metadata?['subjectId'] ?? metadata?['subject_id']) == null) {
+      merge({'subjectId': subjectId});
+    }
+    if (subjectTitle != null &&
+        (metadata?['subjectTitle'] ?? metadata?['subject_title']) == null) {
+      merge({'subjectTitle': subjectTitle});
+    }
+    if (subjectLabel != null &&
+        (metadata?['subjectLabel'] ?? metadata?['subject_label']) == null) {
+      merge({'subjectLabel': subjectLabel});
+    }
+    if (subjectCategory != null &&
+        (metadata?['subjectCategory'] ?? metadata?['subject_category']) ==
+            null) {
+      merge({'subjectCategory': subjectCategory});
+    }
+
+    return metadata;
   }
 
   Future<void> _trackStreetArtAchievements(ArtMarker marker) async {

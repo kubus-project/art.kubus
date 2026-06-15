@@ -52,6 +52,19 @@ void main() {
     }
   });
 
+  test('exhibition subject metadata overrides event transport type', () {
+    final marker = parse(<String, dynamic>{
+      'markerType': 'event',
+      'type': 'event',
+      'metadata': const <String, dynamic>{
+        'subjectType': 'exhibition',
+        'subjectId': 'exhibition_1',
+      },
+    });
+
+    expect(marker.type, ArtMarkerType.exhibition);
+  });
+
   test('uses metadata subjectType when markerType/type are transport values',
       () {
     final marker = parse(<String, dynamic>{
