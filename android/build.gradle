@@ -32,8 +32,8 @@ subprojects {
         def androidExt = project.extensions.findByName('android')
         if (androidExt != null && androidExt.hasProperty('compileOptions')) {
             androidExt.compileOptions {
-                sourceCompatibility JavaVersion.VERSION_21
-                targetCompatibility JavaVersion.VERSION_21
+                sourceCompatibility JavaVersion.VERSION_17
+                targetCompatibility JavaVersion.VERSION_17
             }
         }
     }
@@ -41,8 +41,8 @@ subprojects {
         def androidExt = project.extensions.findByName('android')
         if (androidExt != null && androidExt.hasProperty('compileOptions')) {
             androidExt.compileOptions {
-                sourceCompatibility JavaVersion.VERSION_21
-                targetCompatibility JavaVersion.VERSION_21
+                sourceCompatibility JavaVersion.VERSION_17
+                targetCompatibility JavaVersion.VERSION_17
             }
         }
     }
@@ -50,7 +50,7 @@ subprojects {
         def androidExt = project.extensions.findByName('android')
         if (androidExt != null && androidExt.hasProperty('kotlinOptions')) {
             androidExt.kotlinOptions {
-                jvmTarget = '21'
+                jvmTarget = '17'
             }
         }
     }
