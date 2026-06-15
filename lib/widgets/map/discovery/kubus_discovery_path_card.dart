@@ -152,6 +152,7 @@ class KubusDiscoveryPathCard extends StatelessWidget {
         child: buildKubusMapGlassSurface(
           context: context,
           kind: KubusMapGlassSurfaceKind.panel,
+          overlayName: 'discovery-path-card',
           borderRadius: radius,
           tintBase: scheme.surface,
           padding: glassPadding,

@@ -122,9 +122,11 @@ class _KubusNearbyArtPanelState extends State<KubusNearbyArtPanel> {
       tintBase: scheme.surface,
       padding: EdgeInsets.zero,
       margin: EdgeInsets.zero,
-      blurPolicy: isMobile
-          ? KubusMapBlurPolicy.disabled
-          : KubusMapBlurPolicy.forceMapChromeWhenCapable,
+      // Real blur required on every platform. On Android this resolves to a
+      // real BackdropFilter over the Virtual-Display map texture; previously
+      // mobile passed `disabled`, which is exactly the flat-panel regression.
+      blurPolicy: KubusMapBlurPolicy.forceRealBlur,
+      overlayName: 'nearby-art-panel',
       backdropRegionId: isMobile
           ? 'mobile-nearby-art-sheet'
           : 'desktop-nearby-art-panel',

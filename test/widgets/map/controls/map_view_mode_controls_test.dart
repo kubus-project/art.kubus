@@ -36,6 +36,35 @@ void main() {
     expect(isometricTapped, 1);
   });
 
+  testWidgets(
+      'MapViewModeControls hides travel toggle when callback is null even if shown',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: MapViewModeControls(
+            density: MapViewModeControlsDensity.mobileRail,
+            showTravelModeToggle: true,
+            travelModeActive: false,
+            // Documented guard: travel mode only renders when BOTH the flag is
+            // set AND a non-null callback is provided.
+            onToggleTravelMode: null,
+            showIsometricViewToggle: true,
+            isometricViewActive: false,
+            onToggleIsometricView: () {},
+            travelModeIcon: Icons.travel_explore,
+            isometricViewIcon: Icons.filter_tilt_shift,
+            travelModeTooltip: 'Travel',
+            isometricViewTooltip: 'Isometric',
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byIcon(Icons.travel_explore), findsNothing);
+    expect(find.byIcon(Icons.filter_tilt_shift), findsOneWidget);
+  });
+
   testWidgets('MapViewModeControls renders desktop toggles with separators',
       (tester) async {
     await tester.pumpWidget(

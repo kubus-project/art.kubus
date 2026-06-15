@@ -69,7 +69,7 @@ void main() {
   });
 
   testWidgets(
-      'mobile native over MapLibre uses material safe-tint fallback even when forced',
+      'Android over MapLibre resolves to real BackdropFilter (Virtual Display)',
       (tester) async {
     late KubusMapBlurDecision decision;
 
@@ -79,12 +79,46 @@ void main() {
           builder: (context) {
             decision = resolveKubusMapBlurDecision(
               context,
-              // Forcing map chrome must NOT re-enable real blur on mobile,
-              // because BackdropFilter cannot sample the native MapLibre view.
-              policy: KubusMapBlurPolicy.forceMapChromeWhenCapable,
+              policy: KubusMapBlurPolicy.forceRealBlur,
               overMapPlatformView: true,
               isWebOverride: false,
               mobileNativeOverride: true,
+              // Android renders MapLibre as a Virtual-Display texture that
+              // Flutter's BackdropFilter CAN sample.
+              mobileBackdropSampleableOverride: true,
+            );
+            return const SizedBox.shrink();
+          },
+        ),
+      ),
+    );
+
+    expect(decision.enabled, isTrue);
+    expect(decision.strategy, KubusMapBackdropStrategy.flutterBackdropFilter);
+    expect(decision.reason, 'android-virtual-display-backdrop-filter');
+    expect(decision.requireRealBlur, isTrue);
+    expect(decision.realBlurUnavailable, isFalse);
+  });
+
+  testWidgets(
+      'iOS forceRealBlur with no native host falls back AND flags realBlurUnavailable',
+      (tester) async {
+    late KubusMapBlurDecision decision;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) {
+            decision = resolveKubusMapBlurDecision(
+              context,
+              policy: KubusMapBlurPolicy.forceRealBlur,
+              overMapPlatformView: true,
+              isWebOverride: false,
+              mobileNativeOverride: true,
+              // iOS UiKitView is not sampleable by BackdropFilter...
+              mobileBackdropSampleableOverride: false,
+              // ...and the native host is not available/verified yet.
+              nativeBlurHostAvailableOverride: false,
             );
             return const SizedBox.shrink();
           },
@@ -97,7 +131,42 @@ void main() {
       decision.strategy,
       KubusMapBackdropStrategy.platformViewSafeTintFallback,
     );
-    expect(decision.reason, 'mobile-platform-view-safe-tint-fallback');
+    expect(decision.reason, 'mobile-real-blur-unavailable-fallback');
+    expect(decision.requireRealBlur, isTrue);
+    expect(decision.realBlurUnavailable, isTrue);
+  });
+
+  testWidgets(
+      'iOS forceRealBlur with native host available uses the native backdrop host',
+      (tester) async {
+    late KubusMapBlurDecision decision;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) {
+            decision = resolveKubusMapBlurDecision(
+              context,
+              policy: KubusMapBlurPolicy.forceRealBlur,
+              overMapPlatformView: true,
+              isWebOverride: false,
+              mobileNativeOverride: true,
+              mobileBackdropSampleableOverride: false,
+              nativeBlurHostAvailableOverride: true,
+            );
+            return const SizedBox.shrink();
+          },
+        ),
+      ),
+    );
+
+    expect(decision.enabled, isTrue);
+    expect(decision.strategy, KubusMapBackdropStrategy.nativeBackdropHost);
+    expect(decision.reason, 'mobile-native-backdrop-host');
+    expect(
+      decision.strategy == KubusMapBackdropStrategy.platformViewSafeTintFallback,
+      isFalse,
+    );
   });
 
   testWidgets(
@@ -444,7 +513,7 @@ void main() {
   });
 
   testWidgets(
-      'mobile map glass surface drops BackdropFilter and adds the sheen overlay',
+      'Android map glass surface keeps real BackdropFilter (no sheen fallback)',
       (tester) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -454,9 +523,41 @@ void main() {
             builder: (context) => buildKubusMapGlassSurface(
               context: context,
               kind: KubusMapGlassSurfaceKind.panel,
+              overlayName: 'test-panel',
               overMapPlatformView: true,
               isWebOverride: false,
               mobileNativeOverride: true,
+              // Android Virtual-Display map is sampleable.
+              mobileBackdropSampleableOverride: true,
+              child: const SizedBox(width: 120, height: 60),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byType(BackdropFilter), findsOneWidget);
+    expect(find.byType(KubusMapGlassMaterialSheen), findsNothing);
+  });
+
+  testWidgets(
+      'iOS map glass surface drops BackdropFilter and adds the sheen overlay',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark(useMaterial3: true),
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => buildKubusMapGlassSurface(
+              context: context,
+              kind: KubusMapGlassSurfaceKind.panel,
+              overlayName: 'test-panel',
+              overMapPlatformView: true,
+              isWebOverride: false,
+              mobileNativeOverride: true,
+              // iOS UiKitView is not sampleable and no native host yet.
+              mobileBackdropSampleableOverride: false,
+              nativeBlurHostAvailableOverride: false,
               child: const SizedBox(width: 120, height: 60),
             ),
           ),

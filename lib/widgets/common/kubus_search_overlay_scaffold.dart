@@ -199,15 +199,42 @@ class KubusSearchOverlayScaffold extends StatelessWidget {
     );
     final showChips = filterChips != null && !sidePanelSearchExpanded;
 
-    return Wrap(
-      crossAxisAlignment: WrapCrossAlignment.center,
-      spacing: KubusSpacing.md + KubusSpacing.xs,
-      runSpacing: KubusSpacing.sm,
+    // One coherent toolbar line: logo/title + search field + filter/settings
+    // button, all vertically centered on a single baseline. The field lives in
+    // an [Expanded] so it grows toward the right on focus (its resolved width is
+    // clamped to the available space to avoid overflow) while the trailing
+    // button stays pinned to the right. The quick-filter chips never share this
+    // line — they previously forced the field to wrap below the title (the
+    // "dropped second-row" header bug). Instead they sit on a deliberate second
+    // row below and collapse entirely while the search is focused/expanded.
+    final toolbar = Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        if (leading != null) leading!,
-        field,
-        if (showChips) filterChips!,
-        if (mapToggle != null) mapToggle!,
+        if (leading != null) ...[
+          leading!,
+          const SizedBox(width: KubusSpacing.md + KubusSpacing.xs),
+        ],
+        Expanded(
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: field,
+          ),
+        ),
+        if (mapToggle != null) ...[
+          const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
+          mapToggle!,
+        ],
+      ],
+    );
+
+    if (!showChips) return toolbar;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        toolbar,
+        SizedBox(height: sectionGap),
+        filterChips!,
       ],
     );
   }

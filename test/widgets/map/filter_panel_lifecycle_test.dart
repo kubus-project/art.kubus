@@ -8,10 +8,11 @@ import 'package:flutter_test/flutter_test.dart';
 /// panel lifecycle so we can assert the glass behaviour in isolation (the full
 /// map screen is too heavy to pump here).
 ///
-/// Uses the mobile/native fallback surface (no platform backdrop host), which
-/// is the platform-view-safe path: real blur is unavailable so the panel must
-/// show the static [KubusMapGlassMaterialSheen] immediately on open and leave
-/// nothing behind on close.
+/// The default test platform is Android, where MapLibre renders as a
+/// Virtual-Display texture that Flutter's [BackdropFilter] can sample, so the
+/// panel uses REAL blur immediately on open (no static sheen fallback) and
+/// leaves nothing behind on close. The Android real-blur path never registers a
+/// platform backdrop region (that host is web/native-iOS only).
 class _FilterPanelHost extends StatefulWidget {
   const _FilterPanelHost({super.key, required this.controller});
 
@@ -63,11 +64,11 @@ class _FilterPanelHostState extends State<_FilterPanelHost> {
 
 void main() {
   testWidgets(
-    'filter panel: closed mounts stable parent, open shows glass immediately, '
-    'close leaves no ghost glass/backdrop',
+    'filter panel: closed mounts stable parent, open shows real blur '
+    'immediately, close leaves no ghost glass/backdrop',
     (tester) async {
-      // The default test platform is mobile-native (Android), so the panel
-      // resolves to the platform-view-safe static sheen fallback.
+      // The default test platform is Android, so the panel resolves to real
+      // BackdropFilter blur over the Virtual-Display map texture.
       final controller = KubusMapBackdropHostController();
       addTearDown(controller.dispose);
 
@@ -78,26 +79,29 @@ void main() {
       await tester.pump();
 
       // Closed: the stable parent (AnimatedSwitcher) is mounted, but there is
-      // no panel content and no glass sheen.
+      // no panel content and no glass surface.
       expect(find.byType(AnimatedSwitcher), findsOneWidget);
       expect(find.text('Filter content'), findsNothing);
+      expect(find.byType(BackdropFilter), findsNothing);
       expect(find.byType(KubusMapGlassMaterialSheen), findsNothing);
 
-      // Open: the panel and its glass fallback sheen appear on the very first
-      // frame (no extra interaction needed). The mobile-native fallback never
-      // registers a platform backdrop region.
+      // Open: the panel and its real blur appear on the very first frame (no
+      // extra interaction needed). The Android real-blur path never registers a
+      // platform backdrop region, and never needs the static sheen fallback.
       hostKey.currentState!.setOpen(true);
       await tester.pump();
       expect(find.text('Filter content'), findsOneWidget);
-      expect(find.byType(KubusMapGlassMaterialSheen), findsWidgets);
+      expect(find.byType(BackdropFilter), findsWidgets);
+      expect(find.byType(KubusMapGlassMaterialSheen), findsNothing);
       expect(find.byType(KubusMapBackdropRegionTracker), findsNothing);
       expect(controller.regionCount, 0);
 
       // Close: after the switch-out animation completes, the panel and its
-      // sheen are gone — no ghost glass/backdrop remains.
+      // glass are gone — no ghost glass/backdrop remains.
       hostKey.currentState!.setOpen(false);
       await tester.pumpAndSettle();
       expect(find.text('Filter content'), findsNothing);
+      expect(find.byType(BackdropFilter), findsNothing);
       expect(find.byType(KubusMapGlassMaterialSheen), findsNothing);
       expect(controller.regionCount, 0);
     },

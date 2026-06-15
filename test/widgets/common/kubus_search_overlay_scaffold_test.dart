@@ -43,7 +43,75 @@ Widget _buildSearchOverlay(
   );
 }
 
+Widget _buildHeaderToolbar({
+  required double fieldWidth,
+  required bool expanded,
+}) {
+  return MaterialApp(
+    home: Scaffold(
+      body: Stack(
+        children: [
+          KubusSearchOverlayScaffold(
+            layout: KubusSearchOverlayLayout.sidePanel,
+            sidePanelSurfaceMode: KubusSearchSidePanelSurfaceMode.hostless,
+            // Setting the resolved field width selects the map-assembly header
+            // path (single-line toolbar + chips on a deliberate row below).
+            sidePanelFieldWidth: fieldWidth,
+            sidePanelSearchExpanded: expanded,
+            searchField: const SizedBox(
+              key: ValueKey<String>('search_field'),
+              height: 48,
+              child: DecoratedBox(
+                decoration: BoxDecoration(color: Colors.black12),
+              ),
+            ),
+            leading: const Text('Discover', key: ValueKey<String>('leading')),
+            filterChips: const Text('Filters'),
+            mapToggle: const Icon(Icons.tune),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
 void main() {
+  testWidgets(
+      'desktop header keeps logo/title and search field aligned on one row',
+      (tester) async {
+    await tester.pumpWidget(
+      _buildHeaderToolbar(fieldWidth: 320, expanded: false),
+    );
+    await tester.pump();
+
+    final leadingCenter = tester.getCenter(
+      find.byKey(const ValueKey<String>('leading')),
+    );
+    final fieldCenter = tester.getCenter(
+      find.byKey(const ValueKey<String>('search_field')),
+    );
+
+    // The title and the search field must share the same baseline (single
+    // toolbar line) instead of the field dropping onto a second row.
+    expect((leadingCenter.dy - fieldCenter.dy).abs(), lessThan(1.0));
+    // Field sits to the right of the title.
+    expect(fieldCenter.dx, greaterThan(leadingCenter.dx));
+    // Quick filters render (on the deliberate second row) while idle.
+    expect(find.text('Filters'), findsOneWidget);
+  });
+
+  testWidgets('desktop header collapses quick filters when search is expanded',
+      (tester) async {
+    await tester.pumpWidget(
+      _buildHeaderToolbar(fieldWidth: 620, expanded: true),
+    );
+    await tester.pump();
+
+    // When focused/expanded the chips collapse so the field can grow right.
+    expect(find.text('Filters'), findsNothing);
+    expect(find.byKey(const ValueKey<String>('search_field')), findsOneWidget);
+  });
+
   testWidgets('side panel with glassHost renders outer GlassSurface',
       (tester) async {
     await tester.pumpWidget(

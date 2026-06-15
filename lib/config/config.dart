@@ -121,6 +121,19 @@ class AppConfig {
     defaultValue: true,
   );
 
+  /// Mobile map chrome: use the native (iOS) backdrop blur host to blur the
+  /// MapLibre `UiKitView` beneath registered map-glass regions.
+  ///
+  /// **Off by default** until the native `UIVisualEffectView`-backed host is
+  /// wired and verified on a device (see [KubusMapNativeBackdropHost]). Android
+  /// does not use this — it blurs via Flutter [BackdropFilter] over the
+  /// Virtual-Display map texture. When this is off, iOS overlays that request
+  /// real blur use the enriched tint fallback and log a loud diagnostic.
+  static const bool enableMapNativeBlurHost = bool.fromEnvironment(
+    'MAP_NATIVE_BLUR_HOST',
+    defaultValue: false,
+  );
+
   /// MapLibre map style assets (theme-specific).
   ///
   /// Keep these configurable via build-time defines so production can switch
@@ -514,6 +527,8 @@ class AppConfig {
         return enableMapWebPreserveDrawingBuffer;
       case 'mapCssBlurHost':
         return enableMapCssBlurHost;
+      case 'mapNativeBlurHost':
+        return enableMapNativeBlurHost;
       case 'clientUploadCompression':
         return enableClientUploadCompression;
       default:
@@ -559,7 +574,7 @@ class AppConfig {
 class AppInfo {
   static const String appName = 'art.kubus';
   static const String version = '0.6.2';
-  static const int buildNumber = 26061506;
+  static const int buildNumber = 26061601;
   static const String buildDate = '2026-06-15';
 
   /// Get full version string

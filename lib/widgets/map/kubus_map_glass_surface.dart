@@ -23,17 +23,43 @@ enum KubusMapBlurPolicy {
   automatic,
   allowCompactWeb,
   forceMapChromeWhenCapable,
+
+  /// Strict policy for overlays that REQUIRE real blur of the live map.
+  ///
+  /// Unlike [forceMapChromeWhenCapable] (which only widens the web platform
+  /// host), this also drives the mobile real-blur path: Android resolves to a
+  /// real [BackdropFilter] over the Virtual-Display map texture, iOS resolves to
+  /// the native backdrop host when available. If neither real-blur strategy is
+  /// available the decision is still a fallback, but it is flagged via
+  /// [KubusMapBlurDecision.realBlurUnavailable] so callers can log it loudly
+  /// instead of silently shipping a flat tint.
+  forceRealBlur,
   disabled,
 }
 
 enum KubusMapBackdropStrategy {
+  /// Flutter [BackdropFilter] samples the scene below it (real GPU blur). Works
+  /// on desktop, web (non-platform-view), and Android where the map is a
+  /// Virtual-Display texture that Flutter composites.
   flutterBackdropFilter,
+
+  /// Flat tinted material fallback (no real blur). Enriched with a static sheen
+  /// by [buildKubusMapGlassSurface] so it still reads as glass.
   platformViewSafeTintFallback,
+
+  /// Web DOM/CSS backdrop host renders the blur behind a registered region.
   platformViewBackdropHost,
+
+  /// Native (iOS) backdrop host renders a real blur view beneath a registered
+  /// region, above the MapLibre platform view and behind Flutter overlay
+  /// content. Region lifecycle is shared with [platformViewBackdropHost] via
+  /// [KubusMapBackdropRegionTracker]/[KubusMapBackdropHostController].
+  nativeBackdropHost,
 }
 
-/// Whether the current target renders the map as a native platform view that
-/// Flutter's [BackdropFilter] cannot sample (Android/iOS MapLibre).
+/// Whether the current target renders the map as a native platform view
+/// (Android/iOS MapLibre) rather than a Flutter-composited surface (desktop) or
+/// a web DOM canvas.
 ///
 /// Desktop (windows/macOS/linux) keeps real blur because its map chrome
 /// composites with Flutter; web is handled separately via its own DOM-backed
@@ -50,6 +76,64 @@ bool isMobileNativeMapPlatform({bool web = kIsWeb}) {
     case TargetPlatform.windows:
       return false;
   }
+}
+
+/// Whether Flutter's [BackdropFilter] can actually sample the live map's pixels
+/// on this mobile platform.
+///
+/// **Android:** `maplibre_gl` runs in Virtual-Display mode (the plugin default,
+/// `MapLibreMap.useHybridComposition == false`), so the map is composited into a
+/// Flutter texture that [BackdropFilter] *can* sample — real blur works. This is
+/// the path that was wrongly disabled by the `mobile-platform-view-safe-tint-
+/// fallback` regression, which assumed Hybrid Composition.
+///
+/// **iOS:** `maplibre_gl` renders a `UiKitView` (a true platform view) whose
+/// pixels are not in the Flutter raster, so [BackdropFilter] cannot sample it —
+/// iOS needs the [KubusMapBackdropStrategy.nativeBackdropHost] instead.
+bool mobileMapBackdropFilterCanSample({bool web = kIsWeb}) {
+  if (web) return false;
+  switch (defaultTargetPlatform) {
+    case TargetPlatform.android:
+      return true;
+    case TargetPlatform.iOS:
+    case TargetPlatform.fuchsia:
+    case TargetPlatform.linux:
+    case TargetPlatform.macOS:
+    case TargetPlatform.windows:
+      return false;
+  }
+}
+
+/// Capability gate for the native (iOS) map backdrop blur host.
+///
+/// Until the native `UIVisualEffectView`-backed host is wired and verified on a
+/// device, [isSupported] is `false`, so iOS overlays that request real blur fall
+/// back to the enriched tint and log a loud diagnostic rather than silently
+/// shipping a host that does nothing. Flip this on (behind the `mapNativeBlur
+/// Host` feature flag) once the platform side is verified.
+class KubusMapNativeBackdropHost {
+  const KubusMapNativeBackdropHost._();
+
+  /// Whether a verified native backdrop host is available on this platform.
+  static bool get isSupported {
+    if (kIsWeb) return false;
+    // No verified native host yet; iOS uses the enriched fallback until the
+    // native UIVisualEffectView host lands and is device-verified.
+    return false;
+  }
+}
+
+/// Whether a native mobile backdrop blur host is usable in the current build.
+///
+/// Android does not use a native host (a sibling in-app view cannot capture the
+/// map's GPU surface; Android uses [BackdropFilter] over the Virtual-Display
+/// texture instead). iOS uses it when the feature flag is on, the platform host
+/// is supported, and it is not running on web.
+bool mobileNativeBlurHostAvailable({bool web = kIsWeb}) {
+  if (web) return false;
+  if (defaultTargetPlatform != TargetPlatform.iOS) return false;
+  return AppConfig.isFeatureEnabled('mapNativeBlurHost') &&
+      KubusMapNativeBackdropHost.isSupported;
 }
 
 @immutable
@@ -69,11 +153,21 @@ class KubusMapBlurDecision {
     required this.reduceEffectsUserTouched,
     required this.heuristicTriggered,
     required this.autoReduceEffectsApplied,
+    this.requireRealBlur = false,
+    this.realBlurUnavailable = false,
   });
 
   final bool enabled;
   final String reason;
   final KubusMapBackdropStrategy strategy;
+
+  /// Whether the caller demanded real blur ([KubusMapBlurPolicy.forceRealBlur]).
+  final bool requireRealBlur;
+
+  /// Whether real blur was required but no real-blur strategy was available on
+  /// this platform (so the decision degraded to a tint fallback). Callers should
+  /// surface this loudly in debug builds.
+  final bool realBlurUnavailable;
   final bool providerAllowsBlur;
   final double width;
   final KubusMapBlurPolicy policy;
@@ -96,12 +190,18 @@ KubusMapBlurDecision resolveKubusMapBlurDecision(
   bool? webGlHealthyOverride,
   bool? platformBackdropHostAvailableOverride,
   bool? mobileNativeOverride,
+  bool? mobileBackdropSampleableOverride,
+  bool? nativeBlurHostAvailableOverride,
 }) {
   final width = MediaQuery.maybeOf(context)?.size.width ?? 0;
   final allowBlur = GlassCapabilitiesProvider.watchAllowBlurEnabled(context);
   final web = isWebOverride ?? kIsWeb;
   final mobileNative =
       mobileNativeOverride ?? isMobileNativeMapPlatform(web: web);
+  final mobileBackdropSampleable = mobileBackdropSampleableOverride ??
+      mobileMapBackdropFilterCanSample(web: web);
+  final nativeBlurHost =
+      nativeBlurHostAvailableOverride ?? mobileNativeBlurHostAvailable(web: web);
   final webGlHealthy = webGlHealthyOverride ?? webGLContextHealthy.value;
   final platformBackdropHostAvailable = platformBackdropHostAvailableOverride ??
       (web &&
@@ -173,6 +273,7 @@ KubusMapBlurDecision resolveKubusMapBlurDecision(
 
   final platformHostAllowed = policy ==
           KubusMapBlurPolicy.forceMapChromeWhenCapable ||
+      policy == KubusMapBlurPolicy.forceRealBlur ||
       (!compactWeb &&
           (policy == KubusMapBlurPolicy.allowCompactWeb ||
               policy == KubusMapBlurPolicy.automatic));
@@ -221,14 +322,67 @@ KubusMapBlurDecision resolveKubusMapBlurDecision(
   }
 
   // Mobile native (Android/iOS) renders MapLibre as a native platform view.
-  // Flutter's BackdropFilter cannot sample those pixels, so real blur degrades
-  // to a flat translucent panel. Force the material safe-tint fallback for any
-  // overlay that sits over the live map. This is independent of policy because
-  // there is no platform backdrop host on mobile (that path is web-only DOM).
+  // The original regression assumed Flutter's BackdropFilter could never sample
+  // those pixels and forced a flat tint for ALL mobile. That is only true for
+  // Hybrid Composition. This app uses the maplibre_gl default
+  // (useHybridComposition == false), so:
+  //
+  //  * Android renders the map as a Virtual-Display TEXTURE that Flutter
+  //    composites — BackdropFilter CAN sample it, so real blur works.
+  //  * iOS renders a UiKitView (a real platform view) whose pixels are not in
+  //    the Flutter raster — BackdropFilter cannot sample it, so iOS needs the
+  //    native backdrop host (or, until that is verified, an enriched fallback).
   if (!web && overMapPlatformView && mobileNative) {
+    final requireRealBlur = policy == KubusMapBlurPolicy.forceRealBlur;
+
+    if (mobileBackdropSampleable) {
+      return KubusMapBlurDecision(
+        enabled: true,
+        reason: 'android-virtual-display-backdrop-filter',
+        strategy: KubusMapBackdropStrategy.flutterBackdropFilter,
+        providerAllowsBlur: allowBlur,
+        width: width,
+        policy: policy,
+        web: web,
+        overMapPlatformView: overMapPlatformView,
+        platformBackdropHostAvailable: platformBackdropHostAvailable,
+        webGlHealthy: webGlHealthy,
+        reduceEffects: reduceEffects,
+        reduceEffectsUserTouched: reduceEffectsUserTouched,
+        heuristicTriggered: heuristicTriggered,
+        autoReduceEffectsApplied: autoReduceEffectsApplied,
+        requireRealBlur: requireRealBlur,
+      );
+    }
+
+    if (nativeBlurHost) {
+      return KubusMapBlurDecision(
+        enabled: true,
+        reason: 'mobile-native-backdrop-host',
+        strategy: KubusMapBackdropStrategy.nativeBackdropHost,
+        providerAllowsBlur: allowBlur,
+        width: width,
+        policy: policy,
+        web: web,
+        overMapPlatformView: overMapPlatformView,
+        platformBackdropHostAvailable: platformBackdropHostAvailable,
+        webGlHealthy: webGlHealthy,
+        reduceEffects: reduceEffects,
+        reduceEffectsUserTouched: reduceEffectsUserTouched,
+        heuristicTriggered: heuristicTriggered,
+        autoReduceEffectsApplied: autoReduceEffectsApplied,
+        requireRealBlur: requireRealBlur,
+      );
+    }
+
+    // No real-blur strategy available on this mobile platform (e.g. iOS before
+    // the native host is verified). Fall back to the enriched tint, but flag it
+    // when the caller required real blur so it is logged loudly.
     return KubusMapBlurDecision(
       enabled: false,
-      reason: 'mobile-platform-view-safe-tint-fallback',
+      reason: requireRealBlur
+          ? 'mobile-real-blur-unavailable-fallback'
+          : 'mobile-platform-view-safe-tint-fallback',
       strategy: KubusMapBackdropStrategy.platformViewSafeTintFallback,
       providerAllowsBlur: allowBlur,
       width: width,
@@ -241,6 +395,8 @@ KubusMapBlurDecision resolveKubusMapBlurDecision(
       reduceEffectsUserTouched: reduceEffectsUserTouched,
       heuristicTriggered: heuristicTriggered,
       autoReduceEffectsApplied: autoReduceEffectsApplied,
+      requireRealBlur: requireRealBlur,
+      realBlurUnavailable: requireRealBlur,
     );
   }
 
@@ -290,6 +446,8 @@ class KubusMapGlassSurfacePreset {
     required this.blurSigma,
     required this.blurReason,
     required this.backdropStrategy,
+    this.requireRealBlur = false,
+    this.realBlurUnavailable = false,
   });
 
   final KubusGlassStyle style;
@@ -303,6 +461,8 @@ class KubusMapGlassSurfacePreset {
   final double blurSigma;
   final String blurReason;
   final KubusMapBackdropStrategy backdropStrategy;
+  final bool requireRealBlur;
+  final bool realBlurUnavailable;
 }
 
 KubusMapGlassSurfacePreset resolveKubusMapGlassSurfacePreset(
@@ -315,6 +475,8 @@ KubusMapGlassSurfacePreset resolveKubusMapGlassSurfacePreset(
   bool? isWebOverride,
   bool? platformBackdropHostAvailableOverride,
   bool? mobileNativeOverride,
+  bool? mobileBackdropSampleableOverride,
+  bool? nativeBlurHostAvailableOverride,
 }) {
   final theme = Theme.of(context);
   final scheme = theme.colorScheme;
@@ -340,17 +502,23 @@ KubusMapGlassSurfacePreset resolveKubusMapGlassSurfacePreset(
     platformBackdropHostAvailableOverride:
         platformBackdropHostAvailableOverride,
     mobileNativeOverride: mobileNativeOverride,
+    mobileBackdropSampleableOverride: mobileBackdropSampleableOverride,
+    nativeBlurHostAvailableOverride: nativeBlurHostAvailableOverride,
   );
   final resolvedBlur = useBlur &&
       blurDecision.enabled &&
       (blurDecision.strategy ==
               KubusMapBackdropStrategy.flutterBackdropFilter ||
           blurDecision.strategy ==
-              KubusMapBackdropStrategy.platformViewBackdropHost);
+              KubusMapBackdropStrategy.platformViewBackdropHost ||
+          blurDecision.strategy ==
+              KubusMapBackdropStrategy.nativeBackdropHost);
   final resolvedPlatformBackdrop = useBlur &&
       blurDecision.enabled &&
-      blurDecision.strategy ==
-          KubusMapBackdropStrategy.platformViewBackdropHost;
+      (blurDecision.strategy ==
+              KubusMapBackdropStrategy.platformViewBackdropHost ||
+          blurDecision.strategy ==
+              KubusMapBackdropStrategy.nativeBackdropHost);
   final borderColor = scheme.outlineVariant.withValues(
     alpha: switch (kind) {
       KubusMapGlassSurfaceKind.panel =>
@@ -408,6 +576,8 @@ KubusMapGlassSurfacePreset resolveKubusMapGlassSurfacePreset(
             'platformBackdropHostAvailable=${blurDecision.platformBackdropHostAvailable}'
         : 'caller-disabled',
     backdropStrategy: blurDecision.strategy,
+    requireRealBlur: blurDecision.requireRealBlur,
+    realBlurUnavailable: useBlur && blurDecision.realBlurUnavailable,
   );
 }
 
@@ -424,13 +594,19 @@ Widget buildKubusMapGlassSurface({
   BoxBorder? border,
   List<BoxShadow>? boxShadow,
   VoidCallback? onTap,
-  KubusMapBlurPolicy blurPolicy = KubusMapBlurPolicy.allowCompactWeb,
+  // Default to the strict real-blur policy so every map overlay that does not
+  // explicitly opt out is routed through the real-blur path (Android
+  // BackdropFilter over the Virtual-Display map; web/iOS host where available).
+  KubusMapBlurPolicy blurPolicy = KubusMapBlurPolicy.forceRealBlur,
   bool overMapPlatformView = true,
   String? backdropRegionId,
   bool enablePlatformBackdropRegion = true,
+  String? overlayName,
   bool? isWebOverride,
   bool? platformBackdropHostAvailableOverride,
   bool? mobileNativeOverride,
+  bool? mobileBackdropSampleableOverride,
+  bool? nativeBlurHostAvailableOverride,
 }) {
   final preset = resolveKubusMapGlassSurfacePreset(
     context,
@@ -443,6 +619,8 @@ Widget buildKubusMapGlassSurface({
     platformBackdropHostAvailableOverride:
         platformBackdropHostAvailableOverride,
     mobileNativeOverride: mobileNativeOverride,
+    mobileBackdropSampleableOverride: mobileBackdropSampleableOverride,
+    nativeBlurHostAvailableOverride: nativeBlurHostAvailableOverride,
   );
   final theme = Theme.of(context);
   final isDark = theme.brightness == Brightness.dark;
@@ -492,11 +670,32 @@ Widget buildKubusMapGlassSurface({
     );
   }
 
-  if (kDebugMode && !preset.useBlur) {
-    final key = '$kind:${preset.blurReason}';
+  // Loud, explicit diagnostic when an overlay that REQUIRED real blur did not
+  // get it. This is the contract from the map-glass spec: a required-but-missing
+  // real blur must never ship silently as a flat tint.
+  if (preset.realBlurUnavailable) {
+    final platform = kIsWeb ? 'web' : defaultTargetPlatform.name;
+    debugPrint(
+      'REAL MAP BLUR REQUESTED BUT FALLBACK USED: '
+      '${overlayName ?? kind.name} reason=${preset.blurReason} '
+      'platform=$platform regionId=${backdropRegionId ?? '<none>'}',
+    );
+  }
+
+  if (kDebugMode) {
+    final realBlurRequired =
+        preset.requireRealBlur || blurPolicy == KubusMapBlurPolicy.forceRealBlur;
+    final platform = kIsWeb ? 'web' : defaultTargetPlatform.name;
+    final key = '$kind:${overlayName ?? ''}:${preset.backdropStrategy}:'
+        '${preset.useBlur}:${preset.realBlurUnavailable}';
     if (_loggedMapGlassFallbackKeys.add(key)) {
       debugPrint(
-        'KubusMapGlassSurface: fallback kind=$kind reason=${preset.blurReason}',
+        'KubusMapGlassSurface diag: overlay=${overlayName ?? kind.name} '
+        'kind=${kind.name} platform=$platform '
+        'realBlurRequired=$realBlurRequired strategy=${preset.backdropStrategy} '
+        'realBlurUsed=${preset.useBlur} fallbackUsed=${!preset.useBlur} '
+        'realBlurUnavailable=${preset.realBlurUnavailable} '
+        'regionId=${backdropRegionId ?? '<none>'} reason=${preset.blurReason}',
       );
     }
   }

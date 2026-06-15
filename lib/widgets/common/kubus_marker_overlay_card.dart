@@ -220,6 +220,7 @@ class KubusMarkerOverlayCard extends StatelessWidget {
         child: buildKubusMapGlassSurface(
           context: context,
           kind: KubusMapGlassSurfaceKind.panel,
+          overlayName: 'marker-overlay-card',
           borderRadius: BorderRadius.circular(KubusRadius.lg),
           tintBase: scheme.surface,
           padding: const EdgeInsets.all(cardPadding),
