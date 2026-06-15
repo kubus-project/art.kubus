@@ -2381,6 +2381,46 @@ class BackendApiService
         responsePayload: responsePayload,
       );
 
+  /// Account passkey (sign-in) registration options.
+  /// POST /api/auth/passkey/register/options (authenticated)
+  Future<Map<String, dynamic>> getAccountPasskeyRegisterOptions({
+    String? deviceLabel,
+    String? purpose,
+  }) =>
+      _backendApiGetAccountPasskeyRegisterOptions(
+        this,
+        deviceLabel: deviceLabel,
+        purpose: purpose,
+      );
+
+  /// Verify and store an account passkey (sign-in) credential.
+  /// POST /api/auth/passkey/register/verify (authenticated)
+  Future<Map<String, dynamic>> verifyAccountPasskeyRegister({
+    required Map<String, dynamic> responsePayload,
+    String? deviceLabel,
+    String? purpose,
+    bool prfSupported = false,
+  }) =>
+      _backendApiVerifyAccountPasskeyRegister(
+        this,
+        responsePayload: responsePayload,
+        deviceLabel: deviceLabel,
+        purpose: purpose,
+        prfSupported: prfSupported,
+      );
+
+  /// List account passkeys + account-sign-in readiness.
+  /// GET /api/auth/passkey/credentials (authenticated)
+  Future<Map<String, dynamic>> getAccountPasskeyStatus() =>
+      _backendApiGetAccountPasskeyStatus(this);
+
+  /// Revoke an account passkey by id.
+  /// DELETE /api/auth/passkey/:id (authenticated)
+  Future<Map<String, dynamic>> revokeAccountPasskey({
+    required String passkeyId,
+  }) =>
+      _backendApiRevokeAccountPasskey(this, passkeyId: passkeyId);
+
   /// Resend email verification link
   /// POST /api/auth/resend-verification { email }
   Future<Map<String, dynamic>> _resendEmailVerificationRequest({

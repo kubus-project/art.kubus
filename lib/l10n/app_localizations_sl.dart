@@ -1258,6 +1258,61 @@ class AppLocalizationsSl extends AppLocalizations {
   String get authPasskeySignInFailed => 'Prijava s ključem za dostop ni uspela';
 
   @override
+  String get accountPasskeySectionTitle => 'Ključi za dostop do računa';
+
+  @override
+  String get accountPasskeySectionBody =>
+      'Prijavite se brez gesla s ključem za dostop na tej napravi ali brskalniku.';
+
+  @override
+  String get accountPasskeyCreateAction => 'Ustvari ključ za dostop';
+
+  @override
+  String get accountPasskeyAddedToast => 'Ključ za dostop dodan';
+
+  @override
+  String get accountPasskeyRemovedToast => 'Ključ za dostop odstranjen';
+
+  @override
+  String get accountPasskeyAddFailedToast =>
+      'Ključa za dostop ni bilo mogoče dodati';
+
+  @override
+  String get accountPasskeyRemoveFailedToast =>
+      'Ključa za dostop ni bilo mogoče odstraniti';
+
+  @override
+  String get accountPasskeyRemoveAction => 'Odstrani ključ za dostop';
+
+  @override
+  String get accountPasskeySignInReadyStatus =>
+      'Prijava s ključem za dostop je pripravljena';
+
+  @override
+  String get accountPasskeyNotConfiguredStatus =>
+      'Prijava s ključem za dostop še ni nastavljena';
+
+  @override
+  String get passkeyProtectionEnableAction =>
+      'Omogoči zaščito s ključem za dostop';
+
+  @override
+  String get passkeyProtectionWalletRecoveryReady =>
+      'Obnovitev denarnice s ključem za dostop je pripravljena';
+
+  @override
+  String get passkeyProtectionSignInOnlyMessage =>
+      'Prijava s ključem za dostop je pripravljena. Za obnovitev denarnice na tej napravi še vedno potrebujete obnovitveno geslo ali obnovitveno frazo.';
+
+  @override
+  String get passkeyProtectionPrfUnsupportedMessage =>
+      'Ta naprava podpira prijavo s ključem za dostop, ne pa tudi obnovitve denarnice s ključem za dostop.';
+
+  @override
+  String get passkeyProtectionWalletRecoveryUnavailable =>
+      'Obnovitev denarnice s ključem za dostop ni na voljo';
+
+  @override
   String get authShowOtherOptions => 'Prikaži druge možnosti';
 
   @override

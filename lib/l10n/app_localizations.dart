@@ -2285,6 +2285,96 @@ abstract class AppLocalizations {
   /// **'Passkey sign-in failed'**
   String get authPasskeySignInFailed;
 
+  /// No description provided for @accountPasskeySectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Account sign-in passkeys'**
+  String get accountPasskeySectionTitle;
+
+  /// No description provided for @accountPasskeySectionBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in without a password using a passkey on this device or browser.'**
+  String get accountPasskeySectionBody;
+
+  /// No description provided for @accountPasskeyCreateAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Create a passkey'**
+  String get accountPasskeyCreateAction;
+
+  /// No description provided for @accountPasskeyAddedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Passkey added'**
+  String get accountPasskeyAddedToast;
+
+  /// No description provided for @accountPasskeyRemovedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Passkey removed'**
+  String get accountPasskeyRemovedToast;
+
+  /// No description provided for @accountPasskeyAddFailedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not add passkey'**
+  String get accountPasskeyAddFailedToast;
+
+  /// No description provided for @accountPasskeyRemoveFailedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not remove passkey'**
+  String get accountPasskeyRemoveFailedToast;
+
+  /// No description provided for @accountPasskeyRemoveAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove passkey'**
+  String get accountPasskeyRemoveAction;
+
+  /// No description provided for @accountPasskeySignInReadyStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Passkey sign-in ready'**
+  String get accountPasskeySignInReadyStatus;
+
+  /// No description provided for @accountPasskeyNotConfiguredStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'No passkey sign-in yet'**
+  String get accountPasskeyNotConfiguredStatus;
+
+  /// No description provided for @passkeyProtectionEnableAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable passkey protection'**
+  String get passkeyProtectionEnableAction;
+
+  /// No description provided for @passkeyProtectionWalletRecoveryReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet recovery with passkey ready'**
+  String get passkeyProtectionWalletRecoveryReady;
+
+  /// No description provided for @passkeyProtectionSignInOnlyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Passkey sign-in ready. Wallet recovery still needs your recovery password or recovery phrase on this device.'**
+  String get passkeyProtectionSignInOnlyMessage;
+
+  /// No description provided for @passkeyProtectionPrfUnsupportedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This device supports passkey sign-in, but not passkey wallet recovery.'**
+  String get passkeyProtectionPrfUnsupportedMessage;
+
+  /// No description provided for @passkeyProtectionWalletRecoveryUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Passkey wallet recovery is unavailable'**
+  String get passkeyProtectionWalletRecoveryUnavailable;
+
   /// No description provided for @authShowOtherOptions.
   ///
   /// In en, this message translates to:

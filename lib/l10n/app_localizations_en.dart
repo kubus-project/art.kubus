@@ -1251,6 +1251,56 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authPasskeySignInFailed => 'Passkey sign-in failed';
 
   @override
+  String get accountPasskeySectionTitle => 'Account sign-in passkeys';
+
+  @override
+  String get accountPasskeySectionBody =>
+      'Sign in without a password using a passkey on this device or browser.';
+
+  @override
+  String get accountPasskeyCreateAction => 'Create a passkey';
+
+  @override
+  String get accountPasskeyAddedToast => 'Passkey added';
+
+  @override
+  String get accountPasskeyRemovedToast => 'Passkey removed';
+
+  @override
+  String get accountPasskeyAddFailedToast => 'Could not add passkey';
+
+  @override
+  String get accountPasskeyRemoveFailedToast => 'Could not remove passkey';
+
+  @override
+  String get accountPasskeyRemoveAction => 'Remove passkey';
+
+  @override
+  String get accountPasskeySignInReadyStatus => 'Passkey sign-in ready';
+
+  @override
+  String get accountPasskeyNotConfiguredStatus => 'No passkey sign-in yet';
+
+  @override
+  String get passkeyProtectionEnableAction => 'Enable passkey protection';
+
+  @override
+  String get passkeyProtectionWalletRecoveryReady =>
+      'Wallet recovery with passkey ready';
+
+  @override
+  String get passkeyProtectionSignInOnlyMessage =>
+      'Passkey sign-in ready. Wallet recovery still needs your recovery password or recovery phrase on this device.';
+
+  @override
+  String get passkeyProtectionPrfUnsupportedMessage =>
+      'This device supports passkey sign-in, but not passkey wallet recovery.';
+
+  @override
+  String get passkeyProtectionWalletRecoveryUnavailable =>
+      'Passkey wallet recovery is unavailable';
+
+  @override
   String get authShowOtherOptions => 'Show other options';
 
   @override

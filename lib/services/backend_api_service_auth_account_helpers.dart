@@ -247,6 +247,144 @@ Future<Map<String, dynamic>> _backendApiVerifyPasskeyLogin(
   }
 }
 
+Future<Map<String, dynamic>> _backendApiGetAccountPasskeyRegisterOptions(
+  BackendApiService service, {
+  String? deviceLabel,
+  String? purpose,
+}) async {
+  try {
+    final uri =
+        Uri.parse('${service.baseUrl}/api/auth/passkey/register/options');
+    final response = await service._post(
+      uri,
+      includeAuth: true,
+      headers: service._getHeaders(includeAuth: true),
+      body: jsonEncode(<String, dynamic>{
+        if ((deviceLabel ?? '').trim().isNotEmpty)
+          'deviceLabel': deviceLabel!.trim(),
+        if ((purpose ?? '').trim().isNotEmpty) 'purpose': purpose!.trim(),
+      }),
+    );
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final raw = jsonDecode(response.body) as Map<String, dynamic>;
+      return raw['data'] is Map<String, dynamic>
+          ? raw['data'] as Map<String, dynamic>
+          : raw;
+    }
+    throw BackendApiRequestException(
+      statusCode: response.statusCode,
+      path: uri.path,
+      body: response.body,
+    );
+  } catch (e) {
+    AppConfig.debugPrint(
+      'BackendApiService.getAccountPasskeyRegisterOptions failed: $e',
+    );
+    rethrow;
+  }
+}
+
+Future<Map<String, dynamic>> _backendApiVerifyAccountPasskeyRegister(
+  BackendApiService service, {
+  required Map<String, dynamic> responsePayload,
+  String? deviceLabel,
+  String? purpose,
+  bool prfSupported = false,
+}) async {
+  try {
+    final uri =
+        Uri.parse('${service.baseUrl}/api/auth/passkey/register/verify');
+    final response = await service._post(
+      uri,
+      includeAuth: true,
+      headers: service._getHeaders(includeAuth: true),
+      body: jsonEncode(<String, dynamic>{
+        'response': responsePayload,
+        if ((deviceLabel ?? '').trim().isNotEmpty)
+          'deviceLabel': deviceLabel!.trim(),
+        if ((purpose ?? '').trim().isNotEmpty) 'purpose': purpose!.trim(),
+        'prfSupported': prfSupported,
+      }),
+    );
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final raw = jsonDecode(response.body) as Map<String, dynamic>;
+      return raw['data'] is Map<String, dynamic>
+          ? raw['data'] as Map<String, dynamic>
+          : raw;
+    }
+    throw BackendApiRequestException(
+      statusCode: response.statusCode,
+      path: uri.path,
+      body: response.body,
+    );
+  } catch (e) {
+    AppConfig.debugPrint(
+      'BackendApiService.verifyAccountPasskeyRegister failed: $e',
+    );
+    rethrow;
+  }
+}
+
+Future<Map<String, dynamic>> _backendApiGetAccountPasskeyStatus(
+  BackendApiService service,
+) async {
+  try {
+    final uri = Uri.parse('${service.baseUrl}/api/auth/passkey/credentials');
+    final response = await service._get(
+      uri,
+      includeAuth: true,
+      headers: service._getHeaders(includeAuth: true),
+    );
+    if (response.statusCode == 200) {
+      final raw = jsonDecode(response.body) as Map<String, dynamic>;
+      return raw['data'] is Map<String, dynamic>
+          ? raw['data'] as Map<String, dynamic>
+          : raw;
+    }
+    throw BackendApiRequestException(
+      statusCode: response.statusCode,
+      path: uri.path,
+      body: response.body,
+    );
+  } catch (e) {
+    AppConfig.debugPrint(
+      'BackendApiService.getAccountPasskeyStatus failed: $e',
+    );
+    rethrow;
+  }
+}
+
+Future<Map<String, dynamic>> _backendApiRevokeAccountPasskey(
+  BackendApiService service, {
+  required String passkeyId,
+}) async {
+  try {
+    final uri = Uri.parse(
+        '${service.baseUrl}/api/auth/passkey/${Uri.encodeComponent(passkeyId.trim())}');
+    final response = await service._delete(
+      uri,
+      includeAuth: true,
+      headers: service._getHeaders(includeAuth: true),
+    );
+    if (response.statusCode == 200) {
+      final raw = jsonDecode(response.body) as Map<String, dynamic>;
+      return raw['data'] is Map<String, dynamic>
+          ? raw['data'] as Map<String, dynamic>
+          : raw;
+    }
+    throw BackendApiRequestException(
+      statusCode: response.statusCode,
+      path: uri.path,
+      body: response.body,
+    );
+  } catch (e) {
+    AppConfig.debugPrint(
+      'BackendApiService.revokeAccountPasskey failed: $e',
+    );
+    rethrow;
+  }
+}
+
 Future<Map<String, dynamic>> _backendApiResendEmailVerificationRequest(
   BackendApiService service, {
   required String email,

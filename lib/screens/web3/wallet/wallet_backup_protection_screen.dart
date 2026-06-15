@@ -6,6 +6,8 @@ import 'package:art_kubus/providers/app_mode_provider.dart';
 import 'package:art_kubus/providers/security_gate_provider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/screens/web3/wallet/mnemonic_reveal_screen.dart';
+import 'package:art_kubus/services/backend_api_service.dart';
+import 'package:art_kubus/services/passkey_protection_service.dart';
 import 'package:art_kubus/services/wallet_recovery_flow_service.dart';
 import 'package:art_kubus/services/wallet_backup_passkey_service.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
@@ -37,6 +39,10 @@ class _WalletBackupProtectionScreenState
   bool _backupRequired = false;
   bool _passkeysSupported = false;
   bool _loading = true;
+  AccountPasskeyStatus _accountPasskeyStatus = AccountPasskeyStatus.empty;
+  bool _accountPasskeyBusy = false;
+
+  static const _passkeyProtectionService = PasskeyProtectionService();
 
   @override
   void initState() {
@@ -63,12 +69,120 @@ class _WalletBackupProtectionScreenState
       passkeysSupported = false;
     }
 
+    var accountPasskeyStatus = AccountPasskeyStatus.empty;
+    if (_passkeyProtectionService.isAvailable &&
+        walletProvider.authority.hasAccountSession) {
+      try {
+        accountPasskeyStatus =
+            await _passkeyProtectionService.getAccountStatus(BackendApiService());
+      } catch (_) {
+        accountPasskeyStatus = AccountPasskeyStatus.empty;
+      }
+    }
+
     if (!mounted) return;
     setState(() {
       _backupRequired = backupRequired;
       _passkeysSupported = passkeysSupported;
+      _accountPasskeyStatus = accountPasskeyStatus;
       _loading = false;
     });
+  }
+
+  bool _looksLikePrfUnsupported(Object? error) {
+    if (error == null) return false;
+    final text = error.toString().toLowerCase();
+    return text.contains('not available') ||
+        text.contains('unavailable') ||
+        text.contains('prf');
+  }
+
+  Future<void> _enablePasskeyProtection() async {
+    final walletProvider = context.read<WalletProvider>();
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context)!;
+    setState(() => _accountPasskeyBusy = true);
+    try {
+      final result = await _passkeyProtectionService.enablePasskeyProtection(
+        api: BackendApiService(),
+        walletProvider: walletProvider,
+        deviceLabel: l10n.walletBackupProtectionDefaultPasskeyName,
+      );
+      if (!mounted) return;
+      await _refresh();
+      await widget.onBackupStateChanged?.call();
+      final message = result.walletRecoveryRegistered
+          ? l10n.passkeyProtectionWalletRecoveryReady
+          : _looksLikePrfUnsupported(result.walletRecoveryError)
+              ? l10n.passkeyProtectionPrfUnsupportedMessage
+              : l10n.passkeyProtectionSignInOnlyMessage;
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(message)),
+        tone: result.walletRecoveryRegistered
+            ? KubusSnackBarTone.success
+            : KubusSnackBarTone.neutral,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.accountPasskeyAddFailedToast)),
+        tone: KubusSnackBarTone.error,
+      );
+    } finally {
+      if (mounted) setState(() => _accountPasskeyBusy = false);
+    }
+  }
+
+  Future<void> _createAccountPasskey() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context)!;
+    setState(() => _accountPasskeyBusy = true);
+    try {
+      await _passkeyProtectionService.registerAccountPasskey(
+        api: BackendApiService(),
+        deviceLabel: l10n.walletBackupProtectionDefaultPasskeyName,
+      );
+      if (!mounted) return;
+      await _refresh();
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.accountPasskeyAddedToast)),
+        tone: KubusSnackBarTone.success,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.accountPasskeyAddFailedToast)),
+        tone: KubusSnackBarTone.error,
+      );
+    } finally {
+      if (mounted) setState(() => _accountPasskeyBusy = false);
+    }
+  }
+
+  Future<void> _removeAccountPasskey(String passkeyId) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context)!;
+    setState(() => _accountPasskeyBusy = true);
+    try {
+      await _passkeyProtectionService.revokeAccountPasskey(
+        api: BackendApiService(),
+        passkeyId: passkeyId,
+      );
+      if (!mounted) return;
+      await _refresh();
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.accountPasskeyRemovedToast)),
+        tone: KubusSnackBarTone.success,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.accountPasskeyRemoveFailedToast)),
+        tone: KubusSnackBarTone.error,
+      );
+    } finally {
+      if (mounted) setState(() => _accountPasskeyBusy = false);
+    }
   }
 
   Future<void> _runProtectedAction(Future<void> Function() action) async {
@@ -402,6 +516,98 @@ class _WalletBackupProtectionScreenState
                     label: Text(actionLabel),
                   ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAccountPasskeySection(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    final ready = _accountPasskeyStatus.accountSignInReady;
+    final passkeys = _accountPasskeyStatus.passkeys;
+    return LiquidGlassCard(
+      padding: const EdgeInsets.all(KubusSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: Text(
+                  l10n.accountPasskeySectionTitle,
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w800),
+                ),
+              ),
+              WalletStatusChip(
+                label: ready
+                    ? l10n.accountPasskeySignInReadyStatus
+                    : l10n.accountPasskeyNotConfiguredStatus,
+                icon: ready ? Icons.verified_user_outlined : Icons.key_outlined,
+                color: ready ? scheme.tertiary : scheme.secondary,
+              ),
+            ],
+          ),
+          const SizedBox(height: KubusSpacing.xs),
+          Text(
+            l10n.accountPasskeySectionBody,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: scheme.onSurface.withValues(alpha: 0.78),
+                  height: 1.35,
+                ),
+          ),
+          const SizedBox(height: KubusSpacing.md),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: _accountPasskeyBusy ? null : _enablePasskeyProtection,
+              icon: const Icon(Icons.shield_outlined, size: 18),
+              label: Text(l10n.passkeyProtectionEnableAction),
+            ),
+          ),
+          const SizedBox(height: KubusSpacing.sm),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _accountPasskeyBusy ? null : _createAccountPasskey,
+              icon: const Icon(Icons.key_outlined, size: 18),
+              label: Text(l10n.accountPasskeyCreateAction),
+            ),
+          ),
+          if (passkeys.isNotEmpty) ...<Widget>[
+            const SizedBox(height: KubusSpacing.sm),
+            ...passkeys.map(
+              (passkey) => FrostedContainer(
+                margin: const EdgeInsets.only(bottom: KubusSpacing.sm),
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.key_outlined),
+                  title: Text(
+                    (passkey.deviceLabel ?? '').trim().isNotEmpty
+                        ? passkey.deviceLabel!.trim()
+                        : passkey.credentialId,
+                  ),
+                  subtitle: passkey.lastUsedAt != null
+                      ? Text(
+                          l10n.walletBackupProtectionLastVerifiedLabel(
+                            passkey.lastUsedAt!.toLocal().toString(),
+                          ),
+                        )
+                      : null,
+                  trailing: IconButton(
+                    tooltip: l10n.accountPasskeyRemoveAction,
+                    icon: const Icon(Icons.delete_outline),
+                    onPressed: _accountPasskeyBusy
+                        ? null
+                        : () => unawaited(_removeAccountPasskey(passkey.id)),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -790,6 +996,11 @@ class _WalletBackupProtectionScreenState
                     childAspectRatio: isWide ? 1.45 : 1.16,
                     children: actionCards,
                   ),
+                  if (_passkeyProtectionService.isAvailable &&
+                      authority.hasAccountSession) ...<Widget>[
+                    const SizedBox(height: KubusSpacing.lg),
+                    _buildAccountPasskeySection(context),
+                  ],
                   if (passkeysEnabled) ...<Widget>[
                     const SizedBox(height: KubusSpacing.lg),
                     LiquidGlassCard(

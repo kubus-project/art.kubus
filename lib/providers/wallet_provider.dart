@@ -1420,7 +1420,7 @@ class WalletProvider extends ChangeNotifier {
           'Passkeys are not available in this browser.',
         );
       }
-      if (capability != PasskeyCapability.walletRecoveryPrfSupported) {
+      if (!capability.maySupportWalletRecovery) {
         throw const EncryptedWalletBackupException(
           'Passkey recovery is not available on this device.',
         );
@@ -1537,7 +1537,7 @@ class WalletProvider extends ChangeNotifier {
         'Passkeys are not available in this browser.',
       );
     }
-    if (capability != PasskeyCapability.walletRecoveryPrfSupported) {
+    if (!capability.maySupportWalletRecovery) {
       throw const EncryptedWalletBackupException(
         'Passkey recovery is not available on this device.',
       );
