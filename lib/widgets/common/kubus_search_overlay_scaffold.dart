@@ -46,6 +46,8 @@ class KubusSearchOverlayScaffold extends StatelessWidget {
     this.positionAnimationDuration,
     this.positionAnimationCurve,
     this.topOverlayFieldWidth,
+    this.sidePanelFieldWidth,
+    this.sidePanelSearchExpanded = false,
     this.widthAnimationDuration,
     this.widthAnimationCurve,
   });
@@ -59,6 +61,17 @@ class KubusSearchOverlayScaffold extends StatelessWidget {
   /// content (filters, discovery) keeps the full column width. Pass the same
   /// value to the results dropdown so both share one width contract.
   final double? topOverlayFieldWidth;
+
+  /// When set (side-panel layout only), the search field is laid out at this
+  /// resolved width inside a [Wrap] search row, animating between a comfortable
+  /// idle width and an expanded focused width (growing toward the right). Pass
+  /// the same value to the results dropdown so both share one width contract.
+  /// When null the side panel keeps its legacy [Expanded] field layout.
+  final double? sidePanelFieldWidth;
+
+  /// Whether the side-panel search is focused / has an active query. When true
+  /// the quick-filter chips collapse so the field can expand to the right.
+  final bool sidePanelSearchExpanded;
   final Duration? widthAnimationDuration;
   final Curve? widthAnimationCurve;
 
@@ -147,29 +160,65 @@ class KubusSearchOverlayScaffold extends StatelessWidget {
     );
   }
 
+  /// The side-panel search row (leading + field + quick filters + toggle).
+  ///
+  /// When [sidePanelFieldWidth] is set (the map assembly path) the field is
+  /// laid out at the resolved width inside a [Wrap] so it can animate between a
+  /// comfortable idle width and an expanded focused width, the quick filters
+  /// collapse while focused, and the row reflows (filters drop below) on
+  /// smaller desktops instead of overflowing. When null it keeps the legacy
+  /// [Expanded] layout for any direct callers.
+  Widget _buildSidePanelSearchRow(BuildContext context) {
+    final fieldWidth = sidePanelFieldWidth;
+    if (fieldWidth == null) {
+      return Row(
+        children: [
+          if (leading != null) ...[
+            leading!,
+            SizedBox(width: KubusSpacing.xl + KubusSpacing.sm),
+          ],
+          Expanded(child: searchField),
+          if (filterChips != null) ...[
+            SizedBox(width: KubusSpacing.md + KubusSpacing.xs),
+            filterChips!,
+          ],
+          if (mapToggle != null) ...[
+            SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
+            mapToggle!,
+          ],
+        ],
+      );
+    }
+
+    final animationTheme = context.animationTheme;
+    final field = AnimatedContainer(
+      duration: widthAnimationDuration ?? animationTheme.medium,
+      curve: widthAnimationCurve ?? animationTheme.defaultCurve,
+      width: fieldWidth,
+      child: searchField,
+    );
+    final showChips = filterChips != null && !sidePanelSearchExpanded;
+
+    return Wrap(
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: KubusSpacing.md + KubusSpacing.xs,
+      runSpacing: KubusSpacing.sm,
+      children: [
+        if (leading != null) leading!,
+        field,
+        if (showChips) filterChips!,
+        if (mapToggle != null) mapToggle!,
+      ],
+    );
+  }
+
   Widget _buildSidePanel(BuildContext context, double topInset) {
     final scheme = Theme.of(context).colorScheme;
 
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            if (leading != null) ...[
-              leading!,
-              SizedBox(width: KubusSpacing.xl + KubusSpacing.sm),
-            ],
-            Expanded(child: searchField),
-            if (filterChips != null) ...[
-              SizedBox(width: KubusSpacing.md + KubusSpacing.xs),
-              filterChips!,
-            ],
-            if (mapToggle != null) ...[
-              SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
-              mapToggle!,
-            ],
-          ],
-        ),
+        _buildSidePanelSearchRow(context),
         if (extraContent != null) ...[
           SizedBox(height: sectionGap),
           extraContent!,

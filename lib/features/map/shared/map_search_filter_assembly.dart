@@ -13,6 +13,13 @@ enum KubusMapFilterChipLayout {
   wrap,
   row,
 
+  /// Horizontal strip of fixed-size button cells (used by the desktop
+  /// search-row quick filters). Each chip is a real button cell: a fixed
+  /// width + height with a centered icon + label, so the border wraps the
+  /// whole cell instead of shrink-wrapping the icon/text. Cells reflow to a
+  /// second line (via [Wrap]) on smaller widths instead of overflowing.
+  rowFixed,
+
   /// Responsive grid of full-cell chips: one column on very narrow panels,
   /// two columns otherwise. Each chip stretches to its cell so the border
   /// wraps the whole button area (not just icon + label) and every chip reads
@@ -23,6 +30,11 @@ enum KubusMapFilterChipLayout {
 /// Consistent height for filter/layer chips so a grid reads with equal weight
 /// and keeps an accessible tap target.
 const double kKubusMapFilterChipHeight = 44.0;
+
+/// Default fixed cell width for [KubusMapFilterChipLayout.rowFixed] quick
+/// filters. Wide enough to fit the longest catalog label without truncation so
+/// every desktop search-row chip reads as an equal-weight button cell.
+const double kKubusMapFilterRowChipMinWidth = 140.0;
 
 @immutable
 class KubusMapFilterOption {
@@ -109,6 +121,8 @@ class KubusMapFilterChipStrip extends StatelessWidget {
     this.borderRadius = KubusRadius.sm,
     this.enableBlur = true,
     this.keyPadding = EdgeInsets.zero,
+    this.rowChipMinWidth = kKubusMapFilterRowChipMinWidth,
+    this.rowChipHeight = kKubusMapFilterChipHeight,
   });
 
   final List<KubusMapFilterOption> options;
@@ -121,10 +135,19 @@ class KubusMapFilterChipStrip extends StatelessWidget {
   final bool enableBlur;
   final EdgeInsetsGeometry keyPadding;
 
+  /// Fixed cell width for [KubusMapFilterChipLayout.rowFixed] chips.
+  final double rowChipMinWidth;
+
+  /// Fixed cell height for [KubusMapFilterChipLayout.rowFixed] chips.
+  final double rowChipHeight;
+
   @override
   Widget build(BuildContext context) {
     if (layout == KubusMapFilterChipLayout.grid) {
       return _buildGrid(context);
+    }
+    if (layout == KubusMapFilterChipLayout.rowFixed) {
+      return _buildRowFixed(context);
     }
 
     final chips = <Widget>[
@@ -162,6 +185,36 @@ class KubusMapFilterChipStrip extends StatelessWidget {
       spacing: spacing,
       runSpacing: runSpacing,
       children: chips,
+    );
+  }
+
+  /// Fixed-size button cells laid out in a [Wrap]. Each cell is a real button:
+  /// a fixed width + height with a centered icon + label so the border wraps
+  /// the whole cell (not just the icon/text), and the active state colours the
+  /// whole cell. The [Wrap] reflows cells onto a second line on smaller widths
+  /// instead of overflowing the search row.
+  Widget _buildRowFixed(BuildContext context) {
+    return Wrap(
+      spacing: spacing,
+      runSpacing: runSpacing,
+      children: <Widget>[
+        for (final option in options)
+          SizedBox(
+            width: rowChipMinWidth,
+            height: rowChipHeight,
+            child: KubusGlassChip(
+              label: option.label,
+              icon: option.icon,
+              active: selectedKey == option.key,
+              accentColor: option.accentColor,
+              borderRadius: borderRadius,
+              enableBlur: enableBlur,
+              fullWidth: true,
+              minHeight: rowChipHeight,
+              onPressed: () => onSelected(option.key),
+            ),
+          ),
+      ],
     );
   }
 
@@ -308,28 +361,54 @@ class KubusMapSearchOverlayAssembly extends StatelessWidget {
                 state.results.isNotEmpty ||
                 trimmed.length >= controller.config.minChars);
 
-        // Focus-aware width contract (top-overlay/map layout only): the field is
-        // comfortable but not too wide when idle, and expands to the available
-        // safe width when focused. The same resolved width is handed to both the
-        // field (via the scaffold) and the results dropdown so they share one
-        // measured width and the dropdown never grows independently to the right.
+        // Resolved width contract: one measured width is handed to both the
+        // field (via the scaffold) and the results dropdown so the dropdown
+        // never grows independently to the right.
+        //
+        // - top overlay (mobile): the field is ALWAYS the full available safe
+        //   width. No idle/focused distinction and no focus-expansion
+        //   animation; the filter button stays pinned in the trailing slot.
+        // - side panel (desktop): the field is comfortable when idle and
+        //   expands toward the right when focused / a query is active.
         double? resolvedFieldWidth;
+        bool sidePanelExpanded = false;
         if (layout == KubusSearchOverlayLayout.topOverlay) {
           final screenWidth = MediaQuery.of(context).size.width;
           final available = (screenWidth - panelInsets.left - panelInsets.right)
               .clamp(0.0, maxWidth)
               .toDouble();
-          final idleFloor = available < 240.0 ? available : 240.0;
-          final idleWidth =
-              (available * 0.82).clamp(idleFloor, available).toDouble();
-          resolvedFieldWidth =
-              controller.hasFocusedField ? available : idleWidth;
+          resolvedFieldWidth = available;
+        } else {
+          final screenWidth = MediaQuery.of(context).size.width;
+          // The side panel spans left:0 → right:rightInset, with the glass
+          // surface margins (panelInsets) and inner horizontal padding inside.
+          final outer =
+              (screenWidth - rightInset).clamp(0.0, double.infinity).toDouble();
+          final content = (outer -
+                  panelInsets.left -
+                  panelInsets.right -
+                  sidePanelInnerPadding.horizontal)
+              .clamp(0.0, double.infinity)
+              .toDouble();
+          sidePanelExpanded = controller.hasFocusedField || trimmed.isNotEmpty;
+          final idleWidth = (content * 0.42)
+              .clamp(220.0, 460.0)
+              .clamp(0.0, content)
+              .toDouble();
+          final focusedWidth = (content * 0.72)
+              .clamp(idleWidth, 760.0)
+              .clamp(0.0, content)
+              .toDouble();
+          resolvedFieldWidth = sidePanelExpanded ? focusedWidth : idleWidth;
         }
 
+        final isTopOverlay = layout == KubusSearchOverlayLayout.topOverlay;
         return KubusSearchOverlayScaffold(
           layout: layout,
           searchField: searchField,
-          topOverlayFieldWidth: resolvedFieldWidth,
+          topOverlayFieldWidth: isTopOverlay ? resolvedFieldWidth : null,
+          sidePanelFieldWidth: isTopOverlay ? null : resolvedFieldWidth,
+          sidePanelSearchExpanded: sidePanelExpanded,
           searchDropdown: KubusSearchResultsOverlay(
             controller: controller,
             accentColor: accentColor,

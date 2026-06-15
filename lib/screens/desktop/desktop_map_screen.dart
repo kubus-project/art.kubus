@@ -1073,7 +1073,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           tooltipAlignToTargetRightEdge: true,
           onTargetTap: () {
             if (!mounted) return;
-            setState(() => _showFiltersPanel = true);
+            _openDesktopFiltersPanel();
           },
         ),
       ),
@@ -2051,34 +2051,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               bottom: 24,
               width: 380,
               child: MapOverlayBlocker(
-                child: _selectedExhibition != null
-                    ? Semantics(
-                        label: 'left_info_panel',
-                        container: true,
-                        child: _buildExhibitionDetailPanel(
-                          themeProvider,
-                          animationTheme,
-                        ),
-                      )
-                    : _selectedEvent != null
-                        ? Semantics(
-                            label: 'left_info_panel',
-                            container: true,
-                            child: _buildEventDetailPanel(
-                              themeProvider,
-                              animationTheme,
-                            ),
-                          )
-                        : _selectedArtwork != null
-                            ? Semantics(
-                                label: 'left_info_panel',
-                                container: true,
-                                child: _buildArtworkDetailPanel(
-                                  themeProvider,
-                                  animationTheme,
-                                ),
-                              )
-                            : _buildFiltersPanel(themeProvider),
+                child: _buildLeftPanelChild(themeProvider, animationTheme),
               ),
             ),
 
@@ -2405,12 +2378,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             borderRadius: 10,
             enableBlur: kubusMapBlurEnabled(context),
             onPressed: () {
-              setState(() {
-                _showFiltersPanel = !_showFiltersPanel;
-                _selectedArtwork = null;
-                _selectedExhibition = null;
-                _selectedEvent = null;
-              });
+              if (_showFiltersPanel) {
+                setState(() => _showFiltersPanel = false);
+              } else {
+                _openDesktopFiltersPanel();
+              }
             },
             tooltipPreferBelow: true,
             tooltipVerticalOffset: 18,
@@ -2429,19 +2401,19 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   Widget _buildDesktopSearchField(AppLocalizations l10n) {
     final useMapBlur = kubusMapBlurEnabled(context);
-    return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 480),
-      child: KeyedSubtree(
-        key: _tutorialSearchKey,
-        child: KubusGeneralSearch(
-          controller: _mapSearchController,
-          hintText: l10n.mapSearchHint,
-          semanticsLabel: 'map_search_input',
-          enableBlur: useMapBlur,
-          useMapGlassSurface: true,
-          mouseCursor: SystemMouseCursors.text,
-          onSubmitted: _handleSearchSubmit,
-        ),
+    // No hard width cap here: the side-panel assembly resolves the field width
+    // (comfortable when idle, expanded toward the right when focused / a query
+    // is active) and the scaffold lays the field out at that width.
+    return KeyedSubtree(
+      key: _tutorialSearchKey,
+      child: KubusGeneralSearch(
+        controller: _mapSearchController,
+        hintText: l10n.mapSearchHint,
+        semanticsLabel: 'map_search_input',
+        enableBlur: useMapBlur,
+        useMapGlassSurface: true,
+        mouseCursor: SystemMouseCursors.text,
+        onSubmitted: _handleSearchSubmit,
       ),
     );
   }
@@ -2455,7 +2427,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       child: KubusMapFilterChipStrip(
         options: filters,
         selectedKey: _selectedFilter,
-        layout: KubusMapFilterChipLayout.row,
+        // Fixed-size button cells so each quick filter's border wraps the whole
+        // cell (not just icon/text); the Wrap reflows them below the search row
+        // on smaller desktops instead of overflowing.
+        layout: KubusMapFilterChipLayout.rowFixed,
         spacing: KubusSpacing.sm,
         enableBlur: useMapBlur,
         keyPadding: EdgeInsets.zero,
@@ -2474,6 +2449,101 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         },
       ),
     );
+  }
+
+  /// The single left-panel child hosted by the sliding [AnimatedPositioned].
+  ///
+  /// Detail panels (artwork/exhibition/event) only exist while selected, so
+  /// their platform backdrop regions register fresh when they appear. The
+  /// filter panel, by contrast, shares the same slot and is the slot's resting
+  /// child when nothing is selected — and the slot lives offscreen
+  /// (`left: -400`) whenever [_isLeftPanelVisible] is false. To avoid measuring
+  /// a backdrop region at that stale offscreen geometry (which is why the blur
+  /// previously only appeared after an unrelated interaction), the filter panel
+  /// only builds its region-tracked surface when actually open. A stable key
+  /// per state keeps the open panel's element (and its region tracker) alive for
+  /// the whole open lifetime and tears it down cleanly on close.
+  Widget _buildLeftPanelChild(
+    ThemeProvider themeProvider,
+    AppAnimationTheme animationTheme,
+  ) {
+    if (_selectedExhibition != null) {
+      return Semantics(
+        label: 'left_info_panel',
+        container: true,
+        child: _buildExhibitionDetailPanel(themeProvider, animationTheme),
+      );
+    }
+    if (_selectedEvent != null) {
+      return Semantics(
+        label: 'left_info_panel',
+        container: true,
+        child: _buildEventDetailPanel(themeProvider, animationTheme),
+      );
+    }
+    if (_selectedArtwork != null) {
+      return Semantics(
+        label: 'left_info_panel',
+        container: true,
+        child: _buildArtworkDetailPanel(themeProvider, animationTheme),
+      );
+    }
+
+    final open = _showFiltersPanel;
+    return KeyedSubtree(
+      key: ValueKey<String>(
+        open ? 'desktop_filter_panel_open' : 'desktop_filter_panel_closed',
+      ),
+      child: _buildFiltersPanel(
+        themeProvider,
+        enableBackdropRegion: open,
+      ),
+    );
+  }
+
+  /// Opens the desktop filter panel and primes its backdrop region.
+  ///
+  /// Centralizes the "set `_showFiltersPanel = true` + clear any detail
+  /// selection + schedule the backdrop sync" sequence so every entry point
+  /// (the search-row toggle, the tutorial step) gets correct blur on the first
+  /// open frame instead of only after a later interaction.
+  void _openDesktopFiltersPanel() {
+    setState(() {
+      _showFiltersPanel = true;
+      _selectedArtwork = null;
+      _selectedExhibition = null;
+      _selectedEvent = null;
+    });
+    _scheduleFilterPanelBackdropSync();
+  }
+
+  /// Forces the platform backdrop region tracker to re-measure the desktop
+  /// filter panel as it slides into its final geometry.
+  ///
+  /// The left panel slides in via [AnimatedPositioned], which animates the
+  /// panel's offset WITHOUT rebuilding the region-tracker subtree. A single
+  /// open frame would therefore measure the region at the start (offscreen)
+  /// position and leave it stale until an unrelated rebuild — exactly the
+  /// "blur appears only after interaction" symptom. These scheduled rebuilds
+  /// re-run the tracker at the panel's mid- and final-slide geometry so the
+  /// blur is correct without waiting for user interaction. No-op off web, where
+  /// the panel uses the sheen/tint fallback (no DOM backdrop region).
+  void _scheduleFilterPanelBackdropSync() {
+    if (!kIsWeb) return;
+    final medium = context.animationTheme.medium;
+    void resync() {
+      if (!mounted || !_showFiltersPanel) return;
+      // A bare rebuild re-runs KubusMapBackdropRegionTracker, which re-measures
+      // the panel's current (animated) geometry and upserts the region.
+      setState(() {});
+    }
+
+    // First open frame.
+    WidgetsBinding.instance.addPostFrameCallback((_) => resync());
+    // Halfway through the slide (covers short/long animation curves).
+    Future.delayed(medium ~/ 2, resync);
+    // After the slide settles at the final, visible geometry.
+    Future.delayed(medium + const Duration(milliseconds: 32), resync);
   }
 
   Widget _buildArtworkDetailPanel(
@@ -3428,7 +3498,17 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     );
   }
 
-  Widget _buildFiltersPanel(ThemeProvider themeProvider) {
+  /// Builds the desktop filter panel.
+  ///
+  /// [enableBackdropRegion] gates the platform backdrop region: it is only true
+  /// when the panel is actually open/visible. While the panel rests offscreen
+  /// (filters closed, no detail selected) the region is disabled so the web
+  /// backdrop host never tracks a stale offscreen rectangle — see
+  /// [_buildLeftPanelChild] and [_scheduleFilterPanelBackdropSync].
+  Widget _buildFiltersPanel(
+    ThemeProvider themeProvider, {
+    required bool enableBackdropRegion,
+  }) {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
@@ -3445,7 +3525,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       useMapGlassSurface: true,
       mapBlurPolicy: KubusMapBlurPolicy.forceMapChromeWhenCapable,
       overMapPlatformView: true,
-      enablePlatformBackdropRegion: true,
+      enablePlatformBackdropRegion: enableBackdropRegion,
       backdropRegionId: 'desktop-map-filter-panel',
       footer: Padding(
         padding: const EdgeInsets.all(KubusChromeMetrics.cardPadding),
