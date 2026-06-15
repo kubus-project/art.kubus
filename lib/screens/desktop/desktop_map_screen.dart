@@ -365,6 +365,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     ArtMarkerType.streetArt: true,
     ArtMarkerType.institution: true,
     ArtMarkerType.event: true,
+    ArtMarkerType.exhibition: true,
     ArtMarkerType.residency: true,
     ArtMarkerType.drop: true,
     ArtMarkerType.experience: true,
@@ -2133,8 +2134,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                 alignment: Alignment.bottomRight,
                 child: Consumer<TaskProvider>(
                   builder: (context, taskProvider, _) {
-                    final activeProgress =
-                        taskProvider.getActiveTaskProgress();
+                    final activeProgress = taskProvider.getActiveTaskProgress();
                     return MapOverlayBlocker(
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -3001,7 +3001,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         },
         badge: badge,
         closeAccentColor: themeProvider.accentColor,
-        fallbackIcon: Icons.museum,
+        fallbackIcon: AppColorUtils.exhibitionIcon,
       ),
       sections: [
         Padding(
@@ -3032,7 +3032,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                       label: location,
                     ),
                   DetailMetaItem(
-                    icon: Icons.event_available_outlined,
+                    icon: AppColorUtils.exhibitionIcon,
                     label: _labelForExhibitionStatus(l10n, exhibition.status),
                   ),
                 ],
@@ -3278,7 +3278,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                       label: location,
                     ),
                   DetailMetaItem(
-                    icon: Icons.collections_outlined,
+                    icon: AppColorUtils.exhibitionIcon,
                     label: l10n
                         .eventDetailLinkedExhibitionsSummary(exhibitionsCount),
                   ),
@@ -3309,7 +3309,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                 compact: true,
                 items: [
                   DetailContextItem(
-                    icon: Icons.collections_outlined,
+                    icon: AppColorUtils.exhibitionIcon,
                     value: '$exhibitionsCount',
                     label: l10n.eventDetailLinkedExhibitionsLabel,
                   ),
@@ -4209,7 +4209,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     }
 
     final isMarkerSelection = result.kind == KubusSearchResultKind.marker ||
-        result.kind == KubusSearchResultKind.event;
+        result.kind == KubusSearchResultKind.event ||
+        result.kind == KubusSearchResultKind.exhibition;
     if (!isMarkerSelection) return;
 
     final marker = _findLoadedMarkerForSearchResult(result);
@@ -4284,8 +4285,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       isArCapable: (marker) =>
           defaultMarkerIsArCapable(marker) ||
           (artworkFor(marker)?.arEnabled ?? false),
-      alwaysIncludeMarkerIds:
-          selectedId == null ? null : <String>{selectedId},
+      alwaysIncludeMarkerIds: selectedId == null ? null : <String>{selectedId},
     );
   }
 

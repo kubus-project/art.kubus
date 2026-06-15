@@ -39,7 +39,20 @@ void main() {
         isTrue,
       );
       expect(
-        File('assets/markers/svg/cl_event_99+_d.svg').existsSync(),
+        File('assets/markers/svg/mk_exhibition_subtle_l_std.svg').existsSync(),
+        isTrue,
+      );
+      expect(
+        File('assets/markers/svg/mk_exhibition_legendary_sel_d_pro.svg')
+            .existsSync(),
+        isTrue,
+      );
+      expect(
+        File('assets/markers/svg/cl_v2_event_99+_d.svg').existsSync(),
+        isTrue,
+      );
+      expect(
+        File('assets/markers/svg/cl_v2_exhibition_99+_d.svg').existsSync(),
         isTrue,
       );
 
@@ -95,20 +108,24 @@ Future<void> _ensureIconFontsLoaded() async {
     ),
   );
 
-  // Optional: used only as a fallback in some TextStyle stacks.
+  // Load the checked-in subset so exports use the same custom glyphs as the app.
   await _loadFontFamilyIfAvailable(
     family: 'Material Symbols Outlined',
-    required: false,
+    required: true,
     assetCandidates: const <String>[
+      'assets/fonts/MaterialSymbolsOutlined-subset.ttf',
       'packages/flutter/lib/src/material/fonts/MaterialSymbolsOutlined.ttf',
       'packages/flutter/lib/src/material/fonts/MaterialSymbolsOutlined.otf',
     ],
-    fileCandidates: _flutterRootFileCandidates(
-      relativePaths: const <String>[
-        'bin/cache/artifacts/material_fonts/MaterialSymbolsOutlined.ttf',
-        'bin/cache/artifacts/material_fonts/MaterialSymbolsOutlined.otf',
-      ],
-    ),
+    fileCandidates: <String>[
+      'assets/fonts/MaterialSymbolsOutlined-subset.ttf',
+      ..._flutterRootFileCandidates(
+        relativePaths: const <String>[
+          'bin/cache/artifacts/material_fonts/MaterialSymbolsOutlined.ttf',
+          'bin/cache/artifacts/material_fonts/MaterialSymbolsOutlined.otf',
+        ],
+      ),
+    ],
   );
 
   _iconFontsLoaded = true;

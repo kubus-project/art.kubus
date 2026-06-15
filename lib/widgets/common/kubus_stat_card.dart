@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 
+import '../../utils/app_color_utils.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../glass_components.dart';
@@ -120,12 +121,11 @@ class _KubusStatCardState extends State<KubusStatCard>
     final watermarkHovered = widget.centeredWatermarkHovered ?? _isHovered;
     final effectiveRadius =
         widget.borderRadius ?? BorderRadius.circular(KubusRadius.md);
-    final effectiveMinHeight =
-        (widget.layout == KubusStatCardLayout.centered &&
-                isUltraWide &&
-                widget.minHeight > 0)
-            ? (widget.minHeight - 6).clamp(0.0, double.infinity)
-            : widget.minHeight;
+    final effectiveMinHeight = (widget.layout == KubusStatCardLayout.centered &&
+            isUltraWide &&
+            widget.minHeight > 0)
+        ? (widget.minHeight - 6).clamp(0.0, double.infinity)
+        : widget.minHeight;
     final glassStyle = KubusGlassStyle.resolve(
       context,
       surfaceType: KubusGlassSurfaceType.card,
@@ -136,16 +136,14 @@ class _KubusStatCardState extends State<KubusStatCard>
       decoration: BoxDecoration(
         borderRadius: effectiveRadius,
         border: Border.all(
-          color:
-              widget.borderColor ?? effectiveAccent.withValues(alpha: 0.22),
+          color: widget.borderColor ?? effectiveAccent.withValues(alpha: 0.22),
           width: KubusSizes.hairline,
         ),
       ),
       child: LiquidGlassCard(
-        padding:
-            widget.layout == KubusStatCardLayout.centered
-                ? EdgeInsets.zero
-                : widget.padding,
+        padding: widget.layout == KubusStatCardLayout.centered
+            ? EdgeInsets.zero
+            : widget.padding,
         margin: EdgeInsets.zero,
         borderRadius: effectiveRadius,
         showBorder: false,
@@ -358,9 +356,7 @@ class _KubusStatCardState extends State<KubusStatCard>
                       _watermarkGlyphCompensation(widget.icon);
                   final isWideCard = aspectRatio >= 1.45;
                   final baseWatermarkSize = shortestSide *
-                      (isWideCard
-                          ? 1.36
-                          : (aspectRatio <= 0.9 ? 1.56 : 1.48));
+                      (isWideCard ? 1.36 : (aspectRatio <= 0.9 ? 1.56 : 1.48));
                   final minAllowedSize = shortestSide * 1.10;
                   final maxAllowedSize =
                       math.max(shortestSide * 1.34, longestSide * 1.18);
@@ -384,9 +380,9 @@ class _KubusStatCardState extends State<KubusStatCard>
                       final animatedHoverScale = 1.0 +
                           (0.06 * hoverProgress) +
                           (_floatController.value * 0.015);
-                      final animatedIconWatermarkSize = (baseSizedWatermark *
-                              animatedHoverScale)
-                          .clamp(minAllowedSize, maxAllowedSize);
+                      final animatedIconWatermarkSize =
+                          (baseSizedWatermark * animatedHoverScale)
+                              .clamp(minAllowedSize, maxAllowedSize);
                       final animatedFloatLift = watermarkHovered
                           ? math.sin(_floatController.value * math.pi * 2) *
                               (baseSizedWatermark * 0.022)
@@ -512,7 +508,7 @@ class _KubusStatCardState extends State<KubusStatCard>
         codePoint == Icons.person_add_outlined.codePoint ||
         codePoint == Icons.groups.codePoint ||
         codePoint == Icons.groups_outlined.codePoint ||
-        codePoint == Icons.streetview.codePoint) {
+        codePoint == AppColorUtils.streetArtIcon.codePoint) {
       return 1.04;
     }
 

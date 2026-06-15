@@ -48,6 +48,8 @@ enum ArtMapMarkerShape {
         return ArtMapMarkerShape.arch;
       case ArtMarkerType.event:
         return ArtMapMarkerShape.pill;
+      case ArtMarkerType.exhibition:
+        return ArtMapMarkerShape.pill;
       case ArtMarkerType.residency:
         return ArtMapMarkerShape.hexagon;
       case ArtMarkerType.drop:
@@ -614,7 +616,8 @@ class ArtMarkerCubeIconRenderer {
         );
         break;
       case ArtMapMarkerShape.hexagon:
-        _addPolygon(path, center, half * 1.12, sides: 6, rotation: -math.pi / 2);
+        _addPolygon(path, center, half * 1.12,
+            sides: 6, rotation: -math.pi / 2);
         break;
       case ArtMapMarkerShape.portalHex:
         // Flat-top hexagon (distinct orientation from the residency hexagon).
@@ -1229,8 +1232,8 @@ class ArtMarkerCubeIconRenderer {
       final category = categories[i];
 
       // Tiny shadow so adjacent pips stay separated on busy map tiles.
-      final pipShadow =
-          _buildBadgePath(category.shape, pipCenter + const Offset(0, 1.0), pipSize);
+      final pipShadow = _buildBadgePath(
+          category.shape, pipCenter + const Offset(0, 1.0), pipSize);
       canvas.drawPath(
         pipShadow,
         Paint()

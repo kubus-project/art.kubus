@@ -39,6 +39,7 @@ class CommunitySearchActions {
         return;
       case KubusSearchResultKind.institution:
       case KubusSearchResultKind.event:
+      case KubusSearchResultKind.exhibition:
       case KubusSearchResultKind.marker:
         final markerId = result.markerId?.trim() ?? '';
         if (markerId.isNotEmpty && result.position == null) {

@@ -24,6 +24,7 @@ import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
 import '../../l10n/app_localizations.dart';
 import '../../utils/artwork_media_resolver.dart';
+import '../../utils/app_color_utils.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../widgets/collaboration_panel.dart';
 import '../../widgets/detail/detail_shell_components.dart';
@@ -1236,11 +1237,9 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                                 children: [
                                   topActions,
                                   details,
-                                  const SizedBox(
-                                      height: DetailSpacing.cardGap),
+                                  const SizedBox(height: DetailSpacing.cardGap),
                                   programCard,
-                                  const SizedBox(
-                                      height: DetailSpacing.cardGap),
+                                  const SizedBox(height: DetailSpacing.cardGap),
                                   artworksCard,
                                 ],
                               ),
@@ -1553,7 +1552,7 @@ class _ExhibitionDetailsCard extends StatelessWidget {
               if (location != null)
                 DetailMetaItem(icon: Icons.place_outlined, label: location),
               DetailMetaItem(
-                icon: Icons.event_available_outlined,
+                icon: AppColorUtils.exhibitionIcon,
                 label: l10n.exhibitionDetailStatusRowLabel(
                   _labelForStatus(l10n, exhibition.status),
                 ),
@@ -1577,8 +1576,7 @@ class _ExhibitionDetailsCard extends StatelessWidget {
 
     // Editorial description gets its own roomy card so long copy can expand
     // cleanly without crowding the overview metadata.
-    final hasDescription =
-        (exhibition.description ?? '').trim().isNotEmpty;
+    final hasDescription = (exhibition.description ?? '').trim().isNotEmpty;
     final aboutCard = hasDescription
         ? DetailCard(
             borderRadius: DetailRadius.md,

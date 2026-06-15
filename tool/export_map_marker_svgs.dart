@@ -100,6 +100,7 @@ Future<void> main(List<String> args) async {
               baseColor: baseColor,
               icon: icon,
               tier: tier,
+              shape: ArtMapMarkerShape.forType(type),
               scheme: scheme,
               roles: roles,
               isDark: isDark,
@@ -132,6 +133,7 @@ Future<void> main(List<String> args) async {
               baseColor: baseColor,
               icon: icon,
               tier: tier,
+              shape: ArtMapMarkerShape.forType(type),
               scheme: scheme,
               roles: roles,
               isDark: isDark,
@@ -193,6 +195,14 @@ Future<void> main(List<String> args) async {
             baseColor: baseColor,
             scheme: scheme,
             isDark: isDark,
+            categories: <ClusterCategoryBadge>[
+              ClusterCategoryBadge(
+                shape: ArtMapMarkerShape.forType(type),
+                color: baseColor,
+                count: count,
+                icon: AppColorUtils.markerSubjectIcon(typeName),
+              ),
+            ],
             pixelRatio: options.pixelRatio,
             // Avoid google_fonts runtime fetching for headless/offline exports.
             // The app uses `KubusTextStyles.badgeCount` (Inter); for marketing

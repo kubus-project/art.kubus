@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../models/art_marker.dart';
 import '../models/recent_activity.dart';
 import 'kubus_color_roles.dart';
 import 'design_tokens.dart';
@@ -274,130 +275,65 @@ class AppColorUtils {
     KubusColorRoles? roles,
   }) {
     final resolvedRoles = roles;
-    final subjectType = (metadata?['subjectType'] ?? metadata?['subject_type'])
-        ?.toString()
-        .toLowerCase();
-    final category =
-        (metadata?['subjectCategory'] ?? metadata?['subject_category'])
-            ?.toString()
-            .toLowerCase();
-
     final exhibitionAccent = resolvedRoles?.achievementGold ?? exhibitionColor;
     final eventAccent = resolvedRoles?.statCoral ?? eventColor;
     final streetArtAccent = resolvedRoles?.statAmber ?? streetArtColor;
     final institutionAccent = resolvedRoles?.statGreen ?? institutionColor;
     final artworkAccent = resolvedRoles?.statTeal ?? KubusColors.accentTealDark;
     final residencyAccent = resolvedRoles?.statAmber ?? KubusColors.warningDark;
-    final dropAccent = resolvedRoles?.lockedFeature ?? KubusColors.accentOrangeDark;
-    final groupAccent = resolvedRoles?.statGreen ?? KubusColors.successDark;
+    final dropAccent =
+        resolvedRoles?.lockedFeature ?? KubusColors.accentOrangeDark;
     final experienceAccent = scheme.primary;
 
-    // Check if this is an exhibition marker
-    if (_isExhibitionMarker(markerType, subjectType, category, metadata)) {
-      return exhibitionAccent;
-    }
-
-    // Check subject type metadata first
-    if (subjectType != null && subjectType.isNotEmpty) {
-      if (subjectType.contains('institution') ||
-          subjectType.contains('museum')) {
-        return institutionAccent;
-      }
-      if (subjectType.contains('event')) {
-        return eventAccent;
-      }
-      if (subjectType.contains('streetart') ||
-          subjectType.contains('street_art') ||
-          subjectType.contains('street-art') ||
-          subjectType.contains('publicart') ||
-          subjectType.contains('public_art') ||
-          subjectType.contains('public-art')) {
-        return streetArtAccent;
-      }
-      if (subjectType.contains('group') ||
-          subjectType.contains('dao') ||
-          subjectType.contains('collective')) {
-        return groupAccent;
-      }
-    }
-
-    // Fall back to marker type
-    final normalizedType = markerType.toLowerCase();
-    switch (normalizedType) {
-      case 'artwork':
+    switch (ArtMarker.parseMarkerType(markerType, metadata)) {
+      case ArtMarkerType.artwork:
         return artworkAccent;
-      case 'streetart':
-      case 'street_art':
-      case 'publicart':
-      case 'public_art':
+      case ArtMarkerType.streetArt:
         return streetArtAccent;
-      case 'institution':
+      case ArtMarkerType.institution:
         return institutionAccent;
-      case 'event':
+      case ArtMarkerType.event:
         return eventAccent;
-      case 'residency':
-        return residencyAccent;
-      case 'drop':
-        return dropAccent;
-      case 'experience':
-        return experienceAccent;
-      case 'exhibition':
+      case ArtMarkerType.exhibition:
         return exhibitionAccent;
-      case 'other':
-      default:
+      case ArtMarkerType.residency:
+        return residencyAccent;
+      case ArtMarkerType.drop:
+        return dropAccent;
+      case ArtMarkerType.experience:
+        return experienceAccent;
+      case ArtMarkerType.other:
         return scheme.outline;
     }
   }
 
-  /// Check if a marker represents an exhibition
-  static bool _isExhibitionMarker(
-    String markerType,
-    String? subjectType,
-    String? category,
-    Map<String, dynamic>? metadata,
-  ) {
-    // Check explicit exhibition indicators
-    if (subjectType != null && subjectType.contains('exhibition')) return true;
-    if (category != null && category.contains('exhibition')) return true;
-
-    // Check if marker has exhibition summaries
-    final exhibitions = metadata?['exhibitionSummaries'] ??
-        metadata?['exhibition_summaries'] ??
-        metadata?['exhibitions'];
-    if (exhibitions is List && exhibitions.isNotEmpty) return true;
-    if (exhibitions is Map && exhibitions.isNotEmpty) return true;
-
-    return false;
-  }
-
   /// Get icon for a map marker type
   static IconData markerSubjectIcon(String markerType) {
-    switch (markerType.toLowerCase()) {
-      case 'artwork':
+    switch (ArtMarker.parseMarkerType(markerType)) {
+      case ArtMarkerType.artwork:
         return Icons.auto_awesome;
-      case 'streetart':
-      case 'street_art':
-      case 'publicart':
-      case 'public_art':
-        return Icons.streetview;
-      case 'institution':
+      case ArtMarkerType.streetArt:
+        return streetArtIcon;
+      case ArtMarkerType.institution:
         return Icons.museum_outlined;
-      case 'event':
+      case ArtMarkerType.event:
         return Icons.event_available;
-      case 'residency':
+      case ArtMarkerType.exhibition:
+        return exhibitionIcon;
+      case ArtMarkerType.residency:
         return Icons.apartment;
-      case 'drop':
+      case ArtMarkerType.drop:
         return Icons.wallet_giftcard;
-      case 'experience':
+      case ArtMarkerType.experience:
         return Icons.view_in_ar;
-      case 'exhibition':
-        return CustomIcons.wallArt;
-      case 'other':
-      default:
+      case ArtMarkerType.other:
         return Icons.location_on_outlined;
     }
   }
 
   /// Get icon specifically for exhibition markers
-  static IconData get exhibitionIcon => CustomIcons.wallArt;
+  static const IconData exhibitionIcon = CustomIcons.wallArt;
+
+  /// Get icon specifically for street/public art markers
+  static const IconData streetArtIcon = CustomIcons.fragrance;
 }

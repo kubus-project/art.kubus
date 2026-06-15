@@ -8,6 +8,7 @@ import '../../../services/share/share_types.dart';
 import '../../../models/event.dart';
 import '../../../providers/events_provider.dart';
 import '../../../services/backend_api_service.dart';
+import '../../../utils/app_color_utils.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/creator_shell_navigation.dart';
 import '../../../utils/kubus_color_roles.dart';
@@ -245,8 +246,7 @@ class _EventManagerState extends State<EventManager>
               child: _buildStatItem(
                   l10n.eventManagerStatActiveNow, activeEvents.toString())),
           Expanded(
-              child: _buildStatItem(l10n.eventManagerStatRegistrations,
-                  '0')),
+              child: _buildStatItem(l10n.eventManagerStatRegistrations, '0')),
         ],
       ),
     );
@@ -538,7 +538,7 @@ class _EventManagerState extends State<EventManager>
         if (canManage)
           SubjectOptionsAction(
             id: 'linked_exhibition',
-            icon: Icons.museum_outlined,
+            icon: AppColorUtils.exhibitionIcon,
             label: l10n.eventCreatorCreateExhibitionForEvent,
             onSelected: () => _createLinkedExhibition(event),
           ),

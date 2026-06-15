@@ -273,6 +273,7 @@ class KubusSearchResultsOverlay extends StatelessWidget {
       case KubusSearchResultKind.post:
       case KubusSearchResultKind.institution:
       case KubusSearchResultKind.event:
+      case KubusSearchResultKind.exhibition:
       case KubusSearchResultKind.marker:
         return MediaUrlResolver.resolveDisplayUrl(result.previewImageUrl);
       case KubusSearchResultKind.profile:
@@ -356,9 +357,8 @@ class KubusSearchResultsOverlay extends StatelessWidget {
         // transparency) real BackdropFilter blur cannot sample the MapLibre
         // texture, so resolve the map-aware policy and fall back to the shared
         // material sheen instead of a flat translucent panel.
-        final panelBlurEnabled = useMapGlassSurface
-            ? kubusMapBlurEnabled(context)
-            : true;
+        final panelBlurEnabled =
+            useMapGlassSurface ? kubusMapBlurEnabled(context) : true;
         final panelRadius = BorderRadius.circular(KubusRadius.lg);
         final showSheen = useMapGlassSurface &&
             !(panelBlurEnabled &&
@@ -397,112 +397,114 @@ class KubusSearchResultsOverlay extends StatelessWidget {
                         borderRadius: panelRadius,
                         isDark: theme.brightness == Brightness.dark,
                         child: Builder(
-                        builder: (context) {
-                          if (trimmed.length < controller.config.minChars) {
-                            return Padding(
-                              padding: const EdgeInsets.all(KubusSpacing.md),
-                              child: Text(
-                                minCharsHint,
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color:
-                                      scheme.onSurface.withValues(alpha: 0.6),
-                                ),
-                              ),
-                            );
-                          }
-
-                          if (state.isFetching) {
-                            return const Padding(
-                              padding: EdgeInsets.all(KubusSpacing.md),
-                              child: Center(child: CircularProgressIndicator()),
-                            );
-                          }
-
-                          if (state.results.isEmpty) {
-                            return Padding(
-                              padding: const EdgeInsets.all(KubusSpacing.md),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.search_off,
+                          builder: (context) {
+                            if (trimmed.length < controller.config.minChars) {
+                              return Padding(
+                                padding: const EdgeInsets.all(KubusSpacing.md),
+                                child: Text(
+                                  minCharsHint,
+                                  style: theme.textTheme.bodyMedium?.copyWith(
                                     color:
-                                        scheme.onSurface.withValues(alpha: 0.4),
+                                        scheme.onSurface.withValues(alpha: 0.6),
                                   ),
-                                  const SizedBox(width: 12),
-                                  Flexible(
-                                    child: Text(
-                                      noResultsText,
-                                      style:
-                                          theme.textTheme.bodyMedium?.copyWith(
-                                        color: scheme.onSurface
-                                            .withValues(alpha: 0.6),
+                                ),
+                              );
+                            }
+
+                            if (state.isFetching) {
+                              return const Padding(
+                                padding: EdgeInsets.all(KubusSpacing.md),
+                                child:
+                                    Center(child: CircularProgressIndicator()),
+                              );
+                            }
+
+                            if (state.results.isEmpty) {
+                              return Padding(
+                                padding: const EdgeInsets.all(KubusSpacing.md),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.search_off,
+                                      color: scheme.onSurface
+                                          .withValues(alpha: 0.4),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Flexible(
+                                      child: Text(
+                                        noResultsText,
+                                        style: theme.textTheme.bodyMedium
+                                            ?.copyWith(
+                                          color: scheme.onSurface
+                                              .withValues(alpha: 0.6),
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
+                              );
+                            }
+
+                            final l10n = AppLocalizations.of(context)!;
+                            return Material(
+                              type: MaterialType.transparency,
+                              child: ListView.separated(
+                                shrinkWrap: true,
+                                itemCount: state.results.length,
+                                separatorBuilder: (_, __) => Divider(
+                                  height: 1,
+                                  color: scheme.outlineVariant,
+                                ),
+                                itemBuilder: (context, index) {
+                                  final result = state.results[index];
+                                  return MouseRegion(
+                                    cursor: SystemMouseCursors.click,
+                                    child: ListTile(
+                                      minLeadingWidth: 44,
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                        horizontal: KubusSpacing.md,
+                                        vertical: KubusSpacing.xxs,
+                                      ),
+                                      leading: _buildResultLeading(
+                                        context,
+                                        result,
+                                        resolvedAccent,
+                                      ),
+                                      title: Text(
+                                        result.label,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: theme.textTheme.bodyMedium
+                                            ?.copyWith(
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      subtitle: Text(
+                                        result.subtitleText(l10n),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: theme.textTheme.bodyMedium
+                                            ?.copyWith(
+                                          color: scheme.onSurface
+                                              .withValues(alpha: 0.6),
+                                        ),
+                                      ),
+                                      onTap: () {
+                                        (onDismiss ??
+                                            controller.dismissOverlay)();
+                                        FocusManager.instance.primaryFocus
+                                            ?.unfocus();
+                                        onResultTap(result);
+                                      },
+                                    ),
+                                  );
+                                },
                               ),
                             );
-                          }
-
-                          final l10n = AppLocalizations.of(context)!;
-                          return Material(
-                            type: MaterialType.transparency,
-                            child: ListView.separated(
-                              shrinkWrap: true,
-                              itemCount: state.results.length,
-                              separatorBuilder: (_, __) => Divider(
-                                height: 1,
-                                color: scheme.outlineVariant,
-                              ),
-                              itemBuilder: (context, index) {
-                                final result = state.results[index];
-                                return MouseRegion(
-                                  cursor: SystemMouseCursors.click,
-                                  child: ListTile(
-                                    minLeadingWidth: 44,
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: KubusSpacing.md,
-                                      vertical: KubusSpacing.xxs,
-                                    ),
-                                    leading: _buildResultLeading(
-                                      context,
-                                      result,
-                                      resolvedAccent,
-                                    ),
-                                    title: Text(
-                                      result.label,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style:
-                                          theme.textTheme.bodyMedium?.copyWith(
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    subtitle: Text(
-                                      result.subtitleText(l10n),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style:
-                                          theme.textTheme.bodyMedium?.copyWith(
-                                        color: scheme.onSurface
-                                            .withValues(alpha: 0.6),
-                                      ),
-                                    ),
-                                    onTap: () {
-                                      (onDismiss ??
-                                          controller.dismissOverlay)();
-                                      FocusManager.instance.primaryFocus
-                                          ?.unfocus();
-                                      onResultTap(result);
-                                    },
-                                  ),
-                                );
-                              },
-                            ),
-                          );
-                        },
+                          },
+                        ),
                       ),
-                    ),
                     ),
                   ),
                 ),

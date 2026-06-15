@@ -6,6 +6,7 @@ import '../l10n/app_localizations.dart';
 import '../models/community_group.dart';
 import '../models/community_subject.dart';
 import '../providers/community_hub_provider.dart';
+import 'app_color_utils.dart';
 import 'media_url_resolver.dart';
 
 enum CommunityComposerCategoryKey {
@@ -158,7 +159,7 @@ IconData communitySubjectTypeIcon(String type) {
     case 'artwork':
       return Icons.view_in_ar;
     case 'exhibition':
-      return Icons.event_outlined;
+      return AppColorUtils.exhibitionIcon;
     case 'collection':
       return Icons.collections_bookmark_outlined;
     case 'institution':

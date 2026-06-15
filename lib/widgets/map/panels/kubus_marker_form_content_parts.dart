@@ -600,8 +600,7 @@ class KubusMarkerPositionRow extends StatelessWidget {
           first: KubusMarkerFormTextField(
             controller: latController,
             labelText: l10n.mapMarkerDialogLatitudeLabel,
-            keyboardType:
-                const TextInputType.numberWithOptions(decimal: true),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
             validator: (value) {
               final parsed = double.tryParse(value ?? '');
               if (parsed == null || parsed.abs() > 90) {
@@ -613,8 +612,7 @@ class KubusMarkerPositionRow extends StatelessWidget {
           second: KubusMarkerFormTextField(
             controller: lngController,
             labelText: l10n.mapMarkerDialogLongitudeLabel,
-            keyboardType:
-                const TextInputType.numberWithOptions(decimal: true),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
             validator: (value) {
               final parsed = double.tryParse(value ?? '');
               if (parsed == null || parsed.abs() > 180) {
@@ -778,6 +776,8 @@ String _describeMarkerType(AppLocalizations l10n, ArtMarkerType type) {
       return l10n.mapMarkerLayerInstitution;
     case ArtMarkerType.event:
       return l10n.mapMarkerLayerEvent;
+    case ArtMarkerType.exhibition:
+      return l10n.commonExhibition;
     case ArtMarkerType.residency:
       return l10n.mapMarkerLayerResidency;
     case ArtMarkerType.drop:

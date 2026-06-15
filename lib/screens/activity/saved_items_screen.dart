@@ -145,7 +145,8 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
 
   int _visibleLimit(SavedItemType type) => _visibleLimitByType[type] ?? 50;
 
-  Future<void> _loadMore(SavedItemsProvider savedProvider, SavedItemType type) async {
+  Future<void> _loadMore(
+      SavedItemsProvider savedProvider, SavedItemType type) async {
     await savedProvider.loadMore(type);
     if (!mounted) return;
     setState(() {
@@ -302,7 +303,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                 title: l10n.savedItemsSectionTitle(
                   _localizedTypeLabel(l10n, SavedItemType.exhibition),
                 ),
-                icon: Icons.panorama_outlined,
+                icon: AppColorUtils.exhibitionIcon,
                 accent: _accentForType(SavedItemType.exhibition),
                 expanded: _isExpanded(SavedItemType.exhibition),
                 onToggle: () => _toggleSection(SavedItemType.exhibition),
@@ -430,7 +431,8 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
       );
     }
 
-    final visibleRecords = records.take(_visibleLimit(SavedItemType.artwork)).toList();
+    final visibleRecords =
+        records.take(_visibleLimit(SavedItemType.artwork)).toList();
     return _buildTileGrid(
       context: context,
       children: [
@@ -477,7 +479,8 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
       );
     }
 
-    final visibleRecords = records.take(_visibleLimit(SavedItemType.event)).toList();
+    final visibleRecords =
+        records.take(_visibleLimit(SavedItemType.event)).toList();
     return _buildTileGrid(
       context: context,
       children: [
@@ -581,7 +584,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
         context: context,
         l10n: l10n,
         itemTypeLabel: l10n.savedItemsExhibitionLabel,
-        icon: Icons.panorama_outlined,
+        icon: AppColorUtils.exhibitionIcon,
         accent: AppColorUtils.amberAccent,
       );
     }
@@ -1691,7 +1694,7 @@ class _ExhibitionSavedTile extends StatelessWidget {
       leadingBuilder: (size) => _MediaThumbnail(
         accent: accent,
         imageUrl: coverUrl,
-        icon: Icons.panorama_outlined,
+        icon: AppColorUtils.exhibitionIcon,
         size: size,
       ),
     );

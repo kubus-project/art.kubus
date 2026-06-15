@@ -413,11 +413,13 @@ class KubusMapMarkerHelpers {
       case ArtMarkerType.artwork:
         return Icons.auto_awesome;
       case ArtMarkerType.streetArt:
-        return Icons.streetview;
+        return AppColorUtils.streetArtIcon;
       case ArtMarkerType.institution:
         return Icons.museum_outlined;
       case ArtMarkerType.event:
         return Icons.event_available;
+      case ArtMarkerType.exhibition:
+        return AppColorUtils.exhibitionIcon;
       case ArtMarkerType.residency:
         return Icons.apartment;
       case ArtMarkerType.drop:
@@ -439,6 +441,8 @@ class KubusMapMarkerHelpers {
         return l10n.mapMarkerTypeInstitutions;
       case ArtMarkerType.event:
         return l10n.mapMarkerTypeEvents;
+      case ArtMarkerType.exhibition:
+        return l10n.commonExhibition;
       case ArtMarkerType.residency:
         return l10n.mapMarkerTypeResidencies;
       case ArtMarkerType.drop:
@@ -769,7 +773,7 @@ class KubusMarkerOverlayHelpers {
   ) {
     switch (target) {
       case MapMarkerOverlayPrimaryTarget.exhibition:
-        return Icons.museum_outlined;
+        return AppColorUtils.exhibitionIcon;
       case MapMarkerOverlayPrimaryTarget.event:
         return Icons.event_outlined;
       case MapMarkerOverlayPrimaryTarget.institution:
@@ -826,10 +830,10 @@ class KubusMarkerOverlayHelpers {
       primaryActionIcon: primaryActionIcon(presentation.primaryTarget),
       // Exhibition markers open the more-info surface (desktop sidebar /
       // mobile full page) rather than a generic detail view.
-      primaryActionLabel: presentation.primaryTarget ==
-              MapMarkerOverlayPrimaryTarget.exhibition
-          ? l10n.mapMarkerMoreInfo
-          : l10n.commonViewDetails,
+      primaryActionLabel:
+          presentation.primaryTarget == MapMarkerOverlayPrimaryTarget.exhibition
+              ? l10n.mapMarkerMoreInfo
+              : l10n.commonViewDetails,
       actions: actions,
       stackCount: stackCount,
       stackIndex: stackIndex,

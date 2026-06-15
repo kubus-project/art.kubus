@@ -13,6 +13,7 @@ import '../../../services/share/share_service.dart';
 import '../../../services/share/share_types.dart';
 import '../../../services/block_list_service.dart';
 import '../../../utils/artwork_navigation.dart';
+import '../../../utils/app_color_utils.dart';
 import '../../../utils/media_url_resolver.dart';
 import '../../../utils/profile_showcase_normalizer.dart';
 import '../../../community/community_interactions.dart';
@@ -1238,7 +1239,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
               borderRadius: BorderRadius.circular(KubusRadius.md),
             ),
             child: Icon(
-              Icons.streetview,
+              AppColorUtils.streetArtIcon,
               color: themeProvider.accentColor,
             ),
           ),

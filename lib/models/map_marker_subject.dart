@@ -38,8 +38,7 @@ extension MarkerSubjectTypeX on MarkerSubjectType {
       case MarkerSubjectType.streetArt:
         return ArtMarkerType.streetArt;
       case MarkerSubjectType.exhibition:
-        // No dedicated marker type exists yet; treat exhibitions as event-like markers.
-        return ArtMarkerType.event;
+        return ArtMarkerType.exhibition;
       case MarkerSubjectType.institution:
         return ArtMarkerType.institution;
       case MarkerSubjectType.event:

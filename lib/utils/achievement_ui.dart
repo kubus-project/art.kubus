@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../services/achievement_service.dart' as achievement_svc;
 import '../models/achievements.dart' as backend_achievements;
+import 'app_color_utils.dart';
 import 'category_accent_color.dart';
 
 class AchievementUi {
@@ -30,7 +31,7 @@ class AchievementUi {
         if (normalizedCode.contains('like')) return Icons.favorite_border;
         return Icons.forum_outlined;
       case 'street_art':
-        return Icons.streetview;
+        return AppColorUtils.streetArtIcon;
       case 'events':
         return Icons.event_available;
       case 'trading':
@@ -98,7 +99,7 @@ class AchievementUi {
       case achievement_svc.AchievementType.streetArtScout:
       case achievement_svc.AchievementType.streetArtCurator:
       case achievement_svc.AchievementType.streetArtPatron:
-        return Icons.streetview;
+        return AppColorUtils.streetArtIcon;
     }
   }
 

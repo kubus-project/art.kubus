@@ -22,6 +22,7 @@ import '../../services/backend_api_service.dart';
 import '../../services/community_post_save_controller.dart';
 import '../../services/profile_package_mutation_tracker.dart';
 import '../../utils/app_animations.dart';
+import '../../utils/app_color_utils.dart';
 import '../../utils/community_subject_navigation.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../utils/wallet_utils.dart';
@@ -708,7 +709,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
       case 'artwork':
         return Icons.view_in_ar;
       case 'exhibition':
-        return Icons.event_outlined;
+        return AppColorUtils.exhibitionIcon;
       case 'collection':
         return Icons.collections_bookmark_outlined;
       case 'institution':

@@ -22,6 +22,7 @@ import '../../../models/dao.dart';
 import '../../../models/promotion.dart';
 import '../../../models/user_persona.dart';
 import '../../../utils/dao_role_verification.dart';
+import '../../../utils/app_color_utils.dart';
 import '../../../utils/wallet_action_guard.dart';
 import '../../../utils/wallet_utils.dart';
 import '../../../utils/kubus_color_roles.dart';
@@ -293,7 +294,8 @@ class _ArtistStudioState extends State<ArtistStudio> {
                     builder: (context, collabProvider, _) {
                       final pendingCount = collabProvider.pendingInviteCount;
                       return TopBarIcon(
-                        tooltip: l10n.desktopArtistStudioQuickActionInvitesTitle,
+                        tooltip:
+                            l10n.desktopArtistStudioQuickActionInvitesTitle,
                         badgeCount: pendingCount,
                         badgeColor: Theme.of(context).colorScheme.error,
                         icon: Icon(
@@ -771,7 +773,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
                 Expanded(
                     child: _buildTabButton(
                         l10n.artistStudioTabExhibitions,
-                        Icons.collections_bookmark,
+                        AppColorUtils.exhibitionIcon,
                         2,
                         isApprovedArtist,
                         _artistTabAccent(
@@ -1234,8 +1236,8 @@ class _ArtistStudioState extends State<ArtistStudio> {
                                     );
                                     return;
                                   }
-                                  final canProceed =
-                                      await WalletActionGuard.ensureSignerAccess(
+                                  final canProceed = await WalletActionGuard
+                                      .ensureSignerAccess(
                                     context: context,
                                     profileProvider: profileProvider,
                                     walletProvider: walletProvider,

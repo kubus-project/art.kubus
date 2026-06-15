@@ -22,6 +22,7 @@ import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../utils/profile_showcase_normalizer.dart';
+import '../../utils/app_color_utils.dart';
 import '../../community/community_interactions.dart';
 import '../web3/wallet/wallet_home.dart';
 import '../settings_screen.dart';
@@ -1886,7 +1887,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   AppLocalizations.of(context)!
                       .profilePerformancePublicStreetArtAddedTitle,
                   publicStreetArtAddedLabel,
-                  Icons.streetview,
+                  AppColorUtils.streetArtIcon,
                   null),
             ],
           );
@@ -1987,7 +1988,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         codePoint == Icons.person_add_outlined.codePoint) {
       return roles.statTeal;
     }
-    if (codePoint == Icons.streetview.codePoint) {
+    if (codePoint == AppColorUtils.streetArtIcon.codePoint) {
       return roles.statAmber;
     }
     if (codePoint == Icons.token.codePoint ||

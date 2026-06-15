@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../utils/app_color_utils.dart';
 import '../../l10n/app_localizations.dart';
 import 'analytics_entity_registry.dart';
 
@@ -289,7 +290,7 @@ class AnalyticsMetricRegistry {
       id: 'exhibitions',
       label: 'Exhibitions',
       description: 'Exhibitions this profile participates in.',
-      icon: Icons.museum_outlined,
+      icon: AppColorUtils.exhibitionIcon,
       format: AnalyticsMetricFormat.compact,
       supportedEntities: userEntity,
       relevance: 75,
@@ -298,7 +299,7 @@ class AnalyticsMetricRegistry {
       id: 'exhibitionArtworks',
       label: 'Exhibition artworks',
       description: 'Artworks included in owned exhibitions.',
-      icon: Icons.collections_outlined,
+      icon: AppColorUtils.exhibitionIcon,
       format: AnalyticsMetricFormat.compact,
       supportedEntities: userEntity,
       seriesSupported: false,

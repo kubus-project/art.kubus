@@ -1654,7 +1654,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
       PromotionEntityType.profile => Icons.person_outline,
       PromotionEntityType.institution => Icons.apartment_outlined,
       PromotionEntityType.event => Icons.event_outlined,
-      PromotionEntityType.exhibition => Icons.museum_outlined,
+      PromotionEntityType.exhibition => AppColorUtils.exhibitionIcon,
     };
   }
 
@@ -2666,7 +2666,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
 
     final isMapSubjectResult =
         result.kind == KubusSearchResultKind.institution ||
-            result.kind == KubusSearchResultKind.event;
+            result.kind == KubusSearchResultKind.event ||
+            result.kind == KubusSearchResultKind.exhibition;
     if (isMapSubjectResult && markerId.isNotEmpty && result.position == null) {
       await ShareDeepLinkNavigation.open(
         context,

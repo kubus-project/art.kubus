@@ -358,6 +358,7 @@ class _MapScreenState extends State<MapScreen>
     ArtMarkerType.streetArt: true,
     ArtMarkerType.institution: true,
     ArtMarkerType.event: true,
+    ArtMarkerType.exhibition: true,
     ArtMarkerType.residency: true,
     ArtMarkerType.drop: true,
     ArtMarkerType.experience: true,
@@ -5022,7 +5023,8 @@ class _MapScreenState extends State<MapScreen>
     }
 
     final isMarkerSelection = result.kind == KubusSearchResultKind.marker ||
-        result.kind == KubusSearchResultKind.event;
+        result.kind == KubusSearchResultKind.event ||
+        result.kind == KubusSearchResultKind.exhibition;
     if (!isMarkerSelection) return;
 
     final marker = _findLoadedMarkerForSearchResult(result);
@@ -5135,9 +5137,9 @@ class _MapScreenState extends State<MapScreen>
         opacity: anim,
         child: SizeTransition(
           sizeFactor: anim,
-          // -1.0 anchors the reveal to the top edge (panel grows downward from
-          // the search bar) for a vertical size transition.
-          axisAlignment: -1.0,
+          // Anchor the reveal to the top edge so the panel grows downward from
+          // the search bar for a vertical size transition.
+          alignment: Alignment.topCenter,
           child: child,
         ),
       ),
@@ -5171,8 +5173,8 @@ class _MapScreenState extends State<MapScreen>
   /// sheen/tint fallback (no DOM backdrop region).
   void _scheduleFilterPanelBackdropSync() {
     if (!kIsWeb) return;
-    final settle = context.animationTheme.medium +
-        const Duration(milliseconds: 32);
+    final settle =
+        context.animationTheme.medium + const Duration(milliseconds: 32);
     Future.delayed(settle, () {
       if (!mounted || !_filtersExpanded) return;
       setState(() {});
@@ -5454,8 +5456,7 @@ class _MapScreenState extends State<MapScreen>
       isArCapable: (marker) =>
           defaultMarkerIsArCapable(marker) ||
           (artworkFor(marker)?.arEnabled ?? false),
-      alwaysIncludeMarkerIds:
-          selectedId == null ? null : <String>{selectedId},
+      alwaysIncludeMarkerIds: selectedId == null ? null : <String>{selectedId},
     );
   }
 

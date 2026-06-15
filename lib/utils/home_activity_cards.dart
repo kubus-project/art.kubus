@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 import '../models/stats/stats_models.dart';
 import '../models/user_persona.dart';
+import 'app_color_utils.dart';
 import 'kubus_color_roles.dart';
 
 enum HomeActivityRole {
@@ -329,7 +330,7 @@ IconData _iconForMetric(HomeActivityMetric metric) {
     case HomeActivityMetric.eventsHosted:
       return Icons.event_available_outlined;
     case HomeActivityMetric.exhibitions:
-      return Icons.museum_outlined;
+      return AppColorUtils.exhibitionIcon;
     case HomeActivityMetric.programViews:
       return Icons.insights_outlined;
     case HomeActivityMetric.discovered:

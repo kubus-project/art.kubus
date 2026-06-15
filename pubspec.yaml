@@ -16,7 +16,7 @@ publish_to: "none" # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 0.6.2+26061502
+version: 0.6.2+26061504
 
 environment:
   sdk: ">=3.6.0 <4.0.0"
@@ -184,7 +184,7 @@ flutter:
   # are NOT icon-tree-shaken by Flutter, so the full variable font (~10.4 MB)
   # used to ship in every build. We bundle a SUBSET instead, generated from the
   # full font with fonttools and containing only the codepoints the app renders
-  # (currently just U+E3F5 = CustomIcons.wallArt) — ~4 KB.
+  # (currently U+EFCB = CustomIcons.wallArt and U+F345 = CustomIcons.fragrance) — ~4 KB.
   #
   # The full variable font is kept in the repo at
   # assets/fonts/MaterialSymbolsOutlined-VariableFont_FILL,GRAD,opsz,wght.ttf

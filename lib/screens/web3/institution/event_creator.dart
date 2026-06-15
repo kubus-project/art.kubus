@@ -12,6 +12,7 @@ import '../../../providers/events_provider.dart';
 import '../../../providers/exhibitions_provider.dart';
 import '../../../providers/institution_provider.dart';
 import '../../../services/backend_api_service.dart';
+import '../../../utils/app_color_utils.dart';
 import '../../../utils/creator_shell_navigation.dart';
 import '../../events/event_detail_screen.dart';
 import '../../../utils/design_tokens.dart';
@@ -505,11 +506,11 @@ class _EventCreatorState extends State<EventCreator>
       DesktopCreatorReadinessItem(
         label: l10n.eventCreatorLinkedExhibitionsTitle,
         description: _linkedExhibitions.isNotEmpty
-            ? l10n.eventDetailLinkedExhibitionsSummary(
-                _linkedExhibitions.length)
+            ? l10n
+                .eventDetailLinkedExhibitionsSummary(_linkedExhibitions.length)
             : l10n.eventCreatorLinkedExhibitionsEmpty,
         complete: _linkedExhibitions.isNotEmpty,
-        icon: Icons.museum_outlined,
+        icon: AppColorUtils.exhibitionIcon,
       ),
       DesktopCreatorReadinessItem(
         label: l10n.creatorPoapSectionTitle,
@@ -642,7 +643,7 @@ class _EventCreatorState extends State<EventCreator>
                       ),
                     );
                   },
-                  icon: const Icon(Icons.museum_outlined),
+                  icon: const Icon(AppColorUtils.exhibitionIcon),
                   label: Text(l10n.eventCreatorCreateExhibitionForEvent),
                 ),
               ],
@@ -997,12 +998,12 @@ class _EventCreatorState extends State<EventCreator>
                 decoration: BoxDecoration(
                   color: scheme.onSurface.withValues(alpha: 0.04),
                   borderRadius: BorderRadius.circular(KubusRadius.md),
-                  border: Border.all(
-                      color: scheme.outline.withValues(alpha: 0.25)),
+                  border:
+                      Border.all(color: scheme.outline.withValues(alpha: 0.25)),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.museum_outlined,
+                    Icon(AppColorUtils.exhibitionIcon,
                         size: 18,
                         color: scheme.onSurface.withValues(alpha: 0.65)),
                     const SizedBox(width: KubusSpacing.sm),
@@ -1610,10 +1611,6 @@ class _EventCreatorState extends State<EventCreator>
     }
     return '${_startTime!.format(context)} - ${_endTime!.format(context)}';
   }
-
-
-
-
 
   List<String> _eventTypeOptions() => const <String>[
         'exhibition',

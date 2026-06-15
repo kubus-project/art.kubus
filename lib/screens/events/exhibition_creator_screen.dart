@@ -13,6 +13,7 @@ import '../../models/exhibition.dart';
 import '../../providers/events_provider.dart';
 import '../../providers/exhibitions_provider.dart';
 import '../../utils/design_tokens.dart';
+import '../../utils/app_color_utils.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/creator_shell_navigation.dart';
 import '../desktop/desktop_shell.dart';
@@ -445,8 +446,8 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
                 decoration: BoxDecoration(
                   color: scheme.onSurface.withValues(alpha: 0.04),
                   borderRadius: BorderRadius.circular(KubusRadius.md),
-                  border: Border.all(
-                      color: scheme.outline.withValues(alpha: 0.25)),
+                  border:
+                      Border.all(color: scheme.outline.withValues(alpha: 0.25)),
                 ),
                 child: Row(
                   children: [
@@ -462,8 +463,8 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
                           ),
                           const SizedBox(height: KubusSpacing.xs),
                           DropdownButton<String>(
-                            value: _relationTypeOptions.contains(
-                                    _relationTypeByEventId[event.id])
+                            value: _relationTypeOptions
+                                    .contains(_relationTypeByEventId[event.id])
                                 ? _relationTypeByEventId[event.id]
                                 : 'program',
                             isDense: true,
@@ -481,8 +482,7 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
                                     ))
                                 .toList(),
                             onChanged: _submitting ||
-                                    _initiallyLinkedEventIds
-                                        .contains(event.id)
+                                    _initiallyLinkedEventIds.contains(event.id)
                                 ? null
                                 : (value) {
                                     if (value == null) return;
@@ -818,7 +818,9 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
           subtitle: created == null
               ? l10n.exhibitionCreatorStatusDraftSubtitle
               : l10n.exhibitionCreatorStatusSavedSubtitle,
-          icon: created == null ? Icons.edit_outlined : Icons.museum_outlined,
+          icon: created == null
+              ? Icons.edit_outlined
+              : AppColorUtils.exhibitionIcon,
           contextType: contextType,
           semantic: DesktopCreatorSectionSemantic.status,
           child: Column(

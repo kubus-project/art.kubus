@@ -25,6 +25,7 @@ import '../../../models/dao.dart';
 import '../../../models/promotion.dart';
 import '../../../models/user_persona.dart';
 import '../../../utils/activity_navigation.dart';
+import '../../../utils/app_color_utils.dart';
 import '../../../utils/creator_shell_navigation.dart';
 import '../../../utils/dao_role_verification.dart';
 import '../../../utils/wallet_action_guard.dart';
@@ -269,7 +270,8 @@ class _InstitutionHubState extends State<InstitutionHub> {
                   ),
                   onPressed: () {
                     unawaited(
-                      CreatorShellNavigation.openManageMarkersWorkspace(context),
+                      CreatorShellNavigation.openManageMarkersWorkspace(
+                          context),
                     );
                   },
                 ),
@@ -734,7 +736,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
             Expanded(
               child: _buildTabButton(
                 l10n.institutionHubTabExhibitions,
-                Icons.collections_bookmark,
+                AppColorUtils.exhibitionIcon,
                 1,
                 enabled,
                 roles.web3InstitutionAccent,

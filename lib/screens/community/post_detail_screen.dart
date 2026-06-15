@@ -7,6 +7,7 @@ import '../../utils/design_tokens.dart';
 import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../utils/kubus_color_roles.dart';
+import '../../utils/app_color_utils.dart';
 import '../../utils/wallet_utils.dart';
 import '../../utils/search_suggestions.dart';
 import '../../community/community_interactions.dart';
@@ -246,7 +247,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       case 'artwork':
         return Icons.view_in_ar;
       case 'exhibition':
-        return Icons.event_outlined;
+        return AppColorUtils.exhibitionIcon;
       case 'collection':
         return Icons.collections_bookmark_outlined;
       case 'institution':

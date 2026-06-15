@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-28T13:15:46.022404Z",
+  "generatedAt": "2026-06-15T09:47:53.046348Z",
   "pixelRatio": 4.0,
   "items": [
     {
@@ -889,6 +889,230 @@
       "state": "selected",
       "iconId": "mk_event_legendary_sel_l_pro",
       "markerType": "event",
+      "tier": "legendary",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_exhibition_subtle_l_std",
+      "markerType": "exhibition",
+      "tier": "subtle",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_exhibition_subtle_sel_l_std",
+      "markerType": "exhibition",
+      "tier": "subtle",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_exhibition_subtle_l_pro",
+      "markerType": "exhibition",
+      "tier": "subtle",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_exhibition_subtle_sel_l_pro",
+      "markerType": "exhibition",
+      "tier": "subtle",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_exhibition_active_l_std",
+      "markerType": "exhibition",
+      "tier": "active",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_exhibition_active_sel_l_std",
+      "markerType": "exhibition",
+      "tier": "active",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_exhibition_active_l_pro",
+      "markerType": "exhibition",
+      "tier": "active",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_exhibition_active_sel_l_pro",
+      "markerType": "exhibition",
+      "tier": "active",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_exhibition_featured_l_std",
+      "markerType": "exhibition",
+      "tier": "featured",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_exhibition_featured_sel_l_std",
+      "markerType": "exhibition",
+      "tier": "featured",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_exhibition_featured_l_pro",
+      "markerType": "exhibition",
+      "tier": "featured",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_exhibition_featured_sel_l_pro",
+      "markerType": "exhibition",
+      "tier": "featured",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_exhibition_legendary_l_std",
+      "markerType": "exhibition",
+      "tier": "legendary",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_exhibition_legendary_sel_l_std",
+      "markerType": "exhibition",
+      "tier": "legendary",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_exhibition_legendary_l_pro",
+      "markerType": "exhibition",
+      "tier": "legendary",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_exhibition_legendary_sel_l_pro",
+      "markerType": "exhibition",
       "tier": "legendary",
       "theme": "light",
       "promoted": true,
@@ -2693,6 +2917,230 @@
     {
       "kind": "marker",
       "state": "base",
+      "iconId": "mk_exhibition_subtle_d_std",
+      "markerType": "exhibition",
+      "tier": "subtle",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_exhibition_subtle_sel_d_std",
+      "markerType": "exhibition",
+      "tier": "subtle",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_exhibition_subtle_d_pro",
+      "markerType": "exhibition",
+      "tier": "subtle",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_exhibition_subtle_sel_d_pro",
+      "markerType": "exhibition",
+      "tier": "subtle",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_exhibition_active_d_std",
+      "markerType": "exhibition",
+      "tier": "active",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_exhibition_active_sel_d_std",
+      "markerType": "exhibition",
+      "tier": "active",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_exhibition_active_d_pro",
+      "markerType": "exhibition",
+      "tier": "active",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_exhibition_active_sel_d_pro",
+      "markerType": "exhibition",
+      "tier": "active",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_exhibition_featured_d_std",
+      "markerType": "exhibition",
+      "tier": "featured",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_exhibition_featured_sel_d_std",
+      "markerType": "exhibition",
+      "tier": "featured",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_exhibition_featured_d_pro",
+      "markerType": "exhibition",
+      "tier": "featured",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_exhibition_featured_sel_d_pro",
+      "markerType": "exhibition",
+      "tier": "featured",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_exhibition_legendary_d_std",
+      "markerType": "exhibition",
+      "tier": "legendary",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_exhibition_legendary_sel_d_std",
+      "markerType": "exhibition",
+      "tier": "legendary",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_exhibition_legendary_d_pro",
+      "markerType": "exhibition",
+      "tier": "legendary",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_exhibition_legendary_sel_d_pro",
+      "markerType": "exhibition",
+      "tier": "legendary",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
       "iconId": "mk_residency_subtle_d_std",
       "markerType": "residency",
       "tier": "subtle",
@@ -3588,7 +4036,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_artwork_2_l",
+      "iconId": "cl_v2_artwork_2_l",
       "markerType": "artwork",
       "count": 2,
       "label": "2",
@@ -3601,7 +4049,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_artwork_3_l",
+      "iconId": "cl_v2_artwork_3_l",
       "markerType": "artwork",
       "count": 3,
       "label": "3",
@@ -3614,7 +4062,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_artwork_4_l",
+      "iconId": "cl_v2_artwork_4_l",
       "markerType": "artwork",
       "count": 4,
       "label": "4",
@@ -3627,7 +4075,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_artwork_5_l",
+      "iconId": "cl_v2_artwork_5_l",
       "markerType": "artwork",
       "count": 5,
       "label": "5",
@@ -3640,7 +4088,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_artwork_10_l",
+      "iconId": "cl_v2_artwork_10_l",
       "markerType": "artwork",
       "count": 10,
       "label": "10",
@@ -3653,7 +4101,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_artwork_25_l",
+      "iconId": "cl_v2_artwork_25_l",
       "markerType": "artwork",
       "count": 25,
       "label": "25",
@@ -3666,7 +4114,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_artwork_99_l",
+      "iconId": "cl_v2_artwork_99_l",
       "markerType": "artwork",
       "count": 99,
       "label": "99",
@@ -3679,7 +4127,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_artwork_99+_l",
+      "iconId": "cl_v2_artwork_99+_l",
       "markerType": "artwork",
       "count": 100,
       "label": "99+",
@@ -3692,7 +4140,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_streetArt_2_l",
+      "iconId": "cl_v2_streetArt_2_l",
       "markerType": "streetArt",
       "count": 2,
       "label": "2",
@@ -3705,7 +4153,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_streetArt_3_l",
+      "iconId": "cl_v2_streetArt_3_l",
       "markerType": "streetArt",
       "count": 3,
       "label": "3",
@@ -3718,7 +4166,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_streetArt_4_l",
+      "iconId": "cl_v2_streetArt_4_l",
       "markerType": "streetArt",
       "count": 4,
       "label": "4",
@@ -3731,7 +4179,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_streetArt_5_l",
+      "iconId": "cl_v2_streetArt_5_l",
       "markerType": "streetArt",
       "count": 5,
       "label": "5",
@@ -3744,7 +4192,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_streetArt_10_l",
+      "iconId": "cl_v2_streetArt_10_l",
       "markerType": "streetArt",
       "count": 10,
       "label": "10",
@@ -3757,7 +4205,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_streetArt_25_l",
+      "iconId": "cl_v2_streetArt_25_l",
       "markerType": "streetArt",
       "count": 25,
       "label": "25",
@@ -3770,7 +4218,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_streetArt_99_l",
+      "iconId": "cl_v2_streetArt_99_l",
       "markerType": "streetArt",
       "count": 99,
       "label": "99",
@@ -3783,7 +4231,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_streetArt_99+_l",
+      "iconId": "cl_v2_streetArt_99+_l",
       "markerType": "streetArt",
       "count": 100,
       "label": "99+",
@@ -3796,7 +4244,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_institution_2_l",
+      "iconId": "cl_v2_institution_2_l",
       "markerType": "institution",
       "count": 2,
       "label": "2",
@@ -3809,7 +4257,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_institution_3_l",
+      "iconId": "cl_v2_institution_3_l",
       "markerType": "institution",
       "count": 3,
       "label": "3",
@@ -3822,7 +4270,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_institution_4_l",
+      "iconId": "cl_v2_institution_4_l",
       "markerType": "institution",
       "count": 4,
       "label": "4",
@@ -3835,7 +4283,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_institution_5_l",
+      "iconId": "cl_v2_institution_5_l",
       "markerType": "institution",
       "count": 5,
       "label": "5",
@@ -3848,7 +4296,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_institution_10_l",
+      "iconId": "cl_v2_institution_10_l",
       "markerType": "institution",
       "count": 10,
       "label": "10",
@@ -3861,7 +4309,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_institution_25_l",
+      "iconId": "cl_v2_institution_25_l",
       "markerType": "institution",
       "count": 25,
       "label": "25",
@@ -3874,7 +4322,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_institution_99_l",
+      "iconId": "cl_v2_institution_99_l",
       "markerType": "institution",
       "count": 99,
       "label": "99",
@@ -3887,7 +4335,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_institution_99+_l",
+      "iconId": "cl_v2_institution_99+_l",
       "markerType": "institution",
       "count": 100,
       "label": "99+",
@@ -3900,7 +4348,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_event_2_l",
+      "iconId": "cl_v2_event_2_l",
       "markerType": "event",
       "count": 2,
       "label": "2",
@@ -3913,7 +4361,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_event_3_l",
+      "iconId": "cl_v2_event_3_l",
       "markerType": "event",
       "count": 3,
       "label": "3",
@@ -3926,7 +4374,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_event_4_l",
+      "iconId": "cl_v2_event_4_l",
       "markerType": "event",
       "count": 4,
       "label": "4",
@@ -3939,7 +4387,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_event_5_l",
+      "iconId": "cl_v2_event_5_l",
       "markerType": "event",
       "count": 5,
       "label": "5",
@@ -3952,7 +4400,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_event_10_l",
+      "iconId": "cl_v2_event_10_l",
       "markerType": "event",
       "count": 10,
       "label": "10",
@@ -3965,7 +4413,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_event_25_l",
+      "iconId": "cl_v2_event_25_l",
       "markerType": "event",
       "count": 25,
       "label": "25",
@@ -3978,7 +4426,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_event_99_l",
+      "iconId": "cl_v2_event_99_l",
       "markerType": "event",
       "count": 99,
       "label": "99",
@@ -3991,7 +4439,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_event_99+_l",
+      "iconId": "cl_v2_event_99+_l",
       "markerType": "event",
       "count": 100,
       "label": "99+",
@@ -4004,7 +4452,111 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_residency_2_l",
+      "iconId": "cl_v2_exhibition_2_l",
+      "markerType": "exhibition",
+      "count": 2,
+      "label": "2",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_v2_exhibition_3_l",
+      "markerType": "exhibition",
+      "count": 3,
+      "label": "3",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_v2_exhibition_4_l",
+      "markerType": "exhibition",
+      "count": 4,
+      "label": "4",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_v2_exhibition_5_l",
+      "markerType": "exhibition",
+      "count": 5,
+      "label": "5",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_v2_exhibition_10_l",
+      "markerType": "exhibition",
+      "count": 10,
+      "label": "10",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_v2_exhibition_25_l",
+      "markerType": "exhibition",
+      "count": 25,
+      "label": "25",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_v2_exhibition_99_l",
+      "markerType": "exhibition",
+      "count": 99,
+      "label": "99",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_v2_exhibition_99+_l",
+      "markerType": "exhibition",
+      "count": 100,
+      "label": "99+",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_v2_residency_2_l",
       "markerType": "residency",
       "count": 2,
       "label": "2",
@@ -4017,7 +4569,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_residency_3_l",
+      "iconId": "cl_v2_residency_3_l",
       "markerType": "residency",
       "count": 3,
       "label": "3",
@@ -4030,7 +4582,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_residency_4_l",
+      "iconId": "cl_v2_residency_4_l",
       "markerType": "residency",
       "count": 4,
       "label": "4",
@@ -4043,7 +4595,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_residency_5_l",
+      "iconId": "cl_v2_residency_5_l",
       "markerType": "residency",
       "count": 5,
       "label": "5",
@@ -4056,7 +4608,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_residency_10_l",
+      "iconId": "cl_v2_residency_10_l",
       "markerType": "residency",
       "count": 10,
       "label": "10",
@@ -4069,7 +4621,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_residency_25_l",
+      "iconId": "cl_v2_residency_25_l",
       "markerType": "residency",
       "count": 25,
       "label": "25",
@@ -4082,7 +4634,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_residency_99_l",
+      "iconId": "cl_v2_residency_99_l",
       "markerType": "residency",
       "count": 99,
       "label": "99",
@@ -4095,7 +4647,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_residency_99+_l",
+      "iconId": "cl_v2_residency_99+_l",
       "markerType": "residency",
       "count": 100,
       "label": "99+",
@@ -4108,7 +4660,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_drop_2_l",
+      "iconId": "cl_v2_drop_2_l",
       "markerType": "drop",
       "count": 2,
       "label": "2",
@@ -4121,7 +4673,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_drop_3_l",
+      "iconId": "cl_v2_drop_3_l",
       "markerType": "drop",
       "count": 3,
       "label": "3",
@@ -4134,7 +4686,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_drop_4_l",
+      "iconId": "cl_v2_drop_4_l",
       "markerType": "drop",
       "count": 4,
       "label": "4",
@@ -4147,7 +4699,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_drop_5_l",
+      "iconId": "cl_v2_drop_5_l",
       "markerType": "drop",
       "count": 5,
       "label": "5",
@@ -4160,7 +4712,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_drop_10_l",
+      "iconId": "cl_v2_drop_10_l",
       "markerType": "drop",
       "count": 10,
       "label": "10",
@@ -4173,7 +4725,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_drop_25_l",
+      "iconId": "cl_v2_drop_25_l",
       "markerType": "drop",
       "count": 25,
       "label": "25",
@@ -4186,7 +4738,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_drop_99_l",
+      "iconId": "cl_v2_drop_99_l",
       "markerType": "drop",
       "count": 99,
       "label": "99",
@@ -4199,7 +4751,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_drop_99+_l",
+      "iconId": "cl_v2_drop_99+_l",
       "markerType": "drop",
       "count": 100,
       "label": "99+",
@@ -4212,7 +4764,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_experience_2_l",
+      "iconId": "cl_v2_experience_2_l",
       "markerType": "experience",
       "count": 2,
       "label": "2",
@@ -4225,7 +4777,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_experience_3_l",
+      "iconId": "cl_v2_experience_3_l",
       "markerType": "experience",
       "count": 3,
       "label": "3",
@@ -4238,7 +4790,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_experience_4_l",
+      "iconId": "cl_v2_experience_4_l",
       "markerType": "experience",
       "count": 4,
       "label": "4",
@@ -4251,7 +4803,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_experience_5_l",
+      "iconId": "cl_v2_experience_5_l",
       "markerType": "experience",
       "count": 5,
       "label": "5",
@@ -4264,7 +4816,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_experience_10_l",
+      "iconId": "cl_v2_experience_10_l",
       "markerType": "experience",
       "count": 10,
       "label": "10",
@@ -4277,7 +4829,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_experience_25_l",
+      "iconId": "cl_v2_experience_25_l",
       "markerType": "experience",
       "count": 25,
       "label": "25",
@@ -4290,7 +4842,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_experience_99_l",
+      "iconId": "cl_v2_experience_99_l",
       "markerType": "experience",
       "count": 99,
       "label": "99",
@@ -4303,7 +4855,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_experience_99+_l",
+      "iconId": "cl_v2_experience_99+_l",
       "markerType": "experience",
       "count": 100,
       "label": "99+",
@@ -4316,7 +4868,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_other_2_l",
+      "iconId": "cl_v2_other_2_l",
       "markerType": "other",
       "count": 2,
       "label": "2",
@@ -4329,7 +4881,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_other_3_l",
+      "iconId": "cl_v2_other_3_l",
       "markerType": "other",
       "count": 3,
       "label": "3",
@@ -4342,7 +4894,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_other_4_l",
+      "iconId": "cl_v2_other_4_l",
       "markerType": "other",
       "count": 4,
       "label": "4",
@@ -4355,7 +4907,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_other_5_l",
+      "iconId": "cl_v2_other_5_l",
       "markerType": "other",
       "count": 5,
       "label": "5",
@@ -4368,7 +4920,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_other_10_l",
+      "iconId": "cl_v2_other_10_l",
       "markerType": "other",
       "count": 10,
       "label": "10",
@@ -4381,7 +4933,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_other_25_l",
+      "iconId": "cl_v2_other_25_l",
       "markerType": "other",
       "count": 25,
       "label": "25",
@@ -4394,7 +4946,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_other_99_l",
+      "iconId": "cl_v2_other_99_l",
       "markerType": "other",
       "count": 99,
       "label": "99",
@@ -4407,7 +4959,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_other_99+_l",
+      "iconId": "cl_v2_other_99+_l",
       "markerType": "other",
       "count": 100,
       "label": "99+",
@@ -4420,7 +4972,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_artwork_2_d",
+      "iconId": "cl_v2_artwork_2_d",
       "markerType": "artwork",
       "count": 2,
       "label": "2",
@@ -4433,7 +4985,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_artwork_3_d",
+      "iconId": "cl_v2_artwork_3_d",
       "markerType": "artwork",
       "count": 3,
       "label": "3",
@@ -4446,7 +4998,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_artwork_4_d",
+      "iconId": "cl_v2_artwork_4_d",
       "markerType": "artwork",
       "count": 4,
       "label": "4",
@@ -4459,7 +5011,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_artwork_5_d",
+      "iconId": "cl_v2_artwork_5_d",
       "markerType": "artwork",
       "count": 5,
       "label": "5",
@@ -4472,7 +5024,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_artwork_10_d",
+      "iconId": "cl_v2_artwork_10_d",
       "markerType": "artwork",
       "count": 10,
       "label": "10",
@@ -4485,7 +5037,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_artwork_25_d",
+      "iconId": "cl_v2_artwork_25_d",
       "markerType": "artwork",
       "count": 25,
       "label": "25",
@@ -4498,7 +5050,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_artwork_99_d",
+      "iconId": "cl_v2_artwork_99_d",
       "markerType": "artwork",
       "count": 99,
       "label": "99",
@@ -4511,7 +5063,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_artwork_99+_d",
+      "iconId": "cl_v2_artwork_99+_d",
       "markerType": "artwork",
       "count": 100,
       "label": "99+",
@@ -4524,7 +5076,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_streetArt_2_d",
+      "iconId": "cl_v2_streetArt_2_d",
       "markerType": "streetArt",
       "count": 2,
       "label": "2",
@@ -4537,7 +5089,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_streetArt_3_d",
+      "iconId": "cl_v2_streetArt_3_d",
       "markerType": "streetArt",
       "count": 3,
       "label": "3",
@@ -4550,7 +5102,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_streetArt_4_d",
+      "iconId": "cl_v2_streetArt_4_d",
       "markerType": "streetArt",
       "count": 4,
       "label": "4",
@@ -4563,7 +5115,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_streetArt_5_d",
+      "iconId": "cl_v2_streetArt_5_d",
       "markerType": "streetArt",
       "count": 5,
       "label": "5",
@@ -4576,7 +5128,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_streetArt_10_d",
+      "iconId": "cl_v2_streetArt_10_d",
       "markerType": "streetArt",
       "count": 10,
       "label": "10",
@@ -4589,7 +5141,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_streetArt_25_d",
+      "iconId": "cl_v2_streetArt_25_d",
       "markerType": "streetArt",
       "count": 25,
       "label": "25",
@@ -4602,7 +5154,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_streetArt_99_d",
+      "iconId": "cl_v2_streetArt_99_d",
       "markerType": "streetArt",
       "count": 99,
       "label": "99",
@@ -4615,7 +5167,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_streetArt_99+_d",
+      "iconId": "cl_v2_streetArt_99+_d",
       "markerType": "streetArt",
       "count": 100,
       "label": "99+",
@@ -4628,7 +5180,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_institution_2_d",
+      "iconId": "cl_v2_institution_2_d",
       "markerType": "institution",
       "count": 2,
       "label": "2",
@@ -4641,7 +5193,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_institution_3_d",
+      "iconId": "cl_v2_institution_3_d",
       "markerType": "institution",
       "count": 3,
       "label": "3",
@@ -4654,7 +5206,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_institution_4_d",
+      "iconId": "cl_v2_institution_4_d",
       "markerType": "institution",
       "count": 4,
       "label": "4",
@@ -4667,7 +5219,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_institution_5_d",
+      "iconId": "cl_v2_institution_5_d",
       "markerType": "institution",
       "count": 5,
       "label": "5",
@@ -4680,7 +5232,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_institution_10_d",
+      "iconId": "cl_v2_institution_10_d",
       "markerType": "institution",
       "count": 10,
       "label": "10",
@@ -4693,7 +5245,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_institution_25_d",
+      "iconId": "cl_v2_institution_25_d",
       "markerType": "institution",
       "count": 25,
       "label": "25",
@@ -4706,7 +5258,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_institution_99_d",
+      "iconId": "cl_v2_institution_99_d",
       "markerType": "institution",
       "count": 99,
       "label": "99",
@@ -4719,7 +5271,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_institution_99+_d",
+      "iconId": "cl_v2_institution_99+_d",
       "markerType": "institution",
       "count": 100,
       "label": "99+",
@@ -4732,7 +5284,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_event_2_d",
+      "iconId": "cl_v2_event_2_d",
       "markerType": "event",
       "count": 2,
       "label": "2",
@@ -4745,7 +5297,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_event_3_d",
+      "iconId": "cl_v2_event_3_d",
       "markerType": "event",
       "count": 3,
       "label": "3",
@@ -4758,7 +5310,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_event_4_d",
+      "iconId": "cl_v2_event_4_d",
       "markerType": "event",
       "count": 4,
       "label": "4",
@@ -4771,7 +5323,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_event_5_d",
+      "iconId": "cl_v2_event_5_d",
       "markerType": "event",
       "count": 5,
       "label": "5",
@@ -4784,7 +5336,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_event_10_d",
+      "iconId": "cl_v2_event_10_d",
       "markerType": "event",
       "count": 10,
       "label": "10",
@@ -4797,7 +5349,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_event_25_d",
+      "iconId": "cl_v2_event_25_d",
       "markerType": "event",
       "count": 25,
       "label": "25",
@@ -4810,7 +5362,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_event_99_d",
+      "iconId": "cl_v2_event_99_d",
       "markerType": "event",
       "count": 99,
       "label": "99",
@@ -4823,7 +5375,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_event_99+_d",
+      "iconId": "cl_v2_event_99+_d",
       "markerType": "event",
       "count": 100,
       "label": "99+",
@@ -4836,7 +5388,111 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_residency_2_d",
+      "iconId": "cl_v2_exhibition_2_d",
+      "markerType": "exhibition",
+      "count": 2,
+      "label": "2",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_v2_exhibition_3_d",
+      "markerType": "exhibition",
+      "count": 3,
+      "label": "3",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_v2_exhibition_4_d",
+      "markerType": "exhibition",
+      "count": 4,
+      "label": "4",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_v2_exhibition_5_d",
+      "markerType": "exhibition",
+      "count": 5,
+      "label": "5",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_v2_exhibition_10_d",
+      "markerType": "exhibition",
+      "count": 10,
+      "label": "10",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_v2_exhibition_25_d",
+      "markerType": "exhibition",
+      "count": 25,
+      "label": "25",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_v2_exhibition_99_d",
+      "markerType": "exhibition",
+      "count": 99,
+      "label": "99",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_v2_exhibition_99+_d",
+      "markerType": "exhibition",
+      "count": 100,
+      "label": "99+",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_v2_residency_2_d",
       "markerType": "residency",
       "count": 2,
       "label": "2",
@@ -4849,7 +5505,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_residency_3_d",
+      "iconId": "cl_v2_residency_3_d",
       "markerType": "residency",
       "count": 3,
       "label": "3",
@@ -4862,7 +5518,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_residency_4_d",
+      "iconId": "cl_v2_residency_4_d",
       "markerType": "residency",
       "count": 4,
       "label": "4",
@@ -4875,7 +5531,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_residency_5_d",
+      "iconId": "cl_v2_residency_5_d",
       "markerType": "residency",
       "count": 5,
       "label": "5",
@@ -4888,7 +5544,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_residency_10_d",
+      "iconId": "cl_v2_residency_10_d",
       "markerType": "residency",
       "count": 10,
       "label": "10",
@@ -4901,7 +5557,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_residency_25_d",
+      "iconId": "cl_v2_residency_25_d",
       "markerType": "residency",
       "count": 25,
       "label": "25",
@@ -4914,7 +5570,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_residency_99_d",
+      "iconId": "cl_v2_residency_99_d",
       "markerType": "residency",
       "count": 99,
       "label": "99",
@@ -4927,7 +5583,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_residency_99+_d",
+      "iconId": "cl_v2_residency_99+_d",
       "markerType": "residency",
       "count": 100,
       "label": "99+",
@@ -4940,7 +5596,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_drop_2_d",
+      "iconId": "cl_v2_drop_2_d",
       "markerType": "drop",
       "count": 2,
       "label": "2",
@@ -4953,7 +5609,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_drop_3_d",
+      "iconId": "cl_v2_drop_3_d",
       "markerType": "drop",
       "count": 3,
       "label": "3",
@@ -4966,7 +5622,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_drop_4_d",
+      "iconId": "cl_v2_drop_4_d",
       "markerType": "drop",
       "count": 4,
       "label": "4",
@@ -4979,7 +5635,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_drop_5_d",
+      "iconId": "cl_v2_drop_5_d",
       "markerType": "drop",
       "count": 5,
       "label": "5",
@@ -4992,7 +5648,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_drop_10_d",
+      "iconId": "cl_v2_drop_10_d",
       "markerType": "drop",
       "count": 10,
       "label": "10",
@@ -5005,7 +5661,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_drop_25_d",
+      "iconId": "cl_v2_drop_25_d",
       "markerType": "drop",
       "count": 25,
       "label": "25",
@@ -5018,7 +5674,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_drop_99_d",
+      "iconId": "cl_v2_drop_99_d",
       "markerType": "drop",
       "count": 99,
       "label": "99",
@@ -5031,7 +5687,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_drop_99+_d",
+      "iconId": "cl_v2_drop_99+_d",
       "markerType": "drop",
       "count": 100,
       "label": "99+",
@@ -5044,7 +5700,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_experience_2_d",
+      "iconId": "cl_v2_experience_2_d",
       "markerType": "experience",
       "count": 2,
       "label": "2",
@@ -5057,7 +5713,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_experience_3_d",
+      "iconId": "cl_v2_experience_3_d",
       "markerType": "experience",
       "count": 3,
       "label": "3",
@@ -5070,7 +5726,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_experience_4_d",
+      "iconId": "cl_v2_experience_4_d",
       "markerType": "experience",
       "count": 4,
       "label": "4",
@@ -5083,7 +5739,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_experience_5_d",
+      "iconId": "cl_v2_experience_5_d",
       "markerType": "experience",
       "count": 5,
       "label": "5",
@@ -5096,7 +5752,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_experience_10_d",
+      "iconId": "cl_v2_experience_10_d",
       "markerType": "experience",
       "count": 10,
       "label": "10",
@@ -5109,7 +5765,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_experience_25_d",
+      "iconId": "cl_v2_experience_25_d",
       "markerType": "experience",
       "count": 25,
       "label": "25",
@@ -5122,7 +5778,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_experience_99_d",
+      "iconId": "cl_v2_experience_99_d",
       "markerType": "experience",
       "count": 99,
       "label": "99",
@@ -5135,7 +5791,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_experience_99+_d",
+      "iconId": "cl_v2_experience_99+_d",
       "markerType": "experience",
       "count": 100,
       "label": "99+",
@@ -5148,7 +5804,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_other_2_d",
+      "iconId": "cl_v2_other_2_d",
       "markerType": "other",
       "count": 2,
       "label": "2",
@@ -5161,7 +5817,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_other_3_d",
+      "iconId": "cl_v2_other_3_d",
       "markerType": "other",
       "count": 3,
       "label": "3",
@@ -5174,7 +5830,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_other_4_d",
+      "iconId": "cl_v2_other_4_d",
       "markerType": "other",
       "count": 4,
       "label": "4",
@@ -5187,7 +5843,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_other_5_d",
+      "iconId": "cl_v2_other_5_d",
       "markerType": "other",
       "count": 5,
       "label": "5",
@@ -5200,7 +5856,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_other_10_d",
+      "iconId": "cl_v2_other_10_d",
       "markerType": "other",
       "count": 10,
       "label": "10",
@@ -5213,7 +5869,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_other_25_d",
+      "iconId": "cl_v2_other_25_d",
       "markerType": "other",
       "count": 25,
       "label": "25",
@@ -5226,7 +5882,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_other_99_d",
+      "iconId": "cl_v2_other_99_d",
       "markerType": "other",
       "count": 99,
       "label": "99",
@@ -5239,7 +5895,7 @@
     },
     {
       "kind": "cluster",
-      "iconId": "cl_other_99+_d",
+      "iconId": "cl_v2_other_99+_d",
       "markerType": "other",
       "count": 100,
       "label": "99+",

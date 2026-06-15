@@ -713,6 +713,8 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
         return l10n.mapMarkerLayerInstitution;
       case ArtMarkerType.event:
         return l10n.mapMarkerLayerEvent;
+      case ArtMarkerType.exhibition:
+        return l10n.commonExhibition;
       case ArtMarkerType.residency:
         return l10n.mapMarkerLayerResidency;
       case ArtMarkerType.drop:
@@ -787,7 +789,8 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
         double.tryParse(_activationRadiusController.text.trim()) ?? 50;
     final category = _categoryController.text.trim();
     final markerType = _markerType.name;
-    final existingMetadata = widget.marker?.metadata ?? const <String, dynamic>{};
+    final existingMetadata =
+        widget.marker?.metadata ?? const <String, dynamic>{};
     final existingClientNonce =
         existingMetadata['clientNonce']?.toString().trim();
     final existingClientCreatedAtMs = existingMetadata['clientCreatedAtMs'];
@@ -829,8 +832,8 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
           : ((existingClientNonce != null && existingClientNonce.isNotEmpty)
               ? existingClientNonce
               : _draftClientNonce),
-      'clientCreatedAtMs': existingClientCreatedAtMs ??
-          DateTime.now().millisecondsSinceEpoch,
+      'clientCreatedAtMs':
+          existingClientCreatedAtMs ?? DateTime.now().millisecondsSinceEpoch,
       if (widget.isNew) 'createdFrom': 'manage_markers',
     };
 

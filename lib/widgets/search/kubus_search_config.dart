@@ -38,6 +38,7 @@ class KubusSearchConfig {
           KubusSearchResultKind.profile,
           KubusSearchResultKind.institution,
           KubusSearchResultKind.event,
+          KubusSearchResultKind.exhibition,
           KubusSearchResultKind.marker,
         };
       case KubusSearchScope.community:
@@ -47,6 +48,7 @@ class KubusSearchConfig {
           KubusSearchResultKind.artwork,
           KubusSearchResultKind.institution,
           KubusSearchResultKind.screen,
+          KubusSearchResultKind.exhibition,
         };
       case KubusSearchScope.map:
         return const {
@@ -54,6 +56,7 @@ class KubusSearchConfig {
           KubusSearchResultKind.profile,
           KubusSearchResultKind.institution,
           KubusSearchResultKind.event,
+          KubusSearchResultKind.exhibition,
           KubusSearchResultKind.marker,
         };
     }

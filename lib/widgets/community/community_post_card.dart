@@ -7,6 +7,7 @@ import '../../community/community_interactions.dart';
 import '../../models/community_subject.dart';
 import '../../providers/community_subject_provider.dart';
 import '../../utils/app_animations.dart';
+import '../../utils/app_color_utils.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/media_url_resolver.dart';
@@ -610,7 +611,7 @@ IconData _subjectTypeIcon(String type) {
     case 'artwork':
       return Icons.view_in_ar;
     case 'exhibition':
-      return Icons.event_outlined;
+      return AppColorUtils.exhibitionIcon;
     case 'collection':
       return Icons.collections_bookmark_outlined;
     case 'institution':

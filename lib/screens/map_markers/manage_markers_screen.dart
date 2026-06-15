@@ -50,7 +50,9 @@ class _ManageMarkersScreenState extends State<ManageMarkersScreen> {
 
   String _statusLabel(AppLocalizations l10n, ArtMarker marker) {
     if (!marker.isActive) return l10n.manageMarkersStatusDraft;
-    return marker.isPublic ? l10n.manageMarkersStatusPublic : l10n.manageMarkersStatusPrivate;
+    return marker.isPublic
+        ? l10n.manageMarkersStatusPublic
+        : l10n.manageMarkersStatusPrivate;
   }
 
   String _markerTypeLabel(AppLocalizations l10n, ArtMarkerType type) {
@@ -61,6 +63,8 @@ class _ManageMarkersScreenState extends State<ManageMarkersScreen> {
         return l10n.mapMarkerLayerInstitution;
       case ArtMarkerType.event:
         return l10n.mapMarkerLayerEvent;
+      case ArtMarkerType.exhibition:
+        return l10n.commonExhibition;
       case ArtMarkerType.residency:
         return l10n.mapMarkerLayerResidency;
       case ArtMarkerType.drop:
@@ -82,7 +86,9 @@ class _ManageMarkersScreenState extends State<ManageMarkersScreen> {
   bool _matchesQuery(ArtMarker marker, String query) {
     if (query.isEmpty) return true;
     final q = query.toLowerCase();
-    final subject = (marker.resolvedExhibitionSummary?.title ?? marker.subjectTitle ?? '').toLowerCase();
+    final subject =
+        (marker.resolvedExhibitionSummary?.title ?? marker.subjectTitle ?? '')
+            .toLowerCase();
     return marker.name.toLowerCase().contains(q) ||
         marker.description.toLowerCase().contains(q) ||
         subject.contains(q);
@@ -96,10 +102,15 @@ class _ManageMarkersScreenState extends State<ManageMarkersScreen> {
 
     final isWide = widget.embedded || MediaQuery.of(context).size.width >= 980;
     final query = _searchController.text.trim();
-    final markers = provider.markers.where((m) => _matchesQuery(m, query)).toList(growable: false);
+    final markers = provider.markers
+        .where((m) => _matchesQuery(m, query))
+        .toList(growable: false);
 
     final selectedMarker = (!_creatingNew && _selectedMarkerId != null)
-        ? provider.markers.where((m) => m.id == _selectedMarkerId).cast<ArtMarker?>().firstOrNull
+        ? provider.markers
+            .where((m) => m.id == _selectedMarkerId)
+            .cast<ArtMarker?>()
+            .firstOrNull
         : null;
 
     Widget buildList() {
@@ -136,7 +147,8 @@ class _ManageMarkersScreenState extends State<ManageMarkersScreen> {
               } else {
                 Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) => const MarkerEditorScreen(marker: null, isNew: true),
+                    builder: (_) =>
+                        const MarkerEditorScreen(marker: null, isNew: true),
                   ),
                 );
               }
@@ -147,11 +159,13 @@ class _ManageMarkersScreenState extends State<ManageMarkersScreen> {
 
       return ListView.separated(
         itemCount: markers.length + 1,
-        separatorBuilder: (_, __) => Divider(height: 1, color: scheme.outline.withValues(alpha: 0.12)),
+        separatorBuilder: (_, __) =>
+            Divider(height: 1, color: scheme.outline.withValues(alpha: 0.12)),
         itemBuilder: (context, index) {
           if (index == 0) {
             return Padding(
-              padding: const EdgeInsets.fromLTRB(KubusSpacing.md, KubusSpacing.md, KubusSpacing.md, KubusSpacing.md),
+              padding: const EdgeInsets.fromLTRB(KubusSpacing.md,
+                  KubusSpacing.md, KubusSpacing.md, KubusSpacing.md),
               child: Row(
                 children: [
                   Expanded(
@@ -165,7 +179,9 @@ class _ManageMarkersScreenState extends State<ManageMarkersScreen> {
                   const SizedBox(width: KubusSpacing.md),
                   IconButton(
                     tooltip: l10n.manageMarkersRefreshTooltip,
-                    onPressed: provider.isLoading ? null : () => unawaited(provider.refresh(force: true)),
+                    onPressed: provider.isLoading
+                        ? null
+                        : () => unawaited(provider.refresh(force: true)),
                     icon: const Icon(Icons.refresh),
                   ),
                   const SizedBox(width: KubusSpacing.xs),
@@ -176,7 +192,8 @@ class _ManageMarkersScreenState extends State<ManageMarkersScreen> {
                       } else {
                         Navigator.of(context).push(
                           MaterialPageRoute(
-                            builder: (_) => const MarkerEditorScreen(marker: null, isNew: true),
+                            builder: (_) => const MarkerEditorScreen(
+                                marker: null, isNew: true),
                           ),
                         );
                       }
@@ -192,10 +209,13 @@ class _ManageMarkersScreenState extends State<ManageMarkersScreen> {
           final marker = markers[index - 1];
           final statusColor = _statusColor(scheme, marker);
           final updated = marker.updatedAt ?? marker.createdAt;
-          final updatedLabel = MaterialLocalizations.of(context).formatShortDate(updated);
+          final updatedLabel =
+              MaterialLocalizations.of(context).formatShortDate(updated);
           final selected = marker.id == _selectedMarkerId && !_creatingNew;
-          final subjectLabel =
-              (marker.resolvedExhibitionSummary?.title ?? marker.subjectTitle ?? '').trim();
+          final subjectLabel = (marker.resolvedExhibitionSummary?.title ??
+                  marker.subjectTitle ??
+                  '')
+              .trim();
 
           return ListTile(
             selected: selected,
@@ -256,7 +276,8 @@ class _ManageMarkersScreenState extends State<ManageMarkersScreen> {
               } else {
                 Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) => MarkerEditorScreen(marker: marker, isNew: false),
+                    builder: (_) =>
+                        MarkerEditorScreen(marker: marker, isNew: false),
                   ),
                 );
               }
@@ -308,7 +329,8 @@ class _ManageMarkersScreenState extends State<ManageMarkersScreen> {
                 flex: 5,
                 child: buildList(),
               ),
-              VerticalDivider(width: 1, color: scheme.outline.withValues(alpha: 0.12)),
+              VerticalDivider(
+                  width: 1, color: scheme.outline.withValues(alpha: 0.12)),
               Flexible(
                 flex: 4,
                 child: buildEditorPane(),

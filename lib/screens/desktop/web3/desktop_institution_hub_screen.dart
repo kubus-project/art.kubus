@@ -17,6 +17,7 @@ import '../../../models/dao.dart';
 import '../../../models/promotion.dart';
 import '../../../models/user_persona.dart';
 import '../../../utils/app_animations.dart';
+import '../../../utils/app_color_utils.dart';
 import '../../../utils/dao_role_verification.dart';
 import '../../../utils/creator_shell_navigation.dart';
 import '../../../utils/wallet_utils.dart';
@@ -417,7 +418,7 @@ class _DesktopInstitutionHubScreenState
                   if (showExhibitions)
                     FilledButton.tonalIcon(
                       onPressed: _openExhibitionWorkspace,
-                      icon: const Icon(Icons.museum_outlined),
+                      icon: const Icon(AppColorUtils.exhibitionIcon),
                       label: Text(l10n.exhibitionCreatorAppBarTitle),
                     ),
                 ],
@@ -458,7 +459,7 @@ class _DesktopInstitutionHubScreenState
               KubusActionSidebarTile(
                 title: l10n.desktopInstitutionMyExhibitionsTitle,
                 subtitle: l10n.desktopInstitutionMyExhibitionsSubtitle,
-                icon: Icons.collections_bookmark_outlined,
+                icon: AppColorUtils.exhibitionIcon,
                 semantic: KubusActionSemantic.view,
                 onTap: () {
                   DesktopShellScope.of(context)?.pushScreen(

@@ -12,11 +12,11 @@ import 'package:flutter/material.dart';
 /// ```
 /// python -m fontTools.subset \
 ///   "assets/fonts/MaterialSymbolsOutlined-VariableFont_FILL,GRAD,opsz,wght.ttf" \
-///   --unicodes=E3F5,NEW_CODEPOINT \
+///   --unicodes=EFCB,F345,NEW_CODEPOINT \
 ///   --output-file="assets/fonts/MaterialSymbolsOutlined-subset.ttf"
 /// ```
 ///
-/// Used codepoints: U+E3F5 (wallArt).
+/// Used codepoints: U+EFCB (wallArt), U+F345 (fragrance).
 class CustomIcons {
   CustomIcons._(); // This class is not meant to be instantiated.
 
@@ -24,9 +24,16 @@ class CustomIcons {
   static const String _fontFamily = 'Material Symbols Outlined';
 
   /// Wall Art icon (exhibition marker) from Material Symbols Outlined
-  /// Unicode codepoint: 0xE3F5
+  /// Unicode codepoint: 0xEFCB
   static const IconData wallArt = IconData(
-    0xE3F5,
+    0xEFCB,
+    fontFamily: _fontFamily,
+  );
+
+  /// Fragrance icon (street/public art marker) from Material Symbols Outlined
+  /// Unicode codepoint: 0xF345
+  static const IconData fragrance = IconData(
+    0xF345,
     fontFamily: _fontFamily,
   );
 }

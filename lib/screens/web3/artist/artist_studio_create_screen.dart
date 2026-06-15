@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 
 import '../../../utils/design_tokens.dart';
+import '../../../utils/app_color_utils.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/creator_shell_navigation.dart';
 import '../../../widgets/glass_components.dart';
@@ -76,7 +77,9 @@ class ArtistStudioCreateScreen extends StatelessWidget {
               },
             );
             final collectionId = createdId;
-            if (collectionId != null && collectionId.isNotEmpty && context.mounted) {
+            if (collectionId != null &&
+                collectionId.isNotEmpty &&
+                context.mounted) {
               await CreatorShellNavigation.openCollectionDetailWorkspace(
                 context,
                 collectionId: collectionId,
@@ -88,14 +91,15 @@ class ArtistStudioCreateScreen extends StatelessWidget {
         _CreateOptionCard(
           title: l10n.exhibitionCreatorAppBarTitle,
           subtitle: l10n.exhibitionCreatorBasicsTitle,
-          icon: Icons.event_available_outlined,
+          icon: AppColorUtils.exhibitionIcon,
           accent: studioAccent,
           onTap: () async {
             if (onOpenExhibitionCreator != null) {
               onOpenExhibitionCreator!();
               return;
             }
-            await CreatorShellNavigation.openExhibitionCreatorWorkspace(context);
+            await CreatorShellNavigation.openExhibitionCreatorWorkspace(
+                context);
           },
         ),
         const SizedBox(height: 12),

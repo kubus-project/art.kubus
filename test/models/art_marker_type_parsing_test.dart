@@ -36,6 +36,22 @@ void main() {
     expect(institution.type, ArtMarkerType.institution);
   });
 
+  test('parses exhibition marker aliases as exhibition', () {
+    const aliases = <String>[
+      'exhibition',
+      'exhibitions',
+      'show',
+      'art show',
+      'razstava',
+      'razstave',
+    ];
+
+    for (final alias in aliases) {
+      final marker = parse(<String, dynamic>{'markerType': alias});
+      expect(marker.type, ArtMarkerType.exhibition, reason: alias);
+    }
+  });
+
   test('uses metadata subjectType when markerType/type are transport values',
       () {
     final marker = parse(<String, dynamic>{

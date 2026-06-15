@@ -10,6 +10,7 @@ enum ArtMarkerType {
   streetArt,
   institution,
   event,
+  exhibition,
   residency,
   drop,
   experience,
@@ -119,7 +120,8 @@ class ArtMarker {
     if (metaScoreRaw is num) return metaScoreRaw.toDouble();
     final views = viewCount.toDouble();
     final interactions = interactionCount.toDouble();
-    final boost = metadata?["boost"] is num ? (metadata?["boost"] as num).toDouble() : 0;
+    final boost =
+        metadata?["boost"] is num ? (metadata?["boost"] as num).toDouble() : 0;
     return (views * 0.35) + (interactions * 0.65) + boost;
   }
 
@@ -196,7 +198,8 @@ class ArtMarker {
       'enablePhysics': enablePhysics,
       'enableInteraction': enableInteraction,
       'metadata': metadata,
-      'exhibitionSummaries': exhibitionSummaries.map((e) => e.toJson()).toList(growable: false),
+      'exhibitionSummaries':
+          exhibitionSummaries.map((e) => e.toJson()).toList(growable: false),
       'tags': tags,
       'category': category,
       'createdAt': createdAt.toIso8601String(),
@@ -216,7 +219,7 @@ class ArtMarker {
   factory ArtMarker.fromMap(Map<String, dynamic> map) {
     final metadata = _normalizeMetadata(map['metadata']);
     final exhibitionSummaries = _parseExhibitionSummaries(map, metadata);
-    final markerType = _parseMarkerType(
+    final markerType = parseMarkerType(
       map['markerType'] ?? map['type'] ?? map['category'],
       metadata,
     );
@@ -249,7 +252,8 @@ class ArtMarker {
       metadata: metadata,
       exhibitionSummaries: exhibitionSummaries,
       tags: List<String>.from(map['tags'] ?? const []),
-      createdAt: DateTime.tryParse(map['createdAt']?.toString() ?? '') ?? DateTime.now(),
+      createdAt: DateTime.tryParse(map['createdAt']?.toString() ?? '') ??
+          DateTime.now(),
       updatedAt: updatedAt,
       createdBy: map['createdBy']?.toString() ?? 'system',
       viewCount: _parseInt(map['viewCount'], 0),
@@ -344,22 +348,30 @@ class ArtMarker {
     return 'ArtMarker(id: $id, type: ${type.name}, name: $name)';
   }
 
-  static ArtMarkerType _parseMarkerType(dynamic raw, Map<String, dynamic>? metadata) {
+  static ArtMarkerType parseMarkerType(
+    dynamic raw, [
+    Map<String, dynamic>? metadata,
+  ]) {
+    return _parseMarkerType(raw, metadata);
+  }
+
+  static ArtMarkerType _parseMarkerType(
+      dynamic raw, Map<String, dynamic>? metadata) {
     final metaType = metadata?['subjectType'] ?? metadata?['subject_type'];
     final metaCategory =
         metadata?['subjectCategory'] ?? metadata?['subject_category'];
     final metaLabel = metadata?['subjectLabel'] ?? metadata?['subject_label'];
 
-    String normalized = raw?.toString().toLowerCase() ?? '';
+    String normalized = raw?.toString().trim().toLowerCase() ?? '';
     if ((normalized.isEmpty || normalized == 'geolocation') &&
         metaType is String) {
-      normalized = metaType.toLowerCase();
+      normalized = metaType.trim().toLowerCase();
     }
     if (metaCategory is String && normalized.isEmpty) {
-      normalized = metaCategory.toLowerCase();
+      normalized = metaCategory.trim().toLowerCase();
     }
     if (metaLabel is String && normalized.isEmpty) {
-      normalized = metaLabel.toLowerCase();
+      normalized = metaLabel.trim().toLowerCase();
     }
 
     if (normalized.contains('institution') ||
@@ -376,6 +388,9 @@ class ArtMarker {
         normalized.contains('public-art') ||
         normalized.contains('public art')) {
       return ArtMarkerType.streetArt;
+    }
+    if (_matchesExhibitionType(normalized)) {
+      return ArtMarkerType.exhibition;
     }
     if (normalized.contains('event')) {
       return ArtMarkerType.event;
@@ -403,6 +418,17 @@ class ArtMarker {
       return ArtMarkerType.artwork;
     }
     return ArtMarkerType.other;
+  }
+
+  static bool _matchesExhibitionType(String value) {
+    if (value.isEmpty) return false;
+    final normalized = value.replaceAll(RegExp(r'\s+'), ' ').trim();
+    return normalized.contains('exhibition') ||
+        normalized.contains('exhibitions') ||
+        normalized.contains('razstava') ||
+        normalized.contains('razstave') ||
+        _containsTypeToken(normalized, 'show') ||
+        normalized.contains('art show');
   }
 
   static double _parseDouble(dynamic value, double fallback) {
@@ -561,18 +587,24 @@ class ArtMarker {
     if (primary != null && primary.id.trim().isNotEmpty) return primary;
 
     final subjectTypeValue = subjectType?.toLowerCase();
-    final explicitExhibitionId = _metadataString(const ['exhibitionId', 'exhibition_id']);
+    final explicitExhibitionId =
+        _metadataString(const ['exhibitionId', 'exhibition_id']);
     final allowFallback = subjectTypeValue == null || subjectTypeValue.isEmpty;
-    final isExhibition = (subjectTypeValue != null && subjectTypeValue.contains('exhibition')) ||
-        (allowFallback && explicitExhibitionId != null && explicitExhibitionId.isNotEmpty);
+    final isExhibition =
+        (subjectTypeValue != null && subjectTypeValue.contains('exhibition')) ||
+            (allowFallback &&
+                explicitExhibitionId != null &&
+                explicitExhibitionId.isNotEmpty);
     if (!isExhibition) return null;
 
-    final resolvedId = (subjectTypeValue != null && subjectTypeValue.contains('exhibition'))
-        ? (subjectId ?? explicitExhibitionId)
-        : explicitExhibitionId;
+    final resolvedId =
+        (subjectTypeValue != null && subjectTypeValue.contains('exhibition'))
+            ? (subjectId ?? explicitExhibitionId)
+            : explicitExhibitionId;
     if (resolvedId == null || resolvedId.isEmpty) return null;
 
-    final title = subjectTitle ?? _metadataString(const ['exhibitionTitle', 'exhibition_title']);
+    final title = subjectTitle ??
+        _metadataString(const ['exhibitionTitle', 'exhibition_title']);
     return ExhibitionSummaryDto(
       id: resolvedId,
       title: (title != null && title.isNotEmpty) ? title : null,
@@ -585,6 +617,7 @@ class ArtMarker {
   }
 
   bool get isExhibitionMarker {
+    if (type == ArtMarkerType.exhibition) return true;
     if (isExhibitionSubject) return true;
     final resolved = resolvedExhibitionSummary;
     if (resolved == null || resolved.id.trim().isEmpty) return false;
@@ -609,7 +642,8 @@ class ExhibitionSummaryDto {
 
   factory ExhibitionSummaryDto.fromJson(Map<String, dynamic> json) {
     return ExhibitionSummaryDto(
-      id: (json['id'] ?? json['exhibitionId'] ?? json['exhibition_id'] ?? '').toString(),
+      id: (json['id'] ?? json['exhibitionId'] ?? json['exhibition_id'] ?? '')
+          .toString(),
       title: (json['title'] ?? json['name'] ?? json['label'])?.toString(),
     );
   }
@@ -637,7 +671,7 @@ List<ExhibitionSummaryDto> _parseExhibitionSummaries(
   if (raw is List) {
     return raw
         .whereType<Map>()
-      .map((e) => Map<String, dynamic>.from(e))
+        .map((e) => Map<String, dynamic>.from(e))
         .map(ExhibitionSummaryDto.fromJson)
         .where((e) => e.id.trim().isNotEmpty)
         .toList(growable: false);
@@ -650,24 +684,32 @@ List<ExhibitionSummaryDto> _parseExhibitionSummaries(
     return <ExhibitionSummaryDto>[dto];
   }
 
-  final subjectType =
-      (normalizedMetadata?['subjectType'] ?? normalizedMetadata?['subject_type'] ?? map['subjectType'] ?? map['subject_type'])
-          ?.toString()
-          .toLowerCase();
+  final subjectType = (normalizedMetadata?['subjectType'] ??
+          normalizedMetadata?['subject_type'] ??
+          map['subjectType'] ??
+          map['subject_type'])
+      ?.toString()
+      .toLowerCase();
   if (subjectType != null && subjectType.contains('exhibition')) {
-    final subjectId =
-        (normalizedMetadata?['subjectId'] ?? normalizedMetadata?['subject_id'] ?? map['subjectId'] ?? map['subject_id'])
-            ?.toString()
-            .trim();
+    final subjectId = (normalizedMetadata?['subjectId'] ??
+            normalizedMetadata?['subject_id'] ??
+            map['subjectId'] ??
+            map['subject_id'])
+        ?.toString()
+        .trim();
     if (subjectId != null && subjectId.isNotEmpty) {
-      final subjectTitle =
-          (normalizedMetadata?['subjectTitle'] ?? normalizedMetadata?['subject_title'] ?? map['subjectTitle'] ?? map['subject_title'])
-              ?.toString()
-              .trim();
+      final subjectTitle = (normalizedMetadata?['subjectTitle'] ??
+              normalizedMetadata?['subject_title'] ??
+              map['subjectTitle'] ??
+              map['subject_title'])
+          ?.toString()
+          .trim();
       return <ExhibitionSummaryDto>[
         ExhibitionSummaryDto(
           id: subjectId,
-          title: subjectTitle != null && subjectTitle.isNotEmpty ? subjectTitle : null,
+          title: subjectTitle != null && subjectTitle.isNotEmpty
+              ? subjectTitle
+              : null,
         ),
       ];
     }

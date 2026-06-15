@@ -9,6 +9,7 @@ import '../../providers/themeprovider.dart';
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
 import '../../utils/media_url_resolver.dart';
+import '../../utils/app_color_utils.dart';
 import '../../utils/creator_shell_navigation.dart';
 import '../../utils/design_tokens.dart';
 import '../../widgets/common/subject_options_sheet.dart';
@@ -305,7 +306,7 @@ class _ExhibitionListScreenState extends State<ExhibitionListScreen>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.collections_bookmark_outlined,
+            Icon(AppColorUtils.exhibitionIcon,
                 size: 48, color: scheme.onSurface.withValues(alpha: 0.4)),
             const SizedBox(height: 16),
             Text(
@@ -414,7 +415,7 @@ class _ExhibitionListScreenState extends State<ExhibitionListScreen>
                 borderRadius: BorderRadius.circular(KubusRadius.md),
               ),
               child: Icon(
-                Icons.collections_bookmark,
+                AppColorUtils.exhibitionIcon,
                 color: themeProvider.accentColor,
                 size: 22,
               ),
@@ -503,7 +504,7 @@ class _MyExhibitionsTab extends StatelessWidget {
 
     if (myExhibitions.isEmpty) {
       return _EmptyExhibitionsState(
-        icon: Icons.collections_bookmark_outlined,
+        icon: AppColorUtils.exhibitionIcon,
         title: l10n.exhibitionListEmptyMineTitle,
         subtitle: canCreate
             ? l10n.exhibitionListEmptyMineDescriptionCanCreate
@@ -727,13 +728,13 @@ class _ExhibitionCard extends StatelessWidget {
                               coverUrl,
                               fit: BoxFit.cover,
                               errorBuilder: (_, __, ___) => Icon(
-                                Icons.collections_bookmark,
+                                AppColorUtils.exhibitionIcon,
                                 color: themeProvider.accentColor,
                               ),
                             ),
                           )
                         : Icon(
-                            Icons.collections_bookmark,
+                            AppColorUtils.exhibitionIcon,
                             color: themeProvider.accentColor,
                             size: 28,
                           ),

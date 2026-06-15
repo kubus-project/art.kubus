@@ -15,6 +15,7 @@ import '../../../services/backend_api_service.dart';
 import '../../../services/share/share_service.dart';
 import '../../../services/share/share_types.dart';
 import '../../../utils/artwork_navigation.dart';
+import '../../../utils/app_color_utils.dart';
 import '../../../utils/media_url_resolver.dart';
 import '../../../utils/profile_showcase_normalizer.dart';
 import '../../../community/community_interactions.dart';
@@ -1199,7 +1200,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         else if (_artistEvents.isEmpty)
           DesktopCard(
             child: EmptyStateCard(
-              icon: Icons.museum_outlined,
+              icon: AppColorUtils.exhibitionIcon,
               title: l10n.desktopProfileNoExhibitionsTitle,
               description: l10n.desktopProfileNoExhibitionsDescription,
             ),
@@ -1498,7 +1499,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                 _buildPerformanceStatCard(
                   l10n.profilePerformancePublicStreetArtAddedTitle,
                   publicStreetArtAddedLabel,
-                  Icons.streetview,
+                  AppColorUtils.streetArtIcon,
                 ),
               ],
             ),
@@ -1943,7 +1944,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         codePoint == Icons.person_add_outlined.codePoint) {
       return roles.statTeal;
     }
-    if (codePoint == Icons.streetview.codePoint) {
+    if (codePoint == AppColorUtils.streetArtIcon.codePoint) {
       return roles.statAmber;
     }
     if (codePoint == Icons.token.codePoint ||

@@ -15,6 +15,7 @@ import '../../services/backend_api_service.dart'
     show BackendApiRequestException;
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
+import '../../utils/app_color_utils.dart';
 import '../../utils/creator_shell_navigation.dart';
 import '../../utils/map_navigation.dart';
 import '../../utils/media_url_resolver.dart';
@@ -593,7 +594,7 @@ class _EventDetailsCard extends StatelessWidget {
             compact: true,
             items: [
               DetailContextItem(
-                icon: Icons.collections_outlined,
+                icon: AppColorUtils.exhibitionIcon,
                 value: '$exhibitionsCount',
                 label: l10n.eventDetailLinkedExhibitionsLabel,
               ),
@@ -929,12 +930,12 @@ class _LinkedExhibitionCard extends StatelessWidget {
                           coverUrl,
                           fit: BoxFit.cover,
                           errorBuilder: (_, __, ___) => Icon(
-                            Icons.museum_outlined,
+                            AppColorUtils.exhibitionIcon,
                             color: scheme.onSurface.withValues(alpha: 0.45),
                           ),
                         )
                       : Icon(
-                          Icons.museum_outlined,
+                          AppColorUtils.exhibitionIcon,
                           color: scheme.onSurface.withValues(alpha: 0.45),
                         ),
                 ),
@@ -979,7 +980,7 @@ class _LinkedExhibitionCard extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: TextButton.icon(
               onPressed: onOpen,
-              icon: const Icon(Icons.museum_outlined, size: 18),
+              icon: const Icon(AppColorUtils.exhibitionIcon, size: 18),
               label: Text(l10n.eventDetailOpenExhibitionCta),
             ),
           ),

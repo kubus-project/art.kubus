@@ -14,6 +14,7 @@ import '../../../config/config.dart';
 import '../../../models/dao.dart';
 import '../../../models/promotion.dart';
 import '../../../utils/app_animations.dart';
+import '../../../utils/app_color_utils.dart';
 import '../../../utils/dao_role_verification.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/design_tokens.dart';
@@ -394,7 +395,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                   if (showExhibitions)
                     FilledButton.tonalIcon(
                       onPressed: _openExhibitionWorkspace,
-                      icon: const Icon(Icons.museum_outlined),
+                      icon: const Icon(AppColorUtils.exhibitionIcon),
                       label: Text(l10n.exhibitionCreatorAppBarTitle),
                     ),
                 ],
@@ -437,7 +438,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                 title: l10n.desktopArtistStudioQuickActionExhibitionsTitle,
                 subtitle:
                     l10n.desktopArtistStudioQuickActionExhibitionsSubtitle,
-                icon: Icons.collections_bookmark_outlined,
+                icon: AppColorUtils.exhibitionIcon,
                 semantic: KubusActionSemantic.view,
                 onTap: () {
                   DesktopShellScope.of(context)?.pushScreen(

@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../utils/app_color_utils.dart';
 
 enum KubusSearchResultKind {
   artwork,
   profile,
   institution,
   event,
+  exhibition,
   marker,
   post,
   screen,
@@ -51,7 +53,8 @@ class KubusSearchResult {
     return null;
   }
 
-  String? get walletSeed => dataString(const <String>[
+  String? get walletSeed =>
+      dataString(const <String>[
         'wallet',
         'walletAddress',
         'wallet_address',
@@ -62,13 +65,15 @@ class KubusSearchResult {
       ]) ??
       (kind == KubusSearchResultKind.profile ? id : null);
 
-  String? get markerId => dataString(const <String>[
+  String? get markerId =>
+      dataString(const <String>[
         'markerId',
         'marker_id',
       ]) ??
       (kind == KubusSearchResultKind.marker ? id : null);
 
-  String? get artworkId => dataString(const <String>[
+  String? get artworkId =>
+      dataString(const <String>[
         'artworkId',
         'artwork_id',
         'linkedArtworkId',
@@ -76,18 +81,21 @@ class KubusSearchResult {
       ]) ??
       (kind == KubusSearchResultKind.artwork ? id : null);
 
-  String? get subjectId => dataString(const <String>[
+  String? get subjectId =>
+      dataString(const <String>[
         'subjectId',
         'subject_id',
       ]) ??
       switch (kind) {
         KubusSearchResultKind.institution => id,
         KubusSearchResultKind.event => id,
+        KubusSearchResultKind.exhibition => id,
         KubusSearchResultKind.artwork => artworkId,
         _ => null,
       };
 
-  String? get subjectType => dataString(const <String>[
+  String? get subjectType =>
+      dataString(const <String>[
         'subjectType',
         'subject_type',
       ]) ??
@@ -95,6 +103,7 @@ class KubusSearchResult {
         KubusSearchResultKind.artwork => 'artwork',
         KubusSearchResultKind.institution => 'institution',
         KubusSearchResultKind.event => 'event',
+        KubusSearchResultKind.exhibition => 'exhibition',
         _ => null,
       };
 
@@ -164,6 +173,8 @@ class KubusSearchResult {
         return Icons.museum_outlined;
       case KubusSearchResultKind.event:
         return Icons.event_available;
+      case KubusSearchResultKind.exhibition:
+        return AppColorUtils.exhibitionIcon;
       case KubusSearchResultKind.marker:
         return Icons.location_on_outlined;
       case KubusSearchResultKind.post:
@@ -179,6 +190,7 @@ class KubusSearchResult {
       KubusSearchResultKind.profile => l10n.navigationScreenProfile,
       KubusSearchResultKind.institution => l10n.commonInstitution,
       KubusSearchResultKind.event => l10n.mapMarkerSubjectTypeEvent,
+      KubusSearchResultKind.exhibition => l10n.commonExhibition,
       KubusSearchResultKind.marker => l10n.mapMarkerLayerOther,
       KubusSearchResultKind.post => l10n.commonPost,
       KubusSearchResultKind.screen => l10n.communitySearchTypeScreens,
@@ -246,6 +258,8 @@ extension KubusSearchResultKindX on KubusSearchResultKind {
         return 'institution';
       case KubusSearchResultKind.event:
         return 'event';
+      case KubusSearchResultKind.exhibition:
+        return 'exhibition';
       case KubusSearchResultKind.marker:
         return 'marker';
       case KubusSearchResultKind.post:
@@ -265,8 +279,14 @@ extension KubusSearchResultKindX on KubusSearchResultKind {
       case 'institution':
         return KubusSearchResultKind.institution;
       case 'event':
-      case 'exhibition':
         return KubusSearchResultKind.event;
+      case 'exhibition':
+      case 'exhibitions':
+      case 'show':
+      case 'art show':
+      case 'razstava':
+      case 'razstave':
+        return KubusSearchResultKind.exhibition;
       case 'marker':
         return KubusSearchResultKind.marker;
       case 'post':

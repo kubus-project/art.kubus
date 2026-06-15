@@ -12,6 +12,7 @@ import '../../services/block_list_service.dart';
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
 import '../../utils/design_tokens.dart';
+import '../../utils/app_color_utils.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../utils/profile_showcase_normalizer.dart';
 import '../../community/community_interactions.dart';
@@ -876,7 +877,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     if (icon == Icons.people_outline || icon == Icons.person_add_alt_outlined) {
       return scheme.tertiary;
     }
-    if (icon == Icons.palette_outlined || icon == Icons.streetview) {
+    if (icon == Icons.palette_outlined || icon == AppColorUtils.streetArtIcon) {
       return scheme.primary;
     }
     return scheme.secondary;
@@ -1051,7 +1052,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     return _buildProfileStatCard(
       title: l10n.profilePerformancePublicStreetArtAddedTitle,
       value: _formatCount(_publicStreetArtAddedCount),
-      icon: Icons.streetview,
+      icon: AppColorUtils.streetArtIcon,
     );
   }
 

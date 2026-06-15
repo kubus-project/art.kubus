@@ -177,7 +177,8 @@ class SearchService {
     final kinds = config.effectiveKinds;
 
     if (kinds.contains(KubusSearchResultKind.artwork)) {
-      results.addAll(_localArtworkResults(normalized, snapshot.artworkProvider));
+      results
+          .addAll(_localArtworkResults(normalized, snapshot.artworkProvider));
     }
     if (kinds.contains(KubusSearchResultKind.institution)) {
       results.addAll(
@@ -185,7 +186,8 @@ class SearchService {
       );
     }
     if (kinds.contains(KubusSearchResultKind.event)) {
-      results.addAll(_localEventResults(normalized, snapshot.institutionProvider));
+      results
+          .addAll(_localEventResults(normalized, snapshot.institutionProvider));
     }
     if (kinds.contains(KubusSearchResultKind.screen)) {
       results.addAll(_localScreenResults(normalized, snapshot.screenRecords));
@@ -193,7 +195,8 @@ class SearchService {
     if (kinds.contains(KubusSearchResultKind.profile) &&
         (config.scope == KubusSearchScope.community ||
             config.scope == KubusSearchScope.home)) {
-      results.addAll(_localProfileResults(normalized, snapshot.communityProvider));
+      results
+          .addAll(_localProfileResults(normalized, snapshot.communityProvider));
     }
     if (kinds.contains(KubusSearchResultKind.post) &&
         config.scope == KubusSearchScope.community) {
@@ -330,7 +333,8 @@ class SearchService {
   ) {
     final results = <KubusSearchResult>[];
     final seen = <String>{};
-    for (final post in communityProvider?.artFeedPosts ?? const <CommunityPost>[]) {
+    for (final post
+        in communityProvider?.artFeedPosts ?? const <CommunityPost>[]) {
       final authorName = post.authorName.trim();
       final authorUsername = post.authorUsername?.trim();
       final authorWallet = WalletUtils.canonical(post.authorWallet);
@@ -358,7 +362,8 @@ class SearchService {
             'authorWallet': authorWallet,
             'authorUsername': authorUsername,
             'wallet': authorWallet,
-            if (post.authorAvatar != null && post.authorAvatar!.trim().isNotEmpty)
+            if (post.authorAvatar != null &&
+                post.authorAvatar!.trim().isNotEmpty)
               'avatarUrl': post.authorAvatar!.trim(),
           },
         ),
@@ -371,7 +376,8 @@ class SearchService {
     String query,
     CommunityHubProvider? communityProvider,
   ) {
-    final normalizedTagQuery = query.startsWith('#') ? query.substring(1) : query;
+    final normalizedTagQuery =
+        query.startsWith('#') ? query.substring(1) : query;
     final posts = communityProvider?.artFeedPosts ?? const <CommunityPost>[];
     return posts
         .where(
@@ -400,6 +406,7 @@ class SearchService {
           case KubusSearchResultKind.institution:
             return result.position != null;
           case KubusSearchResultKind.event:
+          case KubusSearchResultKind.exhibition:
           case KubusSearchResultKind.marker:
             return result.position != null;
           case KubusSearchResultKind.post:
@@ -411,6 +418,7 @@ class SearchService {
           case KubusSearchResultKind.institution:
             return result.position != null;
           case KubusSearchResultKind.event:
+          case KubusSearchResultKind.exhibition:
           case KubusSearchResultKind.marker:
             return result.position != null;
           case KubusSearchResultKind.artwork:
@@ -476,6 +484,7 @@ class SearchService {
           KubusSearchResultKind.profile,
           KubusSearchResultKind.institution,
           KubusSearchResultKind.event,
+          KubusSearchResultKind.exhibition,
           KubusSearchResultKind.marker,
           KubusSearchResultKind.post,
           KubusSearchResultKind.screen,
@@ -487,6 +496,7 @@ class SearchService {
           KubusSearchResultKind.institution,
           KubusSearchResultKind.screen,
           KubusSearchResultKind.event,
+          KubusSearchResultKind.exhibition,
           KubusSearchResultKind.marker,
         ],
       KubusSearchScope.map => const [
@@ -494,6 +504,7 @@ class SearchService {
           KubusSearchResultKind.profile,
           KubusSearchResultKind.institution,
           KubusSearchResultKind.event,
+          KubusSearchResultKind.exhibition,
           KubusSearchResultKind.marker,
           KubusSearchResultKind.post,
           KubusSearchResultKind.screen,
@@ -576,7 +587,12 @@ class SearchService {
               _stringValue(map['artwork'], const ['imageUrl', 'image_url']),
         if ((_stringValue(
                   map,
-                  const ['authorAvatar', 'author_avatar', 'avatarUrl', 'avatar_url'],
+                  const [
+                    'authorAvatar',
+                    'author_avatar',
+                    'avatarUrl',
+                    'avatar_url'
+                  ],
                 ) ??
                 _stringValue(
                   map['author'],
@@ -586,7 +602,12 @@ class SearchService {
             .isNotEmpty)
           'avatarUrl': _stringValue(
                 map,
-                const ['authorAvatar', 'author_avatar', 'avatarUrl', 'avatar_url'],
+                const [
+                  'authorAvatar',
+                  'author_avatar',
+                  'avatarUrl',
+                  'avatar_url'
+                ],
               ) ??
               _stringValue(
                 map['author'],
@@ -594,14 +615,25 @@ class SearchService {
               ),
         if ((_stringValue(
                   map,
-                  const ['authorWallet', 'author_wallet', 'wallet', 'walletAddress'],
+                  const [
+                    'authorWallet',
+                    'author_wallet',
+                    'wallet',
+                    'walletAddress'
+                  ],
                 ) ??
-                _stringValue(map['author'], const ['wallet', 'walletAddress']) ??
+                _stringValue(
+                    map['author'], const ['wallet', 'walletAddress']) ??
                 '')
             .isNotEmpty)
           'wallet': _stringValue(
                 map,
-                const ['authorWallet', 'author_wallet', 'wallet', 'walletAddress'],
+                const [
+                  'authorWallet',
+                  'author_wallet',
+                  'wallet',
+                  'walletAddress'
+                ],
               ) ??
               _stringValue(map['author'], const ['wallet', 'walletAddress']),
         if (map['mediaUrls'] is List &&

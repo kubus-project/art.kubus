@@ -25,7 +25,9 @@ List<Map<String, dynamic>> normalizeSearchSuggestionsPayload(dynamic raw) {
       final m = raw;
       if (m.containsKey('results')) {
         final results = m['results'];
-        if (results is Map && results.containsKey('profiles') && results['profiles'] is List) {
+        if (results is Map &&
+            results.containsKey('profiles') &&
+            results['profiles'] is List) {
           items = results['profiles'] as List<dynamic>;
         } else if (results is List) {
           items = results;
@@ -91,9 +93,12 @@ List<Map<String, dynamic>> normalizeSearchSuggestionsPayload(dynamic raw) {
             m.containsKey('bio');
 
         if (hasArtworkShape) return 'artwork';
-        if (hasEventShape || hasExhibitionShape) return 'event';
+        if (hasExhibitionShape) return 'exhibition';
+        if (hasEventShape) return 'event';
         if (hasInstitutionShape) return 'institution';
-        if (hasProfileShape || m.containsKey('username') || m.containsKey('handle')) {
+        if (hasProfileShape ||
+            m.containsKey('username') ||
+            m.containsKey('handle')) {
           return 'profile';
         }
 
@@ -108,9 +113,12 @@ List<Map<String, dynamic>> normalizeSearchSuggestionsPayload(dynamic raw) {
               m['display_name'] ??
               m['name'] ??
               m['label'] ??
-              m['text'])?.toString();
+              m['text'])
+          ?.toString();
       final rawUsername = (m['username'] ?? m['handle'])?.toString();
-      final wallet = (m['wallet'] ?? m['walletAddress'] ?? m['wallet_address'] ?? m['id'])?.toString();
+      final wallet =
+          (m['wallet'] ?? m['walletAddress'] ?? m['wallet_address'] ?? m['id'])
+              ?.toString();
 
       String label;
       String? subtitle;
@@ -138,10 +146,15 @@ List<Map<String, dynamic>> normalizeSearchSuggestionsPayload(dynamic raw) {
                 m['name'] ??
                 '')
             .toString();
-        id = (m['id'] ?? m['walletAddress'] ?? m['wallet'] ?? m['wallet_address'])?.toString();
+        id = (m['id'] ??
+                m['walletAddress'] ??
+                m['wallet'] ??
+                m['wallet_address'])
+            ?.toString();
 
         // Prefer domain-specific subtitles so map search feels relevant.
-        if (m['subtitle'] != null && m['subtitle'].toString().trim().isNotEmpty) {
+        if (m['subtitle'] != null &&
+            m['subtitle'].toString().trim().isNotEmpty) {
           subtitle = m['subtitle'].toString();
         } else if (m['secondaryText'] != null &&
             m['secondaryText'].toString().trim().isNotEmpty) {
@@ -160,10 +173,13 @@ List<Map<String, dynamic>> normalizeSearchSuggestionsPayload(dynamic raw) {
                   m['author_name'])
               ?.toString()
               .trim();
-          if (rawArtist != null && rawArtist.isNotEmpty && !WalletUtils.looksLikeWallet(rawArtist)) {
+          if (rawArtist != null &&
+              rawArtist.isNotEmpty &&
+              !WalletUtils.looksLikeWallet(rawArtist)) {
             subtitle = rawArtist;
           }
-        } else if (type.toLowerCase() == 'event') {
+        } else if (type.toLowerCase() == 'event' ||
+            type.toLowerCase() == 'exhibition') {
           final rawLocation = (m['locationName'] ??
                   m['location_name'] ??
                   m['venue'] ??
@@ -190,8 +206,9 @@ List<Map<String, dynamic>> normalizeSearchSuggestionsPayload(dynamic raw) {
           username = username.trim();
           if (username.startsWith('@')) username = username.substring(1).trim();
         }
-        final hasSafeUsername =
-            username != null && username.isNotEmpty && !WalletUtils.looksLikeWallet(username);
+        final hasSafeUsername = username != null &&
+            username.isNotEmpty &&
+            !WalletUtils.looksLikeWallet(username);
 
         // Only fall back to @username/wallet if we still have no useful subtitle.
         if ((subtitle ?? '').trim().isEmpty) {
@@ -398,21 +415,27 @@ List<Map<String, dynamic>> normalizeSearchSuggestionsPayload(dynamic raw) {
       id = (id?.trim().isNotEmpty ?? false)
           ? id
           : ((type.toLowerCase() == 'artwork')
-                  ? artworkIdCandidate
-                  : (type.toLowerCase() == 'institution')
-                      ? (m['institutionId'] ??
-                              m['institution_id'] ??
-                              institutionMap?['id'] ??
-                              institutionMap?['institutionId'] ??
-                              institutionMap?['institution_id'])
+              ? artworkIdCandidate
+              : (type.toLowerCase() == 'institution')
+                  ? (m['institutionId'] ??
+                          m['institution_id'] ??
+                          institutionMap?['id'] ??
+                          institutionMap?['institutionId'] ??
+                          institutionMap?['institution_id'])
+                      ?.toString()
+                      .trim()
+                  : (type.toLowerCase() == 'event')
+                      ? (m['eventId'] ??
+                              m['event_id'] ??
+                              eventMap?['id'] ??
+                              eventMap?['eventId'] ??
+                              eventMap?['event_id'])
                           ?.toString()
                           .trim()
-                      : (type.toLowerCase() == 'event')
-                          ? (m['eventId'] ??
-                                  m['event_id'] ??
-                                  eventMap?['id'] ??
-                                  eventMap?['eventId'] ??
-                                  eventMap?['event_id'])
+                      : (type.toLowerCase() == 'exhibition')
+                          ? (m['exhibitionId'] ??
+                                  m['exhibition_id'] ??
+                                  m['exhibition'])
                               ?.toString()
                               .trim()
                           : (type.toLowerCase() == 'marker')
@@ -457,5 +480,7 @@ List<Map<String, dynamic>> normalizeSearchSuggestionsPayload(dynamic raw) {
 
 String maskWallet(String wallet) {
   if (wallet.isEmpty) return wallet;
-  return wallet.length > 10 ? '${wallet.substring(0,4)}...${wallet.substring(wallet.length-4)}' : wallet;
+  return wallet.length > 10
+      ? '${wallet.substring(0, 4)}...${wallet.substring(wallet.length - 4)}'
+      : wallet;
 }
