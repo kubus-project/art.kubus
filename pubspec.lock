@@ -204,26 +204,26 @@ packages:
     dependency: "direct main"
     description:
       name: camera
-      sha256: eefad89f262a873f38d21e5eec853461737ea074d7c9ede39f3ceb135d201cab
+      sha256: "034c38cb8014d29698dcae6d20276688a1bf74e6487dfeb274d70ea05d5f7777"
       url: "https://pub.dev"
     source: hosted
-    version: "0.11.3"
+    version: "0.12.0+1"
   camera_android_camerax:
     dependency: transitive
     description:
       name: camera_android_camerax
-      sha256: "1abae0a9853401ee875d7f99e9ec5083335f0aab6edf6eb9a219756143a1b3a8"
+      sha256: e20c1e92ce6797d9ae9b1db1e09a4c1039a04827d0b24985f5da3840b96948ac
       url: "https://pub.dev"
     source: hosted
-    version: "0.6.29"
+    version: "0.7.2+1"
   camera_avfoundation:
     dependency: transitive
     description:
       name: camera_avfoundation
-      sha256: a600b60a7752cc5fa9de476cd0055539d7a3b9d62662f4f446bae49eba2267df
+      sha256: "90e4cc3fde331581a3b2d35d83be41dbb7393af0ab857eb27b732174289cb96d"
       url: "https://pub.dev"
     source: hosted
-    version: "0.9.22+9"
+    version: "0.10.1"
   camera_platform_interface:
     dependency: transitive
     description:
@@ -826,10 +826,10 @@ packages:
     dependency: transitive
     description:
       name: google_sign_in_android
-      sha256: "5ec98ab35387c68c0050495bb211bd88375873723a80fae7c2e9266ea0bdd8bb"
+      sha256: "5b89f1d3c095cc53dfa4f23fbfa88da06dff3fdeb1c86656f30cf8b4ca0e7af8"
       url: "https://pub.dev"
     source: hosted
-    version: "7.2.7"
+    version: "7.2.13"
   google_sign_in_ios:
     dependency: transitive
     description:
@@ -1135,26 +1135,26 @@ packages:
     dependency: "direct main"
     description:
       name: maplibre_gl
-      sha256: d9773555ae4ebab94bbc3ae2176b077cfda486ec729eefe01e1613f164cb8410
+      sha256: "3c383a7e81f0ec5882c377b7d1686047d8bce35b6a3a9798dad8e57a03423e05"
       url: "https://pub.dev"
     source: hosted
-    version: "0.25.0"
+    version: "0.26.1"
   maplibre_gl_platform_interface:
     dependency: transitive
     description:
       name: maplibre_gl_platform_interface
-      sha256: bd7de401dea24dd7e8a6f2fa736ddee7dbbee3e24a9027f0afdd619994702047
+      sha256: "4989f157fdb98ad346b31067cd30aefa7e67d0b235599e37b75608c9284cb459"
       url: "https://pub.dev"
     source: hosted
-    version: "0.25.0"
+    version: "0.26.1"
   maplibre_gl_web:
     dependency: "direct main"
     description:
       name: maplibre_gl_web
-      sha256: af0e48bf96e8dd99f8b958a1953126971eb8a0527b9735441d4f24df3913f5a2
+      sha256: "55a03e586d2007b646f163902388c3c17df536ea44e4b1c381754863201862e6"
       url: "https://pub.dev"
     source: hosted
-    version: "0.25.0"
+    version: "0.26.1"
   matcher:
     dependency: transitive
     description:
@@ -1191,10 +1191,10 @@ packages:
     dependency: "direct main"
     description:
       name: mobile_scanner
-      sha256: c6184bf2913dd66be244108c9c27ca04b01caf726321c44b0e7a7a1e32d41044
+      sha256: c92c26bf2231695b6d3477c8dcf435f51e28f87b1745966b1fe4c47a286171ce
       url: "https://pub.dev"
     source: hosted
-    version: "7.1.4"
+    version: "7.2.0"
   mockito:
     dependency: "direct dev"
     description:
@@ -1247,10 +1247,10 @@ packages:
     dependency: transitive
     description:
       name: package_info_plus
-      sha256: f69da0d3189a4b4ceaeb1a3defb0f329b3b352517f52bed4290f83d4f06bc08d
+      sha256: "468c26b4254ab01979fa5e4a98cb343ea3631b9acee6f21028997419a80e1a20"
       url: "https://pub.dev"
     source: hosted
-    version: "9.0.0"
+    version: "9.0.1"
   package_info_plus_platform_interface:
     dependency: transitive
     description:
@@ -1551,10 +1551,10 @@ packages:
     dependency: "direct main"
     description:
       name: share_plus
-      sha256: "14c8860d4de93d3a7e53af51bff479598c4e999605290756bbbe45cf65b37840"
+      sha256: "223873d106614442ea6f20db5a038685cc5b32a2fba81cdecaefbbae0523f7fa"
       url: "https://pub.dev"
     source: hosted
-    version: "12.0.1"
+    version: "12.0.2"
   share_plus_platform_interface:
     dependency: transitive
     description:
@@ -1567,18 +1567,18 @@ packages:
     dependency: "direct main"
     description:
       name: shared_preferences
-      sha256: "2939ae520c9024cb197fc20dee269cd8cdbf564c8b5746374ec6cacdc5169e64"
+      sha256: c3025c5534b01739267eb7d76959bbc25a6d10f6988e1c2a3036940133dd10bf
       url: "https://pub.dev"
     source: hosted
-    version: "2.5.4"
+    version: "2.5.5"
   shared_preferences_android:
     dependency: transitive
     description:
       name: shared_preferences_android
-      sha256: cbc40be9be1c5af4dab4d6e0de4d5d3729e6f3d65b89d21e1815d57705644a6f
+      sha256: "93ae5884a9df5d3bb696825bceb3a17590754548b5d740eba51500afc8d088f5"
       url: "https://pub.dev"
     source: hosted
-    version: "2.4.20"
+    version: "2.4.26"
   shared_preferences_foundation:
     dependency: transitive
     description:
@@ -1996,10 +1996,10 @@ packages:
     dependency: transitive
     description:
       name: webview_flutter_android
-      sha256: f560f57d0f529c1dcdaf4edc3a3217b099560622f9f4a10b6bdbb566553c61ea
+      sha256: a97db7a44f8e71af2f3971c45550a08cce1fb60059c1b8e534251e6cfb753490
       url: "https://pub.dev"
     source: hosted
-    version: "4.11.0"
+    version: "4.13.0"
   webview_flutter_platform_interface:
     dependency: transitive
     description:
@@ -2057,5 +2057,5 @@ packages:
     source: hosted
     version: "3.1.3"
 sdks:
-  dart: ">=3.10.0 <4.0.0"
-  flutter: ">=3.38.1"
+  dart: ">=3.12.0 <4.0.0"
+  flutter: ">=3.44.0"

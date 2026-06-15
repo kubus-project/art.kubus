@@ -1,19 +1,6 @@
 group 'com.difrancescogianmarco.arcore_flutter_plugin'
 version '1.0-SNAPSHOT'
 
-buildscript {
-    ext.kotlin_version = '1.7.10'
-    repositories {
-        google()
-        mavenCentral()
-    }
-
-    dependencies {
-        classpath 'com.android.tools.build:gradle:7.3.0'
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-    }
-}
-
 rootProject.allprojects {
     repositories {
         google()
@@ -22,7 +9,6 @@ rootProject.allprojects {
 }
 
 apply plugin: 'com.android.library'
-apply plugin: 'kotlin-android'
 
 android {
     namespace 'com.difrancescogianmarco.arcore_flutter_plugin'
@@ -43,17 +29,18 @@ android {
         targetCompatibility JavaVersion.VERSION_21
     }
 
-    kotlinOptions {
-        jvmTarget = "21"
-    }
-
     lintOptions {
         textReport = true
     }
 }
 
+kotlin {
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21
+    }
+}
+
 dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
     implementation 'androidx.appcompat:appcompat:1.7.0'
     implementation 'com.google.ar:core:1.26.0'
     implementation 'com.google.ar.sceneform:core:1.17.1'

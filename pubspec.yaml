@@ -43,10 +43,10 @@ dependencies:
   provider: ^6.1.5
   location: ^8.0.1
   latlong2: ^0.9.1
-  maplibre_gl: ^0.25.0
+  maplibre_gl: ^0.26.1
   # Explicit web implementation registration hardening (release cache edge-cases).
-  maplibre_gl_web: ^0.25.0
-  shared_preferences: ^2.5.3
+  maplibre_gl_web: ^0.26.1
+  shared_preferences: ^2.5.5
   flutter_secure_storage: ^9.2.4
   local_auth: ^3.0.0
   geolocator: ^14.0.2
@@ -83,10 +83,10 @@ dependencies:
 
   # QR Code functionality
   qr_flutter: ^4.1.0 # QR code generation
-  mobile_scanner: ^7.1.4 # QR code scanning (modern replacement for qr_code_scanner)
+  mobile_scanner: ^7.2.0 # QR code scanning (modern replacement for qr_code_scanner)
 
   # Camera and AR
-  camera: ^0.11.1
+  camera: ^0.12.0+1
   flutter_compass: ^0.8.1
   # Platform-specific AR plugins for best reliability and maintenance:
   # arkit_plugin: ^1.2.0  # iOS ARKit - DISABLED due to vector_math 2.1.4 incompatibility
@@ -109,7 +109,7 @@ dependencies:
   file_picker: ^10.3.10 # Updated to avoid conflicts
   path: ^1.9.0
   intl: ^0.20.2
-  share_plus: ^12.0.1 # Updated to latest version
+  share_plus: ^12.0.2 # Updated to latest compatible version
   socket_io_client: ^3.1.4
   equatable: ^2.0.5
 
