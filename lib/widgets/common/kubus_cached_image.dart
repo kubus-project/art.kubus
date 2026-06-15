@@ -101,6 +101,27 @@ class KubusCachedImage extends StatelessWidget {
       return _buildFallback(context);
     }
 
+    // Providing BOTH cacheWidth and cacheHeight forces Flutter to decode the
+    // bitmap to exactly those pixel dimensions, ignoring the source aspect
+    // ratio. That squishes/stretches the image *before* [fit] can act, so even
+    // BoxFit.cover ends up rendering a distorted bitmap (it has nothing left to
+    // crop). For any aspect-preserving fit we therefore decode with a single
+    // constraint — keeping the larger target axis for resolution and dropping
+    // the other — so the decoded bitmap keeps its native aspect ratio and [fit]
+    // does the cropping. BoxFit.fill is the one case that intentionally
+    // distorts, so it keeps both dimensions.
+    int? effectiveCacheWidth = cacheWidth;
+    int? effectiveCacheHeight = cacheHeight;
+    if (fit != BoxFit.fill &&
+        effectiveCacheWidth != null &&
+        effectiveCacheHeight != null) {
+      if (effectiveCacheWidth >= effectiveCacheHeight) {
+        effectiveCacheHeight = null;
+      } else {
+        effectiveCacheWidth = null;
+      }
+    }
+
     return Image.network(
       urlWithVersion,
       width: width,
@@ -109,8 +130,8 @@ class KubusCachedImage extends StatelessWidget {
       alignment: alignment,
       filterQuality: filterQuality,
       gaplessPlayback: true,
-      cacheWidth: cacheWidth,
-      cacheHeight: cacheHeight,
+      cacheWidth: effectiveCacheWidth,
+      cacheHeight: effectiveCacheHeight,
       errorBuilder: (context, error, stackTrace) {
         if (errorBuilder != null) {
           return errorBuilder!(context, error, stackTrace);
