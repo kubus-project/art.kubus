@@ -18947,6 +18947,12 @@ abstract class AppLocalizations {
   /// **'Choose another way to restore wallet signing on this device.'**
   String get walletRecoveryFallbackDescription;
 
+  /// No description provided for @walletRecoveryPasskeyUnavailableDeviceDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Passkey recovery is unavailable on this device. Use the recovery password or recovery phrase to restore wallet access.'**
+  String get walletRecoveryPasskeyUnavailableDeviceDescription;
+
   /// No description provided for @walletRecoveryUsePasswordAction.
   ///
   /// In en, this message translates to:

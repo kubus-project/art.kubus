@@ -9943,6 +9943,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletRecoveryFallbackDescription => 'Choose another way to restore wallet signing on this device.';
 
   @override
+  String get walletRecoveryPasskeyUnavailableDeviceDescription => 'Passkey recovery is unavailable on this device. Use the recovery password or recovery phrase to restore wallet access.';
+
+  @override
   String get walletRecoveryUsePasswordAction => 'Use recovery password';
 
   @override

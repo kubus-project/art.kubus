@@ -4412,6 +4412,7 @@
   "walletRecoveryPasswordFailedTitle": "Recovery password failed",
   "walletRecoveryNoBackupTitle": "No encrypted backup found",
   "walletRecoveryFallbackDescription": "Choose another way to restore wallet signing on this device.",
+  "walletRecoveryPasskeyUnavailableDeviceDescription": "Passkey recovery is unavailable on this device. Use the recovery password or recovery phrase to restore wallet access.",
   "walletRecoveryUsePasswordAction": "Use recovery password",
   "walletRecoveryImportPhraseAction": "Import recovery phrase",
   "walletRecoveryContinueReadOnlyAction": "Continue without wallet",

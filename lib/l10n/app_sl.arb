@@ -4256,6 +4256,7 @@
   "walletRecoveryPasswordFailedTitle": "Obnovitveno geslo ni uspelo",
   "walletRecoveryNoBackupTitle": "Šifrirana kopija ni najdena",
   "walletRecoveryFallbackDescription": "Izberi drug način za obnovo podpisovanja denarnice na tej napravi.",
+    "walletRecoveryPasskeyUnavailableDeviceDescription": "Passkey ni na voljo na tej napravi. Poskusi obnoviti dostop do denarnice z obnovitvenim geslom ali obnovitveno frazo.",
   "walletRecoveryUsePasswordAction": "Uporabi obnovitveno geslo",
   "walletRecoveryImportPhraseAction": "Uvozi obnovitveno frazo",
   "walletRecoveryContinueReadOnlyAction": "Nadaljuj brez denarnice",

@@ -9965,6 +9965,9 @@ class AppLocalizationsSl extends AppLocalizations {
   String get walletRecoveryFallbackDescription => 'Izberi drug način za obnovo podpisovanja denarnice na tej napravi.';
 
   @override
+  String get walletRecoveryPasskeyUnavailableDeviceDescription => 'Passkey ni na voljo na tej napravi. Poskusi obnoviti dostop do denarnice z obnovitvenim geslom ali obnovitveno frazo.';
+
+  @override
   String get walletRecoveryUsePasswordAction => 'Uporabi obnovitveno geslo';
 
   @override
