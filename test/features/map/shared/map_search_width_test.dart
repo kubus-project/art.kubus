@@ -25,14 +25,6 @@ void main() {
         .topOverlayFieldWidth!;
   }
 
-  double sidePanelFieldWidth(WidgetTester tester) {
-    return tester
-        .widget<KubusSearchOverlayScaffold>(
-          find.byType(KubusSearchOverlayScaffold),
-        )
-        .sidePanelFieldWidth!;
-  }
-
   double dropdownWidth(WidgetTester tester) {
     return tester
         .widget<KubusSearchResultsOverlay>(
@@ -114,7 +106,7 @@ void main() {
   );
 
   testWidgets(
-    'desktop (side panel) search expands on focus and shares the dropdown width',
+    'desktop (side panel) keeps the search bar and quick filters on one row',
     (tester) async {
       await tester.binding.setSurfaceSize(const Size(1400, 900));
       addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -138,23 +130,17 @@ void main() {
       );
       await tester.pump();
 
-      // Idle: comfortable width; the dropdown shares exactly the same width.
-      final idleWidth = sidePanelFieldWidth(tester);
-      expect(dropdownWidth(tester), idleWidth);
+      // The search field and the quick-filter strip sit on the same horizontal
+      // line (vertically centered together), not stacked into a second-row
+      // card.
+      final fieldCenter = tester.getCenter(find.byType(TextField));
+      final chipsCenter = tester.getCenter(find.text('Filters'));
+      expect((fieldCenter.dy - chipsCenter.dy).abs(), lessThan(8.0),
+          reason: 'quick filters must share the search bar row');
 
-      // An active query expands the field toward the right. The resolver keys
-      // off `hasFocusedField || query.isNotEmpty`, so driving the query state
-      // exercises the identical width contract as a focus tap, without the
-      // focused-TextField cursor/timer churn that destabilizes pump timing.
-      controller.commitSelection('a');
-      await tester.pump();
-
-      final activeWidth = sidePanelFieldWidth(tester);
-      expect(activeWidth, greaterThan(idleWidth),
-          reason: 'desktop side-panel search should expand when active');
-
-      // The dropdown stays locked to the (expanded) field width.
-      expect(dropdownWidth(tester), activeWidth);
+      // The quick filters are to the RIGHT of the search field (one control
+      // area), not below it.
+      expect(chipsCenter.dx, greaterThan(fieldCenter.dx));
     },
   );
 }

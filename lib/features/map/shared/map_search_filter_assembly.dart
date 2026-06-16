@@ -368,47 +368,24 @@ class KubusMapSearchOverlayAssembly extends StatelessWidget {
         // - top overlay (mobile): the field is ALWAYS the full available safe
         //   width. No idle/focused distinction and no focus-expansion
         //   animation; the filter button stays pinned in the trailing slot.
-        // - side panel (desktop): the field is comfortable when idle and
-        //   expands toward the right when focused / a query is active.
+        // - side panel (desktop): the search bar and quick filters share one
+        //   horizontal row (legacy layout). The field flexes and the trailing
+        //   quick-filter strip scrolls horizontally, so no focus-driven width
+        //   resolution is applied here.
+        final isTopOverlay = layout == KubusSearchOverlayLayout.topOverlay;
         double? resolvedFieldWidth;
-        bool sidePanelExpanded = false;
-        if (layout == KubusSearchOverlayLayout.topOverlay) {
+        if (isTopOverlay) {
           final screenWidth = MediaQuery.of(context).size.width;
           final available = (screenWidth - panelInsets.left - panelInsets.right)
               .clamp(0.0, maxWidth)
               .toDouble();
           resolvedFieldWidth = available;
-        } else {
-          final screenWidth = MediaQuery.of(context).size.width;
-          // The side panel spans left:0 → right:rightInset, with the glass
-          // surface margins (panelInsets) and inner horizontal padding inside.
-          final outer =
-              (screenWidth - rightInset).clamp(0.0, double.infinity).toDouble();
-          final content = (outer -
-                  panelInsets.left -
-                  panelInsets.right -
-                  sidePanelInnerPadding.horizontal)
-              .clamp(0.0, double.infinity)
-              .toDouble();
-          sidePanelExpanded = controller.hasFocusedField || trimmed.isNotEmpty;
-          final idleWidth = (content * 0.42)
-              .clamp(220.0, 460.0)
-              .clamp(0.0, content)
-              .toDouble();
-          final focusedWidth = (content * 0.72)
-              .clamp(idleWidth, 760.0)
-              .clamp(0.0, content)
-              .toDouble();
-          resolvedFieldWidth = sidePanelExpanded ? focusedWidth : idleWidth;
         }
 
-        final isTopOverlay = layout == KubusSearchOverlayLayout.topOverlay;
         return KubusSearchOverlayScaffold(
           layout: layout,
           searchField: searchField,
           topOverlayFieldWidth: isTopOverlay ? resolvedFieldWidth : null,
-          sidePanelFieldWidth: isTopOverlay ? null : resolvedFieldWidth,
-          sidePanelSearchExpanded: sidePanelExpanded,
           searchDropdown: KubusSearchResultsOverlay(
             controller: controller,
             accentColor: accentColor,

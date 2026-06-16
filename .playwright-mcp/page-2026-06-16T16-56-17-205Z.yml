@@ -1,0 +1,52 @@
+- generic [ref=e6] [cursor=pointer]:
+  - region "Map" [ref=e154]
+  - generic:
+    - generic:
+      - generic:
+        - generic:
+          - generic:
+            - generic [ref=e167]:
+              - textbox "map_search_input" [disabled] [ref=e168]
+              - generic [ref=e169]:
+                - textbox "Išči umetnine, umetnike, institucije…" [active] [ref=e170]: pace
+                - button "Počisti iskanje Počisti iskanje" [ref=e204]:
+                  - text: Počisti iskanje
+                  - generic [ref=e205]:
+                    - generic: Počisti iskanje
+            - button "Razširi discovery_path Pot odkrivanja 0% dokončano" [ref=e173]
+            - generic:
+              - group:
+                - button "Space Invader Mosaic LJU_02 Umetnina • Invader" [ref=e206]
+                - button "Space Invader Mosaic LJU_03 Umetnina • Invader" [ref=e207]
+                - button "Space Invader Mosaic LJU_04 Umetnina • Invader" [ref=e208]
+                - button "Space Invader Mosaic LJU_05 Umetnina • Invader" [ref=e209]
+                - button "Space Invader Mosaic LJU_06 Umetnina • Invader" [ref=e210]
+                - button "Space Invader Mosaic LJU_07 Umetnina • Invader" [ref=e211]
+                - button "Space Invader Mosaic LJU_08 Umetnina • Invader" [ref=e212]
+                - button "Space Invader Mosaic LJU_09 Umetnina • Invader" [ref=e213]
+            - button "Vklopi način potovanja" [ref=e178]
+            - button "Vklopi izometrični pogled" [ref=e179]
+            - button "Zoom in map_zoom_in" [ref=e180]
+            - button "Oddalji map_zoom_out" [ref=e181]
+            - button "Središči na meni map_center_on_me" [ref=e182]
+            - button "Map attributions" [ref=e183]
+            - generic:
+              - group:
+                - generic [ref=e184]:
+                  - generic: nearby_art_handle
+                - generic [ref=e185]:
+                  - generic: Umetnost in kraji v bližini
+                - generic [ref=e186]:
+                  - generic: 21 rezultatov · 0% odkrito
+                - button "Radij bližine (5 km)" [ref=e187]
+                - button "Prikaži mrežo" [ref=e188]
+                - button "Razvrsti rezultate" [ref=e189]
+                - button "Space Invader Mosaic LJU_09 kubus public art @kubus_public_art 565m 10 KUB8" [ref=e214]
+                - button "Space Invader Mosaic LJU_12 kubus public art @kubus_public_art 617m 10 KUB8" [ref=e215]
+                - button "Space Invader Mosaic LJU_17 kubus public art @kubus_public_art 681m 10 KUB8" [ref=e216]
+            - button [ref=e193]
+            - button [ref=e194]
+            - button [ref=e195]
+            - button "Dodaj označevalec map_create_marker" [ref=e196]
+            - button [ref=e197]
+            - button [ref=e198]

@@ -46,8 +46,6 @@ class KubusSearchOverlayScaffold extends StatelessWidget {
     this.positionAnimationDuration,
     this.positionAnimationCurve,
     this.topOverlayFieldWidth,
-    this.sidePanelFieldWidth,
-    this.sidePanelSearchExpanded = false,
     this.widthAnimationDuration,
     this.widthAnimationCurve,
   });
@@ -61,17 +59,6 @@ class KubusSearchOverlayScaffold extends StatelessWidget {
   /// content (filters, discovery) keeps the full column width. Pass the same
   /// value to the results dropdown so both share one width contract.
   final double? topOverlayFieldWidth;
-
-  /// When set (side-panel layout only), the search field is laid out at this
-  /// resolved width inside a [Wrap] search row, animating between a comfortable
-  /// idle width and an expanded focused width (growing toward the right). Pass
-  /// the same value to the results dropdown so both share one width contract.
-  /// When null the side panel keeps its legacy [Expanded] field layout.
-  final double? sidePanelFieldWidth;
-
-  /// Whether the side-panel search is focused / has an active query. When true
-  /// the quick-filter chips collapse so the field can expand to the right.
-  final bool sidePanelSearchExpanded;
   final Duration? widthAnimationDuration;
   final Curve? widthAnimationCurve;
 
@@ -160,54 +147,16 @@ class KubusSearchOverlayScaffold extends StatelessWidget {
     );
   }
 
-  /// The side-panel search row (leading + field + quick filters + toggle).
+  /// The side-panel search row: leading + search field + quick filters +
+  /// toggle, all on ONE horizontal line so the search bar and quick filters
+  /// read as a single control area (not a stacked second-row card).
   ///
-  /// When [sidePanelFieldWidth] is set (the map assembly path) the field is
-  /// laid out at the resolved width inside a [Wrap] so it can animate between a
-  /// comfortable idle width and an expanded focused width, the quick filters
-  /// collapse while focused, and the row reflows (filters drop below) on
-  /// smaller desktops instead of overflowing. When null it keeps the legacy
-  /// [Expanded] layout for any direct callers.
+  /// The field flexes to fill the left of the row; the quick-filter strip is
+  /// bounded by a [Flexible] and scrolls horizontally, so it never wraps to a
+  /// second line or overflows on narrower desktop widths. The trailing toggle
+  /// stays pinned to the right.
   Widget _buildSidePanelSearchRow(BuildContext context) {
-    final fieldWidth = sidePanelFieldWidth;
-    if (fieldWidth == null) {
-      return Row(
-        children: [
-          if (leading != null) ...[
-            leading!,
-            SizedBox(width: KubusSpacing.xl + KubusSpacing.sm),
-          ],
-          Expanded(child: searchField),
-          if (filterChips != null) ...[
-            SizedBox(width: KubusSpacing.md + KubusSpacing.xs),
-            filterChips!,
-          ],
-          if (mapToggle != null) ...[
-            SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
-            mapToggle!,
-          ],
-        ],
-      );
-    }
-
-    final animationTheme = context.animationTheme;
-    final field = AnimatedContainer(
-      duration: widthAnimationDuration ?? animationTheme.medium,
-      curve: widthAnimationCurve ?? animationTheme.defaultCurve,
-      width: fieldWidth,
-      child: searchField,
-    );
-    final showChips = filterChips != null && !sidePanelSearchExpanded;
-
-    // One coherent toolbar line: logo/title + search field + filter/settings
-    // button, all vertically centered on a single baseline. The field lives in
-    // an [Expanded] so it grows toward the right on focus (its resolved width is
-    // clamped to the available space to avoid overflow) while the trailing
-    // button stays pinned to the right. The quick-filter chips never share this
-    // line — they previously forced the field to wrap below the title (the
-    // "dropped second-row" header bug). Instead they sit on a deliberate second
-    // row below and collapse entirely while the search is focused/expanded.
-    final toolbar = Row(
+    return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         if (leading != null) ...[
@@ -215,26 +164,24 @@ class KubusSearchOverlayScaffold extends StatelessWidget {
           const SizedBox(width: KubusSpacing.md + KubusSpacing.xs),
         ],
         Expanded(
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: field,
-          ),
+          flex: 5,
+          child: searchField,
         ),
+        if (filterChips != null) ...[
+          const SizedBox(width: KubusSpacing.md + KubusSpacing.xs),
+          Flexible(
+            flex: 6,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              clipBehavior: Clip.none,
+              child: filterChips!,
+            ),
+          ),
+        ],
         if (mapToggle != null) ...[
           const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
           mapToggle!,
         ],
-      ],
-    );
-
-    if (!showChips) return toolbar;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        toolbar,
-        SizedBox(height: sectionGap),
-        filterChips!,
       ],
     );
   }

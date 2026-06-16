@@ -201,14 +201,17 @@
     }
 
     /*
-     * Desktop uses a single custom attribution control (the in-app "info"
-     * glass button to the left of the map controls, which opens the full
-     * attribution dialog). The native MapLibre GL JS attribution would
-     * otherwise also render in the bottom-left corner, duplicating it, so we
-     * suppress only the native attribution element here. Legal attribution
-     * stays fully accessible via the custom button. Mobile keeps the native
-     * attribution visible (rule above).
+     * Both mobile and desktop use a single custom attribution control (the
+     * in-app glass "info" button that opens the full attribution dialog). The
+     * native MapLibre GL JS attribution / its compact "i" toggle would
+     * otherwise also render in the bottom-left corner — duplicating the custom
+     * button and (on mobile) re-appearing as a white "i" after a map refresh
+     * that obscures the bottom menu. Suppress the native control on both so the
+     * custom button is the only attribution affordance. Legal attribution stays
+     * fully accessible via that button's dialog.
      */
+    body.kubus-mobile-map .maplibregl-ctrl-attrib,
+    body.kubus-mobile-map .maplibregl-ctrl-attrib-button,
     body.kubus-desktop-map .maplibregl-ctrl-attrib,
     body.kubus-desktop-map .maplibregl-ctrl-attrib-button {
       display: none !important;

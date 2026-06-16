@@ -241,12 +241,18 @@ KubusMapBlurDecision resolveKubusMapBlurDecision(
   // `disabled` policy handled above) turns it off — this is what makes web map
   // blur behave like desktop instead of silently degrading to a flat tint.
   final reduceEffectsUser = provider?.reduceEffectsUserOverride ?? false;
-  final platformHostAllowed =
-      policy == KubusMapBlurPolicy.forceMapChromeWhenCapable ||
+  // The web CSS-blur host inserts `backdrop-filter` DOM elements over the map
+  // platform view. On wide/desktop web they composite behind the Flutter
+  // overlay canvas (content stays sharp), but on narrow/compact web the overlay
+  // canvas can land *behind* those DOM blur layers, blurring foreground UI such
+  // as the search results dropdown ("blur in front of content"). So never use
+  // the DOM host on compact web — fall through to the opaque safe-tint
+  // fallback, which matches the mobile-app glass over the platform view.
+  final platformHostAllowed = !compactWeb &&
+      (policy == KubusMapBlurPolicy.forceMapChromeWhenCapable ||
           policy == KubusMapBlurPolicy.forceRealBlur ||
-          (!compactWeb &&
-              (policy == KubusMapBlurPolicy.allowCompactWeb ||
-                  policy == KubusMapBlurPolicy.automatic));
+          policy == KubusMapBlurPolicy.allowCompactWeb ||
+          policy == KubusMapBlurPolicy.automatic);
 
   if (web &&
       overMapPlatformView &&

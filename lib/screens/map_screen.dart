@@ -5184,6 +5184,23 @@ class _MapScreenState extends State<MapScreen>
     });
   }
 
+  /// Re-measures the Discovery Path card's platform backdrop region across its
+  /// open/close size animation so the web DOM blur tracks the card instead of
+  /// lagging behind. No-op off web (native uses a real BackdropFilter that
+  /// follows the size automatically).
+  void _scheduleDiscoveryBackdropSync() {
+    if (!kIsWeb) return;
+    final medium = context.animationTheme.medium;
+    void resync() {
+      if (!mounted) return;
+      setState(() {});
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) => resync());
+    Future.delayed(medium ~/ 2, resync);
+    Future.delayed(medium + const Duration(milliseconds: 32), resync);
+  }
+
   Widget _buildFilterPanelCard(ThemeData theme) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = theme.colorScheme;
@@ -5263,8 +5280,14 @@ class _MapScreenState extends State<MapScreen>
       activeProgress: activeProgress,
       overallProgress: overall,
       expanded: _isDiscoveryExpanded,
-      onToggleExpanded: () =>
-          setState(() => _isDiscoveryExpanded = !_isDiscoveryExpanded),
+      onToggleExpanded: () {
+        setState(() => _isDiscoveryExpanded = !_isDiscoveryExpanded);
+        // The card keeps a constant-radius blur mounted and only animates its
+        // size. On web the DOM backdrop region otherwise lags the size
+        // animation (blur fades in/out late), so re-measure it across the
+        // open/close. No-op off web.
+        _scheduleDiscoveryBackdropSync();
+      },
       buildTaskRow: _buildTaskProgressRow,
       titleStyle: KubusTypography.textTheme.titleSmall?.copyWith(
         fontWeight: FontWeight.w700,
@@ -5350,10 +5373,11 @@ class _MapScreenState extends State<MapScreen>
           return AnimatedPadding(
             duration: const Duration(milliseconds: 120),
             curve: Curves.easeOutCubic,
+            // Tuck the attribution button just above the Nearby Art sheet edge
+            // (it tracks the sheet's extent) instead of floating a full
+            // button-height above it.
             padding: EdgeInsets.only(
-              bottom: bottomInset +
-                  KubusHeaderMetrics.actionHitArea +
-                  KubusSpacing.sm,
+              bottom: bottomInset + KubusSpacing.sm,
             ),
             child: MapOverlayBlocker(
               child: KubusGlassIconButton(

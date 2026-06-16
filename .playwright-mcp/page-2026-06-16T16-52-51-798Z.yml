@@ -1,0 +1,77 @@
+- generic [ref=e6]:
+  - region "Map" [ref=e91]
+  - generic:
+    - generic:
+      - generic:
+        - generic:
+          - generic:
+            - generic [ref=e62]:
+              - generic: art.kubus
+            - img [ref=e64]
+            - generic [ref=e65]:
+              - generic: Umetniška platforma
+            - button "Skrči navigacijo" [ref=e63]
+            - generic:
+              - group:
+                - button "Domov" [ref=e66]
+                - button "Raziskuj" [ref=e67]
+                - button "Poveži" [ref=e68]
+                - button "Infrastruktura" [ref=e69]
+            - button [ref=e70]
+            - button [ref=e71]
+            - button [ref=e72]
+            - button "U Ljubitelj umetnosti" [ref=e73]
+            - button "Preskoči" [ref=e107]
+            - generic [ref=e108]:
+              - textbox "map_search_input" [disabled] [ref=e109]
+              - textbox "Išči umetnine, umetnike, institucije…" [ref=e111]
+            - button "Filtri" [ref=e112]
+            - group:
+              - switch "Vse v bližini" [ref=e113]
+              - switch "Znotraj 1 km" [checked] [ref=e114]
+              - switch "Odkrito" [ref=e115]
+              - switch "Neodkrito" [ref=e116]
+              - switch "AR pripravljeno" [ref=e117]
+              - switch "Priljubljene" [ref=e118]
+            - img [ref=e119]
+            - generic [ref=e120]:
+              - generic: Odkrij
+            - generic [ref=e121]:
+              - generic: Odprti zemljevid umetnosti
+            - generic [ref=e122]:
+              - generic: 1/7
+            - generic [ref=e123]:
+              - generic: Odkrij umetnost v javnem prostoru, razstave, institucije in zgodbe ustvarjalcev na skupnostno ustvarjenem kulturnem zemljevidu.
+            - button "Naprej" [ref=e124]
+            - button "discovery_path_idle Pot odkrivanja Razišči bližnjo umetnost Začni pot na zemljevidu" [ref=e125]
+            - button "Zapri" [ref=e126]
+            - button "Način potovanja" [ref=e127]
+            - button "Vklopi izometrični pogled" [ref=e128]
+            - button "map_zoom_out":
+              - button "Oddalji" [ref=e129]
+            - button "map_zoom_in":
+              - button "Zoom in" [ref=e130]
+            - button "map_create_marker":
+              - button "Ustvari označevalnik tukaj" [ref=e131]
+            - button "Map attributions" [ref=e132]
+            - group "nearby_sidebar_panel":
+              - generic:
+                - group:
+                  - generic [ref=e133]:
+                    - generic: Umetnine v bližini
+                  - generic [ref=e134]:
+                    - generic: "Radij bližine: 5.0 km"
+                  - button "Zapri" [ref=e135]
+                  - button "Invader Mosaics – Ljubljana kubus public art @kubus_public_art 6m 10 KUB8" [ref=e138]
+                  - button "Cyanometer kubus public art @kubus_public_art 338m 10 KUB8" [ref=e139]
+                  - button "kubus 1.0 Rok Černezel @rok 482m 10 KUB8" [ref=e140]
+                  - button "Space Invader Mosaic LJU_09 kubus public art @kubus_public_art 559m 10 KUB8" [ref=e141]
+                  - button "Shoeffiti – Hanging Shoes on Trubarjeva Street kubus public art @kubus_public_art 571m 10 KUB8" [ref=e142]
+                  - button "Space Invader Mosaic LJU_12 kubus public art @kubus_public_art 610m 10 KUB8" [ref=e143]
+                  - button "Space Invader Mosaic LJU_17 kubus public art @kubus_public_art 676m 10 KUB8" [ref=e144]
+                  - button "Miron Milić Mural – Vodnik Square kubus public art @kubus_public_art 693m 10 KUB8" [ref=e145]
+                  - button "Jaša Mrevlje Pollak Mural – Mahrova House kubus public art @kubus_public_art 731m 10 KUB8" [ref=e146]
+                  - button "Ljubljana (48754748417) kubus public art @kubus_public_art 758m 10 KUB8" [ref=e147]
+                  - button "Space Invader Mosaic LJU_10 kubus public art @kubus_public_art 783m 10 KUB8" [ref=e148]
+            - button "map_center_on_me":
+              - button "Središči na meni" [ref=e137]

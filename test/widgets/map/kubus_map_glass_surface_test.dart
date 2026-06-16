@@ -327,6 +327,42 @@ void main() {
     expect(decision.reason, 'platform-view-backdrop-host');
   });
 
+  testWidgets(
+      'compact web map chrome avoids the DOM blur host (safe-tint, no blur over content)',
+      (tester) async {
+    late KubusMapBlurDecision decision;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MediaQuery(
+          // Narrow/compact web: the CSS-blur host DOM layers can composite in
+          // front of the Flutter overlay (search dropdown), so the host must be
+          // avoided even for forced map-chrome policies.
+          data: const MediaQueryData(size: Size(390, 800)),
+          child: Builder(
+            builder: (context) {
+              decision = resolveKubusMapBlurDecision(
+                context,
+                policy: KubusMapBlurPolicy.forceMapChromeWhenCapable,
+                overMapPlatformView: true,
+                isWebOverride: true,
+                platformBackdropHostAvailableOverride: true,
+              );
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      ),
+    );
+
+    expect(decision.enabled, isFalse);
+    expect(
+      decision.strategy,
+      KubusMapBackdropStrategy.platformViewSafeTintFallback,
+    );
+    expect(decision.reason, 'compact-web-platform-view-safe-tint-fallback');
+  });
+
   testWidgets('web unhealthy WebGL resolves to documented fallback',
       (tester) async {
     late KubusMapBlurDecision decision;

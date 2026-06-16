@@ -1,0 +1,73 @@
+- generic [active] [ref=e6]:
+  - generic:
+    - generic:
+      - generic:
+        - generic:
+          - generic:
+            - img [ref=e37]
+            - generic:
+              - group:
+                - img [ref=e38]
+                - generic [ref=e39]:
+                  - generic: Dober večer,
+                - generic [ref=e40]:
+                  - generic: prijatelj
+                - generic [ref=e41]:
+                  - textbox "desktop_home_search_input" [disabled] [ref=e42]
+                  - textbox "Išči umetnine, umetnike, institucije…" [ref=e44]
+                - generic "Obvestila":
+                  - button [ref=e45]
+                - generic [ref=e46]:
+                  - generic: Odprta umetniška platforma.
+                - generic [ref=e47]:
+                  - generic: Odkrivaj umetnine, kraje, ustvarjalce in institucije v javnem prostoru in na spletu. Orodja denarnice podpirajo atribucijo in arhivske zapise, AR plasti pa so v razvoju.
+                - button "Poveži denarnico" [ref=e48]
+                - generic [ref=e49]:
+                  - generic: Tvoja aktivnost
+                - generic [ref=e50]:
+                  - generic: Spremljaj svoj napredek in sodelovanje
+                - button "0 Odkrito" [ref=e51]
+                - button "0 AR seje" [ref=e52]
+                - button "0 Slediš" [ref=e53]
+                - button "0 Podani všečki" [ref=e54]
+                - generic [ref=e55]:
+                  - generic: Nedavno obiskano
+                - generic [ref=e56]:
+                  - generic: Začni raziskovati, da se tu prikažejo nedavne strani
+                - generic [ref=e57]:
+                  - generic: Za zdaj ni nedavnih obiskov
+                - generic [ref=e58]:
+                  - generic: Pojdi na različne zaslone in prikazali se bodo tukaj za hiter dostop. Kartice izginejo po 24 urah neaktivnosti.
+                - button "Raziskuj zemljevid" [ref=e59]
+                - button "Umetniški studio" [ref=e60]
+                - button "Institucijsko središče" [ref=e61]
+            - generic [ref=e62]:
+              - generic: art.kubus
+            - button "Skrči navigacijo" [ref=e63]
+            - img [ref=e64]
+            - generic [ref=e65]:
+              - generic: Umetniška platforma
+            - generic:
+              - group:
+                - button "Domov" [ref=e66]
+                - button "Raziskuj" [ref=e67]
+                - button "Poveži" [ref=e68]
+                - button "Infrastruktura" [ref=e69]
+            - button [ref=e70]
+            - button [ref=e71]
+            - button [ref=e72]
+            - button "U Ljubitelj umetnosti" [ref=e73]
+            - generic:
+              - group:
+                - generic [ref=e74]:
+                  - generic: Aktivnost
+                - group "Nedavna aktivnost Začni pot odkrivanja. kubus bo tukaj zbiral tvoje obiske." [ref=e76]:
+                  - button "Osveži" [ref=e77]
+                - group "Priljubljena umetnost Priljubljena dela se bodo prikazala tukaj" [ref=e79]:
+                  - button "Osveži" [ref=e80]
+                - group "Naj ustvarjalci Naj ustvarjalci se bodo prikazali tukaj" [ref=e82]:
+                  - button "Osveži" [ref=e83]
+                - generic:
+                  - button "Statistika platforme" [ref=e85]
+                  - button "Osveži" [ref=e86]
+                  - button "Statistike skupnosti ni mogoče naložiti." [ref=e87]

@@ -1,0 +1,26 @@
+- generic [active] [ref=e6]:
+  - generic:
+    - generic:
+      - generic:
+        - generic:
+          - generic:
+            - img [ref=e7]
+            - button "Jezik" [ref=e25]
+            - button "Način teme" [ref=e26]
+            - img [ref=e27]
+            - generic [ref=e28]:
+              - generic: Vstopi v art.kubus
+            - generic [ref=e29]:
+              - generic: Hitra nastavitev
+            - generic [ref=e30]:
+              - generic: Izberi, kaj želiš omogočiti
+            - generic [ref=e31]:
+              - generic: Vstopi v art.kubus
+            - generic [ref=e32]:
+              - generic: Omogoči lokacijo za javno umetnost v bližini, kamero za AR plasti v razvoju in obvestila za ustvarjalce, institucije, razstave ter skupnost.
+            - group "Lokacija":
+              - button "Omogoči" [ref=e33]
+            - group "Obvestila":
+              - button "Omogoči" [ref=e34]
+            - button "Preskoči" [ref=e35]
+            - button "Nadaljuj" [ref=e36]

@@ -2430,10 +2430,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       child: KubusMapFilterChipStrip(
         options: filters,
         selectedKey: _selectedFilter,
-        // Fixed-size button cells so each quick filter's border wraps the whole
-        // cell (not just icon/text); the Wrap reflows them below the search row
-        // on smaller desktops instead of overflowing.
-        layout: KubusMapFilterChipLayout.rowFixed,
+        // Compact pills on a single line, shared with the search bar. Each chip
+        // (KubusGlassChip) already wraps its border/blur around the whole button
+        // at the root; the strip scrolls horizontally (see the side-panel row)
+        // so it never wraps to a second row or overflows on smaller desktops.
+        layout: KubusMapFilterChipLayout.row,
         spacing: KubusSpacing.sm,
         enableBlur: useMapBlur,
         keyPadding: EdgeInsets.zero,
@@ -2559,6 +2560,23 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     // Halfway through the slide (covers short/long animation curves).
     Future.delayed(medium ~/ 2, resync);
     // After the slide settles at the final, visible geometry.
+    Future.delayed(medium + const Duration(milliseconds: 32), resync);
+  }
+
+  /// Re-measures the Discovery Path card's platform backdrop region across its
+  /// open/close size animation so the web DOM blur tracks the card instead of
+  /// lagging behind. No-op off web (native uses a real BackdropFilter that
+  /// follows the size automatically).
+  void _scheduleDiscoveryBackdropSync() {
+    if (!kIsWeb) return;
+    final medium = context.animationTheme.medium;
+    void resync() {
+      if (!mounted) return;
+      setState(() {});
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) => resync());
+    Future.delayed(medium ~/ 2, resync);
     Future.delayed(medium + const Duration(milliseconds: 32), resync);
   }
 
@@ -3820,8 +3838,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       activeProgress: activeProgress,
       overallProgress: overall,
       expanded: _isDiscoveryExpanded,
-      onToggleExpanded: () =>
-          setState(() => _isDiscoveryExpanded = !_isDiscoveryExpanded),
+      onToggleExpanded: () {
+        setState(() => _isDiscoveryExpanded = !_isDiscoveryExpanded);
+        // Keep the constant-radius blur mounted; re-measure the web DOM
+        // backdrop region across the size animation so it doesn't lag.
+        _scheduleDiscoveryBackdropSync();
+      },
       buildTaskRow: _buildTaskProgressRow,
       expansionDirection: KubusDiscoveryExpansionDirection.upward,
       titleStyle: theme.textTheme.bodyMedium?.copyWith(
