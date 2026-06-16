@@ -46,9 +46,13 @@ class KubusMapBackdropRegionValidation {
       disposition == KubusMapBackdropRegionDisposition.clamped;
 }
 
-const double kubusMapBackdropMaxAreaRatio = 0.30;
-const double kubusMapBackdropAlmostFullWidthRatio = 0.92;
-const double kubusMapBackdropVeryTallHeightRatio = 0.46;
+// Map-glass overlays (search panel, nearby panel, filter panel, dropdown) are
+// legitimately large, so the backdrop host must blur sizeable regions — not just
+// tiny controls. Only reject regions that cover almost the ENTIRE map (blurring
+// everything is pointless and costly).
+const double kubusMapBackdropMaxAreaRatio = 0.90;
+const double kubusMapBackdropAlmostFullWidthRatio = 0.985;
+const double kubusMapBackdropVeryTallHeightRatio = 0.92;
 
 KubusMapBackdropRegionValidation validateKubusMapBackdropRegionForMap({
   required KubusMapBackdropRegion region,

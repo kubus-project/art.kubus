@@ -234,6 +234,43 @@ KubusMapBlurDecision resolveKubusMapBlurDecision(
       autoReduceEffectsApplied: autoReduceEffectsApplied,
     );
   }
+  // Resolve the web DOM/CSS backdrop host up-front. It is browser-native and
+  // cheap, so it should engage for over-map chrome even when the expensive Skia
+  // [BackdropFilter] would be gated by the auto perf-heuristic or a transient
+  // WebGL-health blip. Only an explicit user "reduce effects" opt-in (or the
+  // `disabled` policy handled above) turns it off — this is what makes web map
+  // blur behave like desktop instead of silently degrading to a flat tint.
+  final reduceEffectsUser = provider?.reduceEffectsUserOverride ?? false;
+  final platformHostAllowed =
+      policy == KubusMapBlurPolicy.forceMapChromeWhenCapable ||
+          policy == KubusMapBlurPolicy.forceRealBlur ||
+          (!compactWeb &&
+              (policy == KubusMapBlurPolicy.allowCompactWeb ||
+                  policy == KubusMapBlurPolicy.automatic));
+
+  if (web &&
+      overMapPlatformView &&
+      platformBackdropHostAvailable &&
+      platformHostAllowed &&
+      !reduceEffectsUser) {
+    return KubusMapBlurDecision(
+      enabled: true,
+      reason: 'platform-view-backdrop-host',
+      strategy: KubusMapBackdropStrategy.platformViewBackdropHost,
+      providerAllowsBlur: allowBlur,
+      width: width,
+      policy: policy,
+      web: web,
+      overMapPlatformView: overMapPlatformView,
+      platformBackdropHostAvailable: platformBackdropHostAvailable,
+      webGlHealthy: webGlHealthy,
+      reduceEffects: reduceEffects,
+      reduceEffectsUserTouched: reduceEffectsUserTouched,
+      heuristicTriggered: heuristicTriggered,
+      autoReduceEffectsApplied: autoReduceEffectsApplied,
+    );
+  }
+
   if (!allowBlur) {
     return KubusMapBlurDecision(
       enabled: false,
@@ -257,35 +294,6 @@ KubusMapBlurDecision resolveKubusMapBlurDecision(
       enabled: false,
       reason: 'webgl-unhealthy',
       strategy: KubusMapBackdropStrategy.platformViewSafeTintFallback,
-      providerAllowsBlur: allowBlur,
-      width: width,
-      policy: policy,
-      web: web,
-      overMapPlatformView: overMapPlatformView,
-      platformBackdropHostAvailable: platformBackdropHostAvailable,
-      webGlHealthy: webGlHealthy,
-      reduceEffects: reduceEffects,
-      reduceEffectsUserTouched: reduceEffectsUserTouched,
-      heuristicTriggered: heuristicTriggered,
-      autoReduceEffectsApplied: autoReduceEffectsApplied,
-    );
-  }
-
-  final platformHostAllowed = policy ==
-          KubusMapBlurPolicy.forceMapChromeWhenCapable ||
-      policy == KubusMapBlurPolicy.forceRealBlur ||
-      (!compactWeb &&
-          (policy == KubusMapBlurPolicy.allowCompactWeb ||
-              policy == KubusMapBlurPolicy.automatic));
-
-  if (web &&
-      overMapPlatformView &&
-      platformBackdropHostAvailable &&
-      platformHostAllowed) {
-    return KubusMapBlurDecision(
-      enabled: true,
-      reason: 'platform-view-backdrop-host',
-      strategy: KubusMapBackdropStrategy.platformViewBackdropHost,
       providerAllowsBlur: allowBlur,
       width: width,
       policy: policy,

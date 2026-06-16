@@ -3617,9 +3617,12 @@ class _MapScreenState extends State<MapScreen>
                 .clamp(12.0, math.max(12.0, constraints.maxHeight - 12.0))
                 .toDouble();
             _syncWebAttributionBottomForSheet(sheetExtent);
+            // Use the strict real-blur policy so the platform backdrop host is
+            // mounted on compact/mobile web too (allowCompactWeb disables the
+            // host below 700px, which left mobile-web overlays flat).
             final backdropDecision = resolveKubusMapBlurDecision(
               context,
-              policy: KubusMapBlurPolicy.allowCompactWeb,
+              policy: KubusMapBlurPolicy.forceRealBlur,
               overMapPlatformView: true,
             );
             final platformBackdropHostEnabled = backdropDecision.enabled &&

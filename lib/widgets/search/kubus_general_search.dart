@@ -6,7 +6,6 @@ import '../../providers/themeprovider.dart';
 import '../../utils/artwork_media_resolver.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/media_url_resolver.dart';
-import '../../providers/glass_capabilities_provider.dart';
 import '../avatar_widget.dart';
 import '../glass_components.dart';
 import '../map/kubus_map_glass_surface.dart';
@@ -353,16 +352,12 @@ class KubusSearchResultsOverlay extends StatelessWidget {
           surfaceType: KubusGlassSurfaceType.panelBackground,
           tintBase: scheme.surface,
         );
-        // Over the map (mobile native platform view, unhealthy WebGL, reduced
-        // transparency) real BackdropFilter blur cannot sample the MapLibre
-        // texture, so resolve the map-aware policy and fall back to the shared
-        // material sheen instead of a flat translucent panel.
+        // In map context, route the dropdown through the shared map-glass path
+        // ([_KubusDropdownSurface]) so it registers a backdrop region (DOM host
+        // on web, BackdropFilter on desktop/Android) and stays translucent.
         final panelBlurEnabled =
             useMapGlassSurface ? kubusMapBlurEnabled(context) : true;
         final panelRadius = BorderRadius.circular(KubusRadius.lg);
-        final showSheen = useMapGlassSurface &&
-            !(panelBlurEnabled &&
-                GlassCapabilitiesProvider.watchAllowBlurEnabled(context));
 
         return Positioned.fill(
           child: Stack(
@@ -382,21 +377,14 @@ class KubusSearchResultsOverlay extends StatelessWidget {
                       maxWidth: width ?? maxWidth,
                       maxHeight: maxHeight,
                     ),
-                    child: LiquidGlassPanel(
-                      padding: const EdgeInsets.symmetric(
-                        vertical: KubusSpacing.sm,
-                      ),
-                      margin: EdgeInsets.zero,
-                      borderRadius: panelRadius,
+                    child: _KubusDropdownSurface(
+                      useMapGlassSurface: useMapGlassSurface,
+                      panelRadius: panelRadius,
                       blurSigma: surfaceStyle.blurSigma,
-                      backgroundColor: surfaceStyle.tintColor,
+                      tintColor: surfaceStyle.tintColor,
                       fallbackMinOpacity: surfaceStyle.fallbackMinOpacity,
                       enableBlur: panelBlurEnabled,
-                      child: wrapWithKubusMapGlassSheen(
-                        show: showSheen,
-                        borderRadius: panelRadius,
-                        isDark: theme.brightness == Brightness.dark,
-                        child: Builder(
+                      child: Builder(
                           builder: (context) {
                             if (trimmed.length < controller.config.minChars) {
                               return Padding(
@@ -508,11 +496,64 @@ class KubusSearchResultsOverlay extends StatelessWidget {
                     ),
                   ),
                 ),
-              ),
             ],
           ),
         );
       },
+    );
+  }
+}
+
+/// Surface wrapper for the search results dropdown.
+///
+/// In map context it routes through the shared [buildKubusMapGlassSurface] path
+/// so the dropdown registers a backdrop region (DOM CSS host on web,
+/// [BackdropFilter] on desktop/Android) and stays translucent over the live map
+/// instead of rendering as an opaque tinted panel. Outside the map it keeps the
+/// plain [LiquidGlassPanel].
+class _KubusDropdownSurface extends StatelessWidget {
+  const _KubusDropdownSurface({
+    required this.useMapGlassSurface,
+    required this.panelRadius,
+    required this.blurSigma,
+    required this.tintColor,
+    required this.fallbackMinOpacity,
+    required this.enableBlur,
+    required this.child,
+  });
+
+  final bool useMapGlassSurface;
+  final BorderRadius panelRadius;
+  final double blurSigma;
+  final Color tintColor;
+  final double fallbackMinOpacity;
+  final bool enableBlur;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (useMapGlassSurface) {
+      return buildKubusMapGlassSurface(
+        context: context,
+        kind: KubusMapGlassSurfaceKind.panel,
+        overlayName: 'search-results-dropdown',
+        borderRadius: panelRadius,
+        padding: const EdgeInsets.symmetric(vertical: KubusSpacing.sm),
+        margin: EdgeInsets.zero,
+        tintBase: tintColor,
+        backdropRegionId: 'map-search-results-dropdown',
+        child: child,
+      );
+    }
+    return LiquidGlassPanel(
+      padding: const EdgeInsets.symmetric(vertical: KubusSpacing.sm),
+      margin: EdgeInsets.zero,
+      borderRadius: panelRadius,
+      blurSigma: blurSigma,
+      backgroundColor: tintColor,
+      fallbackMinOpacity: fallbackMinOpacity,
+      enableBlur: enableBlur,
+      child: child,
     );
   }
 }

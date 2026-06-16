@@ -120,6 +120,10 @@ docker-compose.yml
 pm2-logs/
 ecosystem.config.js
 
+# Claude Code — share project config (.claude/settings.json, hooks, skills,
+# agents) and .mcp.json, but keep personal/local overrides out of the repo.
+.claude/settings.local.json
+
 # Developer-only documentation (internal/technical)
 /dev.docs/
 artkubus-04ac0a64327c.json

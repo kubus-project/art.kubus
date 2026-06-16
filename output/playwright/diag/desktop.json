@@ -1,0 +1,254 @@
+{
+  "diag": {
+    "mapCount": 1,
+    "hostExists": true,
+    "regionCount": 5,
+    "regions": [
+      {
+        "filter": "blur(6px)",
+        "rect": [
+          220,
+          12,
+          1020,
+          132
+        ]
+      },
+      {
+        "filter": "blur(6px)",
+        "rect": [
+          1240,
+          0,
+          360,
+          1000
+        ]
+      },
+      {
+        "filter": "blur(6px)",
+        "rect": [
+          876,
+          838,
+          340,
+          72
+        ]
+      },
+      {
+        "filter": "blur(6px)",
+        "rect": [
+          836,
+          918,
+          381,
+          59
+        ]
+      },
+      {
+        "filter": "blur(6px)",
+        "rect": [
+          1264,
+          74,
+          312,
+          926
+        ]
+      }
+    ],
+    "anyBackdropCount": 5,
+    "anyBackdrop": [
+      {
+        "id": "",
+        "filter": "blur(6px)",
+        "rect": [
+          220,
+          12,
+          1020,
+          132
+        ]
+      },
+      {
+        "id": "",
+        "filter": "blur(6px)",
+        "rect": [
+          1240,
+          0,
+          360,
+          1000
+        ]
+      },
+      {
+        "id": "",
+        "filter": "blur(6px)",
+        "rect": [
+          876,
+          838,
+          340,
+          72
+        ]
+      },
+      {
+        "id": "",
+        "filter": "blur(6px)",
+        "rect": [
+          836,
+          918,
+          381,
+          59
+        ]
+      },
+      {
+        "id": "",
+        "filter": "blur(6px)",
+        "rect": [
+          1264,
+          74,
+          312,
+          926
+        ]
+      }
+    ]
+  },
+  "diagFocus": {
+    "mapCount": 1,
+    "hostExists": true,
+    "regionCount": 5,
+    "regions": [
+      {
+        "filter": "blur(6px)",
+        "rect": [
+          220,
+          12,
+          1020,
+          132
+        ]
+      },
+      {
+        "filter": "blur(6px)",
+        "rect": [
+          1240,
+          0,
+          360,
+          1000
+        ]
+      },
+      {
+        "filter": "blur(6px)",
+        "rect": [
+          876,
+          838,
+          340,
+          72
+        ]
+      },
+      {
+        "filter": "blur(6px)",
+        "rect": [
+          836,
+          918,
+          381,
+          59
+        ]
+      },
+      {
+        "filter": "blur(6px)",
+        "rect": [
+          1264,
+          74,
+          312,
+          926
+        ]
+      }
+    ],
+    "anyBackdropCount": 5,
+    "anyBackdrop": [
+      {
+        "id": "",
+        "filter": "blur(6px)",
+        "rect": [
+          220,
+          12,
+          1020,
+          132
+        ]
+      },
+      {
+        "id": "",
+        "filter": "blur(6px)",
+        "rect": [
+          1240,
+          0,
+          360,
+          1000
+        ]
+      },
+      {
+        "id": "",
+        "filter": "blur(6px)",
+        "rect": [
+          876,
+          838,
+          340,
+          72
+        ]
+      },
+      {
+        "id": "",
+        "filter": "blur(6px)",
+        "rect": [
+          836,
+          918,
+          381,
+          59
+        ]
+      },
+      {
+        "id": "",
+        "filter": "blur(6px)",
+        "rect": [
+          1264,
+          74,
+          312,
+          926
+        ]
+      }
+    ]
+  },
+  "logs": [
+    "[error] Failed to load resource: the server responded with a status of 403 ()",
+    "[error] Failed to load resource: the server responded with a status of 403 ()",
+    "[error] Failed to load resource: the server responded with a status of 403 ()",
+    "[error] Failed to load resource: the server responded with a status of 403 ()",
+    "[error] Failed to load resource: the server responded with a status of 403 ()",
+    "[error] Failed to load resource: the server responded with a status of 403 ()",
+    "[error] Failed to load resource: the server responded with a status of 403 ()",
+    "[error] Failed to load resource: the server responded with a status of 403 ()",
+    "[error] Failed to load resource: the server responded with a status of 403 ()",
+    "[error] Failed to load resource: the server responded with a status of 403 ()",
+    "[error] Failed to load resource: the server responded with a status of 403 ()",
+    "[error] Failed to load resource: the server responded with a status of 403 ()",
+    "[error] Failed to load resource: the server responded with a status of 403 ()",
+    "[error] Failed to load resource: the server responded with a status of 403 ()",
+    "[error] Failed to load resource: the server responded with a status of 403 ()",
+    "[error] Failed to load resource: the server responded with a status of 403 ()",
+    "[error] Failed to load resource: the server responded with a status of 403 ()",
+    "[log] myLocationRenderMode not available in web",
+    "[log] setAttributionButtonMargins not available in web",
+    "[error] Failed to load resource: the server responded with a status of 403 ()",
+    "[error] Failed to load resource: the server responded with a status of 403 ()",
+    "[error] Failed to load resource: the server responded with a status of 403 ()",
+    "[error] Failed to load resource: the server responded with a status of 403 ()",
+    "[error] Failed to load resource: the server responded with a status of 403 ()",
+    "[error] Failed to load resource: the server responded with a status of 403 ()",
+    "[error] WebSocket connection to 'wss://api.kubus.site/socket.io/?EIO=4&transport=websocket' failed: Error during WebSocket handshake: Unexpected response code: 400",
+    "[error] Failed to load resource: the server responded with a status of 403 ()",
+    "[error] Failed to load resource: the server responded with a status of 403 ()",
+    "[error] Failed to load resource: the server responded with a status of 403 ()",
+    "[error] Failed to load resource: the server responded with a status of 403 ()",
+    "[error] Failed to load resource: the server responded with a status of 403 ()",
+    "[error] Failed to load resource: the server responded with a status of 403 ()",
+    "[error] Failed to load resource: the server responded with a status of 403 ()",
+    "[error] WebSocket connection to 'wss://api.kubus.site/socket.io/?EIO=4&transport=websocket' failed: Error during WebSocket handshake: Unexpected response code: 400",
+    "[error] Failed to load resource: the server responded with a status of 403 ()",
+    "[error] Failed to load resource: the server responded with a status of 403 ()",
+    "[error] WebSocket connection to 'wss://api.kubus.site/socket.io/?EIO=4&transport=websocket' failed: Error during WebSocket handshake: Unexpected response code: 400",
+    "[error] Failed to load resource: the server responded with a status of 403 ()",
+    "[error] WebSocket connection to 'wss://api.kubus.site/socket.io/?EIO=4&transport=websocket' failed: Error during WebSocket handshake: Unexpected response code: 400",
+    "[error] WebSocket connection to 'wss://api.kubus.site/socket.io/?EIO=4&transport=websocket' failed: Error during WebSocket handshake: Unexpected response code: 400"
+  ]
+}

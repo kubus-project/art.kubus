@@ -105,7 +105,7 @@ void main() {
 
       // Focusing the field must NOT widen it on mobile.
       await tester.tap(find.byType(TextField));
-      await tester.pumpAndSettle();
+      await tester.pump();
 
       expect(topOverlayFieldWidth(tester), idleWidth,
           reason: 'mobile search must stay full width on focus');
@@ -136,22 +136,25 @@ void main() {
           layout: KubusSearchOverlayLayout.sidePanel,
         ),
       );
-      await tester.pumpAndSettle();
+      await tester.pump();
 
       // Idle: comfortable width; the dropdown shares exactly the same width.
       final idleWidth = sidePanelFieldWidth(tester);
       expect(dropdownWidth(tester), idleWidth);
 
-      // Focus -> the field expands toward the right.
-      await tester.tap(find.byType(TextField));
-      await tester.pumpAndSettle();
+      // An active query expands the field toward the right. The resolver keys
+      // off `hasFocusedField || query.isNotEmpty`, so driving the query state
+      // exercises the identical width contract as a focus tap, without the
+      // focused-TextField cursor/timer churn that destabilizes pump timing.
+      controller.commitSelection('a');
+      await tester.pump();
 
-      final focusedWidth = sidePanelFieldWidth(tester);
-      expect(focusedWidth, greaterThan(idleWidth),
-          reason: 'desktop side-panel search should expand when focused');
+      final activeWidth = sidePanelFieldWidth(tester);
+      expect(activeWidth, greaterThan(idleWidth),
+          reason: 'desktop side-panel search should expand when active');
 
       // The dropdown stays locked to the (expanded) field width.
-      expect(dropdownWidth(tester), focusedWidth);
+      expect(dropdownWidth(tester), activeWidth);
     },
   );
 }

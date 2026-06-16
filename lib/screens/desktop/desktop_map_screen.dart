@@ -2009,9 +2009,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     // (glass panel with blur). This keeps the map at full width; only the
     // UI chrome (controls, search bar) shifts to avoid overlap.
     final showLocalNearbyPanel = _isRightSidebarOpen;
+    // Strict real-blur policy so the host mounts even on a narrow desktop
+    // window (allowCompactWeb would disable it below 700px).
     final backdropDecision = resolveKubusMapBlurDecision(
       context,
-      policy: KubusMapBlurPolicy.allowCompactWeb,
+      policy: KubusMapBlurPolicy.forceRealBlur,
       overMapPlatformView: true,
     );
     final platformBackdropHostEnabled = backdropDecision.enabled &&
@@ -2337,9 +2339,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       child: KubusMapSearchOverlayAssembly(
         controller: _mapSearchController,
         layout: KubusSearchOverlayLayout.sidePanel,
-        sidePanelSurfaceMode: kIsWeb
-            ? KubusSearchSidePanelSurfaceMode.hostless
-            : KubusSearchSidePanelSurfaceMode.glassHost,
+        // Always use the glass host (web included) so the search panel registers
+        // a backdrop region and blurs the map like the rest of the map chrome,
+        // instead of rendering as a flat hostless container on web.
+        sidePanelSurfaceMode: KubusSearchSidePanelSurfaceMode.glassHost,
         sidePanelAnimated: true,
         positionAnimationDuration: animationTheme.medium,
         positionAnimationCurve: animationTheme.defaultCurve,
@@ -2489,15 +2492,28 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       );
     }
 
-    final open = _showFiltersPanel;
-    return KeyedSubtree(
-      key: ValueKey<String>(
-        open ? 'desktop_filter_panel_open' : 'desktop_filter_panel_closed',
-      ),
-      child: _buildFiltersPanel(
-        themeProvider,
-        enableBackdropRegion: open,
-      ),
+    // A keyed AnimatedSwitcher is the single open/close mechanism (mirroring the
+    // mobile filter panel). The closed state is an empty placeholder that builds
+    // NO live KubusFilterPanel and therefore no platform backdrop region, so the
+    // tracker never measures the offscreen/stale geometry. The switcher also
+    // defers tearing down the open panel until its out-transition completes, so
+    // the region tracker's dispose (which removes its region and notifies the
+    // backdrop controller) never runs while the widget tree is locked.
+    return AnimatedSwitcher(
+      duration: animationTheme.medium,
+      switchInCurve: animationTheme.defaultCurve,
+      switchOutCurve: animationTheme.defaultCurve,
+      child: _showFiltersPanel
+          ? KeyedSubtree(
+              key: const ValueKey<String>('desktop_filter_panel_open'),
+              child: _buildFiltersPanel(
+                themeProvider,
+                enableBackdropRegion: true,
+              ),
+            )
+          : const SizedBox.shrink(
+              key: ValueKey<String>('desktop_filter_panel_closed'),
+            ),
     );
   }
 
