@@ -7,6 +7,7 @@ import 'package:art_kubus/providers/security_gate_provider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/screens/web3/wallet/mnemonic_reveal_screen.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
+import 'package:art_kubus/services/passkey_error_mapper.dart';
 import 'package:art_kubus/services/passkey_protection_service.dart';
 import 'package:art_kubus/services/wallet_recovery_flow_service.dart';
 import 'package:art_kubus/services/wallet_backup_passkey_service.dart';
@@ -73,8 +74,8 @@ class _WalletBackupProtectionScreenState
     if (_passkeyProtectionService.isAvailable &&
         walletProvider.authority.hasAccountSession) {
       try {
-        accountPasskeyStatus =
-            await _passkeyProtectionService.getAccountStatus(BackendApiService());
+        accountPasskeyStatus = await _passkeyProtectionService
+            .getAccountStatus(BackendApiService());
       } catch (_) {
         accountPasskeyStatus = AccountPasskeyStatus.empty;
       }
@@ -125,7 +126,7 @@ class _WalletBackupProtectionScreenState
     } catch (e) {
       if (!mounted) return;
       messenger.showKubusSnackBar(
-        SnackBar(content: Text(l10n.accountPasskeyAddFailedToast)),
+        SnackBar(content: Text(passkeyUserMessage(e))),
         tone: KubusSnackBarTone.error,
       );
     } finally {
@@ -151,7 +152,7 @@ class _WalletBackupProtectionScreenState
     } catch (e) {
       if (!mounted) return;
       messenger.showKubusSnackBar(
-        SnackBar(content: Text(l10n.accountPasskeyAddFailedToast)),
+        SnackBar(content: Text(passkeyUserMessage(e))),
         tone: KubusSnackBarTone.error,
       );
     } finally {
@@ -177,7 +178,7 @@ class _WalletBackupProtectionScreenState
     } catch (e) {
       if (!mounted) return;
       messenger.showKubusSnackBar(
-        SnackBar(content: Text(l10n.accountPasskeyRemoveFailedToast)),
+        SnackBar(content: Text(passkeyUserMessage(e))),
         tone: KubusSnackBarTone.error,
       );
     } finally {
@@ -376,8 +377,7 @@ class _WalletBackupProtectionScreenState
               ? l10n.walletBackupProtectionSignerRestoredWithPasskeyToast
               : result.restoreMethod ==
                       WalletRecoveryRestoreMethod.recoveryPassword
-                  ? l10n
-                      .walletBackupProtectionSignerRestoredWithPasswordToast
+                  ? l10n.walletBackupProtectionSignerRestoredWithPasswordToast
                   : l10n.walletBackupProtectionSignerRestoredToast,
         WalletRecoveryResultKind.readOnlyChosen =>
           l10n.walletBackupProtectionSignerStillMissingToast,

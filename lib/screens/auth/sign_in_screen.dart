@@ -13,6 +13,7 @@ import '../../services/backend_api_service.dart';
 import '../../services/google_auth_service.dart';
 import '../../services/post_auth_coordinator.dart';
 import '../../services/telemetry/telemetry_service.dart';
+import '../../services/passkey_error_mapper.dart';
 import '../../services/wallet_backup_passkey_service.dart';
 import '../../widgets/google_sign_in_button.dart';
 import '../../widgets/google_sign_in_web_button.dart';
@@ -401,7 +402,10 @@ class _SignInScreenState extends State<SignInScreen> {
     try {
       final supported = await isWalletBackupPasskeySupported();
       if (!supported) {
-        throw StateError('Passkeys are not available in this browser.');
+        throw const PasskeyAppException(
+          PasskeyErrorCode.unavailable,
+          'Passkeys are not available in this browser. Use email, Google, or wallet sign-in.',
+        );
       }
       final api = BackendApiService();
       final options = await api.getPasskeyLoginOptions(
@@ -417,13 +421,15 @@ class _SignInScreenState extends State<SignInScreen> {
       await _handleAuthSuccess(result, origin: AuthOrigin.passkey);
       unawaited(TelemetryService().trackSignInSuccess(method: 'passkey'));
     } catch (e) {
+      final message = passkeyUserMessage(e);
       unawaited(TelemetryService().trackSignInFailure(
         method: 'passkey',
-        errorClass: e.runtimeType.toString(),
+        errorClass:
+            e is PasskeyAppException ? e.code.name : e.runtimeType.toString(),
       ));
       if (!mounted) return;
       ScaffoldMessenger.of(context).showKubusSnackBar(
-        SnackBar(content: Text(l10n.authPasskeySignInFailed)),
+        SnackBar(content: Text(message)),
         tone: KubusSnackBarTone.error,
       );
     } finally {

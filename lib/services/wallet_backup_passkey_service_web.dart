@@ -5,6 +5,8 @@ import 'dart:typed_data';
 
 import 'package:web/web.dart' as web;
 
+import 'passkey_error_mapper.dart';
+
 Uint8List _decodeBase64Url(String value) {
   return Uint8List.fromList(base64Url.decode(base64Url.normalize(value)));
 }
@@ -309,10 +311,12 @@ Map<String, dynamic> _authenticationResponseToJson(
 
 Future<bool> isWalletBackupPasskeySupported() async {
   try {
-    final available = await web.PublicKeyCredential
-            .isUserVerifyingPlatformAuthenticatorAvailable()
-        .toDart;
-    return available.toDart;
+    if (!web.window.isSecureContext) return false;
+    final publicKeyCredential =
+        globalContext.getProperty<JSAny?>('PublicKeyCredential'.toJS);
+    if (publicKeyCredential == null) return false;
+    web.window.navigator.credentials;
+    return true;
   } catch (_) {
     return false;
   }
@@ -332,33 +336,59 @@ Future<bool> isWalletBackupPasskeyPrfSupported() async {
 Future<Map<String, dynamic>> createWalletBackupPasskeyCredential(
   Map<String, dynamic> creationOptions,
 ) async {
-  final credential = await web.window.navigator.credentials
-      .create(
-        web.CredentialCreationOptions(
-          publicKey: _creationOptionsFromJson(creationOptions),
-        ),
-      )
-      .toDart;
-  if (credential == null) {
-    throw StateError('Passkey registration was cancelled.');
-  }
+  validatePasskeyCreationOptions(creationOptions);
+  try {
+    final credential = await web.window.navigator.credentials
+        .create(
+          web.CredentialCreationOptions(
+            publicKey: _creationOptionsFromJson(creationOptions),
+          ),
+        )
+        .toDart;
+    if (credential == null) {
+      throw passkeyCancelledException();
+    }
 
-  return _registrationResponseToJson(credential as web.PublicKeyCredential);
+    return _registrationResponseToJson(credential as web.PublicKeyCredential);
+  } catch (error) {
+    if (error is PasskeyAppException) rethrow;
+    throw _mapWebAuthnError(error);
+  }
 }
 
 Future<Map<String, dynamic>> getWalletBackupPasskeyAssertion(
   Map<String, dynamic> requestOptions,
 ) async {
-  final credential = await web.window.navigator.credentials
-      .get(
-        web.CredentialRequestOptions(
-          publicKey: _requestOptionsFromJson(requestOptions),
-        ),
-      )
-      .toDart;
-  if (credential == null) {
-    throw StateError('Passkey authentication was cancelled.');
-  }
+  validatePasskeyRequestOptions(requestOptions);
+  try {
+    final credential = await web.window.navigator.credentials
+        .get(
+          web.CredentialRequestOptions(
+            publicKey: _requestOptionsFromJson(requestOptions),
+          ),
+        )
+        .toDart;
+    if (credential == null) {
+      throw passkeyCancelledException();
+    }
 
-  return _authenticationResponseToJson(credential as web.PublicKeyCredential);
+    return _authenticationResponseToJson(
+      credential as web.PublicKeyCredential,
+    );
+  } catch (error) {
+    if (error is PasskeyAppException) rethrow;
+    throw _mapWebAuthnError(error);
+  }
+}
+
+PasskeyAppException _mapWebAuthnError(Object error) {
+  String? name;
+  try {
+    final jsError = error as JSObject;
+    final value = jsError.getProperty<JSAny?>('name'.toJS);
+    if (value != null && value.isA<JSString>()) {
+      name = (value as JSString).toDart;
+    }
+  } catch (_) {}
+  return mapWebAuthnException(error, name: name);
 }

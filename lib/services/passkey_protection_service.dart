@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../config/config.dart';
 import '../providers/wallet_provider.dart';
 import 'backend_api_service.dart';
+import 'passkey_error_mapper.dart';
 import 'wallet_backup_passkey_service.dart';
 
 /// A single account sign-in passkey credential as reported by the backend
@@ -38,10 +39,9 @@ class AccountPasskey {
     final transportsRaw = json['transports'];
     return AccountPasskey(
       id: (json['id'] ?? '').toString(),
-      credentialId: (json['credentialId'] ?? json['credential_id'] ?? '')
-          .toString(),
-      deviceLabel:
-          (json['deviceLabel'] ?? json['device_label'])?.toString(),
+      credentialId:
+          (json['credentialId'] ?? json['credential_id'] ?? '').toString(),
+      deviceLabel: (json['deviceLabel'] ?? json['device_label'])?.toString(),
       purpose: (json['purpose'])?.toString(),
       transports: transportsRaw is List
           ? transportsRaw.map((e) => e.toString()).toList(growable: false)
@@ -63,8 +63,8 @@ class AccountPasskeyStatus {
   final List<AccountPasskey> passkeys;
   final bool accountSignInReady;
 
-  static const empty =
-      AccountPasskeyStatus(passkeys: <AccountPasskey>[], accountSignInReady: false);
+  static const empty = AccountPasskeyStatus(
+      passkeys: <AccountPasskey>[], accountSignInReady: false);
 
   factory AccountPasskeyStatus.fromJson(Map<String, dynamic> json) {
     final list = json['passkeys'];
@@ -77,7 +77,8 @@ class AccountPasskeyStatus {
     return AccountPasskeyStatus(
       passkeys: passkeys,
       accountSignInReady: json['accountSignInReady'] == true ||
-          passkeys.any((p) => p.purpose == 'account_sign_in' || p.purpose == 'both'),
+          passkeys.any(
+              (p) => p.purpose == 'account_sign_in' || p.purpose == 'both'),
     );
   }
 }
@@ -113,8 +114,7 @@ class PasskeyProtectionResult {
 class PasskeyProtectionService {
   const PasskeyProtectionService();
 
-  bool get isAvailable =>
-      kIsWeb && AppConfig.isFeatureEnabled('passkeySignIn');
+  bool get isAvailable => kIsWeb && AppConfig.isFeatureEnabled('passkeySignIn');
 
   Future<AccountPasskeyStatus> getAccountStatus(BackendApiService api) async {
     final data = await api.getAccountPasskeyStatus();
@@ -131,28 +131,38 @@ class PasskeyProtectionService {
     String purpose = 'account_sign_in',
   }) async {
     if (!kIsWeb) {
-      throw StateError('Passkeys are only available on web.');
+      throw const PasskeyAppException(
+        PasskeyErrorCode.unavailable,
+        'Passkeys are only available in the web app.',
+      );
     }
     final supported = await isWalletBackupPasskeySupported();
     if (!supported) {
-      throw StateError('Passkeys are not available in this browser.');
+      throw const PasskeyAppException(
+        PasskeyErrorCode.unavailable,
+        'Passkeys are not available in this browser.',
+      );
     }
-    final options = await api.getAccountPasskeyRegisterOptions(
-      deviceLabel: deviceLabel,
-      purpose: purpose,
-    );
-    final credential = await createWalletBackupPasskeyCredential(options);
-    final prfSupported = prfOutputFromResponse(credential) != null;
-    final verify = await api.verifyAccountPasskeyRegister(
-      responsePayload: credential,
-      deviceLabel: deviceLabel,
-      purpose: purpose,
-      prfSupported: prfSupported,
-    );
-    final passkeyPayload = verify['passkey'] is Map
-        ? Map<String, dynamic>.from(verify['passkey'] as Map)
-        : verify;
-    return AccountPasskey.fromJson(passkeyPayload);
+    try {
+      final options = await api.getAccountPasskeyRegisterOptions(
+        deviceLabel: deviceLabel,
+        purpose: purpose,
+      );
+      final credential = await createWalletBackupPasskeyCredential(options);
+      final prfSupported = prfOutputFromResponse(credential) != null;
+      final verify = await api.verifyAccountPasskeyRegister(
+        responsePayload: credential,
+        deviceLabel: deviceLabel,
+        purpose: purpose,
+        prfSupported: prfSupported,
+      );
+      final passkeyPayload = verify['passkey'] is Map
+          ? Map<String, dynamic>.from(verify['passkey'] as Map)
+          : verify;
+      return AccountPasskey.fromJson(passkeyPayload);
+    } catch (error) {
+      throw mapBackendPasskeyException(error);
+    }
   }
 
   Future<void> revokeAccountPasskey({
@@ -184,10 +194,9 @@ class PasskeyProtectionService {
     final capability = await getPasskeyCapability();
     final hasWalletMaterial = walletProvider.hasSigner ||
         (await walletProvider.readCachedMnemonic() ?? '').trim().isNotEmpty;
-    final shouldAttemptWalletRecovery =
-        capability.maySupportWalletRecovery &&
-            AppConfig.isFeatureEnabled('walletBackupPasskeyWeb') &&
-            hasWalletMaterial;
+    final shouldAttemptWalletRecovery = capability.maySupportWalletRecovery &&
+        AppConfig.isFeatureEnabled('walletBackupPasskeyWeb') &&
+        hasWalletMaterial;
 
     if (!shouldAttemptWalletRecovery) {
       return PasskeyProtectionResult(

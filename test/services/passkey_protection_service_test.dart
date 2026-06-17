@@ -1,4 +1,6 @@
 import 'package:art_kubus/services/passkey_protection_service.dart';
+import 'package:art_kubus/services/backend_api_service.dart';
+import 'package:art_kubus/services/passkey_error_mapper.dart';
 import 'package:art_kubus/services/wallet_backup_passkey_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -19,7 +21,8 @@ void main() {
       expect(cap.confirmedWalletRecovery, isFalse);
     });
 
-    test('unknownUntilRegistration permits attempting recovery, not confirmed', () {
+    test('unknownUntilRegistration permits attempting recovery, not confirmed',
+        () {
       const cap = PasskeyCapability.walletRecoveryPrfUnknownUntilRegistration;
       expect(cap.supportsAccountSignIn, isTrue);
       expect(cap.maySupportWalletRecovery, isTrue);
@@ -118,6 +121,58 @@ void main() {
       );
       expect(result.accountSignInRegistered, isTrue);
       expect(result.walletRecoveryError, isNotNull);
+    });
+  });
+
+  group('Passkey error mapping', () {
+    test('maps InvalidStateError to duplicate credential', () {
+      final error = mapWebAuthnException(
+        Exception('InvalidStateError: credential exists'),
+      );
+      expect(error.code, PasskeyErrorCode.duplicateCredential);
+      expect(error.message, contains('already registered'));
+    });
+
+    test('maps NotAllowedError to cancelled or timed out', () {
+      final error = mapWebAuthnException(
+        Exception('NotAllowedError: user cancelled'),
+      );
+      expect(error.code, PasskeyErrorCode.cancelled);
+      expect(error.message, contains('cancelled'));
+    });
+
+    test('maps null credential to cancelled', () {
+      final error = passkeyCancelledException();
+      expect(error.code, PasskeyErrorCode.cancelled);
+      expect(error.message, contains('cancelled'));
+    });
+
+    test('rejects malformed creation options before WebAuthn create', () {
+      expect(
+        () => validatePasskeyCreationOptions(<String, dynamic>{
+          'challenge': '',
+        }),
+        throwsA(
+          isA<PasskeyAppException>().having(
+            (error) => error.code,
+            'code',
+            PasskeyErrorCode.malformedOptions,
+          ),
+        ),
+      );
+    });
+
+    test('maps backend structured passkey errors', () {
+      final error = mapBackendPasskeyException(
+        const BackendApiRequestException(
+          statusCode: 400,
+          path: '/api/auth/passkey/login/verify',
+          body:
+              '{"success":false,"errorCode":"PASSKEY_CHALLENGE_EXPIRED","error":"expired"}',
+        ),
+      );
+      expect(error.code, PasskeyErrorCode.challengeExpired);
+      expect(error.message, contains('fresh challenge'));
     });
   });
 }
