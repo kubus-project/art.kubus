@@ -38,6 +38,7 @@ import 'auth_session_coordinator.dart';
 import 'http_client_factory.dart';
 import 'media_upload_optimizer.dart';
 import 'telemetry/kubus_client_context.dart';
+import 'telemetry/telemetry_uuid.dart';
 
 part 'backend_api_service_auth_helpers.dart';
 part 'backend_api_service_auth_account_helpers.dart';
@@ -280,6 +281,7 @@ class BackendApiService
   final Map<String, DateTime> _rateLimitResets = {};
   final Map<String, DateTime> _debugLogThrottle = <String, DateTime>{};
   Duration? _lastMultipartTimeoutForTesting;
+  String? _lastRequestId;
 
   bool? _exhibitionsApiAvailable;
   bool? _institutionsApiAvailable;
@@ -288,6 +290,7 @@ class BackendApiService
   bool? get exhibitionsApiAvailable => _exhibitionsApiAvailable;
   bool? get institutionsApiAvailable => _institutionsApiAvailable;
   bool? get eventsApiAvailable => _eventsApiAvailable;
+  String? get lastRequestId => _lastRequestId;
 
   void bindAuthCoordinator(AuthSessionCoordinator coordinator) {
     _authCoordinator = coordinator;
@@ -554,6 +557,118 @@ class BackendApiService
     final secs = remaining.inSeconds % 60;
     final human = mins > 0 ? '${mins}m ${secs}s' : '${secs}s';
     return 'Rate limit exceeded. Please retry in ~$human.';
+  }
+
+  Map<String, dynamic> _sanitizeDiagnosticsMetadata(
+      Map<String, dynamic> input) {
+    final output = <String, dynamic>{};
+    input.forEach((key, value) {
+      final lower = key.toLowerCase();
+      final secret = lower.contains('authorization') ||
+          lower.contains('cookie') ||
+          lower.contains('token') ||
+          lower.contains('password') ||
+          lower.contains('secret') ||
+          lower.contains('private') ||
+          lower.contains('seed') ||
+          lower.contains('mnemonic') ||
+          lower.contains('backup');
+      if (secret) {
+        output[key] = '[redacted]';
+      } else if (value is String) {
+        output[key] = _redactDiagnosticsString(value);
+      } else if (value is Map) {
+        output[key] =
+            _sanitizeDiagnosticsMetadata(Map<String, dynamic>.from(value));
+      } else {
+        output[key] = value;
+      }
+    });
+    return output;
+  }
+
+  String _redactDiagnosticsString(String value) {
+    var out = value;
+    out = out.replaceAll(
+      RegExp(r'Bearer\s+[A-Za-z0-9._~+/=-]+', caseSensitive: false),
+      'Bearer [redacted]',
+    );
+    out = out.replaceAll(
+      RegExp(r'(token|password|secret|private[_-]?key)=([^&\s]+)',
+          caseSensitive: false),
+      r'$1=[redacted]',
+    );
+    out = out.replaceAll(
+      RegExp(r'postgres(?:ql)?://[^\s]+', caseSensitive: false),
+      'postgres://[redacted]',
+    );
+    out = out.replaceAll(
+      RegExp(r'redis(?:s)?://[^\s]+', caseSensitive: false),
+      'redis://[redacted]',
+    );
+    return out.length > 1000 ? out.substring(0, 1000) : out;
+  }
+
+  Future<http.Response?> postClientDiagnostics(String jsonBody) async {
+    try {
+      final headers = _getHeaders(includeAuth: false);
+      final token = (_authToken ?? '').trim();
+      if (token.isNotEmpty) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+      return await _post(
+        Uri.parse('$baseUrl/api/diagnostics/error'),
+        includeAuth: false,
+        headers: headers,
+        body: jsonBody,
+        isIdempotent: true,
+        timeout: const Duration(seconds: 5),
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  void _captureHttpFailureDiagnostics({
+    required String method,
+    required Uri uri,
+    required http.Response response,
+  }) {
+    if (uri.path == '/api/diagnostics/error') return;
+    final status = response.statusCode;
+    if (status < 500 && status != 401 && status != 403) return;
+
+    unawaited(() async {
+      try {
+        final context = KubusClientContext.instance.snapshot;
+        final bodyPreview = response.body.length > 300
+            ? response.body.substring(0, 300)
+            : response.body;
+        final payload = <String, dynamic>{
+          'eventId': TelemetryUuid.v4(),
+          'source': 'flutter_http',
+          'severity': status >= 500 ? 'error' : 'warning',
+          'message': 'HTTP $status ${method.toUpperCase()} ${uri.path}',
+          'clientVersion': AppInfo.fullVersion,
+          'buildNumber': AppInfo.buildNumber,
+          'platform': defaultTargetPlatform.name,
+          'screenRoute': context?.screenRoute ?? uri.path,
+          'screenName': context?.screenName,
+          'flowStage': context?.flowStage,
+          'sessionId': context?.sessionId,
+          'requestId': _lastRequestId,
+          'metadata': _sanitizeDiagnosticsMetadata({
+            'method': method.toUpperCase(),
+            'path': uri.path,
+            'status_code': status,
+            'response_preview': bodyPreview,
+          }),
+        };
+        final jsonBody = jsonEncode(payload);
+        if (utf8.encode(jsonBody).length > 16 * 1024) return;
+        await postClientDiagnostics(jsonBody);
+      } catch (_) {}
+    }());
   }
 
   /// Ensure an existing backend account session is loaded.
@@ -1131,6 +1246,17 @@ class BackendApiService
         'bodySnippet': snippet,
       });
     }
+
+    final responseRequestId =
+        response.headers['x-request-id'] ?? response.headers['x-kubus-request-id'];
+    if ((responseRequestId ?? '').trim().isNotEmpty) {
+      _lastRequestId = responseRequestId!.trim();
+    }
+    _captureHttpFailureDiagnostics(
+      method: method,
+      uri: uri,
+      response: response,
+    );
 
     final coordinator = _authCoordinator;
     final isAuthFailure = includeAuth &&

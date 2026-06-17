@@ -90,6 +90,7 @@ import 'services/notification_handler.dart';
 import 'services/solana_wallet_service.dart';
 import 'services/socket_service.dart';
 import 'services/backend_api_service.dart';
+import 'services/diagnostics/diagnostics_client.dart';
 import 'services/public_action_outbox_service.dart';
 import 'services/public_fallback_service.dart';
 import 'services/telemetry/telemetry_route_observer.dart';
@@ -155,6 +156,14 @@ class _UnhandledErrorDedupe {
     }
 
     _surfaceDebugUi(error: error, source: source);
+    unawaited(DiagnosticsClient.instance.captureError(
+      error,
+      stack,
+      source: source,
+      severity: source == 'PlatformDispatcher' || source == 'Zone'
+          ? 'fatal'
+          : 'error',
+    ));
   }
 
   static void _captureFirst(Object error, StackTrace stack, String source) {

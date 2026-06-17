@@ -63,10 +63,11 @@ class KubusClientContext {
     return snapshot.toHeaders();
   }
 
+  KubusClientContextSnapshot? get snapshot => _enabled ? _snapshot : null;
+
   static String? _clamp(String? value, int maxLen) {
     final raw = (value ?? '').trim();
     if (raw.isEmpty) return null;
     return raw.length > maxLen ? raw.substring(0, maxLen) : raw;
   }
 }
-
