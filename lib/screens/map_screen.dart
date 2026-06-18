@@ -5142,7 +5142,7 @@ class _MapScreenState extends State<MapScreen>
           sizeFactor: anim,
           // Anchor the reveal to the top edge so the panel grows downward from
           // the search bar for a vertical size transition.
-          axisAlignment: -1.0,
+          alignment: Alignment.topCenter,
           child: child,
         ),
       ),
