@@ -172,56 +172,33 @@ class PasskeyProtectionService {
     await api.revokeAccountPasskey(passkeyId: passkeyId);
   }
 
-  /// Combined "Enable passkey protection":
-  ///   1. Always register an account sign-in passkey.
-  ///   2. If PRF may be supported and the signer/mnemonic is available locally,
-  ///      register a wallet recovery passkey (PRF-wrapped).
+  /// Combined "Enable passkey protection" uses exactly one WebAuthn create()
+  /// ceremony. It registers an account sign-in passkey with `purpose='both'`
+  /// so this API cannot silently trigger a second browser prompt.
   ///
-  /// Wallet recovery failure never rolls back a successful account passkey.
+  /// Wallet recovery/unlock passkeys require PRF-wrapped recovery material and
+  /// are now an explicit separate user action in the canonical security hub.
   Future<PasskeyProtectionResult> enablePasskeyProtection({
     required BackendApiService api,
     required WalletProvider walletProvider,
     String? deviceLabel,
   }) async {
-    // Step 1: account sign-in passkey (required).
-    await registerAccountPasskey(
+    final accountPasskey = await registerAccountPasskey(
       api: api,
       deviceLabel: deviceLabel,
-      purpose: 'account_sign_in',
+      purpose: 'both',
     );
 
-    // Step 2: wallet recovery passkey (best effort, PRF-gated).
-    final capability = await getPasskeyCapability();
-    final hasWalletMaterial = walletProvider.hasSigner ||
-        (await walletProvider.readCachedMnemonic() ?? '').trim().isNotEmpty;
-    final shouldAttemptWalletRecovery = capability.maySupportWalletRecovery &&
-        AppConfig.isFeatureEnabled('walletBackupPasskeyWeb') &&
-        hasWalletMaterial;
-
-    if (!shouldAttemptWalletRecovery) {
-      return PasskeyProtectionResult(
-        accountSignInRegistered: true,
-        walletRecoveryRegistered: false,
-        walletRecoveryAttempted: false,
-      );
-    }
-
-    try {
-      await walletProvider.registerWalletPasskeyRecovery();
-      return const PasskeyProtectionResult(
-        accountSignInRegistered: true,
-        walletRecoveryRegistered: true,
-        walletRecoveryAttempted: true,
-      );
-    } catch (error) {
-      // Account passkey stays registered; surface the wallet recovery failure so
-      // the UI can fall back to recovery password / phrase.
-      return PasskeyProtectionResult(
-        accountSignInRegistered: true,
-        walletRecoveryRegistered: false,
-        walletRecoveryAttempted: true,
-        walletRecoveryError: error,
-      );
-    }
+    return PasskeyProtectionResult(
+      accountSignInRegistered: true,
+      walletRecoveryRegistered: false,
+      walletRecoveryAttempted: false,
+      walletRecoveryError: accountPasskey.prfSupported
+          ? null
+          : const PasskeyAppException(
+              PasskeyErrorCode.unavailable,
+              'This passkey can sign into the account, but wallet recovery passkey setup needs a PRF-capable device.',
+            ),
+    );
   }
 }

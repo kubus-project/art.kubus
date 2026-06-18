@@ -2725,6 +2725,24 @@ class BackendApiService
         walletAddress: walletAddress,
       );
 
+  Future<List<WalletBackupPasskeyDefinition>> getWalletRecoveryPasskeys({
+    String? walletAddress,
+  }) =>
+      _backendApiGetWalletRecoveryPasskeys(
+        this,
+        walletAddress: walletAddress,
+      );
+
+  Future<Map<String, dynamic>> revokeWalletRecoveryPasskey({
+    required String id,
+    String? walletAddress,
+  }) =>
+      _backendApiRevokeWalletRecoveryPasskey(
+        this,
+        id: id,
+        walletAddress: walletAddress,
+      );
+
   Future<Map<String, dynamic>> getWalletBackupPasskeyRecoverOptions({
     required String walletAddress,
   }) =>

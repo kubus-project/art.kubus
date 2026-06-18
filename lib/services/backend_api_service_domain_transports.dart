@@ -224,6 +224,22 @@ class BackendRecoveryTransport {
     );
   }
 
+  Future<List<WalletBackupPasskeyDefinition>> getWalletRecoveryPasskeys({
+    String? walletAddress,
+  }) {
+    return _service.getWalletRecoveryPasskeys(walletAddress: walletAddress);
+  }
+
+  Future<Map<String, dynamic>> revokeWalletRecoveryPasskey({
+    required String id,
+    String? walletAddress,
+  }) {
+    return _service.revokeWalletRecoveryPasskey(
+      id: id,
+      walletAddress: walletAddress,
+    );
+  }
+
   Future<Map<String, dynamic>> getPasskeyRecoverOptions({
     required String walletAddress,
   }) {

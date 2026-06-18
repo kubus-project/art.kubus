@@ -1022,6 +1022,73 @@ Future<Map<String, dynamic>> _backendApiGetWalletBackupPasskeyRecoveryStatus(
   }
 }
 
+Future<List<WalletBackupPasskeyDefinition>> _backendApiGetWalletRecoveryPasskeys(
+  BackendApiService service, {
+  String? walletAddress,
+}) async {
+  try {
+    final definition = await service.getEncryptedWalletBackup(
+      walletAddress: walletAddress,
+    );
+    return definition?.passkeys ?? const <WalletBackupPasskeyDefinition>[];
+  } on BackendApiRequestException catch (e) {
+    if (e.statusCode == 404) {
+      return const <WalletBackupPasskeyDefinition>[];
+    }
+    rethrow;
+  } catch (e) {
+    AppConfig.debugPrint(
+      'BackendApiService.getWalletRecoveryPasskeys failed: $e',
+    );
+    rethrow;
+  }
+}
+
+Future<Map<String, dynamic>> _backendApiRevokeWalletRecoveryPasskey(
+  BackendApiService service, {
+  required String id,
+  String? walletAddress,
+}) async {
+  final normalizedId = id.trim();
+  if (normalizedId.isEmpty) {
+    throw const EncryptedWalletBackupException('Passkey id is required.');
+  }
+  try {
+    final normalizedWallet = (walletAddress ?? '').trim();
+    final uri = Uri.parse(
+      '${service.baseUrl}/api/wallet-backup/passkey/${Uri.encodeComponent(normalizedId)}',
+    ).replace(
+      queryParameters: normalizedWallet.isEmpty
+          ? null
+          : <String, String>{'walletAddress': normalizedWallet},
+    );
+    final response = await service._delete(
+      uri,
+      includeAuth: true,
+      headers: service._getHeaders(includeAuth: true),
+    );
+    if (response.statusCode == 200 || response.statusCode == 204) {
+      if (response.body.trim().isEmpty) {
+        return <String, dynamic>{'revoked': true, 'id': normalizedId};
+      }
+      final raw = jsonDecode(response.body) as Map<String, dynamic>;
+      return raw['data'] is Map<String, dynamic>
+          ? raw['data'] as Map<String, dynamic>
+          : raw;
+    }
+    throw BackendApiRequestException(
+      statusCode: response.statusCode,
+      path: uri.path,
+      body: response.body,
+    );
+  } catch (e) {
+    AppConfig.debugPrint(
+      'BackendApiService.revokeWalletRecoveryPasskey failed: $e',
+    );
+    rethrow;
+  }
+}
+
 Future<Map<String, dynamic>> _backendApiGetWalletBackupPasskeyRecoverOptions(
   BackendApiService service, {
   required String walletAddress,
