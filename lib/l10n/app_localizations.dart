@@ -3179,6 +3179,30 @@ abstract class AppLocalizations {
   /// **'Discover local art, creators, institutions, exhibitions and works in public space. art.kubus connects the map, community, AR, wallet, archive records and governance into one open cultural infrastructure.'**
   String get onboardingWelcomeDescription;
 
+  /// No description provided for @alphaNoticeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'You are entering the art.kubus alpha'**
+  String get alphaNoticeTitle;
+
+  /// No description provided for @alphaNoticeBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The platform is live, but still evolving. Features, layouts and interactions may change during development. Account data is intended to remain preserved as the platform grows, but occasional changes may still be necessary.\n\nPlease avoid submitting sensitive or private information while the platform is in alpha.'**
+  String get alphaNoticeBody;
+
+  /// No description provided for @alphaNoticeContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue to onboarding'**
+  String get alphaNoticeContinue;
+
+  /// No description provided for @alphaNoticeBackToWebsite.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to website'**
+  String get alphaNoticeBackToWebsite;
+
   /// No description provided for @onboardingExploreTitle.
   ///
   /// In en, this message translates to:

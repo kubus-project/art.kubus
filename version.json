@@ -1,7 +1,7 @@
 {
   "version": "0.6.2",
-  "buildNumber": "260618.02",
-  "buildDate": "2026-06-18",
+  "buildNumber": "260619.01",
+  "buildDate": "2026-06-19",
   "channel": "alpha",
   "ecosystem": "art.kubus",
   "targets": {

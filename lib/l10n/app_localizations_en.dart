@@ -1591,6 +1591,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingWelcomeDescription => 'Discover local art, creators, institutions, exhibitions and works in public space. art.kubus connects the map, community, AR, wallet, archive records and governance into one open cultural infrastructure.';
 
   @override
+  String get alphaNoticeTitle => 'You are entering the art.kubus alpha';
+
+  @override
+  String get alphaNoticeBody => 'The platform is live, but still evolving. Features, layouts and interactions may change during development. Account data is intended to remain preserved as the platform grows, but occasional changes may still be necessary.\n\nPlease avoid submitting sensitive or private information while the platform is in alpha.';
+
+  @override
+  String get alphaNoticeContinue => 'Continue to onboarding';
+
+  @override
+  String get alphaNoticeBackToWebsite => 'Back to website';
+
+  @override
   String get onboardingExploreTitle => 'Explore the open art map';
 
   @override

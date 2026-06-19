@@ -12,6 +12,7 @@ import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/screens/auth/sign_in_screen.dart';
 import 'package:art_kubus/screens/desktop/desktop_shell.dart';
 import 'package:art_kubus/screens/web3/wallet/mnemonic_reveal_screen.dart';
+import 'package:art_kubus/services/alpha_notice_service.dart';
 import 'package:art_kubus/services/auth_onboarding_service.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/notification_helper.dart';
@@ -35,6 +36,7 @@ import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:art_kubus/widgets/gradient_icon_card.dart';
 import 'package:art_kubus/widgets/kubus_button.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import 'package:art_kubus/widgets/onboarding/alpha_notice_dialog.dart';
 import 'package:art_kubus/widgets/onboarding/onboarding_wallet_connect_step.dart';
 import 'package:art_kubus/widgets/user_persona_picker_content.dart';
 import 'package:art_kubus/widgets/wallet_backup_prompts.dart';
@@ -201,6 +203,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
 
   int _currentIndex = 0;
   bool _isInitializing = true;
+  bool _alphaNoticeCheckStarted = false;
   bool _locationEnabled = false;
   bool _notificationEnabled = false;
   bool _cameraEnabled = false;
@@ -403,10 +406,12 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       _flushPendingAvatarUploadIfPossible();
 
   @visibleForTesting
-  Future<void> debugEnsureAvatarHydratedForMainShell(String? uploadedAvatarUrl) {
+  Future<void> debugEnsureAvatarHydratedForMainShell(
+      String? uploadedAvatarUrl) {
     final profileProvider =
         Provider.of<ProfileProvider>(context, listen: false);
-    return _ensureAvatarHydratedForMainShell(profileProvider, uploadedAvatarUrl);
+    return _ensureAvatarHydratedForMainShell(
+        profileProvider, uploadedAvatarUrl);
   }
 
   @visibleForTesting
@@ -611,6 +616,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
 
       await _loadPermissionStatuses();
       _syncStepSideEffects();
+      _queueAlphaNoticeIfNeeded();
     } catch (error, stackTrace) {
       if (kDebugMode) {
         debugPrint(
@@ -626,7 +632,31 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         _currentIndex = _nextIncompleteIndex();
       });
       _syncStepSideEffects();
+      _queueAlphaNoticeIfNeeded();
     }
+  }
+
+  void _queueAlphaNoticeIfNeeded() {
+    if (_alphaNoticeCheckStarted) return;
+    _alphaNoticeCheckStarted = true;
+    unawaited(_showAlphaNoticeIfNeeded());
+  }
+
+  Future<void> _showAlphaNoticeIfNeeded() async {
+    final acknowledged = await AlphaNoticeService.isAcknowledged();
+    if (!mounted || acknowledged) return;
+
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted) return;
+
+    await showKubusDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      routeSettings: const RouteSettings(name: '/onboarding/alpha-notice'),
+      builder: (_) => AlphaNoticeDialog(
+        onContinue: () => AlphaNoticeService.acknowledge(),
+      ),
+    );
   }
 
   void _setPendingEmailVerification(
@@ -1108,8 +1138,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           // recorded it migrates forward safely. Bootstrap promotes a completed
           // / deferred `walletBackup` to `walletBackupIntro`, and
           // `_refreshAuthDerivedSteps` prunes any entry no longer in `_steps`.
-          if (_shouldOfferWalletBackupIntro)
-            _OnboardingStep.walletBackupIntro,
+          if (_shouldOfferWalletBackupIntro) _OnboardingStep.walletBackupIntro,
           if (_requiresDaoReviewStep) _OnboardingStep.daoReview,
           _OnboardingStep.accountPermissions,
           _OnboardingStep.done,
@@ -2565,8 +2594,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
                     const SizedBox(height: KubusSpacing.md),
                     MnemonicRevealContent(
                       embedded: true,
-                      onCompleted: () =>
-                          Navigator.of(dialogContext).pop(true),
+                      onCompleted: () => Navigator.of(dialogContext).pop(true),
                       onClose: () => Navigator.of(dialogContext).pop(false),
                     ),
                   ],
@@ -3395,15 +3423,13 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
                       child: Text(
                         _stageLabel(l10n, stage),
                         maxLines: 2,
-                        style:
-                            Theme.of(context).textTheme.labelLarge?.copyWith(
-                                  color: Colors.white.withValues(
-                                    alpha: isActive ? 0.98 : 0.66,
-                                  ),
-                                  fontWeight: isActive
-                                      ? FontWeight.w700
-                                      : FontWeight.w500,
-                                ),
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                              color: Colors.white.withValues(
+                                alpha: isActive ? 0.98 : 0.66,
+                              ),
+                              fontWeight:
+                                  isActive ? FontWeight.w700 : FontWeight.w500,
+                            ),
                       ),
                     ),
                   ],
@@ -4156,24 +4182,24 @@ class _WelcomeDecisionPanel extends StatelessWidget {
             const SizedBox(height: KubusSpacing.md),
             _WelcomeChoiceCard(
               compact: compact,
-              icon: Icons.person_add_alt_1_rounded,
-              title: createTitle,
-              body: createBody,
+              icon: Icons.travel_explore_rounded,
+              title: discoverTitle,
+              body: discoverBody,
               action: KubusButton(
-                onPressed: () => unawaited(onSelectAccount()),
-                label: createTitle,
+                onPressed: () => unawaited(onSelectGuest()),
+                label: discoverTitle,
                 isFullWidth: true,
               ),
             ),
             const SizedBox(height: KubusSpacing.md),
             _WelcomeChoiceCard(
               compact: compact,
-              icon: Icons.travel_explore_rounded,
-              title: discoverTitle,
-              body: discoverBody,
+              icon: Icons.person_add_alt_1_rounded,
+              title: createTitle,
+              body: createBody,
               action: KubusOutlineButton(
-                onPressed: () => unawaited(onSelectGuest()),
-                label: discoverTitle,
+                onPressed: () => unawaited(onSelectAccount()),
+                label: createTitle,
                 isFullWidth: true,
               ),
             ),
