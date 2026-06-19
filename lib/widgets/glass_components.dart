@@ -810,6 +810,7 @@ class KubusAlertDialog extends StatelessWidget {
       dialog = Semantics(
         scopesRoute: true,
         namesRoute: true,
+        explicitChildNodes: true,
         label: semanticLabel,
         child: dialog,
       );

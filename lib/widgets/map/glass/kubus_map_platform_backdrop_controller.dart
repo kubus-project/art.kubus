@@ -148,6 +148,8 @@ KubusMapBackdropRegionValidation validateKubusMapBackdropRegionForMap({
 class KubusMapBackdropHostController extends ChangeNotifier {
   final Map<String, KubusMapBackdropRegion> _regions =
       <String, KubusMapBackdropRegion>{};
+  bool _disposed = false;
+  bool _deferredNotifyScheduled = false;
 
   List<KubusMapBackdropRegion> get regions =>
       List<KubusMapBackdropRegion>.unmodifiable(_regions.values);
@@ -155,6 +157,7 @@ class KubusMapBackdropHostController extends ChangeNotifier {
   int get regionCount => _regions.length;
 
   void upsertRegion(KubusMapBackdropRegion region) {
+    if (_disposed) return;
     final previous = _regions[region.id];
     if (previous != null &&
         previous.rect == region.rect &&
@@ -165,19 +168,42 @@ class KubusMapBackdropHostController extends ChangeNotifier {
       return;
     }
     _regions[region.id] = region;
-    notifyListeners();
+    _notifyRegionChange(defer: false);
   }
 
-  void removeRegion(String id) {
+  void removeRegion(String id, {bool deferNotify = false}) {
+    if (_disposed) return;
     if (_regions.remove(id) != null) {
-      notifyListeners();
+      _notifyRegionChange(defer: deferNotify);
     }
   }
 
   void clear() {
+    if (_disposed) return;
     if (_regions.isEmpty) return;
     _regions.clear();
-    notifyListeners();
+    _notifyRegionChange(defer: false);
+  }
+
+  void _notifyRegionChange({required bool defer}) {
+    if (_disposed) return;
+    if (!defer) {
+      notifyListeners();
+      return;
+    }
+    if (_deferredNotifyScheduled) return;
+    _deferredNotifyScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _deferredNotifyScheduled = false;
+      if (_disposed) return;
+      notifyListeners();
+    });
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
   }
 }
 

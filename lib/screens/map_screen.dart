@@ -333,6 +333,7 @@ class _MapScreenState extends State<MapScreen>
   bool _isRouteVisible = true;
   bool _mapViewMounted = true;
   PageRoute<dynamic>? _subscribedRoute;
+  int _markerOpenRequestId = 0;
   bool _pendingMarkerRefresh = false;
   bool _pendingMarkerRefreshForce = false;
 
@@ -815,7 +816,7 @@ class _MapScreenState extends State<MapScreen>
     if (route is PageRoute<dynamic>) {
       if (_subscribedRoute != route) {
         if (_subscribedRoute != null) {
-          appRouteObserver.unsubscribe(this);
+          _unsubscribeRouteObserver(source: 'didChangeDependencies');
         }
         _subscribedRoute = route;
         appRouteObserver.subscribe(this, route);
@@ -1134,6 +1135,22 @@ class _MapScreenState extends State<MapScreen>
     _syncRootTutorialBinding();
     if (isVisible) {
       _scheduleWebMapResizeRecovery(reason: 'tabVisible');
+    }
+  }
+
+  void _unsubscribeRouteObserver({required String source}) {
+    final route = _subscribedRoute;
+    if (route == null) return;
+    _subscribedRoute = null;
+    try {
+      appRouteObserver.unsubscribe(this);
+    } catch (error, stack) {
+      if (kDebugMode) {
+        debugPrint(
+          'MapScreen: route observer unsubscribe failed ($source): $error',
+        );
+        debugPrintStack(stackTrace: stack);
+      }
     }
   }
 
@@ -1560,10 +1577,7 @@ class _MapScreenState extends State<MapScreen>
 
   @override
   void dispose() {
-    if (_subscribedRoute != null) {
-      appRouteObserver.unsubscribe(this);
-      _subscribedRoute = null;
-    }
+    _unsubscribeRouteObserver(source: 'dispose');
     MapAttributionHelper.setMobileMapEnabled(false);
     _mapDeepLinkProvider?.removeListener(_handleMapDeepLinkProviderChanged);
     _mapDeepLinkProvider = null;
@@ -1590,30 +1604,48 @@ class _MapScreenState extends State<MapScreen>
     _timer?.cancel();
     _perf.timerStopped('location_timer');
     _mapSearchController.dispose();
-    if (_compassSubscription != null) {
+    final compassSubscription = _compassSubscription;
+    _compassSubscription = null;
+    if (compassSubscription != null) {
       _perf.subscriptionStopped('compass');
-      unawaited(_compassSubscription!.cancel().catchError((_) {/* ignore */}));
+      unawaited(compassSubscription.cancel().catchError((_) {/* ignore */}));
     }
-    if (_mobileLocationSubscription != null) {
+    final mobileLocationSubscription = _mobileLocationSubscription;
+    _mobileLocationSubscription = null;
+    if (mobileLocationSubscription != null) {
       _perf.subscriptionStopped('mobile_location_stream');
       unawaited(
-        _mobileLocationSubscription!.cancel().catchError((_) {/* ignore */}),
+        mobileLocationSubscription.cancel().catchError((_) {/* ignore */}),
       );
     }
-    if (_webPositionSubscription != null) {
+    final webPositionSubscription = _webPositionSubscription;
+    _webPositionSubscription = null;
+    if (webPositionSubscription != null) {
       _perf.subscriptionStopped('web_location_stream');
       unawaited(
-          _webPositionSubscription!.cancel().catchError((_) {/* ignore */}));
+          webPositionSubscription.cancel().catchError((_) {/* ignore */}));
     }
     _proximityCheckTimer?.cancel();
     _perf.timerStopped('proximity_timer');
     _pushNotificationService.onNotificationTap = null;
     _pushNotificationService.dispose();
     _arIntegrationService.dispose();
-    _markerSocketSubscription?.cancel();
-    _perf.subscriptionStopped('marker_socket_created');
-    _markerDeletedSubscription?.cancel();
-    _perf.subscriptionStopped('marker_socket_deleted');
+    final markerSocketSubscription = _markerSocketSubscription;
+    _markerSocketSubscription = null;
+    if (markerSocketSubscription != null) {
+      _perf.subscriptionStopped('marker_socket_created');
+      unawaited(
+        markerSocketSubscription.cancel().catchError((_) {/* ignore */}),
+      );
+    }
+    final markerDeletedSubscription = _markerDeletedSubscription;
+    _markerDeletedSubscription = null;
+    if (markerDeletedSubscription != null) {
+      _perf.subscriptionStopped('marker_socket_deleted');
+      unawaited(
+        markerDeletedSubscription.cancel().catchError((_) {/* ignore */}),
+      );
+    }
     _cubeSyncDebouncer.dispose();
     _animationController.dispose();
     _perf.controllerDisposed('selection_pop');
@@ -2199,7 +2231,7 @@ class _MapScreenState extends State<MapScreen>
         final index = _artMarkers.indexWhere((m) => m.id == markerId);
         if (index < 0) return;
         final marker = _artMarkers[index];
-        unawaited(_openMarkerPrimaryTarget(marker));
+        unawaited(_handleMarkerPrimaryAction(marker));
       }
     } catch (e) {
       AppConfig.debugPrint('MapScreen: failed to handle notification tap: $e');
@@ -2397,7 +2429,7 @@ class _MapScreenState extends State<MapScreen>
           label: l10n.commonView,
           onPressed: () {
             messenger.hideCurrentSnackBar();
-            unawaited(_openMarkerPrimaryTarget(marker));
+            unawaited(_handleMarkerPrimaryAction(marker));
           },
         ),
       ),
@@ -4426,7 +4458,7 @@ class _MapScreenState extends State<MapScreen>
 
       void openDetails() {
         unawaited(
-          _openMarkerPrimaryTarget(
+          _handleMarkerPrimaryAction(
             pageMarker,
             artwork: pageArtwork,
             exhibition: pagePrimaryExhibition,
@@ -4514,6 +4546,68 @@ class _MapScreenState extends State<MapScreen>
     );
   }
 
+  bool _isCurrentMarkerOpenRequest(ArtMarker marker, int? requestId) {
+    if (!mounted) return false;
+    if (requestId == null) return true;
+    if (requestId != _markerOpenRequestId) return false;
+    final selectedMarkerId = _kubusMapController.selectedMarkerId;
+    return selectedMarkerId == null || selectedMarkerId == marker.id;
+  }
+
+  Future<void> _handleMarkerPrimaryAction(
+    ArtMarker marker, {
+    Artwork? artwork,
+    ExhibitionSummaryDto? exhibition,
+    KubusEvent? event,
+  }) async {
+    final requestId = ++_markerOpenRequestId;
+    if (kDebugMode) {
+      debugPrint('[marker.tap] start id=${marker.id} type=${marker.type.name}');
+    }
+
+    try {
+      if (!_isCurrentMarkerOpenRequest(marker, requestId)) return;
+      await _openMarkerPrimaryTarget(
+        marker,
+        artwork: artwork,
+        exhibition: exhibition,
+        event: event,
+        requestId: requestId,
+      );
+      if (!_isCurrentMarkerOpenRequest(marker, requestId)) return;
+      if (kDebugMode) {
+        debugPrint('[marker.tap] opened id=${marker.id}');
+      }
+    } on ProviderNotFoundException catch (error, stack) {
+      if (kDebugMode) {
+        debugPrint('[marker.tap] ProviderNotFound id=${marker.id}: $error');
+        debugPrintStack(stackTrace: stack);
+      }
+      if (_isCurrentMarkerOpenRequest(marker, requestId)) {
+        _showMarkerOpenError();
+      }
+    } catch (error, stack) {
+      if (kDebugMode) {
+        debugPrint('[marker.tap] failed id=${marker.id}: $error');
+        debugPrintStack(stackTrace: stack);
+      }
+      if (_isCurrentMarkerOpenRequest(marker, requestId)) {
+        _showMarkerOpenError();
+      }
+    }
+  }
+
+  void _showMarkerOpenError() {
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context);
+    final message = l10n?.commonActionFailedToast ??
+        'Could not open marker details. Please try again.';
+    ScaffoldMessenger.of(context).showKubusSnackBar(
+      SnackBar(content: Text(message)),
+      tone: KubusSnackBarTone.error,
+    );
+  }
+
   Widget _buildTopOverlays(
     ThemeData theme,
     ThemeProvider themeProvider,
@@ -4569,7 +4663,9 @@ class _MapScreenState extends State<MapScreen>
     Artwork? artwork,
     ExhibitionSummaryDto? exhibition,
     KubusEvent? event,
+    required int requestId,
   }) async {
+    if (!_isCurrentMarkerOpenRequest(marker, requestId)) return;
     final resolvedEvent = event ??
         KubusMarkerOverlayHelpers.resolveLinkedEvent(
           marker: marker,
@@ -4582,36 +4678,51 @@ class _MapScreenState extends State<MapScreen>
     );
     switch (presentation.primaryTarget) {
       case MapMarkerOverlayPrimaryTarget.exhibition:
-        await _openExhibitionFromMarker(marker, exhibition, artwork);
+        await _openExhibitionFromMarker(
+          marker,
+          exhibition,
+          artwork,
+          requestId: requestId,
+        );
         return;
       case MapMarkerOverlayPrimaryTarget.event:
-        await _openEventFromMarker(marker, resolvedEvent);
+        await _openEventFromMarker(
+          marker,
+          resolvedEvent,
+          requestId: requestId,
+        );
         return;
       case MapMarkerOverlayPrimaryTarget.institution:
-        await _openInstitutionFromMarker(marker, presentation.linkedSubject.id);
+        await _openInstitutionFromMarker(
+          marker,
+          presentation.linkedSubject.id,
+          requestId: requestId,
+        );
         return;
       case MapMarkerOverlayPrimaryTarget.artwork:
-        await _openMarkerDetail(marker, artwork);
+        await _openMarkerDetail(marker, artwork, requestId: requestId);
         return;
       case MapMarkerOverlayPrimaryTarget.markerInfo:
-        await _showMarkerInfoFallback(marker);
+        await _showMarkerInfoFallback(marker, requestId: requestId);
         return;
     }
   }
 
   Future<void> _openEventFromMarker(
     ArtMarker marker,
-    KubusEvent? event,
-  ) async {
+    KubusEvent? event, {
+    required int requestId,
+  }) async {
     final eventId = (event?.id ?? marker.subjectId ?? '').trim();
     if (eventId.isEmpty ||
         !AppConfig.isFeatureEnabled('events') ||
         BackendApiService().eventsApiAvailable == false) {
-      await _showMarkerInfoFallback(marker);
+      await _showMarkerInfoFallback(marker, requestId: requestId);
       return;
     }
 
     final eventsProvider = context.read<EventsProvider>();
+    final navigator = Navigator.of(context);
     final fetched = event ??
         await (() async {
           try {
@@ -4621,13 +4732,12 @@ class _MapScreenState extends State<MapScreen>
           }
         })();
 
-    if (!mounted) return;
+    if (!_isCurrentMarkerOpenRequest(marker, requestId)) return;
     if (fetched == null) {
-      await _showMarkerInfoFallback(marker);
+      await _showMarkerInfoFallback(marker, requestId: requestId);
       return;
     }
 
-    final navigator = Navigator.of(context);
     navigator.push(
       MaterialPageRoute(
         builder: (_) => EventDetailScreen(eventId: fetched.id),
@@ -4637,8 +4747,9 @@ class _MapScreenState extends State<MapScreen>
 
   Future<void> _openInstitutionFromMarker(
     ArtMarker marker,
-    String? linkedInstitutionId,
-  ) async {
+    String? linkedInstitutionId, {
+    required int requestId,
+  }) async {
     final institutionId =
         (linkedInstitutionId ?? marker.subjectId ?? '').trim();
     final profileTargetId = InstitutionNavigation.resolveProfileTargetId(
@@ -4646,10 +4757,11 @@ class _MapScreenState extends State<MapScreen>
       data: marker.metadata,
     );
     if (institutionId.isEmpty && profileTargetId == null) {
-      await _showMarkerInfoFallback(marker);
+      await _showMarkerInfoFallback(marker, requestId: requestId);
       return;
     }
 
+    if (!_isCurrentMarkerOpenRequest(marker, requestId)) return;
     await InstitutionNavigation.open(
       context,
       institutionId: institutionId,
@@ -4664,8 +4776,9 @@ class _MapScreenState extends State<MapScreen>
   Future<void> _openExhibitionFromMarker(
     ArtMarker marker,
     ExhibitionSummaryDto? exhibition,
-    Artwork? artwork,
-  ) async {
+    Artwork? artwork, {
+    required int requestId,
+  }) async {
     final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
     final l10n = AppLocalizations.of(context)!;
@@ -4676,10 +4789,10 @@ class _MapScreenState extends State<MapScreen>
 
     if (resolved == null || resolved.id.isEmpty) {
       if (isExhibitionMarker) {
-        await _showMarkerInfoFallback(marker);
+        await _showMarkerInfoFallback(marker, requestId: requestId);
         return;
       }
-      await _openMarkerDetail(marker, artwork);
+      await _openMarkerDetail(marker, artwork, requestId: requestId);
       return;
     }
 
@@ -4694,7 +4807,7 @@ class _MapScreenState extends State<MapScreen>
 
     if (BackendApiService().exhibitionsApiAvailable == false &&
         !isExhibitionMarker) {
-      await _openMarkerDetail(marker, artwork);
+      await _openMarkerDetail(marker, artwork, requestId: requestId);
       return;
     }
 
@@ -4709,7 +4822,7 @@ class _MapScreenState extends State<MapScreen>
       }
     })();
 
-    if (!mounted) return;
+    if (!_isCurrentMarkerOpenRequest(marker, requestId)) return;
 
     if (fetched == null) {
       final serviceUnavailable = fetchError is BackendApiRequestException &&
@@ -4726,7 +4839,7 @@ class _MapScreenState extends State<MapScreen>
         );
         setState(() {});
       }
-      await _showMarkerInfoFallback(marker);
+      await _showMarkerInfoFallback(marker, requestId: requestId);
       return;
     }
 
@@ -4741,7 +4854,11 @@ class _MapScreenState extends State<MapScreen>
     );
   }
 
-  Future<void> _openMarkerDetail(ArtMarker marker, Artwork? artwork) async {
+  Future<void> _openMarkerDetail(
+    ArtMarker marker,
+    Artwork? artwork, {
+    required int requestId,
+  }) async {
     Artwork? resolvedArtwork = artwork;
     final artworkId = marker.isExhibitionMarker ? null : marker.artworkId;
     if (resolvedArtwork == null && artworkId != null && artworkId.isNotEmpty) {
@@ -4755,14 +4872,15 @@ class _MapScreenState extends State<MapScreen>
       }
     }
 
-    if (!mounted) return;
+    if (!_isCurrentMarkerOpenRequest(marker, requestId)) return;
 
     if (resolvedArtwork == null) {
-      await _showMarkerInfoFallback(marker);
+      await _showMarkerInfoFallback(marker, requestId: requestId);
       return;
     }
 
     final artworkToOpen = resolvedArtwork;
+    if (!mounted) return;
     await openArtwork(
       context,
       artworkToOpen.id,
@@ -4771,9 +4889,14 @@ class _MapScreenState extends State<MapScreen>
     );
   }
 
-  Future<void> _showMarkerInfoFallback(ArtMarker marker) async {
+  Future<void> _showMarkerInfoFallback(
+    ArtMarker marker, {
+    int? requestId,
+  }) async {
+    if (!_isCurrentMarkerOpenRequest(marker, requestId)) return;
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
+    final themeProvider = context.read<ThemeProvider>();
     final dpr = MediaQuery.maybeOf(context)?.devicePixelRatio ?? 1.0;
     final cacheWidth = (640 * dpr).clamp(256.0, 1600.0).round();
     final cacheHeight = (360 * dpr).clamp(144.0, 1200.0).round();
@@ -4786,6 +4909,7 @@ class _MapScreenState extends State<MapScreen>
 
     await showKubusDialog<void>(
       context: context,
+      useRootNavigator: false,
       builder: (dialogContext) => KubusAlertDialog(
         backgroundColor: scheme.surface,
         title: Text(
@@ -4823,7 +4947,9 @@ class _MapScreenState extends State<MapScreen>
                     errorBuilder: (_, __, ___) =>
                         KubusMapMarkerHelpers.markerImageFallback(
                       baseColor: _resolveArtMarkerColor(
-                          marker, context.read<ThemeProvider>()),
+                        marker,
+                        themeProvider,
+                      ),
                       scheme: scheme,
                       marker: marker,
                     ),
@@ -5142,7 +5268,7 @@ class _MapScreenState extends State<MapScreen>
           sizeFactor: anim,
           // Anchor the reveal to the top edge so the panel grows downward from
           // the search bar for a vertical size transition.
-          axisAlignment: -1.0,
+          alignment: Alignment.topCenter,
           child: child,
         ),
       ),

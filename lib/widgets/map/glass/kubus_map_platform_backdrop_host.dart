@@ -97,7 +97,7 @@ class _KubusMapBackdropRegionTrackerState
     super.didChangeDependencies();
     final nextController = KubusMapBackdropScope.maybeOf(context);
     if (_controller != nextController) {
-      _controller?.removeRegion(widget.id);
+      _controller?.removeRegion(widget.id, deferNotify: true);
       _controller = nextController;
       _scheduleSync();
     }
@@ -107,7 +107,7 @@ class _KubusMapBackdropRegionTrackerState
   void didUpdateWidget(KubusMapBackdropRegionTracker oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.id != widget.id) {
-      _controller?.removeRegion(oldWidget.id);
+      _controller?.removeRegion(oldWidget.id, deferNotify: true);
       _lastRect = null;
     }
     _scheduleSync();
@@ -115,7 +115,7 @@ class _KubusMapBackdropRegionTrackerState
 
   @override
   void dispose() {
-    _controller?.removeRegion(widget.id);
+    _controller?.removeRegion(widget.id, deferNotify: true);
     super.dispose();
   }
 

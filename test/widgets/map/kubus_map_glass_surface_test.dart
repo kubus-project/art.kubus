@@ -164,13 +164,13 @@ void main() {
     expect(decision.strategy, KubusMapBackdropStrategy.nativeBackdropHost);
     expect(decision.reason, 'mobile-native-backdrop-host');
     expect(
-      decision.strategy == KubusMapBackdropStrategy.platformViewSafeTintFallback,
+      decision.strategy ==
+          KubusMapBackdropStrategy.platformViewSafeTintFallback,
       isFalse,
     );
   });
 
-  testWidgets(
-      'mobile native NOT over the map platform view keeps real blur',
+  testWidgets('mobile native NOT over the map platform view keeps real blur',
       (tester) async {
     late KubusMapBlurDecision decision;
 
@@ -295,7 +295,8 @@ void main() {
     expect(decision.platformBackdropHostAvailable, isTrue);
   });
 
-  testWidgets('desktop explicit map chrome policy uses platform host when available',
+  testWidgets(
+      'desktop explicit map chrome policy uses platform host when available',
       (tester) async {
     late KubusMapBlurDecision decision;
 
@@ -610,7 +611,7 @@ void main() {
       mapRect: const Rect.fromLTWH(0, 0, 390, 720),
       region: KubusMapBackdropRegion(
         id: 'oversized-sheet',
-        rect: const Rect.fromLTWH(0, 0, 390, 500),
+        rect: const Rect.fromLTWH(0, 0, 390, 700),
         borderRadius: BorderRadius.circular(16),
         blurSigma: 18,
       ),

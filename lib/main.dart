@@ -251,14 +251,17 @@ void main() {
     } catch (_) {
       // Never crash the fallback builder.
     }
-    return Material(
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Text(
-            message,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 16.0),
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: Material(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 16.0),
+            ),
           ),
         ),
       ),
@@ -694,7 +697,7 @@ class _AppLauncherState extends State<AppLauncher> {
                   return provider;
                 },
               ),
-              ProxyProvider2<SolanaWalletService, WalletProvider,
+              ListenableProxyProvider2<SolanaWalletService, WalletProvider,
                   PublicActionOutboxService>(
                 lazy: false,
                 create: (context) => PublicActionOutboxService(),

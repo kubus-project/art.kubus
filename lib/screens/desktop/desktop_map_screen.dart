@@ -283,6 +283,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   bool _isAppForeground = true;
   bool _isRouteVisible = true;
   PageRoute<dynamic>? _subscribedRoute;
+  int _markerOpenRequestId = 0;
   bool _pendingMarkerRefresh = false;
   bool _pendingMarkerRefreshForce = false;
   LatLng _cameraCenter = const LatLng(46.0569, 14.5058);
@@ -664,7 +665,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     if (route is PageRoute<dynamic>) {
       if (_subscribedRoute != route) {
         if (_subscribedRoute != null) {
-          appRouteObserver.unsubscribe(this);
+          _unsubscribeRouteObserver(source: 'didChangeDependencies');
         }
         _subscribedRoute = route;
         appRouteObserver.subscribe(this, route);
@@ -679,6 +680,22 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       _tutorialOverlayController = overlayController;
     }
     _syncRootTutorialBinding();
+  }
+
+  void _unsubscribeRouteObserver({required String source}) {
+    final route = _subscribedRoute;
+    if (route == null) return;
+    _subscribedRoute = null;
+    try {
+      appRouteObserver.unsubscribe(this);
+    } catch (error, stack) {
+      if (kDebugMode) {
+        debugPrint(
+          'DesktopMapScreen: route observer unsubscribe failed ($source): $error',
+        );
+        debugPrintStack(stackTrace: stack);
+      }
+    }
   }
 
   void _syncRootTutorialBinding() {
@@ -1934,10 +1951,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   @override
   void dispose() {
     MapAttributionHelper.setDesktopMapEnabled(false);
-    if (_subscribedRoute != null) {
-      appRouteObserver.unsubscribe(this);
-      _subscribedRoute = null;
-    }
+    _unsubscribeRouteObserver(source: 'dispose');
     // Avoid leaving Explore-side panels open when navigating away.
     try {
       DesktopShellScope.of(context)?.closeFunctionsPanel();
@@ -1964,10 +1978,18 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     _deactivateRootTutorialOwner(reason: 'desktop-map-dispose');
     _tutorialOverlayController = null;
     _mapTutorialCoordinator.dispose();
-    _markerStreamSub?.cancel();
-    _perf.subscriptionStopped('marker_socket_created');
-    _markerDeletedSub?.cancel();
-    _perf.subscriptionStopped('marker_socket_deleted');
+    final markerStreamSub = _markerStreamSub;
+    _markerStreamSub = null;
+    if (markerStreamSub != null) {
+      _perf.subscriptionStopped('marker_socket_created');
+      unawaited(markerStreamSub.cancel().catchError((_) {/* ignore */}));
+    }
+    final markerDeletedSub = _markerDeletedSub;
+    _markerDeletedSub = null;
+    if (markerDeletedSub != null) {
+      _perf.subscriptionStopped('marker_socket_deleted');
+      unawaited(markerDeletedSub.cancel().catchError((_) {/* ignore */}));
+    }
     _mapSearchController.removeListener(_handleMapSearchControllerChanged);
     _mapSearchController.dispose();
     _markerStackPageController.dispose();
@@ -4977,7 +4999,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
     void openDetails() {
       unawaited(
-        _openMarkerPrimaryTarget(
+        _handleMarkerPrimaryAction(
           marker,
           artwork: artwork,
           exhibition: primaryExhibition,
@@ -5208,12 +5230,76 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     );
   }
 
-  Future<void> _openMarkerPrimaryTarget(
+  bool _isCurrentMarkerOpenRequest(ArtMarker marker, int? requestId) {
+    if (!mounted) return false;
+    if (requestId == null) return true;
+    if (requestId != _markerOpenRequestId) return false;
+    final selectedMarkerId = _kubusMapController.selectedMarkerId;
+    return selectedMarkerId == null || selectedMarkerId == marker.id;
+  }
+
+  Future<void> _handleMarkerPrimaryAction(
     ArtMarker marker, {
     Artwork? artwork,
     ExhibitionSummaryDto? exhibition,
     KubusEvent? event,
   }) async {
+    final requestId = ++_markerOpenRequestId;
+    if (kDebugMode) {
+      debugPrint('[marker.tap] start id=${marker.id} type=${marker.type.name}');
+    }
+
+    try {
+      if (!_isCurrentMarkerOpenRequest(marker, requestId)) return;
+      await _openMarkerPrimaryTarget(
+        marker,
+        artwork: artwork,
+        exhibition: exhibition,
+        event: event,
+        requestId: requestId,
+      );
+      if (!_isCurrentMarkerOpenRequest(marker, requestId)) return;
+      if (kDebugMode) {
+        debugPrint('[marker.tap] opened id=${marker.id}');
+      }
+    } on ProviderNotFoundException catch (error, stack) {
+      if (kDebugMode) {
+        debugPrint('[marker.tap] ProviderNotFound id=${marker.id}: $error');
+        debugPrintStack(stackTrace: stack);
+      }
+      if (_isCurrentMarkerOpenRequest(marker, requestId)) {
+        _showMarkerOpenError();
+      }
+    } catch (error, stack) {
+      if (kDebugMode) {
+        debugPrint('[marker.tap] failed id=${marker.id}: $error');
+        debugPrintStack(stackTrace: stack);
+      }
+      if (_isCurrentMarkerOpenRequest(marker, requestId)) {
+        _showMarkerOpenError();
+      }
+    }
+  }
+
+  void _showMarkerOpenError() {
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context);
+    final message = l10n?.commonActionFailedToast ??
+        'Could not open marker details. Please try again.';
+    ScaffoldMessenger.of(context).showKubusSnackBar(
+      SnackBar(content: Text(message)),
+      tone: KubusSnackBarTone.error,
+    );
+  }
+
+  Future<void> _openMarkerPrimaryTarget(
+    ArtMarker marker, {
+    Artwork? artwork,
+    ExhibitionSummaryDto? exhibition,
+    KubusEvent? event,
+    required int requestId,
+  }) async {
+    if (!_isCurrentMarkerOpenRequest(marker, requestId)) return;
     final resolvedEvent = event ??
         KubusMarkerOverlayHelpers.resolveLinkedEvent(
           marker: marker,
@@ -5226,32 +5312,46 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     );
     switch (presentation.primaryTarget) {
       case MapMarkerOverlayPrimaryTarget.exhibition:
-        await _openExhibitionFromMarker(marker, exhibition, artwork);
+        await _openExhibitionFromMarker(
+          marker,
+          exhibition,
+          artwork,
+          requestId: requestId,
+        );
         return;
       case MapMarkerOverlayPrimaryTarget.event:
-        await _openEventFromMarker(marker, resolvedEvent);
+        await _openEventFromMarker(
+          marker,
+          resolvedEvent,
+          requestId: requestId,
+        );
         return;
       case MapMarkerOverlayPrimaryTarget.institution:
-        await _openInstitutionFromMarker(marker, presentation.linkedSubject.id);
+        await _openInstitutionFromMarker(
+          marker,
+          presentation.linkedSubject.id,
+          requestId: requestId,
+        );
         return;
       case MapMarkerOverlayPrimaryTarget.artwork:
-        await _openMarkerDetail(marker, artwork);
+        await _openMarkerDetail(marker, artwork, requestId: requestId);
         return;
       case MapMarkerOverlayPrimaryTarget.markerInfo:
-        await _showMarkerInfoFallback(marker);
+        await _showMarkerInfoFallback(marker, requestId: requestId);
         return;
     }
   }
 
   Future<void> _openEventFromMarker(
     ArtMarker marker,
-    KubusEvent? event,
-  ) async {
+    KubusEvent? event, {
+    required int requestId,
+  }) async {
     final eventId = (event?.id ?? marker.subjectId ?? '').trim();
     if (eventId.isEmpty ||
         !AppConfig.isFeatureEnabled('events') ||
         BackendApiService().eventsApiAvailable == false) {
-      await _showMarkerInfoFallback(marker);
+      await _showMarkerInfoFallback(marker, requestId: requestId);
       return;
     }
 
@@ -5265,9 +5365,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           }
         })();
 
-    if (!mounted) return;
+    if (!_isCurrentMarkerOpenRequest(marker, requestId)) return;
     if (fetched == null) {
-      await _showMarkerInfoFallback(marker);
+      await _showMarkerInfoFallback(marker, requestId: requestId);
       return;
     }
 
@@ -5282,8 +5382,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   Future<void> _openInstitutionFromMarker(
     ArtMarker marker,
-    String? linkedInstitutionId,
-  ) async {
+    String? linkedInstitutionId, {
+    required int requestId,
+  }) async {
     final institutionId =
         (linkedInstitutionId ?? marker.subjectId ?? '').trim();
     final profileTargetId = InstitutionNavigation.resolveProfileTargetId(
@@ -5291,10 +5392,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       data: marker.metadata,
     );
     if (institutionId.isEmpty && profileTargetId == null) {
-      await _showMarkerInfoFallback(marker);
+      await _showMarkerInfoFallback(marker, requestId: requestId);
       return;
     }
 
+    if (!_isCurrentMarkerOpenRequest(marker, requestId)) return;
     await InstitutionNavigation.open(
       context,
       institutionId: institutionId,
@@ -5306,13 +5408,17 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     );
   }
 
-  Future<void> _openMarkerDetail(ArtMarker marker, Artwork? artwork) async {
+  Future<void> _openMarkerDetail(
+    ArtMarker marker,
+    Artwork? artwork, {
+    required int requestId,
+  }) async {
     final resolvedArtwork =
         await _ensureLinkedArtworkLoaded(marker, initial: artwork);
-    if (!mounted) return;
+    if (!_isCurrentMarkerOpenRequest(marker, requestId)) return;
 
     if (resolvedArtwork == null) {
-      await _showMarkerInfoFallback(marker);
+      await _showMarkerInfoFallback(marker, requestId: requestId);
       return;
     }
 
@@ -5328,8 +5434,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   Future<void> _openExhibitionFromMarker(
     ArtMarker marker,
     ExhibitionSummaryDto? exhibition,
-    Artwork? artwork,
-  ) async {
+    Artwork? artwork, {
+    required int requestId,
+  }) async {
     final messenger = ScaffoldMessenger.of(context);
     final l10n = AppLocalizations.of(context)!;
     final exhibitionsProvider = context.read<ExhibitionsProvider>();
@@ -5339,10 +5446,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
     if (resolved == null || resolved.id.isEmpty) {
       if (isExhibitionMarker) {
-        await _showMarkerInfoFallback(marker);
+        await _showMarkerInfoFallback(marker, requestId: requestId);
         return;
       }
-      await _openMarkerDetail(marker, artwork);
+      await _openMarkerDetail(marker, artwork, requestId: requestId);
       return;
     }
 
@@ -5357,7 +5464,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
     if (BackendApiService().exhibitionsApiAvailable == false &&
         !isExhibitionMarker) {
-      await _openMarkerDetail(marker, artwork);
+      await _openMarkerDetail(marker, artwork, requestId: requestId);
       return;
     }
 
@@ -5377,7 +5484,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               force: true,
             );
           } catch (e) {
-            debugPrint('DesktopMapScreen: exhibition POAP fetch failed: $e');
+            if (kDebugMode) {
+              debugPrint('DesktopMapScreen: exhibition POAP fetch failed: $e');
+            }
           }
         }
         return exhibition;
@@ -5387,7 +5496,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       }
     })();
 
-    if (!mounted) return;
+    if (!_isCurrentMarkerOpenRequest(marker, requestId)) return;
 
     if (fetched == null) {
       final serviceUnavailable = fetchError is BackendApiRequestException &&
@@ -5404,7 +5513,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         );
         setState(() {});
       }
-      await _showMarkerInfoFallback(marker);
+      await _showMarkerInfoFallback(marker, requestId: requestId);
       return;
     }
 
@@ -5541,8 +5650,13 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     await Future.wait(tasks, eagerError: false);
   }
 
-  Future<void> _showMarkerInfoFallback(ArtMarker marker) async {
+  Future<void> _showMarkerInfoFallback(
+    ArtMarker marker, {
+    int? requestId,
+  }) async {
+    if (!_isCurrentMarkerOpenRequest(marker, requestId)) return;
     final scheme = Theme.of(context).colorScheme;
+    final themeProvider = context.read<ThemeProvider>();
     final dpr = MediaQuery.maybeOf(context)?.devicePixelRatio ?? 1.0;
     final cacheWidth = (640 * dpr).clamp(256.0, 1600.0).round();
     final cacheHeight = (360 * dpr).clamp(144.0, 1200.0).round();
@@ -5555,6 +5669,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
     await showKubusDialog<void>(
       context: context,
+      useRootNavigator: false,
       builder: (dialogContext) => KubusAlertDialog(
         backgroundColor: scheme.surface,
         title: Text(
@@ -5592,7 +5707,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     errorBuilder: (_, __, ___) =>
                         KubusMapMarkerHelpers.markerImageFallback(
                       baseColor: _resolveArtMarkerColor(
-                          marker, context.read<ThemeProvider>()),
+                        marker,
+                        themeProvider,
+                      ),
                       scheme: scheme,
                       marker: marker,
                     ),

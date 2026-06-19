@@ -57,8 +57,12 @@ String _buildWordSequence(int count) {
 
 Widget _wrap(Widget child, {ThemeMode themeMode = ThemeMode.light}) {
   return MaterialApp(
-    theme: ThemeData.light(useMaterial3: true),
-    darkTheme: ThemeData.dark(useMaterial3: true),
+    theme: ThemeData.light(useMaterial3: true).copyWith(
+      splashFactory: NoSplash.splashFactory,
+    ),
+    darkTheme: ThemeData.dark(useMaterial3: true).copyWith(
+      splashFactory: NoSplash.splashFactory,
+    ),
     themeMode: themeMode,
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
@@ -187,6 +191,48 @@ void main() {
       await tester.tap(find.byType(KubusCachedImage));
       await tester.pump();
       expect(cardTapCount, 1);
+    },
+  );
+
+  testWidgets(
+    'rapid primary marker action taps stay local to the overlay',
+    (tester) async {
+      final marker = _marker();
+      final artwork = _artwork();
+      var primaryTapCount = 0;
+
+      await tester.pumpWidget(
+        _wrap(
+          SizedBox(
+            width: 340,
+            child: KubusMarkerOverlayCard(
+              marker: marker,
+              artwork: artwork,
+              baseColor: Colors.teal,
+              displayTitle: artwork.title,
+              canPresentExhibition: false,
+              description: marker.description,
+              onClose: () {},
+              onPrimaryAction: () => primaryTapCount += 1,
+              primaryActionIcon: Icons.arrow_forward,
+              primaryActionLabel: 'More info',
+              maxWidth: 340,
+              maxHeight: 360,
+            ),
+          ),
+        ),
+      );
+
+      final primaryAction =
+          find.byKey(const ValueKey<String>('marker_overlay_primary_action'));
+      await tester.tap(primaryAction);
+      await tester.tap(primaryAction);
+      await tester.tap(primaryAction);
+      await tester.pump();
+
+      expect(primaryTapCount, 3);
+      expect(tester.takeException(), isNull);
+      expect(find.text('More info'), findsOneWidget);
     },
   );
 
