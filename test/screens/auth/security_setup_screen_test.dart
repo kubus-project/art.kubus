@@ -19,16 +19,19 @@ class _SecuritySetupWalletProvider extends WalletProvider {
     required this.canUseBiometricsValue,
     required this.hasEncryptedWalletBackupValue,
     required this.mnemonicBackupRequiredValue,
-    this.walletAddress = '7YgP1dXwz9exampleWallet111111111111111111',
     this.passkeys = const <WalletBackupPasskeyDefinition>[],
+    this.failPasskeyRevoke = false,
   }) : super(deferInit: true);
 
   bool hasPinValue;
   bool canUseBiometricsValue;
   bool hasEncryptedWalletBackupValue;
   bool mnemonicBackupRequiredValue;
-  String walletAddress;
+  String walletAddress = '7YgP1dXwz9exampleWallet111111111111111111';
   List<WalletBackupPasskeyDefinition> passkeys;
+  bool failPasskeyRevoke;
+  int walletRecoveryPasskeyRevokeCalls = 0;
+  String? lastRevokedWalletRecoveryPasskeyId;
 
   @override
   String? get currentWalletAddress => walletAddress;
@@ -102,6 +105,24 @@ class _SecuritySetupWalletProvider extends WalletProvider {
       lastVerifiedAt: DateTime(2026, 1, 2),
       passkeys: passkeys,
     );
+  }
+
+  @override
+  Future<List<WalletBackupPasskeyDefinition>>
+      revokeEncryptedWalletBackupPasskey(
+    String passkeyId, {
+    String? walletAddress,
+  }) async {
+    walletRecoveryPasskeyRevokeCalls += 1;
+    lastRevokedWalletRecoveryPasskeyId = passkeyId;
+    if (failPasskeyRevoke) {
+      throw Exception('backend exploded');
+    }
+    passkeys = passkeys
+        .where((passkey) => (passkey.id ?? passkey.credentialId) != passkeyId)
+        .toList(growable: false);
+    notifyListeners();
+    return passkeys;
   }
 }
 
@@ -234,8 +255,121 @@ void main() {
         findsOneWidget);
     expect(find.byKey(const ValueKey('security-methods-list')), findsOneWidget);
     expect(find.text('Wallet recovery / unlock passkey'), findsOneWidget);
-    expect(find.text('Laptop'), findsOneWidget);
+    expect(find.text('Manage wallet recovery passkeys'), findsOneWidget);
+    expect(find.text('Laptop'), findsNothing);
     expect(find.text('Wallet security status'), findsNothing);
     expect(find.text('Protect your web3 wallet'), findsNothing);
+  });
+
+  testWidgets('wallet recovery passkey manager deletes a passkey successfully',
+      (tester) async {
+    tester.view.devicePixelRatio = 1.0;
+    await tester.binding.setSurfaceSize(const Size(1200, 900));
+    addTearDown(() async => tester.binding.setSurfaceSize(null));
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final walletProvider = _SecuritySetupWalletProvider(
+      hasPinValue: true,
+      canUseBiometricsValue: false,
+      hasEncryptedWalletBackupValue: true,
+      mnemonicBackupRequiredValue: false,
+      passkeys: [
+        WalletBackupPasskeyDefinition(
+          id: 'wallet-passkey-1',
+          credentialId: 'credential-1',
+          transports: const ['internal'],
+          nickname: 'Laptop',
+          prfSupported: true,
+          hasEncryptedRecoveryKey: true,
+          createdAt: DateTime(2026, 1, 1),
+          lastVerifiedAt: DateTime(2026, 1, 3),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      _buildSecurityApp(
+        home: const WalletBackupProtectionScreen(),
+        walletProvider: walletProvider,
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    final manageAction = find.text('Manage wallet recovery passkeys');
+    await tester.ensureVisible(manageAction);
+    await tester.pumpAndSettle();
+    await tester.tap(manageAction);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Laptop'), findsOneWidget);
+    expect(find.textContaining('Created 2026-01-01'), findsOneWidget);
+    expect(find.textContaining('PRF supported'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Delete'));
+    await tester.pumpAndSettle();
+    expect(find.text('Remove wallet recovery passkey?'), findsOneWidget);
+
+    await tester.tap(find.text('Remove recovery passkey'));
+    await tester.pumpAndSettle();
+
+    expect(walletProvider.walletRecoveryPasskeyRevokeCalls, 1);
+    expect(
+        walletProvider.lastRevokedWalletRecoveryPasskeyId, 'wallet-passkey-1');
+    expect(find.text('Wallet recovery passkey removed.'), findsOneWidget);
+    expect(find.text('Laptop'), findsNothing);
+  });
+
+  testWidgets('wallet recovery passkey delete failure shows friendly error',
+      (tester) async {
+    tester.view.devicePixelRatio = 1.0;
+    await tester.binding.setSurfaceSize(const Size(1200, 900));
+    addTearDown(() async => tester.binding.setSurfaceSize(null));
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final walletProvider = _SecuritySetupWalletProvider(
+      hasPinValue: true,
+      canUseBiometricsValue: false,
+      hasEncryptedWalletBackupValue: true,
+      mnemonicBackupRequiredValue: false,
+      failPasskeyRevoke: true,
+      passkeys: [
+        WalletBackupPasskeyDefinition(
+          id: 'wallet-passkey-1',
+          credentialId: 'credential-1',
+          transports: const ['internal'],
+          nickname: 'Laptop',
+          prfSupported: true,
+          hasEncryptedRecoveryKey: true,
+          createdAt: DateTime(2026, 1, 1),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      _buildSecurityApp(
+        home: const WalletBackupProtectionScreen(),
+        walletProvider: walletProvider,
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    final manageAction = find.text('Manage wallet recovery passkeys');
+    await tester.ensureVisible(manageAction);
+    await tester.pumpAndSettle();
+    await tester.tap(manageAction);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Delete'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Remove recovery passkey'));
+    await tester.pumpAndSettle();
+
+    expect(walletProvider.walletRecoveryPasskeyRevokeCalls, 1);
+    expect(
+      find.text('Could not remove wallet recovery passkey. Try again.'),
+      findsOneWidget,
+    );
+    expect(find.text('Laptop'), findsOneWidget);
   });
 }

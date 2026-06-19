@@ -1022,15 +1022,48 @@ Future<Map<String, dynamic>> _backendApiGetWalletBackupPasskeyRecoveryStatus(
   }
 }
 
-Future<List<WalletBackupPasskeyDefinition>> _backendApiGetWalletRecoveryPasskeys(
+Future<List<WalletBackupPasskeyDefinition>>
+    _backendApiGetWalletRecoveryPasskeys(
   BackendApiService service, {
   String? walletAddress,
 }) async {
   try {
-    final definition = await service.getEncryptedWalletBackup(
-      walletAddress: walletAddress,
+    final normalizedWallet = (walletAddress ?? '').trim();
+    final uri = Uri.parse(
+      '${service.baseUrl}/api/wallet-backup/passkey-recovery/credentials',
+    ).replace(
+      queryParameters: normalizedWallet.isEmpty
+          ? null
+          : <String, String>{'walletAddress': normalizedWallet},
     );
-    return definition?.passkeys ?? const <WalletBackupPasskeyDefinition>[];
+    final response = await service._get(
+      uri,
+      includeAuth: true,
+      headers: service._getHeaders(includeAuth: true),
+    );
+    if (response.statusCode == 200) {
+      final raw = jsonDecode(response.body) as Map<String, dynamic>;
+      final data = raw['data'];
+      final passkeysRaw =
+          data is Map ? data['passkeys'] ?? data['credentials'] : data;
+      if (passkeysRaw is List) {
+        return passkeysRaw
+            .whereType<Map>()
+            .map((item) => WalletBackupPasskeyDefinition.fromJson(
+                  Map<String, dynamic>.from(item),
+                ))
+            .toList(growable: false);
+      }
+      return const <WalletBackupPasskeyDefinition>[];
+    }
+    if (response.statusCode == 404) {
+      return const <WalletBackupPasskeyDefinition>[];
+    }
+    throw BackendApiRequestException(
+      statusCode: response.statusCode,
+      path: uri.path,
+      body: response.body,
+    );
   } on BackendApiRequestException catch (e) {
     if (e.statusCode == 404) {
       return const <WalletBackupPasskeyDefinition>[];
@@ -1056,7 +1089,7 @@ Future<Map<String, dynamic>> _backendApiRevokeWalletRecoveryPasskey(
   try {
     final normalizedWallet = (walletAddress ?? '').trim();
     final uri = Uri.parse(
-      '${service.baseUrl}/api/wallet-backup/passkey/${Uri.encodeComponent(normalizedId)}',
+      '${service.baseUrl}/api/wallet-backup/passkey-recovery/credentials/${Uri.encodeComponent(normalizedId)}',
     ).replace(
       queryParameters: normalizedWallet.isEmpty
           ? null

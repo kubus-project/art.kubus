@@ -9959,6 +9959,48 @@ class AppLocalizationsSl extends AppLocalizations {
   String get walletBackupProtectionPasskeysBody => 'Na spletu passkey najprej poskusimo uporabiti za obnovo denarnice. Obnovitveno geslo ostane na voljo kot nadomestna možnost.';
 
   @override
+  String get securityHubAccountSecurity => 'Varnost računa';
+
+  @override
+  String get securityHubTitle => 'Varnostno središče';
+
+  @override
+  String get securityHubPinLocalLock => 'PIN / lokalni zaklep';
+
+  @override
+  String get securityHubAccountSignInPasskey => 'Passkey za prijavo v račun';
+
+  @override
+  String get securityHubWalletRecoveryPasskey => 'Passkey za obnovitev denarnice';
+
+  @override
+  String get securityHubEncryptedServerBackup => 'Šifrirana varnostna kopija';
+
+  @override
+  String get securityHubRecoveryPhrase => 'Obnovitvena fraza';
+
+  @override
+  String get securityHubAddWalletRecoveryPasskey => 'Dodaj passkey za obnovitev denarnice';
+
+  @override
+  String get securityHubManageWalletRecoveryPasskeys => 'Upravljaj passkeyje za obnovitev denarnice';
+
+  @override
+  String get securityHubRemoveWalletRecoveryPasskeyTitle => 'Odstrani passkey za obnovitev denarnice?';
+
+  @override
+  String get securityHubWalletRecoveryPasskeyRemovedToast => 'Passkey za obnovitev denarnice je odstranjen.';
+
+  @override
+  String get securityHubWalletRecoveryPasskeyRemoveFailedToast => 'Passkeyja za obnovitev denarnice ni bilo mogoče odstraniti. Poskusi znova.';
+
+  @override
+  String get securityHubPasskeyAlreadyRegistered => 'Ta passkey je že registriran.';
+
+  @override
+  String get securityHubBrowserPromptCancelledOrTimedOut => 'Poziv brskalnika je bil preklican ali je potekel.';
+
+  @override
   String get walletRecoveryFallbackTitle => 'Obnovi dostop do denarnice';
 
   @override

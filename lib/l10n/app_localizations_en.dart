@@ -9937,6 +9937,48 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletBackupProtectionPasskeysBody => 'On web, passkeys are tried first for wallet recovery. Recovery password remains available as a fallback.';
 
   @override
+  String get securityHubAccountSecurity => 'Account security';
+
+  @override
+  String get securityHubTitle => 'Security hub';
+
+  @override
+  String get securityHubPinLocalLock => 'PIN / local lock';
+
+  @override
+  String get securityHubAccountSignInPasskey => 'Account sign-in passkey';
+
+  @override
+  String get securityHubWalletRecoveryPasskey => 'Wallet recovery / unlock passkey';
+
+  @override
+  String get securityHubEncryptedServerBackup => 'Encrypted server backup';
+
+  @override
+  String get securityHubRecoveryPhrase => 'Recovery phrase';
+
+  @override
+  String get securityHubAddWalletRecoveryPasskey => 'Add wallet recovery passkey';
+
+  @override
+  String get securityHubManageWalletRecoveryPasskeys => 'Manage wallet recovery passkeys';
+
+  @override
+  String get securityHubRemoveWalletRecoveryPasskeyTitle => 'Remove wallet recovery passkey?';
+
+  @override
+  String get securityHubWalletRecoveryPasskeyRemovedToast => 'Wallet recovery passkey removed.';
+
+  @override
+  String get securityHubWalletRecoveryPasskeyRemoveFailedToast => 'Could not remove wallet recovery passkey. Try again.';
+
+  @override
+  String get securityHubPasskeyAlreadyRegistered => 'This passkey is already registered.';
+
+  @override
+  String get securityHubBrowserPromptCancelledOrTimedOut => 'Browser prompt cancelled or timed out.';
+
+  @override
   String get walletRecoveryFallbackTitle => 'Restore wallet access';
 
   @override

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../widgets/security/security_hub_view.dart';
 
 class SecurityHubScreen extends StatelessWidget {
@@ -17,6 +18,7 @@ class SecurityHubScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final canNavigateBack = mode == SecurityHubMode.manage;
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
@@ -26,8 +28,8 @@ class SecurityHubScreen extends StatelessWidget {
         elevation: 0,
         title: Text(
           mode == SecurityHubMode.requiredSetup
-              ? 'Account security'
-              : 'Security hub',
+              ? l10n?.securityHubAccountSecurity ?? 'Account security'
+              : l10n?.securityHubTitle ?? 'Security hub',
         ),
       ),
       body: SafeArea(

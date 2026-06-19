@@ -18935,6 +18935,90 @@ abstract class AppLocalizations {
   /// **'On web, passkeys are tried first for wallet recovery. Recovery password remains available as a fallback.'**
   String get walletBackupProtectionPasskeysBody;
 
+  /// No description provided for @securityHubAccountSecurity.
+  ///
+  /// In en, this message translates to:
+  /// **'Account security'**
+  String get securityHubAccountSecurity;
+
+  /// No description provided for @securityHubTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Security hub'**
+  String get securityHubTitle;
+
+  /// No description provided for @securityHubPinLocalLock.
+  ///
+  /// In en, this message translates to:
+  /// **'PIN / local lock'**
+  String get securityHubPinLocalLock;
+
+  /// No description provided for @securityHubAccountSignInPasskey.
+  ///
+  /// In en, this message translates to:
+  /// **'Account sign-in passkey'**
+  String get securityHubAccountSignInPasskey;
+
+  /// No description provided for @securityHubWalletRecoveryPasskey.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet recovery / unlock passkey'**
+  String get securityHubWalletRecoveryPasskey;
+
+  /// No description provided for @securityHubEncryptedServerBackup.
+  ///
+  /// In en, this message translates to:
+  /// **'Encrypted server backup'**
+  String get securityHubEncryptedServerBackup;
+
+  /// No description provided for @securityHubRecoveryPhrase.
+  ///
+  /// In en, this message translates to:
+  /// **'Recovery phrase'**
+  String get securityHubRecoveryPhrase;
+
+  /// No description provided for @securityHubAddWalletRecoveryPasskey.
+  ///
+  /// In en, this message translates to:
+  /// **'Add wallet recovery passkey'**
+  String get securityHubAddWalletRecoveryPasskey;
+
+  /// No description provided for @securityHubManageWalletRecoveryPasskeys.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage wallet recovery passkeys'**
+  String get securityHubManageWalletRecoveryPasskeys;
+
+  /// No description provided for @securityHubRemoveWalletRecoveryPasskeyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove wallet recovery passkey?'**
+  String get securityHubRemoveWalletRecoveryPasskeyTitle;
+
+  /// No description provided for @securityHubWalletRecoveryPasskeyRemovedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet recovery passkey removed.'**
+  String get securityHubWalletRecoveryPasskeyRemovedToast;
+
+  /// No description provided for @securityHubWalletRecoveryPasskeyRemoveFailedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not remove wallet recovery passkey. Try again.'**
+  String get securityHubWalletRecoveryPasskeyRemoveFailedToast;
+
+  /// No description provided for @securityHubPasskeyAlreadyRegistered.
+  ///
+  /// In en, this message translates to:
+  /// **'This passkey is already registered.'**
+  String get securityHubPasskeyAlreadyRegistered;
+
+  /// No description provided for @securityHubBrowserPromptCancelledOrTimedOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Browser prompt cancelled or timed out.'**
+  String get securityHubBrowserPromptCancelledOrTimedOut;
+
   /// No description provided for @walletRecoveryFallbackTitle.
   ///
   /// In en, this message translates to:

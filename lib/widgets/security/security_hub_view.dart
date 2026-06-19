@@ -387,8 +387,8 @@ class _SecurityHubViewState extends State<SecurityHubView> {
     try {
       await _passkeyProtectionService.registerAccountPasskey(
         api: BackendApiService(),
-        deviceLabel: l10n?.walletBackupProtectionDefaultPasskeyName ??
-            'This device',
+        deviceLabel:
+            l10n?.walletBackupProtectionDefaultPasskeyName ?? 'This device',
         purpose: 'account_sign_in',
       );
       if (!mounted) return;
@@ -413,8 +413,7 @@ class _SecurityHubViewState extends State<SecurityHubView> {
     if (_busy) return;
     final confirmed = await _confirmDestructive(
       title: 'Remove account sign-in passkey?',
-      body:
-          'This passkey will no longer sign into art.kubus on this account.',
+      body: 'This passkey will no longer sign into art.kubus on this account.',
       action: 'Remove passkey',
     );
     if (!confirmed || !mounted) return;
@@ -450,13 +449,14 @@ class _SecurityHubViewState extends State<SecurityHubView> {
     final l10n = AppLocalizations.of(context);
     final nickname = await showWalletBackupTextPrompt(
       context: context,
-      title: 'Add wallet recovery passkey',
+      title: l10n?.securityHubAddWalletRecoveryPasskey ??
+          'Add wallet recovery passkey',
       label: l10n?.walletBackupProtectionPasskeyNameLabel ?? 'Passkey name',
-      description:
-          'Used to restore local wallet access from encrypted backup.',
+      description: 'Used to restore local wallet access from encrypted backup.',
       initialValue:
           l10n?.walletBackupProtectionDefaultPasskeyName ?? 'This device',
-      actionLabel: 'Add wallet recovery passkey',
+      actionLabel: l10n?.securityHubAddWalletRecoveryPasskey ??
+          'Add wallet recovery passkey',
     );
     if (!mounted || nickname == null) return;
     setState(() => _busy = true);
@@ -489,39 +489,176 @@ class _SecurityHubViewState extends State<SecurityHubView> {
 
   Future<void> _removeWalletRecoveryPasskey(String id) async {
     if (_busy) return;
-    final walletAddress =
-        (context.read<WalletProvider>().currentWalletAddress ?? '').trim();
+    final l10n = AppLocalizations.of(context);
     final confirmed = await _confirmDestructive(
-      title: 'Remove wallet recovery passkey?',
+      title: l10n?.securityHubRemoveWalletRecoveryPasskeyTitle ??
+          'Remove wallet recovery passkey?',
       body:
           'This device passkey will no longer unlock the encrypted wallet backup.',
       action: 'Remove recovery passkey',
     );
     if (!confirmed || !mounted) return;
+    final walletProvider = context.read<WalletProvider>();
     final messenger = ScaffoldMessenger.of(context);
     setState(() => _busy = true);
     try {
-      await BackendApiService().revokeWalletRecoveryPasskey(
-        id: id,
-        walletAddress: walletAddress,
-      );
+      await walletProvider.revokeEncryptedWalletBackupPasskey(id);
       if (!mounted) return;
       await _refresh();
       await widget.onBackupStateChanged?.call();
       if (!mounted) return;
       messenger.showKubusSnackBar(
-        const SnackBar(content: Text('Wallet recovery passkey removed.')),
+        SnackBar(
+          content: Text(
+            l10n?.securityHubWalletRecoveryPasskeyRemovedToast ??
+                'Wallet recovery passkey removed.',
+          ),
+        ),
         tone: KubusSnackBarTone.success,
       );
-    } catch (error) {
+    } catch (_) {
       if (!mounted) return;
       messenger.showKubusSnackBar(
-        SnackBar(content: Text(_friendlySecurityError(error))),
+        SnackBar(
+          content: Text(
+            l10n?.securityHubWalletRecoveryPasskeyRemoveFailedToast ??
+                'Could not remove wallet recovery passkey. Try again.',
+          ),
+        ),
         tone: KubusSnackBarTone.error,
       );
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  Future<void> _showWalletRecoveryPasskeys() async {
+    final l10n = AppLocalizations.of(context);
+    await showKubusDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        final scheme = Theme.of(dialogContext).colorScheme;
+        return KubusAlertDialog(
+          title: Text(
+            l10n?.securityHubManageWalletRecoveryPasskeys ??
+                'Manage wallet recovery passkeys',
+          ),
+          content: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 560),
+            child: Consumer<WalletProvider>(
+              builder: (context, walletProvider, _) {
+                final passkeys = walletProvider.encryptedWalletBackupPasskeys;
+                if (passkeys.isEmpty) {
+                  return Text(
+                    'No wallet recovery passkeys are registered.',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: scheme.onSurface.withValues(alpha: 0.72),
+                        ),
+                  );
+                }
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: passkeys
+                      .map(
+                        (passkey) => Padding(
+                          padding: const EdgeInsets.only(
+                            bottom: KubusSpacing.sm,
+                          ),
+                          child: _buildWalletRecoveryPasskeyItem(passkey),
+                        ),
+                      )
+                      .toList(growable: false),
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(l10n?.commonClose ?? 'Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildWalletRecoveryPasskeyItem(
+    WalletBackupPasskeyDefinition passkey,
+  ) {
+    final scheme = Theme.of(context).colorScheme;
+    final passkeyId = (passkey.id ?? '').trim();
+    final lastActivity = passkey.lastUsedAt != null
+        ? 'Last used ${_formatDate(passkey.lastUsedAt)}'
+        : passkey.lastVerifiedAt != null
+            ? 'Last verified ${_formatDate(passkey.lastVerifiedAt)}'
+            : 'Last used never';
+    final prfLabel =
+        passkey.prfSupported ? 'PRF supported' : 'PRF not supported';
+    final recoveryMaterial = passkey.hasEncryptedRecoveryKey
+        ? 'Recovery material encrypted'
+        : 'No encrypted recovery material';
+
+    return Container(
+      key: ValueKey<String>(
+        'wallet-recovery-passkey-${passkeyId.isEmpty ? passkey.credentialId : passkeyId}',
+      ),
+      padding: const EdgeInsets.all(KubusSpacing.sm),
+      decoration: BoxDecoration(
+        color: scheme.surface.withValues(alpha: 0.40),
+        borderRadius: KubusRadius.circular(KubusRadius.sm),
+        border: Border.all(
+          color: scheme.outlineVariant.withValues(alpha: 0.44),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.devices_other_rounded,
+            color: passkey.prfSupported ? scheme.primary : KubusColors.warning,
+          ),
+          const SizedBox(width: KubusSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _walletRecoveryPasskeyLabel(passkey),
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: scheme.onSurface,
+                      ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  'Created ${_formatDate(passkey.createdAt)}',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurface.withValues(alpha: 0.72),
+                      ),
+                ),
+                Text(
+                  '$lastActivity. $prfLabel. $recoveryMaterial.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurface.withValues(alpha: 0.66),
+                        height: 1.28,
+                      ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: KubusSpacing.sm),
+          IconButton.filledTonal(
+            tooltip: 'Delete',
+            onPressed: _busy || passkeyId.isEmpty
+                ? null
+                : () => _removeWalletRecoveryPasskey(passkeyId),
+            icon: Icon(Icons.delete_outline, color: scheme.error),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _createOrUpdateBackup() async {
@@ -676,8 +813,9 @@ class _SecurityHubViewState extends State<SecurityHubView> {
               ? 'Wallet access restored on this device.'
               : 'Wallet access is still read-only on this device.'),
         ),
-        tone:
-            result.restored ? KubusSnackBarTone.success : KubusSnackBarTone.neutral,
+        tone: result.restored
+            ? KubusSnackBarTone.success
+            : KubusSnackBarTone.neutral,
       );
     } catch (error) {
       if (!mounted) return;
@@ -704,6 +842,7 @@ class _SecurityHubViewState extends State<SecurityHubView> {
     required String body,
     required String action,
   }) async {
+    final l10n = AppLocalizations.of(context);
     final result = await showKubusDialog<bool>(
       context: context,
       builder: (dialogContext) => KubusAlertDialog(
@@ -712,7 +851,7 @@ class _SecurityHubViewState extends State<SecurityHubView> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Cancel'),
+            child: Text(l10n?.commonCancel ?? 'Cancel'),
           ),
           FilledButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
@@ -754,6 +893,15 @@ class _SecurityHubViewState extends State<SecurityHubView> {
     if (value.isEmpty) return 'No wallet';
     if (value.length <= 14) return value;
     return '${value.substring(0, 6)}...${value.substring(value.length - 6)}';
+  }
+
+  String _walletRecoveryPasskeyLabel(WalletBackupPasskeyDefinition passkey) {
+    final nickname = (passkey.nickname ?? '').trim();
+    if (nickname.isNotEmpty) return nickname;
+    if (passkey.transports.contains('internal')) return 'This device';
+    if (passkey.transports.contains('hybrid')) return 'Linked device';
+    if (passkey.transports.contains('usb')) return 'Security key';
+    return 'Wallet recovery passkey';
   }
 
   String _formatDate(DateTime? date) {
@@ -921,6 +1069,7 @@ class _SecurityHubViewState extends State<SecurityHubView> {
 
   Widget _buildMethodsList(WalletProvider walletProvider) {
     final gate = context.watch<SecurityGateProvider>();
+    final l10n = AppLocalizations.of(context);
     final authority = walletProvider.authority;
     final backupFeatureEnabled =
         AppConfig.isFeatureEnabled('encryptedWalletBackup');
@@ -932,17 +1081,18 @@ class _SecurityHubViewState extends State<SecurityHubView> {
         ? walletProvider.encryptedWalletBackupPasskeys
         : const <WalletBackupPasskeyDefinition>[];
     final accountPasskeys = _accountPasskeyStatus.passkeys;
-    final passkeyEnabled = _passkeyProtectionService.isAvailable &&
-        authority.hasAccountSession;
+    final passkeyEnabled =
+        _passkeyProtectionService.isAvailable && authority.hasAccountSession;
     final needsSignerRestore = authority.canRestoreFromEncryptedBackup;
 
     final rows = <Widget>[
       SecurityMethodRow(
-        title: 'PIN / local lock',
+        title: l10n?.securityHubPinLocalLock ?? 'PIN / local lock',
         description:
             'Protects sensitive account and wallet actions on this device.',
         icon: Icons.lock_rounded,
-        status: _hasPin ? SecurityHubStatus.secured : SecurityHubStatus.recommended,
+        status:
+            _hasPin ? SecurityHubStatus.secured : SecurityHubStatus.recommended,
         statusLabel: _hasPin ? 'Active' : 'Recommended',
         actions: _hasPin
             ? const <SecurityMethodAction>[]
@@ -1038,16 +1188,18 @@ class _SecurityHubViewState extends State<SecurityHubView> {
         status: authority.hasExternalSigner
             ? SecurityHubStatus.secured
             : SecurityHubStatus.disabled,
-        statusLabel: authority.hasExternalSigner ? 'Connected' : 'Not connected',
+        statusLabel:
+            authority.hasExternalSigner ? 'Connected' : 'Not connected',
       ),
       const SizedBox(height: KubusSpacing.sm),
       SecurityMethodRow(
-        title: 'Encrypted server backup',
+        title:
+            l10n?.securityHubEncryptedServerBackup ?? 'Encrypted server backup',
         description: !backupFeatureEnabled
             ? 'Encrypted wallet backup is disabled in this build.'
             : walletBackupReady
-            ? 'Encrypted wallet backup is available for recovery.'
-            : 'Create a password-protected encrypted backup for recovery.',
+                ? 'Encrypted wallet backup is available for recovery.'
+                : 'Create a password-protected encrypted backup for recovery.',
         helper: walletProvider.encryptedWalletBackupLastVerifiedAt == null
             ? null
             : 'Last verified: ${_formatDate(walletProvider.encryptedWalletBackupLastVerifiedAt)}',
@@ -1055,8 +1207,8 @@ class _SecurityHubViewState extends State<SecurityHubView> {
         status: !backupFeatureEnabled
             ? SecurityHubStatus.disabled
             : walletBackupReady
-            ? SecurityHubStatus.secured
-            : SecurityHubStatus.recommended,
+                ? SecurityHubStatus.secured
+                : SecurityHubStatus.recommended,
         statusLabel: !backupFeatureEnabled
             ? 'Disabled'
             : walletBackupReady
@@ -1064,23 +1216,23 @@ class _SecurityHubViewState extends State<SecurityHubView> {
                 : 'Recommended',
         actions: backupFeatureEnabled
             ? [
-          SecurityMethodAction(
-            label: walletBackupReady ? 'Update backup' : 'Create backup',
-            icon: Icons.cloud_upload_outlined,
-            onPressed: _busy ? null : _createOrUpdateBackup,
-          ),
-          if (walletBackupReady)
-            SecurityMethodAction(
-              label: 'Verify',
-              icon: Icons.fact_check_outlined,
-              onPressed: _busy ? null : _verifyBackup,
-            ),
-        ]
+                SecurityMethodAction(
+                  label: walletBackupReady ? 'Update backup' : 'Create backup',
+                  icon: Icons.cloud_upload_outlined,
+                  onPressed: _busy ? null : _createOrUpdateBackup,
+                ),
+                if (walletBackupReady)
+                  SecurityMethodAction(
+                    label: 'Verify',
+                    icon: Icons.fact_check_outlined,
+                    onPressed: _busy ? null : _verifyBackup,
+                  ),
+              ]
             : const <SecurityMethodAction>[],
       ),
       const SizedBox(height: KubusSpacing.sm),
       SecurityMethodRow(
-        title: 'Recovery phrase',
+        title: l10n?.securityHubRecoveryPhrase ?? 'Recovery phrase',
         description: _backupPhraseRequired
             ? 'Store the recovery phrase offline before you rely on this wallet.'
             : 'No recovery phrase action is currently required.',
@@ -1099,7 +1251,8 @@ class _SecurityHubViewState extends State<SecurityHubView> {
       ),
       const SizedBox(height: KubusSpacing.sm),
       SecurityMethodRow(
-        title: 'Account sign-in passkey',
+        title:
+            l10n?.securityHubAccountSignInPasskey ?? 'Account sign-in passkey',
         description:
             'Used to sign into art.kubus without email, Google, or wallet signature.',
         icon: Icons.key_rounded,
@@ -1149,18 +1302,23 @@ class _SecurityHubViewState extends State<SecurityHubView> {
       ),
       const SizedBox(height: KubusSpacing.sm),
       SecurityMethodRow(
-        title: 'Wallet recovery / unlock passkey',
+        title: l10n?.securityHubWalletRecoveryPasskey ??
+            'Wallet recovery / unlock passkey',
         description:
             'Used to restore local wallet access from encrypted backup.',
         icon: Icons.settings_backup_restore_rounded,
         status: recoveryPasskeys.isNotEmpty
             ? SecurityHubStatus.secured
-            : passkeyRecoveryFeatureEnabled && _passkeysSupported && walletBackupReady
+            : passkeyRecoveryFeatureEnabled &&
+                    _passkeysSupported &&
+                    walletBackupReady
                 ? SecurityHubStatus.available
                 : SecurityHubStatus.recommended,
         statusLabel: recoveryPasskeys.isNotEmpty
             ? '${recoveryPasskeys.length} registered'
-            : passkeyRecoveryFeatureEnabled && _passkeysSupported && walletBackupReady
+            : passkeyRecoveryFeatureEnabled &&
+                    _passkeysSupported &&
+                    walletBackupReady
                 ? 'Available'
                 : !passkeyRecoveryFeatureEnabled
                     ? 'Disabled'
@@ -1168,44 +1326,23 @@ class _SecurityHubViewState extends State<SecurityHubView> {
         helper: passkeyRecoveryFeatureEnabled && !_passkeysSupported && kIsWeb
             ? 'This browser does not expose wallet-recovery PRF support.'
             : null,
-        actions: passkeyRecoveryFeatureEnabled && _passkeysSupported && walletBackupReady
-            ? [
-                SecurityMethodAction(
-                  label: 'Add wallet recovery passkey',
-                  icon: Icons.add_rounded,
-                  onPressed: _busy ? null : _createWalletRecoveryPasskey,
-                ),
-              ]
-            : const <SecurityMethodAction>[],
-      ),
-      ...recoveryPasskeys.expand(
-        (passkey) => [
-          const SizedBox(height: KubusSpacing.xs),
-          SecurityMethodRow(
-            title: passkey.nickname ?? 'Wallet recovery passkey',
-            description:
-                'Created ${_formatDate(passkey.createdAt)}. Last used ${_formatDate(passkey.lastUsedAt)}.',
-            helper: passkey.prfSupported
-                ? 'PRF supported. Recovery material is encrypted.'
-                : 'PRF not available. This credential cannot restore wallet access.',
-            icon: Icons.devices_other_rounded,
-            status: passkey.prfSupported
-                ? SecurityHubStatus.secured
-                : SecurityHubStatus.recommended,
-            statusLabel: 'Wallet recovery',
-            actions: [
-              SecurityMethodAction(
-                label: 'Remove',
-                icon: Icons.delete_outline,
-                destructive: true,
-                onPressed: _busy
-                    ? null
-                    : () => _removeWalletRecoveryPasskey(
-                          passkey.id ?? passkey.credentialId,
-                        ),
-              ),
-            ],
-          ),
+        actions: [
+          if (recoveryPasskeys.isNotEmpty)
+            SecurityMethodAction(
+              label: l10n?.securityHubManageWalletRecoveryPasskeys ??
+                  'Manage wallet recovery passkeys',
+              icon: Icons.manage_accounts_outlined,
+              onPressed: _busy ? null : _showWalletRecoveryPasskeys,
+            ),
+          if (passkeyRecoveryFeatureEnabled &&
+              _passkeysSupported &&
+              walletBackupReady)
+            SecurityMethodAction(
+              label: l10n?.securityHubAddWalletRecoveryPasskey ??
+                  'Add wallet recovery passkey',
+              icon: Icons.add_rounded,
+              onPressed: _busy ? null : _createWalletRecoveryPasskey,
+            ),
         ],
       ),
     ];
@@ -1265,6 +1402,7 @@ class _SecurityHubViewState extends State<SecurityHubView> {
 
   Widget _buildHubContent(bool desktop, WalletProvider walletProvider) {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context);
     final summary = Wrap(
       spacing: KubusSpacing.md,
       runSpacing: KubusSpacing.md,
@@ -1274,7 +1412,9 @@ class _SecurityHubViewState extends State<SecurityHubView> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          _isRequiredSetup ? 'Account security' : 'Security hub',
+          _isRequiredSetup
+              ? l10n?.securityHubAccountSecurity ?? 'Account security'
+              : l10n?.securityHubTitle ?? 'Security hub',
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                 color: scheme.onSurface,
                 fontWeight: FontWeight.w900,

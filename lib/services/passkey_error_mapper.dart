@@ -40,13 +40,13 @@ PasskeyAppException mapWebAuthnException(
     case 'InvalidStateError':
       return PasskeyAppException(
         PasskeyErrorCode.duplicateCredential,
-        'This passkey is already registered for this account. Try a different device or remove the existing passkey first.',
+        'This passkey is already registered.',
         cause: error,
       );
     case 'NotAllowedError':
       return PasskeyAppException(
         PasskeyErrorCode.cancelled,
-        'Passkey approval was cancelled, blocked, or timed out. Retry and complete the browser prompt.',
+        'Browser prompt cancelled or timed out.',
         cause: error,
       );
     case 'SecurityError':
@@ -78,7 +78,7 @@ PasskeyAppException mapWebAuthnException(
 PasskeyAppException passkeyCancelledException() {
   return const PasskeyAppException(
     PasskeyErrorCode.cancelled,
-    'Passkey approval was cancelled. Retry and complete the browser prompt.',
+    'Browser prompt cancelled or timed out.',
   );
 }
 
@@ -106,7 +106,7 @@ PasskeyAppException mapBackendPasskeyException(Object error) {
     case 'DUPLICATE_CREDENTIAL':
       return PasskeyAppException(
         PasskeyErrorCode.duplicateCredential,
-        'This passkey is already registered. Use the existing passkey or remove it before adding it again.',
+        'This passkey is already registered.',
         cause: error,
       );
     case 'PASSKEY_CHALLENGE_EXPIRED':

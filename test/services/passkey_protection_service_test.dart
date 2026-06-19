@@ -130,7 +130,7 @@ void main() {
         Exception('InvalidStateError: credential exists'),
       );
       expect(error.code, PasskeyErrorCode.duplicateCredential);
-      expect(error.message, contains('already registered'));
+      expect(error.message, 'This passkey is already registered.');
     });
 
     test('maps NotAllowedError to cancelled or timed out', () {
@@ -138,13 +138,13 @@ void main() {
         Exception('NotAllowedError: user cancelled'),
       );
       expect(error.code, PasskeyErrorCode.cancelled);
-      expect(error.message, contains('cancelled'));
+      expect(error.message, 'Browser prompt cancelled or timed out.');
     });
 
     test('maps null credential to cancelled', () {
       final error = passkeyCancelledException();
       expect(error.code, PasskeyErrorCode.cancelled);
-      expect(error.message, contains('cancelled'));
+      expect(error.message, 'Browser prompt cancelled or timed out.');
     });
 
     test('rejects malformed creation options before WebAuthn create', () {

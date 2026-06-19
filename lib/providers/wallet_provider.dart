@@ -1625,6 +1625,68 @@ class WalletProvider extends ChangeNotifier {
     return WalletPasskeyRecoveryStatus.fromJson(status);
   }
 
+  Future<List<WalletBackupPasskeyDefinition>>
+      revokeEncryptedWalletBackupPasskey(
+    String passkeyId, {
+    String? walletAddress,
+  }) async {
+    final normalizedPasskeyId = passkeyId.trim();
+    if (normalizedPasskeyId.isEmpty) {
+      throw const EncryptedWalletBackupException('Passkey id is required.');
+    }
+
+    final targetWallet = (await _resolveBackupWalletAddress(
+              walletAddress: walletAddress,
+            ) ??
+            '')
+        .trim();
+    if (targetWallet.isEmpty) {
+      throw const EncryptedWalletBackupException(
+        'No wallet is available for passkey deletion.',
+      );
+    }
+
+    _encryptedWalletBackupLoading = true;
+    _encryptedWalletBackupError = null;
+    notifyListeners();
+    try {
+      final result = await _apiService.recovery.revokeWalletRecoveryPasskey(
+        id: normalizedPasskeyId,
+        walletAddress: targetWallet,
+      );
+
+      final rawPasskeys = result['passkeys'] ?? result['credentials'];
+      if (rawPasskeys is List &&
+          _encryptedWalletBackupDefinition != null &&
+          WalletUtils.equals(
+            _encryptedWalletBackupDefinition!.walletAddress,
+            targetWallet,
+          )) {
+        final passkeys = rawPasskeys
+            .whereType<Map>()
+            .map((item) => WalletBackupPasskeyDefinition.fromJson(
+                  Map<String, dynamic>.from(item),
+                ))
+            .toList(growable: false);
+        _setEncryptedWalletBackupDefinition(
+          _encryptedWalletBackupDefinition!.copyWith(passkeys: passkeys),
+        );
+      }
+
+      final refreshed = await refreshEncryptedWalletBackupStatus(
+        walletAddress: targetWallet,
+        notify: false,
+      );
+      return refreshed?.passkeys ?? encryptedWalletBackupPasskeys;
+    } catch (e) {
+      _encryptedWalletBackupError = e.toString();
+      rethrow;
+    } finally {
+      _encryptedWalletBackupLoading = false;
+      notifyListeners();
+    }
+  }
+
   Future<bool> restoreSignerFromEncryptedWalletBackup({
     required String recoveryPassword,
     String? walletAddress,
