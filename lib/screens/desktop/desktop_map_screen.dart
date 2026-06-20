@@ -267,7 +267,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   bool get _isNearbyPanelOpen =>
       _rightSidebarContent == _RightSidebarContent.nearby;
   bool get _isRightSidebarOpen => _rightSidebarContent != null;
-  bool _pendingInitialNearbyPanelOpen = true;
+  bool _pendingInitialNearbyPanelOpen = false;
   int _nearbyPanelAutoloadAttempts = 0;
   bool _nearbyPanelAutoloadScheduled = false;
   static const int _maxNearbyPanelAutoloadAttempts = 8;
@@ -2361,10 +2361,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       child: KubusMapSearchOverlayAssembly(
         controller: _mapSearchController,
         layout: KubusSearchOverlayLayout.sidePanel,
-        // Always use the glass host (web included) so the search panel registers
-        // a backdrop region and blurs the map like the rest of the map chrome,
-        // instead of rendering as a flat hostless container on web.
-        sidePanelSurfaceMode: KubusSearchSidePanelSurfaceMode.glassHost,
+        // Hostless: the outer scaffold is layout-only; each individual control
+        // (search field, chips, filter button) carries its own glass surface.
+        // This removes the unwanted outer card behind the whole row.
+        sidePanelSurfaceMode: KubusSearchSidePanelSurfaceMode.hostless,
         sidePanelAnimated: true,
         positionAnimationDuration: animationTheme.medium,
         positionAnimationCurve: animationTheme.defaultCurve,
@@ -2452,11 +2452,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       child: KubusMapFilterChipStrip(
         options: filters,
         selectedKey: _selectedFilter,
-        // Compact pills on a single line, shared with the search bar. Each chip
-        // (KubusGlassChip) already wraps its border/blur around the whole button
-        // at the root; the strip scrolls horizontally (see the side-panel row)
-        // so it never wraps to a second row or overflows on smaller desktops.
-        layout: KubusMapFilterChipLayout.row,
+        // Fixed-cell buttons (rowFixed) so the border wraps the full 44-high
+        // cell, not just the icon+text. The strip scrolls horizontally inside
+        // the side-panel row so chips never overflow on smaller desktops.
+        layout: KubusMapFilterChipLayout.rowFixed,
         spacing: KubusSpacing.sm,
         enableBlur: useMapBlur,
         keyPadding: EdgeInsets.zero,
