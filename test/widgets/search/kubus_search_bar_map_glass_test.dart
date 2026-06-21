@@ -79,6 +79,10 @@ class _MapSearchHarness extends StatelessWidget {
                 noResultsText: 'No results',
                 accentColor: Colors.teal,
                 useMapGlassSurface: true,
+                // Mirror the field: blur is off over the native MapLibre
+                // platform view, so the dropdown must take the safe-tint +
+                // sheen fallback instead of a BackdropFilter in front of text.
+                enableBlur: false,
                 onResultTap: onResultTap,
               ),
             ],

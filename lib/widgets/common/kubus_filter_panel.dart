@@ -26,6 +26,7 @@ class KubusFilterPanel extends StatelessWidget {
     this.showHeaderDivider = true,
     this.showFooterDivider = false,
     this.expandContent = false,
+    this.maxHeight,
     this.absorbPointer = false,
     this.cursor = SystemMouseCursors.basic,
     this.titleStyle,
@@ -51,6 +52,14 @@ class KubusFilterPanel extends StatelessWidget {
   final bool showHeaderDivider;
   final bool showFooterDivider;
   final bool expandContent;
+
+  /// When set, bounds the panel's height so its scrollable content actually
+  /// scrolls instead of overflowing. Use this for overlay placements that have
+  /// no bounded parent (e.g. the mobile top-overlay filter panel, which sits in
+  /// a `Positioned` with only top/left/right). Leave null when the panel already
+  /// has a bounded parent and uses [expandContent] (e.g. the desktop side
+  /// panel).
+  final double? maxHeight;
   final bool absorbPointer;
   final MouseCursor cursor;
   final TextStyle? titleStyle;
@@ -78,7 +87,24 @@ class KubusFilterPanel extends StatelessWidget {
       child: child,
     );
 
+    // When the panel is height-bounded (via [maxHeight]) but not [expandContent],
+    // the scroll area must be [Flexible] inside a `mainAxisSize.min` Column so it
+    // shrink-wraps small content yet scrolls within the bound when content is
+    // tall. [expandContent] keeps using [Expanded] (its parent is already
+    // bounded). Otherwise the scroll view is placed as-is.
+    final Widget contentArea;
+    if (expandContent) {
+      contentArea = Expanded(child: content);
+    } else if (maxHeight != null) {
+      contentArea = Flexible(child: content);
+    } else {
+      contentArea = content;
+    }
+
     final panelBody = Column(
+      mainAxisSize: (maxHeight != null && !expandContent)
+          ? MainAxisSize.min
+          : MainAxisSize.max,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
@@ -106,7 +132,7 @@ class KubusFilterPanel extends StatelessWidget {
         ),
         if (showHeaderDivider)
           Divider(height: 1, color: scheme.outline.withValues(alpha: 0.14)),
-        if (expandContent) Expanded(child: content) else content,
+        contentArea,
         if (footer != null) ...[
           if (showFooterDivider)
             Divider(height: 1, color: scheme.outline.withValues(alpha: 0.14)),
@@ -152,6 +178,13 @@ class KubusFilterPanel extends StatelessWidget {
           borderRadius: BorderRadius.circular(borderRadius),
           child: panelBody,
         ),
+      );
+    }
+
+    if (maxHeight != null) {
+      panel = ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: maxHeight!),
+        child: panel,
       );
     }
 

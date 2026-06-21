@@ -213,6 +213,7 @@ class KubusSearchResultsOverlay extends StatelessWidget {
     this.width,
     this.enabled = true,
     this.useMapGlassSurface = false,
+    this.enableBlur,
   });
 
   final KubusSearchController controller;
@@ -237,6 +238,13 @@ class KubusSearchResultsOverlay extends StatelessWidget {
   /// the dropdown matches the rest of the map chrome over the MapLibre platform
   /// view. Defaults to `false` for non-map search dropdowns.
   final bool useMapGlassSurface;
+
+  /// Explicit blur decision for the map-glass dropdown surface. When null
+  /// (default), the dropdown resolves blur itself via [kubusMapBlurEnabled].
+  /// Pass the same value the adjacent search field uses so the dropdown and
+  /// field stay consistent (and so callers/tests can force the safe-tint
+  /// fallback where real blur must never sit in front of the results text).
+  final bool? enableBlur;
 
   Widget _buildIconBadge(
     BuildContext context,
@@ -355,8 +363,9 @@ class KubusSearchResultsOverlay extends StatelessWidget {
         // In map context, route the dropdown through the shared map-glass path
         // ([_KubusDropdownSurface]) so it registers a backdrop region (DOM host
         // on web, BackdropFilter on desktop/Android) and stays translucent.
-        final panelBlurEnabled =
-            useMapGlassSurface ? kubusMapBlurEnabled(context) : true;
+        final panelBlurEnabled = useMapGlassSurface
+            ? (enableBlur ?? kubusMapBlurEnabled(context))
+            : true;
         final panelRadius = BorderRadius.circular(KubusRadius.lg);
 
         return Positioned.fill(
@@ -541,6 +550,13 @@ class _KubusDropdownSurface extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: KubusSpacing.sm),
         margin: EdgeInsets.zero,
         tintBase: tintColor,
+        // Respect the caller's blur decision (same one the search field uses).
+        // Without this the dropdown always took the default forceRealBlur path,
+        // rendering a BackdropFilter over the live map even where real blur is
+        // unsafe (mobile web / over the native platform view), putting blur in
+        // front of the result text. When false it falls back to the static
+        // sheen + tint instead.
+        useBlur: enableBlur,
         backdropRegionId: 'map-search-results-dropdown',
         child: child,
       );

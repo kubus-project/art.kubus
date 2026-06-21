@@ -5332,9 +5332,21 @@ class _MapScreenState extends State<MapScreen>
     final scheme = theme.colorScheme;
     final filters = KubusMapFilterCatalog.buildOptions(context);
 
+    // The mobile filter panel lives in the top-overlay column, which sits in a
+    // `Positioned` with only top/left/right — i.e. it has no bounded height. Cap
+    // the panel so its internal SingleChildScrollView actually scrolls (by touch
+    // drag / wheel) instead of growing past the viewport. Room is reserved above
+    // for the search field + quick-filter chips and below for the nearby sheet.
+    final media = MediaQuery.of(context);
+    final available =
+        media.size.height - media.padding.top - media.padding.bottom;
+    final maxPanelHeight =
+        (available - 220).clamp(220.0, available * 0.7).toDouble();
+
     return KubusFilterPanel(
       title: l10n.mapFiltersTitle,
       margin: EdgeInsets.zero,
+      maxHeight: maxPanelHeight,
       contentPadding: const EdgeInsets.all(KubusSpacing.md),
       headerPadding: const EdgeInsets.fromLTRB(
         KubusSpacing.md,
