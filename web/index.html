@@ -126,47 +126,6 @@
         maplibre.src = 'local/maplibre-gl/maplibre-gl-csp.js?v=' + encodeURIComponent(String(v));
         maplibre.onload = function () {
           try {
-            (function installMapLibreEventSubscriptionCompat() {
-              var evented = window.maplibregl && window.maplibregl.Evented;
-              var proto = evented && evented.prototype;
-              if (!proto || proto.__kubusSubscriptionCompatInstalled) return;
-
-              function wrapSubscriptionMethod(methodName) {
-                var original = proto[methodName];
-                if (typeof original !== 'function') return;
-
-                proto[methodName] = function () {
-                  var target = this;
-                  var args = Array.prototype.slice.call(arguments);
-                  var result = original.apply(target, args);
-                  if (result && typeof result.unsubscribe === 'function') {
-                    return result;
-                  }
-                  if (methodName === 'once' && args.length < 2) {
-                    return result;
-                  }
-
-                  var unsubscribed = false;
-                  return {
-                    unsubscribe: function () {
-                      if (unsubscribed) return;
-                      unsubscribed = true;
-                      if (target && typeof target.off === 'function') {
-                        target.off.apply(target, args);
-                      }
-                    }
-                  };
-                };
-              }
-
-              wrapSubscriptionMethod('on');
-              wrapSubscriptionMethod('once');
-              Object.defineProperty(proto, '__kubusSubscriptionCompatInstalled', {
-                value: true,
-                configurable: false
-              });
-            })();
-
             if (window.maplibregl && typeof window.maplibregl.setWorkerUrl === 'function') {
               window.maplibregl.setWorkerUrl(
                 'local/maplibre-gl/maplibre-gl-csp-worker.js?v=' + encodeURIComponent(String(v))
