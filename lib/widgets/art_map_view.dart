@@ -715,38 +715,43 @@ class _ArtMapViewState extends State<ArtMapView> {
                 webGLRecovering: _webGLRecovering,
                 styleFailed: _styleFailed,
               ))
-                Positioned.fill(
+                // Non-covering recovery indicator. WebGL context loss is usually
+                // transient and MapLibre restores its own context, so we must
+                // NOT hide the live map behind a full-screen tint (that made the
+                // whole map read as a flat green/teal surface on mobile web when
+                // a single context-loss/CanvasKit event flipped the health flag).
+                // Show a small bottom toast instead and keep the map visible.
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: KubusSpacing.lg,
                   child: IgnorePointer(
                     ignoring: true,
-                    child: Container(
-                      color: _mapWebGLRecoveryBackdropColor(),
-                      alignment: Alignment.center,
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 320),
-                        child: Container(
-                          margin: const EdgeInsets.all(KubusSpacing.md),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: KubusSpacing.md,
-                            vertical: KubusSpacing.sm,
+                    child: Align(
+                      alignment: Alignment.bottomCenter,
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(
+                          horizontal: KubusSpacing.md,
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: KubusSpacing.md,
+                          vertical: KubusSpacing.sm,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.42),
+                          borderRadius: BorderRadius.circular(KubusRadius.lg),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.10),
                           ),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.18),
-                            borderRadius:
-                                BorderRadius.circular(KubusRadius.lg),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.10),
-                            ),
-                          ),
-                          child: Text(
-                            'Recovering map rendering…',
-                            textAlign: TextAlign.center,
-                            style:
-                                Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: Colors.white
-                                          .withValues(alpha: 0.85),
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                          ),
+                        ),
+                        child: Text(
+                          'Recovering map rendering…',
+                          textAlign: TextAlign.center,
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Colors.white.withValues(alpha: 0.85),
+                                    fontWeight: FontWeight.w600,
+                                  ),
                         ),
                       ),
                     ),
@@ -793,11 +798,6 @@ class _ArtMapViewState extends State<ArtMapView> {
     );
   }
 
-  Color _mapWebGLRecoveryBackdropColor() {
-    return ArtMapView.mapWebGLRecoveryBackdropColorForTest(
-      isDarkMode: widget.isDarkMode,
-    ).withValues(alpha: 0.92);
-  }
 }
 
 class _StyleErrorCard extends StatelessWidget {
