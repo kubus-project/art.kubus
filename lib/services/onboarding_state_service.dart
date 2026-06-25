@@ -2,6 +2,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/config.dart';
 import '../utils/wallet_utils.dart';
+import 'guest_session_service.dart';
 
 class OnboardingState {
   final bool isFirstLaunch;
@@ -134,6 +135,9 @@ class OnboardingStateService {
       p,
       scopeKey: authOnboardingScopeKey,
     );
+    // A user who finished onboarding (created/linked an account) is no longer a
+    // guest; subsequent launches use the normal returning-user flow.
+    await GuestSessionService.clearGuestMode(prefs: p);
   }
 
   /// Mark that the welcome has been seen (without necessarily completing the full onboarding flow).

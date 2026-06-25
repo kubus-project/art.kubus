@@ -41,6 +41,8 @@ import '../models/artwork.dart';
 import '../models/task.dart';
 import '../models/map_marker_subject.dart';
 import '../services/ar_integration_service.dart';
+import '../services/guest_session_service.dart';
+import '../services/telemetry/telemetry_service.dart';
 import '../services/map_marker_service.dart';
 import '../services/push_notification_service.dart';
 import '../services/map_attribution_helper.dart';
@@ -516,6 +518,10 @@ class _MapScreenState extends State<MapScreen>
     MapAttributionHelper.setMobileMapEnabled(true);
     _autoFollow = widget.autoFollow;
 
+    // Guest-first funnel: record that a guest reached the map (campaign
+    // attribution is attached automatically by the telemetry layer).
+    unawaited(_trackGuestMapEntry());
+
     // Shared UI state mirror (selection/tutorial/etc). Not yet used by the UI;
     // this is a no-behavior-change bridge for incremental refactors.
     _mapUiStateCoordinator = MapUiStateCoordinator();
@@ -967,8 +973,21 @@ class _MapScreenState extends State<MapScreen>
       }
 
       _mapTutorialStartAttempts = 0;
+      // Guest-first: bindings are configured (so the tutorial stays launchable),
+      // but we don't auto-pop it for cold visitors who came to explore.
+      if (await GuestSessionService.isGuestActive()) return;
       unawaited(_mapTutorialCoordinator.maybeStart());
     });
+  }
+
+  Future<void> _trackGuestMapEntry() async {
+    try {
+      if (await GuestSessionService.isGuestActive()) {
+        await TelemetryService().trackGuestMapLoaded();
+      }
+    } catch (_) {
+      // Analytics must never affect the map.
+    }
   }
 
   void _scheduleMapTutorialStartRetry({required String reason}) {

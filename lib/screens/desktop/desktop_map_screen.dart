@@ -33,6 +33,8 @@ import '../../models/exhibition.dart';
 import '../../models/map_marker_subject.dart';
 import '../../config/config.dart';
 import '../../core/app_route_observer.dart';
+import '../../services/guest_session_service.dart';
+import '../../services/telemetry/telemetry_service.dart';
 import '../../services/map_attribution_helper.dart';
 import '../../services/map_style_service.dart';
 import '../../services/backend_api_service.dart';
@@ -377,6 +379,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+
+    // Guest-first funnel parity with the mobile map: record that a guest reached
+    // the desktop map (campaign attribution is attached by the telemetry layer).
+    unawaited(_trackGuestMapEntry());
 
     // Shared UI state mirror (selection/tutorial/etc). Not yet used by the UI;
     // this is a no-behavior-change bridge for incremental refactors.
@@ -812,8 +818,21 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       }
 
       _mapTutorialStartAttempts = 0;
+      // Guest-first: bindings stay configured (tutorial remains launchable) but
+      // we don't auto-pop it for cold visitors who came to explore.
+      if (await GuestSessionService.isGuestActive()) return;
       unawaited(_mapTutorialCoordinator.maybeStart());
     });
+  }
+
+  Future<void> _trackGuestMapEntry() async {
+    try {
+      if (await GuestSessionService.isGuestActive()) {
+        await TelemetryService().trackGuestMapLoaded();
+      }
+    } catch (_) {
+      // Analytics must never affect the map.
+    }
   }
 
   void _scheduleMapTutorialStartRetry({required String reason}) {

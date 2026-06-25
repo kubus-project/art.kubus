@@ -23,6 +23,8 @@ import '../services/app_bootstrap_service.dart';
 import '../services/auth_onboarding_service.dart';
 import '../services/onboarding_state_service.dart';
 import '../services/auth_gating_service.dart';
+import '../services/guest_session_service.dart';
+import '../services/telemetry/telemetry_service.dart';
 import '../services/auth/auth_deep_link_parser.dart';
 import '../screens/onboarding/onboarding_flow_screen.dart';
 import '../screens/desktop/desktop_shell.dart';
@@ -344,6 +346,18 @@ class _AppInitializerState extends State<AppInitializer> {
         prefs: prefs,
         onboardingState: onboardingState,
       );
+
+      // Guest-first entry from the marketing funnel (e.g.
+      // app.kubus.site/?mode=guest&intent=discover). Cold visitors who clicked
+      // an ad are not ready for the account/wallet/tutorial onboarding flow, so
+      // we capture their campaign attribution and send them straight to the
+      // map/discovery shell. Only the new guest-entry case is affected; all
+      // existing returning-user / sign-in / onboarding flows are untouched.
+      await GuestSessionService.captureFromLaunchUrl(prefs: prefs);
+      final guestEntry = GuestSessionService.isGuestActiveSync(prefs);
+      if (guestEntry) {
+        unawaited(TelemetryService().trackGuestAppLoaded());
+      }
       final shouldShowSignIn = !hasValidSession &&
           hasLocalAccount &&
           AppConfig.enableMultiAuthEntry &&
@@ -703,7 +717,7 @@ class _AppInitializerState extends State<AppInitializer> {
           _didNavigate = true;
           navigator.pushReplacementNamed(_resolvedShellRoute);
         }
-      } else if (shouldShowFirstRunOnboarding) {
+      } else if (shouldShowFirstRunOnboarding && !guestEntry) {
         // First-time user - show onboarding (no wallet required)
         await OnboardingStateService.markWelcomeSeen(prefs: prefs);
         if (kDebugMode) {

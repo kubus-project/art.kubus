@@ -50,7 +50,18 @@ class MapOverlayBlocker extends StatelessWidget {
 
     result = MouseRegion(cursor: cursor, child: result);
 
-    if (kIsWeb && interceptPlatformViews) {
+    // Insert a PointerInterceptor over the overlay so touches/clicks don't get
+    // captured by the map platform view underneath. This is required not only on
+    // web (DOM map node) but also on iOS/Android, where MapLibre renders as a
+    // native platform view that otherwise steals taps from Flutter overlay
+    // buttons (claim/save/like/share) layered above it. `pointer_interceptor`
+    // (^0.10) ships web/iOS/Android implementations but NOT desktop, where the
+    // map composites with Flutter and no interceptor is needed (and calling it
+    // would throw), so desktop is intentionally excluded.
+    final needsPlatformViewInterceptor = kIsWeb ||
+        defaultTargetPlatform == TargetPlatform.iOS ||
+        defaultTargetPlatform == TargetPlatform.android;
+    if (interceptPlatformViews && needsPlatformViewInterceptor) {
       result = PointerInterceptor(child: result);
     }
 

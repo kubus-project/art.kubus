@@ -46,6 +46,12 @@ class AppTelemetryEventTypes {
   static const String signUpFailure = 'signup_failure';
   static const String arSessionStart = 'ar_session_start';
 
+  // Guest-first funnel: cold visitors arriving from the marketing site via
+  // ?mode=guest. These let acquisition analytics tie ad clicks -> guest app
+  // usage -> (optional) signup.
+  static const String guestAppLoaded = 'guest_app_loaded';
+  static const String guestMapLoaded = 'guest_map_loaded';
+
   static const Set<String> allowed = {
     screenView,
     screenDuration,
@@ -60,5 +66,7 @@ class AppTelemetryEventTypes {
     signUpSuccess,
     signUpFailure,
     arSessionStart,
+    guestAppLoaded,
+    guestMapLoaded,
   };
 }

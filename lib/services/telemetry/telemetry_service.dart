@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../config/config.dart';
+import '../guest_session_service.dart';
 import 'kubus_client_context.dart';
 import 'telemetry_config.dart';
 import 'telemetry_event.dart';
@@ -48,6 +49,11 @@ class TelemetryService {
   final Random _rand = Random.secure();
 
   final Set<String> _onceKeys = <String>{};
+
+  // Campaign attribution captured at guest-first entry (?mode=guest&utm_*),
+  // attached to every event so acquisition analytics can tie ad clicks to app
+  // usage and signups.
+  Map<String, Object?> _entryAttribution = const <String, Object?>{};
 
   static final RegExp _uuidRegex = RegExp(
     r'^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
@@ -92,9 +98,11 @@ class TelemetryService {
       final prefs = await SharedPreferences.getInstance();
       _analyticsPreferenceEnabled = prefs.getBool('enableAnalytics') ?? true;
       _actorUserId = _normalizeUuid(prefs.getString('user_id'));
+      _entryAttribution = _loadEntryAttribution(prefs);
     } catch (_) {
       _analyticsPreferenceEnabled = true;
       _actorUserId = null;
+      _entryAttribution = const <String, Object?>{};
     }
 
     _enabled = (_enabledByBuildFlagOverride ??
@@ -277,6 +285,34 @@ class TelemetryService {
     await trackEvent(AppTelemetryEventTypes.arSessionStart);
   }
 
+  /// Guest-first funnel events. Fired once per session so acquisition analytics
+  /// can attribute ad clicks to guest app/map usage. Campaign attribution
+  /// (utm_*, entry_intent) is attached automatically via `_buildMetadata`.
+  Future<void> trackGuestAppLoaded() async {
+    await _trackOncePerSession(AppTelemetryEventTypes.guestAppLoaded);
+  }
+
+  Future<void> trackGuestMapLoaded() async {
+    await _trackOncePerSession(AppTelemetryEventTypes.guestMapLoaded);
+  }
+
+  Map<String, Object?> _loadEntryAttribution(SharedPreferences prefs) {
+    try {
+      final attribution = <String, Object?>{};
+      GuestSessionService.entryUtmSync(prefs).forEach((key, value) {
+        attribution[key] = value;
+      });
+      final intent = GuestSessionService.entryIntentSync(prefs);
+      if (intent != null) attribution['entry_intent'] = intent;
+      if (GuestSessionService.isGuestActiveSync(prefs)) {
+        attribution['guest'] = true;
+      }
+      return attribution;
+    } catch (_) {
+      return const <String, Object?>{};
+    }
+  }
+
   Future<void> trackEvent(String eventType,
       {Map<String, Object?> extra = const {}}) async {
     await ensureInitialized();
@@ -405,6 +441,10 @@ class TelemetryService {
       'platform': _platformName(),
       'env': AppTelemetryConfig.env,
     };
+
+    // Campaign attribution (utm_*, entry_intent, guest) from the marketing
+    // funnel. Added before `extra` so explicit per-event values still win.
+    base.addAll(_entryAttribution);
 
     for (final entry in extra.entries) {
       final key = entry.key.toString();
