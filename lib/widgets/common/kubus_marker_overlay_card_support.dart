@@ -195,7 +195,7 @@ class _OverlayActionButton extends StatelessWidget {
         onTap: spec.onTap,
         child: SizedBox(
           key: const ValueKey<String>('marker_overlay_secondary_action'),
-          height: 30,
+          height: KubusHeaderMetrics.actionHitArea,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             mainAxisSize: showLabel ? MainAxisSize.max : MainAxisSize.min,
@@ -277,8 +277,9 @@ class _OverlayPager extends StatelessWidget {
       child: Tooltip(
         message: tooltip,
         child: MouseRegion(
-          cursor:
-              onTap == null ? SystemMouseCursors.basic : SystemMouseCursors.click,
+          cursor: onTap == null
+              ? SystemMouseCursors.basic
+              : SystemMouseCursors.click,
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTap: onTap,
@@ -347,8 +348,8 @@ class _OverlayPager extends StatelessWidget {
                           onTap: () => onSelectIndex!(dotIndex),
                           child: SizedBox(
                             width: 18,
-                            height:
-                                KubusHeaderMetrics.actionHitArea - KubusSpacing.xs,
+                            height: KubusHeaderMetrics.actionHitArea -
+                                KubusSpacing.xs,
                             child: Center(child: dot),
                           ),
                         ),
@@ -411,7 +412,7 @@ class _OverlayPrimaryButton extends StatelessWidget {
         onTap: onPressed,
         child: SizedBox(
           key: const ValueKey<String>('marker_overlay_primary_action'),
-          height: 34,
+          height: KubusHeaderMetrics.actionHitArea,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [

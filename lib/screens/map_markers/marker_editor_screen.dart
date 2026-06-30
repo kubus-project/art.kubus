@@ -24,17 +24,18 @@ class MarkerEditorScreen extends StatelessWidget {
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
-          title: Text(isNew ? l10n.manageMarkersNewButton : l10n.manageMarkersEditTitle),
+          title: Text(isNew
+              ? l10n.manageMarkersNewButton
+              : l10n.manageMarkersEditTitle),
         ),
         body: MarkerEditorView(
           marker: marker,
           isNew: isNew,
-          onSaved: (_) {
-            if (context.mounted) Navigator.of(context).maybePop();
+          onSaved: (saved) {
+            if (context.mounted) Navigator.of(context).maybePop(saved);
           },
         ),
       ),
     );
   }
 }
-

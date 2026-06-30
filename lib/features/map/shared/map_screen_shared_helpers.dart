@@ -656,6 +656,11 @@ class KubusMarkerOverlayHelpers {
       estimated += 8.0;
     }
 
+    // Footer action controls use the shared 44px hit-area token. Account for
+    // that reserved space so constrained mobile cards scroll their body before
+    // compressing action rows.
+    estimated += isCompactWidth ? 24.0 : 10.0;
+
     return MapOverlaySizing.resolveCardHeight(
       estimatedHeight: estimated,
       maxCardHeight: maxCardHeight,

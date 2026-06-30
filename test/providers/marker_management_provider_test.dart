@@ -214,6 +214,60 @@ void main() {
     expect(api.updateCalls, 1);
   });
 
+  test('MarkerManagementProvider.updateMarker keeps persisted marker fields',
+      () async {
+    final api = _FakeMarkerApi();
+    final provider = MarkerManagementProvider(
+        api: api, mapMarkerService: MapMarkerService());
+    final saved = _marker('m1', name: 'Edited').copyWith(
+      description: 'edited desc',
+      position: const LatLng(46.05, 14.5),
+      category: 'Event',
+      isPublic: false,
+      isActive: false,
+      requiresProximity: false,
+      activationRadius: 75,
+      metadata: const <String, dynamic>{
+        'clientNonce': 'nonce-1',
+        'subjectType': 'event',
+      },
+    );
+
+    provider.ingestMarker(_marker('m1', name: 'Old'));
+    api.updateCompleter = Completer<ArtMarker?>();
+
+    final future = provider.updateMarker('m1', <String, dynamic>{
+      'name': 'Edited',
+      'description': 'edited desc',
+      'category': 'Event',
+      'latitude': 46.05,
+      'longitude': 14.5,
+      'isPublic': false,
+      'isActive': false,
+      'requiresProximity': false,
+      'activationRadius': 75,
+      'metadata': <String, dynamic>{
+        'subjectType': 'event',
+      },
+    });
+
+    api.updateCompleter!.complete(saved);
+    final updated = await future;
+
+    expect(updated, isNotNull);
+    expect(updated!.name, 'Edited');
+    expect(updated.description, 'edited desc');
+    expect(updated.position.latitude, 46.05);
+    expect(updated.position.longitude, 14.5);
+    expect(updated.category, 'Event');
+    expect(updated.isPublic, isFalse);
+    expect(updated.isActive, isFalse);
+    expect(updated.requiresProximity, isFalse);
+    expect(updated.activationRadius, 75);
+    expect(updated.metadata?['subjectType'], 'event');
+    expect(provider.markers.firstWhere((m) => m.id == 'm1').name, 'Edited');
+  });
+
   test(
       'MarkerManagementProvider.updateMarker reverts optimistic marker when backend returns null payload',
       () async {

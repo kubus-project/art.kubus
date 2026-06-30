@@ -4,6 +4,7 @@ import 'dart:io' as io;
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/models/art_marker.dart';
 import 'package:art_kubus/models/artwork.dart';
+import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/widgets/common/kubus_cached_image.dart';
 import 'package:art_kubus/widgets/common/kubus_marker_overlay_card.dart';
 import 'package:art_kubus/widgets/glass/glass_surface.dart';
@@ -233,6 +234,56 @@ void main() {
       expect(primaryTapCount, 3);
       expect(tester.takeException(), isNull);
       expect(find.text('More info'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'mobile marker overlay actions keep minimum touch height',
+    (tester) async {
+      final marker = _marker();
+
+      await tester.pumpWidget(
+        _wrap(
+          SizedBox(
+            width: 300,
+            child: KubusMarkerOverlayCard(
+              marker: marker,
+              baseColor: Colors.teal,
+              displayTitle: marker.name,
+              canPresentExhibition: false,
+              description: _buildWordSequence(80),
+              onClose: () {},
+              onPrimaryAction: () {},
+              primaryActionIcon: Icons.arrow_forward,
+              primaryActionLabel: 'More info',
+              actions: const [
+                MarkerOverlayActionSpec(
+                  icon: Icons.favorite,
+                  label: 'Save',
+                  isActive: false,
+                  activeColor: Colors.teal,
+                ),
+              ],
+              maxWidth: 300,
+              maxHeight: 320,
+            ),
+          ),
+        ),
+      );
+
+      final secondary = find.byKey(
+        const ValueKey<String>('marker_overlay_secondary_action'),
+      );
+      final primary = find.byKey(
+        const ValueKey<String>('marker_overlay_primary_action'),
+      );
+
+      expect(secondary, findsOneWidget);
+      expect(primary, findsOneWidget);
+      expect(tester.getSize(secondary).height,
+          greaterThanOrEqualTo(KubusHeaderMetrics.actionHitArea));
+      expect(tester.getSize(primary).height,
+          greaterThanOrEqualTo(KubusHeaderMetrics.actionHitArea));
     },
   );
 
@@ -476,7 +527,7 @@ void main() {
                   .first,
             )
             .height,
-        30,
+        KubusHeaderMetrics.actionHitArea,
       );
       expect(
         tester
@@ -485,7 +536,7 @@ void main() {
                   const ValueKey<String>('marker_overlay_primary_action')),
             )
             .height,
-        34,
+        KubusHeaderMetrics.actionHitArea,
       );
     },
   );

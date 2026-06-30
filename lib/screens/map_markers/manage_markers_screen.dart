@@ -48,6 +48,27 @@ class _ManageMarkersScreenState extends State<ManageMarkersScreen> {
     });
   }
 
+  Future<void> _openMarkerEditorRoute({
+    required ArtMarker? marker,
+    required bool isNew,
+  }) async {
+    final provider = context.read<MarkerManagementProvider>();
+    final saved = await Navigator.of(context).push<ArtMarker>(
+      MaterialPageRoute(
+        builder: (_) => MarkerEditorScreen(marker: marker, isNew: isNew),
+      ),
+    );
+
+    if (!mounted || saved == null) return;
+    provider.ingestMarker(saved);
+    await provider.refresh(force: true);
+    if (!mounted) return;
+    setState(() {
+      _creatingNew = false;
+      _selectedMarkerId = saved.id;
+    });
+  }
+
   String _statusLabel(AppLocalizations l10n, ArtMarker marker) {
     if (!marker.isActive) return l10n.manageMarkersStatusDraft;
     return marker.isPublic
@@ -145,11 +166,8 @@ class _ManageMarkersScreenState extends State<ManageMarkersScreen> {
               if (isWide) {
                 _startCreate();
               } else {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        const MarkerEditorScreen(marker: null, isNew: true),
-                  ),
+                unawaited(
+                  _openMarkerEditorRoute(marker: null, isNew: true),
                 );
               }
             },
@@ -190,11 +208,8 @@ class _ManageMarkersScreenState extends State<ManageMarkersScreen> {
                       if (isWide) {
                         _startCreate();
                       } else {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const MarkerEditorScreen(
-                                marker: null, isNew: true),
-                          ),
+                        unawaited(
+                          _openMarkerEditorRoute(marker: null, isNew: true),
                         );
                       }
                     },
@@ -274,11 +289,8 @@ class _ManageMarkersScreenState extends State<ManageMarkersScreen> {
               if (isWide) {
                 _selectMarker(marker);
               } else {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        MarkerEditorScreen(marker: marker, isNew: false),
-                  ),
+                unawaited(
+                  _openMarkerEditorRoute(marker: marker, isNew: false),
                 );
               }
             },

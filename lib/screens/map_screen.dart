@@ -2820,12 +2820,16 @@ class _MapScreenState extends State<MapScreen>
     return _createSubjectLoader().refresh(force: force);
   }
 
-  Future<void> _startMarkerCreationFlow() async {
-    if (_currentPosition == null) {
+  Future<void> _startMarkerCreationFlow({LatLng? position}) async {
+    LatLng? targetPosition = position;
+    if (targetPosition == null && _currentPosition == null) {
       await _promptForLocationThenCenter(reason: 'marker_creation');
       if (!mounted) return;
       if (_currentPosition == null) return;
     }
+    targetPosition ??= _currentPosition;
+    if (targetPosition == null) return;
+
     final refreshed = await _refreshMarkerSubjectData(force: true);
     if (!mounted) return;
     final subjectData = refreshed ?? _snapshotMarkerSubjectData();
@@ -2874,7 +2878,7 @@ class _MapScreenState extends State<MapScreen>
         subjectData: subjectData,
         onRefreshSubjects: ({bool force = false}) =>
             _refreshMarkerSubjectData(force: force),
-        initialPosition: _currentPosition!,
+        initialPosition: targetPosition,
         allowManualPosition: false,
         initialSubjectType: initialSubjectType,
         allowedSubjectTypes: allowedSubjectTypes,
@@ -2891,7 +2895,7 @@ class _MapScreenState extends State<MapScreen>
 
     if (!mounted || result == null) return;
 
-    final success = await _createMarkerAtCurrentLocation(result);
+    final success = await _createMarkerAtPosition(targetPosition, result);
 
     if (!mounted) return;
 
@@ -2911,9 +2915,8 @@ class _MapScreenState extends State<MapScreen>
     }
   }
 
-  Future<bool> _createMarkerAtCurrentLocation(MapMarkerFormResult form) async {
-    if (_currentPosition == null) return false;
-
+  Future<bool> _createMarkerAtPosition(
+      LatLng position, MapMarkerFormResult form) async {
     try {
       final exhibitionsProvider = context.read<ExhibitionsProvider>();
       final markerManagementProvider = context.read<MarkerManagementProvider>();
@@ -2940,12 +2943,13 @@ class _MapScreenState extends State<MapScreen>
       // Snap to the nearest grid cell center at the current zoom level
       // We use the current camera zoom to determine which grid level is most relevant
       final double currentZoom = _lastZoom;
+      final requestedPosition = form.positionOverride ?? position;
       final gridCell =
-          GridUtils.gridCellForZoom(_currentPosition!, currentZoom);
+          GridUtils.gridCellForZoom(requestedPosition, currentZoom);
       // Snap to the grid level that is closest to the current zoom
       // This ensures we snap to the grid lines the user is likely seeing
       final LatLng snappedPosition = tileProviders?.snapToVisibleGrid(
-            form.positionOverride ?? _currentPosition!,
+            requestedPosition,
             currentZoom,
           ) ??
           gridCell.center;
@@ -3790,6 +3794,10 @@ class _MapScreenState extends State<MapScreen>
         onCameraIdle: _handleCameraIdle,
         onMapClick: (dynamic point, _) {
           unawaited(_handleMapTap(point));
+        },
+        onMapLongClick: (_, point) {
+          _kubusMapController.dismissSelection();
+          unawaited(_startMarkerCreationFlow(position: point));
         },
         onMapCreated: (controller) {
           KubusMapLifecycleHelpers.handleMapCreated(
@@ -5287,7 +5295,7 @@ class _MapScreenState extends State<MapScreen>
           sizeFactor: anim,
           // Anchor the reveal to the top edge so the panel grows downward from
           // the search bar for a vertical size transition.
-          alignment: Alignment.topCenter,
+          axisAlignment: -1.0,
           child: child,
         ),
       ),
