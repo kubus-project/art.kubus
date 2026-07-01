@@ -67,6 +67,15 @@ String? _backendApiGuessContentType(String fileName, String fileType) {
   return null;
 }
 
+String _backendApiNormalizeTargetStorage(String targetStorage) {
+  final normalized = targetStorage.trim().toLowerCase();
+  if (normalized == 'both') return 'hybrid';
+  if (normalized == 'ipfs' || normalized == 'http' || normalized == 'hybrid') {
+    return normalized;
+  }
+  return 'http';
+}
+
 bool _backendApiIsNodeNotWritableException(Object error) {
   return error is BackendApiRequestException &&
       error.statusCode == 503 &&
@@ -161,6 +170,7 @@ Future<Map<String, dynamic>> _backendApiUploadFileImpl(
   required String fileType,
   Map<String, String>? metadata,
   String? walletAddress,
+  String targetStorage = 'http',
   bool compress = true,
   UploadCompressionPolicy? compressionPolicy,
   void Function(UploadCompressionProgress progress)? onCompressionProgress,
@@ -168,6 +178,8 @@ Future<Map<String, dynamic>> _backendApiUploadFileImpl(
   await service._ensureAuthBeforeRequest(walletAddress: walletAddress);
   final initialMetadata = Map<String, String>.from(metadata ?? const {});
   initialMetadata.putIfAbsent('publicationScope', () => 'draft');
+  final normalizedTargetStorage =
+      _backendApiNormalizeTargetStorage(targetStorage);
 
   var uploadBytes = Uint8List.fromList(fileBytes);
   var uploadFileName = fileName;
@@ -232,7 +244,7 @@ Future<Map<String, dynamic>> _backendApiUploadFileImpl(
         );
 
         request.fields['fileType'] = fileType;
-        request.fields['targetStorage'] = 'http';
+        request.fields['targetStorage'] = normalizedTargetStorage;
         if (initialMetadata.isNotEmpty) {
           request.fields['metadata'] = jsonEncode(initialMetadata);
         }
@@ -249,7 +261,7 @@ Future<Map<String, dynamic>> _backendApiUploadFileImpl(
               'fileName': uploadFileName,
               'bytes': uploadBytes.length,
               'fileType': fileType,
-              'targetStorage': 'http',
+              'targetStorage': normalizedTargetStorage,
               'baseUrl': effectiveBaseUrl,
               if (initialMetadata.isNotEmpty) 'metadata': initialMetadata,
             },

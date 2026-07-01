@@ -11,6 +11,7 @@ class EmptyStateCard extends StatelessWidget {
   final bool showAction;
   final String? actionLabel;
   final VoidCallback? onAction;
+  final String? semanticsLabel;
 
   const EmptyStateCard({
     super.key,
@@ -20,6 +21,7 @@ class EmptyStateCard extends StatelessWidget {
     this.showAction = false,
     this.actionLabel,
     this.onAction,
+    this.semanticsLabel,
   });
 
   @override
@@ -31,6 +33,7 @@ class EmptyStateCard extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
     final radius = BorderRadius.circular(KubusRadius.lg);
     final glassTint = scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10);
+    final resolvedSemanticsLabel = semanticsLabel ?? '$title. $description';
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -91,24 +94,30 @@ class EmptyStateCard extends StatelessWidget {
           );
         }
 
-        return Container(
-          width: double.infinity,
-          decoration: BoxDecoration(
-            borderRadius: radius,
-            border: Border.all(
-              color: scheme.outline.withValues(alpha: 0.14),
+        return Semantics(
+          container: true,
+          explicitChildNodes: true,
+          liveRegion: true,
+          label: resolvedSemanticsLabel,
+          child: Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              borderRadius: radius,
+              border: Border.all(
+                color: scheme.outline.withValues(alpha: 0.14),
+              ),
             ),
-          ),
-          child: LiquidGlassPanel(
-            padding: const EdgeInsets.symmetric(
-              vertical: KubusSpacing.lg,
-              horizontal: KubusSpacing.md,
+            child: LiquidGlassPanel(
+              padding: const EdgeInsets.symmetric(
+                vertical: KubusSpacing.lg,
+                horizontal: KubusSpacing.md,
+              ),
+              margin: EdgeInsets.zero,
+              borderRadius: radius,
+              showBorder: false,
+              backgroundColor: glassTint,
+              child: content,
             ),
-            margin: EdgeInsets.zero,
-            borderRadius: radius,
-            showBorder: false,
-            backgroundColor: glassTint,
-            child: content,
           ),
         );
       },

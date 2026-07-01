@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/providers/themeprovider.dart';
 import 'package:art_kubus/services/search_service.dart';
@@ -23,6 +25,20 @@ class _FakeSearchService extends SearchService {
     required KubusSearchConfig config,
   }) async {
     return results;
+  }
+}
+
+class _PendingSearchService extends SearchService {
+  final Completer<List<KubusSearchResult>> completer =
+      Completer<List<KubusSearchResult>>();
+
+  @override
+  Future<List<KubusSearchResult>> fetchResults({
+    required SearchContextSnapshot snapshot,
+    required String query,
+    required KubusSearchConfig config,
+  }) {
+    return completer.future;
   }
 }
 
@@ -172,5 +188,55 @@ void main() {
       findsOneWidget,
     );
     expect(find.byType(AvatarWidget), findsOneWidget);
+  });
+
+  testWidgets('search dropdown announces loading and empty results',
+      (tester) async {
+    final semantics = tester.ensureSemantics();
+    final themeProvider = ThemeProvider();
+    addTearDown(themeProvider.dispose);
+    final searchService = _PendingSearchService();
+    final controller = KubusSearchController(
+      config: const KubusSearchConfig(
+        scope: KubusSearchScope.home,
+        debounceDuration: Duration.zero,
+      ),
+      searchService: searchService,
+    );
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      _SearchHarness(
+        controller: controller,
+        themeProvider: themeProvider,
+        onResultTap: (_) {},
+      ),
+    );
+
+    await tester.tap(find.byType(TextField));
+    await tester.pump();
+    await tester.enterText(find.byType(TextField), 'Ocean');
+    await tester.pump();
+    await tester.pump();
+
+    final loadingFinder = find.bySemanticsLabel('Loading');
+    expect(loadingFinder, findsOneWidget);
+    expect(
+      tester.getSemantics(loadingFinder).flagsCollection.isLiveRegion,
+      isTrue,
+    );
+
+    searchService.completer.complete(const <KubusSearchResult>[]);
+    await tester.pump();
+    await tester.pump();
+
+    final emptyFinder = find.bySemanticsLabel('No results');
+    expect(emptyFinder, findsOneWidget);
+    expect(
+      tester.getSemantics(emptyFinder).flagsCollection.isLiveRegion,
+      isTrue,
+    );
+
+    semantics.dispose();
   });
 }

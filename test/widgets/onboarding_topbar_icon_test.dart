@@ -2,15 +2,18 @@ import 'dart:ui';
 
 import 'package:art_kubus/widgets/onboarding_topbar_icon.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-Widget _buildApp(ThemeData theme) {
+Widget _buildApp(ThemeData theme, {VoidCallback? onPressed}) {
   return MaterialApp(
     theme: theme,
-    home: const Scaffold(
+    home: Scaffold(
       body: Center(
         child: OnboardingTopbarIcon(
           icon: Icons.language,
+          semanticLabel: 'Language',
+          onPressed: onPressed ?? () {},
         ),
       ),
     ),
@@ -69,5 +72,38 @@ void main() {
     expect(pressedOpacity, lessThan(idleOpacity));
 
     await touch.up();
+  });
+
+  testWidgets('topbar icon has semantics and 44px hit area', (tester) async {
+    final semantics = tester.ensureSemantics();
+
+    await tester.pumpWidget(_buildApp(ThemeData.light(useMaterial3: true)));
+    await tester.pumpAndSettle();
+
+    final hitArea = tester.getSize(find.byType(OnboardingTopbarIcon));
+    expect(hitArea.width, greaterThanOrEqualTo(44));
+    expect(hitArea.height, greaterThanOrEqualTo(44));
+    expect(find.bySemanticsLabel('Language'), findsOneWidget);
+
+    semantics.dispose();
+  });
+
+  testWidgets('topbar icon can be activated from the keyboard', (tester) async {
+    var activationCount = 0;
+
+    await tester.pumpWidget(
+      _buildApp(
+        ThemeData.light(useMaterial3: true),
+        onPressed: () => activationCount += 1,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pump();
+
+    expect(activationCount, 1);
   });
 }

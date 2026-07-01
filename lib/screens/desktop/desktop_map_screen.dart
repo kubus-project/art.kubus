@@ -2453,7 +2453,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       child: KubusGeneralSearch(
         controller: _mapSearchController,
         hintText: l10n.mapSearchHint,
-        semanticsLabel: 'map_search_input',
+        semanticsLabel: l10n.mapSearchHint,
         enableBlur: useMapBlur,
         useMapGlassSurface: true,
         mouseCursor: SystemMouseCursors.text,
@@ -2511,23 +2511,24 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     ThemeProvider themeProvider,
     AppAnimationTheme animationTheme,
   ) {
+    final l10n = AppLocalizations.of(context)!;
     if (_selectedExhibition != null) {
       return Semantics(
-        label: 'left_info_panel',
+        label: l10n.commonDetails,
         container: true,
         child: _buildExhibitionDetailPanel(themeProvider, animationTheme),
       );
     }
     if (_selectedEvent != null) {
       return Semantics(
-        label: 'left_info_panel',
+        label: l10n.commonDetails,
         container: true,
         child: _buildEventDetailPanel(themeProvider, animationTheme),
       );
     }
     if (_selectedArtwork != null) {
       return Semantics(
-        label: 'left_info_panel',
+        label: l10n.commonDetails,
         container: true,
         child: _buildArtworkDetailPanel(themeProvider, animationTheme),
       );
@@ -3918,7 +3919,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final useMapBlur = kubusMapBlurEnabled(context);
 
     return Semantics(
-      label: 'discovery_path_idle',
+      label: l10n.mapDiscoveryPathTitle,
       button: true,
       container: true,
       child: ConstrainedBox(
@@ -3986,8 +3987,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     ArtworkProvider artworkProvider,
   ) {
     if (_rightSidebarContent == _RightSidebarContent.createMarker) {
+      final l10n = AppLocalizations.of(context)!;
       return Semantics(
-        label: 'create_marker_sidebar_panel',
+        label: l10n.mapCreateMarkerHereTooltip,
         container: true,
         child: MapOverlayBlocker(
           child: _buildCreateMarkerSidebar(),
@@ -4002,8 +4004,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       basePositionOverride: nearbyBasePosition,
     );
     final isLoadingArtworks = artworkProvider.isLoading('load_artworks');
+    final l10n = AppLocalizations.of(context)!;
     return Semantics(
-      label: 'nearby_sidebar_panel',
+      label: l10n.mapNearbyArtTitle,
       container: true,
       child: MapOverlayBlocker(
         child: _buildNearbyArtSidebar(

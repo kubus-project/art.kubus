@@ -1,15 +1,9 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/widgets.dart' show IconData, immutable;
 import 'package:latlong2/latlong.dart';
-import 'package:provider/provider.dart';
 
 import '../community/community_interactions.dart';
-import '../l10n/app_localizations.dart';
 import '../models/artwork.dart';
 import '../models/institution.dart';
-import '../providers/artwork_provider.dart';
-import '../providers/community_hub_provider.dart';
-import '../providers/institution_provider.dart';
-import '../providers/navigation_provider.dart';
 import '../utils/artwork_media_resolver.dart';
 import '../utils/search_suggestions.dart';
 import '../utils/wallet_utils.dart';
@@ -32,63 +26,18 @@ class SearchScreenRecord {
 @immutable
 class SearchContextSnapshot {
   const SearchContextSnapshot({
-    this.artworkProvider,
-    this.communityProvider,
-    this.institutionProvider,
+    this.artworks = const <Artwork>[],
+    this.communityPosts = const <CommunityPost>[],
+    this.institutions = const <Institution>[],
+    this.events = const <Event>[],
     this.screenRecords = const <SearchScreenRecord>[],
   });
 
-  final ArtworkProvider? artworkProvider;
-  final CommunityHubProvider? communityProvider;
-  final InstitutionProvider? institutionProvider;
+  final List<Artwork> artworks;
+  final List<CommunityPost> communityPosts;
+  final List<Institution> institutions;
+  final List<Event> events;
   final List<SearchScreenRecord> screenRecords;
-
-  factory SearchContextSnapshot.capture(
-    BuildContext context, {
-    required KubusSearchConfig config,
-  }) {
-    ArtworkProvider? artworkProvider;
-    CommunityHubProvider? communityProvider;
-    InstitutionProvider? institutionProvider;
-    var screenRecords = const <SearchScreenRecord>[];
-
-    try {
-      artworkProvider = context.read<ArtworkProvider>();
-    } catch (_) {}
-
-    try {
-      if (config.scope == KubusSearchScope.community ||
-          config.scope == KubusSearchScope.home) {
-        communityProvider = context.read<CommunityHubProvider>();
-      }
-    } catch (_) {}
-
-    try {
-      institutionProvider = context.read<InstitutionProvider>();
-    } catch (_) {}
-
-    if (config.effectiveKinds.contains(KubusSearchResultKind.screen)) {
-      final l10n = AppLocalizations.of(context);
-      if (l10n != null) {
-        screenRecords = NavigationProvider.screenDefinitions.entries
-            .map(
-              (entry) => SearchScreenRecord(
-                key: entry.key,
-                label: entry.value.labelKey.resolve(l10n),
-                icon: entry.value.icon,
-              ),
-            )
-            .toList(growable: false);
-      }
-    }
-
-    return SearchContextSnapshot(
-      artworkProvider: artworkProvider,
-      communityProvider: communityProvider,
-      institutionProvider: institutionProvider,
-      screenRecords: screenRecords,
-    );
-  }
 }
 
 class SearchService {
@@ -177,17 +126,15 @@ class SearchService {
     final kinds = config.effectiveKinds;
 
     if (kinds.contains(KubusSearchResultKind.artwork)) {
-      results
-          .addAll(_localArtworkResults(normalized, snapshot.artworkProvider));
+      results.addAll(_localArtworkResults(normalized, snapshot.artworks));
     }
     if (kinds.contains(KubusSearchResultKind.institution)) {
       results.addAll(
-        _localInstitutionResults(normalized, snapshot.institutionProvider),
+        _localInstitutionResults(normalized, snapshot.institutions),
       );
     }
     if (kinds.contains(KubusSearchResultKind.event)) {
-      results
-          .addAll(_localEventResults(normalized, snapshot.institutionProvider));
+      results.addAll(_localEventResults(normalized, snapshot.events));
     }
     if (kinds.contains(KubusSearchResultKind.screen)) {
       results.addAll(_localScreenResults(normalized, snapshot.screenRecords));
@@ -195,12 +142,11 @@ class SearchService {
     if (kinds.contains(KubusSearchResultKind.profile) &&
         (config.scope == KubusSearchScope.community ||
             config.scope == KubusSearchScope.home)) {
-      results
-          .addAll(_localProfileResults(normalized, snapshot.communityProvider));
+      results.addAll(_localProfileResults(normalized, snapshot.communityPosts));
     }
     if (kinds.contains(KubusSearchResultKind.post) &&
         config.scope == KubusSearchScope.community) {
-      results.addAll(_localPostResults(normalized, snapshot.communityProvider));
+      results.addAll(_localPostResults(normalized, snapshot.communityPosts));
     }
 
     return results.where((result) => _includeResult(result, config)).toList();
@@ -208,9 +154,8 @@ class SearchService {
 
   List<KubusSearchResult> _localArtworkResults(
     String query,
-    ArtworkProvider? artworkProvider,
+    List<Artwork> artworks,
   ) {
-    final artworks = artworkProvider?.artworks ?? const <Artwork>[];
     return artworks
         .where(
           (artwork) =>
@@ -243,10 +188,8 @@ class SearchService {
 
   List<KubusSearchResult> _localInstitutionResults(
     String query,
-    InstitutionProvider? institutionProvider,
+    List<Institution> institutions,
   ) {
-    final institutions =
-        institutionProvider?.institutions ?? const <Institution>[];
     return institutions
         .where(
           (institution) =>
@@ -278,9 +221,8 @@ class SearchService {
 
   List<KubusSearchResult> _localEventResults(
     String query,
-    InstitutionProvider? institutionProvider,
+    List<Event> events,
   ) {
-    final events = institutionProvider?.events ?? const <Event>[];
     return events
         .where(
           (event) =>
@@ -329,12 +271,11 @@ class SearchService {
 
   List<KubusSearchResult> _localProfileResults(
     String query,
-    CommunityHubProvider? communityProvider,
+    List<CommunityPost> communityPosts,
   ) {
     final results = <KubusSearchResult>[];
     final seen = <String>{};
-    for (final post
-        in communityProvider?.artFeedPosts ?? const <CommunityPost>[]) {
+    for (final post in communityPosts) {
       final authorName = post.authorName.trim();
       final authorUsername = post.authorUsername?.trim();
       final authorWallet = WalletUtils.canonical(post.authorWallet);
@@ -374,11 +315,10 @@ class SearchService {
 
   List<KubusSearchResult> _localPostResults(
     String query,
-    CommunityHubProvider? communityProvider,
+    List<CommunityPost> posts,
   ) {
     final normalizedTagQuery =
         query.startsWith('#') ? query.substring(1) : query;
-    final posts = communityProvider?.artFeedPosts ?? const <CommunityPost>[];
     return posts
         .where(
           (post) =>

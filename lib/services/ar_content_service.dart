@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
 import '../models/art_marker.dart';
 import '../providers/storage_provider.dart';
 import 'art_content_service.dart';
@@ -151,69 +150,37 @@ class ARContentService {
     return marker.modelURL;
   }
 
-  /// Upload content to IPFS (via Pinata)
-  static Future<String?> uploadToIPFS(
+  static String _targetStorageFor(
+    StorageProvider provider, {
+    required bool uploadToBoth,
+  }) {
+    switch (provider) {
+      case StorageProvider.ipfs:
+        return 'ipfs';
+      case StorageProvider.http:
+        return 'http';
+      case StorageProvider.hybrid:
+        return uploadToBoth ? 'hybrid' : 'ipfs';
+    }
+  }
+
+  static Future<String?> _uploadViaBackendStorage(
     Uint8List data,
     String filename, {
     Map<String, dynamic>? metadata,
+    required String targetStorage,
   }) async {
-    // Validate API keys are configured
-    if (StorageConfig.pinataApiKey == 'YOUR_PINATA_API_KEY' ||
-        StorageConfig.pinataSecretKey == 'YOUR_PINATA_SECRET_KEY') {
-      if (kDebugMode) {
-        debugPrint(
-            'ARContentService: Pinata credentials not configured. Set PINATA_API_KEY and PINATA_SECRET_KEY.');
-      }
-      return null;
-    }
-
-    try {
-      final url =
-          Uri.parse('${StorageConfig.pinataApiUrl}/pinning/pinFileToIPFS');
-      final request = http.MultipartRequest('POST', url);
-
-      // Add headers
-      request.headers['pinata_api_key'] = StorageConfig.pinataApiKey;
-      request.headers['pinata_secret_api_key'] = StorageConfig.pinataSecretKey;
-
-      // Add file
-      request.files.add(http.MultipartFile.fromBytes(
-        'file',
-        data,
-        filename: filename,
-      ));
-
-      // Add metadata
-      if (metadata != null) {
-        request.fields['pinataMetadata'] = jsonEncode({
-          'name': filename,
-          'keyvalues': metadata,
-        });
-      }
-
-      final streamedResponse = await request.send();
-      final response = await http.Response.fromStream(streamedResponse);
-
-      if (response.statusCode == 200) {
-        final jsonResponse = jsonDecode(response.body);
-        final cid = jsonResponse['IpfsHash'] as String;
-        if (kDebugMode) {
-          debugPrint('ARContentService: Uploaded to IPFS - CID: $cid');
-        }
-        return cid;
-      }
-
-      if (kDebugMode) {
-        debugPrint(
-            'ARContentService: Upload failed - ${response.statusCode}: ${response.body}');
-      }
-      return null;
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('ARContentService: IPFS upload error: $e');
-      }
-      return null;
-    }
+    final uploadMetadata = <String, dynamic>{
+      if (metadata != null) ...metadata,
+      'fileType': 'model',
+      'storageIntent': targetStorage,
+    };
+    return ArtContentService.uploadMedia(
+      data,
+      filename,
+      metadata: uploadMetadata,
+      targetStorage: targetStorage,
+    );
   }
 
   /// Upload content using preferred storage provider
@@ -222,7 +189,7 @@ class ARContentService {
     String filename, {
     Map<String, dynamic>? metadata,
     bool uploadToBoth =
-        true, // Upload to both IPFS and HTTP for hybrid approach
+        true, // Ask backend for hybrid storage when supported.
   }) async {
     final provider = await getPreferredStorageProvider();
     final results = <String, String?>{
@@ -230,44 +197,36 @@ class ARContentService {
       'url': null,
     };
 
+    // The client never sends Pinata credentials; backend storage owns IPFS pinning.
     switch (provider) {
       case StorageProvider.ipfs:
-        results['cid'] = await uploadToIPFS(data, filename, metadata: metadata);
-        break;
-
-      case StorageProvider.http:
-        results['url'] = await ArtContentService.uploadMedia(
+        results['url'] = await _uploadViaBackendStorage(
           data,
           filename,
           metadata: metadata,
+          targetStorage:
+              _targetStorageFor(provider, uploadToBoth: uploadToBoth),
+        );
+        break;
+
+      case StorageProvider.http:
+        results['url'] = await _uploadViaBackendStorage(
+          data,
+          filename,
+          metadata: metadata,
+          targetStorage:
+              _targetStorageFor(provider, uploadToBoth: uploadToBoth),
         );
         break;
 
       case StorageProvider.hybrid:
-        if (uploadToBoth) {
-          // Upload to both for maximum availability
-          final ipfsFuture = uploadToIPFS(data, filename, metadata: metadata);
-          final httpFuture = ArtContentService.uploadMedia(
-            data,
-            filename,
-            metadata: metadata,
-          );
-
-          final uploadResults = await Future.wait([ipfsFuture, httpFuture]);
-          results['cid'] = uploadResults[0];
-          results['url'] = uploadResults[1];
-        } else {
-          // Try IPFS first, fallback to HTTP
-          results['cid'] =
-              await uploadToIPFS(data, filename, metadata: metadata);
-          if (results['cid'] == null) {
-            results['url'] = await ArtContentService.uploadMedia(
-              data,
-              filename,
-              metadata: metadata,
-            );
-          }
-        }
+        results['url'] = await _uploadViaBackendStorage(
+          data,
+          filename,
+          metadata: metadata,
+          targetStorage:
+              _targetStorageFor(provider, uploadToBoth: uploadToBoth),
+        );
         break;
     }
 

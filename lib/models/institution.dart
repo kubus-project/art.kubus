@@ -1,3 +1,5 @@
+import 'event.dart' show KubusEvent;
+
 // Institution and Events Models
 class Institution {
   final String id;
@@ -248,6 +250,104 @@ class Event {
     );
   }
 
+  factory Event.fromBackendJson(
+    Map<String, dynamic> json, {
+    Institution? institution,
+  }) {
+    final kubusEvent = KubusEvent.fromJson(json);
+    return Event.fromKubusEvent(
+      kubusEvent,
+      raw: json,
+      institution: institution,
+    );
+  }
+
+  factory Event.fromKubusEvent(
+    KubusEvent event, {
+    Map<String, dynamic> raw = const <String, dynamic>{},
+    Institution? institution,
+  }) {
+    final startDate = event.startsAt ??
+        _eventDate(raw['startDate'] ?? raw['start_date']) ??
+        DateTime.now();
+    final endDate = event.endsAt ??
+        _eventDate(raw['endDate'] ?? raw['end_date']) ??
+        startDate.add(const Duration(hours: 2));
+    final institutionId = _eventString(
+      raw['institutionId'] ??
+          raw['institution_id'] ??
+          (raw['institution'] is Map ? raw['institution']['id'] : null) ??
+          raw['hostInstitutionId'] ??
+          raw['host_institution_id'] ??
+          institution?.id ??
+          event.host?.walletAddress ??
+          event.host?.id,
+    );
+    final location = _eventString(event.locationName);
+    final cityCountry = [
+      _eventString(event.city),
+      _eventString(event.country),
+    ].where((value) => value.isNotEmpty).join(', ');
+
+    return Event(
+      id: event.id,
+      title: event.title,
+      description: event.description ?? '',
+      type: _eventType(raw['type'] ?? raw['eventType'] ?? raw['event_type']),
+      category: _eventCategory(raw['category']),
+      institutionId: institutionId,
+      institution: institution,
+      startDate: startDate,
+      endDate: endDate,
+      location: location.isNotEmpty ? location : cityCountry,
+      latitude: event.lat,
+      longitude: event.lng,
+      price: _eventDouble(
+          raw['price'] ?? raw['ticketPrice'] ?? raw['ticket_price']),
+      capacity: _eventInt(
+          raw['capacity'] ?? raw['maxAttendees'] ?? raw['max_attendees']),
+      currentAttendees: _eventInt(
+            raw['currentAttendees'] ??
+                raw['current_attendees'] ??
+                raw['attendeeCount'] ??
+                raw['attendee_count'] ??
+                raw['registrationsCount'] ??
+                raw['registrations_count'],
+          ) ??
+          0,
+      isPublic:
+          _eventBool(raw['isPublic'] ?? raw['is_public'] ?? raw['public']) ??
+              true,
+      allowRegistration: _eventBool(
+            raw['allowRegistration'] ??
+                raw['allow_registration'] ??
+                raw['registrationEnabled'] ??
+                raw['registration_enabled'],
+          ) ??
+          true,
+      imageUrls: _eventStringList(
+          raw['imageUrls'] ?? raw['image_urls'] ?? raw['images'])
+        ..addAll([
+          if (_eventString(event.coverUrl).isNotEmpty)
+            _eventString(event.coverUrl),
+        ]),
+      featuredArtworkIds: _eventStringList(
+        raw['featuredArtworkIds'] ?? raw['featured_artwork_ids'],
+      ),
+      artistIds: _eventStringList(raw['artistIds'] ?? raw['artist_ids']),
+      createdAt: event.createdAt ??
+          _eventDate(raw['createdAt'] ?? raw['created_at']) ??
+          DateTime.now(),
+      createdBy: _eventString(
+        raw['createdBy'] ??
+            raw['created_by'] ??
+            raw['hostUserId'] ??
+            raw['host_user_id'] ??
+            event.host?.id,
+      ),
+    );
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -324,4 +424,93 @@ class Event {
       createdBy: createdBy ?? this.createdBy,
     );
   }
+}
+
+String _eventString(dynamic value) => (value ?? '').toString().trim();
+
+DateTime? _eventDate(dynamic value) {
+  if (value == null) return null;
+  if (value is DateTime) return value;
+  final raw = value.toString().trim();
+  if (raw.isEmpty) return null;
+  return DateTime.tryParse(raw);
+}
+
+double? _eventDouble(dynamic value) {
+  if (value == null) return null;
+  if (value is num) return value.toDouble();
+  return double.tryParse(value.toString());
+}
+
+int? _eventInt(dynamic value) {
+  if (value == null) return null;
+  if (value is num) return value.toInt();
+  return int.tryParse(value.toString());
+}
+
+bool? _eventBool(dynamic value) {
+  if (value == null) return null;
+  if (value is bool) return value;
+  final normalized = value.toString().trim().toLowerCase();
+  if (normalized == 'true' || normalized == '1' || normalized == 'yes') {
+    return true;
+  }
+  if (normalized == 'false' || normalized == '0' || normalized == 'no') {
+    return false;
+  }
+  return null;
+}
+
+String _normalizedEnumToken(dynamic value) =>
+    _eventString(value).toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+
+EventType _eventType(dynamic value) {
+  switch (_normalizedEnumToken(value)) {
+    case 'workshop':
+      return EventType.workshop;
+    case 'conference':
+    case 'talk':
+    case 'artisttalk':
+      return EventType.conference;
+    case 'performance':
+      return EventType.performance;
+    case 'galleryopening':
+    case 'opening':
+      return EventType.galleryOpening;
+    case 'auction':
+      return EventType.auction;
+    case 'exhibition':
+    default:
+      return EventType.exhibition;
+  }
+}
+
+EventCategory _eventCategory(dynamic value) {
+  switch (_normalizedEnumToken(value)) {
+    case 'photography':
+      return EventCategory.photography;
+    case 'sculpture':
+      return EventCategory.sculpture;
+    case 'digital':
+      return EventCategory.digital;
+    case 'mixedmedia':
+      return EventCategory.mixedMedia;
+    case 'installation':
+      return EventCategory.installation;
+    case 'art':
+    default:
+      return EventCategory.art;
+  }
+}
+
+List<String> _eventStringList(dynamic value) {
+  if (value is List) {
+    return value
+        .map(_eventString)
+        .where((item) => item.isNotEmpty)
+        .toList(growable: true);
+  }
+  final single = _eventString(value);
+  if (single.isEmpty) return <String>[];
+  return <String>[single];
 }

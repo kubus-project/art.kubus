@@ -63,6 +63,7 @@ app.*.map.json
 /backend/admin-whitelist.json
 /backend/artkubus-*.json
 /backend/ssl/**
+/output/playwright/artifacts/
 
 # Firebase configuration files
 /android/app/google-services.json

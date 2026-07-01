@@ -1,4 +1,3 @@
-import '../services/backend_api_service.dart';
 import '../config/config.dart';
 import 'promotion.dart';
 
@@ -117,18 +116,25 @@ class UserProfile {
     return UserProfile(
       id: (json['id'] ?? '').toString(),
       userId: (json['userId'] ?? json['user_id'])?.toString(),
-      walletAddress: (json['walletAddress'] ?? json['wallet_address'] ?? '').toString(),
-      publicActorId: (json['publicActorId'] ?? json['public_actor_id'])?.toString(),
+      walletAddress:
+          (json['walletAddress'] ?? json['wallet_address'] ?? '').toString(),
+      publicActorId:
+          (json['publicActorId'] ?? json['public_actor_id'])?.toString(),
       username: (json['username'] ?? '').toString(),
-      displayName: (json['displayName'] ?? json['display_name'] ?? '').toString(),
+      displayName:
+          (json['displayName'] ?? json['display_name'] ?? '').toString(),
       bio: (json['bio'] ?? '').toString(),
       avatar: (json['avatar'] ?? json['avatar_url'] ?? '').toString(),
       coverImage: coverRaw?.toString(),
       social: socialMap,
       isArtist: json['isArtist'] ?? json['is_artist'] ?? false,
       isInstitution: json['isInstitution'] ?? json['is_institution'] ?? false,
-      artistInfo: json['artistInfo'] != null ? ArtistInfo.fromJson(json['artistInfo']) : null,
-      preferences: json['preferences'] != null ? ProfilePreferences.fromJson(json['preferences']) : null,
+      artistInfo: json['artistInfo'] != null
+          ? ArtistInfo.fromJson(json['artistInfo'])
+          : null,
+      preferences: json['preferences'] != null
+          ? ProfilePreferences.fromJson(json['preferences'])
+          : null,
       stats: json['stats'] != null ? UserStats.fromJson(json['stats']) : null,
       promotion: PromotionMetadata.readFrom(
         json,
@@ -166,7 +172,6 @@ class UserProfile {
       'updatedAt': updatedAt.toIso8601String(),
     };
   }
-
 }
 
 class ArtistInfo {
@@ -223,6 +228,7 @@ class ProfilePreferences {
   final bool shareLastVisitedLocation;
   final bool showCollection;
   final bool allowMessages;
+
   /// UX persona (onboarding). A hint for what to emphasize in the UI.
   ///
   /// Expected values: "lover", "creator", "institution".
@@ -260,8 +266,9 @@ class ProfilePreferences {
           notificationPreferences ?? this.notificationPreferences,
       theme: theme ?? this.theme,
       showActivityStatus: showActivityStatus ?? this.showActivityStatus,
-        showAchievements: showAchievements ?? this.showAchievements,
-      shareLastVisitedLocation: shareLastVisitedLocation ?? this.shareLastVisitedLocation,
+      showAchievements: showAchievements ?? this.showAchievements,
+      shareLastVisitedLocation:
+          shareLastVisitedLocation ?? this.shareLastVisitedLocation,
       showCollection: showCollection ?? this.showCollection,
       allowMessages: allowMessages ?? this.allowMessages,
       persona: persona ?? this.persona,
@@ -280,12 +287,17 @@ class ProfilePreferences {
         fallbackEnabled: notifications is bool ? notifications : true,
       ),
       theme: json['theme'] ?? 'auto',
-      showActivityStatus: json['showActivityStatus'] ?? json['show_activity_status'] ?? true,
-      showAchievements: json['showAchievements'] ?? json['show_achievements'] ?? true,
-      shareLastVisitedLocation: json['shareLastVisitedLocation'] ?? json['share_last_visited_location'] ?? false,
+      showActivityStatus:
+          json['showActivityStatus'] ?? json['show_activity_status'] ?? true,
+      showAchievements:
+          json['showAchievements'] ?? json['show_achievements'] ?? true,
+      shareLastVisitedLocation: json['shareLastVisitedLocation'] ??
+          json['share_last_visited_location'] ??
+          false,
       showCollection: json['showCollection'] ?? json['show_collection'] ?? true,
       allowMessages: json['allowMessages'] ?? json['allow_messages'] ?? true,
-      persona: (json['persona'] ?? json['userPersona'] ?? json['user_persona'])?.toString(),
+      persona: (json['persona'] ?? json['userPersona'] ?? json['user_persona'])
+          ?.toString(),
     );
   }
 
@@ -356,7 +368,8 @@ class NotificationPreferenceSettings {
       return NotificationPreferenceSettings(enabled: fallbackEnabled);
     }
 
-    bool readBool(String key, bool fallback, [List<String> aliases = const []]) {
+    bool readBool(String key, bool fallback,
+        [List<String> aliases = const []]) {
       final dynamic direct = json[key];
       if (direct is bool) return direct;
       for (final alias in aliases) {
@@ -433,11 +446,14 @@ class UserStats {
 
   factory UserStats.fromJson(Map<String, dynamic> json) {
     return UserStats(
-      artworksDiscovered: json['artworksDiscovered'] ?? json['artworks_discovered'] ?? 0,
+      artworksDiscovered:
+          json['artworksDiscovered'] ?? json['artworks_discovered'] ?? 0,
       artworksCreated: json['artworksCreated'] ?? json['artworks_created'] ?? 0,
       nftsOwned: json['nftsOwned'] ?? json['nfts_owned'] ?? 0,
-      kub8Balance: (json['kub8Balance'] ?? json['kub8_balance'] ?? 0.0).toDouble(),
-      achievementsUnlocked: json['achievementsUnlocked'] ?? json['achievements_unlocked'] ?? 0,
+      kub8Balance:
+          (json['kub8Balance'] ?? json['kub8_balance'] ?? 0.0).toDouble(),
+      achievementsUnlocked:
+          json['achievementsUnlocked'] ?? json['achievements_unlocked'] ?? 0,
       followersCount: json['followersCount'] ?? json['followers_count'] ?? 0,
       followingCount: json['followingCount'] ?? json['following_count'] ?? 0,
     );
@@ -467,7 +483,8 @@ extension UserProfileSamples on UserProfile {
         username: 'crypto_artist',
         displayName: 'Crypto Artist',
         bio: 'Digital artist exploring blockchain',
-        avatar: '${_backendAvatarBase()}/crypto_artist?style=avataaars&format=png',
+        avatar:
+            '${_backendAvatarBase()}/crypto_artist?style=avataaars&format=png',
         isArtist: true,
         stats: UserStats(followersCount: 1234, followingCount: 567),
         createdAt: now,
@@ -479,7 +496,8 @@ extension UserProfileSamples on UserProfile {
         username: 'archive_collector',
         displayName: 'Archive Collector',
         bio: 'Collecting and contextualizing digital art records',
-        avatar: '${_backendAvatarBase()}/nft_collector?style=avataaars&format=png',
+        avatar:
+            '${_backendAvatarBase()}/nft_collector?style=avataaars&format=png',
         stats: UserStats(followersCount: 890, followingCount: 432),
         createdAt: now,
         updatedAt: now,
@@ -490,7 +508,8 @@ extension UserProfileSamples on UserProfile {
         username: 'ar_enthusiast',
         displayName: 'AR Enthusiast',
         bio: 'Love augmented reality art',
-        avatar: '${_backendAvatarBase()}/ar_enthusiast?style=avataaars&format=png',
+        avatar:
+            '${_backendAvatarBase()}/ar_enthusiast?style=avataaars&format=png',
         stats: UserStats(followersCount: 456, followingCount: 789),
         createdAt: now,
         updatedAt: now,
@@ -499,14 +518,7 @@ extension UserProfileSamples on UserProfile {
   }
 }
 
-// Helper to compute backend avatar base URL without importing BackendApiService in model constructors
+// Helper to compute backend avatar base URL without importing transport services.
 String _backendAvatarBase() {
-  // Try to resolve from environment-like fallback. In runtime, BackendApiService.baseUrl should be preferred.
-  try {
-    // Importing inside function to avoid circular import at top-level
-    final svc = BackendApiService();
-    return '${svc.baseUrl.replaceAll(RegExp(r'/$'), '')}/api/avatar';
-  } catch (_) {
-    return '${AppConfig.baseApiUrl.replaceAll(RegExp(r'/$'), '')}/api/avatar';
-  }
+  return '${AppConfig.baseApiUrl.replaceAll(RegExp(r'/$'), '')}/api/avatar';
 }

@@ -95,6 +95,9 @@ class _FakeProfileApi implements ProfileBackendApi {
   }
 
   @override
+  Future<bool> verifyImageUrl(String url) async => true;
+
+  @override
   Future<void> followUser(String walletAddress) async {}
 
   @override

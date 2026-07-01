@@ -78,16 +78,6 @@ class _FakeArtworkBackendApi implements ArtworkBackendApi {
   }
 
   @override
-  Future<void> bookmarkArtwork(String artworkId) {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<void> unbookmarkArtwork(String artworkId) {
-    throw UnimplementedError();
-  }
-
-  @override
   Future<List<ArtworkComment>> getArtworkComments({
     required String artworkId,
     int page = 1,

@@ -3,15 +3,19 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:art_kubus/models/user_profile.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/utils/profile_media_ref_utils.dart';
 
 class _FakeProfileApi implements ProfileBackendApi {
   Map<String, dynamic>? lastSavedProfile;
+  Map<String, dynamic>? lastProfileUpdate;
   Map<String, dynamic>? nextSaveResponse;
   Object? saveError;
+  Object? updateError;
   Object? uploadError;
+  int updateProfileCalls = 0;
 
   @override
   String get baseUrl => 'https://api.kubus.site';
@@ -60,6 +64,15 @@ class _FakeProfileApi implements ProfileBackendApi {
     String walletAddress,
     Map<String, dynamic> updates,
   ) async {
+    updateProfileCalls += 1;
+    lastProfileUpdate = <String, dynamic>{
+      'walletAddress': walletAddress,
+      ...updates,
+    };
+    final error = updateError;
+    if (error != null) {
+      throw error;
+    }
     return <String, dynamic>{'success': true};
   }
 
@@ -80,6 +93,9 @@ class _FakeProfileApi implements ProfileBackendApi {
   }
 
   @override
+  Future<bool> verifyImageUrl(String url) async => true;
+
+  @override
   Future<void> followUser(String walletAddress) async {}
 
   @override
@@ -97,6 +113,23 @@ class _FakeProfileApi implements ProfileBackendApi {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  UserProfile profileForPreferences({
+    ProfilePreferences? preferences,
+  }) {
+    return UserProfile(
+      id: 'profile-1',
+      walletAddress: 'ArtistWallet111111111111111111111111111111111',
+      username: 'artist_user',
+      displayName: 'Artist User',
+      bio: 'Existing bio',
+      avatar: '/uploads/profiles/avatars/current.png',
+      coverImage: '/uploads/profiles/cover/current.png',
+      preferences: preferences ?? ProfilePreferences(),
+      createdAt: DateTime.parse('2026-03-31T00:00:00.000Z'),
+      updatedAt: DateTime.parse('2026-03-31T00:00:00.000Z'),
+    );
+  }
 
   setUp(() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
@@ -282,6 +315,38 @@ void main() {
     expect(saved, isFalse);
     expect(provider.isLoading, isFalse);
     expect(provider.error, contains('network timeout'));
+  });
+
+  test('ProfileProvider exposes failed preference backend sync for retry',
+      () async {
+    final api = _FakeProfileApi()
+      ..updateError = Exception('profile update rejected');
+    final provider = ProfileProvider(apiService: api)
+      ..setCurrentUser(profileForPreferences());
+
+    await provider.updatePreferences(showCollection: false);
+
+    expect(provider.preferences.showCollection, isFalse);
+    expect(provider.isSavingPreferences, isFalse);
+    expect(provider.hasUnsyncedPreferences, isTrue);
+    expect(provider.hasPendingPreferenceSync, isTrue);
+    expect(provider.preferencesSaveError, contains('profile update rejected'));
+    expect(api.updateProfileCalls, 1);
+    expect(
+      (api.lastProfileUpdate?['preferences']
+          as Map<String, dynamic>)['showCollection'],
+      isFalse,
+    );
+
+    api.updateError = null;
+    final synced = await provider.retryPreferenceSync();
+
+    expect(synced, isTrue);
+    expect(provider.isSavingPreferences, isFalse);
+    expect(provider.hasUnsyncedPreferences, isFalse);
+    expect(provider.hasPendingPreferenceSync, isFalse);
+    expect(provider.preferencesSaveError, isNull);
+    expect(api.updateProfileCalls, 2);
   });
 
   test('ProfileProvider saveProfile timeout keeps current profile values',

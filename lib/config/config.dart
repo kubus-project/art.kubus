@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart' as foundation;
-import 'api_keys.dart';
 
 /// Production-ready configuration for art.kubus app
 /// Manages feature flags, debug settings, and environment configuration
@@ -260,7 +259,6 @@ class AppConfig {
   );
 
   /// IPFS configuration (future integration)
-  static String get ipfsApiUrl => ApiKeys.ipfsApiUrl;
   static const bool enableIPFS = false; // Future feature
 
   /// Blockchain networks

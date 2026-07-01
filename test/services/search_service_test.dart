@@ -26,7 +26,9 @@ class _FakeBackendApiService implements BackendApiService {
 }
 
 void main() {
-  test('home scope filters out unsupported non-art/profile suggestions without coordinates', () async {
+  test(
+      'home scope filters out unsupported non-art/profile suggestions without coordinates',
+      () async {
     final service = SearchService(
       backendApi: _FakeBackendApiService(
         <Map<String, dynamic>>[
@@ -48,7 +50,9 @@ void main() {
     expect(results, isEmpty);
   });
 
-  test('community scope filters out institution suggestions without coordinates', () async {
+  test(
+      'community scope filters out institution suggestions without coordinates',
+      () async {
     final service = SearchService(
       backendApi: _FakeBackendApiService(
         <Map<String, dynamic>>[

@@ -132,8 +132,6 @@ abstract class ArtworkBackendApi {
   Future<int?> likeArtwork(String artworkId);
   Future<int?> unlikeArtwork(String artworkId);
   Future<int?> discoverArtworkWithCount(String artworkId);
-  Future<void> bookmarkArtwork(String artworkId);
-  Future<void> unbookmarkArtwork(String artworkId);
   Future<int?> recordArtworkView(String artworkId);
 
   Future<List<ArtworkComment>> getArtworkComments({
@@ -180,6 +178,8 @@ abstract class ProfileBackendApi {
     required String fileType,
     Map<String, String>? metadata,
   });
+
+  Future<bool> verifyImageUrl(String url);
 
   Future<void> followUser(String walletAddress);
   Future<void> unfollowUser(String walletAddress);
@@ -1183,6 +1183,11 @@ class BackendApiService
           response =
               await _client.get(uri, headers: resolvedHeaders).timeout(timeout);
           break;
+        case 'HEAD':
+          response = await _client
+              .head(uri, headers: resolvedHeaders)
+              .timeout(timeout);
+          break;
         case 'POST':
           response = await _client
               .post(uri,
@@ -1247,8 +1252,8 @@ class BackendApiService
       });
     }
 
-    final responseRequestId =
-        response.headers['x-request-id'] ?? response.headers['x-kubus-request-id'];
+    final responseRequestId = response.headers['x-request-id'] ??
+        response.headers['x-kubus-request-id'];
     if ((responseRequestId ?? '').trim().isNotEmpty) {
       _lastRequestId = responseRequestId!.trim();
     }
@@ -1376,6 +1381,22 @@ class BackendApiService
   }) {
     return _request(
       'GET',
+      uri,
+      includeAuth: includeAuth,
+      headers: headers,
+      isIdempotent: true,
+      timeout: timeout,
+    );
+  }
+
+  Future<http.Response> _head(
+    Uri uri, {
+    bool includeAuth = true,
+    Map<String, String>? headers,
+    Duration timeout = AppConfig.requestTimeout,
+  }) {
+    return _request(
+      'HEAD',
       uri,
       includeAuth: includeAuth,
       headers: headers,
@@ -1764,7 +1785,9 @@ class BackendApiService
           (primaryResponse.statusCode == 404 ||
               primaryResponse.statusCode == 405 ||
               primaryResponse.statusCode == 501)) {
-        _exhibitionsApiAvailable = false;
+        // Provisional routes can appear during staged deploys; keep the next
+        // request retryable instead of pinning the process to unavailable.
+        _exhibitionsApiAvailable = null;
       }
 
       _debugLogThrottled(
@@ -2781,31 +2804,11 @@ class BackendApiService
         eventType: eventType,
       );
 
-  /// Get user profile by ID
-  /// GET /api/users/:userId
-  Future<Map<String, dynamic>> getUserProfile(String userId) async {
-    try {
-      final response = await _get(
-        Uri.parse('$baseUrl/api/users/$userId'),
-        headers: _getHeaders(),
-      );
-
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body) as Map<String, dynamic>;
-      } else {
-        throw Exception('Failed to get profile: ${response.statusCode}');
-      }
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.getUserProfile failed: $e');
-      rethrow;
-    }
-  }
-
   /// Get authenticated user's email preferences
-  /// GET /api/users/me/preferences
+  /// GET /api/profiles/me/preferences
   Future<Map<String, dynamic>> getMyEmailPreferences() async {
     try {
-      final uri = Uri.parse('$baseUrl/api/users/me/preferences');
+      final uri = Uri.parse('$baseUrl/api/profiles/me/preferences');
       final response = await _get(uri, headers: _getHeaders());
       if (response.statusCode == 200) {
         return jsonDecode(response.body) as Map<String, dynamic>;
@@ -2824,11 +2827,11 @@ class BackendApiService
   }
 
   /// Update authenticated user's email preferences
-  /// PATCH /api/users/me/preferences
+  /// PATCH /api/profiles/me/preferences
   Future<Map<String, dynamic>> updateMyEmailPreferences(
       Map<String, dynamic> preferences) async {
     try {
-      final uri = Uri.parse('$baseUrl/api/users/me/preferences');
+      final uri = Uri.parse('$baseUrl/api/profiles/me/preferences');
       final response = await _patch(
         uri,
         headers: _getHeaders(),
@@ -3560,6 +3563,70 @@ class BackendApiService
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.getUserStats failed: $e');
       rethrow;
+    }
+  }
+
+  /// Get aggregate storage statistics through the central backend transport.
+  /// GET /api/storage/stats
+  Future<Map<String, dynamic>> getStorageStats() async {
+    try {
+      final response = await _get(
+        Uri.parse('$baseUrl/api/storage/stats'),
+        includeAuth: false,
+        headers: _getHeaders(includeAuth: false),
+        timeout: const Duration(seconds: 10),
+      );
+
+      if (response.statusCode != 200) return <String, dynamic>{};
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map<String, dynamic>) return decoded;
+    } catch (e) {
+      AppConfig.debugPrint('BackendApiService.getStorageStats failed: $e');
+    }
+    return <String, dynamic>{};
+  }
+
+  /// Best-effort image probe for URLs returned by backend upload endpoints.
+  @override
+  Future<bool> verifyImageUrl(String url) async {
+    final trimmed = url.trim();
+    if (trimmed.isEmpty) return false;
+    final uri = Uri.tryParse(trimmed);
+    if (uri == null || !uri.hasScheme) return false;
+
+    try {
+      try {
+        final headResponse = await _head(
+          uri,
+          includeAuth: false,
+          headers: _getHeaders(includeAuth: false),
+          timeout: const Duration(seconds: 5),
+        );
+        if (headResponse.statusCode >= 200 && headResponse.statusCode < 400) {
+          final contentType = headResponse.headers['content-type'] ?? '';
+          if (contentType.toLowerCase().startsWith('image/')) return true;
+          final contentLength = headResponse.headers['content-length'];
+          final parsedLength =
+              contentLength == null ? null : int.tryParse(contentLength);
+          if (parsedLength != null && parsedLength > 0) return true;
+        }
+      } catch (_) {
+        // Some storage backends block HEAD; fall through to GET.
+      }
+
+      final getResponse = await _get(
+        uri,
+        includeAuth: false,
+        headers: _getHeaders(includeAuth: false),
+        timeout: const Duration(seconds: 7),
+      );
+      if (getResponse.statusCode != 200) return false;
+      final contentType = getResponse.headers['content-type'] ?? '';
+      return contentType.toLowerCase().startsWith('image/') ||
+          getResponse.bodyBytes.isNotEmpty;
+    } catch (e) {
+      AppConfig.debugPrint('BackendApiService.verifyImageUrl failed: $e');
+      return false;
     }
   }
 
@@ -5230,44 +5297,6 @@ class BackendApiService
       return _extractIntFromResponse(response, const <String>['likesCount']);
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.unlikeArtwork failed: $e');
-      rethrow;
-    }
-  }
-
-  /// Bookmark an artwork
-  /// POST /api/artworks/:id/bookmark
-  @override
-  Future<void> bookmarkArtwork(String artworkId) async {
-    try {
-      await _sendQueueablePublicAction(
-        method: 'POST',
-        path: '/api/artworks/$artworkId/bookmark',
-        actionType: 'bookmark',
-        entityType: 'artwork',
-        entityId: artworkId,
-        isIdempotent: true,
-      );
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.bookmarkArtwork failed: $e');
-      rethrow;
-    }
-  }
-
-  /// Remove artwork bookmark
-  /// DELETE /api/artworks/:id/bookmark
-  @override
-  Future<void> unbookmarkArtwork(String artworkId) async {
-    try {
-      await _sendQueueablePublicAction(
-        method: 'DELETE',
-        path: '/api/artworks/$artworkId/bookmark',
-        actionType: 'unbookmark',
-        entityType: 'artwork',
-        entityId: artworkId,
-        isIdempotent: true,
-      );
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.unbookmarkArtwork failed: $e');
       rethrow;
     }
   }
@@ -7153,7 +7182,6 @@ class BackendApiService
   // ==================== Achievement Endpoints ====================
 
   /// Get user achievements
-  /// GET /api/users/:userId/achievements
   /// Get user's unlocked achievements and progress
   /// GET /api/achievements/user/:walletAddress
   Future<Map<String, dynamic>> getUserAchievements(String walletAddress) async {
@@ -7406,7 +7434,6 @@ class BackendApiService
   Future<List<Map<String, dynamic>>> listInstitutions(
       {int limit = 50, int offset = 0}) async {
     try {
-      if (_institutionsApiAvailable == false) return [];
       final uri =
           Uri.parse('$baseUrl/api/institutions').replace(queryParameters: {
         'limit': '$limit',
@@ -7422,7 +7449,7 @@ class BackendApiService
         return List<Map<String, dynamic>>.from(list);
       } else if (response.statusCode == 404 || response.statusCode == 400) {
         // Some deployments do not expose these provisional endpoints.
-        _institutionsApiAvailable = false;
+        _institutionsApiAvailable = null;
         return [];
       } else {
         throw Exception('Failed to list institutions: ${response.statusCode}');
@@ -7478,7 +7505,6 @@ class BackendApiService
     int offset = 0,
   }) async {
     try {
-      if (_eventsApiAvailable == false) return [];
       final query = <String, String>{
         'limit': '$limit',
         'offset': '$offset',
@@ -7525,7 +7551,7 @@ class BackendApiService
           }
 
           if (response.statusCode == 404) {
-            _eventsApiAvailable = false;
+            _eventsApiAvailable = null;
             return [];
           }
 
@@ -7575,7 +7601,7 @@ class BackendApiService
               return [];
             }
 
-            _eventsApiAvailable = false;
+            _eventsApiAvailable = null;
             return [];
           }
 
@@ -8690,6 +8716,7 @@ class BackendApiService
     required String fileType,
     Map<String, String>? metadata,
     String? walletAddress,
+    String targetStorage = 'http',
     bool compress = true,
     UploadCompressionPolicy? compressionPolicy,
     void Function(UploadCompressionProgress progress)? onCompressionProgress,
@@ -8701,6 +8728,7 @@ class BackendApiService
       fileType: fileType,
       metadata: metadata,
       walletAddress: walletAddress,
+      targetStorage: targetStorage,
       compress: compress,
       compressionPolicy: compressionPolicy,
       onCompressionProgress: onCompressionProgress,
@@ -9569,7 +9597,17 @@ ArtMarker _artMarkerFromBackendJson(Map<String, dynamic> json) {
         json['created_at'] ??
         DateTime.now().toIso8601String(),
     'updatedAt': json['updatedAt'] ?? json['updated_at'],
-    'createdBy': json['createdBy'] ?? json['created_by'] ?? 'system',
+    'createdBy': json['createdBy'] ??
+        json['created_by'] ??
+        json['ownerWalletAddress'] ??
+        json['owner_wallet_address'] ??
+        mergedMeta?['ownerWalletAddress'] ??
+        mergedMeta?['owner_wallet_address'] ??
+        'system',
+    'ownerWalletAddress': json['ownerWalletAddress'] ??
+        json['owner_wallet_address'] ??
+        mergedMeta?['ownerWalletAddress'] ??
+        mergedMeta?['owner_wallet_address'],
     'viewCount': intVal(json['viewCount'] ?? json['views'], 0),
     'interactionCount':
         intVal(json['interactionCount'] ?? json['interactions'], 0),

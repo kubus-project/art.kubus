@@ -68,7 +68,7 @@ class KubusMapPrimaryControls extends StatelessWidget {
     this.zoomInTooltip = 'Zoom in',
     this.zoomOutTooltip = 'Zoom out',
     this.resetBearingTooltip = 'Reset bearing',
-    this.resetBearingSemanticLabel = 'map_reset_bearing',
+    this.resetBearingSemanticLabel = 'Reset bearing',
     this.bearingVisibleThresholdDegrees = 1.0,
     this.centerOnMeKey,
     this.centerOnMeTooltip = 'Center on me',
@@ -266,10 +266,16 @@ class KubusMapPrimaryControls extends StatelessWidget {
               onTap: spec.onPressed,
               active: spec.active,
             );
-            if (spec.controlKey == null) return button;
+            final semanticButton = Semantics(
+              label: spec.tooltip,
+              button: true,
+              selected: spec.active,
+              child: button,
+            );
+            if (spec.controlKey == null) return semanticButton;
             return KeyedSubtree(
               key: spec.controlKey,
-              child: button,
+              child: semanticButton,
             );
           },
         ),
@@ -281,7 +287,7 @@ class KubusMapPrimaryControls extends StatelessWidget {
 
     children.add(
       Semantics(
-        label: 'map_zoom_in',
+        label: zoomInTooltip,
         button: true,
         child: _KubusSquareControlButton.mobile(
           size: resolvedButtonSize,
@@ -297,7 +303,7 @@ class KubusMapPrimaryControls extends StatelessWidget {
 
     children.add(
       Semantics(
-        label: 'map_zoom_out',
+        label: zoomOutTooltip,
         button: true,
         child: _KubusSquareControlButton.mobile(
           size: resolvedButtonSize,
@@ -313,8 +319,9 @@ class KubusMapPrimaryControls extends StatelessWidget {
 
     children.add(
       Semantics(
-        label: 'map_center_on_me',
+        label: centerOnMeTooltip,
         button: true,
+        selected: centerOnMeActive,
         child: KeyedSubtree(
           key: centerOnMeKey,
           child: _KubusSquareControlButton.mobile(
@@ -333,8 +340,9 @@ class KubusMapPrimaryControls extends StatelessWidget {
 
     children.add(
       Semantics(
-        label: 'map_create_marker',
+        label: createMarkerTooltip,
         button: true,
+        selected: createMarkerHighlighted,
         child: KeyedSubtree(
           key: createMarkerKey,
           child: _KubusSquareControlButton.mobile(
@@ -420,10 +428,16 @@ class KubusMapPrimaryControls extends StatelessWidget {
               onTap: spec.onPressed,
               active: spec.active,
             );
-            if (spec.controlKey == null) return button;
+            final semanticButton = Semantics(
+              label: spec.tooltip,
+              button: true,
+              selected: spec.active,
+              child: button,
+            );
+            if (spec.controlKey == null) return semanticButton;
             return KeyedSubtree(
               key: spec.controlKey,
-              child: button,
+              child: semanticButton,
             );
           },
         ),
@@ -441,19 +455,24 @@ class KubusMapPrimaryControls extends StatelessWidget {
       final idleTint = scheme.surface.withValues(alpha: isDark ? 0.16 : 0.12);
 
       rowChildren.add(
-        KeyedSubtree(
-          key: nearbyKey,
-          child: _KubusSquareControlButton.desktop(
-            size: resolvedButtonSize,
-            accent: accent,
-            icon: nearbyIcon,
-            tooltip: tooltip,
-            onTap: onToggleNearby,
-            active: nearbyActive,
-            // Keep the button background visually stable; the active state is
-            // primarily communicated via the icon accent.
-            activeTint: idleTint,
-            activeIconColor: accent,
+        Semantics(
+          label: tooltip,
+          button: true,
+          selected: nearbyActive,
+          child: KeyedSubtree(
+            key: nearbyKey,
+            child: _KubusSquareControlButton.desktop(
+              size: resolvedButtonSize,
+              accent: accent,
+              icon: nearbyIcon,
+              tooltip: tooltip,
+              onTap: onToggleNearby,
+              active: nearbyActive,
+              // Keep the button background visually stable; the active state is
+              // primarily communicated via the icon accent.
+              activeTint: idleTint,
+              activeIconColor: accent,
+            ),
           ),
         ),
       );
@@ -462,7 +481,7 @@ class KubusMapPrimaryControls extends StatelessWidget {
 
     rowChildren.add(
       Semantics(
-        label: 'map_zoom_out',
+        label: zoomOutTooltip,
         button: true,
         child: _KubusSquareControlButton.desktop(
           size: resolvedButtonSize,
@@ -476,7 +495,7 @@ class KubusMapPrimaryControls extends StatelessWidget {
 
     rowChildren.add(
       Semantics(
-        label: 'map_zoom_in',
+        label: zoomInTooltip,
         button: true,
         child: _KubusSquareControlButton.desktop(
           size: resolvedButtonSize,
@@ -520,8 +539,9 @@ class KubusMapPrimaryControls extends StatelessWidget {
 
     rowChildren.add(
       Semantics(
-        label: 'map_create_marker',
+        label: createMarkerTooltip,
         button: true,
+        selected: createMarkerHighlighted,
         child: KeyedSubtree(
           key: createMarkerKey,
           child: _KubusSquareControlButton.desktop(
@@ -546,8 +566,9 @@ class KubusMapPrimaryControls extends StatelessWidget {
 
     rowChildren.add(
       Semantics(
-        label: 'map_center_on_me',
+        label: centerOnMeTooltip,
         button: true,
+        selected: centerOnMeActive,
         child: KeyedSubtree(
           key: centerOnMeKey,
           child: _KubusSquareControlButton.desktop(
@@ -674,22 +695,19 @@ class _KubusSquareControlButtonState extends State<_KubusSquareControlButton> {
           accentColor: mobileAccent,
           iconColor: scheme.onSurface,
           activeIconColor: widget.activeIconColor ?? mobileActiveIconColor,
-          activeTint:
-              widget.activeTint ?? mobileAccent.withValues(alpha: 0.20),
+          activeTint: widget.activeTint ?? mobileAccent.withValues(alpha: 0.20),
           borderRadius: KubusRadius.md,
           enableBlur: kubusMapBlurEnabled(context),
         );
 
       case _KubusSquareControlVariant.desktop:
         final resolvedAccent = widget.accent ?? scheme.primary;
-        final resolvedTintBase = active
-            ? (widget.activeTint ?? resolvedAccent)
-            : scheme.surface;
+        final resolvedTintBase =
+            active ? (widget.activeTint ?? resolvedAccent) : scheme.surface;
         final iconBase = active
             ? (widget.activeIconColor ?? resolvedAccent)
             : scheme.onSurface;
-        final iconCol =
-            enabled ? iconBase : iconBase.withValues(alpha: 0.38);
+        final iconCol = enabled ? iconBase : iconBase.withValues(alpha: 0.38);
 
         final child = SizedBox(
           width: widget.size,

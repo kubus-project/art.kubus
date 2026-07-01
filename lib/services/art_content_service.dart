@@ -1,10 +1,6 @@
-import 'dart:convert';
-
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 
 import 'backend_api_service.dart';
-import 'storage_config.dart';
 
 /// Service for handling generic (non-AR) art media uploads and storage stats.
 class ArtContentService {
@@ -16,6 +12,7 @@ class ArtContentService {
     Uint8List data,
     String filename, {
     Map<String, dynamic>? metadata,
+    String targetStorage = 'http',
   }) async {
     try {
       final fields = <String, String>{};
@@ -27,6 +24,7 @@ class ArtContentService {
         fileName: filename,
         fileType: fields['fileType'] ?? fields['type'] ?? 'image',
         metadata: fields,
+        targetStorage: targetStorage,
       );
       final fileUrl = result['uploadedUrl'] as String? ??
           result['data']?['url'] as String? ??
@@ -47,20 +45,6 @@ class ArtContentService {
 
   /// Reads aggregate storage statistics from the backend (if enabled).
   static Future<Map<String, dynamic>> getStorageStats() async {
-    try {
-      final url = Uri.parse('${StorageConfig.httpBackend}/api/storage/stats');
-      final response = await http.get(url).timeout(const Duration(seconds: 10));
-      if (response.statusCode == 200) {
-        final decoded = jsonDecode(response.body);
-        if (decoded is Map<String, dynamic>) {
-          return decoded;
-        }
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('ArtContentService: Error fetching storage stats: $e');
-      }
-    }
-    return {};
+    return BackendApiService().getStorageStats();
   }
 }

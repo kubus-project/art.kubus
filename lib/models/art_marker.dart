@@ -55,6 +55,7 @@ class ArtMarker {
   final DateTime createdAt;
   final DateTime? updatedAt;
   final String createdBy;
+  final String? ownerWalletAddress;
   final int viewCount;
   final int interactionCount;
 
@@ -88,6 +89,7 @@ class ArtMarker {
     required this.createdAt,
     this.updatedAt,
     required this.createdBy,
+    this.ownerWalletAddress,
     this.viewCount = 0,
     this.interactionCount = 0,
     this.activationRadius = 50.0,
@@ -205,6 +207,8 @@ class ArtMarker {
       'createdAt': createdAt.toIso8601String(),
       if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
       'createdBy': createdBy,
+      if (ownerWalletAddress != null && ownerWalletAddress!.trim().isNotEmpty)
+        'ownerWalletAddress': ownerWalletAddress,
       'viewCount': viewCount,
       'interactionCount': interactionCount,
       'activationRadius': activationRadius,
@@ -226,6 +230,7 @@ class ArtMarker {
     final updatedAtRaw = map['updatedAt'] ?? map['updated_at'];
     final updatedAt = DateTime.tryParse(updatedAtRaw?.toString() ?? '');
     final rotation = _normalizeRotation(map['rotation']);
+    final ownerWalletAddress = _ownerWalletAddressFromMap(map, metadata);
     return ArtMarker(
       id: map['id']?.toString() ?? '',
       name: map['name']?.toString() ?? '',
@@ -255,7 +260,11 @@ class ArtMarker {
       createdAt: DateTime.tryParse(map['createdAt']?.toString() ?? '') ??
           DateTime.now(),
       updatedAt: updatedAt,
-      createdBy: map['createdBy']?.toString() ?? 'system',
+      createdBy: map['createdBy']?.toString() ??
+          map['created_by']?.toString() ??
+          ownerWalletAddress ??
+          'system',
+      ownerWalletAddress: ownerWalletAddress,
       viewCount: _parseInt(map['viewCount'], 0),
       interactionCount: _parseInt(map['interactionCount'], 0),
       activationRadius: _parseDouble(map['activationRadius'], 50.0),
@@ -293,6 +302,7 @@ class ArtMarker {
     DateTime? createdAt,
     DateTime? updatedAt,
     String? createdBy,
+    String? ownerWalletAddress,
     int? viewCount,
     int? interactionCount,
     double? activationRadius,
@@ -324,6 +334,7 @@ class ArtMarker {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       createdBy: createdBy ?? this.createdBy,
+      ownerWalletAddress: ownerWalletAddress ?? this.ownerWalletAddress,
       viewCount: viewCount ?? this.viewCount,
       interactionCount: interactionCount ?? this.interactionCount,
       activationRadius: activationRadius ?? this.activationRadius,
@@ -489,6 +500,37 @@ class ArtMarker {
       metadata = raw.map((key, value) => MapEntry(key.toString(), value));
     }
     return metadata;
+  }
+
+  static String? _firstStringFromMap(
+    Map<String, dynamic>? map,
+    List<String> keys,
+  ) {
+    if (map == null) return null;
+    for (final key in keys) {
+      final raw = map[key];
+      final value = raw?.toString().trim();
+      if (value != null && value.isNotEmpty) return value;
+    }
+    return null;
+  }
+
+  static String? _ownerWalletAddressFromMap(
+    Map<String, dynamic> map,
+    Map<String, dynamic>? metadata,
+  ) {
+    return _firstStringFromMap(map, const <String>[
+          'ownerWalletAddress',
+          'owner_wallet_address',
+          'ownerWallet',
+          'owner_wallet',
+        ]) ??
+        _firstStringFromMap(metadata, const <String>[
+          'ownerWalletAddress',
+          'owner_wallet_address',
+          'ownerWallet',
+          'owner_wallet',
+        ]);
   }
 
   ExhibitionSummaryDto? get primaryExhibitionSummary {

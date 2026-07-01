@@ -5017,7 +5017,7 @@ class _MapScreenState extends State<MapScreen>
     return KubusGeneralSearch(
       controller: _mapSearchController,
       hintText: l10n.mapSearchHint,
-      semanticsLabel: 'map_search_input',
+      semanticsLabel: l10n.mapSearchHint,
       enableBlur: kubusMapBlurEnabled(context),
       useMapGlassSurface: true,
       height: fieldHeight,

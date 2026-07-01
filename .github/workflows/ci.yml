@@ -157,13 +157,7 @@ jobs:
 
       - name: Check backend sources present
         id: present
-        shell: bash
-        run: |
-          if [ -f "backend/package.json" ]; then
-            echo "ok=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "ok=false" >> "$GITHUB_OUTPUT"
-          fi
+        run: node scripts/backend_status.mjs --github-output
 
       - name: Set up Node
         if: ${{ steps.present.outputs.ok == 'true' }}
@@ -206,4 +200,5 @@ jobs:
       - name: Skip backend checks (submodule not available)
         if: ${{ steps.present.outputs.ok != 'true' }}
         run: |
-          echo "backend/ is a git submodule or missing in this checkout; skipping backend lint/tests."
+          echo "backend/ validation skipped: ${{ steps.present.outputs.reason }}"
+          echo "submodule status: ${{ steps.present.outputs.submodule_status }}"

@@ -100,8 +100,10 @@
     // If it isn't replaced (e.g. unusual tooling), fall back to a stable dev tag.
     (function () {
       try {
-        var v = '{{flutter_service_worker_version}}';
-        if (!v || v.indexOf('{{') !== -1) v = 'dev';
+        var raw = String.raw`{{flutter_service_worker_version}}`;
+        var match = raw.match(/[0-9a-f]{6,}/i);
+        var v = match ? match[0] : raw;
+        if (!v || raw.indexOf('{{') !== -1) v = 'dev';
         window.__kubusBuildVersion = v;
       } catch (_) {
         window.__kubusBuildVersion = 'dev';

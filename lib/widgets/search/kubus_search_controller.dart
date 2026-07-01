@@ -1,7 +1,16 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../../community/community_interactions.dart';
+import '../../l10n/app_localizations.dart';
+import '../../models/artwork.dart';
+import '../../models/institution.dart';
+import '../../providers/artwork_provider.dart';
+import '../../providers/community_hub_provider.dart';
+import '../../providers/institution_provider.dart';
+import '../../providers/navigation_provider.dart';
 import '../../services/search_service.dart';
 import 'kubus_search_config.dart';
 import 'kubus_search_result.dart';
@@ -83,6 +92,57 @@ class KubusSearchController extends ChangeNotifier {
     return _state.isOverlayVisible && trimmed.isNotEmpty;
   }
 
+  SearchContextSnapshot _captureSnapshot(BuildContext context) {
+    var artworks = const <Artwork>[];
+    var communityPosts = const <CommunityPost>[];
+    var institutions = const <Institution>[];
+    var events = const <Event>[];
+    var screenRecords = const <SearchScreenRecord>[];
+
+    try {
+      artworks = List<Artwork>.of(context.read<ArtworkProvider>().artworks);
+    } catch (_) {}
+
+    try {
+      institutions = List<Institution>.of(
+        context.read<InstitutionProvider>().institutions,
+      );
+      events = List<Event>.of(context.read<InstitutionProvider>().events);
+    } catch (_) {}
+
+    try {
+      if (config.scope == KubusSearchScope.community ||
+          config.scope == KubusSearchScope.home) {
+        communityPosts = List<CommunityPost>.of(
+          context.read<CommunityHubProvider>().artFeedPosts,
+        );
+      }
+    } catch (_) {}
+
+    if (config.effectiveKinds.contains(KubusSearchResultKind.screen)) {
+      final l10n = AppLocalizations.of(context);
+      if (l10n != null) {
+        screenRecords = NavigationProvider.screenDefinitions.entries
+            .map(
+              (entry) => SearchScreenRecord(
+                key: entry.key,
+                label: entry.value.labelKey.resolve(l10n),
+                icon: entry.value.icon,
+              ),
+            )
+            .toList(growable: false);
+      }
+    }
+
+    return SearchContextSnapshot(
+      artworks: artworks,
+      communityPosts: communityPosts,
+      institutions: institutions,
+      events: events,
+      screenRecords: screenRecords,
+    );
+  }
+
   void updateFieldFocus(LayerLink link, bool hasFocus) {
     if (_disposed) return;
     final previousActiveFieldLink = _activeFieldLink;
@@ -124,10 +184,7 @@ class KubusSearchController extends ChangeNotifier {
   void onQueryChanged(BuildContext context, String value) {
     final nextQuery = value;
     final trimmed = nextQuery.trim();
-    final snapshot = SearchContextSnapshot.capture(
-      context,
-      config: config,
-    );
+    final snapshot = _captureSnapshot(context);
 
     _debounce?.cancel();
     _debounce = null;
@@ -136,7 +193,8 @@ class KubusSearchController extends ChangeNotifier {
       _state.copyWith(
         query: nextQuery,
         isOverlayVisible: _shouldShowOverlayFor(nextQuery),
-        isFetching: trimmed.length >= config.minChars ? _state.isFetching : false,
+        isFetching:
+            trimmed.length >= config.minChars ? _state.isFetching : false,
         results: trimmed.length >= config.minChars ? _state.results : const [],
       ),
     );

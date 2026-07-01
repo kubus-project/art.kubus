@@ -3,9 +3,12 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../community/community_interactions.dart';
+import '../models/community_subject.dart';
 import '../services/backend_api_service.dart';
 import '../services/profile_package_mutation_tracker.dart';
 import 'wallet_provider.dart';
+
+typedef CommunityPostNormalizer = CommunityPost Function(CommunityPost post);
 
 class CommunityInteractionsProvider extends ChangeNotifier {
   CommunityInteractionsProvider({BackendApiService? api})
@@ -78,6 +81,101 @@ class CommunityInteractionsProvider extends ChangeNotifier {
     for (final post in posts) {
       applyServerPostState(post);
     }
+  }
+
+  Future<CommunityPost> createCommunityPost({
+    required String content,
+    String? imageUrl,
+    List<String>? mediaUrls,
+    List<String>? mediaCids,
+    String? artworkId,
+    String? subjectType,
+    String? subjectId,
+    List<CommunitySubjectRef>? subjects,
+    String? postType,
+    String category = 'post',
+    List<String>? tags,
+    List<String>? mentions,
+    CommunityLocation? location,
+    String? locationName,
+    double? locationLat,
+    double? locationLng,
+    CommunityPostNormalizer? normalizePost,
+  }) async {
+    final created = await _api.createCommunityPost(
+      content: content,
+      imageUrl: imageUrl,
+      mediaUrls: mediaUrls,
+      mediaCids: mediaCids,
+      artworkId: artworkId,
+      subjectType: subjectType,
+      subjectId: subjectId,
+      subjects: subjects,
+      postType: postType,
+      category: category,
+      tags: tags,
+      mentions: mentions,
+      location: location,
+      locationName: locationName,
+      locationLat: locationLat,
+      locationLng: locationLng,
+    );
+    final resolved = normalizePost?.call(created) ?? created;
+    registerCreatedPost(resolved);
+    return resolved;
+  }
+
+  Future<CommunityPost> createRepost({
+    required CommunityPost originalPost,
+    String? content,
+  }) async {
+    final trimmedContent = content?.trim();
+    final created = await _api.createRepost(
+      originalPostId: originalPost.id,
+      content: trimmedContent != null && trimmedContent.isNotEmpty
+          ? trimmedContent
+          : null,
+    );
+
+    originalPost.shareCount =
+        (originalPost.shareCount + 1).clamp(0, 1 << 30).toInt();
+    applyServerPostState(originalPost);
+    registerCreatedPost(created, notify: false);
+    ProfilePackageMutationTracker.postUpdated(post: originalPost);
+    _trackRepostCreated(
+      originalPostId: originalPost.id,
+      hasComment: trimmedContent != null && trimmedContent.isNotEmpty,
+    );
+    notifyListeners();
+    return created;
+  }
+
+  Future<void> deleteRepost(CommunityPost repost) async {
+    await _api.deleteRepost(repost.id);
+    _forgetPostState(repost.id);
+    ProfilePackageMutationTracker.postDeleted(
+      authorWallet: repost.authorWallet ?? repost.authorId,
+    );
+    _trackRepostDeleted(repost);
+    notifyListeners();
+  }
+
+  Future<void> deleteCommunityPost(CommunityPost post) async {
+    await _api.deleteCommunityPost(post.id);
+    _forgetPostState(post.id);
+    ProfilePackageMutationTracker.postDeleted(
+      authorWallet: post.authorWallet ?? post.authorId,
+    );
+    notifyListeners();
+  }
+
+  void registerCreatedPost(CommunityPost post, {bool notify = true}) {
+    applyServerPostState(post);
+    ProfilePackageMutationTracker.postCreated(
+      post: post,
+      achievementResult: post.achievementResult,
+    );
+    if (notify) notifyListeners();
   }
 
   Future<void> refreshPostStates(
@@ -339,6 +437,48 @@ class CommunityInteractionsProvider extends ChangeNotifier {
     _commentLikeFutures.clear();
     _commentLikeUsers.clear();
     _commentLikeFetchedAt.clear();
+  }
+
+  void _forgetPostState(String postId) {
+    _postStates.remove(postId);
+    _postStateFetchedAt.remove(postId);
+    _postStateInflight.remove(postId);
+    _postLikeFutures.remove(postId);
+    _postLikeUsers.remove(postId);
+    _postLikeFetchedAt.remove(postId);
+  }
+
+  void _trackRepostCreated({
+    required String originalPostId,
+    required bool hasComment,
+  }) {
+    unawaited(
+      _api.trackAnalyticsEvent(
+        eventType: 'repost_created',
+        postId: originalPostId,
+        metadata: {'has_comment': hasComment},
+      ).catchError((Object e) {
+        if (kDebugMode) {
+          debugPrint(
+              'CommunityInteractionsProvider.createRepost analytics: $e');
+        }
+      }),
+    );
+  }
+
+  void _trackRepostDeleted(CommunityPost repost) {
+    unawaited(
+      _api.trackAnalyticsEvent(
+        eventType: 'repost_deleted',
+        postId: repost.originalPostId ?? repost.id,
+        metadata: {'repost_id': repost.id},
+      ).catchError((Object e) {
+        if (kDebugMode) {
+          debugPrint(
+              'CommunityInteractionsProvider.deleteRepost analytics: $e');
+        }
+      }),
+    );
   }
 
   String? _normalizedWallet(String? wallet) {

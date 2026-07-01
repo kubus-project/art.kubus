@@ -7,9 +7,7 @@
 ///
 /// Example:
 ///   flutter build apk --release \
-///     --dart-define=KUBUS_WALLETCONNECT_PROJECT_ID=... \
-///     --dart-define=KUBUS_PINATA_API_KEY=... \
-///     --dart-define=KUBUS_PINATA_SECRET_KEY=...
+///     --dart-define=KUBUS_WALLETCONNECT_PROJECT_ID=...
 class ApiKeys {
   // ================= Backend & API =================
   static const String backendUrl = String.fromEnvironment(
@@ -90,20 +88,6 @@ class ApiKeys {
   // WalletConnect / Reown
   static const String walletConnectProjectId = String.fromEnvironment(
     'KUBUS_WALLETCONNECT_PROJECT_ID',
-    defaultValue: '',
-  );
-
-  // ================= IPFS / Pinata =================
-  static const String ipfsApiUrl = String.fromEnvironment(
-    'KUBUS_IPFS_API_URL',
-    defaultValue: 'https://api.pinata.cloud/pinning/pinFileToIPFS',
-  );
-  static const String pinataApiKey = String.fromEnvironment(
-    'KUBUS_PINATA_API_KEY',
-    defaultValue: '',
-  );
-  static const String pinataSecretKey = String.fromEnvironment(
-    'KUBUS_PINATA_SECRET_KEY',
     defaultValue: '',
   );
 

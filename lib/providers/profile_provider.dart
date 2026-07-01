@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart' as foundation;
-import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as path;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/config.dart';
@@ -41,6 +40,11 @@ class ProfileProvider extends foundation.ChangeNotifier {
   foundation.VoidCallback? _walletProviderListener;
   String? _boundWalletAddress;
   int _profileLoadEpoch = 0;
+  bool _isSavingPreferences = false;
+  bool _hasUnsyncedPreferences = false;
+  String? _preferencesSaveError;
+  ProfilePreferences? _pendingPreferencesSync;
+  int _preferencesSaveEpoch = 0;
 
   ProfileProvider({ProfileBackendApi? apiService})
       : _apiService = apiService ?? BackendApiService();
@@ -100,6 +104,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
     _isLoading = false;
     _isSignedIn = false;
     _error = null;
+    _clearPreferenceSyncState();
   }
 
   Future<SharedPreferences> _ensurePrefs() async {
@@ -298,41 +303,9 @@ class ProfileProvider extends foundation.ChangeNotifier {
     }
   }
 
-  // Verify that a URL is reachable and points to an image (HEAD then GET fallback)
+  // Verify that a URL is reachable and points to an image via backend transport.
   Future<bool> _verifyImageUrl(String url) async {
-    try {
-      final uri = Uri.tryParse(url);
-      if (uri == null) return false;
-
-      // Try HEAD first
-      try {
-        final headResp =
-            await http.head(uri).timeout(const Duration(seconds: 5));
-        if (headResp.statusCode == 200) {
-          final ct = headResp.headers['content-type'] ?? '';
-          if (ct.toLowerCase().startsWith('image/')) return true;
-          // Some hosts don't set content-type correctly; if content-length present and >0, accept
-          final cl = headResp.headers['content-length'];
-          if (cl != null && int.tryParse(cl) != null && int.parse(cl) > 0) {
-            return true;
-          }
-        }
-      } catch (_) {
-        // ignore and fallback to GET
-      }
-
-      // Fallback to GET with small timeout
-      final getResp = await http.get(uri).timeout(const Duration(seconds: 7));
-      if (getResp.statusCode == 200) {
-        final ct = getResp.headers['content-type'] ?? '';
-        if (ct.toLowerCase().startsWith('image/')) return true;
-        if (getResp.bodyBytes.isNotEmpty) return true;
-      }
-      return false;
-    } catch (e) {
-      debugPrint('Error verifying image URL $url: $e');
-      return false;
-    }
+    return _apiService.verifyImageUrl(url);
   }
 
   UserProfile? get currentUser => _currentUser;
@@ -351,6 +324,11 @@ class ProfileProvider extends foundation.ChangeNotifier {
       _currentUser?.preferences ??
       _cachedPreferences ??
       _cachedPreferencesFromPrefs();
+  bool get isSavingPreferences => _isSavingPreferences;
+  bool get hasUnsyncedPreferences => _hasUnsyncedPreferences;
+  String? get preferencesSaveError => _preferencesSaveError;
+  bool get hasPendingPreferenceSync =>
+      _isSavingPreferences || _hasUnsyncedPreferences;
 
   /// Best-effort wallet address for the currently active profile.
   ///
@@ -1716,6 +1694,118 @@ class ProfileProvider extends foundation.ChangeNotifier {
     } catch (_) {}
   }
 
+  void _clearPreferenceSyncState() {
+    _isSavingPreferences = false;
+    _hasUnsyncedPreferences = false;
+    _preferencesSaveError = null;
+    _pendingPreferencesSync = null;
+  }
+
+  String _preferenceSyncErrorMessage(Object error) {
+    if (error is TimeoutException) {
+      return 'Profile preference save timed out. Please retry.';
+    }
+    final raw = error.toString().trim();
+    if (raw.isEmpty) {
+      return 'Unable to sync profile preferences. Please retry.';
+    }
+    return 'Unable to sync profile preferences: $raw';
+  }
+
+  bool _samePreferencePayload(
+    ProfilePreferences left,
+    ProfilePreferences right,
+  ) {
+    final leftNotifications = left.notificationPreferences;
+    final rightNotifications = right.notificationPreferences;
+    return left.privacy == right.privacy &&
+        left.notifications == right.notifications &&
+        left.theme == right.theme &&
+        left.showActivityStatus == right.showActivityStatus &&
+        left.showAchievements == right.showAchievements &&
+        left.shareLastVisitedLocation == right.shareLastVisitedLocation &&
+        left.showCollection == right.showCollection &&
+        left.allowMessages == right.allowMessages &&
+        left.persona == right.persona &&
+        leftNotifications.enabled == rightNotifications.enabled &&
+        leftNotifications.art == rightNotifications.art &&
+        leftNotifications.community == rightNotifications.community &&
+        leftNotifications.dao == rightNotifications.dao &&
+        leftNotifications.artistHub == rightNotifications.artistHub &&
+        leftNotifications.institutionHub == rightNotifications.institutionHub &&
+        leftNotifications.account == rightNotifications.account &&
+        leftNotifications.promotion == rightNotifications.promotion;
+  }
+
+  Future<bool> _syncPreferencesToBackend(
+    ProfilePreferences preferencesToSync,
+  ) async {
+    final user = _currentUser;
+    if (user == null) {
+      _clearPreferenceSyncState();
+      notifyListeners();
+      return true;
+    }
+
+    final wallet = user.walletAddress.trim();
+    final epoch = ++_preferencesSaveEpoch;
+    _isSavingPreferences = true;
+    _hasUnsyncedPreferences = true;
+    _preferencesSaveError = null;
+    _pendingPreferencesSync = preferencesToSync;
+    notifyListeners();
+
+    if (wallet.isEmpty) {
+      if (epoch == _preferencesSaveEpoch) {
+        _isSavingPreferences = false;
+        _hasUnsyncedPreferences = true;
+        _preferencesSaveError =
+            'No wallet is connected to sync profile preferences.';
+        _pendingPreferencesSync = preferencesToSync;
+        notifyListeners();
+      }
+      return false;
+    }
+
+    try {
+      await _apiService.updateProfile(
+        wallet,
+        {'preferences': preferencesToSync.toJson()},
+      );
+
+      if (epoch != _preferencesSaveEpoch) {
+        final latest = _currentUser?.preferences ?? _cachedPreferences;
+        if (latest != null &&
+            !_samePreferencePayload(latest, preferencesToSync)) {
+          unawaited(_syncPreferencesToBackend(latest));
+        }
+        return false;
+      }
+
+      _clearPreferenceSyncState();
+      ProfilePackageMutationTracker.profileChanged(wallet);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      if (epoch == _preferencesSaveEpoch) {
+        _isSavingPreferences = false;
+        _hasUnsyncedPreferences = true;
+        _preferencesSaveError = _preferenceSyncErrorMessage(e);
+        _pendingPreferencesSync = preferencesToSync;
+        notifyListeners();
+      }
+      debugPrint(
+          'ProfileProvider.updatePreferences: backend update failed: $e');
+      return false;
+    }
+  }
+
+  Future<bool> retryPreferenceSync() async {
+    final pending = _pendingPreferencesSync;
+    if (pending == null) return true;
+    return _syncPreferencesToBackend(pending);
+  }
+
   // Refresh stats from backend.
   //
   // This is intentionally resilient: on first profile open, the UI may render
@@ -1785,25 +1875,14 @@ class ProfileProvider extends foundation.ChangeNotifier {
         _currentUser = _currentUser!.copyWith(preferences: next);
       }
       await _persistPreferences(next);
-      notifyListeners();
-
-      // Best-effort backend persistence
-      if (_currentUser != null) {
-        try {
-          await _apiService.updateProfile(
-            _currentUser!.walletAddress,
-            {'preferences': next.toJson()},
-          );
-          ProfilePackageMutationTracker.profileChanged(
-            _currentUser!.walletAddress,
-          );
-        } catch (e) {
-          debugPrint(
-              'ProfileProvider.updatePreferences: backend update failed: $e');
-        }
-      }
+      await _syncPreferencesToBackend(next);
     } catch (e) {
+      _isSavingPreferences = false;
+      _hasUnsyncedPreferences = true;
+      _preferencesSaveError = _preferenceSyncErrorMessage(e);
+      _pendingPreferencesSync = _currentUser?.preferences ?? _cachedPreferences;
       debugPrint('ProfileProvider.updatePreferences failed: $e');
+      notifyListeners();
     }
   }
 

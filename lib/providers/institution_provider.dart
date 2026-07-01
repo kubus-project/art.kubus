@@ -130,7 +130,10 @@ class InstitutionProvider extends ChangeNotifier {
 
       // Fetch events globally; backend validates limit max=100, so request max allowed.
       final eventsJson = await api.listEvents(limit: 100, offset: 0);
-      final nextEvents = eventsJson.map((e) => Event.fromJson(e)).toList();
+      final nextEvents = eventsJson
+          .map(_eventFromBackendJson)
+          .where((e) => e.id.isNotEmpty)
+          .toList();
 
       // If backend endpoints are unavailable (404) the API returns empty lists.
       // Only overwrite local state when the backend returns real data.
@@ -148,6 +151,18 @@ class InstitutionProvider extends ChangeNotifier {
         debugPrint('InstitutionProvider: backend load failed (ignored): $e');
       }
     }
+  }
+
+  Event _eventFromBackendJson(Map<String, dynamic> json) {
+    final institutionId = (json['institutionId'] ??
+            json['institution_id'] ??
+            (json['institution'] is Map ? json['institution']['id'] : null) ??
+            '')
+        .toString()
+        .trim();
+    final institution =
+        institutionId.isEmpty ? null : getInstitutionById(institutionId);
+    return Event.fromBackendJson(json, institution: institution);
   }
 
   void _seedMockData() {

@@ -55,14 +55,17 @@ class _FakeArtworkApi implements ArtworkBackendApi {
   Future<Artwork> getArtwork(String artworkId) => throw UnimplementedError();
 
   @override
-  Future<Artwork?> updateArtwork(String artworkId, Map<String, dynamic> updates) =>
+  Future<Artwork?> updateArtwork(
+          String artworkId, Map<String, dynamic> updates) =>
       throw UnimplementedError();
 
   @override
-  Future<Artwork?> publishArtwork(String artworkId) => throw UnimplementedError();
+  Future<Artwork?> publishArtwork(String artworkId) =>
+      throw UnimplementedError();
 
   @override
-  Future<Artwork?> unpublishArtwork(String artworkId) => throw UnimplementedError();
+  Future<Artwork?> unpublishArtwork(String artworkId) =>
+      throw UnimplementedError();
 
   @override
   Future<int?> likeArtwork(String artworkId) => throw UnimplementedError();
@@ -71,23 +74,21 @@ class _FakeArtworkApi implements ArtworkBackendApi {
   Future<int?> unlikeArtwork(String artworkId) => throw UnimplementedError();
 
   @override
-  Future<int?> discoverArtworkWithCount(String artworkId) => throw UnimplementedError();
-
-  @override
-  Future<void> bookmarkArtwork(String artworkId) => throw UnimplementedError();
-
-  @override
-  Future<void> unbookmarkArtwork(String artworkId) => throw UnimplementedError();
-
-  @override
-  Future<int?> recordArtworkView(String artworkId) => throw UnimplementedError();
-
-  @override
-  Future<ArtworkComment> editArtworkComment({required String commentId, required String content}) =>
+  Future<int?> discoverArtworkWithCount(String artworkId) =>
       throw UnimplementedError();
 
   @override
-  Future<int?> deleteArtworkComment(String commentId) => throw UnimplementedError();
+  Future<int?> recordArtworkView(String artworkId) =>
+      throw UnimplementedError();
+
+  @override
+  Future<ArtworkComment> editArtworkComment(
+          {required String commentId, required String content}) =>
+      throw UnimplementedError();
+
+  @override
+  Future<int?> deleteArtworkComment(String commentId) =>
+      throw UnimplementedError();
 
   @override
   Future<int?> likeComment(String commentId) => throw UnimplementedError();
@@ -103,7 +104,8 @@ class _FakeProfileApi implements ProfileBackendApi {
   String get baseUrl => AppConfig.baseApiUrl;
 
   @override
-  Future<Map<String, dynamic>> saveProfile(Map<String, dynamic> profileData) async {
+  Future<Map<String, dynamic>> saveProfile(
+      Map<String, dynamic> profileData) async {
     lastPayload = profileData;
     final wallet = (profileData['walletAddress'] ?? '').toString();
     final now = DateTime.now().toUtc().toIso8601String();
@@ -115,27 +117,33 @@ class _FakeProfileApi implements ProfileBackendApi {
       'bio': (profileData['bio'] ?? '').toString(),
       'avatar': (profileData['avatar'] ?? '').toString(),
       'coverImage': (profileData['coverImage'] ?? '').toString(),
-      'social': profileData['social'] is Map<String, dynamic> ? profileData['social'] : <String, dynamic>{},
+      'social': profileData['social'] is Map<String, dynamic>
+          ? profileData['social']
+          : <String, dynamic>{},
       'isArtist': profileData['isArtist'] == true,
       'isInstitution': profileData['isInstitution'] == true,
-      if (profileData['artistInfo'] is Map<String, dynamic>) 'artistInfo': profileData['artistInfo'],
+      if (profileData['artistInfo'] is Map<String, dynamic>)
+        'artistInfo': profileData['artistInfo'],
       'createdAt': now,
       'updatedAt': now,
     };
   }
 
   @override
-  Future<Map<String, dynamic>> registerWallet({required String walletAddress, String? username}) =>
+  Future<Map<String, dynamic>> registerWallet(
+          {required String walletAddress, String? username}) =>
       throw UnimplementedError();
 
   @override
-  Future<Map<String, dynamic>> getProfileByWallet(String walletAddress) => throw UnimplementedError();
+  Future<Map<String, dynamic>> getProfileByWallet(String walletAddress) =>
+      throw UnimplementedError();
 
   @override
   Future<Map<String, dynamic>> getMyProfile() => throw UnimplementedError();
 
   @override
-  Future<Map<String, dynamic>> updateProfile(String walletAddress, Map<String, dynamic> updates) =>
+  Future<Map<String, dynamic>> updateProfile(
+          String walletAddress, Map<String, dynamic> updates) =>
       throw UnimplementedError();
 
   @override
@@ -148,6 +156,9 @@ class _FakeProfileApi implements ProfileBackendApi {
       throw UnimplementedError();
 
   @override
+  Future<bool> verifyImageUrl(String url) async => true;
+
+  @override
   Future<void> followUser(String walletAddress) => throw UnimplementedError();
 
   @override
@@ -157,7 +168,8 @@ class _FakeProfileApi implements ProfileBackendApi {
   Future<bool> isFollowing(String walletAddress) => throw UnimplementedError();
 
   @override
-  Future<Map<String, dynamic>?> getDAOReview({required String idOrWallet}) => throw UnimplementedError();
+  Future<Map<String, dynamic>?> getDAOReview({required String idOrWallet}) =>
+      throw UnimplementedError();
 }
 
 void main() {
@@ -185,7 +197,8 @@ void main() {
       ),
     );
 
-    final future = provider.addComment(artworkId: artworkId, content: 'Hello provider');
+    final future =
+        provider.addComment(artworkId: artworkId, content: 'Hello provider');
     await Future<void>.delayed(Duration.zero);
 
     // Community-aligned behavior: no optimistic insert; comment appears after
@@ -209,7 +222,8 @@ void main() {
     expect(provider.getArtworkById(artworkId)!.commentsCount, 1);
   });
 
-  test('ProfileProvider.saveProfile persists fieldOfWork + yearsActive', () async {
+  test('ProfileProvider.saveProfile persists fieldOfWork + yearsActive',
+      () async {
     final api = _FakeProfileApi();
     final provider = ProfileProvider(apiService: api);
     await provider.initialize();
@@ -228,8 +242,12 @@ void main() {
     expect(ok, isTrue);
     expect(api.lastPayload, isNotNull);
     expect(api.lastPayload!['artistInfo'], isA<Map<String, dynamic>>());
-    expect((api.lastPayload!['artistInfo'] as Map<String, dynamic>)['specialty'], ['AR', 'Sculpture']);
-    expect((api.lastPayload!['artistInfo'] as Map<String, dynamic>)['yearsActive'], 7);
+    expect(
+        (api.lastPayload!['artistInfo'] as Map<String, dynamic>)['specialty'],
+        ['AR', 'Sculpture']);
+    expect(
+        (api.lastPayload!['artistInfo'] as Map<String, dynamic>)['yearsActive'],
+        7);
 
     final profile = provider.currentUser;
     expect(profile, isNotNull);

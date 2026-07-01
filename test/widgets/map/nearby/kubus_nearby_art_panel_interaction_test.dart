@@ -5,6 +5,7 @@ import 'package:art_kubus/models/art_marker.dart';
 import 'package:art_kubus/models/artwork.dart';
 import 'package:art_kubus/providers/themeprovider.dart';
 import 'package:art_kubus/widgets/map/nearby/kubus_nearby_art_panel.dart';
+import 'package:art_kubus/widgets/map/nearby/kubus_nearby_art_panel_states.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
@@ -93,6 +94,88 @@ void main() {
     await tester.pump();
 
     expect(closeTapCount, 1);
+  });
+
+  testWidgets('nearby panel mobile handle is decorative for semantics',
+      (tester) async {
+    final semantics = tester.ensureSemantics();
+    final mapDelegate = _FakeNearbyMapDelegate();
+    final controller = NearbyArtController(map: mapDelegate);
+
+    await tester.pumpWidget(
+      _buildApp(
+        SizedBox(
+          width: 420,
+          height: 640,
+          child: KubusNearbyArtPanel(
+            controller: controller,
+            layout: KubusNearbyArtPanelLayout.mobileBottomSheet,
+            artworks: <Artwork>[_artwork()],
+            markers: const <ArtMarker>[],
+            basePosition: const LatLng(46.0569, 14.5058),
+            isLoading: false,
+            travelModeEnabled: false,
+            radiusKm: 2,
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.bySemanticsLabel('nearby_art_handle'), findsNothing);
+    expect(find.bySemanticsLabel('Nearby art and places'),
+        findsAtLeastNWidgets(1));
+    semantics.dispose();
+  });
+
+  testWidgets('nearby loading state announces a live region', (tester) async {
+    final semantics = tester.ensureSemantics();
+
+    await tester.pumpWidget(
+      _buildApp(
+        const SizedBox(
+          width: 420,
+          height: 320,
+          child: KubusNearbyArtLoadingState(),
+        ),
+      ),
+    );
+
+    final finder = find.bySemanticsLabel('Loading: Nearby art and places');
+    expect(finder, findsOneWidget);
+    expect(
+      tester.getSemantics(finder).flagsCollection.isLiveRegion,
+      isTrue,
+    );
+
+    semantics.dispose();
+  });
+
+  testWidgets('nearby empty state announces a live region', (tester) async {
+    final semantics = tester.ensureSemantics();
+
+    await tester.pumpWidget(
+      _buildApp(
+        const SizedBox(
+          width: 420,
+          height: 320,
+          child: KubusNearbyArtEmptyState(),
+        ),
+      ),
+    );
+
+    final finder = find.bySemanticsLabel(
+      'No nearby cultural markers. '
+      'Explore different areas or adjust your filters to discover art around you.',
+    );
+    expect(finder, findsOneWidget);
+    expect(
+      tester.getSemantics(finder).flagsCollection.isLiveRegion,
+      isTrue,
+    );
+
+    semantics.dispose();
   });
 }
 

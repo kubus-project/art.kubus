@@ -243,6 +243,47 @@ void main() {
     expect(travelToggleCount, 1);
     expect(isometricToggleCount, 1);
   });
+
+  testWidgets('primary map controls expose user-facing semantics labels',
+      (tester) async {
+    final semantics = tester.ensureSemantics();
+    final controller = _buildMapController();
+
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Align(
+            alignment: Alignment.topLeft,
+            child: KubusMapPrimaryControls(
+              controller: controller,
+              layout: KubusMapPrimaryControlsLayout.mobileRightRail,
+              onCenterOnMe: () {},
+              onCreateMarker: () {},
+              centerOnMeActive: true,
+              createMarkerHighlighted: true,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.bySemanticsLabel('Zoom in'), findsAtLeastNWidgets(1));
+    expect(find.bySemanticsLabel('Zoom out'), findsAtLeastNWidgets(1));
+    expect(find.bySemanticsLabel('Center on me'), findsAtLeastNWidgets(1));
+    expect(
+      find.bySemanticsLabel('Create marker here'),
+      findsAtLeastNWidgets(1),
+    );
+    expect(find.bySemanticsLabel('map_zoom_in'), findsNothing);
+    expect(find.bySemanticsLabel('map_zoom_out'), findsNothing);
+    expect(find.bySemanticsLabel('map_center_on_me'), findsNothing);
+    expect(find.bySemanticsLabel('map_create_marker'), findsNothing);
+    semantics.dispose();
+  });
 }
 
 KubusMapController _buildMapController() {

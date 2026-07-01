@@ -710,12 +710,17 @@ class KubusMarkerOverlayHelpers {
 
     final ownerCandidates = <String>{
       marker.createdBy,
+      (marker.ownerWalletAddress ?? '').toString(),
+      (metadata['ownerWalletAddress'] ?? '').toString(),
+      (metadata['owner_wallet_address'] ?? '').toString(),
       (metadata['ownerWallet'] ?? '').toString(),
       (metadata['owner_wallet'] ?? '').toString(),
       (metadata['walletAddress'] ?? '').toString(),
       (metadata['wallet_address'] ?? '').toString(),
       (metadata['createdBy'] ?? '').toString(),
       (metadata['created_by'] ?? '').toString(),
+      (nestedMetadata['ownerWalletAddress'] ?? '').toString(),
+      (nestedMetadata['owner_wallet_address'] ?? '').toString(),
       (nestedMetadata['ownerWallet'] ?? '').toString(),
       (nestedMetadata['owner_wallet'] ?? '').toString(),
       (nestedMetadata['walletAddress'] ?? '').toString(),

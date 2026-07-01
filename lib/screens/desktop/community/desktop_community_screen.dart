@@ -3368,15 +3368,15 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     final messenger = ScaffoldMessenger.of(context);
     final l10n = AppLocalizations.of(context)!;
     try {
-      final createdRepost = await BackendApiService().createRepost(
-        originalPostId: post.id,
-        content: comment != null && comment.trim().isNotEmpty
-            ? comment.trim()
-            : null,
-      );
+      final createdRepost =
+          await context.read<CommunityInteractionsProvider>().createRepost(
+                originalPost: post,
+                content: comment != null && comment.trim().isNotEmpty
+                    ? comment.trim()
+                    : null,
+              );
       if (!mounted) return false;
       setState(() {
-        post.shareCount++;
         _discoverPosts = _prependUniquePost(_discoverPosts, createdRepost);
         _followingPosts = _prependUniquePost(_followingPosts, createdRepost);
       });
@@ -3633,18 +3633,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     _deleteInFlightPostIds.add(post.id);
 
     try {
-      await BackendApiService().deleteRepost(post.id);
-      BackendApiService().trackAnalyticsEvent(
-        eventType: 'repost_deleted',
-        postId: post.originalPostId ?? post.id,
-        metadata: {'repost_id': post.id},
-      );
+      await context.read<CommunityInteractionsProvider>().deleteRepost(post);
 
       if (!mounted) return;
       setState(() => _removePostFromLocalFeeds(post.id));
-      ProfilePackageMutationTracker.postDeleted(
-        authorWallet: post.authorWallet ?? post.authorId,
-      );
       try {
         final hub = Provider.of<CommunityHubProvider>(context, listen: false);
         if (post.groupId != null) {
@@ -5391,12 +5383,11 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                         final appRefresh = _appRefreshProvider;
 
                         try {
-                          await _backendApi.deleteCommunityPost(post.id);
+                          await context
+                              .read<CommunityInteractionsProvider>()
+                              .deleteCommunityPost(post);
                           if (!mounted || !dialogContext.mounted) return;
                           setState(() => _removePostFromLocalFeeds(post.id));
-                          ProfilePackageMutationTracker.postDeleted(
-                            authorWallet: post.authorWallet ?? post.authorId,
-                          );
                           try {
                             final hub = Provider.of<CommunityHubProvider>(
                               context,
@@ -5722,7 +5713,6 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     setState(() => _isPosting = true);
 
     try {
-      final api = BackendApiService();
       final hub = Provider.of<CommunityHubProvider>(context, listen: false);
       hub.setDraftCategory(_selectedCategory);
 
@@ -5733,7 +5723,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
 
       CommunityPost createdPost;
       if (draft.targetGroup != null) {
-        createdPost = await api.createGroupPost(
+        final groupPost = await hub.submitGroupPost(
           draft.targetGroup!.id,
           content: _composeController.text.trim(),
           category: draft.category,
@@ -5744,30 +5734,30 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           tags: draft.tags,
           mentions: draft.mentions,
           location: location,
-          locationName: locationName,
-          locationLat: location?.lat,
-          locationLng: location?.lng,
+          locationLabel: locationName,
         );
+        if (groupPost == null) {
+          throw Exception('Group post creation failed');
+        }
+        createdPost = groupPost;
       } else {
-        createdPost = await api.createCommunityPost(
-          content: _composeController.text.trim(),
-          category: draft.category,
-          artworkId: draft.artwork?.id,
-          subjectType: draft.subjectType,
-          subjectId: draft.subjectId,
-          subjects: draft.subjects,
-          tags: draft.tags,
-          mentions: draft.mentions,
-          location: location,
-          locationName: locationName,
-          locationLat: location?.lat,
-          locationLng: location?.lng,
-        );
+        createdPost = await context
+            .read<CommunityInteractionsProvider>()
+            .createCommunityPost(
+              content: _composeController.text.trim(),
+              category: draft.category,
+              artworkId: draft.artwork?.id,
+              subjectType: draft.subjectType,
+              subjectId: draft.subjectId,
+              subjects: draft.subjects,
+              tags: draft.tags,
+              mentions: draft.mentions,
+              location: location,
+              locationName: locationName,
+              locationLat: location?.lat,
+              locationLng: location?.lng,
+            );
       }
-      ProfilePackageMutationTracker.postCreated(
-        post: createdPost,
-        achievementResult: createdPost.achievementResult,
-      );
       final achievementResult = createdPost.achievementResult;
       if (achievementResult != null && mounted) {
         context.read<TaskProvider>().applyAchievementResult(achievementResult);
@@ -7586,7 +7576,6 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     setState(() => _isPosting = true);
 
     try {
-      final api = BackendApiService();
       final hub = Provider.of<CommunityHubProvider>(context, listen: false);
       hub.setDraftCategory(_selectedCategory);
 
@@ -7621,26 +7610,22 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           locationLabel: locationName,
         );
       } else {
-        final created = await api.createCommunityPost(
-          content: content,
-          mediaUrls: mediaUrls.isEmpty ? null : mediaUrls,
-          postType: postType,
-          category: draft.category,
-          artworkId: draft.artwork?.id,
-          subjectType: draft.subjectType,
-          subjectId: draft.subjectId,
-          subjects: draft.subjects,
-          tags: draft.tags,
-          mentions: draft.mentions,
-          location: location,
-          locationName: locationName,
-          locationLat: location?.lat,
-          locationLng: location?.lng,
-        );
-        ProfilePackageMutationTracker.postCreated(
-          post: created,
-          achievementResult: created.achievementResult,
-        );
+        await context.read<CommunityInteractionsProvider>().createCommunityPost(
+              content: content,
+              mediaUrls: mediaUrls.isEmpty ? null : mediaUrls,
+              postType: postType,
+              category: draft.category,
+              artworkId: draft.artwork?.id,
+              subjectType: draft.subjectType,
+              subjectId: draft.subjectId,
+              subjects: draft.subjects,
+              tags: draft.tags,
+              mentions: draft.mentions,
+              location: location,
+              locationName: locationName,
+              locationLat: location?.lat,
+              locationLng: location?.lng,
+            );
       }
 
       if (mounted) {

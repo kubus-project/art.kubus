@@ -760,7 +760,17 @@ class MapMarkerService {
         'createdAt': json['createdAt'] ??
             json['created_at'] ??
             DateTime.now().toIso8601String(),
-        'createdBy': json['createdBy'] ?? json['created_by'] ?? 'system',
+        'createdBy': json['createdBy'] ??
+            json['created_by'] ??
+            json['ownerWalletAddress'] ??
+            json['owner_wallet_address'] ??
+            metadata?['ownerWalletAddress'] ??
+            metadata?['owner_wallet_address'] ??
+            'system',
+        'ownerWalletAddress': json['ownerWalletAddress'] ??
+            json['owner_wallet_address'] ??
+            metadata?['ownerWalletAddress'] ??
+            metadata?['owner_wallet_address'],
         'viewCount':
             json['viewCount'] ?? json['views'] ?? json['activation_count'] ?? 0,
         'interactionCount':

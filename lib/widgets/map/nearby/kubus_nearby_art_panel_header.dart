@@ -43,7 +43,8 @@ class KubusNearbyArtPanelHeader extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final isMobile = layout == KubusNearbyArtPanelLayout.mobileBottomSheet;
-    final title = isMobile ? l10n.mapNearbyArtTitle : l10n.arNearbyArtworksTitle;
+    final title =
+        isMobile ? l10n.mapNearbyArtTitle : l10n.arNearbyArtworksTitle;
 
     final subtitle = (() {
       if (travelModeEnabled) {
@@ -147,8 +148,7 @@ class KubusNearbyArtPanelHeader extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Center(
-              child: Semantics(
-                label: 'nearby_art_handle',
+              child: ExcludeSemantics(
                 child: Container(
                   width: KubusHeaderMetrics.searchBarHeight,
                   height: 4,

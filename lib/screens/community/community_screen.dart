@@ -4801,22 +4801,23 @@ class _CommunityScreenState extends State<CommunityScreen>
       return created;
     }
 
-    return BackendApiService().createCommunityPost(
-      content: content,
-      mediaUrls: mediaUrls.isEmpty ? null : mediaUrls,
-      artworkId: artworkId,
-      subjectType: subjectType,
-      subjectId: subjectId,
-      subjects: draft.subjects,
-      postType: postType,
-      category: category,
-      tags: tags,
-      mentions: mentions,
-      location: location,
-      locationName: locationLabel,
-      locationLat: location?.lat,
-      locationLng: location?.lng,
-    );
+    return context.read<CommunityInteractionsProvider>().createCommunityPost(
+          content: content,
+          mediaUrls: mediaUrls.isEmpty ? null : mediaUrls,
+          artworkId: artworkId,
+          subjectType: subjectType,
+          subjectId: subjectId,
+          subjects: draft.subjects,
+          postType: postType,
+          category: category,
+          tags: tags,
+          mentions: mentions,
+          location: location,
+          locationName: locationLabel,
+          locationLat: location?.lat,
+          locationLng: location?.lng,
+          normalizePost: (created) => _mergeDraftSubject(created, draft),
+        );
   }
 
   Future<void> _submitComposer({
@@ -4945,10 +4946,6 @@ class _CommunityScreenState extends State<CommunityScreen>
         Provider.of<CommunitySubjectProvider>(context, listen: false);
     final draft = hub.draft;
     final resolvedPost = _mergeDraftSubject(createdPost, draft);
-    ProfilePackageMutationTracker.postCreated(
-      post: resolvedPost,
-      achievementResult: resolvedPost.achievementResult,
-    );
     final achievementResult = resolvedPost.achievementResult;
     if (achievementResult != null) {
       context.read<TaskProvider>().applyAchievementResult(achievementResult);
@@ -6109,17 +6106,13 @@ class _CommunityScreenState extends State<CommunityScreen>
                             final messenger = ScaffoldMessenger.of(context);
 
                             try {
-                              // Create repost via backend
-                              final createdRepost =
-                                  await BackendApiService().createRepost(
-                                originalPostId: post.id,
-                                content: content.isNotEmpty ? content : null,
-                              );
-                              BackendApiService().trackAnalyticsEvent(
-                                eventType: 'repost_created',
-                                postId: post.id,
-                                metadata: {'has_comment': content.isNotEmpty},
-                              );
+                              final createdRepost = await context
+                                  .read<CommunityInteractionsProvider>()
+                                  .createRepost(
+                                    originalPost: post,
+                                    content:
+                                        content.isNotEmpty ? content : null,
+                                  );
 
                               if (!mounted) return;
                               // Insert repost into feed immediately for instant feedback
@@ -6502,18 +6495,10 @@ class _CommunityScreenState extends State<CommunityScreen>
     _deleteInFlightPostIds.add(post.id);
 
     try {
-      await BackendApiService().deleteRepost(post.id);
-      BackendApiService().trackAnalyticsEvent(
-        eventType: 'repost_deleted',
-        postId: post.originalPostId ?? post.id,
-        metadata: {'repost_id': post.id},
-      );
+      await context.read<CommunityInteractionsProvider>().deleteRepost(post);
 
       if (!mounted) return;
       setState(() => _removePostFromLocalFeeds(post.id));
-      ProfilePackageMutationTracker.postDeleted(
-        authorWallet: post.authorWallet ?? post.authorId,
-      );
       try {
         final hub = Provider.of<CommunityHubProvider>(context, listen: false);
         if (post.groupId != null) {
@@ -6638,13 +6623,11 @@ class _CommunityScreenState extends State<CommunityScreen>
                         final appRefresh = _appRefreshProvider;
 
                         try {
-                          await BackendApiService()
-                              .deleteCommunityPost(post.id);
+                          await context
+                              .read<CommunityInteractionsProvider>()
+                              .deleteCommunityPost(post);
                           if (!mounted || !dialogContext.mounted) return;
                           setState(() => _removePostFromLocalFeeds(post.id));
-                          ProfilePackageMutationTracker.postDeleted(
-                            authorWallet: post.authorWallet ?? post.authorId,
-                          );
                           try {
                             final hub = Provider.of<CommunityHubProvider>(
                               context,

@@ -1,0 +1,12 @@
+{
+  "name": "art-kubus-web-qa",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "qa:web": "node ./web_runtime_smoke.mjs",
+    "qa:web:proxy": "node ./dev_spa_proxy.mjs"
+  },
+  "dependencies": {
+    "playwright": "^1.58.2"
+  }
+}

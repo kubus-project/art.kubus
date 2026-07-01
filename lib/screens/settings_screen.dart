@@ -3990,9 +3990,27 @@ class _SettingsScreenState extends State<SettingsScreen>
                 await _saveAllSettings();
                 if (!mounted) return;
                 navigator.pop();
+                final preferenceSyncFailed =
+                    profileProvider.preferencesSaveError != null;
                 ScaffoldMessenger.of(context).showKubusSnackBar(
                   SnackBar(
-                      content: Text(l10n.settingsPrivacySettingsUpdatedToast)),
+                    content: Text(
+                      preferenceSyncFailed
+                          ? l10n.commonActionFailedToast
+                          : l10n.settingsPrivacySettingsUpdatedToast,
+                    ),
+                    backgroundColor: preferenceSyncFailed
+                        ? Theme.of(context).colorScheme.error
+                        : null,
+                    action: preferenceSyncFailed
+                        ? SnackBarAction(
+                            label: l10n.commonRetry,
+                            onPressed: () {
+                              unawaited(profileProvider.retryPreferenceSync());
+                            },
+                          )
+                        : null,
+                  ),
                 );
               },
               child: Text(l10n.commonSave),

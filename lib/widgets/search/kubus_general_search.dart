@@ -353,6 +353,7 @@ class KubusSearchResultsOverlay extends StatelessWidget {
         final trimmed = state.query.trim();
         final theme = Theme.of(context);
         final scheme = theme.colorScheme;
+        final l10n = AppLocalizations.of(context)!;
         final resolvedAccent = accentColor ??
             Provider.of<ThemeProvider>(context, listen: false).accentColor;
         final surfaceStyle = KubusGlassStyle.resolve(
@@ -394,117 +395,131 @@ class KubusSearchResultsOverlay extends StatelessWidget {
                       fallbackMinOpacity: surfaceStyle.fallbackMinOpacity,
                       enableBlur: panelBlurEnabled,
                       child: Builder(
-                          builder: (context) {
-                            if (trimmed.length < controller.config.minChars) {
-                              return Padding(
-                                padding: const EdgeInsets.all(KubusSpacing.md),
-                                child: Text(
-                                  minCharsHint,
-                                  style: theme.textTheme.bodyMedium?.copyWith(
-                                    color:
-                                        scheme.onSurface.withValues(alpha: 0.6),
-                                  ),
+                        builder: (context) {
+                          if (trimmed.length < controller.config.minChars) {
+                            return Padding(
+                              padding: const EdgeInsets.all(KubusSpacing.md),
+                              child: Text(
+                                minCharsHint,
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color:
+                                      scheme.onSurface.withValues(alpha: 0.6),
                                 ),
-                              );
-                            }
-
-                            if (state.isFetching) {
-                              return const Padding(
-                                padding: EdgeInsets.all(KubusSpacing.md),
-                                child:
-                                    Center(child: CircularProgressIndicator()),
-                              );
-                            }
-
-                            if (state.results.isEmpty) {
-                              return Padding(
-                                padding: const EdgeInsets.all(KubusSpacing.md),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      Icons.search_off,
-                                      color: scheme.onSurface
-                                          .withValues(alpha: 0.4),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Flexible(
-                                      child: Text(
-                                        noResultsText,
-                                        style: theme.textTheme.bodyMedium
-                                            ?.copyWith(
-                                          color: scheme.onSurface
-                                              .withValues(alpha: 0.6),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }
-
-                            final l10n = AppLocalizations.of(context)!;
-                            return Material(
-                              type: MaterialType.transparency,
-                              child: ListView.separated(
-                                shrinkWrap: true,
-                                itemCount: state.results.length,
-                                separatorBuilder: (_, __) => Divider(
-                                  height: 1,
-                                  color: scheme.outlineVariant,
-                                ),
-                                itemBuilder: (context, index) {
-                                  final result = state.results[index];
-                                  return MouseRegion(
-                                    cursor: SystemMouseCursors.click,
-                                    child: ListTile(
-                                      minLeadingWidth: 44,
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                        horizontal: KubusSpacing.md,
-                                        vertical: KubusSpacing.xxs,
-                                      ),
-                                      leading: _buildResultLeading(
-                                        context,
-                                        result,
-                                        resolvedAccent,
-                                      ),
-                                      title: Text(
-                                        result.label,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: theme.textTheme.bodyMedium
-                                            ?.copyWith(
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                      subtitle: Text(
-                                        result.subtitleText(l10n),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: theme.textTheme.bodyMedium
-                                            ?.copyWith(
-                                          color: scheme.onSurface
-                                              .withValues(alpha: 0.6),
-                                        ),
-                                      ),
-                                      onTap: () {
-                                        (onDismiss ??
-                                            controller.dismissOverlay)();
-                                        FocusManager.instance.primaryFocus
-                                            ?.unfocus();
-                                        onResultTap(result);
-                                      },
-                                    ),
-                                  );
-                                },
                               ),
                             );
-                          },
-                        ),
+                          }
+
+                          if (state.isFetching) {
+                            return Semantics(
+                              container: true,
+                              explicitChildNodes: true,
+                              liveRegion: true,
+                              label: l10n.commonLoading,
+                              child: const Padding(
+                                padding: EdgeInsets.all(KubusSpacing.md),
+                                child: Center(
+                                  child: CircularProgressIndicator(),
+                                ),
+                              ),
+                            );
+                          }
+
+                          if (state.results.isEmpty) {
+                            return Semantics(
+                              container: true,
+                              explicitChildNodes: true,
+                              liveRegion: true,
+                              label: noResultsText,
+                              child: ExcludeSemantics(
+                                child: Padding(
+                                  padding:
+                                      const EdgeInsets.all(KubusSpacing.md),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.search_off,
+                                        color: scheme.onSurface
+                                            .withValues(alpha: 0.4),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Flexible(
+                                        child: Text(
+                                          noResultsText,
+                                          style: theme.textTheme.bodyMedium
+                                              ?.copyWith(
+                                            color: scheme.onSurface
+                                                .withValues(alpha: 0.6),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          }
+
+                          return Material(
+                            type: MaterialType.transparency,
+                            child: ListView.separated(
+                              shrinkWrap: true,
+                              itemCount: state.results.length,
+                              separatorBuilder: (_, __) => Divider(
+                                height: 1,
+                                color: scheme.outlineVariant,
+                              ),
+                              itemBuilder: (context, index) {
+                                final result = state.results[index];
+                                return MouseRegion(
+                                  cursor: SystemMouseCursors.click,
+                                  child: ListTile(
+                                    minLeadingWidth: 44,
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: KubusSpacing.md,
+                                      vertical: KubusSpacing.xxs,
+                                    ),
+                                    leading: _buildResultLeading(
+                                      context,
+                                      result,
+                                      resolvedAccent,
+                                    ),
+                                    title: Text(
+                                      result.label,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style:
+                                          theme.textTheme.bodyMedium?.copyWith(
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    subtitle: Text(
+                                      result.subtitleText(l10n),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style:
+                                          theme.textTheme.bodyMedium?.copyWith(
+                                        color: scheme.onSurface
+                                            .withValues(alpha: 0.6),
+                                      ),
+                                    ),
+                                    onTap: () {
+                                      (onDismiss ??
+                                          controller.dismissOverlay)();
+                                      FocusManager.instance.primaryFocus
+                                          ?.unfocus();
+                                      onResultTap(result);
+                                    },
+                                  ),
+                                );
+                              },
+                            ),
+                          );
+                        },
                       ),
                     ),
                   ),
                 ),
+              ),
             ],
           ),
         );

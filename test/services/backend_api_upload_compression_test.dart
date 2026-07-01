@@ -117,6 +117,34 @@ void main() {
     expect(body, contains('disabled_by_caller'));
   });
 
+  test('uploadFile forwards normalized target storage to backend', () async {
+    late String body;
+
+    BackendApiService().setHttpClient(
+      MockClient((request) async {
+        body = latin1.decode(request.bodyBytes);
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'data': {'relativeUrl': '/uploads/model.glb'}
+          }),
+          200,
+        );
+      }),
+    );
+
+    await BackendApiService().uploadFile(
+      fileBytes: <int>[1, 2, 3],
+      fileName: 'model.glb',
+      fileType: 'model',
+      targetStorage: 'both',
+      compress: false,
+    );
+
+    expect(body, contains('targetStorage'));
+    expect(body, contains('hybrid'));
+  });
+
   test('uploadAvatarToProfile switches once to preferred write base', () async {
     final requestHosts = <String>[];
     final primaryHost = Uri.parse(AppConfig.baseApiUrl).host;

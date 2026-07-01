@@ -443,8 +443,6 @@ class ArtworkProvider extends ChangeNotifier {
     final savedProvider = _savedItemsProvider;
     final artwork = getArtworkById(id);
     final previousSaved = savedProvider?.isArtworkSaved(id) ?? false;
-    final previousArtwork = artwork;
-    final previousTimestamp = savedProvider?.getArtworkSavedAt(id);
     final nextSaved = !previousSaved;
     final nextTimestamp = DateTime.now();
 
@@ -471,30 +469,6 @@ class ArtworkProvider extends ChangeNotifier {
           artworkTitle: artwork?.title ?? id,
           artistName: artwork?.artist,
         );
-      }
-
-      try {
-        if (nextSaved) {
-          await _backendApi.bookmarkArtwork(id);
-        } else {
-          await _backendApi.unbookmarkArtwork(id);
-        }
-      } catch (e) {
-        if (savedProvider != null) {
-          await savedProvider.setArtworkSaved(
-            id,
-            previousSaved,
-            timestamp: previousSaved ? previousTimestamp : null,
-          );
-        }
-        if (previousArtwork != null) {
-          addOrUpdateArtwork(
-            previousArtwork.copyWith(
-              isFavoriteByCurrentUser: previousSaved,
-            ),
-          );
-        }
-        rethrow;
       }
     } catch (e) {
       _setError('Failed to toggle artwork saved: $e');
