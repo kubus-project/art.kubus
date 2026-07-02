@@ -143,6 +143,25 @@ class Artwork {
   final Map<String, dynamic>? metadata;
   final PromotionMetadata promotion;
 
+  String? _metaString(String key) {
+    final raw = metadata?[key];
+    if (raw == null) return null;
+    final value = raw.toString().trim();
+    return value.isEmpty ? null : value;
+  }
+
+  /// Photographer / author of the displayed image (attribution).
+  String? get imageAuthor => _metaString('imageAuthor');
+
+  /// Licence of the displayed image (e.g. "CC BY-SA 4.0").
+  String? get imageLicense => _metaString('imageLicense');
+
+  /// Display-ready attribution line for the displayed image.
+  String? get imageAttribution => _metaString('imageAttribution');
+
+  /// Source page of the displayed image (e.g. Wikimedia Commons file page).
+  String? get imageSourceUrl => _metaString('imageSourceUrl');
+
   const Artwork({
     required this.id,
     this.walletAddress,

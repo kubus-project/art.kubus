@@ -9800,6 +9800,13 @@ Artwork parseArtworkFromBackendJson(Map<String, dynamic> json) {
     addMeta('cidRegistry', json['cidRegistry'] ?? json['cid_registry']);
     addMeta('poap', json['poap']);
     addMeta('promotion', json['promotion']);
+    // Image attribution (photographer / licence), surfaced in detail screens.
+    addMeta('imageAuthor', json['imageAuthor'] ?? json['image_author']);
+    addMeta('imageLicense', json['imageLicense'] ?? json['image_license']);
+    addMeta(
+        'imageAttribution', json['imageAttribution'] ?? json['image_attribution']);
+    addMeta(
+        'imageSourceUrl', json['imageSourceUrl'] ?? json['image_source_url']);
 
     return metadata;
   }

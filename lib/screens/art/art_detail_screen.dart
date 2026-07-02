@@ -38,6 +38,7 @@ import '../../config/config.dart';
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
+import '../../widgets/common/marker_attribution_section.dart';
 import '../../widgets/common/subject_options_sheet.dart';
 import '../../widgets/glass_components.dart';
 import '../../widgets/common/keyboard_inset_padding.dart';
@@ -711,6 +712,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
             style: DetailTypography.sectionTitle(context)),
         const SizedBox(height: DetailSpacing.md),
         Text(artwork.description, style: DetailTypography.body(context)),
+        // Photo author / licence attribution, below the description.
+        MarkerAttributionSection.fromArtwork(artwork),
       ],
     );
   }

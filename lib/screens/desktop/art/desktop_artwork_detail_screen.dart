@@ -31,6 +31,7 @@ import '../../../widgets/detail/detail_shell_components.dart';
 import '../../../widgets/detail/artwork_engagement_sections.dart';
 import '../../web3/artist/artwork_ar_manager_screen.dart';
 import '../../../widgets/common/kubus_screen_header.dart';
+import '../../../widgets/common/marker_attribution_section.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import '../../../widgets/map/dialogs/street_art_claims_dialog.dart';
 
@@ -618,7 +619,9 @@ class _DesktopArtworkDetailScreenState
 
   Widget _buildDescription(Artwork artwork) {
     final text = (artwork.description).trim();
-    if (text.isEmpty) return const SizedBox.shrink();
+    final hasAttribution = ((artwork.imageAttribution ?? '').trim().isNotEmpty) ||
+        ((artwork.imageAuthor ?? '').trim().isNotEmpty);
+    if (text.isEmpty && !hasAttribution) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.only(top: DetailSpacing.lg),
       child: DetailCard(
@@ -627,7 +630,10 @@ class _DesktopArtworkDetailScreenState
           children: [
             const SectionHeader(title: 'Description'),
             const SizedBox(height: DetailSpacing.sm),
-            Text(text, style: DetailTypography.body(context)),
+            if (text.isNotEmpty)
+              Text(text, style: DetailTypography.body(context)),
+            // Photo author / licence attribution, below the description.
+            MarkerAttributionSection.fromArtwork(artwork),
           ],
         ),
       ),

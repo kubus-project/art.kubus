@@ -3,37 +3,65 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../models/art_marker.dart';
+import '../../models/artwork.dart';
 
-/// Attribution block for the marker info card ("more info"), rendered below
-/// the description: artwork artist, photo author/licence, and data source.
+/// Attribution block rendered below a description: artwork artist, photo
+/// author/licence, and data source.
 ///
-/// Reads the attribution metadata surfaced by `/api/public-markers`
-/// (`artistName`, `imageAuthor`, `imageLicense`, `imageAttribution`,
-/// `sourceAttribution`) via the [ArtMarker] getters, so it works for both
-/// open-data seeded markers and manually created ones.
+/// Used by the marker "more info" dialogs (via [MarkerAttributionSection.fromMarker])
+/// and the artwork detail screens (via [MarkerAttributionSection.fromArtwork]).
+/// Works for open-data seeded markers (attribution from `/api/public-markers`
+/// metadata or `artworks.image_*` columns) and manually created ones.
 class MarkerAttributionSection extends StatelessWidget {
   const MarkerAttributionSection({
     super.key,
-    required this.marker,
-    this.artistNameOverride,
+    this.artist,
+    this.imageAttribution,
+    this.imageAuthor,
+    this.imageLicense,
+    this.sourceAttribution,
   });
 
-  final ArtMarker marker;
+  /// Attribution resolved from an [ArtMarker]'s metadata.
+  factory MarkerAttributionSection.fromMarker(
+    ArtMarker marker, {
+    Key? key,
+    String? artistNameOverride,
+  }) {
+    return MarkerAttributionSection(
+      key: key,
+      artist: artistNameOverride ?? marker.artistName,
+      imageAttribution: marker.imageAttribution,
+      imageAuthor: marker.imageAuthor,
+      imageLicense: marker.imageLicense,
+      sourceAttribution: marker.sourceAttribution,
+    );
+  }
 
-  /// Optional artist override (e.g. from a linked [Artwork.artistName]).
-  final String? artistNameOverride;
+  /// Attribution resolved from an [Artwork]'s image attribution metadata.
+  factory MarkerAttributionSection.fromArtwork(
+    Artwork artwork, {
+    Key? key,
+  }) {
+    return MarkerAttributionSection(
+      key: key,
+      // Detail screens already render the artist byline prominently, so only
+      // photo/source credit rows are added here.
+      imageAttribution: artwork.imageAttribution,
+      imageAuthor: artwork.imageAuthor,
+      imageLicense: artwork.imageLicense,
+    );
+  }
+
+  final String? artist;
+  final String? imageAttribution;
+  final String? imageAuthor;
+  final String? imageLicense;
+  final String? sourceAttribution;
 
   static String? _clean(String? value) {
     final v = (value ?? '').trim();
     return v.isEmpty ? null : v;
-  }
-
-  /// Whether the marker carries any attribution worth rendering.
-  static bool hasAttribution(ArtMarker marker, {String? artistNameOverride}) {
-    return _clean(artistNameOverride ?? marker.artistName) != null ||
-        _clean(marker.imageAttribution) != null ||
-        _clean(marker.imageAuthor) != null ||
-        _clean(marker.sourceAttribution) != null;
   }
 
   @override
@@ -41,14 +69,14 @@ class MarkerAttributionSection extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
 
-    final artist = _clean(artistNameOverride ?? marker.artistName);
+    final artistValue = _clean(artist);
     // Prefer the display-ready line; otherwise compose from author/licence.
-    final photoLine = _clean(marker.imageAttribution) ??
+    final photoLine = _clean(imageAttribution) ??
         [
-          _clean(marker.imageAuthor),
-          _clean(marker.imageLicense),
+          _clean(imageAuthor),
+          _clean(imageLicense),
         ].whereType<String>().join(' / ');
-    final source = _clean(marker.sourceAttribution);
+    final source = _clean(sourceAttribution);
 
     final rows = <Widget>[];
     void addRow(IconData icon, String label, String value) {
@@ -78,8 +106,9 @@ class MarkerAttributionSection extends StatelessWidget {
       );
     }
 
-    if (artist != null && !RegExp(r'^unknown$', caseSensitive: false).hasMatch(artist)) {
-      addRow(Icons.brush_outlined, l10n.markerAttributionArtistLabel, artist);
+    if (artistValue != null &&
+        !RegExp(r'^unknown$', caseSensitive: false).hasMatch(artistValue)) {
+      addRow(Icons.brush_outlined, l10n.markerAttributionArtistLabel, artistValue);
     }
     if (photoLine.isNotEmpty) {
       addRow(

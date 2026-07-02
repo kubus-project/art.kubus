@@ -5753,7 +5753,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                 ),
               ),
               // Artist / photo / source attribution, below the description.
-              MarkerAttributionSection(marker: marker),
+              MarkerAttributionSection.fromMarker(marker),
             ],
           ),
         ),

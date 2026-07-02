@@ -5008,7 +5008,7 @@ class _MapScreenState extends State<MapScreen>
                 ),
               ),
               // Artist / photo / source attribution, below the description.
-              MarkerAttributionSection(marker: marker),
+              MarkerAttributionSection.fromMarker(marker),
             ],
           ),
         ),
