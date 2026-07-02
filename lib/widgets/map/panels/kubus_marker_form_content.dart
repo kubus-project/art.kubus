@@ -78,6 +78,9 @@ class _KubusMarkerFormContentState extends State<KubusMarkerFormContent> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _categoryController = TextEditingController();
+  final _artistNameController = TextEditingController();
+  final _imageAuthorController = TextEditingController();
+  final _imageLicenseController = TextEditingController();
   late final TextEditingController _latController;
   late final TextEditingController _lngController;
   final _formKey = GlobalKey<FormState>();
@@ -130,6 +133,9 @@ class _KubusMarkerFormContentState extends State<KubusMarkerFormContent> {
     _titleController.dispose();
     _descriptionController.dispose();
     _categoryController.dispose();
+    _artistNameController.dispose();
+    _imageAuthorController.dispose();
+    _imageLicenseController.dispose();
     _latController.dispose();
     _lngController.dispose();
     super.dispose();
@@ -363,6 +369,9 @@ class _KubusMarkerFormContentState extends State<KubusMarkerFormContent> {
             titleController: _titleController,
             descriptionController: _descriptionController,
             categoryController: _categoryController,
+            artistNameController: _artistNameController,
+            imageAuthorController: _imageAuthorController,
+            imageLicenseController: _imageLicenseController,
             latController: _latController,
             lngController: _lngController,
             subjectSelectionRequired: _subjectSelectionRequired(
@@ -449,6 +458,15 @@ class _KubusMarkerFormContentState extends State<KubusMarkerFormContent> {
         coverImageBytes: _coverImageBytes,
         coverImageFileName: _coverImageFileName,
         coverImageFileType: _coverImageFileType,
+        artistName: _artistNameController.text.trim().isNotEmpty
+            ? _artistNameController.text.trim()
+            : null,
+        imageAuthor: _imageAuthorController.text.trim().isNotEmpty
+            ? _imageAuthorController.text.trim()
+            : null,
+        imageLicense: _imageLicenseController.text.trim().isNotEmpty
+            ? _imageLicenseController.text.trim()
+            : null,
       ),
     );
   }

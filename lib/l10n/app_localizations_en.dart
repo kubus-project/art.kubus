@@ -3883,6 +3883,36 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mapMarkerDialogStreetArtCoverRequiredError => 'Add a cover image for this street art marker.';
 
   @override
+  String get mapMarkerDialogAttributionSectionTitle => 'Attribution';
+
+  @override
+  String get mapMarkerDialogArtistNameLabel => 'Artist name';
+
+  @override
+  String get mapMarkerDialogArtistNameHint => 'Who created this artwork?';
+
+  @override
+  String get mapMarkerDialogImageAuthorLabel => 'Photo author';
+
+  @override
+  String get mapMarkerDialogImageAuthorHint => 'Who took the photo?';
+
+  @override
+  String get mapMarkerDialogImageLicenseLabel => 'Photo license';
+
+  @override
+  String get mapMarkerDialogImageLicenseHint => 'e.g. CC BY-SA 4.0';
+
+  @override
+  String get markerAttributionArtistLabel => 'Artist';
+
+  @override
+  String get markerAttributionPhotoLabel => 'Photo';
+
+  @override
+  String get markerAttributionSourceLabel => 'Source';
+
+  @override
   String get mapMarkerCommunityLabel => 'Community';
 
   @override

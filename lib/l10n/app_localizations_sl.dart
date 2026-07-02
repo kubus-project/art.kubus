@@ -3883,6 +3883,36 @@ class AppLocalizationsSl extends AppLocalizations {
   String get mapMarkerDialogStreetArtCoverRequiredError => 'Dodaj naslovno sliko za ta označevalec ulične umetnosti.';
 
   @override
+  String get mapMarkerDialogAttributionSectionTitle => 'Avtorstvo';
+
+  @override
+  String get mapMarkerDialogArtistNameLabel => 'Ime umetnika';
+
+  @override
+  String get mapMarkerDialogArtistNameHint => 'Kdo je ustvaril to delo?';
+
+  @override
+  String get mapMarkerDialogImageAuthorLabel => 'Avtor fotografije';
+
+  @override
+  String get mapMarkerDialogImageAuthorHint => 'Kdo je posnel fotografijo?';
+
+  @override
+  String get mapMarkerDialogImageLicenseLabel => 'Licenca fotografije';
+
+  @override
+  String get mapMarkerDialogImageLicenseHint => 'npr. CC BY-SA 4.0';
+
+  @override
+  String get markerAttributionArtistLabel => 'Umetnik';
+
+  @override
+  String get markerAttributionPhotoLabel => 'Fotografija';
+
+  @override
+  String get markerAttributionSourceLabel => 'Vir';
+
+  @override
   String get mapMarkerCommunityLabel => 'Skupnost';
 
   @override

@@ -115,6 +115,7 @@ import '../widgets/common/kubus_glass_icon_button.dart';
 import '../widgets/common/kubus_map_controls.dart';
 import '../widgets/common/kubus_cached_image.dart';
 import '../widgets/common/kubus_marker_overlay_card.dart';
+import '../widgets/common/marker_attribution_section.dart';
 import '../widgets/common/kubus_search_overlay_scaffold.dart';
 import '../widgets/map/overlays/kubus_marker_overlay_card_wrapper.dart'
     as overlay_wrapper;
@@ -2990,6 +2991,19 @@ class _MapScreenState extends State<MapScreen>
           },
           if (coverImageUrl != null && coverImageUrl.isNotEmpty)
             'coverImageUrl': coverImageUrl,
+          // Attribution (shown in the marker info card below the description).
+          if ((form.artistName ?? '').isNotEmpty)
+            'artistName': form.artistName,
+          if ((form.imageAuthor ?? '').isNotEmpty)
+            'imageAuthor': form.imageAuthor,
+          if ((form.imageLicense ?? '').isNotEmpty)
+            'imageLicense': form.imageLicense,
+          if ((form.imageAuthor ?? '').isNotEmpty ||
+              (form.imageLicense ?? '').isNotEmpty)
+            'coverImageAttribution': [
+              if ((form.imageAuthor ?? '').isNotEmpty) form.imageAuthor,
+              if ((form.imageLicense ?? '').isNotEmpty) form.imageLicense,
+            ].join(' / '),
           if (form.isCommunity) ...{
             'isCommunity': true,
             'community': 'community',
@@ -4993,6 +5007,8 @@ class _MapScreenState extends State<MapScreen>
                   style: GoogleFonts.outfit(color: scheme.onSurfaceVariant),
                 ),
               ),
+              // Artist / photo / source attribution, below the description.
+              MarkerAttributionSection(marker: marker),
             ],
           ),
         ),

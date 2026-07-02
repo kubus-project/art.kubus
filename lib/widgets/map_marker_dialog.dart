@@ -27,6 +27,11 @@ class MapMarkerFormResult {
   final String? coverImageFileName;
   final String? coverImageFileType;
 
+  /// Attribution (shown in the marker info card below the description).
+  final String? artistName;
+  final String? imageAuthor;
+  final String? imageLicense;
+
   const MapMarkerFormResult({
     required this.title,
     required this.description,
@@ -41,6 +46,9 @@ class MapMarkerFormResult {
     this.coverImageBytes,
     this.coverImageFileName,
     this.coverImageFileType,
+    this.artistName,
+    this.imageAuthor,
+    this.imageLicense,
   });
 }
 

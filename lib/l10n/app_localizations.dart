@@ -62,7 +62,15 @@ import 'app_localizations_sl.dart';
 /// be consistent with the languages listed in the AppLocalizations.supportedLocales
 /// property.
 abstract class AppLocalizations {
-  AppLocalizations(String locale) : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+  AppLocalizations(String locale) : localeName = _safeCanonicalizedLocale(locale);
+
+  static String _safeCanonicalizedLocale(String locale) {
+    final raw = locale.trim();
+    if (raw.isEmpty || raw == 'undefined' || raw == 'null') {
+      return 'sl';
+    }
+    return intl.Intl.canonicalizedLocale(raw);
+  }
 
   final String localeName;
 
@@ -7630,6 +7638,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Add a cover image for this street art marker.'**
   String get mapMarkerDialogStreetArtCoverRequiredError;
+
+  /// No description provided for @mapMarkerDialogAttributionSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Attribution'**
+  String get mapMarkerDialogAttributionSectionTitle;
+
+  /// No description provided for @mapMarkerDialogArtistNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Artist name'**
+  String get mapMarkerDialogArtistNameLabel;
+
+  /// No description provided for @mapMarkerDialogArtistNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Who created this artwork?'**
+  String get mapMarkerDialogArtistNameHint;
+
+  /// No description provided for @mapMarkerDialogImageAuthorLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo author'**
+  String get mapMarkerDialogImageAuthorLabel;
+
+  /// No description provided for @mapMarkerDialogImageAuthorHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Who took the photo?'**
+  String get mapMarkerDialogImageAuthorHint;
+
+  /// No description provided for @mapMarkerDialogImageLicenseLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo license'**
+  String get mapMarkerDialogImageLicenseLabel;
+
+  /// No description provided for @mapMarkerDialogImageLicenseHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. CC BY-SA 4.0'**
+  String get mapMarkerDialogImageLicenseHint;
+
+  /// No description provided for @markerAttributionArtistLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Artist'**
+  String get markerAttributionArtistLabel;
+
+  /// No description provided for @markerAttributionPhotoLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo'**
+  String get markerAttributionPhotoLabel;
+
+  /// No description provided for @markerAttributionSourceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Source'**
+  String get markerAttributionSourceLabel;
 
   /// No description provided for @mapMarkerCommunityLabel.
   ///

@@ -81,6 +81,9 @@ class KubusMarkerFormBody extends StatelessWidget {
     required this.titleController,
     required this.descriptionController,
     required this.categoryController,
+    required this.artistNameController,
+    required this.imageAuthorController,
+    required this.imageLicenseController,
     required this.latController,
     required this.lngController,
     required this.subjectSelectionRequired,
@@ -114,6 +117,9 @@ class KubusMarkerFormBody extends StatelessWidget {
   final TextEditingController titleController;
   final TextEditingController descriptionController;
   final TextEditingController categoryController;
+  final TextEditingController artistNameController;
+  final TextEditingController imageAuthorController;
+  final TextEditingController imageLicenseController;
   final TextEditingController latController;
   final TextEditingController lngController;
   final bool subjectSelectionRequired;
@@ -217,6 +223,28 @@ class KubusMarkerFormBody extends StatelessWidget {
                 style: KubusTypography.textTheme.bodySmall?.copyWith(
                   color: scheme.onSurface.withValues(alpha: 0.72),
                 ),
+              ),
+              const SizedBox(height: KubusSpacing.md),
+              KubusMarkerFormSectionTitle(
+                title: l10n.mapMarkerDialogAttributionSectionTitle,
+              ),
+              const SizedBox(height: KubusSpacing.sm),
+              KubusMarkerFormTextField(
+                controller: artistNameController,
+                labelText: l10n.mapMarkerDialogArtistNameLabel,
+                hintText: l10n.mapMarkerDialogArtistNameHint,
+              ),
+              const SizedBox(height: KubusSpacing.sm),
+              KubusMarkerFormTextField(
+                controller: imageAuthorController,
+                labelText: l10n.mapMarkerDialogImageAuthorLabel,
+                hintText: l10n.mapMarkerDialogImageAuthorHint,
+              ),
+              const SizedBox(height: KubusSpacing.sm),
+              KubusMarkerFormTextField(
+                controller: imageLicenseController,
+                labelText: l10n.mapMarkerDialogImageLicenseLabel,
+                hintText: l10n.mapMarkerDialogImageLicenseHint,
               ),
               const SizedBox(height: KubusSpacing.md),
             ],
@@ -667,6 +695,7 @@ class KubusMarkerFormTextField extends StatelessWidget {
     super.key,
     required this.controller,
     required this.labelText,
+    this.hintText,
     this.maxLines = 1,
     this.keyboardType,
     this.validator,
@@ -674,6 +703,7 @@ class KubusMarkerFormTextField extends StatelessWidget {
 
   final TextEditingController controller;
   final String labelText;
+  final String? hintText;
   final int maxLines;
   final TextInputType? keyboardType;
   final String? Function(String?)? validator;
@@ -683,6 +713,7 @@ class KubusMarkerFormTextField extends StatelessWidget {
     return CreatorTextField(
       controller: controller,
       label: labelText,
+      hint: hintText,
       maxLines: maxLines,
       keyboardType: keyboardType,
       validator: validator,
