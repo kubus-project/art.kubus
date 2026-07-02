@@ -568,7 +568,11 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
       if (seen.add(url)) unique.add(url);
     }
 
-    return ArtworkGalleryView(imageUrls: unique);
+    final title = artwork.title.trim();
+    return ArtworkGalleryView(
+      imageUrls: unique,
+      semanticLabel: title.isEmpty ? null : '$title image',
+    );
   }
 
   Widget _buildInfoChip(IconData icon, String label) {

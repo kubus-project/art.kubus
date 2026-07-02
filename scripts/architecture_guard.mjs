@@ -33,7 +33,7 @@ let directDebugPrintCount = 0;
 
 // Current debt ceiling captured during the desloppify pass. Lower this number
 // after each focused logging cleanup; never raise it without documenting why.
-const directDebugPrintBudget = 814;
+const directDebugPrintBudget = 778;
 
 function toRepoPath(filePath) {
   return path.relative(repoRoot, filePath).split(path.sep).join("/");

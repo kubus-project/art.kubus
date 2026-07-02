@@ -55,8 +55,6 @@ Future<Map<String, dynamic>> _backendApiGetProfileByWalletImpl(
         );
         final raw = data['data'] ?? data;
         if (raw is Map<String, dynamic>) {
-          AppConfig.debugPrint(
-              'BackendApiService.getProfileByWallet: parsed profile keys: ${raw.keys.toList()}');
           return raw;
         }
         throw Exception('Invalid profile payload');
@@ -270,10 +268,8 @@ Future<Map<String, dynamic>> _backendApiSaveProfileImpl(
   while (true) {
     attempt++;
     try {
-      if (kDebugMode) {
-        debugPrint(
-            'BackendApiService.saveProfile: POST /api/profiles payload: ${jsonEncode(profileData)}');
-      }
+      AppConfig.debugPrint(
+          'BackendApiService.saveProfile: POST /api/profiles attempt=$attempt keys=${profileData.keys.toList()}');
       final uri = Uri.parse('${service.baseUrl}/api/profiles');
       final response = await service._post(
         uri,
@@ -287,10 +283,8 @@ Future<Map<String, dynamic>> _backendApiSaveProfileImpl(
         // Some legacy backends used to return a token. Keep support.
         if (data['token'] is String && (data['token'] as String).isNotEmpty) {
           await service.setAuthToken(data['token'] as String);
-          if (kDebugMode) {
-            debugPrint(
-                'BackendApiService.saveProfile: token received and stored from profile creation');
-          }
+          AppConfig.debugPrint(
+              'BackendApiService.saveProfile: token received and stored from profile creation');
         }
 
         final payload = data['data'] ?? data;

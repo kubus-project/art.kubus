@@ -391,6 +391,7 @@ class _DesktopArtworkDetailScreenState
         return ArtworkGalleryView(
           imageUrls: [primaryCover],
           height: tunedCoverHeight,
+          semanticLabel: _artworkImageSemanticLabel(artwork),
         );
       },
     );
@@ -422,6 +423,7 @@ class _DesktopArtworkDetailScreenState
                 return ArtworkGalleryView(
                   imageUrls: urls,
                   height: galleryHeight,
+                  semanticLabel: _artworkImageSemanticLabel(artwork),
                 );
               },
             ),
@@ -429,6 +431,12 @@ class _DesktopArtworkDetailScreenState
         ),
       ),
     );
+  }
+
+  String? _artworkImageSemanticLabel(Artwork artwork) {
+    final title = artwork.title.trim();
+    if (title.isEmpty) return null;
+    return '$title image';
   }
 
   Widget _buildDesktopSidePanel(
@@ -484,8 +492,8 @@ class _DesktopArtworkDetailScreenState
     );
     final ownerWallet = WalletUtils.canonical(artwork.walletAddress);
     final isOwner = viewerWallet.isNotEmpty &&
-      ownerWallet.isNotEmpty &&
-      WalletUtils.equals(viewerWallet, ownerWallet);
+        ownerWallet.isNotEmpty &&
+        WalletUtils.equals(viewerWallet, ownerWallet);
 
     String statusLabel() {
       switch (artwork.arStatus) {
@@ -532,7 +540,7 @@ class _DesktopArtworkDetailScreenState
                 Icon(Icons.view_in_ar_rounded, color: color),
                 const SizedBox(width: KubusSpacing.sm),
                 Text(l10n.mapMarkerLayerArExperience,
-                  style: KubusTextStyles.sectionTitle),
+                    style: KubusTextStyles.sectionTitle),
                 const Spacer(),
                 Container(
                   padding: const EdgeInsets.symmetric(
@@ -663,7 +671,8 @@ class _DesktopArtworkDetailScreenState
         l10n.exhibitionDetailAttendanceRewardPending(rewardAmount.toString()),
       if (validFrom != null || validTo != null)
         '${l10n.commonAvailable}: ${(validFrom != null) ? validFrom.toLocal().toIso8601String().split('T').first : '…'} → ${(validTo != null) ? validTo.toLocal().toIso8601String().split('T').first : '…'}',
-      if (eventId != null && eventId.isNotEmpty) '${l10n.commonEvent}: $eventId',
+      if (eventId != null && eventId.isNotEmpty)
+        '${l10n.commonEvent}: $eventId',
     ];
 
     final uri = (claimUrl != null && claimUrl.isNotEmpty)
@@ -887,10 +896,10 @@ class _DesktopArtworkDetailScreenState
         final isConfirming = state.isConfirming;
 
         final label = isConfirming
-          ? l10n.exhibitionDetailAttendanceConfirmingAction
-          : (alreadyAttended
-            ? l10n.exhibitionDetailAttendanceAlreadyCheckedIn
-            : l10n.exhibitionDetailAttendanceConfirmAction);
+            ? l10n.exhibitionDetailAttendanceConfirmingAction
+            : (alreadyAttended
+                ? l10n.exhibitionDetailAttendanceAlreadyCheckedIn
+                : l10n.exhibitionDetailAttendanceConfirmAction);
         final icon = isConfirming
             ? Icons.hourglass_top
             : (alreadyAttended ? Icons.check_circle : Icons.verified_user);
@@ -948,8 +957,7 @@ class _DesktopArtworkDetailScreenState
       if (result == null) {
         messenger.showKubusSnackBar(
           SnackBar(
-            content:
-                Text(l10n.exhibitionDetailAttendanceUnableToConfirmToast),
+            content: Text(l10n.exhibitionDetailAttendanceUnableToConfirmToast),
           ),
           tone: KubusSnackBarTone.warning,
         );

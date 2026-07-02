@@ -40,12 +40,19 @@ class DiskCachedArtworkImage extends StatefulWidget {
     required this.fit,
     this.showProgress = true,
     this.errorIconColor,
-  });
+    this.semanticLabel,
+    this.excludeFromSemantics = false,
+  }) : assert(
+          semanticLabel == null || !excludeFromSemantics,
+          'semanticLabel cannot be provided when excludeFromSemantics is true.',
+        );
 
   final String url;
   final BoxFit fit;
   final bool showProgress;
   final Color? errorIconColor;
+  final String? semanticLabel;
+  final bool excludeFromSemantics;
 
   @override
   State<DiskCachedArtworkImage> createState() => _DiskCachedArtworkImageState();
@@ -59,7 +66,8 @@ class _DiskCachedArtworkImageState extends State<DiskCachedArtworkImage> {
   void initState() {
     super.initState();
     _resolvedUrl = _resolveArtworkImageUrl(widget.url);
-    _fileFuture = _KubusArtworkCacheManager.instance.getSingleFile(_resolvedUrl);
+    _fileFuture =
+        _KubusArtworkCacheManager.instance.getSingleFile(_resolvedUrl);
   }
 
   @override
@@ -67,56 +75,90 @@ class _DiskCachedArtworkImageState extends State<DiskCachedArtworkImage> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.url != widget.url) {
       _resolvedUrl = _resolveArtworkImageUrl(widget.url);
-      _fileFuture = _KubusArtworkCacheManager.instance.getSingleFile(_resolvedUrl);
+      _fileFuture =
+          _KubusArtworkCacheManager.instance.getSingleFile(_resolvedUrl);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final errorColor = widget.errorIconColor ??
-        scheme.outline.withValues(alpha: 0.8);
+    final errorColor =
+        widget.errorIconColor ?? scheme.outline.withValues(alpha: 0.8);
 
     return FutureBuilder<File?>(
       future: _fileFuture,
       builder: (context, snap) {
+        final resolvedSemanticLabel = _normalizedSemanticLabel;
         final file = snap.data;
         if (file != null) {
           return Image.file(
             file,
             fit: widget.fit,
+            semanticLabel: resolvedSemanticLabel,
+            excludeFromSemantics: widget.excludeFromSemantics,
             errorBuilder: (_, __, ___) => Center(
-              child: Icon(Icons.image_not_supported, color: errorColor),
+              child: _withFallbackSemantics(
+                Icon(Icons.image_not_supported, color: errorColor),
+                resolvedSemanticLabel,
+              ),
             ),
           );
         }
         if (snap.connectionState == ConnectionState.waiting &&
             widget.showProgress) {
-          return Center(
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              valueColor: AlwaysStoppedAnimation<Color>(scheme.primary),
+          return _withFallbackSemantics(
+            Center(
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(scheme.primary),
+              ),
             ),
+            resolvedSemanticLabel,
           );
         }
         return Image.network(
           _resolvedUrl.isNotEmpty ? _resolvedUrl : widget.url,
           fit: widget.fit,
+          semanticLabel: resolvedSemanticLabel,
+          excludeFromSemantics: widget.excludeFromSemantics,
           errorBuilder: (_, __, ___) => Center(
-            child: Icon(Icons.image_not_supported, color: errorColor),
+            child: _withFallbackSemantics(
+              Icon(Icons.image_not_supported, color: errorColor),
+              resolvedSemanticLabel,
+            ),
           ),
           loadingBuilder: (context, child, progress) {
             if (progress == null) return child;
             if (!widget.showProgress) return child;
-            return Center(
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(scheme.primary),
+            return _withFallbackSemantics(
+              Center(
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(scheme.primary),
+                ),
               ),
+              resolvedSemanticLabel,
             );
           },
         );
       },
+    );
+  }
+
+  String? get _normalizedSemanticLabel {
+    final trimmed = widget.semanticLabel?.trim();
+    if (trimmed == null || trimmed.isEmpty) return null;
+    return trimmed;
+  }
+
+  Widget _withFallbackSemantics(Widget child, String? resolvedLabel) {
+    if (widget.excludeFromSemantics) return ExcludeSemantics(child: child);
+    if (resolvedLabel == null) return child;
+    return Semantics(
+      image: true,
+      label: resolvedLabel,
+      child: ExcludeSemantics(child: child),
     );
   }
 }

@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -71,10 +70,10 @@ class _AvatarWidgetState extends State<AvatarWidget>
   @override
   void initState() {
     super.initState();
-    _setup();
     _shimmerController = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 1000))
-      ..repeat();
+        vsync: this, duration: const Duration(milliseconds: 1000));
+    _syncShimmerController();
+    _setup();
   }
 
   @override
@@ -130,14 +129,8 @@ class _AvatarWidgetState extends State<AvatarWidget>
     // Don't set fabricated URL yet to avoid "Robot -> Real" flash.
     // Show initials/loading state instead.
 
-    setState(() {
-      _loading = true;
-    });
+    _setLoading(true);
     try {
-      if (kDebugMode) {
-        debugPrint(
-            'AvatarWidget: fallback user fetch for avatar id=$cacheKey includeAchievements=false');
-      }
       final u = await UserService.getUserById(
         cacheKey,
         includeAchievements: false,
@@ -148,8 +141,8 @@ class _AvatarWidgetState extends State<AvatarWidget>
       if (p != null && p.isNotEmpty) {
         setState(() {
           _effectiveUrl = _normalizeAvatar(p);
-          _loading = false;
         });
+        _setLoading(false);
         return;
       }
 
@@ -160,17 +153,13 @@ class _AvatarWidgetState extends State<AvatarWidget>
           setState(() {
             _effectiveUrl = UserService.safeAvatarUrl(
                 fallbackSeed.isNotEmpty ? fallbackSeed : cacheKey);
-            _loading = false;
           });
+          _setLoading(false);
         } else {
-          setState(() {
-            _loading = false;
-          });
+          _setLoading(false);
         }
       } else {
-        setState(() {
-          _loading = false;
-        });
+        _setLoading(false);
       }
     } catch (_) {
       if (mounted) {
@@ -182,10 +171,38 @@ class _AvatarWidgetState extends State<AvatarWidget>
                 fallbackSeed.isNotEmpty ? fallbackSeed : cacheKey);
           });
         }
-        setState(() {
-          _loading = false;
-        });
+        _setLoading(false);
       }
+    }
+  }
+
+  void _setLoading(bool loading) {
+    if (_loading == loading) {
+      _syncShimmerController();
+      return;
+    }
+    if (mounted) {
+      setState(() => _loading = loading);
+    } else {
+      _loading = loading;
+    }
+    _syncShimmerController();
+  }
+
+  void _syncShimmerController() {
+    final shouldAnimate = _loading || widget.isLoading;
+    if (shouldAnimate) {
+      if (!_shimmerController.isAnimating) {
+        _shimmerController.repeat();
+      }
+      return;
+    }
+
+    if (_shimmerController.isAnimating) {
+      _shimmerController.stop();
+    }
+    if (_shimmerController.value != 0) {
+      _shimmerController.value = 0;
     }
   }
 
@@ -197,6 +214,9 @@ class _AvatarWidgetState extends State<AvatarWidget>
         oldWidget.allowFabricatedFallback != widget.allowFabricatedFallback ||
         oldWidget.fetchMissingAvatar != widget.fetchMissingAvatar) {
       _setup();
+    }
+    if (oldWidget.isLoading != widget.isLoading) {
+      _syncShimmerController();
     }
     if (oldWidget.wallet != widget.wallet ||
         oldWidget.showStatusIndicator != widget.showStatusIndicator) {

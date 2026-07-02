@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../config/config.dart';
 import '../community/community_interactions.dart';
 import '../models/achievement_progress.dart' as legacy;
 import '../models/achievements.dart' as backend;
@@ -768,7 +769,7 @@ class ProfilePackageService {
       await prefs.setString(_criticalCachePrefsKey, jsonEncode(payload));
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('ProfilePackageService._persistCriticalCache: $e');
+        AppConfig.debugPrint('ProfilePackageService._persistCriticalCache: $e');
       }
     }
   }
@@ -783,7 +784,7 @@ class ProfilePackageService {
       if (wallet != null && wallet.isNotEmpty) 'wallet=$wallet',
       if (value != null) 'value=$value',
     ].join(' ');
-    debugPrint(
+    AppConfig.debugPrint(
       suffix.isEmpty
           ? 'ProfilePackageService.telemetry $event'
           : 'ProfilePackageService.telemetry $event $suffix',

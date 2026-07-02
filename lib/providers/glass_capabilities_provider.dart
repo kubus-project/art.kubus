@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../config/config.dart';
 import '../services/webgl_context_helper.dart';
 
 /// Whether glass surfaces use real blur or a solid tinted fallback.
@@ -45,6 +46,11 @@ class GlassCapabilitiesProvider with ChangeNotifier {
     return bindingType.contains('AutomatedTestWidgetsFlutterBinding') ||
         bindingType.contains('TestWidgetsFlutterBinding') ||
         bindingType.contains('IntegrationTestWidgetsFlutterBinding');
+  }
+
+  void _debugLog(String message) {
+    if (!kDebugMode || _isRunningUnderTestBinding()) return;
+    AppConfig.debugPrint(message);
   }
 
   GlassMode get mode => _mode;
@@ -91,20 +97,16 @@ class GlassCapabilitiesProvider with ChangeNotifier {
           prefs.getBool(_reduceEffectsUserTouchedKey) ?? false;
       _autoReduceEffectsOptOut =
           prefs.getBool(_autoReduceEffectsOptOutKey) ?? false;
-      if (kDebugMode) {
-        debugPrint(
-          'GlassCapabilitiesProvider._initialize: loaded from prefs: '
-          '_reduceEffectsUser=$_reduceEffectsUser, '
-          '_reduceEffectsUserTouched=$_reduceEffectsUserTouched, '
-          '_autoReduceEffectsOptOut=$_autoReduceEffectsOptOut',
-        );
-      }
+      _debugLog(
+        'GlassCapabilitiesProvider._initialize: loaded from prefs: '
+        '_reduceEffectsUser=$_reduceEffectsUser, '
+        '_reduceEffectsUserTouched=$_reduceEffectsUserTouched, '
+        '_autoReduceEffectsOptOut=$_autoReduceEffectsOptOut',
+      );
     } catch (e) {
       // Default: effects enabled.
-      if (kDebugMode) {
-        debugPrint(
-            'GlassCapabilitiesProvider._initialize: error loading prefs: $e');
-      }
+      _debugLog(
+          'GlassCapabilitiesProvider._initialize: error loading prefs: $e');
     }
 
     if (_disposed) {
@@ -116,10 +118,8 @@ class GlassCapabilitiesProvider with ChangeNotifier {
 
     // 3. Run platform capability heuristic.
     _heuristicTriggered = _evaluateHeuristic();
-    if (kDebugMode) {
-      debugPrint(
-          'GlassCapabilitiesProvider: _heuristicTriggered=$_heuristicTriggered');
-    }
+    _debugLog(
+        'GlassCapabilitiesProvider: _heuristicTriggered=$_heuristicTriggered');
 
     _recomputeMode();
     _isInitialized = true;
@@ -171,18 +171,14 @@ class GlassCapabilitiesProvider with ChangeNotifier {
     final nextUserSetting = value;
     final nextAutoOptOut = !value && _heuristicTriggered;
 
-    if (kDebugMode) {
-      debugPrint(
-        'GlassCapabilitiesProvider.setReduceEffects: value=$value, '
-        'nextUserSetting=$nextUserSetting, nextAutoOptOut=$nextAutoOptOut',
-      );
-    }
+    _debugLog(
+      'GlassCapabilitiesProvider.setReduceEffects: value=$value, '
+      'nextUserSetting=$nextUserSetting, nextAutoOptOut=$nextAutoOptOut',
+    );
 
     if (_reduceEffectsUser == nextUserSetting &&
         _autoReduceEffectsOptOut == nextAutoOptOut) {
-      if (kDebugMode) {
-        debugPrint('GlassCapabilitiesProvider.setReduceEffects: no change');
-      }
+      _debugLog('GlassCapabilitiesProvider.setReduceEffects: no change');
       return;
     }
 
@@ -218,46 +214,36 @@ class GlassCapabilitiesProvider with ChangeNotifier {
         !_reduceEffectsUser &&
         _isDesktopClassEnvironment();
 
-    if (kDebugMode) {
-      debugPrint(
-        'GlassCapabilitiesProvider._recomputeMode: '
-        '_reduceEffectsUser=$_reduceEffectsUser, '
-        '_reduceEffectsUserTouched=$_reduceEffectsUserTouched, '
-        '_heuristicTriggered=$_heuristicTriggered, '
-        '_autoReduceEffectsOptOut=$_autoReduceEffectsOptOut, '
-        'healthy=$healthy, '
-        'heuristicActive=$heuristicActive, '
-        'explicitOffForcesBlur=$explicitOffForcesBlur',
-      );
-    }
+    _debugLog(
+      'GlassCapabilitiesProvider._recomputeMode: '
+      '_reduceEffectsUser=$_reduceEffectsUser, '
+      '_reduceEffectsUserTouched=$_reduceEffectsUserTouched, '
+      '_heuristicTriggered=$_heuristicTriggered, '
+      '_autoReduceEffectsOptOut=$_autoReduceEffectsOptOut, '
+      'healthy=$healthy, '
+      'heuristicActive=$heuristicActive, '
+      'explicitOffForcesBlur=$explicitOffForcesBlur',
+    );
 
     if (_reduceEffectsUser) {
       _mode = GlassMode.tintedFallback;
-      if (kDebugMode) {
-        debugPrint('GlassCapabilitiesProvider: mode=tintedFallback (user on)');
-      }
+      _debugLog('GlassCapabilitiesProvider: mode=tintedFallback (user on)');
       return;
     }
 
     if (explicitOffForcesBlur) {
       _mode = GlassMode.blur;
-      if (kDebugMode) {
-        debugPrint('GlassCapabilitiesProvider: mode=blur (explicit user off)');
-      }
+      _debugLog('GlassCapabilitiesProvider: mode=blur (explicit user off)');
       return;
     }
 
     if (!healthy || heuristicActive) {
       _mode = GlassMode.tintedFallback;
-      if (kDebugMode) {
-        debugPrint(
-            'GlassCapabilitiesProvider: mode=tintedFallback (!healthy=${!healthy} OR heuristicActive=$heuristicActive)');
-      }
+      _debugLog(
+          'GlassCapabilitiesProvider: mode=tintedFallback (!healthy=${!healthy} OR heuristicActive=$heuristicActive)');
     } else {
       _mode = GlassMode.blur;
-      if (kDebugMode) {
-        debugPrint('GlassCapabilitiesProvider: mode=blur');
-      }
+      _debugLog('GlassCapabilitiesProvider: mode=blur');
     }
   }
 

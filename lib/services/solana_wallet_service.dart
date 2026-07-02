@@ -571,7 +571,7 @@ class SolanaWalletService {
       return balance.value / 1000000000; // Convert lamports to SOL
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('Error getting balance: $e');
+        AppConfig.debugPrint('SolanaWalletService.getSolBalance failed: $e');
       }
       return 0.0;
     }
@@ -608,14 +608,15 @@ class SolanaWalletService {
       );
       return lamports.value / 1000000000.0; // Convert lamports to SOL
     } catch (e) {
-      debugPrint('Error getting balance via RpcClient: $e');
+      AppConfig.debugPrint('SolanaWalletService.getBalance failed: $e');
       try {
         // Fallback to raw RPC call
         final response = await _makeRpcCall('getBalance', [publicKey]);
         final balance = response['result']['value'] as int;
         return balance / 1000000000.0;
       } catch (err) {
-        debugPrint('Fallback getBalance failed: $err');
+        AppConfig.debugPrint(
+            'SolanaWalletService.getBalance fallback failed: $err');
         return 0.0;
       }
     }
@@ -722,7 +723,7 @@ class SolanaWalletService {
       });
       return tokenBalances;
     } catch (e) {
-      debugPrint('Error getting token balances: $e');
+      AppConfig.debugPrint('SolanaWalletService.getTokenBalances failed: $e');
       return [];
     }
   }
@@ -846,7 +847,8 @@ class SolanaWalletService {
       });
       return transactions;
     } catch (e) {
-      debugPrint('Error getting transaction history: $e');
+      AppConfig.debugPrint(
+          'SolanaWalletService.getTransactionHistory failed: $e');
       return [];
     }
   }

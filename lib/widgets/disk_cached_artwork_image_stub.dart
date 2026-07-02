@@ -52,12 +52,19 @@ class DiskCachedArtworkImage extends StatelessWidget {
     required this.fit,
     this.showProgress = true,
     this.errorIconColor,
-  });
+    this.semanticLabel,
+    this.excludeFromSemantics = false,
+  }) : assert(
+          semanticLabel == null || !excludeFromSemantics,
+          'semanticLabel cannot be provided when excludeFromSemantics is true.',
+        );
 
   final String url;
   final BoxFit fit;
   final bool showProgress;
   final Color? errorIconColor;
+  final String? semanticLabel;
+  final bool excludeFromSemantics;
 
   @override
   Widget build(BuildContext context) {
@@ -78,6 +85,8 @@ class DiskCachedArtworkImage extends StatelessWidget {
       errorBuilder: (_, __, ___) => Center(
         child: Icon(Icons.image_not_supported, color: errorColor),
       ),
+      semanticLabel: semanticLabel,
+      excludeFromSemantics: excludeFromSemantics,
     );
   }
 }

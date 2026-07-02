@@ -599,6 +599,34 @@ class ArtMarker {
     return value;
   }
 
+  /// Artwork artist attribution (e.g. muralist, sculptor, architect).
+  String? get artistName =>
+      _metadataString(const ['artistName', 'artist_name', 'artist']);
+
+  /// Photographer / author of the displayed image.
+  String? get imageAuthor =>
+      _metadataString(const ['imageAuthor', 'image_author']);
+
+  /// Licence of the displayed image (e.g. "CC BY-SA 4.0").
+  String? get imageLicense =>
+      _metadataString(const ['imageLicense', 'image_license']);
+
+  /// Display-ready attribution line for the displayed image.
+  String? get imageAttribution => _metadataString(const [
+        'imageAttribution',
+        'image_attribution',
+        'coverImageAttribution',
+        'cover_image_attribution',
+      ]);
+
+  /// Source page of the displayed image (e.g. Wikimedia Commons file page).
+  String? get imageSourceUrl =>
+      _metadataString(const ['imageSourceUrl', 'image_source_url']);
+
+  /// Data-source attribution (e.g. "© OpenStreetMap contributors").
+  String? get sourceAttribution =>
+      _metadataString(const ['sourceAttribution', 'source_attribution']);
+
   bool get isCommunityMarker {
     dynamic readRaw(Map<String, dynamic>? map) {
       if (map == null) return null;

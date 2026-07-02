@@ -3,6 +3,7 @@ import 'dart:collection';
 
 import 'package:flutter/foundation.dart';
 
+import '../config/config.dart';
 import '../services/profile_package_service.dart';
 import 'wallet_utils.dart';
 
@@ -127,7 +128,7 @@ class ProfilePackagePrefetcher {
       _debug('profile_package_prefetch_completed', request.wallet);
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('ProfilePackagePrefetcher._run: $e');
+        AppConfig.debugPrint('ProfilePackagePrefetcher._run: $e');
       }
     } finally {
       _active -= 1;
@@ -138,7 +139,8 @@ class ProfilePackagePrefetcher {
 
   static void _debug(String event, String wallet) {
     if (!kDebugMode) return;
-    debugPrint('ProfilePackagePrefetcher.telemetry $event wallet=$wallet');
+    AppConfig.debugPrint(
+        'ProfilePackagePrefetcher.telemetry $event wallet=$wallet');
   }
 }
 

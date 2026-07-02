@@ -1283,19 +1283,16 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       fallbackSubtitle: l10n.commonDigital,
     );
 
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
+    return _buildShowcaseCard(
+      imageUrl: card.imageUrl,
+      title: card.title,
+      subtitle: card.subtitle,
+      footer: l10n.userProfileLikesLabel(card.likesCount),
       onTap: card.id != null
           ? () {
               openArtwork(context, card.id!, source: 'user_profile');
             }
           : null,
-      child: _buildShowcaseCard(
-        imageUrl: card.imageUrl,
-        title: card.title,
-        subtitle: card.subtitle,
-        footer: l10n.userProfileLikesLabel(card.likesCount),
-      ),
     );
   }
 
@@ -1306,8 +1303,11 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       fallbackTitle: l10n.userProfileCollectionFallbackTitle,
     );
 
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
+    return _buildShowcaseCard(
+      imageUrl: card.imageUrl,
+      title: card.title,
+      subtitle: l10n.userProfileArtworksCountLabel(card.artworkCount),
+      footer: card.description ?? l10n.userProfileCuratedByLabel(user!.name),
       onTap: (card.id != null && card.id!.isNotEmpty)
           ? () {
               Navigator.push(
@@ -1319,12 +1319,6 @@ class _UserProfileScreenState extends State<UserProfileScreen>
               );
             }
           : null,
-      child: _buildShowcaseCard(
-        imageUrl: card.imageUrl,
-        title: card.title,
-        subtitle: l10n.userProfileArtworksCountLabel(card.artworkCount),
-        footer: card.description ?? l10n.userProfileCuratedByLabel(user!.name),
-      ),
     );
   }
 
@@ -1337,8 +1331,11 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     );
     final dateLabel = _formatDateLabel(l10n, card.startDate);
 
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
+    return _buildShowcaseCard(
+      imageUrl: card.imageUrl,
+      title: card.title,
+      subtitle: dateLabel,
+      footer: card.location ?? l10n.commonTba,
       onTap: (card.id != null && card.id!.isNotEmpty)
           ? () {
               Navigator.push(
@@ -1349,12 +1346,6 @@ class _UserProfileScreenState extends State<UserProfileScreen>
               );
             }
           : null,
-      child: _buildShowcaseCard(
-        imageUrl: card.imageUrl,
-        title: card.title,
-        subtitle: dateLabel,
-        footer: card.location ?? l10n.commonTba,
-      ),
     );
   }
 
@@ -1363,12 +1354,14 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     required String title,
     required String subtitle,
     required String footer,
+    VoidCallback? onTap,
   }) {
     return SharedShowcaseCard(
       imageUrl: imageUrl,
       title: title,
       subtitle: subtitle,
       footer: footer,
+      onTap: onTap,
       width: 200,
       imageHeight: 110,
     );

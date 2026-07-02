@@ -89,10 +89,10 @@ The goal is to reduce security risk, architectural drift, brittle state flow, UI
 **Validation required:** Route tests with `wallet_bootstrap`, email, Google, and wallet-signed tokens proving only intended auth levels can mutate wallet-owned state.  
 **Dependencies or blockers:** Should follow [CRIT-02] and [CRIT-03].  
 **Status:** Partially completed  
-**Completion notes:** Added wallet-signed middleware enforcement to wallet-owned profile create/update, profile deletion, avatar upload, and generic upload/multiple upload writes. Added route coverage proving account-linked tokens are rejected before upload storage while wallet-signed tokens can proceed.  
-**Validation run:** `npx jest --runInBand uploadWalletSignedAuth.test.js uploadRouteDeprecation.test.js avatarProfileUploadRoutes.test.js profilesMediaPersistence.test.js profilesRoleFlags.test.js` passed (34 tests); `npm run lint` passed in `backend/`.  
+**Completion notes:** Added wallet-signed middleware enforcement to wallet-owned profile create/update, profile deletion, avatar upload, and generic upload/multiple upload writes. Added route coverage proving account-linked tokens are rejected before upload storage while wallet-signed tokens can proceed. Second pass added wallet-signed enforcement for marker create/update/delete and marker claim submit/review routes.
+**Validation run:** `npx jest --runInBand uploadWalletSignedAuth.test.js uploadRouteDeprecation.test.js avatarProfileUploadRoutes.test.js profilesMediaPersistence.test.js profilesRoleFlags.test.js` passed (34 tests); second pass `npx jest --runInBand artMarkersWriteAssurance.test.js artMarkersCreateIdempotency.test.js artMarkersUpdatePersistence.test.js artMarkersClaimsAuth.test.js markerOwnership.test.js` passed (25 tests); `npm run lint` passed in `backend/`.
 **Screenshots:** Not applicable; no UI change.  
-**Follow-up:** Messaging and marker ownership-sensitive writes still need route-by-route product policy decisions; deferred below rather than enforced blindly.
+**Follow-up:** Messaging authorization still needs a route-by-route assurance matrix; deferred below rather than enforced blindly.
 
 ### [CRIT-05] Admin moderation updates bypass public sync
 
@@ -431,10 +431,11 @@ The goal is to reduce security risk, architectural drift, brittle state flow, UI
 **Recommended model:** GPT-5.5 high  
 **Validation required:** Widget semantics tests and before/after focus screenshots.  
 **Dependencies or blockers:** UI screenshot capture required.  
-**Status:** Deferred  
-**Reason:** This spans multiple repeated-card families across profile, media, gallery, and detail flows. It needs a shared focusable card primitive plus before/after keyboard-focus screenshots for several routes, which is too broad to fold into the current map/harness cleanup without risking visual regressions.  
-**Safest next action:** Create a dedicated accessibility pass for repeated card primitives, starting with one shared wrapper and one representative profile/gallery route before broad rollout.  
-**Validation needed later:** Widget semantics tests for the wrapper, keyboard activation tests, and before/after focus screenshots for profile showcase cards, gallery thumbnails, and media/detail cards.
+**Status:** Partially completed
+**Completion notes:** `SharedShowcaseCard` now owns button semantics, default semantic labels, keyboard activation through Enter/Space `ActivateIntent`, and visible hover/focus styling for tappable showcase cards. Mobile self-profile saved/showcase cards and public-profile showcase cards now pass their existing navigation callbacks into the shared card instead of wrapping it in raw `GestureDetector`s; desktop profile surfaces already used the shared `onTap` path. The same validation pass fixed adjacent profile UX debt discovered by tests: likes-sheet layout now respects the modal route height cap, likes rows do not trigger fallback avatar network fetches, social repost identity data preserves explicit user ids separately from wallet seeds, hyphenated usernames remain stable, and avatar shimmer tickers run only while actually loading.
+**Validation run:** `flutter test test/widgets/detail/shared_showcase_card_test.dart` passed; `flutter test test/widgets/profile_identity_summary_test.dart` passed after the adjacent likes-sheet/identity fixes; `flutter test test/widgets/detail/shared_showcase_card_test.dart test/widgets/profile_public_package_loading_test.dart test/widgets/profile_identity_summary_test.dart test/widgets/profile_achievements_badges_sections_test.dart` passed (26 tests); scoped `flutter analyze --no-fatal-infos` on touched files passed; `npm run guard:architecture` passed; `npm run verify:all` passed with the known nonfatal `lib/screens/map_screen.dart:5298` `axisAlignment` info.
+**Screenshots:** Baseline: `output/playwright/desloppify-polish02-before-desktop-root.png`, `output/playwright/desloppify-polish02-before-mobile-root.png`; after: `output/playwright/desloppify-polish02-after-desktop-root.png`, `output/playwright/desloppify-polish02-after-mobile-root.png`. These are root-route smoke screenshots because local auth/profile seed data was not available for a live profile route; widget/profile tests validate the card behavior directly.
+**Follow-up:** Gallery thumbnails, detail media cards, and any remaining non-showcase repeated card families still need adoption with route-specific focus screenshots.
 
 ### [POLISH-03] Onboarding topbar icon is pointer-only
 
@@ -466,10 +467,11 @@ The goal is to reduce security risk, architectural drift, brittle state flow, UI
 **Recommended model:** GPT-5.5 high  
 **Validation required:** Widget semantics tests and gallery/lightbox screenshots.  
 **Dependencies or blockers:** UI screenshots required.  
-**Status:** Deferred  
-**Reason:** This touches shared image rendering plus gallery/lightbox behavior and requires screenshot coverage for media-heavy routes. It should be isolated to avoid changing artwork/media presentation without visual review.  
-**Safest next action:** Add semantic-label plumbing to the shared image primitive first, then adopt it in one gallery/detail route with before/after screenshots before wider rollout.  
-**Validation needed later:** Widget semantics tests, gallery thumbnail selected/index assertions, and before/after screenshots for artwork detail gallery and lightbox flows.
+**Status:** Partially completed
+**Completion notes:** Added semantic-label plumbing to `KubusCachedImage` and `DiskCachedArtworkImage`, including loading/error/fallback states. `ArtworkGalleryView` now exposes actionable main-image labels, mobile selected-index announcements, desktop thumbnail index/selected semantics, semantic tap actions, keyboard-friendly `InkWell` thumbnail activation, lightbox current-image labels, and guarded prefetch failures. Mobile and desktop artwork detail routes pass artwork-title context into gallery labels.
+**Validation run:** `flutter test test/widgets/common/kubus_cached_image_test.dart test/widgets/artwork_gallery_view_test.dart` passed; scoped `flutter analyze --no-fatal-infos` on touched gallery/image files and tests passed; `npm run verify:all` passed with the known nonfatal `lib/screens/map_screen.dart:5298` `axisAlignment` info.
+**Screenshots:** Not captured for this slice. The change is semantics-only at idle and no seeded local artwork-detail route with gallery/lightbox media was available for meaningful before/after screenshots.
+**Follow-up:** Add route-level gallery/lightbox screenshots once a seeded artwork media harness exists, then decide whether to mark the screenshot requirement fully satisfied.
 
 ### [POLISH-05] Purple and hardcoded status/social colors bypass color roles
 
@@ -519,10 +521,10 @@ The goal is to reduce security risk, architectural drift, brittle state flow, UI
 **Validation required:** Static guard and `flutter analyze`.  
 **Dependencies or blockers:** Should follow [HARNESS-01].  
 **Status:** Partially completed  
-**Completion notes:** Added `AK-GUARD-008` to `scripts/architecture_guard.mjs` to enforce the current unqualified `debugPrint` debt ceiling. The guard reports `814/814` direct calls and fails if future work increases the footprint.  
-**Validation run:** `node --check scripts/architecture_guard.mjs`, `npm run guard:architecture`, and `npm run verify:architecture` passed.  
+**Completion notes:** Added `AK-GUARD-008` to `scripts/architecture_guard.mjs` to enforce the current unqualified `debugPrint` debt ceiling. Second pass removed the no-value `NotificationProvider` constructor log, removed noisy avatar/profile payload logs, centralized selected glass/wallet/profile-package/Solana logs behind `AppConfig.debugPrint`, suppressed routine glass diagnostics under Flutter test bindings, and lowered the direct `debugPrint` budget from `814` to `790`. Third pass removed backend API achievement fetch-start chatter, removed normal profile payload key dumps, replaced full profile-save payload logging with a field-name-only message, centralized selected backend API diagnostics, and lowered the budget to `778`.
+**Validation run:** `node --check scripts/architecture_guard.mjs`, `npm run guard:architecture`, and `npm run verify:architecture` passed in the first pass. Second pass `npm run guard:architecture` passed at `790/790`, scoped `flutter analyze --no-fatal-infos` on touched logging files passed, and `npm run verify:all` passed with the known nonfatal `lib/screens/map_screen.dart:5298` `axisAlignment` info. Third pass `npm run guard:architecture` passed at `778/778`, scoped `flutter analyze --no-fatal-infos lib/services/backend_api_service.dart lib/services/backend_api_service_profile_helpers.dart` passed, and `npm run verify:all` passed with the same known analyzer info.
 **Screenshots:** Not applicable.  
-**Follow-up:** The actual conversion of existing direct logs remains deferred to isolated domain passes. Start with `lib/providers`, then `lib/screens`, then `lib/services`, lowering `directDebugPrintBudget` after each cleanup.
+**Follow-up:** The actual conversion of remaining direct logs remains deferred to isolated domain passes. Current verify output still includes centralized debug output from wallet/Solana test fallbacks, profile-package telemetry, debug-token issuance, and secure-storage timeouts; lower `directDebugPrintBudget` after each cleanup.
 
 ## Harness engineering alignment
 
@@ -736,7 +738,15 @@ For each selected task:
 **Completion notes:** Required wallet-signed tokens for profile create/update, profile deletion, profile avatar upload, and generic upload writes.  
 **Validation run:** `npx jest --runInBand uploadWalletSignedAuth.test.js uploadRouteDeprecation.test.js avatarProfileUploadRoutes.test.js profilesMediaPersistence.test.js profilesRoleFlags.test.js` passed; `npm run lint` passed in `backend/`.  
 **Screenshots:** Not applicable.  
-**Follow-up:** Remaining [CRIT-04] messaging/marker authorization policy deferred below.
+**Follow-up:** Remaining [CRIT-04] marker and messaging authorization policy continued under [CRIT-04B].
+
+### [CRIT-04B] Marker write assurance policy
+
+**Status:** Partially completed
+**Completion notes:** Required wallet-signed tokens for marker create/update/delete and marker claim submit/review routes. Read routes, optional view/interact routes, and messaging routes were not changed.
+**Validation run:** `npx jest --runInBand artMarkersWriteAssurance.test.js` passed (6 tests); `npx jest --runInBand artMarkersWriteAssurance.test.js artMarkersCreateIdempotency.test.js artMarkersUpdatePersistence.test.js artMarkersClaimsAuth.test.js markerOwnership.test.js` passed (25 tests); `npm run lint` passed in `backend/`.
+**Screenshots:** Not applicable.
+**Follow-up:** Messaging write assurance remains deferred until the route matrix defines which chat/collaboration flows require wallet-signed authority versus account-level authentication.
 
 ### [CRIT-05A] Admin moderation public sync hooks
 
@@ -761,6 +771,14 @@ For each selected task:
 **Validation run:** `npx jest --runInBand messagesRoutesAuth.test.js` passed; `npx jest --runInBand messagesRoutesAuth.test.js uploadRouteDeprecation.test.js avatarProfileUploadRoutes.test.js` passed; `npm run lint` passed in `backend/`.  
 **Screenshots:** Not applicable.  
 **Follow-up:** None.
+
+### [CRIT-06B] Artwork multipart upload validation still uses MIME-or-extension checks
+
+**Status:** Completed
+**Completion notes:** Replaced artwork route-local MIME-or-extension filtering with shared artwork-specific declaration and magic-byte validation for cover images and GLB/glTF/USDZ models. Artwork storage metadata now uses the validated MIME type and extension.
+**Validation run:** `npx jest --runInBand artworksUploadValidation.test.js` passed; `npx jest --runInBand artworksUploadValidation.test.js uploadRouteDeprecation.test.js avatarProfileUploadRoutes.test.js uploadStaticCors.test.js storageServiceUploadPath.test.js messagesRoutesAuth.test.js` passed (84 tests); `npx jest --runInBand artworksUploadValidation.test.js artworksCreateGalleryMetaJson.test.js` passed; `npm run lint` passed in `backend/`.
+**Screenshots:** Not applicable; backend validation-only change.
+**Follow-up:** None for artwork multipart media validation.
 
 ### [HARNESS-01] Mechanical architecture guard checks
 
@@ -900,10 +918,11 @@ For each selected task:
 
 ### [POLISH-02] Repeated tappable cards lack consistent keyboard and focus semantics
 
-**Status:** Deferred  
-**Reason:** Requires a shared accessible card primitive and route-level focus screenshots across profile, gallery, and media/detail flows. A partial fix in one card family would leave inconsistent keyboard behavior and visual focus styling.  
-**Safest next action:** Isolate a dedicated card-accessibility pass with representative route screenshots before rollout.  
-**Validation needed later:** Widget semantics/keyboard tests and before/after focus screenshots for each adopted card family.
+**Status:** Partially completed
+**Completion notes:** Added shared button semantics, Enter/Space keyboard activation, and hover/focus styling to tappable `SharedShowcaseCard`s. Routed mobile profile saved/showcase and public-profile showcase cards through that shared `onTap` path. Fixed adjacent profile UX issues found during validation: likes-sheet modal height overflow, unnecessary likes-row fallback avatar fetches, social identity user-id/wallet confusion, hyphenated username preservation, and idle avatar shimmer tickers.
+**Validation run:** `flutter test test/widgets/detail/shared_showcase_card_test.dart` passed; `flutter test test/widgets/profile_identity_summary_test.dart` passed; combined `flutter test test/widgets/detail/shared_showcase_card_test.dart test/widgets/profile_public_package_loading_test.dart test/widgets/profile_identity_summary_test.dart test/widgets/profile_achievements_badges_sections_test.dart` passed (26 tests); scoped touched-file `flutter analyze --no-fatal-infos` passed; `npm run guard:architecture` passed; `npm run verify:all` passed with the known nonfatal `lib/screens/map_screen.dart:5298` analyzer info.
+**Screenshots:** `output/playwright/desloppify-polish02-before-desktop-root.png`, `output/playwright/desloppify-polish02-before-mobile-root.png`, `output/playwright/desloppify-polish02-after-desktop-root.png`, `output/playwright/desloppify-polish02-after-mobile-root.png`. Root-route smoke only; no seeded live profile route was available.
+**Follow-up:** Gallery/media/detail card families still need a dedicated adoption pass with route-specific before/after focus screenshots.
 
 ### [POLISH-03] Onboarding topbar icon is pointer-only
 
@@ -924,17 +943,18 @@ For each selected task:
 ### [POLISH-07] Debug logging remains noisy in selected Flutter paths
 
 **Status:** Partially completed  
-**Completion notes:** Added a CI-facing architecture guard budget for unqualified `debugPrint` calls so the existing logging debt cannot grow during future agent work. Current budget is `814/814`.  
-**Validation run:** `node --check scripts/architecture_guard.mjs`, `npm run guard:architecture`, and `npm run verify:architecture` passed.  
+**Completion notes:** Added a CI-facing architecture guard budget for unqualified `debugPrint` calls so the existing logging debt cannot grow during future agent work. Second pass removed the no-value notification constructor log and noisy avatar/profile diagnostics, centralized selected glass/wallet/profile-package/Solana logs, suppressed routine glass diagnostics under Flutter test bindings, and lowered the budget from `814/814` to `790/790`. Third pass removed achievement fetch-start logs and profile key dumps from `BackendApiService`, replaced full profile-save payload logging with key-only diagnostics, centralized selected backend API debug logs, and lowered the budget to `778/778`.
+**Validation run:** `node --check scripts/architecture_guard.mjs`, `npm run guard:architecture`, and `npm run verify:architecture` passed in the first pass; second pass `npm run guard:architecture` passed at `790/790`, scoped touched-file `flutter analyze --no-fatal-infos` passed, and `npm run verify:all` passed with the known nonfatal `lib/screens/map_screen.dart:5298` analyzer info. Third pass `npm run guard:architecture` passed at `778/778`, scoped `flutter analyze --no-fatal-infos lib/services/backend_api_service.dart lib/services/backend_api_service_profile_helpers.dart` passed, and `npm run verify:all` passed with the same known analyzer info.
 **Screenshots:** Not applicable.  
-**Follow-up:** Defer broad conversion of existing logs to focused domain passes; lower `directDebugPrintBudget` after each pass.
+**Follow-up:** Continue with focused wallet/Solana/profile-package logging passes. Full verifier output is still not silent, but remaining Flutter logs are centralized or outside this small slice.
 
 ### [POLISH-04] Media/gallery image semantics are incomplete
 
-**Status:** Deferred  
-**Reason:** Requires shared image semantics plumbing plus gallery/lightbox screenshots across artwork media routes.  
-**Safest next action:** Isolate a media accessibility pass with a representative gallery route before broad adoption.  
-**Validation needed later:** Widget semantics tests and before/after screenshots for artwork detail gallery and lightbox flows.
+**Status:** Partially completed
+**Completion notes:** Added shared image semantic-label support and adopted it in `ArtworkGalleryView` plus mobile/desktop artwork detail callsites. Gallery thumbnails now expose index and selected state, main media frames expose semantic tap actions, mobile page indicators announce the selected index, and lightbox media exposes the current image context.
+**Validation run:** `flutter test test/widgets/common/kubus_cached_image_test.dart test/widgets/artwork_gallery_view_test.dart` passed; scoped touched-file `flutter analyze --no-fatal-infos` passed; `npm run verify:all` passed with the known nonfatal `lib/screens/map_screen.dart:5298` analyzer info.
+**Screenshots:** Not captured; no seeded gallery/lightbox route was available locally and the implementation is semantics-only for idle visual state.
+**Follow-up:** Capture before/after artwork gallery and lightbox screenshots when the local QA harness can seed a representative artwork detail route.
 
 ### [POLISH-05] Purple and hardcoded status/social colors bypass color roles
 
@@ -968,10 +988,12 @@ For each selected task:
 
 ### [CRIT-04B] Messaging and marker write assurance policy
 
-**Status:** Deferred  
-**Reason:** Messaging and map-marker writes need product-level assurance classification before enforcing wallet-signed-only access. Some account-linked sessions may be valid for chat or collaborative flows, while marker ownership writes likely need wallet proof. Applying one rule blindly would risk breaking legitimate non-wallet account flows.  
-**Safest next action:** Define a route matrix for `backend/src/routes/messages.js` and `backend/src/routes/artMarkers.js`, then add focused tests for account-linked and wallet-signed tokens before changing middleware.  
-**Validation needed later:** Route tests for conversation creation/message sending/attachment upload and marker create/update/delete/claim flows.
+**Status:** Partially completed
+**Completion notes:** Marker ownership-affecting writes now require wallet-signed authority for `POST /api/art-markers`, `PUT /api/art-markers/:id`, `DELETE /api/art-markers/:id`, `POST /api/art-markers/:id/claims`, and `PATCH /api/art-markers/:id/claims/:claimId`. Messaging routes remain deferred because account-linked chat/session behavior needs an explicit route matrix before enforcement.
+**Validation run:** `npx jest --runInBand artMarkersWriteAssurance.test.js` passed (6 tests); `npx jest --runInBand artMarkersWriteAssurance.test.js artMarkersCreateIdempotency.test.js artMarkersUpdatePersistence.test.js artMarkersClaimsAuth.test.js markerOwnership.test.js` passed (25 tests); `npm run lint` passed in `backend/`.
+**Reason remaining:** Some messaging flows may be legitimate for email/Google account-linked sessions, while attachment and conversation mutation routes may need stronger assurance depending on product policy. Applying one rule blindly would risk breaking valid non-wallet collaboration flows.
+**Safest next action:** Define a route matrix for `backend/src/routes/messages.js`, then add focused tests for account-linked and wallet-signed tokens before changing middleware.
+**Validation needed later:** Route tests for conversation creation, message sending, attachment upload, conversation membership changes, and conversation avatar upload under account-linked and wallet-signed sessions.
 
 ### [CRIT-05B] Event moderation public publication contract
 
@@ -982,10 +1004,11 @@ For each selected task:
 
 ### [CRIT-06B] Artwork multipart upload validation still uses MIME-or-extension checks
 
-**Status:** Deferred  
-**Reason:** `backend/src/routes/artworks.js` still accepts artwork image/model multipart uploads when either the extension or MIME type matches. Fixing this should reuse `backend/src/utils/uploadFileValidation.js`, but it affects artwork create/update flows and model upload compatibility, so it should be isolated with artwork-specific tests rather than bundled into generic upload/profile hardening.  
-**Safest next action:** Add artwork route tests for spoofed image/model uploads, safe artwork images, and accepted GLB/glTF/USDZ model signatures, then swap the route to the shared validator.  
-**Validation needed later:** Focused artwork upload route tests plus `npm run lint`.
+**Status:** Completed
+**Completion notes:** Added artwork upload route tests for spoofed image/model uploads, mismatched bytes, valid PNG covers, and valid GLB/glTF/USDZ model signatures. Reused `backend/src/utils/uploadFileValidation.js` from `backend/src/routes/artworks.js` for both Multer declaration filtering and pre-storage content validation.
+**Validation run:** `npx jest --runInBand artworksUploadValidation.test.js` passed; `npx jest --runInBand artworksUploadValidation.test.js uploadRouteDeprecation.test.js avatarProfileUploadRoutes.test.js uploadStaticCors.test.js storageServiceUploadPath.test.js messagesRoutesAuth.test.js` passed (84 tests); `npx jest --runInBand artworksUploadValidation.test.js artworksCreateGalleryMetaJson.test.js` passed; `npm run lint` passed in `backend/`.
+**Screenshots:** Not applicable.
+**Follow-up:** None.
 
 ### [HARNESS-01B] Broader architecture guards need debt cleanup first
 

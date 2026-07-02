@@ -160,7 +160,7 @@ enum ManagedWalletReconnectOutcome {
 
 void _walletLog(String message) {
   if (!kDebugMode) return;
-  debugPrint('WalletProvider: $message');
+  AppConfig.debugPrint('WalletProvider: $message');
 }
 
 class _PlannedSplTransferRecord {

@@ -110,4 +110,36 @@ void main() {
       expect(dims.height, isNull);
     },
   );
+
+  testWidgets('passes semantic labels to network images', (tester) async {
+    await tester.pumpWidget(
+      _wrap(
+        const KubusCachedImage(
+          imageUrl: url,
+          semanticLabel: 'Artwork cover image',
+        ),
+      ),
+    );
+
+    final image = tester.widget<Image>(find.byType(Image));
+    expect(image.semanticLabel, 'Artwork cover image');
+    expect(image.excludeFromSemantics, isFalse);
+  });
+
+  testWidgets('labels fallback images when no URL is available',
+      (tester) async {
+    final semantics = tester.ensureSemantics();
+
+    await tester.pumpWidget(
+      _wrap(
+        const KubusCachedImage(
+          imageUrl: null,
+          semanticLabel: 'Missing artwork image',
+        ),
+      ),
+    );
+
+    expect(find.bySemanticsLabel('Missing artwork image'), findsOneWidget);
+    semantics.dispose();
+  });
 }

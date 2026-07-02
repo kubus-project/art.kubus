@@ -25,9 +25,14 @@ class KubusCachedImage extends StatelessWidget {
     this.cacheVersion,
     this.icon = Icons.image_outlined,
     this.iconSize = 22,
+    this.semanticLabel,
+    this.excludeFromSemantics = false,
     this.placeholderBuilder,
     this.errorBuilder,
-  });
+  }) : assert(
+          semanticLabel == null || !excludeFromSemantics,
+          'semanticLabel cannot be provided when excludeFromSemantics is true.',
+        );
 
   final String? imageUrl;
   final BoxFit fit;
@@ -41,6 +46,8 @@ class KubusCachedImage extends StatelessWidget {
   final String? cacheVersion;
   final IconData icon;
   final double iconSize;
+  final String? semanticLabel;
+  final bool excludeFromSemantics;
   final WidgetBuilder? placeholderBuilder;
   final KubusImageErrorBuilder? errorBuilder;
 
@@ -92,13 +99,17 @@ class KubusCachedImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final resolvedSemanticLabel = _normalizedSemanticLabel;
     final resolved = resolveImageUrl(
       imageUrl,
       maxDisplayWidth: maxDisplayWidth,
     );
     final urlWithVersion = withStableVersion(resolved, cacheVersion);
     if (urlWithVersion == null || urlWithVersion.isEmpty) {
-      return _buildFallback(context);
+      return _withFallbackSemantics(
+        _buildFallback(context),
+        resolvedSemanticLabel,
+      );
     }
 
     // Providing BOTH cacheWidth and cacheHeight forces Flutter to decode the
@@ -132,16 +143,40 @@ class KubusCachedImage extends StatelessWidget {
       gaplessPlayback: true,
       cacheWidth: effectiveCacheWidth,
       cacheHeight: effectiveCacheHeight,
+      semanticLabel: resolvedSemanticLabel,
+      excludeFromSemantics: excludeFromSemantics,
       errorBuilder: (context, error, stackTrace) {
+        late final Widget fallback;
         if (errorBuilder != null) {
-          return errorBuilder!(context, error, stackTrace);
+          fallback = errorBuilder!(context, error, stackTrace);
+        } else {
+          fallback = _buildFallback(context, icon: Icons.broken_image_outlined);
         }
-        return _buildFallback(context, icon: Icons.broken_image_outlined);
+        return _withFallbackSemantics(fallback, resolvedSemanticLabel);
       },
       loadingBuilder: (context, child, progress) {
         if (progress == null) return child;
-        return placeholderBuilder?.call(context) ?? _buildFallback(context);
+        return _withFallbackSemantics(
+          placeholderBuilder?.call(context) ?? _buildFallback(context),
+          resolvedSemanticLabel,
+        );
       },
+    );
+  }
+
+  String? get _normalizedSemanticLabel {
+    final trimmed = semanticLabel?.trim();
+    if (trimmed == null || trimmed.isEmpty) return null;
+    return trimmed;
+  }
+
+  Widget _withFallbackSemantics(Widget child, String? resolvedLabel) {
+    if (excludeFromSemantics) return ExcludeSemantics(child: child);
+    if (resolvedLabel == null) return child;
+    return Semantics(
+      image: true,
+      label: resolvedLabel,
+      child: ExcludeSemantics(child: child),
     );
   }
 

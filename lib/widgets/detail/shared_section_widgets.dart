@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../utils/design_tokens.dart';
 import '../../utils/media_url_resolver.dart';
@@ -32,7 +33,8 @@ class SharedSectionHeader extends StatelessWidget {
 
     return Padding(
       padding: padding ??
-          const EdgeInsets.symmetric(vertical: KubusSpacing.sm + KubusSpacing.xxs),
+          const EdgeInsets.symmetric(
+              vertical: KubusSpacing.sm + KubusSpacing.xxs),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -144,7 +146,8 @@ class SharedShowcaseSection<T> extends StatelessWidget {
                 scrollDirection: Axis.horizontal,
                 itemCount: items.length,
                 separatorBuilder: (_, __) => SizedBox(width: spacing),
-                itemBuilder: (context, index) => itemBuilder(context, items[index]),
+                itemBuilder: (context, index) =>
+                    itemBuilder(context, items[index]),
               ),
             ),
         ],
@@ -153,13 +156,14 @@ class SharedShowcaseSection<T> extends StatelessWidget {
   }
 }
 
-class SharedShowcaseCard extends StatelessWidget {
+class SharedShowcaseCard extends StatefulWidget {
   final String? imageUrl;
   final String title;
   final String subtitle;
   final String? footer;
   final Widget? subtitleWidget;
   final VoidCallback? onTap;
+  final String? semanticLabel;
   final double width;
   final double imageHeight;
   final IconData placeholderIcon;
@@ -182,6 +186,7 @@ class SharedShowcaseCard extends StatelessWidget {
     this.footer,
     this.subtitleWidget,
     this.onTap,
+    this.semanticLabel,
     this.width = 200,
     this.imageHeight = 110,
     this.placeholderIcon = Icons.image_outlined,
@@ -198,137 +203,207 @@ class SharedShowcaseCard extends StatelessWidget {
   });
 
   @override
+  State<SharedShowcaseCard> createState() => _SharedShowcaseCardState();
+}
+
+class _SharedShowcaseCardState extends State<SharedShowcaseCard> {
+  bool _hovered = false;
+  bool _focused = false;
+
+  bool get _enabled => widget.onTap != null;
+
+  void _activate() {
+    widget.onTap?.call();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final normalizedImage = MediaUrlResolver.resolveDisplayUrl(imageUrl) ??
-        MediaUrlResolver.resolve(imageUrl) ??
-        imageUrl;
-    final radius = borderRadius;
+    final normalizedImage =
+        MediaUrlResolver.resolveDisplayUrl(widget.imageUrl) ??
+            MediaUrlResolver.resolve(widget.imageUrl) ??
+            widget.imageUrl;
+    final radius = widget.borderRadius;
+    final active = _enabled && (_hovered || _focused);
     final style = KubusGlassStyle.resolve(
       context,
       surfaceType: KubusGlassSurfaceType.card,
       tintBase: scheme.surface,
     );
 
-    return MouseRegion(
-      cursor: onTap != null ? SystemMouseCursors.click : SystemMouseCursors.basic,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: SizedBox(
-          width: width,
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: radius,
-              border: Border.all(
-                color: scheme.outline.withValues(alpha: 0.14),
-                width: 1.5,
+    final card = SizedBox(
+      width: widget.width,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        curve: Curves.easeOutCubic,
+        decoration: BoxDecoration(
+          borderRadius: radius,
+          border: Border.all(
+            color: active
+                ? scheme.primary.withValues(alpha: _focused ? 0.76 : 0.42)
+                : scheme.outline.withValues(alpha: 0.14),
+            width: _focused ? 2 : 1.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: scheme.shadow.withValues(
+                alpha: theme.brightness == Brightness.dark ? 0.10 : 0.08,
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: scheme.shadow.withValues(
-                    alpha: theme.brightness == Brightness.dark ? 0.10 : 0.08,
-                  ),
-                  blurRadius: 12,
-                  offset: const Offset(0, 6),
-                ),
-              ],
+              blurRadius: 12,
+              offset: const Offset(0, 6),
             ),
-            child: LiquidGlassCard(
-              padding: EdgeInsets.zero,
-              margin: EdgeInsets.zero,
-              borderRadius: radius,
-              blurSigma: style.blurSigma,
-              showBorder: false,
-              backgroundColor: style.tintColor,
-              fallbackMinOpacity: style.fallbackMinOpacity,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(
-                    height: imageHeight,
-                    width: double.infinity,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.vertical(
-                        top: borderRadius.topLeft,
-                      ),
-                      child: Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          if (normalizedImage != null && normalizedImage.isNotEmpty)
-                            Image.network(
-                              normalizedImage,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => _buildPlaceholder(context),
-                            )
-                          else
-                            _buildPlaceholder(context),
-                          if (badge != null)
-                            Positioned.fill(
-                              child: Align(
-                                alignment: badgeAlignment,
-                                child: Padding(
-                                  padding: const EdgeInsets.all(KubusSpacing.sm),
-                                  child: badge!,
-                                ),
-                              ),
+            if (active)
+              BoxShadow(
+                color: scheme.primary.withValues(alpha: 0.10),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
+              ),
+          ],
+        ),
+        child: LiquidGlassCard(
+          padding: EdgeInsets.zero,
+          margin: EdgeInsets.zero,
+          borderRadius: radius,
+          blurSigma: style.blurSigma,
+          showBorder: false,
+          backgroundColor: style.tintColor,
+          fallbackMinOpacity: style.fallbackMinOpacity,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                height: widget.imageHeight,
+                width: double.infinity,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.vertical(
+                    top: widget.borderRadius.topLeft,
+                  ),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      if (normalizedImage != null && normalizedImage.isNotEmpty)
+                        Image.network(
+                          normalizedImage,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) =>
+                              _buildPlaceholder(context),
+                        )
+                      else
+                        _buildPlaceholder(context),
+                      if (widget.badge != null)
+                        Positioned.fill(
+                          child: Align(
+                            alignment: widget.badgeAlignment,
+                            child: Padding(
+                              padding: const EdgeInsets.all(KubusSpacing.sm),
+                              child: widget.badge!,
                             ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  Padding(
-                    padding: contentPadding,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          title,
-                          maxLines: titleMaxLines,
-                          overflow: TextOverflow.ellipsis,
-                          style: titleStyle ??
-                              KubusTextStyles.sectionTitle.copyWith(
-                                color: scheme.onSurface,
-                              ),
+                          ),
                         ),
-                        const SizedBox(height: KubusSpacing.xxs),
-                        if (subtitleWidget != null)
-                          subtitleWidget!
-                        else
-                          Text(
-                            subtitle,
-                            maxLines: subtitleMaxLines,
-                            overflow: TextOverflow.ellipsis,
-                            style: subtitleStyle ??
-                                KubusTextStyles.navMetaLabel.copyWith(
-                                  color:
-                                      scheme.onSurface.withValues(alpha: 0.6),
-                                ),
-                          ),
-                        if (footer != null) ...[
-                          const SizedBox(height: KubusSpacing.sm),
-                          Text(
-                            footer!,
-                            maxLines: footerMaxLines,
-                            overflow: TextOverflow.ellipsis,
-                            style: footerStyle ??
-                                KubusTextStyles.detailCaption.copyWith(
-                                  color: scheme.onSurface.withValues(alpha: 0.72),
-                                ),
-                          ),
-                        ],
-                      ],
-                    ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
+              Padding(
+                padding: widget.contentPadding,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      widget.title,
+                      maxLines: widget.titleMaxLines,
+                      overflow: TextOverflow.ellipsis,
+                      style: widget.titleStyle ??
+                          KubusTextStyles.sectionTitle.copyWith(
+                            color: scheme.onSurface,
+                          ),
+                    ),
+                    const SizedBox(height: KubusSpacing.xxs),
+                    if (widget.subtitleWidget != null)
+                      widget.subtitleWidget!
+                    else
+                      Text(
+                        widget.subtitle,
+                        maxLines: widget.subtitleMaxLines,
+                        overflow: TextOverflow.ellipsis,
+                        style: widget.subtitleStyle ??
+                            KubusTextStyles.navMetaLabel.copyWith(
+                              color: scheme.onSurface.withValues(alpha: 0.6),
+                            ),
+                      ),
+                    if (widget.footer != null) ...[
+                      const SizedBox(height: KubusSpacing.sm),
+                      Text(
+                        widget.footer!,
+                        maxLines: widget.footerMaxLines,
+                        overflow: TextOverflow.ellipsis,
+                        style: widget.footerStyle ??
+                            KubusTextStyles.detailCaption.copyWith(
+                              color: scheme.onSurface.withValues(alpha: 0.72),
+                            ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),
     );
+
+    if (!_enabled) {
+      return card;
+    }
+
+    final interactiveCard = FocusableActionDetector(
+      mouseCursor: SystemMouseCursors.click,
+      shortcuts: const <ShortcutActivator, Intent>{
+        SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
+        SingleActivator(LogicalKeyboardKey.space): ActivateIntent(),
+      },
+      actions: <Type, Action<Intent>>{
+        ActivateIntent: CallbackAction<ActivateIntent>(
+          onInvoke: (_) {
+            _activate();
+            return null;
+          },
+        ),
+      },
+      onShowHoverHighlight: (hovered) {
+        if (_hovered == hovered) return;
+        setState(() => _hovered = hovered);
+      },
+      onShowFocusHighlight: (focused) {
+        if (_focused == focused) return;
+        setState(() => _focused = focused);
+      },
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: _activate,
+        child: card,
+      ),
+    );
+
+    return Semantics(
+      button: true,
+      label: widget.semanticLabel ?? _defaultSemanticLabel(),
+      onTap: _activate,
+      child: ExcludeSemantics(
+        child: interactiveCard,
+      ),
+    );
+  }
+
+  String _defaultSemanticLabel() {
+    final parts = <String>[
+      widget.title,
+      widget.subtitle,
+      if ((widget.footer ?? '').trim().isNotEmpty) widget.footer!.trim(),
+    ].where((part) => part.trim().isNotEmpty).toList(growable: false);
+    return parts.join(', ');
   }
 
   Widget _buildPlaceholder(BuildContext context) {
@@ -346,7 +421,7 @@ class SharedShowcaseCard extends StatelessWidget {
       ),
       child: Center(
         child: Icon(
-          placeholderIcon,
+          widget.placeholderIcon,
           size: 48,
           color: scheme.onSurface.withValues(alpha: 0.4),
         ),

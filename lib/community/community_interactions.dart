@@ -306,11 +306,20 @@ ProfileIdentityData communityRepostIdentityDataFromPayload(
   Map<String, dynamic>? user, {
   required String fallbackLabel,
 }) {
+  String? pickUserId() {
+    if (user == null) return null;
+    for (final key in const ['userId', 'user_id', 'id']) {
+      final value = user[key]?.toString().trim();
+      if (value != null && value.isNotEmpty) return value;
+    }
+    return null;
+  }
+
   return ProfileIdentityData.fromIdentityPayload(
     {
       'author': {
         if (user != null) ...user,
-        'userId': WalletUtils.resolveFromMap(user, fallback: ''),
+        'userId': pickUserId(),
       },
     },
     fallbackLabel: fallbackLabel,
@@ -335,9 +344,8 @@ class CommunityLikeUser {
   });
 
   ProfileIdentityData get profileIdentityData {
-    final normalizedUserId = userId.trim().toLowerCase() == 'unknown'
-        ? null
-        : userId.trim();
+    final normalizedUserId =
+        userId.trim().toLowerCase() == 'unknown' ? null : userId.trim();
     return ProfileIdentityData.fromValues(
       fallbackLabel: 'Unknown user',
       displayName: displayName,

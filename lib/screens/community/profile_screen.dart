@@ -1315,18 +1315,15 @@ class _ProfileScreenState extends State<ProfileScreen>
                 SharedShowcaseSection<Artwork>(
                   title: l10n.profileMenuSavedItemsTitle,
                   items: savedArtworks,
-                  itemBuilder: (context, artwork) => GestureDetector(
-                    behavior: HitTestBehavior.opaque,
+                  itemBuilder: (context, artwork) => SharedShowcaseCard(
+                    imageUrl: artwork.imageUrl,
+                    title: artwork.title,
+                    subtitle: artwork.artist,
+                    footer: l10n.userProfileLikesLabel(artwork.likesCount),
                     onTap: () => openArtwork(
                       context,
                       artwork.id,
                       source: 'profile_saved_artworks',
-                    ),
-                    child: SharedShowcaseCard(
-                      imageUrl: artwork.imageUrl,
-                      title: artwork.title,
-                      subtitle: artwork.artist,
-                      footer: l10n.userProfileLikesLabel(artwork.likesCount),
                     ),
                   ),
                   emptyTitle: l10n
@@ -1592,17 +1589,14 @@ class _ProfileScreenState extends State<ProfileScreen>
       fallbackSubtitle: l10n.profileArtworkMediumFallback,
     );
 
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
+    return _buildShowcaseCard(
+      imageUrl: card.imageUrl,
+      title: card.title,
+      subtitle: card.subtitle,
+      footer: l10n.userProfileLikesLabel(card.likesCount),
       onTap: card.id != null
           ? () => openArtwork(context, card.id!, source: 'profile_showcase')
           : null,
-      child: _buildShowcaseCard(
-        imageUrl: card.imageUrl,
-        title: card.title,
-        subtitle: card.subtitle,
-        footer: l10n.userProfileLikesLabel(card.likesCount),
-      ),
     );
   }
 
@@ -1613,8 +1607,11 @@ class _ProfileScreenState extends State<ProfileScreen>
       fallbackTitle: l10n.profileCollectionFallbackTitle,
     );
 
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
+    return _buildShowcaseCard(
+      imageUrl: card.imageUrl,
+      title: card.title,
+      subtitle: l10n.userProfileArtworksCountLabel(card.artworkCount),
+      footer: card.description ?? l10n.profileCollectionCuratedByYouFooter,
       onTap: (card.id != null && card.id!.isNotEmpty)
           ? () {
               Navigator.push(
@@ -1626,12 +1623,6 @@ class _ProfileScreenState extends State<ProfileScreen>
               );
             }
           : null,
-      child: _buildShowcaseCard(
-        imageUrl: card.imageUrl,
-        title: card.title,
-        subtitle: l10n.userProfileArtworksCountLabel(card.artworkCount),
-        footer: card.description ?? l10n.profileCollectionCuratedByYouFooter,
-      ),
     );
   }
 
@@ -1644,8 +1635,11 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
     final date = _formatDateLabel(card.startDate);
 
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
+    return _buildShowcaseCard(
+      imageUrl: card.imageUrl,
+      title: card.title,
+      subtitle: date,
+      footer: card.location ?? l10n.profileEventLocationTba,
       onTap: (card.id != null && card.id!.isNotEmpty)
           ? () {
               Navigator.push(
@@ -1656,12 +1650,6 @@ class _ProfileScreenState extends State<ProfileScreen>
               );
             }
           : null,
-      child: _buildShowcaseCard(
-        imageUrl: card.imageUrl,
-        title: card.title,
-        subtitle: date,
-        footer: card.location ?? l10n.profileEventLocationTba,
-      ),
     );
   }
 
@@ -1670,12 +1658,14 @@ class _ProfileScreenState extends State<ProfileScreen>
     required String title,
     required String subtitle,
     required String footer,
+    VoidCallback? onTap,
   }) {
     return SharedShowcaseCard(
       imageUrl: imageUrl,
       title: title,
       subtitle: subtitle,
       footer: footer,
+      onTap: onTap,
       width: 200,
       imageHeight: 110,
     );

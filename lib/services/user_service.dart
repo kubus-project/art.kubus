@@ -357,12 +357,6 @@ class UserService {
     try {
       // Fetch profile from backend using wallet address (force or cache miss)
       final profile = await BackendApiService().getProfileByWallet(userId);
-      // Log (briefly) the profile payload for diagnostics if it has unexpected shapes
-      if (kDebugMode) {
-        try {
-          debugPrint('UserService.getUserById: profile keys = ${profile.keys}');
-        } catch (_) {}
-      }
 
       final isArtist =
           (profile['isArtist'] == true) || (profile['is_artist'] == true);
@@ -531,12 +525,6 @@ class UserService {
               profile['cover'],
         ),
       );
-      if (kDebugMode) {
-        try {
-          debugPrint(
-              'UserService.getUserById: built user: id=${user.id}, username=${user.username}, avatar=${user.profileImageUrl}');
-        } catch (_) {}
-      }
       // populate cache & timestamp
       try {
         if (user.id.isNotEmpty) {

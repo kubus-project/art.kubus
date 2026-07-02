@@ -33,160 +33,187 @@ Future<void> showCommunityLikesSheet({
     backgroundColor: Colors.transparent,
     isScrollControlled: isScrollControlled,
     builder: (sheetContext) {
+      final mediaQuery = MediaQuery.of(sheetContext);
+      final heightFactor = isScrollControlled ? 0.6 : 9.0 / 16.0;
+      final sheetHeight = mediaQuery.size.height * heightFactor;
+      final contentHeight = (sheetHeight - mediaQuery.padding.bottom)
+          .clamp(0.0, sheetHeight)
+          .toDouble();
       return SizedBox(
-        height: MediaQuery.of(context).size.height * 0.6,
+        height: sheetHeight,
         child: BackdropGlassSheet(
+          showHandle: false,
           showBorder: false,
           padding: EdgeInsets.zero,
           backgroundColor: theme.colorScheme.surface,
-          child: Column(
-            children: [
-              KubusSheetHeader(
-                title: title,
-                trailing: KubusGlassIconButton(
-                  icon: Icons.close,
-                  tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
-                  onPressed: () => Navigator.of(sheetContext).pop(),
+          child: SizedBox(
+            height: contentHeight,
+            child: Column(
+              children: [
+                const SizedBox(height: KubusSpacing.sm),
+                ExcludeSemantics(
+                  child: Container(
+                    height: KubusSpacing.xs,
+                    width: KubusSpacing.xl,
+                    decoration: BoxDecoration(
+                      color:
+                          theme.colorScheme.onSurface.withValues(alpha: 0.18),
+                      borderRadius: BorderRadius.circular(KubusRadius.xl),
+                    ),
+                  ),
                 ),
-              ),
-              Expanded(
-                child: FutureBuilder<List<CommunityLikeUser>>(
-                  future: future,
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState != ConnectionState.done) {
-                      return const Center(
-                        child: SizedBox(
-                          width: KubusSpacing.xl,
-                          height: KubusSpacing.xl,
-                          child: InlineLoading(
-                            expand: true,
-                            shape: BoxShape.circle,
-                            tileSize: 4.0,
-                          ),
-                        ),
-                      );
-                    }
-
-                    if (snapshot.hasError) {
-                      if (!showDetailedError) {
-                        return Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(KubusSpacing.lg),
-                            child: Text(
-                              errorMessage,
-                              style: KubusTypography.textTheme.bodyMedium
-                                  ?.copyWith(
-                                color: theme.colorScheme.onSurface,
-                              ),
+                const SizedBox(height: KubusSpacing.md),
+                KubusSheetHeader(
+                  title: title,
+                  trailing: KubusGlassIconButton(
+                    icon: Icons.close,
+                    tooltip:
+                        MaterialLocalizations.of(context).closeButtonTooltip,
+                    onPressed: () => Navigator.of(sheetContext).pop(),
+                  ),
+                ),
+                Expanded(
+                  child: FutureBuilder<List<CommunityLikeUser>>(
+                    future: future,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState != ConnectionState.done) {
+                        return const Center(
+                          child: SizedBox(
+                            width: KubusSpacing.xl,
+                            height: KubusSpacing.xl,
+                            child: InlineLoading(
+                              expand: true,
+                              shape: BoxShape.circle,
+                              tileSize: 4.0,
                             ),
                           ),
                         );
                       }
 
-                      return Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(KubusSpacing.lg),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.error_outline,
-                                color: theme.colorScheme.error,
-                                size: 36,
-                              ),
-                              const SizedBox(height: KubusSpacing.sm),
-                              Text(
+                      if (snapshot.hasError) {
+                        if (!showDetailedError) {
+                          return Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(KubusSpacing.lg),
+                              child: Text(
                                 errorMessage,
                                 style: KubusTypography.textTheme.bodyMedium
                                     ?.copyWith(
                                   color: theme.colorScheme.onSurface,
                                 ),
                               ),
-                              const SizedBox(height: KubusSpacing.sm),
-                              Text(
-                                '${snapshot.error}',
-                                textAlign: TextAlign.center,
-                                style: KubusTextStyles.navMetaLabel.copyWith(
-                                  color: theme.colorScheme.onSurface
-                                      .withValues(alpha: 0.7),
+                            ),
+                          );
+                        }
+
+                        return Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(KubusSpacing.lg),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.error_outline,
+                                  color: theme.colorScheme.error,
+                                  size: 36,
                                 ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    }
-
-                    final likes = snapshot.data ?? <CommunityLikeUser>[];
-                    if (likes.isEmpty) {
-                      return Center(
-                        child: EmptyStateCard(
-                          icon: Icons.favorite_border,
-                          title: l10n.postDetailNoLikesTitle,
-                          description: l10n.postDetailNoLikesDescription,
-                        ),
-                      );
-                    }
-
-                    return ListView.separated(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: KubusSpacing.lg,
-                        vertical: KubusSpacing.sm,
-                      ),
-                      itemCount: likes.length,
-                      separatorBuilder: (_, __) => Divider(
-                        color: theme.colorScheme.outline.withValues(alpha: 0.3),
-                      ),
-                      itemBuilder: (context, index) {
-                        final user = likes[index];
-                        final identity = user.profileIdentityData;
-                        final subtitleParts = <String>[];
-                        if (user.username != null &&
-                            user.username!.isNotEmpty) {
-                          subtitleParts.add('@${user.username}');
-                        }
-                        if (user.likedAt != null) {
-                          subtitleParts.add(formatTimeAgo(user.likedAt!));
-                        }
-                        return ListTile(
-                          onTap: () {
-                            if (onOpenProfileIdentity != null) {
-                              onOpenProfileIdentity(identity);
-                            } else {
-                              openProfileIdentity(context, identity);
-                            }
-                          },
-                          contentPadding: EdgeInsets.zero,
-                          leading: AvatarWidget(
-                            wallet: identity.walletSeed,
-                            avatarUrl: identity.avatarUrl,
-                            radius: 20,
-                            enableProfileNavigation: false,
-                            allowFabricatedFallback: allowFabricatedFallback,
-                          ),
-                          title: Text(
-                            identity.label.isNotEmpty
-                                ? identity.label
-                                : unnamedUserLabel,
-                            style: KubusTypography.textTheme.bodyMedium
-                                ?.copyWith(fontWeight: FontWeight.w600),
-                          ),
-                          subtitle: subtitleParts.isNotEmpty
-                              ? Text(
-                                  subtitleParts.join(' • '),
+                                const SizedBox(height: KubusSpacing.sm),
+                                Text(
+                                  errorMessage,
+                                  style: KubusTypography.textTheme.bodyMedium
+                                      ?.copyWith(
+                                    color: theme.colorScheme.onSurface,
+                                  ),
+                                ),
+                                const SizedBox(height: KubusSpacing.sm),
+                                Text(
+                                  '${snapshot.error}',
+                                  textAlign: TextAlign.center,
                                   style: KubusTextStyles.navMetaLabel.copyWith(
                                     color: theme.colorScheme.onSurface
-                                        .withValues(alpha: 0.6),
+                                        .withValues(alpha: 0.7),
                                   ),
-                                )
-                              : null,
+                                ),
+                              ],
+                            ),
+                          ),
                         );
-                      },
-                    );
-                  },
+                      }
+
+                      final likes = snapshot.data ?? <CommunityLikeUser>[];
+                      if (likes.isEmpty) {
+                        return Center(
+                          child: EmptyStateCard(
+                            icon: Icons.favorite_border,
+                            title: l10n.postDetailNoLikesTitle,
+                            description: l10n.postDetailNoLikesDescription,
+                          ),
+                        );
+                      }
+
+                      return ListView.separated(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: KubusSpacing.lg,
+                          vertical: KubusSpacing.sm,
+                        ),
+                        itemCount: likes.length,
+                        separatorBuilder: (_, __) => Divider(
+                          color:
+                              theme.colorScheme.outline.withValues(alpha: 0.3),
+                        ),
+                        itemBuilder: (context, index) {
+                          final user = likes[index];
+                          final identity = user.profileIdentityData;
+                          final subtitleParts = <String>[];
+                          if (user.username != null &&
+                              user.username!.isNotEmpty) {
+                            subtitleParts.add('@${user.username}');
+                          }
+                          if (user.likedAt != null) {
+                            subtitleParts.add(formatTimeAgo(user.likedAt!));
+                          }
+                          return ListTile(
+                            onTap: () {
+                              if (onOpenProfileIdentity != null) {
+                                onOpenProfileIdentity(identity);
+                              } else {
+                                openProfileIdentity(context, identity);
+                              }
+                            },
+                            contentPadding: EdgeInsets.zero,
+                            leading: AvatarWidget(
+                              wallet: identity.walletSeed,
+                              avatarUrl: identity.avatarUrl,
+                              radius: 20,
+                              enableProfileNavigation: false,
+                              fetchMissingAvatar: false,
+                              allowFabricatedFallback: allowFabricatedFallback,
+                            ),
+                            title: Text(
+                              identity.label.isNotEmpty
+                                  ? identity.label
+                                  : unnamedUserLabel,
+                              style: KubusTypography.textTheme.bodyMedium
+                                  ?.copyWith(fontWeight: FontWeight.w600),
+                            ),
+                            subtitle: subtitleParts.isNotEmpty
+                                ? Text(
+                                    subtitleParts.join(' • '),
+                                    style:
+                                        KubusTextStyles.navMetaLabel.copyWith(
+                                      color: theme.colorScheme.onSurface
+                                          .withValues(alpha: 0.6),
+                                    ),
+                                  )
+                                : null,
+                          );
+                        },
+                      );
+                    },
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       );

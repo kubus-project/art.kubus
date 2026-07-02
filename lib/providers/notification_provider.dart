@@ -70,10 +70,9 @@ class NotificationProvider extends ChangeNotifier {
   bool get hasNew => _hasNew;
 
   NotificationProvider() {
-    debugPrint('NotificationProvider: Constructor called');
     // Defer heavy work until the widget tree is ready; initialization is invoked
-    // explicitly from ArtKubus after providers mount. This constructor only logs
-    // so unit tests/builds without Material bindings do not start async work.
+    // explicitly from ArtKubus after providers mount. This constructor must not
+    // start async work so unit tests/builds without Material bindings stay safe.
   }
 
   Future<void> initialize({String? walletOverride, bool force = false}) async {

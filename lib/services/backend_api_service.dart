@@ -4087,7 +4087,7 @@ class BackendApiService
       }
 
       if (kDebugMode) {
-        debugPrint(
+        AppConfig.debugPrint(
           'BackendApiService.updateArtMarkerRecord: status=${response.statusCode} bodyLength=${response.body.length}',
         );
       }
@@ -4126,7 +4126,7 @@ class BackendApiService
           }
         } catch (e) {
           if (kDebugMode) {
-            debugPrint(
+            AppConfig.debugPrint(
               'BackendApiService.updateArtMarkerRecord: response parse failed, falling back to GET: $e',
             );
           }
@@ -4138,7 +4138,7 @@ class BackendApiService
         allowOrbitFallback: false,
       );
       if (kDebugMode && refreshed == null) {
-        debugPrint(
+        AppConfig.debugPrint(
           'BackendApiService.updateArtMarkerRecord: successful PUT but GET fallback returned null for marker $markerId',
         );
       }
@@ -6098,7 +6098,8 @@ class BackendApiService
       // Treat as "feature unavailable" instead of a hard error.
       if (status == 404 || status == 501 || status == 503) {
         if (kDebugMode) {
-          debugPrint('BackendApiService: art feed unavailable (HTTP $status)');
+          AppConfig.debugPrint(
+              'BackendApiService: art feed unavailable (HTTP $status)');
         }
         return <CommunityPost>[];
       }
@@ -6149,7 +6150,7 @@ class BackendApiService
       // Treat as "feature unavailable" instead of surfacing as a hard error.
       if (status == 404 || status == 501 || status == 503) {
         if (kDebugMode) {
-          debugPrint(
+          AppConfig.debugPrint(
               'BackendApiService: community groups unavailable (HTTP $status)');
         }
         return <CommunityGroupSummary>[];
@@ -6624,7 +6625,7 @@ class BackendApiService
       }
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('BackendApiService.createComment failed: $e');
+        AppConfig.debugPrint('BackendApiService.createComment failed: $e');
       }
       rethrow;
     }
@@ -7186,9 +7187,6 @@ class BackendApiService
   /// GET /api/achievements/user/:walletAddress
   Future<Map<String, dynamic>> getUserAchievements(String walletAddress) async {
     try {
-      if (kDebugMode) {
-        debugPrint('BackendApiService: achievements fetch user');
-      }
       final response = await _get(
         Uri.parse('$baseUrl/api/achievements/user/$walletAddress'),
         headers: _getHeaders(),
@@ -7214,9 +7212,6 @@ class BackendApiService
   Future<Map<String, dynamic>> getPublicUserAchievements(
       String walletAddress) async {
     try {
-      if (kDebugMode) {
-        debugPrint('BackendApiService: achievements fetch public user');
-      }
       final response = await _get(
         Uri.parse('$baseUrl/api/achievements/users/$walletAddress'),
         headers: _getHeaders(),
@@ -7242,9 +7237,6 @@ class BackendApiService
 
   Future<Map<String, dynamic>> getMyAchievements() async {
     try {
-      if (kDebugMode) {
-        debugPrint('BackendApiService: achievements fetch me');
-      }
       final response = await _get(
         Uri.parse('$baseUrl/api/achievements/me'),
         headers: _getHeaders(),
@@ -8602,9 +8594,6 @@ class BackendApiService
   /// GET /api/achievements
   Future<List<Map<String, dynamic>>> getAchievements() async {
     try {
-      if (kDebugMode) {
-        debugPrint('BackendApiService: achievements fetch definitions');
-      }
       final response = await _get(
         Uri.parse('$baseUrl/api/achievements'),
         headers: _getHeaders(),

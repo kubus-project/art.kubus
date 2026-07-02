@@ -79,15 +79,15 @@ class CreatorDisplayFormat {
       final isAlphaNum = (codeUnit >= 97 && codeUnit <= 122) ||
           (codeUnit >= 48 && codeUnit <= 57);
       final c = String.fromCharCode(codeUnit);
-      if (isAlphaNum || c == '_' || c == '.') {
+      if (isAlphaNum || c == '_' || c == '.' || c == '-') {
         sb.write(c);
-      } else if (c == ' ' || c == '-') {
+      } else if (c == ' ') {
         sb.write('_');
       }
     }
     var normalized = sb.toString();
     normalized = normalized.replaceAll(RegExp(r'_+'), '_');
-    normalized = normalized.replaceAll(RegExp(r'^[_\.]+|[_\.]+$'), '');
+    normalized = normalized.replaceAll(RegExp(r'^[_\.-]+|[_\.-]+$'), '');
     if (normalized.length < 3) return null;
     if (normalized.length > 24) normalized = normalized.substring(0, 24);
     if (normalized.isEmpty) return null;
