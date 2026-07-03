@@ -8053,11 +8053,11 @@ abstract class AppLocalizations {
   /// **'All nearby'**
   String get mapFilterAllNearby;
 
-  /// No description provided for @mapFilterWithin1Km.
+  /// Quick-filter chip label for the nearby radius filter; radiusKm is the user-configured radius.
   ///
   /// In en, this message translates to:
-  /// **'Within 1 km'**
-  String get mapFilterWithin1Km;
+  /// **'Within {radiusKm} km'**
+  String mapFilterWithinRadiusKm(Object radiusKm);
 
   /// No description provided for @mapFilterDiscovered.
   ///

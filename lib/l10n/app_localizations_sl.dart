@@ -4092,7 +4092,9 @@ class AppLocalizationsSl extends AppLocalizations {
   String get mapFilterAllNearby => 'Vse v bližini';
 
   @override
-  String get mapFilterWithin1Km => 'Znotraj 1 km';
+  String mapFilterWithinRadiusKm(Object radiusKm) {
+    return 'Znotraj $radiusKm km';
+  }
 
   @override
   String get mapFilterDiscovered => 'Odkrito';

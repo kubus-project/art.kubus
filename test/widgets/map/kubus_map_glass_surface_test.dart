@@ -229,7 +229,7 @@ void main() {
     expect(decision.platformBackdropHostAvailable, isFalse);
   });
 
-  testWidgets('compact web automatic policy falls back safely over MapLibre',
+  testWidgets('compact web automatic policy uses the DOM host over MapLibre',
       (tester) async {
     late KubusMapBlurDecision decision;
 
@@ -253,16 +253,16 @@ void main() {
       ),
     );
 
-    expect(decision.enabled, isFalse);
+    expect(decision.enabled, isTrue);
     expect(
       decision.strategy,
-      KubusMapBackdropStrategy.platformViewSafeTintFallback,
+      KubusMapBackdropStrategy.platformViewBackdropHost,
     );
-    expect(decision.reason, 'compact-web-platform-view-safe-tint-fallback');
+    expect(decision.reason, 'platform-view-backdrop-host');
   });
 
   testWidgets(
-      'compact web over MapLibre keeps safe tint fallback when host is available',
+      'compact web over MapLibre uses the DOM host when it is available',
       (tester) async {
     late KubusMapBlurDecision decision;
 
@@ -286,12 +286,12 @@ void main() {
       ),
     );
 
-    expect(decision.enabled, isFalse);
+    expect(decision.enabled, isTrue);
     expect(
       decision.strategy,
-      KubusMapBackdropStrategy.platformViewSafeTintFallback,
+      KubusMapBackdropStrategy.platformViewBackdropHost,
     );
-    expect(decision.reason, 'compact-web-platform-view-safe-tint-fallback');
+    expect(decision.reason, 'platform-view-backdrop-host');
     expect(decision.platformBackdropHostAvailable, isTrue);
   });
 
@@ -329,16 +329,17 @@ void main() {
   });
 
   testWidgets(
-      'compact web map chrome avoids the DOM blur host (safe-tint, no blur over content)',
+      'compact web forced map chrome engages the DOM blur host',
       (tester) async {
     late KubusMapBlurDecision decision;
 
     await tester.pumpWidget(
       MaterialApp(
         home: MediaQuery(
-          // Narrow/compact web: the CSS-blur host DOM layers can composite in
-          // front of the Flutter overlay (search dropdown), so the host must be
-          // avoided even for forced map-chrome policies.
+          // Narrow/compact web is no longer excluded: the host div isolates its
+          // stacking (z-index 0 + isolation) so its blur layers can never
+          // composite above Flutter's overlay canvas (search dropdown stays
+          // sharp) — see kubus_map_platform_backdrop_dom_web.dart.
           data: const MediaQueryData(size: Size(390, 800)),
           child: Builder(
             builder: (context) {
@@ -356,12 +357,12 @@ void main() {
       ),
     );
 
-    expect(decision.enabled, isFalse);
+    expect(decision.enabled, isTrue);
     expect(
       decision.strategy,
-      KubusMapBackdropStrategy.platformViewSafeTintFallback,
+      KubusMapBackdropStrategy.platformViewBackdropHost,
     );
-    expect(decision.reason, 'compact-web-platform-view-safe-tint-fallback');
+    expect(decision.reason, 'platform-view-backdrop-host');
   });
 
   testWidgets('web unhealthy WebGL resolves to documented fallback',
@@ -604,6 +605,54 @@ void main() {
 
     expect(find.byType(BackdropFilter), findsNothing);
     expect(find.byType(KubusMapGlassMaterialSheen), findsOneWidget);
+  });
+
+  testWidgets(
+      'fallback (sheen) surface fills a tight-width parent like the blur path',
+      (tester) async {
+    // Regression: the sheen fallback used a loose Stack, so inside an Expanded
+    // action-button cell the glass surface + icon shrank to intrinsic width and
+    // left-aligned while the sheen rim spanned the whole cell.
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark(useMaterial3: true),
+        home: Scaffold(
+          body: Row(
+            children: [
+              Expanded(
+                child: Builder(
+                  builder: (context) => buildKubusMapGlassSurface(
+                    context: context,
+                    kind: KubusMapGlassSurfaceKind.button,
+                    overlayName: 'test-action-button',
+                    overMapPlatformView: true,
+                    isWebOverride: false,
+                    mobileNativeOverride: true,
+                    // Force the no-real-blur sheen fallback path.
+                    mobileBackdropSampleableOverride: false,
+                    nativeBlurHostAvailableOverride: false,
+                    child: SizedBox(
+                      height: 40,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: const [Icon(Icons.share_outlined, size: 14)],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byType(KubusMapGlassMaterialSheen), findsOneWidget);
+
+    final surfaceWidth = tester.getSize(find.byType(GlassSurface)).width;
+    final rowWidth = tester.getSize(find.byType(Scaffold)).width;
+    expect(surfaceWidth, rowWidth);
   });
 
   test('oversized map backdrop regions are rejected', () {

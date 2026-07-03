@@ -1655,7 +1655,13 @@
   "mapFilterAll": "All",
   "mapFilterNearby": "Nearby",
   "mapFilterAllNearby": "All nearby",
-  "mapFilterWithin1Km": "Within 1 km",
+  "mapFilterWithinRadiusKm": "Within {radiusKm} km",
+  "@mapFilterWithinRadiusKm": {
+    "description": "Quick-filter chip label for the nearby radius filter; radiusKm is the user-configured radius.",
+    "placeholders": {
+      "radiusKm": {}
+    }
+  },
   "mapFilterDiscovered": "Discovered",
   "mapFilterUndiscovered": "Undiscovered",
   "mapFilterArEnabled": "AR ready",

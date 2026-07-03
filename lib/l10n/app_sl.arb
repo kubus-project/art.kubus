@@ -1622,7 +1622,7 @@
   "mapFilterAll": "Vse",
   "mapFilterNearby": "V bližini",
   "mapFilterAllNearby": "Vse v bližini",
-  "mapFilterWithin1Km": "Znotraj 1 km",
+  "mapFilterWithinRadiusKm": "Znotraj {radiusKm} km",
   "mapFilterDiscovered": "Odkrito",
   "mapFilterUndiscovered": "Neodkrito",
   "mapFilterArEnabled": "AR pripravljeno",

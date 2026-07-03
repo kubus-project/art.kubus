@@ -3694,9 +3694,14 @@ class _MapScreenState extends State<MapScreen>
               policy: KubusMapBlurPolicy.forceRealBlur,
               overMapPlatformView: true,
             );
+            // Mount the region-sync host for BOTH platform-backed strategies:
+            // the web DOM/CSS host and the native iOS Liquid Glass host share
+            // the same region tracking + sync widget.
             final platformBackdropHostEnabled = backdropDecision.enabled &&
-                backdropDecision.strategy ==
-                    KubusMapBackdropStrategy.platformViewBackdropHost;
+                (backdropDecision.strategy ==
+                        KubusMapBackdropStrategy.platformViewBackdropHost ||
+                    backdropDecision.strategy ==
+                        KubusMapBackdropStrategy.nativeBackdropHost);
             return KubusMapBackdropScope(
               controller: _mapBackdropHostController,
               child: Stack(
@@ -3954,19 +3959,18 @@ class _MapScreenState extends State<MapScreen>
     }
 
     // Nearby list filtering may depend on camera center when precise user
-    // location is unavailable.
+    // location is unavailable. When the nearby quick filter is anchored to the
+    // camera (no GPS fix), re-apply it so the visible markers track the
+    // viewport instead of a stale center.
+    if (_artworkFilter == 'nearby' && _currentPosition == null) {
+      _applyVisibleMarkers();
+      _requestMarkerVisualSync();
+    }
     _safeSetState(() {});
   }
 
-  int _clusterGridLevelForZoom(double zoom) {
-    // Optimized grid levels for smoother cluster transitions during incremental zoom.
-    // Fewer jumpy re-organizations = better perceived responsiveness.
-    if (zoom < 5) return 2;
-    if (zoom < 7) return 3;
-    if (zoom < 9) return 4;
-    if (zoom < 11) return 5;
-    return 6;
-  }
+  int _clusterGridLevelForZoom(double zoom) =>
+      MapScreenConstants.clusterGridLevelForZoom(zoom);
 
   void _queueMarkerVisualRefreshForZoom(double zoom) {
     final shouldCluster = zoom < _clusterMaxZoom;
@@ -3977,6 +3981,9 @@ class _MapScreenState extends State<MapScreen>
     }
     _lastClusterEnabled = shouldCluster;
     _lastClusterGridLevel = gridLevel;
+    // The grouping changed: ease the new marker/cluster arrangement in with a
+    // soft scale/opacity pop instead of snapping between layouts.
+    _kubusMapController.animateMarkerRegroup();
     _requestMarkerVisualSync();
   }
 
@@ -4116,6 +4123,7 @@ class _MapScreenState extends State<MapScreen>
           scheme: scheme,
           roles: roles,
           isDark: isDark,
+          renderById: renderById,
         ),
       );
       if (!mounted) return;
@@ -4261,10 +4269,12 @@ class _MapScreenState extends State<MapScreen>
     required ColorScheme scheme,
     required KubusColorRoles roles,
     required bool isDark,
+    Map<String, KubusRenderedMarker>? renderById,
   }) async {
     final controller = _mapController;
     if (controller == null) return const <String, dynamic>{};
 
+    final entry = kubusClusterEntryValues(cluster, renderById);
     return kubusClusterFeatureFor(
       controller: controller,
       registeredMapImages: _registeredMapImages,
@@ -4275,6 +4285,8 @@ class _MapScreenState extends State<MapScreen>
       pixelRatio: _markerPixelRatio(),
       shouldAbort: () => !mounted,
       resolveMarkerIcon: KubusMapMarkerHelpers.resolveArtMarkerIcon,
+      entryScale: entry.scale,
+      entryOpacity: entry.opacity,
     );
   }
 
@@ -5277,11 +5289,14 @@ class _MapScreenState extends State<MapScreen>
           : null,
     );
 
-    // Add to the markers list so it can be selected
+    // Add to the markers list so it can be selected. Route through the shared
+    // filter pipeline (not raw setMarkers) so the active quick filter / search
+    // keeps applying; the temp marker itself is pinned by _computeVisibleMarkers
+    // so a restrictive filter cannot hide it before selection completes.
     setState(() {
       _artMarkers = List<ArtMarker>.from(_artMarkers)..add(tempMarker);
     });
-    _kubusMapController.setMarkers(_artMarkers);
+    _applyVisibleMarkers();
 
     return tempMarker;
   }
@@ -5373,7 +5388,10 @@ class _MapScreenState extends State<MapScreen>
   Widget _buildFilterPanelCard(ThemeData theme) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = theme.colorScheme;
-    final filters = KubusMapFilterCatalog.buildOptions(context);
+    final filters = KubusMapFilterCatalog.buildOptions(
+      context,
+      nearbyRadiusKm: _effectiveMarkerRadiusKm,
+    );
 
     // The mobile filter panel lives in the top-overlay column, which sits in a
     // `Positioned` with only top/left/right — i.e. it has no bounded height. Cap
@@ -5647,6 +5665,13 @@ class _MapScreenState extends State<MapScreen>
     }
 
     final selectedId = _kubusMapController.selectedMarkerId;
+    // Pin the selection and any temporary search-navigation markers so an
+    // active quick filter can never hide the marker the user just asked for.
+    final pinnedIds = <String>{
+      if (selectedId != null) selectedId,
+      for (final marker in _artMarkers)
+        if (marker.id.startsWith('search_temp_')) marker.id,
+    };
     return filterVisibleMapMarkers(
       markers: _artMarkers,
       state: MapMarkerFilterState(
@@ -5664,7 +5689,7 @@ class _MapScreenState extends State<MapScreen>
       isArCapable: (marker) =>
           defaultMarkerIsArCapable(marker) ||
           (artworkFor(marker)?.arEnabled ?? false),
-      alwaysIncludeMarkerIds: selectedId == null ? null : <String>{selectedId},
+      alwaysIncludeMarkerIds: pinnedIds.isEmpty ? null : pinnedIds,
     );
   }
 
@@ -5679,8 +5704,11 @@ class _MapScreenState extends State<MapScreen>
       query: _mapSearchController.state.query,
       filterKey: _artworkFilter,
       basePosition: basePosition,
-      radiusKm: _markerRadiusKm,
-      strictNearbyWithoutBase: true,
+      radiusKm: _effectiveMarkerRadiusKm,
+      // Match the map-marker filter (strict = false): without a base position
+      // the nearby list keeps showing loaded artworks instead of going empty
+      // while the map still renders their markers.
+      strictNearbyWithoutBase: false,
     );
   }
 

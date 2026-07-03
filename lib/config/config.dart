@@ -124,13 +124,14 @@ class AppConfig {
   /// MapLibre `UiKitView` beneath registered map-glass regions.
   ///
   /// **Off by default** until the native `UIVisualEffectView`-backed host is
-  /// wired and verified on a device (see [KubusMapNativeBackdropHost]). Android
-  /// does not use this — it blurs via Flutter [BackdropFilter] over the
-  /// Virtual-Display map texture. When this is off, iOS overlays that request
-  /// real blur use the enriched tint fallback and log a loud diagnostic.
+  /// gated by a runtime handshake with the platform side (see
+  /// [KubusMapNativeBackdropHost]): a build without the native handler falls
+  /// back to the enriched tint sheen. Android does not use this — it blurs via
+  /// Flutter [BackdropFilter] over the Virtual-Display map texture. iOS hosts
+  /// Liquid Glass (`UIGlassEffect`) on iOS 26+, `UIVisualEffectView` below.
   static const bool enableMapNativeBlurHost = bool.fromEnvironment(
     'MAP_NATIVE_BLUR_HOST',
-    defaultValue: false,
+    defaultValue: true,
   );
 
   /// MapLibre map style assets (theme-specific).

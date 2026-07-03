@@ -171,9 +171,12 @@ class KubusSearchOverlayScaffold extends StatelessWidget {
           const SizedBox(width: KubusSpacing.md + KubusSpacing.xs),
           Flexible(
             flex: 6,
+            // Clip at the strip bounds: with Clip.none the overflowing chips
+            // painted past the panel edge and under the trailing filter toggle,
+            // reading as broken chip borders on narrower desktops.
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
-              clipBehavior: Clip.none,
+              clipBehavior: Clip.hardEdge,
               child: filterChips!,
             ),
           ),

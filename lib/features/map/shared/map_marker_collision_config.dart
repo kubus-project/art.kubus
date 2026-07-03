@@ -44,6 +44,18 @@ abstract final class MapMarkerCollisionConfig {
   /// Additional stagger per marker for sequential pop-in.
   static const int entryStaggerMs = 36;
 
+  /// Soft re-entry (cluster regroup) starting scale. Higher floor than a full
+  /// entry so an already-visible arrangement shimmers into its new grouping
+  /// instead of blinking out.
+  static const double entryRegroupStartScale = 0.88;
+
+  /// Soft re-entry (cluster regroup) starting opacity.
+  static const double entryRegroupStartOpacity = 0.55;
+
+  /// Soft re-entry (cluster regroup) duration in milliseconds — shorter than a
+  /// full entry so rapid zooming across grid levels stays calm.
+  static const int entryRegroupDurationMs = 170;
+
   /// Debounce for viewport visibility checks while moving/zooming.
   static const int viewportVisibilityDebounceMs = 120;
 
