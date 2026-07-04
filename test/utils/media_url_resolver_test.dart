@@ -118,6 +118,81 @@ void main() {
       expect(resolved!, contains('width=1600'));
     });
 
+    group('rewriteWikimediaThumb', () {
+      test('rewrites commons original to width-limited thumb', () {
+        expect(
+          MediaUrlResolver.rewriteWikimediaThumb(
+            'https://upload.wikimedia.org/wikipedia/commons/4/4e/Venus_moderna.jpg',
+          ),
+          equals(
+            'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Venus_moderna.jpg/960px-Venus_moderna.jpg',
+          ),
+        );
+      });
+
+      test('snaps maxWidth up to an allowed bucket and drops cache-buster',
+          () {
+        // Wikimedia only serves fixed thumb widths; 640 snaps up to 960.
+        expect(
+          MediaUrlResolver.rewriteWikimediaThumb(
+            'https://upload.wikimedia.org/wikipedia/commons/7/75/Gato%2C_Botero.JPG?v=1783084734319',
+            maxWidth: 640,
+          ),
+          equals(
+            'https://upload.wikimedia.org/wikipedia/commons/thumb/7/75/Gato%2C_Botero.JPG/960px-Gato%2C_Botero.JPG',
+          ),
+        );
+      });
+
+      test('small maxWidth snaps to a small bucket; huge widths cap at 1920',
+          () {
+        expect(
+          MediaUrlResolver.rewriteWikimediaThumb(
+            'https://upload.wikimedia.org/wikipedia/commons/a/ab/Example.jpg',
+            maxWidth: 200,
+          ),
+          contains('/250px-Example.jpg'),
+        );
+        expect(
+          MediaUrlResolver.rewriteWikimediaThumb(
+            'https://upload.wikimedia.org/wikipedia/commons/a/ab/Example.jpg',
+            maxWidth: 4096,
+          ),
+          contains('/1920px-Example.jpg'),
+        );
+      });
+
+      test('leaves already-thumbnailed URLs untouched', () {
+        const thumb =
+            'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Venus_moderna.jpg/640px-Venus_moderna.jpg';
+        expect(MediaUrlResolver.rewriteWikimediaThumb(thumb), equals(thumb));
+      });
+
+      test('leaves non-thumbnailable formats untouched', () {
+        const svg =
+            'https://upload.wikimedia.org/wikipedia/commons/1/17/Example.svg';
+        expect(MediaUrlResolver.rewriteWikimediaThumb(svg), equals(svg));
+      });
+
+      test('leaves non-Wikimedia hosts untouched', () {
+        const other = 'https://cdn.example.com/a/ab/photo.jpg';
+        expect(MediaUrlResolver.rewriteWikimediaThumb(other), equals(other));
+      });
+
+      test('resolveDisplayUrl applies the wikimedia thumb rewrite', () {
+        final resolved = MediaUrlResolver.resolveDisplayUrl(
+          'https://upload.wikimedia.org/wikipedia/commons/4/4e/Venus_moderna.jpg',
+          maxWidth: 800,
+        );
+        expect(
+          resolved,
+          equals(
+            'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Venus_moderna.jpg/960px-Venus_moderna.jpg',
+          ),
+        );
+      });
+    });
+
     test(
         'resolveDisplayUrl preserves bounded width query for hostile redirectors',
         () {

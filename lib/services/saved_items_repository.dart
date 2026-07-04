@@ -40,6 +40,17 @@ class SavedItemsRepository {
     await prefs.remove(_outboxKey);
   }
 
+  /// Whether a backend account session exists.
+  ///
+  /// Saved items are account-scoped; without a session the per-type page
+  /// requests in [loadBackendItems] can only 401, so callers skip syncing.
+  Future<bool> hasBackendSession() async {
+    try {
+      await _api.ensureAuthLoaded();
+    } catch (_) {}
+    return _api.hasAuthSession;
+  }
+
   Future<SavedItemsPage> loadBackendItems({
     SavedItemType? type,
     int limit = 50,

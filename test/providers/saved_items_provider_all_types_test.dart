@@ -37,6 +37,9 @@ class _FakeSavedItemsRepository extends SavedItemsRepository {
   }
 
   @override
+  Future<bool> hasBackendSession() async => true;
+
+  @override
   Future<List<SavedItemRecord>> loadCachedItems() async =>
       List<SavedItemRecord>.from(_cachedItems);
 

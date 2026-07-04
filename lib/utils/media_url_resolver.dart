@@ -53,6 +53,30 @@ class MediaUrlResolver {
 
   static const int _defaultMaxDisplayWidth = 1600;
 
+  // Wikimedia originals are frequently multi-megabyte scans; always request a
+  // server-side thumbnail for display so 4G clients don't download 5MB+ per
+  // card. Formats that Wikimedia can thumbnail with the same file extension.
+  static const Set<String> _wikimediaThumbnailableExtensions = {
+    'jpg',
+    'jpeg',
+    'png',
+    'gif',
+    'webp',
+  };
+  // Wikimedia's thumbor only serves a fixed set of thumbnail widths and
+  // returns 400 for anything else (see https://w.wiki/GHai). Requested widths
+  // are snapped up to the nearest allowed bucket.
+  static const List<int> _wikimediaThumbWidthBuckets = [
+    120,
+    250,
+    330,
+    500,
+    960,
+    1280,
+    1920,
+  ];
+  static const int _defaultWikimediaThumbWidth = 960;
+
   static const Set<String> _indirectImageNoiseParams = {
     'v',
     'cb',
@@ -166,6 +190,49 @@ class MediaUrlResolver {
     }
   }
 
+  /// Rewrites a Wikimedia Commons original-file URL to a server-side
+  /// thumbnail URL, e.g.
+  /// `upload.wikimedia.org/wikipedia/commons/a/ab/File.jpg`
+  /// → `upload.wikimedia.org/wikipedia/commons/thumb/a/ab/File.jpg/1024px-File.jpg`.
+  ///
+  /// Returns the input unchanged for non-Wikimedia hosts, already-thumbnailed
+  /// URLs, and formats that don't thumbnail cleanly (SVG/TIFF/PDF).
+  @foundation.visibleForTesting
+  static String rewriteWikimediaThumb(String url, {int? maxWidth}) {
+    final uri = Uri.tryParse(url);
+    if (uri == null) return url;
+    if (!_hostMatches(uri.host.toLowerCase(), 'upload.wikimedia.org')) {
+      return url;
+    }
+
+    // Work on the raw (still percent-encoded) URL string so the filename
+    // keeps its original encoding in the rebuilt thumb URL. Uri.path would
+    // decode `%2C` etc.
+    final withoutQuery = url.split('?').first.split('#').first;
+    final pathStart = withoutQuery.indexOf('/wikipedia/');
+    if (pathStart == -1) return url;
+    final parts = withoutQuery.substring(pathStart).split('/');
+    // Expected: ['', 'wikipedia', '<project>', '<h1>', '<h2>', '<File.ext>'].
+    // Thumb URLs have more segments and are left untouched.
+    if (parts.length != 6) return url;
+
+    final fileName = parts.last;
+    final dot = fileName.lastIndexOf('.');
+    if (dot <= 0 || dot == fileName.length - 1) return url;
+    final ext = fileName.substring(dot + 1).toLowerCase();
+    if (!_wikimediaThumbnailableExtensions.contains(ext)) return url;
+
+    final requestedWidth = maxWidth ?? _defaultWikimediaThumbWidth;
+    final width = _wikimediaThumbWidthBuckets.firstWhere(
+      (bucket) => bucket >= requestedWidth,
+      orElse: () => _wikimediaThumbWidthBuckets.last,
+    );
+    final thumbPath = '/wikipedia/${parts[2]}/thumb/${parts[3]}/${parts[4]}'
+        '/$fileName/${width}px-$fileName';
+    // Cache-buster queries are dropped; thumbs are immutable per name+width.
+    return '${withoutQuery.substring(0, pathStart)}$thumbPath';
+  }
+
   static bool _looksLikeImageUrl(String url) {
     try {
       final uri = Uri.parse(url);
@@ -274,6 +341,7 @@ class MediaUrlResolver {
     var normalized = _canonicalizeHttpUrl(resolved);
     if (forDisplay && _isHttpUrl(normalized)) {
       normalized = _clampDisplayWidthQuery(normalized, maxWidth: maxWidth);
+      normalized = rewriteWikimediaThumb(normalized, maxWidth: maxWidth);
     }
 
     // Flutter Web (CanvasKit) loads images via fetch/wasm decode and therefore

@@ -42,6 +42,7 @@ class _FakeArtworkBackendApi implements ArtworkBackendApi {
     int limit = 20,
     String? walletAddress,
     bool includePrivateForWallet = false,
+    List<String>? ids,
   }) {
     throw UnimplementedError();
   }
@@ -162,6 +163,9 @@ class _FakeCollabApi implements CollabApi {
 }
 
 class _NoopSavedItemsRepository extends SavedItemsRepository {
+  @override
+  Future<bool> hasBackendSession() async => false;
+
   @override
   Future<Map<String, bool>> getSavedBatchStatus(
     Iterable<SavedItemRecord> items,

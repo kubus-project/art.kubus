@@ -129,3 +129,6 @@ ecosystem.config.js
 /dev.docs/
 artkubus-04ac0a64327c.json
 COMPLETE_AUDIT.md
+
+# Playwright MCP session artifacts
+/.playwright-mcp/

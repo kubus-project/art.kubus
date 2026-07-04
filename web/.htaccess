@@ -20,10 +20,46 @@
   <FilesMatch "\.(ttf|otf|woff2?|png|jpe?g|webp|svg|gif|ico|wasm)$">
     Header set Cache-Control "public, max-age=86400"
   </FilesMatch>
+
+  # Pre-compressed wasm (see rewrite rules below): keep the wasm content type
+  # and declare the applied encoding so browsers decompress transparently.
+  <FilesMatch "\.wasm\.br$">
+    ForceType application/wasm
+    Header set Content-Encoding br
+    Header append Vary Accept-Encoding
+    Header set Cache-Control "public, max-age=86400"
+  </FilesMatch>
+  <FilesMatch "\.wasm\.gz$">
+    ForceType application/wasm
+    Header set Content-Encoding gzip
+    Header append Vary Accept-Encoding
+    Header set Cache-Control "public, max-age=86400"
+  </FilesMatch>
+</IfModule>
+
+<IfModule mod_mime.c>
+  AddType application/wasm .wasm
+  # .br/.gz are content-encoding suffixes here, not language/type hints.
+  RemoveLanguage .br
+  RemoveType .br .gz
 </IfModule>
 
 <IfModule mod_rewrite.c>
   RewriteEngine On
+
+  # canvaskit.wasm is ~5.7MB and LiteSpeed does not compress application/wasm
+  # dynamically. CI ships pre-compressed .wasm.br/.wasm.gz next to each .wasm;
+  # serve those when the client advertises support (~1.3MB over the wire).
+  RewriteCond %{HTTP:Accept-Encoding} br
+  RewriteCond %{REQUEST_FILENAME} \.wasm$
+  RewriteCond %{REQUEST_FILENAME}.br -f
+  RewriteRule ^(.*)$ $1.br [QSA,L]
+
+  RewriteCond %{HTTP:Accept-Encoding} gzip
+  RewriteCond %{REQUEST_FILENAME} \.wasm$
+  RewriteCond %{REQUEST_FILENAME}.gz -f
+  RewriteRule ^(.*)$ $1.gz [QSA,L]
+
   # Avoid SPA rewrites serving index.html for missing source maps (noise in DevTools).
   RewriteCond %{REQUEST_URI} \.map$ [NC]
   RewriteCond %{REQUEST_FILENAME} !-f

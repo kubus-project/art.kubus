@@ -27,6 +27,9 @@ class ArtworkProvider extends ChangeNotifier {
   final ArtworkBackendApi _backendApi;
   final Map<String, Future<Artwork>> _inFlightArtworkFetches =
       <String, Future<Artwork>>{};
+  Future<void>? _inFlightLoadArtworks;
+  DateTime? _lastArtworksLoadAt;
+  static const Duration _artworksFreshWindow = Duration(seconds: 60);
   static const String _viewHistoryPrefsKey = 'artwork_view_history_v1';
   final List<ViewHistoryEntry> _viewHistory = <ViewHistoryEntry>[];
   bool _historyLoaded = false;
@@ -76,6 +79,43 @@ class ArtworkProvider extends ChangeNotifier {
     } finally {
       _inFlightArtworkFetches.remove(key);
     }
+  }
+
+  /// Fetch several artworks in one request and merge them into the cache.
+  ///
+  /// Returns the ids that are still missing afterwards (not returned by the
+  /// backend — e.g. deleted, private, or an older backend without `ids`
+  /// support). Callers may fall back to per-id fetches for those.
+  Future<Set<String>> fetchArtworksByIds(Iterable<String> artworkIds) async {
+    final wanted = artworkIds
+        .map((id) => id.trim())
+        .where((id) => id.isNotEmpty && getArtworkById(id) == null)
+        .toSet();
+    if (wanted.isEmpty) return const <String>{};
+
+    try {
+      final fetched =
+          await _backendApi.getArtworks(ids: wanted.toList(growable: false));
+      var updated = false;
+      for (final artwork in fetched) {
+        if (!wanted.contains(artwork.id)) continue;
+        final merged = _mergeSavedBookmarkState(artwork);
+        final index = _artworks.indexWhere((a) => a.id == merged.id);
+        if (index >= 0) {
+          _artworks[index] = merged;
+        } else {
+          _artworks.add(merged);
+        }
+        _artworkById[merged.id] = merged;
+        updated = true;
+      }
+      if (updated) notifyListeners();
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('ArtworkProvider: fetchArtworksByIds failed: $e');
+      }
+    }
+    return wanted.where((id) => getArtworkById(id) == null).toSet();
   }
 
   /// Force-refresh a single artwork from the backend and update local cache.
@@ -725,6 +765,30 @@ class ArtworkProvider extends ChangeNotifier {
 
   /// Load initial artworks
   Future<void> loadArtworks({bool refresh = false}) async {
+    // Home + map both request this on startup; share one in-flight load so we
+    // don't issue duplicate `/api/artworks` page-1 fetches.
+    final inflight = _inFlightLoadArtworks;
+    if (inflight != null) {
+      return inflight;
+    }
+    // Non-refresh callers arriving moments after a successful load reuse it.
+    final lastLoadAt = _lastArtworksLoadAt;
+    if (!refresh &&
+        _artworks.isNotEmpty &&
+        lastLoadAt != null &&
+        DateTime.now().difference(lastLoadAt) < _artworksFreshWindow) {
+      return;
+    }
+    final future = _loadArtworksInternal(refresh: refresh);
+    _inFlightLoadArtworks = future;
+    try {
+      await future;
+    } finally {
+      _inFlightLoadArtworks = null;
+    }
+  }
+
+  Future<void> _loadArtworksInternal({bool refresh = false}) async {
     _setLoading('load_artworks', true);
 
     try {
@@ -741,6 +805,7 @@ class ArtworkProvider extends ChangeNotifier {
         ..clear()
         ..addEntries(merged.map((a) => MapEntry(a.id, a)));
       _comments.clear();
+      _lastArtworksLoadAt = DateTime.now();
 
       notifyListeners();
     } catch (e) {
