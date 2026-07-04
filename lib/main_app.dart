@@ -224,7 +224,15 @@ class _MainAppState extends State<MainApp> {
             key: ValueKey<String>('tab-$tabIndex-placeholder'));
       }
 
-      return screens[tabIndex];
+      // IndexedStack keeps inactive tabs alive but does NOT mute their
+      // tickers: every ambient animation (gradient backgrounds, pulses)
+      // on a hidden tab kept running at frame rate, burning CPU/battery
+      // with zero visible output. TickerMode silences them while hidden;
+      // state is preserved and animations resume when the tab is shown.
+      return TickerMode(
+        enabled: tabIndex == currentIndex,
+        child: screens[tabIndex],
+      );
     });
   }
 

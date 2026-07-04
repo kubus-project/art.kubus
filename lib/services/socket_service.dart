@@ -149,6 +149,12 @@ class SocketService {
         // block WS, which otherwise surfaces as "No transports available").
         'transports': ['websocket', 'polling'],
         'autoConnect': false,
+        // Default socket.io backoff caps at 5s forever; when the server is
+        // unreachable that means a radio wakeup every few seconds for the
+        // whole session. Let retries back off up to 30s instead — reconnects
+        // after transient drops still happen quickly (first retries stay ~1s).
+        'reconnectionDelay': 1000,
+        'reconnectionDelayMax': 30000,
         'auth': token.isNotEmpty ? {'token': token} : {},
         'extraHeaders': token.isNotEmpty ? {'Authorization': 'Bearer $token'} : {},
       };

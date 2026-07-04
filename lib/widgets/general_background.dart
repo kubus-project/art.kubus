@@ -36,17 +36,20 @@ class GeneralBackground extends StatefulWidget {
 }
 
 class _GeneralBackgroundState extends State<GeneralBackground>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   late AnimationController _motionController;
   late Animation<double> _motion;
 
   late AnimationController _paletteController;
   List<Color> _paletteFrom = const <Color>[];
   List<Color> _paletteTo = const <Color>[];
+  bool _appVisible = true;
+  bool _reduceMotion = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _motionController = AnimationController(
       duration: widget.duration,
       vsync: this,
@@ -62,15 +65,37 @@ class _GeneralBackgroundState extends State<GeneralBackground>
       vsync: this,
     )..value = 1.0;
 
-    if (widget.animate) {
-      _motionController.repeat(reverse: true);
-    }
+    _syncMotionAnimation();
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    // Honor the platform reduce-motion/accessibility setting: the gradient
+    // renders at its resting position instead of drifting.
+    _reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    _syncMotionAnimation();
     _syncPaletteIfNeeded();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Backgrounded/hidden apps must not keep an animation ticker alive; this
+    // is a pure battery cost with no visible output (notably on web, where
+    // hidden tabs may still receive throttled frames).
+    _appVisible = state == AppLifecycleState.resumed;
+    _syncMotionAnimation();
+  }
+
+  void _syncMotionAnimation() {
+    final shouldAnimate = widget.animate && _appVisible && !_reduceMotion;
+    if (shouldAnimate) {
+      if (!_motionController.isAnimating) {
+        _motionController.repeat(reverse: true);
+      }
+    } else if (_motionController.isAnimating) {
+      _motionController.stop();
+    }
   }
 
   @override
@@ -84,11 +109,7 @@ class _GeneralBackgroundState extends State<GeneralBackground>
       _paletteController.duration = widget.paletteTransitionDuration;
     }
     if (widget.animate != oldWidget.animate) {
-      if (widget.animate) {
-        _motionController.repeat(reverse: true);
-      } else {
-        _motionController.stop();
-      }
+      _syncMotionAnimation();
     }
     if (!_listEquals(widget.colors, oldWidget.colors)) {
       _syncPaletteIfNeeded(force: true);
@@ -97,6 +118,7 @@ class _GeneralBackgroundState extends State<GeneralBackground>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _motionController.dispose();
     _paletteController.dispose();
     super.dispose();
@@ -104,62 +126,86 @@ class _GeneralBackgroundState extends State<GeneralBackground>
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: Listenable.merge(<Listenable>[_motion, _paletteController]),
-      builder: (context, child) {
-        final theme = Theme.of(context);
-        final motionT = _motion.value;
-        final progress = motionT * widget.intensity;
-        final isDark = theme.brightness == Brightness.dark;
+    // Battery/perf structure (visuals unchanged):
+    // - The blurred map image is built once per build, not once per animation
+    //   tick (it used to re-run a full-screen ImageFiltered blur every frame).
+    // - The animated backdrop lives in its own RepaintBoundary so each tick
+    //   repaints only the cheap color + gradient fills.
+    // - The app content is a sibling in its own RepaintBoundary, so the
+    //   ambient animation no longer re-rasterizes the entire UI at frame rate
+    //   (this was a large idle GPU/battery cost on every screen).
+    final Widget? staticMapLayer = widget.showMapLayer
+        ? RepaintBoundary(child: _buildStaticMapLayer(context))
+        : null;
 
-        final beginOffset = Alignment(
-          -1.0 + (progress * 0.5),
-          -1.0 + (progress * 0.3),
-        );
-        final endOffset = Alignment(
-          1.0 - (progress * 0.3),
-          1.0 - (progress * 0.5),
-        );
+    final Widget backdrop = RepaintBoundary(
+      child: AnimatedBuilder(
+        animation: Listenable.merge(<Listenable>[_motion, _paletteController]),
+        builder: (context, _) {
+          final theme = Theme.of(context);
+          final motionT = _motion.value;
+          final progress = motionT * widget.intensity;
+          final isDark = theme.brightness == Brightness.dark;
 
-        final paletteT = Curves.easeInOut.transform(_paletteController.value);
-        final basePalette = _lerpColorLists(_paletteFrom, _paletteTo, paletteT);
-        final effectivePalette = _applyHueShift(
-          basePalette,
-          degrees: widget.hueShiftDegrees,
-          t: motionT,
-          intensity: widget.intensity,
-        );
-        final gradientAlpha =
-            widget.showMapLayer ? (isDark ? 0.85 : 0.88) : 1.0;
-        final fallbackColor =
-            _resolveFallbackBackdropColor(theme, effectivePalette);
-        final gradientPalette = effectivePalette
-            .map((color) => color.withValues(alpha: gradientAlpha))
-            .toList(growable: false);
+          final beginOffset = Alignment(
+            -1.0 + (progress * 0.5),
+            -1.0 + (progress * 0.3),
+          );
+          final endOffset = Alignment(
+            1.0 - (progress * 0.3),
+            1.0 - (progress * 0.5),
+          );
 
-        return Stack(
-          fit: StackFit.expand,
-          children: [
-            ColoredBox(
-              key: const ValueKey<String>('general-background-fallback'),
-              color: fallbackColor,
-            ),
-            if (widget.showMapLayer) _buildStaticMapLayer(context),
-            DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: gradientPalette,
-                  begin: beginOffset,
-                  end: endOffset,
-                  stops: _calculateStops(gradientPalette.length, progress),
+          final paletteT =
+              Curves.easeInOut.transform(_paletteController.value);
+          final basePalette =
+              _lerpColorLists(_paletteFrom, _paletteTo, paletteT);
+          final effectivePalette = _applyHueShift(
+            basePalette,
+            degrees: widget.hueShiftDegrees,
+            t: motionT,
+            intensity: widget.intensity,
+          );
+          final gradientAlpha =
+              widget.showMapLayer ? (isDark ? 0.85 : 0.88) : 1.0;
+          final fallbackColor =
+              _resolveFallbackBackdropColor(theme, effectivePalette);
+          final gradientPalette = effectivePalette
+              .map((color) => color.withValues(alpha: gradientAlpha))
+              .toList(growable: false);
+
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              ColoredBox(
+                key: const ValueKey<String>('general-background-fallback'),
+                color: fallbackColor,
+              ),
+              if (staticMapLayer != null) staticMapLayer,
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: gradientPalette,
+                    begin: beginOffset,
+                    end: endOffset,
+                    stops: _calculateStops(gradientPalette.length, progress),
+                  ),
                 ),
               ),
-            ),
-            if (child != null) child,
-          ],
-        );
-      },
-      child: widget.child,
+            ],
+          );
+        },
+      ),
+    );
+
+    // StackFit.expand matches the original single-Stack layout: both the
+    // backdrop and the app content receive tight full-size constraints.
+    return Stack(
+      fit: StackFit.expand,
+      children: <Widget>[
+        backdrop,
+        RepaintBoundary(child: widget.child),
+      ],
     );
   }
 
