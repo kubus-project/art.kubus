@@ -60,12 +60,19 @@ class KubusMapFilterCatalog {
   static List<KubusMapFilterOption> buildOptions(
     BuildContext context, {
     Color? accentColor,
+    double? nearbyRadiusKm,
   }) {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final roles = KubusColorRoles.of(context);
     final primaryAccent = accentColor ?? scheme.primary;
+    // The nearby chip must advertise the radius it actually applies (the
+    // user-configured nearby radius), not a hardcoded distance.
+    final radiusKm = nearbyRadiusKm ?? 1.0;
+    final radiusLabel = radiusKm == radiusKm.roundToDouble()
+        ? radiusKm.round().toString()
+        : radiusKm.toStringAsFixed(1);
 
     return <KubusMapFilterOption>[
       KubusMapFilterOption(
@@ -76,7 +83,7 @@ class KubusMapFilterCatalog {
       ),
       KubusMapFilterOption(
         key: 'nearby',
-        label: l10n.mapFilterWithin1Km,
+        label: l10n.mapFilterWithinRadiusKm(radiusLabel),
         accentColor: primaryAccent,
         icon: Icons.near_me,
       ),

@@ -147,13 +147,25 @@ class MapMarkerHelper {
       }
     }
 
-    for (final artworkId in missingIds) {
-      try {
-        await artworkProvider.fetchArtworkIfNeeded(artworkId);
-      } catch (e) {
-        if (kDebugMode) {
-          debugPrint('MapMarkerHelper: failed to hydrate artwork $artworkId: $e');
-        }
+    if (missingIds.isNotEmpty) {
+      // One bulk request instead of a per-artwork N+1 storm; per-id fetches
+      // remain only as a fallback for ids the bulk endpoint didn't return.
+      final stillMissing =
+          await artworkProvider.fetchArtworksByIds(missingIds);
+      const chunkSize = 6;
+      final pending = stillMissing.toList(growable: false);
+      for (var i = 0; i < pending.length; i += chunkSize) {
+        final chunk = pending.skip(i).take(chunkSize);
+        await Future.wait(chunk.map((artworkId) async {
+          try {
+            await artworkProvider.fetchArtworkIfNeeded(artworkId);
+          } catch (e) {
+            if (kDebugMode) {
+              debugPrint(
+                  'MapMarkerHelper: failed to hydrate artwork $artworkId: $e');
+            }
+          }
+        }));
       }
     }
 

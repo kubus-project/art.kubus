@@ -359,11 +359,12 @@ class KubusMarkerLayerStyler {
       state,
       constantScale: 0.92,
     );
+    // Clusters carry entryScale/entryOpacity like markers, so both share the
+    // same entry/regroup animation; features without the property stay opaque.
     final iconOpacity = <Object>[
-      'case',
-      <Object>['==', <Object>['get', 'kind'], 'cluster'],
+      'coalesce',
+      <Object>['get', 'entryOpacity'],
       1.0,
-      <Object>['coalesce', <Object>['get', 'entryOpacity'], 1.0],
     ];
 
     final markerVisible = !state.cubeLayerVisible;
@@ -886,7 +887,8 @@ class MapLayersManager {
     _addLayerCalls += 1;
     _layerIds.add(_ids.markerPulseLayerId);
 
-    // Precise coordinate dot at every marker/cluster point.
+    // Precise coordinate dot at every marker/cluster point. Fades in with the
+    // shared entry/regroup animation so the dot never appears before its badge.
     await _controller.addCircleLayer(
       _ids.markerSourceId,
       _ids.markerDotLayerId,
@@ -898,7 +900,11 @@ class MapLayersManager {
           MapMarkerStyleConfig.dotRadiusPx,
         ],
         circleColor: const <Object>['get', 'color'],
-        circleOpacity: 1.0,
+        circleOpacity: <Object>[
+          'coalesce',
+          <Object>['get', 'entryOpacity'],
+          1.0,
+        ],
         circleStrokeWidth: MapMarkerStyleConfig.dotStrokeWidthPx,
         circleStrokeColor: MapLibreStyleUtils.hexRgb(theme.locationStroke),
         circlePitchAlignment: 'map',
@@ -920,10 +926,9 @@ class MapLayersManager {
             ],
           ),
           iconOpacity: <Object>[
-            'case',
-            <Object>['==', <Object>['get', 'kind'], 'cluster'],
+            'coalesce',
+            <Object>['get', 'entryOpacity'],
             1.0,
-            <Object>['coalesce', <Object>['get', 'entryOpacity'], 1.0],
           ],
           iconAllowOverlap: true,
           iconIgnorePlacement: true,
@@ -952,10 +957,9 @@ class MapLayersManager {
             ],
           ),
           iconOpacity: <Object>[
-            'case',
-            <Object>['==', <Object>['get', 'kind'], 'cluster'],
+            'coalesce',
+            <Object>['get', 'entryOpacity'],
             1.0,
-            <Object>['coalesce', <Object>['get', 'entryOpacity'], 1.0],
           ],
           iconAllowOverlap: true,
           iconIgnorePlacement: true,

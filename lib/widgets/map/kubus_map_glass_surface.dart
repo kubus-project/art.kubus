@@ -7,6 +7,7 @@ import '../../providers/glass_capabilities_provider.dart';
 import '../../services/webgl_context_helper.dart';
 import '../../utils/design_tokens.dart';
 import '../glass_components.dart';
+import 'glass/kubus_map_native_backdrop_channel.dart';
 import 'glass/kubus_map_platform_backdrop_host.dart';
 
 enum KubusMapGlassSurfaceKind {
@@ -106,20 +107,18 @@ bool mobileMapBackdropFilterCanSample({bool web = kIsWeb}) {
 
 /// Capability gate for the native (iOS) map backdrop blur host.
 ///
-/// Until the native `UIVisualEffectView`-backed host is wired and verified on a
-/// device, [isSupported] is `false`, so iOS overlays that request real blur fall
-/// back to the enriched tint and log a loud diagnostic rather than silently
-/// shipping a host that does nothing. Flip this on (behind the `mapNativeBlur
-/// Host` feature flag) once the platform side is verified.
+/// Backed by a runtime handshake with the platform side
+/// ([KubusMapNativeBackdropChannel]): support starts `false`, the first query
+/// fires a one-shot probe, and any channel failure demotes back to the
+/// enriched tint sheen. This keeps the gate honest — a build without the
+/// native handler behaves exactly like the pre-host fallback.
 class KubusMapNativeBackdropHost {
   const KubusMapNativeBackdropHost._();
 
-  /// Whether a verified native backdrop host is available on this platform.
+  /// Whether a native backdrop host responded to the capability probe.
   static bool get isSupported {
     if (kIsWeb) return false;
-    // No verified native host yet; iOS uses the enriched fallback until the
-    // native UIVisualEffectView host lands and is device-verified.
-    return false;
+    return KubusMapNativeBackdropChannel.isSupported;
   }
 }
 
@@ -242,17 +241,17 @@ KubusMapBlurDecision resolveKubusMapBlurDecision(
   // blur behave like desktop instead of silently degrading to a flat tint.
   final reduceEffectsUser = provider?.reduceEffectsUserOverride ?? false;
   // The web CSS-blur host inserts `backdrop-filter` DOM elements over the map
-  // platform view. On wide/desktop web they composite behind the Flutter
-  // overlay canvas (content stays sharp), but on narrow/compact web the overlay
-  // canvas can land *behind* those DOM blur layers, blurring foreground UI such
-  // as the search results dropdown ("blur in front of content"). So never use
-  // the DOM host on compact web — fall through to the opaque safe-tint
-  // fallback, which matches the mobile-app glass over the platform view.
-  final platformHostAllowed = !compactWeb &&
-      (policy == KubusMapBlurPolicy.forceMapChromeWhenCapable ||
+  // platform view. It is available at every width: the historical compact-web
+  // exclusion ("blur in front of content" over the search dropdown) was caused
+  // by the host div's `z-index: 1` escaping into the page stacking context and
+  // painting above Flutter's overlay canvas; the host now isolates itself at
+  // `z-index: 0` (see kubus_map_platform_backdrop_dom_web.dart), so it always
+  // composites above the map canvas but below Flutter-rendered content.
+  final platformHostAllowed =
+      policy == KubusMapBlurPolicy.forceMapChromeWhenCapable ||
           policy == KubusMapBlurPolicy.forceRealBlur ||
           policy == KubusMapBlurPolicy.allowCompactWeb ||
-          policy == KubusMapBlurPolicy.automatic);
+          policy == KubusMapBlurPolicy.automatic;
 
   if (web &&
       overMapPlatformView &&
@@ -669,7 +668,12 @@ Widget buildKubusMapGlassSurface({
   // IgnorePointer decoration with no animation, so it stays jank-free while the
   // map pans/zooms and reads as intentional glass rather than a flat panel.
   if (!preset.useBlur) {
+    // StackFit.passthrough keeps the incoming constraints intact: inside a
+    // tight parent (e.g. an Expanded action-button cell) the glass surface must
+    // fill the cell exactly like the blur path does, instead of shrink-wrapping
+    // to its intrinsic width and leaving the sheen to cover the remainder.
     surface = Stack(
+      fit: StackFit.passthrough,
       children: <Widget>[
         surface,
         Positioned.fill(
@@ -844,7 +848,10 @@ Widget wrapWithKubusMapGlassSheen({
   required bool show,
 }) {
   if (!show) return child;
+  // Passthrough keeps tight parent constraints on [child] so glass chrome fills
+  // its cell exactly as it would without the sheen wrapper.
   return Stack(
+    fit: StackFit.passthrough,
     children: <Widget>[
       // Painted first => sits behind [child] so text/icons stay crisp on top.
       Positioned.fill(

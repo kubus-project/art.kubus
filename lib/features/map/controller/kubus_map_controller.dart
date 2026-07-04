@@ -1601,9 +1601,35 @@ class KubusMapController {
     return point.longitude >= west || point.longitude <= east;
   }
 
+  /// Soft, non-staggered re-entry animation for the currently visible markers.
+  ///
+  /// Used when the cluster grouping changes (zoom crossed a grid level or
+  /// clustering toggled) so the new marker/cluster arrangement eases in with a
+  /// quick scale/opacity pop instead of snapping. Markers whose full entry
+  /// animation is still in flight are left untouched so the staggered initial
+  /// pop-in never gets interrupted.
+  void animateMarkerRegroup() {
+    if (!_viewportStateInitialized) return;
+    if (_visibleMarkerIds.isEmpty) return;
+
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
+    final ids = <String>[];
+    for (final id in _visibleMarkerIds) {
+      final existing = _entryAnimationByMarkerId[id];
+      if (existing != null &&
+          nowMs - existing.revealAtMs < existing.durationMs + 120) {
+        continue;
+      }
+      ids.add(id);
+    }
+    if (ids.isEmpty) return;
+    _scheduleEntryAnimations(ids, staggered: false, soft: true);
+  }
+
   void _scheduleEntryAnimations(
     List<String> markerIds, {
     required bool staggered,
+    bool soft = false,
   }) {
     if (markerIds.isEmpty) return;
 
@@ -1617,6 +1643,7 @@ class KubusMapController {
       _entryAnimationByMarkerId[id] = _MarkerEntryAnimationState(
         revealAtMs: nowMs + (i * step),
         serial: _entrySerialCounter,
+        soft: soft,
       );
     }
 
@@ -1645,12 +1672,12 @@ class KubusMapController {
       return hidden;
     }
 
-    final durationMs = MapMarkerCollisionConfig.entryDurationMs;
+    final durationMs = state.durationMs;
     final elapsed = nowMs - state.revealAtMs;
     if (elapsed <= 0) {
       return _MarkerEntryValues(
-        scale: MapMarkerCollisionConfig.entryStartScale,
-        opacity: 0.0,
+        scale: state.startScale,
+        opacity: state.startOpacity,
         serial: state.serial,
       );
     }
@@ -1661,13 +1688,14 @@ class KubusMapController {
     final t = (elapsed / durationMs).clamp(0.0, 1.0);
     final scaleT = Curves.easeOutBack.transform(t);
     final opacityT = Curves.easeOutCubic.transform(t);
-    final scale = MapMarkerCollisionConfig.entryStartScale +
-        (1.0 - MapMarkerCollisionConfig.entryStartScale) * scaleT;
+    final scale = state.startScale + (1.0 - state.startScale) * scaleT;
+    final opacity =
+        state.startOpacity + (1.0 - state.startOpacity) * opacityT;
 
     return _MarkerEntryValues(
       scale:
           scale.clamp(MapMarkerCollisionConfig.entryStartScale, 1.2).toDouble(),
-      opacity: opacityT.clamp(0.0, 1.0).toDouble(),
+      opacity: opacity.clamp(0.0, 1.0).toDouble(),
       serial: state.serial,
     );
   }
@@ -1688,7 +1716,6 @@ class KubusMapController {
     }
 
     final nowMs = DateTime.now().millisecondsSinceEpoch;
-    final expireAfter = MapMarkerCollisionConfig.entryDurationMs + 120;
     var boundaryCrossed = false;
     var hasActiveAnimations = false;
     final removeIds = <String>[];
@@ -1697,8 +1724,7 @@ class KubusMapController {
         state.revealSyncIssued = true;
         boundaryCrossed = true;
       }
-      final completeAtMs =
-          state.revealAtMs + MapMarkerCollisionConfig.entryDurationMs;
+      final completeAtMs = state.revealAtMs + state.durationMs;
       if (!state.completeSyncIssued && nowMs >= completeAtMs) {
         state.completeSyncIssued = true;
         boundaryCrossed = true;
@@ -1706,7 +1732,7 @@ class KubusMapController {
       if (nowMs >= state.revealAtMs && nowMs < completeAtMs) {
         hasActiveAnimations = true;
       }
-      if (nowMs - state.revealAtMs > expireAfter) {
+      if (nowMs - state.revealAtMs > state.durationMs + 120) {
         removeIds.add(markerId);
       }
     });
@@ -1939,10 +1965,27 @@ class _MarkerEntryAnimationState {
   _MarkerEntryAnimationState({
     required this.revealAtMs,
     required this.serial,
+    this.soft = false,
   });
 
   final int revealAtMs;
   final int serial;
+
+  /// Soft re-entry (cluster regroup): higher scale/opacity floor and a shorter
+  /// duration than a full viewport-entry pop-in.
+  final bool soft;
+
+  int get durationMs => soft
+      ? MapMarkerCollisionConfig.entryRegroupDurationMs
+      : MapMarkerCollisionConfig.entryDurationMs;
+
+  double get startScale => soft
+      ? MapMarkerCollisionConfig.entryRegroupStartScale
+      : MapMarkerCollisionConfig.entryStartScale;
+
+  double get startOpacity =>
+      soft ? MapMarkerCollisionConfig.entryRegroupStartOpacity : 0.0;
+
   bool revealSyncIssued = false;
   bool completeSyncIssued = false;
 }

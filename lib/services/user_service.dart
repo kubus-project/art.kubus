@@ -314,6 +314,27 @@ class UserService {
     } catch (_) {}
   }
 
+  /// Tracks when an achievement summary fetch was last *attempted* per user.
+  ///
+  /// Users with zero achievements (and guests hitting auth-only endpoints)
+  /// produce empty achievement lists; without this marker the cache check
+  /// below would treat every such entry as incomplete and refetch the full
+  /// profile + achievements on every call.
+  static final Map<String, int> _achievementsCheckedAtMillis = <String, int>{};
+
+  static bool _achievementsRecentlyChecked(String userId) {
+    final ts = _achievementsCheckedAtMillis[userId] ?? 0;
+    return ts > 0 && DateTime.now().millisecondsSinceEpoch - ts <= _ttlMillis;
+  }
+
+  static void _markAchievementsChecked(Iterable<String> keys) {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    for (final key in keys) {
+      if (key.isEmpty) continue;
+      _achievementsCheckedAtMillis[key] = now;
+    }
+  }
+
   static Future<User?> getUserById(String userId,
       {bool forceRefresh = false, bool includeAchievements = true}) async {
     try {
@@ -335,7 +356,8 @@ class UserService {
               final cached = _cache[userId];
               final hasAchievementPackage = cached != null &&
                   (cached.achievementDefinitions.isNotEmpty ||
-                      cached.achievementProgress.isNotEmpty);
+                      cached.achievementProgress.isNotEmpty ||
+                      _achievementsRecentlyChecked(userId));
               if (!_legacyCacheMissingCoverKey.contains(userId) &&
                   (!includeAchievements || hasAchievementPackage)) {
                 return cached;
@@ -345,7 +367,8 @@ class UserService {
             final cached = _cache[userId];
             final hasAchievementPackage = cached != null &&
                 (cached.achievementDefinitions.isNotEmpty ||
-                    cached.achievementProgress.isNotEmpty);
+                    cached.achievementProgress.isNotEmpty ||
+                    _achievementsRecentlyChecked(userId));
             if (!_legacyCacheMissingCoverKey.contains(userId) &&
                 (!includeAchievements || hasAchievementPackage)) {
               return cached;
@@ -428,6 +451,7 @@ class UserService {
                 'UserService.getUserById: failed to load achievements for $resolvedWallet: $e');
           }
         }
+        _markAchievementsChecked([userId, resolvedWallet]);
       }
 
       List<String> fieldOfWork = const <String>[];

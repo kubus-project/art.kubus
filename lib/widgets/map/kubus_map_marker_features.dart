@@ -4,6 +4,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:maplibre_gl/maplibre_gl.dart' as ml;
 
 import '../../models/art_marker.dart';
+import '../../features/map/controller/kubus_map_controller.dart';
 import '../../features/map/shared/map_marker_collision_config.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/map_marker_icon_ids.dart';
@@ -108,6 +109,41 @@ Future<Map<String, dynamic>> kubusMarkerFeatureFor({
   };
 }
 
+@immutable
+class KubusClusterEntryValues {
+  const KubusClusterEntryValues({required this.scale, required this.opacity});
+
+  final double scale;
+  final double opacity;
+}
+
+/// Entry-animation values for a cluster, derived from its member markers.
+///
+/// Uses the MAX scale/opacity across members so a cluster that absorbs an
+/// already-visible marker never blinks out, while clusters made only of
+/// still-animating markers pop in alongside them. Falls back to fully visible
+/// when member render state is unavailable.
+KubusClusterEntryValues kubusClusterEntryValues(
+  KubusClusterBucket cluster,
+  Map<String, KubusRenderedMarker>? renderById,
+) {
+  if (renderById == null || renderById.isEmpty) {
+    return const KubusClusterEntryValues(scale: 1.0, opacity: 1.0);
+  }
+  var scale = 0.0;
+  var opacity = 0.0;
+  var any = false;
+  for (final marker in cluster.markers) {
+    final rendered = renderById[marker.id];
+    if (rendered == null) continue;
+    any = true;
+    if (rendered.entryScale > scale) scale = rendered.entryScale;
+    if (rendered.entryOpacity > opacity) opacity = rendered.entryOpacity;
+  }
+  if (!any) return const KubusClusterEntryValues(scale: 1.0, opacity: 1.0);
+  return KubusClusterEntryValues(scale: scale, opacity: opacity);
+}
+
 Future<Map<String, dynamic>> kubusClusterFeatureFor({
   required ml.MapLibreMapController controller,
   required Set<String> registeredMapImages,
@@ -118,6 +154,8 @@ Future<Map<String, dynamic>> kubusClusterFeatureFor({
   required double pixelRatio,
   required bool Function() shouldAbort,
   required IconData Function(ArtMarkerType type) resolveMarkerIcon,
+  double entryScale = 1.0,
+  double entryOpacity = 1.0,
 }) async {
   if (shouldAbort()) return const <String, dynamic>{};
 
@@ -177,6 +215,13 @@ Future<Map<String, dynamic>> kubusClusterFeatureFor({
       'renderMode': 'cluster',
       'sameCoordinateKey': cluster.sameCoordinateKey,
       'clusterCount': cluster.markers.length,
+      // Clusters take part in the shared entry animation (viewport entry and
+      // soft regroup) via the same expression-driven properties as markers.
+      'entryScale': entryScale.clamp(
+        MapMarkerCollisionConfig.entryStartScale,
+        1.2,
+      ),
+      'entryOpacity': entryOpacity.clamp(0.0, 1.0),
     },
     'geometry': <String, dynamic>{
       'type': 'Point',

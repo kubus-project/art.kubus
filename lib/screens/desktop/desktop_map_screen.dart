@@ -1229,13 +1229,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     setState(fn);
   }
 
-  int _clusterGridLevelForZoom(double zoom) {
-    final double targetSpacingPx =
-        zoom < 6.5 ? 56.0 : (zoom < 9.5 ? 64.0 : 72.0);
-    final level = GridUtils.resolvePrimaryGridLevel(zoom,
-        targetScreenSpacing: targetSpacingPx);
-    return level.clamp(3, 14);
-  }
+  int _clusterGridLevelForZoom(double zoom) =>
+      MapScreenConstants.clusterGridLevelForZoom(zoom);
 
   void _queueMarkerVisualRefreshForZoom(double zoom) {
     final shouldCluster = zoom < _clusterMaxZoom;
@@ -1246,6 +1241,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     }
     _lastClusterEnabled = shouldCluster;
     _lastClusterGridLevel = gridLevel;
+    // The grouping changed: ease the new marker/cluster arrangement in with a
+    // soft scale/opacity pop instead of snapping between layouts.
+    _kubusMapController.animateMarkerRegroup();
     _requestMarkerVisualSync();
   }
 
@@ -1709,6 +1707,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         scheme: scheme,
         roles: roles,
         isDark: isDark,
+        renderById: renderById,
       ),
     );
     if (!mounted) return;
@@ -1796,10 +1795,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     required ColorScheme scheme,
     required KubusColorRoles roles,
     required bool isDark,
+    Map<String, KubusRenderedMarker>? renderById,
   }) async {
     final controller = _mapController;
     if (controller == null) return const <String, dynamic>{};
 
+    final entry = kubusClusterEntryValues(cluster, renderById);
     return kubusClusterFeatureFor(
       controller: controller,
       registeredMapImages: _registeredMapImages,
@@ -1810,6 +1811,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       pixelRatio: _markerPixelRatio(),
       shouldAbort: () => !mounted,
       resolveMarkerIcon: KubusMapMarkerHelpers.resolveArtMarkerIcon,
+      entryScale: entry.scale,
+      entryOpacity: entry.opacity,
     );
   }
 
@@ -2058,9 +2061,14 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       policy: KubusMapBlurPolicy.forceRealBlur,
       overMapPlatformView: true,
     );
+    // Mount the region-sync host for BOTH platform-backed strategies: the web
+    // DOM/CSS host and the native iOS Liquid Glass host (wide iPads land in
+    // this desktop layout) share the same region tracking + sync widget.
     final platformBackdropHostEnabled = backdropDecision.enabled &&
-        backdropDecision.strategy ==
-            KubusMapBackdropStrategy.platformViewBackdropHost;
+        (backdropDecision.strategy ==
+                KubusMapBackdropStrategy.platformViewBackdropHost ||
+            backdropDecision.strategy ==
+                KubusMapBackdropStrategy.nativeBackdropHost);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -2295,6 +2303,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                 _safeSetState(() => _nearbySidebarAnchor = nextAnchor);
               }
             }
+            // When the nearby quick filter is anchored to the camera (no GPS
+            // fix), re-apply it so visible markers track the viewport.
+            if (_selectedFilter == 'nearby' && _userLocation == null) {
+              _applyVisibleMarkers();
+              _requestMarkerVisualSync(force: false);
+            }
             _queueMarkerRefresh(fromGesture: false);
           },
           onMapClick: (dynamic point, _) {
@@ -2466,7 +2480,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   Widget _buildDesktopFilterChipRow(ThemeProvider themeProvider) {
     final useMapBlur = kubusMapBlurEnabled(context);
     final filters = KubusMapFilterCatalog.buildOptions(context,
-        accentColor: themeProvider.accentColor);
+        accentColor: themeProvider.accentColor,
+        nearbyRadiusKm: _effectiveSearchRadiusKm);
     return KeyedSubtree(
       key: _tutorialFilterChipsKey,
       child: KubusMapFilterChipStrip(
@@ -3683,6 +3698,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                       ? null
                       : (value) {
                           setState(() => _searchRadius = value);
+                          // Re-filter the already-loaded markers immediately so
+                          // the map tracks the slider without waiting for the
+                          // debounced fetch.
+                          _applyVisibleMarkers();
+                          _requestMarkerVisualSync(force: true);
                           _radiusChangeDebouncer(
                             const Duration(
                               milliseconds: MapMarkerCollisionConfig
@@ -4464,7 +4484,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       filterKey: _selectedFilter,
       basePosition: basePosition,
       radiusKm: _effectiveSearchRadiusKm,
-      strictNearbyWithoutBase: true,
+      // Match the map-marker filter (strict = false): without a base position
+      // the nearby list keeps showing loaded artworks instead of going empty
+      // while the map still renders their markers.
+      strictNearbyWithoutBase: false,
     );
 
     switch (_selectedFilter) {

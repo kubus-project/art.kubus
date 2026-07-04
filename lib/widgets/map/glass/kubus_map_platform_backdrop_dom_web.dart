@@ -98,7 +98,14 @@ web.HTMLDivElement _ensureHost(web.Element mapElement) {
   style.setProperty('height', '100%');
   style.setProperty('overflow', 'hidden');
   style.setProperty('pointer-events', 'none');
-  style.setProperty('z-index', '1');
+  // z-index 0 (not 1) + isolation: the host must paint above the MapLibre
+  // canvas container (earlier sibling, tree order) but must NEVER escape above
+  // Flutter's overlay canvas, which follows the platform view in tree order
+  // with an auto z-index. A positive z-index promoted this host above that
+  // canvas on compact layouts, blurring foreground UI (search dropdown).
+  // `isolation: isolate` keeps the per-region stacking self-contained.
+  style.setProperty('z-index', '0');
+  style.setProperty('isolation', 'isolate');
   style.setProperty('contain', 'layout paint style');
 
   final mapStyle = (mapElement as web.HTMLElement).style;

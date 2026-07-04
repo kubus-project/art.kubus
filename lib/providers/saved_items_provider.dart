@@ -109,6 +109,9 @@ class SavedItemsProvider extends ChangeNotifier {
 
   Future<void> refreshFromBackend() async {
     if (_isSyncing) return;
+    // Saved items are account-scoped; without a session every per-type page
+    // request would just 401. Guests keep whatever is cached locally.
+    if (!await _repository.hasBackendSession()) return;
     _isSyncing = true;
     notifyListeners();
     try {

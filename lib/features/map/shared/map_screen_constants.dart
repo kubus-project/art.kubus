@@ -1,3 +1,4 @@
+import '../../../utils/grid_utils.dart';
 import '../map_layers_manager.dart';
 
 /// Shared constants for mobile + desktop map screens.
@@ -27,6 +28,24 @@ abstract final class MapScreenConstants {
   // Clustering
   // ---------------------------------------------------------------------------
   static const double clusterMaxZoom = 12.0;
+
+  /// Cluster grid level for the current zoom, shared by mobile + desktop.
+  ///
+  /// Markers merge into a cluster when they fall inside the same diagonal grid
+  /// cell. The level is derived from a target on-screen cell size so the
+  /// grouping distance stays roughly constant (~56-72 px) at every zoom.
+  /// A grid cell measures `256 * 2^(zoom - level)` screen px, so levels must
+  /// track the camera zoom; fixed small levels produce cells thousands of
+  /// pixels wide and collapse the whole viewport into one cluster.
+  static int clusterGridLevelForZoom(double zoom) {
+    final double targetSpacingPx =
+        zoom < 6.5 ? 56.0 : (zoom < 9.5 ? 64.0 : 72.0);
+    final level = GridUtils.resolvePrimaryGridLevel(
+      zoom,
+      targetScreenSpacing: targetSpacingPx,
+    );
+    return level.clamp(3, 14);
+  }
 
   // ---------------------------------------------------------------------------
   // Marker refresh thresholds

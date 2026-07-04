@@ -272,6 +272,21 @@ jobs:
           flutter pub get
           flutter build web --release ${{ steps.defines.outputs.args }}
 
+      - name: Pre-compress wasm artifacts (brotli + gzip)
+        if: ${{ steps.sftp.outputs.ok == 'true' && steps.deploy_target.outputs.ok == 'true' && steps.net.outputs.sftp_ok == 'true' }}
+        shell: bash
+        run: |
+          # LiteSpeed does not compress application/wasm dynamically; the
+          # deployed .htaccess serves these pre-compressed variants instead
+          # (canvaskit.wasm: ~5.7MB -> ~1.3MB over the wire).
+          sudo apt-get update -y >/dev/null
+          sudo apt-get install -y brotli >/dev/null
+          find build/web -type f -name '*.wasm' -print0 | while IFS= read -r -d '' f; do
+            brotli -f -q 11 "$f"
+            gzip -kf9 "$f"
+            ls -la "$f" "$f.br" "$f.gz"
+          done
+
       - name: Show runner public IP (for cPanel allowlist)
         if: ${{ steps.sftp.outputs.ok == 'true' && steps.deploy_target.outputs.ok == 'true' && steps.net.outputs.sftp_ok == 'true' && vars.SFTP_DEBUG == 'true' }}
         shell: bash

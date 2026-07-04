@@ -4092,7 +4092,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mapFilterAllNearby => 'All nearby';
 
   @override
-  String get mapFilterWithin1Km => 'Within 1 km';
+  String mapFilterWithinRadiusKm(Object radiusKm) {
+    return 'Within $radiusKm km';
+  }
 
   @override
   String get mapFilterDiscovered => 'Discovered';

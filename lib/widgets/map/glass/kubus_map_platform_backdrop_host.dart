@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
+import 'kubus_map_native_backdrop_channel.dart';
 import 'kubus_map_platform_backdrop_controller.dart';
 import 'kubus_map_platform_backdrop_dom_stub.dart'
     if (dart.library.js_interop) 'kubus_map_platform_backdrop_dom_web.dart';
@@ -45,15 +48,30 @@ class _KubusMapPlatformBackdropHostState
   @override
   void dispose() {
     widget.controller.removeListener(_sync);
-    disposeKubusMapPlatformBackdropDom();
+    if (kubusMapPlatformBackdropDomSupported) {
+      disposeKubusMapPlatformBackdropDom();
+    } else {
+      unawaited(KubusMapNativeBackdropChannel.disposeRegions());
+    }
     super.dispose();
   }
 
   void _sync() {
     if (!mounted) return;
-    syncKubusMapPlatformBackdropDom(
-      enabled: widget.enabled && kubusMapPlatformBackdropDomSupported,
-      regions: widget.controller.regions,
+    if (kubusMapPlatformBackdropDomSupported) {
+      syncKubusMapPlatformBackdropDom(
+        enabled: widget.enabled,
+        regions: widget.controller.regions,
+      );
+      return;
+    }
+    // Native (iOS) host: same region contract, synced over the platform
+    // channel. No-ops safely when the native side is absent/unsupported.
+    unawaited(
+      KubusMapNativeBackdropChannel.syncRegions(
+        enabled: widget.enabled,
+        regions: widget.controller.regions,
+      ),
     );
   }
 

@@ -122,6 +122,7 @@ abstract class ArtworkBackendApi {
     int limit = 20,
     String? walletAddress,
     bool includePrivateForWallet = false,
+    List<String>? ids,
   });
 
   Future<Artwork> getArtwork(String artworkId);
@@ -291,6 +292,32 @@ class BackendApiService
   bool? get institutionsApiAvailable => _institutionsApiAvailable;
   bool? get eventsApiAvailable => _eventsApiAvailable;
   String? get lastRequestId => _lastRequestId;
+
+  /// Whether a backend account session (JWT) is currently loaded.
+  ///
+  /// Guests have no session; callers should skip auth-only endpoints
+  /// (saved items, follow status, self achievements) when this is false.
+  bool get hasAuthSession => (_authToken ?? '').isNotEmpty;
+
+  /// Whether any wallet identity is stored locally (preferred wallet or a
+  /// persisted wallet address). Distinguishes signed-in-but-tokenless states
+  /// (e.g. cookie-backed sessions) from true guests.
+  Future<bool> _hasStoredWalletIdentity() async {
+    if ((_preferredWalletCanonical ?? '').trim().isNotEmpty) return true;
+    if ((_authWalletCanonical ?? '').trim().isNotEmpty) return true;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final stored = (prefs.getString(PreferenceKeys.walletAddress) ??
+              prefs.getString('wallet_address') ??
+              prefs.getString('wallet') ??
+              prefs.getString('walletAddress') ??
+              '')
+          .trim();
+      return stored.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
 
   void bindAuthCoordinator(AuthSessionCoordinator coordinator) {
     _authCoordinator = coordinator;
@@ -629,6 +656,9 @@ class BackendApiService
     }
   }
 
+  static const Duration _diagnosticsRepeatWindow = Duration(minutes: 5);
+  final Map<String, DateTime> _diagnosticsLastReportAt = <String, DateTime>{};
+
   void _captureHttpFailureDiagnostics({
     required String method,
     required Uri uri,
@@ -637,6 +667,22 @@ class BackendApiService
     if (uri.path == '/api/diagnostics/error') return;
     final status = response.statusCode;
     if (status < 500 && status != 401 && status != 403) return;
+    // 401/403 without a session is an expected guest outcome, not a defect;
+    // reporting each one doubles guest request volume for no signal.
+    if ((status == 401 || status == 403) && !hasAuthSession) return;
+    // Dedupe repeats: one report per method+path+status per window.
+    final dedupeKey = '$method ${uri.path} $status';
+    final lastAt = _diagnosticsLastReportAt[dedupeKey];
+    final now = DateTime.now();
+    if (lastAt != null && now.difference(lastAt) < _diagnosticsRepeatWindow) {
+      return;
+    }
+    _diagnosticsLastReportAt[dedupeKey] = now;
+    if (_diagnosticsLastReportAt.length > 200) {
+      _diagnosticsLastReportAt.removeWhere(
+        (_, at) => now.difference(at) >= _diagnosticsRepeatWindow,
+      );
+    }
 
     unawaited(() async {
       try {
@@ -4683,16 +4729,28 @@ class BackendApiService
     int limit = 20,
     String? walletAddress,
     bool includePrivateForWallet = false,
+    List<String>? ids,
   }) async {
     try {
       try {
         await _ensureAuthWithStoredWallet();
       } catch (_) {}
 
+      final requestedIds = (ids ?? const <String>[])
+          .map((id) => id.trim())
+          .where((id) => id.isNotEmpty)
+          .toSet()
+          .toList(growable: false);
+
       final queryParams = <String, String>{
         'page': page.toString(),
-        'limit': limit.toString(),
+        'limit': requestedIds.isNotEmpty
+            ? requestedIds.length.clamp(1, 100).toString()
+            : limit.toString(),
       };
+      if (requestedIds.isNotEmpty) {
+        queryParams['ids'] = requestedIds.take(100).join(',');
+      }
 
       if (category != null) queryParams['category'] = category;
       if (arEnabled != null) queryParams['arEnabled'] = arEnabled.toString();
@@ -4730,7 +4788,12 @@ class BackendApiService
           }
 
           final snapshots = await _loadSnapshotDatasetMaps('artworks');
+          final idFilter = requestedIds.toSet();
           var filtered = snapshots.where((entry) {
+            if (idFilter.isNotEmpty &&
+                !idFilter.contains((entry['id'] ?? '').toString().trim())) {
+              return false;
+            }
             if (category != null &&
                 entry['category']?.toString().trim().toLowerCase() !=
                     category.trim().toLowerCase()) {
@@ -4761,8 +4824,12 @@ class BackendApiService
                 true;
           }).toList(growable: false);
 
-          final start = ((page - 1) * limit).clamp(0, filtered.length).toInt();
-          final end = (start + limit).clamp(0, filtered.length).toInt();
+          final effectiveLimit =
+              idFilter.isNotEmpty ? idFilter.length : limit;
+          final start =
+              ((page - 1) * effectiveLimit).clamp(0, filtered.length).toInt();
+          final end =
+              (start + effectiveLimit).clamp(0, filtered.length).toInt();
           filtered = filtered.sublist(start, end);
 
           return filtered
@@ -7042,6 +7109,9 @@ class BackendApiService
     final encoded = Uri.encodeComponent(walletAddress);
     try {
       await _ensureAuthBeforeRequest();
+      // Guests (no session and no stored wallet identity) can never be
+      // following anyone; skip the request that would otherwise 401.
+      if (!hasAuthSession && !await _hasStoredWalletIdentity()) return false;
       final uri = Uri.parse('$baseUrl/api/community/follow/$encoded/status');
       final response = await _get(uri, headers: _getHeaders());
 
