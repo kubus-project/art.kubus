@@ -279,8 +279,9 @@ void main() {
     );
     await _pumpOnboardingReady(tester);
 
-    // Tap "Discover art" to enter guest branch
-    await tester.tap(find.widgetWithText(KubusOutlineButton, 'Discover art'));
+    // Tap "Discover art" to enter guest branch (primary button since the
+    // welcome redesign made the guest path the main call to action).
+    await tester.tap(find.widgetWithText(KubusButton, 'Discover art'));
     await tester.pumpAndSettle();
 
     // Should show permissions step
@@ -303,7 +304,7 @@ void main() {
     await _pumpOnboardingReady(tester);
 
     // Tap "Create an account" to enter account branch
-    await tester.tap(find.widgetWithText(KubusButton, 'Create an account'));
+    await tester.tap(find.widgetWithText(KubusOutlineButton, 'Create an account'));
     await tester.pumpAndSettle();
 
     // Should show account step with auth panel
@@ -1345,7 +1346,7 @@ void main() {
     await _pumpOnboardingReady(tester);
 
     // Enter account branch to get the header with AuthTitleRow
-    await tester.tap(find.widgetWithText(KubusButton, 'Create an account'));
+    await tester.tap(find.widgetWithText(KubusOutlineButton, 'Create an account'));
     await tester.pumpAndSettle();
 
     final titleSize = tester.getSize(find.byType(AuthTitleRow).first);

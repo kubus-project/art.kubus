@@ -57,6 +57,12 @@ class _TestAuthCoordinator implements AuthSessionCoordinator {
 }
 
 void main() {
+  setUpAll(() {
+    // These tests count MockClient requests; the fire-and-forget HTTP failure
+    // reports would otherwise race the counters (singleton client).
+    BackendApiService.disableHttpFailureDiagnosticsForTesting = true;
+  });
+
   test('401 triggers auth coordinator once', () async {
     final api = BackendApiService();
     api.setAuthTokenForTesting(null);

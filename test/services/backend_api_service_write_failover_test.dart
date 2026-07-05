@@ -24,6 +24,12 @@ String? _headerValue(http.Request request, String name) {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  setUpAll(() {
+    // The MockClients below assert on every request; fire-and-forget HTTP
+    // failure reports (triggered by the intentional 503s) must not race them.
+    BackendApiService.disableHttpFailureDiagnosticsForTesting = true;
+  });
+
   setUp(() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     BackendApiService().setAuthTokenForTesting(_validAuthToken);

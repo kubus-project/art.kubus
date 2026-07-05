@@ -26,18 +26,60 @@ class DAOProvider extends ChangeNotifier {
     DAOSignedEnvelopeService? signedEnvelopeService,
   })  : _solanaService = solanaWalletService ?? SolanaWalletService(),
         _signedEnvelopeService =
-            signedEnvelopeService ?? const DAOSignedEnvelopeService() {
-    _loadData();
+            signedEnvelopeService ?? const DAOSignedEnvelopeService();
+
+  // DAO data loads lazily on first read instead of in the constructor. The
+  // provider is constructed at app startup (proxy provider), which used to
+  // fire 5 backend requests + a Solana RPC on boot for every user — including
+  // guests who never open a DAO surface. First access schedules the load in a
+  // microtask (never synchronously, so no notifyListeners during build) and
+  // listeners rebuild when data arrives, same as before.
+  bool _loadRequested = false;
+
+  void _scheduleInitialLoad() {
+    if (_loadRequested) return;
+    _loadRequested = true;
+    Future.microtask(_loadData);
+  }
+
+  /// Explicitly kick off (or await) the initial DAO data load.
+  Future<void> ensureLoaded() {
+    _loadRequested = true;
+    return refreshData();
   }
 
   // Getters
-  List<Proposal> get proposals => List.unmodifiable(_proposals);
-  List<Vote> get votes => List.unmodifiable(_votes);
-  List<Delegate> get delegates => List.unmodifiable(_delegates);
-  List<DAOTransaction> get transactions => List.unmodifiable(_transactions);
-  List<DAOReview> get reviews => List.unmodifiable(_reviews);
+  List<Proposal> get proposals {
+    _scheduleInitialLoad();
+    return List.unmodifiable(_proposals);
+  }
+
+  List<Vote> get votes {
+    _scheduleInitialLoad();
+    return List.unmodifiable(_votes);
+  }
+
+  List<Delegate> get delegates {
+    _scheduleInitialLoad();
+    return List.unmodifiable(_delegates);
+  }
+
+  List<DAOTransaction> get transactions {
+    _scheduleInitialLoad();
+    return List.unmodifiable(_transactions);
+  }
+
+  List<DAOReview> get reviews {
+    _scheduleInitialLoad();
+    return List.unmodifiable(_reviews);
+  }
+
   bool get isLoading => _isLoading;
-  double? get treasuryOnChainBalance => _treasuryOnChainBalance;
+
+  double? get treasuryOnChainBalance {
+    _scheduleInitialLoad();
+    return _treasuryOnChainBalance;
+  }
 
   Future<void> _loadData() async {
     _isLoading = true;
@@ -98,6 +140,7 @@ class DAOProvider extends ChangeNotifier {
 
   /// Public refresh hook so UI flows can ensure delegates/groups are present.
   Future<void> refreshData({bool force = false}) async {
+    _loadRequested = true;
     if (_isLoading) return;
     final bool hasData =
         _delegates.isNotEmpty || _proposals.isNotEmpty || _transactions.isNotEmpty;

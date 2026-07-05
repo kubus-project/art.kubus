@@ -155,6 +155,7 @@ class PublicFallbackService extends ChangeNotifier {
   bool _initialized = false;
   int _consecutiveDualFailures = 0;
   int _consecutiveRecoverySuccesses = 0;
+  int _consecutiveStandbyProbeFailures = 0;
   BackendWritableStatusRecord? _primaryStatus;
   BackendWritableStatusRecord? _standbyStatus;
   DateTime? _lastStandbyProbeAt;
@@ -271,6 +272,11 @@ class PublicFallbackService extends ChangeNotifier {
         _standbyStatus = standby;
         if (shouldProbeStandby) {
           _lastStandbyProbeAt = DateTime.now().toUtc();
+          if (standby != null && standby.reachable) {
+            _consecutiveStandbyProbeFailures = 0;
+          } else {
+            _consecutiveStandbyProbeFailures += 1;
+          }
         }
 
         final hintedMode = _resolveHintedMode(
@@ -528,6 +534,7 @@ class PublicFallbackService extends ChangeNotifier {
     _mode = AppRuntimeMode.live;
     _consecutiveDualFailures = 0;
     _consecutiveRecoverySuccesses = 0;
+    _consecutiveStandbyProbeFailures = 0;
     _primaryStatus = null;
     _standbyStatus = null;
     _lastStandbyProbeAt = null;
@@ -565,10 +572,20 @@ class PublicFallbackService extends ChangeNotifier {
   }
 
   Duration _standbyProbeIntervalWhenPrimaryHealthy() {
-    if (_isAppForeground) {
-      return const Duration(minutes: 6);
+    final base = _isAppForeground
+        ? const Duration(minutes: 6)
+        : const Duration(minutes: 12);
+    // A standby that keeps failing while the primary is healthy is most
+    // likely not deployed at all (bapi DNS/CORS errors on every probe).
+    // Back the probe cadence off up to 4x so we stop burning a request and
+    // a console error every few minutes; one success resets the backoff and
+    // outage handling (_shouldProbeStandbyNow) bypasses this entirely when
+    // the primary is down.
+    if (_consecutiveStandbyProbeFailures >= 3) {
+      final factor = _consecutiveStandbyProbeFailures >= 6 ? 4 : 2;
+      return base * factor;
     }
-    return const Duration(minutes: 12);
+    return base;
   }
 
   Duration _standbyProbeIntervalWhenNotLive() {

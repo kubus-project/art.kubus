@@ -16,6 +16,13 @@ const _validAuthToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.'
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  setUpAll(() {
+    // The MockClients below assert on every request they receive; the
+    // fire-and-forget HTTP failure reports (triggered by the intentional
+    // primary 503s) would otherwise race those expectations.
+    BackendApiService.disableHttpFailureDiagnosticsForTesting = true;
+  });
+
   setUp(() async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     await PublicFallbackService().resetForTesting();

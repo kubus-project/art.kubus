@@ -659,11 +659,19 @@ class BackendApiService
   static const Duration _diagnosticsRepeatWindow = Duration(minutes: 5);
   final Map<String, DateTime> _diagnosticsLastReportAt = <String, DateTime>{};
 
+  /// Tests that install counting/asserting MockClients set this so the
+  /// fire-and-forget failure reports don't race their request expectations
+  /// (the singleton client means a late report can even land in the next
+  /// test's mock).
+  @visibleForTesting
+  static bool disableHttpFailureDiagnosticsForTesting = false;
+
   void _captureHttpFailureDiagnostics({
     required String method,
     required Uri uri,
     required http.Response response,
   }) {
+    if (disableHttpFailureDiagnosticsForTesting) return;
     if (uri.path == '/api/diagnostics/error') return;
     final status = response.statusCode;
     if (status < 500 && status != 401 && status != 403) return;
