@@ -2725,12 +2725,22 @@ class BackendApiService
         origin: origin,
       );
 
-  /// Deprecated compatibility bridge.
+  /// Binds [walletAddress] to the authenticated account.
   ///
-  /// This surface is intentionally no longer the canonical way to link wallet
-  /// identity. Prefer challenge/sign/login for any wallet-proofed session.
-  Future<Map<String, dynamic>> bindAuthenticatedWallet(String walletAddress) =>
-      _backendApiBindAuthenticatedWallet(this, walletAddress);
+  /// The backend requires proof of wallet ownership unless the session is
+  /// already wallet-signed for that wallet: pass [signature] — the active
+  /// signer's signature over a fresh `/api/auth/challenge` message. Google and
+  /// email onboarding sessions are never wallet-signed, so account-link flows
+  /// must always supply it (see AccountWalletLinkService).
+  Future<Map<String, dynamic>> bindAuthenticatedWallet(
+    String walletAddress, {
+    String? signature,
+  }) =>
+      _backendApiBindAuthenticatedWallet(
+        this,
+        walletAddress,
+        signature: signature,
+      );
 
   Future<EncryptedWalletBackupDefinition?> getEncryptedWalletBackup({
     String? walletAddress,

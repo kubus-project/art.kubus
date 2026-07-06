@@ -527,11 +527,13 @@ extension BackendApiDomainAccess on BackendApiService {
         BackendTransportSurfaceDefinition(
           name: 'bindAuthenticatedWallet',
           domain: 'auth/session',
-          lifecycle: BackendTransportLifecycle.deadUnwired,
+          lifecycle: BackendTransportLifecycle.canonical,
           route: 'POST /api/auth/bind-wallet',
           notes:
-              'Deprecated unsafe wallet-link bridge. Kept only as a compatibility surface.',
+              'Account-link bind for Google/email sessions. Requires a signed '
+              'wallet challenge as ownership proof (AccountWalletLinkService).',
           requiresBackendSession: true,
+          requiresWalletSignature: true,
         ),
         BackendTransportSurfaceDefinition(
           name: 'issueDebugTokenForWallet',

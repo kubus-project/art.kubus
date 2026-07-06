@@ -63,11 +63,15 @@ class AccountWalletLinkResult {
 ///
 /// 1. Forces the original account token back onto [BackendApiService]
 ///    before any backend call (wallet creation may have polluted it).
-/// 2. POSTs `/api/auth/bind-wallet` under that token.
-/// 3. Persists the bind response token.
-/// 4. GETs `/api/profiles/me` and verifies the returned `userId` equals the
+/// 2. Proves wallet ownership: requests `/api/auth/challenge` for the wallet
+///    and signs it with the active signer. The backend rejects any
+///    `/api/auth/bind-wallet` from a non-wallet-signed (Google/email) session
+///    that does not carry this challenge signature.
+/// 3. POSTs `/api/auth/bind-wallet` with the signature under that token.
+/// 4. Persists the bind response token.
+/// 5. GETs `/api/profiles/me` and verifies the returned `userId` equals the
 ///    original account id and the returned wallet equals the linked wallet.
-/// 5. Only after verification commits wallet prefs and provider state.
+/// 6. Only after verification commits wallet prefs and provider state.
 ///
 /// On any failure the original token is restored and no wallet prefs are
 /// written; callers stay on the WalletConnect step and surface the error
@@ -75,19 +79,32 @@ class AccountWalletLinkResult {
 class AccountWalletLinkService {
   AccountWalletLinkService({
     BackendApiService? backendApi,
-    Future<Map<String, dynamic>> Function(String walletAddress)? bindWallet,
+    Future<Map<String, dynamic>> Function(
+      String walletAddress, {
+      String? signature,
+    })? bindWallet,
     Future<Map<String, dynamic>> Function()? fetchMyProfile,
+    Future<String> Function(String walletAddress)? signWalletChallenge,
   })  : _backendApi = backendApi ?? BackendApiService(),
         _bindWalletOverride = bindWallet,
-        _fetchMyProfileOverride = fetchMyProfile;
+        _fetchMyProfileOverride = fetchMyProfile,
+        _signWalletChallengeOverride = signWalletChallenge;
 
   final BackendApiService _backendApi;
-  final Future<Map<String, dynamic>> Function(String walletAddress)?
-      _bindWalletOverride;
+  final Future<Map<String, dynamic>> Function(
+    String walletAddress, {
+    String? signature,
+  })? _bindWalletOverride;
   final Future<Map<String, dynamic>> Function()? _fetchMyProfileOverride;
+  final Future<String> Function(String walletAddress)?
+      _signWalletChallengeOverride;
 
   static const Duration _bindTimeout = Duration(seconds: 10);
   static const Duration _verifyTimeout = Duration(seconds: 8);
+
+  /// External wallets need user approval to sign the ownership challenge, so
+  /// the proof step gets a much longer budget than the bind call itself.
+  static const Duration _challengeSignTimeout = Duration(minutes: 2);
 
   Future<AccountWalletLinkResult> linkWalletToCurrentAccount({
     required BuildContext context,
@@ -140,11 +157,37 @@ class AccountWalletLinkService {
       await _backendApi.setRefreshToken(refreshToken);
     }
 
+    // Prove wallet ownership before binding. The backend requires a signed
+    // challenge from non-wallet-signed sessions; without it every bind from a
+    // Google/email onboarding session fails with 400. When a bind override is
+    // injected without a signing override, the override owns the proof.
+    String? walletProofSignature;
+    if (_signWalletChallengeOverride != null || _bindWalletOverride == null) {
+      try {
+        walletProofSignature = await (_signWalletChallengeOverride != null
+                ? _signWalletChallengeOverride(normalizedWallet)
+                : _signChallengeWithActiveSigner(
+                    walletProvider,
+                    normalizedWallet,
+                  ))
+            .timeout(_challengeSignTimeout);
+      } catch (error) {
+        await _restoreOriginalToken(normalizedToken, refreshToken);
+        rethrow;
+      }
+    }
+
     Map<String, dynamic> bindPayload;
     try {
       bindPayload = await (_bindWalletOverride != null
-              ? _bindWalletOverride(normalizedWallet)
-              : _backendApi.bindAuthenticatedWallet(normalizedWallet))
+              ? _bindWalletOverride(
+                  normalizedWallet,
+                  signature: walletProofSignature,
+                )
+              : _backendApi.bindAuthenticatedWallet(
+                  normalizedWallet,
+                  signature: walletProofSignature,
+                ))
           .timeout(_bindTimeout);
     } catch (error) {
       await _restoreOriginalToken(normalizedToken, refreshToken);
@@ -216,6 +259,28 @@ class AccountWalletLinkService {
       profilePayload: profilePayload,
       bindPayload: bindPayload,
     );
+  }
+
+  /// Default ownership proof: fetch a wallet challenge (unauthenticated) and
+  /// sign it with the signer that onboarding just created/imported/connected.
+  Future<String> _signChallengeWithActiveSigner(
+    WalletProvider? walletProvider,
+    String walletAddress,
+  ) async {
+    if (walletProvider == null ||
+        !walletProvider.canTransact ||
+        !WalletUtils.equals(
+          walletProvider.currentWalletAddress,
+          walletAddress,
+        )) {
+      throw const AccountWalletLinkStateException(
+        'The wallet signer is not ready to prove ownership of this wallet. '
+        'Retry the wallet step.',
+      );
+    }
+    final challenge =
+        await _backendApi.requestWalletAuthChallenge(walletAddress);
+    return walletProvider.signMessage(challenge.message);
   }
 
   Future<void> _restoreOriginalToken(String token, String refreshToken) async {

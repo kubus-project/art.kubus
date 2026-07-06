@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:art_kubus/providers/chat_provider.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
@@ -6,6 +8,8 @@ import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/solana_wallet_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -131,7 +135,7 @@ void main() {
     String? tokenAtBindTime;
     var profileFetches = 0;
     final service = AccountWalletLinkService(
-      bindWallet: (wallet) async {
+      bindWallet: (wallet, {signature}) async {
         tokenAtBindTime = BackendApiService().getAuthToken();
         return <String, dynamic>{
           'success': true,
@@ -183,6 +187,186 @@ void main() {
   });
 
   testWidgets(
+      'wallet-ownership proof is acquired and its signature reaches the bind '
+      'transport', (tester) async {
+    final context = await _pumpProviders(
+      tester,
+      walletProvider: _RecordingWalletProvider(),
+      profileProvider: _RecordingProfileProvider(),
+      chatProvider: _RecordingChatProvider(),
+    );
+
+    String? signedWallet;
+    String? signatureAtBindTime;
+    final service = AccountWalletLinkService(
+      signWalletChallenge: (wallet) async {
+        signedWallet = wallet;
+        return 'challenge-signature-abc';
+      },
+      bindWallet: (wallet, {signature}) async {
+        signatureAtBindTime = signature;
+        return <String, dynamic>{
+          'success': true,
+          'data': <String, dynamic>{'token': 'post-bind-token'},
+        };
+      },
+      fetchMyProfile: () async => <String, dynamic>{
+        'success': true,
+        'data': <String, dynamic>{
+          'userId': kUserId,
+          'walletAddress': kWallet,
+        },
+      },
+    );
+
+    await tester.runAsync(() async {
+      await service.linkWalletToCurrentAccount(
+        context: context,
+        walletAddress: kWallet,
+        expectedUserId: kUserId,
+        originalAuthToken: kOriginalToken,
+      );
+    });
+
+    expect(signedWallet, kWallet,
+        reason: 'the challenge must be signed for the wallet being linked');
+    expect(signatureAtBindTime, 'challenge-signature-abc',
+        reason: 'bind-wallet requires the challenge signature as ownership '
+            'proof for non-wallet-signed (Google/email) sessions');
+  });
+
+  testWidgets(
+      'end-to-end default path: challenge is fetched, signed by the created '
+      'wallet, and the signature is posted to bind-wallet', (tester) async {
+    final walletProvider = _RecordingWalletProvider();
+    final context = await _pumpProviders(
+      tester,
+      walletProvider: walletProvider,
+      profileProvider: _RecordingProfileProvider(),
+      chatProvider: _RecordingChatProvider(),
+    );
+
+    const challengeMessage =
+        'Sign this message to verify wallet ownership: nonce-e2e-1';
+    Uri? challengeUri;
+    Map<String, dynamic>? bindBody;
+    String? createdWallet;
+
+    BackendApiService().setHttpClient(MockClient((request) async {
+      final path = request.url.path;
+      if (path.endsWith('/api/auth/challenge')) {
+        challengeUri = request.url;
+        return http.Response(
+          jsonEncode(<String, dynamic>{'message': challengeMessage}),
+          200,
+          headers: const {'content-type': 'application/json'},
+        );
+      }
+      if (path.endsWith('/api/auth/bind-wallet')) {
+        bindBody = jsonDecode(request.body) as Map<String, dynamic>;
+        return http.Response(
+          jsonEncode(<String, dynamic>{
+            'success': true,
+            'data': <String, dynamic>{'token': 'post-bind-token'},
+          }),
+          200,
+          headers: const {'content-type': 'application/json'},
+        );
+      }
+      if (path.endsWith('/api/profiles/me')) {
+        return http.Response(
+          jsonEncode(<String, dynamic>{
+            'data': <String, dynamic>{
+              'userId': kUserId,
+              'walletAddress': createdWallet,
+            },
+          }),
+          200,
+          headers: const {'content-type': 'application/json'},
+        );
+      }
+      return http.Response(
+        '{"success":false,"error":"unexpected path"}',
+        404,
+        headers: const {'content-type': 'application/json'},
+      );
+    }));
+    addTearDown(() => BackendApiService().setHttpClient(http.Client()));
+
+    // No seams: the real proof + bind + verify path must run.
+    final service = AccountWalletLinkService();
+
+    late AccountWalletLinkResult result;
+    late String expectedSignature;
+    await tester.runAsync(() async {
+      createdWallet = await walletProvider.createWalletForAccountLink();
+      result = await service.linkWalletToCurrentAccount(
+        context: context,
+        walletAddress: createdWallet!,
+        expectedUserId: kUserId,
+        originalAuthToken: kOriginalToken,
+      );
+      // Ed25519 signing is deterministic: re-signing the same challenge with
+      // the same signer must reproduce the signature sent to the backend.
+      expectedSignature = await walletProvider.signMessage(challengeMessage);
+    });
+
+    expect(challengeUri, isNotNull,
+        reason: 'the ownership challenge must be requested before binding');
+    expect(challengeUri!.queryParameters['walletAddress'], createdWallet);
+    expect(bindBody, isNotNull);
+    expect(bindBody!['walletAddress'], createdWallet);
+    expect(bindBody!['signature'], expectedSignature,
+        reason: 'bind-wallet must carry the signer\'s challenge signature');
+    expect(result.walletAddress, createdWallet);
+    expect(result.userId, kUserId);
+  });
+
+  testWidgets(
+      'challenge signing failure restores the original token and never binds',
+      (tester) async {
+    final context = await _pumpProviders(
+      tester,
+      walletProvider: _RecordingWalletProvider(),
+      profileProvider: _RecordingProfileProvider(),
+      chatProvider: _RecordingChatProvider(),
+    );
+
+    var bindCalls = 0;
+    final service = AccountWalletLinkService(
+      signWalletChallenge: (wallet) async =>
+          throw Exception('signer rejected the challenge'),
+      bindWallet: (wallet, {signature}) async {
+        bindCalls += 1;
+        return <String, dynamic>{'success': true};
+      },
+      fetchMyProfile: () async =>
+          fail('profiles/me must not be fetched when signing fails'),
+    );
+
+    Object? thrown;
+    await tester.runAsync(() async {
+      try {
+        await service.linkWalletToCurrentAccount(
+          context: context,
+          walletAddress: kWallet,
+          expectedUserId: kUserId,
+          originalAuthToken: kOriginalToken,
+        );
+      } catch (error) {
+        thrown = error;
+      }
+    });
+
+    expect(thrown, isNotNull);
+    expect(bindCalls, 0);
+    expect(BackendApiService().getAuthToken(), kOriginalToken);
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString('wallet_address'), isNull);
+    expect(prefs.getBool('has_wallet'), isNull);
+  });
+
+  testWidgets(
       'verification user-id mismatch throws, restores the original token and '
       'writes no wallet prefs', (tester) async {
     final walletProvider = _RecordingWalletProvider();
@@ -196,7 +380,7 @@ void main() {
     );
 
     final service = AccountWalletLinkService(
-      bindWallet: (wallet) async => <String, dynamic>{
+      bindWallet: (wallet, {signature}) async => <String, dynamic>{
         'success': true,
         'data': <String, dynamic>{'token': 'wallet-account-token'},
       },
@@ -245,7 +429,8 @@ void main() {
     );
 
     final service = AccountWalletLinkService(
-      bindWallet: (wallet) async => <String, dynamic>{'success': true},
+      bindWallet: (wallet, {signature}) async =>
+          <String, dynamic>{'success': true},
       fetchMyProfile: () async => <String, dynamic>{
         'success': true,
         'data': <String, dynamic>{
@@ -283,7 +468,8 @@ void main() {
     );
 
     final service = AccountWalletLinkService(
-      bindWallet: (wallet) async => throw Exception('bind exploded'),
+      bindWallet: (wallet, {signature}) async =>
+          throw Exception('bind exploded'),
       fetchMyProfile: () async =>
           fail('profiles/me must not be fetched when bind fails'),
     );
@@ -321,7 +507,7 @@ void main() {
 
     var bindCalls = 0;
     final service = AccountWalletLinkService(
-      bindWallet: (wallet) async {
+      bindWallet: (wallet, {signature}) async {
         bindCalls += 1;
         return <String, dynamic>{'success': true};
       },

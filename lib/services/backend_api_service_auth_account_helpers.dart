@@ -764,16 +764,21 @@ Future<Map<String, dynamic>> _backendApiLoginWithGoogle(
 
 Future<Map<String, dynamic>> _backendApiBindAuthenticatedWallet(
   BackendApiService service,
-  String walletAddress,
-) async {
+  String walletAddress, {
+  String? signature,
+}) async {
   try {
     const path = '/api/auth/bind-wallet';
+    final normalizedSignature = (signature ?? '').trim();
     final response = await service._sendAuthRequestWithFailover(
       'POST',
       path,
       includeAuth: true,
       headers: service._getHeaders(includeAuth: true),
-      body: jsonEncode(<String, dynamic>{'walletAddress': walletAddress}),
+      body: jsonEncode(<String, dynamic>{
+        'walletAddress': walletAddress,
+        if (normalizedSignature.isNotEmpty) 'signature': normalizedSignature,
+      }),
     );
     final data = jsonDecode(response.body) as Map<String, dynamic>;
     if (response.statusCode == 200 || response.statusCode == 201) {

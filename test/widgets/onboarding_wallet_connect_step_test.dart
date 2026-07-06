@@ -182,7 +182,7 @@ void main() {
     final harness = await _pumpStep(
       tester,
       linkService: AccountWalletLinkService(
-        bindWallet: (wallet) async {
+        bindWallet: (wallet, {signature}) async {
           tokenAtBindTime = BackendApiService().getAuthToken();
           if (!bindStarted.isCompleted) bindStarted.complete();
           await releaseBind.future;
@@ -252,7 +252,7 @@ void main() {
     final harness = await _pumpStep(
       tester,
       linkService: AccountWalletLinkService(
-        bindWallet: (wallet) async => <String, dynamic>{
+        bindWallet: (wallet, {signature}) async => <String, dynamic>{
           'success': true,
           'data': <String, dynamic>{'token': 'wallet-root-token'},
         },
@@ -299,7 +299,7 @@ void main() {
     final harness = await _pumpStep(
       tester,
       linkService: AccountWalletLinkService(
-        bindWallet: (wallet) async {
+        bindWallet: (wallet, {signature}) async {
           tokenAtBindTime = BackendApiService().getAuthToken();
           return <String, dynamic>{
             'success': true,
@@ -358,7 +358,7 @@ void main() {
     final harness = await _pumpStep(
       tester,
       linkService: AccountWalletLinkService(
-        bindWallet: (wallet) async =>
+        bindWallet: (wallet, {signature}) async =>
             fail('bind must not run without an account session'),
         fetchMyProfile: () async =>
             fail('verification must not run without an account session'),

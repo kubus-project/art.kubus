@@ -103,9 +103,12 @@ class WalletSessionSyncService {
       if (normalizedOriginalToken.isEmpty) {
         throw ArgumentError('accountLinkMode requires originalAuthToken.');
       }
-      Future<Map<String, dynamic>> Function(String wallet)? bindOverride;
+      // When a bind override is injected it owns the whole transport,
+      // including any wallet-ownership proof; the signature is not forwarded.
+      Future<Map<String, dynamic>> Function(String wallet, {String? signature})?
+          bindOverride;
       if (syncBackendWallet != null) {
-        bindOverride = (wallet) async {
+        bindOverride = (wallet, {String? signature}) async {
           final response = await syncBackendWallet(wallet);
           return response is Map
               ? Map<String, dynamic>.from(response)
