@@ -2514,43 +2514,66 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
             '')
         .trim();
 
+    // Reaching this callback means AccountWalletLinkService already bound the
+    // wallet AND verified through /api/profiles/me that the signed-in account
+    // owns it — it throws (and this callback never runs) otherwise. So the
+    // link is authoritative here.
+    //
+    // The refresh below is a best-effort convenience + a final consistency
+    // guard. A transient failure to reload the profile (e.g. a post-bind read
+    // that briefly 401s on a busy/HA backend) must NEVER strand a correctly
+    // linked wallet on the WalletConnect step. We therefore only block
+    // completion when the profile actually reloads AND positively reports a
+    // different account or a different/missing wallet.
+    var profileReloaded = false;
     try {
       await profileProvider
           .loadAuthenticatedProfile()
           .timeout(const Duration(seconds: 6));
+      profileReloaded = true;
+    } catch (error) {
+      debugPrint(
+        'OnboardingFlow: post-link profile refresh failed (non-fatal, link '
+        'already verified): $error',
+      );
+    }
+
+    try {
       await _syncWalletBackupRequirement();
-      _refreshAuthDerivedSteps();
-      if (!mounted) return;
+    } catch (error) {
+      debugPrint(
+        'OnboardingFlow: wallet backup sync after link failed (non-fatal): '
+        '$error',
+      );
+    }
+    _refreshAuthDerivedSteps();
+    if (!mounted) return;
+
+    if (profileReloaded && profileProvider.hasHydratedProfile) {
       final linkedWallet =
           (profileProvider.currentUser?.walletAddress ?? '').trim();
       final reloadedUserId = (profileProvider.currentUser?.userId ??
               profileProvider.currentUser?.id ??
               '')
           .trim();
-      // The step already verified the link; this is a final consistency
-      // check that the authenticated account still owns the wallet and the
-      // account id did not change underneath us.
       final userIdStable = expectedUserId.isEmpty ||
           reloadedUserId.isEmpty ||
           reloadedUserId == expectedUserId;
-      if (linkedWallet.isEmpty ||
-          !WalletUtils.equals(linkedWallet, walletAddress) ||
-          !userIdStable) {
+      final walletMatches = linkedWallet.isNotEmpty &&
+          WalletUtils.equals(linkedWallet, walletAddress);
+      if (!walletMatches || !userIdStable) {
         messenger.showKubusSnackBar(
           SnackBar(content: Text(l10n.connectWalletWalletConnectFailedToast)),
           tone: KubusSnackBarTone.error,
         );
         return;
       }
-      await OnboardingStateService.clearAccountLinkGuard();
-      await _markCompleted(_OnboardingStep.walletConnect);
-    } catch (error) {
-      if (!mounted) return;
-      messenger.showKubusSnackBar(
-        SnackBar(content: Text(error.toString())),
-        tone: KubusSnackBarTone.error,
-      );
     }
+
+    // Verified link (by the link service) — complete the step regardless of a
+    // transient profile-refresh hiccup.
+    await OnboardingStateService.clearAccountLinkGuard();
+    await _markCompleted(_OnboardingStep.walletConnect);
   }
 
   Future<bool> _openMnemonicRevealFlow() async {
