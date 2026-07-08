@@ -4842,8 +4842,7 @@ class BackendApiService
                 true;
           }).toList(growable: false);
 
-          final effectiveLimit =
-              idFilter.isNotEmpty ? idFilter.length : limit;
+          final effectiveLimit = idFilter.isNotEmpty ? idFilter.length : limit;
           final start =
               ((page - 1) * effectiveLimit).clamp(0, filtered.length).toInt();
           final end =
@@ -5235,6 +5234,7 @@ class BackendApiService
     double? latitude,
     double? longitude,
   }) async {
+    const path = '/api/artworks';
     try {
       await _ensureAuthBeforeRequest(walletAddress: walletAddress);
 
@@ -5300,7 +5300,7 @@ class BackendApiService
       };
 
       final response = await _post(
-        Uri.parse('$baseUrl/api/artworks'),
+        Uri.parse('$baseUrl$path'),
         headers: _getHeaders(),
         body: jsonEncode(body),
         isIdempotent: true,
@@ -5312,15 +5312,57 @@ class BackendApiService
           preferredKeys: const <String>['artwork'],
         );
         if (payload is Map<String, dynamic>) {
-          return parseArtworkFromBackendJson(payload);
+          try {
+            final artwork = parseArtworkFromBackendJson(payload);
+            if (artwork.id.trim().isNotEmpty) {
+              return artwork;
+            }
+          } catch (_) {
+            // Re-throw as a request exception below so callers get the HTTP
+            // context for malformed mutation responses.
+          }
         }
-        return null;
-      } else {
-        throw Exception('Failed to create artwork: ${response.statusCode}');
+        throw BackendApiRequestException(
+          statusCode: response.statusCode,
+          path: path,
+          body: response.body,
+        );
       }
-    } catch (e) {
+      throw BackendApiRequestException(
+        statusCode: response.statusCode,
+        path: path,
+        body: response.body,
+      );
+    } on BackendApiRequestException catch (e) {
       AppConfig.debugPrint('BackendApiService.createArtworkRecord failed: $e');
-      return null;
+      rethrow;
+    } on TimeoutException catch (e) {
+      final error = BackendApiRequestException(
+        statusCode: 504,
+        path: path,
+        body: e.message,
+      );
+      AppConfig.debugPrint(
+          'BackendApiService.createArtworkRecord failed: $error');
+      throw error;
+    } on http.ClientException catch (e) {
+      final error = BackendApiRequestException(
+        statusCode: 0,
+        path: path,
+        body: e.message,
+      );
+      AppConfig.debugPrint(
+          'BackendApiService.createArtworkRecord failed: $error');
+      throw error;
+    } catch (e) {
+      final error = BackendApiRequestException(
+        statusCode: 0,
+        path: path,
+        body: e.toString(),
+      );
+      AppConfig.debugPrint(
+          'BackendApiService.createArtworkRecord failed: $error');
+      throw error;
     }
   }
 
@@ -9891,8 +9933,8 @@ Artwork parseArtworkFromBackendJson(Map<String, dynamic> json) {
     // Image attribution (photographer / licence), surfaced in detail screens.
     addMeta('imageAuthor', json['imageAuthor'] ?? json['image_author']);
     addMeta('imageLicense', json['imageLicense'] ?? json['image_license']);
-    addMeta(
-        'imageAttribution', json['imageAttribution'] ?? json['image_attribution']);
+    addMeta('imageAttribution',
+        json['imageAttribution'] ?? json['image_attribution']);
     addMeta(
         'imageSourceUrl', json['imageSourceUrl'] ?? json['image_source_url']);
 

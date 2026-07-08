@@ -324,10 +324,10 @@ The goal is to reduce security risk, architectural drift, brittle state flow, UI
 **Recommended model:** GPT-5.5 high  
 **Validation required:** Table tests for 200, 401, 404, 500, timeout, and offline fallback for representative methods.  
 **Dependencies or blockers:** Requires compatibility plan for existing providers.  
-**Status:** Deferred  
-**Deferral reason:** This is a cross-cutting API contract change. Existing providers and screens currently depend on mixed return conventions (`[]`, `null`, `{success:false}`, and thrown exceptions); changing representative methods without a compatibility matrix would risk turning recoverable empty states into user-facing failures or swallowing real mutation failures in a different place.  
-**Safest next action:** Write a method-by-method compatibility matrix for `getMyProfile`, `listEvents`, `listExhibitions`, `createArtworkRecord`, and one mutation path, then implement one contract family at a time with table tests for 200, 401, 404, 500, timeout, and snapshot fallback.  
-**Validation needed later:** Table-driven backend API service tests plus provider regression tests for each changed method family.
+**Status:** Partially completed
+**Completion notes:** Implemented the first isolated mutation slice: `BackendApiService.createArtworkRecord` now preserves successful behavior but throws `BackendApiRequestException` for transport failures, non-2xx responses, and malformed successful mutation responses. `ArtworkDraftsProvider` catches that typed exception so visible draft-submit failure UX remains unchanged. This is an intentional non-drop-in service contract change for this method only.
+**Validation run:** `flutter test test/services/backend_api_service_create_artwork_record_test.dart test/providers/artwork_drafts_provider_test.dart` passed; scoped `flutter analyze --no-fatal-infos` on touched service/provider/tests passed; `npm run guard:architecture` passed at `778/778` direct `debugPrint` budget.
+**Follow-up:** Continue method-by-method. Do not change `getMyProfile`, `listEvents`, `listExhibitions`, or other mutations without their own compatibility matrix and provider regression tests.
 
 ### [MED-11] Map screens still own lifecycle and business logic
 
@@ -376,10 +376,10 @@ The goal is to reduce security risk, architectural drift, brittle state flow, UI
 **Validation required:** Service unit tests without widget harness plus `flutter analyze`.  
 **Dependencies or blockers:** None  
 **Status:** Partially completed  
-**Completion notes:** `SearchService` no longer captures providers, localization, or `BuildContext`; it now consumes explicit snapshot data, while `KubusSearchController` owns the widget-layer provider/localization capture.  
-**Validation run:** `flutter test test/services/search_service_test.dart test/widgets/search/kubus_general_search_test.dart test/widgets/search/kubus_search_bar_map_glass_test.dart test/widgets/search/kubus_search_results_overlay_interaction_test.dart` passed; scoped `flutter analyze` for touched search files/tests passed; `npm run guard:architecture` passed; `rg` confirmed no `BuildContext`/provider/localization usage remains in `lib/services/search_service.dart`.  
+**Completion notes:** `SearchService` no longer captures providers, localization, or `BuildContext`; it now consumes explicit snapshot data, while `KubusSearchController` owns the widget-layer provider/localization capture. Second pass removed `BuildContext` and provider-package reads from `WalletSessionSyncService` and `AccountWalletLinkService` by introducing an explicit wallet-session provider payload captured at widget/coordinator boundaries. `PostAuthCoordinator` still owns navigation, app-bootstrap warm-up, and other UI-bound context work.
+**Validation run:** `flutter test test/services/search_service_test.dart test/widgets/search/kubus_general_search_test.dart test/widgets/search/kubus_search_bar_map_glass_test.dart test/widgets/search/kubus_search_results_overlay_interaction_test.dart` passed; scoped search `flutter analyze` passed; wallet-session pass `flutter test test/services/wallet_session_sync_service_test.dart test/services/account_wallet_link_service_test.dart` passed; auth/onboarding regression group `flutter test test/utils/auth_google_wallet_test.dart test/widgets/onboarding_wallet_connect_step_test.dart test/auth/post_auth_handoff_test.dart test/auth/post_auth_visible_loading_test.dart test/screens/sign_in_post_auth_shell_loading_test.dart test/screens/sign_in_wallet_post_auth_loading_test.dart test/widgets/auth_methods_panel_wallet_post_auth_loading_test.dart test/widgets/auth/post_auth_loading_screen_test.dart` passed; scoped touched-file `flutter analyze --no-fatal-infos` passed; `npm run guard:architecture` passed.
 **Screenshots:** Not applicable; no visual or layout changes.  
-**Follow-up:** `lib/services/post_auth_coordinator.dart`, `lib/services/wallet_session_sync_service.dart`, and `lib/services/share/share_service.dart` still require isolated context-removal work because they touch onboarding, wallet session, navigation, and share modal flows.
+**Follow-up:** `lib/services/post_auth_coordinator.dart` and `lib/services/share/share_service.dart` still require isolated context-removal work because they touch navigation, app bootstrap, snackbars, and share modal flows.
 
 ### [MED-14] Legacy API shims remain despite pre-launch no-legacy policy
 
@@ -965,10 +965,10 @@ For each selected task:
 
 ### [MED-10] API error contracts are inconsistent
 
-**Status:** Deferred  
-**Reason:** Requires a compatibility plan across providers before changing return/throw contracts. A partial change in this pass could make existing empty-state handling or mutation error handling less reliable.  
-**Safest next action:** Build a route/method policy matrix, then implement one method family per isolated task with table tests and provider regressions.  
-**Validation needed later:** 200/401/404/500/timeout/snapshot-fallback tests for each representative method plus affected provider tests.
+**Status:** Partially completed
+**Completion notes:** Implemented only the `BackendApiService.createArtworkRecord` mutation contract slice. Failed transport, non-2xx, and malformed mutation responses now throw `BackendApiRequestException`; `ArtworkDraftsProvider` preserves the existing visible publish-failure UX by catching that typed exception. Successful behavior is unchanged.
+**Validation run:** `flutter test test/services/backend_api_service_create_artwork_record_test.dart test/providers/artwork_drafts_provider_test.dart` passed; scoped touched-file `flutter analyze --no-fatal-infos` passed; `npm run guard:architecture` passed.
+**Follow-up:** Broader API error contracts remain deferred behind method-by-method compatibility tests.
 
 ### [MED-11] Map screens still own lifecycle and business logic
 
@@ -988,19 +988,17 @@ For each selected task:
 
 ### [CRIT-04B] Messaging and marker write assurance policy
 
-**Status:** Partially completed
-**Completion notes:** Marker ownership-affecting writes now require wallet-signed authority for `POST /api/art-markers`, `PUT /api/art-markers/:id`, `DELETE /api/art-markers/:id`, `POST /api/art-markers/:id/claims`, and `PATCH /api/art-markers/:id/claims/:claimId`. Messaging routes remain deferred because account-linked chat/session behavior needs an explicit route matrix before enforcement.
-**Validation run:** `npx jest --runInBand artMarkersWriteAssurance.test.js` passed (6 tests); `npx jest --runInBand artMarkersWriteAssurance.test.js artMarkersCreateIdempotency.test.js artMarkersUpdatePersistence.test.js artMarkersClaimsAuth.test.js markerOwnership.test.js` passed (25 tests); `npm run lint` passed in `backend/`.
-**Reason remaining:** Some messaging flows may be legitimate for email/Google account-linked sessions, while attachment and conversation mutation routes may need stronger assurance depending on product policy. Applying one rule blindly would risk breaking valid non-wallet collaboration flows.
-**Safest next action:** Define a route matrix for `backend/src/routes/messages.js`, then add focused tests for account-linked and wallet-signed tokens before changing middleware.
-**Validation needed later:** Route tests for conversation creation, message sending, attachment upload, conversation membership changes, and conversation avatar upload under account-linked and wallet-signed sessions.
+**Status:** Completed
+**Completion notes:** Marker ownership-affecting writes require wallet-signed authority. Messaging assurance now follows the scoped route matrix: existing account-linked chat sessions can still create/rename/delete conversations, add members, send text messages, read messages, send receipts, and react; only media-bearing message multipart sends and conversation avatar uploads require wallet-signed authority. Public API impact is limited to account-linked tokens receiving `403 WALLET_SIGNATURE_REQUIRED` on attachment/avatar upload paths.
+**Validation run:** Marker pass `npx jest --runInBand artMarkersWriteAssurance.test.js artMarkersCreateIdempotency.test.js artMarkersUpdatePersistence.test.js artMarkersClaimsAuth.test.js markerOwnership.test.js` passed (25 tests). Messaging pass `npx jest --runInBand messagesRoutesAuth.test.js authSecureAccount.test.js authBindWalletAccountLink.test.js uploadWalletSignedAuth.test.js` passed (52 tests). `npm run lint` passed in `backend/`.
+**Follow-up:** None for this scoped route matrix.
 
 ### [CRIT-05B] Event moderation public publication contract
 
-**Status:** Deferred  
-**Reason:** `backend/src/routes/adminModeration.js` can moderate `events`, but `backend/src/services/publicSyncService.js` exposes no `syncEventById`/`syncEventRow` method. Events are currently included in DNSLink/IPFS public snapshots through `publicSnapshotService`, which has scheduled/manual publish behavior but no narrow post-commit event refresh API. Adding a new event publication contract inside CRIT-05 would be a broader public-data design change.  
-**Safest next action:** Define whether events should become first-class `publicSyncService` entities, snapshot-only entities with a refresh queue, or exhibition-linked records only; then add tests for event create/update/moderation/delete sync semantics.  
-**Validation needed later:** Public sync or snapshot tests covering `events` status changes and public fallback output.
+**Status:** Completed
+**Completion notes:** Events remain snapshot-only public entities for this pass. Added `publicSnapshotService.requestPublish({ reason, entityType, entityId })`, which coalesces best-effort publish requests, honors publisher/writable-role behavior, and never rolls back admin moderation when publishing fails. Admin event moderation queues a snapshot publish only when event status changes and keeps response shapes unchanged.
+**Validation run:** `npx jest --runInBand publicSnapshotService.test.js adminModerationPublicSync.test.js` passed (18 tests); `npm run lint` passed in `backend/`.
+**Follow-up:** Do not invent OrbitDB event documents without a separate public-data design task.
 
 ### [CRIT-06B] Artwork multipart upload validation still uses MIME-or-extension checks
 
@@ -1012,17 +1010,32 @@ For each selected task:
 
 ### [HARNESS-01B] Broader architecture guards need debt cleanup first
 
-**Status:** Deferred  
-**Reason:** Several valuable guard candidates would fail against current known debt: route-level wildcard CORS still appears in `backend/src/routes/mediaProxy.js` and `backend/src/routes/presence.js`; canonical map screens still own timers, listeners, and subscriptions; broad `debugPrint` usage is widespread; and public-sync coverage requires route-specific ownership decisions.  
-**Safest next action:** Convert each category into a cleanup task with focused tests, then extend `scripts/architecture_guard.mjs` once the repo can pass the invariant without broad allowlists.  
-**Validation needed later:** `npm run guard:architecture`, focused route tests, Flutter analyze, and map/UI smoke checks for map lifecycle rules.
+**Status:** Partially completed
+**Completion notes:** Removed route-level wildcard/reflected CORS behavior from `mediaProxy` and `presence`, aligned both with shared server allowlist behavior, and added architecture guard rule `AK-GUARD-009` to prevent those route files from reintroducing direct `Access-Control-Allow-*` overrides. Browser approved-origin preflight behavior and non-browser media proxy behavior remain preserved.
+**Validation run:** `npx jest --runInBand mediaProxyRoutes.test.js presenceRoutes.test.js corsAllowedHeaders.test.js serverCorsProdDefaults.test.js architectureGuardScript.test.js` passed (37 tests); `npm run guard:architecture` passed (`3217` file checks, `778/778` direct `debugPrint` budget); `npm run lint` passed in `backend/`.
+**Follow-up:** Map lifecycle, remaining logging debt, and public-sync ownership guard candidates still need separate cleanup before new invariants can be enforced.
 
 ### [MED-13B] Auth, wallet, and share services still depend on `BuildContext`
 
-**Status:** Deferred  
-**Reason:** Removing context from `PostAuthCoordinator`, `WalletSessionSyncService`, and `ShareService` would cross login/onboarding, wallet binding, app bootstrap, navigation, snackbar, and modal share flows. That is too broad to change safely as the remainder of [MED-13] without dedicated flow tests and screenshots where share UI is affected.  
-**Safest next action:** Split into separate tasks: auth coordinator dependency bundle, wallet session sync typed provider dependencies, and share sheet UI/controller extraction. Keep existing behavior stable and validate each flow independently.  
-**Validation needed later:** Post-auth widget tests, wallet session sync service tests without widget provider harnesses where feasible, share sheet widget tests, scoped `flutter analyze`, and screenshots for share modal UI if the modal composition changes.
+**Status:** Partially completed
+**Completion notes:** Removed `BuildContext` from `WalletSessionSyncService` and `AccountWalletLinkService`. Widget/controller boundaries now capture typed wallet/profile/chat provider dependencies and pass them through `WalletSessionSyncProvidersPayload`; `PostAuthCoordinator` performs app-bootstrap warm-up at the UI boundary after wallet session sync. Auth/onboarding navigation and wallet-link UX remain unchanged.
+**Validation run:** `flutter test test/services/wallet_session_sync_service_test.dart test/services/account_wallet_link_service_test.dart` passed; auth/onboarding regression group `flutter test test/utils/auth_google_wallet_test.dart test/widgets/onboarding_wallet_connect_step_test.dart test/auth/post_auth_handoff_test.dart test/auth/post_auth_visible_loading_test.dart test/screens/sign_in_post_auth_shell_loading_test.dart test/screens/sign_in_wallet_post_auth_loading_test.dart test/widgets/auth_methods_panel_wallet_post_auth_loading_test.dart test/widgets/auth/post_auth_loading_screen_test.dart` passed; scoped touched-file `flutter analyze --no-fatal-infos` passed; `rg` confirmed no `BuildContext`, provider package import, or `AppBootstrapService` reference remains in the two wallet-link services.
+**Follow-up:** `PostAuthCoordinator` and `ShareService` still own UI-bound context work and need separate extraction tasks with screenshots where share modal composition changes.
+
+## Current branch validation
+
+Validation run on `chore/desloppify-audit` after the CRIT-04B, CRIT-05B, route CORS, MED-10, MED-13B, and backend mirror fixes:
+
+- `npm run verify:architecture` passed.
+- `npm run verify:docs` passed.
+- `npm run verify:backend` passed.
+- `npm run verify:flutter` passed with the known nonfatal `lib/screens/map_screen.dart:5329 deprecated_member_use` analyzer info.
+- `npm run qa:web:install` passed.
+- `C:\dev\flutter\bin\flutter.bat build web --release` passed; Flutter reported existing Wasm dry-run dependency incompatibilities, but the release web build completed.
+- `QA_ARTIFACT_DIR=output/playwright/artifacts/desloppify-web-smoke npm run qa:web` passed and captured `desktop-home.png` plus `mobile-home.png`.
+- `npm run verify:all` passed with the same known nonfatal analyzer info.
+- Full backend `npx jest --runInBand` passed: 145 suites / 865 tests.
+- Full Flutter `C:\dev\flutter\bin\flutter.bat test` passed: 1223 tests, 1 skipped.
 
 ## Notes for future audits
 

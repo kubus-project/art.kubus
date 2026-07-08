@@ -7,6 +7,7 @@ const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const failures = [];
 
 const requiredFiles = [
+  '.gitmodules',
   'AGENTS.md',
   'lib/AGENTS.md',
   'lib/providers/AGENTS.md',
@@ -148,10 +149,16 @@ requireIncludes('docs/README.md', [
 requireIncludes('docs/LOCAL_VERIFICATION.md', [
   'npm run docs:doctor',
   'npm run backend:status',
+  'backend-open-art-wt',
   'npm run qa:web',
   'npm run verify:all',
   'FLUTTER_BIN',
   'output/playwright/artifacts/',
+]);
+requireIncludes('.gitmodules', [
+  'path = backend',
+  'path = backend-open-art-wt',
+  'git@github.com:kubus-project/art.kubus-backend.git',
 ]);
 requireIncludes('AGENTS.md', [
   'StorageConfig.resolveUrl(raw)',

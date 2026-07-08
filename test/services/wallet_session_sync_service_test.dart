@@ -3,6 +3,7 @@ import 'package:art_kubus/services/account_wallet_link_service.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/services/solana_wallet_service.dart';
+import 'package:art_kubus/services/wallet_session_sync_dependencies.dart';
 import 'package:art_kubus/services/wallet_session_sync_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -59,6 +60,14 @@ class _RecordingChatProvider extends ChatProvider {
   }
 }
 
+WalletSessionSyncProvidersPayload _providersFromContext(BuildContext context) {
+  return WalletSessionSyncProvidersPayload(
+    walletProvider: context.read<WalletProvider>(),
+    profileProvider: context.read<ProfileProvider>(),
+    chatProvider: context.read<ChatProvider>(),
+  );
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -94,10 +103,9 @@ void main() {
     await tester.pump();
 
     await const WalletSessionSyncService().bindAuthenticatedWallet(
-      context: buildContext,
+      providers: _providersFromContext(buildContext),
       walletAddress: 'wallet-123',
       userId: 'user-42',
-      warmUp: false,
     );
 
     expect(walletProvider.restoreAttempted, isTrue);
@@ -141,10 +149,9 @@ void main() {
     await tester.pump();
 
     await const WalletSessionSyncService().bindAuthenticatedWallet(
-      context: buildContext,
+      providers: _providersFromContext(buildContext),
       walletAddress: 'wallet-backend-sync',
       userId: 'user-42',
-      warmUp: false,
       syncBackend: true,
       syncBackendWallet: (wallet) async {
         bindRequests += 1;
@@ -186,10 +193,9 @@ void main() {
 
     await tester.runAsync(() async {
       await const WalletSessionSyncService().bindAuthenticatedWallet(
-        context: buildContext,
+        providers: _providersFromContext(buildContext),
         walletAddress: 'wallet-token-refresh',
         userId: 'user-42',
-        warmUp: false,
         loadProfile: false,
         syncBackend: true,
         syncBackendWallet: (_) async => <String, dynamic>{
@@ -234,10 +240,9 @@ void main() {
     await tester.pump();
 
     await const WalletSessionSyncService().bindAuthenticatedWallet(
-      context: buildContext,
+      providers: _providersFromContext(buildContext),
       walletAddress: 'linked_auth:placeholder',
       userId: 'user-42',
-      warmUp: false,
       syncBackend: true,
     );
 
@@ -277,9 +282,8 @@ void main() {
 
     expect(
       () => const WalletSessionSyncService().bindAuthenticatedWallet(
-        context: buildContext,
+        providers: _providersFromContext(buildContext),
         walletAddress: wallet,
-        warmUp: false,
         accountLinkMode: true,
         // Missing syncBackend/requireBackendSync.
         expectedUserId: 'user-42',
@@ -289,9 +293,8 @@ void main() {
     );
     expect(
       () => const WalletSessionSyncService().bindAuthenticatedWallet(
-        context: buildContext,
+        providers: _providersFromContext(buildContext),
         walletAddress: wallet,
-        warmUp: false,
         syncBackend: true,
         requireBackendSync: true,
         accountLinkMode: true,
@@ -301,9 +304,8 @@ void main() {
     );
     expect(
       () => const WalletSessionSyncService().bindAuthenticatedWallet(
-        context: buildContext,
+        providers: _providersFromContext(buildContext),
         walletAddress: wallet,
-        warmUp: false,
         syncBackend: true,
         requireBackendSync: true,
         accountLinkMode: true,
@@ -345,9 +347,8 @@ void main() {
 
     await tester.runAsync(() async {
       await const WalletSessionSyncService().bindAuthenticatedWallet(
-        context: buildContext,
+        providers: _providersFromContext(buildContext),
         walletAddress: wallet,
-        warmUp: false,
         syncBackend: true,
         requireBackendSync: true,
         accountLinkMode: true,
@@ -410,9 +411,8 @@ void main() {
     await tester.runAsync(() async {
       try {
         await const WalletSessionSyncService().bindAuthenticatedWallet(
-          context: buildContext,
+          providers: _providersFromContext(buildContext),
           walletAddress: wallet,
-          warmUp: false,
           syncBackend: true,
           requireBackendSync: true,
           accountLinkMode: true,

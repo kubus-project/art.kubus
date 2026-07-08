@@ -4,15 +4,18 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/config.dart';
 import '../models/user_persona.dart';
+import '../providers/chat_provider.dart';
 import '../providers/profile_provider.dart';
 import '../providers/saved_items_provider.dart';
 import '../providers/security_gate_provider.dart';
 import '../providers/wallet_provider.dart';
 import '../services/auth_onboarding_service.dart';
 import '../services/auth_redirect_controller.dart';
+import '../services/app_bootstrap_service.dart';
 import '../services/security/post_auth_security_setup_service.dart';
 import '../services/telemetry/telemetry_service.dart';
 import '../services/wallet_session_sync_service.dart';
+import '../services/wallet_session_sync_dependencies.dart';
 import '../services/wallet_recovery_flow_service.dart';
 import '../utils/wallet_utils.dart';
 
@@ -73,6 +76,11 @@ class PostAuthCoordinator {
       final profileProvider = context.read<ProfileProvider>();
       final securityGateProvider = context.read<SecurityGateProvider>();
       final savedItemsProvider = context.read<SavedItemsProvider>();
+      final walletSessionProviders = WalletSessionSyncProvidersPayload(
+        walletProvider: walletProvider,
+        profileProvider: profileProvider,
+        chatProvider: context.read<ChatProvider>(),
+      );
       final prefs = await SharedPreferences.getInstance();
       final data = _mapOrNull(payload['data']) ?? payload;
       final user = _mapOrNull(data['user']) ?? data;
@@ -160,13 +168,19 @@ class PostAuthCoordinator {
 
           try {
             await const WalletSessionSyncService().bindAuthenticatedWallet(
-              context: context,
+              providers: walletSessionProviders,
               walletAddress: resolvedWallet,
               userId: normalizedUserId,
-              warmUp: true,
               loadProfile:
                   false, // Profile loading happens in loadingProfile stage
               syncBackend: shouldSyncBackendWallet,
+            );
+            if (!context.mounted) {
+              return const PostAuthResult(completed: false);
+            }
+            await _warmUpWalletSession(
+              context: context,
+              walletAddress: resolvedWallet,
             );
             if (!context.mounted) {
               return const PostAuthResult(completed: false);
@@ -464,5 +478,21 @@ class PostAuthCoordinator {
     // only in the dedicated WalletSetup step (account-link mode) or in the
     // explicit wallet sign-in flow.
     return null;
+  }
+
+  Future<void> _warmUpWalletSession({
+    required BuildContext context,
+    required String walletAddress,
+  }) async {
+    try {
+      await const AppBootstrapService()
+          .warmUp(
+            context: context,
+            walletAddress: walletAddress,
+          )
+          .timeout(const Duration(seconds: 8));
+    } catch (e) {
+      AppConfig.debugPrint('PostAuthCoordinator: bootstrap warm-up failed: $e');
+    }
   }
 }

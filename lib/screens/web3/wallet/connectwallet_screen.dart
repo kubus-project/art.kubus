@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import '../../../services/event_bus.dart';
+import '../../../providers/chat_provider.dart';
 import '../../../providers/wallet_provider.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../providers/profile_provider.dart';
@@ -17,6 +18,7 @@ import '../../../services/app_bootstrap_service.dart';
 import '../../../services/security/post_auth_security_setup_service.dart';
 import '../../../services/user_service.dart';
 import '../../../services/telemetry/telemetry_service.dart';
+import '../../../services/wallet_session_sync_dependencies.dart';
 import '../../../services/wallet_session_sync_service.dart';
 import '../../../models/user.dart';
 import '../../../widgets/auth_wallet_entry_menu.dart';
@@ -238,10 +240,9 @@ class _ConnectWalletState extends State<ConnectWallet>
         Provider.of<ProfileProvider?>(context, listen: false);
     final userId = profileProvider?.currentUser?.userId;
     await const WalletSessionSyncService().bindAuthenticatedWallet(
-      context: context,
+      providers: _walletSessionProviders(),
       walletAddress: normalizedWallet,
       userId: userId,
-      warmUp: false,
       loadProfile: true,
       syncBackend: true,
       requireBackendSync: true,
@@ -275,6 +276,14 @@ class _ConnectWalletState extends State<ConnectWallet>
       return;
     }
     _closeFlow();
+  }
+
+  WalletSessionSyncProvidersPayload _walletSessionProviders() {
+    return WalletSessionSyncProvidersPayload(
+      walletProvider: Provider.of<WalletProvider>(context, listen: false),
+      profileProvider: Provider.of<ProfileProvider>(context, listen: false),
+      chatProvider: Provider.of<ChatProvider>(context, listen: false),
+    );
   }
 
   @visibleForTesting
@@ -2048,9 +2057,8 @@ class _ConnectWalletState extends State<ConnectWallet>
 
         if (!mounted) return;
         await const WalletSessionSyncService().bindAuthenticatedWallet(
-          context: context,
+          providers: _walletSessionProviders(),
           walletAddress: address,
-          warmUp: false,
           loadProfile: false,
         );
         try {
@@ -2566,9 +2574,8 @@ class _ConnectWalletState extends State<ConnectWallet>
 
       if (!mounted) return;
       await const WalletSessionSyncService().bindAuthenticatedWallet(
-        context: context,
+        providers: _walletSessionProviders(),
         walletAddress: address,
-        warmUp: false,
         loadProfile: false,
       );
       try {
@@ -2684,9 +2691,8 @@ class _ConnectWalletState extends State<ConnectWallet>
         }
 
         await const WalletSessionSyncService().bindAuthenticatedWallet(
-          context: context,
+          providers: _walletSessionProviders(),
           walletAddress: address,
-          warmUp: false,
           loadProfile: false,
         );
 

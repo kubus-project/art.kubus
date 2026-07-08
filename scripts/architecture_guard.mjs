@@ -229,6 +229,22 @@ function scanDirectDebugPrintBudget() {
   }
 }
 
+function scanRouteLevelCorsOverrides() {
+  const files = [
+    "backend/src/routes/mediaProxy.js",
+    "backend/src/routes/presence.js",
+  ]
+    .filter(fileExists)
+    .map((relativePath) => path.join(repoRoot, relativePath));
+
+  scanRegex(
+    files,
+    "AK-GUARD-009",
+    /Access-Control-Allow-[A-Za-z-]+/g,
+    "mediaProxy and presence routes must use shared server CORS instead of route-level CORS headers.",
+  );
+}
+
 function runtimeConfigFiles() {
   const extensions = new Set([
     ".cjs",
@@ -304,6 +320,8 @@ scanRegex(
 );
 
 scanMulterMemoryLimits();
+
+scanRouteLevelCorsOverrides();
 
 scanDirectDebugPrintBudget();
 

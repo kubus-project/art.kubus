@@ -1,3 +1,6 @@
 [submodule "backend"]
 	path = backend
 	url = git@github.com:kubus-project/art.kubus-backend.git
+[submodule "backend-open-art-wt"]
+	path = backend-open-art-wt
+	url = git@github.com:kubus-project/art.kubus-backend.git

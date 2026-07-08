@@ -1,15 +1,14 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../config/config.dart';
 import '../providers/chat_provider.dart';
 import '../providers/profile_provider.dart';
 import '../providers/wallet_provider.dart';
 import '../utils/wallet_utils.dart';
 import 'backend_api_service.dart';
+import 'wallet_session_sync_dependencies.dart';
 
 /// Raised when the account-wallet link transaction cannot start because the
 /// caller is missing required authenticated-account state.
@@ -107,11 +106,11 @@ class AccountWalletLinkService {
   static const Duration _challengeSignTimeout = Duration(minutes: 2);
 
   Future<AccountWalletLinkResult> linkWalletToCurrentAccount({
-    required BuildContext context,
     required String walletAddress,
     required String expectedUserId,
     required String originalAuthToken,
     String? originalRefreshToken,
+    WalletSessionSyncProvidersPayload? providers,
   }) async {
     final normalizedWallet = walletAddress.trim();
     final normalizedUserId = expectedUserId.trim();
@@ -135,20 +134,6 @@ class AccountWalletLinkService {
       );
     }
 
-    // Capture providers before any await so the transaction does not depend
-    // on the widget staying mounted.
-    WalletProvider? walletProvider;
-    ProfileProvider? profileProvider;
-    ChatProvider? chatProvider;
-    try {
-      walletProvider = context.read<WalletProvider>();
-      profileProvider = context.read<ProfileProvider>();
-      chatProvider = context.read<ChatProvider>();
-    } catch (_) {
-      // Providers are optional for the backend transaction itself; commit
-      // steps that need them are skipped when unavailable.
-    }
-
     // Force the original Google/email account token back before binding. A
     // wallet create/import/connect must never decide which account binds.
     await _backendApi.setAuthToken(normalizedToken);
@@ -167,7 +152,7 @@ class AccountWalletLinkService {
         walletProofSignature = await (_signWalletChallengeOverride != null
                 ? _signWalletChallengeOverride(normalizedWallet)
                 : _signChallengeWithActiveSigner(
-                    walletProvider,
+                    providers?.walletProvider,
                     normalizedWallet,
                   ))
             .timeout(_challengeSignTimeout);
@@ -248,9 +233,9 @@ class AccountWalletLinkService {
     await _commitVerifiedLink(
       walletAddress: normalizedWallet,
       userId: verifiedUserId,
-      walletProvider: walletProvider,
-      profileProvider: profileProvider,
-      chatProvider: chatProvider,
+      walletProvider: providers?.walletProvider,
+      profileProvider: providers?.profileProvider,
+      chatProvider: providers?.chatProvider,
     );
 
     return AccountWalletLinkResult(
@@ -290,9 +275,8 @@ class AccountWalletLinkService {
         await _backendApi.setRefreshToken(refreshToken);
       }
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint('AccountWalletLinkService: token restore failed: $e');
-      }
+      AppConfig.debugPrint(
+          'AccountWalletLinkService: token restore failed: $e');
     }
   }
 
@@ -333,9 +317,7 @@ class AccountWalletLinkService {
       await prefs.setBool('has_wallet', true);
       await prefs.setString('user_id', userId);
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint('AccountWalletLinkService: prefs commit failed: $e');
-      }
+      AppConfig.debugPrint('AccountWalletLinkService: prefs commit failed: $e');
     }
 
     _backendApi.setPreferredWalletAddress(walletAddress);
@@ -356,9 +338,8 @@ class AccountWalletLinkService {
     if (profileProvider != null) {
       await _runNonFatal(
         'authenticated profile refresh',
-        () => profileProvider
-            .loadAuthenticatedProfile()
-            .timeout(_verifyTimeout),
+        () =>
+            profileProvider.loadAuthenticatedProfile().timeout(_verifyTimeout),
       );
     }
 
@@ -377,9 +358,7 @@ class AccountWalletLinkService {
     try {
       await action();
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint('AccountWalletLinkService: $label failed: $e');
-      }
+      AppConfig.debugPrint('AccountWalletLinkService: $label failed: $e');
     }
   }
 }

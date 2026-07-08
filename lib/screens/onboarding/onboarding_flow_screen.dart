@@ -5,6 +5,7 @@ import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/models/dao.dart';
 import 'package:art_kubus/models/user_persona.dart';
+import 'package:art_kubus/providers/chat_provider.dart';
 import 'package:art_kubus/providers/dao_provider.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/themeprovider.dart';
@@ -21,6 +22,7 @@ import 'package:art_kubus/services/onboarding_embedded_auth_service.dart';
 import 'package:art_kubus/services/push_notification_service.dart';
 import 'package:art_kubus/services/telemetry/telemetry_service.dart';
 import 'package:art_kubus/services/wallet_backup_passkey_service.dart';
+import 'package:art_kubus/services/wallet_session_sync_dependencies.dart';
 import 'package:art_kubus/services/wallet_session_sync_service.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/utils/dao_role_verification.dart';
@@ -914,11 +916,15 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         : _currentSessionWalletAddress();
     if (sessionWallet.isEmpty) return;
 
+    final providers = WalletSessionSyncProvidersPayload(
+      walletProvider: Provider.of<WalletProvider>(context, listen: false),
+      profileProvider: Provider.of<ProfileProvider>(context, listen: false),
+      chatProvider: Provider.of<ChatProvider>(context, listen: false),
+    );
     await const WalletSessionSyncService().bindAuthenticatedWallet(
-      context: context,
+      providers: providers,
       walletAddress: sessionWallet,
       userId: userId,
-      warmUp: false,
       loadProfile: loadProfile,
     );
     await _syncWalletBackupRequirement();

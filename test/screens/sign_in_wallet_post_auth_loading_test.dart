@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/providers/cache_provider.dart';
+import 'package:art_kubus/providers/chat_provider.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/saved_items_provider.dart';
 import 'package:art_kubus/providers/security_gate_provider.dart';
@@ -23,6 +24,7 @@ Widget _buildApp(
     providers: [
       ChangeNotifierProvider<WalletProvider>.value(value: walletProvider),
       ChangeNotifierProvider<CacheProvider>(create: (_) => CacheProvider()),
+      ChangeNotifierProvider<ChatProvider>(create: (_) => ChatProvider()),
       ChangeNotifierProvider<ProfileProvider>(create: (_) => ProfileProvider()),
       ChangeNotifierProvider<SavedItemsProvider>(
         create: (_) => SavedItemsProvider(),
@@ -133,8 +135,7 @@ void main() {
     await _drainPostAuthTimers(tester);
   });
 
-  testWidgets('wallet result with backend token shows loading',
-      (tester) async {
+  testWidgets('wallet result with backend token shows loading', (tester) async {
     final walletProvider = WalletProvider(deferInit: true);
 
     await tester.pumpWidget(

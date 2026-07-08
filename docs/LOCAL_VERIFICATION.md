@@ -78,7 +78,9 @@ npm run verify:backend
 
 `backend:status` reports whether `backend/` is available as a checked-out
 submodule, the backend HEAD, dirty state, and whether backend validation can run.
-CI uses the same script before deciding to run or explicitly skip backend checks.
+It also reports `backend-open-art-wt` mirror configuration, HEAD, and dirty state
+so the auxiliary backend worktree cannot silently drift. CI uses the same script
+before deciding to run or explicitly skip backend checks.
 
 Targeted profile media and CORS checks:
 

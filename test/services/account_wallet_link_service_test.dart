@@ -6,6 +6,7 @@ import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/services/account_wallet_link_service.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/solana_wallet_service.dart';
+import 'package:art_kubus/services/wallet_session_sync_dependencies.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -106,6 +107,14 @@ Future<BuildContext> _pumpProviders(
   return buildContext;
 }
 
+WalletSessionSyncProvidersPayload _providersFromContext(BuildContext context) {
+  return WalletSessionSyncProvidersPayload(
+    walletProvider: context.read<WalletProvider>(),
+    profileProvider: context.read<ProfileProvider>(),
+    chatProvider: context.read<ChatProvider>(),
+  );
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -157,10 +166,10 @@ void main() {
     late AccountWalletLinkResult result;
     await tester.runAsync(() async {
       result = await service.linkWalletToCurrentAccount(
-        context: context,
         walletAddress: kWallet,
         expectedUserId: kUserId,
         originalAuthToken: kOriginalToken,
+        providers: _providersFromContext(context),
       );
     });
 
@@ -221,10 +230,10 @@ void main() {
 
     await tester.runAsync(() async {
       await service.linkWalletToCurrentAccount(
-        context: context,
         walletAddress: kWallet,
         expectedUserId: kUserId,
         originalAuthToken: kOriginalToken,
+        providers: _providersFromContext(context),
       );
     });
 
@@ -301,10 +310,10 @@ void main() {
     await tester.runAsync(() async {
       createdWallet = await walletProvider.createWalletForAccountLink();
       result = await service.linkWalletToCurrentAccount(
-        context: context,
         walletAddress: createdWallet!,
         expectedUserId: kUserId,
         originalAuthToken: kOriginalToken,
+        providers: _providersFromContext(context),
       );
       // Ed25519 signing is deterministic: re-signing the same challenge with
       // the same signer must reproduce the signature sent to the backend.
@@ -348,10 +357,10 @@ void main() {
     await tester.runAsync(() async {
       try {
         await service.linkWalletToCurrentAccount(
-          context: context,
           walletAddress: kWallet,
           expectedUserId: kUserId,
           originalAuthToken: kOriginalToken,
+          providers: _providersFromContext(context),
         );
       } catch (error) {
         thrown = error;
@@ -398,10 +407,10 @@ void main() {
     await tester.runAsync(() async {
       try {
         await service.linkWalletToCurrentAccount(
-          context: context,
           walletAddress: kWallet,
           expectedUserId: kUserId,
           originalAuthToken: kOriginalToken,
+          providers: _providersFromContext(context),
         );
       } catch (error) {
         thrown = error;
@@ -444,10 +453,10 @@ void main() {
     await tester.runAsync(() async {
       try {
         await service.linkWalletToCurrentAccount(
-          context: context,
           walletAddress: kWallet,
           expectedUserId: kUserId,
           originalAuthToken: kOriginalToken,
+          providers: _providersFromContext(context),
         );
       } catch (error) {
         thrown = error;
@@ -478,10 +487,10 @@ void main() {
     await tester.runAsync(() async {
       try {
         await service.linkWalletToCurrentAccount(
-          context: context,
           walletAddress: kWallet,
           expectedUserId: kUserId,
           originalAuthToken: kOriginalToken,
+          providers: _providersFromContext(context),
         );
       } catch (error) {
         thrown = error;
@@ -523,10 +532,10 @@ void main() {
       await tester.runAsync(() async {
         try {
           await service.linkWalletToCurrentAccount(
-            context: context,
             walletAddress: wallet,
             expectedUserId: userId,
             originalAuthToken: token,
+            providers: _providersFromContext(context),
           );
         } catch (error) {
           thrown = error;

@@ -2,11 +2,13 @@ import 'dart:async';
 
 import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:art_kubus/providers/chat_provider.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/services/account_wallet_link_service.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/onboarding_state_service.dart';
+import 'package:art_kubus/services/wallet_session_sync_dependencies.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/widgets/kubus_button.dart';
 import 'package:flutter/material.dart';
@@ -220,10 +222,14 @@ class _OnboardingWalletConnectStepState
       // 4-7. Strict bind + verification through /api/profiles/me.
       final service = widget.linkService ?? AccountWalletLinkService();
       final result = await service.linkWalletToCurrentAccount(
-        context: context,
         walletAddress: address,
         expectedUserId: snapshot.userId,
         originalAuthToken: snapshot.token,
+        providers: WalletSessionSyncProvidersPayload(
+          walletProvider: context.read<WalletProvider>(),
+          profileProvider: context.read<ProfileProvider>(),
+          chatProvider: context.read<ChatProvider>(),
+        ),
       );
 
       // 8. Verified: the original account owns the wallet.
@@ -521,19 +527,18 @@ class _OnboardingWalletConnectStepState
         // Status appears only once something is happening — progressive
         // disclosure keeps the resting state calm.
         AnimatedSize(
-          duration: _reduceMotion
-              ? Duration.zero
-              : const Duration(milliseconds: 200),
+          duration:
+              _reduceMotion ? Duration.zero : const Duration(milliseconds: 200),
           curve: Curves.easeOutCubic,
           alignment: Alignment.topCenter,
           child: showStatus
               ? Padding(
                   padding: const EdgeInsets.only(top: KubusSpacing.lg),
                   child: _WalletConnectStatusPanel(
-                    phase: isLinked &&
-                            _phase != OnboardingWalletLinkPhase.failed
-                        ? OnboardingWalletLinkPhase.linked
-                        : _phase,
+                    phase:
+                        isLinked && _phase != OnboardingWalletLinkPhase.failed
+                            ? OnboardingWalletLinkPhase.linked
+                            : _phase,
                     localWallet: (_localWallet ?? '').isEmpty
                         ? null
                         : _truncateWallet(_localWallet!),
@@ -560,8 +565,7 @@ class _OnboardingWalletConnectStepState
               children: [
                 content,
                 SizedBox(
-                  height:
-                      MediaQuery.viewInsetsOf(context).bottom > 0 ? 120 : 0,
+                  height: MediaQuery.viewInsetsOf(context).bottom > 0 ? 120 : 0,
                 ),
               ],
             ),

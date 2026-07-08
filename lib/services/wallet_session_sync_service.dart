@@ -1,23 +1,17 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../providers/chat_provider.dart';
-import '../providers/profile_provider.dart';
-import '../providers/wallet_provider.dart';
 import 'account_wallet_link_service.dart';
-import 'app_bootstrap_service.dart';
 import 'backend_api_service.dart';
+import 'wallet_session_sync_dependencies.dart';
 
 class WalletSessionSyncService {
   const WalletSessionSyncService();
 
   static const Duration _walletBindTimeout = Duration(seconds: 6);
   static const Duration _profileRefreshTimeout = Duration(seconds: 5);
-  static const Duration _warmUpTimeout = Duration(seconds: 8);
 
   Future<void> _persistAuthResponse(
     BackendApiService backendApi,
@@ -65,17 +59,16 @@ class WalletSessionSyncService {
   /// * Default (wallet-auth) mode keeps the historical behavior used by
   ///   wallet-rooted sign-in flows. It writes wallet prefs eagerly and may
   ///   auto-register a wallet profile. It MUST NOT be called from onboarding
-  ///   Google/email flows — those flows must use [accountLinkMode] so a
+  ///   Google/email flows; those flows must use [accountLinkMode] so a
   ///   wallet can never replace or duplicate the signed-in account.
   /// * [accountLinkMode] runs the strict [AccountWalletLinkService]
   ///   transaction: no prefs, no preferred-wallet routing change, and no
   ///   provider identity update happen before `/api/auth/bind-wallet` is
   ///   verified through `/api/profiles/me` for [expectedUserId].
   Future<void> bindAuthenticatedWallet({
-    required BuildContext context,
+    required WalletSessionSyncProvidersPayload providers,
     required String walletAddress,
     Object? userId,
-    bool warmUp = true,
     bool loadProfile = true,
     bool syncBackend = false,
     bool requireBackendSync = false,
@@ -87,7 +80,10 @@ class WalletSessionSyncService {
     Future<Map<String, dynamic>> Function()? fetchAuthenticatedProfile,
   }) async {
     final normalizedWallet = walletAddress.trim();
-    if (normalizedWallet.isEmpty || normalizedWallet.toLowerCase().startsWith('linked_auth:')) return;
+    if (normalizedWallet.isEmpty ||
+        normalizedWallet.toLowerCase().startsWith('linked_auth:')) {
+      return;
+    }
 
     if (accountLinkMode) {
       if (!syncBackend || !requireBackendSync) {
@@ -119,30 +115,18 @@ class WalletSessionSyncService {
         bindWallet: bindOverride,
         fetchMyProfile: fetchAuthenticatedProfile,
       ).linkWalletToCurrentAccount(
-        context: context,
         walletAddress: normalizedWallet,
         expectedUserId: normalizedExpectedUserId,
         originalAuthToken: normalizedOriginalToken,
         originalRefreshToken: originalRefreshToken,
+        providers: providers,
       );
-      if (warmUp) {
-        if (!context.mounted) return;
-        await _runNonFatal(
-          'bootstrap warm-up',
-          () => const AppBootstrapService()
-              .warmUp(
-                context: context,
-                walletAddress: normalizedWallet,
-              )
-              .timeout(_warmUpTimeout),
-        );
-      }
       return;
     }
 
-    final walletProvider = context.read<WalletProvider>();
-    final profileProvider = context.read<ProfileProvider>();
-    final chatProvider = context.read<ChatProvider>();
+    final walletProvider = providers.walletProvider;
+    final profileProvider = providers.profileProvider;
+    final chatProvider = providers.chatProvider;
 
     final backendApi = BackendApiService();
     backendApi.setPreferredWalletAddress(normalizedWallet);
@@ -168,11 +152,11 @@ class WalletSessionSyncService {
     if (syncBackend) {
       Future<void> bindBackendWallet() async {
         final response = await (syncBackendWallet ??
-                (wallet) => backendApi
-                    .bindAuthenticatedWallet(wallet)
-                    .timeout(_walletBindTimeout))(
-              normalizedWallet,
-            );
+            (wallet) => backendApi
+                .bindAuthenticatedWallet(wallet)
+                .timeout(_walletBindTimeout))(
+          normalizedWallet,
+        );
         await _persistAuthResponse(backendApi, response);
       }
 
@@ -224,18 +208,5 @@ class WalletSessionSyncService {
       'chat wallet bind',
       () => chatProvider.setCurrentWallet(normalizedWallet),
     );
-
-    if (warmUp) {
-      if (!context.mounted) return;
-      await _runNonFatal(
-        'bootstrap warm-up',
-        () => const AppBootstrapService()
-            .warmUp(
-              context: context,
-              walletAddress: normalizedWallet,
-            )
-            .timeout(_warmUpTimeout),
-      );
-    }
   }
 }

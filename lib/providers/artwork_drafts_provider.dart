@@ -665,6 +665,10 @@ class ArtworkDraftsProvider extends ChangeNotifier {
       notifyListeners();
 
       return artwork;
+    } on BackendApiRequestException catch (e) {
+      AppConfig.debugPrint('ArtworkDraftsProvider: submitDraft failed: $e');
+      draft.submitError = l10n.artworkDraftPublishFailed;
+      return null;
     } catch (e) {
       if (kDebugMode) {
         debugPrint('ArtworkDraftsProvider: submitDraft failed: $e');
