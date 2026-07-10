@@ -44,6 +44,16 @@ void main() {
     expect(light.color, KubusColors.glassBorderLight);
   });
 
+  test('onDark is theme-independent white with tokenized alphas', () {
+    final subtle = KubusBorders.onDarkSide();
+    final strong = KubusBorders.onDarkSide(strong: true);
+    expect(subtle.color.toARGB32() & 0x00FFFFFF, 0x00FFFFFF);
+    expect(subtle.color.a,
+        closeTo(KubusGlassEffects.glassBorderOpacitySubtle, 0.01));
+    expect(strong.color.a,
+        closeTo(KubusGlassEffects.glassBorderOpacityStrong, 0.01));
+  });
+
   testWidgets('focus and active derive from accent', (tester) async {
     late BorderSide focus;
     late BorderSide active;

@@ -1,6 +1,3 @@
-// ignore_for_file: kubus_no_raw_color, kubus_no_raw_border
-// Grandfathered kubus design-token violations. Remove this header
-// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'dart:async';
 import 'dart:convert';
 
@@ -28,6 +25,7 @@ import 'package:art_kubus/services/wallet_backup_passkey_service.dart';
 import 'package:art_kubus/services/wallet_session_sync_dependencies.dart';
 import 'package:art_kubus/services/wallet_session_sync_service.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
+import 'package:art_kubus/utils/kubus_accent_gradients.dart';
 import 'package:art_kubus/utils/dao_role_verification.dart';
 import 'package:art_kubus/utils/media_url_resolver.dart';
 import 'package:art_kubus/utils/wallet_utils.dart';
@@ -295,80 +293,35 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     return (profileProvider.currentUser?.walletAddress ?? '').trim().isEmpty;
   }
 
+  static _StepPalette _paletteFrom(KubusAccentGradient g) =>
+      _StepPalette(start: g.start, end: g.end, accent: g.accent);
+
   _StepPalette _paletteForStep(_OnboardingStep step) {
     switch (step) {
       case _OnboardingStep.welcome:
-        return const _StepPalette(
-          start: Color(0xFF006064),
-          end: KubusColors.accentTealLight,
-          accent: Color(0xFF26A69A),
-        );
+        return _paletteFrom(KubusAccentGradients.tealBlue);
       case _OnboardingStep.guestPermissions:
-        return const _StepPalette(
-          start: Color(0xFF00695C),
-          end: Color(0xFF26A69A),
-          accent: Color(0xFF80CBC4),
-        );
+        return _paletteFrom(KubusAccentGradients.emerald);
       case _OnboardingStep.account:
-        return const _StepPalette(
-          start: Color(0xFF1565C0),
-          end: Color(0xFF42A5F5),
-          accent: KubusColors.accentBlue,
-        );
+        return _paletteFrom(KubusAccentGradients.indigo);
       case _OnboardingStep.verifyEmail:
-        return const _StepPalette(
-          start: Color(0xFF2E7D32),
-          end: KubusColors.successDark,
-          accent: Color(0xFFA5D6A7),
-        );
+        return _paletteFrom(KubusAccentGradients.emerald);
       case _OnboardingStep.role:
-        return const _StepPalette(
-          start: Color(0xFFE65100),
-          end: KubusColors.accentOrangeDark,
-          accent: Color(0xFFFFB74D),
-        );
+        return _paletteFrom(KubusAccentGradients.gold);
       case _OnboardingStep.profile:
-        return const _StepPalette(
-          start: Color(0xFF00796B),
-          end: Color(0xFF4DB6AC),
-          accent: KubusColors.accentTealDark,
-        );
+        return _paletteFrom(KubusAccentGradients.emerald);
       case _OnboardingStep.walletConnect:
-        return const _StepPalette(
-          start: Color(0xFF0F766E),
-          end: Color(0xFF2563EB),
-          accent: Color(0xFF67E8F9),
-        );
+        return _paletteFrom(KubusAccentGradients.tealBlue);
       case _OnboardingStep.walletBackupIntro:
-        return const _StepPalette(
-          start: Color(0xFF01579B),
-          end: Color(0xFF0288D1),
-          accent: Color(0xFF81D4FA),
-        );
+        return _paletteFrom(KubusAccentGradients.skyCyan);
       case _OnboardingStep.walletBackup:
-        return const _StepPalette(
-          start: Color(0xFF0D47A1),
-          end: Color(0xFF1E88E5),
-          accent: Color(0xFF90CAF9),
-        );
+        return _paletteFrom(KubusAccentGradients.cyanBlue);
       case _OnboardingStep.daoReview:
-        return const _StepPalette(
-          start: Color(0xFF6A1B9A),
-          end: Color(0xFF8E24AA),
-          accent: Color(0xFFCE93D8),
-        );
+        return _paletteFrom(KubusAccentGradients.violet);
       case _OnboardingStep.accountPermissions:
-        return const _StepPalette(
-          start: Color(0xFF00695C),
-          end: Color(0xFF26A69A),
-          accent: Color(0xFF80CBC4),
-        );
+        return _paletteFrom(KubusAccentGradients.emerald);
       case _OnboardingStep.done:
-        return const _StepPalette(
-          start: Color(0xFFF57F17),
-          end: KubusColors.achievementGoldDark,
-          accent: Color(0xFFFFE082),
-        );
+        return _paletteFrom(KubusAccentGradients.gold);
     }
   }
 
@@ -3400,9 +3353,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       decoration: BoxDecoration(
         color: scheme.surface.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(KubusRadius.lg),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.08),
-        ),
+        border: KubusBorders.onDark(),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -3935,9 +3886,7 @@ class _AccountStepState extends State<_AccountStep> {
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(KubusRadius.lg),
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.12),
-                ),
+                border: KubusBorders.onDark(),
               ),
               padding: const EdgeInsets.all(KubusSpacing.xs),
               child: _OnboardingAuthModeSwitch(
@@ -4536,7 +4485,7 @@ class _InlineVerificationPanelState extends State<_InlineVerificationPanel> {
                     : Icons.mark_email_unread_outlined,
                 size: 18,
                 color: widget.isVerified
-                    ? const Color(0xFF81C784)
+                    ? KubusColors.successOnDark
                     : Colors.white.withValues(alpha: 0.85),
               ),
               const SizedBox(width: 8),
@@ -4550,7 +4499,7 @@ class _InlineVerificationPanelState extends State<_InlineVerificationPanel> {
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         fontWeight: FontWeight.w600,
                         color: widget.isVerified
-                            ? const Color(0xFF81C784)
+                            ? KubusColors.successOnDark
                             : Colors.white.withValues(alpha: 0.85),
                       ),
                 ),
@@ -5575,12 +5524,12 @@ class _PermissionTile extends StatelessWidget {
           ? Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.check_circle, color: Color(0xFF81C784)),
+                const Icon(Icons.check_circle, color: KubusColors.successOnDark),
                 const SizedBox(width: KubusSpacing.xs),
                 Text(
                   l10n.permissionsGrantedLabel,
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: const Color(0xFF81C784),
+                        color: KubusColors.successOnDark,
                         fontWeight: FontWeight.w700,
                       ),
                 ),
@@ -5590,9 +5539,7 @@ class _PermissionTile extends StatelessWidget {
               onPressed: onTap,
               style: OutlinedButton.styleFrom(
                 foregroundColor: Colors.white,
-                side: BorderSide(
-                  color: Colors.white.withValues(alpha: 0.5),
-                ),
+                side: KubusBorders.onDarkSide(strong: true),
                 padding: const EdgeInsets.symmetric(
                   horizontal: KubusSpacing.md,
                   vertical: KubusSpacing.sm,
@@ -5649,9 +5596,7 @@ class _WalletBackupStep extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(KubusRadius.md),
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.16),
-                ),
+                border: KubusBorders.onDark(),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -5707,13 +5652,13 @@ class _WalletBackupStep extends StatelessWidget {
                 child: Row(
                   children: [
                     const Icon(Icons.check_circle_outline,
-                        color: Color(0xFF81C784)),
+                        color: KubusColors.successOnDark),
                     const SizedBox(width: KubusSpacing.xs),
                     Expanded(
                       child: Text(
                         l10n.onboardingFlowWalletBackupCompleted,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: const Color(0xFF81C784),
+                              color: KubusColors.successOnDark,
                               fontWeight: FontWeight.w600,
                             ),
                       ),
@@ -5835,7 +5780,7 @@ class _WalletBackupIntroStepState extends State<_WalletBackupIntroStep> {
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(KubusRadius.md),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+        border: KubusBorders.onDark(),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -5878,14 +5823,14 @@ class _WalletBackupIntroStepState extends State<_WalletBackupIntroStep> {
                     children: [
                       const Icon(
                         Icons.check_circle_outline,
-                        color: Color(0xFF81C784),
+                        color: KubusColors.successOnDark,
                         size: 18,
                       ),
                       const SizedBox(width: KubusSpacing.xs),
                       Text(
                         actionLabel,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: const Color(0xFF81C784),
+                              color: KubusColors.successOnDark,
                               fontWeight: FontWeight.w700,
                             ),
                       ),
@@ -5898,9 +5843,7 @@ class _WalletBackupIntroStepState extends State<_WalletBackupIntroStep> {
                     label: Text(actionLabel),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.white,
-                      side: BorderSide(
-                        color: Colors.white.withValues(alpha: 0.26),
-                      ),
+                      side: KubusBorders.onDarkSide(strong: true),
                     ),
                   ),
           ),
@@ -5937,7 +5880,7 @@ class _WalletBackupIntroStepState extends State<_WalletBackupIntroStep> {
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(KubusRadius.md),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
+        border: KubusBorders.onDark(),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -5986,7 +5929,7 @@ class _WalletBackupIntroStepState extends State<_WalletBackupIntroStep> {
             label: Text(actionLabel),
             style: OutlinedButton.styleFrom(
               foregroundColor: Colors.white,
-              side: BorderSide(color: Colors.white.withValues(alpha: 0.26)),
+              side: KubusBorders.onDarkSide(strong: true),
             ),
           ),
         ],
@@ -6017,7 +5960,7 @@ class _WalletBackupIntroStepState extends State<_WalletBackupIntroStep> {
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(KubusRadius.md),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
+                border: KubusBorders.onDark(),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

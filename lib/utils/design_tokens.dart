@@ -38,6 +38,10 @@ class KubusColors {
   static const Color success = Color(0xFF43A047); // Green 600
   static const Color successDark = Color(0xFF4CAF50); // Green 500
 
+  /// Success/verified indicator tone for content that always renders on a
+  /// dark backdrop (onboarding gradients, wallet flows) regardless of theme.
+  static const Color successOnDark = Color(0xFF81C784); // Green 300
+
   static const Color warning = Color(0xFFFFA000); // Amber 700
   static const Color warningDark = Color(0xFFFFB300); // Amber 600
 
@@ -770,6 +774,21 @@ class KubusBorders {
 
   static Border accentTint(Color accent) =>
       Border.fromBorderSide(accentTintSide(accent));
+
+  /// Border for surfaces rendered on an always-dark backdrop (onboarding,
+  /// wallet flows) regardless of theme brightness. `strong` is for outlined
+  /// buttons / emphasized cards; the default suits glass containers.
+  static BorderSide onDarkSide({bool strong = false}) => BorderSide(
+        color: KubusColors.textPrimaryDark.withValues(
+          alpha: strong
+              ? KubusGlassEffects.glassBorderOpacityStrong
+              : KubusGlassEffects.glassBorderOpacitySubtle,
+        ),
+        width: KubusSizes.hairline,
+      );
+
+  static Border onDark({bool strong = false}) =>
+      Border.fromBorderSide(onDarkSide(strong: strong));
 }
 
 @immutable
