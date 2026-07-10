@@ -1123,7 +1123,7 @@ class _SignInScreenState extends State<SignInScreen> {
       enabledBorder: border,
       border: border,
       focusedBorder: border.copyWith(
-        borderSide: BorderSide(color: scheme.primary.withValues(alpha: 0.56)),
+        borderSide: KubusBorders.focusSide(context),
       ),
       errorBorder: border.copyWith(
         borderSide: BorderSide(color: scheme.error.withValues(alpha: 0.56)),
