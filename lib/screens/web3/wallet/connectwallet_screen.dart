@@ -1,6 +1,3 @@
-// ignore_for_file: kubus_no_raw_color, kubus_no_raw_border
-// Grandfathered kubus design-token violations. Remove this header
-// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
@@ -27,6 +24,8 @@ import '../../../models/user.dart';
 import '../../../widgets/auth_wallet_entry_menu.dart';
 import '../../../widgets/gradient_icon_card.dart';
 import '../../../widgets/kubus_button.dart';
+import '../../../utils/kubus_accent_gradients.dart';
+import '../../../utils/kubus_color_roles.dart';
 import '../../../widgets/glass_components.dart';
 import '../../../widgets/wallet_mnemonic_backup_prompt.dart';
 import '../../../utils/design_tokens.dart';
@@ -118,21 +117,21 @@ class _ConnectWalletState extends State<ConnectWallet>
     Color end;
     switch (_currentStep) {
       case 1:
-        start = const Color(0xFF0EA5E9);
-        end = const Color(0xFF06B6D4);
+        start = KubusAccentGradients.skyCyan.start;
+        end = KubusAccentGradients.skyCyan.end;
         break;
       case 2:
-        start = const Color(0xFF10B981);
-        end = const Color(0xFF059669);
+        start = KubusAccentGradients.emerald.start;
+        end = KubusAccentGradients.emerald.end;
         break;
       case 3:
-        start = const Color(0xFF06B6D4);
-        end = const Color(0xFF3B82F6);
+        start = KubusAccentGradients.cyanBlue.start;
+        end = KubusAccentGradients.cyanBlue.end;
         break;
       case 0:
       default:
-        start = const Color(0xFF099514);
-        end = const Color(0xFF3B82F6);
+        start = KubusAccentGradients.emerald.start;
+        end = KubusAccentGradients.emerald.end;
         break;
     }
 
@@ -1564,8 +1563,8 @@ class _ConnectWalletState extends State<ConnectWallet>
                   child: Column(
                     children: [
                       GradientIconCard(
-                        start: const Color.fromARGB(255, 9, 149, 20),
-                        end: const Color(0xFF3B82F6),
+                        start: KubusAccentGradients.emerald.start,
+                        end: KubusAccentGradients.emerald.end,
                         icon: Icons.account_balance_wallet_outlined,
                         iconSize: isSmallScreen ? 44 : 52,
                         width: isSmallScreen ? 84 : 100,
@@ -1700,14 +1699,14 @@ class _ConnectWalletState extends State<ConnectWallet>
     Color startColor;
     Color endColor;
     if (icon == Icons.qr_code_scanner || icon == Icons.qr_code_2_outlined) {
-      startColor = const Color(0xFF06B6D4);
-      endColor = const Color(0xFF3B82F6);
+      startColor = KubusAccentGradients.cyanBlue.start;
+      endColor = KubusAccentGradients.cyanBlue.end;
     } else if (icon == Icons.add_circle_outline_rounded) {
-      startColor = const Color.fromARGB(255, 3, 115, 185);
-      endColor = const Color.fromARGB(255, 13, 228, 49);
+      startColor = KubusAccentGradients.tealBlue.start;
+      endColor = KubusAccentGradients.tealBlue.end;
     } else {
-      startColor = const Color(0xFFF59E0B);
-      endColor = const Color(0xFFEF4444);
+      startColor = KubusAccentGradients.sunset.start;
+      endColor = KubusAccentGradients.sunset.end;
     }
 
     return Padding(
@@ -1825,8 +1824,8 @@ class _ConnectWalletState extends State<ConnectWallet>
                 child: Column(
                   children: [
                     GradientIconCard(
-                      start: Color(0xFF0EA5E9),
-                      end: Color(0xFF06B6D4),
+                      start: KubusAccentGradients.skyCyan.start,
+                      end: KubusAccentGradients.skyCyan.end,
                       icon: Icons.vpn_key_rounded,
                       iconSize: isSmallScreen ? 44 : 52,
                       width: isSmallScreen ? 88 : 100,
@@ -1896,7 +1895,7 @@ class _ConnectWalletState extends State<ConnectWallet>
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: KubusRadius.circular(KubusRadius.md),
-                    borderSide: const BorderSide(color: Colors.blue, width: 2),
+                    borderSide: KubusBorders.focusSide(context),
                   ),
                 ),
                 style: KubusTypography.textTheme.bodyLarge?.copyWith(
@@ -1916,10 +1915,12 @@ class _ConnectWalletState extends State<ConnectWallet>
                       : KubusSpacing.md,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.orange.withValues(alpha: 0.1),
+                  color: KubusColorRoles.of(context)
+                      .warningAction
+                      .withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(KubusRadius.sm),
-                  border:
-                      Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                  border: KubusBorders.accentTint(
+                      KubusColorRoles.of(context).warningAction),
                 ),
                 child: Row(
                   children: [
@@ -1957,7 +1958,7 @@ class _ConnectWalletState extends State<ConnectWallet>
                 isLoading: _isLoading,
                 label: l10n.connectWalletImportButton,
                 isFullWidth: true,
-                backgroundColor: const Color(0xFF0EA5E9),
+                backgroundColor: KubusAccentGradients.skyCyan.start,
                 foregroundColor: Colors.white,
               ),
               SizedBox(
@@ -2147,8 +2148,8 @@ class _ConnectWalletState extends State<ConnectWallet>
                 child: Column(
                   children: [
                     GradientIconCard(
-                      start: Color(0xFF10B981),
-                      end: Color(0xFF059669),
+                      start: KubusAccentGradients.emerald.start,
+                      end: KubusAccentGradients.emerald.end,
                       icon: Icons.add_circle_outline_rounded,
                       iconSize: isSmallScreen ? 44 : 52,
                       width: isSmallScreen ? 88 : 100,
@@ -2195,10 +2196,12 @@ class _ConnectWalletState extends State<ConnectWallet>
                       : KubusSpacing.md,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.green.withValues(alpha: 0.1),
+                  color: KubusColorRoles.of(context)
+                      .positiveAction
+                      .withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(KubusRadius.sm),
-                  border:
-                      Border.all(color: Colors.green.withValues(alpha: 0.3)),
+                  border: KubusBorders.accentTint(
+                      KubusColorRoles.of(context).positiveAction),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -2254,10 +2257,12 @@ class _ConnectWalletState extends State<ConnectWallet>
                       : KubusSpacing.md,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.orange.withValues(alpha: 0.1),
+                  color: KubusColorRoles.of(context)
+                      .warningAction
+                      .withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(KubusRadius.sm),
-                  border:
-                      Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                  border: KubusBorders.accentTint(
+                      KubusColorRoles.of(context).warningAction),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -2296,7 +2301,7 @@ class _ConnectWalletState extends State<ConnectWallet>
                 isLoading: _isLoading,
                 label: l10n.connectWalletCreateGenerateButton,
                 isFullWidth: true,
-                backgroundColor: const Color(0xFF10B981),
+                backgroundColor: KubusAccentGradients.emerald.start,
                 foregroundColor: Colors.white,
               ),
               SizedBox(
@@ -2362,8 +2367,8 @@ class _ConnectWalletState extends State<ConnectWallet>
                 child: Column(
                   children: [
                     GradientIconCard(
-                      start: const Color(0xFF06B6D4),
-                      end: const Color(0xFF3B82F6),
+                      start: KubusAccentGradients.cyanBlue.start,
+                      end: KubusAccentGradients.cyanBlue.end,
                       icon: Icons.qr_code_scanner_rounded,
                       iconSize: isSmallScreen ? 44 : 52,
                       width: isSmallScreen ? 88 : 100,
@@ -2410,10 +2415,12 @@ class _ConnectWalletState extends State<ConnectWallet>
                     isSmallScreen ? KubusSpacing.sm : KubusSpacing.md,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.blue.withValues(alpha: 0.1),
+                    color: KubusColorRoles.of(context)
+                        .statBlue
+                        .withValues(alpha: 0.1),
                     borderRadius: KubusRadius.circular(KubusRadius.sm),
-                    border:
-                        Border.all(color: Colors.blue.withValues(alpha: 0.3)),
+                    border: KubusBorders.accentTint(
+                        KubusColorRoles.of(context).statBlue),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -2777,8 +2784,8 @@ class _ConnectWalletState extends State<ConnectWallet>
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             GradientIconCard(
-              start: Color(0xFF10B981),
-              end: Color(0xFF059669),
+              start: KubusAccentGradients.emerald.start,
+              end: KubusAccentGradients.emerald.end,
               icon: Icons.check_circle_rounded,
               iconSize: isSmallScreen ? 56 : 68,
               width: isSmallScreen ? 100 : 120,
@@ -2825,7 +2832,7 @@ class _ConnectWalletState extends State<ConnectWallet>
               child: ElevatedButton(
                 onPressed: _closeConnectedWalletFlow,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF10B981),
+                  backgroundColor: KubusAccentGradients.emerald.start,
                   padding: EdgeInsets.symmetric(
                     vertical: isSmallScreen
                         ? KubusSpacing.md
