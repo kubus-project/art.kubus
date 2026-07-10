@@ -149,6 +149,10 @@ dev_dependencies:
   integration_test:
     sdk: flutter
   mockito: ^5.6.4
+  # Kubus design-token enforcement (packages/kubus_lints).
+  custom_lint: ^0.8.1
+  kubus_lints:
+    path: packages/kubus_lints
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
