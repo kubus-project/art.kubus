@@ -6,9 +6,12 @@ Ship Flutter UI without breaking Kubus design tokens, theme roles, feature flags
 Preflight: review all `AGENTS.md` files (root, `lib/**`, `backend/**`) before making changes.
 
 ## Design tokens & Kubus colors (single source of truth)
+- Import `package:art_kubus/widgets/kubus_kit.dart` for the canonical component set; its dartdoc has the component decision table.
+- Never inline `Color(0x...)`, raw `Border.all`/`BorderSide` colors, `BackdropFilter`, or `GoogleFonts.*` in widgets — enforced by `packages/kubus_lints` (grandfathered files carry `// ignore_for_file` headers; `tool/kubus_lint_ratchet.json` only ratchets down).
+- Contextual colors are fine but must be defined centrally (`KubusColorRoles`, `KubusAccentGradients`, `design_tokens.dart`). Borders go through `KubusBorders.*`.
 - Tokens live in `lib/utils/design_tokens.dart`:
 	- `KubusColors` (brand palette + semantic colors)
-	- `KubusSpacing`, `KubusRadius`, `KubusTypography`, `KubusGradients`, `KubusGlassEffects`, `KubusLayout`
+	- `KubusSpacing`, `KubusRadius`, `KubusTypography`, `KubusGradients`, `KubusGlassEffects`, `KubusLayout`, `KubusBorders`
 - Semantic role mapping lives in `lib/utils/kubus_color_roles.dart`:
 	- “All UI color decisions should go through this extension or AppColorUtils.”
 - Color helpers (use instead of ad‑hoc literals):
