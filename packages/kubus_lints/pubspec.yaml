@@ -1,0 +1,11 @@
+name: kubus_lints
+description: In-repo custom_lint rules enforcing the kubus design token system.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ">=3.6.0 <4.0.0"
+
+dependencies:
+  analyzer: ">=6.0.0 <9.0.0"
+  custom_lint_builder: ^0.8.0

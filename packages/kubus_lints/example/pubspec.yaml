@@ -1,0 +1,16 @@
+name: kubus_lints_example
+description: Lint-rule fixtures verified via expect_lint comments.
+publish_to: none
+
+environment:
+  sdk: ">=3.6.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  google_fonts: ^6.1.0
+
+dev_dependencies:
+  custom_lint: ^0.8.1
+  kubus_lints:
+    path: ../
