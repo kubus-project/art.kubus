@@ -1,6 +1,3 @@
-// ignore_for_file: kubus_no_raw_color
-// Grandfathered kubus design-token violations. Remove this header
-// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../l10n/app_localizations.dart';
@@ -45,6 +42,7 @@ import '../../../widgets/profile/profile_badges_verification_section.dart';
 import '../../../models/dao.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/design_tokens.dart';
+import '../../../utils/kubus_brand_colors.dart';
 import '../components/desktop_widgets.dart';
 import '../desktop_shell.dart';
 import '../../art/collection_detail_screen.dart';
@@ -2300,7 +2298,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       links.add(KubusSocialLinkChip(
         icon: Icons.alternate_email,
         label: '@$handle',
-        color: const Color(0xFF1DA1F2),
+        color: KubusBrandColors.twitterBlue,
         onTap: () => _openSocialUrl('https://x.com/$handle'),
       ));
     }
@@ -2309,7 +2307,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       links.add(KubusSocialLinkChip(
         icon: Icons.camera_alt_outlined,
         label: '@$handle',
-        color: const Color(0xFFE4405F),
+        color: KubusBrandColors.instagramPink,
         onTap: () => _openSocialUrl('https://instagram.com/$handle'),
       ));
     }

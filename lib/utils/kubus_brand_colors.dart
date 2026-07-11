@@ -18,4 +18,10 @@ class KubusBrandColors {
 
   /// Google Play brand green (store badge).
   static const Color googlePlayGreen = Color(0xFF01875F);
+
+  /// X / Twitter brand blue (social link chips).
+  static const Color twitterBlue = Color(0xFF1DA1F2);
+
+  /// Instagram brand pink (social link chips).
+  static const Color instagramPink = Color(0xFFE4405F);
 }
