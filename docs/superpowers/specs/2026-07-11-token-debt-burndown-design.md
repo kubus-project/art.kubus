@@ -53,3 +53,15 @@ What actually remains for "professional, no weird design choices":
 Same as slice 1: zero new test failures (full suite baseline: +1235 ~1 -1
 under puro 3.38.5), analyze/custom_lint clean, visual smoke of touched
 surfaces light+dark.
+
+## Outcome (2026-07-11)
+
+- Batches A–E executed. **Ratchet: 0/0/0/0** — every grandfather header
+  removed; the four kubus lint rules are now fully binding repo-wide.
+- New central homes: `KubusBrandColors` (Google/Play/Twitter/Instagram),
+  `KubusTypography.mono` + `.outfit`, `KubusColors.surfaceDarkElevated`,
+  `MarkerCubePalette` (canvas marker art, in map_marker_style_config).
+- Register backdrop accent aligned with sign-in (primary→positiveAction);
+  previously lockedFeature→likeAction (orange/coral).
+- Full suite: +1235 ~1 -1 — identical to baseline (the single failure is
+  the pre-existing TabBar/Material assert under pinned Flutter 3.38.5).
