@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import '../../inline_loading.dart';
 
 import '../../../models/artwork.dart';
 import '../../../utils/artwork_media_resolver.dart';
@@ -331,7 +332,7 @@ class _ArtworkThumbnail extends StatelessWidget {
             child: SizedBox(
               width: math.max(16.0, iconSize - 8),
               height: math.max(16.0, iconSize - 8),
-              child: const CircularProgressIndicator(strokeWidth: 2),
+              child: const InlineLoading(tileSize: 4),
             ),
           ),
         ),

@@ -19,6 +19,7 @@
 /// | Screen/section header | `KubusScreenHeader` |
 /// | Stat tile | `KubusStatCard` |
 /// | Empty state | `EmptyStateCard` |
+/// | Loading (inline/indeterminate/determinate) | `InlineLoading` / `InlineProgress` (never raw `CircularProgressIndicator`) |
 /// | Toast/snackbar | `KubusSnackbar` |
 /// | Borders | `KubusBorders.*` (never raw `Border.all`) |
 /// | Contextual gradients | `KubusAccentGradients.*` (never inline colors) |
@@ -39,6 +40,8 @@ export 'common/kubus_stat_card.dart';
 export 'common/kubus_text_field.dart';
 export 'empty_state_card.dart';
 export 'glass_components.dart';
+export 'inline_loading.dart';
+export 'inline_progress.dart';
 export 'kubus_button.dart';
 export 'kubus_card.dart';
 export 'kubus_snackbar.dart';

@@ -23,6 +23,14 @@ const googleFontsAllowedSuffixes = <String>[
   'lib/utils/design_tokens.dart',
 ];
 
+/// Files allowed to construct raw Material progress indicators
+/// (the canonical kubus loading primitives).
+const progressIndicatorAllowedSuffixes = <String>[
+  'lib/widgets/inline_loading.dart',
+  'lib/widgets/inline_progress.dart',
+  'lib/widgets/app_loading.dart',
+];
+
 /// Whether [path] is exempt from a rule with the given [suffixes] allowlist.
 ///
 /// Test files are always exempt: fixtures legitimately construct raw colors.

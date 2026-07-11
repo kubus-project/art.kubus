@@ -2,5 +2,6 @@
   "kubus_no_raw_color": 0,
   "kubus_no_raw_border": 0,
   "kubus_no_raw_backdropfilter": 0,
-  "kubus_no_inline_google_fonts": 0
+  "kubus_no_inline_google_fonts": 0,
+  "kubus_no_raw_progress_indicator": 62
 }

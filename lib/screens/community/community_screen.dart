@@ -2596,7 +2596,7 @@ class _CommunityScreenState extends State<CommunityScreen>
             if (loading && comments.isEmpty)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: KubusSpacing.md),
-                child: Center(child: CircularProgressIndicator()),
+                child: Center(child: InlineLoading(width: 40, height: 40)),
               )
             else if (error != null && comments.isEmpty)
               Padding(
@@ -5661,7 +5661,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                     }
 
                     if (loading && comments.isEmpty) {
-                      return const Center(child: CircularProgressIndicator());
+                      return const Center(child: InlineLoading(width: 40, height: 40));
                     }
 
                     if (error != null && comments.isEmpty) {
@@ -6320,7 +6320,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                 future: BackendApiService().getPostReposts(postId: post.id),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
+                    return const Center(child: InlineLoading(width: 40, height: 40));
                   }
                   if (snapshot.hasError) {
                     return Center(
@@ -6665,7 +6665,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                     ? const SizedBox(
                         width: 18,
                         height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                        child: InlineLoading(tileSize: 4),
                       )
                     : Text(l10n.commonDelete),
               ),

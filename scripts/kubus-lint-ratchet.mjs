@@ -20,6 +20,8 @@ const RULES = {
     /\b(Border\.all|BorderSide)\s*\((?:[^()]|\([^()]*\))*color:\s*(const\s+)?(Color(\.from)?\s*\(|Colors\.)/s,
   kubus_no_raw_backdropfilter: /\bBackdropFilter\s*\(/,
   kubus_no_inline_google_fonts: /\bGoogleFonts\.\w+\s*\(/,
+  kubus_no_raw_progress_indicator:
+    /\b(CircularProgressIndicator|LinearProgressIndicator)\s*\(/,
 };
 
 const CENTRAL_COLOR_FILES = [
@@ -42,6 +44,11 @@ const ALLOW = {
     'lib/widgets/glass_components.dart',
   ],
   kubus_no_inline_google_fonts: ['lib/utils/design_tokens.dart'],
+  kubus_no_raw_progress_indicator: [
+    'lib/widgets/inline_loading.dart',
+    'lib/widgets/inline_progress.dart',
+    'lib/widgets/app_loading.dart',
+  ],
 };
 
 const BASELINE_PATH = 'tool/kubus_lint_ratchet.json';
@@ -84,7 +91,9 @@ const files = [...dartFiles('lib')];
 if (mode === '--grandfather') {
   let touched = 0;
   for (const path of files) {
-    const text = readFileSync(path, 'utf8');
+    // Strip any BOM: prepending a header before U+FEFF would leave it
+    // mid-file, which the Dart compiler rejects.
+    const text = readFileSync(path, 'utf8').replaceAll('﻿', '');
     const ignored = existingIgnores(text);
     const rules = violatedRules(path, text).filter((r) => !ignored.has(r));
     if (rules.length === 0) continue;
