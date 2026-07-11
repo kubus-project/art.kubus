@@ -229,6 +229,26 @@ class KubusTypography {
     );
   }
 
+  /// Monospace style for seed phrases, addresses, and code-like content.
+  ///
+  /// Central home for the app's mono font so widgets never call
+  /// `GoogleFonts.*` directly (enforced by `kubus_no_inline_google_fonts`).
+  static TextStyle mono({
+    double? fontSize,
+    FontWeight? fontWeight,
+    Color? color,
+    double? height,
+    double? letterSpacing,
+  }) {
+    return GoogleFonts.robotoMono(
+      fontSize: fontSize,
+      fontWeight: fontWeight,
+      color: color,
+      height: height,
+      letterSpacing: letterSpacing,
+    );
+  }
+
   static TextTheme get textTheme {
     // Important: build a color-agnostic text theme so it can inherit the active
     // ThemeData text colors (fixes dark-mode regressions where GoogleFonts

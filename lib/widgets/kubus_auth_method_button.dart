@@ -1,6 +1,3 @@
-// ignore_for_file: kubus_no_raw_color
-// Grandfathered kubus design-token violations. Remove this header
-// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'package:flutter/material.dart';
 
 import '../providers/glass_capabilities_provider.dart';
@@ -338,13 +335,13 @@ class KubusAuthMethodButtonStyle {
 
     final defaultBackground = switch (variant) {
       KubusButtonVariant.primary =>
-        isDark ? Colors.white : const Color(0xFF1A1A1A),
+        isDark ? Colors.white : KubusColors.surfaceDark,
       KubusButtonVariant.secondary =>
         scheme.surface.withValues(alpha: isDark ? 0.9 : 0.96),
     };
     final defaultForeground = switch (variant) {
       KubusButtonVariant.primary =>
-        isDark ? const Color(0xFF1A1A1A) : Colors.white,
+        isDark ? KubusColors.surfaceDark : Colors.white,
       KubusButtonVariant.secondary => scheme.onSurface,
     };
     final effectiveBackground = backgroundColor ?? defaultBackground;
