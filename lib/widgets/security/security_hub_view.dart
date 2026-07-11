@@ -1,11 +1,9 @@
-// ignore_for_file: kubus_no_raw_progress_indicator
-// Grandfathered kubus design-token violations. Remove this header
-// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../inline_loading.dart';
 import 'package:provider/provider.dart';
 
 import '../../config/config.dart';
@@ -1500,7 +1498,7 @@ class _SecurityHubViewState extends State<SecurityHubView> {
         builder: (context, constraints) {
           final desktop = constraints.maxWidth >= 900;
           final content = _loading
-              ? const Center(child: CircularProgressIndicator())
+              ? const Center(child: InlineLoading(width: 40, height: 40))
               : _buildHubContent(desktop, walletProvider);
           return RefreshIndicator(
             onRefresh: _refresh,

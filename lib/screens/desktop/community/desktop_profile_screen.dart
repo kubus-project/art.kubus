@@ -1,7 +1,5 @@
-// ignore_for_file: kubus_no_raw_progress_indicator
-// Grandfathered kubus design-token violations. Remove this header
-// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'package:flutter/material.dart';
+import '../../../widgets/inline_loading.dart';
 import 'package:provider/provider.dart';
 import '../../../l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -1061,7 +1059,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             child: Container(
               height: 200,
               alignment: Alignment.center,
-              child: const CircularProgressIndicator(),
+              child: const InlineLoading(width: 40, height: 40),
             ),
           )
         else if (_artistArtworks.isEmpty)
@@ -1112,7 +1110,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             child: Container(
               height: 180,
               alignment: Alignment.center,
-              child: const CircularProgressIndicator(),
+              child: const InlineLoading(width: 40, height: 40),
             ),
           )
         else if (_artistCollections.isEmpty)
@@ -1155,7 +1153,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             child: Container(
               height: 180,
               alignment: Alignment.center,
-              child: const CircularProgressIndicator(),
+              child: const InlineLoading(width: 40, height: 40),
             ),
           )
         else if (_artistEvents.isEmpty)
@@ -1198,7 +1196,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             child: Container(
               height: 200,
               alignment: Alignment.center,
-              child: const CircularProgressIndicator(),
+              child: const InlineLoading(width: 40, height: 40),
             ),
           )
         else if (_artistEvents.isEmpty)
@@ -1250,7 +1248,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             child: Container(
               height: 180,
               alignment: Alignment.center,
-              child: const CircularProgressIndicator(),
+              child: const InlineLoading(width: 40, height: 40),
             ),
           )
         else if (_artistCollections.isEmpty)
@@ -1979,7 +1977,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                 child: Container(
                   height: 200,
                   alignment: Alignment.center,
-                  child: const CircularProgressIndicator(),
+                  child: const InlineLoading(width: 40, height: 40),
                 ),
               );
             }

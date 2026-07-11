@@ -18,6 +18,7 @@ import 'package:art_kubus/widgets/auth_title_row.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:art_kubus/widgets/kubus_button.dart';
 import 'package:flutter/material.dart';
+import 'package:art_kubus/widgets/inline_loading.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -73,8 +74,7 @@ Future<void> _pumpOnboardingReady(
   final deadline = DateTime.now().add(timeout);
   while (DateTime.now().isBefore(deadline)) {
     await tester.pump(const Duration(milliseconds: 120));
-    final hasLoading =
-        find.byType(CircularProgressIndicator).evaluate().isNotEmpty;
+    final hasLoading = find.byType(InlineLoading).evaluate().isNotEmpty;
     if (!hasLoading) {
       return;
     }

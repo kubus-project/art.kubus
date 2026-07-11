@@ -15,6 +15,7 @@ import 'package:art_kubus/widgets/common/kubus_screen_header.dart';
 import 'package:art_kubus/widgets/empty_state_card.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:flutter/material.dart';
+import '../inline_loading.dart';
 
 class ShareMessageSheet extends StatefulWidget {
   const ShareMessageSheet({
@@ -215,7 +216,7 @@ class _ShareMessageSheetState extends State<ShareMessageSheet> {
             const SizedBox(height: KubusSpacing.sm),
             Expanded(
               child: _isSearching
-                  ? const Center(child: CircularProgressIndicator())
+                  ? const Center(child: InlineLoading(width: 40, height: 40))
                   : _searchController.text.trim().isEmpty
                       ? const SizedBox.shrink()
                       : _searchResults.isEmpty

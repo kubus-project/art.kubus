@@ -11,6 +11,7 @@ import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/widgets/common/subject_options_sheet.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import '../../widgets/inline_loading.dart';
 import 'package:provider/provider.dart';
 
 import '../../config/config.dart';
@@ -458,7 +459,7 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen> {
         if (provider.listLoading && provider.collections.isEmpty) {
           return Scaffold(
             backgroundColor: Theme.of(context).colorScheme.surface,
-            body: const Center(child: CircularProgressIndicator()),
+            body: const Center(child: InlineLoading(width: 40, height: 40)),
           );
         }
 

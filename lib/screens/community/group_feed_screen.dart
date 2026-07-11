@@ -1,6 +1,3 @@
-// ignore_for_file: kubus_no_raw_progress_indicator
-// Grandfathered kubus design-token violations. Remove this header
-// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'package:flutter/foundation.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 
@@ -361,7 +358,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                     ? const SizedBox(
                         width: 18,
                         height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                        child: InlineLoading(tileSize: 4),
                       )
                     : Text(l10n.commonPost),
               ),
@@ -898,7 +895,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                     ? const SizedBox(
                         width: 18,
                         height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                        child: InlineLoading(tileSize: 4),
                       )
                     : Text(l10n.commonDelete),
               ),
@@ -1222,7 +1219,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                 builder: (context, snapshot) {
                   final l10n = AppLocalizations.of(context)!;
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
+                    return const Center(child: InlineLoading(width: 40, height: 40));
                   }
                   if (snapshot.hasError) {
                     return Center(

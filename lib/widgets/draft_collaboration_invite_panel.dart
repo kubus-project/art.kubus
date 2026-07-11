@@ -1,9 +1,7 @@
-// ignore_for_file: kubus_no_raw_progress_indicator
-// Grandfathered kubus design-token violations. Remove this header
-// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'inline_loading.dart';
 import 'package:provider/provider.dart';
 
 import '../l10n/app_localizations.dart';
@@ -242,7 +240,7 @@ class _DraftCollaborationInvitePanelState
                     child: SizedBox(
                       width: 18,
                       height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                      child: InlineLoading(tileSize: 4),
                     ),
                   )
                 : null,

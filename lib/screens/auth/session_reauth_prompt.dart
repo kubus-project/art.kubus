@@ -1,7 +1,5 @@
-// ignore_for_file: kubus_no_raw_progress_indicator
-// Grandfathered kubus design-token violations. Remove this header
-// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'package:flutter/material.dart';
+import '../../widgets/inline_loading.dart';
 
 import '../../services/pin_hashing.dart';
 import '../../providers/wallet_provider.dart';
@@ -181,7 +179,7 @@ class _SessionReauthPromptState extends State<SessionReauthPrompt> {
                         ? const SizedBox(
                             height: 18,
                             width: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
+                            child: InlineLoading(tileSize: 4),
                           )
                         : Text(widget.biometricButtonLabel),
                   ),

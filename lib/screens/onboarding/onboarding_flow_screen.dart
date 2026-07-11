@@ -48,6 +48,7 @@ import 'package:art_kubus/widgets/user_persona_picker_content.dart';
 import 'package:art_kubus/widgets/wallet_backup_prompts.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../../widgets/inline_loading.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -3686,7 +3687,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           data: onboardingTheme,
           child: const Scaffold(
             backgroundColor: Colors.transparent,
-            body: Center(child: CircularProgressIndicator()),
+            body: Center(child: InlineLoading(width: 40, height: 40)),
           ),
         ),
       );
@@ -5220,7 +5221,7 @@ class _DaoReviewStepState extends State<_DaoReviewStep> {
         ),
         const SizedBox(height: 12),
         if (widget.isLoadingReview) ...[
-          const Center(child: CircularProgressIndicator()),
+          const Center(child: InlineLoading(width: 40, height: 40)),
           const SizedBox(height: 12),
         ] else if (statusLabel != null) ...[
           Container(
