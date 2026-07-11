@@ -1,6 +1,6 @@
 {
-  "kubus_no_raw_color": 6,
-  "kubus_no_raw_border": 4,
+  "kubus_no_raw_color": 4,
+  "kubus_no_raw_border": 2,
   "kubus_no_raw_backdropfilter": 0,
   "kubus_no_inline_google_fonts": 2
 }
