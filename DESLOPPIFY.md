@@ -325,9 +325,9 @@ The goal is to reduce security risk, architectural drift, brittle state flow, UI
 **Validation required:** Table tests for 200, 401, 404, 500, timeout, and offline fallback for representative methods.  
 **Dependencies or blockers:** Requires compatibility plan for existing providers.  
 **Status:** Partially completed
-**Completion notes:** Implemented the first isolated mutation slice: `BackendApiService.createArtworkRecord` now preserves successful behavior but throws `BackendApiRequestException` for transport failures, non-2xx responses, and malformed successful mutation responses. `ArtworkDraftsProvider` catches that typed exception so visible draft-submit failure UX remains unchanged. This is an intentional non-drop-in service contract change for this method only.
-**Validation run:** `flutter test test/services/backend_api_service_create_artwork_record_test.dart test/providers/artwork_drafts_provider_test.dart` passed; scoped `flutter analyze --no-fatal-infos` on touched service/provider/tests passed; `npm run guard:architecture` passed at `778/778` direct `debugPrint` budget.
-**Follow-up:** Continue method-by-method. Do not change `getMyProfile`, `listEvents`, `listExhibitions`, or other mutations without their own compatibility matrix and provider regression tests.
+**Completion notes:** Implemented the first isolated mutation slice: `BackendApiService.createArtworkRecord` now preserves successful behavior but throws `BackendApiRequestException` for transport failures, non-2xx responses, and malformed successful mutation responses. `ArtworkDraftsProvider` catches that typed exception so visible draft-submit failure UX remains unchanged. The second isolated slice applies the same typed failure policy to collaboration invite/accept/decline/role/remove writes. A malformed successful invite response can no longer be reported as a sent invite, while `CollabProvider` continues to restore optimistically removed invites when a mutation fails. The existing public return types remain unchanged.
+**Validation run:** `flutter test test/services/backend_api_service_create_artwork_record_test.dart test/providers/artwork_drafts_provider_test.dart` passed; collaboration contract/provider coverage passed all 18 tests in `test/services/backend_api_service_collaboration_mutations_test.dart` and `test/collab/collab_provider_test.dart`; scoped touched-file `flutter analyze --no-fatal-infos` passed; `npm run guard:architecture` passed at `778/778` direct `debugPrint` budget.
+**Follow-up:** Continue method-by-method. Do not change `getMyProfile`, `listEvents`, `listExhibitions`, or unrelated mutations without their own compatibility matrix and provider regression tests.
 
 ### [MED-11] Map screens still own lifecycle and business logic
 
@@ -943,8 +943,8 @@ For each selected task:
 ### [POLISH-07] Debug logging remains noisy in selected Flutter paths
 
 **Status:** Partially completed  
-**Completion notes:** Added a CI-facing architecture guard budget for unqualified `debugPrint` calls so the existing logging debt cannot grow during future agent work. Second pass removed the no-value notification constructor log and noisy avatar/profile diagnostics, centralized selected glass/wallet/profile-package/Solana logs, suppressed routine glass diagnostics under Flutter test bindings, and lowered the budget from `814/814` to `790/790`. Third pass removed achievement fetch-start logs and profile key dumps from `BackendApiService`, replaced full profile-save payload logging with key-only diagnostics, centralized selected backend API debug logs, and lowered the budget to `778/778`.
-**Validation run:** `node --check scripts/architecture_guard.mjs`, `npm run guard:architecture`, and `npm run verify:architecture` passed in the first pass; second pass `npm run guard:architecture` passed at `790/790`, scoped touched-file `flutter analyze --no-fatal-infos` passed, and `npm run verify:all` passed with the known nonfatal `lib/screens/map_screen.dart:5298` analyzer info. Third pass `npm run guard:architecture` passed at `778/778`, scoped `flutter analyze --no-fatal-infos lib/services/backend_api_service.dart lib/services/backend_api_service_profile_helpers.dart` passed, and `npm run verify:all` passed with the same known analyzer info.
+**Completion notes:** Added a CI-facing architecture guard budget for unqualified `debugPrint` calls so the existing logging debt cannot grow during future agent work. Second pass removed the no-value notification constructor log and noisy avatar/profile diagnostics, centralized selected glass/wallet/profile-package/Solana logs, suppressed routine glass diagnostics under Flutter test bindings, and lowered the budget from `814/814` to `790/790`. Third pass removed achievement fetch-start logs and profile key dumps from `BackendApiService`, replaced full profile-save payload logging with key-only diagnostics, centralized selected backend API debug logs, and lowered the budget to `778/778`. The collaboration pass removed routine socket listener add/remove diagnostics and reduced mutation failure logs to status plus request path instead of response bodies.
+**Validation run:** `node --check scripts/architecture_guard.mjs`, `npm run guard:architecture`, and `npm run verify:architecture` passed in the first pass; second pass `npm run guard:architecture` passed at `790/790`, scoped touched-file `flutter analyze --no-fatal-infos` passed, and `npm run verify:all` passed with the known nonfatal `lib/screens/map_screen.dart:5298` analyzer info. Third pass `npm run guard:architecture` passed at `778/778`, scoped `flutter analyze --no-fatal-infos lib/services/backend_api_service.dart lib/services/backend_api_service_profile_helpers.dart` passed, and `npm run verify:all` passed with the same known analyzer info. The collaboration pass retained the `778/778` budget, passed scoped analysis, and removed listener lifecycle chatter from provider tests.
 **Screenshots:** Not applicable.  
 **Follow-up:** Continue with focused wallet/Solana/profile-package logging passes. Full verifier output is still not silent, but remaining Flutter logs are centralized or outside this small slice.
 
@@ -966,8 +966,8 @@ For each selected task:
 ### [MED-10] API error contracts are inconsistent
 
 **Status:** Partially completed
-**Completion notes:** Implemented only the `BackendApiService.createArtworkRecord` mutation contract slice. Failed transport, non-2xx, and malformed mutation responses now throw `BackendApiRequestException`; `ArtworkDraftsProvider` preserves the existing visible publish-failure UX by catching that typed exception. Successful behavior is unchanged.
-**Validation run:** `flutter test test/services/backend_api_service_create_artwork_record_test.dart test/providers/artwork_drafts_provider_test.dart` passed; scoped touched-file `flutter analyze --no-fatal-infos` passed; `npm run guard:architecture` passed.
+**Completion notes:** Implemented the `BackendApiService.createArtworkRecord` and collaboration mutation contract slices. Failed transport, non-2xx, and malformed mutation responses now throw `BackendApiRequestException`; `ArtworkDraftsProvider` preserves publish-failure UX, and `CollabProvider` restores optimistic inbox state on typed failures. Successful behavior and public return types are unchanged.
+**Validation run:** Artwork draft contract/provider tests passed; collaboration contract/provider coverage passed all 18 tests; scoped touched-file `flutter analyze --no-fatal-infos` passed; `npm run guard:architecture` passed.
 **Follow-up:** Broader API error contracts remain deferred behind method-by-method compatibility tests.
 
 ### [MED-11] Map screens still own lifecycle and business logic
@@ -1056,7 +1056,7 @@ untouched.
 
 ### [CONT-01] Reproducible, failure-honest verification
 
-**Status:** In progress
+**Status:** Completed
 **Baseline:** Root smoke verification passed, but used a floating/local Flutter
 toolchain and allowed analyzer infos. Root CI could skip an unavailable backend;
 the backend had no independent CI; the admin repository had no CI and tracked
@@ -1065,10 +1065,18 @@ its dependency/test cache.
 mandatory, add deterministic full-suite commands in all repositories, and keep
 generated reports, logs, caches, dependencies, and local environment files out
 of version control.
+**Completion notes:** Pinned Flutter `3.44.2`, Node `22.15.0`, and Java `21`, made
+the backend checkout mandatory in root CI, added independent backend and admin
+CI gates, removed tracked generated reports/caches, and made analyzer warnings
+and infos fatal. Clean installs are now the default verification path.
+**Validation run:** Root toolchain, architecture, Flutter, backend, deployment,
+and version gates passed; backend passed 148 Jest suites / 895 tests plus 22
+native public-art tests; admin passed lint, typecheck, 93 tests, and production
+build from a clean `npm ci` install.
 
 ### [CONT-02] Android and deployment release blockers
 
-**Status:** In progress
+**Status:** Completed
 **Baseline:** The Gradle problems report contained twelve repository-owned
 Groovy assignment deprecations plus one cached `appcheck` compilation failure.
 The release build used debug signing; deployment still accepted obsolete
@@ -1076,10 +1084,18 @@ client-side Pinata secrets and could report successful skips/failures.
 **Required completion:** Reproduce from a clean cache, remove repository-owned
 deprecations, require protected release signing, remove frontend secrets, and
 make build/deploy/publish failures terminal and rollback-safe.
+**Completion notes:** Removed generated Android reports from version control,
+modernized repository-owned Gradle assignments, restored the pinned wrapper,
+made release signing a protected manual promotion step, rejected client-side
+Pinata credentials, and changed web promotion to checksum-verified immutable
+releases with atomic symlink rollback after a failed smoke test.
+**Validation run:** Toolchain and Android configuration gates passed;
+`npm run verify:deploy` exercised successful promotion and failed-smoke
+rollback; CI/deploy workflow and public build configuration guards passed.
 
 ### [CONT-03] Backend fail-open database behavior
 
-**Status:** Pending harness gate
+**Status:** Completed
 **Baseline:** Wallet registration/verification/binding, account deletion,
 message/member reads and writes, and conversation avatar persistence contain
 database-failure paths that return authenticated success or empty success.
@@ -1107,10 +1123,18 @@ audited.
 pagination, use recurring groups deliberately, align status types, provide
 keyboard semantics, make privileged audit writes fail closed, add retention and
 noise classification, and validate backend plus admin UI together.
+**Completion notes:** Normalized backend/admin filter and status contracts,
+implemented deploy correlation and pagination, surfaced resolve/reopen errors,
+made privileged CDP mutations and their audit writes transactional, added
+retention/noise classification behavior, and covered keyboard/visual workflows
+with the deterministic admin fixture.
+**Validation run:** Backend CDP route/service coverage passed within the full
+148-suite / 895-test Jest gate; admin lint, typecheck, 93 tests, and production
+build passed; the root admin CDP fixture QA passed.
 
 ### [CONT-06] Dependency and runtime exposure audit
 
-**Status:** Pending harness gate
+**Status:** Completed
 **Baseline:** The backend production dependency audit reported one critical,
 twenty-eight high, and seventeen moderate findings, including transitive
 IPFS/libp2p paths. Production/deployment configuration also needs verification
@@ -1118,3 +1142,27 @@ that database, Redis, and IPFS control ports are not publicly exposed.
 **Required completion:** Upgrade or remove affected reachable dependency
 families without forced audit rewrites, then validate the unchanged Oracle/home
 HA topology and private control-plane networking.
+**Completion notes:** Removed the embedded IPFS/libp2p runtime, native bcrypt,
+bundled GeoIP database, direct UUID package, and Solana SPL dependency; upgraded
+the remaining reachable runtime/toolchain families and retained remote Kubo,
+Oracle/home, DNSLink, and private control-plane deployment contracts. Admin build
+dependencies were upgraded in the same clean-install pass.
+**Validation run:** Backend production and release audits report zero
+vulnerabilities; backend lint, toolchain, schema, compose, 148 Jest suites / 895
+tests, and 22 native public-art tests passed. Admin `npm audit`, lint, typecheck,
+93 tests, and production build passed with zero vulnerabilities.
+
+## 2026-07-11 continuation validation
+
+- Root `npm run verify:flutter` passed with zero analyzer issues, 1,252 Flutter
+  tests passed / one skipped, coverage generation, and a release web build. The
+  existing third-party Wasm dry-run findings remain nonfatal.
+- Root `npm run guard:architecture` passed 3,232 file checks at the ratcheted
+  `778/778` direct `debugPrint` budget; `npm run verify:docs` passed.
+- Collaboration mutation contract/provider coverage passed all 18 focused
+  tests, including malformed 2xx, 401, 404, 500, timeout, offline transport, and
+  optimistic rollback cases.
+- Backend clean-install gates passed lint, toolchain, dependency audit, schema,
+  compose, 148 Jest suites / 895 tests, and 22 native public-art tests.
+- Admin clean-install gates passed zero-vulnerability audit, lint, typecheck, 93
+  tests, and production build; root admin CDP fixture QA passed.

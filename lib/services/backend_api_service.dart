@@ -110,6 +110,37 @@ class BackendApiRequestException implements Exception {
   }
 }
 
+Never _throwTypedMutationFailure({
+  required Object error,
+  required StackTrace stackTrace,
+  required String operation,
+  required String path,
+}) {
+  final requestError = switch (error) {
+    BackendApiRequestException() => error,
+    TimeoutException() => BackendApiRequestException(
+        statusCode: 504,
+        path: path,
+        body: error.message,
+      ),
+    http.ClientException() => BackendApiRequestException(
+        statusCode: 0,
+        path: path,
+        body: error.message,
+      ),
+    _ => BackendApiRequestException(
+        statusCode: 0,
+        path: path,
+        body: error.toString(),
+      ),
+  };
+  AppConfig.debugPrint(
+    '$operation failed: status=${requestError.statusCode} '
+    'path=${requestError.path}',
+  );
+  Error.throwWithStackTrace(requestError, stackTrace);
+}
+
 /// Minimal contract for artwork endpoints used by providers.
 ///
 /// Providers depend on this interface to allow deterministic unit tests without
@@ -8551,10 +8582,10 @@ class BackendApiService
     String invitedIdentifier,
     String role,
   ) async {
+    final path = '/api/collab/$entityType/$entityId/invites';
     try {
       await _ensureAuthBeforeRequest();
-      final uri =
-          Uri.parse('$baseUrl/api/collab/$entityType/$entityId/invites');
+      final uri = Uri.parse('$baseUrl$path');
       final response = await _post(
         uri,
         headers: _getHeaders(),
@@ -8566,15 +8597,22 @@ class BackendApiService
           preferredKeys: const <String>['invite'],
         );
         if (inviteRaw != null) {
-          return CollabInvite.fromJson(inviteRaw);
+          final invite = CollabInvite.fromJson(inviteRaw);
+          if (invite.id.trim().isNotEmpty) return invite;
         }
-        return null;
       }
-      throw Exception(
-          'Failed to invite collaborator: ${response.statusCode} ${response.body}');
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.inviteCollaborator failed: $e');
-      rethrow;
+      throw BackendApiRequestException(
+        statusCode: response.statusCode,
+        path: path,
+        body: response.body,
+      );
+    } catch (error, stackTrace) {
+      _throwTypedMutationFailure(
+        error: error,
+        stackTrace: stackTrace,
+        operation: 'BackendApiService.inviteCollaborator',
+        path: path,
+      );
     }
   }
 
@@ -8646,34 +8684,50 @@ class BackendApiService
   /// Accept an invite
   /// POST /api/collab/invites/:inviteId/accept
   Future<bool> acceptInvite(String inviteId) async {
+    final path = '/api/collab/invites/$inviteId/accept';
     try {
       await _ensureAuthBeforeRequest();
-      final uri = Uri.parse('$baseUrl/api/collab/invites/$inviteId/accept');
+      final uri = Uri.parse('$baseUrl$path');
       final response =
           await _post(uri, headers: _getHeaders(), isIdempotent: true);
       if (_isSuccessStatus(response.statusCode)) return true;
-      throw Exception(
-          'Failed to accept invite: ${response.statusCode} ${response.body}');
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.acceptInvite failed: $e');
-      rethrow;
+      throw BackendApiRequestException(
+        statusCode: response.statusCode,
+        path: path,
+        body: response.body,
+      );
+    } catch (error, stackTrace) {
+      _throwTypedMutationFailure(
+        error: error,
+        stackTrace: stackTrace,
+        operation: 'BackendApiService.acceptInvite',
+        path: path,
+      );
     }
   }
 
   /// Decline an invite
   /// POST /api/collab/invites/:inviteId/decline
   Future<bool> declineInvite(String inviteId) async {
+    final path = '/api/collab/invites/$inviteId/decline';
     try {
       await _ensureAuthBeforeRequest();
-      final uri = Uri.parse('$baseUrl/api/collab/invites/$inviteId/decline');
+      final uri = Uri.parse('$baseUrl$path');
       final response =
           await _post(uri, headers: _getHeaders(), isIdempotent: true);
       if (_isSuccessStatus(response.statusCode)) return true;
-      throw Exception(
-          'Failed to decline invite: ${response.statusCode} ${response.body}');
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.declineInvite failed: $e');
-      rethrow;
+      throw BackendApiRequestException(
+        statusCode: response.statusCode,
+        path: path,
+        body: response.body,
+      );
+    } catch (error, stackTrace) {
+      _throwTypedMutationFailure(
+        error: error,
+        stackTrace: stackTrace,
+        operation: 'BackendApiService.declineInvite',
+        path: path,
+      );
     }
   }
 
@@ -8681,10 +8735,10 @@ class BackendApiService
   /// PATCH /api/collab/:entityType/:entityId/members/:memberUserId
   Future<bool> updateCollaboratorRole(String entityType, String entityId,
       String memberUserId, String role) async {
+    final path = '/api/collab/$entityType/$entityId/members/$memberUserId';
     try {
       await _ensureAuthBeforeRequest();
-      final uri = Uri.parse(
-          '$baseUrl/api/collab/$entityType/$entityId/members/$memberUserId');
+      final uri = Uri.parse('$baseUrl$path');
       final response = await _patch(
         uri,
         headers: _getHeaders(),
@@ -8692,12 +8746,18 @@ class BackendApiService
         isIdempotent: true,
       );
       if (_isSuccessStatus(response.statusCode)) return true;
-      throw Exception(
-          'Failed to update collaborator role: ${response.statusCode} ${response.body}');
-    } catch (e) {
-      AppConfig.debugPrint(
-          'BackendApiService.updateCollaboratorRole failed: $e');
-      rethrow;
+      throw BackendApiRequestException(
+        statusCode: response.statusCode,
+        path: path,
+        body: response.body,
+      );
+    } catch (error, stackTrace) {
+      _throwTypedMutationFailure(
+        error: error,
+        stackTrace: stackTrace,
+        operation: 'BackendApiService.updateCollaboratorRole',
+        path: path,
+      );
     }
   }
 
@@ -8705,18 +8765,25 @@ class BackendApiService
   /// DELETE /api/collab/:entityType/:entityId/members/:memberUserId
   Future<bool> removeCollaborator(
       String entityType, String entityId, String memberUserId) async {
+    final path = '/api/collab/$entityType/$entityId/members/$memberUserId';
     try {
       await _ensureAuthBeforeRequest();
-      final uri = Uri.parse(
-          '$baseUrl/api/collab/$entityType/$entityId/members/$memberUserId');
+      final uri = Uri.parse('$baseUrl$path');
       final response =
           await _delete(uri, headers: _getHeaders(), isIdempotent: true);
       if (_isSuccessStatus(response.statusCode)) return true;
-      throw Exception(
-          'Failed to remove collaborator: ${response.statusCode} ${response.body}');
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.removeCollaborator failed: $e');
-      rethrow;
+      throw BackendApiRequestException(
+        statusCode: response.statusCode,
+        path: path,
+        body: response.body,
+      );
+    } catch (error, stackTrace) {
+      _throwTypedMutationFailure(
+        error: error,
+        stackTrace: stackTrace,
+        operation: 'BackendApiService.removeCollaborator',
+        path: path,
+      );
     }
   }
 

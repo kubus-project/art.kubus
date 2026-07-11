@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:art_kubus/models/collab_invite.dart';
 import 'package:art_kubus/models/collab_member.dart';
 import 'package:art_kubus/providers/collab_provider.dart';
+import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/collab_api.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -55,7 +56,8 @@ class _FakeCollabApi implements CollabApi {
   }
 
   @override
-  Future<List<CollabMember>> listCollaborators(String entityType, String entityId) {
+  Future<List<CollabMember>> listCollaborators(
+      String entityType, String entityId) {
     throw UnimplementedError();
   }
 
@@ -70,13 +72,15 @@ class _FakeCollabApi implements CollabApi {
   }
 
   @override
-  Future<void> removeCollaborator(String entityType, String entityId, String memberUserId) {
+  Future<void> removeCollaborator(
+      String entityType, String entityId, String memberUserId) {
     throw UnimplementedError();
   }
 }
 
 void main() {
-  test('CollabProvider acceptInvite removes invite before API completes', () async {
+  test('CollabProvider acceptInvite removes invite before API completes',
+      () async {
     SharedPreferences.setMockInitialValues({});
 
     const invite = CollabInvite(
@@ -110,7 +114,52 @@ void main() {
     expect(provider.isLoading, false);
   });
 
-  test('CollabProvider declineInvite removes invite before API completes', () async {
+  test('CollabProvider restores an optimistic invite after a typed failure',
+      () async {
+    SharedPreferences.setMockInitialValues({});
+
+    const invite = CollabInvite(
+      id: 'invite_failed',
+      entityType: 'artworks',
+      entityId: '33333333-3333-4333-8333-333333333333',
+      invitedUserId: 'user_1',
+      invitedByUserId: 'user_2',
+      role: 'editor',
+      status: 'pending',
+    );
+    const requestError = BackendApiRequestException(
+      statusCode: 503,
+      path: '/api/collab/invites/invite_failed/accept',
+      body: 'temporarily unavailable',
+    );
+    final api = _FakeCollabApi()
+      ..inbox = <CollabInvite>[invite]
+      ..acceptCompleter = Completer<void>();
+    final provider = CollabProvider(api: api);
+    addTearDown(provider.dispose);
+
+    await provider.initialize(refresh: true);
+    final future = provider.acceptInvite(invite.id);
+    final expectation = expectLater(
+      future,
+      throwsA(
+        isA<BackendApiRequestException>()
+            .having((error) => error.statusCode, 'statusCode', 503),
+      ),
+    );
+    expect(provider.pendingInviteCount, 0);
+
+    api.acceptCompleter!.completeError(requestError);
+    await expectation;
+
+    expect(provider.pendingInviteCount, 1);
+    expect(provider.invitesInbox.single.id, invite.id);
+    expect(provider.error, contains('temporarily unavailable'));
+    expect(provider.isLoading, false);
+  });
+
+  test('CollabProvider declineInvite removes invite before API completes',
+      () async {
     SharedPreferences.setMockInitialValues({});
 
     const invite = CollabInvite(
