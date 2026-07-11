@@ -1102,19 +1102,42 @@ database-failure paths that return authenticated success or empty success.
 **Required completion:** Fail closed with the existing structured error-code
 convention, preserve client retry/offline UX, make multi-step writes
 transactional, and cover every changed failure path with route tests.
+**Completion notes:** Removed process-memory authority from wallet registration,
+wallet login, wallet binding, and account deletion after Postgres failures.
+Eligible auth writes forward to the configured writable backend before returning
+retryable `503 AUTH_DB_UNAVAILABLE`. Conversation/message/member reads now return
+`503 MESSAGING_DB_UNAVAILABLE` instead of successful empty payloads; member adds
+run in a transaction, and conversation avatar success is withheld unless the DB
+pointer persists.
+**Validation run:** Focused failure-contract coverage passed 57 tests; the wider
+auth/messaging group passed 27 suites / 167 tests; notification, achievement,
+and challenge security regressions passed 20 tests. Full backend CI passed 148
+suites / 904 tests with two skipped.
 
 ### [CONT-04] Schema snapshot and migration integrity
 
-**Status:** Pending harness gate
+**Status:** Completed
 **Baseline:** `schema.sql` and `schema_complete.sql` differ by four tables;
 migration prefixes are duplicated.
 **Required completion:** Reconcile both snapshots, bootstrap and compare them
 mechanically, preserve already-applied migration filenames, and reject future
 prefix collisions.
+**Completion notes:** Added the four missing tables to `schema_complete.sql`,
+aligned the PostGIS marker column, artwork discovery constraint, and analytics
+timestamp default, and replaced the permissive drift baseline with zero-table-
+drift enforcement. The exact historical `009`, `010`, `044`, and `063` filename
+pairs are immutable grandfathered exceptions; every new duplicate or rename now
+fails. Clean bootstrap also exposed and fixed idempotence gaps in migrations 035
+and 054. The live gate compares post-migration columns, constraints, indexes,
+triggers, and views from both snapshots.
+**Validation run:** `npm run schema:parity` reports zero table drift. Against the
+exact CI PostGIS 15 image, both snapshots bootstrapped independently, all 78
+runnable migrations applied, each produced 115 tables, and their public catalogs
+matched. CI harness tests, lint, and full backend CI passed.
 
 ### [CONT-05] Admin Ops/CDP correctness
 
-**Status:** Pending harness gate
+**Status:** Completed
 **Baseline:** Admin lint failed; deploy filtering was dead, summary filters did
 not match list filters, lists were truncated without pagination, recurring
 groups were unused, and resolve/reopen failures were not surfaced or atomically
@@ -1129,7 +1152,7 @@ made privileged CDP mutations and their audit writes transactional, added
 retention/noise classification behavior, and covered keyboard/visual workflows
 with the deterministic admin fixture.
 **Validation run:** Backend CDP route/service coverage passed within the full
-148-suite / 895-test Jest gate; admin lint, typecheck, 93 tests, and production
+148-suite / 904-test Jest gate; admin lint, typecheck, 93 tests, and production
 build passed; the root admin CDP fixture QA passed.
 
 ### [CONT-06] Dependency and runtime exposure audit
@@ -1148,7 +1171,7 @@ the remaining reachable runtime/toolchain families and retained remote Kubo,
 Oracle/home, DNSLink, and private control-plane deployment contracts. Admin build
 dependencies were upgraded in the same clean-install pass.
 **Validation run:** Backend production and release audits report zero
-vulnerabilities; backend lint, toolchain, schema, compose, 148 Jest suites / 895
+vulnerabilities; backend lint, toolchain, schema, compose, 148 Jest suites / 904
 tests, and 22 native public-art tests passed. Admin `npm audit`, lint, typecheck,
 93 tests, and production build passed with zero vulnerabilities.
 
@@ -1163,6 +1186,8 @@ tests, and 22 native public-art tests passed. Admin `npm audit`, lint, typecheck
   tests, including malformed 2xx, 401, 404, 500, timeout, offline transport, and
   optimistic rollback cases.
 - Backend clean-install gates passed lint, toolchain, dependency audit, schema,
-  compose, 148 Jest suites / 895 tests, and 22 native public-art tests.
+  compose, 148 Jest suites / 904 tests, and 22 native public-art tests.
+- Both schema snapshots passed clean bootstrap with the exact CI PostGIS image:
+  78 migrations, 115 tables, and matching public catalogs per snapshot.
 - Admin clean-install gates passed zero-vulnerability audit, lint, typecheck, 93
   tests, and production build; root admin CDP fixture QA passed.
