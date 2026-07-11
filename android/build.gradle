@@ -3,13 +3,13 @@ allprojects {
         google()
         mavenCentral()
         maven {
-            url 'https://jitpack.io'
+            url = uri('https://jitpack.io')
             content {
                 includeGroupByRegex 'com\\.github\\..*'
             }
         }
         maven {
-            url 'https://maven.reown.com/releases'
+            url = uri('https://maven.reown.com/releases')
             content {
                 includeGroupByRegex 'com\\.reown(\\..*)?'
                 includeGroupByRegex 'com\\.walletconnect(\\..*)?'
@@ -19,21 +19,17 @@ allprojects {
     }
 }
 
-rootProject.buildDir = '../build'
+rootProject.layout.buildDirectory.set(file('../build'))
 subprojects {
-    project.buildDir = "${rootProject.buildDir}/${project.name}"
+    project.layout.buildDirectory.set(rootProject.layout.buildDirectory.dir(project.name))
 }
-subprojects {
-    project.evaluationDependsOn(':app')
-}
-
 subprojects {
     plugins.withId('com.android.application') {
         def androidExt = project.extensions.findByName('android')
         if (androidExt != null && androidExt.hasProperty('compileOptions')) {
             androidExt.compileOptions {
-                sourceCompatibility JavaVersion.VERSION_21
-                targetCompatibility JavaVersion.VERSION_21
+                sourceCompatibility = JavaVersion.VERSION_21
+                targetCompatibility = JavaVersion.VERSION_21
             }
         }
     }
@@ -41,8 +37,8 @@ subprojects {
         def androidExt = project.extensions.findByName('android')
         if (androidExt != null && androidExt.hasProperty('compileOptions')) {
             androidExt.compileOptions {
-                sourceCompatibility JavaVersion.VERSION_21
-                targetCompatibility JavaVersion.VERSION_21
+                sourceCompatibility = JavaVersion.VERSION_21
+                targetCompatibility = JavaVersion.VERSION_21
             }
         }
     }
@@ -56,6 +52,10 @@ subprojects {
     }
 }
 
+subprojects {
+    project.evaluationDependsOn(':app')
+}
+
 tasks.register("clean", Delete) {
-    delete rootProject.buildDir
+    delete rootProject.layout.buildDirectory
 }

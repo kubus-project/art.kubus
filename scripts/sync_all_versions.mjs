@@ -9,6 +9,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const stackDir = path.resolve(__dirname, '..');
 const manifestPath = path.join(stackDir, 'version.json');
+let dryRun = false;
 
 // ===== Helpers =====
 
@@ -37,12 +38,16 @@ function writeIfChanged(filePath, nextContent, changes) {
     // File doesn't exist yet
   }
 
-  if (currentContent === nextContent) {
+  const normalizedCurrent = currentContent.replace(/\r\n/g, '\n');
+  const normalizedNext = nextContent.replace(/\r\n/g, '\n');
+  if (normalizedCurrent === normalizedNext) {
     return;
   }
 
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  writeText(filePath, nextContent);
+  if (!dryRun) {
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
+    writeText(filePath, nextContent);
+  }
   changes.push(filePath);
 }
 
@@ -257,7 +262,9 @@ function syncFlutterRepo(repoDir, manifest, changes) {
   // Sync package.json and local version.json for Flutter repo
   syncPackageJson(repoDir, manifest, changes);
   syncPackageLock(repoDir, manifest, changes);
-  syncLocalVersionJson(repoDir, manifest, changes);
+  if (path.resolve(repoDir) !== stackDir) {
+    syncLocalVersionJson(repoDir, manifest, changes);
+  }
 }
 
 function syncNodeLikeRepo(repoDir, manifest, targetKind, changes) {
@@ -278,29 +285,31 @@ function syncNodeLikeRepo(repoDir, manifest, targetKind, changes) {
 
 function main() {
   const args = process.argv.slice(2);
-  let mode = 'sync'; // 'sync', 'check', or 'target'
+  let checkOnly = false;
+  let targetRequested = false;
   let targetName = null;
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
     if (arg === '--check') {
-      mode = 'check';
+      checkOnly = true;
     } else if (arg === '--target') {
-      mode = 'target';
+      targetRequested = true;
       if (i + 1 < args.length && !args[i + 1].startsWith('--')) {
         targetName = args[i + 1];
         i++;
       }
     } else if (arg.startsWith('--target=')) {
-      mode = 'target';
+      targetRequested = true;
       targetName = arg.slice(9);
     }
   }
 
-  if (mode === 'target' && !targetName) {
+  if (targetRequested && !targetName) {
     console.error('Error: --target requires a target name (e.g., --target frontend)');
     process.exit(1);
   }
+  dryRun = checkOnly;
 
   // Read manifest
   let manifest;
@@ -315,7 +324,7 @@ function main() {
   const changes = [];
 
   // Determine which targets to sync
-  const targetsToSync = mode === 'target' ? [targetName] : Object.keys(manifest.targets);
+  const targetsToSync = targetName ? [targetName] : Object.keys(manifest.targets);
 
   for (const name of targetsToSync) {
     const target = manifest.targets[name];
@@ -346,7 +355,7 @@ function main() {
   }
 
   // Report
-  if (mode === 'check') {
+  if (checkOnly) {
     if (changes.length === 0) {
       console.log('✓ All versions in sync');
       process.exit(0);

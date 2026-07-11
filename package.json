@@ -1,11 +1,21 @@
 {
   "name": "art-kubus-workspace",
-  "version": "0.6.0",
+  "version": "0.6.2",
   "private": true,
+  "packageManager": "npm@11.7.0",
+  "engines": {
+    "node": "22.15.0",
+    "npm": "11.7.0"
+  },
   "scripts": {
     "guard:architecture": "node ./scripts/architecture_guard.mjs",
     "docs:doctor": "node ./scripts/docs_doctor.mjs",
     "backend:status": "node ./scripts/backend_status.mjs",
+    "verify:toolchain": "node ./scripts/verify_toolchain.mjs all",
+    "verify:toolchain:node": "node ./scripts/verify_toolchain.mjs node",
+    "verify:toolchain:flutter": "node ./scripts/verify_toolchain.mjs flutter",
+    "verify:toolchain:android": "node ./scripts/verify_toolchain.mjs android",
+    "verify:deploy": "node ./scripts/deploy/run_atomic_web_release_test.mjs",
     "verify": "node ./scripts/verify.mjs all",
     "verify:all": "node ./scripts/verify.mjs all",
     "verify:architecture": "node ./scripts/verify.mjs architecture",
@@ -13,9 +23,13 @@
     "verify:backend-status": "node ./scripts/verify.mjs backend:status",
     "verify:flutter": "node ./scripts/verify.mjs flutter",
     "verify:flutter:analyze": "node ./scripts/verify.mjs flutter:analyze",
+    "verify:flutter:test": "node ./scripts/verify.mjs flutter:test",
+    "verify:flutter:web": "node ./scripts/verify.mjs flutter:web",
+    "verify:flutter:android": "node ./scripts/verify.mjs flutter:android",
     "verify:flutter:smoke": "node ./scripts/verify.mjs flutter:smoke",
     "verify:backend": "node ./scripts/verify.mjs backend",
     "verify:backend:lint": "node ./scripts/verify.mjs backend:lint",
+    "verify:backend:test": "node ./scripts/verify.mjs backend:test",
     "verify:backend:smoke": "node ./scripts/verify.mjs backend:smoke",
     "qa:web": "npm --prefix scripts/qa run qa:web",
     "qa:web:proxy": "npm --prefix scripts/qa run qa:web:proxy",
@@ -24,6 +38,6 @@
     "sync:versions": "npm run sync:version",
     "sync:all-versions": "node ./scripts/sync_all_versions.mjs",
     "sync:version:target": "node ./scripts/sync_all_versions.mjs --target",
-    "check:versions": "node ./scripts/sync_all_versions.mjs --check"
+    "check:versions": "node ./scripts/sync_all_versions.mjs --check --target frontend && node ./scripts/sync_all_versions.mjs --check --target backend"
   }
 }

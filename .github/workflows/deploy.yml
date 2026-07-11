@@ -1,723 +1,492 @@
 name: Deploy
 
 on:
-  push:
+  workflow_run:
+    workflows:
+      - CI
+    types:
+      - completed
     branches:
       - master
       - main
   workflow_dispatch:
     inputs:
+      ci_run_id:
+        description: 'Successful CI run ID containing the immutable artifacts'
+        required: true
+        type: string
+      artifact_sha:
+        description: 'Full 40-character commit SHA built by that CI run'
+        required: true
+        type: string
       deploy_web:
-        description: 'Deploy Flutter web build to app server via SFTP/SSH'
+        description: 'Promote the tested Flutter web artifact'
         required: false
         default: true
         type: boolean
       build_apk:
-        description: 'Build Android APK (debug-signed release mode)'
+        description: 'Sign the tested unsigned Android artifact'
         required: false
         default: true
         type: boolean
       publish_github_release:
-        description: 'Create/Update a GitHub Release and upload the APK'
+        description: 'Create a new immutable GitHub Release for the signed APK'
         required: false
-        default: true
+        default: false
         type: boolean
       release_tag:
-        description: 'Release tag to create/use (leave empty to auto-generate)'
+        description: 'New release tag (required when publishing)'
         required: false
         default: ''
         type: string
       prerelease:
-        description: 'Mark GitHub Release as a prerelease'
+        description: 'Mark the GitHub Release as a prerelease'
         required: false
         default: true
         type: boolean
 
 permissions:
-  contents: write
+  actions: read
+  contents: read
 
 concurrency:
-  group: deploy-${{ github.ref }}
+  group: deploy-production
   cancel-in-progress: false
 
 jobs:
   deploy_web:
-    name: SFTP deploy (Flutter web)
-    runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.deploy_web) }}
-
+    name: Promote immutable Flutter web artifact
+    if: >-
+      ${{
+        (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
+        (github.event_name == 'workflow_dispatch' && inputs.deploy_web)
+      }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: production-web
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          submodules: false
-
-      - name: Detect Flutter changes (skip web deploy when unchanged)
-        id: changes
-        if: ${{ github.event_name == 'push' }}
-        uses: dorny/paths-filter@v3
-        with:
-          filters: |
-            flutter:
-              - 'lib/**'
-              - 'test/**'
-              - 'assets/**'
-              - 'pubspec.yaml'
-              - 'pubspec.lock'
-              - 'analysis_options.yaml'
-              - 'android/**'
-              - 'ios/**'
-              - 'macos/**'
-              - 'linux/**'
-              - 'windows/**'
-              - 'web/**'
-
-      - name: Decide whether to deploy web
-        id: web_gate
-        shell: bash
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "deploy=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          if [ "${{ steps.changes.outputs.flutter || 'false' }}" = "true" ]; then
-            echo "deploy=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "deploy=false" >> "$GITHUB_OUTPUT"
-            echo "No Flutter changes detected on this push; skipping web build/deploy to save runner minutes." 
-          fi
-
-      - name: Check SFTP secrets
-        id: sftp
-        if: ${{ steps.web_gate.outputs.deploy == 'true' }}
+      - name: Resolve and verify successful CI source
+        id: source
         shell: bash
         env:
-          SFTP_SERVER: ${{ secrets.SFTP_SERVER }}
-          SFTP_USERNAME: ${{ secrets.SFTP_USERNAME }}
-          SFTP_PRIVATE_KEY: ${{ secrets.SFTP_PRIVATE_KEY }}
-          # Backward-compatible fallbacks (host/user only) so existing repos don't need a rename.
-          FTP_SERVER_FALLBACK: ${{ secrets.FTP_SERVER }}
-          FTP_USERNAME_FALLBACK: ${{ secrets.FTP_USERNAME }}
-        run: |
-          HOST="${SFTP_SERVER:-${FTP_SERVER_FALLBACK:-}}"
-          USER="${SFTP_USERNAME:-${FTP_USERNAME_FALLBACK:-}}"
-
-          if [ -n "$HOST" ] && [ -n "$USER" ] && [ -n "$SFTP_PRIVATE_KEY" ]; then
-            echo "ok=true" >> "$GITHUB_OUTPUT"
-            echo "host_raw=$HOST" >> "$GITHUB_OUTPUT"
-            echo "username=$USER" >> "$GITHUB_OUTPUT"
-          else
-            echo "ok=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Normalize SFTP server host
-        if: ${{ steps.sftp.outputs.ok == 'true' }}
-        id: deploy_target
-        shell: bash
-        env:
-          DEPLOY_SERVER_RAW: ${{ steps.sftp.outputs.host_raw }}
-        run: |
-          # Users sometimes put values like:
-          #   sftp://example.com
-          #   ftp.example.com/
-          #   example.com:22
-          # This step normalizes to HOST without printing the secret value.
-
-          RAW="${DEPLOY_SERVER_RAW}"
-          RAW="$(printf '%s' "$RAW" | tr -d '\r\n')"
-          RAW="$(printf '%s' "$RAW" | xargs)"
-
-          HAS_PROTO=false
-          if [[ "$RAW" == *"://"* ]]; then
-            HAS_PROTO=true
-          fi
-
-          HOSTPORT="$(printf '%s' "$RAW" | sed -E 's#^[a-zA-Z]+://##; s#/.*$##')"
-          HOSTPORT="$(printf '%s' "$HOSTPORT" | xargs)"
-
-          HOST="$HOSTPORT"
-
-          # If host looks like host:port (not IPv6), split it and keep only host.
-          if [[ "$HOSTPORT" == *:* && "$HOSTPORT" != \[*\] ]]; then
-            CAND_PORT="${HOSTPORT##*:}"
-            CAND_HOST="${HOSTPORT%%:*}"
-            if [[ "$CAND_PORT" =~ ^[0-9]+$ ]]; then
-              HOST="$CAND_HOST"
-            fi
-          fi
-
-          if [ -z "$HOST" ]; then
-            echo "ok=false" >> "$GITHUB_OUTPUT"
-            echo "Unable to parse SFTP host from configured secret." >&2
-            exit 0
-          fi
-
-          echo "ok=true" >> "$GITHUB_OUTPUT"
-          echo "host=$HOST" >> "$GITHUB_OUTPUT"
-
-          if [ "$HAS_PROTO" = true ]; then
-            echo "Note: Server secret appears to include a protocol. Prefer hostname only (e.g., ssh.kubus.site)."
-          fi
-
-      - name: Preflight SSH connectivity
-        if: ${{ steps.sftp.outputs.ok == 'true' && steps.deploy_target.outputs.ok == 'true' }}
-        id: net
-        shell: bash
-        env:
-          DEPLOY_HOST: ${{ steps.deploy_target.outputs.host }}
-          SFTP_PORT: ${{ vars.SFTP_PORT || 22 }}
-        run: |
-          PORT="${SFTP_PORT:-22}"
-          echo "Checking connectivity to ${DEPLOY_HOST}:${PORT} (SFTP/SSH)..."
-
-          if ! getent hosts "$DEPLOY_HOST" >/dev/null 2>&1; then
-            echo "DNS lookup failed for the configured SFTP host." >&2
-            echo "Check your Actions secret SFTP_SERVER (or FTP_SERVER fallback). It must be a resolvable hostname." >&2
-            echo "ok=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          if nc -vz -w 10 "$DEPLOY_HOST" "$PORT"; then
-            echo "sftp_ok=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "sftp_ok=false" >> "$GITHUB_OUTPUT"
-            echo "SSH port is not reachable from this GitHub runner; skipping deploy." >&2
-          fi
-
-      - name: Cache Dart/Flutter packages
-        if: ${{ steps.sftp.outputs.ok == 'true' && steps.deploy_target.outputs.ok == 'true' && steps.net.outputs.sftp_ok == 'true' }}
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.pub-cache
-            .dart_tool
-          key: ${{ runner.os }}-pub-${{ hashFiles('pubspec.lock', 'pubspec.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pub-
-
-      - name: Set up Flutter
-        if: ${{ steps.sftp.outputs.ok == 'true' && steps.deploy_target.outputs.ok == 'true' && steps.net.outputs.sftp_ok == 'true' }}
-        uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
-
-      - name: Prepare web Google Sign-In config
-        if: ${{ steps.sftp.outputs.ok == 'true' && steps.deploy_target.outputs.ok == 'true' && steps.net.outputs.sftp_ok == 'true' }}
-        shell: bash
-        env:
-          KUBUS_GOOGLE_WEB_CLIENT_ID: ${{ secrets.KUBUS_GOOGLE_WEB_CLIENT_ID || vars.KUBUS_GOOGLE_WEB_CLIENT_ID }}
-        run: |
-          if [ -z "${KUBUS_GOOGLE_WEB_CLIENT_ID:-}" ]; then
-            echo "KUBUS_GOOGLE_WEB_CLIENT_ID must be configured for web deploys." >&2
-            exit 1
-          fi
-
-          python3 - <<'PY'
-          import os
-          import pathlib
-          import re
-          import sys
-
-          path = pathlib.Path("web/index.html")
-          client_id = os.environ["KUBUS_GOOGLE_WEB_CLIENT_ID"]
-          text = path.read_text(encoding="utf-8")
-          pattern = r'(<meta name="google-signin-client_id" content=")[^"]*(">)'
-          updated, count = re.subn(
-            pattern,
-            lambda match: f'{match.group(1)}{client_id}{match.group(2)}',
-            text,
-            count=1,
-          )
-          if count != 1:
-            sys.exit("google-signin-client_id meta tag not found in web/index.html")
-          path.write_text(updated, encoding="utf-8")
-          PY
-
-      - name: Prepare Dart defines (optional)
-        id: defines
-        if: ${{ steps.sftp.outputs.ok == 'true' && steps.deploy_target.outputs.ok == 'true' && steps.net.outputs.sftp_ok == 'true' }}
-        shell: bash
-        env:
-          KUBUS_BACKEND_URL: ${{ secrets.KUBUS_BACKEND_URL }}
-          KUBUS_GOOGLE_CLIENT_ID: ${{ secrets.KUBUS_GOOGLE_CLIENT_ID || vars.KUBUS_GOOGLE_CLIENT_ID }}
-          KUBUS_GOOGLE_WEB_CLIENT_ID: ${{ secrets.KUBUS_GOOGLE_WEB_CLIENT_ID || vars.KUBUS_GOOGLE_WEB_CLIENT_ID }}
-          KUBUS_GOOGLE_IOS_CLIENT_ID: ${{ secrets.KUBUS_GOOGLE_IOS_CLIENT_ID || vars.KUBUS_GOOGLE_IOS_CLIENT_ID }}
-          KUBUS_WALLETCONNECT_PROJECT_ID: ${{ secrets.KUBUS_WALLETCONNECT_PROJECT_ID }}
-          KUBUS_PINATA_API_KEY: ${{ secrets.KUBUS_PINATA_API_KEY }}
-          KUBUS_PINATA_SECRET_KEY: ${{ secrets.KUBUS_PINATA_SECRET_KEY }}
-        run: |
-          ARGS=""
-          add() {
-            local name="$1"
-            local value="$2"
-            if [ -n "$value" ]; then
-              ARGS="$ARGS --dart-define=${name}=${value}"
-            fi
-          }
-          add KUBUS_BACKEND_URL "$KUBUS_BACKEND_URL"
-          add KUBUS_GOOGLE_CLIENT_ID "$KUBUS_GOOGLE_CLIENT_ID"
-          add KUBUS_GOOGLE_WEB_CLIENT_ID "$KUBUS_GOOGLE_WEB_CLIENT_ID"
-          add KUBUS_GOOGLE_IOS_CLIENT_ID "$KUBUS_GOOGLE_IOS_CLIENT_ID"
-          add KUBUS_ENABLE_WEB_SEMANTICS "false"
-          add KUBUS_WALLETCONNECT_PROJECT_ID "$KUBUS_WALLETCONNECT_PROJECT_ID"
-          add KUBUS_PINATA_API_KEY "$KUBUS_PINATA_API_KEY"
-          add KUBUS_PINATA_SECRET_KEY "$KUBUS_PINATA_SECRET_KEY"
-          echo "args=$ARGS" >> "$GITHUB_OUTPUT"
-
-      - name: Build Flutter web
-        if: ${{ steps.sftp.outputs.ok == 'true' && steps.deploy_target.outputs.ok == 'true' && steps.net.outputs.sftp_ok == 'true' }}
-        run: |
-          flutter pub get
-          flutter build web --release ${{ steps.defines.outputs.args }}
-
-      - name: Pre-compress wasm artifacts (brotli + gzip)
-        if: ${{ steps.sftp.outputs.ok == 'true' && steps.deploy_target.outputs.ok == 'true' && steps.net.outputs.sftp_ok == 'true' }}
-        shell: bash
-        run: |
-          # LiteSpeed does not compress application/wasm dynamically; the
-          # deployed .htaccess serves these pre-compressed variants instead
-          # (canvaskit.wasm: ~5.7MB -> ~1.3MB over the wire).
-          sudo apt-get update -y >/dev/null
-          sudo apt-get install -y brotli >/dev/null
-          find build/web -type f -name '*.wasm' -print0 | while IFS= read -r -d '' f; do
-            brotli -f -q 11 "$f"
-            gzip -kf9 "$f"
-            ls -la "$f" "$f.br" "$f.gz"
-          done
-
-      - name: Show runner public IP (for cPanel allowlist)
-        if: ${{ steps.sftp.outputs.ok == 'true' && steps.deploy_target.outputs.ok == 'true' && steps.net.outputs.sftp_ok == 'true' && vars.SFTP_DEBUG == 'true' }}
-        shell: bash
-        run: |
-          echo "Runner public egress IP (best-effort):"
-
-          echo -n "ipify: "
-          curl -fsS https://api.ipify.org || true
-          echo
-
-          echo -n "ifconfig.me: "
-          curl -fsS https://ifconfig.me || true
-          echo
-
-          if command -v dig >/dev/null 2>&1; then
-            echo -n "opendns: "
-            dig +short myip.opendns.com @resolver1.opendns.com || true
-            echo
-          else
-            echo "dig not available on runner"
-          fi
-
-      - name: Prepare SFTP auth (Flutter Web)
-        if: ${{ steps.sftp.outputs.ok == 'true' && steps.deploy_target.outputs.ok == 'true' && steps.net.outputs.sftp_ok == 'true' }}
-        id: sftp_prep
-        continue-on-error: true
-        shell: bash
-        env:
-          SFTP_HOST: ${{ steps.deploy_target.outputs.host }}
-          SFTP_USERNAME: ${{ steps.sftp.outputs.username }}
-          SFTP_PORT: ${{ vars.SFTP_PORT || 22 }}
-          SFTP_PRIVATE_KEY: ${{ secrets.SFTP_PRIVATE_KEY }}
-          SFTP_PRIVATE_KEY_PASSPHRASE: ${{ secrets.SFTP_PRIVATE_KEY_PASSPHRASE }}
-          SFTP_PASSWORD: ${{ secrets.SFTP_PASSWORD }}
-          SFTP_HOST_FINGERPRINT: ${{ secrets.SFTP_HOST_FINGERPRINT }}
-          SFTP_DEBUG: ${{ vars.SFTP_DEBUG || 'false' }}
-          WEB_SERVER_DIR: ${{ vars.WEB_SERVER_DIR || '/app.kubus.site/' }}
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          INPUT_CI_RUN_ID: ${{ inputs.ci_run_id }}
+          INPUT_ARTIFACT_SHA: ${{ inputs.artifact_sha }}
         run: |
           set -euo pipefail
-
-          echo "Preparing SFTP auth for ${SFTP_USERNAME}@${SFTP_HOST}:${SFTP_PORT}"
-          if [ "${SFTP_DEBUG:-false}" = "true" ]; then
-            echo "Secrets present (values masked):"
-            echo "- SFTP_SERVER set: $([[ -n \"${SFTP_HOST:-}\" ]] && echo yes || echo no)"
-            echo "- SFTP_USERNAME set: $([[ -n \"${SFTP_USERNAME:-}\" ]] && echo yes || echo no)"
-            echo "- SFTP_PRIVATE_KEY set: $([[ -n \"${SFTP_PRIVATE_KEY:-}\" ]] && echo yes || echo no)"
-            echo "- SFTP_PRIVATE_KEY_PASSPHRASE set: $([[ -n \"${SFTP_PRIVATE_KEY_PASSPHRASE:-}\" ]] && echo yes || echo no)"
-            echo "- SFTP_HOST_FINGERPRINT set: $([[ -n \"${SFTP_HOST_FINGERPRINT:-}\" ]] && echo yes || echo no)"
-            echo "- WEB_SERVER_DIR: ${WEB_SERVER_DIR}"
-          fi
-
-          # Most cPanel SSH/SFTP servers have PasswordAuthentication disabled.
-          # If you hit "attempted methods [none publickey]", it means you MUST use an SSH private key.
-          if [ -z "${SFTP_PRIVATE_KEY:-}" ]; then
-            echo "SFTP_PRIVATE_KEY secret is missing/empty. This host likely requires SSH key auth; SFTP deploy will be skipped." >&2
-            exit 0
-          fi
-
-          # Quick sanity checks to catch common misconfiguration: users accidentally paste the PUBLIC key.
-          FIRST_LINE="$(printf '%s' "$SFTP_PRIVATE_KEY" | head -n 1 | tr -d '\r')"
-          if [[ "$FIRST_LINE" == ssh-* ]]; then
-            echo "SFTP_PRIVATE_KEY looks like a PUBLIC key (starts with 'ssh-')." >&2
-            echo "Paste the *private* key (e.g. '-----BEGIN OPENSSH PRIVATE KEY-----') into the GitHub secret SFTP_PRIVATE_KEY." >&2
-            exit 1
-          fi
-          if ! printf '%s' "$SFTP_PRIVATE_KEY" | grep -q "PRIVATE KEY"; then
-            echo "SFTP_PRIVATE_KEY does not appear to be a private key (no 'PRIVATE KEY' marker found)." >&2
-            echo "Make sure you pasted the full private key block into the GitHub secret." >&2
-            exit 1
-          fi
-
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-
-          KEY_PATH=~/.ssh/deploy_key
-
-          # Support both formats:
-          # - Multi-line key pasted as-is into GitHub secrets (preferred)
-          # - Single-line with literal \n sequences (common mistake when copying through JSON/UI)
-          if printf '%s' "$SFTP_PRIVATE_KEY" | grep -q "\\n"; then
-            # Convert literal \n sequences to real newlines, and strip CRs.
-            printf '%b' "${SFTP_PRIVATE_KEY//\\n/\n}" | tr -d '\r' > "$KEY_PATH"
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            run_id="${{ github.event.workflow_run.id }}"
+            artifact_sha="${{ github.event.workflow_run.head_sha }}"
+            workflow_name="${{ github.event.workflow_run.name }}"
+            conclusion="${{ github.event.workflow_run.conclusion }}"
           else
-            # Preserve multiline secret as-is, but strip CRs (Windows line endings break OpenSSH on Linux).
-            printf '%s' "$SFTP_PRIVATE_KEY" | tr -d '\r' > "$KEY_PATH"
-          fi
-          chmod 600 "$KEY_PATH"
-
-          # Validate that OpenSSH can parse the key file.
-          # IMPORTANT: if the key is passphrase-protected, ssh-keygen will prompt and a timeout will look like a parse failure.
-          # So we only perform non-interactive validation when NO passphrase is configured.
-          if command -v ssh-keygen >/dev/null 2>&1 && command -v timeout >/dev/null 2>&1; then
-            if [ -z "${SFTP_PRIVATE_KEY_PASSPHRASE:-}" ]; then
-              if ! timeout 3 ssh-keygen -y -f "$KEY_PATH" >/dev/null 2>&1; then
-                echo "OpenSSH could not parse the private key file (this often shows up as: 'error in libcrypto')." >&2
-                echo "Fixes:" >&2
-                echo "- Ensure SFTP_PRIVATE_KEY is an OpenSSH private key (NOT a PuTTY .ppk, NOT a public key)." >&2
-                echo "- Re-paste the key with proper newlines (multi-line secret)." >&2
-                echo "- If the key is encrypted, set SFTP_PRIVATE_KEY_PASSPHRASE." >&2
-                exit 1
-              fi
-            else
-              echo "Note: private key is passphrase-protected; skipping non-interactive parse validation." 
-            fi
-          fi
-
-          # Create known_hosts and (optionally) verify the pinned fingerprint matches what the runner sees.
-          KNOWN_HOSTS=~/.ssh/known_hosts
-          : > "$KNOWN_HOSTS"
-          chmod 600 "$KNOWN_HOSTS"
-
-          if command -v ssh-keyscan >/dev/null 2>&1; then
-            ssh-keyscan -p "$SFTP_PORT" -t ed25519,ecdsa,rsa "$SFTP_HOST" 2>/dev/null >> "$KNOWN_HOSTS" || true
-          fi
-
-          if [ -n "${SFTP_HOST_FINGERPRINT:-}" ] && command -v ssh-keygen >/dev/null 2>&1; then
-            # Compare any scanned host key fingerprint with the pinned value; accept match on any algorithm.
-            if ! ssh-keygen -lf "$KNOWN_HOSTS" 2>/dev/null | awk '{print $2}' | grep -Fxq "$SFTP_HOST_FINGERPRINT"; then
-              echo "Pinned SFTP_HOST_FINGERPRINT did not match scanned host keys (or scan unavailable)." >&2
-              echo "Re-check which host key algorithm your server presents (ECDSA/RSA/ED25519)." >&2
+            run_id="$INPUT_CI_RUN_ID"
+            artifact_sha="$INPUT_ARTIFACT_SHA"
+            metadata="$RUNNER_TEMP/ci-run.json"
+            curl --fail --silent --show-error --location \
+              --header "Authorization: Bearer $GH_TOKEN" \
+              --header 'X-GitHub-Api-Version: 2022-11-28' \
+              "https://api.github.com/repos/$REPOSITORY/actions/runs/$run_id" \
+              > "$metadata"
+            workflow_name="$(jq -r '.name' "$metadata")"
+            conclusion="$(jq -r '.conclusion' "$metadata")"
+            run_sha="$(jq -r '.head_sha' "$metadata")"
+            if [ "$run_sha" != "$artifact_sha" ]; then
+              echo "CI run $run_id belongs to $run_sha, not $artifact_sha." >&2
               exit 1
             fi
           fi
 
-          # Lightweight auth check (does not fail the job thanks to continue-on-error).
-          # Skip when a passphrase is required, because we can't supply it to the system ssh client here.
-          if [ -z "${SFTP_PRIVATE_KEY_PASSPHRASE:-}" ] && command -v ssh >/dev/null 2>&1; then
-            ssh -o BatchMode=yes \
-              -o StrictHostKeyChecking=yes \
-              -o UserKnownHostsFile="$KNOWN_HOSTS" \
-              -i "$KEY_PATH" \
-              -p "$SFTP_PORT" \
-              "$SFTP_USERNAME@$SFTP_HOST" \
-              'echo "SSH auth OK"' || true
+          if [ "$workflow_name" != "CI" ] || [ "$conclusion" != "success" ]; then
+            echo "Deployment requires a successful CI workflow run." >&2
+            exit 1
+          fi
+          if [[ ! "$run_id" =~ ^[0-9]+$ ]] || [[ ! "$artifact_sha" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Invalid CI run ID or artifact SHA." >&2
+            exit 1
+          fi
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+          echo "sha=$artifact_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout exact tested deployment logic
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          ref: ${{ steps.source.outputs.sha }}
+          submodules: false
+
+      - name: Download exact web artifact from CI
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: flutter-web-${{ steps.source.outputs.sha }}
+          path: build/web
+          run-id: ${{ steps.source.outputs.run_id }}
+          github-token: ${{ github.token }}
+
+      - name: Verify and package exact web artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f build/web/index.html
+          test -f build/web/SHA256SUMS
+          (cd build/web && sha256sum -c SHA256SUMS)
+          mkdir -p deployment
+          archive="art-kubus-web-${{ steps.source.outputs.sha }}.tar.gz"
+          tar -C build/web -czf "deployment/$archive" .
+          (cd deployment && sha256sum "$archive" > "$archive.sha256")
+          cp scripts/deploy/atomic_web_release.sh deployment/
+
+      - name: Validate protected deployment inputs
+        id: target
+        shell: bash
+        env:
+          SFTP_HOST: ${{ secrets.SFTP_SERVER }}
+          SFTP_USERNAME: ${{ secrets.SFTP_USERNAME }}
+          SFTP_PRIVATE_KEY: ${{ secrets.SFTP_PRIVATE_KEY }}
+          SFTP_HOST_FINGERPRINT: ${{ secrets.SFTP_HOST_FINGERPRINT }}
+          SFTP_PORT: ${{ vars.SFTP_PORT || '22' }}
+          WEB_SERVER_DIR: ${{ vars.WEB_SERVER_DIR }}
+          WEB_RELEASES_DIR: ${{ vars.WEB_RELEASES_DIR }}
+          WEB_SMOKE_URL: ${{ vars.WEB_SMOKE_URL }}
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
+        run: |
+          set -euo pipefail
+          required=(
+            "$SFTP_HOST"
+            "$SFTP_USERNAME"
+            "$SFTP_PRIVATE_KEY"
+            "$SFTP_HOST_FINGERPRINT"
+            "$WEB_SERVER_DIR"
+            "$WEB_SMOKE_URL"
+          )
+          for value in "${required[@]}"; do
+            if [ -z "$value" ]; then
+              echo "A required production-web secret or variable is missing." >&2
+              exit 1
+            fi
+          done
+          if [[ ! "$SFTP_HOST" =~ ^[A-Za-z0-9.-]+$ ]] || [[ ! "$SFTP_PORT" =~ ^[0-9]+$ ]]; then
+            echo "SFTP_SERVER must be a hostname and SFTP_PORT must be numeric." >&2
+            exit 1
           fi
 
-          # Run the actual upload using appleboy/scp-action (via a local key file for reliability).
-          # We invoke the action via `uses` in the next step, passing KEY_PATH through outputs.
-          echo "key_path=$KEY_PATH" >> "$GITHUB_OUTPUT"
-          echo "known_hosts=$KNOWN_HOSTS" >> "$GITHUB_OUTPUT"
+          live_dir="${WEB_SERVER_DIR%/}"
+          if [[ ! "$live_dir" =~ ^/[A-Za-z0-9_./-]+$ ]] || [[ "$live_dir" == *'..'* ]]; then
+            echo "WEB_SERVER_DIR must be a safe absolute path to a pre-provisioned symlink." >&2
+            exit 1
+          fi
+          parent_dir="$(dirname "$live_dir")"
+          release_root="${WEB_RELEASES_DIR%/}"
+          if [ -z "$release_root" ]; then
+            release_root="$parent_dir/.art-kubus-releases"
+          fi
+          if [[ ! "$release_root" =~ ^/[A-Za-z0-9_./-]+$ ]] || [[ "$release_root" == *'..'* ]]; then
+            echo "WEB_RELEASES_DIR must be a safe absolute path." >&2
+            exit 1
+          fi
+
           echo "host=$SFTP_HOST" >> "$GITHUB_OUTPUT"
           echo "username=$SFTP_USERNAME" >> "$GITHUB_OUTPUT"
           echo "port=$SFTP_PORT" >> "$GITHUB_OUTPUT"
-          echo "web_server_dir=$WEB_SERVER_DIR" >> "$GITHUB_OUTPUT"
+          echo "live_dir=$live_dir" >> "$GITHUB_OUTPUT"
+          echo "release_root=$release_root" >> "$GITHUB_OUTPUT"
+          echo "incoming_dir=$release_root/incoming-$SOURCE_SHA" >> "$GITHUB_OUTPUT"
+          echo "release_dir=$release_root/releases/$SOURCE_SHA" >> "$GITHUB_OUTPUT"
+          echo "smoke_url=$WEB_SMOKE_URL" >> "$GITHUB_OUTPUT"
 
-      - name: SFTP Upload (Flutter Web)
-        if: ${{ steps.sftp.outputs.ok == 'true' && steps.deploy_target.outputs.ok == 'true' && steps.net.outputs.sftp_ok == 'true' && steps.sftp_prep.outputs.key_path != '' }}
-        id: sftp_upload
-        continue-on-error: true
-        uses: appleboy/scp-action@v1
+      - name: Prepare versioned remote upload directory
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1
+        env:
+          LIVE_DIR: ${{ steps.target.outputs.live_dir }}
+          INCOMING_DIR: ${{ steps.target.outputs.incoming_dir }}
+          RELEASE_ROOT: ${{ steps.target.outputs.release_root }}
+          RELEASE_DIR: ${{ steps.target.outputs.release_dir }}
         with:
-          host: ${{ steps.sftp_prep.outputs.host }}
-          username: ${{ steps.sftp_prep.outputs.username }}
-          port: ${{ steps.sftp_prep.outputs.port }}
-          timeout: ${{ vars.SFTP_TIMEOUT || '120s' }}
-          command_timeout: ${{ vars.SFTP_COMMAND_TIMEOUT || '120s' }}
-          key_path: ${{ steps.sftp_prep.outputs.key_path }}
+          host: ${{ steps.target.outputs.host }}
+          username: ${{ steps.target.outputs.username }}
+          port: ${{ steps.target.outputs.port }}
+          key: ${{ secrets.SFTP_PRIVATE_KEY }}
           passphrase: ${{ secrets.SFTP_PRIVATE_KEY_PASSPHRASE }}
-          password: ${{ secrets.SFTP_PASSWORD || secrets.FTP_PASSWORD }}
           fingerprint: ${{ secrets.SFTP_HOST_FINGERPRINT }}
-          debug: ${{ vars.SFTP_DEBUG || 'false' }}
-          source: "build/web/*"
-          strip_components: 2
-          target: ${{ steps.sftp_prep.outputs.web_server_dir }}
+          envs: LIVE_DIR,INCOMING_DIR,RELEASE_ROOT,RELEASE_DIR
+          script_stop: true
+          script: |
+            set -eu
+            if [ ! -L "$LIVE_DIR" ]; then
+              echo "WEB_SERVER_DIR must already be a symlink before atomic deployment." >&2
+              exit 1
+            fi
+            if [ -e "$RELEASE_DIR" ]; then
+              test -d "$RELEASE_DIR"
+            fi
+            rm -rf "$INCOMING_DIR"
+            mkdir -p "$INCOMING_DIR" "$RELEASE_ROOT/releases"
 
-      - name: Show SSH host fingerprints (for pinning)
-        if: ${{ steps.sftp.outputs.ok == 'true' && steps.deploy_target.outputs.ok == 'true' && steps.net.outputs.sftp_ok == 'true' && vars.SFTP_DEBUG == 'true' }}
+      - name: Upload versioned web archive
+        uses: appleboy/scp-action@ff85246acaad7bdce478db94a363cd2bf7c90345 # v1
+        with:
+          host: ${{ steps.target.outputs.host }}
+          username: ${{ steps.target.outputs.username }}
+          port: ${{ steps.target.outputs.port }}
+          key: ${{ secrets.SFTP_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SFTP_PRIVATE_KEY_PASSPHRASE }}
+          fingerprint: ${{ secrets.SFTP_HOST_FINGERPRINT }}
+          source: deployment/*
+          target: ${{ steps.target.outputs.incoming_dir }}
+          strip_components: 1
+          overwrite: true
+
+      - name: Verify checksums and atomically switch current web root
+        id: promote
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1
+        env:
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
+          LIVE_DIR: ${{ steps.target.outputs.live_dir }}
+          RELEASE_ROOT: ${{ steps.target.outputs.release_root }}
+          INCOMING_DIR: ${{ steps.target.outputs.incoming_dir }}
+          RELEASE_DIR: ${{ steps.target.outputs.release_dir }}
+        with:
+          host: ${{ steps.target.outputs.host }}
+          username: ${{ steps.target.outputs.username }}
+          port: ${{ steps.target.outputs.port }}
+          key: ${{ secrets.SFTP_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SFTP_PRIVATE_KEY_PASSPHRASE }}
+          fingerprint: ${{ secrets.SFTP_HOST_FINGERPRINT }}
+          envs: SOURCE_SHA,LIVE_DIR,RELEASE_ROOT,INCOMING_DIR,RELEASE_DIR
+          script_stop: true
+          script: |
+            set -eu
+            sh "$INCOMING_DIR/atomic_web_release.sh" promote
+
+      - name: Post-deploy HTTP smoke
+        id: smoke
         shell: bash
         env:
-          SFTP_HOST: ${{ steps.deploy_target.outputs.host }}
-          SFTP_PORT: ${{ vars.SFTP_PORT || 22 }}
+          WEB_SMOKE_URL: ${{ steps.target.outputs.smoke_url }}
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
         run: |
-          echo "Fetching SSH host keys for ${SFTP_HOST}:${SFTP_PORT} (best-effort)..."
-          if ! command -v ssh-keyscan >/dev/null 2>&1; then
-            echo "ssh-keyscan not available on runner" >&2
-            exit 0
-          fi
-          if ! command -v ssh-keygen >/dev/null 2>&1; then
-            echo "ssh-keygen not available on runner" >&2
-            exit 0
-          fi
+          set -euo pipefail
+          separator='?'
+          if [[ "$WEB_SMOKE_URL" == *'?'* ]]; then separator='&'; fi
+          response="$RUNNER_TEMP/web-smoke.html"
+          curl --fail --silent --show-error --location \
+            --retry 5 --retry-delay 3 --retry-all-errors \
+            "${WEB_SMOKE_URL}${separator}deploy_sha=${SOURCE_SHA}" \
+            --output "$response"
+          grep -Eq 'flutter_bootstrap\.js|main\.dart\.js' "$response"
 
-          # This prints the fingerprints you should pin in the SFTP_HOST_FINGERPRINT secret.
-          # Note: ssh-keyscan is not authenticated; use it to obtain the value, then
-          # confirm it via your hosting control panel/SSH access page if possible.
-          ssh-keyscan -p "$SFTP_PORT" -t ed25519,ecdsa,rsa "$SFTP_HOST" 2>/dev/null | ssh-keygen -lf - || true
-
-      - name: SFTP deploy note
-        if: ${{ steps.sftp.outputs.ok == 'true' && steps.deploy_target.outputs.ok == 'true' && steps.net.outputs.sftp_ok == 'true' && steps.sftp_upload.outcome != 'success' }}
-        run: |
-          echo "SFTP port 22 is reachable, but SFTP upload failed (kept non-fatal to avoid a red deploy)."
-          echo "Common causes:"
-          echo "- Wrong SSH username (often NOT the same as FTP user on some hosts)"
-          echo "- Wrong remote path. Try setting repo variable WEB_SERVER_DIR to something like: public_html/app.kubus.site/"
-          echo "- Password SFTP disabled; you may need SSH key auth"
-          echo "- SSH key is passphrase-protected; set secret SFTP_PRIVATE_KEY_PASSPHRASE"
-
-      - name: Skip deploy (missing SFTP secrets)
-        if: ${{ steps.sftp.outputs.ok != 'true' }}
-        run: |
-          echo "SFTP secrets not configured (need host + username + private key); skipping web deploy."
-
-      - name: Skip deploy (no Flutter changes)
-        if: ${{ steps.web_gate.outputs.deploy != 'true' }}
-        run: |
-          echo "No Flutter changes detected; web deploy skipped."
-
-      - name: Skip deploy (SSH not reachable)
-        if: ${{ steps.sftp.outputs.ok == 'true' && steps.deploy_target.outputs.ok == 'true' && steps.net.outputs.sftp_ok != 'true' }}
-        run: |
-          echo "SFTP/SSH port is not reachable from this runner; skipping web deploy."
-
-  apk:
-    name: Build APK + upload to GitHub Release
-    runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.build_apk) }}
-    timeout-minutes: 30
-    env:
-      # Keep Gradle caches inside the workspace so we can cache them across runs.
-      GRADLE_USER_HOME: ${{ github.workspace }}/.gradle
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Roll back failed web smoke
+        if: ${{ failure() && steps.promote.outcome == 'success' && steps.smoke.outcome == 'failure' }}
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1
+        env:
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
+          LIVE_DIR: ${{ steps.target.outputs.live_dir }}
+          RELEASE_ROOT: ${{ steps.target.outputs.release_root }}
+          INCOMING_DIR: ${{ steps.target.outputs.incoming_dir }}
+          RELEASE_DIR: ${{ steps.target.outputs.release_dir }}
         with:
+          host: ${{ steps.target.outputs.host }}
+          username: ${{ steps.target.outputs.username }}
+          port: ${{ steps.target.outputs.port }}
+          key: ${{ secrets.SFTP_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SFTP_PRIVATE_KEY_PASSPHRASE }}
+          fingerprint: ${{ secrets.SFTP_HOST_FINGERPRINT }}
+          envs: SOURCE_SHA,LIVE_DIR,RELEASE_ROOT,INCOMING_DIR,RELEASE_DIR
+          script_stop: true
+          script: |
+            set -eu
+            sh "$INCOMING_DIR/atomic_web_release.sh" rollback
+
+      - name: Finalize successful promotion
+        if: ${{ success() }}
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1
+        env:
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
+          LIVE_DIR: ${{ steps.target.outputs.live_dir }}
+          RELEASE_ROOT: ${{ steps.target.outputs.release_root }}
+          INCOMING_DIR: ${{ steps.target.outputs.incoming_dir }}
+          RELEASE_DIR: ${{ steps.target.outputs.release_dir }}
+        with:
+          host: ${{ steps.target.outputs.host }}
+          username: ${{ steps.target.outputs.username }}
+          port: ${{ steps.target.outputs.port }}
+          key: ${{ secrets.SFTP_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SFTP_PRIVATE_KEY_PASSPHRASE }}
+          fingerprint: ${{ secrets.SFTP_HOST_FINGERPRINT }}
+          envs: SOURCE_SHA,LIVE_DIR,RELEASE_ROOT,INCOMING_DIR,RELEASE_DIR
+          script_stop: true
+          script: |
+            set -eu
+            sh "$INCOMING_DIR/atomic_web_release.sh" finalize
+            rm -rf "$INCOMING_DIR"
+
+  signed_apk:
+    name: Sign tested Android artifact + optional release
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_apk }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: android-release
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - name: Verify successful CI source
+        id: source
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_ID: ${{ inputs.ci_run_id }}
+          ARTIFACT_SHA: ${{ inputs.artifact_sha }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$RUN_ID" =~ ^[0-9]+$ ]] || [[ ! "$ARTIFACT_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Invalid CI run ID or artifact SHA." >&2
+            exit 1
+          fi
+          metadata="$RUNNER_TEMP/ci-run.json"
+          curl --fail --silent --show-error --location \
+            --header "Authorization: Bearer $GH_TOKEN" \
+            --header 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/$REPOSITORY/actions/runs/$RUN_ID" \
+            > "$metadata"
+          test "$(jq -r '.name' "$metadata")" = "CI"
+          test "$(jq -r '.conclusion' "$metadata")" = "success"
+          test "$(jq -r '.head_sha' "$metadata")" = "$ARTIFACT_SHA"
+          echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+          echo "sha=$ARTIFACT_SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout exact tested source metadata
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          ref: ${{ steps.source.outputs.sha }}
           submodules: false
 
-      - name: Detect Flutter changes (skip APK when unchanged)
-        id: changes
-        if: ${{ github.event_name == 'push' }}
-        uses: dorny/paths-filter@v3
+      - name: Download exact unsigned Android artifact from CI
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          filters: |
-            flutter:
-              - 'lib/**'
-              - 'test/**'
-              - 'assets/**'
-              - 'pubspec.yaml'
-              - 'pubspec.lock'
-              - 'analysis_options.yaml'
-              - 'android/**'
-              - 'ios/**'
-              - 'macos/**'
-              - 'linux/**'
-              - 'windows/**'
-              - 'web/**'
+          name: android-verification-${{ steps.source.outputs.sha }}
+          path: unsigned-apk
+          run-id: ${{ steps.source.outputs.run_id }}
+          github-token: ${{ github.token }}
 
-      - name: Decide whether to build APK
-        id: apk_gate
-        shell: bash
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "build=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          if [ "${{ steps.changes.outputs.flutter || 'false' }}" = "true" ]; then
-            echo "build=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "build=false" >> "$GITHUB_OUTPUT"
-            echo "No Flutter/Android changes detected on this push; skipping APK build to save runner minutes." 
-          fi
-
-      - name: Cache Gradle
-        if: ${{ steps.apk_gate.outputs.build == 'true' }}
-        uses: actions/cache@v4
+      - name: Set up Java 21
+        uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4
         with:
-          path: |
-            ${{ github.workspace }}/.gradle/caches
-            ${{ github.workspace }}/.gradle/wrapper
-            android/.gradle
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/gradle-wrapper.properties', 'android/**/build.gradle*', 'android/**/settings.gradle*', 'android/**/gradle.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
-
-      - name: Cache Dart/Flutter packages
-        if: ${{ steps.apk_gate.outputs.build == 'true' }}
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.pub-cache
-            .dart_tool
-          key: ${{ runner.os }}-pub-${{ hashFiles('pubspec.lock', 'pubspec.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pub-
-
-      - name: Set up Java
-        if: ${{ steps.apk_gate.outputs.build == 'true' }}
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
+          distribution: temurin
           java-version: '21'
 
-      - name: Set up Flutter
-        if: ${{ steps.apk_gate.outputs.build == 'true' }}
-        uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
-
       - name: Set up Android SDK
-        if: ${{ steps.apk_gate.outputs.build == 'true' }}
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
 
-      - name: Accept Android licenses
-        if: ${{ steps.apk_gate.outputs.build == 'true' }}
-        shell: bash
-        run: |
-          # On GitHub Actions, bash runs with -e -o pipefail by default.
-          # When sdkmanager finishes, `yes` can hit a broken pipe (exit 141) which
-          # would fail the step even though licenses were accepted.
-          # We capture sdkmanager's exit code and ignore the `yes` exit code.
-          set +e
-          set +o pipefail
-          yes | sdkmanager --licenses > /dev/null
-          SDK_STATUS=${PIPESTATUS[1]}
-          set -o pipefail
-          set -e
+      - name: Install Android signing tools
+        run: sdkmanager --install "build-tools;36.0.0" "platform-tools"
 
-          if [ "$SDK_STATUS" -ne 0 ]; then
-            exit "$SDK_STATUS"
-          fi
-
-      - name: Install Android SDK components
-        if: ${{ steps.apk_gate.outputs.build == 'true' }}
-        shell: bash
-        run: |
-          sdkmanager --install "cmdline-tools;latest" "platforms;android-36" "build-tools;36.0.0" "platform-tools"
-
-      - name: Flutter pub get
-        if: ${{ steps.apk_gate.outputs.build == 'true' }}
-        run: flutter pub get
-
-      - name: Prepare Dart defines (optional)
-        id: apk_defines
-        if: ${{ steps.apk_gate.outputs.build == 'true' }}
+      - name: Configure protected release signing
         shell: bash
         env:
-          KUBUS_BACKEND_URL: ${{ secrets.KUBUS_BACKEND_URL }}
-          KUBUS_WALLETCONNECT_PROJECT_ID: ${{ secrets.KUBUS_WALLETCONNECT_PROJECT_ID }}
-          KUBUS_PINATA_API_KEY: ${{ secrets.KUBUS_PINATA_API_KEY }}
-          KUBUS_PINATA_SECRET_KEY: ${{ secrets.KUBUS_PINATA_SECRET_KEY }}
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS_SECRET: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEYSTORE_PASSWORD_SECRET: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD_SECRET: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          ARGS=""
-          add() {
-            local name="$1"
-            local value="$2"
-            if [ -n "$value" ]; then
-              ARGS="$ARGS --dart-define=${name}=${value}"
+          set -euo pipefail
+          required=(
+            "$ANDROID_KEYSTORE_BASE64"
+            "$ANDROID_KEY_ALIAS_SECRET"
+            "$ANDROID_KEYSTORE_PASSWORD_SECRET"
+            "$ANDROID_KEY_PASSWORD_SECRET"
+          )
+          for value in "${required[@]}"; do
+            if [ -z "$value" ]; then
+              echo "All four protected Android signing secrets are required." >&2
+              exit 1
             fi
-          }
-          add KUBUS_BACKEND_URL "$KUBUS_BACKEND_URL"
-          add KUBUS_WALLETCONNECT_PROJECT_ID "$KUBUS_WALLETCONNECT_PROJECT_ID"
-          add KUBUS_PINATA_API_KEY "$KUBUS_PINATA_API_KEY"
-          add KUBUS_PINATA_SECRET_KEY "$KUBUS_PINATA_SECRET_KEY"
-          echo "args=$ARGS" >> "$GITHUB_OUTPUT"
+          done
+          keystore_path="$RUNNER_TEMP/art-kubus-release.jks"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$keystore_path"
+          test -s "$keystore_path"
+          chmod 600 "$keystore_path"
+          {
+            echo "ANDROID_KEYSTORE_PATH=$keystore_path"
+            echo "ANDROID_KEY_ALIAS=$ANDROID_KEY_ALIAS_SECRET"
+            echo "ANDROID_KEYSTORE_PASSWORD=$ANDROID_KEYSTORE_PASSWORD_SECRET"
+            echo "ANDROID_KEY_PASSWORD=$ANDROID_KEY_PASSWORD_SECRET"
+          } >> "$GITHUB_ENV"
 
-      - name: Build APK (release mode, current project signing)
-        if: ${{ steps.apk_gate.outputs.build == 'true' }}
-        run: flutter build apk --release ${{ steps.apk_defines.outputs.args }}
-
-      - name: Compute release metadata
-        id: meta
-        if: ${{ steps.apk_gate.outputs.build == 'true' }}
+      - name: Sign the exact tested APK
+        id: signed
         shell: bash
         run: |
-          VERSION=$(grep -E '^version:\s*' pubspec.yaml | awk '{print $2}' | cut -d+ -f1)
-          if [ -z "$VERSION" ]; then
-            echo "Unable to parse version from pubspec.yaml" >&2
+          set -euo pipefail
+          mapfile -t candidates < <(find unsigned-apk -type f -iname '*release*.apk' | sort)
+          if [ "${#candidates[@]}" -ne 1 ]; then
+            echo "Expected exactly one unsigned release APK; found ${#candidates[@]}." >&2
+            exit 1
+          fi
+          unsigned_apk="${candidates[0]}"
+          apksigner="$ANDROID_HOME/build-tools/36.0.0/apksigner"
+          if "$apksigner" verify "$unsigned_apk" >/dev/null 2>&1; then
+            echo "CI release APK was already signed; refusing to re-sign an untrusted artifact." >&2
             exit 1
           fi
 
-          TAG="v${VERSION}-alpha"
-
-          # Allow manual override when workflow_dispatch provides a tag.
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ inputs.release_tag }}" ]; then
-            TAG="${{ inputs.release_tag }}"
-          fi
-
-          # File name requested by user: art.kubus.vX.Y.Z.-alpha.apk
-          APK_NAME="art.kubus.v${VERSION}.-alpha.apk"
-
-          # prerelease: always true on push; configurable on manual.
-          PRE="true"
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            PRE="${{ inputs.prerelease }}"
-          fi
-
-          # publish: always on push; configurable on manual.
-          PUB="true"
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            PUB="${{ inputs.publish_github_release }}"
-          fi
-
-          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
-          echo "apk_name=${APK_NAME}" >> "$GITHUB_OUTPUT"
-          echo "prerelease=${PRE}" >> "$GITHUB_OUTPUT"
-          echo "publish=${PUB}" >> "$GITHUB_OUTPUT"
-
-      - name: Rename APK asset
-        id: rename
-        if: ${{ steps.apk_gate.outputs.build == 'true' }}
-        shell: bash
-        run: |
-          SRC="build/app/outputs/flutter-apk/app-release.apk"
-          if [ ! -f "$SRC" ]; then
-            echo "Expected APK not found at $SRC" >&2
-            ls -la build/app/outputs/flutter-apk || true
+          version="$(awk '/^version:[[:space:]]*/ { print $2; exit }' pubspec.yaml | cut -d+ -f1)"
+          if [ -z "$version" ]; then
+            echo "Unable to parse application version." >&2
             exit 1
           fi
-          DEST="build/app/outputs/flutter-apk/${{ steps.meta.outputs.apk_name }}"
-          cp "$SRC" "$DEST"
-          echo "dest=$DEST" >> "$GITHUB_OUTPUT"
+          apk_name="art.kubus.v${version}-${{ steps.source.outputs.sha }}.apk"
+          mkdir -p "$GITHUB_WORKSPACE/release"
+          signed_apk="$GITHUB_WORKSPACE/release/$apk_name"
+          "$apksigner" sign \
+            --ks "$ANDROID_KEYSTORE_PATH" \
+            --ks-key-alias "$ANDROID_KEY_ALIAS" \
+            --ks-pass env:ANDROID_KEYSTORE_PASSWORD \
+            --key-pass env:ANDROID_KEY_PASSWORD \
+            --out "$signed_apk" \
+            "$unsigned_apk"
+          "$apksigner" verify --verbose --print-certs "$signed_apk"
+          (cd "$GITHUB_WORKSPACE/release" && sha256sum "$apk_name" > "$apk_name.sha256")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "apk_name=$apk_name" >> "$GITHUB_OUTPUT"
+          echo "apk_path=$signed_apk" >> "$GITHUB_OUTPUT"
+          echo "checksum_path=$signed_apk.sha256" >> "$GITHUB_OUTPUT"
 
-      - name: Upload APK as workflow artifact
-        if: ${{ steps.apk_gate.outputs.build == 'true' }}
-        uses: actions/upload-artifact@v4
+      - name: Upload signed APK workflow artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: ${{ steps.meta.outputs.apk_name }}
-          path: ${{ steps.rename.outputs.dest }}
+          name: ${{ steps.signed.outputs.apk_name }}
+          path: |
+            ${{ steps.signed.outputs.apk_path }}
+            ${{ steps.signed.outputs.checksum_path }}
           if-no-files-found: error
+          retention-days: 30
 
-      - name: Create/Update GitHub Release + upload APK
-        if: ${{ steps.apk_gate.outputs.build == 'true' && steps.meta.outputs.publish == 'true' }}
-        uses: ncipollo/release-action@v1
+      - name: Require a new explicit release tag
+        if: ${{ inputs.publish_github_release }}
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          if [ -z "$RELEASE_TAG" ]; then
+            echo "release_tag is required when publishing a GitHub Release." >&2
+            exit 1
+          fi
+          if [[ ! "$RELEASE_TAG" =~ ^[A-Za-z0-9._/-]+$ ]] || [[ "$RELEASE_TAG" == *'..'* ]]; then
+            echo "release_tag contains unsupported characters." >&2
+            exit 1
+          fi
+
+      - name: Create immutable GitHub Release
+        if: ${{ inputs.publish_github_release }}
+        uses: ncipollo/release-action@339a81892b84b4eeb0f6e744e4574d79d0d9b8dd # v1
         with:
-          tag: ${{ steps.meta.outputs.tag }}
-          name: art.kubus v${{ steps.meta.outputs.version }} alpha
-          prerelease: ${{ steps.meta.outputs.prerelease }}
+          tag: ${{ inputs.release_tag }}
+          commit: ${{ steps.source.outputs.sha }}
+          name: art.kubus v${{ steps.signed.outputs.version }}
+          prerelease: ${{ inputs.prerelease }}
           generateReleaseNotes: true
-          allowUpdates: true
-          replacesArtifacts: true
-          artifacts: ${{ steps.rename.outputs.dest }}
+          allowUpdates: false
+          replacesArtifacts: false
+          artifacts: ${{ steps.signed.outputs.apk_path }},${{ steps.signed.outputs.checksum_path }}

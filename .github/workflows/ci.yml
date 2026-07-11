@@ -11,196 +11,414 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  FLUTTER_VERSION: '3.44.2'
+  NODE_VERSION: '22.15.0'
+  NPM_VERSION: '11.7.0'
+
 jobs:
-  changes:
-    name: Detect changed areas
-    runs-on: ubuntu-latest
-    outputs:
-      flutter: ${{ steps.filter.outputs.flutter }}
-      backend: ${{ steps.filter.outputs.backend }}
-      workflows: ${{ steps.filter.outputs.workflows }}
+  guardrails:
+    name: Guardrails + pinned sources
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Checkout root and both backend gitlinks
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 0
-          submodules: false
+          submodules: recursive
 
-      - name: Paths filter
-        id: filter
-        uses: dorny/paths-filter@v3
+      - name: Require both backend checkouts at their pinned gitlinks
+        shell: bash
+        run: |
+          set -euo pipefail
+          git submodule status --recursive
+          test -f backend/package.json
+          test -f backend-open-art-wt/package.json
+
+          canonical_expected="$(git rev-parse HEAD:backend)"
+          public_expected="$(git rev-parse HEAD:backend-open-art-wt)"
+          canonical_actual="$(git -C backend rev-parse HEAD)"
+          public_actual="$(git -C backend-open-art-wt rev-parse HEAD)"
+
+          test "$canonical_expected" = "$canonical_actual"
+          test "$public_expected" = "$public_actual"
+          if [ "$canonical_expected" != "$public_expected" ]; then
+            echo "The two backend gitlinks must point to the same verified backend commit." >&2
+            exit 1
+          fi
+
+      - name: Set up pinned Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          filters: |
-            workflows:
-              - '.github/workflows/**'
-            flutter:
-              - 'pubspec.yaml'
-              - 'pubspec.lock'
-              - 'analysis_options.yaml'
-              - 'lib/**'
-              - 'test/**'
-              - 'assets/**'
-              - 'web/**'
-              - 'android/**'
-              - 'ios/**'
-              - 'macos/**'
-              - 'windows/**'
-              - 'linux/**'
-              - 'third_party/**'
-            backend:
-              - 'backend'
-              - 'backend/**'
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Set up pinned npm
+        run: npm install --global npm@${NPM_VERSION}
+
+      - name: Verify pinned Node/npm and repository pins
+        run: npm run verify:toolchain:node
+
+      - name: Architecture guard
+        run: npm run guard:architecture
+
+      - name: Documentation guard
+        run: npm run docs:doctor
+
+      - name: Version parity guard
+        run: |
+          npm run check:versions
+          git diff --exit-code
+
+      - name: Reject client-side Pinata credentials
+        shell: bash
+        run: |
+          pinata_prefix='KUBUS_PINATA_'
+          if rg -n "${pinata_prefix}(API|SECRET)_KEY" .github lib web android scripts; then
+            echo "Client-side Pinata credentials are forbidden." >&2
+            exit 1
+          fi
+
+      - name: Exercise atomic web promotion and rollback
+        run: npm run verify:deploy
 
   flutter:
-    name: Flutter (test + web build)
-    needs: changes
-    if: ${{ always() }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
-
+    name: Flutter analyze + full tests + web
+    needs: guardrails
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Checkout root and both backend gitlinks
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
-          submodules: false
+          submodules: recursive
 
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
+      - name: Set up pinned Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Set up pinned npm
+        run: npm install --global npm@${NPM_VERSION}
+
+      - name: Set up pinned Flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
 
-      - name: Flutter pub get
-        run: flutter pub get
-
-      - name: Prepare Dart defines (optional)
-        id: defines
-        shell: bash
-        env:
-          KUBUS_BACKEND_URL: ${{ secrets.KUBUS_BACKEND_URL }}
-          KUBUS_GOOGLE_CLIENT_ID: ${{ secrets.KUBUS_GOOGLE_CLIENT_ID || vars.KUBUS_GOOGLE_CLIENT_ID }}
-          KUBUS_GOOGLE_WEB_CLIENT_ID: ${{ secrets.KUBUS_GOOGLE_WEB_CLIENT_ID || vars.KUBUS_GOOGLE_WEB_CLIENT_ID }}
-          KUBUS_GOOGLE_IOS_CLIENT_ID: ${{ secrets.KUBUS_GOOGLE_IOS_CLIENT_ID || vars.KUBUS_GOOGLE_IOS_CLIENT_ID }}
-          KUBUS_WALLETCONNECT_PROJECT_ID: ${{ secrets.KUBUS_WALLETCONNECT_PROJECT_ID }}
+      - name: Verify toolchain
         run: |
-          if [ -n "${KUBUS_GOOGLE_WEB_CLIENT_ID:-}" ]; then
-            python3 - <<'PY'
-            import os
-            import pathlib
-            import re
-            import sys
+          npm run verify:toolchain:node
+          npm run verify:toolchain:flutter
 
-            path = pathlib.Path("web/index.html")
-            client_id = os.environ["KUBUS_GOOGLE_WEB_CLIENT_ID"]
-            text = path.read_text(encoding="utf-8")
-            pattern = r'(<meta name="google-signin-client_id" content=")[^"]*(">)'
-            updated, count = re.subn(
-              pattern,
-              lambda match: f'{match.group(1)}{client_id}{match.group(2)}',
-              text,
-              count=1,
-            )
-            if count != 1:
-              sys.exit("google-signin-client_id meta tag not found in web/index.html")
-            path.write_text(updated, encoding="utf-8")
-            PY
-          fi
+      - name: Resolve locked Flutter dependencies
+        run: |
+          flutter pub get
+          git diff --exit-code -- pubspec.lock
 
-          ARGS=""
-          add() {
-            local name="$1"
-            local value="$2"
-            if [ -n "$value" ]; then
-              ARGS="$ARGS --dart-define=${name}=${value}"
-            fi
-          }
-          add KUBUS_BACKEND_URL "$KUBUS_BACKEND_URL"
-          add KUBUS_GOOGLE_CLIENT_ID "$KUBUS_GOOGLE_CLIENT_ID"
-          add KUBUS_GOOGLE_WEB_CLIENT_ID "$KUBUS_GOOGLE_WEB_CLIENT_ID"
-          add KUBUS_GOOGLE_IOS_CLIENT_ID "$KUBUS_GOOGLE_IOS_CLIENT_ID"
-          add KUBUS_ENABLE_WEB_SEMANTICS "false"
-          add KUBUS_WALLETCONNECT_PROJECT_ID "$KUBUS_WALLETCONNECT_PROJECT_ID"
-          echo "args=$ARGS" >> "$GITHUB_OUTPUT"
+      - name: Flutter analyze (warnings and infos are fatal)
+        run: flutter analyze --fatal-infos --fatal-warnings
 
-      - name: Flutter analyze
-        run: flutter analyze
-
-      - name: Kubus lint (custom_lint)
+      - name: Kubus custom lint
         run: dart run custom_lint
 
       - name: Kubus lint ratchet
         run: node scripts/kubus-lint-ratchet.mjs --check
 
-      - name: Flutter test
-        run: flutter test --coverage ${{ steps.defines.outputs.args }}
+      - name: Full Flutter test suite
+        run: flutter test --coverage
 
       - name: Upload Flutter coverage
-        uses: actions/upload-artifact@v4
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: flutter-coverage
+          name: flutter-coverage-${{ github.sha }}
           path: coverage/lcov.info
           if-no-files-found: warn
+          retention-days: 14
 
-      - name: Flutter build web
-        run: flutter build web --release ${{ steps.defines.outputs.args }}
+      - name: Prepare required public build configuration
+        env:
+          KUBUS_BACKEND_URL: ${{ vars.KUBUS_BACKEND_URL }}
+          KUBUS_GOOGLE_CLIENT_ID: ${{ vars.KUBUS_GOOGLE_CLIENT_ID }}
+          KUBUS_GOOGLE_WEB_CLIENT_ID: ${{ vars.KUBUS_GOOGLE_WEB_CLIENT_ID }}
+          KUBUS_GOOGLE_IOS_CLIENT_ID: ${{ vars.KUBUS_GOOGLE_IOS_CLIENT_ID }}
+          KUBUS_WALLETCONNECT_PROJECT_ID: ${{ vars.KUBUS_WALLETCONNECT_PROJECT_ID }}
+        run: node scripts/prepare_public_build_config.mjs --web
+
+      - name: Build release web bundle
+        run: flutter build web --release --dart-define-from-file=.dart_tool/public-build-defines.json
+
+      - name: Pre-compress and checksum immutable web bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -y >/dev/null
+          sudo apt-get install -y brotli >/dev/null
+          find build/web -type f -name '*.wasm' -print0 | while IFS= read -r -d '' file; do
+            brotli -f -q 11 "$file"
+            gzip -kf9 "$file"
+          done
+          (
+            cd build/web
+            find . -type f ! -name SHA256SUMS -print0 \
+              | sort -z \
+              | xargs -0 sha256sum > SHA256SUMS
+            sha256sum -c SHA256SUMS
+          )
+
+      - name: Upload immutable web bundle
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: flutter-web-${{ github.sha }}
+          path: build/web
+          if-no-files-found: error
+          retention-days: 14
 
   backend:
-    name: Backend (lint + tests)
-    needs: changes
-    if: ${{ always() }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-
+    name: Canonical backend lint + serial tests
+    needs: guardrails
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Checkout root and both backend gitlinks
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
-          submodules: false
+          submodules: recursive
 
-      - name: Check backend sources present
-        id: present
-        run: node scripts/backend_status.mjs --github-output
+      - name: Require backend lockfile
+        run: test -f backend/package-lock.json
 
-      - name: Set up Node
-        if: ${{ steps.present.outputs.ok == 'true' }}
-        uses: actions/setup-node@v4
+      - name: Set up pinned Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: '20'
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
 
-      - name: Cache npm
-        if: ${{ steps.present.outputs.ok == 'true' }}
-        uses: actions/cache@v4
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node20-npm-${{ hashFiles('backend/package.json') }}
+      - name: Set up pinned npm
+        run: npm install --global npm@${NPM_VERSION}
 
-      - name: Install dependencies
-        if: ${{ steps.present.outputs.ok == 'true' }}
+      - name: Verify Node/npm
+        run: npm run verify:toolchain:node
+
+      - name: Install backend dependencies from lockfile
         working-directory: backend
         run: npm ci --no-audit --no-fund
 
-      - name: Lint
-        if: ${{ steps.present.outputs.ok == 'true' }}
+      - name: Backend lint
         working-directory: backend
         run: npm run lint
 
-      - name: Test
-        if: ${{ steps.present.outputs.ok == 'true' }}
+      - name: Backend full serial test suite
         env:
           NODE_ENV: test
         working-directory: backend
-        run: npm test
+        run: npm run test:ci
+
+      - name: Production dependency audit
+        working-directory: backend
+        run: npm audit --omit=dev --audit-level=high
 
       - name: Upload backend coverage
-        if: ${{ steps.present.outputs.ok == 'true' }}
-        uses: actions/upload-artifact@v4
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: backend-coverage
+          name: backend-coverage-${{ github.sha }}
           path: backend/coverage
           if-no-files-found: warn
+          retention-days: 14
 
-      - name: Skip backend checks (submodule not available)
-        if: ${{ steps.present.outputs.ok != 'true' }}
+  android:
+    name: Android SDK 36 debug + unsigned release compile
+    needs: guardrails
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      GRADLE_USER_HOME: ${{ github.workspace }}/.gradle
+    steps:
+      - name: Checkout root and both backend gitlinks
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          submodules: recursive
+
+      - name: Set up pinned Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Set up pinned npm
+        run: npm install --global npm@${NPM_VERSION}
+
+      - name: Set up Java 21
+        uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up pinned Flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
+
+      - name: Install Android SDK 36
+        shell: bash
         run: |
-          echo "backend/ validation skipped: ${{ steps.present.outputs.reason }}"
-          echo "submodule status: ${{ steps.present.outputs.submodule_status }}"
+          set -euo pipefail
+          yes | sdkmanager --licenses >/dev/null 2>&1 || true
+          sdkmanager --install "platforms;android-36" "build-tools;36.0.0" "platform-tools"
+
+      - name: Verify Android toolchain
+        run: |
+          test -x android/gradlew
+          npm run verify:toolchain:android
+
+      - name: Resolve locked Flutter dependencies
+        run: |
+          flutter pub get
+          git diff --exit-code -- pubspec.lock
+
+      - name: Prepare required public build configuration
+        env:
+          KUBUS_BACKEND_URL: ${{ vars.KUBUS_BACKEND_URL }}
+          KUBUS_GOOGLE_CLIENT_ID: ${{ vars.KUBUS_GOOGLE_CLIENT_ID }}
+          KUBUS_GOOGLE_WEB_CLIENT_ID: ${{ vars.KUBUS_GOOGLE_WEB_CLIENT_ID }}
+          KUBUS_GOOGLE_IOS_CLIENT_ID: ${{ vars.KUBUS_GOOGLE_IOS_CLIENT_ID }}
+          KUBUS_WALLETCONNECT_PROJECT_ID: ${{ vars.KUBUS_WALLETCONNECT_PROJECT_ID }}
+        run: node scripts/prepare_public_build_config.mjs
+
+      - name: Clear generated Android problems report
+        run: node scripts/clear_generated_android_reports.mjs
+
+      - name: Compile Android debug APK
+        run: flutter build apk --debug --dart-define-from-file=.dart_tool/public-build-defines.json
+
+      - name: Compile unsigned Android release APK
+        run: flutter build apk --release --dart-define-from-file=.dart_tool/public-build-defines.json
+
+      - name: Reject Gradle build errors
+        shell: bash
+        run: |
+          report=android/build/reports/problems/problems-report.html
+          if [ -f "$report" ] && rg -q '"severity":"ERROR"' "$report"; then
+            echo "Gradle problems report contains an error." >&2
+            exit 1
+          fi
+
+      - name: Upload Android verification outputs
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: android-verification-${{ github.sha }}
+          path: build/app/outputs/flutter-apk
+          if-no-files-found: error
+          retention-days: 14
+
+  ios:
+    name: iOS release compile (no codesign)
+    needs: guardrails
+    # GitHub-hosted macOS images have no immutable digest. Bound the OS image
+    # generation and record the rotating Xcode patch level in every run.
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - name: Checkout root and both backend gitlinks
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          submodules: recursive
+
+      - name: Set up pinned Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Set up pinned npm
+        run: npm install --global npm@${NPM_VERSION}
+
+      - name: Record hosted Xcode toolchain
+        run: xcodebuild -version
+
+      - name: Set up pinned Flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Verify toolchain
+        run: |
+          npm run verify:toolchain:node
+          npm run verify:toolchain:flutter
+
+      - name: Resolve locked Flutter dependencies
+        run: |
+          flutter pub get
+          git diff --exit-code -- pubspec.lock
+
+      - name: Prepare required public build configuration
+        env:
+          KUBUS_BACKEND_URL: ${{ vars.KUBUS_BACKEND_URL }}
+          KUBUS_GOOGLE_CLIENT_ID: ${{ vars.KUBUS_GOOGLE_CLIENT_ID }}
+          KUBUS_GOOGLE_WEB_CLIENT_ID: ${{ vars.KUBUS_GOOGLE_WEB_CLIENT_ID }}
+          KUBUS_GOOGLE_IOS_CLIENT_ID: ${{ vars.KUBUS_GOOGLE_IOS_CLIENT_ID }}
+          KUBUS_WALLETCONNECT_PROJECT_ID: ${{ vars.KUBUS_WALLETCONNECT_PROJECT_ID }}
+        run: node scripts/prepare_public_build_config.mjs
+
+      - name: Compile iOS release without codesigning
+        run: flutter build ios --release --no-codesign --dart-define-from-file=.dart_tool/public-build-defines.json
+
+  web_qa:
+    name: Playwright desktop + mobile runtime smoke
+    needs: flutter
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout root and both backend gitlinks
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          submodules: recursive
+
+      - name: Set up pinned Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: scripts/qa/package-lock.json
+
+      - name: Set up pinned npm
+        run: npm install --global npm@${NPM_VERSION}
+
+      - name: Verify Node/npm
+        run: npm run verify:toolchain:node
+
+      - name: Download the exact web bundle tested by Flutter job
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: flutter-web-${{ github.sha }}
+          path: build/web
+
+      - name: Install Playwright harness
+        run: npm --prefix scripts/qa ci --no-audit --no-fund
+
+      - name: Install Chromium
+        run: npm --prefix scripts/qa exec -- playwright install --with-deps chromium
+
+      - name: Run web runtime smoke
+        env:
+          QA_ARTIFACT_DIR: output/playwright/artifacts/ci-${{ github.sha }}
+        run: npm run qa:web
+
+      - name: Upload Playwright diagnostics
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: playwright-web-${{ github.sha }}
+          path: output/playwright/artifacts
+          if-no-files-found: warn
+          retention-days: 14

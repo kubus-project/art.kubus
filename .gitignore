@@ -31,6 +31,10 @@ tmpclaude-*-cwd
 .pub-cache/
 .pub/
 /build/
+/android/build/
+**/.gradle/
+**/coverage/
+**/build/reports/
 
 # Symbolication related
 app.*.symbols

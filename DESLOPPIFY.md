@@ -1044,3 +1044,77 @@ Validation run on `chore/desloppify-audit` after the CRIT-04B, CRIT-05B, route C
 - Avoid stale watchlist findings: `/api/orbitdb/artworks` currently has explicit size/depth limits and a route limiter.
 - Treat auth contract fixes as isolated tasks with route-level tests before broad route assurance changes.
 - Treat UI tasks as screenshot-required when visual focus, layout, colors, or major controls change.
+
+## 2026-07-11 continuation audit
+
+This continuation is executed across the parent Flutter repository, the canonical
+`backend` repository, and the sibling `admin.kubus` repository. The parent and
+backend reuse `chore/desloppify-audit`; the admin repository uses a matching new
+branch. Work is isolated in dedicated worktrees so the concurrent
+`feat/ui-kit-token-enforcement` checkout and its screenshot artifacts remain
+untouched.
+
+### [CONT-01] Reproducible, failure-honest verification
+
+**Status:** In progress
+**Baseline:** Root smoke verification passed, but used a floating/local Flutter
+toolchain and allowed analyzer infos. Root CI could skip an unavailable backend;
+the backend had no independent CI; the admin repository had no CI and tracked
+its dependency/test cache.
+**Required completion:** Pin and verify toolchains, make backend checkout
+mandatory, add deterministic full-suite commands in all repositories, and keep
+generated reports, logs, caches, dependencies, and local environment files out
+of version control.
+
+### [CONT-02] Android and deployment release blockers
+
+**Status:** In progress
+**Baseline:** The Gradle problems report contained twelve repository-owned
+Groovy assignment deprecations plus one cached `appcheck` compilation failure.
+The release build used debug signing; deployment still accepted obsolete
+client-side Pinata secrets and could report successful skips/failures.
+**Required completion:** Reproduce from a clean cache, remove repository-owned
+deprecations, require protected release signing, remove frontend secrets, and
+make build/deploy/publish failures terminal and rollback-safe.
+
+### [CONT-03] Backend fail-open database behavior
+
+**Status:** Pending harness gate
+**Baseline:** Wallet registration/verification/binding, account deletion,
+message/member reads and writes, and conversation avatar persistence contain
+database-failure paths that return authenticated success or empty success.
+**Required completion:** Fail closed with the existing structured error-code
+convention, preserve client retry/offline UX, make multi-step writes
+transactional, and cover every changed failure path with route tests.
+
+### [CONT-04] Schema snapshot and migration integrity
+
+**Status:** Pending harness gate
+**Baseline:** `schema.sql` and `schema_complete.sql` differ by four tables;
+migration prefixes are duplicated.
+**Required completion:** Reconcile both snapshots, bootstrap and compare them
+mechanically, preserve already-applied migration filenames, and reject future
+prefix collisions.
+
+### [CONT-05] Admin Ops/CDP correctness
+
+**Status:** Pending harness gate
+**Baseline:** Admin lint failed; deploy filtering was dead, summary filters did
+not match list filters, lists were truncated without pagination, recurring
+groups were unused, and resolve/reopen failures were not surfaced or atomically
+audited.
+**Required completion:** Normalize filter contracts, add deploy correlation and
+pagination, use recurring groups deliberately, align status types, provide
+keyboard semantics, make privileged audit writes fail closed, add retention and
+noise classification, and validate backend plus admin UI together.
+
+### [CONT-06] Dependency and runtime exposure audit
+
+**Status:** Pending harness gate
+**Baseline:** The backend production dependency audit reported one critical,
+twenty-eight high, and seventeen moderate findings, including transitive
+IPFS/libp2p paths. Production/deployment configuration also needs verification
+that database, Redis, and IPFS control ports are not publicly exposed.
+**Required completion:** Upgrade or remove affected reachable dependency
+families without forced audit rewrites, then validate the unchanged Oracle/home
+HA topology and private control-plane networking.

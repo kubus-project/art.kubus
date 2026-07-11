@@ -5,6 +5,11 @@
   "channel": "alpha",
   "ecosystem": "art.kubus",
   "targets": {
+    "frontend": {
+      "repo": "art.kubus",
+      "path": ".",
+      "kind": "flutter"
+    },
     "backend": {
       "repo": "art.kubus-backend",
       "path": "./backend",
