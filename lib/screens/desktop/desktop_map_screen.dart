@@ -85,6 +85,7 @@ import '../../features/map/shared/map_search_filter_assembly.dart';
 import '../../features/map/map_layers_manager.dart';
 import '../../features/map/map_overlay_stack.dart';
 import '../../features/map/controller/kubus_map_controller.dart';
+import '../../features/map/engine/kubus_map_marker_sync_engine.dart';
 import '../../features/map/tutorial/map_tutorial_coordinator.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
@@ -94,9 +95,6 @@ import '../../widgets/kubus_snackbar.dart';
 import '../../widgets/tutorial/interactive_tutorial_overlay.dart';
 import '../../widgets/tutorial/tutorial_overlay_controller.dart';
 import '../../widgets/tutorial/tutorial_overlay_scope.dart';
-import '../../widgets/map/kubus_map_marker_geojson_builder.dart';
-import '../../widgets/map/kubus_map_marker_rendering.dart';
-import '../../widgets/map/kubus_map_marker_features.dart';
 import '../../widgets/map/controls/kubus_map_primary_controls.dart'
     show KubusMapPrimaryControlsLayout;
 import '../../widgets/map/filters/kubus_map_marker_layer_chips.dart';
@@ -205,7 +203,8 @@ class DesktopMapScreen extends StatefulWidget {
 }
 
 class _DesktopMapScreenState extends State<DesktopMapScreen>
-    with WidgetsBindingObserver, TickerProviderStateMixin, RouteAware {
+    with WidgetsBindingObserver, TickerProviderStateMixin, RouteAware
+    implements KubusMapMarkerSyncHost {
   final MapPerfTracker _perf = MapPerfTracker('DesktopMapScreen');
 
   late final KubusMapController _kubusMapController;
@@ -337,6 +336,52 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       Duration(milliseconds: 100);
   bool _pendingSafeSetState = false;
   int _debugMarkerTapCount = 0;
+  late final KubusMapMarkerSyncEngine _markerSyncEngine =
+      KubusMapMarkerSyncEngine(this);
+
+  // --- KubusMapMarkerSyncHost ---------------------------------------------
+  @override
+  ml.MapLibreMapController? get mapController => _mapController;
+  @override
+  bool get styleInitialized => _styleInitialized;
+  @override
+  bool get hostMounted => mounted;
+  @override
+  BuildContext get hostContext => context;
+  @override
+  Set<String> get managedSourceIds => _managedSourceIds;
+  @override
+  String get markerSourceId => _markerSourceId;
+  @override
+  KubusMapController get kubusMapController => _kubusMapController;
+  @override
+  Set<String> get registeredMapImages => _registeredMapImages;
+  @override
+  double get syncZoom => _cameraZoom;
+  @override
+  double get clusterMaxZoom => _clusterMaxZoom;
+  @override
+  bool get sortClustersBySizeDesc => false;
+  @override
+  String get debugLabel => 'DesktopMapScreen';
+  @override
+  int clusterGridLevelForZoom(double zoom) => _clusterGridLevelForZoom(zoom);
+  @override
+  double markerPixelRatio() => _markerPixelRatio();
+  @override
+  Color resolveArtMarkerBaseColor(
+          ArtMarker marker, ThemeProvider themeProvider) =>
+      _resolveArtMarkerColor(marker, themeProvider);
+  @override
+  void onMarkerSourceWrite() => _debugMarkerSourceWriteCount += 1;
+  @override
+  Future<void> afterMarkerSync(ThemeProvider themeProvider) async {
+    if (_renderCoordinator.is3DModeActive) {
+      await _syncMarkerCubes(themeProvider: themeProvider);
+    }
+  }
+  // -------------------------------------------------------------------------
+
   int _debugMarkerSourceWriteCount = 0;
   int _webResizeRecoveryToken = 0;
 
@@ -1251,16 +1296,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     _markerVisualSyncCoordinator.request(force: force);
   }
 
+
   Future<void> _syncMapMarkersSafe(
-      {required ThemeProvider themeProvider}) async {
-    try {
-      await _syncMapMarkers(themeProvider: themeProvider);
-    } catch (e) {
-      if (kDebugMode) {
-        AppConfig.debugPrint('DesktopMapScreen: _syncMapMarkers failed: $e');
-      }
-    }
-  }
+          {required ThemeProvider themeProvider}) =>
+      _markerSyncEngine.syncMarkersSafe(themeProvider: themeProvider);
 
   Future<void> _applyThemeToMapStyle(
       {required ThemeProvider themeProvider}) async {
@@ -1651,170 +1690,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     );
   }
 
-  Future<void> _syncMapMarkers({required ThemeProvider themeProvider}) async {
-    final controller = _mapController;
-    if (controller == null) return;
-    if (!_styleInitialized) return;
-    if (!_managedSourceIds.contains(_markerSourceId)) return;
-    if (!mounted) return;
 
-    final scheme = Theme.of(context).colorScheme;
-    final roles = KubusColorRoles.of(context);
-    final isDark = themeProvider.isDarkMode;
+  Future<void> _syncMapMarkers({required ThemeProvider themeProvider}) =>
+      _markerSyncEngine.syncMarkers(themeProvider: themeProvider);
 
-    final zoom = _cameraZoom;
-    final useClustering =
-        zoom < _clusterMaxZoom && !_kubusMapController.hasExpandedSameLocation;
-    final renderedMarkers = _kubusMapController.buildRenderedMarkers();
-    final visibleMarkers =
-        renderedMarkers.map((m) => m.marker).toList(growable: false);
-    final renderById = <String, KubusRenderedMarker>{
-      for (final marker in renderedMarkers) marker.marker.id: marker,
-    };
-    final geoMarkers = renderedMarkers
-        .map((m) => m.marker.copyWith(position: m.position))
-        .toList(growable: false);
 
-    // Pre-register all needed icons in parallel to avoid waterfall.
-    await _preregisterMarkerIcons(
-      markers: visibleMarkers,
-      themeProvider: themeProvider,
-      scheme: scheme,
-      roles: roles,
-      isDark: isDark,
-      useClustering: useClustering,
-      zoom: zoom,
-    );
-    if (!mounted) return;
 
-    final features = await kubusBuildMarkerFeatureList(
-      markers: geoMarkers,
-      useClustering: useClustering,
-      zoom: zoom,
-      clusterGridLevelForZoom: _clusterGridLevelForZoom,
-      sortClustersBySizeDesc: false,
-      shouldAbort: () => !mounted,
-      buildMarkerFeature: (marker) => _markerFeatureFor(
-        marker: marker,
-        renderMarker: renderById[marker.id],
-        themeProvider: themeProvider,
-        scheme: scheme,
-        roles: roles,
-        isDark: isDark,
-      ),
-      buildClusterFeature: (cluster) => _clusterFeatureFor(
-        cluster: cluster,
-        scheme: scheme,
-        roles: roles,
-        isDark: isDark,
-        renderById: renderById,
-      ),
-    );
-    if (!mounted) return;
-
-    final collection = <String, dynamic>{
-      'type': 'FeatureCollection',
-      'features': features,
-    };
-    if (!mounted) return;
-    try {
-      await controller.setGeoJsonSource(_markerSourceId, collection);
-      _debugMarkerSourceWriteCount += 1;
-    } catch (_) {
-      // Best-effort: style swaps can temporarily invalidate sources.
-    }
-
-    if (_renderCoordinator.is3DModeActive) {
-      await _syncMarkerCubes(themeProvider: themeProvider);
-    }
-  }
-
-  /// Pre-registers marker icons in batched parallel to avoid waterfall.
-  Future<void> _preregisterMarkerIcons({
-    required List<ArtMarker> markers,
-    required ThemeProvider themeProvider,
-    required ColorScheme scheme,
-    required KubusColorRoles roles,
-    required bool isDark,
-    required bool useClustering,
-    required double zoom,
-  }) async {
-    final controller = _mapController;
-    if (controller == null) return;
-
-    await kubusPreregisterMarkerIcons(
-      controller: controller,
-      registeredMapImages: _registeredMapImages,
-      markers: markers,
-      isDark: isDark,
-      useClustering: useClustering,
-      zoom: zoom,
-      clusterGridLevelForZoom: _clusterGridLevelForZoom,
-      sortClustersBySizeDesc: false,
-      scheme: scheme,
-      roles: roles,
-      pixelRatio: _markerPixelRatio(),
-      resolveMarkerIcon: KubusMapMarkerHelpers.resolveArtMarkerIcon,
-      resolveMarkerBaseColor: (marker) =>
-          _resolveArtMarkerColor(marker, themeProvider),
-    );
-  }
-
-  Future<Map<String, dynamic>> _markerFeatureFor({
-    required ArtMarker marker,
-    required KubusRenderedMarker? renderMarker,
-    required ThemeProvider themeProvider,
-    required ColorScheme scheme,
-    required KubusColorRoles roles,
-    required bool isDark,
-  }) async {
-    final controller = _mapController;
-    if (controller == null) return const <String, dynamic>{};
-
-    return kubusMarkerFeatureFor(
-      controller: controller,
-      registeredMapImages: _registeredMapImages,
-      marker: marker,
-      isDark: isDark,
-      scheme: scheme,
-      roles: roles,
-      pixelRatio: _markerPixelRatio(),
-      shouldAbort: () => !mounted,
-      resolveMarkerIcon: KubusMapMarkerHelpers.resolveArtMarkerIcon,
-      resolveMarkerBaseColor: (m) => _resolveArtMarkerColor(m, themeProvider),
-      entryScale: renderMarker?.entryScale ?? 1.0,
-      entryOpacity: renderMarker?.entryOpacity ?? 1.0,
-      spiderfied: renderMarker?.isSpiderfied ?? false,
-      coordinateKey: renderMarker?.sameCoordinateKey,
-      entrySerial: renderMarker?.entrySerial ?? 0,
-    );
-  }
-
-  Future<Map<String, dynamic>> _clusterFeatureFor({
-    required KubusClusterBucket cluster,
-    required ColorScheme scheme,
-    required KubusColorRoles roles,
-    required bool isDark,
-    Map<String, KubusRenderedMarker>? renderById,
-  }) async {
-    final controller = _mapController;
-    if (controller == null) return const <String, dynamic>{};
-
-    final entry = kubusClusterEntryValues(cluster, renderById);
-    return kubusClusterFeatureFor(
-      controller: controller,
-      registeredMapImages: _registeredMapImages,
-      cluster: cluster,
-      isDark: isDark,
-      scheme: scheme,
-      roles: roles,
-      pixelRatio: _markerPixelRatio(),
-      shouldAbort: () => !mounted,
-      resolveMarkerIcon: KubusMapMarkerHelpers.resolveArtMarkerIcon,
-      entryScale: entry.scale,
-      entryOpacity: entry.opacity,
-    );
-  }
 
   Future<GeoBounds?> _getVisibleGeoBounds() async {
     final controller = _mapController;
