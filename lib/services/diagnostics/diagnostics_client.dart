@@ -33,7 +33,11 @@ class DiagnosticsClient {
 
     final message = _redact(error.toString());
     final stackText = _redact(stack.toString());
-    final signature = '$source|$normalizedSeverity|$message|${stackText.split('\n').firstOrNull ?? ''}';
+    // Signature deliberately excludes source AND severity: the same
+    // exception is delivered to both the FlutterError handler ('error')
+    // and the Zone handler ('fatal'); reporting it twice halves the
+    // signal-to-noise of the diagnostics feed.
+    final signature = '$message|${stackText.split('\n').firstOrNull ?? ''}';
     final now = DateTime.now();
     final last = _lastSentBySignature[signature];
     if (last != null && now.difference(last) < _dedupeWindow) return;

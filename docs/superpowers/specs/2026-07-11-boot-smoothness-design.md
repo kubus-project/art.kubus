@@ -44,3 +44,14 @@ scoped from live measurement instead of speculative prefetch work).
   pair collapses to 1; bind errors gone entirely).
 - Tutorial tests (`test/widgets/tutorial/`, map tutorial suites) green;
   full suite +1235 ~1 -1 baseline; analyze/custom_lint clean.
+
+## Outcome (2026-07-11)
+
+- Boot diagnostics volume: **16 posts -> 1 post** per guest boot (measured
+  via Playwright request capture before/after).
+- Both setState-during-build errors eliminated (deferred, coalesced
+  notifyListeners on TutorialOverlayController). Interestingly the
+  LayoutBuilder intrinsics error stopped double-posting AND fires only in
+  the later flow — the surviving single post is the documented deferred bug.
+- Verified: analyze clean, tutorial + map-tutorial suites green, full suite
+  +1235 ~1 -1 (baseline parity), guest map visually intact with tutorial.
