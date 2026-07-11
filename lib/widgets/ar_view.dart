@@ -1,6 +1,3 @@
-// ignore_for_file: kubus_no_raw_color, kubus_no_raw_border
-// Grandfathered kubus design-token violations. Remove this header
-// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
@@ -328,10 +325,10 @@ class _ARViewState extends State<ARView> with TickerProviderStateMixin {
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [
-                    const Color(0xFF1a1a1a),
-                    const Color(0xFF2a2a2a),
-                    const Color(0xFF1a1a1a),
+                  colors: const [
+                    KubusColors.surfaceDark,
+                    KubusColors.surfaceDarkElevated,
+                    KubusColors.surfaceDark,
                   ],
                 ),
               ),
@@ -409,7 +406,8 @@ class _ARViewState extends State<ARView> with TickerProviderStateMixin {
                 height: 40,
                 decoration: BoxDecoration(
                   border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.7), width: 2),
+                      color: KubusColors.textPrimaryDark.withValues(alpha: 0.7),
+                      width: 2),
                   shape: BoxShape.circle,
                 ),
                 child: Center(

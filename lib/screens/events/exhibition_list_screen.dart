@@ -1,6 +1,3 @@
-// ignore_for_file: kubus_no_raw_color
-// Grandfathered kubus design-token violations. Remove this header
-// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'package:flutter/material.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
@@ -15,6 +12,7 @@ import '../../utils/media_url_resolver.dart';
 import '../../utils/app_color_utils.dart';
 import '../../utils/creator_shell_navigation.dart';
 import '../../utils/design_tokens.dart';
+import '../../utils/kubus_color_roles.dart';
 import '../../widgets/common/subject_options_sheet.dart';
 import '../../widgets/glass_components.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
@@ -765,7 +763,7 @@ class _ExhibitionCard extends StatelessWidget {
                                   ? l10n.commonPublished
                                   : l10n.commonDraft,
                               color: isPublished
-                                  ? const Color(0xFF4CAF50)
+                                  ? KubusColorRoles.of(context).positiveAction
                                   : scheme.outline,
                             ),
                             const SizedBox(width: 8),

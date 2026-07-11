@@ -52,6 +52,10 @@ class KubusColors {
   static const Color surfaceLight = Color(0xFFFFFFFF); // Pure white
   static const Color surfaceDark = Color(0xFF1A1A1A); // Dark grey
 
+  /// Slightly elevated dark surface (matches the dark theme's
+  /// secondaryContainer); used by always-dark surfaces like AR fallbacks.
+  static const Color surfaceDarkElevated = Color(0xFF2A2A2A);
+
   static const Color outlineLight = Color(0xFFE0E0E0); // Grey 300
   static const Color outlineDark = Color(0xFF424242); // Grey 800
 
@@ -221,6 +225,45 @@ class KubusTypography {
     double? letterSpacing,
   }) {
     return GoogleFonts.inter(
+      fontSize: fontSize,
+      fontWeight: fontWeight,
+      color: color,
+      height: height,
+      letterSpacing: letterSpacing,
+    );
+  }
+
+  /// Display face used by map marker overlays/attribution (Outfit).
+  ///
+  /// Central home so widgets never call `GoogleFonts.*` directly.
+  static TextStyle outfit({
+    double? fontSize,
+    FontWeight? fontWeight,
+    Color? color,
+    double? height,
+    double? letterSpacing,
+  }) {
+    return GoogleFonts.outfit(
+      fontSize: fontSize,
+      fontWeight: fontWeight,
+      color: color,
+      height: height,
+      letterSpacing: letterSpacing,
+    );
+  }
+
+  /// Monospace style for seed phrases, addresses, and code-like content.
+  ///
+  /// Central home for the app's mono font so widgets never call
+  /// `GoogleFonts.*` directly (enforced by `kubus_no_inline_google_fonts`).
+  static TextStyle mono({
+    double? fontSize,
+    FontWeight? fontWeight,
+    Color? color,
+    double? height,
+    double? letterSpacing,
+  }) {
+    return GoogleFonts.robotoMono(
       fontSize: fontSize,
       fontWeight: fontWeight,
       color: color,

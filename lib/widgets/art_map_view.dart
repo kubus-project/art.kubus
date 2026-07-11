@@ -1,6 +1,3 @@
-// ignore_for_file: kubus_no_raw_border
-// Grandfathered kubus design-token violations. Remove this header
-// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'dart:async';
 import 'dart:math' as math;
 
@@ -743,9 +740,7 @@ class _ArtMapViewState extends State<ArtMapView> {
                         decoration: BoxDecoration(
                           color: Colors.black.withValues(alpha: 0.42),
                           borderRadius: BorderRadius.circular(KubusRadius.lg),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.10),
-                          ),
+                          border: KubusBorders.onDark(),
                         ),
                         child: Text(
                           'Recovering map rendering…',

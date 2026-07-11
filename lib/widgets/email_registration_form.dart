@@ -1,6 +1,3 @@
-// ignore_for_file: kubus_no_raw_color
-// Grandfathered kubus design-token violations. Remove this header
-// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/widgets/kubus_button.dart';
@@ -81,8 +78,8 @@ class _EmailRegistrationFormState extends State<EmailRegistrationForm> {
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
     final submitBackground =
-        isDark ? Colors.white.withValues(alpha: 0.96) : const Color(0xFF1A1A1A);
-    final submitForeground = isDark ? const Color(0xFF1A1A1A) : Colors.white;
+        isDark ? Colors.white.withValues(alpha: 0.96) : KubusColors.surfaceDark;
+    final submitForeground = isDark ? KubusColors.surfaceDark : Colors.white;
     final border = OutlineInputBorder(
       borderRadius: BorderRadius.circular(widget.compact ? 14 : 18),
       borderSide: BorderSide(

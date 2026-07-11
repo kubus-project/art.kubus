@@ -604,8 +604,12 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
     final colorScheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
     final roles = KubusColorRoles.of(context);
-    final accentStart = roles.lockedFeature;
-    final accentEnd = roles.likeAction;
+    // Match the sign-in surface's accent family (primary -> positiveAction):
+    // registration is a sibling of sign-in, not a warning/locked surface.
+    // (Previously lockedFeature -> likeAction, which rendered a jarring
+    // orange/red backdrop amid the teal/emerald auth flow.)
+    final accentStart = colorScheme.primary;
+    final accentEnd = roles.positiveAction;
     final isDark = theme.brightness == Brightness.dark;
     final enableWallet = AppConfig.enableWeb3 && AppConfig.enableWalletConnect;
     final enableEmail = AppConfig.enableEmailAuth;

@@ -1,12 +1,9 @@
-// ignore_for_file: kubus_no_raw_border, kubus_no_inline_google_fonts
-// Grandfathered kubus design-token violations. Remove this header
-// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../l10n/app_localizations.dart';
 import '../screens/desktop/desktop_shell.dart';
 import '../utils/design_tokens.dart';
+import '../utils/kubus_color_roles.dart';
 import 'glass_components.dart';
 import 'kubus_button.dart';
 
@@ -39,9 +36,12 @@ Future<bool> showWalletMnemonicBackupPrompt({
           Container(
             padding: const EdgeInsets.all(KubusSpacing.md),
             decoration: BoxDecoration(
-              color: Colors.orange.withValues(alpha: 0.1),
+              color: KubusColorRoles.of(context)
+                  .warningAction
+                  .withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(KubusRadius.sm),
-              border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+              border: KubusBorders.accentTint(
+                  KubusColorRoles.of(context).warningAction),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -75,7 +75,7 @@ Future<bool> showWalletMnemonicBackupPrompt({
             ),
             child: SelectableText(
               mnemonic,
-              style: GoogleFonts.robotoMono(
+              style: KubusTypography.mono(
                 fontSize: 14,
                 height: 1.6,
                 color: scheme.onSurface,

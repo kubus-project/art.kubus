@@ -1,6 +1,3 @@
-// ignore_for_file: kubus_no_raw_border
-// Grandfathered kubus design-token violations. Remove this header
-// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
@@ -2527,7 +2524,7 @@ class _GovernanceHubState extends State<GovernanceHub>
                   backgroundColor:
                       Theme.of(context).colorScheme.surfaceContainerHighest,
                   foregroundColor: Colors.white,
-                  side: BorderSide(color: Colors.grey[600]!),
+                  side: KubusBorders.hairlineSide(context),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(KubusRadius.md),
@@ -2545,7 +2542,7 @@ class _GovernanceHubState extends State<GovernanceHub>
                   backgroundColor:
                       Theme.of(context).colorScheme.surfaceContainerHighest,
                   foregroundColor: Colors.white,
-                  side: BorderSide(color: Colors.grey[600]!),
+                  side: KubusBorders.hairlineSide(context),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(KubusRadius.md),
@@ -2877,7 +2874,7 @@ class _GovernanceHubState extends State<GovernanceHub>
                   backgroundColor:
                       Theme.of(context).colorScheme.surfaceContainerHighest,
                   foregroundColor: Colors.white,
-                  side: BorderSide(color: Colors.grey[600]!),
+                  side: KubusBorders.hairlineSide(context),
                   padding:
                       const EdgeInsets.symmetric(vertical: KubusSpacing.md),
                 ),

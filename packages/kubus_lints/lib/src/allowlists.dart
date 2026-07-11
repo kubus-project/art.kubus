@@ -4,6 +4,7 @@ const rawColorAllowedSuffixes = <String>[
   'lib/utils/design_tokens.dart',
   'lib/utils/kubus_color_roles.dart',
   'lib/utils/kubus_accent_gradients.dart',
+  'lib/utils/kubus_brand_colors.dart',
   'lib/utils/app_color_utils.dart',
   'lib/utils/category_accent_color.dart',
   'lib/utils/rarity_ui.dart',
