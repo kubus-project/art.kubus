@@ -1,7 +1,5 @@
-// ignore_for_file: kubus_no_raw_progress_indicator
-// Grandfathered kubus design-token violations. Remove this header
-// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'package:flutter/material.dart';
+import '../../widgets/inline_loading.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 
@@ -503,7 +501,7 @@ class _MyExhibitionsTab extends StatelessWidget {
         .toList(growable: false);
 
     if (provider.isMyExhibitionsLoading && myExhibitions.isEmpty) {
-      return Center(child: CircularProgressIndicator(color: scheme.primary));
+      return Center(child: InlineLoading(width: 40, height: 40, color: scheme.primary));
     }
 
     if (myExhibitions.isEmpty) {
@@ -565,7 +563,7 @@ class _CollaboratingTab extends StatelessWidget {
         .toList(growable: false);
 
     if (provider.isMyExhibitionsLoading && collaborating.isEmpty) {
-      return Center(child: CircularProgressIndicator(color: scheme.primary));
+      return Center(child: InlineLoading(width: 40, height: 40, color: scheme.primary));
     }
 
     if (collaborating.isEmpty) {

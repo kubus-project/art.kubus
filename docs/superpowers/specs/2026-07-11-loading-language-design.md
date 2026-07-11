@@ -35,3 +35,18 @@ Skeleton redesign, prefetch/network (slice 5), splash changes.
 
 analyze + custom_lint clean; ratchet monotone; full suite +1235 ~1 -1
 baseline; visual pass of a migrated loading state via the verify skill.
+
+## Outcome (2026-07-11)
+
+- `kubus_no_raw_progress_indicator` live (fixture-verified); ratchet baseline
+  68 files -> 62 after beachhead. Follow-up burn-down continues under the
+  ratchet (count can only decrease).
+- Beachhead migrated to `InlineLoading`: map nearby panel (states + item
+  thumbs), exhibition list, community feed (3 sites + delete-in-flight),
+  home activity, post-auth loading bar (LinearProgressIndicator -> branded
+  tile bar with failure color intact).
+- Bug found & fixed: the grandfather script prepended headers before UTF-8
+  BOMs, leaving U+FEFF mid-file (compile error in 3 files). Script now
+  strips BOMs; repo swept clean.
+- Verified: repo-wide analyze clean, custom_lint clean, full suite
+  +1235 ~1 -1 (baseline parity).

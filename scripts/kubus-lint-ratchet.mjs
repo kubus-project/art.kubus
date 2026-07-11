@@ -91,7 +91,9 @@ const files = [...dartFiles('lib')];
 if (mode === '--grandfather') {
   let touched = 0;
   for (const path of files) {
-    const text = readFileSync(path, 'utf8');
+    // Strip any BOM: prepending a header before U+FEFF would leave it
+    // mid-file, which the Dart compiler rejects.
+    const text = readFileSync(path, 'utf8').replaceAll('﻿', '');
     const ignored = existingIgnores(text);
     const rules = violatedRules(path, text).filter((r) => !ignored.has(r));
     if (rules.length === 0) continue;

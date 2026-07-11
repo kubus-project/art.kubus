@@ -1,9 +1,7 @@
-// ignore_for_file: kubus_no_raw_progress_indicator
-// Grandfathered kubus design-token violations. Remove this header
-// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import '../../inline_loading.dart';
 
 import '../../../models/artwork.dart';
 import '../../../utils/artwork_media_resolver.dart';
@@ -334,7 +332,7 @@ class _ArtworkThumbnail extends StatelessWidget {
             child: SizedBox(
               width: math.max(16.0, iconSize - 8),
               height: math.max(16.0, iconSize - 8),
-              child: const CircularProgressIndicator(strokeWidth: 2),
+              child: const InlineLoading(tileSize: 4),
             ),
           ),
         ),

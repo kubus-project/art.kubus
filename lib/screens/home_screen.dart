@@ -1,6 +1,3 @@
-// ignore_for_file: kubus_no_raw_progress_indicator
-// Grandfathered kubus design-token violations. Remove this header
-// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
@@ -2155,10 +2152,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       child: SizedBox(
         width: 32,
         height: 32,
-        child: CircularProgressIndicator(
-          strokeWidth: 3,
-          valueColor: AlwaysStoppedAnimation<Color>(AppColorUtils.amberAccent),
-        ),
+        child: InlineLoading(color: AppColorUtils.amberAccent),
       ),
     );
   }
@@ -2887,7 +2881,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
           final activities = activityProvider.activities;
 
           if (activityProvider.isLoading && activities.isEmpty) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: InlineLoading(width: 40, height: 40));
           }
 
           if (activityProvider.error != null && activities.isEmpty) {

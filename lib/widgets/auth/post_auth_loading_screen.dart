@@ -1,6 +1,3 @@
-// ignore_for_file: kubus_no_raw_progress_indicator
-// Grandfathered kubus design-token violations. Remove this header
-// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/screens/onboarding/onboarding_flow_screen.dart';
@@ -12,6 +9,7 @@ import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:flutter/material.dart';
+import '../inline_loading.dart';
 
 enum PostAuthLoadingPresentation {
   fullScreen,
@@ -329,12 +327,11 @@ class PostAuthLoadingContent extends StatelessWidget {
             ],
           ),
           SizedBox(height: compact ? KubusSpacing.lg : KubusSpacing.xl),
-          LinearProgressIndicator(
-            minHeight: compact ? 5 : 6,
-            backgroundColor: scheme.outlineVariant.withValues(alpha: 0.22),
-            valueColor: AlwaysStoppedAnimation<Color>(
-              isFailed ? roles.negativeAction : roles.positiveAction,
-            ),
+          InlineLoading(
+            height: compact ? 5 : 6,
+            borderRadius: BorderRadius.circular(3),
+            color: isFailed ? roles.negativeAction : roles.positiveAction,
+            animate: !isFailed,
           ),
           SizedBox(height: compact ? KubusSpacing.md : KubusSpacing.lg),
           _StageList(
