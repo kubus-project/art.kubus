@@ -59,3 +59,19 @@ host (notably cluster sorting) — unifying them is a later, deliberate choice.
 - Full suite: +1235 ~1 -1 baseline (one pre-existing TabBar failure).
 - Visual: project verify skill — guest map loads, markers render, cluster
   + tap-select still work on web (mobile viewport) and desktop width.
+
+## Outcome (2026-07-11)
+
+- `KubusMapMarkerSyncEngine` + `KubusMapMarkerSyncHost` landed in
+  `lib/features/map/engine/`; both screens implement the host and keep two
+  thin `_syncMapMarkers*` delegators (zero call-site churn). The
+  `_preregisterMarkerIcons` / `_markerFeatureFor` / `_clusterFeatureFor`
+  trios are deleted from both screens (-130 L mobile, -119 L desktop).
+- Divergences preserved via host: cluster sort order, zoom field, debug
+  counters; desktop additionally gains perf-timeline tracing (gated by
+  MapPerformanceDebug, previously mobile-only).
+- Verified: analyze + custom_lint clean (ratchet 0/0/0/0), 76 map widget
+  tests pass, full suite +1235 ~1 -1 (identical to baseline), visual pass
+  of BOTH hosts on web (mobile viewport guest map + desktop shell map).
+- Noted for later: desktop Home center pane shows 'An unexpected error
+  occurred' offline (backend-dependent; unrelated to map diff).
