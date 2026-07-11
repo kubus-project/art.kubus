@@ -1,10 +1,8 @@
-// ignore_for_file: kubus_no_raw_color
-// Grandfathered kubus design-token violations. Remove this header
-// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'dart:collection';
 import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
+import 'map_marker_style_config.dart';
 
 import 'package:flutter/material.dart';
 
@@ -483,7 +481,9 @@ class ArtMarkerCubeIconRenderer {
   static Color _iconForegroundForTheme({required bool isDark}) {
     // User preference: marker glyphs should invert from the typical scheme:
     // dark mode uses black glyphs, light mode uses white glyphs.
-    return isDark ? const Color(0xFF000000) : const Color(0xFFFFFFFF);
+    return isDark
+        ? MarkerCubePalette.glyphDarkMode
+        : MarkerCubePalette.glyphLightMode;
   }
 
   /// Renders a marker as a flat top-down square (top face + shadow).
@@ -805,18 +805,18 @@ class ArtMarkerCubeIconRenderer {
     canvas.drawCircle(
       starCenter,
       outerRadius + 2.5,
-      Paint()..color = const Color(0xCC111827),
+      Paint()..color = MarkerCubePalette.starHaloInk,
     );
     canvas.drawPath(
       path,
-      Paint()..color = const Color(0xFFFFD54F),
+      Paint()..color = MarkerCubePalette.starFill,
     );
     canvas.drawPath(
       path,
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1
-        ..color = const Color(0xFFF59E0B),
+        ..color = MarkerCubePalette.starStroke,
     );
   }
 
@@ -1313,7 +1313,7 @@ class ArtMarkerCubeIconRenderer {
     canvas.drawRect(
       Rect.fromLTWH(0, 0, width, height),
       Paint()
-        ..color = const Color(0x00000000)
+        ..color = MarkerCubePalette.clear
         ..blendMode = BlendMode.clear,
     );
 

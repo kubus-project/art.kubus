@@ -1,6 +1,3 @@
-// ignore_for_file: kubus_no_inline_google_fonts
-// Grandfathered kubus design-token violations. Remove this header
-// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer' as dev;
@@ -17,7 +14,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_compass/flutter_compass.dart';
 import 'package:location/location.dart' hide LocationAccuracy;
 import 'package:provider/provider.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../features/map/shared/map_screen_shared_helpers.dart';
 import '../features/map/shared/map_artwork_filtering.dart';
 import '../features/map/shared/map_marker_filtering.dart';
@@ -4974,7 +4970,7 @@ class _MapScreenState extends State<MapScreen>
               : marker.name,
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
-          style: GoogleFonts.outfit(
+          style: KubusTypography.outfit(
             fontWeight: FontWeight.w700,
             color: scheme.onSurface,
           ),
@@ -5019,7 +5015,7 @@ class _MapScreenState extends State<MapScreen>
                       : l10n.mapNoLinkedArtworkForMarker,
                   maxLines: 12,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.outfit(color: scheme.onSurfaceVariant),
+                  style: KubusTypography.outfit(color: scheme.onSurfaceVariant),
                 ),
               ),
               // Artist / photo / source attribution, below the description.

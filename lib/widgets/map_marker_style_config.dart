@@ -237,3 +237,23 @@ class MapMarkerStyleConfig {
     return 0.2126 * r + 0.7152 * g + 0.0722 * b;
   }
 }
+
+/// Fixed canvas-paint colors for the marker cube renderer
+/// (`art_marker_cube.dart`). Marker art is intentionally theme-fixed; keep
+/// the values here so widgets carry no raw color literals.
+class MarkerCubePalette {
+  MarkerCubePalette._();
+
+  /// Marker glyphs invert from the usual scheme by design:
+  /// dark mode paints black glyphs, light mode paints white glyphs.
+  static const Color glyphDarkMode = Color(0xFF000000);
+  static const Color glyphLightMode = Color(0xFFFFFFFF);
+
+  /// Featured-star badge: dark ink halo, gold fill, amber stroke.
+  static const Color starHaloInk = Color(0xCC111827);
+  static const Color starFill = Color(0xFFFFD54F);
+  static const Color starStroke = Color(0xFFF59E0B);
+
+  /// Fully transparent clear color for canvas initialisation.
+  static const Color clear = Color(0x00000000);
+}

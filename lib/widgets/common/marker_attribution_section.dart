@@ -1,10 +1,7 @@
-// ignore_for_file: kubus_no_inline_google_fonts
-// Grandfathered kubus design-token violations. Remove this header
-// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../utils/design_tokens.dart';
 import '../../models/art_marker.dart';
 import '../../models/artwork.dart';
 
@@ -96,7 +93,7 @@ class MarkerAttributionSection extends StatelessWidget {
                   '$label: $value',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.outfit(
+                  style: KubusTypography.outfit(
                     fontSize: 12,
                     color: scheme.onSurfaceVariant,
                     height: 1.3,
