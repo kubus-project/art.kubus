@@ -55,3 +55,14 @@ scoped from live measurement instead of speculative prefetch work).
   the later flow — the surviving single post is the documented deferred bug.
 - Verified: analyze clean, tutorial + map-tutorial suites green, full suite
   +1235 ~1 -1 (baseline parity), guest map visually intact with tutorial.
+
+## Follow-up (2026-07-11, same day)
+
+Root-caused the deferred LayoutBuilder error via a deterministic widget
+test: it was NOT pre-existing — slice 4 put `InlineLoading` (built on a
+`LayoutBuilder`) under the nearby panel's
+`SliverFillRemaining(hasScrollBody: false)`, which measures the child's max
+intrinsic height. Fixed in the primitive: `InlineLoading` skips its
+`LayoutBuilder` when both dimensions are explicit (regression test:
+`test/widgets/inline_loading_intrinsics_test.dart`). Clean-storage guest
+boot now posts **0** diagnostics errors (was 16 before this slice pair).
