@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
@@ -9,6 +8,7 @@ import '../screens/desktop/community/desktop_user_profile_screen.dart'
 import '../screens/desktop/desktop_shell.dart';
 import '../models/profile_package.dart';
 import '../services/profile_package_service.dart';
+import '../widgets/glass_components.dart';
 import 'design_tokens.dart';
 
 enum DesktopProfilePresentation {
@@ -150,92 +150,53 @@ class UserProfileNavigation {
     final radius = BorderRadius.circular(KubusRadius.xl);
     final isDark = theme.brightness == Brightness.dark;
 
-    await showGeneralDialog<void>(
+    // Canonical glass dialog: showKubusDialog applies the shared backdrop
+    // blur, barrier dismissal, and fade/scale transition.
+    await showKubusDialog<void>(
       context: context,
-      barrierDismissible: true,
-      barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
-      barrierColor: Colors.transparent,
-      transitionDuration: const Duration(milliseconds: 220),
-      pageBuilder: (dialogContext, _, __) {
-        return BackdropFilter(
-          filter: ImageFilter.blur(
-            sigmaX: KubusGlassEffects.blurSigmaLight,
-            sigmaY: KubusGlassEffects.blurSigmaLight,
-          ),
-          child: ColoredBox(
-            color: scheme.scrim.withValues(alpha: 0.32),
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () => Navigator.of(dialogContext).maybePop(),
-              child: SafeArea(
-                child: Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(KubusSpacing.lg),
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.deferToChild,
-                      onTap: () {},
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(
-                          minWidth: 520,
-                          maxWidth: 980,
-                          maxHeight: 900,
-                        ),
-                        child: Material(
-                          color: scheme.surface.withValues(
-                            alpha: isDark ? 0.78 : 0.92,
-                          ),
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              color: scheme.surface.withValues(
-                                alpha: isDark ? 0.82 : 0.94,
-                              ),
-                              borderRadius: radius,
-                              border: Border.all(
-                                color: scheme.outline.withValues(alpha: 0.14),
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: scheme.shadow.withValues(alpha: 0.24),
-                                  blurRadius: 32,
-                                  offset: const Offset(0, 18),
-                                ),
-                              ],
-                            ),
-                            child: ClipRRect(
-                              borderRadius: radius,
-                              child: DesktopProfilePresentationScope(
-                                presentation:
-                                    DesktopProfilePresentation.communityOverlay,
-                                child: desktop.UserProfileScreen(
-                                  userId: userId,
-                                  username: username,
-                                  heroTag: heroTag,
-                                  initialCriticalPackageFuture: criticalFuture,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
+      barrierColor: scheme.scrim.withValues(alpha: 0.32),
+      builder: (dialogContext) {
+        return Padding(
+          padding: const EdgeInsets.all(KubusSpacing.lg),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              minWidth: 520,
+              maxWidth: 980,
+              maxHeight: 900,
+            ),
+            child: Material(
+              color: scheme.surface.withValues(
+                alpha: isDark ? 0.78 : 0.92,
+              ),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: scheme.surface.withValues(
+                    alpha: isDark ? 0.82 : 0.94,
+                  ),
+                  borderRadius: radius,
+                  border: KubusBorders.glass(context),
+                  boxShadow: [
+                    BoxShadow(
+                      color: scheme.shadow.withValues(alpha: 0.24),
+                      blurRadius: 32,
+                      offset: const Offset(0, 18),
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: radius,
+                  child: DesktopProfilePresentationScope(
+                    presentation: DesktopProfilePresentation.communityOverlay,
+                    child: desktop.UserProfileScreen(
+                      userId: userId,
+                      username: username,
+                      heroTag: heroTag,
+                      initialCriticalPackageFuture: criticalFuture,
                     ),
                   ),
                 ),
               ),
             ),
-          ),
-        );
-      },
-      transitionBuilder: (context, animation, secondaryAnimation, child) {
-        final curved = CurvedAnimation(
-          parent: animation,
-          curve: Curves.easeOutCubic,
-          reverseCurve: Curves.easeInCubic,
-        );
-        return FadeTransition(
-          opacity: curved,
-          child: ScaleTransition(
-            scale: Tween<double>(begin: 0.96, end: 1.0).animate(curved),
-            child: child,
           ),
         );
       },

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:art_kubus/utils/kubus_accent_gradients.dart';
 import 'web3_onboarding.dart';
+
+List<Color> _g(KubusAccentGradient g) => [g.start, g.end];
 
 class DAOOnboardingData {
   static const String featureKey = 'DAO';
@@ -13,7 +16,7 @@ class DAOOnboardingData {
           title: l10n.web3DaoP1Title,
           description: l10n.web3DaoP1Description,
           icon: Icons.account_balance,
-          gradientColors: [const Color.fromARGB(255, 6, 89, 141), const Color(0xFF0B6E4F)],
+          gradientColors: _g(KubusAccentGradients.tealBlue),
           features: [
             l10n.web3DaoP1Feature1,
             l10n.web3DaoP1Feature2,
@@ -25,7 +28,7 @@ class DAOOnboardingData {
           title: l10n.web3DaoP2Title,
           description: l10n.web3DaoP2Description,
           icon: Icons.how_to_vote,
-          gradientColors: [const Color(0xFF06B6D4), const Color(0xFF3B82F6)],
+          gradientColors: _g(KubusAccentGradients.cyanBlue),
           features: [
             l10n.web3DaoP2Feature1,
             l10n.web3DaoP2Feature2,
@@ -37,7 +40,7 @@ class DAOOnboardingData {
           title: l10n.web3DaoP3Title,
           description: l10n.web3DaoP3Description,
           icon: Icons.lightbulb_outline,
-          gradientColors: [const Color(0xFFF59E0B), const Color(0xFFEF4444)],
+          gradientColors: _g(KubusAccentGradients.sunset),
           features: [
             l10n.web3DaoP3Feature1,
             l10n.web3DaoP3Feature2,
@@ -49,7 +52,7 @@ class DAOOnboardingData {
           title: l10n.web3DaoP4Title,
           description: l10n.web3DaoP4Description,
           icon: Icons.rocket_launch,
-          gradientColors: [const Color(0xFFEC4899), const Color(0xFF0B6E4F)],
+          gradientColors: _g(KubusAccentGradients.violet),
           features: [
             l10n.web3DaoP4Feature1,
             l10n.web3DaoP4Feature2,
@@ -71,7 +74,7 @@ class ArtistStudioOnboardingData {
           title: l10n.web3ArtistStudioP1Title,
           description: l10n.web3ArtistStudioP1Description,
           icon: Icons.palette,
-          gradientColors: [const Color(0xFF06B6D4), const Color(0xFF3B82F6)],
+          gradientColors: _g(KubusAccentGradients.cyanBlue),
           features: [
             l10n.web3ArtistStudioP1Feature1,
             l10n.web3ArtistStudioP1Feature2,
@@ -83,7 +86,7 @@ class ArtistStudioOnboardingData {
           title: l10n.web3ArtistStudioP2Title,
           description: l10n.web3ArtistStudioP2Description,
           icon: Icons.photo_library,
-          gradientColors: [const Color(0xFF10B981), const Color(0xFF059669)],
+          gradientColors: _g(KubusAccentGradients.emerald),
           features: [
             l10n.web3ArtistStudioP2Feature1,
             l10n.web3ArtistStudioP2Feature2,
@@ -95,7 +98,7 @@ class ArtistStudioOnboardingData {
           title: l10n.web3ArtistStudioP3Title,
           description: l10n.web3ArtistStudioP3Description,
           icon: Icons.view_in_ar,
-          gradientColors: [const Color(0xFF06B6D4), const Color(0xFF3B82F6)],
+          gradientColors: _g(KubusAccentGradients.cyanBlue),
           features: [
             l10n.web3ArtistStudioP3Feature1,
             l10n.web3ArtistStudioP3Feature2,
@@ -107,7 +110,7 @@ class ArtistStudioOnboardingData {
           title: l10n.web3ArtistStudioP4Title,
           description: l10n.web3ArtistStudioP4Description,
           icon: Icons.analytics,
-          gradientColors: [const Color(0xFFEC4899), const Color(0xFF0B6E4F)],
+          gradientColors: _g(KubusAccentGradients.violet),
           features: [
             l10n.web3ArtistStudioP4Feature1,
             l10n.web3ArtistStudioP4Feature2,
@@ -119,7 +122,7 @@ class ArtistStudioOnboardingData {
           title: l10n.web3ArtistStudioP5Title,
           description: l10n.web3ArtistStudioP5Description,
           icon: Icons.create,
-          gradientColors: [const Color(0xFFF59E0B), const Color(0xFFEF4444)],
+          gradientColors: _g(KubusAccentGradients.sunset),
           features: [
             l10n.web3ArtistStudioP5Feature1,
             l10n.web3ArtistStudioP5Feature2,
@@ -141,7 +144,7 @@ class InstitutionHubOnboardingData {
           title: l10n.web3InstitutionHubP1Title,
           description: l10n.web3InstitutionHubP1Description,
           icon: Icons.museum,
-          gradientColors: [const Color(0xFFF59E0B), const Color(0xFFEF4444)],
+          gradientColors: _g(KubusAccentGradients.sunset),
           features: [
             l10n.web3InstitutionHubP1Feature1,
             l10n.web3InstitutionHubP1Feature2,
@@ -153,7 +156,7 @@ class InstitutionHubOnboardingData {
           title: l10n.web3InstitutionHubP2Title,
           description: l10n.web3InstitutionHubP2Description,
           icon: Icons.event,
-          gradientColors: [const Color(0xFF06B6D4), const Color(0xFF3B82F6)],
+          gradientColors: _g(KubusAccentGradients.cyanBlue),
           features: [
             l10n.web3InstitutionHubP2Feature1,
             l10n.web3InstitutionHubP2Feature2,
@@ -165,7 +168,7 @@ class InstitutionHubOnboardingData {
           title: l10n.web3InstitutionHubP3Title,
           description: l10n.web3InstitutionHubP3Description,
           icon: Icons.create_new_folder,
-          gradientColors: [const Color(0xFF072A40), const Color(0xFF0B6E4F)],
+          gradientColors: _g(KubusAccentGradients.tealBlue),
           features: [
             l10n.web3InstitutionHubP3Feature1,
             l10n.web3InstitutionHubP3Feature2,
@@ -177,7 +180,7 @@ class InstitutionHubOnboardingData {
           title: l10n.web3InstitutionHubP4Title,
           description: l10n.web3InstitutionHubP4Description,
           icon: Icons.insights,
-          gradientColors: [const Color(0xFF10B981), const Color(0xFF059669)],
+          gradientColors: _g(KubusAccentGradients.emerald),
           features: [
             l10n.web3InstitutionHubP4Feature1,
             l10n.web3InstitutionHubP4Feature2,
@@ -189,7 +192,7 @@ class InstitutionHubOnboardingData {
           title: l10n.web3InstitutionHubP5Title,
           description: l10n.web3InstitutionHubP5Description,
           icon: Icons.launch,
-          gradientColors: [const Color(0xFFEC4899), const Color(0xFF06B6D4)],
+          gradientColors: _g(KubusAccentGradients.violet),
           features: [
             l10n.web3InstitutionHubP5Feature1,
             l10n.web3InstitutionHubP5Feature2,
@@ -211,7 +214,7 @@ class MarketplaceOnboardingData {
           title: l10n.web3MarketplaceP1Title,
           description: l10n.web3MarketplaceP1Description,
           icon: Icons.store,
-          gradientColors: [const Color(0xFF6366F1), const Color(0xFF3B82F6)],
+          gradientColors: _g(KubusAccentGradients.indigo),
           features: [
             l10n.web3MarketplaceP1Feature1,
             l10n.web3MarketplaceP1Feature2,
@@ -223,7 +226,7 @@ class MarketplaceOnboardingData {
           title: l10n.web3MarketplaceP2Title,
           description: l10n.web3MarketplaceP2Description,
           icon: Icons.explore,
-          gradientColors: [const Color(0xFF06B6D4), const Color(0xFF3B82F6)],
+          gradientColors: _g(KubusAccentGradients.cyanBlue),
           features: [
             l10n.web3MarketplaceP2Feature1,
             l10n.web3MarketplaceP2Feature2,
@@ -235,7 +238,7 @@ class MarketplaceOnboardingData {
           title: l10n.web3MarketplaceP3Title,
           description: l10n.web3MarketplaceP3Description,
           icon: Icons.sell,
-          gradientColors: [const Color(0xFF10B981), const Color(0xFF059669)],
+          gradientColors: _g(KubusAccentGradients.emerald),
           features: [
             l10n.web3MarketplaceP3Feature1,
             l10n.web3MarketplaceP3Feature2,
@@ -247,7 +250,7 @@ class MarketplaceOnboardingData {
           title: l10n.web3MarketplaceP4Title,
           description: l10n.web3MarketplaceP4Description,
           icon: Icons.shopping_cart,
-          gradientColors: [const Color(0xFFF59E0B), const Color(0xFFEF4444)],
+          gradientColors: _g(KubusAccentGradients.sunset),
           features: [
             l10n.web3MarketplaceP4Feature1,
             l10n.web3MarketplaceP4Feature2,
@@ -268,10 +271,7 @@ class Web3FeaturesOnboardingData {
           title: l10n.web3FeaturesP1Title,
           description: l10n.web3FeaturesP1Description,
           icon: Icons.account_balance_wallet,
-          gradientColors: [
-            Colors.blue,
-            const Color(0xFF3F51B5),
-          ],
+          gradientColors: _g(KubusAccentGradients.indigo),
           features: [
             l10n.web3FeaturesP1Feature1,
             l10n.web3FeaturesP1Feature2,
@@ -283,10 +283,7 @@ class Web3FeaturesOnboardingData {
           title: l10n.web3FeaturesP2Title,
           description: l10n.web3FeaturesP2Description,
           icon: Icons.store,
-          gradientColors: [
-            const Color(0xFFFF6B6B),
-            const Color(0xFFE91E63),
-          ],
+          gradientColors: _g(KubusAccentGradients.sunset),
           features: [
             l10n.web3FeaturesP2Feature1,
             l10n.web3FeaturesP2Feature2,
@@ -299,10 +296,7 @@ class Web3FeaturesOnboardingData {
           title: l10n.web3FeaturesP3Title,
           description: l10n.web3FeaturesP3Description,
           icon: Icons.palette,
-          gradientColors: [
-            const Color(0xFFFF9A8B),
-            const Color(0xFFFF7043),
-          ],
+          gradientColors: _g(KubusAccentGradients.gold),
           features: [
             l10n.web3FeaturesP3Feature1,
             l10n.web3FeaturesP3Feature2,
@@ -315,10 +309,7 @@ class Web3FeaturesOnboardingData {
           title: l10n.web3FeaturesP4Title,
           description: l10n.web3FeaturesP4Description,
           icon: Icons.how_to_vote,
-          gradientColors: [
-            const Color(0xFF4ECDC4),
-            const Color(0xFF26A69A),
-          ],
+          gradientColors: _g(KubusAccentGradients.tealBlue),
           features: [
             l10n.web3FeaturesP4Feature1,
             l10n.web3FeaturesP4Feature2,
@@ -331,10 +322,7 @@ class Web3FeaturesOnboardingData {
           title: l10n.web3FeaturesP5Title,
           description: l10n.web3FeaturesP5Description,
           icon: Icons.museum,
-          gradientColors: [
-            const Color(0xFF667eea),
-            const Color(0xFF764ba2),
-          ],
+          gradientColors: _g(KubusAccentGradients.violet),
           features: [
             l10n.web3FeaturesP5Feature1,
             l10n.web3FeaturesP5Feature2,
@@ -347,10 +335,7 @@ class Web3FeaturesOnboardingData {
           title: l10n.web3FeaturesP6Title,
           description: l10n.web3FeaturesP6Description,
           icon: Icons.monetization_on,
-          gradientColors: [
-            const Color(0xFFFFD700),
-            const Color(0xFFFF8C00),
-          ],
+          gradientColors: _g(KubusAccentGradients.gold),
           features: [
             l10n.web3FeaturesP6Feature1,
             l10n.web3FeaturesP6Feature2,

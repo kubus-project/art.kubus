@@ -1,3 +1,6 @@
+// ignore_for_file: kubus_no_inline_google_fonts
+// Grandfathered kubus design-token violations. Remove this header
+// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 

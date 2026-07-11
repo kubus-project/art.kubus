@@ -38,6 +38,10 @@ class KubusColors {
   static const Color success = Color(0xFF43A047); // Green 600
   static const Color successDark = Color(0xFF4CAF50); // Green 500
 
+  /// Success/verified indicator tone for content that always renders on a
+  /// dark backdrop (onboarding gradients, wallet flows) regardless of theme.
+  static const Color successOnDark = Color(0xFF81C784); // Green 300
+
   static const Color warning = Color(0xFFFFA000); // Amber 700
   static const Color warningDark = Color(0xFFFFB300); // Amber 600
 
@@ -703,6 +707,88 @@ class KubusGlassEffects {
   /// Accent blend amount used to preserve intent in blur-disabled mode while
   /// keeping the resulting surface opaque and theme-aligned.
   static const double fallbackTintBlend = 0.14;
+}
+
+/// Semantic border roles for the kubus design system.
+///
+/// The app previously had ~546 ad-hoc `Border.all`/`BorderSide` call sites
+/// each choosing its own color/alpha. All container borders collapse onto
+/// these roles:
+///
+/// * [hairline] — default container/divider border (theme outline).
+/// * [glass]    — border on glass surfaces (matches [GlassSurface] tokens).
+/// * [focus]    — focused input / keyboard-focused interactive element.
+/// * [active]   — selected/active state emphasis.
+/// * [accentTint] — soft contextual-accent border for chips/cards.
+class KubusBorders {
+  KubusBorders._();
+
+  /// Width used by [focus] and [active] emphasis borders.
+  static const double emphasisWidth = 1.25;
+
+  static BorderSide hairlineSide(BuildContext context) => BorderSide(
+        color: Theme.of(context).colorScheme.outline,
+        width: KubusSizes.hairline,
+      );
+
+  static Border hairline(BuildContext context) =>
+      Border.fromBorderSide(hairlineSide(context));
+
+  static BorderSide glassSide(BuildContext context) => BorderSide(
+        color: Theme.of(context).brightness == Brightness.dark
+            ? KubusColors.glassBorderDark
+            : KubusColors.glassBorderLight,
+        width: KubusSizes.hairline,
+      );
+
+  static Border glass(BuildContext context) =>
+      Border.fromBorderSide(glassSide(context));
+
+  static BorderSide focusSide(BuildContext context, {Color? accent}) =>
+      BorderSide(
+        color: (accent ?? Theme.of(context).colorScheme.primary)
+            .withValues(alpha: 0.70),
+        width: emphasisWidth,
+      );
+
+  static Border focus(BuildContext context, {Color? accent}) =>
+      Border.fromBorderSide(focusSide(context, accent: accent));
+
+  static BorderSide activeSide(BuildContext context, {Color? accent}) =>
+      BorderSide(
+        color: (accent ?? Theme.of(context).colorScheme.primary)
+            .withValues(alpha: 0.85),
+        width: emphasisWidth,
+      );
+
+  static Border active(BuildContext context, {Color? accent}) =>
+      Border.fromBorderSide(activeSide(context, accent: accent));
+
+  /// Soft accent-tinted border for chips/cards that carry a contextual
+  /// accent (e.g. wallet action cards). Replaces the widespread
+  /// `Border.all(color: X.withValues(alpha: 0.2..0.35))` pattern.
+  static BorderSide accentTintSide(Color accent) => BorderSide(
+        color: accent.withValues(alpha: 0.30),
+        width: KubusSizes.hairline,
+      );
+
+  static Border accentTint(Color accent) =>
+      Border.fromBorderSide(accentTintSide(accent));
+
+  /// Border for surfaces rendered on an always-dark backdrop (onboarding,
+  /// wallet flows) regardless of theme brightness. `strong` is for outlined
+  /// buttons / emphasized cards; the default suits glass containers.
+  static BorderSide onDarkSide({bool strong = false}) => BorderSide(
+        color: KubusColors.textPrimaryDark.withValues(
+          alpha: strong
+              ? KubusGlassEffects.glassBorderOpacityStrong
+              : KubusGlassEffects.glassBorderOpacitySubtle,
+        ),
+        width: KubusSizes.hairline,
+      );
+
+  static Border onDark({bool strong = false}) =>
+      Border.fromBorderSide(onDarkSide(strong: strong));
 }
 
 @immutable

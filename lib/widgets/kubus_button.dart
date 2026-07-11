@@ -121,13 +121,13 @@ class KubusButton extends StatelessWidget {
     final defaultBackground = switch (variant) {
       KubusButtonVariant.primary => isDark
           ? Colors.white
-          : const Color(0xFF1A1A1A),
+          : KubusColors.surfaceDark,
       KubusButtonVariant.secondary =>
         scheme.surface.withValues(alpha: isDark ? 0.9 : 0.96),
     };
     final defaultForeground = switch (variant) {
       KubusButtonVariant.primary =>
-        isDark ? const Color(0xFF1A1A1A) : Colors.white,
+        isDark ? KubusColors.surfaceDark : Colors.white,
       KubusButtonVariant.secondary => scheme.onSurface,
     };
     final effectiveBackground = backgroundColor ?? defaultBackground;
@@ -276,10 +276,10 @@ class KubusOutlineButton extends StatelessWidget {
     // Outline button: white text/border in dark mode, dark in light mode
     final contentColor = isDark
         ? Colors.white.withValues(alpha: 0.9)
-        : const Color(0xFF1A1A1A).withValues(alpha: 0.9);
+        : KubusColors.surfaceDark.withValues(alpha: 0.9);
     final borderColor = isDark
         ? Colors.white.withValues(alpha: isEnabled ? 0.3 : 0.16)
-        : const Color(0xFF1A1A1A).withValues(alpha: isEnabled ? 0.3 : 0.16);
+        : KubusColors.surfaceDark.withValues(alpha: isEnabled ? 0.3 : 0.16);
 
     final radius = KubusRadius.circular(KubusRadius.sm);
     final glassTint = colorScheme.surface.withValues(

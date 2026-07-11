@@ -125,6 +125,12 @@ jobs:
       - name: Flutter analyze
         run: flutter analyze
 
+      - name: Kubus lint (custom_lint)
+        run: dart run custom_lint
+
+      - name: Kubus lint ratchet
+        run: node scripts/kubus-lint-ratchet.mjs --check
+
       - name: Flutter test
         run: flutter test --coverage ${{ steps.defines.outputs.args }}
 

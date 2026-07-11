@@ -1,3 +1,6 @@
+// ignore_for_file: kubus_no_raw_color
+// Grandfathered kubus design-token violations. Remove this header
+// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'package:art_kubus/widgets/community/community_post_card.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
