@@ -147,7 +147,10 @@ async function capture(browser, scenario) {
   await page.route('**/api/admin/**', fulfillAdminFixture);
 
   await page.goto(`${baseUrl}/ops/errors`, { waitUntil: 'networkidle' });
-  await page.getByText('Seeded database timeout used for deterministic visual QA').waitFor();
+  await page.getByRole('link', {
+    name: 'Open error: Seeded database timeout used for deterministic visual QA',
+    exact: true,
+  }).waitFor();
   await page.screenshot({
     path: resolve(artifactRoot, `${scenario.name}.png`),
     fullPage: true,
