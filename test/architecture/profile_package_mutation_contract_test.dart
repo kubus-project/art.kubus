@@ -44,18 +44,32 @@ void main() {
       r'addComment|deleteComment)\s*\(',
     );
 
-    final offenders = <String>[];
+    // Screen libraries may be split across `<name>_parts/` part files
+    // (god-file decomposition); evaluate the whole library as one unit.
+    final libraries = <String, StringBuffer>{};
     for (final root in const ['lib/screens']) {
       for (final file in _dartFilesUnder(root)) {
         final path = _slash(file.path);
-        if (providerManagedScreens.contains(path)) continue;
-        final contents = file.readAsStringSync();
-        if (!writeCalls.hasMatch(contents)) continue;
-        if (!contents.contains('ProfilePackageMutationTracker')) {
-          offenders.add(path);
-        }
+        final partsMatch =
+            RegExp(r'^(.*)/([^/]+)_parts/[^/]+\.dart$').firstMatch(path);
+        final key = partsMatch != null
+            ? '${partsMatch.group(1)}/${partsMatch.group(2)}.dart'
+            : path;
+        libraries
+            .putIfAbsent(key, StringBuffer.new)
+            .writeln(file.readAsStringSync());
       }
     }
+
+    final offenders = <String>[];
+    libraries.forEach((path, buffer) {
+      if (providerManagedScreens.contains(path)) return;
+      final contents = buffer.toString();
+      if (!writeCalls.hasMatch(contents)) return;
+      if (!contents.contains('ProfilePackageMutationTracker')) {
+        offenders.add(path);
+      }
+    });
 
     expect(
       offenders,
