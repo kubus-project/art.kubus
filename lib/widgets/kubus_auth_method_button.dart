@@ -1,11 +1,9 @@
-// ignore_for_file: kubus_no_raw_progress_indicator
-// Grandfathered kubus design-token violations. Remove this header
-// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'package:flutter/material.dart';
 
 import '../providers/glass_capabilities_provider.dart';
 import '../utils/design_tokens.dart';
 import 'glass_components.dart';
+import 'inline_loading.dart';
 import 'kubus_button.dart';
 
 class KubusAuthMethodMetrics {
@@ -68,10 +66,9 @@ class KubusAuthMethodButton extends StatelessWidget {
                 child: Center(
                   child: SizedBox.square(
                     dimension: KubusAuthMethodMetrics.iconSize,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.5,
-                      valueColor:
-                          AlwaysStoppedAnimation<Color>(style.foregroundColor),
+                    child: InlineLoading(
+                      tileSize: 4,
+                      color: style.foregroundColor,
                     ),
                   ),
                 ),
@@ -280,11 +277,9 @@ class KubusAuthMethodButtonSkeleton extends StatelessWidget {
                 child: Center(
                   child: SizedBox.square(
                     dimension: KubusAuthMethodMetrics.iconSize,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        Theme.of(context).colorScheme.onSurface,
-                      ),
+                    child: InlineLoading(
+                      tileSize: 4,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                 ),
@@ -402,11 +397,9 @@ class _KubusAuthLoadingOverlay extends StatelessWidget {
               child: Center(
                 child: SizedBox.square(
                   dimension: KubusAuthMethodMetrics.iconSize,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.5,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      style.foregroundColor,
-                    ),
+                  child: InlineLoading(
+                    tileSize: 4,
+                    color: style.foregroundColor,
                   ),
                 ),
               ),

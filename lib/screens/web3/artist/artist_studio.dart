@@ -1,8 +1,6 @@
-// ignore_for_file: kubus_no_raw_progress_indicator
-// Grandfathered kubus design-token violations. Remove this header
-// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../../../widgets/inline_loading.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
@@ -645,11 +643,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
                       SizedBox(
                         height: 18,
                         width: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor:
-                              AlwaysStoppedAnimation<Color>(statusColor),
-                        ),
+                        child: InlineLoading(tileSize: 4, color: statusColor),
                       )
                     else if (review != null)
                       Text(

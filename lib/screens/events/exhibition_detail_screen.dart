@@ -1,6 +1,3 @@
-// ignore_for_file: kubus_no_raw_progress_indicator
-// Grandfathered kubus design-token violations. Remove this header
-// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'dart:async';
 import 'dart:convert';
 import 'package:file_picker/file_picker.dart';
@@ -1265,7 +1262,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                           top: 0,
                           left: 0,
                           right: 0,
-                          child: LinearProgressIndicator(color: scheme.primary),
+                          child: InlineLoading(height: 4, borderRadius: BorderRadius.circular(2), color: scheme.primary),
                         ),
                     ],
                   );
@@ -1284,7 +1281,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                     if (provider.isDetailLoading)
                       Padding(
                         padding: const EdgeInsets.only(top: DetailSpacing.lg),
-                        child: LinearProgressIndicator(color: scheme.primary),
+                        child: InlineLoading(height: 4, borderRadius: BorderRadius.circular(2), color: scheme.primary),
                       ),
                   ],
                 );

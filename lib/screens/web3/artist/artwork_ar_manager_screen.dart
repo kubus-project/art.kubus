@@ -1,6 +1,3 @@
-// ignore_for_file: kubus_no_raw_progress_indicator
-// Grandfathered kubus design-token violations. Remove this header
-// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
@@ -8,6 +5,7 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import '../../../widgets/inline_loading.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -306,7 +304,7 @@ class _ArtworkArManagerScreenState extends State<ArtworkArManagerScreen> {
                       ? const SizedBox(
                           width: 18,
                           height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2))
+                          child: InlineLoading(tileSize: 4))
                       : const Icon(Icons.auto_fix_high),
                   label: Text(config == null ? 'Generate' : 'Regenerate'),
                 ),
@@ -384,7 +382,7 @@ class _ArtworkArManagerScreenState extends State<ArtworkArManagerScreen> {
                     ? const SizedBox(
                         width: 18,
                         height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2))
+                        child: InlineLoading(tileSize: 4))
                     : const Icon(Icons.cloud_upload_outlined),
                 label: const Text('Upload marker'),
               ),

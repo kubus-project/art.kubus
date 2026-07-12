@@ -1,6 +1,3 @@
-// ignore_for_file: kubus_no_raw_progress_indicator
-// Grandfathered kubus design-token violations. Remove this header
-// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'dart:async';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:flutter/foundation.dart';
@@ -1893,10 +1890,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
             const SizedBox(height: 12),
             if (isLoading)
               Center(
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: themeProvider.accentColor,
-                ),
+                child: InlineLoading(tileSize: 4, color: themeProvider.accentColor),
               )
             else if (hasError)
               DesktopCard(
@@ -2087,10 +2081,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
             const SizedBox(height: DetailSpacing.md),
             if (isLoading)
               Center(
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: themeProvider.accentColor,
-                ),
+                child: InlineLoading(tileSize: 4, color: themeProvider.accentColor),
               )
             else if (hasError)
               DesktopCard(
@@ -2257,10 +2248,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         const SizedBox(height: DetailSpacing.md),
         if (isLoading)
           Center(
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              color: themeProvider.accentColor,
-            ),
+            child: InlineLoading(tileSize: 4, color: themeProvider.accentColor),
           )
         else if (hasError)
           DesktopCard(
@@ -2366,10 +2354,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         Widget content;
         if (isLoading) {
           content = Center(
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              color: themeProvider.accentColor,
-            ),
+            child: InlineLoading(tileSize: 4, color: themeProvider.accentColor),
           );
         } else if (error != null && activities.isEmpty) {
           content = DesktopCard(

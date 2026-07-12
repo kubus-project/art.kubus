@@ -1,6 +1,3 @@
-// ignore_for_file: kubus_no_raw_progress_indicator
-// Grandfathered kubus design-token violations. Remove this header
-// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'package:flutter/material.dart';
 import '../inline_loading.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
@@ -489,7 +486,7 @@ class _PromotionBuilderSheetState extends State<_PromotionBuilderSheet> {
                 const Center(
                   child: Padding(
                     padding: EdgeInsets.all(KubusSpacing.md),
-                    child: CircularProgressIndicator(),
+                    child: InlineLoading(tileSize: 4),
                   ),
                 ),
 

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:art_kubus/widgets/creator/creator_kit.dart';
+import 'package:art_kubus/widgets/inline_loading.dart';
 
 Widget _wrap(Widget child, {double width = 800}) {
   return MaterialApp(
@@ -107,7 +108,7 @@ void main() {
         ),
       );
 
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.byType(InlineLoading), findsOneWidget);
       await tester.tap(find.byType(ElevatedButton));
       await tester.pump();
       expect(tapped, isFalse);

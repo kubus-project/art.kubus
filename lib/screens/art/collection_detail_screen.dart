@@ -1,10 +1,8 @@
-// ignore_for_file: kubus_no_raw_progress_indicator
-// Grandfathered kubus design-token violations. Remove this header
-// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'dart:async';
 import 'package:art_kubus/widgets/glass_components.dart';
 
 import 'package:flutter/material.dart';
+import '../../widgets/inline_loading.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 
@@ -271,7 +269,7 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
 
           if (collection == null && isLoading) {
             return const Center(
-                child: CircularProgressIndicator(strokeWidth: 2));
+                child: InlineLoading(tileSize: 4));
           }
 
           if (collection == null && (error ?? '').isNotEmpty) {
@@ -472,7 +470,7 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
                     if (isLoading)
                       Padding(
                         padding: const EdgeInsets.only(top: DetailSpacing.lg),
-                        child: LinearProgressIndicator(color: scheme.primary),
+                        child: InlineLoading(height: 4, borderRadius: BorderRadius.circular(2), color: scheme.primary),
                       ),
                   ],
                 ),

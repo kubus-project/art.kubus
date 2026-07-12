@@ -1,10 +1,8 @@
-// ignore_for_file: kubus_no_raw_progress_indicator
-// Grandfathered kubus design-token violations. Remove this header
-// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'inline_loading.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 
 import '../utils/media_url_resolver.dart';
@@ -112,10 +110,7 @@ class _DiskCachedArtworkImageState extends State<DiskCachedArtworkImage> {
             widget.showProgress) {
           return _withFallbackSemantics(
             Center(
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(scheme.primary),
-              ),
+              child: InlineLoading(tileSize: 4, color: scheme.primary),
             ),
             resolvedSemanticLabel,
           );
@@ -136,10 +131,7 @@ class _DiskCachedArtworkImageState extends State<DiskCachedArtworkImage> {
             if (!widget.showProgress) return child;
             return _withFallbackSemantics(
               Center(
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(scheme.primary),
-                ),
+                child: InlineLoading(tileSize: 4, color: scheme.primary),
               ),
               resolvedSemanticLabel,
             );

@@ -1,10 +1,8 @@
-// ignore_for_file: kubus_no_raw_progress_indicator
-// Grandfathered kubus design-token violations. Remove this header
-// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'package:flutter/material.dart';
 import '../providers/glass_capabilities_provider.dart';
 import '../utils/design_tokens.dart';
 import 'glass_components.dart';
+import 'inline_loading.dart';
 
 enum KubusButtonVariant {
   primary,
@@ -163,10 +161,7 @@ class KubusButton extends StatelessWidget {
         ? SizedBox(
             height: 20,
             width: 20,
-            child: CircularProgressIndicator(
-              strokeWidth: 2.5,
-              valueColor: AlwaysStoppedAnimation<Color>(effectiveForeground),
-            ),
+            child: InlineLoading(tileSize: 4, color: effectiveForeground),
           )
         : FittedBox(
             fit: BoxFit.scaleDown,
@@ -293,10 +288,7 @@ class KubusOutlineButton extends StatelessWidget {
         ? SizedBox(
             height: 20,
             width: 20,
-            child: CircularProgressIndicator(
-              strokeWidth: 2.5,
-              valueColor: AlwaysStoppedAnimation<Color>(contentColor),
-            ),
+            child: InlineLoading(tileSize: 4, color: contentColor),
           )
         : FittedBox(
             fit: BoxFit.scaleDown,

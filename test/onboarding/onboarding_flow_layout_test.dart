@@ -799,7 +799,7 @@ void main() {
     await tester.tap(find.text('Art lover'));
     await tester.pump();
 
-    expect(find.byType(CircularProgressIndicator), findsWidgets);
+    expect(find.byType(InlineLoading), findsWidgets);
     await _pumpUntilCondition(tester, () => personaSaves == 1);
 
     saveCompleter.complete();

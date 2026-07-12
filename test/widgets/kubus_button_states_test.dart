@@ -1,3 +1,4 @@
+import 'package:art_kubus/widgets/inline_loading.dart';
 import 'package:art_kubus/widgets/kubus_button.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -25,7 +26,7 @@ void main() {
       ),
     );
 
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.byType(InlineLoading), findsOneWidget);
     expect(find.text('Continue'), findsNothing);
     await tester.tap(find.byType(KubusButton), warnIfMissed: false);
     expect(pressed, 0);

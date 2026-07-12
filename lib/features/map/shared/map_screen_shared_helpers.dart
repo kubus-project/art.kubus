@@ -1,10 +1,8 @@
-// ignore_for_file: kubus_no_raw_progress_indicator
-// Grandfathered kubus design-token violations. Remove this header
-// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../../../widgets/common/kubus_meter_bar.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 import 'package:maplibre_gl/maplibre_gl.dart' as ml;
@@ -533,12 +531,7 @@ class KubusMapTaskProgressRow {
                 const SizedBox(height: 4),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: pct,
-                    minHeight: 6,
-                    backgroundColor: scheme.surfaceContainerHighest,
-                    valueColor: AlwaysStoppedAnimation<Color>(accent),
-                  ),
+                  child: KubusMeterBar(progress: pct, height: 6, color: accent, trackColor: scheme.surfaceContainerHighest),
                 ),
               ],
             ),

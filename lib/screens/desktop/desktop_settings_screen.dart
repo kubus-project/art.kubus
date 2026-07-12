@@ -1,9 +1,7 @@
-// ignore_for_file: kubus_no_raw_progress_indicator
-// Grandfathered kubus design-token violations. Remove this header
-// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../../widgets/inline_loading.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import '../../providers/notification_provider.dart';
@@ -2446,17 +2444,8 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                   ),
                   if (emailPreferencesProvider.isLoading) ...[
                     const SizedBox(height: 12),
-                    LinearProgressIndicator(
-                      minHeight: 2,
-                      backgroundColor: Theme.of(context)
-                          .colorScheme
-                          .surfaceContainerHighest
-                          .withValues(alpha: 0.5),
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        Provider.of<ThemeProvider>(context, listen: false)
-                            .accentColor,
-                      ),
-                    ),
+                    InlineLoading(height: 2, borderRadius: BorderRadius.circular(2), color: Provider.of<ThemeProvider>(context, listen: false)
+                            .accentColor,),
                   ],
                   const Divider(height: 32),
                   _buildToggleSetting(

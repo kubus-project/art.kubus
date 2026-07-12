@@ -1,9 +1,7 @@
-// ignore_for_file: kubus_no_raw_progress_indicator
-// Grandfathered kubus design-token violations. Remove this header
-// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'inline_loading.dart';
 import 'package:provider/provider.dart';
 
 import '../l10n/app_localizations.dart';
@@ -563,10 +561,7 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
                 SizedBox(
                   width: KubusSizes.trailingChevron + KubusSpacing.xxs,
                   height: KubusSizes.trailingChevron + KubusSpacing.xxs,
-                  child: CircularProgressIndicator(
-                    strokeWidth: KubusSizes.hairline + KubusSpacing.xxs,
-                    color: scheme.primary,
-                  ),
+                  child: InlineLoading(tileSize: 4, color: scheme.primary),
                 )
               else
                 IconButton(
@@ -654,11 +649,7 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
                                     KubusSpacing.xxs,
                                 height: KubusSizes.trailingChevron -
                                     KubusSpacing.xxs,
-                                child: CircularProgressIndicator(
-                                  strokeWidth:
-                                      KubusSizes.hairline + KubusSizes.hairline,
-                                  color: scheme.primary,
-                                ),
+                                child: InlineLoading(tileSize: 4, color: scheme.primary),
                               ),
                             )
                           : (_inviteController.text.isNotEmpty

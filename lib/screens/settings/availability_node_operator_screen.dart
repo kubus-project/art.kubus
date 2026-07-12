@@ -1,9 +1,7 @@
-// ignore_for_file: kubus_no_raw_progress_indicator
-// Grandfathered kubus design-token violations. Remove this header
-// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../../widgets/inline_loading.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
@@ -266,7 +264,7 @@ class _AvailabilityNodeOperatorBodyState
                             ? const SizedBox.square(
                                 dimension: 18,
                                 child:
-                                    CircularProgressIndicator(strokeWidth: 2),
+                                    InlineLoading(tileSize: 4),
                               )
                             : const Icon(Icons.vpn_key_outlined),
                         label: Text(l10n.commonCreate),
