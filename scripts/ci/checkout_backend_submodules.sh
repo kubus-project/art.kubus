@@ -17,7 +17,7 @@ printf '%s\n' "$BACKEND_SUBMODULE_SSH_KEY" > "$key_path"
 
 ssh-keyscan -t ed25519 github.com > "$known_hosts_path" 2>/dev/null
 fingerprint="$(ssh-keygen -lf "$known_hosts_path" -E sha256 | awk '{ print $2 }')"
-expected_fingerprint='SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zP70W7sMWUjUhESQ'
+expected_fingerprint='SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU'
 if [ "$fingerprint" != "$expected_fingerprint" ]; then
   echo "GitHub SSH host fingerprint verification failed." >&2
   exit 1
