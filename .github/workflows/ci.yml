@@ -26,7 +26,13 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 0
-          submodules: recursive
+          submodules: false
+
+      - name: Checkout private backend gitlinks
+        shell: bash
+        env:
+          BACKEND_SUBMODULE_SSH_KEY: ${{ secrets.BACKEND_SUBMODULE_SSH_KEY }}
+        run: bash scripts/ci/checkout_backend_submodules.sh
 
       - name: Require both backend checkouts at their pinned gitlinks
         shell: bash
@@ -91,7 +97,13 @@ jobs:
       - name: Checkout root and both backend gitlinks
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
-          submodules: recursive
+          submodules: false
+
+      - name: Checkout private backend gitlinks
+        shell: bash
+        env:
+          BACKEND_SUBMODULE_SSH_KEY: ${{ secrets.BACKEND_SUBMODULE_SSH_KEY }}
+        run: bash scripts/ci/checkout_backend_submodules.sh
 
       - name: Set up pinned Node
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -186,7 +198,13 @@ jobs:
       - name: Checkout root and both backend gitlinks
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
-          submodules: recursive
+          submodules: false
+
+      - name: Checkout private backend gitlinks
+        shell: bash
+        env:
+          BACKEND_SUBMODULE_SSH_KEY: ${{ secrets.BACKEND_SUBMODULE_SSH_KEY }}
+        run: bash scripts/ci/checkout_backend_submodules.sh
 
       - name: Require backend lockfile
         run: test -f backend/package-lock.json
@@ -242,7 +260,13 @@ jobs:
       - name: Checkout root and both backend gitlinks
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
-          submodules: recursive
+          submodules: false
+
+      - name: Checkout private backend gitlinks
+        shell: bash
+        env:
+          BACKEND_SUBMODULE_SSH_KEY: ${{ secrets.BACKEND_SUBMODULE_SSH_KEY }}
+        run: bash scripts/ci/checkout_backend_submodules.sh
 
       - name: Set up pinned Node
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -331,7 +355,13 @@ jobs:
       - name: Checkout root and both backend gitlinks
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
-          submodules: recursive
+          submodules: false
+
+      - name: Checkout private backend gitlinks
+        shell: bash
+        env:
+          BACKEND_SUBMODULE_SSH_KEY: ${{ secrets.BACKEND_SUBMODULE_SSH_KEY }}
+        run: bash scripts/ci/checkout_backend_submodules.sh
 
       - name: Set up pinned Node
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -382,7 +412,13 @@ jobs:
       - name: Checkout root and both backend gitlinks
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
-          submodules: recursive
+          submodules: false
+
+      - name: Checkout private backend gitlinks
+        shell: bash
+        env:
+          BACKEND_SUBMODULE_SSH_KEY: ${{ secrets.BACKEND_SUBMODULE_SSH_KEY }}
+        run: bash scripts/ci/checkout_backend_submodules.sh
 
       - name: Set up pinned Node
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4

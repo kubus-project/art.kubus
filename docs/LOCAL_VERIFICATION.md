@@ -46,6 +46,13 @@ present and aligned, then runs canonical backend lint plus the complete serial
 Jest suite. `verify:all` adds pinned-toolchain, architecture, documentation, and
 Android debug/unsigned-release build gates.
 
+Root GitHub Actions jobs clone the private backend gitlinks after the public
+root checkout. Configure `BACKEND_SUBMODULE_SSH_KEY` as the private half of a
+dedicated read-only deploy key installed on `art.kubus-backend`. The checkout
+script verifies GitHub's published Ed25519 host fingerprint and removes the
+temporary runner key material after every fetch. Do not reuse a developer PAT
+or a write-capable deployment key for this secret.
+
 `qa:web` is a Playwright browser smoke. Install its nested dependencies once
 with `npm run qa:web:install`. It captures screenshots and diagnostics under
 `output/playwright/artifacts/`, uses deterministic API/socket stubs instead of
