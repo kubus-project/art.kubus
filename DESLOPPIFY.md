@@ -1175,6 +1175,28 @@ vulnerabilities; backend lint, toolchain, schema, compose, 148 Jest suites / 904
 tests, and 22 native public-art tests passed. Admin `npm audit`, lint, typecheck,
 93 tests, and production build passed with zero vulnerabilities.
 
+### [CONT-07] Browser smoke was network-noise blind
+
+**Status:** Completed
+**Baseline:** The release-web Playwright smoke captured console errors, failed
+requests, and HTTP failures but only failed on uncaught page errors or a missing
+Flutter runtime marker. It also contacted production API and socket origins from
+the local QA origin, producing tolerated 403, CORS, and WebSocket noise.
+**Required completion:** Make the browser gate deterministic, keep QA traffic
+away from production APIs, and fail on unexpected browser/network errors while
+preserving only narrowly documented runtime cancellations.
+**Completion notes:** Added deterministic health, stats, collection, telemetry,
+diagnostics, and Socket.IO stubs for the explicit Kubus API hosts. The smoke now
+fails on console errors, HTTP errors, page errors, and unexpected request
+failures. The sole allowlisted request failure is MapLibre's cancellation of its
+alternate local CSP loader after the selected loader wins. Structured artifacts
+separate expected and unexpected failures, and host boundaries plus response
+contracts are covered by repo-local Node tests wired into
+`npm run verify:architecture`.
+**Validation run:** Five web-QA contract tests passed. The real Chromium desktop
+and iPhone 13 runs passed with zero console errors, HTTP errors, page errors, or
+unexpected request failures; both screenshots were visually inspected.
+
 ## 2026-07-11 continuation validation
 
 - Root `npm run verify:flutter` passed with zero analyzer issues, 1,252 Flutter
@@ -1191,3 +1213,35 @@ tests, and 22 native public-art tests passed. Admin `npm audit`, lint, typecheck
   78 migrations, 115 tables, and matching public catalogs per snapshot.
 - Admin clean-install gates passed zero-vulnerability audit, lint, typecheck, 93
   tests, and production build; root admin CDP fixture QA passed.
+
+## 2026-07-12 final local release validation
+
+- The final parent `verify:all` execution passed toolchain, architecture, docs,
+  Flutter analysis, 1,252 Flutter tests / one skipped, coverage, release web
+  build, Android debug APK, and unsigned Android release APK before exposing a
+  stale ignored backend dependency install at the backend lint step. Both parent
+  backend checkouts were refreshed with committed-lockfile `npm ci` installs;
+  no tracked source changed as part of that refresh.
+- Parent `npm run verify:backend` then passed clean gitlink status, ESLint, and
+  the complete backend test matrix at 149 suites / 906 tests. Docker was
+  available, so the two schema-bootstrap tests that previously skipped also ran
+  and passed.
+- `npm run verify:deploy` passed immutable web promotion, checksum verification,
+  and failed-smoke atomic rollback coverage.
+- `npm run verify:architecture` passed 3,232 architecture checks at the
+  `778/778` direct-`debugPrint` ratchet plus all five deterministic web-QA
+  contract tests.
+- `npm run qa:web` passed against the release web build with artifacts directed
+  to `output/playwright/artifacts/desloppify-final-web-smoke-clean`. Desktop and
+  iPhone 13
+  captures were visually inspected; artifacts contain zero console errors, HTTP
+  errors, page errors, or unexpected request failures. The one recorded request
+  cancellation is the explicitly allowlisted local MapLibre CSP-loader abort.
+- The deterministic admin CDP fixture passed desktop/mobile and light/dark
+  Chromium coverage, producing four visually inspected screenshots under
+  `output/playwright/artifacts/desloppify-final-admin-cdp`.
+- No executable staging or soak target exists in the checked-in scripts or CI
+  configuration; the only staging reference is an example backend URL override
+  in documentation. Protected staging deployment/soak therefore remains an
+  external release gate requiring an approved environment, credentials, and a
+  deployable branch artifact. No push, merge, or deployment was performed.

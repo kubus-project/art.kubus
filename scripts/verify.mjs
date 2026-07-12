@@ -44,6 +44,12 @@ const commands = {
       args: ['run', 'guard:architecture'],
       cwd: rootDir,
     },
+    {
+      label: 'Web QA contract tests',
+      command: commandFor('npm'),
+      args: ['run', 'qa:web:test'],
+      cwd: rootDir,
+    },
   ],
   docs: [
     {

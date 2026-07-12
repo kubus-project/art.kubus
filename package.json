@@ -34,6 +34,7 @@
     "qa:web": "npm --prefix scripts/qa run qa:web",
     "qa:web:proxy": "npm --prefix scripts/qa run qa:web:proxy",
     "qa:web:install": "npm --prefix scripts/qa ci",
+    "qa:web:test": "npm --prefix scripts/qa test",
     "sync:version": "node ./scripts/sync_versions.js",
     "sync:versions": "npm run sync:version",
     "sync:all-versions": "node ./scripts/sync_all_versions.mjs",
