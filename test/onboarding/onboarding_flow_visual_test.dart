@@ -7,6 +7,7 @@ import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/screens/onboarding/onboarding_flow_screen.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/http_client_factory.dart';
+import 'package:art_kubus/widgets/inline_loading.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -50,7 +51,7 @@ Widget _buildTestApp({
 Future<void> _pumpOnboardingReady(WidgetTester tester) async {
   for (var i = 0; i < 20; i++) {
     await tester.pump(const Duration(milliseconds: 120));
-    if (find.byType(CircularProgressIndicator).evaluate().isEmpty) return;
+    if (find.byType(InlineLoading).evaluate().isEmpty) return;
   }
 }
 

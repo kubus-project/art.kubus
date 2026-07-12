@@ -1,6 +1,3 @@
-// ignore_for_file: kubus_no_raw_progress_indicator
-// Grandfathered kubus design-token violations. Remove this header
-// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'dart:async';
 
 import 'package:art_kubus/config/config.dart';
@@ -20,6 +17,7 @@ import 'package:art_kubus/widgets/app_logo.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:art_kubus/widgets/kubus_button.dart';
 import 'package:flutter/material.dart';
+import '../../widgets/inline_loading.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -282,13 +280,7 @@ class _EmailVerificationSuccessScreenState
                         const SizedBox(height: KubusSpacing.lg),
                         ClipRRect(
                           borderRadius: BorderRadius.circular(KubusRadius.sm),
-                          child: LinearProgressIndicator(
-                            minHeight: 4,
-                            backgroundColor:
-                                scheme.onSurface.withValues(alpha: 0.12),
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(scheme.primary),
-                          ),
+                          child: InlineLoading(height: 4, borderRadius: BorderRadius.circular(2), color: scheme.primary),
                         ),
                       ],
                       if (_error != null) ...[

@@ -1,7 +1,5 @@
-// ignore_for_file: kubus_no_raw_progress_indicator
-// Grandfathered kubus design-token violations. Remove this header
-// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'package:flutter/material.dart';
+import '../../../widgets/inline_loading.dart';
 import 'package:provider/provider.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 
@@ -183,10 +181,7 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
           ],
           if (isBusy) ...[
             const SizedBox(height: KubusSpacing.sm + KubusSpacing.xxs),
-            LinearProgressIndicator(
-              minHeight: 3,
-              backgroundColor: scheme.onSurface.withValues(alpha: 0.08),
-            ),
+            InlineLoading(height: 3, borderRadius: BorderRadius.circular(2)),
           ],
         ],
       ),

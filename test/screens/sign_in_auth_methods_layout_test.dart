@@ -13,6 +13,7 @@ import 'package:art_kubus/screens/web3/wallet/connectwallet_screen.dart';
 import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'package:art_kubus/widgets/auth_methods_panel_sections.dart';
 import 'package:art_kubus/widgets/google_sign_in_button.dart';
+import 'package:art_kubus/widgets/inline_loading.dart';
 import 'package:art_kubus/widgets/kubus_auth_method_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -109,7 +110,7 @@ void main() {
       ),
       findsOneWidget,
     );
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.byType(InlineLoading), findsOneWidget);
 
     final button = tester.widget<ElevatedButton>(find.byType(ElevatedButton));
     expect(button.onPressed, isNull);

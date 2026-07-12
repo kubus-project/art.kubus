@@ -1,6 +1,3 @@
-// ignore_for_file: kubus_no_raw_progress_indicator
-// Grandfathered kubus design-token violations. Remove this header
-// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -925,12 +922,9 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                     ? SizedBox(
                         width: 18,
                         height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: user!.isFollowing
+                        child: InlineLoading(tileSize: 4, color: user!.isFollowing
                               ? Theme.of(context).colorScheme.onSurface
-                              : Colors.white,
-                        ),
+                              : Colors.white),
                       )
                     : Text(
                         user!.isFollowing
@@ -1143,7 +1137,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
               child: const SizedBox(
                   width: 24,
                   height: 24,
-                  child: CircularProgressIndicator(strokeWidth: 2)),
+                  child: InlineLoading(tileSize: 4)),
             )
           else if (_isLastPage)
             Container(

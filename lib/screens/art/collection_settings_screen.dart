@@ -1,6 +1,3 @@
-// ignore_for_file: kubus_no_raw_progress_indicator
-// Grandfathered kubus design-token violations. Remove this header
-// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'dart:async';
 import 'dart:typed_data';
 
@@ -709,10 +706,7 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen> {
                         ? SizedBox(
                             width: 16,
                             height: 16,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: scheme.onPrimary,
-                            ),
+                            child: InlineLoading(tileSize: 4, color: scheme.onPrimary),
                           )
                         : const Icon(Icons.add),
                     label: Text(l10n.collectionDetailAddArtwork),
@@ -878,10 +872,7 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen> {
                       ? SizedBox(
                           width: 16,
                           height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: scheme.onPrimary,
-                          ),
+                          child: InlineLoading(tileSize: 4, color: scheme.onPrimary),
                         )
                       : const Icon(Icons.save_outlined),
                   label: Text(canEdit

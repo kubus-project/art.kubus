@@ -1,12 +1,10 @@
-// ignore_for_file: kubus_no_raw_progress_indicator
-// Grandfathered kubus design-token violations. Remove this header
-// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'dart:async';
 
 import 'package:art_kubus/models/event.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../../widgets/inline_loading.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../utils/app_animations.dart';
 import '../../widgets/app_loading.dart';
@@ -1795,11 +1793,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                               ? SizedBox(
                                   height: 18,
                                   width: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color:
-                                        Theme.of(context).colorScheme.primary,
-                                  ),
+                                  child: InlineLoading(tileSize: 4, color: Theme.of(context).colorScheme.primary),
                                 )
                               : const Icon(Icons.upload_file),
                           label: Text(selectedModelName == null
@@ -1945,12 +1939,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                                 ? SizedBox(
                                     height: 18,
                                     width: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Theme.of(context)
+                                    child: InlineLoading(tileSize: 4, color: Theme.of(context)
                                           .colorScheme
-                                          .onPrimary,
-                                    ),
+                                          .onPrimary),
                                   )
                                 : const Icon(Icons.upload),
                             label: Text(

@@ -1,8 +1,6 @@
-// ignore_for_file: kubus_no_raw_progress_indicator
-// Grandfathered kubus design-token violations. Remove this header
-// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'inline_loading.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/user_persona.dart';
@@ -172,10 +170,7 @@ class _PersonaTile extends StatelessWidget {
                 SizedBox(
                   width: 20,
                   height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.4,
-                    color: color,
-                  ),
+                  child: InlineLoading(tileSize: 4, color: color),
                 )
               else if (selected)
                 Icon(Icons.check_circle, color: color, size: 20)

@@ -1,6 +1,3 @@
-// ignore_for_file: kubus_no_raw_progress_indicator
-// Grandfathered kubus design-token violations. Remove this header
-// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'dart:async';
 import 'dart:math' as math;
 
@@ -1310,10 +1307,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                 ? SizedBox(
                     width: 18,
                     height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: themeProvider.accentColor,
-                    ),
+                    child: InlineLoading(tileSize: 4, color: themeProvider.accentColor),
                   )
                 : Icon(
                     Icons.refresh,
@@ -2678,10 +2672,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           SizedBox(
             width: 48,
             height: 48,
-            child: CircularProgressIndicator(
-              strokeWidth: 3,
-              color: themeProvider.accentColor,
-            ),
+            child: InlineLoading(tileSize: 4, color: themeProvider.accentColor),
           ),
           const SizedBox(height: KubusSpacing.lg - KubusSpacing.xs),
           Text(
@@ -3352,10 +3343,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                       ? SizedBox(
                           width: 16,
                           height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Theme.of(context).colorScheme.onPrimary,
-                          ),
+                          child: InlineLoading(tileSize: 4, color: Theme.of(context).colorScheme.onPrimary),
                         )
                       : Text(l10n.communityRepostButtonLabel),
                 ),
@@ -5103,10 +5091,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                     ? SizedBox(
                         width: 14,
                         height: 14,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: onPrimary,
-                        ),
+                        child: InlineLoading(tileSize: 4, color: onPrimary),
                       )
                     : Text(
                         AppLocalizations.of(context)!.commonPost,
@@ -5569,7 +5554,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                       height: 260,
                       child: isLoading
                           ? const Center(
-                              child: CircularProgressIndicator(strokeWidth: 2))
+                              child: InlineLoading(tileSize: 4))
                           : results.isEmpty
                               ? Center(
                                   child: Text(
@@ -5865,10 +5850,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
         if (_isLoadingTrending)
           Center(
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              color: themeProvider.accentColor,
-            ),
+            child: InlineLoading(tileSize: 4, color: themeProvider.accentColor),
           )
         else if (_trendingError != null)
           DesktopCard(
@@ -6260,10 +6242,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
         if (_isLoadingSuggestions)
           Center(
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              color: themeProvider.accentColor,
-            ),
+            child: InlineLoading(tileSize: 4, color: themeProvider.accentColor),
           )
         else if (_suggestionsError != null)
           DesktopCard(
@@ -6467,10 +6446,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                   SizedBox(
                     width: 16,
                     height: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: themeProvider.accentColor,
-                    ),
+                    child: InlineLoading(tileSize: 4, color: themeProvider.accentColor),
                   ),
               ],
             ),
@@ -6715,10 +6691,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                       ? SizedBox(
                           width: 18,
                           height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: onPrimary,
-                          ),
+                          child: InlineLoading(tileSize: 4, color: onPrimary),
                         )
                       : Text(
                           AppLocalizations.of(context)!.commonPost,
