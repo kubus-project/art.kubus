@@ -1280,3 +1280,40 @@ unexpected request failures; both screenshots were visually inspected.
   closed, the root/backend remote audit refs stale, and no admin audit ref. The
   required publish workflow cannot proceed on this host until GitHub CLI `gh`
   is installed and authenticated; no remote refs were changed.
+
+## 2026-07-12 latest-master slice 7 integration validation
+
+- Fetched remote `master` at `8fe8039a` and merged it into the isolated audit
+  branch as `cef027ab`. The incoming slice decomposes the mobile/desktop
+  community and settings screens and restores the shared Kubus meter bar. It
+  had no path overlap with the audit branch's unique changes, merged without a
+  conflict, and did not modify the active dirty IDE checkout.
+- After a final fetch, the tested merge remained zero commits behind and eleven
+  commits ahead of `origin/master`. Both parent gitlinks remain pinned to the
+  audited backend commit `a711dbf`.
+- The sequential `verify:all` run reached the full Flutter coverage gate only
+  after toolchain, architecture, web-QA contract, docs, and strict analyzer
+  gates had passed. Its terminal result was lost when the command cell expired,
+  so no pass was inferred from partial output: the exact Flutter test, release
+  web, Android, and backend targets were rerun independently and each returned
+  exit zero.
+- The complete Flutter suite passed 1,256 tests with one skipped and regenerated
+  coverage. The release web build passed in 151 seconds. Flutter's optional Wasm
+  dry run still reports known third-party incompatibilities in
+  `flutter_secure_storage_web` and `socket_io_common`; the JavaScript release
+  artifact is unaffected.
+- Android debug and unsigned release APKs rebuilt successfully. The only build
+  warning is Flutter's forward-looking Built-in Kotlin migration notice for
+  third-party plugins, and no generated Gradle problems report remains.
+- Parent backend status and ESLint passed; the complete serial Jest matrix then
+  passed 149 suites / 906 tests in 106 seconds.
+- Deterministic Chromium smoke passed against the fresh release web artifact
+  with evidence under
+  `output/playwright/artifacts/desloppify-latest-master-web-smoke`. Desktop and
+  iPhone 13 screenshots were visually compared with the preceding known-good
+  captures and remained stable. Both viewports recorded zero console errors,
+  HTTP errors, page errors, or unexpected request failures; the only request
+  cancellation is the documented local MapLibre CSP-loader abort.
+- GitHub CLI `gh` remains unavailable on this host, so the required authenticated
+  publish workflow, remote CI, and external staging soak have not run. No remote
+  refs, deployments, or `master` branches were changed by this validation.
