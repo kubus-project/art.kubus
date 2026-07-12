@@ -59,8 +59,8 @@ jobs:
       - name: Verify pinned Node/npm and repository pins
         run: npm run verify:toolchain:node
 
-      - name: Architecture guard
-        run: npm run guard:architecture
+      - name: Architecture and web QA contract guards
+        run: npm run verify:architecture
 
       - name: Documentation guard
         run: npm run docs:doctor

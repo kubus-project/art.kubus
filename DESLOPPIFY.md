@@ -1192,7 +1192,7 @@ failures. The sole allowlisted request failure is MapLibre's cancellation of its
 alternate local CSP loader after the selected loader wins. Structured artifacts
 separate expected and unexpected failures, and host boundaries plus response
 contracts are covered by repo-local Node tests wired into
-`npm run verify:architecture`.
+`npm run verify:architecture` and the CI guardrail job.
 **Validation run:** Five web-QA contract tests passed. The real Chromium desktop
 and iPhone 13 runs passed with zero console errors, HTTP errors, page errors, or
 unexpected request failures; both screenshots were visually inspected.

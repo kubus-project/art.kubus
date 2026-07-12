@@ -33,20 +33,25 @@ npm run backend:status
 npm run verify:backend:lint
 npm run verify:backend:smoke
 npm run docs:doctor
+npm run qa:web:test
 npm run qa:web
 ```
 
-`verify:flutter:analyze` uses `flutter analyze --no-fatal-infos` so local
-verification remains stable when the analyzer reports informational diagnostics.
-Use plain `flutter analyze` when you need CI-strict behavior.
+`verify:flutter:analyze` treats analyzer warnings and informational diagnostics
+as fatal, matching CI.
 
-The root verification commands run maintained smoke suites, not every checked-in
-test. Direct full-suite runs are still useful for investigation, but they are
-not yet stable enough to be the default agent handoff gate.
+`verify:flutter` runs analysis, the complete Flutter test suite with coverage,
+and a release web build. `verify:backend` requires both backend gitlinks to be
+present and aligned, then runs canonical backend lint plus the complete serial
+Jest suite. `verify:all` adds pinned-toolchain, architecture, documentation, and
+Android debug/unsigned-release build gates.
 
 `qa:web` is a Playwright browser smoke. Install its nested dependencies once
 with `npm run qa:web:install`. It captures screenshots and diagnostics under
-`output/playwright/artifacts/`.
+`output/playwright/artifacts/`, uses deterministic API/socket stubs instead of
+contacting production, and fails on page, console, HTTP, or unexpected request
+errors. `qa:web:test` validates those stub and failure-classification contracts
+without launching a browser.
 
 `docs:doctor` checks required `AGENTS.md` files, local verification docs,
 Markdown links in the docs index, and generated-artifact hygiene.
@@ -79,8 +84,8 @@ npm run verify:backend
 `backend:status` reports whether `backend/` is available as a checked-out
 submodule, the backend HEAD, dirty state, and whether backend validation can run.
 It also reports `backend-open-art-wt` mirror configuration, HEAD, and dirty state
-so the auxiliary backend worktree cannot silently drift. CI uses the same script
-before deciding to run or explicitly skip backend checks.
+so the auxiliary backend worktree cannot silently drift. CI requires both
+gitlinks and fails when either is missing or points at a different commit.
 
 Targeted profile media and CORS checks:
 
