@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/scheduler.dart';
 
 import 'interactive_tutorial_overlay.dart';
 import 'tutorial_overlay_driver.dart';
@@ -157,6 +158,27 @@ class TutorialOverlayController extends ChangeNotifier {
   TutorialOverlayDriver? _driver;
   String? _tutorialId;
   String? _ownerRoute;
+  bool _notifyDeferred = false;
+
+  /// Screens bind/unbind drivers from build-phase hooks
+  /// (`didChangeDependencies` on the map screens). Notifying synchronously
+  /// there makes the scope's InheritedNotifier call markNeedsBuild during
+  /// build — a framework error thrown on every map boot. Defer to after the
+  /// frame when a build/layout pass is in progress.
+  @override
+  void notifyListeners() {
+    final binding = SchedulerBinding.instance;
+    if (binding.schedulerPhase == SchedulerPhase.persistentCallbacks) {
+      if (_notifyDeferred) return;
+      _notifyDeferred = true;
+      binding.addPostFrameCallback((_) {
+        _notifyDeferred = false;
+        super.notifyListeners();
+      });
+      return;
+    }
+    super.notifyListeners();
+  }
 
   TutorialOverlayDriver? get driver => _driver;
   String? get tutorialId => _tutorialId;

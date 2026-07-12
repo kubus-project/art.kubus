@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../../inline_loading.dart';
 import 'package:provider/provider.dart';
 
 import '../../../l10n/app_localizations.dart';
@@ -356,7 +357,7 @@ class _StreetArtClaimsDialogState extends State<StreetArtClaimsDialog> {
                           ? const SizedBox(
                               width: 14,
                               height: 14,
-                              child: CircularProgressIndicator(strokeWidth: 2),
+                              child: InlineLoading(tileSize: 4),
                             )
                           : const Icon(Icons.gavel_outlined),
                       label: Text(l10n.mapMarkerClaimSubmitButton),

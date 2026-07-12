@@ -19,6 +19,7 @@ import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/widgets/common/keyboard_inset_padding.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../../widgets/inline_loading.dart';
 import 'package:provider/provider.dart';
 
 class SecureAccountScreen extends StatefulWidget {
@@ -591,7 +592,7 @@ class _SecureAccountScreenState extends State<SecureAccountScreen> {
     } else if (_verificationSent) {
       body = _buildSuccessState(l10n: l10n, scheme: scheme);
     } else if (_mode == _SecureAccountMode.loading) {
-      body = const Center(child: CircularProgressIndicator());
+      body = const Center(child: InlineLoading(width: 40, height: 40));
     } else if (_mode == _SecureAccountMode.loadError) {
       body = _buildLoadErrorState(l10n: l10n, scheme: scheme);
     } else if (_mode == _SecureAccountMode.secured) {

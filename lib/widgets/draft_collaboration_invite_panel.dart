@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'inline_loading.dart';
 import 'package:provider/provider.dart';
 
 import '../l10n/app_localizations.dart';
@@ -239,7 +240,7 @@ class _DraftCollaborationInvitePanelState
                     child: SizedBox(
                       width: 18,
                       height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                      child: InlineLoading(tileSize: 4),
                     ),
                   )
                 : null,

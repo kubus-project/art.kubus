@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
+import '../../widgets/inline_loading.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/art_marker.dart';
@@ -136,7 +137,7 @@ class _ManageMarkersScreenState extends State<ManageMarkersScreen> {
 
     Widget buildList() {
       if (provider.isLoading && provider.markers.isEmpty) {
-        return const Center(child: CircularProgressIndicator());
+        return const Center(child: InlineLoading(width: 40, height: 40));
       }
 
       if (provider.error != null && provider.markers.isEmpty) {

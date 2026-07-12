@@ -1,8 +1,12 @@
+// ignore_for_file: kubus_no_raw_progress_indicator
+// Grandfathered kubus design-token violations. Remove this header
+// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../../../widgets/inline_loading.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -3102,7 +3106,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
             if (loading && comments.isEmpty)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: KubusSpacing.md),
-                child: Center(child: CircularProgressIndicator()),
+                child: Center(child: InlineLoading(width: 40, height: 40)),
               )
             else if (error != null && comments.isEmpty)
               Padding(
@@ -3732,7 +3736,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                 future: future,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
+                    return const Center(child: InlineLoading(width: 40, height: 40));
                   }
                   if (snapshot.hasError) {
                     return Center(
@@ -5425,7 +5429,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                     ? const SizedBox(
                         width: 18,
                         height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                        child: InlineLoading(tileSize: 4),
                       )
                     : Text(l10n.commonDelete),
               ),
@@ -7958,7 +7962,7 @@ class _NewConversationDialogState extends State<_NewConversationDialog> {
             const SizedBox(height: 16),
             Flexible(
               child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
+                  ? const Center(child: InlineLoading(width: 40, height: 40))
                   : _isSearching && _searchResults.isEmpty
                       ? Center(
                           child: Column(

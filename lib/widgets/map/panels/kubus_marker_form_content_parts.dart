@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
+import '../../inline_loading.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../models/art_marker.dart';
@@ -45,7 +46,7 @@ class KubusMarkerFormHeader extends StatelessWidget {
               ? const SizedBox(
                   width: 18,
                   height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+                  child: InlineLoading(tileSize: 4),
                 )
               : const Icon(Icons.refresh),
           tooltip: l10n.mapMarkerDialogRefreshSubjectsTooltip,

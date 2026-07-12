@@ -34,6 +34,15 @@ class InlineLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // When the caller supplies both dimensions the incoming constraints are
+    // irrelevant — skip the LayoutBuilder entirely. This matters under
+    // intrinsic-measuring parents (SliverFillRemaining(hasScrollBody: false),
+    // IntrinsicHeight, ...): LayoutBuilder cannot answer intrinsics and
+    // throws in debug builds.
+    if (!expand && width != null && height != null) {
+      return _buildSized(width!, height!);
+    }
+
     // Single LayoutBuilder to determine constraints and apply clipping.
     // (Previously had nested LayoutBuilders which is inefficient.)
     return LayoutBuilder(builder: (context, constraints) {
@@ -93,5 +102,30 @@ class InlineLoading extends StatelessWidget {
         child: inner,
       );
     });
+  }
+
+  /// Constraint-independent path used when both dimensions are explicit.
+  Widget _buildSized(double finalWidth, double finalHeight) {
+    final inner = SizedBox(
+      width: finalWidth,
+      height: finalHeight,
+      child: IsometricPulse(
+        color: color,
+        highlight: highlight,
+        duration: duration,
+        tileSize: tileSize,
+        animate: animate,
+        progress: progress,
+      ),
+    );
+
+    if (shape == BoxShape.circle && (finalWidth - finalHeight).abs() < 0.5) {
+      return ClipOval(child: inner);
+    }
+
+    return ClipRRect(
+      borderRadius: borderRadius ?? BorderRadius.circular(6.0),
+      child: inner,
+    );
   }
 }

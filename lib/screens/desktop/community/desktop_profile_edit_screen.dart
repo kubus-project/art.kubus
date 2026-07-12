@@ -1,4 +1,8 @@
+// ignore_for_file: kubus_no_raw_progress_indicator
+// Grandfathered kubus design-token violations. Remove this header
+// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'package:flutter/material.dart';
+import '../../../widgets/inline_loading.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
@@ -378,7 +382,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
                   const SizedBox(
                     width: KubusHeaderMetrics.actionIcon,
                     height: KubusHeaderMetrics.actionIcon,
-                    child: CircularProgressIndicator(strokeWidth: 2.5),
+                    child: InlineLoading(tileSize: 4),
                   ),
                 ]
               : <Widget>[
@@ -554,7 +558,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
                             child: SizedBox(
                               width: 50,
                               height: 50,
-                              child: CircularProgressIndicator(strokeWidth: 3),
+                              child: InlineLoading(tileSize: 4),
                             ),
                           ),
                         ),

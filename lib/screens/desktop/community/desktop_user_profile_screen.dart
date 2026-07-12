@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../../../widgets/inline_loading.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/wallet_utils.dart';
@@ -1294,7 +1295,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
             child: Container(
               height: 200,
               alignment: Alignment.center,
-              child: const CircularProgressIndicator(),
+              child: const InlineLoading(width: 40, height: 40),
             ),
           )
         else if (_artistArtworks.isEmpty)
@@ -1339,7 +1340,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
             child: Container(
               height: 180,
               alignment: Alignment.center,
-              child: const CircularProgressIndicator(),
+              child: const InlineLoading(width: 40, height: 40),
             ),
           )
         else if (_artistCollections.isEmpty)
@@ -1381,7 +1382,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
             child: Container(
               height: 200,
               alignment: Alignment.center,
-              child: const CircularProgressIndicator(),
+              child: const InlineLoading(width: 40, height: 40),
             ),
           )
         else if (_artistArtworks.isEmpty && _artistCollections.isEmpty)
@@ -1552,7 +1553,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
             child: Container(
               height: 200,
               alignment: Alignment.center,
-              child: const CircularProgressIndicator(),
+              child: const InlineLoading(width: 40, height: 40),
             ),
           )
         else if (_postsError != null)
@@ -1582,7 +1583,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                 Container(
                   padding: const EdgeInsets.all(KubusSpacing.md),
                   alignment: Alignment.center,
-                  child: const CircularProgressIndicator(),
+                  child: const InlineLoading(width: 40, height: 40),
                 )
               else if (_isLastPage)
                 Container(

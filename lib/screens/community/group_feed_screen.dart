@@ -358,7 +358,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                     ? const SizedBox(
                         width: 18,
                         height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                        child: InlineLoading(tileSize: 4),
                       )
                     : Text(l10n.commonPost),
               ),
@@ -895,7 +895,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                     ? const SizedBox(
                         width: 18,
                         height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                        child: InlineLoading(tileSize: 4),
                       )
                     : Text(l10n.commonDelete),
               ),
@@ -1219,7 +1219,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                 builder: (context, snapshot) {
                   final l10n = AppLocalizations.of(context)!;
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
+                    return const Center(child: InlineLoading(width: 40, height: 40));
                   }
                   if (snapshot.hasError) {
                     return Center(

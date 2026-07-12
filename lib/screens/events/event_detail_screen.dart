@@ -1,6 +1,10 @@
+// ignore_for_file: kubus_no_raw_progress_indicator
+// Grandfathered kubus design-token violations. Remove this header
+// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../../widgets/inline_loading.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
@@ -671,7 +675,7 @@ class _EventPoapCard extends StatelessWidget {
           child: SizedBox(
             width: 20,
             height: 20,
-            child: CircularProgressIndicator(strokeWidth: 2),
+            child: InlineLoading(tileSize: 4),
           ),
         ),
       );
@@ -821,7 +825,7 @@ class _LinkedExhibitionsSection extends StatelessWidget {
                 const SizedBox(
                   width: 16,
                   height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+                  child: InlineLoading(tileSize: 4),
                 ),
             ],
           ),

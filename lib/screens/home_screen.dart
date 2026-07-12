@@ -2152,10 +2152,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       child: SizedBox(
         width: 32,
         height: 32,
-        child: CircularProgressIndicator(
-          strokeWidth: 3,
-          valueColor: AlwaysStoppedAnimation<Color>(AppColorUtils.amberAccent),
-        ),
+        child: InlineLoading(color: AppColorUtils.amberAccent),
       ),
     );
   }
@@ -2884,7 +2881,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
           final activities = activityProvider.activities;
 
           if (activityProvider.isLoading && activities.isEmpty) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: InlineLoading(width: 40, height: 40));
           }
 
           if (activityProvider.error != null && activities.isEmpty) {

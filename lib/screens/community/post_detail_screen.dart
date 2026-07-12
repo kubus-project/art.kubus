@@ -1,8 +1,12 @@
+// ignore_for_file: kubus_no_raw_progress_indicator
+// Grandfathered kubus design-token violations. Remove this header
+// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'dart:async';
 import 'package:art_kubus/widgets/glass_components.dart';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../../widgets/inline_loading.dart';
 import '../../utils/design_tokens.dart';
 import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
@@ -425,7 +429,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                   future: future,
                   builder: (context, snapshot) {
                     if (snapshot.connectionState != ConnectionState.done) {
-                      return const Center(child: CircularProgressIndicator());
+                      return const Center(child: InlineLoading(width: 40, height: 40));
                     }
                     if (snapshot.hasError) {
                       return Center(
@@ -569,7 +573,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                   future: future,
                   builder: (context, snapshot) {
                     if (snapshot.connectionState != ConnectionState.done) {
-                      return const Center(child: CircularProgressIndicator());
+                      return const Center(child: InlineLoading(width: 40, height: 40));
                     }
                     if (snapshot.hasError) {
                       return Center(
@@ -718,7 +722,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                 future: future,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
+                    return const Center(child: InlineLoading(width: 40, height: 40));
                   }
                   if (snapshot.hasError) {
                     return Center(
@@ -1386,7 +1390,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                   ? const SizedBox(
                       width: 18,
                       height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                      child: InlineLoading(tileSize: 4),
                     )
                   : Text(l10n.commonDelete),
             ),
@@ -1675,7 +1679,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       body: SafeArea(
         bottom: false,
         child: _loading
-            ? const Center(child: CircularProgressIndicator())
+            ? const Center(child: InlineLoading(width: 40, height: 40))
             : _error != null
                 ? Center(child: Text(_error!, style: KubusTypography.inter()))
                 : SingleChildScrollView(
@@ -2194,7 +2198,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                               return const Padding(
                                 padding: EdgeInsets.symmetric(vertical: 24),
                                 child:
-                                    Center(child: CircularProgressIndicator()),
+                                    Center(child: InlineLoading(width: 40, height: 40)),
                               );
                             }
 

@@ -1,4 +1,8 @@
+// ignore_for_file: kubus_no_raw_progress_indicator
+// Grandfathered kubus design-token violations. Remove this header
+// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'package:flutter/material.dart';
+import '../inline_loading.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -528,7 +532,7 @@ class _PromotionBuilderSheetState extends State<_PromotionBuilderSheet> {
                         ? const SizedBox(
                             width: 18,
                             height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
+                            child: InlineLoading(tileSize: 4),
                           )
                         : Icon(hasPendingFiatCheckout
                             ? Icons.open_in_new
@@ -741,7 +745,7 @@ class _ScheduledPromotionTileState extends State<_ScheduledPromotionTile> {
             const SizedBox(
               width: 24,
               height: 24,
-              child: CircularProgressIndicator(strokeWidth: 2),
+              child: InlineLoading(tileSize: 4),
             ),
         ],
       ),

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../inline_loading.dart';
 import 'package:provider/provider.dart';
 
 import '../../l10n/app_localizations.dart';
@@ -95,7 +96,7 @@ class KubusNotificationsSheet extends StatelessWidget {
                   }
 
                   if (isLoading) {
-                    return const Center(child: CircularProgressIndicator());
+                    return const Center(child: InlineLoading(width: 40, height: 40));
                   }
 
                   return RefreshIndicator(

@@ -31,3 +31,9 @@ final badBlur = BackdropFilter(
 
 // expect_lint: kubus_no_inline_google_fonts
 final badFont = GoogleFonts.inter(fontSize: 12);
+
+// expect_lint: kubus_no_raw_progress_indicator
+const badSpinner = CircularProgressIndicator();
+
+// expect_lint: kubus_no_raw_progress_indicator
+const badBar = LinearProgressIndicator();

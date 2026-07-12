@@ -1,7 +1,5 @@
-// ignore_for_file: kubus_no_raw_color
-// Grandfathered kubus design-token violations. Remove this header
-// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'package:flutter/material.dart';
+import '../utils/kubus_brand_colors.dart';
 import '../l10n/app_localizations.dart';
 import 'kubus_auth_method_button.dart';
 
@@ -23,7 +21,7 @@ class GoogleSignInButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final isDark = colorScheme.brightness == Brightness.dark;
-    final baseForeground = isDark ? Colors.white : const Color(0xFF1F1F1F);
+    final baseForeground = isDark ? Colors.white : KubusBrandColors.googleInk;
 
     return KubusAuthMethodButton(
       onPressed: isLoading ? null : () async => onPressed(),
@@ -52,10 +50,10 @@ class _GoogleGlyph extends StatelessWidget {
 class _GoogleGlyphPainter extends CustomPainter {
   const _GoogleGlyphPainter();
 
-  static const _blue = Color(0xFF4285F4);
-  static const _red = Color(0xFFEA4335);
-  static const _yellow = Color(0xFFFBBC05);
-  static const _green = Color(0xFF34A853);
+  static const _blue = KubusBrandColors.googleBlue;
+  static const _red = KubusBrandColors.googleRed;
+  static const _yellow = KubusBrandColors.googleYellow;
+  static const _green = KubusBrandColors.googleGreen;
 
   @override
   void paint(Canvas canvas, Size size) {

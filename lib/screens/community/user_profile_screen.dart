@@ -1,6 +1,10 @@
+// ignore_for_file: kubus_no_raw_progress_indicator
+// Grandfathered kubus design-token violations. Remove this header
+// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../../widgets/inline_loading.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../utils/wallet_utils.dart';
 import '../../widgets/app_loading.dart';
@@ -1088,7 +1092,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           if (_postsLoading)
             Container(
               padding: const EdgeInsets.symmetric(vertical: 24),
-              child: const Center(child: CircularProgressIndicator()),
+              child: const Center(child: InlineLoading(width: 40, height: 40)),
             )
           else if (_postsError != null)
             _buildEmptyStateCard(

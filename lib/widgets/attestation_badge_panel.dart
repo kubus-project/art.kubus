@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'inline_loading.dart';
 import 'package:provider/provider.dart';
 
 import '../l10n/app_localizations.dart';
@@ -34,7 +35,7 @@ class AttestationBadgePanel extends StatelessWidget {
             child: SizedBox(
               height: 20,
               width: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
+              child: InlineLoading(tileSize: 4),
             ),
           );
         } else {

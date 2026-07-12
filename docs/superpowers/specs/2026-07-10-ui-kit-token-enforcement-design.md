@@ -69,11 +69,12 @@ No file moves (155+ importers). Instead:
 
 ### 3. Beachhead migration
 
-1. **Map controls/chips (mobile + desktop map screens):** replace ad-hoc `_glassIconButton`/`_glassChip`/`_buildGlassIconButton`/`_buildGlassChip` with canonical `KubusGlassIconButton`/`KubusGlassChip`. Marker engine untouched (Slice 3).
-2. **Onboarding + auth:** `onboarding_flow_screen.dart` (38 raw colors), `onboarding_data.dart` (29), `sign_in_screen.dart` → tokens/roles/`KubusBorders`.
-3. **Connect-wallet:** `connectwallet_screen.dart` (24 raw colors + 23 border sites) — worst single offender.
+1. **Map controls/chips:** ~~replace ad-hoc glass helpers~~ — **verified already migrated** before this slice (the 2026-02 unification audit executed this); `KubusGlassIconButton`/`KubusGlassChip` are canon. No work needed.
+2. **Onboarding + auth:** `onboarding_flow_screen.dart`, `onboarding_data.dart`, `sign_in_screen.dart` → tokens/roles/`KubusBorders`. **Done** — plus 9 white-hairline drift sites consolidated onto a new `KubusBorders.onDark` role, and `KubusColors.successOnDark` centralizes the on-dark success tone.
+3. **Connect-wallet:** `connectwallet_screen.dart` — **done**; step palettes + 8 gradient cards onto `KubusAccentGradients`, info boxes onto role accents + `accentTint`.
+4. **(Added)** `user_profile_navigation.dart` hand-rolled dialog blur → `showKubusDialog`; `kubus_button.dart` surface literals → `KubusColors.surfaceDark`.
 
-Each migrated file loses its ignore header → ratchet ticks down, proving the mechanism.
+Outcome: ratchet moved 16/9/1/3 → **12/7/0/3** (color/border/backdropfilter/fonts). `kubus_no_raw_backdropfilter` is fully clean — only the glass stack blurs.
 
 ### 4. Verification
 

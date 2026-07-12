@@ -1,4 +1,4 @@
-// ignore_for_file: kubus_no_raw_color, kubus_no_raw_border
+// ignore_for_file: kubus_no_raw_progress_indicator
 // Grandfathered kubus design-token violations. Remove this header
 // when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'package:flutter/material.dart';
@@ -556,9 +556,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.14),
                         borderRadius: BorderRadius.circular(KubusRadius.sm),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.12),
-                        ),
+                        border: KubusBorders.onDark(),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -943,7 +941,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(KubusRadius.md),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
+        border: KubusBorders.onDark(),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1094,9 +1092,10 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
             padding: EdgeInsets.symmetric(
                 horizontal: DetailSpacing.md, vertical: DetailSpacing.sm),
             decoration: BoxDecoration(
-              color: isPositive
-                  ? const Color(0xFF4ADE80).withValues(alpha: 0.1)
-                  : const Color(0xFFEF4444).withValues(alpha: 0.1),
+              color: (isPositive
+                      ? KubusColorRoles.of(context).positiveAction
+                      : KubusColorRoles.of(context).negativeAction)
+                  .withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(DetailRadius.sm),
             ),
             child: Text(
@@ -1104,8 +1103,8 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
               style: KubusTextStyles.navMetaLabel.copyWith(
                 fontWeight: FontWeight.w600,
                 color: isPositive
-                    ? const Color(0xFF4ADE80)
-                    : const Color(0xFFEF4444),
+                    ? KubusColorRoles.of(context).positiveAction
+                    : KubusColorRoles.of(context).negativeAction,
               ),
             ),
           ),

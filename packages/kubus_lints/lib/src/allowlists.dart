@@ -4,6 +4,7 @@ const rawColorAllowedSuffixes = <String>[
   'lib/utils/design_tokens.dart',
   'lib/utils/kubus_color_roles.dart',
   'lib/utils/kubus_accent_gradients.dart',
+  'lib/utils/kubus_brand_colors.dart',
   'lib/utils/app_color_utils.dart',
   'lib/utils/category_accent_color.dart',
   'lib/utils/rarity_ui.dart',
@@ -20,6 +21,14 @@ const backdropFilterAllowedSuffixes = <String>[
 /// Files allowed to call GoogleFonts directly.
 const googleFontsAllowedSuffixes = <String>[
   'lib/utils/design_tokens.dart',
+];
+
+/// Files allowed to construct raw Material progress indicators
+/// (the canonical kubus loading primitives).
+const progressIndicatorAllowedSuffixes = <String>[
+  'lib/widgets/inline_loading.dart',
+  'lib/widgets/inline_progress.dart',
+  'lib/widgets/app_loading.dart',
 ];
 
 /// Whether [path] is exempt from a rule with the given [suffixes] allowlist.

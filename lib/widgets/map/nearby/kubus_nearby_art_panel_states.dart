@@ -1,5 +1,6 @@
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
+import '../../inline_loading.dart';
 
 import '../../../utils/design_tokens.dart';
 import '../../../utils/kubus_color_roles.dart';
@@ -17,7 +18,7 @@ class KubusNearbyArtLoadingState extends StatelessWidget {
       explicitChildNodes: true,
       liveRegion: true,
       label: '${l10n.commonLoading}: ${l10n.mapNearbyArtTitle}',
-      child: const Center(child: CircularProgressIndicator()),
+      child: const Center(child: InlineLoading(width: 40, height: 40)),
     );
   }
 }

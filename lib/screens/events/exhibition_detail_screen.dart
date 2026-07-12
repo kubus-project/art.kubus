@@ -1,7 +1,11 @@
+// ignore_for_file: kubus_no_raw_progress_indicator
+// Grandfathered kubus design-token violations. Remove this header
+// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'dart:async';
 import 'dart:convert';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import '../../widgets/inline_loading.dart';
 import 'package:provider/provider.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 
@@ -1598,7 +1602,7 @@ class _ExhibitionDetailsCard extends StatelessWidget {
           child: SizedBox(
             width: 20,
             height: 20,
-            child: CircularProgressIndicator(strokeWidth: 2),
+            child: InlineLoading(tileSize: 4),
           ),
         ),
       );
@@ -1753,7 +1757,7 @@ class _ProgramSection extends StatelessWidget {
                 const SizedBox(
                   width: 16,
                   height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+                  child: InlineLoading(tileSize: 4),
                 ),
             ],
           ),
