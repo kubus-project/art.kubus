@@ -1,6 +1,3 @@
-// ignore_for_file: kubus_no_raw_progress_indicator
-// Grandfathered kubus design-token violations. Remove this header
-// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'dart:async';
 
 import 'package:art_kubus/l10n/app_localizations.dart';
@@ -313,9 +310,7 @@ class _ShareMessageSheetState extends State<ShareMessageSheet> {
                                           ? const SizedBox(
                                               width: 16,
                                               height: 16,
-                                              child: CircularProgressIndicator(
-                                                strokeWidth: 2,
-                                              ),
+                                              child: InlineLoading(tileSize: 4),
                                             )
                                           : null,
                                     ),

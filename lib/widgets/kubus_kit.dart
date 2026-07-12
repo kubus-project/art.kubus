@@ -19,7 +19,8 @@
 /// | Screen/section header | `KubusScreenHeader` |
 /// | Stat tile | `KubusStatCard` |
 /// | Empty state | `EmptyStateCard` |
-/// | Loading (inline/indeterminate/determinate) | `InlineLoading` / `InlineProgress` (never raw `CircularProgressIndicator`) |
+/// | Loading (inline/indeterminate) | `InlineLoading` / `InlineProgress` (never raw `CircularProgressIndicator`) |
+/// | Determinate meter (vote share, upload %, usage) | `KubusMeterBar` (never a raw Material progress bar) |
 /// | Toast/snackbar | `KubusSnackbar` |
 /// | Borders | `KubusBorders.*` (never raw `Border.all`) |
 /// | Contextual gradients | `KubusAccentGradients.*` (never inline colors) |
@@ -34,6 +35,7 @@ export '../utils/kubus_accent_gradients.dart';
 export '../utils/kubus_color_roles.dart';
 export 'common/kubus_badge.dart';
 export 'common/kubus_glass_chip.dart';
+export 'common/kubus_meter_bar.dart';
 export 'common/kubus_glass_icon_button.dart';
 export 'common/kubus_screen_header.dart';
 export 'common/kubus_stat_card.dart';

@@ -1,7 +1,5 @@
-// ignore_for_file: kubus_no_raw_progress_indicator
-// Grandfathered kubus design-token violations. Remove this header
-// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'package:flutter/material.dart';
+import '../inline_loading.dart';
 import 'package:provider/provider.dart';
 
 import '../../l10n/app_localizations.dart';
@@ -421,7 +419,7 @@ class KubusSearchResultsOverlay extends StatelessWidget {
                               child: const Padding(
                                 padding: EdgeInsets.all(KubusSpacing.md),
                                 child: Center(
-                                  child: CircularProgressIndicator(),
+                                  child: InlineLoading(tileSize: 4),
                                 ),
                               ),
                             );

@@ -2,7 +2,26 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-String _read(String path) => File(path).readAsStringSync();
+/// Reads a screen source together with its `<name>_parts/` part files, so
+/// source-contract scans keep working after god-file decomposition split
+/// screen libraries across parts.
+String _read(String path) {
+  final buffer = StringBuffer(File(path).readAsStringSync());
+  final base = path.substring(0, path.length - '.dart'.length);
+  final partsDir = Directory('${base}_parts');
+  if (partsDir.existsSync()) {
+    final parts = partsDir
+        .listSync()
+        .whereType<File>()
+        .where((f) => f.path.endsWith('.dart'))
+        .toList()
+      ..sort((a, b) => a.path.compareTo(b.path));
+    for (final f in parts) {
+      buffer.writeln(f.readAsStringSync());
+    }
+  }
+  return buffer.toString();
+}
 
 void main() {
   test('profile avatar and cover saves use reloadStats false in real screens',

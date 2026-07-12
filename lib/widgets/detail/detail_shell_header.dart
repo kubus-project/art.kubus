@@ -1,7 +1,5 @@
-// ignore_for_file: kubus_no_raw_progress_indicator
-// Grandfathered kubus design-token violations. Remove this header
-// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'package:flutter/material.dart';
+import '../inline_loading.dart';
 
 import '../../utils/design_tokens.dart';
 import '../../utils/media_url_resolver.dart';
@@ -213,14 +211,10 @@ class DetailHeader extends StatelessWidget {
               child: SizedBox(
                 width: 32,
                 height: 32,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: accentColor,
-                  value: loadingProgress.expectedTotalBytes != null
+                child: InlineLoading(tileSize: 4, progress: loadingProgress.expectedTotalBytes != null
                       ? loadingProgress.cumulativeBytesLoaded /
                           loadingProgress.expectedTotalBytes!
-                      : null,
-                ),
+                      : null, color: accentColor),
               ),
             ),
           ],

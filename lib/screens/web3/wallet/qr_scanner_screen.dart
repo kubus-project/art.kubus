@@ -1,6 +1,3 @@
-// ignore_for_file: kubus_no_raw_progress_indicator
-// Grandfathered kubus design-token violations. Remove this header
-// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'dart:async';
 
 import 'package:art_kubus/core/app_navigator.dart';
@@ -8,6 +5,7 @@ import 'package:art_kubus/models/qr_scan_result.dart';
 import 'package:art_kubus/providers/themeprovider.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../../../widgets/inline_loading.dart';
 import '../../../utils/design_tokens.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:art_kubus/services/share/share_deep_link_parser.dart';
@@ -230,7 +228,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          CircularProgressIndicator(color: accent),
+          InlineLoading(tileSize: 4, color: accent),
           const SizedBox(height: 16),
           Text(
             l10n.qrScannerPreparingCameraLabel,

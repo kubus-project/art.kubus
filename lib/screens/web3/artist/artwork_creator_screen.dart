@@ -1,6 +1,3 @@
-// ignore_for_file: kubus_no_raw_progress_indicator
-// Grandfathered kubus design-token violations. Remove this header
-// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'dart:async';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
@@ -9,6 +6,7 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import '../../../widgets/common/kubus_meter_bar.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:maplibre_gl/maplibre_gl.dart' as ml;
 import 'package:provider/provider.dart';
@@ -1561,11 +1559,11 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
         ],
 
         if (draft.isSubmitting) ...[
-          LinearProgressIndicator(
-            value: draft.uploadProgress.clamp(0, 1),
+          KubusMeterBar(
+            progress: draft.uploadProgress.clamp(0, 1),
             color: accent,
-            backgroundColor: accent.withValues(alpha: 0.18),
-            minHeight: 6,
+            trackColor: accent.withValues(alpha: 0.18),
+            height: 6,
             borderRadius: BorderRadius.circular(KubusRadius.xl),
           ),
           const SizedBox(height: KubusSpacing.sm),

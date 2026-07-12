@@ -1,10 +1,8 @@
-// ignore_for_file: kubus_no_raw_progress_indicator
-// Grandfathered kubus design-token violations. Remove this header
-// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'dart:async';
 
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
+import '../../../widgets/inline_loading.dart';
 import 'package:provider/provider.dart';
 
 import '../../../models/recent_activity.dart';
@@ -187,10 +185,7 @@ class DesktopNotificationsPanel extends StatelessWidget {
 
                   if (activityProvider.isLoading && activities.isEmpty) {
                     return Center(
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: themeProvider.accentColor,
-                      ),
+                      child: InlineLoading(tileSize: 4, color: themeProvider.accentColor),
                     );
                   }
 

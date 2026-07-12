@@ -1,9 +1,7 @@
-// ignore_for_file: kubus_no_raw_progress_indicator
-// Grandfathered kubus design-token violations. Remove this header
-// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'inline_loading.dart';
 
 import '../utils/media_url_resolver.dart';
 import 'common/kubus_cached_image.dart';
@@ -79,10 +77,7 @@ class DiskCachedArtworkImage extends StatelessWidget {
       placeholderBuilder: (context) {
         if (!showProgress) return const SizedBox.shrink();
         return Center(
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-            valueColor: AlwaysStoppedAnimation<Color>(scheme.primary),
-          ),
+          child: InlineLoading(tileSize: 4, color: scheme.primary),
         );
       },
       errorBuilder: (_, __, ___) => Center(

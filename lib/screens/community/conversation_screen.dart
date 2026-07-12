@@ -1,6 +1,3 @@
-// ignore_for_file: kubus_no_raw_progress_indicator
-// Grandfathered kubus design-token violations. Remove this header
-// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../utils/design_tokens.dart';
@@ -1184,7 +1181,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
           children: [
             Expanded(child: _buildMessagesList()),
             _buildMessageInput(),
-            if (_isUploading) const LinearProgressIndicator(),
+            if (_isUploading) InlineLoading(height: 4, borderRadius: BorderRadius.circular(2)),
           ],
         ),
       ),
@@ -2032,12 +2029,10 @@ class _ConversationScreenState extends State<ConversationScreen> {
                       color:
                           Theme.of(context).colorScheme.surfaceContainerHighest,
                       child: Center(
-                        child: CircularProgressIndicator(
-                          value: loadingProgress.expectedTotalBytes != null
+                        child: InlineLoading(tileSize: 4, progress: loadingProgress.expectedTotalBytes != null
                               ? loadingProgress.cumulativeBytesLoaded /
                                   loadingProgress.expectedTotalBytes!
-                              : null,
-                        ),
+                              : null),
                       ),
                     );
                   },

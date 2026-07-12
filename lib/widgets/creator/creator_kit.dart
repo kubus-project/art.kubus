@@ -1,9 +1,7 @@
-// ignore_for_file: kubus_no_raw_progress_indicator
-// Grandfathered kubus design-token violations. Remove this header
-// when migrating this file to tokens (see docs/superpowers/specs/2026-07-10-ui-kit-token-enforcement-design.md).
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import '../inline_loading.dart';
 import '../../l10n/app_localizations.dart';
 import '../../utils/app_animations.dart';
 import '../../utils/design_tokens.dart';
@@ -393,10 +391,7 @@ class CreatorFooterActions extends StatelessWidget {
                 key: const ValueKey<String>('creator_footer_primary_loading'),
                 height: 18,
                 width: 18,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(scheme.onPrimary),
-                ),
+                child: InlineLoading(tileSize: 4, color: scheme.onPrimary),
               )
             : Text(
                 primaryLabel,
