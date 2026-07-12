@@ -1233,9 +1233,9 @@ unexpected request failures; both screenshots were visually inspected.
   contract tests.
 - `npm run qa:web` passed against the release web build with artifacts directed
   to `output/playwright/artifacts/desloppify-final-web-smoke-clean`. Desktop and
-  iPhone 13
-  captures were visually inspected; artifacts contain zero console errors, HTTP
-  errors, page errors, or unexpected request failures. The one recorded request
+  iPhone 13 captures were visually inspected; artifacts contain zero console
+  errors, HTTP errors, page errors, or unexpected request failures. The recorded
+  request
   cancellation is the explicitly allowlisted local MapLibre CSP-loader abort.
 - The deterministic admin CDP fixture passed desktop/mobile and light/dark
   Chromium coverage, producing four visually inspected screenshots under
@@ -1244,4 +1244,39 @@ unexpected request failures; both screenshots were visually inspected.
   configuration; the only staging reference is an example backend URL override
   in documentation. Protected staging deployment/soak therefore remains an
   external release gate requiring an approved environment, credentials, and a
-  deployable branch artifact. No push, merge, or deployment was performed.
+  deployable branch artifact. No remote push, master merge, or deployment was
+  performed.
+
+## 2026-07-12 current-master integration validation
+
+- Fetched current remote `master` (`0aa6c071`) and merged it into the isolated
+  audit branch as `d0da7873`. The branch is now zero commits behind and nine
+  commits ahead of remote `master`; the active dirty IDE checkout was not
+  modified.
+- The only path changed on both sides was `lib/screens/map_screen.dart`. Git's
+  three-way merge completed without conflict, preserving master's shared
+  `KubusMapMarkerSyncEngine` extraction and the audit branch's
+  `SizeTransition.alignment` analyzer fix.
+- Pinned toolchain verification passed for Flutter `3.44.2`, Dart `3.12.2`, Node
+  `22.15.0`, npm `11.7.0`, Java `21`, Android SDK `36`, and Gradle `8.14.3`.
+  Architecture passed 3,240 file checks at the `778/778` log ratchet plus all
+  five web-QA contract tests; docs and version parity passed.
+- Strict Flutter analysis passed with zero issues. The complete post-merge
+  Flutter suite passed 1,253 tests with one skipped and regenerated coverage.
+- Parent backend status, ESLint, and the complete serial Jest matrix passed 149
+  suites / 906 tests. An earlier intentionally parallel local attempt caused
+  three unrelated five-second Jest timeouts under Flutter CPU contention; the
+  three suites passed 24/24 tests in 7.7 seconds when isolated, and the full
+  backend matrix then passed in 105 seconds. No timeout was weakened.
+- Release web, Android debug APK, and unsigned Android release APK builds passed.
+  The Android build reports only Flutter's upstream future Built-in Kotlin
+  migration warning for third-party plugins; no Gradle problems report remains.
+- Atomic web promotion/checksum/rollback passed. Deterministic post-merge
+  Chromium smoke passed with artifacts under
+  `output/playwright/artifacts/desloppify-post-merge-web-smoke`: desktop and
+  iPhone 13 screenshots were visually stable, with zero console, HTTP, page, or
+  unexpected request errors and the one documented MapLibre cancellation.
+- Read-only GitHub inspection found the old root audit PR #8 already merged and
+  closed, the root/backend remote audit refs stale, and no admin audit ref. The
+  required publish workflow cannot proceed on this host until GitHub CLI `gh`
+  is installed and authenticated; no remote refs were changed.
