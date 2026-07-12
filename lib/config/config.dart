@@ -572,9 +572,9 @@ class AppConfig {
 /// App version and build information
 class AppInfo {
   static const String appName = 'art.kubus';
-  static const String version = '0.6.2';
-  static const int buildNumber = 26062901;
-  static const String buildDate = '2026-06-29';
+  static const String version = '0.7.0';
+  static const int buildNumber = 26071201;
+  static const String buildDate = '2026-07-12';
 
   /// Get full version string
   static String get fullVersion => '$version+$buildNumber';
