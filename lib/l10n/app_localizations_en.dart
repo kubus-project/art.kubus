@@ -5811,8 +5811,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get connectWalletBrowserWalletChooserDescription => 'Compatible Solana extensions are preferred automatically on web. If none are available, continue with the all-wallets flow.';
 
   @override
+  String get connectWalletBrowserWalletChooserLocalDescription => 'Choose a compatible Solana wallet detected in this browser.';
+
+  @override
   String connectWalletBrowserWalletAutoPrompt(Object walletName) {
     return 'Opening $walletName in your browser. Approve the connection in the extension, or continue with the all-wallets flow instead.';
+  }
+
+  @override
+  String connectWalletBrowserWalletAutoPromptLocal(String walletName) {
+    return 'Opening $walletName in your browser. Approve the connection in the extension.';
   }
 
   @override
@@ -5822,10 +5830,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get connectWalletBrowserWalletNoWalletDescription => 'Install Phantom or another compatible Solana browser wallet, or continue with the all-wallets flow.';
 
   @override
+  String get connectWalletBrowserWalletNoWalletLocalDescription => 'Install or enable MetaMask, Phantom, or another compatible Solana browser wallet, then rescan.';
+
+  @override
   String get connectWalletBrowserWalletFallbackButton => 'Open all wallets';
 
   @override
   String get connectWalletBrowserWalletRescanButton => 'Rescan browser wallets';
+
+  @override
+  String get connectWalletReownUnavailableDescription => 'The all-wallets QR flow is not configured in this build. Use a compatible browser wallet on web, or choose another wallet setup option.';
 
   @override
   String get connectWalletWalletConnectConnectingLabel => 'Connecting…';

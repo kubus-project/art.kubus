@@ -13,7 +13,10 @@ into client applications and must never contain server credentials:
 - `KUBUS_GOOGLE_CLIENT_ID`
 - `KUBUS_GOOGLE_WEB_CLIENT_ID`
 - `KUBUS_GOOGLE_IOS_CLIENT_ID`
-- `KUBUS_WALLETCONNECT_PROJECT_ID`
+
+`KUBUS_WALLETCONNECT_PROJECT_ID` is optional. When it is absent, compatible
+injected Solana browser wallets (including Wallet Standard providers) remain
+available, while the Reown QR/mobile fallback is disabled cleanly.
 
 Pinata API and secret keys are backend-only and are rejected from client build
 configuration by CI.

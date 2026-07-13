@@ -91,6 +91,11 @@ class ApiKeys {
     defaultValue: '',
   );
 
+  static bool get hasWalletConnectProjectId {
+    final projectId = walletConnectProjectId.trim();
+    return projectId.isNotEmpty && projectId != 'YOUR_WALLETCONNECT_PROJECT_ID';
+  }
+
   // ================= Google Auth =================
   /// Web OAuth client ID used for Google Sign-In token verification.
   /// (Client IDs are not secrets, but still configurable.)

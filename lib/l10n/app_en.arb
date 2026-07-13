@@ -2544,16 +2544,27 @@
   "connectWalletWalletConnectStep3": "Return to art.kubus to finish",
   "connectWalletBrowserWalletChooserTitle": "Choose a browser wallet",
   "connectWalletBrowserWalletChooserDescription": "Compatible Solana extensions are preferred automatically on web. If none are available, continue with the all-wallets flow.",
+  "connectWalletBrowserWalletChooserLocalDescription": "Choose a compatible Solana wallet detected in this browser.",
   "connectWalletBrowserWalletAutoPrompt": "Opening {walletName} in your browser. Approve the connection in the extension, or continue with the all-wallets flow instead.",
   "@connectWalletBrowserWalletAutoPrompt": {
     "placeholders": {
       "walletName": {}
     }
   },
+  "connectWalletBrowserWalletAutoPromptLocal": "Opening {walletName} in your browser. Approve the connection in the extension.",
+  "@connectWalletBrowserWalletAutoPromptLocal": {
+    "placeholders": {
+      "walletName": {
+        "type": "String"
+      }
+    }
+  },
   "connectWalletBrowserWalletNoWalletTitle": "No compatible browser wallet detected",
   "connectWalletBrowserWalletNoWalletDescription": "Install Phantom or another compatible Solana browser wallet, or continue with the all-wallets flow.",
+  "connectWalletBrowserWalletNoWalletLocalDescription": "Install or enable MetaMask, Phantom, or another compatible Solana browser wallet, then rescan.",
   "connectWalletBrowserWalletFallbackButton": "Open all wallets",
   "connectWalletBrowserWalletRescanButton": "Rescan browser wallets",
+  "connectWalletReownUnavailableDescription": "The all-wallets QR flow is not configured in this build. Use a compatible browser wallet on web, or choose another wallet setup option.",
   "connectWalletWalletConnectConnectingLabel": "Connecting…",
   "connectWalletWalletConnectQuickConnectLabel": "Open wallet picker",
   "connectWalletWalletConnectUriHint": "External wallet session",

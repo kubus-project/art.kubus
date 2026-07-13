@@ -104,12 +104,12 @@ void main() {
     expect(find.text('Choose a browser wallet'), findsOneWidget);
     expect(find.text('Phantom'), findsOneWidget);
     expect(find.text('Solflare'), findsOneWidget);
-    expect(find.text('Open all wallets'), findsOneWidget);
+    expect(find.text('Open all wallets'), findsNothing);
     expect(find.text('Scan QR code'), findsNothing);
     expect(find.text('External wallet session'), findsNothing);
   });
 
-  testWidgets('web fallback view appears when no browser wallet is detected',
+  testWidgets('web local-wallet view appears when Reown is not configured',
       (tester) async {
     ExternalWalletSignerService.instance.replaceBrowserWalletService(
       _FakeBrowserSolanaWalletService(
@@ -121,7 +121,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('No compatible browser wallet detected'), findsOneWidget);
-    expect(find.text('Open all wallets'), findsOneWidget);
+    expect(find.text('Open all wallets'), findsNothing);
+    expect(
+      find.textContaining('Install or enable MetaMask'),
+      findsOneWidget,
+    );
     expect(find.text('Rescan browser wallets'), findsOneWidget);
     expect(find.text('Scan QR code'), findsNothing);
     expect(find.text('External wallet session'), findsNothing);

@@ -8,8 +8,8 @@ const required = [
   'KUBUS_GOOGLE_CLIENT_ID',
   'KUBUS_GOOGLE_WEB_CLIENT_ID',
   'KUBUS_GOOGLE_IOS_CLIENT_ID',
-  'KUBUS_WALLETCONNECT_PROJECT_ID',
 ];
+const optional = ['KUBUS_WALLETCONNECT_PROJECT_ID'];
 
 const missing = required.filter((name) => !(process.env[name] || '').trim());
 if (missing.length > 0) {
@@ -29,7 +29,10 @@ if (!['https:', 'http:'].includes(backendUrl.protocol)) {
   process.exit(1);
 }
 
-const values = Object.fromEntries(required.map((name) => [name, process.env[name].trim()]));
+const values = Object.fromEntries([
+  ...required.map((name) => [name, process.env[name].trim()]),
+  ...optional.map((name) => [name, (process.env[name] || '').trim()]),
+]);
 values.KUBUS_ENABLE_WEB_SEMANTICS = false;
 
 const outputPath = resolve(rootDir, '.dart_tool', 'public-build-defines.json');

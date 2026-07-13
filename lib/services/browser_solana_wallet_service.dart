@@ -60,16 +60,19 @@ enum ExternalWalletConnectRoute {
   directBrowserWallet,
   browserWalletChooser,
   reownModal,
+  unavailable,
 }
 
 class ExternalWalletConnectPlan {
   const ExternalWalletConnectPlan({
     required this.route,
     required this.browserWallets,
+    required this.reownAvailable,
   });
 
   final ExternalWalletConnectRoute route;
   final List<BrowserSolanaWalletDefinition> browserWallets;
+  final bool reownAvailable;
 
   BrowserSolanaWalletDefinition? get preferredBrowserWallet =>
       route == ExternalWalletConnectRoute.directBrowserWallet &&
@@ -81,11 +84,25 @@ class ExternalWalletConnectPlan {
 ExternalWalletConnectPlan buildExternalWalletConnectPlan({
   required bool isWeb,
   required List<BrowserSolanaWalletDefinition> browserWallets,
+  required bool reownAvailable,
 }) {
-  if (!isWeb || browserWallets.isEmpty) {
-    return const ExternalWalletConnectPlan(
-      route: ExternalWalletConnectRoute.reownModal,
+  if (!isWeb) {
+    return ExternalWalletConnectPlan(
+      route: reownAvailable
+          ? ExternalWalletConnectRoute.reownModal
+          : ExternalWalletConnectRoute.unavailable,
       browserWallets: <BrowserSolanaWalletDefinition>[],
+      reownAvailable: reownAvailable,
+    );
+  }
+
+  if (browserWallets.isEmpty) {
+    return ExternalWalletConnectPlan(
+      route: reownAvailable
+          ? ExternalWalletConnectRoute.reownModal
+          : ExternalWalletConnectRoute.unavailable,
+      browserWallets: const <BrowserSolanaWalletDefinition>[],
+      reownAvailable: reownAvailable,
     );
   }
 
@@ -95,6 +112,7 @@ ExternalWalletConnectPlan buildExternalWalletConnectPlan({
       browserWallets: List<BrowserSolanaWalletDefinition>.unmodifiable(
         browserWallets,
       ),
+      reownAvailable: reownAvailable,
     );
   }
 
@@ -103,6 +121,7 @@ ExternalWalletConnectPlan buildExternalWalletConnectPlan({
     browserWallets: List<BrowserSolanaWalletDefinition>.unmodifiable(
       browserWallets,
     ),
+    reownAvailable: reownAvailable,
   );
 }
 
