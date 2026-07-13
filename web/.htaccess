@@ -78,17 +78,19 @@
   RewriteRule ^map/?$ /en/map/%2 [R=308,L,NE,QSD]
 
   # Public HTML, sitemaps, robots and legacy aliases are rendered by the
-  # existing Node service. LiteSpeed/Apache must provide proxy rewrites for
-  # this vhost (mod_proxy + mod_proxy_http on Apache, or the equivalent
-  # LiteSpeed Web Server external-app proxy capability).
+  # existing Node service. Route through the local fixed-origin PHP gateway so
+  # shared LiteSpeed/cPanel hosting does not require a server-level External
+  # App or mod_proxy privilege. The gateway accepts only this finite surface,
+  # never forwards cookies/authentication, and preserves upstream status and
+  # cache/security headers.
   RewriteCond %{REQUEST_METHOD} ^(?:GET|HEAD)$ [NC]
-  RewriteRule ^(?:robots\.txt|sitemap\.xml|sitemaps/[^/]+\.xml)$ https://api.kubus.site%{REQUEST_URI} [P,L,NE]
+  RewriteRule ^(?:robots\.txt|sitemap\.xml|sitemaps/[^/]+\.xml)$ seo-proxy.php [L,QSA]
 
   RewriteCond %{REQUEST_METHOD} ^(?:GET|HEAD)$ [NC]
-  RewriteRule ^(?:en|sl)(?:/.*)?$ https://api.kubus.site%{REQUEST_URI} [P,L,NE]
+  RewriteRule ^(?:en|sl)(?:/.*)?$ seo-proxy.php [L,QSA]
 
   RewriteCond %{REQUEST_METHOD} ^(?:GET|HEAD)$ [NC]
-  RewriteRule ^(?:a|u|e|x|p|c|n|m|artwork|artworks|profile|profiles|user|users|post|posts|event|events|exhibition|exhibitions|collection|collections|nft|nfts|collectible|collectibles|marker|markers|art-marker|art-markers)/[^/]+/?$ https://api.kubus.site%{REQUEST_URI} [P,L,NE]
+  RewriteRule ^(?:a|u|e|x|p|c|n|m|artwork|artworks|profile|profiles|user|users|post|posts|event|events|exhibition|exhibitions|collection|collections|nft|nfts|collectible|collectibles|marker|markers|art-marker|art-markers)/[^/]+/?$ seo-proxy.php [L,QSA]
 
   # Explicit interactive-app namespace. Public landing pages link here, and
   # ShareDeepLinkParser understands both compact and localized paths after the
