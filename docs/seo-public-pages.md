@@ -7,8 +7,8 @@
 - The existing Flutter application owns `/`, `/app/*`, and the finite set of
   interactive routes listed in `web/.htaccess`.
 - The existing Express service renders localized public HTML for `/en/*`,
-  `/sl/*`, compact share aliases, robots, and sitemaps. Apache/LiteSpeed proxies
-  only that finite route surface to `api.kubus.site`.
+  `/sl/*`, compact share aliases, robots, and sitemaps. The static host routes
+  only that finite surface through `web/seo-proxy.php` to `api.kubus.site`.
 
 The renderer reads the existing PostgreSQL public models. It does not call an
 authenticated API, branch on user agent, or load Flutter, MapLibre, wallet, or
@@ -19,8 +19,11 @@ parser ignores the prefix and opens the same entity screen. Flutter then keeps
 its established compact in-app route name in browser history.
 
 This design is deployable through the current atomic static release and Node
-deployment. The web origin must have Apache `mod_proxy`/`mod_proxy_http` or the
-equivalent LiteSpeed proxy feature enabled for `RewriteRule [P]`.
+deployment on the existing LiteSpeed/cPanel host. The local PHP gateway removes
+the need for server-level `mod_proxy` or a LiteSpeed External App. It has a
+compile-time fixed HTTPS upstream, accepts only the public route allowlist,
+forwards no cookie or authorization header, rejects non-GET/HEAD methods, and
+preserves only an explicit response-header allowlist.
 
 ## Route ownership and canonicals
 
@@ -103,9 +106,9 @@ CSP and do not vary on cookies or authentication state.
 1. Deploy the backend with `FEATURE_ENABLE_SEO_PUBLIC_PAGES=true` and the public
    URL variables documented in its `.env.example`.
 2. Verify the renderer directly on the backend before promoting web routing.
-3. Ensure web-origin proxy support is enabled, then atomically deploy the Flutter
-   web artifact. The workflow smoke test checks public HTML, robots, sitemap, and
-   an unknown-path 404.
+3. Confirm PHP cURL is enabled on the web origin, then atomically deploy the
+   Flutter web artifact. The workflow smoke test checks public HTML, robots,
+   sitemap, and an unknown-path 404.
 4. Purge CDN HTML/XML entries if a release must become visible immediately.
 
 Rollback is feature-flagged: disable `FEATURE_ENABLE_SEO_PUBLIC_PAGES`, restore
@@ -143,7 +146,7 @@ keyboard links, contrast-aware colors, and reduced-motion rules. Flutter web
 semantics remains controlled by the existing opt-in build flag; SEO does not
 enable it. This preserves the current Google Sign-In DOM-overlay mitigation.
 
-The static host-to-backend proxy is an infrastructure dependency. Search engines
-and social crawlers cannot receive distinct HTML until that proxy feature and
-the backend environment values are active together. Entity translations are
-limited to fields already stored by the product.
+The web origin requires its standard PHP cURL extension. Renderer availability
+still depends on the Oracle API origin; gateway connection failures return a
+non-cacheable, non-indexable 503. Entity translations are limited to fields
+already stored by the product.

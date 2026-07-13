@@ -125,12 +125,23 @@ test('Flutter index positions art.kubus as an open art map', () => {
 
 test('web routing reserves public HTML, interactive app and real 404 surfaces', () => {
   const htaccess = readFileSync(resolve(repoRoot, 'web', '.htaccess'), 'utf8');
+  const gateway = readFileSync(resolve(repoRoot, 'web', 'seo-proxy.php'), 'utf8');
   const notFound = readFileSync(resolve(repoRoot, 'web', '404.html'), 'utf8');
 
-  assert.match(htaccess, /api\.kubus\.site%\{REQUEST_URI\} \[P,L,NE\]/);
+  assert.match(htaccess, /seo-proxy\.php \[L,QSA\]/);
+  assert.doesNotMatch(htaccess, /\[P,L,NE\]/);
   assert.match(htaccess, /\^app\(\?:\/\.\*\)\?\$ index\.html/);
   assert.match(htaccess, /Unknown paths are real 404s/);
   assert.match(htaccess, /RewriteRule \^ - \[R=404,L\]/);
+  assert.match(gateway, /const KUBUS_SEO_UPSTREAM_ORIGIN = 'https:\/\/api\.kubus\.site'/);
+  assert.match(gateway, /\$method !== 'GET' && \$method !== 'HEAD'/);
+  assert.match(gateway, /CURLOPT_FOLLOWLOCATION => false/);
+  assert.match(gateway, /CURLOPT_PROTOCOLS/);
+  assert.match(gateway, /X-Robots-Tag: noindex, follow/);
+  assert.match(gateway, /Cache-Control: no-store, max-age=0/);
+  assert.match(gateway, /if \(\$status >= 400\)/);
+  assert.doesNotMatch(gateway, /HTTP_(?:AUTHORIZATION|COOKIE)/);
+  assert.doesNotMatch(gateway, /getenv\s*\(/);
   assert.match(notFound, /<meta name="robots" content="noindex, follow">/);
   assert.match(notFound, /href="\/en\/artworks"/);
 });
