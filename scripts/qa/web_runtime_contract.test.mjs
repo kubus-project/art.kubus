@@ -1,10 +1,15 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 import {
   buildStableApiStub,
   isExpectedRequestFailure,
 } from './web_runtime_contract.mjs';
+
+const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
 function jsonBody(response) {
   return JSON.parse(response.body);
@@ -67,4 +72,20 @@ test('API stubs reject hosts outside the explicit QA boundary', () => {
     () => buildStableApiStub('https://example.com/api/artworks'),
     /Unsupported QA API host/,
   );
+});
+
+test('immutable web artifact preserves files covered by its checksum manifest', () => {
+  const workflow = readFileSync(
+    resolve(repoRoot, '.github', 'workflows', 'ci.yml'),
+    'utf8',
+  );
+  const stepStart = workflow.indexOf('- name: Upload immutable web bundle');
+  assert.notEqual(stepStart, -1, 'CI must upload the immutable web bundle');
+
+  const nextStep = workflow.indexOf('\n      - name:', stepStart + 1);
+  const uploadStep = workflow.slice(
+    stepStart,
+    nextStep === -1 ? workflow.length : nextStep,
+  );
+  assert.match(uploadStep, /\binclude-hidden-files:\s*true\b/);
 });
