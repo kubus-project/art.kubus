@@ -257,6 +257,7 @@ jobs:
     timeout-minutes: 45
     env:
       GRADLE_USER_HOME: ${{ github.workspace }}/.gradle
+      GRADLE_OPTS: -Dorg.gradle.workers.max=1
     steps:
       - name: Checkout root and both backend gitlinks
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
