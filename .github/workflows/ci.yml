@@ -186,6 +186,7 @@ jobs:
         with:
           name: flutter-web-${{ github.sha }}
           path: build/web
+          include-hidden-files: true
           if-no-files-found: error
           retention-days: 14
 
