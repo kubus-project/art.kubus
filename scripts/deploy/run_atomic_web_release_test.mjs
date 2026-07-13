@@ -3,7 +3,10 @@ import { resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 
 const rootDir = resolve(import.meta.dirname, '..', '..');
-const testScript = resolve(import.meta.dirname, 'test_atomic_web_release.sh');
+const testScripts = [
+  'test_bootstrap_atomic_web_root.sh',
+  'test_atomic_web_release.sh',
+].map((script) => resolve(import.meta.dirname, script));
 const candidates = process.platform === 'win32'
   ? [
       process.env.BASH_BIN,
@@ -20,19 +23,21 @@ if (!bash) {
   process.exit(1);
 }
 
-const result = spawnSync(bash, [testScript], {
-  cwd: rootDir,
-  encoding: 'utf8',
-  env: {
-    ...process.env,
-    ...(process.platform === 'win32' ? { MSYS: 'winsymlinks:nativestrict' } : {}),
-  },
-  stdio: 'inherit',
-  shell: false,
-});
+for (const testScript of testScripts) {
+  const result = spawnSync(bash, [testScript], {
+    cwd: rootDir,
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      ...(process.platform === 'win32' ? { MSYS: 'winsymlinks:nativestrict' } : {}),
+    },
+    stdio: 'inherit',
+    shell: false,
+  });
 
-if (result.error) {
-  console.error(result.error.message);
-  process.exit(1);
+  if (result.error) {
+    console.error(result.error.message);
+    process.exit(1);
+  }
+  if (result.status !== 0) process.exit(result.status ?? 1);
 }
-process.exit(result.status ?? 1);
