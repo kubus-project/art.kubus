@@ -5,6 +5,11 @@ import { fileURLToPath } from 'node:url';
 
 import { chromium, devices } from 'playwright';
 
+import {
+  buildStableApiStub,
+  isExpectedRequestFailure,
+} from './web_runtime_contract.mjs';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '../..');
@@ -78,6 +83,28 @@ async function stopProxy(child) {
 }
 
 async function installStableNetworkStubs(page) {
+  await page.routeWebSocket(
+    /^wss:\/\/api\.kubus\.site\/socket\.io\//,
+    (webSocket) => {
+      webSocket.onMessage((message) => {
+        const text = message.toString();
+        if (text === '2') {
+          webSocket.send('3');
+        } else if (text.startsWith('40')) {
+          webSocket.send('40{"sid":"qa-socket"}');
+        }
+      });
+      webSocket.send(
+        '0{"sid":"qa-engine","upgrades":[],"pingInterval":25000,"pingTimeout":20000,"maxPayload":1000000}',
+      );
+    },
+  );
+
+  await page.route(/^https:\/\/(?:api|bapi)\.kubus\.site\//, async (route) => {
+    const request = route.request();
+    await route.fulfill(buildStableApiStub(request.url(), request.method()));
+  });
+
   await page.route('https://accounts.google.com/gsi/client**', async (route) => {
     await route.fulfill({
       status: 200,
@@ -125,6 +152,7 @@ async function captureRuntime(contextOptions, name) {
   const context = await browser.newContext(contextOptions);
   const page = await context.newPage();
   const consoleEntries = [];
+  const httpErrors = [];
   const pageErrors = [];
   const requestFailures = [];
 
@@ -133,6 +161,11 @@ async function captureRuntime(contextOptions, name) {
   });
   page.on('pageerror', (error) => {
     pageErrors.push(error.stack || error.message);
+  });
+  page.on('response', (response) => {
+    if (response.status() >= 400) {
+      httpErrors.push(`${response.status()} ${response.request().method()} ${response.url()}`);
+    }
   });
   page.on('requestfailed', (request) => {
     requestFailures.push(
@@ -186,14 +219,26 @@ async function captureRuntime(contextOptions, name) {
     };
   });
 
+  const consoleErrors = consoleEntries.filter((entry) =>
+    entry.startsWith('[error]'),
+  );
+  const expectedRequestFailures = requestFailures.filter(isExpectedRequestFailure);
+  const unexpectedRequestFailures = requestFailures.filter(
+    (entry) => !isExpectedRequestFailure(entry),
+  );
+
   await fs.writeFile(
     path.join(artifactDir, `${name}.json`),
     JSON.stringify(
       {
         state,
         consoleEntries,
+        consoleErrors,
+        httpErrors,
         pageErrors,
         requestFailures,
+        expectedRequestFailures,
+        unexpectedRequestFailures,
         screenshotPath,
       },
       null,
@@ -212,6 +257,17 @@ async function captureRuntime(contextOptions, name) {
   }
   if (pageErrors.length > 0) {
     throw new Error(`${name}: page errors found: ${pageErrors.join(' | ')}`);
+  }
+  if (consoleErrors.length > 0) {
+    throw new Error(`${name}: console errors found: ${consoleErrors.join(' | ')}`);
+  }
+  if (httpErrors.length > 0) {
+    throw new Error(`${name}: HTTP errors found: ${httpErrors.join(' | ')}`);
+  }
+  if (unexpectedRequestFailures.length > 0) {
+    throw new Error(
+      `${name}: request failures found: ${unexpectedRequestFailures.join(' | ')}`,
+    );
   }
 }
 

@@ -2497,16 +2497,27 @@
   "connectWalletWalletConnectStep3": "Vrni se v art.kubus za zaključek",
   "connectWalletBrowserWalletChooserTitle": "Izberi brskalniško denarnico",
   "connectWalletBrowserWalletChooserDescription": "Na spletu imajo združljive Solana razširitve prednost. Če jih ni, nadaljuj s tokom za vse denarnice.",
+  "connectWalletBrowserWalletChooserLocalDescription": "Izberi združljivo denarnico Solana, zaznano v tem brskalniku.",
   "connectWalletBrowserWalletAutoPrompt": "Odpiram {walletName} v tvojem brskalniku. Potrdi povezavo v razširitvi ali pa nadaljuj s tokom za vse denarnice.",
   "@connectWalletBrowserWalletAutoPrompt": {
     "placeholders": {
       "walletName": {}
     }
   },
+  "connectWalletBrowserWalletAutoPromptLocal": "Odpiram {walletName} v tvojem brskalniku. Potrdi povezavo v razširitvi.",
+  "@connectWalletBrowserWalletAutoPromptLocal": {
+    "placeholders": {
+      "walletName": {
+        "type": "String"
+      }
+    }
+  },
   "connectWalletBrowserWalletNoWalletTitle": "Združljiva brskalniška denarnica ni zaznana",
   "connectWalletBrowserWalletNoWalletDescription": "Namesti Phantom ali drugo združljivo Solana brskalniško denarnico ali pa nadaljuj s tokom za vse denarnice.",
+  "connectWalletBrowserWalletNoWalletLocalDescription": "Namesti ali omogoči MetaMask, Phantom ali drugo združljivo brskalniško denarnico Solana in nato ponovno zaženi iskanje.",
   "connectWalletBrowserWalletFallbackButton": "Odpri vse denarnice",
   "connectWalletBrowserWalletRescanButton": "Ponovno preišči brskalnik",
+  "connectWalletReownUnavailableDescription": "Tok QR za vse denarnice v tej različici ni konfiguriran. V spletu uporabi združljivo brskalniško denarnico ali izberi drugo možnost nastavitve denarnice.",
   "connectWalletWalletConnectConnectingLabel": "Povezujem…",
   "connectWalletWalletConnectQuickConnectLabel": "Odpri izbor denarnice",
   "connectWalletWalletConnectUriHint": "Seja zunanje denarnice",

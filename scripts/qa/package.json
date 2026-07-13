@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "qa:web": "node ./web_runtime_smoke.mjs",
-    "qa:web:proxy": "node ./dev_spa_proxy.mjs"
+    "qa:web:proxy": "node ./dev_spa_proxy.mjs",
+    "test": "node --test ./web_runtime_contract.test.mjs"
   },
   "dependencies": {
     "playwright": "^1.58.2"

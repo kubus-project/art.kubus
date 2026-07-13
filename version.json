@@ -1,10 +1,15 @@
 {
-  "version": "0.6.2",
-  "buildNumber": "260629.01",
-  "buildDate": "2026-06-29",
+  "version": "0.7.0",
+  "buildNumber": "260712.01",
+  "buildDate": "2026-07-12",
   "channel": "alpha",
   "ecosystem": "art.kubus",
   "targets": {
+    "frontend": {
+      "repo": "art.kubus",
+      "path": ".",
+      "kind": "flutter"
+    },
     "backend": {
       "repo": "art.kubus-backend",
       "path": "./backend",

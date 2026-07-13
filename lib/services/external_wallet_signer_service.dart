@@ -153,18 +153,28 @@ class ExternalWalletSignerService {
     BuildContext context,
   ) async {
     if (!kIsWeb) {
-      await initialize(context);
       return buildExternalWalletConnectPlan(
         isWeb: false,
         browserWallets: const <BrowserSolanaWalletDefinition>[],
+        reownAvailable: ApiKeys.hasWalletConnectProjectId,
       );
     }
 
-    final browserWallets =
-        await _browserWalletService.discoverCompatibleWallets();
+    final reownAvailable = ApiKeys.hasWalletConnectProjectId;
+    List<BrowserSolanaWalletDefinition> browserWallets;
+    try {
+      browserWallets = await _browserWalletService.discoverCompatibleWallets();
+    } catch (error) {
+      _log(
+        'browser wallet discovery failed: $error; '
+        '${reownAvailable ? 'using Reown fallback' : 'no fallback available'}',
+      );
+      browserWallets = const <BrowserSolanaWalletDefinition>[];
+    }
     final plan = buildExternalWalletConnectPlan(
       isWeb: true,
       browserWallets: browserWallets,
+      reownAvailable: reownAvailable,
     );
     _log(
       'prepared web connection plan ${plan.route.name} '
@@ -189,6 +199,7 @@ class ExternalWalletSignerService {
             chainId: _solanaChainId(),
           );
         } catch (error) {
+          if (!plan.reownAvailable) rethrow;
           _log(
             'browser wallet $selectedWalletId failed: $error; '
             'falling back to Reown modal',
@@ -202,6 +213,9 @@ class ExternalWalletSignerService {
 
     if (!context.mounted) {
       throw StateError('External wallet context is no longer mounted.');
+    }
+    if (!ApiKeys.hasWalletConnectProjectId) {
+      throw StateError('The Reown wallet fallback is not configured.');
     }
     await initialize(context);
     final connector = _modalConnector;

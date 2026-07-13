@@ -207,7 +207,8 @@ void main() {
     // Mid-transaction: wallet exists locally, but nothing may claim success
     // yet and no wallet-auth flow may have started.
     expect(bindStarted.isCompleted, isTrue);
-    expect(find.textContaining('Linking wallet to your account'), findsOneWidget);
+    expect(
+        find.textContaining('Linking wallet to your account'), findsOneWidget);
     expect(find.text('Wallet linked to this account.'), findsNothing);
     expect(harness.linkedWallets, isEmpty);
     expect(tokenAtBindTime, kOriginalToken);
@@ -377,5 +378,25 @@ void main() {
       find.textContaining('Your account session could not be confirmed'),
       findsOneWidget,
     );
+  });
+
+  testWidgets('native onboarding hides external connect without Reown',
+      (tester) async {
+    await _pumpStep(
+      tester,
+      linkService: AccountWalletLinkService(
+        bindWallet: (wallet, {signature}) async =>
+            fail('bind must not run while inspecting wallet options'),
+        fetchMyProfile: () async =>
+            fail('verification must not run while inspecting wallet options'),
+      ),
+    );
+
+    await tester.tap(find.text('I already have a wallet'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('Import wallet'), findsOneWidget);
+    expect(find.text('Connect wallet'), findsNothing);
   });
 }

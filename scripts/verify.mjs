@@ -29,11 +29,25 @@ function commandFor(name) {
 const flutter = resolveFlutterCommand();
 
 const commands = {
+  toolchain: [
+    {
+      label: 'Pinned toolchain',
+      command: commandFor('node'),
+      args: ['scripts/verify_toolchain.mjs', 'all'],
+      cwd: rootDir,
+    },
+  ],
   architecture: [
     {
       label: 'Architecture guard',
       command: commandFor('npm'),
       args: ['run', 'guard:architecture'],
+      cwd: rootDir,
+    },
+    {
+      label: 'Web QA contract tests',
+      command: commandFor('npm'),
+      args: ['run', 'qa:web:test'],
       cwd: rootDir,
     },
   ],
@@ -49,7 +63,43 @@ const commands = {
     {
       label: 'Flutter analyze',
       command: flutter,
-      args: ['analyze', '--no-fatal-infos'],
+      args: ['analyze', '--fatal-infos', '--fatal-warnings'],
+      cwd: rootDir,
+    },
+  ],
+  'flutter:test': [
+    {
+      label: 'Full Flutter test suite',
+      command: flutter,
+      args: ['test', '--coverage'],
+      cwd: rootDir,
+    },
+  ],
+  'flutter:web': [
+    {
+      label: 'Flutter release web build',
+      command: flutter,
+      args: ['build', 'web', '--release'],
+      cwd: rootDir,
+    },
+  ],
+  'flutter:android': [
+    {
+      label: 'Clear generated Android problems report',
+      command: commandFor('node'),
+      args: ['scripts/clear_generated_android_reports.mjs'],
+      cwd: rootDir,
+    },
+    {
+      label: 'Flutter Android debug build',
+      command: flutter,
+      args: ['build', 'apk', '--debug'],
+      cwd: rootDir,
+    },
+    {
+      label: 'Flutter Android unsigned release build',
+      command: flutter,
+      args: ['build', 'apk', '--release'],
       cwd: rootDir,
     },
   ],
@@ -98,21 +148,33 @@ const commands = {
       env: { NODE_ENV: 'test' },
     },
   ],
+  'backend:test': [
+    {
+      label: 'Backend full serial test suite',
+      command: commandFor('npm'),
+      args: ['run', 'test:ci'],
+      cwd: backendDir,
+      env: { NODE_ENV: 'test' },
+    },
+  ],
 };
 
 commands.flutter = [
   ...commands['flutter:analyze'],
-  ...commands['flutter:smoke'],
+  ...commands['flutter:test'],
+  ...commands['flutter:web'],
 ];
 commands.backend = [
   ...commands['backend:status'],
   ...commands['backend:lint'],
-  ...commands['backend:smoke'],
+  ...commands['backend:test'],
 ];
 commands.all = [
+  ...commands.toolchain,
   ...commands.architecture,
   ...commands.docs,
   ...commands.flutter,
+  ...commands['flutter:android'],
   ...commands.backend,
 ];
 

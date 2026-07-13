@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../../widgets/inline_loading.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
+import '../../../config/api_keys.dart';
 import '../../../services/event_bus.dart';
 import '../../../providers/chat_provider.dart';
 import '../../../providers/wallet_provider.dart';
@@ -1088,6 +1089,8 @@ class _ConnectWalletState extends State<ConnectWallet>
     final browserWallets =
         plan?.browserWallets ?? const <BrowserSolanaWalletDefinition>[];
     final preferredWallet = plan?.preferredBrowserWallet;
+    final reownAvailable =
+        plan?.reownAvailable ?? ApiKeys.hasWalletConnectProjectId;
 
     if (_externalWalletPlanLoading && plan == null) {
       return Column(
@@ -1140,7 +1143,13 @@ class _ConnectWalletState extends State<ConnectWallet>
             color: scheme.primary,
             icon: Icons.extension_rounded,
             child: Text(
-              l10n.connectWalletBrowserWalletAutoPrompt(preferredWallet.name),
+              reownAvailable
+                  ? l10n.connectWalletBrowserWalletAutoPrompt(
+                      preferredWallet.name,
+                    )
+                  : l10n.connectWalletBrowserWalletAutoPromptLocal(
+                      preferredWallet.name,
+                    ),
               style: KubusTypography.textTheme.bodySmall?.copyWith(
                     color: scheme.onSurface.withValues(alpha: 0.76),
                     height: 1.35,
@@ -1166,14 +1175,16 @@ class _ConnectWalletState extends State<ConnectWallet>
             isLoading: _isLoading,
             isFullWidth: true,
           ),
-          const SizedBox(height: KubusSpacing.xs),
-          _buildExternalWalletSecondaryButton(
-            label: l10n.connectWalletBrowserWalletFallbackButton,
-            onPressed: _isLoading
-                ? null
-                : () => _connectExternalWallet(preferBrowserWallet: false),
-            isFullWidth: true,
-          ),
+          if (reownAvailable) ...[
+            const SizedBox(height: KubusSpacing.xs),
+            _buildExternalWalletSecondaryButton(
+              label: l10n.connectWalletBrowserWalletFallbackButton,
+              onPressed: _isLoading
+                  ? null
+                  : () => _connectExternalWallet(preferBrowserWallet: false),
+              isFullWidth: true,
+            ),
+          ],
         ],
       );
     }
@@ -1202,7 +1213,9 @@ class _ConnectWalletState extends State<ConnectWallet>
                 ),
                 const SizedBox(height: KubusSpacing.xxs),
                 Text(
-                  l10n.connectWalletBrowserWalletChooserDescription,
+                  reownAvailable
+                      ? l10n.connectWalletBrowserWalletChooserDescription
+                      : l10n.connectWalletBrowserWalletChooserLocalDescription,
                   style: KubusTypography.textTheme.bodySmall?.copyWith(
                         color: scheme.onSurface.withValues(alpha: 0.72),
                         height: 1.35,
@@ -1230,14 +1243,15 @@ class _ConnectWalletState extends State<ConnectWallet>
             ),
             const SizedBox(height: KubusSpacing.xs),
           ],
-          _buildExternalWalletPrimaryButton(
-            label: l10n.connectWalletBrowserWalletFallbackButton,
-            onPressed: _isLoading
-                ? null
-                : () => _connectExternalWallet(preferBrowserWallet: false),
-            isLoading: _isLoading,
-            isFullWidth: true,
-          ),
+          if (reownAvailable)
+            _buildExternalWalletPrimaryButton(
+              label: l10n.connectWalletBrowserWalletFallbackButton,
+              onPressed: _isLoading
+                  ? null
+                  : () => _connectExternalWallet(preferBrowserWallet: false),
+              isLoading: _isLoading,
+              isFullWidth: true,
+            ),
         ],
       );
     }
@@ -1265,7 +1279,9 @@ class _ConnectWalletState extends State<ConnectWallet>
               ),
               const SizedBox(height: KubusSpacing.xxs),
               Text(
-                l10n.connectWalletBrowserWalletNoWalletDescription,
+                reownAvailable
+                    ? l10n.connectWalletBrowserWalletNoWalletDescription
+                    : l10n.connectWalletBrowserWalletNoWalletLocalDescription,
                 style: KubusTypography.textTheme.bodySmall?.copyWith(
                       color: scheme.onSurface.withValues(alpha: 0.72),
                       height: 1.35,
@@ -1279,17 +1295,19 @@ class _ConnectWalletState extends State<ConnectWallet>
             ],
           ),
         ),
-        const SizedBox(height: KubusSpacing.sm),
-        _buildExternalWalletInstructionList(),
-        const SizedBox(height: KubusSpacing.md),
-        _buildExternalWalletPrimaryButton(
-          label: l10n.connectWalletBrowserWalletFallbackButton,
-          onPressed: _isLoading
-              ? null
-              : () => _connectExternalWallet(preferBrowserWallet: false),
-          isLoading: _isLoading,
-          isFullWidth: true,
-        ),
+        if (reownAvailable) ...[
+          const SizedBox(height: KubusSpacing.sm),
+          _buildExternalWalletInstructionList(),
+          const SizedBox(height: KubusSpacing.md),
+          _buildExternalWalletPrimaryButton(
+            label: l10n.connectWalletBrowserWalletFallbackButton,
+            onPressed: _isLoading
+                ? null
+                : () => _connectExternalWallet(preferBrowserWallet: false),
+            isLoading: _isLoading,
+            isFullWidth: true,
+          ),
+        ],
         const SizedBox(height: KubusSpacing.xs),
         _buildExternalWalletSecondaryButton(
           label: l10n.connectWalletBrowserWalletRescanButton,
@@ -1303,6 +1321,31 @@ class _ConnectWalletState extends State<ConnectWallet>
 
   Widget _buildNativeExternalWalletBody() {
     final l10n = AppLocalizations.of(context)!;
+
+    if (!ApiKeys.hasWalletConnectProjectId) {
+      return _buildExternalWalletInfoCard(
+        color: Theme.of(context).colorScheme.tertiary,
+        icon: Icons.info_outline_rounded,
+        child: Text(
+          l10n.connectWalletReownUnavailableDescription,
+          style: KubusTypography.textTheme.bodySmall?.copyWith(
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.76),
+                height: 1.35,
+              ) ??
+              KubusTypography.inter(
+                fontSize: KubusSizes.badgeCountFontSize,
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.76),
+                height: 1.35,
+              ),
+        ),
+      );
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,

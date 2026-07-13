@@ -56,53 +56,51 @@ class SocketService {
     _log('$eventName -> msg=$messageId, wallet=$wallet, conv=$conversationId');
   }
 
-  void _addToListeners<T>(List<T> list, T cb, String name) {
+  void _addToListeners<T>(List<T> list, T cb) {
     if (!list.contains(cb)) list.add(cb);
-    _log('$name: total=${list.length}');
   }
 
-  void _removeFromListeners<T>(List<T> list, T cb, String name) {
+  void _removeFromListeners<T>(List<T> list, T cb) {
     list.remove(cb);
-    _log('$name: total=${list.length}');
   }
 
   /// Add a listener for incoming notifications. Multiple listeners are supported.
   void addNotificationListener(NotificationCallback cb) =>
-      _addToListeners(_notificationListeners, cb, 'addNotificationListener');
+      _addToListeners(_notificationListeners, cb);
 
   /// Remove a previously added listener.
   void removeNotificationListener(NotificationCallback cb) =>
-      _removeFromListeners(_notificationListeners, cb, 'removeNotificationListener');
+      _removeFromListeners(_notificationListeners, cb);
 
   void addCollabListener(NotificationCallback cb) =>
-      _addToListeners(_collabListeners, cb, 'addCollabListener');
+      _addToListeners(_collabListeners, cb);
 
   void removeCollabListener(NotificationCallback cb) =>
-      _removeFromListeners(_collabListeners, cb, 'removeCollabListener');
+      _removeFromListeners(_collabListeners, cb);
 
   void addMessageListener(NotificationCallback cb) =>
-      _addToListeners(_messageListeners, cb, 'addMessageListener');
+      _addToListeners(_messageListeners, cb);
 
   void addMessageReadListener(NotificationCallback cb) =>
-      _addToListeners(_messageReadListeners, cb, 'addMessageReadListener');
+      _addToListeners(_messageReadListeners, cb);
 
   void removeMessageListener(NotificationCallback cb) =>
-      _removeFromListeners(_messageListeners, cb, 'removeMessageListener');
+      _removeFromListeners(_messageListeners, cb);
 
   void removeMessageReadListener(NotificationCallback cb) =>
-      _removeFromListeners(_messageReadListeners, cb, 'removeMessageReadListener');
+      _removeFromListeners(_messageReadListeners, cb);
 
   void addConversationListener(NotificationCallback cb) =>
-      _addToListeners(_conversationListeners, cb, 'addConversationListener');
+      _addToListeners(_conversationListeners, cb);
 
   void removeConversationListener(NotificationCallback cb) =>
-      _removeFromListeners(_conversationListeners, cb, 'removeConversationListener');
+      _removeFromListeners(_conversationListeners, cb);
 
   void addMessageReactionListener(NotificationCallback cb) =>
-      _addToListeners(_messageReactionListeners, cb, 'addMessageReactionListener');
+      _addToListeners(_messageReactionListeners, cb);
 
   void removeMessageReactionListener(NotificationCallback cb) =>
-      _removeFromListeners(_messageReactionListeners, cb, 'removeMessageReactionListener');
+      _removeFromListeners(_messageReactionListeners, cb);
 
   /// Connects socket to backend. If `baseUrl` is null uses `BackendApiService().baseUrl`.
   /// Returns true when connected, false on error/timeout.
@@ -238,16 +236,16 @@ class SocketService {
   Stream<Map<String, dynamic>> get onMarkerCreated => _markerController.stream;
 
   void addPostListener(NotificationCallback cb) =>
-      _addToListeners(_postListeners, cb, 'addPostListener');
+      _addToListeners(_postListeners, cb);
 
   void removePostListener(NotificationCallback cb) =>
-      _removeFromListeners(_postListeners, cb, 'removePostListener');
+      _removeFromListeners(_postListeners, cb);
 
   void addMarkerListener(NotificationCallback cb) =>
-      _addToListeners(_markerListeners, cb, 'addMarkerListener');
+      _addToListeners(_markerListeners, cb);
 
   void removeMarkerListener(NotificationCallback cb) =>
-      _removeFromListeners(_markerListeners, cb, 'removeMarkerListener');
+      _removeFromListeners(_markerListeners, cb);
 
   /// Connects and attempts to subscribe, resolving when subscription is confirmed or rejects on timeout/error
   Future<bool> connectAndSubscribe(String baseUrl, String walletAddress, {Duration timeout = const Duration(seconds: 6)}) async {
@@ -262,10 +260,10 @@ class SocketService {
   }
 
   void addConnectListener(VoidCallback cb) =>
-      _addToListeners(_connectListeners, cb, 'addConnectListener');
+      _addToListeners(_connectListeners, cb);
 
   void removeConnectListener(VoidCallback cb) =>
-      _removeFromListeners(_connectListeners, cb, 'removeConnectListener');
+      _removeFromListeners(_connectListeners, cb);
 
   /// Subscribe to personal user room. Requires server validation with JWT.
   /// Will auto-connect if needed and avoid duplicate subscriptions.

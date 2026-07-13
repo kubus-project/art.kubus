@@ -1,5 +1,5 @@
-group 'com.difrancescogianmarco.arcore_flutter_plugin'
-version '1.0-SNAPSHOT'
+group = 'com.difrancescogianmarco.arcore_flutter_plugin'
+version = '1.0-SNAPSHOT'
 
 rootProject.allprojects {
     repositories {
@@ -11,25 +11,25 @@ rootProject.allprojects {
 apply plugin: 'com.android.library'
 
 android {
-    namespace 'com.difrancescogianmarco.arcore_flutter_plugin'
-    compileSdkVersion 35
+    namespace = 'com.difrancescogianmarco.arcore_flutter_plugin'
+    compileSdk = 36
 
     sourceSets {
         main.java.srcDirs += 'src/main/kotlin'
     }
     defaultConfig {
-        minSdkVersion 24
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        minSdk = 24
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     // Sceneform libraries use language constructs from Java 8.
     // Add these compile options if targeting minSdkVersion < 26.
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_21
-        targetCompatibility JavaVersion.VERSION_21
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
 
-    lintOptions {
+    lint {
         textReport = true
     }
 }
@@ -64,14 +64,11 @@ afterEvaluate {
         }
     }
     if (!containsEmbeddingDependencies) {
-        android {
-    namespace 'com.difrancescogianmarco.arcore_flutter_plugin'
-            dependencies {
-                def lifecycle_version = "1.1.1"
-                compileOnly "android.arch.lifecycle:runtime:$lifecycle_version"
-                compileOnly "android.arch.lifecycle:common:$lifecycle_version"
-                compileOnly "android.arch.lifecycle:common-java8:$lifecycle_version"
-            }
+        dependencies {
+            def lifecycle_version = "1.1.1"
+            compileOnly "android.arch.lifecycle:runtime:$lifecycle_version"
+            compileOnly "android.arch.lifecycle:common:$lifecycle_version"
+            compileOnly "android.arch.lifecycle:common-java8:$lifecycle_version"
         }
     }
 }

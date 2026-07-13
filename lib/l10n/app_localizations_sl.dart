@@ -5825,8 +5825,16 @@ class AppLocalizationsSl extends AppLocalizations {
   String get connectWalletBrowserWalletChooserDescription => 'Na spletu imajo združljive Solana razširitve prednost. Če jih ni, nadaljuj s tokom za vse denarnice.';
 
   @override
+  String get connectWalletBrowserWalletChooserLocalDescription => 'Izberi združljivo denarnico Solana, zaznano v tem brskalniku.';
+
+  @override
   String connectWalletBrowserWalletAutoPrompt(Object walletName) {
     return 'Odpiram $walletName v tvojem brskalniku. Potrdi povezavo v razširitvi ali pa nadaljuj s tokom za vse denarnice.';
+  }
+
+  @override
+  String connectWalletBrowserWalletAutoPromptLocal(String walletName) {
+    return 'Odpiram $walletName v tvojem brskalniku. Potrdi povezavo v razširitvi.';
   }
 
   @override
@@ -5836,10 +5844,16 @@ class AppLocalizationsSl extends AppLocalizations {
   String get connectWalletBrowserWalletNoWalletDescription => 'Namesti Phantom ali drugo združljivo Solana brskalniško denarnico ali pa nadaljuj s tokom za vse denarnice.';
 
   @override
+  String get connectWalletBrowserWalletNoWalletLocalDescription => 'Namesti ali omogoči MetaMask, Phantom ali drugo združljivo brskalniško denarnico Solana in nato ponovno zaženi iskanje.';
+
+  @override
   String get connectWalletBrowserWalletFallbackButton => 'Odpri vse denarnice';
 
   @override
   String get connectWalletBrowserWalletRescanButton => 'Ponovno preišči brskalnik';
+
+  @override
+  String get connectWalletReownUnavailableDescription => 'Tok QR za vse denarnice v tej različici ni konfiguriran. V spletu uporabi združljivo brskalniško denarnico ali izberi drugo možnost nastavitve denarnice.';
 
   @override
   String get connectWalletWalletConnectConnectingLabel => 'Povezujem…';

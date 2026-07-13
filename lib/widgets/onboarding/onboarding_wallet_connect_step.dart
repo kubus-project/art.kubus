@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:art_kubus/config/api_keys.dart';
 import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/providers/chat_provider.dart';
@@ -11,6 +12,7 @@ import 'package:art_kubus/services/onboarding_state_service.dart';
 import 'package:art_kubus/services/wallet_session_sync_dependencies.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/widgets/kubus_button.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../inline_loading.dart';
 import 'package:provider/provider.dart';
@@ -349,6 +351,9 @@ class _OnboardingWalletConnectStepState
         : accountLabel;
 
     final busy = _busyAction != null;
+    final canConnectExternalWallet = AppConfig.enableWeb3 &&
+        AppConfig.enableWalletConnect &&
+        (kIsWeb || ApiKeys.hasWalletConnectProjectId);
     final showStatus = _phase != OnboardingWalletLinkPhase.ready ||
         isLinked ||
         (_error ?? '').isNotEmpty;
@@ -507,17 +512,19 @@ class _OnboardingWalletConnectStepState
                           label: l10n.walletSetupImportAction,
                           isFullWidth: true,
                         ),
-                        const SizedBox(height: KubusSpacing.sm),
-                        KubusOutlineButton(
-                          onPressed: busy
-                              ? null
-                              : () => unawaited(_connectExternalWallet()),
-                          isLoading: _busyAction ==
-                              OnboardingWalletConnectAction.connect,
-                          icon: Icons.account_balance_wallet_outlined,
-                          label: l10n.walletSetupConnectAction,
-                          isFullWidth: true,
-                        ),
+                        if (canConnectExternalWallet) ...[
+                          const SizedBox(height: KubusSpacing.sm),
+                          KubusOutlineButton(
+                            onPressed: busy
+                                ? null
+                                : () => unawaited(_connectExternalWallet()),
+                            isLoading: _busyAction ==
+                                OnboardingWalletConnectAction.connect,
+                            icon: Icons.account_balance_wallet_outlined,
+                            label: l10n.walletSetupConnectAction,
+                            isFullWidth: true,
+                          ),
+                        ],
                       ],
                     ),
                   ),

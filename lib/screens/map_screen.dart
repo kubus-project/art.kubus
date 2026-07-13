@@ -3036,8 +3036,7 @@ class _MapScreenState extends State<MapScreen>
           if (coverImageUrl != null && coverImageUrl.isNotEmpty)
             'coverImageUrl': coverImageUrl,
           // Attribution (shown in the marker info card below the description).
-          if ((form.artistName ?? '').isNotEmpty)
-            'artistName': form.artistName,
+          if ((form.artistName ?? '').isNotEmpty) 'artistName': form.artistName,
           if ((form.imageAuthor ?? '').isNotEmpty)
             'imageAuthor': form.imageAuthor,
           if ((form.imageLicense ?? '').isNotEmpty)
@@ -5195,7 +5194,7 @@ class _MapScreenState extends State<MapScreen>
           sizeFactor: anim,
           // Anchor the reveal to the top edge so the panel grows downward from
           // the search bar for a vertical size transition.
-          axisAlignment: -1.0,
+          alignment: Alignment.topLeft,
           child: child,
         ),
       ),

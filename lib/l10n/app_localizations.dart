@@ -11203,11 +11203,23 @@ abstract class AppLocalizations {
   /// **'Compatible Solana extensions are preferred automatically on web. If none are available, continue with the all-wallets flow.'**
   String get connectWalletBrowserWalletChooserDescription;
 
+  /// No description provided for @connectWalletBrowserWalletChooserLocalDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a compatible Solana wallet detected in this browser.'**
+  String get connectWalletBrowserWalletChooserLocalDescription;
+
   /// No description provided for @connectWalletBrowserWalletAutoPrompt.
   ///
   /// In en, this message translates to:
   /// **'Opening {walletName} in your browser. Approve the connection in the extension, or continue with the all-wallets flow instead.'**
   String connectWalletBrowserWalletAutoPrompt(Object walletName);
+
+  /// No description provided for @connectWalletBrowserWalletAutoPromptLocal.
+  ///
+  /// In en, this message translates to:
+  /// **'Opening {walletName} in your browser. Approve the connection in the extension.'**
+  String connectWalletBrowserWalletAutoPromptLocal(String walletName);
 
   /// No description provided for @connectWalletBrowserWalletNoWalletTitle.
   ///
@@ -11221,6 +11233,12 @@ abstract class AppLocalizations {
   /// **'Install Phantom or another compatible Solana browser wallet, or continue with the all-wallets flow.'**
   String get connectWalletBrowserWalletNoWalletDescription;
 
+  /// No description provided for @connectWalletBrowserWalletNoWalletLocalDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Install or enable MetaMask, Phantom, or another compatible Solana browser wallet, then rescan.'**
+  String get connectWalletBrowserWalletNoWalletLocalDescription;
+
   /// No description provided for @connectWalletBrowserWalletFallbackButton.
   ///
   /// In en, this message translates to:
@@ -11232,6 +11250,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Rescan browser wallets'**
   String get connectWalletBrowserWalletRescanButton;
+
+  /// No description provided for @connectWalletReownUnavailableDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'The all-wallets QR flow is not configured in this build. Use a compatible browser wallet on web, or choose another wallet setup option.'**
+  String get connectWalletReownUnavailableDescription;
 
   /// No description provided for @connectWalletWalletConnectConnectingLabel.
   ///
