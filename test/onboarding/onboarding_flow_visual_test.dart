@@ -157,7 +157,9 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
 
     expect(find.text('Import wallet'), findsOneWidget);
-    expect(find.text('Connect wallet'), findsOneWidget);
+    // This native test build has no Reown project ID, so the unavailable
+    // external-wallet action must stay hidden after disclosure.
+    expect(find.text('Connect wallet'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
