@@ -17,11 +17,14 @@ import 'share_types.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class ShareService {
-  ShareService({
-    BackendApiService? api,
-    ShareLinkBuilder? linkBuilder,
-  })  : _api = api ?? BackendApiService(),
-        _linkBuilder = linkBuilder ?? ShareLinkBuilder(baseUri: Uri.parse(AppConfig.appBaseUrl));
+  ShareService({BackendApiService? api, ShareLinkBuilder? linkBuilder})
+    : _api = api ?? BackendApiService(),
+      _linkBuilder =
+          linkBuilder ??
+          ShareLinkBuilder(
+            baseUri: Uri.parse(AppConfig.publicPagesBaseUrl),
+            publicPagesEnabled: AppConfig.isFeatureEnabled('seoPublicPages'),
+          );
 
   final BackendApiService _api;
   final ShareLinkBuilder _linkBuilder;
@@ -38,8 +41,9 @@ class ShareService {
   bool _looksLikeUuid(String value) {
     final v = value.trim();
     if (v.isEmpty) return false;
-    return RegExp(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$')
-        .hasMatch(v);
+    return RegExp(
+      r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$',
+    ).hasMatch(v);
   }
 
   Future<void> _trackShareEventIfEnabled(
@@ -70,7 +74,8 @@ class ShareService {
     }
   }
 
-  Uri buildShareUrl(ShareTarget target) => _linkBuilder.build(target);
+  Uri buildShareUrl(ShareTarget target, {String locale = 'en'}) =>
+      _linkBuilder.build(target, locale: locale);
 
   Future<void> showShareSheet(
     BuildContext context, {
@@ -80,13 +85,15 @@ class ShareService {
   }) async {
     if (!AppConfig.isFeatureEnabled('sharing')) return;
     final analyticsEnabled = _analyticsEnabled(context);
-    unawaited(_trackShareEventIfEnabled(
-      analyticsEnabled,
-      eventType: 'share_modal_opened',
-      target: target,
-      channel: 'modal',
-      sourceScreen: sourceScreen,
-    ));
+    unawaited(
+      _trackShareEventIfEnabled(
+        analyticsEnabled,
+        eventType: 'share_modal_opened',
+        target: target,
+        channel: 'modal',
+        sourceScreen: sourceScreen,
+      ),
+    );
 
     await showModalBottomSheet<void>(
       context: context,
@@ -99,7 +106,10 @@ class ShareService {
           final l10n = AppLocalizations.of(context)!;
           final messenger = ScaffoldMessenger.of(context);
 
-          final shareUrl = buildShareUrl(target).toString();
+          final shareUrl = buildShareUrl(
+            target,
+            locale: Localizations.localeOf(context).languageCode,
+          ).toString();
 
           Future<void> bumpPostShareCountIfNeeded() async {
             if (target.type != ShareEntityType.post) return;
@@ -113,28 +123,34 @@ class ShareService {
               await Clipboard.setData(ClipboardData(text: shareUrl));
               if (!context.mounted) return;
               sheetNavigator.pop();
-              messenger.showKubusSnackBar(SnackBar(content: Text(l10n.shareLinkCopiedToast)));
+              messenger.showKubusSnackBar(
+                SnackBar(content: Text(l10n.shareLinkCopiedToast)),
+              );
               unawaited(bumpPostShareCountIfNeeded());
-              unawaited(_trackShareEventIfEnabled(
-                analyticsEnabled,
-                eventType: 'share_copy_link',
-                target: target,
-                channel: 'copy_link',
-                sourceScreen: sourceScreen,
-              ));
+              unawaited(
+                _trackShareEventIfEnabled(
+                  analyticsEnabled,
+                  eventType: 'share_copy_link',
+                  target: target,
+                  channel: 'copy_link',
+                  sourceScreen: sourceScreen,
+                ),
+              );
               return;
             case ShareAction.shareExternal:
               sheetNavigator.pop();
               await SharePlus.instance.share(ShareParams(text: shareUrl));
               if (!context.mounted) return;
               unawaited(bumpPostShareCountIfNeeded());
-              unawaited(_trackShareEventIfEnabled(
-                analyticsEnabled,
-                eventType: 'share_external',
-                target: target,
-                channel: 'platform_share',
-                sourceScreen: sourceScreen,
-              ));
+              unawaited(
+                _trackShareEventIfEnabled(
+                  analyticsEnabled,
+                  eventType: 'share_external',
+                  target: target,
+                  channel: 'platform_share',
+                  sourceScreen: sourceScreen,
+                ),
+              );
               return;
             case ShareAction.sendMessage:
               sheetNavigator.pop();
@@ -158,21 +174,29 @@ class ShareService {
                         url: shareUrl,
                       );
                       unawaited(bumpPostShareCountIfNeeded());
-                      unawaited(_trackShareEventIfEnabled(
-                        analyticsEnabled,
-                        eventType: 'share_message',
-                        target: target,
-                        channel: 'dm',
-                        sourceScreen: sourceScreen,
-                      ));
+                      unawaited(
+                        _trackShareEventIfEnabled(
+                          analyticsEnabled,
+                          eventType: 'share_message',
+                          target: target,
+                          channel: 'dm',
+                          sourceScreen: sourceScreen,
+                        ),
+                      );
                       if (!outerNavigator.mounted) return;
                       outerMessenger.showKubusSnackBar(
-                        SnackBar(content: Text(outerL10n.shareMessageSentToast(recipientWallet))),
+                        SnackBar(
+                          content: Text(
+                            outerL10n.shareMessageSentToast(recipientWallet),
+                          ),
+                        ),
                       );
                     } catch (_) {
                       if (!outerNavigator.mounted) return;
                       outerMessenger.showKubusSnackBar(
-                        SnackBar(content: Text(outerL10n.shareMessageFailedToast)),
+                        SnackBar(
+                          content: Text(outerL10n.shareMessageFailedToast),
+                        ),
                       );
                       rethrow;
                     }
@@ -182,18 +206,23 @@ class ShareService {
               return;
             case ShareAction.createPost:
               sheetNavigator.pop();
-              unawaited(_trackShareEventIfEnabled(
-                analyticsEnabled,
-                eventType: 'share_create_post',
-                target: target,
-                channel: 'create_post',
-                sourceScreen: sourceScreen,
-              ));
+              unawaited(
+                _trackShareEventIfEnabled(
+                  analyticsEnabled,
+                  eventType: 'share_create_post',
+                  target: target,
+                  channel: 'create_post',
+                  sourceScreen: sourceScreen,
+                ),
+              );
               if (onCreatePostRequested != null) {
                 await onCreatePostRequested();
                 return;
               }
-              await ShareCreatePostLauncher.openComposerForShare(context, target);
+              await ShareCreatePostLauncher.openComposerForShare(
+                context,
+                target,
+              );
               return;
           }
         },

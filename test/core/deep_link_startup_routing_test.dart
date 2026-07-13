@@ -17,6 +17,22 @@ void main() {
     expect(decision?.signInArguments?['redirectRoute'], '/m/m1');
   });
 
+  test('localized public handoff preserves the entity through sign-in', () {
+    const parser = ShareDeepLinkParser();
+    final pending = parser.parse(
+      Uri.parse('https://app.kubus.site/app/sl/umetnine/art-42'),
+    );
+
+    final decision = router.decide(
+      pending: pending,
+      shouldShowSignIn: true,
+    );
+
+    expect(decision?.requiresSignIn, isTrue);
+    expect(decision?.canonicalPath, '/a/art-42');
+    expect(decision?.signInArguments?['redirectRoute'], '/a/art-42');
+  });
+
   test('keeps artwork deep link canonical while preferring main shell', () {
     const pending =
         ShareDeepLinkTarget(type: ShareEntityType.artwork, id: 'a1');
@@ -46,7 +62,9 @@ void main() {
     }
   });
 
-  test('claim-ready exhibition deep links preserve attendance marker in startup routing', () {
+  test(
+      'claim-ready exhibition deep links preserve attendance marker in startup routing',
+      () {
     const pending = ShareDeepLinkTarget(
       type: ShareEntityType.exhibition,
       id: 'expo-1',
