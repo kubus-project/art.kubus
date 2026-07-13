@@ -4,10 +4,7 @@ import { dirname, resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import {
-  buildStableApiStub,
-  isExpectedRequestFailure,
-} from './web_runtime_contract.mjs';
+import { buildStableApiStub } from './web_runtime_contract.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
@@ -52,19 +49,6 @@ test('collection and telemetry stubs are empty and side-effect free', () => {
   assert.deepEqual(collection.data, []);
   assert.equal(collection.pagination.total, 0);
   assert.deepEqual(telemetry, { status: 204, body: '' });
-});
-
-test('only the known MapLibre cancellation is an expected request failure', () => {
-  assert.equal(
-    isExpectedRequestFailure(
-      'GET http://127.0.0.1:8090/local/maplibre-gl/maplibre-gl-csp.js?v=1 net::ERR_ABORTED',
-    ),
-    true,
-  );
-  assert.equal(
-    isExpectedRequestFailure('GET https://api.kubus.site/health net::ERR_FAILED'),
-    false,
-  );
 });
 
 test('API stubs reject hosts outside the explicit QA boundary', () => {
@@ -155,4 +139,15 @@ test('production smoke verifies public HTML and unknown-route status', () => {
   assert.match(workflow, /Public HTML unexpectedly loads the interactive app bundle/);
   assert.match(workflow, /__deploy_unknown_\$\{SOURCE_SHA\}/);
   assert.match(workflow, /test .*http_code.* = '404'/);
+});
+
+test('runtime smoke does not trigger the service-worker reload escape hatch', () => {
+  const smoke = readFileSync(
+    resolve(repoRoot, 'scripts', 'qa', 'web_runtime_smoke.mjs'),
+    'utf8',
+  );
+
+  assert.match(smoke, /page\.goto\(`\$\{appUrl\}\/`/);
+  assert.doesNotMatch(smoke, /page\.goto\([^\n]*clear_sw/);
+  assert.doesNotMatch(smoke, /isExpectedRequestFailure/);
 });

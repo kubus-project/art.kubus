@@ -5,10 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 import { chromium, devices } from 'playwright';
 
-import {
-  buildStableApiStub,
-  isExpectedRequestFailure,
-} from './web_runtime_contract.mjs';
+import { buildStableApiStub } from './web_runtime_contract.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -184,7 +181,12 @@ async function captureRuntime(contextOptions, name) {
     set('map_onboarding_desktop_seen_v2', 'true');
   });
 
-  const response = await page.goto(`${appUrl}/?clear_sw=1`, {
+  // Every capture uses a fresh Playwright context. Do not pass the production
+  // clear_sw escape hatch here: index.html responds to it with location.replace,
+  // which legitimately aborts in-flight CSS/JS and makes request-failure checks
+  // nondeterministic. Localhost already clears matching Flutter caches without
+  // forcing a navigation, and a new context has no prior service-worker state.
+  const response = await page.goto(`${appUrl}/`, {
     waitUntil: 'domcontentloaded',
     timeout: 60000,
   });
@@ -222,11 +224,6 @@ async function captureRuntime(contextOptions, name) {
   const consoleErrors = consoleEntries.filter((entry) =>
     entry.startsWith('[error]'),
   );
-  const expectedRequestFailures = requestFailures.filter(isExpectedRequestFailure);
-  const unexpectedRequestFailures = requestFailures.filter(
-    (entry) => !isExpectedRequestFailure(entry),
-  );
-
   await fs.writeFile(
     path.join(artifactDir, `${name}.json`),
     JSON.stringify(
@@ -237,8 +234,6 @@ async function captureRuntime(contextOptions, name) {
         httpErrors,
         pageErrors,
         requestFailures,
-        expectedRequestFailures,
-        unexpectedRequestFailures,
         screenshotPath,
       },
       null,
@@ -264,9 +259,9 @@ async function captureRuntime(contextOptions, name) {
   if (httpErrors.length > 0) {
     throw new Error(`${name}: HTTP errors found: ${httpErrors.join(' | ')}`);
   }
-  if (unexpectedRequestFailures.length > 0) {
+  if (requestFailures.length > 0) {
     throw new Error(
-      `${name}: request failures found: ${unexpectedRequestFailures.join(' | ')}`,
+      `${name}: request failures found: ${requestFailures.join(' | ')}`,
     );
   }
 }
