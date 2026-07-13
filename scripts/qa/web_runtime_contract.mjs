@@ -103,10 +103,3 @@ export function buildStableApiStub(requestUrl, method = 'GET') {
     pagination: { page: 1, limit: 100, total: 0, totalPages: 0 },
   });
 }
-
-export function isExpectedRequestFailure(entry) {
-  return (
-    entry.includes('/local/maplibre-gl/maplibre-gl-csp.js') &&
-    entry.endsWith('net::ERR_ABORTED')
-  );
-}
