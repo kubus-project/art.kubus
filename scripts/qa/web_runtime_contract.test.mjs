@@ -108,3 +108,40 @@ test('web-root migration remains an explicit manual deployment action', () => {
     'both bootstrap steps must require an explicit manual dispatch',
   );
 });
+
+test('Flutter index positions art.kubus as an open art map', () => {
+  const html = readFileSync(resolve(repoRoot, 'web', 'index.html'), 'utf8');
+
+  assert.match(html, /<title>art\.kubus — Open Art Map and Community Platform<\/title>/);
+  assert.match(html, /open, community-led art map/);
+  assert.match(html, /"@type": "WebSite"/);
+  assert.match(html, /<link rel="canonical" href="https:\/\/app\.kubus\.site\/en">/);
+  assert.match(html, /"@type": "Organization"/);
+  assert.match(html, /"@type": "WebApplication"/);
+  assert.doesNotMatch(html, /<meta name="keywords"/);
+  assert.doesNotMatch(html, /icons\/Icon-512\.png[^\n]*twitter:image/);
+  assert.doesNotMatch(html, /explicitLang|slTitle|legacyHeads/);
+});
+
+test('web routing reserves public HTML, interactive app and real 404 surfaces', () => {
+  const htaccess = readFileSync(resolve(repoRoot, 'web', '.htaccess'), 'utf8');
+  const notFound = readFileSync(resolve(repoRoot, 'web', '404.html'), 'utf8');
+
+  assert.match(htaccess, /api\.kubus\.site%\{REQUEST_URI\} \[P,L,NE\]/);
+  assert.match(htaccess, /\^app\(\?:\/\.\*\)\?\$ index\.html/);
+  assert.match(htaccess, /Unknown paths are real 404s/);
+  assert.match(htaccess, /RewriteRule \^ - \[R=404,L\]/);
+  assert.match(notFound, /<meta name="robots" content="noindex, follow">/);
+  assert.match(notFound, /href="\/en\/artworks"/);
+});
+
+test('production smoke verifies public HTML and unknown-route status', () => {
+  const workflow = readFileSync(
+    resolve(repoRoot, '.github', 'workflows', 'deploy.yml'),
+    'utf8',
+  );
+
+  assert.match(workflow, /Public HTML unexpectedly loads the interactive app bundle/);
+  assert.match(workflow, /__deploy_unknown_\$\{SOURCE_SHA\}/);
+  assert.match(workflow, /test .*http_code.* = '404'/);
+});
