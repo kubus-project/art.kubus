@@ -24,6 +24,11 @@ on:
         required: false
         default: true
         type: boolean
+      bootstrap_web_root:
+        description: 'One-time migration of the existing web root into the atomic symlink layout'
+        required: false
+        default: false
+        type: boolean
       build_apk:
         description: 'Sign the tested unsigned Android artifact'
         required: false
@@ -165,18 +170,22 @@ jobs:
               exit 1
             fi
           done
-          if [[ ! "$SFTP_HOST" =~ ^[A-Za-z0-9.-]+$ ]] || [[ ! "$SFTP_PORT" =~ ^[0-9]+$ ]]; then
-            echo "SFTP_SERVER must be a hostname and SFTP_PORT must be numeric." >&2
+          if [[ ! "$SFTP_HOST" =~ ^[A-Za-z0-9.-]+$ ]] || \
+             [[ ! "$SFTP_USERNAME" =~ ^[A-Za-z0-9._-]+$ ]] || \
+             [[ ! "$SFTP_PORT" =~ ^[0-9]+$ ]]; then
+            echo "SFTP host, username, or port contains unsupported characters." >&2
             exit 1
           fi
 
-          live_dir="${WEB_SERVER_DIR%/}"
+          configured_live_dir="${WEB_SERVER_DIR%/}"
+          live_dir="${configured_live_dir//\{SFTP_USERNAME\}/$SFTP_USERNAME}"
           if [[ ! "$live_dir" =~ ^/[A-Za-z0-9_./-]+$ ]] || [[ "$live_dir" == *'..'* ]]; then
-            echo "WEB_SERVER_DIR must be a safe absolute path to a pre-provisioned symlink." >&2
+            echo "WEB_SERVER_DIR must resolve to a safe absolute path." >&2
             exit 1
           fi
           parent_dir="$(dirname "$live_dir")"
-          release_root="${WEB_RELEASES_DIR%/}"
+          configured_release_root="${WEB_RELEASES_DIR%/}"
+          release_root="${configured_release_root//\{SFTP_USERNAME\}/$SFTP_USERNAME}"
           if [ -z "$release_root" ]; then
             release_root="$parent_dir/.art-kubus-releases"
           fi
@@ -192,7 +201,46 @@ jobs:
           echo "release_root=$release_root" >> "$GITHUB_OUTPUT"
           echo "incoming_dir=$release_root/incoming-$SOURCE_SHA" >> "$GITHUB_OUTPUT"
           echo "release_dir=$release_root/releases/$SOURCE_SHA" >> "$GITHUB_OUTPUT"
+          echo "bootstrap_dir=$release_root/bootstrap-$SOURCE_SHA" >> "$GITHUB_OUTPUT"
           echo "smoke_url=$WEB_SMOKE_URL" >> "$GITHUB_OUTPUT"
+
+      - name: Upload approved web-root bootstrap helper
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.bootstrap_web_root }}
+        uses: appleboy/scp-action@ff85246acaad7bdce478db94a363cd2bf7c90345 # v1
+        with:
+          host: ${{ steps.target.outputs.host }}
+          username: ${{ steps.target.outputs.username }}
+          port: ${{ steps.target.outputs.port }}
+          key: ${{ secrets.SFTP_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SFTP_PRIVATE_KEY_PASSPHRASE }}
+          fingerprint: ${{ secrets.SFTP_HOST_FINGERPRINT }}
+          source: scripts/deploy/bootstrap_atomic_web_root.sh
+          target: ${{ steps.target.outputs.bootstrap_dir }}
+          strip_components: 2
+          overwrite: true
+
+      - name: Migrate existing web root into atomic layout
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.bootstrap_web_root }}
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1
+        env:
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
+          LIVE_DIR: ${{ steps.target.outputs.live_dir }}
+          RELEASE_ROOT: ${{ steps.target.outputs.release_root }}
+          BOOTSTRAP_DIR: ${{ steps.target.outputs.bootstrap_dir }}
+        with:
+          host: ${{ steps.target.outputs.host }}
+          username: ${{ steps.target.outputs.username }}
+          port: ${{ steps.target.outputs.port }}
+          key: ${{ secrets.SFTP_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SFTP_PRIVATE_KEY_PASSPHRASE }}
+          fingerprint: ${{ secrets.SFTP_HOST_FINGERPRINT }}
+          envs: SOURCE_SHA,LIVE_DIR,RELEASE_ROOT,BOOTSTRAP_DIR
+          script_stop: true
+          script: |
+            set -eu
+            trap 'rm -rf "$BOOTSTRAP_DIR"' EXIT HUP INT TERM
+            sh "$BOOTSTRAP_DIR/bootstrap_atomic_web_root.sh" \
+              "$LIVE_DIR" "$RELEASE_ROOT" "$SOURCE_SHA"
 
       - name: Prepare versioned remote upload directory
         uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1

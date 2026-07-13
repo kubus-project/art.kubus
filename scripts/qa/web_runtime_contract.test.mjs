@@ -89,3 +89,22 @@ test('immutable web artifact preserves files covered by its checksum manifest', 
   );
   assert.match(uploadStep, /\binclude-hidden-files:\s*true\b/);
 });
+
+test('web-root migration remains an explicit manual deployment action', () => {
+  const workflow = readFileSync(
+    resolve(repoRoot, '.github', 'workflows', 'deploy.yml'),
+    'utf8',
+  );
+  assert.match(
+    workflow,
+    /bootstrap_web_root:\s*[\s\S]*?default:\s*false\s*[\s\S]*?type:\s*boolean/,
+  );
+
+  const manualGate =
+    "if: ${{ github.event_name == 'workflow_dispatch' && inputs.bootstrap_web_root }}";
+  assert.equal(
+    workflow.split(manualGate).length - 1,
+    2,
+    'both bootstrap steps must require an explicit manual dispatch',
+  );
+});

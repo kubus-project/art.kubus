@@ -34,16 +34,22 @@ Create a protected `production-web` environment with these secrets:
 Configure these environment variables:
 
 - `SFTP_PORT` (defaults to `22`)
-- `WEB_SERVER_DIR`: absolute path to the symlink served as the live web root
-- `WEB_RELEASES_DIR`: absolute directory for immutable releases
+- `WEB_SERVER_DIR`: absolute path to the symlink served as the live web root;
+  use `{SFTP_USERNAME}` when the protected username must not be exposed in a
+  repository variable (for example `/home/{SFTP_USERNAME}/app.kubus.site`)
+- `WEB_RELEASES_DIR`: optional absolute directory for immutable releases; the
+  same `{SFTP_USERNAME}` placeholder is supported
 - `WEB_SMOKE_URL`: public URL whose HTML loads the Flutter bootstrap
 
 `WEB_SERVER_DIR` must be a symlink before the first automated promotion. If an
 existing document root is a physical directory, migrate it once during an
-approved maintenance window: move that directory beneath
-`WEB_RELEASES_DIR/releases/`, then replace it with a symlink to the moved
-directory. The workflow refuses to convert a physical directory because that
-transition cannot be guaranteed atomic.
+approved maintenance window by manually dispatching `Deploy` with
+`bootstrap_web_root=true`. The bootstrap requires the live directory to be a
+direct child of the authenticated SFTP home, moves it beneath
+`WEB_RELEASES_DIR/releases/`, and replaces it with a symlink. It is idempotent,
+preserves the existing directory as the rollback target, and refuses symlinks
+that point outside the immutable releases tree. Ordinary automatic promotions
+never perform this migration.
 
 Every promotion verifies both the downloaded artifact checksum and the
 per-file checksum manifest, writes an immutable SHA-named release directory,
