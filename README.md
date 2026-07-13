@@ -25,6 +25,7 @@ Project site: https://art.kubus.site · App site: https://app.kubus.site
 
 - `lib/`, `assets/`, `android/`, `ios/`, `web/`, `windows/`, … — the Flutter client (Apache-2.0)
 - `docs/` — client documentation and the open-platform boundary (start at [`docs/README.md`](docs/README.md))
+- [`docs/seo-public-pages.md`](docs/seo-public-pages.md) — server-rendered public routes, canonicals, deployment, and rollback
 - `backend/` — platform backend for local development / reference (not Apache-2.0; see [`backend/README.md`](backend/README.md))
 
 ## Quick start

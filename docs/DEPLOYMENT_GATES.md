@@ -23,6 +23,12 @@ configuration by CI.
 
 ## Web promotion environment
 
+Public entity route ownership, required backend variables, proxy prerequisites,
+and coordinated rollback are documented in
+[`seo-public-pages.md`](seo-public-pages.md). Enable the renderer and validate it
+before promoting a web artifact whose `.htaccess` proxies localized public
+routes.
+
 Create a protected `production-web` environment with these secrets:
 
 - `SFTP_SERVER`
