@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "qa:web": "node ./web_runtime_smoke.mjs",
+    "qa:seo": "node ./seo_public_pages.mjs",
     "qa:web:proxy": "node ./dev_spa_proxy.mjs",
     "test": "node --test ./web_runtime_contract.test.mjs"
   },

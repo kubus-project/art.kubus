@@ -19,6 +19,17 @@ Run the default web smoke:
 npm run qa:web
 ```
 
+For localized public HTML, start the backend repository's `npm run seo:preview`
+server after building Flutter web, then run:
+
+```powershell
+npm run qa:seo
+```
+
+This checks Chromium and Firefox, desktop and mobile public pages, social
+images, keyboard focus, the custom 404, and the explicit Flutter handoff.
+Evidence is written to `output/playwright/artifacts/seo-public-pages/`.
+
 By default, the smoke starts `scripts/qa/dev_spa_proxy.mjs`, serves
 `build/web`, proxies `/api/*` to `https://api.kubus.site`, and captures desktop
 and mobile home screenshots. Build the Flutter web bundle first if

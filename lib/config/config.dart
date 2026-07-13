@@ -23,6 +23,10 @@ class AppConfig {
   static const bool enableLiking = true;
   static const bool enableCommenting = true;
   static const bool enableSharing = true;
+  static const bool enableSeoPublicPages = bool.fromEnvironment(
+    'SEO_PUBLIC_PAGES_ENABLED',
+    defaultValue: true,
+  );
   static const bool enableReporting = true;
   static const bool enableSupportTickets = true;
 
@@ -159,8 +163,10 @@ class AppConfig {
   static const bool enableLabs = true;
 
   /// Analytics and tracking
-  static const bool enableAnalytics =
-      bool.fromEnvironment('ANALYTICS_APP_ENABLED', defaultValue: isProduction);
+  static const bool enableAnalytics = bool.fromEnvironment(
+    'ANALYTICS_APP_ENABLED',
+    defaultValue: isProduction,
+  );
   static const bool enableCrashReporting = isProduction;
   static const bool enablePerformanceMonitoring = isProduction;
 
@@ -213,8 +219,9 @@ class AppConfig {
   /// API endpoints
   static const String baseApiUrl = String.fromEnvironment(
     'BACKEND_BASE_URL',
-    defaultValue:
-        isDevelopment ? 'https://api.kubus.site' : 'https://api.kubus.site',
+    defaultValue: isDevelopment
+        ? 'https://api.kubus.site'
+        : 'https://api.kubus.site',
   );
 
   /// Standby API endpoint used during primary backend failover.
@@ -259,6 +266,12 @@ class AppConfig {
     defaultValue: 'https://app.kubus.site',
   );
 
+  /// Public, crawlable documents used by copy-link, social-share and QR flows.
+  static const String publicPagesBaseUrl = String.fromEnvironment(
+    'SEO_PUBLIC_BASE_URL',
+    defaultValue: 'https://app.kubus.site',
+  );
+
   /// IPFS configuration (future integration)
   static const bool enableIPFS = false; // Future feature
 
@@ -283,19 +296,19 @@ class AppConfig {
     'jpeg',
     'png',
     'gif',
-    'webp'
+    'webp',
   ];
   static const List<String> supportedVideoFormats = [
     'mp4',
     'mov',
     'avi',
-    'webm'
+    'webm',
   ];
   static const List<String> supportedAudioFormats = [
     'mp3',
     'wav',
     'aac',
-    'ogg'
+    'ogg',
   ];
 
   /// AR model limits
@@ -304,7 +317,7 @@ class AppConfig {
     'glb',
     'gltf',
     'obj',
-    'fbx'
+    'fbx',
   ];
 
   // ===========================================
@@ -375,9 +388,9 @@ class AppConfig {
   );
   static const int clientUploadModelTextureCompressionQuality =
       int.fromEnvironment(
-    'CLIENT_UPLOAD_MODEL_TEXTURE_COMPRESSION_QUALITY',
-    defaultValue: 82,
-  );
+        'CLIENT_UPLOAD_MODEL_TEXTURE_COMPRESSION_QUALITY',
+        defaultValue: 82,
+      );
   static const int clientUploadVideoFrameRate = int.fromEnvironment(
     'CLIENT_UPLOAD_VIDEO_FRAME_RATE',
     defaultValue: 30,
@@ -432,6 +445,8 @@ class AppConfig {
         return enableCommenting;
       case 'sharing':
         return enableSharing;
+      case 'seoPublicPages':
+        return enableSeoPublicPages;
       case 'messaging':
         return enableMessaging;
       case 'web3':
@@ -562,8 +577,11 @@ class AppConfig {
   }
 
   /// Network logging helper
-  static void networkLog(String method, String url,
-      {Map<String, dynamic>? data}) {
+  static void networkLog(
+    String method,
+    String url, {
+    Map<String, dynamic>? data,
+  }) {
     if (!enableNetworkLogging) return;
     debugPrint('[$method] $url ${data != null ? '- Data: $data' : ''}');
   }

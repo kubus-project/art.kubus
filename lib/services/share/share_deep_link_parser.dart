@@ -25,35 +25,32 @@ class AppRouteIntent {
   });
 
   const AppRouteIntent.marker(String markerId)
-      : this._(type: AppRouteIntentType.marker, id: markerId);
+    : this._(type: AppRouteIntentType.marker, id: markerId);
 
   const AppRouteIntent.artwork(String artworkId)
-      : this._(type: AppRouteIntentType.artwork, id: artworkId);
+    : this._(type: AppRouteIntentType.artwork, id: artworkId);
 
   const AppRouteIntent.event(String eventId)
-      : this._(type: AppRouteIntentType.event, id: eventId);
+    : this._(type: AppRouteIntentType.event, id: eventId);
 
   const AppRouteIntent.post(String postId)
-      : this._(type: AppRouteIntentType.post, id: postId);
+    : this._(type: AppRouteIntentType.post, id: postId);
 
   const AppRouteIntent.profile(String profileId)
-      : this._(type: AppRouteIntentType.profile, id: profileId);
+    : this._(type: AppRouteIntentType.profile, id: profileId);
 
   const AppRouteIntent.exhibition(String exhibitionId)
-      : this._(type: AppRouteIntentType.exhibition, id: exhibitionId);
+    : this._(type: AppRouteIntentType.exhibition, id: exhibitionId);
 
   const AppRouteIntent.collection(String collectionId)
-      : this._(type: AppRouteIntentType.collection, id: collectionId);
+    : this._(type: AppRouteIntentType.collection, id: collectionId);
 
   const AppRouteIntent.nft(String nftId)
-      : this._(type: AppRouteIntentType.nft, id: nftId);
+    : this._(type: AppRouteIntentType.nft, id: nftId);
 
-  const AppRouteIntent.map({
-    this.lat,
-    this.lng,
-    this.zoom,
-  })  : type = AppRouteIntentType.map,
-        id = null;
+  const AppRouteIntent.map({this.lat, this.lng, this.zoom})
+    : type = AppRouteIntentType.map,
+      id = null;
 
   final AppRouteIntentType type;
   final String? id;
@@ -89,14 +86,14 @@ class ShareDeepLinkTarget {
     String? handoffToken,
     String? proofSource,
   }) : this(
-          type: ShareEntityType.exhibition,
-          id: exhibitionId,
-          attendanceMarkerId: attendanceMarkerId,
-          claimReady: true,
-          claimProofToken: claimProofToken,
-          handoffToken: handoffToken,
-          proofSource: proofSource,
-        );
+         type: ShareEntityType.exhibition,
+         id: exhibitionId,
+         attendanceMarkerId: attendanceMarkerId,
+         claimReady: true,
+         claimProofToken: claimProofToken,
+         handoffToken: handoffToken,
+         proofSource: proofSource,
+       );
 
   ShareDeepLinkTarget copyWith({
     ShareEntityType? type,
@@ -159,18 +156,14 @@ class ShareDeepLinkCodec {
         final id = Uri.decodeComponent(rawId).trim();
         if (id.isEmpty) continue;
 
-        return _intentFromType(
-          intentType,
-          id,
-          uri: uri,
-          segmentIndex: i,
-        );
+        return _intentFromType(intentType, id, uri: uri, segmentIndex: i);
       }
     }
 
     final queryType = _intentTypeForHead((uri.queryParameters['type'] ?? ''));
-    final queryId =
-        Uri.decodeComponent((uri.queryParameters['id'] ?? '').trim());
+    final queryId = Uri.decodeComponent(
+      (uri.queryParameters['id'] ?? '').trim(),
+    );
     if (queryType != null && queryId.isNotEmpty) {
       return _intentFromType(queryType, queryId, uri: uri);
     }
@@ -189,9 +182,10 @@ class ShareDeepLinkCodec {
     final proofSource = _proofSourceFromUri(uri);
     final explicitClaimReady =
         uri.queryParameters['handoff']?.toLowerCase() == 'claim-ready' ||
-            uri.queryParameters['claimReady'] == 'true' ||
-            uri.queryParameters['claim_ready'] == 'true';
-    final claimReady = intent.type == AppRouteIntentType.exhibition &&
+        uri.queryParameters['claimReady'] == 'true' ||
+        uri.queryParameters['claim_ready'] == 'true';
+    final claimReady =
+        intent.type == AppRouteIntentType.exhibition &&
         (explicitClaimReady ||
             (claimProofToken ?? '').isNotEmpty ||
             (handoffToken ?? '').isNotEmpty);
@@ -218,8 +212,9 @@ class ShareDeepLinkCodec {
     final parsed = Uri.parse(relativePath);
     return baseUri.replace(
       path: '$normalizedPath${parsed.path}',
-      queryParameters:
-          parsed.queryParameters.isEmpty ? null : parsed.queryParameters,
+      queryParameters: parsed.queryParameters.isEmpty
+          ? null
+          : parsed.queryParameters,
     );
   }
 
@@ -295,11 +290,12 @@ class ShareDeepLinkCodec {
     if (uri == null) return false;
     final handoff = (uri.queryParameters['handoff'] ?? '').trim().toLowerCase();
     if (handoff == 'claim-ready') return true;
-    final claimReady = (uri.queryParameters['claimReady'] ??
-            uri.queryParameters['claim_ready'])
-        ?.toString()
-        .trim()
-        .toLowerCase();
+    final claimReady =
+        (uri.queryParameters['claimReady'] ??
+                uri.queryParameters['claim_ready'])
+            ?.toString()
+            .trim()
+            .toLowerCase();
     if (claimReady == 'true') return true;
     if (segmentIndex != null && uri.pathSegments.length > segmentIndex + 2) {
       final segment = uri.pathSegments[segmentIndex + 2].trim().toLowerCase();
@@ -310,11 +306,12 @@ class ShareDeepLinkCodec {
 
   String? _claimReadyMarkerFromUri(Uri? uri) {
     if (uri == null) return null;
-    final markerFromQuery = (uri.queryParameters['attendanceMarkerId'] ??
-            uri.queryParameters['attendance_marker_id'] ??
-            uri.queryParameters['markerId'] ??
-            uri.queryParameters['marker_id'])
-        ?.trim();
+    final markerFromQuery =
+        (uri.queryParameters['attendanceMarkerId'] ??
+                uri.queryParameters['attendance_marker_id'] ??
+                uri.queryParameters['markerId'] ??
+                uri.queryParameters['marker_id'])
+            ?.trim();
     if (markerFromQuery != null && markerFromQuery.isNotEmpty) {
       return markerFromQuery;
     }
@@ -338,32 +335,35 @@ class ShareDeepLinkCodec {
 
   String? _proofTokenFromUri(Uri? uri) {
     if (uri == null) return null;
-    final value = (uri.queryParameters['claimProofToken'] ??
-            uri.queryParameters['claim_proof_token'] ??
-            uri.queryParameters['scanProofToken'] ??
-            uri.queryParameters['scan_proof_token'] ??
-            uri.queryParameters['proofToken'] ??
-            uri.queryParameters['proof_token'])
-        ?.trim();
+    final value =
+        (uri.queryParameters['claimProofToken'] ??
+                uri.queryParameters['claim_proof_token'] ??
+                uri.queryParameters['scanProofToken'] ??
+                uri.queryParameters['scan_proof_token'] ??
+                uri.queryParameters['proofToken'] ??
+                uri.queryParameters['proof_token'])
+            ?.trim();
     return value == null || value.isEmpty ? null : value;
   }
 
   String? _handoffTokenFromUri(Uri? uri) {
     if (uri == null) return null;
-    final value = (uri.queryParameters['handoffToken'] ??
-            uri.queryParameters['handoff_token'] ??
-            uri.queryParameters['scanHandoffToken'] ??
-            uri.queryParameters['scan_handoff_token'])
-        ?.trim();
+    final value =
+        (uri.queryParameters['handoffToken'] ??
+                uri.queryParameters['handoff_token'] ??
+                uri.queryParameters['scanHandoffToken'] ??
+                uri.queryParameters['scan_handoff_token'])
+            ?.trim();
     return value == null || value.isEmpty ? null : value;
   }
 
   String? _proofSourceFromUri(Uri? uri) {
     if (uri == null) return null;
-    final value = (uri.queryParameters['proofSource'] ??
-            uri.queryParameters['proof_source'] ??
-            uri.queryParameters['source'])
-        ?.trim();
+    final value =
+        (uri.queryParameters['proofSource'] ??
+                uri.queryParameters['proof_source'] ??
+                uri.queryParameters['source'])
+            ?.trim();
     return value == null || value.isEmpty ? null : value;
   }
 
@@ -394,20 +394,36 @@ class ShareDeepLinkCodec {
     final head = headRaw.trim().toLowerCase();
     switch (head) {
       case 'p':
+      case 'posts':
+      case 'objave':
         return AppRouteIntentType.post;
       case 'a':
+      case 'artworks':
+      case 'umetnine':
         return AppRouteIntentType.artwork;
       case 'm':
+      case 'map':
+      case 'zemljevid':
         return AppRouteIntentType.marker;
       case 'c':
+      case 'collections':
+      case 'zbirke':
         return AppRouteIntentType.collection;
       case 'e':
+      case 'events':
+      case 'dogodki':
         return AppRouteIntentType.event;
       case 'x':
+      case 'exhibitions':
+      case 'razstave':
         return AppRouteIntentType.exhibition;
       case 'u':
+      case 'profiles':
+      case 'profili':
         return AppRouteIntentType.profile;
       case 'n':
+      case 'collectibles':
+      case 'zbirateljski-predmeti':
         return AppRouteIntentType.nft;
       default:
         return null;

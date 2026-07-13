@@ -1,6 +1,7 @@
 <IfModule mod_headers.c>
-  Header unset Content-Security-Policy
-  Header set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://fonts.googleapis.com https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https: wss: blob:; media-src 'self' blob: data: https:; worker-src 'self' blob:; object-src 'none'; frame-src 'self' https://accounts.google.com;"
+  # Keep the renderer's stricter CSP on proxied public HTML. Static Flutter
+  # responses do not set one, so they receive the established app policy.
+  Header setifempty Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://fonts.googleapis.com https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https: wss: blob:; media-src 'self' blob: data: https:; worker-src 'self' blob:; object-src 'none'; frame-src 'self' https://accounts.google.com;"
 
   # --- Caching ---------------------------------------------------------------
   # LiteSpeed defaults to "Cache-Control: private", which prevents any CDN/edge
@@ -47,6 +48,10 @@
 <IfModule mod_rewrite.c>
   RewriteEngine On
 
+  # Useful, index-safe error document for paths outside the finite Flutter and
+  # public-document route sets below. ErrorDocument preserves the original 404.
+  ErrorDocument 404 /404.html
+
   # canvaskit.wasm is ~5.7MB and LiteSpeed does not compress application/wasm
   # dynamically. CI ships pre-compressed .wasm.br/.wasm.gz next to each .wasm;
   # serve those when the client advertises support (~1.3MB over the wire).
@@ -65,23 +70,44 @@
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteRule ^ - [R=404,L]
 
-  # Canonicalize legacy share URLs before Flutter boots.
+  # Canonicalize the oldest map query alias in one hop. All other compact and
+  # long-form share aliases are proxied to the public renderer, which returns a
+  # single permanent redirect to the locale-aware canonical document.
   RewriteCond %{REQUEST_URI} ^/map/?$ [NC]
   RewriteCond %{QUERY_STRING} (^|&)marker=([^&]+) [NC]
-  RewriteRule ^map/?$ /m/%2 [R=301,L,NE,QSD]
+  RewriteRule ^map/?$ /en/map/%2 [R=308,L,NE,QSD]
 
-  RewriteRule ^(?:marker|markers|art-marker|art-markers)/(.+)$ /m/$1 [R=301,L,NE]
-  RewriteRule ^(?:artwork|artworks)/(.+)$ /a/$1 [R=301,L,NE]
-  RewriteRule ^(?:profile|profiles|user|users)/(.+)$ /u/$1 [R=301,L,NE]
-  RewriteRule ^(?:post|posts)/(.+)$ /p/$1 [R=301,L,NE]
-  RewriteRule ^(?:event|events)/(.+)$ /e/$1 [R=301,L,NE]
-  RewriteRule ^(?:exhibition|exhibitions)/(.+)$ /x/$1 [R=301,L,NE]
-  RewriteRule ^(?:collection|collections)/(.+)$ /c/$1 [R=301,L,NE]
-  RewriteRule ^(?:nft|nfts)/(.+)$ /n/$1 [R=301,L,NE]
+  # Public HTML, sitemaps, robots and legacy aliases are rendered by the
+  # existing Node service. LiteSpeed/Apache must provide proxy rewrites for
+  # this vhost (mod_proxy + mod_proxy_http on Apache, or the equivalent
+  # LiteSpeed Web Server external-app proxy capability).
+  RewriteCond %{REQUEST_METHOD} ^(?:GET|HEAD)$ [NC]
+  RewriteRule ^(?:robots\.txt|sitemap\.xml|sitemaps/[^/]+\.xml)$ https://api.kubus.site%{REQUEST_URI} [P,L,NE]
 
-  # Flutter web SPA deep links (e.g. /m/<id>): serve index.html for any
-  # route that isn't a real file or directory.
+  RewriteCond %{REQUEST_METHOD} ^(?:GET|HEAD)$ [NC]
+  RewriteRule ^(?:en|sl)(?:/.*)?$ https://api.kubus.site%{REQUEST_URI} [P,L,NE]
+
+  RewriteCond %{REQUEST_METHOD} ^(?:GET|HEAD)$ [NC]
+  RewriteRule ^(?:a|u|e|x|p|c|n|m|artwork|artworks|profile|profiles|user|users|post|posts|event|events|exhibition|exhibitions|collection|collections|nft|nfts|collectible|collectibles|marker|markers|art-marker|art-markers)/[^/]+/?$ https://api.kubus.site%{REQUEST_URI} [P,L,NE]
+
+  # Explicit interactive-app namespace. Public landing pages link here, and
+  # ShareDeepLinkParser understands both compact and localized paths after the
+  # /app prefix. Root remains the established Flutter homepage.
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d
-  RewriteRule ^ index.html [L]
+  RewriteRule ^app(?:/.*)?$ index.html [L]
+
+  RewriteRule ^$ index.html [L]
+
+  # Preserve the existing finite Flutter route surface. Authentication,
+  # settings, checkout and wallet pages stay interactive but are never exposed
+  # as public SEO documents.
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule ^(?:main|map|community|home|explore|ar|artwork|exhibition|connect-wallet|wallet_connect|connect_wallet|import-wallet|sign-in|register|secure-account|verify-email(?:/success)?|forgot-password|reset-password|promotions|web3|wallet(?:/availability-node)?|settings(?:/availability-node)?|marketplace)/?$ index.html [L]
+
+  # Unknown paths are real 404s, not indexable Flutter-shell soft 404s.
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule ^ - [R=404,L]
 </IfModule>
