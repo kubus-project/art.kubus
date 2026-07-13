@@ -65,4 +65,45 @@ void main() {
 
     expect(identity.label, 'abcdef...7890');
   });
+
+  test('community identity navigates by wallet before internal user UUID', () {
+    final identity = ProfileIdentityData.fromIdentityPayload({
+      'author': {
+        'userId': '11111111-1111-4111-8111-111111111111',
+        'walletAddress': 'ArtistWallet111111111111111111111111111111111',
+        'displayName': 'Artist User',
+        'username': 'artist_user',
+      },
+    }, fallbackLabel: 'Unknown author');
+
+    expect(
+      identity.navigationIdentifier,
+      'ArtistWallet111111111111111111111111111111111',
+    );
+  });
+
+  test('walletless identity navigates by its stable public UUID', () {
+    final identity = ProfileIdentityData.fromIdentityPayload({
+      'author': {
+        'userId': '11111111-1111-4111-8111-111111111111',
+        'displayName': 'Account User',
+        'username': 'account_user',
+      },
+    }, fallbackLabel: 'Unknown author');
+
+    expect(
+      identity.navigationIdentifier,
+      '11111111-1111-4111-8111-111111111111',
+    );
+  });
+
+  test('display label is never treated as a public profile identifier', () {
+    const identity = ProfileIdentityData(
+      label: 'Display Name',
+      walletSeed: 'Display Name',
+    );
+
+    expect(identity.navigationIdentifier, isNull);
+    expect(identity.canOpenProfile, isFalse);
+  });
 }

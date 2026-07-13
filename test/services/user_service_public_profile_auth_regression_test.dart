@@ -215,4 +215,48 @@ void main() {
     expect(user, isNotNull);
     expect(user!.isFollowing, isTrue);
   });
+
+  test('Canonical profile UUID resolves to the wallet-backed app profile',
+      () async {
+    const profileId = '22222222-2222-4222-8222-222222222222';
+    const wallet = '6Nd1mYbF7kYgU7kD3bcd1q2w4gS7y8Z9xKLMNPQRSTV';
+    final requests = <http.Request>[];
+    final api = BackendApiService();
+    api.setHttpClient(MockClient((request) async {
+      requests.add(request);
+      if (request.url.path == '/api/profiles/$profileId') {
+        return http.Response(
+          jsonEncode(<String, Object?>{
+            'data': <String, Object?>{
+              'id': profileId,
+              'profileId': profileId,
+              'publicActorId': wallet,
+              'walletAddress': wallet,
+              'username': 'canonical_artist',
+              'displayName': 'Canonical Artist',
+              'bio': 'Public profile',
+            },
+          }),
+          200,
+          headers: const <String, String>{'content-type': 'application/json'},
+        );
+      }
+      return http.Response('Not found', 404);
+    }));
+
+    final user = await UserService.getUserById(
+      profileId,
+      forceRefresh: true,
+      includeAchievements: false,
+    );
+
+    expect(user, isNotNull);
+    expect(user!.id, wallet);
+    expect(user.name, 'Canonical Artist');
+    expect(
+      requests
+          .where((request) => request.url.path.startsWith('/api/profiles/')),
+      hasLength(1),
+    );
+  });
 }

@@ -469,9 +469,10 @@ class ProfilePackageService {
   static Future<ProfileCriticalPackage?> _loadFreshPublicProfileCriticalPackage(
     _ProfileLookup lookup,
   ) async {
-    final hasWallet = lookup.wallet.isNotEmpty;
+    final hasIdentifier = lookup.wallet.isNotEmpty;
+    final canPrefetchWalletPackage = hasIdentifier && !lookup.isUuid;
 
-    final userFuture = hasWallet
+    final userFuture = hasIdentifier
         ? UserService.getUserById(
             lookup.wallet,
             forceRefresh: true,
@@ -482,24 +483,24 @@ class ProfilePackageService {
             includeAchievements: false,
           );
 
-    final achievementFuture = hasWallet
+    final achievementFuture = canPrefetchWalletPackage
         ? UserService.loadPublicAchievementSummaryResult(lookup.wallet)
-        : Future<UserAchievementSummaryResult>.value(
-            const UserAchievementSummaryResult(unavailable: true),
-          );
-    final statsFuture = hasWallet
-        ? _loadPublicStats(lookup.wallet)
-        : Future<Map<String, int>>.value(const <String, int>{});
+        : null;
+    final statsFuture =
+        canPrefetchWalletPackage ? _loadPublicStats(lookup.wallet) : null;
 
     final userShell = await userFuture;
     if (userShell == null) return null;
 
     final resolvedWallet = WalletUtils.canonical(userShell.id);
-    final achievementResult = hasWallet
-        ? await achievementFuture
+    final canUsePrefetchedPackage = canPrefetchWalletPackage &&
+        WalletUtils.equals(lookup.wallet, resolvedWallet);
+    final achievementResult = canUsePrefetchedPackage
+        ? await achievementFuture!
         : await UserService.loadPublicAchievementSummaryResult(resolvedWallet);
-    final stats =
-        hasWallet ? await statsFuture : await _loadPublicStats(resolvedWallet);
+    final stats = canUsePrefetchedPackage
+        ? await statsFuture!
+        : await _loadPublicStats(resolvedWallet);
 
     final statsWithFallback = <String, int>{
       'posts': userShell.postsCount,
@@ -799,6 +800,11 @@ class _ProfileLookup {
 
   final String wallet;
   final String? username;
+
+  bool get isUuid => RegExp(
+        r'^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
+        caseSensitive: false,
+      ).hasMatch(wallet);
 
   bool get hasLookup =>
       wallet.isNotEmpty || (username != null && username!.isNotEmpty);

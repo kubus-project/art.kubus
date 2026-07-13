@@ -378,7 +378,9 @@ class UserService {
       }
     } catch (_) {}
     try {
-      // Fetch profile from backend using wallet address (force or cache miss)
+      // Fetch a public profile by wallet, profile UUID, account UUID, or
+      // username. Canonical public pages use the profile UUID, while community
+      // payloads normally resolve to the wallet before reaching this method.
       final profile = await BackendApiService().getProfileByWallet(userId);
 
       final isArtist =
@@ -393,6 +395,10 @@ class UserService {
                 profile['wallet_address'] ??
                 profile['publicKey'] ??
                 profile['public_key'] ??
+                profile['publicActorId'] ??
+                profile['public_actor_id'] ??
+                profile['profileId'] ??
+                profile['profile_id'] ??
                 userId)
             .toString(),
       );

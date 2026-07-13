@@ -11,16 +11,11 @@ void openProfileIdentity(
 ) {
   if (!context.mounted) return;
 
-  final userId = identity.userId?.trim();
   final username = identity.username?.trim();
-  final label = identity.label.trim();
-  final rawWalletSeed = identity.walletSeed.trim();
-  final walletSeed = rawWalletSeed == label ? '' : rawWalletSeed;
-  final navigationId = userId != null && userId.isNotEmpty
-      ? userId
-      : walletSeed.isNotEmpty
-          ? walletSeed
-          : null;
+  // Community identities contain both the account UUID and public wallet.
+  // ProfileIdentityData keeps the wallet first and retains the UUID for
+  // walletless accounts and canonical public-page handoffs.
+  final navigationId = identity.navigationIdentifier;
 
   if ((navigationId == null || navigationId.isEmpty) &&
       (username == null || username.isEmpty)) {
