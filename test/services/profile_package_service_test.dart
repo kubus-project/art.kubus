@@ -65,6 +65,39 @@ void main() {
     );
   });
 
+  test('canonical profile UUID loads wallet-scoped profile data', () async {
+    const profileId = '22222222-2222-4222-8222-222222222222';
+    final requests = <String>[];
+    BackendApiService().setHttpClient(MockClient((request) async {
+      requests.add(request.url.path);
+      return _mockProfilePackageResponse(request, wallet: wallet);
+    }));
+
+    final critical =
+        await ProfilePackageService.loadPublicProfileCriticalPackage(
+      profileId,
+      forceRefresh: true,
+    );
+
+    expect(critical, isNotNull);
+    expect(critical!.user.id, wallet);
+    expect(requests, contains('/api/profiles/$profileId'));
+    expect(
+      requests.any((path) => path.contains('/api/stats/user/$wallet')),
+      isTrue,
+    );
+    expect(
+      requests.any((path) => path.contains('/api/achievements/users/$wallet')),
+      isTrue,
+    );
+    expect(
+      requests.any((path) =>
+          path.contains('/api/stats/user/$profileId') ||
+          path.contains('/api/achievements/users/$profileId')),
+      isFalse,
+    );
+  });
+
   test('extended package loads posts separately', () async {
     final requests = <String>[];
     BackendApiService().setHttpClient(MockClient((request) async {

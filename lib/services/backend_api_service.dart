@@ -3232,8 +3232,8 @@ class BackendApiService
 
   // ==================== Profile/Artists API (New) ====================
 
-  /// Get profile by wallet address
-  /// GET /api/profiles/:walletAddress
+  /// Get a public profile by wallet or another stable public identifier.
+  /// GET /api/profiles/:identifier
   @override
   Future<Map<String, dynamic>> getProfileByWallet(String walletAddress) =>
       _backendApiGetProfileByWalletImpl(this, walletAddress);

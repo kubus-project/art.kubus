@@ -20,7 +20,17 @@ class ProfileIdentityData {
     this.avatarUrl,
   });
 
-  bool get canOpenProfile => (userId ?? '').trim().isNotEmpty;
+  String? get navigationIdentifier {
+    final normalizedWallet = walletSeed.trim();
+    if (normalizedWallet.isNotEmpty && normalizedWallet != label.trim()) {
+      return normalizedWallet;
+    }
+    final normalizedUserId = (userId ?? '').trim();
+    return normalizedUserId.isEmpty ? null : normalizedUserId;
+  }
+
+  bool get canOpenProfile =>
+      navigationIdentifier != null || (username ?? '').trim().isNotEmpty;
 
   ProfileIdentityData copyWith({
     String? label,

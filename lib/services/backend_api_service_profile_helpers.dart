@@ -31,25 +31,25 @@ Future<Map<String, dynamic>> _backendApiUpdateProfileImpl(
 
 Future<Map<String, dynamic>> _backendApiGetProfileByWalletImpl(
   BackendApiService service,
-  String walletAddress,
+  String identifier,
 ) async {
   try {
     // Public read: do NOT attempt to auto-issue/auth-switch for the wallet
     // being viewed.
     // Avoid making pointless network calls when wallet is a known placeholder
-    final normalized = WalletUtils.normalize(walletAddress);
+    final normalized = WalletUtils.normalize(identifier);
     if (normalized.isEmpty ||
         ['unknown', 'anonymous', 'n/a', 'none']
             .contains(normalized.toLowerCase())) {
       throw Exception('Profile not found');
     }
-    // URL-encode the wallet address for safe path segments
-    final encodedWallet = Uri.encodeComponent(normalized);
+    // URL-encode the identifier for a safe path segment.
+    final encodedIdentifier = Uri.encodeComponent(normalized);
     return await service._performPublicRead<Map<String, dynamic>>(
       liveRead: (candidateBaseUrl) async {
         final data = await service._fetchJsonFromBaseUrl(
           candidateBaseUrl,
-          '/api/profiles/$encodedWallet',
+          '/api/profiles/$encodedIdentifier',
           includeAuth: false,
           allowOrbitFallback: true,
         );
@@ -62,13 +62,26 @@ Future<Map<String, dynamic>> _backendApiGetProfileByWalletImpl(
       snapshotRead: () async {
         final profiles = await service._loadSnapshotDatasetMaps('profiles');
         for (final profile in profiles) {
-          final candidate = WalletUtils.normalize(
-            profile['walletAddress'] ??
-                profile['wallet_address'] ??
-                profile['wallet'] ??
-                profile['id'],
-          );
-          if (candidate == normalized) {
+          final candidates = <dynamic>[
+            profile['walletAddress'],
+            profile['wallet_address'],
+            profile['wallet'],
+            profile['profileId'],
+            profile['profile_id'],
+            profile['userId'],
+            profile['user_id'],
+            profile['publicActorId'],
+            profile['public_actor_id'],
+            profile['username'],
+            profile['id'],
+          ].map((value) => WalletUtils.normalize(value?.toString())).where(
+                (value) => value.isNotEmpty,
+              );
+          if (candidates.any(
+            (candidate) =>
+                candidate == normalized ||
+                candidate.toLowerCase() == normalized.toLowerCase(),
+          )) {
             return profile;
           }
         }
