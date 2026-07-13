@@ -19,8 +19,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta http-equiv="Permissions-Policy" content="identity-credentials-get=(self &quot;https://accounts.google.com&quot;)">
   <meta name="robots" content="index, follow">
-  <meta name="description" content="Discover augmented reality (AR) art in real places, create immersive AR experiences, and collect and trade NFTs and digital collectibles on art.kubus - a Web3 art marketplace.">
-  <meta name="keywords" content="augmented reality art, AR art, NFT marketplace, Web3 art, blockchain art, digital collectibles, immersive art, AR experiences, creators, Solana, razširjena resničnost, AR umetnost, NFT tržnica, digitalni zbirateljski predmeti">
+  <meta name="description" content="Discover public art, exhibitions, artists and cultural spaces through an open, community-led art map.">
   <!-- Patched by CI/deploy from KUBUS_GOOGLE_WEB_CLIENT_ID when provided. -->
   <meta name="google-signin-client_id" content="623807687386-b08lhv474n1li9kkaasq46sag1s8gjcp.apps.googleusercontent.com">
 
@@ -78,10 +77,10 @@
     })();
   </script>
 
-  <link rel="canonical" href="https://app.kubus.site/">
-  <link rel="alternate" hreflang="en" href="https://app.kubus.site/">
-  <link rel="alternate" hreflang="sl" href="https://app.kubus.site/?lang=sl">
-  <link rel="alternate" hreflang="x-default" href="https://app.kubus.site/">
+  <link rel="canonical" href="https://app.kubus.site/en">
+  <link rel="alternate" hreflang="en" href="https://app.kubus.site/en">
+  <link rel="alternate" hreflang="sl" href="https://app.kubus.site/sl">
+  <link rel="alternate" hreflang="x-default" href="https://app.kubus.site/en">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -307,18 +306,18 @@
 
   <meta property="og:site_name" content="art.kubus">
   <meta property="og:type" content="website">
-  <meta property="og:url" content="https://app.kubus.site/">
-  <meta property="og:title" content="art.kubus | Art Map & Social Media For Artists">
-  <meta property="og:description" content="Discover augmented reality (AR) art in real places, create immersive AR experiences, and collect and trade NFTs and digital collectibles on art.kubus - a Web3 art marketplace.">
-  <meta property="og:image" content="https://app.kubus.site/icons/Icon-512.png">
-  <meta property="og:image:alt" content="art.kubus">
+  <meta property="og:url" content="https://app.kubus.site/en">
+  <meta property="og:title" content="art.kubus — Open Art Map and Community Platform">
+  <meta property="og:description" content="Discover public art, exhibitions, artists and cultural spaces through an open, community-led art map.">
+  <meta property="og:image" content="https://app.kubus.site/images/social-preview-default.webp">
+  <meta property="og:image:alt" content="art.kubus open art map and community platform">
   <meta property="og:locale" content="en_US">
   <meta property="og:locale:alternate" content="sl_SI">
 
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="art.kubus | Art Map & Social Media For Artists">
-  <meta name="twitter:description" content="Discover augmented reality (AR) art in real places, create immersive AR experiences, and collect and trade NFTs and digital collectibles on art.kubus - a Web3 art marketplace.">
-  <meta name="twitter:image" content="https://app.kubus.site/icons/Icon-512.png">
+  <meta name="twitter:title" content="art.kubus — Open Art Map and Community Platform">
+  <meta name="twitter:description" content="Discover public art, exhibitions, artists and cultural spaces through an open, community-led art map.">
+  <meta name="twitter:image" content="https://app.kubus.site/images/social-preview-default.webp">
 
   <!-- iOS meta tags & icons -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -330,62 +329,38 @@
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png">
 
-  <title>art.kubus | Art Map & Social Media For Artists</title>
+  <title>art.kubus — Open Art Map and Community Platform</title>
   <link rel="manifest" href="manifest.json">
 
   <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "WebApplication",
-      "name": "art.kubus",
-      "alternateName": "art.kubus",
-      "url": "https://app.kubus.site/",
-      "operatingSystem": "Web",
-      "applicationCategory": "EntertainmentApplication",
-      "inLanguage": ["en", "sl"],
-      "description": [
+      "@graph": [
         {
-          "@language": "en",
-          "@value": "Discover art in real places, create and view immersive AR experiences, and connect with other artists on art.kubus - a Web3 art platform."
+          "@type": "WebSite",
+          "@id": "https://app.kubus.site/#website",
+          "name": "art.kubus",
+          "url": "https://app.kubus.site/",
+          "inLanguage": ["en", "sl"],
+          "description": "Discover public art, exhibitions, artists and cultural spaces through an open, community-led art map."
         },
         {
-          "@language": "sl",
-          "@value": "Odkrijte umetnost v resničnem svetu, ustvarjajte in si oglejte poglobljene AR izkušnje ter se povežite z drugimi umetniki na art.kubus - platformi za umetnost Web3."
+          "@type": "Organization",
+          "@id": "https://app.kubus.site/#organization",
+          "name": "art.kubus",
+          "url": "https://app.kubus.site/"
+        },
+        {
+          "@type": "WebApplication",
+          "@id": "https://app.kubus.site/#app",
+          "name": "art.kubus",
+          "url": "https://app.kubus.site/app",
+          "operatingSystem": "Web, Android, iOS",
+          "applicationCategory": "LifestyleApplication",
+          "inLanguage": ["en", "sl"]
         }
       ]
     }
-  </script>
-
-  <script>
-    (function() {
-      try {
-        var params = new URLSearchParams(location.search || '');
-        var explicitLang = (params.get('lang') || params.get('hl') || '').toLowerCase();
-        var preferred = explicitLang || ((navigator.language || '').toLowerCase().startsWith('sl') ? 'sl' : 'en');
-        if (preferred !== 'sl') return;
-
-        var slTitle = 'art.kubus | zemljevid umetnosti in družabno omrežje za umetnike';
-        var slDescription = 'Odkrijte umetnost razširjene resničnosti (AR) v resničnem svetu, ustvarjajte AR izkušnje ter zbirajte in trgujte z NFT-ji in digitalnimi zbirateljskimi predmeti na platformi art.kubus.';
-
-        document.documentElement.lang = 'sl';
-        document.title = slTitle;
-
-        var desc = document.querySelector('meta[name=\"description\"]');
-        if (desc) desc.setAttribute('content', slDescription);
-
-        var ogTitle = document.querySelector('meta[property=\"og:title\"]');
-        if (ogTitle) ogTitle.setAttribute('content', slTitle);
-
-        var ogDesc = document.querySelector('meta[property=\"og:description\"]');
-        if (ogDesc) ogDesc.setAttribute('content', slDescription);
-
-        var twTitle = document.querySelector('meta[name=\"twitter:title\"]');
-        if (twTitle) twTitle.setAttribute('content', slTitle);
-
-        var twDesc = document.querySelector('meta[name=\"twitter:description\"]');
-        if (twDesc) twDesc.setAttribute('content', slDescription);
-      } catch (_) {}
-    })();
   </script>
 
   <!-- Dev helper: Unregister service workers + clear Flutter caches on local dev only.
@@ -452,68 +427,6 @@
       } catch (e) {
         console.warn('Dev helper: unregister script failed', e);
       }
-    })();
-  </script>
-  <script>
-    (function () {
-      try {
-        var legacyHeads = {
-          post: 'p',
-          posts: 'p',
-          artwork: 'a',
-          artworks: 'a',
-          marker: 'm',
-          markers: 'm',
-          'art-marker': 'm',
-          'art-markers': 'm',
-          profile: 'u',
-          profiles: 'u',
-          user: 'u',
-          users: 'u',
-          event: 'e',
-          events: 'e',
-          exhibition: 'x',
-          exhibitions: 'x',
-          collection: 'c',
-          collections: 'c',
-          nft: 'n',
-          nfts: 'n'
-        };
-
-        var canonicalPath = null;
-        var pathname = location.pathname || '/';
-        var segments = pathname.split('/').filter(function (segment) {
-          return segment && segment.trim().length > 0;
-        });
-
-        if (segments.length >= 2) {
-          for (var i = 0; i < segments.length - 1; i += 1) {
-            var head = String(segments[i] || '').trim().toLowerCase();
-            var shortHead = legacyHeads[head];
-            if (!shortHead) continue;
-            canonicalPath = '/' + shortHead + '/' + encodeURIComponent(decodeURIComponent(segments[i + 1]));
-            break;
-          }
-        }
-
-        if (!canonicalPath) {
-          var params = new URLSearchParams(location.search || '');
-          var markerId = (params.get('marker') || '').trim();
-          if ((pathname === '/map' || pathname === '/map/') && markerId) {
-            canonicalPath = '/m/' + encodeURIComponent(markerId);
-          } else {
-            var typedId = (params.get('id') || '').trim();
-            var typedHead = legacyHeads[String(params.get('type') || '').trim().toLowerCase()];
-            if (typedHead && typedId) {
-              canonicalPath = '/' + typedHead + '/' + encodeURIComponent(typedId);
-            }
-          }
-        }
-
-        if (!canonicalPath) return;
-        if (canonicalPath === pathname) return;
-        location.replace(canonicalPath);
-      } catch (_) {}
     })();
   </script>
   <!-- This script adds the flutter initialization JS code -->

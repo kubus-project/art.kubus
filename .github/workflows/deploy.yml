@@ -323,6 +323,21 @@ jobs:
             --output "$response"
           grep -Eq 'flutter_bootstrap\.js|main\.dart\.js' "$response"
 
+          origin="$(printf '%s' "$WEB_SMOKE_URL" | sed -E 's#(https?://[^/]+).*#\1#')"
+          public_home="$RUNNER_TEMP/public-home.html"
+          robots="$RUNNER_TEMP/robots.txt"
+          curl --fail --silent --show-error --retry 5 --retry-delay 3 \
+            "$origin/en" --output "$public_home"
+          grep -q '<h1>' "$public_home"
+          grep -q 'rel="canonical"' "$public_home"
+          if grep -Eq 'flutter_bootstrap\.js|main\.dart\.js|maplibre' "$public_home"; then
+            echo 'Public HTML unexpectedly loads the interactive app bundle.' >&2
+            exit 1
+          fi
+          curl --fail --silent --show-error "$origin/robots.txt" --output "$robots"
+          grep -q "Sitemap: $origin/sitemap.xml" "$robots"
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' "$origin/__deploy_unknown_${SOURCE_SHA}")" = '404'
+
       - name: Roll back failed web smoke
         if: ${{ failure() && steps.promote.outcome == 'success' && steps.smoke.outcome == 'failure' }}
         uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1
