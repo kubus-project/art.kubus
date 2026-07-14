@@ -151,6 +151,20 @@ test('CI applies its generated build metadata to every Flutter platform build', 
   assert.match(config, /String\.fromEnvironment\(\s*'KUBUS_BUILD_DATE'/);
 });
 
+test('Android CI reclaims disk before release compilation without dropping the debug gate', () => {
+  const workflow = readFileSync(
+    resolve(repoRoot, '.github', 'workflows', 'ci.yml'),
+    'utf8',
+  );
+  const androidJob = workflow.slice(workflow.indexOf('\n  android:'), workflow.indexOf('\n  ios:'));
+
+  assert.match(androidJob, /Reclaim hosted-runner disk for Android builds/);
+  assert.match(androidJob, /docker image prune --all --force/);
+  assert.match(androidJob, /test "\$available_kib" -ge 12582912/);
+  assert.match(androidJob, /Compile Android debug APK[\s\S]*?Reclaim debug-only Android intermediates[\s\S]*?Compile unsigned Android release APK/);
+  assert.match(androidJob, /rm -rf build\/app android\/.gradle/);
+});
+
 test('successful master CI publishes one immutable alpha release per version', () => {
   const workflow = readFileSync(
     resolve(repoRoot, '.github', 'workflows', 'deploy.yml'),
