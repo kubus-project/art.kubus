@@ -13,6 +13,7 @@ void main() {
 
   setUp(() async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
+    BackendApiService().setAuthTokenForTesting(null);
     await UserService.clearCache();
   });
 
@@ -63,7 +64,8 @@ void main() {
     );
   });
 
-  test('Viewing own user profile may fetch self-only achievements', () async {
+  test('Viewing own public profile without a session stays anonymous',
+      () async {
     const myWallet = '4Nd1mYbF7kYgU7kD3bcd1q2w4gS7y8Z9xKLMNPQRSTU';
 
     final prefs = await SharedPreferences.getInstance();
@@ -110,12 +112,12 @@ void main() {
 
     expect(
       requests.any((r) => r.url.path.contains('/api/achievements/user/')),
-      isTrue,
-      reason: 'Own profile can fetch self-only achievements when available.',
+      isFalse,
+      reason: 'A stored wallet alone must not authorize self-only enrichment.',
     );
   });
 
-  test('Public profile follow state uses backend status over stale local list',
+  test('Public profile follow state skips protected status for stale account',
       () async {
     const myWallet = '4Nd1mYbF7kYgU7kD3bcd1q2w4gS7y8Z9xKLMNPQRSTU';
     const otherWallet = '6Nd1mYbF7kYgU7kD3bcd1q2w4gS7y8Z9xKLMNPQRSTV';
@@ -164,9 +166,9 @@ void main() {
     expect(user!.isFollowing, isFalse);
     expect(
       requests.any((r) => r.url.path.endsWith('/follow/$otherWallet/status')),
-      isTrue,
+      isFalse,
       reason:
-          'Profile hydration must ask the backend for viewer-specific follow state.',
+          'A stale wallet without a session must not issue a protected read.',
     );
   });
 
@@ -178,6 +180,7 @@ void main() {
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(PreferenceKeys.walletAddress, myWallet);
+    BackendApiService().setAuthTokenForTesting('test-account-session');
 
     final api = BackendApiService();
     api.setHttpClient(MockClient((request) async {

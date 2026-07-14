@@ -28,6 +28,7 @@ import '../../../services/backend_api_service.dart';
 import '../../../services/profile_package_mutation_tracker.dart';
 import '../../../services/block_list_service.dart';
 import '../../../services/community_post_save_controller.dart';
+import '../../../services/contextual_auth_gate.dart';
 import '../../../services/user_service.dart';
 import '../../../services/share/share_service.dart';
 import '../../../services/share/share_types.dart' as share_types;

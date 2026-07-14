@@ -16,6 +16,7 @@ import '../../widgets/avatar_widget.dart';
 import '../../widgets/common/keyboard_inset_padding.dart';
 import '../../services/backend_api_service.dart';
 import '../../services/community_post_save_controller.dart';
+import '../../services/contextual_auth_gate.dart';
 import '../../services/profile_package_mutation_tracker.dart';
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
@@ -261,6 +262,12 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   Future<void> _toggleLike() async {
     if (_post == null) return;
     final l10n = AppLocalizations.of(context)!;
+    final authenticated = await const ContextualAuthGate().ensureAuthenticated(
+      context,
+      actionLabel: l10n.commonLikes.toLowerCase(),
+      returnRoute: '/p/${Uri.encodeComponent(_post!.id)}',
+    );
+    if (!authenticated || !mounted) return;
     try {
       await context
           .read<CommunityInteractionsProvider>()
@@ -343,6 +350,12 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     final messenger = ScaffoldMessenger.of(context);
     final text = _commentController.text.trim();
     if (text.isEmpty) return;
+    final authenticated = await const ContextualAuthGate().ensureAuthenticated(
+      context,
+      actionLabel: l10n.commonComments.toLowerCase(),
+      returnRoute: '/p/${Uri.encodeComponent(_post!.id)}',
+    );
+    if (!authenticated || !mounted) return;
     _commentController.clear();
     // capture and clear reply target
     final parentId = _replyToCommentId;
@@ -426,7 +439,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                   future: future,
                   builder: (context, snapshot) {
                     if (snapshot.connectionState != ConnectionState.done) {
-                      return const Center(child: InlineLoading(width: 40, height: 40));
+                      return const Center(
+                          child: InlineLoading(width: 40, height: 40));
                     }
                     if (snapshot.hasError) {
                       return Center(
@@ -570,7 +584,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                   future: future,
                   builder: (context, snapshot) {
                     if (snapshot.connectionState != ConnectionState.done) {
-                      return const Center(child: InlineLoading(width: 40, height: 40));
+                      return const Center(
+                          child: InlineLoading(width: 40, height: 40));
                     }
                     if (snapshot.hasError) {
                       return Center(
@@ -719,7 +734,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                 future: future,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: InlineLoading(width: 40, height: 40));
+                    return const Center(
+                        child: InlineLoading(width: 40, height: 40));
                   }
                   if (snapshot.hasError) {
                     return Center(
@@ -1639,6 +1655,13 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   Future<void> _toggleBookmark() async {
     final post = _post;
     if (!mounted || post == null) return;
+    final l10n = AppLocalizations.of(context)!;
+    final authenticated = await const ContextualAuthGate().ensureAuthenticated(
+      context,
+      actionLabel: l10n.commonSave.toLowerCase(),
+      returnRoute: '/p/${Uri.encodeComponent(post.id)}',
+    );
+    if (!authenticated || !mounted) return;
     try {
       await CommunityPostSaveController.toggle(context, post);
       if (!mounted) return;
@@ -2193,8 +2216,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                             if (loading && comments.isEmpty) {
                               return const Padding(
                                 padding: EdgeInsets.symmetric(vertical: 24),
-                                child:
-                                    Center(child: InlineLoading(width: 40, height: 40)),
+                                child: Center(
+                                    child:
+                                        InlineLoading(width: 40, height: 40)),
                               );
                             }
 

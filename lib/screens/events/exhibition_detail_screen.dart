@@ -16,7 +16,7 @@ import '../../providers/attestation_provider.dart';
 import '../../providers/collab_provider.dart';
 import '../../providers/events_provider.dart';
 import '../../providers/exhibitions_provider.dart';
-import '../../providers/profile_provider.dart';
+import '../../providers/wallet_provider.dart';
 import '../../screens/collab/invites_inbox_screen.dart';
 import '../../screens/desktop/desktop_shell.dart';
 import '../../services/backend_api_service.dart'
@@ -68,7 +68,6 @@ class ExhibitionDetailScreen extends StatefulWidget {
 class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
   String? _prefetchedAttendanceMarkerId;
   bool _isClaimingPoap = false;
-  bool _autoClaimAttempted = false;
   bool _scanProofExchangeAttempted = false;
   String? _claimProofToken;
   final Set<String> _deleteDialogOpenExhibitionIds = <String>{};
@@ -107,33 +106,9 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
     }
     try {
       await provider.fetchExhibitionPoap(widget.exhibitionId, force: true);
-      await _maybeAutoClaimPoap();
     } catch (e) {
       debugPrint('ExhibitionDetailScreen: POAP load failed: $e');
     }
-  }
-
-  Future<void> _maybeAutoClaimPoap() async {
-    if (!widget.autoClaimPoap || _autoClaimAttempted) return;
-
-    final markerId = (widget.attendanceMarkerId ?? '').trim();
-    final existingProof =
-        (_claimProofToken ?? widget.claimProofToken ?? '').trim();
-    final handoff = (widget.handoffToken ?? '').trim();
-    if (markerId.isEmpty && existingProof.isEmpty && handoff.isEmpty) return;
-
-    final provider = context.read<ExhibitionsProvider>();
-    final currentPoap = provider.poapStatusFor(widget.exhibitionId);
-    if (currentPoap == null || currentPoap.claimed) {
-      return;
-    }
-    final hasProofContext = existingProof.isNotEmpty || handoff.isNotEmpty;
-    if (!currentPoap.canClaim && !hasProofContext) {
-      return;
-    }
-
-    _autoClaimAttempted = true;
-    await _claimExhibitionPoap();
   }
 
   Future<String?> _ensureClaimProofToken() async {
@@ -942,7 +917,8 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
       return const SizedBox.shrink();
     }
 
-    final isSignedIn = context.watch<ProfileProvider>().isSignedIn;
+    final isSignedIn =
+        context.watch<WalletProvider>().authority.hasAccountSession;
     if (!isSignedIn) {
       return const SizedBox.shrink();
     }
@@ -1109,7 +1085,8 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final provider = context.watch<ExhibitionsProvider>();
-    final isSignedIn = context.watch<ProfileProvider>().isSignedIn;
+    final isSignedIn =
+        context.watch<WalletProvider>().authority.hasAccountSession;
 
     final ex = provider.exhibitions.firstWhere(
       (e) => e.id == widget.exhibitionId,
@@ -1262,7 +1239,10 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                           top: 0,
                           left: 0,
                           right: 0,
-                          child: InlineLoading(height: 4, borderRadius: BorderRadius.circular(2), color: scheme.primary),
+                          child: InlineLoading(
+                              height: 4,
+                              borderRadius: BorderRadius.circular(2),
+                              color: scheme.primary),
                         ),
                     ],
                   );
@@ -1281,7 +1261,10 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                     if (provider.isDetailLoading)
                       Padding(
                         padding: const EdgeInsets.only(top: DetailSpacing.lg),
-                        child: InlineLoading(height: 4, borderRadius: BorderRadius.circular(2), color: scheme.primary),
+                        child: InlineLoading(
+                            height: 4,
+                            borderRadius: BorderRadius.circular(2),
+                            color: scheme.primary),
                       ),
                   ],
                 );

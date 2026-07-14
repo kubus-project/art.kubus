@@ -1173,7 +1173,10 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
     if (ShellRoutes.shouldWrapInitialUri(uri)) {
       return <Route<dynamic>>[
         MaterialPageRoute(
-          builder: (_) => AppInitializer(preferredShellRoute: uri.path),
+          builder: (_) => AppInitializer(
+            preferredShellRoute: uri.path,
+            initialUri: uri,
+          ),
           settings: RouteSettings(name: normalized),
         ),
       ];

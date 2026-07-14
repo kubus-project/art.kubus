@@ -11,6 +11,7 @@ import '../../providers/artwork_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../services/backend_api_service.dart';
+import '../../services/contextual_auth_gate.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/wallet_utils.dart';
 import '../avatar_widget.dart';
@@ -767,8 +768,10 @@ class _ArtworkCommentsExpandableCardState
                   Row(
                     children: [
                       IconButton(
-                        onPressed: () => provider.toggleCommentLike(
-                            widget.artwork.id, comment.id),
+                        onPressed: () => _toggleCommentLike(
+                          provider,
+                          comment.id,
+                        ),
                         icon: Icon(
                           comment.isLikedByCurrentUser
                               ? Icons.favorite
@@ -913,30 +916,12 @@ class _ArtworkCommentsExpandableCardState
     final navigator = Navigator.of(context);
     final l10n = AppLocalizations.of(context)!;
 
-    if (!isSignedIn) {
-      messenger.showKubusSnackBar(
-        SnackBar(
-          content: Text(
-            l10n.communityCommentAuthRequiredToast,
-            style: KubusTypography.inter(),
-          ),
-          action: SnackBarAction(
-            label: l10n.commonSignIn,
-            onPressed: () {
-              navigator.pushNamed(
-                '/sign-in',
-                arguments: widget.signInArguments ??
-                    {
-                      'redirectRoute': '/artwork',
-                      'redirectArguments': {'artworkId': widget.artwork.id},
-                    },
-              );
-            },
-          ),
-        ),
-      );
-      return;
-    }
+    final authenticated = await const ContextualAuthGate().ensureAuthenticated(
+      context,
+      actionLabel: l10n.commonComments.toLowerCase(),
+      returnRoute: '/a/${Uri.encodeComponent(widget.artwork.id)}',
+    );
+    if (!authenticated || !mounted) return;
 
     final parentId = _replyToCommentId;
     setState(() {
@@ -1031,5 +1016,19 @@ class _ArtworkCommentsExpandableCardState
         ),
       );
     }
+  }
+
+  Future<void> _toggleCommentLike(
+    ArtworkProvider provider,
+    String commentId,
+  ) async {
+    final l10n = AppLocalizations.of(context)!;
+    final authenticated = await const ContextualAuthGate().ensureAuthenticated(
+      context,
+      actionLabel: l10n.commonLikes.toLowerCase(),
+      returnRoute: '/a/${Uri.encodeComponent(widget.artwork.id)}',
+    );
+    if (!authenticated || !mounted) return;
+    await provider.toggleCommentLike(widget.artwork.id, commentId);
   }
 }

@@ -25,32 +25,32 @@ class AppRouteIntent {
   });
 
   const AppRouteIntent.marker(String markerId)
-    : this._(type: AppRouteIntentType.marker, id: markerId);
+      : this._(type: AppRouteIntentType.marker, id: markerId);
 
   const AppRouteIntent.artwork(String artworkId)
-    : this._(type: AppRouteIntentType.artwork, id: artworkId);
+      : this._(type: AppRouteIntentType.artwork, id: artworkId);
 
   const AppRouteIntent.event(String eventId)
-    : this._(type: AppRouteIntentType.event, id: eventId);
+      : this._(type: AppRouteIntentType.event, id: eventId);
 
   const AppRouteIntent.post(String postId)
-    : this._(type: AppRouteIntentType.post, id: postId);
+      : this._(type: AppRouteIntentType.post, id: postId);
 
   const AppRouteIntent.profile(String profileId)
-    : this._(type: AppRouteIntentType.profile, id: profileId);
+      : this._(type: AppRouteIntentType.profile, id: profileId);
 
   const AppRouteIntent.exhibition(String exhibitionId)
-    : this._(type: AppRouteIntentType.exhibition, id: exhibitionId);
+      : this._(type: AppRouteIntentType.exhibition, id: exhibitionId);
 
   const AppRouteIntent.collection(String collectionId)
-    : this._(type: AppRouteIntentType.collection, id: collectionId);
+      : this._(type: AppRouteIntentType.collection, id: collectionId);
 
   const AppRouteIntent.nft(String nftId)
-    : this._(type: AppRouteIntentType.nft, id: nftId);
+      : this._(type: AppRouteIntentType.nft, id: nftId);
 
   const AppRouteIntent.map({this.lat, this.lng, this.zoom})
-    : type = AppRouteIntentType.map,
-      id = null;
+      : type = AppRouteIntentType.map,
+        id = null;
 
   final AppRouteIntentType type;
   final String? id;
@@ -68,6 +68,9 @@ class ShareDeepLinkTarget {
   final String? claimProofToken;
   final String? handoffToken;
   final String? proofSource;
+  final String? localeCode;
+
+  String? get _currentLocaleCode => localeCode;
 
   const ShareDeepLinkTarget({
     required this.type,
@@ -77,6 +80,7 @@ class ShareDeepLinkTarget {
     this.claimProofToken,
     this.handoffToken,
     this.proofSource,
+    this.localeCode,
   });
 
   const ShareDeepLinkTarget.exhibitionClaimReady({
@@ -85,15 +89,17 @@ class ShareDeepLinkTarget {
     String? claimProofToken,
     String? handoffToken,
     String? proofSource,
+    String? localeCode,
   }) : this(
-         type: ShareEntityType.exhibition,
-         id: exhibitionId,
-         attendanceMarkerId: attendanceMarkerId,
-         claimReady: true,
-         claimProofToken: claimProofToken,
-         handoffToken: handoffToken,
-         proofSource: proofSource,
-       );
+          type: ShareEntityType.exhibition,
+          id: exhibitionId,
+          attendanceMarkerId: attendanceMarkerId,
+          claimReady: true,
+          claimProofToken: claimProofToken,
+          handoffToken: handoffToken,
+          proofSource: proofSource,
+          localeCode: localeCode,
+        );
 
   ShareDeepLinkTarget copyWith({
     ShareEntityType? type,
@@ -103,6 +109,7 @@ class ShareDeepLinkTarget {
     String? claimProofToken,
     String? handoffToken,
     String? proofSource,
+    String? localeCode,
   }) {
     return ShareDeepLinkTarget(
       type: type ?? this.type,
@@ -112,6 +119,7 @@ class ShareDeepLinkTarget {
       claimProofToken: claimProofToken ?? this.claimProofToken,
       handoffToken: handoffToken ?? this.handoffToken,
       proofSource: proofSource ?? this.proofSource,
+      localeCode: localeCode ?? _currentLocaleCode,
     );
   }
 
@@ -182,10 +190,9 @@ class ShareDeepLinkCodec {
     final proofSource = _proofSourceFromUri(uri);
     final explicitClaimReady =
         uri.queryParameters['handoff']?.toLowerCase() == 'claim-ready' ||
-        uri.queryParameters['claimReady'] == 'true' ||
-        uri.queryParameters['claim_ready'] == 'true';
-    final claimReady =
-        intent.type == AppRouteIntentType.exhibition &&
+            uri.queryParameters['claimReady'] == 'true' ||
+            uri.queryParameters['claim_ready'] == 'true';
+    final claimReady = intent.type == AppRouteIntentType.exhibition &&
         (explicitClaimReady ||
             (claimProofToken ?? '').isNotEmpty ||
             (handoffToken ?? '').isNotEmpty);
@@ -201,6 +208,7 @@ class ShareDeepLinkCodec {
       claimProofToken: claimProofToken,
       handoffToken: handoffToken,
       proofSource: proofSource,
+      localeCode: _localeCodeFromUri(uri),
     );
   }
 
@@ -212,9 +220,8 @@ class ShareDeepLinkCodec {
     final parsed = Uri.parse(relativePath);
     return baseUri.replace(
       path: '$normalizedPath${parsed.path}',
-      queryParameters: parsed.queryParameters.isEmpty
-          ? null
-          : parsed.queryParameters,
+      queryParameters:
+          parsed.queryParameters.isEmpty ? null : parsed.queryParameters,
     );
   }
 
@@ -290,12 +297,11 @@ class ShareDeepLinkCodec {
     if (uri == null) return false;
     final handoff = (uri.queryParameters['handoff'] ?? '').trim().toLowerCase();
     if (handoff == 'claim-ready') return true;
-    final claimReady =
-        (uri.queryParameters['claimReady'] ??
-                uri.queryParameters['claim_ready'])
-            ?.toString()
-            .trim()
-            .toLowerCase();
+    final claimReady = (uri.queryParameters['claimReady'] ??
+            uri.queryParameters['claim_ready'])
+        ?.toString()
+        .trim()
+        .toLowerCase();
     if (claimReady == 'true') return true;
     if (segmentIndex != null && uri.pathSegments.length > segmentIndex + 2) {
       final segment = uri.pathSegments[segmentIndex + 2].trim().toLowerCase();
@@ -306,12 +312,11 @@ class ShareDeepLinkCodec {
 
   String? _claimReadyMarkerFromUri(Uri? uri) {
     if (uri == null) return null;
-    final markerFromQuery =
-        (uri.queryParameters['attendanceMarkerId'] ??
-                uri.queryParameters['attendance_marker_id'] ??
-                uri.queryParameters['markerId'] ??
-                uri.queryParameters['marker_id'])
-            ?.trim();
+    final markerFromQuery = (uri.queryParameters['attendanceMarkerId'] ??
+            uri.queryParameters['attendance_marker_id'] ??
+            uri.queryParameters['markerId'] ??
+            uri.queryParameters['marker_id'])
+        ?.trim();
     if (markerFromQuery != null && markerFromQuery.isNotEmpty) {
       return markerFromQuery;
     }
@@ -335,36 +340,45 @@ class ShareDeepLinkCodec {
 
   String? _proofTokenFromUri(Uri? uri) {
     if (uri == null) return null;
-    final value =
-        (uri.queryParameters['claimProofToken'] ??
-                uri.queryParameters['claim_proof_token'] ??
-                uri.queryParameters['scanProofToken'] ??
-                uri.queryParameters['scan_proof_token'] ??
-                uri.queryParameters['proofToken'] ??
-                uri.queryParameters['proof_token'])
-            ?.trim();
+    final value = (uri.queryParameters['claimProofToken'] ??
+            uri.queryParameters['claim_proof_token'] ??
+            uri.queryParameters['scanProofToken'] ??
+            uri.queryParameters['scan_proof_token'] ??
+            uri.queryParameters['proofToken'] ??
+            uri.queryParameters['proof_token'])
+        ?.trim();
     return value == null || value.isEmpty ? null : value;
   }
 
   String? _handoffTokenFromUri(Uri? uri) {
     if (uri == null) return null;
-    final value =
-        (uri.queryParameters['handoffToken'] ??
-                uri.queryParameters['handoff_token'] ??
-                uri.queryParameters['scanHandoffToken'] ??
-                uri.queryParameters['scan_handoff_token'])
-            ?.trim();
+    final value = (uri.queryParameters['handoffToken'] ??
+            uri.queryParameters['handoff_token'] ??
+            uri.queryParameters['scanHandoffToken'] ??
+            uri.queryParameters['scan_handoff_token'])
+        ?.trim();
     return value == null || value.isEmpty ? null : value;
   }
 
   String? _proofSourceFromUri(Uri? uri) {
     if (uri == null) return null;
-    final value =
-        (uri.queryParameters['proofSource'] ??
-                uri.queryParameters['proof_source'] ??
-                uri.queryParameters['source'])
-            ?.trim();
+    final value = (uri.queryParameters['proofSource'] ??
+            uri.queryParameters['proof_source'] ??
+            uri.queryParameters['source'])
+        ?.trim();
     return value == null || value.isEmpty ? null : value;
+  }
+
+  String? _localeCodeFromUri(Uri uri) {
+    for (final segment in uri.pathSegments) {
+      final normalized = segment.trim().toLowerCase();
+      if (normalized == 'en' || normalized == 'sl') return normalized;
+    }
+    final queryLocale =
+        (uri.queryParameters['lang'] ?? uri.queryParameters['locale'])
+            ?.trim()
+            .toLowerCase();
+    return queryLocale == 'en' || queryLocale == 'sl' ? queryLocale : null;
   }
 
   ShareEntityType? _shareTypeForIntent(AppRouteIntentType type) {

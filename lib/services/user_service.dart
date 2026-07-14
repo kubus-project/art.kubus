@@ -1554,7 +1554,7 @@ class UserService {
     }
     try {
       final isCurrentUser = await _isCurrentUserWallet(walletAddress);
-      final resp = isCurrentUser
+      final resp = isCurrentUser && BackendApiService().hasAuthSession
           ? await BackendApiService().getUserAchievements(walletAddress)
           : await BackendApiService().getPublicUserAchievements(walletAddress);
       final unavailable = resp['success'] == false;

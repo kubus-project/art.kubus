@@ -38,6 +38,7 @@ import '../../services/telemetry/telemetry_service.dart';
 import '../../services/map_attribution_helper.dart';
 import '../../services/map_style_service.dart';
 import '../../services/backend_api_service.dart';
+import '../../services/contextual_auth_gate.dart';
 import '../../services/map_data_controller.dart';
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
@@ -1296,9 +1297,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     _markerVisualSyncCoordinator.request(force: force);
   }
 
-
-  Future<void> _syncMapMarkersSafe(
-          {required ThemeProvider themeProvider}) =>
+  Future<void> _syncMapMarkersSafe({required ThemeProvider themeProvider}) =>
       _markerSyncEngine.syncMarkersSafe(themeProvider: themeProvider);
 
   Future<void> _applyThemeToMapStyle(
@@ -1690,12 +1689,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     );
   }
 
-
   Future<void> _syncMapMarkers({required ThemeProvider themeProvider}) =>
       _markerSyncEngine.syncMarkers(themeProvider: themeProvider);
-
-
-
 
   Future<GeoBounds?> _getVisibleGeoBounds() async {
     final controller = _mapController;
@@ -2744,8 +2739,15 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   DetailSecondaryAction(
                     icon: isSaved ? Icons.bookmark : Icons.bookmark_border,
                     label: isSaved ? l10n.commonSavedToast : l10n.commonSave,
-                    onTap: () {
-                      unawaited(artworkProvider.toggleArtworkSaved(artwork.id));
+                    onTap: () async {
+                      final authenticated =
+                          await const ContextualAuthGate().ensureAuthenticated(
+                        context,
+                        actionLabel: l10n.commonSave.toLowerCase(),
+                        returnRoute: '/a/${Uri.encodeComponent(artwork.id)}',
+                      );
+                      if (!authenticated || !context.mounted) return;
+                      await artworkProvider.toggleArtworkSaved(artwork.id);
                     },
                     isActive: isSaved,
                     activeColor: accent,
@@ -2756,8 +2758,15 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                         ? Icons.favorite
                         : Icons.favorite_border,
                     label: '${artwork.likesCount}',
-                    onTap: () {
-                      unawaited(artworkProvider.toggleLike(artwork.id));
+                    onTap: () async {
+                      final authenticated =
+                          await const ContextualAuthGate().ensureAuthenticated(
+                        context,
+                        actionLabel: l10n.commonLikes.toLowerCase(),
+                        returnRoute: '/a/${Uri.encodeComponent(artwork.id)}',
+                      );
+                      if (!authenticated || !context.mounted) return;
+                      await artworkProvider.toggleLike(artwork.id);
                     },
                     isActive: artwork.isLikedByCurrentUser,
                     activeColor: scheme.error,
@@ -5814,8 +5823,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           if (coverImageUrl != null && coverImageUrl.isNotEmpty)
             'coverImageUrl': coverImageUrl,
           // Attribution (shown in the marker info card below the description).
-          if ((form.artistName ?? '').isNotEmpty)
-            'artistName': form.artistName,
+          if ((form.artistName ?? '').isNotEmpty) 'artistName': form.artistName,
           if ((form.imageAuthor ?? '').isNotEmpty)
             'imageAuthor': form.imageAuthor,
           if ((form.imageLicense ?? '').isNotEmpty)

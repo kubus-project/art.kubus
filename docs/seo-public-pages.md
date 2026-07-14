@@ -18,6 +18,11 @@ in art.kubus” link targets `/app/<compact-entity-path>`; the existing deep-lin
 parser ignores the prefix and opens the same entity screen. Flutter then keeps
 its established compact in-app route name in browser history.
 
+The Flutter handoff and authenticated-action boundary are defined in
+[`public-entry-access-policy.md`](public-entry-access-policy.md). In particular,
+ordinary eligible entity handoffs are public reads even when local account
+metadata is stale; authentication begins at an identity-required action.
+
 This design is deployable through the current atomic static release and Node
 deployment on the existing LiteSpeed/cPanel host. The local PHP gateway removes
 the need for server-level `mod_proxy` or a LiteSpeed External App. It has a

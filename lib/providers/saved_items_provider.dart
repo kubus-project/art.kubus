@@ -6,6 +6,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/saved_item.dart';
 import '../services/saved_items_repository.dart';
 
+class SavedItemsAuthenticationRequired implements Exception {
+  const SavedItemsAuthenticationRequired();
+
+  @override
+  String toString() => 'Authentication required to change saved items';
+}
+
 class SavedItemsProvider extends ChangeNotifier {
   SavedItemsProvider({SavedItemsRepository? repository})
       : _repository = repository ?? SavedItemsRepository();
@@ -31,6 +38,7 @@ class SavedItemsProvider extends ChangeNotifier {
   };
 
   bool _isInitialized = false;
+  bool _legacyMigrationAttempted = false;
   bool _isSyncing = false;
   SharedPreferences? _prefs;
 
@@ -94,16 +102,21 @@ class SavedItemsProvider extends ChangeNotifier {
     return latest;
   }
 
-  Future<void> initialize() async {
-    if (_isInitialized) return;
-    _prefs = await SharedPreferences.getInstance();
-    final cached = await _repository.loadCachedItems();
-    final legacy = _loadLegacyItems();
-    _replaceAll(_mergeRecords([...cached, ...legacy]));
-    _isInitialized = true;
-    notifyListeners();
+  Future<void> initialize({bool syncBackend = true}) async {
+    if (!_isInitialized) {
+      _prefs = await SharedPreferences.getInstance();
+      final cached = await _repository.loadCachedItems();
+      final legacy = _loadLegacyItems();
+      _replaceAll(_mergeRecords([...cached, ...legacy]));
+      _isInitialized = true;
+      notifyListeners();
+    }
 
-    await _repository.migrateLegacyItems(legacy);
+    if (!syncBackend || !await _repository.hasBackendSession()) return;
+    if (!_legacyMigrationAttempted) {
+      _legacyMigrationAttempted = true;
+      await _repository.migrateLegacyItems(_loadLegacyItems());
+    }
     await refreshFromBackend();
   }
 
@@ -200,6 +213,7 @@ class SavedItemsProvider extends ChangeNotifier {
       }
     }
     if (items.isEmpty) return;
+    if (!await _repository.hasBackendSession()) return;
 
     final statusMap = await _repository.getSavedBatchStatus(items);
     if (statusMap.isEmpty) return;
@@ -231,6 +245,9 @@ class SavedItemsProvider extends ChangeNotifier {
   }
 
   Future<void> saveItem(SavedItemRecord record) async {
+    if (!await _repository.hasBackendSession()) {
+      throw const SavedItemsAuthenticationRequired();
+    }
     final normalized = record.copyWith(
       savedAt: record.savedAt.millisecondsSinceEpoch <= 0
           ? DateTime.now()
@@ -274,6 +291,10 @@ class SavedItemsProvider extends ChangeNotifier {
         metadata: metadata,
       ));
       return;
+    }
+
+    if (!await _repository.hasBackendSession()) {
+      throw const SavedItemsAuthenticationRequired();
     }
 
     final removed = _itemsByType[type]!.remove(normalizedId);

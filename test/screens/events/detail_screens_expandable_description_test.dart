@@ -9,6 +9,7 @@ import 'package:art_kubus/providers/events_provider.dart';
 import 'package:art_kubus/providers/exhibitions_provider.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/themeprovider.dart';
+import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/screens/events/event_detail_screen.dart';
 import 'package:art_kubus/screens/events/exhibition_detail_screen.dart';
 import 'package:art_kubus/screens/events/exhibition_list_screen.dart';
@@ -79,6 +80,7 @@ Widget _wrap({
       ChangeNotifierProvider(create: (_) => ExhibitionsProvider()),
       ChangeNotifierProvider(create: (_) => EventsProvider()),
       ChangeNotifierProvider(create: (_) => ProfileProvider()),
+      ChangeNotifierProvider(create: (_) => WalletProvider(deferInit: true)),
       ChangeNotifierProvider(create: (_) => ArtworkProvider()),
       ChangeNotifierProvider(create: (_) => CollabProvider(api: _FakeCollabApi())),
       ...extraProviders,

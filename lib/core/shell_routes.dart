@@ -29,7 +29,17 @@ class ShellRoutes {
   };
 
   static bool shouldWrapInitialUri(Uri uri) {
-    return uri.queryParameters.isEmpty && initializerWrapped.contains(uri.path);
+    if (!initializerWrapped.contains(uri.path)) return false;
+    return uri.queryParameters.keys.every(_isBenignLaunchParameter);
+  }
+
+  static bool _isBenignLaunchParameter(String rawKey) {
+    final key = rawKey.trim().toLowerCase();
+    return key.startsWith('utm_') ||
+        key == 'mode' ||
+        key == 'intent' ||
+        key == 'lang' ||
+        key == 'locale';
   }
 
   static bool isInternalShellAlias(String path) {

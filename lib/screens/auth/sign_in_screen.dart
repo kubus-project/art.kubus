@@ -30,6 +30,12 @@ import '../../utils/auth_wallet_result_normalizer.dart';
 import '../web3/wallet/connectwallet_screen.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
+@visibleForTesting
+String signInCancellationRoute(String? redirectRoute) {
+  final normalized = (redirectRoute ?? '').trim();
+  return normalized.isEmpty ? '/main' : normalized;
+}
+
 class SignInScreen extends StatefulWidget {
   const SignInScreen({
     super.key,
@@ -1145,6 +1151,9 @@ class _SignInScreenState extends State<SignInScreen> {
   void _continueAsGuest() {
     unawaited(TelemetryService().trackSignInAttempt(method: 'guest'));
     unawaited(TelemetryService().trackSignInSuccess(method: 'guest'));
-    Navigator.of(context).pushReplacementNamed('/main');
+    Navigator.of(context).pushReplacementNamed(
+      signInCancellationRoute(widget.redirectRoute),
+      arguments: widget.redirectArguments,
+    );
   }
 }

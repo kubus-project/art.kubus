@@ -26,6 +26,7 @@ import '../services/auth_gating_service.dart';
 import '../services/guest_session_service.dart';
 import '../services/telemetry/telemetry_service.dart';
 import '../services/auth/auth_deep_link_parser.dart';
+import '../services/share/share_deep_link_parser.dart';
 import '../screens/onboarding/onboarding_flow_screen.dart';
 import '../screens/desktop/desktop_shell.dart';
 import '../widgets/app_loading.dart';
@@ -41,9 +42,11 @@ class AppInitializer extends StatefulWidget {
   const AppInitializer({
     super.key,
     this.preferredShellRoute,
+    this.initialUri,
   });
 
   final String? preferredShellRoute;
+  final Uri? initialUri;
 
   @override
   State<AppInitializer> createState() => _AppInitializerState();
@@ -79,6 +82,39 @@ class _AppInitializerState extends State<AppInitializer> {
     return ShellRoutes.signInRedirectArguments(widget.preferredShellRoute);
   }
 
+  ShareDeepLinkTarget? get _pendingShareTarget {
+    try {
+      return Provider.of<DeepLinkProvider>(context, listen: false).pending;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  bool _openPendingPublicTarget(NavigatorState navigator) {
+    final pending = _pendingShareTarget;
+    if (pending == null) return false;
+    final routing = const DeepLinkStartupRouting();
+    if (routing.accessPolicyFor(pending) != DeepLinkAccessPolicy.publicRead) {
+      return false;
+    }
+    final decision = routing.decide(
+      pending: pending,
+      hasValidSession: false,
+    );
+    if (decision == null) return false;
+    final destination = decision.preferredShellRoute == ShellRoutes.map
+        ? const ShellEntryScreen.map()
+        : const MainApp();
+    _didNavigate = true;
+    navigator.pushReplacement(
+      MaterialPageRoute(
+        builder: (_) => destination,
+        settings: RouteSettings(name: decision.canonicalPath),
+      ),
+    );
+    return true;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -92,6 +128,7 @@ class _AppInitializerState extends State<AppInitializer> {
       if (!mounted || _didNavigate) return;
       final navigator = appNavigatorKey.currentState;
       if (navigator == null) return;
+      if (_openPendingPublicTarget(navigator)) return;
       final isDesktop = DesktopBreakpoints.isDesktop(navigator.context);
       _didNavigate = true;
       navigator.pushReplacement(
@@ -161,6 +198,20 @@ class _AppInitializerState extends State<AppInitializer> {
           Provider.of<LocaleProvider>(context, listen: false);
       await _safeStep<void>('locale.initialize', localeProvider.initialize,
           timeout: const Duration(seconds: 4));
+      final deepLinkLocale = _pendingShareTarget?.localeCode;
+      final launchLocale = widget.initialUri?.queryParameters['lang'] ??
+          widget.initialUri?.queryParameters['locale'];
+      final requestedLocale = deepLinkLocale ?? launchLocale;
+      if (requestedLocale != null &&
+          LocaleProvider.supportedLanguageCodes.contains(
+            requestedLocale.trim().toLowerCase(),
+          )) {
+        await _safeStep<void>(
+          'locale.applyDeepLink',
+          () => localeProvider.setLanguageCode(requestedLocale),
+          timeout: const Duration(seconds: 4),
+        );
+      }
       if (!mounted) return;
 
       // Initialize ConfigProvider first
@@ -228,9 +279,19 @@ class _AppInitializerState extends State<AppInitializer> {
       // Initialize ProfileProvider and load profile if wallet exists
       final profileProvider =
           Provider.of<ProfileProvider>(context, listen: false);
-      await _safeStep<void>('profile.initialize', profileProvider.initialize,
-          timeout: const Duration(seconds: 8));
-      if (walletAddress != null && walletAddress.isNotEmpty) {
+      final pendingBeforeAccountHydration = _pendingShareTarget;
+      final signedOutPublicRead = pendingBeforeAccountHydration != null &&
+          const DeepLinkStartupRouting()
+                  .accessPolicyFor(pendingBeforeAccountHydration) ==
+              DeepLinkAccessPolicy.publicRead &&
+          !BackendApiService().hasAuthSession;
+      if (!signedOutPublicRead) {
+        await _safeStep<void>('profile.initialize', profileProvider.initialize,
+            timeout: const Duration(seconds: 8));
+      }
+      if (!signedOutPublicRead &&
+          walletAddress != null &&
+          walletAddress.isNotEmpty) {
         // profileProvider.initialize() already performs a backend loadProfile()
         // + stats fetch for the persisted wallet. When that already hydrated the
         // SAME wallet we're routing for, repeating the network load here only
@@ -274,7 +335,7 @@ class _AppInitializerState extends State<AppInitializer> {
           Provider.of<SavedItemsProvider>(context, listen: false);
       unawaited(_safeStep<void>(
         'saved_items.initialize',
-        savedItemsProvider.initialize,
+        () => savedItemsProvider.initialize(syncBackend: !signedOutPublicRead),
         timeout: const Duration(seconds: 6),
       ));
       if (!mounted) return;
@@ -459,8 +520,9 @@ class _AppInitializerState extends State<AppInitializer> {
             context: context,
             walletAddress: walletAddress,
           );
-      Future<void> maybeStartWarmUp() {
-        if (shouldShowSignIn) {
+      Future<void> maybeStartWarmUp({bool publicRead = false}) {
+        if ((shouldShowSignIn && !publicRead) ||
+            (publicRead && !hasValidSession)) {
           return Future<void>.value();
         }
         return startWarmUp();
@@ -504,26 +566,24 @@ class _AppInitializerState extends State<AppInitializer> {
       //
       // NOTE: We intentionally do NOT consume the pending target here because
       // AppInitializer's navigator context does not have DesktopShellScope.
-      final pendingDeepLink = (() {
-        try {
-          return Provider.of<DeepLinkProvider>(context, listen: false).pending;
-        } catch (_) {
-          return null;
-        }
-      })();
+      final pendingDeepLink = _pendingShareTarget;
       if (pendingDeepLink != null) {
         // For first-run deep-link cold starts, defer onboarding until users
         // leave the deep-linked destination (handled in shell navigation).
         try {
-          if (shouldShowFirstRunOnboarding && !profileProvider.isSignedIn) {
+          if (shouldShowFirstRunOnboarding ||
+              hasPendingAuthOnboarding ||
+              hasActiveOnboardingGuard) {
             Provider.of<DeferredOnboardingProvider>(context, listen: false)
-                .enableForDeepLinkColdStart();
+                .enableForDeepLinkColdStart(
+              initialStepId: pendingAuthOnboardingStepId,
+            );
           }
         } catch (_) {}
 
         final decision = const DeepLinkStartupRouting().decide(
           pending: pendingDeepLink,
-          shouldShowSignIn: shouldShowSignIn,
+          hasValidSession: hasValidSession,
         );
         if (decision == null) return;
 
@@ -542,7 +602,9 @@ class _AppInitializerState extends State<AppInitializer> {
         // own data; warm-up (markers/artworks/web3/profile refresh) runs in the
         // background after the first frame instead of holding the splash for up
         // to 15s.
-        unawaited(maybeStartWarmUp());
+        unawaited(maybeStartWarmUp(
+          publicRead: decision.accessPolicy == DeepLinkAccessPolicy.publicRead,
+        ));
         if (!mounted) return;
         _didNavigate = true;
 
@@ -747,6 +809,7 @@ class _AppInitializerState extends State<AppInitializer> {
       AppConfig.debugPrint('AppInitializer: initialization failed: $e');
       AppConfig.debugPrint('AppInitializer: init stack: $st');
       if (!mounted) return;
+      if (_openPendingPublicTarget(navigator)) return;
       final isDesktop = DesktopBreakpoints.isDesktop(context);
       _didNavigate = true;
       navigator.pushReplacement(

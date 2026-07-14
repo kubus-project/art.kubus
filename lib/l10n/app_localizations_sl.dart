@@ -317,6 +317,16 @@ class AppLocalizationsSl extends AppLocalizations {
   String get commonContinue => 'Nadaljuj';
 
   @override
+  String contextualAuthTitle(String action) {
+    return 'Za dejanje »$action« je potrebna prijava';
+  }
+
+  @override
+  String contextualAuthBody(String action) {
+    return 'To javno vsebino si lahko ogleduješ brez računa. Prijavi se za nadaljevanje z dejanjem »$action«.';
+  }
+
+  @override
   String get commonOr => 'ali';
 
   @override

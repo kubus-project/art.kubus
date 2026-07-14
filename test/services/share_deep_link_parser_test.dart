@@ -64,7 +64,14 @@ void main() {
       final target = parser.parse(Uri.parse(entry.key));
       expect(target?.type, entry.value, reason: entry.key);
       expect(target?.id, entry.key.split('/').last, reason: entry.key);
+      expect(target?.localeCode, entry.key.split('/')[2], reason: entry.key);
     }
+  });
+
+  test('ShareDeepLinkParser accepts supported locale query context only', () {
+    expect(parser.parse(Uri.parse('/a/a1?lang=en'))?.localeCode, 'en');
+    expect(parser.parse(Uri.parse('/a/a1?locale=sl'))?.localeCode, 'sl');
+    expect(parser.parse(Uri.parse('/a/a1?lang=de'))?.localeCode, isNull);
   });
 
   test('ShareDeepLinkParser parses claim-ready exhibition handoffs', () {
