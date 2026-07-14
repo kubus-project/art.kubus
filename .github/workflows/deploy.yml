@@ -314,12 +314,12 @@ jobs:
           SOURCE_SHA: ${{ steps.source.outputs.sha }}
         run: |
           set -euo pipefail
-          separator='?'
-          if [[ "$WEB_SMOKE_URL" == *'?'* ]]; then separator='&'; fi
           response="$RUNNER_TEMP/web-smoke.html"
           curl --fail --silent --show-error --location \
             --retry 5 --retry-delay 3 --retry-all-errors \
-            "${WEB_SMOKE_URL}${separator}deploy_sha=${SOURCE_SHA}" \
+            --header 'Cache-Control: no-cache' \
+            --header 'Pragma: no-cache' \
+            "$WEB_SMOKE_URL" \
             --output "$response"
           grep -Eq 'flutter_bootstrap\.js|main\.dart\.js' "$response"
 

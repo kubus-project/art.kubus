@@ -1,9 +1,9 @@
 # Deployment gates
 
 The `Deploy` workflow promotes artifacts produced by a successful `CI` run. It
-does not rebuild source after CI. The web environment remains reviewer-protected
-where required by production policy. The Android alpha-release environment must
-allow the automatic `master` workflow to run without a reviewer gate.
+does not rebuild source after CI. Both deployment environments retain their
+scoped secrets, but routine successful `master` CI must not require a reviewer
+gate: promotion and alpha publishing are automatic.
 
 ## Public build configuration
 
@@ -30,7 +30,9 @@ and coordinated rollback are documented in
 before promoting a web artifact whose `.htaccess` proxies localized public
 routes.
 
-Create a protected `production-web` environment with these secrets:
+Create a `production-web` environment with these secrets and variables. Do not
+configure required reviewers or a wait timer: the workflow automatically uploads
+the verified artifact and atomically promotes it after successful `master` CI.
 
 - `SFTP_SERVER`
 - `SFTP_USERNAME`
@@ -60,9 +62,11 @@ never perform this migration.
 
 Every promotion verifies both the downloaded artifact checksum and the
 per-file checksum manifest, writes an immutable SHA-named release directory,
-atomically replaces the live symlink, and performs an HTTP smoke test. A failed
-smoke restores the exact previous symlink target. CI exercises the same
-promotion and rollback script with `npm run verify:deploy`.
+atomically replaces the live symlink, and performs an HTTP smoke test. The smoke
+request forces normal cache revalidation with HTTP headers instead of adding a
+query parameter that hosting security filters can reject. A failed smoke restores
+the exact previous symlink target. CI exercises the same promotion and rollback
+script with `npm run verify:deploy`.
 
 ## Android release environment
 
