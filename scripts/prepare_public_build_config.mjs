@@ -10,6 +10,11 @@ const required = [
   'KUBUS_GOOGLE_IOS_CLIENT_ID',
 ];
 const optional = ['KUBUS_WALLETCONNECT_PROJECT_ID'];
+const buildMetadata = [
+  'KUBUS_APP_VERSION',
+  'KUBUS_BUILD_NUMBER',
+  'KUBUS_BUILD_DATE',
+];
 
 const missing = required.filter((name) => !(process.env[name] || '').trim());
 if (missing.length > 0) {
@@ -33,6 +38,29 @@ const values = Object.fromEntries([
   ...required.map((name) => [name, process.env[name].trim()]),
   ...optional.map((name) => [name, (process.env[name] || '').trim()]),
 ]);
+const suppliedBuildMetadata = Object.fromEntries(
+  buildMetadata.map((name) => [name, (process.env[name] || '').trim()]),
+);
+const suppliedBuildMetadataCount = Object.values(suppliedBuildMetadata).filter(Boolean).length;
+if (suppliedBuildMetadataCount > 0 && suppliedBuildMetadataCount !== buildMetadata.length) {
+  console.error('CI build metadata must provide version, build number, and build date together.');
+  process.exit(1);
+}
+if (suppliedBuildMetadataCount === buildMetadata.length) {
+  if (!/^\d+\.\d+\.\d+$/.test(suppliedBuildMetadata.KUBUS_APP_VERSION)) {
+    console.error('KUBUS_APP_VERSION must use X.Y.Z.');
+    process.exit(1);
+  }
+  if (!/^\d+$/.test(suppliedBuildMetadata.KUBUS_BUILD_NUMBER)) {
+    console.error('KUBUS_BUILD_NUMBER must be an integer.');
+    process.exit(1);
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(suppliedBuildMetadata.KUBUS_BUILD_DATE)) {
+    console.error('KUBUS_BUILD_DATE must use YYYY-MM-DD.');
+    process.exit(1);
+  }
+  Object.assign(values, suppliedBuildMetadata);
+}
 values.KUBUS_ENABLE_WEB_SEMANTICS = false;
 
 const outputPath = resolve(rootDir, '.dart_tool', 'public-build-defines.json');

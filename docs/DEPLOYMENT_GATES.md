@@ -84,6 +84,21 @@ Manual `Deploy` runs can still sign a selected successful CI artifact without
 publishing it. Manual publication requires a new explicit tag and remains
 immutable.
 
+## CI build metadata
+
+`version.json` and `pubspec.yaml` retain the manually selected `X.Y.Z` version.
+Every CI workflow derives its own UTC build date and Android-safe build number
+without committing generated version changes. The build number uses
+`YYDDDNNNN`: the UTC two-digit year, day of year, and a one-to-10,000 sequence
+derived from the GitHub workflow run number. It is monotonic across normal CI
+runs, supports up to 10,000 runs per day, and stays below Android's
+`versionCode` limit.
+
+The generated metadata is passed to all Flutter web, Android, and iOS builds as
+both Flutter build arguments and Dart defines. A semantic version bump remains
+a deliberate source change and is the only event that creates the next alpha
+release tag.
+
 ## Manual promotion
 
 A manual run requires the successful CI run ID and its full 40-character commit

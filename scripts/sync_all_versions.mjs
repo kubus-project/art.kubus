@@ -239,20 +239,29 @@ function syncFlutterRepo(repoDir, manifest, changes) {
 
     raw = replaceOrThrow(
       raw,
-      /static const String version\s*=\s*['"][^'"]+['"];/,
-      `static const String version = '${manifest.version}';`,
+      /static const String version\s*=\s*(?:String\.fromEnvironment\(\s*'KUBUS_APP_VERSION',\s*defaultValue:\s*'[^']+',\s*\)|'[^']+');/,
+      `static const String version = String.fromEnvironment(
+    'KUBUS_APP_VERSION',
+    defaultValue: '${manifest.version}',
+  );`,
       'AppInfo.version'
     );
     raw = replaceOrThrow(
       raw,
-      /static const int buildNumber\s*=\s*\d+;/,
-      `static const int buildNumber = ${numericBuildNumber};`,
+      /static const int buildNumber\s*=\s*(?:int\.fromEnvironment\(\s*'KUBUS_BUILD_NUMBER',\s*defaultValue:\s*\d+,\s*\)|\d+);/,
+      `static const int buildNumber = int.fromEnvironment(
+    'KUBUS_BUILD_NUMBER',
+    defaultValue: ${numericBuildNumber},
+  );`,
       'AppInfo.buildNumber'
     );
     raw = replaceOrThrow(
       raw,
-      /static const String buildDate\s*=\s*['"][^'"]+['"];/,
-      `static const String buildDate = '${manifest.buildDate}';`,
+      /static const String buildDate\s*=\s*(?:String\.fromEnvironment\(\s*'KUBUS_BUILD_DATE',\s*defaultValue:\s*'[^']+',\s*\)|'[^']+');/,
+      `static const String buildDate = String.fromEnvironment(
+    'KUBUS_BUILD_DATE',
+    defaultValue: '${manifest.buildDate}',
+  );`,
       'AppInfo.buildDate'
     );
 

@@ -5,6 +5,7 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import { buildStableApiStub } from './web_runtime_contract.mjs';
+import { resolveBuildMetadata } from '../../scripts/resolve_ci_build_metadata.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
@@ -91,6 +92,63 @@ test('web-root migration remains an explicit manual deployment action', () => {
     2,
     'both bootstrap steps must require an explicit manual dispatch',
   );
+});
+
+test('CI build metadata keeps semantic versions manual and increments Android-safe builds', () => {
+  const first = resolveBuildMetadata({
+    version: '0.7.0',
+    buildDate: '2026-07-14',
+    runNumber: 42,
+  });
+  const next = resolveBuildMetadata({
+    version: '0.7.0',
+    buildDate: '2026-07-14',
+    runNumber: 43,
+  });
+  const tomorrow = resolveBuildMetadata({
+    version: '0.7.0',
+    buildDate: '2026-07-15',
+    runNumber: 1,
+  });
+  const dailyLimit = resolveBuildMetadata({
+    version: '0.7.0',
+    buildDate: '2026-07-14',
+    runNumber: 10000,
+  });
+
+  assert.deepEqual(first, {
+    version: '0.7.0',
+    buildDate: '2026-07-14',
+    buildNumber: 261950042,
+  });
+  assert.ok(next.buildNumber > first.buildNumber);
+  assert.equal(dailyLimit.buildNumber, 261960000);
+  assert.ok(tomorrow.buildNumber > next.buildNumber);
+  assert.throws(
+    () => resolveBuildMetadata({ version: '0.7', buildDate: '2026-07-14', runNumber: 1 }),
+    /X\.Y\.Z/,
+  );
+});
+
+test('CI applies its generated build metadata to every Flutter platform build', () => {
+  const workflow = readFileSync(
+    resolve(repoRoot, '.github', 'workflows', 'ci.yml'),
+    'utf8',
+  );
+  const config = readFileSync(resolve(repoRoot, 'lib', 'config', 'config.dart'), 'utf8');
+
+  assert.equal(
+    (workflow.match(/Resolve CI build metadata/g) || []).length,
+    1,
+    'one job must resolve metadata and all Flutter platform jobs must consume it',
+  );
+  assert.match(workflow, /build_metadata:[\s\S]*?outputs:[\s\S]*?build_number:/);
+  assert.match(workflow, /needs: \[guardrails, build_metadata\]/);
+  assert.match(workflow, /--build-number="\$\{\{ needs\.build_metadata\.outputs\.build_number \}\}"/);
+  assert.match(workflow, /KUBUS_BUILD_DATE: \$\{\{ needs\.build_metadata\.outputs\.build_date \}\}/);
+  assert.match(config, /String\.fromEnvironment\(\s*'KUBUS_APP_VERSION'/);
+  assert.match(config, /int\.fromEnvironment\(\s*'KUBUS_BUILD_NUMBER'/);
+  assert.match(config, /String\.fromEnvironment\(\s*'KUBUS_BUILD_DATE'/);
 });
 
 test('successful master CI publishes one immutable alpha release per version', () => {

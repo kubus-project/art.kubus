@@ -88,9 +88,34 @@ jobs:
       - name: Exercise atomic web promotion and rollback
         run: npm run verify:deploy
 
+  build_metadata:
+    name: Resolve immutable CI build metadata
+    needs: guardrails
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.resolve.outputs.version }}
+      build_date: ${{ steps.resolve.outputs.build_date }}
+      build_number: ${{ steps.resolve.outputs.build_number }}
+    steps:
+      - name: Checkout version source
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 1
+          submodules: false
+
+      - name: Set up pinned Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Resolve CI build metadata
+        id: resolve
+        run: node scripts/resolve_ci_build_metadata.mjs --github-output "$GITHUB_OUTPUT"
+
   flutter:
     name: Flutter analyze + full tests + web
-    needs: guardrails
+    needs: [guardrails, build_metadata]
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
@@ -158,10 +183,17 @@ jobs:
           KUBUS_GOOGLE_WEB_CLIENT_ID: ${{ vars.KUBUS_GOOGLE_WEB_CLIENT_ID }}
           KUBUS_GOOGLE_IOS_CLIENT_ID: ${{ vars.KUBUS_GOOGLE_IOS_CLIENT_ID }}
           KUBUS_WALLETCONNECT_PROJECT_ID: ${{ vars.KUBUS_WALLETCONNECT_PROJECT_ID }}
+          KUBUS_APP_VERSION: ${{ needs.build_metadata.outputs.version }}
+          KUBUS_BUILD_NUMBER: ${{ needs.build_metadata.outputs.build_number }}
+          KUBUS_BUILD_DATE: ${{ needs.build_metadata.outputs.build_date }}
         run: node scripts/prepare_public_build_config.mjs --web
 
       - name: Build release web bundle
-        run: flutter build web --release --dart-define-from-file=.dart_tool/public-build-defines.json
+        run: |
+          flutter build web --release \
+            --build-name="${{ needs.build_metadata.outputs.version }}" \
+            --build-number="${{ needs.build_metadata.outputs.build_number }}" \
+            --dart-define-from-file=.dart_tool/public-build-defines.json
 
       - name: Pre-compress and checksum immutable web bundle
         shell: bash
@@ -252,7 +284,7 @@ jobs:
 
   android:
     name: Android SDK 36 debug + unsigned release compile
-    needs: guardrails
+    needs: [guardrails, build_metadata]
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
@@ -318,16 +350,27 @@ jobs:
           KUBUS_GOOGLE_WEB_CLIENT_ID: ${{ vars.KUBUS_GOOGLE_WEB_CLIENT_ID }}
           KUBUS_GOOGLE_IOS_CLIENT_ID: ${{ vars.KUBUS_GOOGLE_IOS_CLIENT_ID }}
           KUBUS_WALLETCONNECT_PROJECT_ID: ${{ vars.KUBUS_WALLETCONNECT_PROJECT_ID }}
+          KUBUS_APP_VERSION: ${{ needs.build_metadata.outputs.version }}
+          KUBUS_BUILD_NUMBER: ${{ needs.build_metadata.outputs.build_number }}
+          KUBUS_BUILD_DATE: ${{ needs.build_metadata.outputs.build_date }}
         run: node scripts/prepare_public_build_config.mjs
 
       - name: Clear generated Android problems report
         run: node scripts/clear_generated_android_reports.mjs
 
       - name: Compile Android debug APK
-        run: flutter build apk --debug --dart-define-from-file=.dart_tool/public-build-defines.json
+        run: |
+          flutter build apk --debug \
+            --build-name="${{ needs.build_metadata.outputs.version }}" \
+            --build-number="${{ needs.build_metadata.outputs.build_number }}" \
+            --dart-define-from-file=.dart_tool/public-build-defines.json
 
       - name: Compile unsigned Android release APK
-        run: flutter build apk --release --dart-define-from-file=.dart_tool/public-build-defines.json
+        run: |
+          flutter build apk --release \
+            --build-name="${{ needs.build_metadata.outputs.version }}" \
+            --build-number="${{ needs.build_metadata.outputs.build_number }}" \
+            --dart-define-from-file=.dart_tool/public-build-defines.json
 
       - name: Reject Gradle build errors
         shell: bash
@@ -348,7 +391,7 @@ jobs:
 
   ios:
     name: iOS release compile (no codesign)
-    needs: guardrails
+    needs: [guardrails, build_metadata]
     # GitHub-hosted macOS images have no immutable digest. Bound the OS image
     # generation and record the rotating Xcode patch level in every run.
     runs-on: macos-15
@@ -400,10 +443,17 @@ jobs:
           KUBUS_GOOGLE_WEB_CLIENT_ID: ${{ vars.KUBUS_GOOGLE_WEB_CLIENT_ID }}
           KUBUS_GOOGLE_IOS_CLIENT_ID: ${{ vars.KUBUS_GOOGLE_IOS_CLIENT_ID }}
           KUBUS_WALLETCONNECT_PROJECT_ID: ${{ vars.KUBUS_WALLETCONNECT_PROJECT_ID }}
+          KUBUS_APP_VERSION: ${{ needs.build_metadata.outputs.version }}
+          KUBUS_BUILD_NUMBER: ${{ needs.build_metadata.outputs.build_number }}
+          KUBUS_BUILD_DATE: ${{ needs.build_metadata.outputs.build_date }}
         run: node scripts/prepare_public_build_config.mjs
 
       - name: Compile iOS release without codesigning
-        run: flutter build ios --release --no-codesign --dart-define-from-file=.dart_tool/public-build-defines.json
+        run: |
+          flutter build ios --release --no-codesign \
+            --build-name="${{ needs.build_metadata.outputs.version }}" \
+            --build-number="${{ needs.build_metadata.outputs.build_number }}" \
+            --dart-define-from-file=.dart_tool/public-build-defines.json
 
   web_qa:
     name: Playwright desktop + mobile runtime smoke
