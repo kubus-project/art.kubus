@@ -67,6 +67,23 @@ const outputPath = resolve(rootDir, '.dart_tool', 'public-build-defines.json');
 mkdirSync(dirname(outputPath), { recursive: true });
 writeFileSync(outputPath, `${JSON.stringify(values, null, 2)}\n`, 'utf8');
 
+const iosClientId = values.KUBUS_GOOGLE_IOS_CLIENT_ID;
+const iosClientIdMatch = iosClientId.match(/^([A-Za-z0-9_-]+)\.apps\.googleusercontent\.com$/);
+if (!iosClientIdMatch) {
+  console.error('KUBUS_GOOGLE_IOS_CLIENT_ID must be a Google iOS OAuth client ID.');
+  process.exit(1);
+}
+const iosConfigPath = resolve(rootDir, 'ios', 'Flutter', 'Google-CI.xcconfig');
+writeFileSync(
+  iosConfigPath,
+  [
+    `KUBUS_GOOGLE_IOS_CLIENT_ID=${iosClientId}`,
+    `KUBUS_GOOGLE_REVERSED_IOS_CLIENT_ID=com.googleusercontent.apps.${iosClientIdMatch[1]}`,
+    '',
+  ].join('\n'),
+  'utf8',
+);
+
 if (process.argv.includes('--web')) {
   const indexPath = resolve(rootDir, 'web', 'index.html');
   const original = readFileSync(indexPath, 'utf8');
