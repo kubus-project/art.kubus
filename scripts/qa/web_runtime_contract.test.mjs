@@ -194,6 +194,10 @@ test('iOS publication signs a configured IPA from exact CI inputs before attachi
   const ci = readFileSync(resolve(repoRoot, '.github', 'workflows', 'ci.yml'), 'utf8');
   const deploy = readFileSync(resolve(repoRoot, '.github', 'workflows', 'deploy.yml'), 'utf8');
   const releaseConfig = readFileSync(resolve(repoRoot, 'ios', 'Flutter', 'Release.xcconfig'), 'utf8');
+  const project = readFileSync(
+    resolve(repoRoot, 'ios', 'Runner.xcodeproj', 'project.pbxproj'),
+    'utf8',
+  );
 
   assert.match(ci, /Retain exact iOS release build inputs/);
   assert.match(ci, /name: ios-release-inputs-\$\{\{ github\.sha \}\}/);
@@ -208,9 +212,12 @@ test('iOS publication signs a configured IPA from exact CI inputs before attachi
   assert.match(deploy, /security delete-keychain/);
   assert.match(
     releaseConfig,
-    /KUBUS_IOS_BUNDLE_ID=com\.example\.artKubus\n#include\? "Release-CI\.xcconfig"/,
+    /KUBUS_IOS_BUNDLE_ID=com\.art\.kubus\n#include\? "Release-CI\.xcconfig"/,
   );
   assert.match(releaseConfig, /#include\? "Release-CI\.xcconfig"/);
+  const appBundleIds = project
+    .match(/PRODUCT_BUNDLE_IDENTIFIER = "\$\(KUBUS_IOS_BUNDLE_ID\)";/g) ?? [];
+  assert.equal(appBundleIds.length, 3, 'all Runner configurations must share the production bundle ID');
 });
 
 test('Flutter index positions art.kubus as an open art map', () => {

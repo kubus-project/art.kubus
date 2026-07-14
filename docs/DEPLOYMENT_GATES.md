@@ -108,8 +108,8 @@ Set these repository variables only after the environment has those secrets:
 
 - `IOS_RELEASE_ENABLED=true`
 - `IOS_TEAM_ID`: ten-character Apple Developer team ID
-- `IOS_BUNDLE_ID`: registered production application bundle ID (never the
-  checked-in `com.example.artKubus` development placeholder)
+- `IOS_BUNDLE_ID=com.art.kubus`: the registered production application
+  bundle ID. It must match the source build setting and provisioning profile.
 - `IOS_EXPORT_METHOD`: optional; defaults to `ad-hoc`. Accepted values are
   `ad-hoc`, `app-store`, `development`, and `enterprise`.
 
@@ -119,6 +119,11 @@ the certificate into a temporary keychain, verifies the signed IPA's bundle ID
 and signature, uploads a SHA-256 checksum, then attaches both files to the
 already-created immutable alpha release. It deletes the temporary keychain and
 generated signing configuration in an always-run cleanup step.
+
+Register `com.art.kubus` as an explicit App ID in Apple Developer before
+creating the profile. Update or create the Google iOS OAuth client for that
+same bundle ID, then replace the checked-in iOS client/reversed-client values
+when Google provides the new client configuration.
 
 `ad-hoc` IPAs only install on devices registered in the provisioning profile.
 For TestFlight or App Store distribution, choose `app-store` and upload the
