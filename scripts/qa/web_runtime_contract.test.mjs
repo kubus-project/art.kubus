@@ -222,6 +222,9 @@ test('production smoke verifies public HTML and unknown-route status', () => {
   assert.match(workflow, /Public HTML unexpectedly loads the interactive app bundle/);
   assert.match(workflow, /__deploy_unknown_\$\{SOURCE_SHA\}/);
   assert.match(workflow, /test .*http_code.* = '404'/);
+  assert.match(workflow, /--header 'Cache-Control: no-cache'/);
+  assert.match(workflow, /--header 'Pragma: no-cache'/);
+  assert.doesNotMatch(workflow, /deploy_sha=/);
 });
 
 test('runtime smoke does not trigger the service-worker reload escape hatch', () => {
