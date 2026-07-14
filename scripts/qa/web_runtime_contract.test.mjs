@@ -241,6 +241,22 @@ test('production smoke verifies public HTML and unknown-route status', () => {
   assert.doesNotMatch(workflow, /deploy_sha=/);
 });
 
+test('web deployment retries SSH reachability before mutating the release root', () => {
+  const workflow = readFileSync(
+    resolve(repoRoot, '.github', 'workflows', 'deploy.yml'),
+    'utf8',
+  );
+
+  assert.match(workflow, /Wait for SSH deployment endpoint/);
+  assert.match(workflow, /for attempt in 1 2 3 4 5 6/);
+  assert.match(workflow, /timeout 15 bash -c/);
+  assert.match(workflow, /no remote files were changed/);
+  assert.match(
+    workflow,
+    /Wait for SSH deployment endpoint[\s\S]*?Prepare versioned remote upload directory/,
+  );
+});
+
 test('runtime smoke does not trigger the service-worker reload escape hatch', () => {
   const smoke = readFileSync(
     resolve(repoRoot, 'scripts', 'qa', 'web_runtime_smoke.mjs'),

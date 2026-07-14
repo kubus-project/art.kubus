@@ -68,6 +68,11 @@ query parameter that hosting security filters can reject. A failed smoke restore
 the exact previous symlink target. CI exercises the same promotion and rollback
 script with `npm run verify:deploy`.
 
+Before any remote file operation, deployment checks the configured SSH endpoint
+up to six times with bounded backoff. A persistent connectivity failure stops
+before the release root is touched; restore the server's SSH service or inbound
+port access before retrying the workflow.
+
 ## Android release environment
 
 Create a protected `android-release` environment with:

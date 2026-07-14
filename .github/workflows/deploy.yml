@@ -204,6 +204,27 @@ jobs:
           echo "bootstrap_dir=$release_root/bootstrap-$SOURCE_SHA" >> "$GITHUB_OUTPUT"
           echo "smoke_url=$WEB_SMOKE_URL" >> "$GITHUB_OUTPUT"
 
+      - name: Wait for SSH deployment endpoint
+        shell: bash
+        env:
+          SFTP_HOST: ${{ steps.target.outputs.host }}
+          SFTP_PORT: ${{ steps.target.outputs.port }}
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3 4 5 6; do
+            if timeout 15 bash -c "</dev/tcp/$SFTP_HOST/$SFTP_PORT" 2>/dev/null; then
+              echo "SSH deployment endpoint is reachable."
+              exit 0
+            fi
+            if [ "$attempt" -lt 6 ]; then
+              delay_seconds=$((attempt * 10))
+              echo "SSH deployment endpoint is not reachable; retrying in ${delay_seconds}s."
+              sleep "$delay_seconds"
+            fi
+          done
+          echo "SSH deployment endpoint remained unreachable after six attempts; no remote files were changed." >&2
+          exit 1
+
       - name: Upload approved web-root bootstrap helper
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.bootstrap_web_root }}
         uses: appleboy/scp-action@ff85246acaad7bdce478db94a363cd2bf7c90345 # v1
