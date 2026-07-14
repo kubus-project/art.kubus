@@ -93,6 +93,31 @@ test('web-root migration remains an explicit manual deployment action', () => {
   );
 });
 
+test('successful master CI publishes one immutable alpha release per version', () => {
+  const workflow = readFileSync(
+    resolve(repoRoot, '.github', 'workflows', 'deploy.yml'),
+    'utf8',
+  );
+
+  assert.match(
+    workflow,
+    /signed_apk:[\s\S]*?github\.event_name == 'workflow_run'[\s\S]*?github\.event\.workflow_run\.conclusion == 'success'/,
+  );
+  assert.match(workflow, /release_tag="v\$\{version\}-alpha"/);
+  assert.match(workflow, /releases\/tags\/\$release_tag/);
+  assert.match(
+    workflow,
+    /Immutable release \$release_tag already exists; skipping signing and publication/,
+  );
+  assert.match(workflow, /should_build=false/);
+  assert.match(
+    workflow,
+    /Tag \$release_tag exists without a GitHub Release; refusing to mutate it/,
+  );
+  assert.match(workflow, /allowUpdates:\s*false/);
+  assert.match(workflow, /replacesArtifacts:\s*false/);
+});
+
 test('Flutter index positions art.kubus as an open art map', () => {
   const html = readFileSync(resolve(repoRoot, 'web', 'index.html'), 'utf8');
 
