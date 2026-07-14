@@ -34,6 +34,11 @@ on:
         required: false
         default: true
         type: boolean
+      build_ipa:
+        description: 'Sign and attach an iOS IPA when iOS publishing is enabled'
+        required: false
+        default: true
+        type: boolean
       publish_github_release:
         description: 'Create a new immutable GitHub Release for the signed APK'
         required: false
@@ -417,6 +422,13 @@ jobs:
     permissions:
       actions: read
       contents: write
+    outputs:
+      should_build: ${{ steps.release.outputs.should_build }}
+      publish: ${{ steps.release.outputs.publish }}
+      release_tag: ${{ steps.release.outputs.release_tag }}
+      version: ${{ steps.release.outputs.version }}
+      source_sha: ${{ steps.source.outputs.sha }}
+      source_run_id: ${{ steps.source.outputs.run_id }}
     steps:
       - name: Verify successful CI source
         id: source
@@ -670,3 +682,237 @@ jobs:
           allowUpdates: false
           replacesArtifacts: false
           artifacts: ${{ steps.signed.outputs.apk_path }},${{ steps.signed.outputs.checksum_path }}
+
+  signed_ipa:
+    name: Sign iOS IPA + attach to alpha release
+    needs: signed_apk
+    if: >-
+      ${{
+        vars.IOS_RELEASE_ENABLED == 'true' &&
+        needs.signed_apk.outputs.should_build == 'true' &&
+        needs.signed_apk.outputs.publish == 'true' &&
+        (github.event_name == 'workflow_run' || inputs.build_ipa)
+      }}
+    runs-on: macos-15
+    timeout-minutes: 45
+    environment: ios-release
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - name: Checkout exact tested source
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          ref: ${{ needs.signed_apk.outputs.source_sha }}
+          submodules: false
+
+      - name: Checkout private backend gitlinks
+        shell: bash
+        env:
+          BACKEND_SUBMODULE_SSH_KEY: ${{ secrets.BACKEND_SUBMODULE_SSH_KEY }}
+        run: bash scripts/ci/checkout_backend_submodules.sh
+
+      - name: Set up pinned Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22.15.0'
+
+      - name: Set up pinned npm
+        run: npm install --global npm@11.7.0
+
+      - name: Set up pinned Flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          flutter-version: '3.44.2'
+          channel: stable
+          cache: true
+
+      - name: Download exact iOS release build inputs from CI
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: ios-release-inputs-${{ needs.signed_apk.outputs.source_sha }}
+          path: .dart_tool
+          run-id: ${{ needs.signed_apk.outputs.source_run_id }}
+          github-token: ${{ github.token }}
+
+      - name: Verify exact iOS release build inputs
+        id: build_inputs
+        shell: bash
+        env:
+          EXPECTED_VERSION: ${{ needs.signed_apk.outputs.version }}
+        run: |
+          set -euo pipefail
+          input_file=.dart_tool/public-build-defines.json
+          test -s "$input_file"
+          version="$(node -e "const values=require('./' + process.argv[1]); process.stdout.write(String(values.KUBUS_APP_VERSION || ''))" "$input_file")"
+          build_number="$(node -e "const values=require('./' + process.argv[1]); process.stdout.write(String(values.KUBUS_BUILD_NUMBER || ''))" "$input_file")"
+          build_date="$(node -e "const values=require('./' + process.argv[1]); process.stdout.write(String(values.KUBUS_BUILD_DATE || ''))" "$input_file")"
+          test "$version" = "$EXPECTED_VERSION"
+          [[ "$build_number" =~ ^[0-9]+$ ]]
+          [[ "$build_date" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "build_number=$build_number" >> "$GITHUB_OUTPUT"
+
+      - name: Resolve locked Flutter dependencies
+        run: |
+          flutter pub get
+          git diff --exit-code -- pubspec.lock
+
+      - name: Configure protected iOS distribution signing
+        shell: bash
+        env:
+          IOS_DISTRIBUTION_CERTIFICATE_BASE64: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_BASE64 }}
+          IOS_DISTRIBUTION_CERTIFICATE_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_PASSWORD }}
+          IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+          IOS_TEAM_ID: ${{ vars.IOS_TEAM_ID }}
+          IOS_BUNDLE_ID: ${{ vars.IOS_BUNDLE_ID }}
+          IOS_EXPORT_METHOD: ${{ vars.IOS_EXPORT_METHOD }}
+        run: |
+          set -euo pipefail
+          required=(
+            "$IOS_DISTRIBUTION_CERTIFICATE_BASE64"
+            "$IOS_DISTRIBUTION_CERTIFICATE_PASSWORD"
+            "$IOS_PROVISIONING_PROFILE_BASE64"
+            "$IOS_TEAM_ID"
+            "$IOS_BUNDLE_ID"
+          )
+          for value in "${required[@]}"; do
+            if [ -z "$value" ]; then
+              echo "iOS distribution certificate, provisioning profile, team ID, and bundle ID are required." >&2
+              exit 1
+            fi
+          done
+          [[ "$IOS_TEAM_ID" =~ ^[A-Z0-9]{10}$ ]]
+          [[ "$IOS_BUNDLE_ID" =~ ^[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+$ ]]
+          test "$IOS_BUNDLE_ID" != 'com.example.artKubus'
+          export_method="${IOS_EXPORT_METHOD:-ad-hoc}"
+          case "$export_method" in ad-hoc|app-store|development|enterprise) ;; *)
+            echo "IOS_EXPORT_METHOD must be ad-hoc, app-store, development, or enterprise." >&2
+            exit 1
+          esac
+
+          keychain_path="$RUNNER_TEMP/art-kubus-ios-signing.keychain-db"
+          keychain_password="$(openssl rand -hex 32)"
+          certificate_path="$RUNNER_TEMP/art-kubus-distribution.p12"
+          profile_path="$RUNNER_TEMP/art-kubus.mobileprovision"
+          profile_plist="$RUNNER_TEMP/art-kubus-profile.plist"
+          security create-keychain -p "$keychain_password" "$keychain_path"
+          security set-keychain-settings -lut 21600 "$keychain_path"
+          security unlock-keychain -p "$keychain_password" "$keychain_path"
+          security list-keychain -d user -s "$keychain_path"
+          printf '%s' "$IOS_DISTRIBUTION_CERTIFICATE_BASE64" | base64 -D > "$certificate_path"
+          printf '%s' "$IOS_PROVISIONING_PROFILE_BASE64" | base64 -D > "$profile_path"
+          test -s "$certificate_path"
+          test -s "$profile_path"
+          security import "$certificate_path" -k "$keychain_path" -P "$IOS_DISTRIBUTION_CERTIFICATE_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$keychain_password" "$keychain_path"
+          security find-identity -v -p codesigning "$keychain_path" | grep -Eq '[1-9][0-9]* valid identities'
+          security cms -D -i "$profile_path" > "$profile_plist"
+          profile_uuid="$(/usr/libexec/PlistBuddy -c 'Print :UUID' "$profile_plist")"
+          profile_team="$(/usr/libexec/PlistBuddy -c 'Print :TeamIdentifier:0' "$profile_plist")"
+          profile_app_id="$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:application-identifier' "$profile_plist")"
+          test "$profile_team" = "$IOS_TEAM_ID"
+          test "$profile_app_id" = "$IOS_TEAM_ID.$IOS_BUNDLE_ID"
+          profile_dir="$HOME/Library/MobileDevice/Provisioning Profiles"
+          mkdir -p "$profile_dir"
+          cp "$profile_path" "$profile_dir/$profile_uuid.mobileprovision"
+          cat > ios/Flutter/Release-CI.xcconfig <<EOF
+          KUBUS_IOS_BUNDLE_ID = $IOS_BUNDLE_ID
+          DEVELOPMENT_TEAM = $IOS_TEAM_ID
+          CODE_SIGN_STYLE = Manual
+          PROVISIONING_PROFILE_SPECIFIER = $profile_uuid
+          CODE_SIGN_IDENTITY[sdk=iphoneos*] = Apple Distribution
+          EOF
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>$export_method</string>
+            <key>signingStyle</key><string>manual</string>
+            <key>teamID</key><string>$IOS_TEAM_ID</string>
+            <key>provisioningProfiles</key><dict><key>$IOS_BUNDLE_ID</key><string>$profile_uuid</string></dict>
+          </dict></plist>
+          EOF
+          {
+            echo "IOS_SIGNING_KEYCHAIN=$keychain_path"
+            echo "IOS_EXPORT_OPTIONS=$RUNNER_TEMP/ExportOptions.plist"
+          } >> "$GITHUB_ENV"
+
+      - name: Build the signed iOS IPA
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter build ipa --release \
+            --build-name="${{ steps.build_inputs.outputs.version }}" \
+            --build-number="${{ steps.build_inputs.outputs.build_number }}" \
+            --export-options-plist="$IOS_EXPORT_OPTIONS" \
+            --dart-define-from-file=.dart_tool/public-build-defines.json
+
+      - name: Verify signed IPA and create checksum
+        id: signed
+        shell: bash
+        env:
+          EXPECTED_BUNDLE_ID: ${{ vars.IOS_BUNDLE_ID }}
+        run: |
+          set -euo pipefail
+          candidates=()
+          while IFS= read -r candidate; do
+            candidates+=("$candidate")
+          done < <(find build/ios/ipa -type f -name '*.ipa' | sort)
+          if [ "${#candidates[@]}" -ne 1 ]; then
+            echo "Expected exactly one signed IPA; found ${#candidates[@]}." >&2
+            exit 1
+          fi
+          ipa="${candidates[0]}"
+          extraction_dir="$RUNNER_TEMP/ipa"
+          unzip -q "$ipa" -d "$extraction_dir"
+          app_path="$extraction_dir/Payload/Runner.app"
+          test -d "$app_path"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$app_path/Info.plist" | grep -Fx "$EXPECTED_BUNDLE_ID"
+          codesign --verify --deep --strict --verbose=2 "$app_path"
+          version="${{ needs.signed_apk.outputs.version }}"
+          ipa_name="art.kubus.v${version}-${{ needs.signed_apk.outputs.source_sha }}.ipa"
+          mkdir -p "$GITHUB_WORKSPACE/release"
+          ipa_path="$GITHUB_WORKSPACE/release/$ipa_name"
+          cp "$ipa" "$ipa_path"
+          (cd "$GITHUB_WORKSPACE/release" && shasum -a 256 "$ipa_name" > "$ipa_name.sha256")
+          echo "ipa_name=$ipa_name" >> "$GITHUB_OUTPUT"
+          echo "ipa_path=$ipa_path" >> "$GITHUB_OUTPUT"
+          echo "checksum_path=$ipa_path.sha256" >> "$GITHUB_OUTPUT"
+
+      - name: Upload signed IPA workflow artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{ steps.signed.outputs.ipa_name }}
+          path: |
+            ${{ steps.signed.outputs.ipa_path }}
+            ${{ steps.signed.outputs.checksum_path }}
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Attach signed IPA to immutable GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.signed_apk.outputs.release_tag }}
+          EXPECTED_SHA: ${{ needs.signed_apk.outputs.source_sha }}
+          IPA_PATH: ${{ steps.signed.outputs.ipa_path }}
+          CHECKSUM_PATH: ${{ steps.signed.outputs.checksum_path }}
+        run: |
+          set -euo pipefail
+          release_json="$RUNNER_TEMP/release.json"
+          curl --fail --silent --show-error --location \
+            --header "Authorization: Bearer $GH_TOKEN" \
+            --header 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${{ github.repository }}/releases/tags/$RELEASE_TAG" \
+            > "$release_json"
+          test "$(jq -r '.target_commitish' "$release_json")" = "$EXPECTED_SHA"
+          gh release upload "$RELEASE_TAG" "$IPA_PATH" "$CHECKSUM_PATH"
+
+      - name: Remove ephemeral iOS signing material
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          set +e
+          security delete-keychain "$IOS_SIGNING_KEYCHAIN" 2>/dev/null || true
+          rm -f ios/Flutter/Release-CI.xcconfig

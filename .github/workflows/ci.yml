@@ -476,6 +476,15 @@ jobs:
           KUBUS_BUILD_DATE: ${{ needs.build_metadata.outputs.build_date }}
         run: node scripts/prepare_public_build_config.mjs
 
+      - name: Retain exact iOS release build inputs
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ios-release-inputs-${{ github.sha }}
+          path: .dart_tool/public-build-defines.json
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Compile iOS release without codesigning
         run: |
           flutter build ios --release --no-codesign \
