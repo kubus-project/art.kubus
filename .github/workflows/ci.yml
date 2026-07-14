@@ -302,6 +302,24 @@ jobs:
           BACKEND_SUBMODULE_SSH_KEY: ${{ secrets.BACKEND_SUBMODULE_SSH_KEY }}
         run: bash scripts/ci/checkout_backend_submodules.sh
 
+      - name: Reclaim hosted-runner disk for Android builds
+        shell: bash
+        run: |
+          set -euo pipefail
+          df -h "$GITHUB_WORKSPACE"
+          sudo rm -rf \
+            /usr/share/dotnet \
+            /opt/ghc \
+            /usr/local/.ghcup \
+            /usr/local/share/boost \
+            /usr/share/swift \
+            /opt/hostedtoolcache/CodeQL \
+            /usr/local/lib/android/sdk/ndk
+          docker image prune --all --force
+          available_kib="$(df -Pk "$GITHUB_WORKSPACE" | awk 'NR == 2 { print $4 }')"
+          test "$available_kib" -ge 12582912
+          df -h "$GITHUB_WORKSPACE"
+
       - name: Set up pinned Node
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
@@ -364,6 +382,16 @@ jobs:
             --build-name="${{ needs.build_metadata.outputs.version }}" \
             --build-number="${{ needs.build_metadata.outputs.build_number }}" \
             --dart-define-from-file=.dart_tool/public-build-defines.json
+
+      - name: Reclaim debug-only Android intermediates
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./android/gradlew --stop || true
+          rm -rf build/app android/.gradle
+          available_kib="$(df -Pk "$GITHUB_WORKSPACE" | awk 'NR == 2 { print $4 }')"
+          test "$available_kib" -ge 12582912
+          df -h "$GITHUB_WORKSPACE"
 
       - name: Compile unsigned Android release APK
         run: |
