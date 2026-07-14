@@ -80,20 +80,29 @@ function syncAppConfig(version, buildNumber, buildDate) {
 
   raw = replaceOrThrow(
     raw,
-    /static const String version\s*=\s*['"][^'"]+['"];/,
-    `static const String version = '${version}';`,
+    /static const String version\s*=\s*(?:String\.fromEnvironment\(\s*'KUBUS_APP_VERSION',\s*defaultValue:\s*'[^']+',\s*\)|'[^']+');/,
+    `static const String version = String.fromEnvironment(
+    'KUBUS_APP_VERSION',
+    defaultValue: '${version}',
+  );`,
     'AppInfo.version',
   );
   raw = replaceOrThrow(
     raw,
-    /static const int buildNumber\s*=\s*\d+;/,
-    `static const int buildNumber = ${buildNumber};`,
+    /static const int buildNumber\s*=\s*(?:int\.fromEnvironment\(\s*'KUBUS_BUILD_NUMBER',\s*defaultValue:\s*\d+,\s*\)|\d+);/,
+    `static const int buildNumber = int.fromEnvironment(
+    'KUBUS_BUILD_NUMBER',
+    defaultValue: ${buildNumber},
+  );`,
     'AppInfo.buildNumber',
   );
   raw = replaceOrThrow(
     raw,
-    /static const String buildDate\s*=\s*['"][^'"]+['"];/,
-    `static const String buildDate = '${buildDate}';`,
+    /static const String buildDate\s*=\s*(?:String\.fromEnvironment\(\s*'KUBUS_BUILD_DATE',\s*defaultValue:\s*'[^']+',\s*\)|'[^']+');/,
+    `static const String buildDate = String.fromEnvironment(
+    'KUBUS_BUILD_DATE',
+    defaultValue: '${buildDate}',
+  );`,
     'AppInfo.buildDate',
   );
 
