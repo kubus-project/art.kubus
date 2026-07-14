@@ -55,7 +55,8 @@ class DeepLinkProvider extends ChangeNotifier {
 
   String? _signatureFor(ShareDeepLinkTarget? target) {
     if (target == null) return null;
-    return const ShareDeepLinkCodec()
+    final path = const ShareDeepLinkCodec()
         .canonicalPathForTarget(target, includeProofTokens: false);
+    return '$path|${target.localeCode ?? ''}';
   }
 }

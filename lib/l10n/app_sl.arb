@@ -165,6 +165,18 @@
   "commonClear": "Počisti",
   "commonClose": "Zapri",
   "commonContinue": "Nadaljuj",
+  "contextualAuthTitle": "Za dejanje »{action}« je potrebna prijava",
+  "@contextualAuthTitle": {
+    "placeholders": {
+      "action": {"type": "String"}
+    }
+  },
+  "contextualAuthBody": "To javno vsebino si lahko ogleduješ brez računa. Prijavi se za nadaljevanje z dejanjem »{action}«.",
+  "@contextualAuthBody": {
+    "placeholders": {
+      "action": {"type": "String"}
+    }
+  },
   "commonOr": "ali",
   "commonSkip": "Preskoči",
   "commonSkipForNow": "Preskoči za zdaj",

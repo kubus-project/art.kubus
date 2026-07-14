@@ -26,6 +26,7 @@ import '../../providers/themeprovider.dart';
 import '../../providers/platform_provider.dart';
 import '../../providers/saved_items_provider.dart';
 import '../../services/user_action_logger.dart';
+import '../../services/contextual_auth_gate.dart';
 import '../../providers/wallet_provider.dart';
 import '../../services/ar_manager.dart';
 import '../../services/ar_integration_service.dart';
@@ -1793,7 +1794,11 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                               ? SizedBox(
                                   height: 18,
                                   width: 18,
-                                  child: InlineLoading(tileSize: 4, color: Theme.of(context).colorScheme.primary),
+                                  child: InlineLoading(
+                                      tileSize: 4,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .primary),
                                 )
                               : const Icon(Icons.upload_file),
                           label: Text(selectedModelName == null
@@ -1939,9 +1944,11 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                                 ? SizedBox(
                                     height: 18,
                                     width: 18,
-                                    child: InlineLoading(tileSize: 4, color: Theme.of(context)
-                                          .colorScheme
-                                          .onPrimary),
+                                    child: InlineLoading(
+                                        tileSize: 4,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onPrimary),
                                   )
                                 : const Icon(Icons.upload),
                             label: Text(
@@ -2334,6 +2341,12 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
     final scheme = Theme.of(context).colorScheme;
     final artworkId = (artwork['id'] ?? '').toString().trim();
     if (artworkId.isEmpty) return;
+    final authenticated = await const ContextualAuthGate().ensureAuthenticated(
+      context,
+      actionLabel: l10n.commonSave.toLowerCase(),
+      returnRoute: '/a/${Uri.encodeComponent(artworkId)}',
+    );
+    if (!authenticated || !mounted) return;
 
     // Update SavedItemsProvider
     final savedItemsProvider =

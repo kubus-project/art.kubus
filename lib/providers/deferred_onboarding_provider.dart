@@ -12,15 +12,25 @@ class DeferredOnboardingProvider extends ChangeNotifier {
   bool _enabledForSession = false;
   bool _initialDeepLinkHandled = false;
   bool _presentedThisSession = false;
+  String? _initialStepId;
 
   bool get enabledForSession => _enabledForSession;
   bool get initialDeepLinkHandled => _initialDeepLinkHandled;
+  String? get initialStepId => _initialStepId;
 
-  void enableForDeepLinkColdStart() {
-    if (_enabledForSession) return;
+  void enableForDeepLinkColdStart({String? initialStepId}) {
+    final normalizedStep = (initialStepId ?? '').trim();
+    if (_enabledForSession) {
+      if (_initialStepId == null && normalizedStep.isNotEmpty) {
+        _initialStepId = normalizedStep;
+        notifyListeners();
+      }
+      return;
+    }
     _enabledForSession = true;
     _initialDeepLinkHandled = false;
     _presentedThisSession = false;
+    _initialStepId = normalizedStep.isEmpty ? null : normalizedStep;
     notifyListeners();
   }
 
@@ -47,6 +57,7 @@ class DeferredOnboardingProvider extends ChangeNotifier {
 
     final isDesktop = DesktopBreakpoints.isDesktop(context);
     final navigator = Navigator.of(context);
+    final initialStepId = _initialStepId;
 
     _presentedThisSession = true;
     // Clear the deferral state immediately so subsequent attempts won't re-trigger.
@@ -55,7 +66,10 @@ class DeferredOnboardingProvider extends ChangeNotifier {
 
     navigator.pushReplacement(
       MaterialPageRoute(
-        builder: (_) => OnboardingFlowScreen(forceDesktop: isDesktop),
+        builder: (_) => OnboardingFlowScreen(
+          forceDesktop: isDesktop,
+          initialStepId: initialStepId,
+        ),
         settings: const RouteSettings(name: '/onboarding'),
       ),
     );
@@ -67,6 +81,7 @@ class DeferredOnboardingProvider extends ChangeNotifier {
     if (!_enabledForSession && !_initialDeepLinkHandled) return;
     _enabledForSession = false;
     _initialDeepLinkHandled = false;
+    _initialStepId = null;
     if (!keepPresentedFlag) {
       _presentedThisSession = false;
     }

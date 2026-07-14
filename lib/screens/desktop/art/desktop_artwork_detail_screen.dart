@@ -17,6 +17,7 @@ import '../../../providers/wallet_provider.dart';
 import '../../../providers/saved_items_provider.dart';
 import '../../../config/config.dart';
 import '../../../services/backend_api_service.dart';
+import '../../../services/contextual_auth_gate.dart';
 import '../../../services/map_data_controller.dart';
 import '../../../services/share/share_service.dart';
 import '../../../services/share/share_types.dart';
@@ -60,6 +61,31 @@ class _DesktopArtworkDetailScreenState
   bool _artworkLoading = true;
   String? _artworkError;
   bool _commentsSidebarExpanded = true;
+
+  String get _publicReturnRoute =>
+      '/a/${Uri.encodeComponent(widget.artworkId)}';
+
+  Future<void> _toggleLike(ArtworkProvider provider, Artwork artwork) async {
+    final l10n = AppLocalizations.of(context)!;
+    final authenticated = await const ContextualAuthGate().ensureAuthenticated(
+      context,
+      actionLabel: l10n.artworkDetailLike.toLowerCase(),
+      returnRoute: _publicReturnRoute,
+    );
+    if (!authenticated || !mounted) return;
+    await provider.toggleLike(artwork.id);
+  }
+
+  Future<void> _toggleSaved(ArtworkProvider provider, Artwork artwork) async {
+    final l10n = AppLocalizations.of(context)!;
+    final authenticated = await const ContextualAuthGate().ensureAuthenticated(
+      context,
+      actionLabel: l10n.commonSave.toLowerCase(),
+      returnRoute: _publicReturnRoute,
+    );
+    if (!authenticated || !mounted) return;
+    await provider.toggleArtworkSaved(artwork.id);
+  }
 
   @override
   void initState() {
@@ -619,8 +645,9 @@ class _DesktopArtworkDetailScreenState
 
   Widget _buildDescription(Artwork artwork) {
     final text = (artwork.description).trim();
-    final hasAttribution = ((artwork.imageAttribution ?? '').trim().isNotEmpty) ||
-        ((artwork.imageAuthor ?? '').trim().isNotEmpty);
+    final hasAttribution =
+        ((artwork.imageAttribution ?? '').trim().isNotEmpty) ||
+            ((artwork.imageAuthor ?? '').trim().isNotEmpty);
     if (text.isEmpty && !hasAttribution) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.only(top: DetailSpacing.lg),
@@ -719,13 +746,11 @@ class _DesktopArtworkDetailScreenState
   }
 
   Widget _buildActionsRow(
-      Artwork artwork, ArtworkProvider artworkProvider, bool isSignedIn) {
+      Artwork artwork, ArtworkProvider artworkProvider, bool _) {
     final l10n = AppLocalizations.of(context)!;
-    final messenger = ScaffoldMessenger.of(context);
     final isSaved = context.select<SavedItemsProvider, bool>(
       (provider) => provider.isArtworkSaved(artwork.id),
     );
-    final canInteract = isSignedIn;
     final showArPrimaryAction =
         artwork.arEnabled && AppConfig.isFeatureEnabled('ar');
 
@@ -733,16 +758,6 @@ class _DesktopArtworkDetailScreenState
     final canShowStreetArtClaimCta =
         AppConfig.isFeatureEnabled('streetArtClaims') &&
             markerIdCandidate.isNotEmpty;
-
-    Future<void> requireSignInToast() async {
-      messenger.showKubusSnackBar(
-        SnackBar(
-          content: Text(l10n.communityCommentAuthRequiredToast,
-              style: KubusTypography.inter()),
-          duration: const Duration(seconds: 2),
-        ),
-      );
-    }
 
     return DetailActionsSection(
       title: l10n.commonActions,
@@ -765,9 +780,7 @@ class _DesktopArtworkDetailScreenState
               ? Icons.favorite
               : Icons.favorite_border,
           label: '${artwork.likesCount}',
-          onTap: canInteract
-              ? () => artworkProvider.toggleLike(artwork.id)
-              : requireSignInToast,
+          onTap: () => _toggleLike(artworkProvider, artwork),
           isActive: artwork.isLikedByCurrentUser,
           activeColor: Theme.of(context).colorScheme.error,
           tooltip: l10n.commonLikes,
@@ -775,9 +788,7 @@ class _DesktopArtworkDetailScreenState
         DetailSecondaryAction(
           icon: isSaved ? Icons.bookmark : Icons.bookmark_border,
           label: isSaved ? l10n.commonSavedToast : l10n.commonSave,
-          onTap: canInteract
-              ? () => artworkProvider.toggleArtworkSaved(artwork.id)
-              : requireSignInToast,
+          onTap: () => _toggleSaved(artworkProvider, artwork),
           isActive: isSaved,
           tooltip: l10n.commonSave,
         ),

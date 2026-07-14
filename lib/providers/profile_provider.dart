@@ -312,7 +312,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
   UserProfile? get profile => _currentUser; // Alias for compatibility
   List<UserProfile> get followingUsers => _followingUsers;
   List<UserProfile> get followers => _followers;
-  bool get isSignedIn => _isSignedIn || _currentUser != null;
+  bool get isSignedIn => _isSignedIn;
   bool get hasWallet =>
       (_currentUser?.walletAddress.trim().isNotEmpty ?? false) ||
       (_walletProvider?.currentWalletAddress?.trim().isNotEmpty ?? false);
@@ -771,7 +771,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
           _currentUser =
               _currentUser?.copyWith(avatar: _convertSvgToRaster(resolved));
         } catch (_) {}
-        _isSignedIn = true;
+        _isSignedIn = BackendApiService().hasAuthSession;
         _hasHydratedProfile = true;
         // Merge backend preferences with locally cached toggles for offline continuity
         final mergedPrefs = _mergePreferencesWithLocalPersona(walletAddress);
@@ -862,7 +862,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
             _currentUser =
                 _currentUser?.copyWith(avatar: _convertSvgToRaster(resolved));
           } catch (_) {}
-          _isSignedIn = true;
+          _isSignedIn = BackendApiService().hasAuthSession;
           _hasHydratedProfile = true;
           final mergedPrefs = _mergePreferencesWithLocalPersona(walletAddress);
           _currentUser = _currentUser?.copyWith(preferences: mergedPrefs);
@@ -872,7 +872,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
               'ProfileProvider: Auto-registration failed: $regError, creating local default');
           // If registration also fails, create local default
           _currentUser = _createDefaultProfile(walletAddress);
-          _isSignedIn = true;
+          _isSignedIn = BackendApiService().hasAuthSession;
           _hasHydratedProfile = true;
           final mergedPrefs = _mergePreferencesWithLocalPersona(walletAddress);
           _currentUser = _currentUser?.copyWith(preferences: mergedPrefs);

@@ -13,6 +13,7 @@ import '../../../services/user_service.dart';
 import '../../../services/share/share_service.dart';
 import '../../../services/share/share_types.dart';
 import '../../../services/block_list_service.dart';
+import '../../../services/contextual_auth_gate.dart';
 import '../../../utils/artwork_navigation.dart';
 import '../../../utils/app_color_utils.dart';
 import '../../../utils/media_url_resolver.dart';
@@ -1662,6 +1663,12 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     if (profile == null || _isFollowMutationInFlight) return;
 
     final l10n = AppLocalizations.of(context)!;
+    final authenticated = await const ContextualAuthGate().ensureAuthenticated(
+      context,
+      actionLabel: l10n.commonFollow.toLowerCase(),
+      returnRoute: '/u/${Uri.encodeComponent(widget.userId)}',
+    );
+    if (!authenticated || !mounted) return;
     final messenger = ScaffoldMessenger.of(context);
     final theme = Theme.of(context);
 
@@ -1763,10 +1770,16 @@ class _UserProfileScreenState extends State<UserProfileScreen>
   }
 
   Future<void> _openConversation() async {
+    final l10n = AppLocalizations.of(context)!;
+    final authenticated = await const ContextualAuthGate().ensureAuthenticated(
+      context,
+      actionLabel: l10n.userProfileMessageButtonLabel.toLowerCase(),
+      returnRoute: '/u/${Uri.encodeComponent(widget.userId)}',
+    );
+    if (!authenticated || !mounted) return;
     final chatProvider = Provider.of<ChatProvider>(context, listen: false);
     final messenger = ScaffoldMessenger.of(context);
     final chatAuth = chatProvider.isAuthenticated;
-    final l10n = AppLocalizations.of(context)!;
 
     try {
       final conv = await chatProvider.createConversation('', false, [user!.id]);

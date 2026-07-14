@@ -22,6 +22,7 @@ import '../../models/saved_item.dart';
 import '../../models/artwork.dart';
 import '../../models/artwork_comment.dart';
 import '../../services/backend_api_service.dart';
+import '../../services/contextual_auth_gate.dart';
 import '../../services/map_data_controller.dart';
 import '../../services/nft_minting_service.dart';
 import '../../services/profile_package_mutation_tracker.dart';
@@ -69,6 +70,38 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
   late TextEditingController _commentController;
   late ScrollController _scrollController;
   bool _showComments = false;
+
+  String get _publicReturnRoute =>
+      '/a/${Uri.encodeComponent(widget.artworkId)}';
+
+  Future<void> _toggleSaved(
+    ArtworkProvider provider,
+    String artworkId,
+  ) async {
+    final l10n = AppLocalizations.of(context)!;
+    final authenticated = await const ContextualAuthGate().ensureAuthenticated(
+      context,
+      actionLabel: l10n.commonSave.toLowerCase(),
+      returnRoute: _publicReturnRoute,
+    );
+    if (!authenticated || !mounted) return;
+    await provider.toggleArtworkSaved(artworkId);
+  }
+
+  Future<void> _toggleArtworkLike(
+    ArtworkProvider provider,
+    String artworkId,
+  ) async {
+    final l10n = AppLocalizations.of(context)!;
+    final authenticated = await const ContextualAuthGate().ensureAuthenticated(
+      context,
+      actionLabel: l10n.artworkDetailLike.toLowerCase(),
+      returnRoute: _publicReturnRoute,
+    );
+    if (!authenticated || !mounted) return;
+    await provider.toggleLike(artworkId);
+  }
+
   String? _replyToCommentId;
   String? _replyToAuthorName;
   String? _prefetchedAttendanceMarkerId;
@@ -418,7 +451,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
             final isSaved = savedItemsProvider.isArtworkSaved(artwork.id);
             return IconButton(
               tooltip: l10n.commonSave,
-              onPressed: () => provider.toggleArtworkSaved(artwork.id),
+              onPressed: () => _toggleSaved(provider, artwork.id),
               icon: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
@@ -802,7 +835,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                         : l10n.artworkDetailLike,
                     isActive: isLiked,
                     activeColor: scheme.error,
-                    onPressed: () => provider.toggleLike(artwork.id),
+                    onPressed: () => _toggleArtworkLike(provider, artwork.id),
                   );
                 },
               ),
@@ -2022,30 +2055,12 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
     final l10n = AppLocalizations.of(context)!;
-    final profileProvider =
-        Provider.of<ProfileProvider>(context, listen: false);
-    if (!profileProvider.isSignedIn) {
-      messenger.showKubusSnackBar(
-        SnackBar(
-          content: Text(l10n.communityCommentAuthRequiredToast,
-              style: KubusTypography.inter()),
-          action: SnackBarAction(
-            label: l10n.commonSignIn,
-            onPressed: () {
-              navigator.pushNamed(
-                '/sign-in',
-                arguments: {
-                  'redirectRoute': '/artwork',
-                  'redirectArguments': {'artworkId': artwork.id},
-                },
-              );
-            },
-          ),
-          duration: const Duration(seconds: 3),
-        ),
-      );
-      return;
-    }
+    final authenticated = await const ContextualAuthGate().ensureAuthenticated(
+      context,
+      actionLabel: l10n.commonComments.toLowerCase(),
+      returnRoute: _publicReturnRoute,
+    );
+    if (!authenticated || !mounted) return;
 
     final parentId = _replyToCommentId;
     setState(() {

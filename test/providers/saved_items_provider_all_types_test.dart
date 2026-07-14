@@ -14,11 +14,13 @@ class _FakeSavedItemsRepository extends SavedItemsRepository {
     Map<String, bool> statusMap = const <String, bool>{},
     List<SavedItemRecord> pendingSaves = const <SavedItemRecord>[],
     Set<String> pendingDeleteKeys = const <String>{},
+    bool hasBackendSession = true,
   })  : _cachedItems = List<SavedItemRecord>.from(cachedItems),
         _backendItems = List<SavedItemRecord>.from(backendItems),
         _statusMap = Map<String, bool>.from(statusMap),
         _pendingSaves = List<SavedItemRecord>.from(pendingSaves),
         _pendingDeleteKeys = Set<String>.from(pendingDeleteKeys),
+        _hasBackendSession = hasBackendSession,
         super(api: BackendApiService());
 
   List<SavedItemRecord> _cachedItems;
@@ -26,7 +28,9 @@ class _FakeSavedItemsRepository extends SavedItemsRepository {
   Map<String, bool> _statusMap;
   final List<SavedItemRecord> _pendingSaves;
   final Set<String> _pendingDeleteKeys;
+  final bool _hasBackendSession;
   bool clearCachedStateCalled = false;
+  int batchStatusCalls = 0;
 
   set backendItems(List<SavedItemRecord> value) {
     _backendItems = List<SavedItemRecord>.from(value);
@@ -37,7 +41,7 @@ class _FakeSavedItemsRepository extends SavedItemsRepository {
   }
 
   @override
-  Future<bool> hasBackendSession() async => true;
+  Future<bool> hasBackendSession() async => _hasBackendSession;
 
   @override
   Future<List<SavedItemRecord>> loadCachedItems() async =>
@@ -81,6 +85,7 @@ class _FakeSavedItemsRepository extends SavedItemsRepository {
   Future<Map<String, bool>> getSavedBatchStatus(
     Iterable<SavedItemRecord> items,
   ) async {
+    batchStatusCalls += 1;
     return {
       for (final item in items)
         '${item.type.storageKey}:${item.id}':
@@ -146,7 +151,8 @@ void main() {
   });
 
   test('artist saved state can be toggled', () async {
-    final provider = SavedItemsProvider();
+    final provider =
+        SavedItemsProvider(repository: _FakeSavedItemsRepository());
 
     // Verify initial state
     expect(provider.isArtistSaved('artist-1'), isFalse);
@@ -163,7 +169,8 @@ void main() {
   });
 
   test('institution saved state can be toggled', () async {
-    final provider = SavedItemsProvider();
+    final provider =
+        SavedItemsProvider(repository: _FakeSavedItemsRepository());
 
     expect(provider.isInstitutionSaved('institution-1'), isFalse);
 
@@ -177,7 +184,8 @@ void main() {
   });
 
   test('group saved state can be toggled', () async {
-    final provider = SavedItemsProvider();
+    final provider =
+        SavedItemsProvider(repository: _FakeSavedItemsRepository());
 
     expect(provider.isGroupSaved('group-1'), isFalse);
 
@@ -191,7 +199,8 @@ void main() {
   });
 
   test('marker saved state can be toggled', () async {
-    final provider = SavedItemsProvider();
+    final provider =
+        SavedItemsProvider(repository: _FakeSavedItemsRepository());
 
     expect(provider.isMarkerSaved('marker-1'), isFalse);
 
@@ -202,6 +211,18 @@ void main() {
     await provider.setMarkerSaved('marker-1', false);
     expect(provider.isMarkerSaved('marker-1'), isFalse);
     expect(provider.savedMarkersCount, equals(0));
+  });
+
+  test('signed-out save does not mutate local saved state', () async {
+    final provider = SavedItemsProvider(
+      repository: _FakeSavedItemsRepository(hasBackendSession: false),
+    );
+
+    await expectLater(
+      provider.setArtworkSaved('artwork-guest', true),
+      throwsA(isA<SavedItemsAuthenticationRequired>()),
+    );
+    expect(provider.isArtworkSaved('artwork-guest'), isFalse);
   });
 
   test('backend refresh removes stale cached items', () async {
@@ -294,6 +315,23 @@ void main() {
 
     expect(provider.isArtistSaved('artist-2'), isTrue);
     expect(provider.isMarkerSaved('marker-3'), isTrue);
+  });
+
+  test('guest batch hydration never calls the account-scoped endpoint',
+      () async {
+    final repository = _FakeSavedItemsRepository(
+      hasBackendSession: false,
+      statusMap: <String, bool>{'artwork:art-guest': true},
+    );
+    final provider = SavedItemsProvider(repository: repository);
+
+    await provider.hydrateSavedStatus(
+      type: SavedItemType.artwork,
+      ids: const ['art-guest'],
+    );
+
+    expect(repository.batchStatusCalls, 0);
+    expect(provider.isArtworkSaved('art-guest'), isFalse);
   });
 
   test('batch hydration removes stale visible saved status from backend',

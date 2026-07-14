@@ -317,6 +317,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonContinue => 'Continue';
 
   @override
+  String contextualAuthTitle(String action) {
+    return 'Sign-in required for $action';
+  }
+
+  @override
+  String contextualAuthBody(String action) {
+    return 'You can keep viewing this public content without an account. Sign in to continue with $action.';
+  }
+
+  @override
   String get commonOr => 'or';
 
   @override

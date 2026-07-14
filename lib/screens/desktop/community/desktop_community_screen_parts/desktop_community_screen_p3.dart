@@ -43,6 +43,12 @@ extension _DesktopCommunityScreenStatePart3 on _DesktopCommunityScreenState {
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     final messenger = ScaffoldMessenger.of(context);
     final l10n = AppLocalizations.of(context)!;
+    final authenticated = await const ContextualAuthGate().ensureAuthenticated(
+      context,
+      actionLabel: l10n.commonLikes.toLowerCase(),
+      returnRoute: '/p/${Uri.encodeComponent(post.id)}',
+    );
+    if (!authenticated || !mounted) return;
     final wasLiked = post.isLiked;
     try {
       await CommunityService.togglePostLike(
@@ -75,6 +81,12 @@ extension _DesktopCommunityScreenStatePart3 on _DesktopCommunityScreenState {
   Future<void> _toggleBookmark(CommunityPost post) async {
     final messenger = ScaffoldMessenger.of(context);
     final l10n = AppLocalizations.of(context)!;
+    final authenticated = await const ContextualAuthGate().ensureAuthenticated(
+      context,
+      actionLabel: l10n.commonSave.toLowerCase(),
+      returnRoute: '/p/${Uri.encodeComponent(post.id)}',
+    );
+    if (!authenticated || !mounted) return;
     try {
       await CommunityPostSaveController.toggle(context, post);
       if (!mounted) return;
@@ -545,7 +557,9 @@ extension _DesktopCommunityScreenStatePart3 on _DesktopCommunityScreenState {
                       ? SizedBox(
                           width: 16,
                           height: 16,
-                          child: InlineLoading(tileSize: 4, color: Theme.of(context).colorScheme.onPrimary),
+                          child: InlineLoading(
+                              tileSize: 4,
+                              color: Theme.of(context).colorScheme.onPrimary),
                         )
                       : Text(l10n.communityRepostButtonLabel),
                 ),
@@ -926,7 +940,8 @@ extension _DesktopCommunityScreenStatePart3 on _DesktopCommunityScreenState {
                 future: future,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: InlineLoading(width: 40, height: 40));
+                    return const Center(
+                        child: InlineLoading(width: 40, height: 40));
                   }
                   if (snapshot.hasError) {
                     return Center(

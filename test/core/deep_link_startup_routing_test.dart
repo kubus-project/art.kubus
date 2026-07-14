@@ -7,40 +7,55 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   const router = DeepLinkStartupRouting();
 
-  test('routes marker deep link through sign-in when auth entry is required',
-      () {
-    const pending = ShareDeepLinkTarget(type: ShareEntityType.marker, id: 'm1');
-    final decision = router.decide(pending: pending, shouldShowSignIn: true);
-    expect(decision?.requiresSignIn, isTrue);
-    expect(decision?.canonicalPath, '/m/m1');
-    expect(decision?.preferredShellRoute, '/map');
-    expect(decision?.signInArguments?['redirectRoute'], '/m/m1');
+  test('ordinary public entities never inherit returning-account sign-in', () {
+    const publicTypes = <ShareEntityType>[
+      ShareEntityType.marker,
+      ShareEntityType.artwork,
+      ShareEntityType.event,
+      ShareEntityType.post,
+      ShareEntityType.profile,
+      ShareEntityType.exhibition,
+      ShareEntityType.collection,
+    ];
+
+    for (final type in publicTypes) {
+      final decision = router.decide(
+        pending: ShareDeepLinkTarget(type: type, id: 'entity-1'),
+        hasValidSession: false,
+      );
+      expect(decision?.accessPolicy, DeepLinkAccessPolicy.publicRead,
+          reason: type.name);
+      expect(decision?.requiresSignIn, isFalse, reason: type.name);
+    }
   });
 
-  test('localized public handoff preserves the entity through sign-in', () {
+  test('localized public handoff remains public and preserves locale context',
+      () {
     const parser = ShareDeepLinkParser();
     final pending = parser.parse(
       Uri.parse('https://app.kubus.site/app/sl/umetnine/art-42'),
     );
-
     final decision = router.decide(
       pending: pending,
-      shouldShowSignIn: true,
+      hasValidSession: false,
     );
 
-    expect(decision?.requiresSignIn, isTrue);
+    expect(pending?.localeCode, 'sl');
+    expect(decision?.requiresSignIn, isFalse);
     expect(decision?.canonicalPath, '/a/art-42');
-    expect(decision?.signInArguments?['redirectRoute'], '/a/art-42');
   });
 
-  test('keeps artwork deep link canonical while preferring main shell', () {
-    const pending =
-        ShareDeepLinkTarget(type: ShareEntityType.artwork, id: 'a1');
-    final decision = router.decide(pending: pending, shouldShowSignIn: false);
-    expect(decision?.requiresSignIn, isFalse);
-    expect(decision?.canonicalPath, '/a/a1');
-    expect(decision?.preferredShellRoute, '/main');
-    expect(decision?.signInArguments, isNull);
+  test('marker remains canonical while preferring the map shell', () {
+    const pending = ShareDeepLinkTarget(
+      type: ShareEntityType.marker,
+      id: 'm1',
+    );
+    final decision = router.decide(
+      pending: pending,
+      hasValidSession: false,
+    );
+    expect(decision?.canonicalPath, '/m/m1');
+    expect(decision?.preferredShellRoute, ShellRoutes.map);
   });
 
   test('canonical public entity paths remain separate from shell aliases', () {
@@ -53,17 +68,14 @@ void main() {
     for (final entry in cases.entries) {
       final decision = router.decide(
         pending: entry.key,
-        shouldShowSignIn: false,
+        hasValidSession: false,
       );
-
       expect(decision?.canonicalPath, entry.value);
       expect(ShellRoutes.isInternalShellAlias(entry.value), isFalse);
-      expect(decision?.canonicalPath, isNot(ShellRoutes.main));
     }
   });
 
-  test(
-      'claim-ready exhibition deep links preserve attendance marker in startup routing',
+  test('claim-ready exhibition view remains public and keeps claim context',
       () {
     const pending = ShareDeepLinkTarget(
       type: ShareEntityType.exhibition,
@@ -71,32 +83,36 @@ void main() {
       attendanceMarkerId: 'marker-1',
       claimReady: true,
     );
+    final decision = router.decide(
+      pending: pending,
+      hasValidSession: false,
+    );
 
-    final decision = router.decide(pending: pending, shouldShowSignIn: false);
+    expect(decision?.accessPolicy, DeepLinkAccessPolicy.publicRead);
+    expect(decision?.requiresSignIn, isFalse);
     expect(
       decision?.canonicalPath,
       '/x/expo-1?handoff=claim-ready&attendanceMarkerId=marker-1',
     );
-    expect(decision?.preferredShellRoute, '/main');
   });
 
-  test('sign-in replay arguments use canonical entity paths', () {
-    const cases = <ShareDeepLinkTarget, String>{
-      ShareDeepLinkTarget(type: ShareEntityType.artwork, id: 'a1'): '/a/a1',
-      ShareDeepLinkTarget(type: ShareEntityType.profile, id: 'u1'): '/u/u1',
-      ShareDeepLinkTarget(type: ShareEntityType.marker, id: 'm1'): '/m/m1',
-    };
+  test('NFT destination keeps its wallet-required startup boundary', () {
+    const pending = ShareDeepLinkTarget(
+      type: ShareEntityType.nft,
+      id: 'nft-1',
+    );
+    final signedOut = router.decide(
+      pending: pending,
+      hasValidSession: false,
+    );
+    final signedIn = router.decide(
+      pending: pending,
+      hasValidSession: true,
+    );
 
-    for (final entry in cases.entries) {
-      final decision = router.decide(
-        pending: entry.key,
-        shouldShowSignIn: true,
-      );
-
-      expect(decision?.requiresSignIn, isTrue);
-      expect(decision?.canonicalPath, entry.value);
-      expect(decision?.signInArguments?['redirectRoute'], entry.value);
-      expect(decision?.signInArguments?['redirectRoute'], isNot('/main'));
-    }
+    expect(signedOut?.accessPolicy, DeepLinkAccessPolicy.walletRequired);
+    expect(signedOut?.requiresSignIn, isTrue);
+    expect(signedOut?.signInArguments?['redirectRoute'], '/n/nft-1');
+    expect(signedIn?.requiresSignIn, isFalse);
   });
 }

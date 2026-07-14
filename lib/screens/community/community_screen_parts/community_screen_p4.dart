@@ -772,6 +772,12 @@ extension _CommunityScreenStatePart4 on _CommunityScreenState {
     final post = _communityPosts[index];
     final wasLiked = post.isLiked;
     final l10n = AppLocalizations.of(context)!;
+    final authenticated = await const ContextualAuthGate().ensureAuthenticated(
+      context,
+      actionLabel: l10n.commonLikes.toLowerCase(),
+      returnRoute: '/p/${Uri.encodeComponent(post.id)}',
+    );
+    if (!authenticated || !mounted) return;
 
     try {
       await Provider.of<CommunityInteractionsProvider>(context, listen: false)
@@ -816,7 +822,6 @@ extension _CommunityScreenStatePart4 on _CommunityScreenState {
     );
   }
 
-
   void _showLikesDialog(
       {required String title,
       required Future<List<CommunityLikeUser>> Function() loader}) {
@@ -832,16 +837,20 @@ extension _CommunityScreenStatePart4 on _CommunityScreenState {
     );
   }
 
-
   void _toggleBookmark(int index) async {
     if (index >= _communityPosts.length) return;
 
     final post = _communityPosts[index];
+    final l10n = AppLocalizations.of(context)!;
+    final authenticated = await const ContextualAuthGate().ensureAuthenticated(
+      context,
+      actionLabel: l10n.commonSave.toLowerCase(),
+      returnRoute: '/p/${Uri.encodeComponent(post.id)}',
+    );
+    if (!authenticated || !mounted) return;
     try {
       await CommunityPostSaveController.toggle(context, post);
       if (!mounted) return;
-
-      final l10n = AppLocalizations.of(context)!;
 
       _applyState(() {
         _bookmarkedPosts[index] = post.isBookmarked;
@@ -872,5 +881,4 @@ extension _CommunityScreenStatePart4 on _CommunityScreenState {
       );
     }
   }
-
 }

@@ -20,6 +20,7 @@ import '../../providers/themeprovider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../services/backend_api_service.dart';
 import '../../services/community_post_save_controller.dart';
+import '../../services/contextual_auth_gate.dart';
 import '../../services/profile_package_mutation_tracker.dart';
 import '../../utils/app_animations.dart';
 import '../../utils/app_color_utils.dart';
@@ -911,6 +912,12 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
   Future<void> _toggleLike(CommunityPost post) async {
     final wasLiked = post.isLiked;
     final l10n = AppLocalizations.of(context)!;
+    final authenticated = await const ContextualAuthGate().ensureAuthenticated(
+      context,
+      actionLabel: l10n.commonLikes.toLowerCase(),
+      returnRoute: '/p/${Uri.encodeComponent(post.id)}',
+    );
+    if (!authenticated || !mounted) return;
     final walletAddress = Provider.of<WalletProvider>(context, listen: false)
         .currentWalletAddress;
 
@@ -950,6 +957,12 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
 
   Future<void> _toggleBookmark(CommunityPost post) async {
     final l10n = AppLocalizations.of(context)!;
+    final authenticated = await const ContextualAuthGate().ensureAuthenticated(
+      context,
+      actionLabel: l10n.commonSave.toLowerCase(),
+      returnRoute: '/p/${Uri.encodeComponent(post.id)}',
+    );
+    if (!authenticated || !mounted) return;
     try {
       await CommunityPostSaveController.toggle(context, post);
       if (!mounted) return;
@@ -1219,7 +1232,8 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                 builder: (context, snapshot) {
                   final l10n = AppLocalizations.of(context)!;
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: InlineLoading(width: 40, height: 40));
+                    return const Center(
+                        child: InlineLoading(width: 40, height: 40));
                   }
                   if (snapshot.hasError) {
                     return Center(

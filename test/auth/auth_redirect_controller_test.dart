@@ -152,6 +152,26 @@ void main() {
     expect(result.arguments, <String, Object>{'tab': 'security'});
   });
 
+  test('existing user auth preserves an exact compact public entity route',
+      () async {
+    final prefs = await SharedPreferences.getInstance();
+    final result = await const AuthRedirectController().resolvePostAuthRedirect(
+      prefs: prefs,
+      payload: <String, dynamic>{},
+      hasHydratedProfile: true,
+      requiresWalletBackup: false,
+      redirectRoute: '/a/art-1',
+      redirectArguments: const <String, Object>{'source': 'public-action'},
+    );
+
+    expect(result.state, PostAuthRouteState.ready);
+    expect(result.routeName, '/a/art-1');
+    expect(
+      result.arguments,
+      const <String, Object>{'source': 'public-action'},
+    );
+  });
+
   test('restored session uses same ready route path', () async {
     final prefs = await SharedPreferences.getInstance();
     final result = await const AuthRedirectController().resolvePostAuthRedirect(

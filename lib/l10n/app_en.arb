@@ -165,6 +165,18 @@
   "commonClear": "Clear",
   "commonClose": "Close",
   "commonContinue": "Continue",
+  "contextualAuthTitle": "Sign-in required for {action}",
+  "@contextualAuthTitle": {
+    "placeholders": {
+      "action": {"type": "String"}
+    }
+  },
+  "contextualAuthBody": "You can keep viewing this public content without an account. Sign in to continue with {action}.",
+  "@contextualAuthBody": {
+    "placeholders": {
+      "action": {"type": "String"}
+    }
+  },
   "commonOr": "or",
   "commonSkip": "Skip",
   "commonSkipForNow": "Skip for now",

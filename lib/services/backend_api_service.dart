@@ -333,23 +333,6 @@ class BackendApiService
   /// Whether any wallet identity is stored locally (preferred wallet or a
   /// persisted wallet address). Distinguishes signed-in-but-tokenless states
   /// (e.g. cookie-backed sessions) from true guests.
-  Future<bool> _hasStoredWalletIdentity() async {
-    if ((_preferredWalletCanonical ?? '').trim().isNotEmpty) return true;
-    if ((_authWalletCanonical ?? '').trim().isNotEmpty) return true;
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final stored = (prefs.getString(PreferenceKeys.walletAddress) ??
-              prefs.getString('wallet_address') ??
-              prefs.getString('wallet') ??
-              prefs.getString('walletAddress') ??
-              '')
-          .trim();
-      return stored.isNotEmpty;
-    } catch (_) {
-      return false;
-    }
-  }
-
   void bindAuthCoordinator(AuthSessionCoordinator coordinator) {
     _authCoordinator = coordinator;
   }
@@ -3735,10 +3718,15 @@ class BackendApiService
     String? groupBy,
   }) async {
     try {
-      // Snapshot is public, but include auth when available (private stats allowed for owners).
-      try {
-        await _ensureAuthWithStoredWallet();
-      } catch (_) {}
+      // Public scope must remain a genuinely anonymous read. A stale local
+      // account must not let an optional stats request invoke global re-auth.
+      if (scope.trim().toLowerCase() != 'public') {
+        try {
+          await _ensureAuthWithStoredWallet();
+        } catch (_) {}
+      }
+      final includeAuth =
+          scope.trim().toLowerCase() != 'public' && hasAuthSession;
 
       final queryParams = <String, String>{};
       if (metrics.isNotEmpty) queryParams['metrics'] = metrics.join(',');
@@ -3752,7 +3740,8 @@ class BackendApiService
           .replace(queryParameters: queryParams.isEmpty ? null : queryParams);
       final response = await _get(
         uri,
-        headers: _getHeaders(includeAuth: true),
+        includeAuth: includeAuth,
+        headers: _getHeaders(includeAuth: includeAuth),
         timeout: const Duration(seconds: 12),
       );
 
@@ -3788,9 +3777,13 @@ class BackendApiService
     String scope = 'public',
   }) async {
     try {
-      try {
-        await _ensureAuthWithStoredWallet();
-      } catch (_) {}
+      if (scope.trim().toLowerCase() != 'public') {
+        try {
+          await _ensureAuthWithStoredWallet();
+        } catch (_) {}
+      }
+      final includeAuth =
+          scope.trim().toLowerCase() != 'public' && hasAuthSession;
 
       final queryParams = <String, String>{
         'metric': metric,
@@ -3813,7 +3806,8 @@ class BackendApiService
           .replace(queryParameters: queryParams);
       final response = await _get(
         uri,
-        headers: _getHeaders(includeAuth: true),
+        includeAuth: includeAuth,
+        headers: _getHeaders(includeAuth: includeAuth),
         timeout: const Duration(seconds: 20),
       );
 
@@ -3844,7 +3838,6 @@ class BackendApiService
     int? limit,
   }) async {
     try {
-      await _ensureAuthBeforeRequest();
       final qp = <String, String>{
         'lat': latitude.toString(),
         'lng': longitude.toString(),
@@ -3857,7 +3850,7 @@ class BackendApiService
             candidateBaseUrl,
             '/api/art-markers',
             queryParameters: qp,
-            includeAuth: true,
+            includeAuth: false,
             allowOrbitFallback: true,
           );
           final dynamic maybeList =
@@ -3915,7 +3908,6 @@ class BackendApiService
     int? limit,
   }) async {
     try {
-      await _ensureAuthBeforeRequest();
       final qp = <String, String>{
         'lat': latitude.toString(),
         'lng': longitude.toString(),
@@ -3931,7 +3923,7 @@ class BackendApiService
             candidateBaseUrl,
             '/api/art-markers',
             queryParameters: qp,
-            includeAuth: true,
+            includeAuth: false,
             allowOrbitFallback: true,
           );
           final dynamic maybeList =
@@ -3986,17 +3978,12 @@ class BackendApiService
     if (id.isEmpty) return null;
 
     try {
-      // Markers can be public (optional auth). Include auth when available,
-      // but do not hard-fail if the user is not signed in yet.
-      try {
-        await _ensureAuthWithStoredWallet();
-      } catch (_) {}
       return await _performPublicRead<ArtMarker?>(
         liveRead: (candidateBaseUrl) async {
           final data = await _fetchJsonFromBaseUrl(
             candidateBaseUrl,
             '/api/art-markers/$id',
-            includeAuth: true,
+            includeAuth: false,
             allowOrbitFallback: allowOrbitFallback,
           );
 
@@ -4781,9 +4768,9 @@ class BackendApiService
     List<String>? ids,
   }) async {
     try {
-      try {
-        await _ensureAuthWithStoredWallet();
-      } catch (_) {}
+      if (includePrivateForWallet) {
+        await _ensureAuthBeforeRequest();
+      }
 
       final requestedIds = (ids ?? const <String>[])
           .map((id) => id.trim())
@@ -4817,7 +4804,7 @@ class BackendApiService
             candidateBaseUrl,
             '/api/artworks',
             queryParameters: queryParams,
-            includeAuth: true,
+            includeAuth: includePrivateForWallet,
             allowOrbitFallback: true,
           );
           final dynamic listCandidate =
@@ -4896,15 +4883,12 @@ class BackendApiService
   @override
   Future<Artwork> getArtwork(String artworkId) async {
     try {
-      try {
-        await _ensureAuthWithStoredWallet();
-      } catch (_) {}
       return await _performPublicRead<Artwork>(
         liveRead: (candidateBaseUrl) async {
           final data = await _fetchJsonFromBaseUrl(
             candidateBaseUrl,
             '/api/artworks/$artworkId',
-            includeAuth: true,
+            includeAuth: false,
             allowOrbitFallback: true,
           );
           final payload = data['artwork'] ?? data['data'] ?? data;
@@ -5401,12 +5385,10 @@ class BackendApiService
   /// POST /api/artworks/:id/discover
   Future<void> discoverArtwork(String artworkId) async {
     try {
-      try {
-        await _ensureAuthWithStoredWallet();
-      } catch (_) {}
       await _post(
         Uri.parse('$baseUrl/api/artworks/$artworkId/discover'),
-        headers: _getHeaders(),
+        includeAuth: false,
+        headers: _getHeaders(includeAuth: false),
       );
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.discoverArtwork failed: $e');
@@ -5464,13 +5446,10 @@ class BackendApiService
   @override
   Future<int?> recordArtworkView(String artworkId) async {
     try {
-      // Views are allowed anonymously, but include auth when available
-      try {
-        await _ensureAuthWithStoredWallet();
-      } catch (_) {}
       final response = await _post(
         Uri.parse('$baseUrl/api/artworks/$artworkId/view'),
-        headers: _getHeaders(),
+        includeAuth: false,
+        headers: _getHeaders(includeAuth: false),
       );
 
       if (response.statusCode == 200) {
@@ -5493,19 +5472,17 @@ class BackendApiService
   /// POST /api/events/:id/view
   Future<void> recordEventView(String eventId, {String? source}) async {
     try {
-      // Views are allowed anonymously, but include auth when available.
-      try {
-        await _ensureAuthWithStoredWallet();
-      } catch (_) {}
-
       final uri = Uri.parse('$baseUrl/api/events/$eventId/view').replace(
         queryParameters: (source != null && source.trim().isNotEmpty)
             ? <String, String>{'source': source.trim()}
             : null,
       );
 
-      final response =
-          await _post(uri, headers: _getHeaders(includeAuth: true));
+      final response = await _post(
+        uri,
+        includeAuth: false,
+        headers: _getHeaders(includeAuth: false),
+      );
       if (response.statusCode == 200) return;
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.recordEventView failed: $e');
@@ -5517,11 +5494,6 @@ class BackendApiService
   Future<void> recordExhibitionView(String exhibitionId,
       {String? source}) async {
     try {
-      // Views are allowed anonymously, but include auth when available.
-      try {
-        await _ensureAuthWithStoredWallet();
-      } catch (_) {}
-
       final uri =
           Uri.parse('$baseUrl/api/exhibitions/$exhibitionId/view').replace(
         queryParameters: (source != null && source.trim().isNotEmpty)
@@ -5529,8 +5501,11 @@ class BackendApiService
             : null,
       );
 
-      final response =
-          await _post(uri, headers: _getHeaders(includeAuth: true));
+      final response = await _post(
+        uri,
+        includeAuth: false,
+        headers: _getHeaders(includeAuth: false),
+      );
       if (response.statusCode == 200) return;
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.recordExhibitionView failed: $e');
@@ -5545,16 +5520,16 @@ class BackendApiService
     int page = 1,
     int limit = 50,
   }) async {
-    // Public, but include auth if available so backend can return isLikedByCurrentUser.
-    try {
-      await _ensureAuthWithStoredWallet();
-    } catch (_) {}
     final uri = Uri.parse('$baseUrl/api/artworks/$artworkId/comments')
         .replace(queryParameters: {
       'page': page.toString(),
       'limit': limit.toString(),
     });
-    final response = await _get(uri, headers: _getHeaders());
+    final response = await _get(
+      uri,
+      includeAuth: false,
+      headers: _getHeaders(includeAuth: false),
+    );
 
     if (response.statusCode == 200) {
       final payload = jsonDecode(response.body);
@@ -5713,9 +5688,9 @@ class BackendApiService
     String? sort,
   }) async {
     try {
-      try {
-        await _ensureAuthWithStoredWallet();
-      } catch (_) {}
+      if (followingOnly == true) {
+        await _ensureAuthBeforeRequest();
+      }
       final queryParams = <String, String>{
         'page': page.toString(),
         'limit': limit.toString(),
@@ -5753,7 +5728,7 @@ class BackendApiService
             candidateBaseUrl,
             '/api/community/posts',
             queryParameters: queryParams,
-            includeAuth: true,
+            includeAuth: followingOnly == true,
             allowOrbitFallback: allowFallback,
           );
           final posts = data['data'] as List<dynamic>? ?? <dynamic>[];
@@ -5864,15 +5839,12 @@ class BackendApiService
   /// GET /api/community/posts/:id
   Future<CommunityPost> getCommunityPostById(String postId) async {
     try {
-      try {
-        await _ensureAuthWithStoredWallet();
-      } catch (_) {}
       return await _performPublicRead<CommunityPost>(
         liveRead: (candidateBaseUrl) async {
           final data = await _fetchJsonFromBaseUrl(
             candidateBaseUrl,
             '/api/community/posts/$postId',
-            includeAuth: true,
+            includeAuth: false,
             allowOrbitFallback: true,
           );
           final payload = data['data'] ?? data;
@@ -5931,9 +5903,10 @@ class BackendApiService
     }
 
     try {
-      try {
-        await _ensureAuthWithStoredWallet();
-      } catch (_) {}
+      await ensureAuthLoaded();
+      if (!hasAuthSession) {
+        return const CommunityInteractionStateBatch();
+      }
 
       final queryParams = <String, String>{
         if (normalizedPostIds.isNotEmpty)
@@ -6243,8 +6216,11 @@ class BackendApiService
       };
       final uri = Uri.parse('$baseUrl/api/community/art-feed')
           .replace(queryParameters: params);
-      final data =
-          await _fetchJson(uri, includeAuth: true, allowOrbitFallback: false);
+      final data = await _fetchJson(
+        uri,
+        includeAuth: false,
+        allowOrbitFallback: false,
+      );
       final posts = data['data'] as List<dynamic>? ?? <dynamic>[];
       return posts
           .map((json) =>
@@ -6276,9 +6252,6 @@ class BackendApiService
     String? search,
   }) async {
     try {
-      try {
-        await _ensureAuthWithStoredWallet();
-      } catch (_) {}
       final queryParams = <String, String>{
         'page': page.toString(),
         'limit': limit.toString(),
@@ -6286,8 +6259,11 @@ class BackendApiService
       };
       final uri = Uri.parse('$baseUrl/api/groups')
           .replace(queryParameters: queryParams);
-      final jsonData =
-          await _fetchJson(uri, includeAuth: true, allowOrbitFallback: false);
+      final jsonData = await _fetchJson(
+        uri,
+        includeAuth: false,
+        allowOrbitFallback: false,
+      );
       final dynamic payload =
           jsonData['data'] ?? jsonData['groups'] ?? jsonData['results'];
       final List<dynamic> rows;
@@ -6406,18 +6382,17 @@ class BackendApiService
     int limit = 50,
   }) async {
     try {
-      // Public-ish, but include auth when available for personalized fields (likes, follows).
-      try {
-        await _ensureAuthWithStoredWallet();
-      } catch (_) {}
       final qp = {
         'page': page.toString(),
         'limit': limit.toString(),
       };
       final uri = Uri.parse('$baseUrl/api/groups/$groupId/posts')
           .replace(queryParameters: qp);
-      final data =
-          await _fetchJson(uri, includeAuth: true, allowOrbitFallback: false);
+      final data = await _fetchJson(
+        uri,
+        includeAuth: false,
+        allowOrbitFallback: false,
+      );
       final posts = data['data'] as List<dynamic>? ?? <dynamic>[];
       return posts
           .map((json) =>
@@ -6692,12 +6667,10 @@ class BackendApiService
     Map<String, dynamic>? metadata,
   }) async {
     try {
-      try {
-        await _ensureAuthWithStoredWallet();
-      } catch (_) {}
       final response = await _post(
         Uri.parse('$baseUrl/api/community/analytics/event'),
-        headers: _getHeaders(),
+        includeAuth: false,
+        headers: _getHeaders(includeAuth: false),
         body: jsonEncode({
           'eventType': eventType,
           if (postId != null) 'postId': postId,
@@ -6843,10 +6816,6 @@ class BackendApiService
     int limit = 50,
   }) async {
     try {
-      // Ensure auth loaded once (safe for public endpoints)
-      try {
-        await ensureAuthLoaded();
-      } catch (_) {}
       final queryParams = <String, String>{
         'page': page.toString(),
         'limit': limit.toString(),
@@ -6854,7 +6823,11 @@ class BackendApiService
 
       final uri = Uri.parse('$baseUrl/api/community/posts/$postId/comments')
           .replace(queryParameters: queryParams);
-      final response = await _get(uri, headers: _getHeaders());
+      final response = await _get(
+        uri,
+        includeAuth: false,
+        headers: _getHeaders(includeAuth: false),
+      );
 
       if (response.statusCode == 200) {
         final parsed = jsonDecode(response.body);
@@ -6954,16 +6927,17 @@ class BackendApiService
   Future<List<CommunityLikeUser>> getPostLikes(String postId,
       {int limit = 50, int offset = 0}) async {
     try {
-      try {
-        await _ensureAuthWithStoredWallet();
-      } catch (_) {}
       final uri = Uri.parse('$baseUrl/api/community/posts/$postId/likes')
           .replace(queryParameters: {
         'limit': limit.toString(),
         'offset': offset.toString(),
       });
 
-      final response = await _get(uri, headers: _getHeaders());
+      final response = await _get(
+        uri,
+        includeAuth: false,
+        headers: _getHeaders(includeAuth: false),
+      );
       if (response.statusCode == 200) {
         final payload = jsonDecode(response.body);
         if (payload is Map<String, dynamic> && payload['data'] is List) {
@@ -6986,16 +6960,17 @@ class BackendApiService
   Future<List<CommunityLikeUser>> getCommentLikes(String commentId,
       {int limit = 50, int offset = 0}) async {
     try {
-      try {
-        await _ensureAuthWithStoredWallet();
-      } catch (_) {}
       final uri = Uri.parse('$baseUrl/api/community/comments/$commentId/likes')
           .replace(queryParameters: {
         'limit': limit.toString(),
         'offset': offset.toString(),
       });
 
-      final response = await _get(uri, headers: _getHeaders());
+      final response = await _get(
+        uri,
+        includeAuth: false,
+        headers: _getHeaders(includeAuth: false),
+      );
       if (response.statusCode == 200) {
         final payload = jsonDecode(response.body);
         if (payload is Map<String, dynamic> && payload['data'] is List) {
@@ -7125,7 +7100,11 @@ class BackendApiService
 
       final uri = Uri.parse('$baseUrl/api/community/followers/$encoded')
           .replace(queryParameters: queryParams);
-      final response = await _get(uri, headers: _getHeaders());
+      final response = await _get(
+        uri,
+        includeAuth: false,
+        headers: _getHeaders(includeAuth: false),
+      );
 
       if (response.statusCode == 200) {
         final payload = jsonDecode(response.body);
@@ -7169,7 +7148,11 @@ class BackendApiService
 
       final uri = Uri.parse('$baseUrl/api/community/following/$encoded')
           .replace(queryParameters: queryParams);
-      final response = await _get(uri, headers: _getHeaders());
+      final response = await _get(
+        uri,
+        includeAuth: false,
+        headers: _getHeaders(includeAuth: false),
+      );
 
       if (response.statusCode == 200) {
         final payload = jsonDecode(response.body);
@@ -7199,10 +7182,11 @@ class BackendApiService
   Future<bool> isFollowing(String walletAddress) async {
     final encoded = Uri.encodeComponent(walletAddress);
     try {
-      await _ensureAuthBeforeRequest();
-      // Guests (no session and no stored wallet identity) can never be
-      // following anyone; skip the request that would otherwise 401.
-      if (!hasAuthSession && !await _hasStoredWalletIdentity()) return false;
+      await ensureAuthLoaded();
+      // Follow status is account-scoped. A stored wallet or stale account
+      // record is not an authenticated session and must not turn a public
+      // profile read into a re-authentication redirect.
+      if (!hasAuthSession) return false;
       final uri = Uri.parse('$baseUrl/api/community/follow/$encoded/status');
       final response = await _get(uri, headers: _getHeaders());
 
@@ -7375,7 +7359,8 @@ class BackendApiService
     try {
       final response = await _get(
         Uri.parse('$baseUrl/api/achievements/users/$walletAddress'),
-        headers: _getHeaders(),
+        includeAuth: false,
+        headers: _getHeaders(includeAuth: false),
       );
 
       if (response.statusCode == 200) {
@@ -7671,18 +7656,17 @@ class BackendApiService
       if (hostUserId != null && hostUserId.trim().isNotEmpty) {
         query['hostUserId'] = hostUserId.trim();
       }
-      // Optional auth: include token when present so backend can return `myRole`.
-      try {
-        await _ensureAuthWithStoredWallet();
-      } catch (_) {}
       return await _performPublicRead<List<Map<String, dynamic>>>(
         liveRead: (candidateBaseUrl) async {
           final base = institutionId == null
               ? '${_normalizeApiBaseUrl(candidateBaseUrl)}/api/events'
               : '${_normalizeApiBaseUrl(candidateBaseUrl)}/api/institutions/$institutionId/events';
           final uri = Uri.parse(base).replace(queryParameters: query);
-          final response =
-              await _get(uri, headers: _getHeaders(includeAuth: true));
+          final response = await _get(
+            uri,
+            includeAuth: false,
+            headers: _getHeaders(includeAuth: false),
+          );
 
           if (response.statusCode == 200) {
             _eventsApiAvailable = true;
@@ -7729,8 +7713,11 @@ class BackendApiService
             }
             final retryUri = _buildApiUri(candidateBaseUrl, '/api/events',
                 queryParameters: retryQuery);
-            final retryRes =
-                await _get(retryUri, headers: _getHeaders(includeAuth: true));
+            final retryRes = await _get(
+              retryUri,
+              includeAuth: false,
+              headers: _getHeaders(includeAuth: false),
+            );
             if (retryRes.statusCode == 200) {
               _eventsApiAvailable = true;
               final decoded = jsonDecode(retryRes.body);
@@ -7808,15 +7795,12 @@ class BackendApiService
   /// GET /api/events/:id
   Future<KubusEvent?> getEvent(String id) async {
     try {
-      try {
-        await _ensureAuthWithStoredWallet();
-      } catch (_) {}
       return await _performPublicRead<KubusEvent?>(
         liveRead: (candidateBaseUrl) async {
           final decoded = await _fetchJsonFromBaseUrl(
             candidateBaseUrl,
             '/api/events/$id',
-            includeAuth: true,
+            includeAuth: false,
             allowOrbitFallback: false,
           );
           final payload = decoded['data'] ?? decoded;
@@ -7940,16 +7924,16 @@ class BackendApiService
   Future<List<Exhibition>> listEventExhibitions(String eventId,
       {int limit = 50, int offset = 0}) async {
     try {
-      try {
-        await _ensureAuthWithStoredWallet();
-      } catch (_) {}
       final uri = Uri.parse('$baseUrl/api/events/$eventId/exhibitions')
           .replace(queryParameters: {
         'limit': '$limit',
         'offset': '$offset',
       });
-      final decoded =
-          await _fetchJson(uri, includeAuth: true, allowOrbitFallback: false);
+      final decoded = await _fetchJson(
+        uri,
+        includeAuth: false,
+        allowOrbitFallback: false,
+      );
       final payload = decoded['data'] ?? decoded;
       if (payload is Map<String, dynamic>) {
         final list = payload['exhibitions'];
@@ -7983,9 +7967,9 @@ class BackendApiService
     int offset = 0,
   }) async {
     try {
-      try {
-        await _ensureAuthWithStoredWallet();
-      } catch (_) {}
+      if (mine == true) {
+        await _ensureAuthBeforeRequest();
+      }
       final qp = <String, String>{
         'limit': '$limit',
         'offset': '$offset',
@@ -8005,7 +7989,7 @@ class BackendApiService
             candidateBaseUrl,
             '/api/exhibitions',
             queryParameters: qp,
-            includeAuth: true,
+            includeAuth: mine == true,
             allowOrbitFallback: false,
           );
           final payload = decoded['data'] ?? decoded;
@@ -8047,15 +8031,12 @@ class BackendApiService
   /// GET /api/exhibitions/:id
   Future<Exhibition?> getExhibition(String id) async {
     try {
-      try {
-        await _ensureAuthWithStoredWallet();
-      } catch (_) {}
       return await _performPublicRead<Exhibition?>(
         liveRead: (candidateBaseUrl) async {
           final decoded = await _fetchJsonFromBaseUrl(
             candidateBaseUrl,
             '/api/exhibitions/$id',
-            includeAuth: true,
+            includeAuth: false,
             allowOrbitFallback: false,
           );
           final payload = decoded['data'] ?? decoded;
@@ -8266,11 +8247,15 @@ class BackendApiService
   Future<ExhibitionPoapStatus?> getExhibitionPoap(String exhibitionId) async {
     try {
       try {
-        await _ensureAuthWithStoredWallet();
+        await ensureAuthLoaded();
       } catch (_) {}
+      final includeAuth = hasAuthSession;
       final uri = Uri.parse('$baseUrl/api/exhibitions/$exhibitionId/poap');
-      final decoded =
-          await _fetchJson(uri, includeAuth: true, allowOrbitFallback: false);
+      final decoded = await _fetchJson(
+        uri,
+        includeAuth: includeAuth,
+        allowOrbitFallback: false,
+      );
       final payload = decoded['data'] ?? decoded;
       if (payload is Map<String, dynamic>) {
         return ExhibitionPoapStatus.fromJson(payload);
@@ -8333,16 +8318,16 @@ class BackendApiService
   Future<List<KubusEvent>> listExhibitionEvents(String exhibitionId,
       {int limit = 50, int offset = 0}) async {
     try {
-      try {
-        await _ensureAuthWithStoredWallet();
-      } catch (_) {}
       final uri = Uri.parse('$baseUrl/api/exhibitions/$exhibitionId/events')
           .replace(queryParameters: {
         'limit': '$limit',
         'offset': '$offset',
       });
-      final decoded =
-          await _fetchJson(uri, includeAuth: true, allowOrbitFallback: false);
+      final decoded = await _fetchJson(
+        uri,
+        includeAuth: false,
+        allowOrbitFallback: false,
+      );
       final payload = decoded['data'] ?? decoded;
       if (payload is Map<String, dynamic>) {
         final list = payload['events'];
@@ -8471,11 +8456,15 @@ class BackendApiService
   Future<EventPoapStatus?> getEventPoap(String eventId) async {
     try {
       try {
-        await _ensureAuthWithStoredWallet();
+        await ensureAuthLoaded();
       } catch (_) {}
+      final includeAuth = hasAuthSession;
       final uri = Uri.parse('$baseUrl/api/events/$eventId/poap');
-      final decoded =
-          await _fetchJson(uri, includeAuth: true, allowOrbitFallback: false);
+      final decoded = await _fetchJson(
+        uri,
+        includeAuth: includeAuth,
+        allowOrbitFallback: false,
+      );
       final payload = decoded['data'] ?? decoded;
       if (payload is Map<String, dynamic>) {
         return EventPoapStatus.fromJson(payload);
@@ -8621,14 +8610,17 @@ class BackendApiService
   Future<List<CollabMember>> listCollaborators(
       String entityType, String entityId) async {
     try {
-      // optional auth
       try {
-        await _ensureAuthWithStoredWallet();
+        await ensureAuthLoaded();
       } catch (_) {}
+      final includeAuth = hasAuthSession;
       final uri =
           Uri.parse('$baseUrl/api/collab/$entityType/$entityId/members');
-      final decoded =
-          await _fetchJson(uri, includeAuth: true, allowOrbitFallback: false);
+      final decoded = await _fetchJson(
+        uri,
+        includeAuth: includeAuth,
+        allowOrbitFallback: false,
+      );
       final payload = decoded['data'] ?? decoded;
       if (payload is Map<String, dynamic>) {
         final list = payload['members'] ?? payload['data'];
@@ -8844,7 +8836,8 @@ class BackendApiService
     try {
       final response = await _get(
         Uri.parse('$baseUrl/api/achievements/stats/$walletAddress'),
-        headers: _getHeaders(),
+        includeAuth: false,
+        headers: _getHeaders(includeAuth: false),
       );
 
       if (response.statusCode == 200) {
@@ -9022,15 +9015,8 @@ class BackendApiService
     try {
       final requestedWallet = (walletAddress ?? '').trim();
 
-      // Collections are generally public for other users. Only include auth
-      // when the request is for the currently signed-in wallet (or when the
-      // caller is implicitly requesting "my collections" by omitting a wallet).
-      final requestedCanonical = WalletUtils.canonical(requestedWallet);
-      final preferredCanonical =
-          WalletUtils.canonical(_preferredWalletCanonical ?? '');
-      final isForPreferredWallet = requestedCanonical.isNotEmpty &&
-          preferredCanonical.isNotEmpty &&
-          requestedCanonical == preferredCanonical;
+      // Explicit wallet filters are public profile reads. Omitting the wallet
+      // means "my collections" only when a real session already exists.
       final isImplicitSelfRequest = requestedWallet.isEmpty;
       final snapshotWalletFilter = requestedWallet.isNotEmpty
           ? requestedWallet
@@ -9038,19 +9024,10 @@ class BackendApiService
               ? (_preferredWalletCanonical ?? _authWalletCanonical ?? '')
               : '');
 
-      final includeAuth = isImplicitSelfRequest || isForPreferredWallet;
-      if (includeAuth) {
-        if (isForPreferredWallet) {
-          // Guarded: will not auth-switch/issue for arbitrary wallets.
-          await _ensureAuthBeforeRequest(walletAddress: requestedWallet);
-        } else {
-          // Best effort: try to load existing auth for stored wallet, but don't
-          // force issuing tokens for view-only flows.
-          try {
-            await _ensureAuthWithStoredWallet();
-          } catch (_) {}
-        }
+      if (isImplicitSelfRequest) {
+        await ensureAuthLoaded();
       }
+      final includeAuth = isImplicitSelfRequest && hasAuthSession;
       final queryParams = <String, String>{
         'page': page.toString(),
         'limit': limit.toString(),
@@ -9119,16 +9096,12 @@ class BackendApiService
   /// GET /api/collections/:id
   Future<Map<String, dynamic>> getCollection(String collectionId) async {
     try {
-      try {
-        await _ensureAuthWithStoredWallet();
-      } catch (_) {}
-
       return await _performPublicRead<Map<String, dynamic>>(
         liveRead: (candidateBaseUrl) async {
           final jsonData = await _fetchJsonFromBaseUrl(
             candidateBaseUrl,
             '/api/collections/$collectionId',
-            includeAuth: true,
+            includeAuth: false,
             allowOrbitFallback: true,
           );
 

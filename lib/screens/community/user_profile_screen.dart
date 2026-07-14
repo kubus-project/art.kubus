@@ -10,6 +10,7 @@ import '../../models/profile_package.dart';
 import '../../models/user.dart';
 import '../../services/user_service.dart';
 import '../../services/block_list_service.dart';
+import '../../services/contextual_auth_gate.dart';
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
 import '../../utils/design_tokens.dart';
@@ -238,6 +239,12 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     if (profile == null || _isFollowMutationInFlight) return;
 
     final l10n = AppLocalizations.of(context)!;
+    final authenticated = await const ContextualAuthGate().ensureAuthenticated(
+      context,
+      actionLabel: l10n.commonFollow.toLowerCase(),
+      returnRoute: '/u/${Uri.encodeComponent(widget.userId)}',
+    );
+    if (!authenticated || !mounted) return;
     final messenger = ScaffoldMessenger.of(context);
     final theme = Theme.of(context);
 
@@ -922,9 +929,11 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                     ? SizedBox(
                         width: 18,
                         height: 18,
-                        child: InlineLoading(tileSize: 4, color: user!.isFollowing
-                              ? Theme.of(context).colorScheme.onSurface
-                              : Colors.white),
+                        child: InlineLoading(
+                            tileSize: 4,
+                            color: user!.isFollowing
+                                ? Theme.of(context).colorScheme.onSurface
+                                : Colors.white),
                       )
                     : Text(
                         user!.isFollowing
@@ -940,12 +949,19 @@ class _UserProfileScreenState extends State<UserProfileScreen>
             onPressed: _isFollowMutationInFlight
                 ? null
                 : () async {
+                    final authenticated =
+                        await const ContextualAuthGate().ensureAuthenticated(
+                      context,
+                      actionLabel:
+                          l10n.userProfileMessageButtonLabel.toLowerCase(),
+                      returnRoute: '/u/${Uri.encodeComponent(widget.userId)}',
+                    );
+                    if (!authenticated || !mounted) return;
                     final chatProvider =
                         Provider.of<ChatProvider>(context, listen: false);
                     // navigator variable no longer used; ConversationNavigator handles navigation
                     final messenger = ScaffoldMessenger.of(context);
                     final chatAuth = chatProvider.isAuthenticated;
-                    final l10n = AppLocalizations.of(context)!;
                     try {
                       final conv = await chatProvider
                           .createConversation('', false, [user!.id]);
@@ -1135,9 +1151,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
               padding: const EdgeInsets.symmetric(vertical: 12),
               alignment: Alignment.center,
               child: const SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: InlineLoading(tileSize: 4)),
+                  width: 24, height: 24, child: InlineLoading(tileSize: 4)),
             )
           else if (_isLastPage)
             Container(

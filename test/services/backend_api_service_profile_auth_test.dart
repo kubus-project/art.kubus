@@ -31,6 +31,45 @@ void main() {
 
   setUp(() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
+    BackendApiService().setAuthTokenForTesting(null);
+  });
+
+  tearDown(() {
+    BackendApiService().setAuthTokenForTesting(null);
+  });
+
+  test('public artwork read never sends a stored stale credential', () async {
+    final requests = <http.Request>[];
+    final coordinator = _TestAuthCoordinator();
+    final api = BackendApiService();
+    api.bindAuthCoordinator(coordinator);
+    api.setAuthTokenForTesting('stale-token');
+    api.setHttpClient(MockClient((request) async {
+      requests.add(request);
+      return http.Response(
+        jsonEncode(<String, Object?>{
+          'data': <String, Object?>{
+            'id': 'art-1',
+            'title': 'Public artwork',
+            'artist': 'Public artist',
+            'description': 'Public description',
+            'image_url': '/uploads/art-1.png',
+            'created_at': '2026-01-01T00:00:00.000Z',
+            'latitude': 46.0,
+            'longitude': 14.0,
+          },
+        }),
+        200,
+        headers: const <String, String>{'content-type': 'application/json'},
+      );
+    }));
+
+    final artwork = await api.getArtwork('art-1');
+
+    expect(artwork.id, 'art-1');
+    expect(requests, hasLength(1));
+    expect(requests.single.headers.containsKey('authorization'), isFalse);
+    expect(coordinator.failures, 0);
   });
 
   test('getProfileByWallet does not auto-issue auth for viewed wallet',
