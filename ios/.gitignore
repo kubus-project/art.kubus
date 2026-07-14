@@ -19,6 +19,7 @@ Flutter/App.framework
 Flutter/Flutter.framework
 Flutter/Flutter.podspec
 Flutter/Generated.xcconfig
+Flutter/Google-CI.xcconfig
 Flutter/Release-CI.xcconfig
 Flutter/ephemeral/
 Flutter/app.flx

@@ -122,8 +122,10 @@ generated signing configuration in an always-run cleanup step.
 
 Register `com.art.kubus` as an explicit App ID in Apple Developer before
 creating the profile. Update or create the Google iOS OAuth client for that
-same bundle ID, then replace the checked-in iOS client/reversed-client values
-when Google provides the new client configuration.
+same bundle ID, then set its client ID in the existing
+`KUBUS_GOOGLE_IOS_CLIENT_ID` repository variable. CI writes the matching
+native `Info.plist` configuration from that value; do not commit a generated
+Google configuration file.
 
 `ad-hoc` IPAs only install on devices registered in the provisioning profile.
 For TestFlight or App Store distribution, choose `app-store` and upload the
