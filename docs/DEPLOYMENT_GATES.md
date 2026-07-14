@@ -1,8 +1,9 @@
 # Deployment gates
 
 The `Deploy` workflow promotes artifacts produced by a successful `CI` run. It
-does not rebuild source after approval. Production environments must require
-reviewers in GitHub before this workflow is enabled on `master`.
+does not rebuild source after CI. The web environment remains reviewer-protected
+where required by production policy. The Android alpha-release environment must
+allow the automatic `master` workflow to run without a reviewer gate.
 
 ## Public build configuration
 
@@ -72,9 +73,16 @@ Create a protected `android-release` environment with:
 - `ANDROID_KEYSTORE_PASSWORD`
 - `ANDROID_KEY_PASSWORD`
 
-CI compiles an unsigned release APK. Only a manual `Deploy` run can sign that
-exact CI artifact. Publishing additionally requires a new explicit release tag;
-ordinary pushes never create or update GitHub Releases.
+CI compiles an unsigned release APK. After successful `master` CI, `Deploy`
+derives `v<pubspec-version>-alpha`, signs that exact tested artifact, and creates
+an immutable prerelease when neither the release nor tag exists. Later commits
+at the same application version detect the existing release and skip signing
+successfully; they never replace its APK or move its tag. Bump `pubspec.yaml`
+before the next automatic alpha release.
+
+Manual `Deploy` runs can still sign a selected successful CI artifact without
+publishing it. Manual publication requires a new explicit tag and remains
+immutable.
 
 ## Manual promotion
 

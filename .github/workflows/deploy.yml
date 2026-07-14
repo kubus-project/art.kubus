@@ -384,8 +384,12 @@ jobs:
             rm -rf "$INCOMING_DIR"
 
   signed_apk:
-    name: Sign tested Android artifact + optional release
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_apk }}
+    name: Sign tested Android artifact + publish alpha release
+    if: >-
+      ${{
+        (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
+        (github.event_name == 'workflow_dispatch' && inputs.build_apk)
+      }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     environment: android-release
@@ -399,25 +403,43 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
-          RUN_ID: ${{ inputs.ci_run_id }}
-          ARTIFACT_SHA: ${{ inputs.artifact_sha }}
+          EVENT_NAME: ${{ github.event_name }}
+          WORKFLOW_RUN_ID: ${{ github.event.workflow_run.id }}
+          WORKFLOW_RUN_SHA: ${{ github.event.workflow_run.head_sha }}
+          WORKFLOW_RUN_NAME: ${{ github.event.workflow_run.name }}
+          WORKFLOW_RUN_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          INPUT_CI_RUN_ID: ${{ inputs.ci_run_id }}
+          INPUT_ARTIFACT_SHA: ${{ inputs.artifact_sha }}
         run: |
           set -euo pipefail
-          if [[ ! "$RUN_ID" =~ ^[0-9]+$ ]] || [[ ! "$ARTIFACT_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+          if [ "$EVENT_NAME" = "workflow_run" ]; then
+            run_id="$WORKFLOW_RUN_ID"
+            artifact_sha="$WORKFLOW_RUN_SHA"
+            workflow_name="$WORKFLOW_RUN_NAME"
+            conclusion="$WORKFLOW_RUN_CONCLUSION"
+          else
+            run_id="$INPUT_CI_RUN_ID"
+            artifact_sha="$INPUT_ARTIFACT_SHA"
+            workflow_name="CI"
+            conclusion="success"
+          fi
+          if [[ ! "$run_id" =~ ^[0-9]+$ ]] || [[ ! "$artifact_sha" =~ ^[0-9a-f]{40}$ ]]; then
             echo "Invalid CI run ID or artifact SHA." >&2
             exit 1
           fi
+          test "$workflow_name" = "CI"
+          test "$conclusion" = "success"
           metadata="$RUNNER_TEMP/ci-run.json"
           curl --fail --silent --show-error --location \
             --header "Authorization: Bearer $GH_TOKEN" \
             --header 'X-GitHub-Api-Version: 2022-11-28' \
-            "https://api.github.com/repos/$REPOSITORY/actions/runs/$RUN_ID" \
+            "https://api.github.com/repos/$REPOSITORY/actions/runs/$run_id" \
             > "$metadata"
           test "$(jq -r '.name' "$metadata")" = "CI"
           test "$(jq -r '.conclusion' "$metadata")" = "success"
-          test "$(jq -r '.head_sha' "$metadata")" = "$ARTIFACT_SHA"
-          echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
-          echo "sha=$ARTIFACT_SHA" >> "$GITHUB_OUTPUT"
+          test "$(jq -r '.head_sha' "$metadata")" = "$artifact_sha"
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+          echo "sha=$artifact_sha" >> "$GITHUB_OUTPUT"
 
       - name: Checkout exact tested source metadata
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -425,7 +447,79 @@ jobs:
           ref: ${{ steps.source.outputs.sha }}
           submodules: false
 
+      - name: Resolve immutable alpha release intent
+        id: release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          EVENT_NAME: ${{ github.event_name }}
+          MANUAL_PUBLISH: ${{ inputs.publish_github_release }}
+          MANUAL_RELEASE_TAG: ${{ inputs.release_tag }}
+          MANUAL_PRERELEASE: ${{ inputs.prerelease }}
+        run: |
+          set -euo pipefail
+          version="$(awk '/^version:[[:space:]]*/ { print $2; exit }' pubspec.yaml | cut -d+ -f1)"
+          if [ -z "$version" ]; then
+            echo "Unable to parse application version." >&2
+            exit 1
+          fi
+
+          if [ "$EVENT_NAME" = "workflow_run" ]; then
+            release_tag="v${version}-alpha"
+            response="$RUNNER_TEMP/existing-release.json"
+            status="$(curl --silent --show-error --location \
+              --output "$response" \
+              --write-out '%{http_code}' \
+              --header "Authorization: Bearer $GH_TOKEN" \
+              --header 'X-GitHub-Api-Version: 2022-11-28' \
+              "https://api.github.com/repos/$REPOSITORY/releases/tags/$release_tag")"
+            case "$status" in
+              200)
+                echo "Immutable release $release_tag already exists; skipping signing and publication."
+                echo "should_build=false" >> "$GITHUB_OUTPUT"
+                echo "publish=false" >> "$GITHUB_OUTPUT"
+                ;;
+              404)
+                ref_response="$RUNNER_TEMP/existing-tag.json"
+                ref_status="$(curl --silent --show-error --location \
+                  --output "$ref_response" \
+                  --write-out '%{http_code}' \
+                  --header "Authorization: Bearer $GH_TOKEN" \
+                  --header 'X-GitHub-Api-Version: 2022-11-28' \
+                  "https://api.github.com/repos/$REPOSITORY/git/ref/tags/$release_tag")"
+                if [ "$ref_status" = "200" ]; then
+                  echo "Tag $release_tag exists without a GitHub Release; refusing to mutate it." >&2
+                  exit 1
+                fi
+                if [ "$ref_status" != "404" ]; then
+                  echo "GitHub tag lookup failed with HTTP $ref_status." >&2
+                  cat "$ref_response" >&2
+                  exit 1
+                fi
+                echo "should_build=true" >> "$GITHUB_OUTPUT"
+                echo "publish=true" >> "$GITHUB_OUTPUT"
+                ;;
+              *)
+                echo "GitHub release lookup failed with HTTP $status." >&2
+                cat "$response" >&2
+                exit 1
+                ;;
+            esac
+            prerelease=true
+          else
+            release_tag="$MANUAL_RELEASE_TAG"
+            prerelease="$MANUAL_PRERELEASE"
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+            echo "publish=$MANUAL_PUBLISH" >> "$GITHUB_OUTPUT"
+          fi
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "release_tag=$release_tag" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
+
       - name: Download exact unsigned Android artifact from CI
+        if: ${{ steps.release.outputs.should_build == 'true' }}
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: android-verification-${{ steps.source.outputs.sha }}
@@ -434,18 +528,22 @@ jobs:
           github-token: ${{ github.token }}
 
       - name: Set up Java 21
+        if: ${{ steps.release.outputs.should_build == 'true' }}
         uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4
         with:
           distribution: temurin
           java-version: '21'
 
       - name: Set up Android SDK
+        if: ${{ steps.release.outputs.should_build == 'true' }}
         uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
 
       - name: Install Android signing tools
+        if: ${{ steps.release.outputs.should_build == 'true' }}
         run: sdkmanager --install "build-tools;36.0.0" "platform-tools"
 
       - name: Configure protected release signing
+        if: ${{ steps.release.outputs.should_build == 'true' }}
         shell: bash
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -479,6 +577,7 @@ jobs:
 
       - name: Sign the exact tested APK
         id: signed
+        if: ${{ steps.release.outputs.should_build == 'true' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -494,11 +593,7 @@ jobs:
             exit 1
           fi
 
-          version="$(awk '/^version:[[:space:]]*/ { print $2; exit }' pubspec.yaml | cut -d+ -f1)"
-          if [ -z "$version" ]; then
-            echo "Unable to parse application version." >&2
-            exit 1
-          fi
+          version="${{ steps.release.outputs.version }}"
           apk_name="art.kubus.v${version}-${{ steps.source.outputs.sha }}.apk"
           mkdir -p "$GITHUB_WORKSPACE/release"
           signed_apk="$GITHUB_WORKSPACE/release/$apk_name"
@@ -517,6 +612,7 @@ jobs:
           echo "checksum_path=$signed_apk.sha256" >> "$GITHUB_OUTPUT"
 
       - name: Upload signed APK workflow artifact
+        if: ${{ steps.release.outputs.should_build == 'true' }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ${{ steps.signed.outputs.apk_name }}
@@ -526,11 +622,11 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Require a new explicit release tag
-        if: ${{ inputs.publish_github_release }}
+      - name: Require a new release tag
+        if: ${{ steps.release.outputs.publish == 'true' }}
         shell: bash
         env:
-          RELEASE_TAG: ${{ inputs.release_tag }}
+          RELEASE_TAG: ${{ steps.release.outputs.release_tag }}
         run: |
           if [ -z "$RELEASE_TAG" ]; then
             echo "release_tag is required when publishing a GitHub Release." >&2
@@ -542,13 +638,13 @@ jobs:
           fi
 
       - name: Create immutable GitHub Release
-        if: ${{ inputs.publish_github_release }}
+        if: ${{ steps.release.outputs.publish == 'true' }}
         uses: ncipollo/release-action@339a81892b84b4eeb0f6e744e4574d79d0d9b8dd # v1
         with:
-          tag: ${{ inputs.release_tag }}
+          tag: ${{ steps.release.outputs.release_tag }}
           commit: ${{ steps.source.outputs.sha }}
-          name: art.kubus v${{ steps.signed.outputs.version }}
-          prerelease: ${{ inputs.prerelease }}
+          name: art.kubus v${{ steps.signed.outputs.version }} alpha
+          prerelease: ${{ steps.release.outputs.prerelease }}
           generateReleaseNotes: true
           allowUpdates: false
           replacesArtifacts: false
