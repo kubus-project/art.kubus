@@ -1,6 +1,48 @@
 part of 'kubus_marker_overlay_card.dart';
 
 extension _KubusMarkerOverlayCardMediaParts on KubusMarkerOverlayCard {
+  Widget _buildCompactImage({
+    required Color baseColor,
+    required ColorScheme scheme,
+    required ArtMarker marker,
+    required String? imageUrl,
+    required String? imageVersion,
+    required int cacheWidth,
+    required int cacheHeight,
+    double size = KubusMapMetrics.mobileMarkerPreviewMediaSize,
+  }) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(KubusRadius.md),
+      child: SizedBox.square(
+        dimension: size,
+        child: imageUrl == null
+            ? _imageFallback(baseColor, scheme, marker)
+            : KubusCachedImage(
+                imageUrl: imageUrl,
+                width: size,
+                height: size,
+                fit: BoxFit.cover,
+                filterQuality: FilterQuality.low,
+                cacheWidth: cacheWidth,
+                cacheHeight: cacheHeight,
+                maxDisplayWidth: cacheWidth,
+                cacheVersion: imageVersion,
+                placeholderBuilder: (context) => ColoredBox(
+                  color: baseColor.withValues(alpha: 0.16),
+                  child: Center(
+                    child: InlineLoading(
+                      tileSize: KubusSpacing.xxs,
+                      color: baseColor,
+                    ),
+                  ),
+                ),
+                errorBuilder: (_, __, ___) =>
+                    _imageFallback(baseColor, scheme, marker),
+              ),
+      ),
+    );
+  }
+
   Widget _buildImage({
     required Color baseColor,
     required ColorScheme scheme,

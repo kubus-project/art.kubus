@@ -20,6 +20,7 @@ class KubusNearbyArtPanelHeader extends StatelessWidget {
     required this.accentColor,
     required this.onClose,
     required this.onRadiusTap,
+    required this.onExpand,
     required this.onToggleGrid,
     required this.onSortChanged,
   });
@@ -35,6 +36,7 @@ class KubusNearbyArtPanelHeader extends StatelessWidget {
   final Color accentColor;
   final VoidCallback? onClose;
   final VoidCallback? onRadiusTap;
+  final VoidCallback? onExpand;
   final VoidCallback onToggleGrid;
   final ValueChanged<KubusNearbyArtSort> onSortChanged;
 
@@ -63,6 +65,28 @@ class KubusNearbyArtPanelHeader extends StatelessWidget {
       return '${l10n.mapNearbyRadiusTitle}: ${radiusKm.toStringAsFixed(1)} km';
     })();
 
+    final headerText = KeyedSubtree(
+      key: titleKey,
+      child: KubusHeaderText(
+        title: title,
+        subtitle: subtitle,
+        kind: KubusHeaderKind.section,
+        titleColor: scheme.onSurface,
+        subtitleColor: scheme.onSurfaceVariant,
+      ),
+    );
+    final titleControl = isMobile && onExpand != null
+        ? Semantics(
+            button: true,
+            label: '$title. $subtitle. ${l10n.commonExpand}',
+            child: InkWell(
+              onTap: onExpand,
+              borderRadius: BorderRadius.circular(KubusRadius.md),
+              child: headerText,
+            ),
+          )
+        : headerText;
+
     final headerRow = Row(
       children: [
         if (!isMobile) ...[
@@ -73,18 +97,7 @@ class KubusNearbyArtPanelHeader extends StatelessWidget {
           ),
           const SizedBox(width: KubusSpacing.sm),
         ],
-        Expanded(
-          child: KeyedSubtree(
-            key: titleKey,
-            child: KubusHeaderText(
-              title: title,
-              subtitle: subtitle,
-              kind: KubusHeaderKind.section,
-              titleColor: scheme.onSurface,
-              subtitleColor: scheme.onSurfaceVariant,
-            ),
-          ),
-        ),
+        Expanded(child: titleControl),
         if (isMobile) ...[
           _glassIconButton(
             context,

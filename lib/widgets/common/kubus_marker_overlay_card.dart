@@ -8,6 +8,7 @@ import '../../utils/app_color_utils.dart';
 import '../../utils/artwork_media_resolver.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
+import '../../utils/kubus_map_tokens.dart';
 import '../../utils/media_url_resolver.dart';
 import '../artwork_creator_byline.dart';
 import '../inline_loading.dart';
@@ -19,6 +20,12 @@ part 'kubus_marker_overlay_card_header.dart';
 part 'kubus_marker_overlay_card_media.dart';
 part 'kubus_marker_overlay_card_body.dart';
 part 'kubus_marker_overlay_card_footer.dart';
+part 'kubus_marker_overlay_card_compact.dart';
+
+enum KubusMarkerOverlayCardPresentation {
+  standard,
+  compactMobile,
+}
 
 class MarkerOverlayActionSpec {
   const MarkerOverlayActionSpec({
@@ -76,6 +83,7 @@ class KubusMarkerOverlayCard extends StatelessWidget {
     this.onHorizontalDragEnd,
     this.maxWidth,
     this.maxHeight,
+    this.presentation = KubusMarkerOverlayCardPresentation.standard,
   });
 
   final ArtMarker marker;
@@ -116,6 +124,7 @@ class KubusMarkerOverlayCard extends StatelessWidget {
   /// Optional sizing hints.
   final double? maxWidth;
   final double? maxHeight;
+  final KubusMarkerOverlayCardPresentation presentation;
 
   @override
   Widget build(BuildContext context) {
@@ -164,6 +173,20 @@ class KubusMarkerOverlayCard extends StatelessWidget {
         marker.isPromoted || (artwork?.promotion.isPromoted ?? false);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final actionFg = isDark ? Colors.white : Colors.black;
+
+    if (presentation == KubusMarkerOverlayCardPresentation.compactMobile) {
+      return _buildCompactMobileCard(
+        context: context,
+        l10n: l10n,
+        scheme: scheme,
+        imageUrl: imageUrl,
+        imageVersion: imageVersion,
+        cacheWidth: cacheWidth,
+        cacheHeight: cacheHeight,
+        visibleDescription: visibleDescription,
+        actionForeground: actionFg,
+      );
+    }
 
     final resolvedCardTap = onCardTap ?? onPrimaryAction;
     final resolvedTitleTap = onTitleTap ?? onPrimaryAction;

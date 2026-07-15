@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/widgets.dart';
 
 import '../../../utils/design_tokens.dart';
+import '../../../utils/kubus_map_tokens.dart';
 
 class MapMarkerOverlayCardLayoutConfig {
   const MapMarkerOverlayCardLayoutConfig({
@@ -28,9 +29,10 @@ class MapMarkerOverlayCardLayoutConfig {
 class MapOverlaySizing {
   const MapOverlaySizing._();
 
-  static const double minCardWidth = 272.0;
-  static const double maxCardWidth = 336.0;
-  static const double preferredCardWidth = 320.0;
+  static const double minCardWidth = KubusMapMetrics.markerPreviewMinWidth;
+  static const double maxCardWidth = KubusMapMetrics.markerPreviewMaxWidth;
+  static const double preferredCardWidth =
+      KubusMapMetrics.markerPreviewPreferredWidth;
   static const double minCardHeight = 280.0;
   static const double maxCardHeight = 500.0;
   static const double fixedCardHeight = 420.0;

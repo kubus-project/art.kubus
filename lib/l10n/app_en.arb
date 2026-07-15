@@ -1678,6 +1678,41 @@
   "mapFilterUndiscovered": "Undiscovered",
   "mapFilterArEnabled": "AR ready",
   "mapFilterFavorites": "Favorites",
+  "mapFilterScopeTitle": "Scope",
+  "mapFilterScopeCurrentViewport": "Current viewport",
+  "mapFilterScopeNearMe": "Near me",
+  "mapFilterScopeTravel": "Travel",
+  "mapFilterDiscoveryStatusTitle": "Discovery status",
+  "mapFilterAttributesTitle": "Attributes",
+  "mapFilterContentLayersTitle": "Content layers",
+  "mapFilterNearMeRadiusLabel": "Radius: {radiusKm} km",
+  "@mapFilterNearMeRadiusLabel": {
+    "description": "Label for the near-me map filter radius slider.",
+    "placeholders": {
+      "radiusKm": {}
+    }
+  },
+  "mapFilterActiveCountLabel": "Active filters: {count}",
+  "@mapFilterActiveCountLabel": {
+    "description": "Accessible and visible count of active non-default map filters.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mapFilterVisibleLayerCountLabel": "{visible} of {total} visible",
+  "@mapFilterVisibleLayerCountLabel": {
+    "description": "Count of visible map content layers.",
+    "placeholders": {
+      "visible": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "mapLayersTitle": "Map layers",
   "mapDiscoveryPathTitle": "Discovery path",
   "mapDiscoveryPathIdleSubtitle": "Explore nearby art",
@@ -1687,6 +1722,8 @@
   "mapSortResultsTooltip": "Sort results",
   "mapCenterOnMeTooltip": "Center on me",
   "mapAddMapMarkerTooltip": "Add map marker",
+  "mapToolsTitle": "Map tools",
+  "mapZoomInTooltip": "Zoom in",
   "mapTravelModeTooltip": "Travel mode",
   "mapTravelModeEnableTooltip": "Enable travel mode",
   "@mapTravelModeEnableTooltip": {

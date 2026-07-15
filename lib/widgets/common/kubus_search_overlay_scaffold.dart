@@ -236,7 +236,13 @@ class KubusSearchOverlayScaffold extends StatelessWidget {
         top: topInset,
         left: 0,
         right: rightInset,
-        child: panel,
+        child: Align(
+          alignment: Alignment.topLeft,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: maxWidth),
+            child: panel,
+          ),
+        ),
       );
     }
 
@@ -247,7 +253,13 @@ class KubusSearchOverlayScaffold extends StatelessWidget {
       top: topInset,
       left: 0,
       right: rightInset,
-      child: panel,
+      child: Align(
+        alignment: Alignment.topLeft,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: maxWidth),
+          child: panel,
+        ),
+      ),
     );
   }
 }

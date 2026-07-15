@@ -8102,6 +8102,66 @@ abstract class AppLocalizations {
   /// **'Favorites'**
   String get mapFilterFavorites;
 
+  /// No description provided for @mapFilterScopeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Scope'**
+  String get mapFilterScopeTitle;
+
+  /// No description provided for @mapFilterScopeCurrentViewport.
+  ///
+  /// In en, this message translates to:
+  /// **'Current viewport'**
+  String get mapFilterScopeCurrentViewport;
+
+  /// No description provided for @mapFilterScopeNearMe.
+  ///
+  /// In en, this message translates to:
+  /// **'Near me'**
+  String get mapFilterScopeNearMe;
+
+  /// No description provided for @mapFilterScopeTravel.
+  ///
+  /// In en, this message translates to:
+  /// **'Travel'**
+  String get mapFilterScopeTravel;
+
+  /// No description provided for @mapFilterDiscoveryStatusTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Discovery status'**
+  String get mapFilterDiscoveryStatusTitle;
+
+  /// No description provided for @mapFilterAttributesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Attributes'**
+  String get mapFilterAttributesTitle;
+
+  /// No description provided for @mapFilterContentLayersTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Content layers'**
+  String get mapFilterContentLayersTitle;
+
+  /// Label for the near-me map filter radius slider.
+  ///
+  /// In en, this message translates to:
+  /// **'Radius: {radiusKm} km'**
+  String mapFilterNearMeRadiusLabel(Object radiusKm);
+
+  /// Accessible and visible count of active non-default map filters.
+  ///
+  /// In en, this message translates to:
+  /// **'Active filters: {count}'**
+  String mapFilterActiveCountLabel(int count);
+
+  /// Count of visible map content layers.
+  ///
+  /// In en, this message translates to:
+  /// **'{visible} of {total} visible'**
+  String mapFilterVisibleLayerCountLabel(int visible, int total);
+
   /// No description provided for @mapLayersTitle.
   ///
   /// In en, this message translates to:
@@ -8155,6 +8215,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Add map marker'**
   String get mapAddMapMarkerTooltip;
+
+  /// No description provided for @mapToolsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Map tools'**
+  String get mapToolsTitle;
+
+  /// No description provided for @mapZoomInTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Zoom in'**
+  String get mapZoomInTooltip;
 
   /// No description provided for @mapTravelModeTooltip.
   ///

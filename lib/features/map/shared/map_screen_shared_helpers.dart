@@ -19,6 +19,7 @@ import '../../../services/task_service.dart';
 import '../../../utils/app_color_utils.dart';
 import '../../../utils/category_accent_color.dart';
 import '../../../utils/design_tokens.dart';
+import '../../../utils/kubus_map_tokens.dart';
 import '../../../utils/maplibre_style_utils.dart';
 import '../../../utils/wallet_utils.dart';
 import '../../../widgets/common/kubus_marker_overlay_card.dart';
@@ -63,6 +64,20 @@ class KubusMapRouteAwareHelpers {
 
   static void didPopNext({required ValueChanged<bool> setRouteVisible}) {
     setRouteVisible(true);
+  }
+}
+
+class KubusMapSurfaceTransitionHelpers {
+  const KubusMapSurfaceTransitionHelpers._();
+
+  /// Lets an outgoing map surface finish before a modal route snapshots the
+  /// underlying scene. This prevents a dismissed glass preview from remaining
+  /// visibly frozen behind the modal barrier on web platform views.
+  static Future<void> awaitOverlayExit(KubusMapMotionSpec motion) async {
+    await WidgetsBinding.instance.endOfFrame;
+    if (motion.duration > Duration.zero) {
+      await Future<void>.delayed(motion.duration);
+    }
   }
 }
 
@@ -531,7 +546,11 @@ class KubusMapTaskProgressRow {
                 const SizedBox(height: 4),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(4),
-                  child: KubusMeterBar(progress: pct, height: 6, color: accent, trackColor: scheme.surfaceContainerHighest),
+                  child: KubusMeterBar(
+                      progress: pct,
+                      height: 6,
+                      color: accent,
+                      trackColor: scheme.surfaceContainerHighest),
                 ),
               ],
             ),
@@ -570,9 +589,12 @@ class KubusMapDiscoveryCardHelpers {
     double tasksTopGap = 10,
     KubusDiscoveryExpansionDirection expansionDirection =
         KubusDiscoveryExpansionDirection.downward,
+    bool compactWhenCollapsed = false,
   }) {
     final progressList = activeProgress.toList(growable: false);
     if (progressList.isEmpty) return const SizedBox.shrink();
+    final compactProgressLabel =
+        '${progressList.fold<int>(0, (sum, item) => sum + item.completed)}/${progressList.fold<int>(0, (sum, item) => sum + item.total)}';
 
     // Always build keyed rows so the expanded area animates between a stable
     // child and zero height (instead of inserting/removing rows, which pops).
@@ -588,6 +610,8 @@ class KubusMapDiscoveryCardHelpers {
       ],
       onToggleExpanded: onToggleExpanded,
       expansionDirection: expansionDirection,
+      compactWhenCollapsed: compactWhenCollapsed,
+      compactProgressLabel: compactProgressLabel,
       titleStyle: titleStyle,
       percentStyle: percentStyle,
       glassPadding: glassPadding,
@@ -809,6 +833,8 @@ class KubusMarkerOverlayHelpers {
     VoidCallback? onPreviousStacked,
     GestureDragEndCallback? onHorizontalDragEnd,
     required double maxCardHeight,
+    KubusMarkerOverlayCardPresentation cardPresentation =
+        KubusMarkerOverlayCardPresentation.standard,
   }) {
     final l10n = AppLocalizations.of(context)!;
     final presentation = resolveMarkerOverlayPresentation(
@@ -848,6 +874,7 @@ class KubusMarkerOverlayHelpers {
       onSelectStackIndex: onSelectStackIndex,
       onHorizontalDragEnd: onHorizontalDragEnd,
       maxHeight: maxCardHeight,
+      presentation: cardPresentation,
     );
   }
 }

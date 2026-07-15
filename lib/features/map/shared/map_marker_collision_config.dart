@@ -35,6 +35,14 @@ abstract final class MapMarkerCollisionConfig {
   /// Upper bound for additive min-separation scale boost.
   static const double spiderfySeparationScaleMaxBoost = 0.35;
 
+  /// Radial expansion/collapse duration. Matches the app's medium map motion
+  /// role while remaining available to the UI-independent map controller.
+  static const int spiderfyMotionDurationMs = 280;
+
+  /// Position interpolation cadence; source writes remain independently
+  /// throttled by [entrySyncThrottleMs].
+  static const int spiderfyMotionFrameIntervalMs = 32;
+
   /// Marker entrance animation starting scale.
   static const double entryStartScale = 0.78;
 
@@ -72,7 +80,11 @@ abstract final class MapMarkerCollisionConfig {
   static const int nearbyRadiusDebounceMs = 400;
 
   /// Upper bound for animation-driven marker data syncs.
-  static const int entrySyncThrottleMs = 96;
+  ///
+  /// Roughly 20fps gives cluster regrouping enough intermediate positions to
+  /// communicate continuity while avoiding a full GeoJSON write every display
+  /// frame. Identical payloads are additionally suppressed by MapLayersManager.
+  static const int entrySyncThrottleMs = 48;
 
   static Object webHitboxIconSizeExpression() {
     return <Object>[
@@ -82,28 +94,44 @@ abstract final class MapMarkerCollisionConfig {
       3,
       <Object>[
         'case',
-        <Object>['==', <Object>['get', 'kind'], 'cluster'],
+        <Object>[
+          '==',
+          <Object>['get', 'kind'],
+          'cluster'
+        ],
         44,
         28,
       ],
       12,
       <Object>[
         'case',
-        <Object>['==', <Object>['get', 'kind'], 'cluster'],
+        <Object>[
+          '==',
+          <Object>['get', 'kind'],
+          'cluster'
+        ],
         52,
         34,
       ],
       15,
       <Object>[
         'case',
-        <Object>['==', <Object>['get', 'kind'], 'cluster'],
+        <Object>[
+          '==',
+          <Object>['get', 'kind'],
+          'cluster'
+        ],
         62,
         40,
       ],
       24,
       <Object>[
         'case',
-        <Object>['==', <Object>['get', 'kind'], 'cluster'],
+        <Object>[
+          '==',
+          <Object>['get', 'kind'],
+          'cluster'
+        ],
         74,
         56,
       ],
@@ -118,28 +146,44 @@ abstract final class MapMarkerCollisionConfig {
       3,
       <Object>[
         'case',
-        <Object>['==', <Object>['get', 'kind'], 'cluster'],
+        <Object>[
+          '==',
+          <Object>['get', 'kind'],
+          'cluster'
+        ],
         22,
         14,
       ],
       12,
       <Object>[
         'case',
-        <Object>['==', <Object>['get', 'kind'], 'cluster'],
+        <Object>[
+          '==',
+          <Object>['get', 'kind'],
+          'cluster'
+        ],
         26,
         17,
       ],
       15,
       <Object>[
         'case',
-        <Object>['==', <Object>['get', 'kind'], 'cluster'],
+        <Object>[
+          '==',
+          <Object>['get', 'kind'],
+          'cluster'
+        ],
         31,
         20,
       ],
       24,
       <Object>[
         'case',
-        <Object>['==', <Object>['get', 'kind'], 'cluster'],
+        <Object>[
+          '==',
+          <Object>['get', 'kind'],
+          'cluster'
+        ],
         37,
         28,
       ],

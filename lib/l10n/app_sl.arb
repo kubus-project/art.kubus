@@ -1639,6 +1639,41 @@
   "mapFilterUndiscovered": "Neodkrito",
   "mapFilterArEnabled": "AR pripravljeno",
   "mapFilterFavorites": "Priljubljene",
+  "mapFilterScopeTitle": "Obseg",
+  "mapFilterScopeCurrentViewport": "Trenutni pogled",
+  "mapFilterScopeNearMe": "V moji bližini",
+  "mapFilterScopeTravel": "Potovanje",
+  "mapFilterDiscoveryStatusTitle": "Stanje odkritja",
+  "mapFilterAttributesTitle": "Lastnosti",
+  "mapFilterContentLayersTitle": "Vsebinske plasti",
+  "mapFilterNearMeRadiusLabel": "Radij: {radiusKm} km",
+  "@mapFilterNearMeRadiusLabel": {
+    "description": "Oznaka drsnika za radij filtra v bližini.",
+    "placeholders": {
+      "radiusKm": {}
+    }
+  },
+  "mapFilterActiveCountLabel": "Aktivni filtri: {count}",
+  "@mapFilterActiveCountLabel": {
+    "description": "Dostopno in vidno število aktivnih filtrov zemljevida, ki niso privzeti.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mapFilterVisibleLayerCountLabel": "Vidnih {visible} od {total}",
+  "@mapFilterVisibleLayerCountLabel": {
+    "description": "Število vidnih vsebinskih plasti zemljevida.",
+    "placeholders": {
+      "visible": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "mapLayersTitle": "Sloji zemljevida",
   "mapDiscoveryPathTitle": "Pot odkrivanja",
   "mapDiscoveryPathIdleSubtitle": "Razišči bližnjo umetnost",
@@ -1648,6 +1683,8 @@
   "mapSortResultsTooltip": "Razvrsti rezultate",
   "mapCenterOnMeTooltip": "Središči na meni",
   "mapAddMapMarkerTooltip": "Dodaj označevalec",
+  "mapToolsTitle": "Orodja zemljevida",
+  "mapZoomInTooltip": "Približaj",
   "mapTravelModeTooltip": "Način potovanja",
   "mapTravelModeEnableTooltip": "Vklopi način potovanja",
   "@mapTravelModeEnableTooltip": {

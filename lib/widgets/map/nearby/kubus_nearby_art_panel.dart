@@ -36,6 +36,7 @@ class KubusNearbyArtPanel extends StatefulWidget {
     this.discoveryProgress,
     this.onClose,
     this.onRadiusTap,
+    this.onExpand,
     this.scrollController,
     this.onInteractingChanged,
   });
@@ -52,6 +53,7 @@ class KubusNearbyArtPanel extends StatefulWidget {
   final double? discoveryProgress;
   final VoidCallback? onClose;
   final VoidCallback? onRadiusTap;
+  final VoidCallback? onExpand;
   final ScrollController? scrollController;
   final ValueChanged<bool>? onInteractingChanged;
 
@@ -110,6 +112,7 @@ class _KubusNearbyArtPanelState extends State<KubusNearbyArtPanel> {
       accentColor: themeProvider.accentColor,
       onClose: widget.onClose,
       onRadiusTap: widget.onRadiusTap,
+      onExpand: widget.onExpand,
       scrollController: _effectiveScrollController,
       onSortChanged: (value) => setState(() => _sort = value),
       onToggleGrid: () => setState(() => _useGrid = !_useGrid),
@@ -127,9 +130,8 @@ class _KubusNearbyArtPanelState extends State<KubusNearbyArtPanel> {
       // mobile passed `disabled`, which is exactly the flat-panel regression.
       blurPolicy: KubusMapBlurPolicy.forceRealBlur,
       overlayName: 'nearby-art-panel',
-      backdropRegionId: isMobile
-          ? 'mobile-nearby-art-sheet'
-          : 'desktop-nearby-art-panel',
+      backdropRegionId:
+          isMobile ? 'mobile-nearby-art-sheet' : 'desktop-nearby-art-panel',
       enablePlatformBackdropRegion: !isMobile,
       child: content,
     );

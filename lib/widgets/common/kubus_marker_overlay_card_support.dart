@@ -410,9 +410,11 @@ class _OverlayPrimaryButton extends StatelessWidget {
           ),
         ],
         onTap: onPressed,
-        child: SizedBox(
+        child: ConstrainedBox(
           key: const ValueKey<String>('marker_overlay_primary_action'),
-          height: KubusHeaderMetrics.actionHitArea,
+          constraints: const BoxConstraints(
+            minHeight: KubusHeaderMetrics.actionHitArea,
+          ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -422,8 +424,7 @@ class _OverlayPrimaryButton extends StatelessWidget {
                 child: Text(
                   label,
                   overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
-                  softWrap: false,
+                  maxLines: 2,
                   style: KubusTypography.textTheme.labelLarge?.copyWith(
                     fontSize: KubusHeaderMetrics.sectionSubtitle - 1,
                     fontWeight: FontWeight.w700,

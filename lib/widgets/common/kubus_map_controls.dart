@@ -35,6 +35,11 @@ class KubusMapControls extends StatelessWidget {
     this.onToggleIsometricView,
     this.isometricViewTooltipWhenActive,
     this.isometricViewTooltipWhenInactive,
+    this.showZoomControls = true,
+    this.showSecondaryTools = false,
+    this.onOpenSecondaryTools,
+    this.secondaryToolsKey,
+    this.secondaryToolsTooltip = 'Map tools',
     this.zoomInTooltip = 'Zoom in',
     this.zoomOutTooltip = 'Zoom out',
     this.resetBearingTooltip = 'Reset bearing',
@@ -43,6 +48,7 @@ class KubusMapControls extends StatelessWidget {
     this.createMarkerKey,
     this.createMarkerTooltip = 'Create marker here',
     this.createMarkerHighlighted = false,
+    this.buttonSize,
   });
 
   final KubusMapController controller;
@@ -75,6 +81,12 @@ class KubusMapControls extends StatelessWidget {
   final String? isometricViewTooltipWhenActive;
   final String? isometricViewTooltipWhenInactive;
 
+  final bool showZoomControls;
+  final bool showSecondaryTools;
+  final VoidCallback? onOpenSecondaryTools;
+  final Key? secondaryToolsKey;
+  final String secondaryToolsTooltip;
+
   final String zoomInTooltip;
   final String zoomOutTooltip;
   final String resetBearingTooltip;
@@ -85,6 +97,7 @@ class KubusMapControls extends StatelessWidget {
   final Key? createMarkerKey;
   final String createMarkerTooltip;
   final bool createMarkerHighlighted;
+  final double? buttonSize;
 
   @override
   Widget build(BuildContext context) {
@@ -114,6 +127,11 @@ class KubusMapControls extends StatelessWidget {
       onToggleIsometricView: onToggleIsometricView,
       isometricViewTooltipWhenActive: isometricViewTooltipWhenActive,
       isometricViewTooltipWhenInactive: isometricViewTooltipWhenInactive,
+      showZoomControls: showZoomControls,
+      showSecondaryTools: showSecondaryTools,
+      onOpenSecondaryTools: onOpenSecondaryTools,
+      secondaryToolsKey: secondaryToolsKey,
+      secondaryToolsTooltip: secondaryToolsTooltip,
       zoomInTooltip: zoomInTooltip,
       zoomOutTooltip: zoomOutTooltip,
       resetBearingTooltip: resetBearingTooltip,
@@ -122,6 +140,7 @@ class KubusMapControls extends StatelessWidget {
       createMarkerKey: createMarkerKey,
       createMarkerTooltip: createMarkerTooltip,
       createMarkerHighlighted: createMarkerHighlighted,
+      buttonSize: buttonSize,
     );
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/kubus_color_roles.dart';
+import '../../../utils/kubus_map_tokens.dart';
 import '../../inline_progress.dart';
 import '../kubus_map_glass_surface.dart';
 
@@ -43,6 +44,10 @@ class KubusDiscoveryPathCard extends StatelessWidget {
   /// mobile/existing behaviour stays unchanged unless a caller opts in.
   final KubusDiscoveryExpansionDirection expansionDirection;
 
+  /// Uses one compact, map-first row while the discovery context is collapsed.
+  final bool compactWhenCollapsed;
+  final String? compactProgressLabel;
+
   const KubusDiscoveryPathCard({
     super.key,
     required this.overallProgress,
@@ -58,6 +63,8 @@ class KubusDiscoveryPathCard extends StatelessWidget {
     this.badgeGap = 10,
     this.tasksTopGap = 10,
     this.expansionDirection = KubusDiscoveryExpansionDirection.downward,
+    this.compactWhenCollapsed = false,
+    this.compactProgressLabel,
   });
 
   @override
@@ -78,10 +85,14 @@ class KubusDiscoveryPathCard extends StatelessWidget {
 
     final radius = BorderRadius.circular(18);
     final animation = context.animationTheme;
+    final mapMotion = KubusMapMotion.fromMediaQuery(
+      animationTheme: animation,
+      mediaQuery: MediaQuery.of(context),
+    ).panelEnter;
     final isUpward =
         expansionDirection == KubusDiscoveryExpansionDirection.upward;
 
-    final header = Row(
+    final fullHeader = Row(
       children: [
         ShaderMask(
           shaderCallback: (rect) => badgeGradient.createShader(rect),
@@ -117,6 +128,47 @@ class KubusDiscoveryPathCard extends StatelessWidget {
       ],
     );
 
+    final compactProgress =
+        compactProgressLabel ?? '${(overallProgress * 100).round()}%';
+    final compactHeader = Row(
+      children: [
+        ShaderMask(
+          shaderCallback: (rect) => badgeGradient.createShader(rect),
+          blendMode: BlendMode.srcIn,
+          child: InlineProgress(
+            progress: overallProgress,
+            rows: 2,
+            cols: 4,
+            tileSize: 5,
+            gap: 2,
+            color: scheme.onSurface,
+            backgroundColor:
+                scheme.surfaceContainerHighest.withValues(alpha: 0.35),
+          ),
+        ),
+        SizedBox(width: badgeGap),
+        Expanded(
+          child: Text.rich(
+            TextSpan(
+              text: l10n.mapDiscoveryPathTitle,
+              style: titleStyle,
+              children: [
+                TextSpan(
+                  text: ' · $compactProgress',
+                  style: percentStyle,
+                ),
+              ],
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        toggleButton,
+      ],
+    );
+    final header =
+        compactWhenCollapsed && !expanded ? compactHeader : fullHeader;
+
     // Stable, keyed expanded content. The rows are always built; collapsing is
     // handled by smoothly sizing the clipped area to zero instead of swapping
     // the subtree, which avoids layout popping / reordering jitter.
@@ -132,10 +184,9 @@ class KubusDiscoveryPathCard extends StatelessWidget {
 
     final expandedArea = ClipRect(
       child: AnimatedSize(
-        duration: animation.short,
-        curve: animation.defaultCurve,
-        alignment:
-            isUpward ? Alignment.bottomCenter : Alignment.topCenter,
+        duration: mapMotion.duration,
+        curve: mapMotion.curve,
+        alignment: isUpward ? Alignment.bottomCenter : Alignment.topCenter,
         child: expanded
             ? SizedBox(width: double.infinity, child: expandedContent)
             : const SizedBox(width: double.infinity, height: 0),
@@ -143,11 +194,13 @@ class KubusDiscoveryPathCard extends StatelessWidget {
     );
 
     Widget card = Semantics(
-      label: 'discovery_path',
+      label: compactWhenCollapsed && !expanded
+          ? '${l10n.mapDiscoveryPathTitle}, $compactProgress'
+          : l10n.mapDiscoveryPathTitle,
       container: true,
       child: AnimatedContainer(
-        duration: animation.medium,
-        curve: animation.defaultCurve,
+        duration: mapMotion.duration,
+        curve: mapMotion.curve,
         constraints: constraints,
         child: buildKubusMapGlassSurface(
           context: context,
@@ -161,9 +214,8 @@ class KubusDiscoveryPathCard extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: isUpward
-                  ? [expandedArea, header]
-                  : [header, expandedArea],
+              children:
+                  isUpward ? [expandedArea, header] : [header, expandedArea],
             ),
           ),
         ),

@@ -62,6 +62,11 @@ class KubusMapPrimaryControls extends StatelessWidget {
     this.isometricViewTooltip,
     this.isometricViewTooltipWhenActive,
     this.isometricViewTooltipWhenInactive,
+    this.showZoomControls = true,
+    this.showSecondaryTools = false,
+    this.onOpenSecondaryTools,
+    this.secondaryToolsKey,
+    this.secondaryToolsTooltip = 'Map tools',
     this.zoomMin = 3.0,
     this.zoomMax = 18.0,
     this.zoomStep = 1.0,
@@ -140,6 +145,16 @@ class KubusMapPrimaryControls extends StatelessWidget {
   final String? isometricViewTooltip;
   final String? isometricViewTooltipWhenActive;
   final String? isometricViewTooltipWhenInactive;
+
+  /// Touch layouts can hide dedicated zoom controls in favour of pinch zoom
+  /// while retaining them inside a progressively disclosed tools surface.
+  final bool showZoomControls;
+
+  /// Compact entry point for secondary controls on touch layouts.
+  final bool showSecondaryTools;
+  final VoidCallback? onOpenSecondaryTools;
+  final Key? secondaryToolsKey;
+  final String secondaryToolsTooltip;
 
   // --- Zoom ---
 
@@ -285,37 +300,54 @@ class KubusMapPrimaryControls extends StatelessWidget {
       );
     }
 
-    children.add(
-      Semantics(
-        label: zoomInTooltip,
-        button: true,
-        child: _KubusSquareControlButton.mobile(
-          size: resolvedButtonSize,
-          icon: Icons.add,
-          tooltip: zoomInTooltip,
-          onTap: () => unawaited(_zoomBy(delta: zoomStep)),
+    if (showZoomControls) {
+      children.add(
+        Semantics(
+          label: zoomInTooltip,
+          button: true,
+          child: _KubusSquareControlButton.mobile(
+            size: resolvedButtonSize,
+            icon: Icons.add,
+            tooltip: zoomInTooltip,
+            onTap: () => unawaited(_zoomBy(delta: zoomStep)),
+          ),
         ),
-      ),
-    );
-    children.add(
-      SizedBox(height: resolvedGap),
-    );
+      );
+      children.add(SizedBox(height: resolvedGap));
 
-    children.add(
-      Semantics(
-        label: zoomOutTooltip,
-        button: true,
-        child: _KubusSquareControlButton.mobile(
-          size: resolvedButtonSize,
-          icon: Icons.remove,
-          tooltip: zoomOutTooltip,
-          onTap: () => unawaited(_zoomBy(delta: -zoomStep)),
+      children.add(
+        Semantics(
+          label: zoomOutTooltip,
+          button: true,
+          child: _KubusSquareControlButton.mobile(
+            size: resolvedButtonSize,
+            icon: Icons.remove,
+            tooltip: zoomOutTooltip,
+            onTap: () => unawaited(_zoomBy(delta: -zoomStep)),
+          ),
         ),
-      ),
-    );
-    children.add(
-      SizedBox(height: resolvedGap),
-    );
+      );
+      children.add(SizedBox(height: resolvedGap));
+    }
+
+    if (showSecondaryTools && onOpenSecondaryTools != null) {
+      children.add(
+        Semantics(
+          label: secondaryToolsTooltip,
+          button: true,
+          child: KeyedSubtree(
+            key: secondaryToolsKey,
+            child: _KubusSquareControlButton.mobile(
+              size: resolvedButtonSize,
+              icon: Icons.tune,
+              tooltip: secondaryToolsTooltip,
+              onTap: onOpenSecondaryTools,
+            ),
+          ),
+        ),
+      );
+      children.add(SizedBox(height: resolvedGap));
+    }
 
     children.add(
       Semantics(

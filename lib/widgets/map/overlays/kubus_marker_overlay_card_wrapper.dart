@@ -4,11 +4,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../../utils/app_animations.dart';
+import '../../../utils/kubus_map_tokens.dart';
 import '../../map_overlay_blocker.dart';
 
 enum KubusMarkerOverlayPlacementStrategy {
   anchored,
   centered,
+  bottomDocked,
 }
 
 @immutable
@@ -16,6 +18,7 @@ class KubusMarkerOverlayAnimationConfig {
   const KubusMarkerOverlayAnimationConfig({
     this.duration = const Duration(milliseconds: 220),
     this.curve = Curves.easeOutCubic,
+    this.allowsSpatialTransform = true,
   });
 
   /// Resolves the entrance motion from [AppAnimationTheme] so overlay cards
@@ -25,11 +28,23 @@ class KubusMarkerOverlayAnimationConfig {
     return KubusMarkerOverlayAnimationConfig(
       duration: animationTheme.medium,
       curve: animationTheme.defaultCurve,
+      allowsSpatialTransform: true,
+    );
+  }
+
+  factory KubusMarkerOverlayAnimationConfig.fromMotion(
+    KubusMapMotionSpec motion,
+  ) {
+    return KubusMarkerOverlayAnimationConfig(
+      duration: motion.duration,
+      curve: motion.curve,
+      allowsSpatialTransform: motion.allowsSpatialTransform,
     );
   }
 
   final Duration duration;
   final Curve curve;
+  final bool allowsSpatialTransform;
 }
 
 @immutable
@@ -180,8 +195,12 @@ class KubusMarkerOverlayCardWrapper extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
+    final effectiveAnchorListenable =
+        placementStrategy == KubusMarkerOverlayPlacementStrategy.bottomDocked
+            ? const _NullAnchorListenable()
+            : anchorListenable;
     return ValueListenableBuilder<Offset?>(
-      valueListenable: anchorListenable,
+      valueListenable: effectiveAnchorListenable,
       builder: (context, liveAnchor, _) {
         return LayoutBuilder(
           builder: (context, constraints) {
@@ -218,6 +237,56 @@ class KubusMarkerOverlayCardWrapper extends StatelessWidget {
               anchor: anchor,
             );
             final card = _buildWrappedCard(context, layout);
+
+            if (placementStrategy ==
+                KubusMarkerOverlayPlacementStrategy.bottomDocked) {
+              final maxLeft = math.max(
+                horizontalPadding,
+                constraints.maxWidth - cardWidth - horizontalPadding,
+              );
+              final left = ((constraints.maxWidth - cardWidth) / 2)
+                  .clamp(horizontalPadding, maxLeft)
+                  .toDouble();
+              final bottom = bottomPadding
+                  .clamp(
+                    0.0,
+                    math.max(0.0, constraints.maxHeight - cardHeight),
+                  )
+                  .toDouble();
+              final top = constraints.maxHeight - cardHeight - bottom;
+
+              _scheduleLayoutCallback(
+                KubusMarkerOverlayResolvedLayout(
+                  layout: layout,
+                  viewportSize: constraints.biggest,
+                  mediaQuery: media,
+                  horizontalPadding: horizontalPadding,
+                  topPadding: topPadding,
+                  bottomPadding: bottomPadding,
+                  markerOffset: markerOffset,
+                  cardLeft: left,
+                  cardTop: top,
+                ),
+              );
+              return KeyedSubtree(
+                key: const ValueKey<String>(
+                  'kubus_marker_overlay_bottom_docked',
+                ),
+                child: Stack(
+                  children: [
+                    Positioned(
+                      left: left,
+                      bottom: bottom,
+                      child: UnconstrainedBox(
+                        alignment: Alignment.bottomLeft,
+                        constrainedAxis: Axis.horizontal,
+                        child: SizedBox(width: cardWidth, child: card),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
 
             final shouldCenter = placementStrategy ==
                     KubusMarkerOverlayPlacementStrategy.centered ||
@@ -293,22 +362,36 @@ class KubusMarkerOverlayCardWrapper extends StatelessWidget {
               ),
             );
 
+            final resolvedAnimation =
+                animation ?? KubusMarkerOverlayAnimationConfig.of(context);
+            final positionedCard = UnconstrainedBox(
+              alignment: Alignment.topLeft,
+              constrainedAxis: Axis.horizontal,
+              child: SizedBox(
+                width: cardWidth,
+                child: card,
+              ),
+            );
+
             return KeyedSubtree(
               key: const ValueKey<String>('kubus_marker_overlay_anchored'),
               child: Stack(
                 children: [
-                  Positioned(
-                    left: left,
-                    top: top,
-                    child: UnconstrainedBox(
-                      alignment: Alignment.topLeft,
-                      constrainedAxis: Axis.horizontal,
-                      child: SizedBox(
-                        width: cardWidth,
-                        child: card,
-                      ),
+                  if (resolvedAnimation.allowsSpatialTransform &&
+                      resolvedAnimation.duration > Duration.zero)
+                    AnimatedPositioned(
+                      left: left,
+                      top: top,
+                      duration: resolvedAnimation.duration,
+                      curve: resolvedAnimation.curve,
+                      child: positionedCard,
+                    )
+                  else
+                    Positioned(
+                      left: left,
+                      top: top,
+                      child: positionedCard,
                     ),
-                  ),
                 ],
               ),
             );
@@ -360,6 +443,19 @@ class KubusMarkerOverlayCardWrapper extends StatelessWidget {
 
     return looksUsable ? anchor : fallback;
   }
+}
+
+class _NullAnchorListenable implements ValueListenable<Offset?> {
+  const _NullAnchorListenable();
+
+  @override
+  Offset? get value => null;
+
+  @override
+  void addListener(VoidCallback listener) {}
+
+  @override
+  void removeListener(VoidCallback listener) {}
 }
 
 /// One-shot entrance fade for the overlay card.

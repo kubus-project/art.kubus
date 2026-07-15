@@ -94,6 +94,135 @@ void main() {
   });
 
   testWidgets(
+    'compact mobile preview stays map-first and keeps core actions accessible',
+    (tester) async {
+      final marker = _marker();
+      var closeCount = 0;
+      var detailsCount = 0;
+      var nextCount = 0;
+      var previousCount = 0;
+      var quickActionCount = 0;
+
+      await tester.pumpWidget(
+        _wrap(
+          SizedBox(
+            width: 320,
+            child: KubusMarkerOverlayCard(
+              marker: marker,
+              baseColor: Colors.teal,
+              displayTitle: 'A deliberately long marker title',
+              canPresentExhibition: false,
+              description:
+                  'A compact description that should remain a single calm line.',
+              onClose: () => closeCount += 1,
+              onPrimaryAction: () => detailsCount += 1,
+              primaryActionIcon: Icons.arrow_forward,
+              primaryActionLabel: 'View details',
+              presentation: KubusMarkerOverlayCardPresentation.compactMobile,
+              stackCount: 3,
+              stackIndex: 1,
+              onPreviousStacked: () => previousCount += 1,
+              onNextStacked: () => nextCount += 1,
+              onHorizontalDragEnd: (_) => nextCount += 1,
+              actions: [
+                MarkerOverlayActionSpec(
+                  icon: Icons.favorite_outline,
+                  label: 'Favorite',
+                  isActive: false,
+                  activeColor: Colors.teal,
+                  onTap: () => quickActionCount += 1,
+                ),
+              ],
+              maxWidth: 320,
+              maxHeight: 208,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final surface = tester.getRect(
+        find.byKey(const ValueKey<String>('marker_overlay_card_surface')),
+      );
+      expect(surface.width, lessThanOrEqualTo(320));
+      expect(surface.height, lessThanOrEqualTo(208));
+      expect(find.text('2/3'), findsOneWidget);
+      final previewSemantics = tester.widget<Semantics>(
+        find.byKey(const ValueKey<String>('marker_overlay_card_surface')),
+      );
+      expect(
+        previewSemantics.properties.label,
+        'A deliberately long marker title',
+      );
+
+      await tester.tap(find.byTooltip('Close'));
+      await tester.tap(find.byTooltip('Next page'));
+      await tester.tap(find.byTooltip('Previous page'));
+      await tester.tap(find.text('View details'));
+      await tester.pump();
+
+      expect(closeCount, 1);
+      expect(nextCount, 1);
+      expect(previousCount, 1);
+      expect(detailsCount, 1);
+      expect(quickActionCount, 0);
+
+      final primary = tester.getRect(
+        find.byKey(const ValueKey<String>('marker_overlay_primary_action')),
+      );
+      expect(primary.height, greaterThanOrEqualTo(44));
+    },
+  );
+
+  testWidgets('compact mobile preview supports large accessibility text',
+      (tester) async {
+    final marker = _marker();
+    await tester.pumpWidget(
+      _wrap(
+        MediaQuery(
+          data: const MediaQueryData(
+            size: Size(360, 640),
+            textScaler: TextScaler.linear(2),
+          ),
+          child: SizedBox(
+            width: 328,
+            child: KubusMarkerOverlayCard(
+              marker: marker,
+              baseColor: Colors.teal,
+              displayTitle: 'Accessible marker title',
+              canPresentExhibition: false,
+              description: 'Description yields to essential content.',
+              onClose: () {},
+              onPrimaryAction: () {},
+              primaryActionIcon: Icons.arrow_forward,
+              primaryActionLabel: 'View details',
+              presentation: KubusMarkerOverlayCardPresentation.compactMobile,
+              maxWidth: 328,
+              maxHeight: 288,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final surface = tester.getRect(
+      find.byKey(const ValueKey<String>('marker_overlay_card_surface')),
+    );
+    expect(surface.height, lessThanOrEqualTo(288));
+    expect(find.text('Accessible marker title'), findsOneWidget);
+    expect(find.byTooltip('Close'), findsOneWidget);
+    expect(find.text('View details'), findsOneWidget);
+    expect(
+      tester
+          .getRect(find
+              .byKey(const ValueKey<String>('marker_overlay_primary_action')))
+          .height,
+      greaterThanOrEqualTo(44),
+    );
+  });
+
+  testWidgets(
     'constrained marker overlay card keeps cover image filling media box',
     (tester) async {
       final marker = _marker();

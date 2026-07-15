@@ -2,6 +2,7 @@ import 'dart:developer' as dev;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:maplibre_gl/maplibre_gl.dart' as ml;
 
 import '../../../config/config.dart';
@@ -14,6 +15,8 @@ import '../../../widgets/map/kubus_map_marker_features.dart';
 import '../../../widgets/map/kubus_map_marker_geojson_builder.dart';
 import '../../../widgets/map/kubus_map_marker_rendering.dart';
 import '../controller/kubus_map_controller.dart';
+import '../shared/map_cluster_transition.dart';
+import '../shared/map_marker_collision_config.dart';
 
 /// What the marker sync engine needs from its hosting map screen `State`.
 ///
@@ -48,7 +51,8 @@ abstract class KubusMapMarkerSyncHost {
 
   int clusterGridLevelForZoom(double zoom);
   double markerPixelRatio();
-  Color resolveArtMarkerBaseColor(ArtMarker marker, ThemeProvider themeProvider);
+  Color resolveArtMarkerBaseColor(
+      ArtMarker marker, ThemeProvider themeProvider);
 
   /// Called after each successful GeoJSON source write (debug counters).
   void onMarkerSourceWrite();
@@ -67,6 +71,12 @@ class KubusMapMarkerSyncEngine {
   KubusMapMarkerSyncEngine(this.host);
 
   final KubusMapMarkerSyncHost host;
+  List<KubusClusterTransitionNode> _lastRenderedTopology =
+      const <KubusClusterTransitionNode>[];
+  String _stableTopologySignature = '';
+  String? _transitionTargetSignature;
+  List<KubusClusterTransitionNode> _transitionOriginTopology =
+      const <KubusClusterTransitionNode>[];
 
   Future<void> syncMarkersSafe({required ThemeProvider themeProvider}) async {
     try {
@@ -92,6 +102,9 @@ class KubusMapMarkerSyncEngine {
     try {
       final scheme = Theme.of(host.hostContext).colorScheme;
       final roles = KubusColorRoles.of(host.hostContext);
+      final media = MediaQuery.maybeOf(host.hostContext);
+      final reduceMotion = media?.disableAnimations == true ||
+          media?.accessibleNavigation == true;
       final isDark = themeProvider.isDarkMode;
 
       final zoom = host.syncZoom;
@@ -144,22 +157,131 @@ class KubusMapMarkerSyncEngine {
       );
       if (!host.hostMounted) return;
 
+      _applyClusterTopologyTransition(
+        features,
+        reduceMotion: reduceMotion,
+      );
       final collection = <String, dynamic>{
         'type': 'FeatureCollection',
         'features': features,
       };
       if (!host.hostMounted) return;
-      try {
-        await controller.setGeoJsonSource(host.markerSourceId, collection);
-        host.onMarkerSourceWrite();
-      } catch (_) {
-        // Best-effort: style swaps can temporarily invalidate sources.
+      final layersManager = host.kubusMapController.layersManager;
+      if (layersManager != null) {
+        final didWrite = await layersManager.upsertMarkerData(collection);
+        if (didWrite) host.onMarkerSourceWrite();
+      } else if (kDebugMode) {
+        AppConfig.debugPrint(
+          '${host.debugLabel}: marker sync skipped without layers manager',
+        );
       }
 
       await host.afterMarkerSync(themeProvider);
     } finally {
       timeline?.finish();
     }
+  }
+
+  void _applyClusterTopologyTransition(
+    List<Map<String, dynamic>> features, {
+    required bool reduceMotion,
+  }) {
+    final targetNodes = _topologyNodesFromFeatures(features);
+    final targetSignature = kubusClusterTopologySignature(targetNodes);
+    if (reduceMotion) {
+      _lastRenderedTopology = targetNodes;
+      _stableTopologySignature = targetSignature;
+      _transitionTargetSignature = null;
+      _transitionOriginTopology = const <KubusClusterTransitionNode>[];
+      return;
+    }
+    if (_lastRenderedTopology.isEmpty || _stableTopologySignature.isEmpty) {
+      _lastRenderedTopology = targetNodes;
+      _stableTopologySignature = targetSignature;
+      _transitionTargetSignature = null;
+      return;
+    }
+    if (targetSignature == _stableTopologySignature) {
+      _lastRenderedTopology = targetNodes;
+      _transitionTargetSignature = null;
+      _transitionOriginTopology = const <KubusClusterTransitionNode>[];
+      return;
+    }
+
+    if (_transitionTargetSignature != targetSignature) {
+      _transitionTargetSignature = targetSignature;
+      _transitionOriginTopology = _lastRenderedTopology;
+    }
+    final progress = Curves.easeOutCubic.transform(
+      kubusClusterRegroupProgress(
+        entryOpacities: features.map((feature) {
+          final properties = feature['properties'];
+          if (properties is! Map) return 1.0;
+          return (properties['entryOpacity'] as num?)?.toDouble() ?? 1.0;
+        }),
+        startOpacity: MapMarkerCollisionConfig.entryRegroupStartOpacity,
+      ),
+    );
+
+    final renderedNodes = <KubusClusterTransitionNode>[];
+    for (var index = 0; index < features.length; index++) {
+      final target = targetNodes[index];
+      final origin = resolveKubusClusterTransitionOrigin(
+        target: target,
+        previous: _transitionOriginTopology,
+      );
+      final position = origin == null
+          ? target.position
+          : interpolateKubusClusterPosition(origin, target.position, progress);
+      final geometry = features[index]['geometry'];
+      if (geometry is Map<String, dynamic>) {
+        geometry['coordinates'] = <double>[
+          position.longitude,
+          position.latitude,
+        ];
+      }
+      renderedNodes.add(
+        KubusClusterTransitionNode(
+          id: target.id,
+          memberIds: target.memberIds,
+          position: position,
+        ),
+      );
+    }
+    _lastRenderedTopology = List<KubusClusterTransitionNode>.unmodifiable(
+      renderedNodes,
+    );
+    if (progress >= 0.999) {
+      _stableTopologySignature = targetSignature;
+      _transitionTargetSignature = null;
+      _transitionOriginTopology = const <KubusClusterTransitionNode>[];
+      _lastRenderedTopology = targetNodes;
+    }
+  }
+
+  List<KubusClusterTransitionNode> _topologyNodesFromFeatures(
+    List<Map<String, dynamic>> features,
+  ) {
+    return List<KubusClusterTransitionNode>.unmodifiable(
+      features.map((feature) {
+        final properties = feature['properties'] as Map;
+        final geometry = feature['geometry'] as Map;
+        final coordinates = geometry['coordinates'] as List;
+        final id = (properties['id'] ?? feature['id']).toString();
+        final rawMembers = properties['clusterMemberIds'];
+        final memberIds = rawMembers is List
+            ? rawMembers.map((value) => value.toString()).toSet()
+            : <String>{(properties['markerId'] ?? id).toString()};
+        return KubusClusterTransitionNode(
+          id: id,
+          memberIds: Set<String>.unmodifiable(memberIds),
+          position: LatLng(
+            (coordinates[1] as num).toDouble(),
+            (coordinates[0] as num).toDouble(),
+          ),
+        );
+      }),
+    );
   }
 
   /// Pre-registers marker icons in batched parallel to avoid waterfall.
