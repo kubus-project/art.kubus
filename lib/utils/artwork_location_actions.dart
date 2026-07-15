@@ -8,6 +8,8 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/artwork.dart';
+import '../config/config.dart';
+import '../features/map/navigation/walking_navigation_models.dart';
 import '../widgets/common/kubus_badge.dart';
 import '../widgets/glass_components.dart';
 import '../widgets/kubus_snackbar.dart';
@@ -272,9 +274,12 @@ class ArtworkLocationActions {
                   ),
                   const SizedBox(height: KubusSpacing.md),
                   ListTile(
-                    enabled: false,
+                    enabled: AppConfig.isFeatureEnabled(
+                      'mapWalkingNavigation',
+                    ),
                     leading: const Icon(Icons.directions_walk_outlined),
                     title: Text(l10n.artDetailNavigationInApp),
+                    subtitle: Text(l10n.walkingNavigationPreviewNotice),
                     trailing: KubusBadge(
                       text: l10n.artDetailNavigationInDevelopment,
                       variant: KubusBadgeVariant.status,
@@ -282,6 +287,21 @@ class ArtworkLocationActions {
                       icon: Icons.construction_outlined,
                       compact: true,
                     ),
+                    onTap: !AppConfig.isFeatureEnabled(
+                      'mapWalkingNavigation',
+                    )
+                        ? null
+                        : () {
+                            Navigator.of(sheetContext).pop();
+                            MapNavigation.openWalking(
+                              context,
+                              intent: WalkingNavigationIntent(
+                                destinationId: artwork.id,
+                                destinationLabel: artwork.title,
+                                destination: artwork.position,
+                              ),
+                            );
+                          },
                   ),
                   const SizedBox(height: KubusSpacing.xs),
                   for (final option in options)

@@ -30,6 +30,7 @@ import '../providers/wallet_provider.dart';
 import '../providers/profile_provider.dart';
 import '../providers/themeprovider.dart';
 import '../providers/map_deep_link_provider.dart';
+import '../providers/walking_navigation_provider.dart';
 import '../providers/public_entity_takeover_provider.dart';
 import '../providers/navigation_provider.dart';
 import '../providers/main_tab_provider.dart';
@@ -84,6 +85,8 @@ import '../services/map_style_service.dart';
 import '../config/config.dart';
 import '../features/map/controller/map_view_preferences_controller.dart';
 import '../features/map/shared/map_screen_constants.dart';
+import '../features/map/navigation/walking_navigation_models.dart';
+import '../features/map/navigation/walking_navigation_map_coordinator.dart';
 import '../features/map/map_layers_manager.dart';
 import '../features/map/map_overlay_stack.dart';
 import '../features/map/controller/kubus_map_controller.dart';
@@ -97,6 +100,8 @@ import 'events/exhibition_detail_screen.dart';
 import '../widgets/glass_components.dart';
 import '../widgets/kubus_snackbar.dart';
 import '../widgets/map_overlay_blocker.dart';
+import '../widgets/map/navigation/kubus_walking_navigation_panel.dart';
+import '../widgets/map/navigation/kubus_walking_navigation_binding.dart';
 import '../widgets/search/kubus_general_search.dart';
 import '../widgets/search/kubus_search_config.dart';
 import '../widgets/search/kubus_search_controller.dart';
@@ -225,6 +230,7 @@ class MapScreen extends StatefulWidget {
   final String? initialSubjectId;
   final String? initialSubjectType;
   final String? initialTargetLabel;
+  final WalkingNavigationIntent? walkingNavigationIntent;
 
   const MapScreen({
     super.key,
@@ -236,6 +242,7 @@ class MapScreen extends StatefulWidget {
     this.initialSubjectId,
     this.initialSubjectType,
     this.initialTargetLabel,
+    this.walkingNavigationIntent,
   });
 
   @override
@@ -255,6 +262,7 @@ class _MapScreenState extends State<MapScreen>
   LatLng? _currentPosition;
   double? _currentPositionAccuracyMeters;
   int? _currentPositionTimestampMs;
+  bool _hasLiveLocationFix = false;
   Location? _mobileLocation;
   Timer? _timer;
   ml.MapLibreMapController? _mapController;
@@ -284,6 +292,9 @@ class _MapScreenState extends State<MapScreen>
       MapScreenConstants.cameraUpdateThrottle; // ~60fps
   bool _styleInitialized = false;
   bool _styleInitializationInProgress = false;
+  WalkingNavigationProvider? _walkingNavigationProvider;
+  WalkingNavigationMapCoordinator? _walkingNavigationMapCoordinator;
+  bool _walkingLocationPromptScheduled = false;
   int _styleEpoch = 0;
   final Set<String> _registeredMapImages = <String>{};
   final Set<String> _managedLayerIds = <String>{};
@@ -538,6 +549,11 @@ class _MapScreenState extends State<MapScreen>
         await _applyThemeToMapStyle(themeProvider: themeProvider);
         await _applyIsometricCamera(enabled: _isometricViewEnabled);
         await _syncUserLocation();
+        if (widget.walkingNavigationIntent != null && mounted) {
+          await _walkingCoordinator.sync(
+            context.read<WalkingNavigationProvider>(),
+          );
+        }
         await _syncMapMarkers(themeProvider: themeProvider);
         await _renderCoordinator.updateRenderMode();
         // Start the ambient dot-pulse / floating-badge bob ticker.
@@ -555,6 +571,10 @@ class _MapScreenState extends State<MapScreen>
     StartupTrace.mark('map screen init');
     MapAttributionHelper.setMobileMapEnabled(true);
     _autoFollow = widget.autoFollow;
+    if (widget.walkingNavigationIntent != null &&
+        AppConfig.isFeatureEnabled('mapWalkingNavigation')) {
+      _isometricViewEnabled = true;
+    }
 
     // Guest-first funnel: record that a guest reached the map (campaign
     // attribution is attached automatically by the telemetry layer).
@@ -1033,6 +1053,22 @@ class _MapScreenState extends State<MapScreen>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (widget.walkingNavigationIntent != null) {
+      _walkingNavigationProvider ??= context.read<WalkingNavigationProvider>();
+      if (!_walkingLocationPromptScheduled) {
+        _walkingLocationPromptScheduled = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          unawaited(() async {
+            await _promptForLocationThenCenter(reason: 'walking_navigation');
+            if (!mounted) return;
+            if (!_hasLiveLocationFix) {
+              _walkingNavigationProvider?.reportLocationUnavailable();
+            }
+          }());
+        });
+      }
+    }
     final media = MediaQuery.of(context);
     _kubusMapController.setReduceMotion(
       media.disableAnimations || media.accessibleNavigation,
@@ -1609,7 +1645,9 @@ class _MapScreenState extends State<MapScreen>
       } else if (_filterState.scope == KubusMapScope.travel) {
         _filterState = _filterState.withScope(KubusMapScope.currentViewport);
       }
-      _isometricViewEnabled = next.isometricViewEnabled;
+      _isometricViewEnabled = widget.walkingNavigationIntent != null
+          ? true
+          : next.isometricViewEnabled;
     });
   }
 
@@ -1621,7 +1659,9 @@ class _MapScreenState extends State<MapScreen>
       if (prefs.travelModeEnabled) {
         _filterState = _filterState.withScope(KubusMapScope.travel);
       }
-      _isometricViewEnabled = prefs.isometricViewEnabled;
+      _isometricViewEnabled = widget.walkingNavigationIntent != null
+          ? true
+          : prefs.isometricViewEnabled;
     });
   }
 
@@ -1886,6 +1926,9 @@ class _MapScreenState extends State<MapScreen>
 
   @override
   void dispose() {
+    if (widget.walkingNavigationIntent != null) {
+      _walkingNavigationProvider?.stop();
+    }
     _unsubscribeRouteObserver(source: 'dispose');
     MapAttributionHelper.setMobileMapEnabled(false);
     final mapDeepLinkProvider = _mapDeepLinkProvider;
@@ -3323,6 +3366,7 @@ class _MapScreenState extends State<MapScreen>
       LatLng? resolvedPosition;
       double? resolvedAccuracyMeters;
       int? resolvedTimestampMs;
+      var resolvedFromLiveFix = false;
       final prefs = await SharedPreferences.getInstance();
 
       if (kIsWeb) {
@@ -3363,6 +3407,7 @@ class _MapScreenState extends State<MapScreen>
           resolvedAccuracyMeters = position.accuracy;
           resolvedTimestampMs = position.timestamp.millisecondsSinceEpoch;
           resolvedPosition = LatLng(position.latitude, position.longitude);
+          resolvedFromLiveFix = true;
         }
       } else {
         _mobileLocation ??= Location();
@@ -3466,6 +3511,7 @@ class _MapScreenState extends State<MapScreen>
         if (locationData.latitude != null && locationData.longitude != null) {
           resolvedPosition =
               LatLng(locationData.latitude!, locationData.longitude!);
+          resolvedFromLiveFix = true;
           resolvedAccuracyMeters = locationData.accuracy;
           final rawTime = locationData.time;
           if (rawTime != null) {
@@ -3502,6 +3548,7 @@ class _MapScreenState extends State<MapScreen>
           accuracyMeters: resolvedAccuracyMeters,
           timestampMs:
               resolvedTimestampMs ?? DateTime.now().millisecondsSinceEpoch,
+          isLiveFix: resolvedFromLiveFix,
         );
         // Only force refresh on initial load (when no markers exist)
         // Timer-based calls should respect the cache/throttling logic
@@ -3561,6 +3608,7 @@ class _MapScreenState extends State<MapScreen>
               accuracyMeters: event.accuracy,
               timestampMs:
                   (event.time is num) ? (event.time as num).round() : null,
+              isLiveFix: true,
             );
           }
         },
@@ -3611,6 +3659,7 @@ class _MapScreenState extends State<MapScreen>
           LatLng(position.latitude, position.longitude),
           accuracyMeters: position.accuracy,
           timestampMs: position.timestamp.millisecondsSinceEpoch,
+          isLiveFix: true,
         );
       });
       _perf.subscriptionStarted('web_location_stream');
@@ -3768,6 +3817,7 @@ class _MapScreenState extends State<MapScreen>
     bool shouldCenter = false,
     double? accuracyMeters,
     int? timestampMs,
+    bool isLiveFix = false,
   }) {
     if (!mounted) return;
     final bool isInitial = _currentPosition == null;
@@ -3777,8 +3827,18 @@ class _MapScreenState extends State<MapScreen>
       _currentPosition = position;
       _currentPositionAccuracyMeters = accuracyMeters;
       _currentPositionTimestampMs = timestampMs;
+      if (isLiveFix) _hasLiveLocationFix = true;
     });
     unawaited(_syncUserLocation());
+    final walkingNavigation = _walkingNavigationProvider;
+    if (isLiveFix && walkingNavigation != null && walkingNavigation.isVisible) {
+      unawaited(
+        walkingNavigation.updatePosition(
+          position,
+          accuracyMeters: accuracyMeters,
+        ),
+      );
+    }
 
     if (allowCenter) {
       final double targetZoom = isInitial ? 18.0 : _lastZoom;
@@ -3953,6 +4013,8 @@ class _MapScreenState extends State<MapScreen>
                         isLoadingArtworks,
                       ),
                     _buildTopOverlays(theme, themeProvider, taskProvider),
+                    if (widget.walkingNavigationIntent != null)
+                      _buildWalkingNavigationOverlay(),
                     // Keep marker overlay above map UI chrome (controls/search/sheet)
                     // so the selected marker card remains the top interactive layer.
                     if (ui.contextSurface == MapContextSurface.markerPreview)
@@ -4025,6 +4087,7 @@ class _MapScreenState extends State<MapScreen>
             setMapController: (value) => _mapController = value,
             setLayersManager: (manager) => _layersManager = manager,
           );
+          _walkingNavigationMapCoordinator?.resetForMapController();
 
           // Mirror controller state into legacy screen guards while migration is incremental.
           _styleInitialized = _kubusMapController.styleInitialized;
@@ -4256,6 +4319,94 @@ class _MapScreenState extends State<MapScreen>
       featureId: 'me',
       position: _currentPosition,
     );
+  }
+
+  Widget _buildWalkingNavigationOverlay() {
+    return KubusWalkingNavigationBinding(
+      coordinator: _walkingCoordinator,
+      builder: (context, navigation) {
+        if (!navigation.isVisible) return const SizedBox.shrink();
+        return Positioned(
+          left: KubusSpacing.md,
+          right: KubusSpacing.md,
+          top: MediaQuery.paddingOf(context).top + 76,
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: KubusWalkingNavigationPanel(
+              navigation: navigation,
+              onEnd: navigation.stop,
+              onResume: () => _resumeWalkingNavigation(navigation),
+              onRetry: () => unawaited(
+                _retryWalkingNavigation(navigation),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  WalkingNavigationMapCoordinator get _walkingCoordinator =>
+      _walkingNavigationMapCoordinator ??= WalkingNavigationMapCoordinator(
+        layersManager: () => _layersManager,
+        isStyleReady: () => _styleInitialized,
+        shouldFollow: () => _autoFollow,
+        followCamera: (position) => _animateMapTo(
+          position,
+          zoom: math.max(_lastZoom, 18),
+          rotation: _direction,
+        ),
+      );
+
+  void _resumeWalkingNavigation(WalkingNavigationProvider navigation) {
+    final position = navigation.currentPosition;
+    if (position == null) return;
+    setState(() {
+      _autoFollow = true;
+      _isometricViewEnabled = true;
+    });
+    _kubusMapController.setAutoFollow(true);
+    unawaited(_applyIsometricCamera(enabled: true));
+    unawaited(_animateMapTo(position, zoom: math.max(_lastZoom, 18)));
+  }
+
+  Future<void> _retryWalkingNavigation(
+    WalkingNavigationProvider navigation,
+  ) async {
+    if (navigation.currentPosition != null) {
+      await navigation.retry();
+      return;
+    }
+    await _prepareWalkingLocationRetry();
+    if (!mounted) return;
+    await _promptForLocationThenCenter(reason: 'walking_navigation_retry');
+    if (!mounted) return;
+    if (!_hasLiveLocationFix) {
+      navigation.reportLocationUnavailable();
+    } else {
+      await navigation.retry();
+    }
+  }
+
+  Future<void> _prepareWalkingLocationRetry() async {
+    if (!kIsWeb) {
+      final permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.deniedForever) {
+        await Geolocator.openAppSettings();
+      }
+      if (!await Geolocator.isLocationServiceEnabled()) {
+        await Geolocator.openLocationSettings();
+      }
+    }
+    _locationPermissionRequested = false;
+    _locationServiceRequested = false;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_kPrefLocationPermissionRequested, false);
+      await prefs.setBool(_kPrefLocationServiceRequested, false);
+    } catch (_) {
+      // In-memory reset is sufficient for the current explicit retry.
+    }
   }
 
   Future<void> _syncMapMarkers({required ThemeProvider themeProvider}) =>

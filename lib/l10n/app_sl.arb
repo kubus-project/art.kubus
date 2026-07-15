@@ -2859,6 +2859,26 @@
   },
   "artDetailNavigationInApp": "Navigacija za pešce v aplikaciji",
   "artDetailNavigationInDevelopment": "V razvoju",
+  "walkingNavigationPreviewNotice": "Predogled hoje v napravi. Poti so lahko nepopolne; spremljajte okolico.",
+  "walkingNavigationWaitingForLocation": "Pridobivanje vaše lokacije…",
+  "walkingNavigationCalculating": "Izračun poti za pešce v tej napravi…",
+  "walkingNavigationArrived": "Prispeli ste",
+  "walkingNavigationRouteUnavailable": "Poti za pešce ni bilo mogoče izračunati.",
+  "walkingNavigationRetry": "Poskusi znova",
+  "walkingNavigationResume": "Nadaljuj",
+  "walkingNavigationEnd": "Končaj",
+  "walkingNavigationContinue": "Nadaljujte po poti",
+  "walkingNavigationTurnLeft": "Zavijte levo",
+  "walkingNavigationTurnRight": "Zavijte desno",
+  "walkingNavigationDepart": "Začnite hoditi",
+  "walkingNavigationRemaining": "{distance} · {minutes}",
+  "@walkingNavigationRemaining": {
+    "placeholders": {
+      "distance": {"type": "String"},
+      "minutes": {"type": "String"}
+    }
+  },
+  "walkingNavigationRouteAttribution": "Podatki poti © sodelavci OpenStreetMap",
   "artDetailNavigationGoogleMaps": "Google Zemljevidi",
   "artDetailShowOnMap": "Prikaži na zemljevidu",
   "artDetailNavigationAppleMaps": "Apple Zemljevidi",

@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:provider/provider.dart';
 
+import '../config/config.dart';
+import '../features/map/navigation/walking_navigation_models.dart';
 import '../l10n/app_localizations.dart';
 import '../screens/map_screen.dart';
 import '../screens/desktop/desktop_map_screen.dart';
 import '../screens/desktop/desktop_shell.dart';
+import '../providers/walking_navigation_provider.dart';
 
 class MapNavigation {
   static void open(
@@ -18,6 +22,7 @@ class MapNavigation {
     String? initialSubjectType,
     String? initialTargetLabel,
     bool preserveDesktopBackStack = false,
+    WalkingNavigationIntent? walkingNavigationIntent,
   }) {
     final width = MediaQuery.sizeOf(context).width;
     final isDesktop = width >= 900;
@@ -42,6 +47,7 @@ class MapNavigation {
               initialSubjectId: initialSubjectId,
               initialSubjectType: initialSubjectType,
               initialTargetLabel: initialTargetLabel,
+              walkingNavigationIntent: walkingNavigationIntent,
             ),
           ),
         );
@@ -61,6 +67,7 @@ class MapNavigation {
                 initialSubjectId: initialSubjectId,
                 initialSubjectType: initialSubjectType,
                 initialTargetLabel: initialTargetLabel,
+                walkingNavigationIntent: walkingNavigationIntent,
               )
             : MapScreen(
                 initialCenter: center,
@@ -71,8 +78,27 @@ class MapNavigation {
                 initialSubjectId: initialSubjectId,
                 initialSubjectType: initialSubjectType,
                 initialTargetLabel: initialTargetLabel,
+                walkingNavigationIntent: walkingNavigationIntent,
               ),
       ),
+    );
+  }
+
+  static void openWalking(
+    BuildContext context, {
+    required WalkingNavigationIntent intent,
+  }) {
+    if (!AppConfig.isFeatureEnabled('mapWalkingNavigation')) return;
+    context.read<WalkingNavigationProvider>().start(intent);
+    open(
+      context,
+      center: intent.destination,
+      zoom: 17,
+      autoFollow: true,
+      initialArtworkId: intent.destinationId,
+      initialTargetLabel: intent.destinationLabel,
+      preserveDesktopBackStack: true,
+      walkingNavigationIntent: intent,
     );
   }
 }
