@@ -6655,6 +6655,12 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get artDetailNavigationInApp => 'In-app walking navigation';
+
+  @override
+  String get artDetailNavigationInDevelopment => 'In development';
+
+  @override
   String get artDetailNavigationGoogleMaps => 'Google Maps';
 
   @override

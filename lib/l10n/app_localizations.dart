@@ -12752,6 +12752,18 @@ abstract class AppLocalizations {
   /// **'Navigate to {title}'**
   String artDetailNavigateToTitle(Object title);
 
+  /// No description provided for @artDetailNavigationInApp.
+  ///
+  /// In en, this message translates to:
+  /// **'In-app walking navigation'**
+  String get artDetailNavigationInApp;
+
+  /// No description provided for @artDetailNavigationInDevelopment.
+  ///
+  /// In en, this message translates to:
+  /// **'In development'**
+  String get artDetailNavigationInDevelopment;
+
   /// No description provided for @artDetailNavigationGoogleMaps.
   ///
   /// In en, this message translates to:

@@ -4023,6 +4023,17 @@ class BackendApiService
     final id = artworkId.trim();
     if (id.isEmpty) return const <ArtMarker>[];
 
+    Future<List<ArtMarker>> readSnapshot() async {
+      final markers = await _loadSnapshotDatasetMaps('markers');
+      return markers
+          .map(_artMarkerFromBackendJson)
+          .where((marker) =>
+              marker.isPublic &&
+              marker.isActive &&
+              (marker.artworkId ?? '').trim() == id)
+          .toList(growable: false);
+    }
+
     try {
       return await _performPublicRead<List<ArtMarker>>(
         liveRead: (candidateBaseUrl) async {
@@ -4030,7 +4041,11 @@ class BackendApiService
             candidateBaseUrl,
             '/api/art-markers/by-artwork/${Uri.encodeComponent(id)}',
             includeAuth: false,
-            allowOrbitFallback: true,
+            // This additive relation endpoint is not guaranteed to be
+            // present on every deployed API version. If it is unavailable,
+            // _performPublicRead can deterministically use the public marker
+            // snapshot below rather than treating a 404 as an empty result.
+            allowOrbitFallback: false,
           );
           final dynamic payload =
               data['data'] ?? data['markers'] ?? data['artMarkers'];
@@ -4042,18 +4057,20 @@ class BackendApiService
                   ))
               .toList(growable: false);
         },
-        snapshotRead: () async {
-          final markers = await _loadSnapshotDatasetMaps('markers');
-          return markers
-              .map(_artMarkerFromBackendJson)
-              .where((marker) =>
-                  marker.isPublic &&
-                  marker.isActive &&
-                  (marker.artworkId ?? '').trim() == id)
-              .toList(growable: false);
-        },
+        snapshotRead: readSnapshot,
       );
     } catch (e) {
+      // This endpoint is additive. During a rolling deployment an older API
+      // can legitimately not expose it yet, while the public marker snapshot
+      // still contains the authoritative artwork relation.
+      final status = _tryParseRequestFailedStatus(e);
+      if (status == 404 || status == 405 || status == 501) {
+        try {
+          return await readSnapshot();
+        } catch (_) {
+          // Fall through to the existing safe empty-state behavior.
+        }
+      }
       AppConfig.debugPrint(
           'BackendApiService.getArtMarkersByArtwork failed: $e');
       return const <ArtMarker>[];

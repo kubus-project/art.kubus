@@ -8,6 +8,8 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/artwork.dart';
+import '../widgets/common/kubus_badge.dart';
+import '../widgets/glass_components.dart';
 import '../widgets/kubus_snackbar.dart';
 import 'design_tokens.dart';
 import 'map_navigation.dart';
@@ -81,8 +83,9 @@ class ArtworkLocationActions {
       '${artwork.position.latitude.toStringAsFixed(6)}, '
       '${artwork.position.longitude.toStringAsFixed(6)}';
 
-  static bool shouldShowAppleMaps(TargetPlatform platform) =>
-      platform == TargetPlatform.iOS || platform == TargetPlatform.macOS;
+  /// Apple Maps has a safe web fallback, so keep it available alongside the
+  /// other external navigation providers on every platform.
+  static bool shouldShowAppleMaps(TargetPlatform platform) => true;
 
   static bool shouldShowPlatformDefaultMaps(
     TargetPlatform platform, {
@@ -242,23 +245,21 @@ class ArtworkLocationActions {
 
     await showModalBottomSheet<void>(
       context: context,
-      backgroundColor: sheetColor,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       clipBehavior: Clip.antiAlias,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
           top: Radius.circular(KubusRadius.xl),
         ),
       ),
-      showDragHandle: true,
       builder: (sheetContext) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              KubusSpacing.lg,
-              KubusSpacing.sm,
-              KubusSpacing.lg,
-              KubusSpacing.lg,
-            ),
+        final maxContentHeight = MediaQuery.sizeOf(sheetContext).height * 0.7;
+        return BackdropGlassSheet(
+          backgroundColor: sheetColor,
+          showBorder: false,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: maxContentHeight),
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -270,6 +271,19 @@ class ArtworkLocationActions {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: KubusSpacing.md),
+                  ListTile(
+                    enabled: false,
+                    leading: const Icon(Icons.directions_walk_outlined),
+                    title: Text(l10n.artDetailNavigationInApp),
+                    trailing: KubusBadge(
+                      text: l10n.artDetailNavigationInDevelopment,
+                      variant: KubusBadgeVariant.status,
+                      accent: Theme.of(sheetContext).colorScheme.primary,
+                      icon: Icons.construction_outlined,
+                      compact: true,
+                    ),
+                  ),
+                  const SizedBox(height: KubusSpacing.xs),
                   for (final option in options)
                     ListTile(
                       leading: Icon(option.icon),

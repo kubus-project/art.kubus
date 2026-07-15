@@ -6669,6 +6669,12 @@ class AppLocalizationsSl extends AppLocalizations {
   }
 
   @override
+  String get artDetailNavigationInApp => 'Navigacija za pešce v aplikaciji';
+
+  @override
+  String get artDetailNavigationInDevelopment => 'V razvoju';
+
+  @override
   String get artDetailNavigationGoogleMaps => 'Google Zemljevidi';
 
   @override
