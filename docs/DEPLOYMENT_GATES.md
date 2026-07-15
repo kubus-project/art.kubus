@@ -73,7 +73,7 @@ up to six times with bounded backoff. A persistent connectivity failure stops
 before the release root is touched; restore the server's SSH service or inbound
 port access before retrying the workflow.
 
-## Android release environment
+## Mobile release environments
 
 Create a protected `android-release` environment with:
 
@@ -92,6 +92,49 @@ before the next automatic alpha release.
 Manual `Deploy` runs can still sign a selected successful CI artifact without
 publishing it. Manual publication requires a new explicit tag and remains
 immutable.
+
+### iOS IPA publication
+
+CI continues to compile an unsigned iOS release on macOS. To attach a signed
+IPA to each new alpha release, create the `ios-release` environment and add:
+
+- `IOS_DISTRIBUTION_CERTIFICATE_BASE64`: base64-encoded Apple Distribution
+  `.p12` certificate
+- `IOS_DISTRIBUTION_CERTIFICATE_PASSWORD`
+- `IOS_PROVISIONING_PROFILE_BASE64`: base64-encoded profile matching the
+  distribution certificate and production bundle ID
+
+Set these repository variables only after the environment has those secrets:
+
+- `IOS_RELEASE_ENABLED=true`
+- `IOS_TEAM_ID`: ten-character Apple Developer team ID
+- `IOS_BUNDLE_ID=com.art.kubus`: the registered production application
+  bundle ID. It must match the source build setting and provisioning profile.
+- `IOS_EXPORT_METHOD`: optional; defaults to `ad-hoc`. Accepted values are
+  `ad-hoc`, `app-store`, `development`, and `enterprise`.
+
+The signing job downloads the exact CI public-build inputs, checks that the
+profile's team and application identifier match the configured values, installs
+the certificate into a temporary keychain, verifies the signed IPA's bundle ID
+and signature, uploads a SHA-256 checksum, then attaches both files to the
+already-created immutable alpha release. It deletes the temporary keychain and
+generated signing configuration in an always-run cleanup step.
+
+Register `com.art.kubus` as an explicit App ID in Apple Developer before
+creating the profile. Update or create the Google iOS OAuth client for that
+same bundle ID, then set its client ID in the existing
+`KUBUS_GOOGLE_IOS_CLIENT_ID` repository variable. CI writes the matching
+native `Info.plist` configuration from that value; do not commit a generated
+Google configuration file.
+
+`ad-hoc` IPAs only install on devices registered in the provisioning profile.
+For TestFlight or App Store distribution, choose `app-store` and upload the
+resulting IPA through the approved App Store Connect release process; attaching
+an IPA to GitHub does not publish it to TestFlight.
+
+Until `IOS_RELEASE_ENABLED` is set, the iOS signing job is intentionally
+skipped so missing Apple credentials cannot block the established Android and
+web release path.
 
 ## CI build metadata
 

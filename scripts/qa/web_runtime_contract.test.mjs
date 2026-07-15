@@ -190,6 +190,40 @@ test('successful master CI publishes one immutable alpha release per version', (
   assert.match(workflow, /replacesArtifacts:\s*false/);
 });
 
+test('iOS publication signs a configured IPA from exact CI inputs before attaching it', () => {
+  const ci = readFileSync(resolve(repoRoot, '.github', 'workflows', 'ci.yml'), 'utf8');
+  const deploy = readFileSync(resolve(repoRoot, '.github', 'workflows', 'deploy.yml'), 'utf8');
+  const releaseConfig = readFileSync(resolve(repoRoot, 'ios', 'Flutter', 'Release.xcconfig'), 'utf8');
+  const buildConfig = readFileSync(resolve(repoRoot, 'scripts', 'prepare_public_build_config.mjs'), 'utf8');
+  const project = readFileSync(
+    resolve(repoRoot, 'ios', 'Runner.xcodeproj', 'project.pbxproj'),
+    'utf8',
+  );
+
+  assert.match(ci, /Retain exact iOS release build inputs/);
+  assert.match(ci, /name: ios-release-inputs-\$\{\{ github\.sha \}\}/);
+  assert.match(deploy, /signed_ipa:[\s\S]*?vars\.IOS_RELEASE_ENABLED == 'true'/);
+  assert.match(deploy, /environment: ios-release/);
+  assert.match(deploy, /IOS_DISTRIBUTION_CERTIFICATE_BASE64/);
+  assert.match(deploy, /IOS_PROVISIONING_PROFILE_BASE64/);
+  assert.match(deploy, /test "\$profile_app_id" = "\$IOS_TEAM_ID\.\$IOS_BUNDLE_ID"/);
+  assert.match(deploy, /flutter build ipa --release/);
+  assert.match(deploy, /codesign --verify --deep --strict/);
+  assert.match(deploy, /gh release upload/);
+  assert.match(deploy, /security delete-keychain/);
+  assert.match(
+    releaseConfig,
+    /KUBUS_IOS_BUNDLE_ID=com\.art\.kubus\r?\n#include\? "Release-CI\.xcconfig"/,
+  );
+  assert.match(releaseConfig, /#include\? "Release-CI\.xcconfig"/);
+  assert.match(releaseConfig, /#include\? "Google-CI\.xcconfig"/);
+  assert.match(buildConfig, /Google-CI\.xcconfig/);
+  assert.match(buildConfig, /KUBUS_GOOGLE_REVERSED_IOS_CLIENT_ID/);
+  const appBundleIds = project
+    .match(/PRODUCT_BUNDLE_IDENTIFIER = "\$\(KUBUS_IOS_BUNDLE_ID\)";/g) ?? [];
+  assert.equal(appBundleIds.length, 3, 'all Runner configurations must share the production bundle ID');
+});
+
 test('Flutter index positions art.kubus as an open art map', () => {
   const html = readFileSync(resolve(repoRoot, 'web', 'index.html'), 'utf8');
 
