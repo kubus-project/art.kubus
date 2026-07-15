@@ -62,6 +62,7 @@ class KubusMapMarkerLayerChips extends StatelessWidget {
         borderRadius: KubusRadius.md,
         fullWidth: fullWidth,
         minHeight: kKubusMapFilterChipHeight,
+        useMapAwareGlass: true,
         onPressed: () => onToggle(type, !selected),
       );
     }

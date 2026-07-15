@@ -4,49 +4,42 @@ import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../models/art_marker.dart';
+import '../filters/map_filter_state.dart';
 
-/// Immutable description of the active quick-filter / search / radius state used
-/// to decide which loaded markers are actually rendered on the map.
+/// Runtime inputs that accompany the persistent typed map filter state.
 ///
-/// This is intentionally decoupled from any provider or widget so the predicate
-/// stays pure and unit-testable. The discovered/favorite/AR signals are injected
-/// as callbacks because they depend on linked artwork state that lives outside
-/// the [ArtMarker] model.
+/// Search text and the current geographic anchor change independently from the
+/// user's semantic filter choices, so they remain request context rather than
+/// becoming part of [KubusMapFilterState].
 @immutable
-class MapMarkerFilterState {
-  const MapMarkerFilterState({
-    this.quickFilterKey = 'all',
+class KubusMapFilterContext {
+  const KubusMapFilterContext({
+    required this.state,
     this.query = '',
     this.basePosition,
-    this.radiusKm = 1.0,
-    this.strictNearbyWithoutBase = false,
+    this.strictNearMeWithoutBase = false,
   });
 
-  /// One of: `all`, `public`, `nearby`, `discovered`, `undiscovered`, `ar`,
-  /// `favorites`. Unknown keys fall back to "show everything eligible".
-  final String quickFilterKey;
+  final KubusMapFilterState state;
 
-  /// Free-text search query (matched against marker name/description/category/
-  /// tags/subject title).
+  /// Free-text search query matched against the supported content fields.
   final String query;
 
-  /// Position used for the `nearby` radius filter (user location or camera).
+  /// User/camera position used only by [KubusMapScope.nearMe].
   final LatLng? basePosition;
 
-  /// Radius in kilometres for the `nearby` filter.
-  final double radiusKm;
-
-  /// When `true`, a `nearby` filter with no [basePosition] hides everything.
-  /// Defaults to `false` for markers so the map never goes empty just because
-  /// the device location is not available yet.
-  final bool strictNearbyWithoutBase;
+  /// Whether near-me filtering hides all content until [basePosition] exists.
+  ///
+  /// The map normally keeps loaded content visible while location is pending,
+  /// while callers that require an exact location may opt into strict mode.
+  final bool strictNearMeWithoutBase;
 }
 
 /// Default AR-capability heuristic that relies only on [ArtMarker] fields.
 ///
 /// A marker is considered AR-capable when it is an experience marker or carries
-/// 3-D model content. Callers can pass their own predicate (e.g. to also honour
-/// the linked artwork's `arEnabled` flag) via [filterVisibleMapMarkers].
+/// 3-D model content. Callers can pass their own predicate (for example, to
+/// honour a linked artwork's `arEnabled` flag) via [filterVisibleMapMarkers].
 bool defaultMarkerIsArCapable(ArtMarker marker) {
   if (marker.type == ArtMarkerType.experience) return true;
   if (marker.modelCID?.trim().isNotEmpty ?? false) return true;
@@ -69,60 +62,71 @@ bool _markerMatchesQuery(ArtMarker marker, String normalizedQuery) {
   return false;
 }
 
-/// Returns whether a single [marker] passes the current [state] and the
-/// injected discovered/favorite/AR predicates.
+bool _markerMatchesScope(ArtMarker marker, KubusMapFilterContext context) {
+  switch (context.state.scope) {
+    case KubusMapScope.currentViewport:
+    case KubusMapScope.travel:
+      // The loaded marker set already represents the active map viewport.
+      return true;
+    case KubusMapScope.nearMe:
+      final base = context.basePosition;
+      if (base == null) return !context.strictNearMeWithoutBase;
+      final radiusMeters = math.max(0.0, context.state.nearMeRadiusKm) * 1000.0;
+      return marker.getDistanceFrom(base) <= radiusMeters;
+  }
+}
+
+/// Returns whether [marker] passes every independent filter dimension.
 ///
-/// Composition order: base eligibility -> search text -> quick filter.
+/// Composition order is content layer, search, geographic scope, discovery,
+/// AR capability, then favorite state. This function deliberately has no
+/// special selection behavior; pinning is a list-level concern handled by
+/// [filterVisibleMapMarkers].
 bool mapMarkerMatchesFilters({
   required ArtMarker marker,
-  required MapMarkerFilterState state,
+  required KubusMapFilterContext context,
   bool Function(ArtMarker marker)? isDiscovered,
   bool Function(ArtMarker marker)? isFavorite,
   bool Function(ArtMarker marker)? isArCapable,
 }) {
-  // Base eligibility mirrors the controller's render gate (valid coordinate).
   if (!marker.hasValidPosition) return false;
 
-  final normalizedQuery = state.query.trim().toLowerCase();
-  if (!_markerMatchesQuery(marker, normalizedQuery)) return false;
-
-  final arCapable = isArCapable ?? defaultMarkerIsArCapable;
-
-  switch (state.quickFilterKey) {
-    case 'nearby':
-      final base = state.basePosition;
-      if (base == null) {
-        return !state.strictNearbyWithoutBase;
-      }
-      final radiusMeters = math.max(0.0, state.radiusKm) * 1000.0;
-      return marker.getDistanceFrom(base) <= radiusMeters;
-    case 'discovered':
-      return isDiscovered?.call(marker) ?? false;
-    case 'undiscovered':
-      // When discovery state is unavailable, treat everything as undiscovered
-      // (explore) rather than hiding the whole map.
-      return !(isDiscovered?.call(marker) ?? false);
-    case 'ar':
-      return arCapable(marker);
-    case 'favorites':
-      return isFavorite?.call(marker) ?? false;
-    case 'all':
-    case 'public':
-    default:
-      return true;
+  final state = context.state;
+  if (!state.visibleContentLayers.contains(marker.type)) return false;
+  if (!_markerMatchesQuery(marker, context.query.trim().toLowerCase())) {
+    return false;
   }
+  if (!_markerMatchesScope(marker, context)) return false;
+
+  final discovered = isDiscovered?.call(marker) ?? false;
+  switch (state.discoveryStatus) {
+    case KubusMapDiscoveryStatus.all:
+      break;
+    case KubusMapDiscoveryStatus.undiscovered:
+      if (discovered) return false;
+    case KubusMapDiscoveryStatus.discovered:
+      if (!discovered) return false;
+  }
+
+  if (state.arOnly && !(isArCapable ?? defaultMarkerIsArCapable)(marker)) {
+    return false;
+  }
+  if (state.favoritesOnly && !(isFavorite?.call(marker) ?? false)) {
+    return false;
+  }
+  return true;
 }
 
-/// Filters [markers] down to the set that should be rendered on the map / fed
-/// into clustering for the current [state].
+/// Filters [markers] to the content rendered by the map and cluster engine.
 ///
-/// [alwaysIncludeMarkerIds] lets the caller pin markers that must stay visible
-/// regardless of the active filter (e.g. the currently selected marker or a
-/// pending/temporary marker), so an active selection is never hidden out from
-/// under the user when they switch filters.
+/// A position-valid ID in [alwaysIncludeMarkerIds] intentionally bypasses the
+/// content-layer, search, scope, discovery, AR, and favorite predicates. This
+/// preserves the established selection/search-navigation contract: changing a
+/// filter must not remove the marker the user is actively interacting with.
+/// Invalid-position markers are never rendered, including when pinned.
 List<ArtMarker> filterVisibleMapMarkers({
   required List<ArtMarker> markers,
-  required MapMarkerFilterState state,
+  required KubusMapFilterContext context,
   bool Function(ArtMarker marker)? isDiscovered,
   bool Function(ArtMarker marker)? isFavorite,
   bool Function(ArtMarker marker)? isArCapable,
@@ -133,7 +137,7 @@ List<ArtMarker> filterVisibleMapMarkers({
     if (always.contains(marker.id) && marker.hasValidPosition) return true;
     return mapMarkerMatchesFilters(
       marker: marker,
-      state: state,
+      context: context,
       isDiscovered: isDiscovered,
       isFavorite: isFavorite,
       isArCapable: isArCapable,

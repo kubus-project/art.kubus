@@ -1,3 +1,4 @@
+import 'package:art_kubus/features/map/filters/map_filter_state.dart';
 import 'package:art_kubus/features/map/shared/map_marker_filtering.dart';
 import 'package:art_kubus/models/art_marker.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -29,176 +30,285 @@ ArtMarker _marker(
   );
 }
 
+KubusMapFilterContext _context({
+  KubusMapFilterState? state,
+  String query = '',
+  LatLng? basePosition,
+  bool strictNearMeWithoutBase = false,
+}) {
+  return KubusMapFilterContext(
+    state: state ?? KubusMapFilterState.defaults(),
+    query: query,
+    basePosition: basePosition,
+    strictNearMeWithoutBase: strictNearMeWithoutBase,
+  );
+}
+
 List<String> _ids(List<ArtMarker> markers) =>
-    markers.map((m) => m.id).toList()..sort();
+    markers.map((marker) => marker.id).toList()..sort();
 
 void main() {
   group('filterVisibleMapMarkers', () {
-    final near = _marker('near', position: const LatLng(46.0500, 14.5000));
-    final far = _marker('far', position: const LatLng(47.0000, 15.0000));
+    final near = _marker('near');
+    final far = _marker('far', position: const LatLng(47, 15));
+    final event = _marker('event', type: ArtMarkerType.event);
     final ar = _marker('ar', type: ArtMarkerType.experience);
     final arModel = _marker('arModel', modelURL: 'https://example.com/m.glb');
     final discovered = _marker('discovered');
     final favorite = _marker('favorite');
-    final nullIsland = _marker('nullIsland', position: const LatLng(0, 0));
-
+    final invalid = _marker('invalid', position: const LatLng(0, 0));
     final all = <ArtMarker>[
       near,
       far,
+      event,
       ar,
       arModel,
       discovered,
       favorite,
-      nullIsland,
+      invalid,
     ];
 
-    test('all filter returns every eligible (valid-position) marker', () {
+    test('defaults keep every valid-position marker', () {
       final result = filterVisibleMapMarkers(
         markers: all,
-        state: const MapMarkerFilterState(quickFilterKey: 'all'),
+        context: _context(),
       );
-      // nullIsland is dropped (invalid position), everything else kept.
-      expect(_ids(result),
-          _ids([near, far, ar, arModel, discovered, favorite]));
+
+      expect(
+        _ids(result),
+        _ids([near, far, event, ar, arModel, discovered, favorite]),
+      );
     });
 
-    test('public behaves like all', () {
+    test('content layers are evaluated before other dimensions', () {
       final result = filterVisibleMapMarkers(
-        markers: all,
-        state: const MapMarkerFilterState(quickFilterKey: 'public'),
-      );
-      expect(result.length, 6);
-    });
-
-    test('nearby filters by radius around the base position', () {
-      final result = filterVisibleMapMarkers(
-        markers: <ArtMarker>[near, far],
-        state: const MapMarkerFilterState(
-          quickFilterKey: 'nearby',
-          basePosition: LatLng(46.0500, 14.5000),
-          radiusKm: 1.0,
+        markers: <ArtMarker>[near, event],
+        context: _context(
+          state: KubusMapFilterState(
+            visibleContentLayers: const <ArtMarkerType>{ArtMarkerType.event},
+          ),
+          query: 'marker',
         ),
       );
+
+      expect(_ids(result), <String>['event']);
+    });
+
+    test('query matches name, description, category, subject, and tags', () {
+      final named = _marker('named', name: 'Copper Mural');
+      final described = _marker('described', description: 'Copper form');
+      final categorized = _marker('categorized', category: 'Copperwork');
+      final tagged = _marker('tagged', tags: const <String>['copper']);
+
+      final result = filterVisibleMapMarkers(
+        markers: <ArtMarker>[named, described, categorized, tagged, near],
+        context: _context(query: ' COPPER '),
+      );
+
+      expect(_ids(result), _ids([named, described, categorized, tagged]));
+    });
+
+    test('current viewport and travel do not apply the near-me radius', () {
+      for (final scope in <KubusMapScope>[
+        KubusMapScope.currentViewport,
+        KubusMapScope.travel,
+      ]) {
+        final result = filterVisibleMapMarkers(
+          markers: <ArtMarker>[near, far],
+          context: _context(
+            state: KubusMapFilterState(
+              scope: scope,
+              nearMeRadiusKm: 1,
+            ),
+            basePosition: near.position,
+          ),
+        );
+
+        expect(_ids(result), _ids([near, far]), reason: scope.name);
+      }
+    });
+
+    test('near-me filters around its base position', () {
+      final result = filterVisibleMapMarkers(
+        markers: <ArtMarker>[near, far],
+        context: _context(
+          state: KubusMapFilterState(
+            scope: KubusMapScope.nearMe,
+            nearMeRadiusKm: 1,
+          ),
+          basePosition: near.position,
+        ),
+      );
+
       expect(_ids(result), <String>['near']);
     });
 
-    test('nearby without base position is non-strict by default (keeps all)',
-        () {
-      final result = filterVisibleMapMarkers(
+    test('near-me without a base is permissive or strict by request', () {
+      final state = KubusMapFilterState(scope: KubusMapScope.nearMe);
+
+      final permissive = filterVisibleMapMarkers(
         markers: <ArtMarker>[near, far],
-        state: const MapMarkerFilterState(quickFilterKey: 'nearby'),
+        context: _context(state: state),
       );
-      expect(_ids(result), _ids([near, far]));
+      final strict = filterVisibleMapMarkers(
+        markers: <ArtMarker>[near, far],
+        context: _context(state: state, strictNearMeWithoutBase: true),
+      );
+
+      expect(_ids(permissive), _ids([near, far]));
+      expect(strict, isEmpty);
     });
 
-    test('nearby without base position can be strict (empty)', () {
-      final result = filterVisibleMapMarkers(
-        markers: <ArtMarker>[near, far],
-        state: const MapMarkerFilterState(
-          quickFilterKey: 'nearby',
-          strictNearbyWithoutBase: true,
+    test('discovery status is exclusive and missing discovery means false', () {
+      final source = <ArtMarker>[near, discovered];
+      bool resolver(ArtMarker marker) => marker.id == discovered.id;
+
+      final discoveredResult = filterVisibleMapMarkers(
+        markers: source,
+        context: _context(
+          state: KubusMapFilterState(
+            discoveryStatus: KubusMapDiscoveryStatus.discovered,
+          ),
         ),
+        isDiscovered: resolver,
       );
-      expect(result, isEmpty);
+      final undiscoveredResult = filterVisibleMapMarkers(
+        markers: source,
+        context: _context(
+          state: KubusMapFilterState(
+            discoveryStatus: KubusMapDiscoveryStatus.undiscovered,
+          ),
+        ),
+        isDiscovered: resolver,
+      );
+
+      expect(_ids(discoveredResult), <String>['discovered']);
+      expect(_ids(undiscoveredResult), <String>['near']);
+      expect(
+        filterVisibleMapMarkers(
+          markers: source,
+          context: _context(
+            state: KubusMapFilterState(
+              discoveryStatus: KubusMapDiscoveryStatus.discovered,
+            ),
+          ),
+        ),
+        isEmpty,
+      );
     });
 
-    test('AR filter returns only AR-capable markers (type or model content)',
-        () {
+    test('AR-only accepts experience, model content, or caller capability', () {
+      final custom = _marker('custom');
       final result = filterVisibleMapMarkers(
-        markers: all,
-        state: const MapMarkerFilterState(quickFilterKey: 'ar'),
+        markers: <ArtMarker>[near, ar, arModel, custom],
+        context: _context(state: KubusMapFilterState(arOnly: true)),
+        isArCapable: (marker) =>
+            defaultMarkerIsArCapable(marker) || marker.id == custom.id,
       );
-      expect(_ids(result), _ids([ar, arModel]));
+
+      expect(_ids(result), _ids([ar, arModel, custom]));
     });
 
-    test('favorites filter returns only favorited markers', () {
-      final result = filterVisibleMapMarkers(
-        markers: all,
-        state: const MapMarkerFilterState(quickFilterKey: 'favorites'),
-        isFavorite: (m) => m.id == 'favorite',
+    test('favorites-only requires a positive resolver', () {
+      final state = KubusMapFilterState(favoritesOnly: true);
+      final resolved = filterVisibleMapMarkers(
+        markers: <ArtMarker>[near, favorite],
+        context: _context(state: state),
+        isFavorite: (marker) => marker.id == favorite.id,
       );
-      expect(_ids(result), <String>['favorite']);
+      final unresolved = filterVisibleMapMarkers(
+        markers: <ArtMarker>[near, favorite],
+        context: _context(state: state),
+      );
+
+      expect(_ids(resolved), <String>['favorite']);
+      expect(unresolved, isEmpty);
     });
 
-    test('favorites with no resolver returns nothing', () {
-      final result = filterVisibleMapMarkers(
-        markers: all,
-        state: const MapMarkerFilterState(quickFilterKey: 'favorites'),
-      );
-      expect(result, isEmpty);
-    });
-
-    test('discovered filter returns only discovered markers', () {
-      final result = filterVisibleMapMarkers(
-        markers: all,
-        state: const MapMarkerFilterState(quickFilterKey: 'discovered'),
-        isDiscovered: (m) => m.id == 'discovered',
-      );
-      expect(_ids(result), <String>['discovered']);
-    });
-
-    test('undiscovered filter returns only not-yet-discovered markers', () {
-      final result = filterVisibleMapMarkers(
-        markers: <ArtMarker>[near, discovered],
-        state: const MapMarkerFilterState(quickFilterKey: 'undiscovered'),
-        isDiscovered: (m) => m.id == 'discovered',
-      );
-      expect(_ids(result), <String>['near']);
-    });
-
-    test('category + quick filter compose', () {
-      final sculpture = _marker(
-        'sculpture',
+    test('all independent dimensions compose simultaneously', () {
+      final match = _marker(
+        'match',
+        name: 'Blue sculpture',
         type: ArtMarkerType.experience,
-        category: 'Sculpture',
       );
+      final wrongLayer = _marker(
+        'wrong-layer',
+        name: 'Blue sculpture',
+        type: ArtMarkerType.event,
+      );
+      final wrongQuery = _marker(
+        'wrong-query',
+        name: 'Red sculpture',
+        type: ArtMarkerType.experience,
+      );
+      final wrongRadius = _marker(
+        'wrong-radius',
+        name: 'Blue sculpture',
+        position: far.position,
+        type: ArtMarkerType.experience,
+      );
+      final wrongDiscovery = _marker(
+        'wrong-discovery',
+        name: 'Blue sculpture',
+        type: ArtMarkerType.experience,
+      );
+      final wrongFavorite = _marker(
+        'wrong-favorite',
+        name: 'Blue sculpture',
+        type: ArtMarkerType.experience,
+      );
+
       final result = filterVisibleMapMarkers(
-        markers: <ArtMarker>[ar, arModel, sculpture],
-        state: const MapMarkerFilterState(
-          quickFilterKey: 'ar',
-          query: 'sculpture',
+        markers: <ArtMarker>[
+          match,
+          wrongLayer,
+          wrongQuery,
+          wrongRadius,
+          wrongDiscovery,
+          wrongFavorite,
+        ],
+        context: _context(
+          state: KubusMapFilterState(
+            scope: KubusMapScope.nearMe,
+            nearMeRadiusKm: 1,
+            discoveryStatus: KubusMapDiscoveryStatus.discovered,
+            arOnly: true,
+            favoritesOnly: true,
+            visibleContentLayers: const <ArtMarkerType>{
+              ArtMarkerType.experience,
+            },
+          ),
+          query: 'blue',
+          basePosition: match.position,
         ),
+        isDiscovered: (marker) => marker.id != wrongDiscovery.id,
+        isFavorite: (marker) => marker.id != wrongFavorite.id,
       );
-      // Only the AR-capable marker whose text matches the query.
-      expect(_ids(result), <String>['sculpture']);
+
+      expect(_ids(result), <String>['match']);
     });
 
-    test('search + quick filter compose', () {
-      final mural = _marker('mural', name: 'Big Mural', tags: ['streetart']);
-      final other = _marker('other', name: 'Quiet Statue');
+    test('pins bypass filters but never invalid-position eligibility', () {
+      final hiddenEvent = _marker('hidden', type: ArtMarkerType.event);
       final result = filterVisibleMapMarkers(
-        markers: <ArtMarker>[mural, other],
-        state: const MapMarkerFilterState(
-          quickFilterKey: 'all',
-          query: 'mural',
+        markers: <ArtMarker>[hiddenEvent, invalid],
+        context: _context(
+          state: KubusMapFilterState(
+            favoritesOnly: true,
+            visibleContentLayers: const <ArtMarkerType>{
+              ArtMarkerType.artwork,
+            },
+          ),
+          query: 'does-not-match',
         ),
+        isFavorite: (_) => false,
+        alwaysIncludeMarkerIds: <String>{hiddenEvent.id, invalid.id},
       );
-      expect(_ids(result), <String>['mural']);
+
+      expect(_ids(result), <String>['hidden']);
     });
 
-    test('empty result when nothing matches', () {
-      final result = filterVisibleMapMarkers(
-        markers: all,
-        state: const MapMarkerFilterState(
-          quickFilterKey: 'all',
-          query: 'no-such-marker-xyz',
-        ),
-      );
-      expect(result, isEmpty);
-    });
-
-    test('alwaysIncludeMarkerIds pins a marker through a filter', () {
-      // `far` would be excluded by favorites, but is pinned (e.g. selected).
-      final result = filterVisibleMapMarkers(
-        markers: <ArtMarker>[near, far],
-        state: const MapMarkerFilterState(quickFilterKey: 'favorites'),
-        isFavorite: (m) => false,
-        alwaysIncludeMarkerIds: <String>{'far'},
-      );
-      expect(_ids(result), <String>['far']);
-    });
-
-    test('defaultMarkerIsArCapable detects experience + model content', () {
+    test('defaultMarkerIsArCapable detects experience and model content', () {
       expect(defaultMarkerIsArCapable(ar), isTrue);
       expect(defaultMarkerIsArCapable(arModel), isTrue);
       expect(defaultMarkerIsArCapable(near), isFalse);

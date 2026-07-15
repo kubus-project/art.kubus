@@ -48,7 +48,8 @@ abstract class MapLayersController {
 
   Future<void> setGeoJsonSource(String sourceId, Map<String, dynamic> data);
   Future<void> setLayerVisibility(String layerId, bool visible);
-  Future<void> setLayerProperties(String layerId, ml.LayerProperties properties);
+  Future<void> setLayerProperties(
+      String layerId, ml.LayerProperties properties);
 
   /// Optional API: implemented via dynamic invocation to tolerate plugin
   /// version differences.
@@ -122,7 +123,8 @@ class MapLibreLayersController implements MapLayersController {
   }
 
   @override
-  Future<void> setLayerProperties(String layerId, ml.LayerProperties properties) {
+  Future<void> setLayerProperties(
+      String layerId, ml.LayerProperties properties) {
     return _controller.setLayerProperties(layerId, properties);
   }
 
@@ -294,19 +296,31 @@ class KubusMarkerLayerStyler {
     final multiplier = <Object>['case'];
     if (pressedId != null) {
       multiplier.addAll(<Object>[
-        <Object>['==', <Object>['id'], pressedId],
+        <Object>[
+          '==',
+          <Object>['id'],
+          pressedId
+        ],
         MapMarkerStyleConfig.pressedScaleFactor,
       ]);
     }
     if (selectedId != null) {
       multiplier.addAll(<Object>[
-        <Object>['==', <Object>['id'], selectedId],
+        <Object>[
+          '==',
+          <Object>['id'],
+          selectedId
+        ],
         pop,
       ]);
     }
     if (hoveredId != null) {
       multiplier.addAll(<Object>[
-        <Object>['==', <Object>['id'], hoveredId],
+        <Object>[
+          '==',
+          <Object>['id'],
+          hoveredId
+        ],
         MapMarkerStyleConfig.hoverScaleFactor,
       ]);
     }
@@ -318,14 +332,19 @@ class KubusMarkerLayerStyler {
     );
   }
 
-  static Object interactiveIconImageExpression(KubusMarkerLayerStyleState state) {
+  static Object interactiveIconImageExpression(
+      KubusMarkerLayerStyleState state) {
     final selectedId = state.selectedMarkerId;
     if (selectedId == null || selectedId.isEmpty) {
       return const <Object>['get', 'icon'];
     }
     return <Object>[
       'case',
-      <Object>['==', <Object>['id'], selectedId],
+      <Object>[
+        '==',
+        <Object>['id'],
+        selectedId
+      ],
       const <Object>['get', 'iconSelected'],
       const <Object>['get', 'icon'],
     ];
@@ -376,7 +395,11 @@ class KubusMarkerLayerStyler {
         ? 1.0
         : <Object>[
             'case',
-            <Object>['==', <Object>['id'], selectedId],
+            <Object>[
+              '==',
+              <Object>['id'],
+              selectedId
+            ],
             2.0,
             1.0,
           ];
@@ -413,8 +436,8 @@ class KubusMarkerLayerStyler {
         await controller.setLayerProperties(
           pulseLayerId,
           ml.CircleLayerProperties(
-            circleRadius:
-                MapMarkerStyleConfig.pulseRadiusForPhase(state.markerPulsePhase),
+            circleRadius: MapMarkerStyleConfig.pulseRadiusForPhase(
+                state.markerPulsePhase),
             circleColor: const <Object>['get', 'color'],
             circleOpacity: markerVisible
                 ? MapMarkerStyleConfig.pulseOpacityForPhase(
@@ -528,6 +551,7 @@ class MapLayersManagerStats {
     required this.removeLayerCalls,
     required this.removeSourceCalls,
     required this.sourceUpdateCalls,
+    required this.sourceUpdateSkips,
     required this.layerPropertiesCalls,
     required this.visibilityCalls,
     required this.modeToggles,
@@ -538,9 +562,30 @@ class MapLayersManagerStats {
   final int removeLayerCalls;
   final int removeSourceCalls;
   final int sourceUpdateCalls;
+
+  /// GeoJSON writes avoided because the canonical payload was unchanged.
+  final int sourceUpdateSkips;
   final int layerPropertiesCalls;
   final int visibilityCalls;
   final int modeToggles;
+}
+
+class _MarkerSourceWriteRequest {
+  _MarkerSourceWriteRequest({
+    required this.featureCollection,
+    required this.fingerprint,
+    required this.styleEpoch,
+  });
+
+  final Map<String, dynamic> featureCollection;
+  final String fingerprint;
+  final int styleEpoch;
+  final Completer<bool> completer = Completer<bool>();
+}
+
+class _MarkerSourceWriteQueue {
+  bool isDraining = false;
+  _MarkerSourceWriteRequest? pending;
 }
 
 /// Single source of truth for MapLibre source/layer lifecycle.
@@ -582,6 +627,17 @@ class MapLayersManager {
   final Set<String> _sourceIds = <String>{};
   final Set<String> _registeredImages = <String>{};
 
+  // Retain the exact canonical payload rather than a lossy integer hash: a
+  // collision must never suppress marker selection, entry, or spiderfy state.
+  // Map keys are sorted while feature/list order remains significant.
+  final Map<String, String> _sourceFingerprints = <String, String>{};
+  // MapLibre source writes are asynchronous. Keeping every intermediate
+  // animation frame in a FIFO queue makes a busy renderer show stale marker
+  // topology long after the camera has settled. Each source therefore has one
+  // in-flight write and, at most, the latest requested frame waiting behind it.
+  final Map<String, _MarkerSourceWriteQueue> _markerSourceWriteQueues =
+      <String, _MarkerSourceWriteQueue>{};
+
   int? _initializedForStyleEpoch;
   MapRenderMode _currentMode = MapRenderMode.twoD;
   MapLayersThemeSpec? _themeSpec;
@@ -593,6 +649,7 @@ class MapLayersManager {
   int _removeLayerCalls = 0;
   int _removeSourceCalls = 0;
   int _sourceUpdateCalls = 0;
+  int _sourceUpdateSkips = 0;
   int _layerPropertiesCalls = 0;
   int _visibilityCalls = 0;
   int _modeToggles = 0;
@@ -603,6 +660,7 @@ class MapLayersManager {
         removeLayerCalls: _removeLayerCalls,
         removeSourceCalls: _removeSourceCalls,
         sourceUpdateCalls: _sourceUpdateCalls,
+        sourceUpdateSkips: _sourceUpdateSkips,
         layerPropertiesCalls: _layerPropertiesCalls,
         visibilityCalls: _visibilityCalls,
         modeToggles: _modeToggles,
@@ -626,6 +684,14 @@ class MapLayersManager {
     _layerIds.clear();
     _sourceIds.clear();
     _registeredImages.clear();
+    _sourceFingerprints.clear();
+    for (final queue in _markerSourceWriteQueues.values) {
+      final pending = queue.pending;
+      if (pending != null && !pending.completer.isCompleted) {
+        pending.completer.complete(false);
+      }
+      queue.pending = null;
+    }
     _mirrorToScreenSets();
   }
 
@@ -672,14 +738,113 @@ class MapLayersManager {
     }
   }
 
-  Future<void> upsertMarkerData(Map<String, dynamic> featureCollection) async {
-    if (!hasSource(_ids.markerSourceId)) return;
-    try {
-      _sourceUpdateCalls += 1;
-      await _controller.setGeoJsonSource(_ids.markerSourceId, featureCollection);
-    } catch (_) {
-      // Best-effort: style swaps can invalidate the source mid-flight.
+  /// Writes marker GeoJSON only when its complete rendered payload changed.
+  ///
+  /// Returns true after a material write succeeds. Failed writes are not
+  /// fingerprinted, and concurrent requests serialize so duplicates can skip.
+  Future<bool> upsertMarkerData(Map<String, dynamic> featureCollection) {
+    return _upsertMarkerData(featureCollection);
+  }
+
+  Future<bool> _upsertMarkerData(Map<String, dynamic> featureCollection) {
+    final sourceId = _ids.markerSourceId;
+    if (!hasSource(sourceId)) return Future<bool>.value(false);
+
+    final requestedStyleEpoch = _initializedForStyleEpoch;
+    if (requestedStyleEpoch == null) return Future<bool>.value(false);
+    final fingerprint = _canonicalSourceFingerprint(featureCollection);
+    final request = _MarkerSourceWriteRequest(
+      featureCollection: featureCollection,
+      fingerprint: fingerprint,
+      styleEpoch: requestedStyleEpoch,
+    );
+    final queue = _markerSourceWriteQueues.putIfAbsent(
+      sourceId,
+      _MarkerSourceWriteQueue.new,
+    );
+
+    // Supersede an obsolete queued animation frame. The in-flight write is
+    // retained because platform APIs do not support cancellation safely.
+    final superseded = queue.pending;
+    if (superseded != null && !superseded.completer.isCompleted) {
+      superseded.completer.complete(false);
     }
+    queue.pending = request;
+
+    if (!queue.isDraining) {
+      queue.isDraining = true;
+      unawaited(_drainMarkerSourceWrites(sourceId, queue));
+    }
+
+    return request.completer.future;
+  }
+
+  Future<void> _drainMarkerSourceWrites(
+    String sourceId,
+    _MarkerSourceWriteQueue queue,
+  ) async {
+    try {
+      while (queue.pending != null) {
+        final request = queue.pending!;
+        queue.pending = null;
+        bool didWrite = false;
+
+        // A style swap/source recreation while queued invalidates this frame.
+        if (_initializedForStyleEpoch == request.styleEpoch &&
+            hasSource(sourceId)) {
+          if (_sourceFingerprints[sourceId] == request.fingerprint) {
+            _sourceUpdateSkips += 1;
+          } else {
+            try {
+              _sourceUpdateCalls += 1;
+              await _controller.setGeoJsonSource(
+                sourceId,
+                request.featureCollection,
+              );
+              if (_initializedForStyleEpoch == request.styleEpoch &&
+                  hasSource(sourceId)) {
+                _sourceFingerprints[sourceId] = request.fingerprint;
+                didWrite = true;
+              }
+            } catch (_) {
+              // Do not commit the fingerprint so a later frame can retry.
+            }
+          }
+        }
+        if (!request.completer.isCompleted) {
+          request.completer.complete(didWrite);
+        }
+      }
+    } finally {
+      queue.isDraining = false;
+      if (queue.pending != null) {
+        queue.isDraining = true;
+        unawaited(_drainMarkerSourceWrites(sourceId, queue));
+      } else if (identical(_markerSourceWriteQueues[sourceId], queue)) {
+        _markerSourceWriteQueues.remove(sourceId);
+      }
+    }
+  }
+
+  static String _canonicalSourceFingerprint(Object? value) {
+    Object? canonicalize(Object? current) {
+      if (current is Map) {
+        final entries = current.entries.toList()
+          ..sort((a, b) => a.key.toString().compareTo(b.key.toString()));
+        return <String, Object?>{
+          for (final entry in entries)
+            entry.key.toString(): canonicalize(entry.value),
+        };
+      }
+      if (current is List) {
+        return <Object?>[
+          for (final item in current) canonicalize(item),
+        ];
+      }
+      return current;
+    }
+
+    return jsonEncode(canonicalize(value));
   }
 
   Future<void> upsertCubeData(Map<String, dynamic> featureCollection) async {
@@ -692,17 +857,20 @@ class MapLayersManager {
     }
   }
 
-  Future<void> upsertUserLocationData(Map<String, dynamic> featureCollection) async {
+  Future<void> upsertUserLocationData(
+      Map<String, dynamic> featureCollection) async {
     if (!hasSource(_ids.locationSourceId)) return;
     try {
       _sourceUpdateCalls += 1;
-      await _controller.setGeoJsonSource(_ids.locationSourceId, featureCollection);
+      await _controller.setGeoJsonSource(
+          _ids.locationSourceId, featureCollection);
     } catch (_) {
       // Best-effort.
     }
   }
 
-  Future<void> upsertPendingMarkerData(Map<String, dynamic> featureCollection) async {
+  Future<void> upsertPendingMarkerData(
+      Map<String, dynamic> featureCollection) async {
     final sourceId = _ids.pendingSourceId;
     if (sourceId == null) return;
     if (!hasSource(sourceId)) return;
@@ -895,7 +1063,11 @@ class MapLayersManager {
       ml.CircleLayerProperties(
         circleRadius: <Object>[
           'case',
-          <Object>['==', <Object>['get', 'kind'], 'cluster'],
+          <Object>[
+            '==',
+            <Object>['get', 'kind'],
+            'cluster'
+          ],
           MapMarkerStyleConfig.clusterDotRadiusPx,
           MapMarkerStyleConfig.dotRadiusPx,
         ],
@@ -914,61 +1086,61 @@ class MapLayersManager {
     _layerIds.add(_ids.markerDotLayerId);
 
     await _controller.addSymbolLayer(
-        _ids.markerSourceId,
-        _ids.markerLayerId,
-        ml.SymbolLayerProperties(
-          iconImage: const <Object>['get', 'icon'],
-          iconSize: MapMarkerStyleConfig.iconSizeExpression(
-            multiplier: <Object>[
-              'coalesce',
-              <Object>['get', 'entryScale'],
-              1.0,
-            ],
-          ),
-          iconOpacity: <Object>[
+      _ids.markerSourceId,
+      _ids.markerLayerId,
+      ml.SymbolLayerProperties(
+        iconImage: const <Object>['get', 'icon'],
+        iconSize: MapMarkerStyleConfig.iconSizeExpression(
+          multiplier: <Object>[
             'coalesce',
-            <Object>['get', 'entryOpacity'],
+            <Object>['get', 'entryScale'],
             1.0,
           ],
-          iconAllowOverlap: true,
-          iconIgnorePlacement: true,
-          // Floating badge: anchored at the icon bottom (float gap baked into
-          // the PNG) and kept upright in screen space so it stays readable under
-          // pitch + bearing rotation.
-          iconAnchor: 'bottom',
-          iconPitchAlignment: 'viewport',
-          iconRotationAlignment: 'viewport',
         ),
+        iconOpacity: <Object>[
+          'coalesce',
+          <Object>['get', 'entryOpacity'],
+          1.0,
+        ],
+        iconAllowOverlap: true,
+        iconIgnorePlacement: true,
+        // Floating badge: anchored at the icon bottom (float gap baked into
+        // the PNG) and kept upright in screen space so it stays readable under
+        // pitch + bearing rotation.
+        iconAnchor: 'bottom',
+        iconPitchAlignment: 'viewport',
+        iconRotationAlignment: 'viewport',
+      ),
     );
     _addLayerCalls += 1;
     _layerIds.add(_ids.markerLayerId);
 
     await _controller.addSymbolLayer(
-        _ids.markerSourceId,
-        _ids.cubeIconLayerId,
-        ml.SymbolLayerProperties(
-          iconImage: const <Object>['get', 'icon'],
-          iconSize: MapMarkerStyleConfig.iconSizeExpression(
-            constantScale: 0.92,
-            multiplier: <Object>[
-              'coalesce',
-              <Object>['get', 'entryScale'],
-              1.0,
-            ],
-          ),
-          iconOpacity: <Object>[
+      _ids.markerSourceId,
+      _ids.cubeIconLayerId,
+      ml.SymbolLayerProperties(
+        iconImage: const <Object>['get', 'icon'],
+        iconSize: MapMarkerStyleConfig.iconSizeExpression(
+          constantScale: 0.92,
+          multiplier: <Object>[
             'coalesce',
-            <Object>['get', 'entryOpacity'],
+            <Object>['get', 'entryScale'],
             1.0,
           ],
-          iconAllowOverlap: true,
-          iconIgnorePlacement: true,
-          iconAnchor: 'center',
-          iconPitchAlignment: 'viewport',
-          iconRotationAlignment: 'viewport',
-          iconOffset: MapMarkerStyleConfig.cubeFloatingIconOffsetEm,
-          visibility: 'none',
         ),
+        iconOpacity: <Object>[
+          'coalesce',
+          <Object>['get', 'entryOpacity'],
+          1.0,
+        ],
+        iconAllowOverlap: true,
+        iconIgnorePlacement: true,
+        iconAnchor: 'center',
+        iconPitchAlignment: 'viewport',
+        iconRotationAlignment: 'viewport',
+        iconOffset: MapMarkerStyleConfig.cubeFloatingIconOffsetEm,
+        visibility: 'none',
+      ),
     );
     _addLayerCalls += 1;
     _layerIds.add(_ids.cubeIconLayerId);
@@ -984,28 +1156,44 @@ class MapLayersManager {
             3,
             <Object>[
               'case',
-              <Object>['==', <Object>['get', 'kind'], 'cluster'],
+              <Object>[
+                '==',
+                <Object>['get', 'kind'],
+                'cluster'
+              ],
               50,
               36,
             ],
             12,
             <Object>[
               'case',
-              <Object>['==', <Object>['get', 'kind'], 'cluster'],
+              <Object>[
+                '==',
+                <Object>['get', 'kind'],
+                'cluster'
+              ],
               64,
               44,
             ],
             15,
             <Object>[
               'case',
-              <Object>['==', <Object>['get', 'kind'], 'cluster'],
+              <Object>[
+                '==',
+                <Object>['get', 'kind'],
+                'cluster'
+              ],
               76,
               56,
             ],
             24,
             <Object>[
               'case',
-              <Object>['==', <Object>['get', 'kind'], 'cluster'],
+              <Object>[
+                '==',
+                <Object>['get', 'kind'],
+                'cluster'
+              ],
               84,
               76,
             ],
@@ -1040,28 +1228,44 @@ class MapLayersManager {
               3,
               <Object>[
                 'case',
-                <Object>['==', <Object>['get', 'kind'], 'cluster'],
+                <Object>[
+                  '==',
+                  <Object>['get', 'kind'],
+                  'cluster'
+                ],
                 25,
                 18,
               ],
               12,
               <Object>[
                 'case',
-                <Object>['==', <Object>['get', 'kind'], 'cluster'],
+                <Object>[
+                  '==',
+                  <Object>['get', 'kind'],
+                  'cluster'
+                ],
                 32,
                 22,
               ],
               15,
               <Object>[
                 'case',
-                <Object>['==', <Object>['get', 'kind'], 'cluster'],
+                <Object>[
+                  '==',
+                  <Object>['get', 'kind'],
+                  'cluster'
+                ],
                 38,
                 28,
               ],
               24,
               <Object>[
                 'case',
-                <Object>['==', <Object>['get', 'kind'], 'cluster'],
+                <Object>[
+                  '==',
+                  <Object>['get', 'kind'],
+                  'cluster'
+                ],
                 42,
                 38,
               ],
@@ -1172,6 +1376,7 @@ class MapLayersManager {
   }
 
   Future<void> _safeRemoveSource(String id) async {
+    _sourceFingerprints.remove(id);
     try {
       await _controller.removeSource(id);
       _removeSourceCalls += 1;

@@ -46,6 +46,8 @@ class KubusDiscoveryCard extends StatelessWidget {
     this.toggleConfigs = const <KubusDiscoveryToggleConfig>[],
     this.footer,
     this.expansionDirection = KubusDiscoveryExpansionDirection.downward,
+    this.compactWhenCollapsed = false,
+    this.compactProgressLabel,
   });
 
   final double overallProgress;
@@ -66,6 +68,8 @@ class KubusDiscoveryCard extends StatelessWidget {
 
   final List<KubusDiscoveryToggleConfig> toggleConfigs;
   final Widget? footer;
+  final bool compactWhenCollapsed;
+  final String? compactProgressLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -115,6 +119,8 @@ class KubusDiscoveryCard extends StatelessWidget {
       expanded: expanded,
       taskRows: expandedRows,
       expansionDirection: expansionDirection,
+      compactWhenCollapsed: compactWhenCollapsed,
+      compactProgressLabel: compactProgressLabel,
       toggleButton: KubusGlassIconButton(
         icon: chevronIcon,
         tooltip: expanded ? l10n.commonCollapse : l10n.commonExpand,

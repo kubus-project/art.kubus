@@ -159,7 +159,8 @@ Future<Map<String, dynamic>> kubusClusterFeatureFor({
 }) async {
   if (shouldAbort()) return const <String, dynamic>{};
 
-  final label = cluster.markers.length > 99 ? '99+' : '${cluster.markers.length}';
+  final label =
+      cluster.markers.length > 99 ? '99+' : '${cluster.markers.length}';
   final renderData = kubusClusterBadgeRenderData(
     cluster.markers,
     scheme: scheme,
@@ -215,6 +216,9 @@ Future<Map<String, dynamic>> kubusClusterFeatureFor({
       'renderMode': 'cluster',
       'sameCoordinateKey': cluster.sameCoordinateKey,
       'clusterCount': cluster.markers.length,
+      'clusterMemberIds': <String>[
+        for (final marker in cluster.markers) marker.id,
+      ]..sort(),
       // Clusters take part in the shared entry animation (viewport entry and
       // soft regroup) via the same expression-driven properties as markers.
       'entryScale': entryScale.clamp(

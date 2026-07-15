@@ -20,6 +20,7 @@ class KubusGlassChip extends StatelessWidget {
     this.fullWidth = false,
     this.minWidth,
     this.minHeight,
+    this.useMapAwareGlass = false,
   });
 
   final String label;
@@ -41,6 +42,11 @@ class KubusGlassChip extends StatelessWidget {
 
   /// Consistent cell height so a row/grid of chips reads with equal weight.
   final double? minHeight;
+
+  /// Routes map-overlay filter chips through the centralized map-aware glass
+  /// policy so their tint, fallback sheen, and border read as one surface over
+  /// MapLibre rather than a generic chip inside a separate outline.
+  final bool useMapAwareGlass;
 
   @override
   Widget build(BuildContext context) {
@@ -74,6 +80,65 @@ class KubusGlassChip extends StatelessWidget {
           : KubusGlassEffects.fallbackOpaqueOpacity,
     );
 
+    final child = wrapWithKubusMapGlassSheen(
+      show: !(enableBlur && allowBlur),
+      borderRadius: radius,
+      isDark: isDark,
+      child: Row(
+        mainAxisSize: fullWidth ? MainAxisSize.max : MainAxisSize.min,
+        mainAxisAlignment:
+            fullWidth ? MainAxisAlignment.center : MainAxisAlignment.start,
+        children: [
+          Icon(
+            icon,
+            size: KubusHeaderMetrics.actionIcon - KubusSpacing.xxs,
+            color: active ? accent : scheme.onSurface.withValues(alpha: 0.65),
+          ),
+          const SizedBox(width: KubusSpacing.sm),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: fullWidth ? TextAlign.center : TextAlign.start,
+              style: (active
+                      ? theme.textTheme.labelLarge
+                      : theme.textTheme.labelMedium)
+                  ?.copyWith(color: active ? accent : scheme.onSurface),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    final surface = useMapAwareGlass
+        ? buildKubusMapGlassSurface(
+            context: context,
+            kind: KubusMapGlassSurfaceKind.button,
+            borderRadius: radius,
+            tintBase: active
+                ? (Color.lerp(scheme.surface, accent, 0.18) ?? scheme.surface)
+                : scheme.surface,
+            padding: const EdgeInsets.symmetric(
+              horizontal: KubusSpacing.sm + KubusSpacing.xs,
+              vertical: KubusSpacing.sm + KubusSpacing.xxs,
+            ),
+            child: child,
+          )
+        : LiquidGlassPanel(
+            padding: const EdgeInsets.symmetric(
+              horizontal: KubusSpacing.sm + KubusSpacing.xs,
+              vertical: KubusSpacing.sm + KubusSpacing.xxs,
+            ),
+            margin: EdgeInsets.zero,
+            borderRadius: radius,
+            blurSigma: KubusGlassEffects.blurSigmaLight,
+            showBorder: false,
+            backgroundColor: active ? selectedTint : idleTint,
+            enableBlur: enableBlur,
+            child: child,
+          );
+
     return Semantics(
       // Filter/layer chips are toggleable; expose the on/off state so screen
       // readers announce selection instead of a plain button. The inner Text
@@ -91,15 +156,17 @@ class KubusGlassChip extends StatelessWidget {
           constraints: constraints,
           decoration: BoxDecoration(
             borderRadius: radius,
-            border: Border.all(
-              color: active
-                  ? accent.withValues(alpha: 0.85)
-                  : scheme.outline.withValues(
-                      alpha: KubusGlassEffects.glassBorderOpacitySubtle,
-                    ),
-              width: active ? 1.25 : 1,
-            ),
-            boxShadow: active
+            border: useMapAwareGlass
+                ? null
+                : Border.all(
+                    color: active
+                        ? accent.withValues(alpha: 0.85)
+                        : scheme.outline.withValues(
+                            alpha: KubusGlassEffects.glassBorderOpacitySubtle,
+                          ),
+                    width: active ? 1.25 : 1,
+                  ),
+            boxShadow: !useMapAwareGlass && active
                 ? [
                     BoxShadow(
                       color: accent.withValues(alpha: 0.12),
@@ -109,56 +176,12 @@ class KubusGlassChip extends StatelessWidget {
                   ]
                 : null,
           ),
-          child: LiquidGlassPanel(
-            padding: const EdgeInsets.symmetric(
-              horizontal: KubusSpacing.sm + KubusSpacing.xs,
-              vertical: KubusSpacing.sm + KubusSpacing.xxs,
-            ),
-            margin: EdgeInsets.zero,
-            borderRadius: radius,
-            blurSigma: KubusGlassEffects.blurSigmaLight,
-            showBorder: false,
-            backgroundColor: active ? selectedTint : idleTint,
-            enableBlur: enableBlur,
-            onTap: onPressed,
-            // When real blur is unavailable (mobile overlays over the MapLibre
-            // platform view, or any reduced-transparency context) add the shared
-            // static sheen so quick-filter chips read as glass rather than flat
-            // tinted pills, matching the icon buttons and panels around them.
-            child: wrapWithKubusMapGlassSheen(
-              show: !(enableBlur && allowBlur),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
               borderRadius: radius,
-              isDark: isDark,
-              child: Row(
-                mainAxisSize:
-                    fullWidth ? MainAxisSize.max : MainAxisSize.min,
-                mainAxisAlignment: fullWidth
-                    ? MainAxisAlignment.center
-                    : MainAxisAlignment.start,
-                children: [
-                  Icon(
-                    icon,
-                    size: KubusHeaderMetrics.actionIcon - KubusSpacing.xxs,
-                    color: active
-                        ? accent
-                        : scheme.onSurface.withValues(alpha: 0.65),
-                  ),
-                  const SizedBox(width: KubusSpacing.sm),
-                  Flexible(
-                    child: Text(
-                      label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign:
-                          fullWidth ? TextAlign.center : TextAlign.start,
-                      style: (active
-                              ? theme.textTheme.labelLarge
-                              : theme.textTheme.labelMedium)
-                          ?.copyWith(color: active ? accent : scheme.onSurface),
-                    ),
-                  ),
-                ],
-              ),
+              onTap: onPressed,
+              child: surface,
             ),
           ),
         ),

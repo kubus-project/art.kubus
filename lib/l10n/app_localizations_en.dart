@@ -4119,6 +4119,42 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mapFilterFavorites => 'Favorites';
 
   @override
+  String get mapFilterScopeTitle => 'Scope';
+
+  @override
+  String get mapFilterScopeCurrentViewport => 'Current viewport';
+
+  @override
+  String get mapFilterScopeNearMe => 'Near me';
+
+  @override
+  String get mapFilterScopeTravel => 'Travel';
+
+  @override
+  String get mapFilterDiscoveryStatusTitle => 'Discovery status';
+
+  @override
+  String get mapFilterAttributesTitle => 'Attributes';
+
+  @override
+  String get mapFilterContentLayersTitle => 'Content layers';
+
+  @override
+  String mapFilterNearMeRadiusLabel(Object radiusKm) {
+    return 'Radius: $radiusKm km';
+  }
+
+  @override
+  String mapFilterActiveCountLabel(int count) {
+    return 'Active filters: $count';
+  }
+
+  @override
+  String mapFilterVisibleLayerCountLabel(int visible, int total) {
+    return '$visible of $total visible';
+  }
+
+  @override
   String get mapLayersTitle => 'Map layers';
 
   @override
@@ -4144,6 +4180,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mapAddMapMarkerTooltip => 'Add map marker';
+
+  @override
+  String get mapToolsTitle => 'Map tools';
+
+  @override
+  String get mapZoomInTooltip => 'Zoom in';
 
   @override
   String get mapTravelModeTooltip => 'Travel mode';

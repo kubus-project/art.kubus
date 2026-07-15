@@ -30,6 +30,7 @@ class KubusNearbyArtPanelBody extends StatelessWidget {
     required this.accentColor,
     required this.onClose,
     required this.onRadiusTap,
+    required this.onExpand,
     required this.scrollController,
     required this.onSortChanged,
     required this.onToggleGrid,
@@ -50,6 +51,7 @@ class KubusNearbyArtPanelBody extends StatelessWidget {
   final Color accentColor;
   final VoidCallback? onClose;
   final VoidCallback? onRadiusTap;
+  final VoidCallback? onExpand;
   final ScrollController scrollController;
   final ValueChanged<KubusNearbyArtSort> onSortChanged;
   final VoidCallback onToggleGrid;
@@ -143,6 +145,7 @@ class KubusNearbyArtPanelBody extends StatelessWidget {
             accentColor: accentColor,
             onClose: onClose,
             onRadiusTap: onRadiusTap,
+            onExpand: onExpand,
             onToggleGrid: onToggleGrid,
             onSortChanged: onSortChanged,
           ),

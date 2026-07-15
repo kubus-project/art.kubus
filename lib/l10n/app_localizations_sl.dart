@@ -4119,6 +4119,42 @@ class AppLocalizationsSl extends AppLocalizations {
   String get mapFilterFavorites => 'Priljubljene';
 
   @override
+  String get mapFilterScopeTitle => 'Obseg';
+
+  @override
+  String get mapFilterScopeCurrentViewport => 'Trenutni pogled';
+
+  @override
+  String get mapFilterScopeNearMe => 'V moji bližini';
+
+  @override
+  String get mapFilterScopeTravel => 'Potovanje';
+
+  @override
+  String get mapFilterDiscoveryStatusTitle => 'Stanje odkritja';
+
+  @override
+  String get mapFilterAttributesTitle => 'Lastnosti';
+
+  @override
+  String get mapFilterContentLayersTitle => 'Vsebinske plasti';
+
+  @override
+  String mapFilterNearMeRadiusLabel(Object radiusKm) {
+    return 'Radij: $radiusKm km';
+  }
+
+  @override
+  String mapFilterActiveCountLabel(int count) {
+    return 'Aktivni filtri: $count';
+  }
+
+  @override
+  String mapFilterVisibleLayerCountLabel(int visible, int total) {
+    return 'Vidnih $visible od $total';
+  }
+
+  @override
   String get mapLayersTitle => 'Sloji zemljevida';
 
   @override
@@ -4144,6 +4180,12 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get mapAddMapMarkerTooltip => 'Dodaj označevalec';
+
+  @override
+  String get mapToolsTitle => 'Orodja zemljevida';
+
+  @override
+  String get mapZoomInTooltip => 'Približaj';
 
   @override
   String get mapTravelModeTooltip => 'Način potovanja';

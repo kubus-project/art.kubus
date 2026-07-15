@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../../utils/kubus_map_tokens.dart';
 import '../../widgets/map_overlay_blocker.dart';
 import '../../widgets/map/overlays/kubus_marker_overlay_card_wrapper.dart';
 
@@ -21,6 +22,7 @@ class KubusMapMarkerOverlayLayer extends StatelessWidget {
     this.blockMapGestures = true,
     this.dismissOnBackdropTap = true,
     this.interceptPlatformViews = true,
+    this.transitionMotion,
     super.key,
   });
 
@@ -58,21 +60,30 @@ class KubusMapMarkerOverlayLayer extends StatelessWidget {
   ///
   /// Only applies when [blockMapGestures] is true.
   final bool interceptPlatformViews;
+  final KubusMapMotionSpec? transitionMotion;
 
   @override
   Widget build(BuildContext context) {
     final isVisible = content != null;
+    final motion = transitionMotion;
+    final transitionDuration =
+        motion?.duration ?? const Duration(milliseconds: 240);
+    final transitionCurve = motion?.curve ?? Curves.easeOutCubic;
+    final allowsSpatialTransform = motion?.allowsSpatialTransform ?? true;
 
     final Widget overlaySwitcher = AnimatedSwitcher(
-      duration: const Duration(milliseconds: 240),
-      switchInCurve: Curves.easeOutCubic,
+      duration: transitionDuration,
+      switchInCurve: transitionCurve,
       switchOutCurve: Curves.easeInCubic,
       transitionBuilder: (child, animation) {
         final curved = CurvedAnimation(
           parent: animation,
-          curve: Curves.easeOutCubic,
+          curve: transitionCurve,
           reverseCurve: Curves.easeInCubic,
         );
+        if (!allowsSpatialTransform) {
+          return FadeTransition(opacity: curved, child: child);
+        }
         final slide = Tween<Offset>(
           begin: const Offset(0, 0.06),
           end: Offset.zero,
@@ -163,6 +174,7 @@ class KubusMapMarkerOverlayShell {
     bool enabled = true,
     bool centerWhenAnchorMissing = true,
     KubusMarkerOverlayLayoutCallback? onLayoutResolved,
+    KubusMapMotionSpec? transitionMotion,
   }) {
     return KubusMapMarkerOverlayLayer(
       content: isVisible
@@ -193,6 +205,7 @@ class KubusMapMarkerOverlayShell {
       blockMapGestures: blockMapGestures,
       dismissOnBackdropTap: dismissOnBackdropTap,
       interceptPlatformViews: interceptPlatformViews,
+      transitionMotion: transitionMotion,
     );
   }
 }

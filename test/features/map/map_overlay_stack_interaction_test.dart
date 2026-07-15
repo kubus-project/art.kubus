@@ -3,6 +3,7 @@ import 'package:art_kubus/features/map/map_layers_manager.dart';
 import 'package:art_kubus/features/map/map_overlay_stack.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/models/art_marker.dart';
+import 'package:art_kubus/utils/kubus_map_tokens.dart';
 import 'package:art_kubus/widgets/common/kubus_glass_chip.dart';
 import 'package:art_kubus/widgets/map/controls/kubus_map_primary_controls.dart';
 import 'package:art_kubus/widgets/map/filters/kubus_map_marker_layer_chips.dart';
@@ -106,6 +107,41 @@ void main() {
 
     expect(outsideTapCount, 1);
     expect(cardTapCount, 1);
+  });
+
+  testWidgets('reduced marker overlay motion uses no spatial transitions',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Stack(
+            children: [
+              KubusMapMarkerOverlayLayer(
+                content: const Center(child: Text('Preview')),
+                contentKey: const ValueKey<String>('reduced_preview'),
+                onDismiss: () {},
+                transitionMotion:
+                    KubusMapMotion.defaults(reduceMotion: true).overlayEnter,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    final overlay = find.byType(KubusMapMarkerOverlayLayer);
+    expect(
+      find.descendant(of: overlay, matching: find.byType(FadeTransition)),
+      findsWidgets,
+    );
+    expect(
+      find.descendant(of: overlay, matching: find.byType(SlideTransition)),
+      findsNothing,
+    );
+    expect(
+      find.descendant(of: overlay, matching: find.byType(ScaleTransition)),
+      findsNothing,
+    );
   });
 
   testWidgets(

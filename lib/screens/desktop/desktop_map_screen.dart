@@ -6,6 +6,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/services.dart';
 import 'package:maplibre_gl/maplibre_gl.dart' as ml;
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
@@ -77,6 +78,7 @@ import '../../features/map/shared/map_marker_collision_config.dart';
 import '../../features/map/shared/map_screen_constants.dart';
 import '../../features/map/shared/map_artwork_filtering.dart';
 import '../../features/map/shared/map_marker_filtering.dart';
+import '../../features/map/filters/map_filter_state.dart';
 import '../../features/map/shared/map_marker_overlay_actions.dart';
 import '../../features/map/shared/map_marker_overlay_presentation.dart';
 import '../../features/map/shared/map_marker_selection_resolver.dart';
@@ -89,6 +91,7 @@ import '../../features/map/controller/kubus_map_controller.dart';
 import '../../features/map/engine/kubus_map_marker_sync_engine.dart';
 import '../../features/map/tutorial/map_tutorial_coordinator.dart';
 import '../../utils/design_tokens.dart';
+import '../../utils/kubus_map_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/marker_cube_geometry.dart';
 import '../../widgets/glass_components.dart';
@@ -98,7 +101,7 @@ import '../../widgets/tutorial/tutorial_overlay_controller.dart';
 import '../../widgets/tutorial/tutorial_overlay_scope.dart';
 import '../../widgets/map/controls/kubus_map_primary_controls.dart'
     show KubusMapPrimaryControlsLayout;
-import '../../widgets/map/filters/kubus_map_marker_layer_chips.dart';
+import '../../widgets/map/filters/kubus_map_filter_content.dart';
 import '../../widgets/map/discovery/kubus_discovery_path_card.dart'
     show KubusDiscoveryExpansionDirection;
 import '../../widgets/map/dialogs/kubus_map_attribution_dialog.dart';
@@ -234,16 +237,13 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   final PageController _markerStackPageController = PageController();
   bool _didOpenInitialSelection = false;
   int _lastMarkerOverlayNudgeSelectionToken = -1;
-  bool _showFiltersPanel = false;
-  bool _isDiscoveryExpanded = false;
-  String _selectedFilter = 'nearby';
-  double _searchRadius = 5.0; // km
+  KubusMapFilterState _filterState = KubusMapFilterState.defaults();
   bool _travelModeEnabled = false;
   bool _isometricViewEnabled = false;
   bool _isClaimingSelectedExhibitionPoap = false;
 
   // Travel mode is viewport-based (bounds query), not huge-radius.
-  double get _effectiveSearchRadiusKm => _searchRadius;
+  double get _effectiveSearchRadiusKm => _filterState.nearMeRadiusKm;
 
   // Interactive onboarding tutorial (coach marks)
   final GlobalKey _tutorialMapKey = GlobalKey();
@@ -267,9 +267,20 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   bool _autoFollow = true;
   bool _isLocating = false;
   _RightSidebarContent? _rightSidebarContent;
+  bool get _showFiltersPanel =>
+      _mapUiStateCoordinator.value.contextSurface == MapContextSurface.filters;
+  bool get _isDiscoveryExpanded =>
+      _mapUiStateCoordinator.value.contextSurface ==
+      MapContextSurface.discovery;
   bool get _isNearbyPanelOpen =>
+      _mapUiStateCoordinator.value.contextSurface == MapContextSurface.nearby &&
       _rightSidebarContent == _RightSidebarContent.nearby;
-  bool get _isRightSidebarOpen => _rightSidebarContent != null;
+  bool get _isCreateMarkerPanelOpen =>
+      _mapUiStateCoordinator.value.contextSurface ==
+          MapContextSurface.createMarker &&
+      _rightSidebarContent == _RightSidebarContent.createMarker;
+  bool get _isRightSidebarOpen =>
+      _isNearbyPanelOpen || _isCreateMarkerPanelOpen;
   bool _pendingInitialNearbyPanelOpen = false;
   int _nearbyPanelAutoloadAttempts = 0;
   bool _nearbyPanelAutoloadScheduled = false;
@@ -287,6 +298,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   bool _isRouteVisible = true;
   PageRoute<dynamic>? _subscribedRoute;
   int _markerOpenRequestId = 0;
+  int _markerOpenSurfaceRevision = -1;
   bool _pendingMarkerRefresh = false;
   bool _pendingMarkerRefreshForce = false;
   LatLng _cameraCenter = const LatLng(46.0569, 14.5058);
@@ -393,9 +405,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   bool _themeResyncScheduled = false;
 
   bool get _hasLeftDetailPanel =>
-      _selectedArtwork != null ||
-      _selectedExhibition != null ||
-      _selectedEvent != null;
+      _mapUiStateCoordinator.value.contextSurface ==
+          MapContextSurface.markerDetails &&
+      (_selectedArtwork != null ||
+          _selectedExhibition != null ||
+          _selectedEvent != null);
 
   bool get _isLeftPanelVisible => _hasLeftDetailPanel || _showFiltersPanel;
 
@@ -410,17 +424,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       ArtworkCommentsPanelController();
 
   // Marker type layer visibility - same as mobile for parity
-  final Map<ArtMarkerType, bool> _markerLayerVisibility = {
-    ArtMarkerType.artwork: true,
-    ArtMarkerType.streetArt: true,
-    ArtMarkerType.institution: true,
-    ArtMarkerType.event: true,
-    ArtMarkerType.exhibition: true,
-    ArtMarkerType.residency: true,
-    ArtMarkerType.drop: true,
-    ArtMarkerType.experience: true,
-    ArtMarkerType.other: true,
-  };
+  Map<ArtMarkerType, bool> get _markerLayerVisibility => <ArtMarkerType, bool>{
+        for (final type in ArtMarkerType.values)
+          type: _filterState.visibleContentLayers.contains(type),
+      };
 
   @override
   void initState() {
@@ -464,8 +471,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         layers: MapScreenConstants.desktopLayerIds,
       ),
       debugTracing: kDebugMode && MapPerformanceDebug.isEnabled,
-      tapConfig: const KubusMapTapConfig(
+      tapConfig: KubusMapTapConfig(
         clusterTapZoomDelta: 2.0,
+        clusterGridLevelForZoom: MapScreenConstants.clusterGridLevelForZoom,
       ),
       distance: _distance,
       supportsPendingMarker: true,
@@ -493,11 +501,14 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             })();
         if (tokenChanged) {
           _perf.recordSetState('markerSelection');
+          _mapSearchController.dismissOverlay();
           _safeSetState(() {
             _selectedArtwork = null;
             _selectedExhibition = null;
             _selectedEvent = null;
             _pendingMarkerLocation = null;
+            _rightSidebarContent = null;
+            _nearbySidebarAnchor = null;
           });
         }
 
@@ -551,12 +562,19 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         if (!mounted) return;
         _perf.recordSetState('backgroundTap');
         _mapSearchController.dismissOverlay();
+        if (_mapUiStateCoordinator.value.contextSurface ==
+            MapContextSurface.createMarker) {
+          return;
+        }
+        _mapUiStateCoordinator.dismissToMap();
+        _kubusMapController.dismissSelection();
         _safeSetState(() {
           _selectedArtwork = null;
           _selectedExhibition = null;
           _selectedEvent = null;
-          _showFiltersPanel = false;
           _pendingMarkerLocation = null;
+          _rightSidebarContent = null;
+          _nearbySidebarAnchor = null;
         });
       },
       onRequestMarkerLayerStyleUpdate: () {
@@ -713,6 +731,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    final media = MediaQuery.of(context);
+    _kubusMapController.setReduceMotion(
+      media.disableAnimations || media.accessibleNavigation,
+    );
 
     final route = ModalRoute.of(context);
     if (route is PageRoute<dynamic>) {
@@ -1036,6 +1058,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     }
     setState(() {
       _travelModeEnabled = next.travelModeEnabled;
+      if (next.travelModeEnabled) {
+        _filterState = _filterState.withScope(KubusMapScope.travel);
+      } else if (_filterState.scope == KubusMapScope.travel) {
+        _filterState = _filterState.withScope(KubusMapScope.currentViewport);
+      }
       _isometricViewEnabled = next.isometricViewEnabled;
     });
   }
@@ -1045,15 +1072,24 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     if (!mounted) return;
     setState(() {
       _travelModeEnabled = prefs.travelModeEnabled;
+      if (prefs.travelModeEnabled) {
+        _filterState = _filterState.withScope(KubusMapScope.travel);
+      }
       _isometricViewEnabled = prefs.isometricViewEnabled;
     });
   }
 
-  Future<void> _setTravelModeEnabled(bool enabled) async {
+  Future<void> _setTravelModeEnabled(
+    bool enabled, {
+    KubusMapScope scopeWhenDisabled = KubusMapScope.currentViewport,
+  }) async {
     if (!mounted) return;
 
     setState(() {
       _travelModeEnabled = enabled;
+      _filterState = _filterState.withScope(
+        enabled ? KubusMapScope.travel : scopeWhenDisabled,
+      );
       if (enabled) {
         _autoFollow = false;
       }
@@ -1075,6 +1111,46 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     }
 
     unawaited(_loadMarkersForCurrentView(force: true));
+  }
+
+  void _handleFilterStateChanged(KubusMapFilterState next) {
+    final previous = _filterState;
+    final travelChanged =
+        (next.scope == KubusMapScope.travel) != _travelModeEnabled;
+    final requiresDataReload = previous.scope != next.scope ||
+        (next.scope == KubusMapScope.nearMe &&
+            previous.nearMeRadiusKm != next.nearMeRadiusKm);
+    final layersChanged = !setEquals(
+      previous.visibleContentLayers,
+      next.visibleContentLayers,
+    );
+    setState(() => _filterState = next);
+    if (layersChanged) {
+      _kubusMapController.setMarkerTypeVisibility(_markerLayerVisibility);
+      _renderCoordinator.requestStyleUpdate(force: true);
+    }
+    _applyVisibleMarkers();
+    _requestMarkerVisualSync(force: true);
+    if (travelChanged) {
+      unawaited(
+        _setTravelModeEnabled(
+          next.scope == KubusMapScope.travel,
+          scopeWhenDisabled: next.scope,
+        ),
+      );
+    }
+    if (requiresDataReload && !travelChanged) {
+      _radiusChangeDebouncer(
+        const Duration(
+          milliseconds: MapMarkerCollisionConfig.nearbyRadiusDebounceMs,
+        ),
+        () {
+          if (mounted) {
+            unawaited(_loadMarkersForCurrentView(force: true));
+          }
+        },
+      );
+    }
   }
 
   Future<void> _setIsometricViewEnabled(bool enabled) async {
@@ -1141,6 +1217,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           title: l10n.mapTutorialStepTypesTitle,
           body: l10n.mapTutorialStepTypesDesktopBody,
           advanceOnTargetTap: false,
+          onTargetTap: _openDesktopFiltersPanel,
         ),
       ),
       MapTutorialStepBinding(
@@ -1225,15 +1302,16 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   void _openNearbyArtPanel() {
+    final accepted = _mapUiStateCoordinator.openSurface(
+      MapContextSurface.nearby,
+      intent: MapSurfaceTransitionIntent.suspendCurrent,
+    );
+    if (!accepted && !_isNearbyPanelOpen) return;
     final anchor = _userLocation ?? _effectiveCenter;
 
     _safeSetState(() {
       _rightSidebarContent = _RightSidebarContent.nearby;
       _nearbySidebarAnchor = anchor;
-      _selectedArtwork = null;
-      _selectedExhibition = null;
-      _selectedEvent = null;
-      _showFiltersPanel = false;
       // Clear any lingering create-marker state.
       _createMarkerSubjectData = null;
       _createMarkerAllowedTypes = null;
@@ -1246,6 +1324,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   void _closeNearbyArtPanel() {
+    if (_mapUiStateCoordinator.value.contextSurface ==
+        MapContextSurface.nearby) {
+      if (!_mapUiStateCoordinator.restoreSuspendedSurface()) {
+        _mapUiStateCoordinator.closeSurface(MapContextSurface.nearby);
+      }
+    }
     _safeSetState(() {
       _rightSidebarContent = null;
       _nearbySidebarAnchor = null;
@@ -1253,6 +1337,37 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     // Close the shell panel too in case it was still open from a previous
     // session (defensive).
     DesktopShellScope.of(context)?.closeFunctionsPanel();
+  }
+
+  bool _handleMapContextBack() {
+    FocusManager.instance.primaryFocus?.unfocus();
+    switch (_mapUiStateCoordinator.value.contextSurface) {
+      case MapContextSurface.none:
+        return false;
+      case MapContextSurface.searchResults:
+        _mapSearchController.dismissOverlay();
+      case MapContextSurface.filters:
+        _closeDesktopFiltersPanel();
+      case MapContextSurface.nearby:
+        _closeNearbyArtPanel();
+      case MapContextSurface.markerPreview:
+        _mapUiStateCoordinator.dismissToMap();
+        _kubusMapController.dismissSelection();
+      case MapContextSurface.markerDetails:
+        _mapUiStateCoordinator.backFromMarkerDetails();
+        _safeSetState(() {
+          _selectedArtwork = null;
+          _selectedExhibition = null;
+          _selectedEvent = null;
+        });
+      case MapContextSurface.createMarker:
+        _finishDesktopMarkerCreation();
+      case MapContextSurface.discovery:
+        if (!_mapUiStateCoordinator.restoreSuspendedSurface()) {
+          _mapUiStateCoordinator.closeSurface(MapContextSurface.discovery);
+        }
+    }
+    return true;
   }
 
   void _safeSetState(VoidCallback fn) {
@@ -1712,13 +1827,17 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   Future<void> _applyIsometricCamera(
       {required bool enabled, bool adjustZoomForScale = false}) async {
+    final cameraMotion = KubusMapMotion.fromMediaQuery(
+      animationTheme: context.animationTheme,
+      mediaQuery: MediaQuery.of(context),
+    ).clusterExpand;
     final nextZoom = await _mapCameraController.applyIsometricCamera(
       enabled: enabled,
       center: _cameraCenter,
       zoom: _cameraZoom,
       bearing: _lastBearing,
       adjustZoomForScale: adjustZoomForScale,
-      duration: const Duration(milliseconds: 320),
+      duration: cameraMotion.duration,
     );
     if (adjustZoomForScale) {
       _cameraZoom = nextZoom;
@@ -1734,12 +1853,16 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         _isometricViewEnabled && AppConfig.isFeatureEnabled('mapIsometricView')
             ? 54.736
             : 0.0;
+    final cameraMotion = KubusMapMotion.fromMediaQuery(
+      animationTheme: context.animationTheme,
+      mediaQuery: MediaQuery.of(context),
+    ).clusterExpand;
     await _mapCameraController.animateTo(
       target,
       zoom: zoom,
       rotation: _lastBearing,
       tilt: tilt,
-      duration: const Duration(milliseconds: 320),
+      duration: cameraMotion.duration,
     );
   }
 
@@ -1780,6 +1903,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     if (!viewportSize.width.isFinite || !viewportSize.height.isFinite) return;
 
     final media = resolvedLayout.mediaQuery;
+    if (media.disableAnimations || media.accessibleNavigation) {
+      _lastMarkerOverlayNudgeSelectionToken = selection.selectionToken;
+      return;
+    }
     final plan = planSelectedMarkerOverlayViewport(
       viewportSize: viewportSize,
       markerAnchor: anchor,
@@ -1806,7 +1933,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         zoom: _cameraZoom,
         rotation: _lastBearing,
         tilt: _desiredPitch(),
-        duration: const Duration(milliseconds: 260),
+        duration: KubusMapMotion.fromMediaQuery(
+          animationTheme: context.animationTheme,
+          mediaQuery: media,
+        ).overlayReposition.duration,
         compositionYOffsetPx: plan.compositionYOffsetPx,
         queueIfNotReady: false,
       )
@@ -1926,10 +2056,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       bindings: tutorialBindings,
     );
     _scheduleMapTutorialStartIfEligible(reason: 'build');
-    // Always show the nearby panel as a local overlay on top of the map
-    // (glass panel with blur). This keeps the map at full width; only the
-    // UI chrome (controls, search bar) shifts to avoid overlap.
-    final showLocalNearbyPanel = _isRightSidebarOpen;
     // Strict real-blur policy so the host mounts even on a narrow desktop
     // window (allowCompactWeb would disable it below 700px).
     final backdropDecision = resolveKubusMapBlurDecision(
@@ -1946,134 +2072,179 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             backdropDecision.strategy ==
                 KubusMapBackdropStrategy.nativeBackdropHost);
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: KubusMapBackdropScope(
-        controller: _mapBackdropHostController,
-        child: Stack(
-          children: [
-            // Map layer
-            KeyedSubtree(
-              key: _tutorialMapKey,
-              child: _buildMapLayer(themeProvider),
-            ),
-
-            if (platformBackdropHostEnabled)
-              KubusMapPlatformBackdropHost(
+    return ValueListenableBuilder<MapUiStateSnapshot>(
+      valueListenable: _mapUiStateCoordinator.state,
+      builder: (context, uiState, _) {
+        // Context panels remain local overlays so the map retains its full
+        // canvas. Their visibility is projected only from the coordinator.
+        final showLocalNearbyPanel = _isRightSidebarOpen;
+        final showMarkerPreview =
+            uiState.contextSurface == MapContextSurface.markerPreview;
+        final viewportWidth = MediaQuery.sizeOf(context).width;
+        final mapMotion = KubusMapMotion.fromMediaQuery(
+          animationTheme: animationTheme,
+          mediaQuery: MediaQuery.of(context),
+        );
+        final contextPanelWidth =
+            KubusMapMetrics.resolveDesktopContextPanelWidth(viewportWidth);
+        final showDiscoveryChrome =
+            mapContextAllowsDiscoveryChrome(uiState.contextSurface);
+        return CallbackShortcuts(
+          bindings: <ShortcutActivator, VoidCallback>{
+            const SingleActivator(LogicalKeyboardKey.escape):
+                _handleMapContextBack,
+          },
+          child: PopScope(
+            canPop: uiState.contextSurface == MapContextSurface.none,
+            onPopInvokedWithResult: (didPop, _) {
+              if (!didPop) _handleMapContextBack();
+            },
+            child: Scaffold(
+              backgroundColor: Colors.transparent,
+              body: KubusMapBackdropScope(
                 controller: _mapBackdropHostController,
-                enabled: true,
-              ),
+                child: Stack(
+                  children: [
+                    // Map layer
+                    KeyedSubtree(
+                      key: _tutorialMapKey,
+                      child: _buildMapLayer(themeProvider),
+                    ),
 
-            _buildSearchOverlayScaffold(
-              themeProvider,
-              animationTheme,
-              nearbyPanelOpen: showLocalNearbyPanel,
-            ),
-
-            // Left side panel (artwork/exhibition details or filters)
-            AnimatedPositioned(
-              duration: animationTheme.medium,
-              curve: animationTheme.defaultCurve,
-              left: _isLeftPanelVisible ? 0 : -400,
-              top: 80,
-              bottom: 24,
-              width: 380,
-              child: MapOverlayBlocker(
-                child: _buildLeftPanelChild(themeProvider, animationTheme),
-              ),
-            ),
-
-            // Local nearby sidebar (only when DesktopMapScreen is opened
-            // outside of DesktopShellScope).
-            AnimatedPositioned(
-              duration: animationTheme.medium,
-              curve: animationTheme.defaultCurve,
-              right: showLocalNearbyPanel ? 0 : -420,
-              top: 0,
-              bottom: 0,
-              width: 360,
-              child: Consumer<ArtworkProvider>(
-                builder: (context, artworkProvider, _) {
-                  return _buildRightSidebarContent(
-                    themeProvider,
-                    artworkProvider,
-                  );
-                },
-              ),
-            ),
-
-            ValueListenableBuilder<MapUiStateSnapshot>(
-              valueListenable: _mapUiStateCoordinator.state,
-              builder: (context, uiState, _) {
-                final selection = uiState.markerSelection;
-                return Consumer<ArtworkProvider>(
-                  builder: (context, artworkProvider, _) {
-                    return _buildMarkerOverlayLayer(
-                      themeProvider: themeProvider,
-                      artworkProvider: artworkProvider,
-                      selection: selection,
-                    );
-                  },
-                );
-              },
-            ),
-
-            // Discovery path card + attribution + map controls (bottom-right).
-            //
-            // The discovery card sits directly above the controls and expands
-            // upward (the bottom-anchored stack keeps the controls fixed). The
-            // custom attribution button is bottom-aligned to the LEFT of the
-            // control toolbar instead of being left in the default
-            // MapLibre/OSM corner. This cluster is the last child in the Stack
-            // so the discovery path and controls always render above the map,
-            // side panels, glass chrome and any anchored marker overlay card.
-            Positioned(
-              left: _hasLeftDetailPanel ? 400 : 24,
-              right: showLocalNearbyPanel ? (24 + 360) : 24,
-              bottom: 24,
-              child: Align(
-                alignment: Alignment.bottomRight,
-                child: Consumer<TaskProvider>(
-                  builder: (context, taskProvider, _) {
-                    final activeProgress = taskProvider.getActiveTaskProgress();
-                    return MapOverlayBlocker(
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          // Custom attribution button, left of the controls.
-                          Padding(
-                            padding: const EdgeInsets.only(
-                              right: KubusSpacing.sm,
-                            ),
-                            child: _buildDesktopAttributionButton(),
-                          ),
-                          Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              // Always reserve a discovery path area on desktop:
-                              // show progress when present, otherwise a compact
-                              // idle card. It sits directly above the controls
-                              // and never collides with search/filters/cards.
-                              if (activeProgress.isNotEmpty)
-                                _buildDiscoveryCard(taskProvider)
-                              else
-                                _buildDiscoveryIdleCard(),
-                              const SizedBox(height: KubusSpacing.sm),
-                              _buildMapControls(themeProvider),
-                            ],
-                          ),
-                        ],
+                    if (platformBackdropHostEnabled)
+                      KubusMapPlatformBackdropHost(
+                        controller: _mapBackdropHostController,
+                        enabled: true,
                       ),
-                    );
-                  },
+
+                    _buildSearchOverlayScaffold(
+                      themeProvider,
+                      mapMotion: mapMotion,
+                      contextPanelWidth: contextPanelWidth,
+                      nearbyPanelOpen: showLocalNearbyPanel,
+                    ),
+
+                    // Left side panel (artwork/exhibition details or filters)
+                    AnimatedPositioned(
+                      duration: mapMotion.panelEnter.duration,
+                      curve: mapMotion.panelEnter.curve,
+                      left: _isLeftPanelVisible
+                          ? 0
+                          : -(contextPanelWidth +
+                              KubusMapMetrics.desktopChromeInset),
+                      top: KubusMapMetrics.desktopContextPanelTopInset,
+                      bottom: KubusMapMetrics.desktopContextPanelBottomInset,
+                      width: contextPanelWidth,
+                      child: MapOverlayBlocker(
+                        child:
+                            _buildLeftPanelChild(themeProvider, animationTheme),
+                      ),
+                    ),
+
+                    // Local nearby sidebar (only when DesktopMapScreen is opened
+                    // outside of DesktopShellScope).
+                    AnimatedPositioned(
+                      duration: mapMotion.panelEnter.duration,
+                      curve: mapMotion.panelEnter.curve,
+                      right: showLocalNearbyPanel
+                          ? 0
+                          : -(contextPanelWidth +
+                              KubusMapMetrics.desktopChromeInset),
+                      top: 0,
+                      bottom: 0,
+                      width: contextPanelWidth,
+                      child: showLocalNearbyPanel
+                          ? Consumer<ArtworkProvider>(
+                              builder: (context, artworkProvider, _) {
+                                return _buildRightSidebarContent(
+                                  themeProvider,
+                                  artworkProvider,
+                                );
+                              },
+                            )
+                          : const SizedBox.shrink(),
+                    ),
+
+                    Consumer<ArtworkProvider>(
+                      builder: (context, artworkProvider, _) {
+                        return _buildMarkerOverlayLayer(
+                          themeProvider: themeProvider,
+                          artworkProvider: artworkProvider,
+                          selection: uiState.markerSelection,
+                          isVisible: showMarkerPreview,
+                        );
+                      },
+                    ),
+
+                    // Discovery path card + attribution + map controls (bottom-right).
+                    //
+                    // The discovery card sits directly above the controls and expands
+                    // upward (the bottom-anchored stack keeps the controls fixed). The
+                    // custom attribution button is bottom-aligned to the LEFT of the
+                    // control toolbar instead of being left in the default
+                    // MapLibre/OSM corner. This cluster is the last child in the Stack
+                    // so the discovery path and controls always render above the map,
+                    // side panels, glass chrome and any anchored marker overlay card.
+                    Positioned(
+                      left: _hasLeftDetailPanel
+                          ? contextPanelWidth +
+                              KubusMapMetrics.desktopChromeInset
+                          : KubusMapMetrics.desktopChromeInset,
+                      right: showLocalNearbyPanel
+                          ? contextPanelWidth +
+                              KubusMapMetrics.desktopChromeInset
+                          : KubusMapMetrics.desktopChromeInset,
+                      bottom: KubusMapMetrics.desktopChromeInset,
+                      child: Align(
+                        alignment: Alignment.bottomRight,
+                        child: Consumer<TaskProvider>(
+                          builder: (context, taskProvider, _) {
+                            final activeProgress =
+                                taskProvider.getActiveTaskProgress();
+                            return MapOverlayBlocker(
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  // Custom attribution button, left of the controls.
+                                  Padding(
+                                    padding: const EdgeInsets.only(
+                                      right: KubusSpacing.sm,
+                                    ),
+                                    child: _buildDesktopAttributionButton(),
+                                  ),
+                                  Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      // Always reserve a discovery path area on desktop:
+                                      // show progress when present, otherwise a compact
+                                      // idle card. It sits directly above the controls
+                                      // and never collides with search/filters/cards.
+                                      if (showDiscoveryChrome) ...[
+                                        if (activeProgress.isNotEmpty)
+                                          _buildDiscoveryCard(taskProvider)
+                                        else
+                                          _buildDiscoveryIdleCard(),
+                                        const SizedBox(height: KubusSpacing.sm),
+                                      ],
+                                      _buildMapControls(themeProvider),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -2181,16 +2352,26 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             }
             // When the nearby quick filter is anchored to the camera (no GPS
             // fix), re-apply it so visible markers track the viewport.
-            if (_selectedFilter == 'nearby' && _userLocation == null) {
+            if (_filterState.scope == KubusMapScope.nearMe &&
+                _userLocation == null) {
               _applyVisibleMarkers();
               _requestMarkerVisualSync(force: false);
             }
             _queueMarkerRefresh(fromGesture: false);
           },
           onMapClick: (dynamic point, _) {
+            if (_isCreateMarkerPanelOpen) return;
             unawaited(_markerInteractionController.handleMapClick(point));
           },
           onMapLongClick: (_, point) {
+            if (_isCreateMarkerPanelOpen) {
+              setState(() {
+                _pendingMarkerLocation = point;
+                _createMarkerPosition = point;
+              });
+              unawaited(_syncPendingMarker());
+              return;
+            }
             _kubusMapController.dismissSelection();
             setState(() {
               _pendingMarkerLocation = point;
@@ -2261,8 +2442,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   Widget _buildSearchOverlayScaffold(
-    ThemeProvider themeProvider,
-    AppAnimationTheme animationTheme, {
+    ThemeProvider themeProvider, {
+    required KubusMapMotion mapMotion,
+    required double contextPanelWidth,
     required bool nearbyPanelOpen,
   }) {
     final l10n = AppLocalizations.of(context)!;
@@ -2276,15 +2458,18 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         // This removes the unwanted outer card behind the whole row.
         sidePanelSurfaceMode: KubusSearchSidePanelSurfaceMode.hostless,
         sidePanelAnimated: true,
-        positionAnimationDuration: animationTheme.medium,
-        positionAnimationCurve: animationTheme.defaultCurve,
+        positionAnimationDuration: mapMotion.panelEnter.duration,
+        positionAnimationCurve: mapMotion.panelEnter.curve,
         panelInsets: const EdgeInsets.fromLTRB(
           KubusSpacing.lg,
           KubusSpacing.sm + KubusSpacing.xs,
           KubusSpacing.lg,
           0,
         ),
-        rightInset: nearbyPanelOpen ? 360 : 0,
+        maxWidth: KubusMapMetrics.resolveSearchWidth(
+          MediaQuery.sizeOf(context).width,
+        ),
+        rightInset: nearbyPanelOpen ? contextPanelWidth : 0,
         leading: Row(
           children: [
             const AppLogo(
@@ -2301,27 +2486,67 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           ],
         ),
         searchField: _buildDesktopSearchField(l10n),
-        filterChips: _buildDesktopFilterChipRow(themeProvider),
+        // Advanced filters and layer visibility live behind one deliberate
+        // affordance instead of six permanently competing quick chips.
         mapToggle: KeyedSubtree(
-          key: _tutorialFiltersButtonKey,
-          child: KubusGlassIconButton(
-            icon: _showFiltersPanel ? Icons.close : Icons.tune,
-            tooltip:
-                _showFiltersPanel ? l10n.commonClose : l10n.mapFiltersTitle,
-            active: _showFiltersPanel,
-            accentColor: themeProvider.accentColor,
-            borderRadius: 10,
-            enableBlur: kubusMapBlurEnabled(context),
-            onPressed: () {
-              if (_showFiltersPanel) {
-                setState(() => _showFiltersPanel = false);
-              } else {
-                _openDesktopFiltersPanel();
-              }
-            },
-            tooltipPreferBelow: true,
-            tooltipVerticalOffset: 18,
-            tooltipMargin: const EdgeInsets.symmetric(horizontal: 24),
+          key: _tutorialFilterChipsKey,
+          child: KeyedSubtree(
+            key: _tutorialFiltersButtonKey,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: <Widget>[
+                KubusGlassIconButton(
+                  icon: _showFiltersPanel ? Icons.close : Icons.tune,
+                  tooltip: _showFiltersPanel
+                      ? l10n.commonClose
+                      : (_filterState.activeFilterCount == 0
+                          ? l10n.mapFiltersTitle
+                          : l10n.mapFilterActiveCountLabel(
+                              _filterState.activeFilterCount,
+                            )),
+                  active: _showFiltersPanel,
+                  accentColor: themeProvider.accentColor,
+                  borderRadius: KubusRadius.sm,
+                  enableBlur: kubusMapBlurEnabled(context),
+                  onPressed: () {
+                    if (_showFiltersPanel) {
+                      _closeDesktopFiltersPanel();
+                    } else {
+                      _openDesktopFiltersPanel();
+                    }
+                  },
+                  tooltipPreferBelow: true,
+                  tooltipVerticalOffset: 18,
+                  tooltipMargin: const EdgeInsets.symmetric(horizontal: 24),
+                ),
+                if (_filterState.activeFilterCount > 0)
+                  Positioned(
+                    right: -5,
+                    top: -5,
+                    child: ExcludeSemantics(
+                      child: Container(
+                        constraints:
+                            const BoxConstraints(minWidth: 18, minHeight: 18),
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primary,
+                          shape: BoxShape.circle,
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          '${_filterState.activeFilterCount}',
+                          style: Theme.of(context)
+                              .textTheme
+                              .labelSmall
+                              ?.copyWith(
+                                color: Theme.of(context).colorScheme.onPrimary,
+                              ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
         accentColor: themeProvider.accentColor,
@@ -2353,40 +2578,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     );
   }
 
-  Widget _buildDesktopFilterChipRow(ThemeProvider themeProvider) {
-    final useMapBlur = kubusMapBlurEnabled(context);
-    final filters = KubusMapFilterCatalog.buildOptions(context,
-        accentColor: themeProvider.accentColor,
-        nearbyRadiusKm: _effectiveSearchRadiusKm);
-    return KeyedSubtree(
-      key: _tutorialFilterChipsKey,
-      child: KubusMapFilterChipStrip(
-        options: filters,
-        selectedKey: _selectedFilter,
-        // Fixed-cell buttons (rowFixed) so the border wraps the full 44-high
-        // cell, not just the icon+text. The strip scrolls horizontally inside
-        // the side-panel row so chips never overflow on smaller desktops.
-        layout: KubusMapFilterChipLayout.rowFixed,
-        spacing: KubusSpacing.sm,
-        enableBlur: useMapBlur,
-        keyPadding: EdgeInsets.zero,
-        onSelected: (key) {
-          setState(() => _selectedFilter = key);
-          // Re-filter the already-loaded markers immediately so the visible map
-          // markers + clusters update even when no new data is fetched.
-          _applyVisibleMarkers();
-          _requestMarkerVisualSync(force: true);
-          // Reload so the nearby panel + wider-scope markers reflect the filter.
-          unawaited(_loadMarkersForCurrentView(force: true).then((_) {
-            if (!mounted) return;
-            _applyVisibleMarkers();
-            _requestMarkerVisualSync(force: true);
-          }));
-        },
-      ),
-    );
-  }
-
   /// The single left-panel child hosted by the sliding [AnimatedPositioned].
   ///
   /// Detail panels (artwork/exhibition/event) only exist while selected, so
@@ -2404,21 +2595,23 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     AppAnimationTheme animationTheme,
   ) {
     final l10n = AppLocalizations.of(context)!;
-    if (_selectedExhibition != null) {
+    final showDetails = _mapUiStateCoordinator.value.contextSurface ==
+        MapContextSurface.markerDetails;
+    if (showDetails && _selectedExhibition != null) {
       return Semantics(
         label: l10n.commonDetails,
         container: true,
         child: _buildExhibitionDetailPanel(themeProvider, animationTheme),
       );
     }
-    if (_selectedEvent != null) {
+    if (showDetails && _selectedEvent != null) {
       return Semantics(
         label: l10n.commonDetails,
         container: true,
         child: _buildEventDetailPanel(themeProvider, animationTheme),
       );
     }
-    if (_selectedArtwork != null) {
+    if (showDetails && _selectedArtwork != null) {
       return Semantics(
         label: l10n.commonDetails,
         container: true,
@@ -2433,10 +2626,14 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     // defers tearing down the open panel until its out-transition completes, so
     // the region tracker's dispose (which removes its region and notifies the
     // backdrop controller) never runs while the widget tree is locked.
+    final panelMotion = KubusMapMotion.fromMediaQuery(
+      animationTheme: animationTheme,
+      mediaQuery: MediaQuery.of(context),
+    ).panelEnter;
     return AnimatedSwitcher(
-      duration: animationTheme.medium,
-      switchInCurve: animationTheme.defaultCurve,
-      switchOutCurve: animationTheme.defaultCurve,
+      duration: panelMotion.duration,
+      switchInCurve: panelMotion.curve,
+      switchOutCurve: panelMotion.curve,
       child: _showFiltersPanel
           ? KeyedSubtree(
               key: const ValueKey<String>('desktop_filter_panel_open'),
@@ -2451,20 +2648,36 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     );
   }
 
-  /// Opens the desktop filter panel and primes its backdrop region.
-  ///
-  /// Centralizes the "set `_showFiltersPanel = true` + clear any detail
-  /// selection + schedule the backdrop sync" sequence so every entry point
-  /// (the search-row toggle, the tutorial step) gets correct blur on the first
-  /// open frame instead of only after a later interaction.
-  void _openDesktopFiltersPanel() {
-    setState(() {
-      _showFiltersPanel = true;
+  void _closeDesktopMarkerDetails() {
+    _mapUiStateCoordinator.closeMarkerDetails();
+    _kubusMapController.dismissSelection();
+    _safeSetState(() {
       _selectedArtwork = null;
       _selectedExhibition = null;
       _selectedEvent = null;
     });
+  }
+
+  /// Opens the desktop filter panel and primes its backdrop region.
+  ///
+  /// Centralizes the dominant-surface transition + backdrop sync so every entry point
+  /// (the search-row toggle, the tutorial step) gets correct blur on the first
+  /// open frame instead of only after a later interaction.
+  void _openDesktopFiltersPanel() {
+    _mapSearchController.dismissOverlay();
+    final accepted = _mapUiStateCoordinator.openSurface(
+      MapContextSurface.filters,
+      intent: MapSurfaceTransitionIntent.suspendCurrent,
+    );
+    if (!accepted && !_showFiltersPanel) return;
     _scheduleFilterPanelBackdropSync();
+  }
+
+  void _closeDesktopFiltersPanel() {
+    if (!_showFiltersPanel) return;
+    if (!_mapUiStateCoordinator.restoreSuspendedSurface()) {
+      _mapUiStateCoordinator.closeSurface(MapContextSurface.filters);
+    }
   }
 
   /// Forces the platform backdrop region tracker to re-measure the desktop
@@ -2587,9 +2800,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         height: 248,
         accentColor: accent,
         closeTooltip: l10n.commonClose,
-        onClose: () {
-          setState(() => _selectedArtwork = null);
-        },
+        onClose: _closeDesktopMarkerDetails,
         badge: arBadge,
         closeAccentColor: themeProvider.accentColor,
         fallbackIcon: Icons.image_not_supported,
@@ -3047,9 +3258,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         height: 248,
         accentColor: exhibitionAccent,
         closeTooltip: l10n.commonClose,
-        onClose: () {
-          setState(() => _selectedExhibition = null);
-        },
+        onClose: _closeDesktopMarkerDetails,
         badge: badge,
         closeAccentColor: themeProvider.accentColor,
         fallbackIcon: AppColorUtils.exhibitionIcon,
@@ -3293,9 +3502,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         height: 248,
         accentColor: eventAccent,
         closeTooltip: l10n.commonClose,
-        onClose: () {
-          setState(() => _selectedEvent = null);
-        },
+        onClose: _closeDesktopMarkerDetails,
         badge: badge,
         closeAccentColor: themeProvider.accentColor,
         fallbackIcon: Icons.event_outlined,
@@ -3493,180 +3700,27 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final useMapBlur = kubusMapBlurEnabled(context);
     return KubusFilterPanel(
       title: l10n.mapFiltersTitle,
-      onClose: () => setState(() => _showFiltersPanel = false),
+      onClose: _closeDesktopFiltersPanel,
       closeTooltip: l10n.commonClose,
       margin: const EdgeInsets.only(left: KubusSpacing.lg),
       contentPadding: const EdgeInsets.all(KubusSpacing.lg),
       expandContent: true,
       absorbPointer: true,
-      showFooterDivider: true,
+      showFooterDivider: false,
       useMapGlassSurface: true,
       mapBlurPolicy: KubusMapBlurPolicy.forceMapChromeWhenCapable,
       overMapPlatformView: true,
       enablePlatformBackdropRegion: enableBackdropRegion,
       backdropRegionId: 'desktop-map-filter-panel',
-      footer: Padding(
-        padding: const EdgeInsets.all(KubusChromeMetrics.cardPadding),
-        child: Row(
-          children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: () {
-                  setState(() {
-                    _searchRadius = 5.0;
-                    _selectedFilter = 'nearby';
-                    _selectedSort = 'distance';
-                    // Reset layer visibility to all visible
-                    for (final type in ArtMarkerType.values) {
-                      _markerLayerVisibility[type] = true;
-                    }
-                  });
-                  _loadMarkersForCurrentView(force: true);
-                  _kubusMapController
-                      .setMarkerTypeVisibility(_markerLayerVisibility);
-                  _renderCoordinator.requestStyleUpdate(force: true);
-                  _requestMarkerVisualSync(force: true);
-                },
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(KubusRadius.md),
-                  ),
-                ),
-                child: Text(l10n.commonReset),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: ElevatedButton(
-                onPressed: () {
-                  setState(() => _showFiltersPanel = false);
-                  _loadMarkersForCurrentView(force: true);
-                  _requestMarkerVisualSync(force: true);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: themeProvider.accentColor,
-                  foregroundColor: ThemeData.estimateBrightnessForColor(
-                              themeProvider.accentColor) ==
-                          Brightness.dark
-                      ? KubusColors.textPrimaryDark
-                      : KubusColors.textPrimaryLight,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(KubusRadius.md),
-                  ),
-                ),
-                child: Text(l10n.commonApply),
-              ),
-            ),
-          ],
-        ),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            l10n.mapNearbyRadiusTitle,
-            style: KubusTextStyles.navLabel.copyWith(
-              fontWeight: FontWeight.w600,
-              color: scheme.onSurface,
-            ),
-          ),
-          const SizedBox(height: KubusSpacing.md),
-          Row(
-            children: [
-              Expanded(
-                child: Slider(
-                  value: _searchRadius,
-                  min: 1,
-                  max: 200,
-                  divisions: 199,
-                  onChanged: _travelModeEnabled
-                      ? null
-                      : (value) {
-                          setState(() => _searchRadius = value);
-                          // Re-filter the already-loaded markers immediately so
-                          // the map tracks the slider without waiting for the
-                          // debounced fetch.
-                          _applyVisibleMarkers();
-                          _requestMarkerVisualSync(force: true);
-                          _radiusChangeDebouncer(
-                            const Duration(
-                              milliseconds: MapMarkerCollisionConfig
-                                  .nearbyRadiusDebounceMs,
-                            ),
-                            () {
-                              if (mounted) {
-                                unawaited(
-                                  _loadMarkersForCurrentView(
-                                    force: true,
-                                  ),
-                                );
-                              }
-                            },
-                          );
-                        },
-                  activeColor: themeProvider.accentColor,
-                ),
-              ),
-              buildKubusMapGlassSurface(
-                context: context,
-                kind: KubusMapGlassSurfaceKind.button,
-                borderRadius: BorderRadius.circular(KubusRadius.sm),
-                tintBase: scheme.surface,
-                useBlur: useMapBlur,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                child: Text(
-                  l10n.commonDistanceKm(
-                    _searchRadius.toStringAsFixed(1),
-                  ),
-                  style: KubusTextStyles.navLabel.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: scheme.onSurface,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: KubusSpacing.lg),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  l10n.mapLayersTitle,
-                  style: KubusTextStyles.navLabel.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: scheme.onSurface,
-                  ),
-                ),
-              ),
-              Text(
-                '${_markerLayerVisibility.values.where((v) => v).length}'
-                '/${_markerLayerVisibility.length}',
-                style: KubusTypography.textTheme.bodySmall?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: KubusSpacing.md),
-          KubusMapMarkerLayerChips(
-            l10n: l10n,
-            visibility: _markerLayerVisibility,
-            onToggle: (type, nextSelected) {
-              setState(
-                () => _markerLayerVisibility[type] = nextSelected,
-              );
-              _kubusMapController
-                  .setMarkerTypeVisibility(_markerLayerVisibility);
-              _renderCoordinator.requestStyleUpdate(force: true);
-              _requestMarkerVisualSync(force: true);
-            },
+          KubusMapFilterContent(
+            state: _filterState,
+            onChanged: _handleFilterStateChanged,
+            travelScopeEnabled: AppConfig.isFeatureEnabled('mapTravelMode'),
           ),
           const SizedBox(height: KubusSpacing.lg),
           Text(
@@ -3730,7 +3784,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           centerOnMeActive: _autoFollow,
           centerOnMeTooltip: l10n.mapCenterOnMeTooltip,
           onCreateMarker: () {
-            if (_rightSidebarContent == _RightSidebarContent.createMarker) {
+            if (_isCreateMarkerPanelOpen) {
               _handleMarkerFormCancel();
               return;
             }
@@ -3738,8 +3792,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             _startMarkerCreationFlow(position: target);
           },
           createMarkerTooltip: l10n.mapCreateMarkerHereTooltip,
-          createMarkerHighlighted:
-              _rightSidebarContent == _RightSidebarContent.createMarker,
+          createMarkerHighlighted: _isCreateMarkerPanelOpen,
           showTravelModeToggle: AppConfig.isFeatureEnabled('mapTravelMode'),
           travelModeActive: _travelModeEnabled,
           onToggleTravelMode: () =>
@@ -3791,7 +3844,17 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       overallProgress: overall,
       expanded: _isDiscoveryExpanded,
       onToggleExpanded: () {
-        setState(() => _isDiscoveryExpanded = !_isDiscoveryExpanded);
+        if (_isDiscoveryExpanded) {
+          if (!_mapUiStateCoordinator.restoreSuspendedSurface()) {
+            _mapUiStateCoordinator.closeSurface(MapContextSurface.discovery);
+          }
+        } else {
+          _mapSearchController.dismissOverlay();
+          _mapUiStateCoordinator.openSurface(
+            MapContextSurface.discovery,
+            intent: MapSurfaceTransitionIntent.suspendCurrent,
+          );
+        }
         // Keep the constant-radius blur mounted; re-measure the web DOM
         // backdrop region across the size animation so it doesn't lag.
         _scheduleDiscoveryBackdropSync();
@@ -3805,12 +3868,18 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       percentStyle: KubusTypography.textTheme.bodySmall?.copyWith(
         color: scheme.onSurface.withValues(alpha: 0.75),
       ),
-      glassPadding: const EdgeInsets.all(KubusSpacing.md),
+      glassPadding: _isDiscoveryExpanded
+          ? const EdgeInsets.all(KubusSpacing.md)
+          : const EdgeInsets.symmetric(
+              horizontal: KubusSpacing.md,
+              vertical: KubusSpacing.xs,
+            ),
       constraints: const BoxConstraints(maxWidth: 340),
       enableMouseRegion: true,
       mouseCursor: SystemMouseCursors.basic,
       badgeGap: 12,
       tasksTopGap: 12,
+      compactWhenCollapsed: true,
     );
   }
 
@@ -3897,7 +3966,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     ThemeProvider themeProvider,
     ArtworkProvider artworkProvider,
   ) {
-    if (_rightSidebarContent == _RightSidebarContent.createMarker) {
+    if (_isCreateMarkerPanelOpen) {
       final l10n = AppLocalizations.of(context)!;
       return Semantics(
         label: l10n.mapCreateMarkerHereTooltip,
@@ -3965,18 +4034,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final targetPosition = _createMarkerPosition ?? _effectiveCenter;
     final selectedPosition = result.positionOverride ?? targetPosition;
 
-    // Close the sidebar.
-    _safeSetState(() {
-      _rightSidebarContent = null;
-      _createMarkerSubjectData = null;
-      _createMarkerAllowedTypes = null;
-      _createMarkerInitialType = null;
-      _createMarkerPosition = null;
-      _pendingMarkerLocation = null;
-    });
-
-    unawaited(_syncPendingMarker());
-
     final success = await _createMarkerAtPosition(
       position: selectedPosition,
       form: result,
@@ -3987,6 +4044,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
     if (success) {
+      _finishDesktopMarkerCreation();
       messenger.showKubusSnackBar(
         SnackBar(content: Text(l10n.mapMarkerCreatedToast)),
         tone: KubusSnackBarTone.success,
@@ -4001,6 +4059,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   void _handleMarkerFormCancel() {
+    _finishDesktopMarkerCreation();
+  }
+
+  void _finishDesktopMarkerCreation() {
+    _mapUiStateCoordinator.closeSurface(MapContextSurface.createMarker);
     _safeSetState(() {
       _rightSidebarContent = null;
       _createMarkerSubjectData = null;
@@ -4037,18 +4100,43 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     );
   }
 
+  bool _presentArtworkDetails(Artwork artwork) {
+    if (!_mapUiStateCoordinator.openMarkerDetails()) return false;
+    _safeSetState(() {
+      _selectedArtwork = artwork;
+      _selectedExhibition = null;
+      _selectedEvent = null;
+    });
+    return true;
+  }
+
+  bool _presentExhibitionDetails(Exhibition exhibition) {
+    if (!_mapUiStateCoordinator.openMarkerDetails()) return false;
+    _safeSetState(() {
+      _selectedExhibition = exhibition;
+      _selectedArtwork = null;
+      _selectedEvent = null;
+    });
+    return true;
+  }
+
+  bool _presentEventDetails(KubusEvent event) {
+    if (!_mapUiStateCoordinator.openMarkerDetails()) return false;
+    _safeSetState(() {
+      _selectedEvent = event;
+      _selectedArtwork = null;
+      _selectedExhibition = null;
+    });
+    return true;
+  }
+
   Future<void> _selectArtwork(
     Artwork artwork, {
     LatLng? focusPosition,
     double minZoom = 15,
     bool skipFetch = false,
   }) async {
-    setState(() {
-      _selectedArtwork = artwork;
-      _selectedExhibition = null;
-      _selectedEvent = null;
-      _showFiltersPanel = false;
-    });
+    _presentArtworkDetails(artwork);
 
     if (focusPosition != null || artwork.hasValidLocation) {
       _moveCamera(
@@ -4061,9 +4149,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
     final hydrated = await _fetchArtworkDetails(artwork.id);
     if (mounted && hydrated != null) {
-      setState(() {
-        _selectedArtwork = hydrated;
-      });
+      if (_mapUiStateCoordinator.value.contextSurface ==
+          MapContextSurface.markerDetails) {
+        setState(() => _selectedArtwork = hydrated);
+      }
     }
   }
 
@@ -4183,6 +4272,21 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   void _handleMapSearchControllerChanged() {
     if (!mounted) return;
+    final searchVisible = _mapSearchController.state.isOverlayVisible;
+    final surface = _mapUiStateCoordinator.value.contextSurface;
+    if (searchVisible && surface != MapContextSurface.searchResults) {
+      final accepted = _mapUiStateCoordinator.openSurface(
+        MapContextSurface.searchResults,
+        intent: MapSurfaceTransitionIntent.suspendCurrent,
+      );
+      if (!accepted) {
+        _mapSearchController.dismissOverlay();
+      }
+    } else if (!searchVisible && surface == MapContextSurface.searchResults) {
+      if (!_mapUiStateCoordinator.restoreSuspendedSurface()) {
+        _mapUiStateCoordinator.closeSurface(MapContextSurface.searchResults);
+      }
+    }
     // Rebuild to apply query-based filtering (lists/panels) in addition to the overlay.
     _perf.recordSetState('map_search');
     _safeSetState(() {});
@@ -4206,10 +4310,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final artworkProvider = context.read<ArtworkProvider>();
     final filtered = _getFilteredArtworks(artworkProvider.artworks);
     if (filtered.isNotEmpty) {
-      unawaited(_selectArtwork(
-        filtered.first,
+      unawaited(_selectArtworkById(
+        filtered.first.id,
         focusPosition: filtered.first.position,
-        minZoom: 14,
+        openDetail: true,
       ));
     }
   }
@@ -4321,7 +4425,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   String _markerQueryFiltersKey() {
     final query = _mapSearchController.state.query.trim().toLowerCase();
-    return 'filter=$_selectedFilter|sort=$_selectedSort|query=$query|travel=${_travelModeEnabled ? 1 : 0}';
+    return '${_filterState.queryFingerprint}|sort=$_selectedSort|query=$query';
   }
 
   /// Applies the active quick filter / search / radius to the raw loaded marker
@@ -4342,11 +4446,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final selectedId = _kubusMapController.selectedMarkerId;
     return filterVisibleMapMarkers(
       markers: _artMarkers,
-      state: MapMarkerFilterState(
-        quickFilterKey: _selectedFilter,
+      context: KubusMapFilterContext(
+        state: _filterState,
         query: _mapSearchController.state.query,
-        basePosition: _userLocation ?? _effectiveCenter,
-        radiusKm: _effectiveSearchRadiusKm,
+        basePosition: _userLocation,
       ),
       isDiscovered: (marker) => artworkFor(marker)?.isDiscovered ?? false,
       isFavorite: (marker) {
@@ -4369,65 +4472,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     var filtered = MapArtworkFiltering.filter(
       artworks: artworks,
       markers: _artMarkers,
-      markerLayerVisibility: _markerLayerVisibility,
-      query: _mapSearchController.state.query,
-      filterKey: _selectedFilter,
-      basePosition: basePosition,
-      radiusKm: _effectiveSearchRadiusKm,
-      // Match the map-marker filter (strict = false): without a base position
-      // the nearby list keeps showing loaded artworks instead of going empty
-      // while the map still renders their markers.
-      strictNearbyWithoutBase: false,
+      context: KubusMapFilterContext(
+        state: _filterState,
+        query: _mapSearchController.state.query,
+        basePosition: basePosition,
+      ),
     );
-
-    switch (_selectedFilter) {
-      case 'discovered':
-      case 'undiscovered':
-      case 'ar':
-      case 'favorites':
-      case 'nearby':
-      case 'all':
-        break;
-      case 'nfts':
-        filtered = filtered.where((artwork) {
-          final category = artwork.category.toLowerCase();
-          final tags = artwork.tags.map((t) => t.toLowerCase());
-          final metaType = (artwork.metadata?['type'] ??
-                  artwork.metadata?['assetType'] ??
-                  artwork.metadata?['kind'])
-              ?.toString()
-              .toLowerCase();
-
-          return category.contains('nft') ||
-              category.contains('token') ||
-              tags.any((t) => t.contains('nft') || t.contains('token')) ||
-              (metaType?.contains('nft') ?? false);
-        }).toList();
-        break;
-      case 'models3d':
-        filtered = filtered.where((artwork) {
-          final category = artwork.category.toLowerCase();
-          final tags = artwork.tags.map((t) => t.toLowerCase());
-          final has3dModel =
-              artwork.model3DCID != null || artwork.model3DURL != null;
-
-          return has3dModel ||
-              category.contains('3d') ||
-              category.contains('model') ||
-              tags.any((t) => t.contains('3d') || t.contains('model'));
-        }).toList();
-        break;
-      case 'sculptures':
-        filtered = filtered.where((artwork) {
-          final category = artwork.category.toLowerCase();
-          final tags = artwork.tags.map((t) => t.toLowerCase());
-          return category.contains('sculpt') ||
-              tags.any((t) => t.contains('sculpt') || t.contains('statue'));
-        }).toList();
-        break;
-      default:
-        break;
-    }
 
     switch (_selectedSort) {
       case 'distance':
@@ -4474,12 +4524,15 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       _queuePendingMarkerRefresh(force: force);
       return;
     }
-    if (_travelModeEnabled && !_styleInitialized) return;
-    final center = _cameraCenter;
+    final useBoundsQuery = _filterState.scope != KubusMapScope.nearMe;
+    if (useBoundsQuery && !_styleInitialized) return;
+    final center = _filterState.scope == KubusMapScope.nearMe
+        ? (_userLocation ?? _cameraCenter)
+        : _cameraCenter;
     GeoBounds? bounds;
     int? zoomBucket;
 
-    if (_travelModeEnabled) {
+    if (useBoundsQuery) {
       zoomBucket = MapViewportUtils.zoomBucket(_cameraZoom);
       final visible = await _getVisibleGeoBounds();
       if (visible == null) return;
@@ -4518,12 +4571,13 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final themeProvider = context.read<ThemeProvider>();
 
     int? bucket = zoomBucket;
-    if (_travelModeEnabled && bucket == null) {
+    final useBoundsQuery = _filterState.scope != KubusMapScope.nearMe;
+    if (useBoundsQuery && bucket == null) {
       bucket = MapViewportUtils.zoomBucket(_cameraZoom);
     }
 
     GeoBounds? queryBounds = bounds;
-    if (_travelModeEnabled && queryBounds == null) {
+    if (useBoundsQuery && queryBounds == null) {
       final visible = await _getVisibleGeoBounds();
       if (visible == null) return;
       final effectiveBucket =
@@ -4547,11 +4601,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           : MapViewportUtils.markerLimitForZoomBucket(bucket);
 
       _perf.recordFetch(
-        (_travelModeEnabled && queryBounds != null)
+        (useBoundsQuery && queryBounds != null)
             ? 'markers:bounds'
             : 'markers:radius',
       );
-      final result = (_travelModeEnabled && queryBounds != null)
+      final result = (useBoundsQuery && queryBounds != null)
           ? await MapMarkerHelper.loadAndHydrateMarkersInBounds(
               artworkProvider: artworkProvider,
               mapMarkerService: _mapMarkerService,
@@ -4567,7 +4621,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               mapMarkerService: _mapMarkerService,
               center: queryCenter,
               radiusKm: _effectiveSearchRadiusKm,
-              limit: _travelModeEnabled ? travelLimit : null,
+              limit: useBoundsQuery ? travelLimit : null,
               forceRefresh: force,
               zoomBucket: bucket,
               filtersKey: _markerQueryFiltersKey(),
@@ -4652,10 +4706,14 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     }
 
     try {
+      final motion = KubusMapMotion.fromMediaQuery(
+        animationTheme: context.animationTheme,
+        mediaQuery: MediaQuery.of(context),
+      ).overlayReposition;
       await _markerStackPageController.animateToPage(
         desired,
-        duration: const Duration(milliseconds: 220),
-        curve: Curves.easeOutCubic,
+        duration: motion.duration,
+        curve: motion.curve,
       );
     } catch (_) {
       // Fall back to state update if the controller is not attached.
@@ -4974,14 +5032,19 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     required ThemeProvider themeProvider,
     required ArtworkProvider artworkProvider,
     required MapMarkerSelectionState selection,
+    required bool isVisible,
   }) {
     final marker = selection.selectedMarker;
+    final mapMotion = KubusMapMotion.fromMediaQuery(
+      animationTheme: context.animationTheme,
+      mediaQuery: MediaQuery.of(context),
+    );
     final selectionKey = selection.selectionToken;
     final animationKey = marker == null
         ? const ValueKey<String>('marker_overlay_empty')
         : ValueKey<String>('marker_overlay:$selectionKey');
     return KubusMapMarkerOverlayShell.build(
-      isVisible: marker != null,
+      isVisible: isVisible && marker != null,
       anchorListenable: _selectedMarkerAnchorNotifier,
       contentKey: animationKey,
       onDismiss: _kubusMapController.dismissSelection,
@@ -5009,6 +5072,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           isDesktop: true,
           rightSidebarOpen: _isRightSidebarOpen,
           leftPanelOpen: _isLeftPanelVisible,
+          topChromePx: KubusMapMetrics.desktopContextPanelTopInset,
         ).maxHeight;
       },
       heightResolver: (constraints, mediaQuery, maxHeight) {
@@ -5059,6 +5123,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         isDesktop: true,
         rightSidebarOpen: _isRightSidebarOpen,
         leftPanelOpen: _isLeftPanelVisible,
+        topChromePx: KubusMapMetrics.desktopContextPanelTopInset,
       ).topPadding,
       bottomPadding: MapOverlaySizing.resolveMarkerOverlayCardLayout(
         constraints: const BoxConstraints(maxWidth: 1000, maxHeight: 800),
@@ -5067,7 +5132,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         rightSidebarOpen: _isRightSidebarOpen,
         leftPanelOpen: _isLeftPanelVisible,
       ).bottomPadding,
-      animation: overlay_wrapper.KubusMarkerOverlayAnimationConfig.of(context),
+      animation: overlay_wrapper.KubusMarkerOverlayAnimationConfig.fromMotion(
+        mapMotion.overlayReposition,
+      ),
+      transitionMotion: mapMotion.overlayEnter,
       onLayoutResolved: (resolvedLayout) {
         _handleMarkerOverlayLayoutResolved(selection, resolvedLayout);
       },
@@ -5169,6 +5237,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     if (!mounted) return false;
     if (requestId == null) return true;
     if (requestId != _markerOpenRequestId) return false;
+    if (!_mapUiStateCoordinator
+        .isSurfaceRevisionCurrent(_markerOpenSurfaceRevision)) {
+      return false;
+    }
     final selectedMarkerId = _kubusMapController.selectedMarkerId;
     return selectedMarkerId == null || selectedMarkerId == marker.id;
   }
@@ -5180,6 +5252,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     KubusEvent? event,
   }) async {
     final requestId = ++_markerOpenRequestId;
+    _markerOpenSurfaceRevision = _mapUiStateCoordinator.value.surfaceRevision;
     if (kDebugMode) {
       debugPrint('[marker.tap] start id=${marker.id} type=${marker.type.name}');
     }
@@ -5307,12 +5380,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     }
 
     unawaited(eventsProvider.loadEventExhibitions(fetched.id, refresh: true));
-    setState(() {
-      _selectedEvent = fetched;
-      _selectedArtwork = null;
-      _selectedExhibition = null;
-      _showFiltersPanel = false;
-    });
+    _presentEventDetails(fetched);
   }
 
   Future<void> _openInstitutionFromMarker(
@@ -5357,13 +5425,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       return;
     }
 
-    // Open the left side panel with artwork details
-    setState(() {
-      _selectedArtwork = resolvedArtwork;
-      _selectedExhibition = null;
-      _selectedEvent = null;
-      _showFiltersPanel = false;
-    });
+    _presentArtworkDetails(resolvedArtwork);
   }
 
   Future<void> _openExhibitionFromMarker(
@@ -5452,13 +5514,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       return;
     }
 
-    // Open the left side panel with exhibition details
-    setState(() {
-      _selectedExhibition = fetched;
-      _selectedArtwork = null;
-      _selectedEvent = null;
-      _showFiltersPanel = false;
-    });
+    _presentExhibitionDetails(fetched);
   }
 
   Future<void> _claimSelectedExhibitionPoap(String exhibitionId) async {
@@ -5539,15 +5595,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       }
       if (mounted && _kubusMapController.selectedMarkerId == marker.id) {
         if (allowAutoSelect) {
-          setState(() {
-            if (_selectedArtwork == null ||
-                _selectedArtwork?.id == resolvedArtwork!.id) {
-              _selectedArtwork = resolvedArtwork;
-            }
-            _selectedExhibition = null;
-            _selectedEvent = null;
-            _showFiltersPanel = false;
-          });
+          if (_mapUiStateCoordinator.value.contextSurface ==
+              MapContextSurface.markerPreview) {
+            _presentArtworkDetails(resolvedArtwork);
+          }
         } else {
           setState(() {});
         }
@@ -5602,82 +5653,103 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       maxWidth: cacheWidth,
     );
 
-    await showKubusDialog<void>(
-      context: context,
-      useRootNavigator: false,
-      builder: (dialogContext) => KubusAlertDialog(
-        backgroundColor: scheme.surface,
-        title: Text(
-          marker.subjectTitle?.trim().isNotEmpty == true
-              ? marker.subjectTitle!.trim()
-              : marker.name,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: scheme.onSurface,
-              ),
-        ),
-        content: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 520),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (coverUrl != null && coverUrl.isNotEmpty)
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(KubusRadius.sm),
-                  child: KubusCachedImage(
-                    imageUrl: coverUrl,
-                    width: double.infinity,
-                    height: 160,
-                    fit: BoxFit.cover,
-                    filterQuality: FilterQuality.low,
-                    cacheWidth: cacheWidth,
-                    cacheHeight: cacheHeight,
-                    maxDisplayWidth: cacheWidth,
-                    cacheVersion: KubusCachedImage.versionTokenFromDate(
-                      marker.updatedAt,
-                    ),
-                    errorBuilder: (_, __, ___) =>
-                        KubusMapMarkerHelpers.markerImageFallback(
-                      baseColor: _resolveArtMarkerColor(
-                        marker,
-                        themeProvider,
+    if (!_mapUiStateCoordinator.openMarkerDetails()) return;
+    try {
+      final overlayExitMotion = KubusMapMotion.fromMediaQuery(
+        animationTheme: context.animationTheme,
+        mediaQuery: MediaQuery.of(context),
+      ).overlayEnter;
+      await KubusMapSurfaceTransitionHelpers.awaitOverlayExit(
+        overlayExitMotion,
+      );
+      if (!mounted ||
+          _mapUiStateCoordinator.value.contextSurface !=
+              MapContextSurface.markerDetails) {
+        return;
+      }
+      await showKubusDialog<void>(
+        context: context,
+        useRootNavigator: false,
+        builder: (dialogContext) => KubusAlertDialog(
+          backgroundColor: scheme.surface,
+          title: Text(
+            marker.subjectTitle?.trim().isNotEmpty == true
+                ? marker.subjectTitle!.trim()
+                : marker.name,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: scheme.onSurface,
+                ),
+          ),
+          content: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (coverUrl != null && coverUrl.isNotEmpty)
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(KubusRadius.sm),
+                    child: KubusCachedImage(
+                      imageUrl: coverUrl,
+                      width: double.infinity,
+                      height: 160,
+                      fit: BoxFit.cover,
+                      filterQuality: FilterQuality.low,
+                      cacheWidth: cacheWidth,
+                      cacheHeight: cacheHeight,
+                      maxDisplayWidth: cacheWidth,
+                      cacheVersion: KubusCachedImage.versionTokenFromDate(
+                        marker.updatedAt,
                       ),
-                      scheme: scheme,
-                      marker: marker,
+                      errorBuilder: (_, __, ___) =>
+                          KubusMapMarkerHelpers.markerImageFallback(
+                        baseColor: _resolveArtMarkerColor(
+                          marker,
+                          themeProvider,
+                        ),
+                        scheme: scheme,
+                        marker: marker,
+                      ),
                     ),
                   ),
+                const SizedBox(height: 12),
+                Flexible(
+                  child: Text(
+                    marker.description.isNotEmpty
+                        ? marker.description
+                        : AppLocalizations.of(context)!
+                            .mapNoLinkedArtworkForMarker,
+                    maxLines: 12,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.copyWith(color: scheme.onSurfaceVariant),
+                  ),
                 ),
-              const SizedBox(height: 12),
-              Flexible(
-                child: Text(
-                  marker.description.isNotEmpty
-                      ? marker.description
-                      : AppLocalizations.of(context)!
-                          .mapNoLinkedArtworkForMarker,
-                  maxLines: 12,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodyMedium
-                      ?.copyWith(color: scheme.onSurfaceVariant),
-                ),
-              ),
-              // Artist / photo / source attribution, below the description.
-              MarkerAttributionSection.fromMarker(marker),
-            ],
+                // Artist / photo / source attribution, below the description.
+                MarkerAttributionSection.fromMarker(marker),
+              ],
+            ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(AppLocalizations.of(context)!.commonClose),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(AppLocalizations.of(context)!.commonClose),
-          ),
-        ],
-      ),
-    );
+      );
+    } finally {
+      if (mounted &&
+          _mapUiStateCoordinator.value.contextSurface ==
+              MapContextSurface.markerDetails) {
+        _mapUiStateCoordinator.backFromMarkerDetails();
+      }
+    }
   }
 
   MarkerSubjectData _snapshotMarkerSubjectData() => _subjectLoader.snapshot();
@@ -5738,17 +5810,17 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                             ? MarkerSubjectType.institution
                             : MarkerSubjectType.misc;
 
+    if (!_mapUiStateCoordinator.beginCreateMarker()) return;
+    _kubusMapController.dismissSelection();
     _safeSetState(() {
       _createMarkerSubjectData = subjectData;
       _createMarkerAllowedTypes = allowedSubjectTypes;
       _createMarkerInitialType = initialSubjectType;
       _createMarkerPosition = targetPosition;
       _rightSidebarContent = _RightSidebarContent.createMarker;
-      // Close left panels to avoid clutter.
       _selectedArtwork = null;
       _selectedExhibition = null;
       _selectedEvent = null;
-      _showFiltersPanel = false;
     });
   }
 
