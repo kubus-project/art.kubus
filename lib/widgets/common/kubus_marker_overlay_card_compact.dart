@@ -11,6 +11,7 @@ extension _KubusMarkerOverlayCardCompactParts on KubusMarkerOverlayCard {
     required int cacheHeight,
     required String visibleDescription,
     required Color actionForeground,
+    required String artistLabel,
   }) {
     final media = MediaQuery.of(context);
     final motion = KubusMapMotion.fromMediaQuery(
@@ -71,6 +72,19 @@ extension _KubusMarkerOverlayCardCompactParts on KubusMarkerOverlayCard {
                       height: 1.15,
                     ),
                   ),
+                  if (artistLabel.isNotEmpty) ...[
+                    const SizedBox(height: KubusSpacing.xxs),
+                    Text(
+                      artistLabel,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: KubusTypography.textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w600,
+                        height: 1.15,
+                      ),
+                    ),
+                  ],
                   if (visibleDescription.isNotEmpty && !largeText) ...[
                     const SizedBox(height: KubusSpacing.xxs),
                     Text(
@@ -284,12 +298,12 @@ class _CompactMarkerActionsMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final materialL10n = MaterialLocalizations.of(context);
+    final l10n = AppLocalizations.of(context)!;
     return SizedBox.square(
       dimension: KubusMapMetrics.minimumTouchTarget,
       child: PopupMenuButton<int>(
-        tooltip: materialL10n.moreButtonTooltip,
-        icon: const Icon(Icons.more_horiz),
+        tooltip: l10n.exhibitionCreatorQuickActionsTitle,
+        icon: const Icon(Icons.bolt_outlined),
         onSelected: (index) => actions[index].onTap?.call(),
         itemBuilder: (context) => [
           for (var index = 0; index < actions.length; index++)

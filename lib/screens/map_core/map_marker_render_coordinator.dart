@@ -108,15 +108,10 @@ class MapMarkerRenderCoordinator {
   // 3-D mode check
   // ---------------------------------------------------------------------------
 
-  /// Returns `true` only when the experimental cube-marker feature flag is on
-  /// AND camera pitch exceeds the cube pitch threshold.
-  ///
-  /// Note: this intentionally no longer keys off `mapIsometricView`. Pitching
-  /// the map (isometric view) must not convert the stable floating badges into
-  /// the experimental fill-extrusion cubes; that only happens when the cube
-  /// experiment is explicitly enabled.
+  /// Isometric view switches markers into their extrusion representation once
+  /// the camera crosses the pitch threshold, making the mode visually clear.
   bool get is3DModeActive {
-    if (!AppConfig.isFeatureEnabled('mapExperimentalCubeMarkers')) return false;
+    if (!AppConfig.isFeatureEnabled('mapIsometricView')) return false;
     return _getLastPitch() > MapScreenConstants.cubePitchThreshold;
   }
 
