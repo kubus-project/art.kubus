@@ -37,6 +37,7 @@ import '../../config/config.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import '../../widgets/promotion/promotion_builder_sheet.dart';
 import '../../widgets/common/subject_options_sheet.dart';
+import '../../widgets/public_entity_takeover_ready.dart';
 import 'event_detail_screen.dart';
 
 class ExhibitionDetailScreen extends StatefulWidget {
@@ -1088,12 +1089,23 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
     final isSignedIn =
         context.watch<WalletProvider>().authority.hasAccountSession;
 
-    final ex = provider.exhibitions.firstWhere(
-      (e) => e.id == widget.exhibitionId,
-      orElse: () =>
-          widget.initialExhibition ??
-          Exhibition(id: widget.exhibitionId, title: l10n.commonExhibition),
-    );
+    Exhibition? loadedExhibition;
+    for (final candidate in provider.exhibitions) {
+      if (candidate.id == widget.exhibitionId) {
+        loadedExhibition = candidate;
+        break;
+      }
+    }
+    final initialExhibition =
+        widget.initialExhibition?.id == widget.exhibitionId
+            ? widget.initialExhibition
+            : null;
+    final exactExhibition = loadedExhibition ?? initialExhibition;
+    final ex = exactExhibition ??
+        Exhibition(
+          id: widget.exhibitionId,
+          title: l10n.commonExhibition,
+        );
 
     final poap = provider.poapStatusFor(widget.exhibitionId);
 
@@ -1105,7 +1117,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
       ex,
     );
 
-    return Scaffold(
+    final content = Scaffold(
       appBar: widget.embedded
           ? null
           : AppBar(
@@ -1273,6 +1285,12 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
           ),
         ),
       ),
+    );
+    if (exactExhibition == null) return content;
+    return PublicEntityTakeoverReady(
+      type: ShareEntityType.exhibition,
+      entityId: exactExhibition.id,
+      child: content,
     );
   }
 }

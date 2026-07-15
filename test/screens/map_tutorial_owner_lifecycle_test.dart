@@ -80,6 +80,19 @@ void main() {
       }
     });
 
+    test('direct map targets suppress automatic tutorial takeover', () {
+      final mobile = _readNormalized('lib/screens/map_screen.dart');
+      final desktop =
+          _readNormalized('lib/screens/desktop/desktop_map_screen.dart');
+
+      for (final source in <String>[mobile, desktop]) {
+        expect(source, contains('if (_hasInitialDirectTarget) return;'));
+        expect(source, contains('widget.initialMarkerId'));
+        expect(source, contains('widget.initialArtworkId'));
+        expect(source, contains('widget.initialSubjectId'));
+      }
+    });
+
     test('mobile schedules tutorial start only when route and tab are active',
         () {
       final source = _readNormalized('lib/screens/map_screen.dart');

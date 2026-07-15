@@ -23,6 +23,7 @@ import '../../providers/events_provider.dart';
 import '../../providers/attestation_provider.dart';
 import '../../providers/marker_management_provider.dart';
 import '../../providers/presence_provider.dart';
+import '../../providers/public_entity_takeover_provider.dart';
 import '../../providers/tile_providers.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/wallet_provider.dart';
@@ -88,6 +89,7 @@ import '../../features/map/shared/map_search_filter_assembly.dart';
 import '../../features/map/map_layers_manager.dart';
 import '../../features/map/map_overlay_stack.dart';
 import '../../features/map/controller/kubus_map_controller.dart';
+import '../../features/map/controller/map_target_coordinator.dart';
 import '../../features/map/engine/kubus_map_marker_sync_engine.dart';
 import '../../features/map/tutorial/map_tutorial_coordinator.dart';
 import '../../utils/design_tokens.dart';
@@ -235,7 +237,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   _MarkerOverlayMode _markerOverlayMode = _MarkerOverlayMode.anchored;
   bool _markerStackPagerSyncing = false;
   final PageController _markerStackPageController = PageController();
-  bool _didOpenInitialSelection = false;
   int _lastMarkerOverlayNudgeSelectionToken = -1;
   KubusMapFilterState _filterState = KubusMapFilterState.defaults();
   bool _travelModeEnabled = false;
@@ -320,6 +321,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   final Debouncer _cubeSyncDebouncer = Debouncer();
   final Debouncer _radiusChangeDebouncer = Debouncer();
   late final ValueNotifier<Offset?> _selectedMarkerAnchorNotifier;
+  late final MapTargetCoordinator _mapTargetCoordinator;
+  String? _directTargetMarkerId;
   // Shared constants – canonical values live in MapScreenConstants.
   static const String _markerSourceId = MapScreenConstants.markerSourceId;
   static const String _markerLayerId = MapScreenConstants.markerLayerId;
@@ -557,6 +560,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           if (!mounted) return;
           _syncMarkerStackPager();
         });
+        _mapTargetCoordinator.selectionChanged(state.selectedMarkerId);
       },
       onBackgroundTap: () {
         if (!mounted) return;
@@ -584,6 +588,39 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         _requestMarkerVisualSync();
       },
     );
+
+    _mapTargetCoordinator = MapTargetCoordinator(
+      loadedMarkers: () => _artMarkers,
+      fetchMarkerById: MapDataController().getArtMarkerById,
+      fetchMarkersByArtwork: MapDataController().getArtMarkersByArtwork,
+      loadMarkersAround: (position) => _loadMarkers(
+        center: position,
+        force: true,
+      ),
+      mergeMarkers: _mergeDirectTargetMarkers,
+      moveCamera: _moveCamera,
+      selectMarker: _handleMarkerTap,
+      setPinnedMarker: (markerId) {
+        if (_directTargetMarkerId == markerId) return;
+        _directTargetMarkerId = markerId;
+        if (mounted) _applyVisibleMarkers();
+      },
+      showFallback: _showMapTargetFallback,
+      onTerminal: _handleMapTargetTerminal,
+    );
+
+    final initialTarget = MapTargetIntent(
+      exactMarkerId: widget.initialMarkerId,
+      artworkId: widget.initialArtworkId,
+      subjectId: widget.initialSubjectId,
+      subjectType: widget.initialSubjectType,
+      preferredPosition: widget.initialCenter,
+      preferredLabel: widget.initialTargetLabel,
+      minZoom: widget.initialZoom ?? 16,
+    );
+    if (initialTarget.hasIdentity) {
+      unawaited(_mapTargetCoordinator.submit(initialTarget));
+    }
     _selectedMarkerAnchorNotifier = _kubusMapController.selectedMarkerAnchor;
     _kubusMapController.setMarkerTypeVisibility(_markerLayerVisibility);
     _kubusMapController.setMarkers(_artMarkers);
@@ -710,8 +747,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // Load markers after the first layout. If travel mode is enabled we will
       // force a bounds refresh once the map reports ready.
-      unawaited(_loadMarkersForCurrentView(force: true)
-          .then((_) => _maybeOpenInitialSelection()));
+      unawaited(_loadMarkersForCurrentView(force: true));
 
       // Only animate camera to user location when we're not deep-linking to a target.
       // When initialCenter is provided (e.g. "Open on Map"), keep the camera focused on that target.
@@ -838,6 +874,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   void _scheduleMapTutorialStartIfEligible({required String reason}) {
+    // A direct target must remain the only foreground task until its exact
+    // marker card is visible. The tutorial remains manually launchable.
+    if (_hasInitialDirectTarget) return;
     if (_mapTutorialStartScheduled) return;
     if (_mapTutorialCoordinator.visible) return;
     if (_mapTutorialStartAttempts >= _maxMapTutorialStartAttempts) return;
@@ -893,6 +932,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       unawaited(_mapTutorialCoordinator.maybeStart());
     });
   }
+
+  bool get _hasInitialDirectTarget => <String?>[
+        widget.initialMarkerId,
+        widget.initialArtworkId,
+        widget.initialSubjectId,
+      ].any((value) => value?.trim().isNotEmpty ?? false);
 
   Future<void> _trackGuestMapEntry() async {
     try {
@@ -1457,68 +1502,14 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     });
   }
 
-  Future<void> _maybeOpenInitialSelection() async {
-    if (_didOpenInitialSelection) return;
-    final markerId = widget.initialMarkerId?.trim() ?? '';
-    final artworkId = widget.initialArtworkId?.trim() ?? '';
-    final subjectId = widget.initialSubjectId?.trim() ?? '';
-    if (markerId.isEmpty && artworkId.isEmpty && subjectId.isEmpty) return;
-
-    _didOpenInitialSelection = true;
-    if (markerId.isNotEmpty) {
-      final opened = await _openMarkerById(markerId);
-      if (opened) return;
-    }
-
-    await _openMarkerBySelection(
-      exactMarkerId: markerId,
-      artworkId: artworkId,
-      subjectId: subjectId,
-      subjectType: widget.initialSubjectType,
-      preferredLabel: widget.initialTargetLabel,
-      preferredPosition: widget.initialCenter,
-    );
-  }
-
   Future<bool> _openMarkerById(String markerId) async {
     final id = markerId.trim();
     if (id.isEmpty) return false;
-
-    for (var attempt = 0; attempt < 4; attempt++) {
-      final existing =
-          _artMarkers.where((m) => m.id == id).toList(growable: false);
-      if (existing.isNotEmpty) {
-        final marker = existing.first;
-        await _moveCamera(marker.position, math.max(_effectiveZoom, 15));
-        _handleMarkerTap(marker);
-        return true;
-      }
-
-      try {
-        _perf.recordFetch('marker:get');
-        final marker = await MapDataController().getArtMarkerById(id);
-        if (!mounted) return false;
-        if (marker != null && marker.hasValidPosition) {
-          setState(() {
-            _artMarkers.removeWhere((m) => m.id == marker.id);
-            _artMarkers.add(marker);
-          });
-          await _moveCamera(marker.position, math.max(_effectiveZoom, 15));
-          _handleMarkerTap(marker);
-          return true;
-        }
-      } catch (_) {
-        // Keep retrying for hydration races.
-      }
-
-      if (attempt < 3) {
-        await Future<void>.delayed(
-          Duration(milliseconds: 220 * (attempt + 1)),
-        );
-        if (!mounted) return false;
-      }
-    }
-    return false;
+    _perf.recordFetch('marker:get');
+    final result = await _mapTargetCoordinator.submit(
+      MapTargetIntent(exactMarkerId: id, minZoom: math.max(_effectiveZoom, 16)),
+    );
+    return result == MapTargetResult.overlayOpened;
   }
 
   Future<bool> _openMarkerBySelection({
@@ -1529,62 +1520,65 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     String? preferredLabel,
     LatLng? preferredPosition,
   }) async {
-    final markerId = exactMarkerId?.trim() ?? '';
-    final normalizedArtworkId = artworkId?.trim() ?? '';
-    final normalizedSubjectId = subjectId?.trim() ?? '';
-    final normalizedSubjectType = subjectType?.trim() ?? '';
-    if (markerId.isEmpty &&
-        normalizedArtworkId.isEmpty &&
-        normalizedSubjectId.isEmpty) {
-      return false;
-    }
+    final target = MapTargetIntent(
+      exactMarkerId: exactMarkerId,
+      artworkId: artworkId,
+      subjectId: subjectId,
+      subjectType: subjectType,
+      preferredLabel: preferredLabel,
+      preferredPosition: preferredPosition ?? widget.initialCenter,
+      minZoom: math.max(_effectiveZoom, 16),
+    );
+    if (!target.hasIdentity) return false;
+    final result = await _mapTargetCoordinator.submit(target);
+    return result == MapTargetResult.overlayOpened;
+  }
 
-    final targetPosition = preferredPosition ?? widget.initialCenter;
-    for (var attempt = 0; attempt < 4; attempt++) {
-      final existing = resolveBestMarkerCandidate(
-        _artMarkers,
-        exactMarkerId: markerId,
-        artworkId: normalizedArtworkId,
-        subjectId: normalizedSubjectId,
-        subjectType: normalizedSubjectType,
-        preferredLabel: preferredLabel,
-        preferredPosition: targetPosition,
-      );
-      if (existing != null) {
-        await _moveCamera(existing.position, math.max(_effectiveZoom, 15));
-        _handleMarkerTap(existing);
-        return true;
-      }
+  void _mergeDirectTargetMarkers(List<ArtMarker> markers) {
+    if (!mounted || markers.isEmpty) return;
+    final merged = ArtMarkerListDiff.upsertById(
+      current: _artMarkers,
+      updates: markers,
+    );
+    if (_markersEquivalent(_artMarkers, merged)) return;
+    setState(() => _artMarkers = merged);
+    _applyVisibleMarkers();
+    _mapTargetCoordinator.notifyMarkersChanged();
+  }
 
-      if (targetPosition != null) {
-        await _loadMarkers(center: targetPosition, force: true);
-        if (!mounted) return false;
+  void _showMapTargetFallback(
+    MapTargetIntent intent,
+    MapTargetResult result,
+  ) {
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    final l10n = AppLocalizations.of(context);
+    if (messenger == null || l10n == null) return;
+    final message = result == MapTargetResult.coordinatesOnly
+        ? l10n.mapTargetMarkerUnavailableToast
+        : l10n.mapTargetNotFoundToast;
+    messenger.showKubusSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
 
-        final refreshed = resolveBestMarkerCandidate(
-          _artMarkers,
-          exactMarkerId: markerId,
-          artworkId: normalizedArtworkId,
-          subjectId: normalizedSubjectId,
-          subjectType: normalizedSubjectType,
-          preferredLabel: preferredLabel,
-          preferredPosition: targetPosition,
+  void _handleMapTargetTerminal(
+    MapTargetIntent intent,
+    MapTargetResult result,
+  ) {
+    final markerId = intent.exactMarkerId?.trim() ?? '';
+    if (result != MapTargetResult.overlayOpened || markerId.isEmpty) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      try {
+        unawaited(
+          context.read<PublicEntityTakeoverProvider>().markEntityReady(
+                ShareEntityType.marker,
+                markerId,
+              ),
         );
-        if (refreshed != null) {
-          await _moveCamera(refreshed.position, math.max(_effectiveZoom, 15));
-          _handleMarkerTap(refreshed);
-          return true;
-        }
-      }
-
-      if (attempt < 3) {
-        await Future<void>.delayed(
-          Duration(milliseconds: 220 * (attempt + 1)),
-        );
-        if (!mounted) return false;
-      }
-    }
-
-    return false;
+      } catch (_) {}
+    });
   }
 
   LatLng get _effectiveCenter => _cameraCenter;
@@ -1592,6 +1586,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   void _handleMapReady() {
     setState(() => _mapReady = true);
+    _mapTargetCoordinator.setMapControllerReady(true);
+    _mapTargetCoordinator.setStyleReady(_styleInitialized);
     _mapCameraController.flushQueuedIfReady();
 
     // Travel mode needs a bounds-based fetch once the viewport exists.
@@ -1727,6 +1723,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       },
     );
     _styleInitialized = false;
+    _mapTargetCoordinator.setMapControllerReady(true);
+    _mapTargetCoordinator.setStyleReady(false);
     AppConfig.debugPrint(
       'DesktopMapScreen: map created (platform=${defaultTargetPlatform.name}, web=$kIsWeb)',
     );
@@ -1780,6 +1778,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         }
       },
     );
+    if (mounted) {
+      _mapTargetCoordinator.setStyleReady(_styleInitialized);
+    }
   }
 
   Future<void> _syncUserLocation() async {
@@ -1893,6 +1894,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         _kubusMapController.selectionState.selectionToken) {
       return;
     }
+    _mapTargetCoordinator.acknowledgeOverlay(marker.id);
     if (_lastMarkerOverlayNudgeSelectionToken == selection.selectionToken) {
       return;
     }
@@ -2026,6 +2028,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     _markerVisualSyncCoordinator.dispose();
     _mapDataCoordinator.dispose();
     _mapUiStateCoordinator.dispose();
+    _mapTargetCoordinator.dispose();
     _kubusMapController.dispose();
     _mapBackdropHostController.dispose();
     WidgetsBinding.instance.removeObserver(this);
@@ -4444,6 +4447,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     }
 
     final selectedId = _kubusMapController.selectedMarkerId;
+    final pinnedIds = <String>{
+      if (selectedId != null) selectedId,
+      if (_directTargetMarkerId != null) _directTargetMarkerId!,
+    };
     return filterVisibleMapMarkers(
       markers: _artMarkers,
       context: KubusMapFilterContext(
@@ -4460,7 +4467,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       isArCapable: (marker) =>
           defaultMarkerIsArCapable(marker) ||
           (artworkFor(marker)?.arEnabled ?? false),
-      alwaysIncludeMarkerIds: selectedId == null ? null : <String>{selectedId},
+      alwaysIncludeMarkerIds: pinnedIds.isEmpty ? null : pinnedIds,
     );
   }
 

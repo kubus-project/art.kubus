@@ -182,6 +182,65 @@ void main() {
 
       expect(resolved?.id, 'event-marker');
     });
+
+    test('returns null instead of selecting an unrelated artwork marker', () {
+      final resolved = resolveBestMarkerCandidate(
+        <ArtMarker>[
+          _marker(
+            id: 'unrelated',
+            artworkId: 'other-artwork',
+            lat: 46.0569,
+            lng: 14.5058,
+          ),
+        ],
+        artworkId: 'missing-artwork',
+        preferredPosition: const LatLng(46.0569, 14.5058),
+      );
+
+      expect(resolved, isNull);
+    });
+
+    test('treats exact marker id as a hint after authoritative artwork id', () {
+      final resolved = resolveBestMarkerCandidate(
+        <ArtMarker>[
+          _marker(
+            id: 'stale-marker-hint',
+            artworkId: 'other-artwork',
+            lat: 46.0569,
+            lng: 14.5058,
+          ),
+          _marker(
+            id: 'authoritative-match',
+            artworkId: 'art-1',
+            lat: 46.0600,
+            lng: 14.5100,
+          ),
+        ],
+        exactMarkerId: 'stale-marker-hint',
+        artworkId: 'art-1',
+        preferredPosition: const LatLng(46.0569, 14.5058),
+      );
+
+      expect(resolved?.id, 'authoritative-match');
+    });
+
+    test('returns null when subject type does not match', () {
+      final resolved = resolveBestMarkerCandidate(
+        <ArtMarker>[
+          _marker(
+            id: 'institution-marker',
+            subjectId: 'shared-subject',
+            subjectType: 'institution',
+            lat: 46.0569,
+            lng: 14.5058,
+          ),
+        ],
+        subjectId: 'shared-subject',
+        subjectType: 'event',
+      );
+
+      expect(resolved, isNull);
+    });
   });
 
   group('NearbyArtController.findMarkerForArtwork', () {

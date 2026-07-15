@@ -17,6 +17,7 @@ class MapNavigation {
     String? initialSubjectId,
     String? initialSubjectType,
     String? initialTargetLabel,
+    bool preserveDesktopBackStack = false,
   }) {
     final width = MediaQuery.sizeOf(context).width;
     final isDesktop = width >= 900;
@@ -26,7 +27,9 @@ class MapNavigation {
       final shellScope = DesktopShellScope.of(context);
       if (shellScope != null) {
         final l10n = AppLocalizations.of(context);
-        shellScope.navigateToRoute('/explore');
+        if (!preserveDesktopBackStack) {
+          shellScope.navigateToRoute('/explore');
+        }
         shellScope.pushScreen(
           DesktopSubScreen(
             title: l10n?.navigationScreenExploreMap ?? 'Explore Map',

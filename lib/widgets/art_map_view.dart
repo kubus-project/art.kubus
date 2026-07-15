@@ -10,6 +10,7 @@ import 'package:maplibre_gl/maplibre_gl.dart' as ml;
 import '../config/config.dart';
 import '../services/map_style_service.dart';
 import '../services/webgl_context_helper.dart';
+import '../services/web_maplibre_runtime.dart';
 import '../utils/design_tokens.dart';
 import 'kubus_snackbar.dart';
 
@@ -202,10 +203,17 @@ class _ArtMapViewState extends State<ArtMapView> {
   Stopwatch? _styleStopwatch;
   bool _webGLHealthy = true;
   bool _webGLRecovering = false;
+  late final Future<void> _webRuntimeReady;
 
   @override
   void initState() {
     super.initState();
+    final bindingName = WidgetsBinding.instance.runtimeType.toString();
+    final isWidgetTest = bindingName.contains('TestWidgetsFlutterBinding') ||
+        bindingName.contains('AutomatedTestWidgetsFlutterBinding');
+    _webRuntimeReady = kIsWeb && !isWidgetTest
+        ? ensureWebMapLibreRuntimeReady()
+        : Future<void>.value();
 
     assert(() {
       _debugLiveInstances += 1;
@@ -563,6 +571,25 @@ class _ArtMapViewState extends State<ArtMapView> {
       );
     }
 
+    if (kIsWeb) {
+      return FutureBuilder<void>(
+        future: _webRuntimeReady,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.done &&
+              !snapshot.hasError) {
+            return _buildMapLibre(context);
+          }
+          return SizedBox.expand(
+            child: ColoredBox(color: _mapLoadingBackdropColor()),
+          );
+        },
+      );
+    }
+
+    return _buildMapLibre(context);
+  }
+
+  Widget _buildMapLibre(BuildContext context) {
     final resolved = _resolvedStyleString;
 
     // MapLibre is a platform view; in a loose Stack it can end up with a 0-size
@@ -593,8 +620,8 @@ class _ArtMapViewState extends State<ArtMapView> {
                 //
                 // Use an explicit empty set so the map only receives gestures
                 // that are not claimed by Flutter overlays.
-                gestureRecognizers:
-                    const <Factory<OneSequenceGestureRecognizer>>{},
+                gestureRecognizers: const <Factory<
+                    OneSequenceGestureRecognizer>>{},
                 initialCameraPosition: ml.CameraPosition(
                   target: ml.LatLng(
                     widget.initialCenter.latitude,
@@ -795,7 +822,6 @@ class _ArtMapViewState extends State<ArtMapView> {
       isDarkMode: widget.isDarkMode,
     );
   }
-
 }
 
 class _StyleErrorCard extends StatelessWidget {

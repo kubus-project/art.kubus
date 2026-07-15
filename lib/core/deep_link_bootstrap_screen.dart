@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:flutter/foundation.dart';
 
 import '../providers/deep_link_provider.dart';
+import '../providers/public_entity_takeover_provider.dart';
 import '../services/share/share_deep_link_parser.dart';
 import 'app_initializer.dart';
 
@@ -10,9 +11,11 @@ class DeepLinkBootstrapScreen extends StatefulWidget {
   const DeepLinkBootstrapScreen({
     super.key,
     required this.target,
+    required this.initialUri,
   });
 
   final ShareDeepLinkTarget target;
+  final Uri initialUri;
 
   @override
   State<DeepLinkBootstrapScreen> createState() => _DeepLinkBootstrapScreenState();
@@ -30,10 +33,14 @@ class _DeepLinkBootstrapScreenState extends State<DeepLinkBootstrapScreen> {
       debugPrint('DeepLinkBootstrapScreen: seeding pending target: ${widget.target.type} id=${widget.target.id}');
     }
     context.read<DeepLinkProvider>().setPending(widget.target);
+    context.read<PublicEntityTakeoverProvider>().seed(
+          initialUri: widget.initialUri,
+          target: widget.target,
+        );
   }
 
   @override
   Widget build(BuildContext context) {
-    return const AppInitializer();
+    return AppInitializer(initialUri: widget.initialUri);
   }
 }

@@ -11,6 +11,10 @@ import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
 class _FakeMarkerApi implements MarkerBackendApi {
+  @override
+  Future<List<ArtMarker>> getArtMarkersByArtwork(String artworkId) async =>
+      const <ArtMarker>[];
+
   int getMyCalls = 0;
   List<ArtMarker> getMyResult = const <ArtMarker>[];
 

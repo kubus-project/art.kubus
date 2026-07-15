@@ -8,10 +8,11 @@ final Distance _markerSelectionDistance = const Distance();
 /// linked artwork or subject.
 ///
 /// Selection order:
-/// 1. exact marker id
-/// 2. exact label match among the candidate set
-/// 3. nearest marker to the preferred position
-/// 4. deterministic fallback by id
+/// 1. authoritative artwork/subject relation filters
+/// 2. exact marker hint within that candidate set
+/// 3. exact label match among the candidate set
+/// 4. nearest marker to the preferred position
+/// 5. deterministic fallback by id
 ArtMarker? resolveBestMarkerCandidate(
   Iterable<ArtMarker> markers, {
   String? exactMarkerId,
@@ -22,52 +23,47 @@ ArtMarker? resolveBestMarkerCandidate(
   LatLng? preferredPosition,
 }) {
   final markerList = markers.toList(growable: false);
-  final normalizedMarkerId = exactMarkerId?.trim() ?? '';
-  if (normalizedMarkerId.isNotEmpty) {
-    for (final marker in markerList) {
-      if (marker.id == normalizedMarkerId) {
-        return marker;
-      }
-    }
-  }
-
   final normalizedArtworkId = artworkId?.trim() ?? '';
   var candidates = markerList;
   if (normalizedArtworkId.isNotEmpty) {
-    final artworkCandidates = markerList
+    candidates = markerList
         .where(
             (marker) => (marker.artworkId ?? '').trim() == normalizedArtworkId)
         .toList(growable: false);
-    if (artworkCandidates.isNotEmpty) {
-      candidates = artworkCandidates;
-    }
+    if (candidates.isEmpty) return null;
   }
 
   final normalizedSubjectId = subjectId?.trim() ?? '';
   if (normalizedSubjectId.isNotEmpty) {
-    final subjectCandidates = candidates
-        .where((marker) => (marker.subjectId ?? '').trim() == normalizedSubjectId)
+    candidates = candidates
+        .where(
+            (marker) => (marker.subjectId ?? '').trim() == normalizedSubjectId)
         .toList(growable: false);
-    if (subjectCandidates.isNotEmpty) {
-      candidates = subjectCandidates;
-    }
+    if (candidates.isEmpty) return null;
   }
 
   final normalizedSubjectType = subjectType?.trim().toLowerCase() ?? '';
   if (normalizedSubjectType.isNotEmpty) {
-    final typedCandidates = candidates
+    candidates = candidates
         .where(
           (marker) =>
               (marker.subjectType ?? '').trim().toLowerCase() ==
               normalizedSubjectType,
         )
         .toList(growable: false);
-    if (typedCandidates.isNotEmpty) {
-      candidates = typedCandidates;
-    }
+    if (candidates.isEmpty) return null;
   }
 
   if (candidates.isEmpty) return null;
+
+  final normalizedMarkerId = exactMarkerId?.trim() ?? '';
+  if (normalizedMarkerId.isNotEmpty) {
+    for (final marker in candidates) {
+      if (marker.id == normalizedMarkerId) {
+        return marker;
+      }
+    }
+  }
 
   final normalizedLabel = preferredLabel?.trim().toLowerCase() ?? '';
   final selectionPosition = preferredPosition;

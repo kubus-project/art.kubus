@@ -15,6 +15,7 @@ import '../../../providers/profile_provider.dart';
 import '../../../providers/task_provider.dart';
 import '../../../providers/wallet_provider.dart';
 import '../../../providers/saved_items_provider.dart';
+import '../../../providers/public_entity_takeover_provider.dart';
 import '../../../config/config.dart';
 import '../../../services/backend_api_service.dart';
 import '../../../services/contextual_auth_gate.dart';
@@ -22,6 +23,7 @@ import '../../../services/map_data_controller.dart';
 import '../../../services/share/share_service.dart';
 import '../../../services/share/share_types.dart';
 import '../../../utils/artwork_media_resolver.dart';
+import '../../../utils/artwork_location_actions.dart';
 import '../../../features/map/shared/map_screen_shared_helpers.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/wallet_utils.dart';
@@ -61,16 +63,25 @@ class _DesktopArtworkDetailScreenState
   bool _artworkLoading = true;
   String? _artworkError;
   bool _commentsSidebarExpanded = true;
+  bool _takeoverReadyScheduled = false;
 
-  String get _publicReturnRoute =>
-      '/a/${Uri.encodeComponent(widget.artworkId)}';
+  String _publicReturnRoute(BuildContext context) {
+    try {
+      return context
+              .read<PublicEntityTakeoverProvider>()
+              .returnRouteForArtwork(widget.artworkId) ??
+          '/a/${Uri.encodeComponent(widget.artworkId)}';
+    } catch (_) {
+      return '/a/${Uri.encodeComponent(widget.artworkId)}';
+    }
+  }
 
   Future<void> _toggleLike(ArtworkProvider provider, Artwork artwork) async {
     final l10n = AppLocalizations.of(context)!;
     final authenticated = await const ContextualAuthGate().ensureAuthenticated(
       context,
       actionLabel: l10n.artworkDetailLike.toLowerCase(),
-      returnRoute: _publicReturnRoute,
+      returnRoute: _publicReturnRoute(context),
     );
     if (!authenticated || !mounted) return;
     await provider.toggleLike(artwork.id);
@@ -81,7 +92,7 @@ class _DesktopArtworkDetailScreenState
     final authenticated = await const ContextualAuthGate().ensureAuthenticated(
       context,
       actionLabel: l10n.commonSave.toLowerCase(),
-      returnRoute: _publicReturnRoute,
+      returnRoute: _publicReturnRoute(context),
     );
     if (!authenticated || !mounted) return;
     await provider.toggleArtworkSaved(artwork.id);
@@ -232,6 +243,7 @@ class _DesktopArtworkDetailScreenState
           );
         }
 
+        _scheduleTakeoverReady(artwork.id);
         final coverUrl = ArtworkMediaResolver.resolveCover(
           artwork: artwork,
           metadata: artwork.metadata,
@@ -313,7 +325,7 @@ class _DesktopArtworkDetailScreenState
                           controller: _commentsPanelController,
                           layoutMode: ArtworkCommentsLayoutMode.fill,
                           signInArguments: {
-                            'redirectRoute': '/artwork',
+                            'redirectRoute': _publicReturnRoute(context),
                             'redirectArguments': {
                               'artworkId': artwork.id,
                               'attendanceMarkerId': widget.attendanceMarkerId ??
@@ -331,6 +343,21 @@ class _DesktopArtworkDetailScreenState
         );
       },
     );
+  }
+
+  void _scheduleTakeoverReady(String artworkId) {
+    if (_takeoverReadyScheduled) return;
+    _takeoverReadyScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      try {
+        unawaited(
+          context
+              .read<PublicEntityTakeoverProvider>()
+              .markArtworkReady(artworkId),
+        );
+      } catch (_) {}
+    });
   }
 
   Widget _buildLeftPane({
@@ -492,7 +519,7 @@ class _DesktopArtworkDetailScreenState
             onClose: onToggleVisibility,
             layoutMode: ArtworkCommentsLayoutMode.fill,
             signInArguments: {
-              'redirectRoute': '/artwork',
+              'redirectRoute': _publicReturnRoute(context),
               'redirectArguments': {
                 'artworkId': artwork.id,
                 'attendanceMarkerId':
@@ -753,6 +780,7 @@ class _DesktopArtworkDetailScreenState
     );
     final showArPrimaryAction =
         artwork.arEnabled && AppConfig.isFeatureEnabled('ar');
+    final hasLocation = ArtworkLocationActions.hasValidLocation(artwork);
 
     final markerIdCandidate = (artwork.arMarkerId ?? '').toString().trim();
     final canShowStreetArtClaimCta =
@@ -762,19 +790,47 @@ class _DesktopArtworkDetailScreenState
     return DetailActionsSection(
       title: l10n.commonActions,
       maxVisibleActions: 5,
-      primaryAction: showArPrimaryAction
+      primaryAction: hasLocation
           ? SizedBox(
               width: double.infinity,
               child: DetailActionButton(
-                icon: Icons.view_in_ar,
-                label: l10n.commonViewInAr,
-                onPressed: () => Navigator.pushNamed(context, '/ar'),
+                icon: Icons.map_outlined,
+                label: l10n.artDetailShowOnMap,
+                onPressed: () =>
+                    ArtworkLocationActions.showOnMap(context, artwork),
                 backgroundColor: Theme.of(context).colorScheme.primary,
                 foregroundColor: Theme.of(context).colorScheme.onPrimary,
               ),
             )
-          : null,
+          : showArPrimaryAction
+              ? SizedBox(
+                  width: double.infinity,
+                  child: DetailActionButton(
+                    icon: Icons.view_in_ar,
+                    label: l10n.commonViewInAr,
+                    onPressed: () => Navigator.pushNamed(context, '/ar'),
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                  ),
+                )
+              : null,
       actions: [
+        if (hasLocation)
+          DetailSecondaryAction(
+            icon: Icons.navigation_outlined,
+            label: l10n.commonNavigate,
+            onTap: () => unawaited(
+              ArtworkLocationActions.showNavigationOptions(context, artwork),
+            ),
+            tooltip: l10n.commonNavigate,
+          ),
+        if (hasLocation && showArPrimaryAction)
+          DetailSecondaryAction(
+            icon: Icons.view_in_ar_outlined,
+            label: l10n.commonViewInAr,
+            onTap: () => Navigator.pushNamed(context, '/ar'),
+            tooltip: l10n.commonViewInAr,
+          ),
         DetailSecondaryAction(
           icon: artwork.isLikedByCurrentUser
               ? Icons.favorite
@@ -1084,7 +1140,7 @@ class _DesktopArtworkDetailScreenState
                     navigator.pushNamed(
                       '/sign-in',
                       arguments: {
-                        'redirectRoute': '/artwork',
+                        'redirectRoute': _publicReturnRoute(context),
                         'redirectArguments': {
                           'artworkId': artwork.id,
                           'attendanceMarkerId': markerId,

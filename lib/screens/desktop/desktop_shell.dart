@@ -688,8 +688,13 @@ class _DesktopShellState extends State<DesktopShell>
       }
     }
 
-    return UserPersonaOnboardingGate(
-      child: TutorialOverlayScope(
+    return PopScope<Object?>(
+      canPop: _screenStack.isEmpty,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _popScreenFromStack();
+      },
+      child: UserPersonaOnboardingGate(
+        child: TutorialOverlayScope(
         controller: _tutorialOverlayController,
         child: DesktopShellScope(
             pushScreen: _pushScreenToStack,
@@ -935,7 +940,8 @@ class _DesktopShellState extends State<DesktopShell>
                   ],
                 );
               },
-            )),
+              )),
+        ),
       ),
     );
   }

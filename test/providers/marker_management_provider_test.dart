@@ -9,6 +9,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
 
 class _FakeMarkerApi implements MarkerBackendApi {
+  @override
+  Future<List<ArtMarker>> getArtMarkersByArtwork(String artworkId) async =>
+      const <ArtMarker>[];
+
   // ignore: unused_element_parameter
   _FakeMarkerApi({this.token = 'token'});
 

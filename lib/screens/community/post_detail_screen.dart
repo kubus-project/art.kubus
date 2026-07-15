@@ -32,6 +32,7 @@ import '../../widgets/community/community_post_card.dart';
 import '../../widgets/community/community_author_role_badges.dart';
 import '../../widgets/community/community_post_options_sheet.dart';
 import '../../widgets/community/community_subject_picker.dart';
+import '../../widgets/public_entity_takeover_ready.dart';
 import '../../widgets/profile_identity_summary.dart';
 import '../../models/community_subject.dart';
 import '../../utils/community_subject_navigation.dart';
@@ -1680,7 +1681,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final themeProvider = Provider.of<ThemeProvider>(context);
-    return Scaffold(
+    final content = Scaffold(
       backgroundColor: Colors.transparent,
       extendBodyBehindAppBar: true,
       appBar: AppBar(
@@ -2311,6 +2312,18 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     ),
                   ),
       ),
+    );
+    final post = _post;
+    final requestedId = (widget.postId ?? '').trim();
+    final isExactLoadedPost = !_loading &&
+        _error == null &&
+        post != null &&
+        (requestedId.isEmpty || post.id == requestedId);
+    if (!isExactLoadedPost) return content;
+    return PublicEntityTakeoverReady(
+      type: ShareEntityType.post,
+      entityId: post.id,
+      child: content,
     );
   }
 }

@@ -109,49 +109,7 @@
       }
     })();
   </script>
-  <script>
-    (function () {
-      try {
-        var v = window.__kubusBuildVersion || 'dev';
-
-        // CSS first.
-        var css = document.createElement('link');
-        css.rel = 'stylesheet';
-        css.href = 'local/maplibre-gl/maplibre-gl.css?v=' + encodeURIComponent(String(v));
-        document.head.appendChild(css);
-
-        // Then MapLibre JS (must be loaded before we set the worker URL and
-        // before Flutter instantiates the web map).
-        var maplibre = document.createElement('script');
-        maplibre.async = false; // preserve execution order
-        maplibre.src = 'local/maplibre-gl/maplibre-gl-csp.js?v=' + encodeURIComponent(String(v));
-        maplibre.onload = function () {
-          try {
-            if (window.maplibregl && typeof window.maplibregl.setWorkerUrl === 'function') {
-              window.maplibregl.setWorkerUrl(
-                'local/maplibre-gl/maplibre-gl-csp-worker.js?v=' + encodeURIComponent(String(v))
-              );
-            } else {
-              console.error('MapLibre GL JS not available (window.maplibregl is missing).');
-            }
-          } catch (e) {
-            console.error('MapLibre GL JS worker setup failed:', e);
-          }
-
-          // Finally, install the WebGL handler (needs MapLibre present).
-          try {
-            var handler = document.createElement('script');
-            handler.async = false;
-            handler.src = 'webgl_context_handler.js?v=' + encodeURIComponent(String(v));
-            document.head.appendChild(handler);
-          } catch (_) {}
-        };
-        document.head.appendChild(maplibre);
-      } catch (e) {
-        console.error('Kubus maplibre loader bootstrap failed:', e);
-      }
-    })();
-  </script>
+  <script src="kubus_maplibre_runtime.js" defer></script>
   <style id="kubus-maplibre-attribution-style">
     :root {
       --kubus-mobile-map-attrib-bottom: 0px;

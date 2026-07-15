@@ -3772,6 +3772,12 @@ class AppLocalizationsSl extends AppLocalizations {
   String get mapLocationUnavailableToast => 'Vaše lokacije ni mogoče določiti.';
 
   @override
+  String get mapTargetMarkerUnavailableToast => 'Za ta predmet ni označevalca na zemljevidu. Prikazana je njegova shranjena lokacija.';
+
+  @override
+  String get mapTargetNotFoundToast => 'Ta predmet ni na voljo na zemljevidu.';
+
+  @override
   String get mapMarkerCreateWalletRequired => 'Ustvari profil in dostop z denarnico, preden postaviš označevalec za svojo umetnino.';
 
   @override
@@ -6666,6 +6672,9 @@ class AppLocalizationsSl extends AppLocalizations {
   String get artDetailNavigationGoogleMaps => 'Google Zemljevidi';
 
   @override
+  String get artDetailShowOnMap => 'Prikaži na zemljevidu';
+
+  @override
   String get artDetailNavigationAppleMaps => 'Apple Zemljevidi';
 
   @override
@@ -6673,6 +6682,9 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get artDetailNavigationCopyCoordinates => 'Kopiraj koordinate';
+
+  @override
+  String get artDetailNavigationCouldNotCopyCoordinates => 'Koordinat ni bilo mogoče kopirati';
 
   @override
   String get artDetailNavigationCouldNotOpenGoogleMaps => 'Google Zemljevidov ni bilo mogoče odpreti';

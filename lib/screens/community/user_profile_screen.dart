@@ -50,6 +50,7 @@ import '../../models/dao.dart';
 import '../../widgets/glass_components.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import '../../widgets/profile/profile_achievements_preview_section.dart';
+import '../../widgets/public_entity_takeover_ready.dart';
 
 class UserProfileScreen extends StatefulWidget {
   final String userId;
@@ -393,7 +394,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
             daoReview.isInstitutionApplication &&
             daoReview.isApproved);
 
-    return AnimatedGradientBackground(
+    final content = AnimatedGradientBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(
@@ -457,6 +458,11 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           ),
         ),
       ),
+    );
+    return PublicEntityTakeoverReady(
+      type: ShareEntityType.profile,
+      entityId: widget.userId,
+      child: content,
     );
   }
 

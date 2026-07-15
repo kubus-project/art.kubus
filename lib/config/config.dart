@@ -27,6 +27,10 @@ class AppConfig {
     'SEO_PUBLIC_PAGES_ENABLED',
     defaultValue: true,
   );
+  static const bool enablePublicFlutterTakeover = bool.fromEnvironment(
+    'PUBLIC_FLUTTER_TAKEOVER_ENABLED',
+    defaultValue: true,
+  );
   static const bool enableReporting = true;
   static const bool enableSupportTickets = true;
 
@@ -447,6 +451,8 @@ class AppConfig {
         return enableSharing;
       case 'seoPublicPages':
         return enableSeoPublicPages;
+      case 'publicFlutterTakeover':
+        return enablePublicFlutterTakeover;
       case 'messaging':
         return enableMessaging;
       case 'web3':

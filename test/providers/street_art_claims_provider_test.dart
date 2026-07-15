@@ -7,6 +7,10 @@ import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class _FakeMarkerApi implements MarkerBackendApi {
+  @override
+  Future<List<ArtMarker>> getArtMarkersByArtwork(String artworkId) =>
+      Future<List<ArtMarker>>.value(const <ArtMarker>[]);
+
   _FakeMarkerApi({this.token = 'token'});
 
   @override

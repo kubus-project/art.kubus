@@ -38,11 +38,13 @@ void main() {
     final decision = router.decide(
       pending: pending,
       hasValidSession: false,
+      initialUri: Uri.parse('/app/sl/umetnine/art-42'),
     );
 
     expect(pending?.localeCode, 'sl');
     expect(decision?.requiresSignIn, isFalse);
-    expect(decision?.canonicalPath, '/a/art-42');
+    expect(decision?.internalRoutePath, '/a/art-42');
+    expect(decision?.browserRoutePath, '/a/art-42');
   });
 
   test('marker remains canonical while preferring the map shell', () {
@@ -54,7 +56,8 @@ void main() {
       pending: pending,
       hasValidSession: false,
     );
-    expect(decision?.canonicalPath, '/m/m1');
+    expect(decision?.internalRoutePath, '/m/m1');
+    expect(decision?.browserRoutePath, '/m/m1');
     expect(decision?.preferredShellRoute, ShellRoutes.map);
   });
 
@@ -70,7 +73,8 @@ void main() {
         pending: entry.key,
         hasValidSession: false,
       );
-      expect(decision?.canonicalPath, entry.value);
+      expect(decision?.internalRoutePath, entry.value);
+      expect(decision?.browserRoutePath, entry.value);
       expect(ShellRoutes.isInternalShellAlias(entry.value), isFalse);
     }
   });
@@ -91,7 +95,7 @@ void main() {
     expect(decision?.accessPolicy, DeepLinkAccessPolicy.publicRead);
     expect(decision?.requiresSignIn, isFalse);
     expect(
-      decision?.canonicalPath,
+      decision?.internalRoutePath,
       '/x/expo-1?handoff=claim-ready&attendanceMarkerId=marker-1',
     );
   });
@@ -114,5 +118,37 @@ void main() {
     expect(signedOut?.requiresSignIn, isTrue);
     expect(signedOut?.signInArguments?['redirectRoute'], '/n/nft-1');
     expect(signedIn?.requiresSignIn, isFalse);
+  });
+
+  test('verified canonical artwork entry preserves localized path and query', () {
+    const pending = ShareDeepLinkTarget(
+      type: ShareEntityType.artwork,
+      id: 'art-42',
+      localeCode: 'sl',
+    );
+    final decision = router.decide(
+      pending: pending,
+      hasValidSession: false,
+      initialUri: Uri.parse('/sl/umetnine/art-42?ref=search#details'),
+    );
+
+    expect(decision?.internalRoutePath, '/a/art-42');
+    expect(decision?.browserRoutePath,
+        '/sl/umetnine/art-42?ref=search#details');
+  });
+
+  test('mismatched localized URI cannot replace the internal route identity', () {
+    const pending = ShareDeepLinkTarget(
+      type: ShareEntityType.artwork,
+      id: 'art-42',
+      localeCode: 'en',
+    );
+    final decision = router.decide(
+      pending: pending,
+      hasValidSession: false,
+      initialUri: Uri.parse('/en/artworks/different'),
+    );
+
+    expect(decision?.browserRoutePath, '/a/art-42');
   });
 }

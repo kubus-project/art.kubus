@@ -55,6 +55,7 @@ import '../../../widgets/common/kubus_glass_icon_button.dart';
 import '../../../widgets/common/kubus_screen_header.dart';
 import '../../../widgets/community/community_post_card.dart';
 import '../../../widgets/profile/profile_achievements_preview_section.dart';
+import '../../../widgets/public_entity_takeover_ready.dart';
 
 const double _kProfileOverlayMaxWidth = 920.0;
 const double _kProfileCoverHeightWithImage = 216.0;
@@ -280,7 +281,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
             daoReview.isInstitutionApplication &&
             daoReview.isApproved);
 
-    return Scaffold(
+    final content = Scaffold(
       backgroundColor: Colors.transparent,
       body: AnimatedBuilder(
         animation: _animationController,
@@ -411,6 +412,11 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           );
         },
       ),
+    );
+    return PublicEntityTakeoverReady(
+      type: ShareEntityType.profile,
+      entityId: widget.userId,
+      child: content,
     );
   }
 

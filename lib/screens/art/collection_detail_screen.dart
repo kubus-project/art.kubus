@@ -19,6 +19,7 @@ import '../../widgets/creator/creator_kit.dart';
 import '../../widgets/common/subject_options_sheet.dart';
 import '../../widgets/collaboration_panel.dart';
 import '../../widgets/detail/detail_shell_components.dart';
+import '../../widgets/public_entity_takeover_ready.dart';
 import '../../config/config.dart';
 import '../../utils/design_tokens.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
@@ -268,8 +269,7 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
           final error = collectionsProvider.errorFor(widget.collectionId);
 
           if (collection == null && isLoading) {
-            return const Center(
-                child: InlineLoading(tileSize: 4));
+            return const Center(child: InlineLoading(tileSize: 4));
           }
 
           if (collection == null && (error ?? '').isNotEmpty) {
@@ -470,7 +470,10 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
                     if (isLoading)
                       Padding(
                         padding: const EdgeInsets.only(top: DetailSpacing.lg),
-                        child: InlineLoading(height: 4, borderRadius: BorderRadius.circular(2), color: scheme.primary),
+                        child: InlineLoading(
+                            height: 4,
+                            borderRadius: BorderRadius.circular(2),
+                            color: scheme.primary),
                       ),
                   ],
                 ),
@@ -478,7 +481,13 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
             ),
           ];
 
-          return CustomScrollView(slivers: slivers);
+          final content = CustomScrollView(slivers: slivers);
+          if (collection == null) return content;
+          return PublicEntityTakeoverReady(
+            type: ShareEntityType.collection,
+            entityId: collection.id,
+            child: content,
+          );
         },
       ),
     );
