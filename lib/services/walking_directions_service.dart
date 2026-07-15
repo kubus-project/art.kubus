@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -19,10 +20,40 @@ abstract class WalkingDirectionsApi {
   void dispose();
 }
 
+enum WalkingDirectionsErrorType {
+  routeUnavailable,
+  sourceTransport,
+  sourceTimeout,
+  sourceHttp,
+  sourceCancelled,
+  sourceInvalidResponse,
+}
+
 class WalkingDirectionsException implements Exception {
-  const WalkingDirectionsException(this.message);
+  const WalkingDirectionsException(
+    this.message, {
+    this.type = WalkingDirectionsErrorType.routeUnavailable,
+    this.endpoint,
+    this.statusCode,
+  });
 
   final String message;
+  final WalkingDirectionsErrorType type;
+  final Uri? endpoint;
+  final int? statusCode;
+
+  bool get isRetryableSourceFailure {
+    if (type == WalkingDirectionsErrorType.sourceTransport ||
+        type == WalkingDirectionsErrorType.sourceTimeout) {
+      return true;
+    }
+    if (type != WalkingDirectionsErrorType.sourceHttp) return false;
+    final status = statusCode;
+    return status == 406 ||
+        status == 408 ||
+        status == 429 ||
+        (status != null && status >= 500 && status <= 599);
+  }
 
   @override
   String toString() => message;
@@ -37,7 +68,7 @@ class WalkingDirectionsException implements Exception {
 class WalkingDirectionsService implements WalkingDirectionsApi {
   WalkingDirectionsService({
     http.Client? client,
-    String? endpoint,
+    Iterable<String>? endpoints,
     Duration timeout = const Duration(seconds: 20),
     Duration minimumRequestInterval = const Duration(seconds: 1),
     double maximumRouteDistanceMeters = 8000,
@@ -48,8 +79,8 @@ class WalkingDirectionsService implements WalkingDirectionsApi {
     int maximumElements = 160000,
   })  : _client = client ?? createPlatformHttpClient(),
         _ownsClient = client == null,
-        _endpoint = _validatedEndpoint(
-          endpoint ?? AppConfig.walkingGraphEndpoint,
+        _endpoints = _validatedEndpoints(
+          endpoints ?? _configuredEndpoints(AppConfig.walkingGraphEndpoints),
         ),
         _timeout = timeout,
         _minimumRequestInterval = minimumRequestInterval,
@@ -65,7 +96,7 @@ class WalkingDirectionsService implements WalkingDirectionsApi {
 
   final http.Client _client;
   final bool _ownsClient;
-  final Uri _endpoint;
+  final List<Uri> _endpoints;
   final Duration _timeout;
   final Duration _minimumRequestInterval;
   final double _maximumRouteDistanceMeters;
@@ -78,6 +109,8 @@ class WalkingDirectionsService implements WalkingDirectionsApi {
 
   DateTime? _lastRequestAt;
   _WalkingGraphRecord? _cachedGraph;
+  Completer<void>? _activeAbortTrigger;
+  int _graphRequestGeneration = 0;
 
   @override
   Future<WalkingRoute> route({
@@ -129,68 +162,20 @@ class WalkingDirectionsService implements WalkingDirectionsApi {
   }
 
   Future<_WalkingGraphRecord> _loadGraph(_GraphBoundsRecord bounds) async {
-    final lastRequestAt = _lastRequestAt;
-    if (lastRequestAt != null) {
-      final remaining =
-          _minimumRequestInterval - DateTime.now().difference(lastRequestAt);
-      if (remaining > Duration.zero) await Future<void>.delayed(remaining);
-    }
-    _lastRequestAt = DateTime.now();
-
+    final generation = ++_graphRequestGeneration;
+    _abortActiveRequest();
     final query = _overpassQuery(bounds);
     final headers = <String, String>{
       'Accept': 'application/json',
       'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8',
       if (!kIsWeb) 'User-Agent': 'art.kubus/1.0 (https://kubus.site)',
     };
-
-    late final http.Response response;
-    try {
-      response = await _client.post(
-        _endpoint,
-        headers: headers,
-        body: <String, String>{'data': query},
-      ).timeout(_timeout);
-    } on TimeoutException {
-      throw const WalkingDirectionsException(
-        'The walking map request timed out.',
-      );
-    } on http.ClientException {
-      throw const WalkingDirectionsException(
-        'The walking map could not be downloaded.',
-      );
-    }
-
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw WalkingDirectionsException(
-        'The walking map request failed (${response.statusCode}).',
-      );
-    }
-    if (response.bodyBytes.length > _maximumResponseBytes) {
-      throw const WalkingDirectionsException(
-        'The downloaded walking map is too large.',
-      );
-    }
-
-    final Object? decoded;
-    try {
-      decoded = jsonDecode(utf8.decode(response.bodyBytes));
-    } on FormatException {
-      throw const WalkingDirectionsException(
-        'The walking map response was invalid.',
-      );
-    }
-    if (decoded is! Map) {
-      throw const WalkingDirectionsException(
-        'The walking map response was invalid.',
-      );
-    }
-    final elements = decoded['elements'];
-    if (elements is! List || elements.length > _maximumElements) {
-      throw const WalkingDirectionsException(
-        'The walking map response was invalid or too large.',
-      );
-    }
+    final elements = await _fetchGraphElements(
+      generation: generation,
+      query: query,
+      headers: headers,
+    );
+    _throwIfObsolete(generation);
 
     final nodes = <int, LatLng>{};
     final rawWays = <Map<Object?, Object?>>[];
@@ -285,13 +270,195 @@ class WalkingDirectionsService implements WalkingDirectionsApi {
     );
   }
 
+  Future<List<dynamic>> _fetchGraphElements({
+    required int generation,
+    required String query,
+    required Map<String, String> headers,
+  }) async {
+    WalkingDirectionsException? lastFailure;
+    for (var index = 0; index < _endpoints.length; index += 1) {
+      _throwIfObsolete(generation);
+      await _waitForRequestSlot(generation);
+      final endpoint = _endpoints[index];
+      final abortTrigger = Completer<void>();
+      _activeAbortTrigger = abortTrigger;
+      final request = http.AbortableRequest(
+        'POST',
+        endpoint,
+        abortTrigger: abortTrigger.future,
+      )
+        ..headers.addAll(headers)
+        ..bodyFields = <String, String>{'data': query};
+
+      try {
+        _lastRequestAt = DateTime.now();
+        final response = await _client.send(request).timeout(
+          _timeout,
+          onTimeout: () {
+            if (!abortTrigger.isCompleted) abortTrigger.complete();
+            throw TimeoutException('Walking graph request timed out.');
+          },
+        );
+        _throwIfObsolete(generation);
+        if (response.statusCode >= 200 && response.statusCode < 300) {
+          try {
+            return await _readGraphElements(
+              response,
+              endpoint: endpoint,
+              abortTrigger: abortTrigger,
+            ).timeout(_timeout, onTimeout: () {
+              if (!abortTrigger.isCompleted) abortTrigger.complete();
+              throw TimeoutException('Walking graph response timed out.');
+            });
+          } on WalkingDirectionsException catch (failure) {
+            if (failure.type !=
+                    WalkingDirectionsErrorType.sourceInvalidResponse ||
+                index == _endpoints.length - 1) {
+              rethrow;
+            }
+            lastFailure = failure;
+            continue;
+          }
+        }
+        final failure = WalkingDirectionsException(
+          'The walking map request failed (${response.statusCode}).',
+          type: WalkingDirectionsErrorType.sourceHttp,
+          endpoint: endpoint,
+          statusCode: response.statusCode,
+        );
+        if (!failure.isRetryableSourceFailure ||
+            index == _endpoints.length - 1) {
+          throw failure;
+        }
+        lastFailure = failure;
+      } on TimeoutException {
+        _throwIfObsolete(generation);
+        final failure = WalkingDirectionsException(
+          'The walking map request timed out.',
+          type: WalkingDirectionsErrorType.sourceTimeout,
+          endpoint: endpoint,
+        );
+        if (index == _endpoints.length - 1) throw failure;
+        lastFailure = failure;
+      } on http.RequestAbortedException {
+        _throwIfObsolete(generation);
+        final failure = WalkingDirectionsException(
+          'The walking map could not be downloaded.',
+          type: WalkingDirectionsErrorType.sourceTransport,
+          endpoint: endpoint,
+        );
+        if (index == _endpoints.length - 1) throw failure;
+        lastFailure = failure;
+      } on http.ClientException {
+        _throwIfObsolete(generation);
+        final failure = WalkingDirectionsException(
+          'The walking map could not be downloaded.',
+          type: WalkingDirectionsErrorType.sourceTransport,
+          endpoint: endpoint,
+        );
+        if (index == _endpoints.length - 1) throw failure;
+        lastFailure = failure;
+      } finally {
+        if (identical(_activeAbortTrigger, abortTrigger)) {
+          _activeAbortTrigger = null;
+        }
+      }
+    }
+    throw lastFailure ??
+        const WalkingDirectionsException(
+          'The walking map could not be downloaded.',
+          type: WalkingDirectionsErrorType.sourceTransport,
+        );
+  }
+
+  Future<List<dynamic>> _readGraphElements(
+    http.StreamedResponse response, {
+    required Uri endpoint,
+    required Completer<void> abortTrigger,
+  }) async {
+    final builder = BytesBuilder(copy: false);
+    await for (final chunk in response.stream) {
+      if (builder.length + chunk.length > _maximumResponseBytes) {
+        if (!abortTrigger.isCompleted) abortTrigger.complete();
+        throw WalkingDirectionsException(
+          'The downloaded walking map is too large.',
+          type: WalkingDirectionsErrorType.sourceInvalidResponse,
+          endpoint: endpoint,
+        );
+      }
+      builder.add(chunk);
+    }
+
+    final Object? decoded;
+    try {
+      decoded = jsonDecode(utf8.decode(builder.takeBytes()));
+    } on FormatException {
+      throw WalkingDirectionsException(
+        'The walking map response was invalid.',
+        type: WalkingDirectionsErrorType.sourceInvalidResponse,
+        endpoint: endpoint,
+      );
+    }
+    if (decoded is! Map) {
+      throw WalkingDirectionsException(
+        'The walking map response was invalid.',
+        type: WalkingDirectionsErrorType.sourceInvalidResponse,
+        endpoint: endpoint,
+      );
+    }
+    final elements = decoded['elements'];
+    if (elements is! List || elements.length > _maximumElements) {
+      throw WalkingDirectionsException(
+        'The walking map response was invalid or too large.',
+        type: WalkingDirectionsErrorType.sourceInvalidResponse,
+        endpoint: endpoint,
+      );
+    }
+    return elements;
+  }
+
+  Future<void> _waitForRequestSlot(int generation) async {
+    final lastRequestAt = _lastRequestAt;
+    if (lastRequestAt == null) return;
+    final remaining =
+        _minimumRequestInterval - DateTime.now().difference(lastRequestAt);
+    if (remaining > Duration.zero) await Future<void>.delayed(remaining);
+    _throwIfObsolete(generation);
+  }
+
+  void _abortActiveRequest() {
+    final trigger = _activeAbortTrigger;
+    _activeAbortTrigger = null;
+    if (trigger != null && !trigger.isCompleted) trigger.complete();
+  }
+
+  Never _cancelled() => throw const WalkingDirectionsException(
+        'The walking map request was cancelled.',
+        type: WalkingDirectionsErrorType.sourceCancelled,
+      );
+
+  void _throwIfObsolete(int generation) {
+    if (generation != _graphRequestGeneration) _cancelled();
+  }
+
   String _overpassQuery(_GraphBoundsRecord bounds) {
     final bbox = '${bounds.south.toStringAsFixed(7)},'
         '${bounds.west.toStringAsFixed(7)},'
         '${bounds.north.toStringAsFixed(7)},'
         '${bounds.east.toStringAsFixed(7)}';
-    return '[out:json][timeout:15][maxsize:$_maximumResponseBytes];'
-        'way["highway"]["area"!="yes"]($bbox);'
+    const ordinaryWalkableHighways = 'footway|path|pedestrian|steps|'
+        'living_street|residential|service|track|unclassified|road|'
+        'tertiary|tertiary_link|secondary|secondary_link|primary|'
+        'primary_link|cycleway|bridleway';
+    const prohibitedHighways = 'motorway|motorway_link|trunk|trunk_link|'
+        'raceway|construction|proposed|abandoned|razed';
+    return '[out:json][timeout:15][maxsize:$_maximumResponseBytes];('
+        'way["highway"~"^($ordinaryWalkableHighways)\$"]'
+        '["area"!="yes"]["foot"!~"^(no|private|use_sidepath)\$",i]'
+        '["access"!~"^(no|private)\$",i]($bbox);'
+        'way["highway"]["highway"!~"^($prohibitedHighways)\$"]'
+        '["area"!="yes"]["foot"~"^(yes|designated|permissive)\$",i]'
+        '($bbox););'
         'out body;>;out skel qt;';
   }
 
@@ -641,6 +808,27 @@ class WalkingDirectionsService implements WalkingDirectionsApi {
   double _meters(LatLng from, LatLng to) =>
       _distance.as(LengthUnit.Meter, from, to);
 
+  static Iterable<String> _configuredEndpoints(String raw) => raw
+      .split(',')
+      .map((value) => value.trim())
+      .where((value) => value.isNotEmpty);
+
+  static List<Uri> _validatedEndpoints(Iterable<String> rawEndpoints) {
+    final endpoints = <Uri>[];
+    for (final raw in rawEndpoints) {
+      final endpoint = _validatedEndpoint(raw);
+      if (!endpoints.contains(endpoint)) endpoints.add(endpoint);
+    }
+    if (endpoints.isEmpty) {
+      throw ArgumentError.value(
+        rawEndpoints,
+        'endpoints',
+        'Must contain at least one HTTPS URL.',
+      );
+    }
+    return List<Uri>.unmodifiable(endpoints);
+  }
+
   static Uri _validatedEndpoint(String raw) {
     final uri = Uri.tryParse(raw.trim());
     if (uri == null ||
@@ -688,6 +876,8 @@ class WalkingDirectionsService implements WalkingDirectionsApi {
 
   @override
   void dispose() {
+    _graphRequestGeneration += 1;
+    _abortActiveRequest();
     if (_ownsClient) _client.close();
   }
 }

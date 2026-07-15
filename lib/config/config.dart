@@ -90,9 +90,8 @@ class AppConfig {
 
   /// Map: optional isometric-like perspective on the map canvas.
   ///
-  /// This now only pitches the map camera. It intentionally does NOT switch
-  /// markers into the experimental fill-extrusion "cube" representation — see
-  /// [enableMapExperimentalCubeMarkers].
+  /// Pitched mode renders stable screen-space pedestals beneath the canonical
+  /// clustered marker badges; it does not generate per-zoom world geometry.
   static const bool enableMapIsometricView = true;
 
   /// Preview: calculate pedestrian routes on device from bounded OSM graph
@@ -102,22 +101,14 @@ class AppConfig {
     defaultValue: true,
   );
 
-  /// Raw OpenStreetMap graph endpoint used by the client-side route engine.
-  /// This is deliberately configurable so the preview can move to an owned
-  /// Overpass deployment without changing navigation contracts.
-  static const String walkingGraphEndpoint = String.fromEnvironment(
-    'OVERPASS_WALKING_ENDPOINT',
-    defaultValue: 'https://overpass-api.de/api/interpreter',
+  /// Ordered raw OpenStreetMap graph endpoints used by the client-side route
+  /// engine. Entries are comma-separated so an owned Overpass deployment can
+  /// take priority while retaining an explicit fallback.
+  static const String walkingGraphEndpoints = String.fromEnvironment(
+    'OVERPASS_WALKING_ENDPOINTS',
+    defaultValue: 'https://overpass-api.de/api/interpreter,'
+        'https://overpass.private.coffee/api/interpreter',
   );
-
-  /// Map: experimental fill-extrusion "cube" markers + viewport floating icons.
-  ///
-  /// Off by default. The default marker representation is the stable floating
-  /// badge (dot + pulse + shaped icon) rendered in screen space. The cube /
-  /// extrusion pipeline is kept behind this flag for future experiments only;
-  /// when disabled, pitching the map (isometric view) never converts markers
-  /// into cubes and no per-zoom polygon/cube geometry is computed.
-  static const bool enableMapExperimentalCubeMarkers = false;
 
   /// Map: allow public/street art marker type submissions.
   static const bool enableStreetArtMarkers = true;
@@ -553,8 +544,6 @@ class AppConfig {
         return enableMapIsometricView;
       case 'mapWalkingNavigation':
         return enableMapWalkingNavigation;
-      case 'mapExperimentalCubeMarkers':
-        return enableMapExperimentalCubeMarkers;
       case 'streetArtMarkers':
         return enableStreetArtMarkers;
       case 'streetArtClaims':

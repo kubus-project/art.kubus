@@ -14,9 +14,9 @@ import '../../features/map/controller/kubus_map_controller.dart';
 /// screens.
 ///
 /// Responsibilities:
-/// - Own 3-D cube layer visibility state and cube icon animation values
+/// - Own isometric pedestal and floating-badge visibility state
 /// - Toggle marker render mode (2-D icon ↔ 3-D cube) via MapLayersManager
-/// - Drive the cube spin ticker and selection pop animation
+/// - Drive the shared bob/pulse ticker and selection pop animation
 /// - Forward style update requests to the shared [KubusMarkerLayerStyler]
 /// - Assert mode invariants (debug only)
 ///
@@ -30,7 +30,6 @@ class MapMarkerRenderCoordinator {
     required this.pulseLayerId,
     required this.cubeLayerId,
     required this.cubeIconLayerId,
-    required this.cubeSourceId,
     required bool Function() isMounted,
     required bool Function() isStyleInitialized,
     required bool Function() isStyleInitInProgress,
@@ -40,11 +39,9 @@ class MapMarkerRenderCoordinator {
     required ml.MapLibreMapController? Function() getMapController,
     required MapLayersManager? Function() getLayersManager,
     required AnimationController Function() getSelectionController,
-    required AnimationController Function() getCubeSpinController,
+    required AnimationController Function() getAmbientController,
     required Set<String> Function() getManagedLayerIds,
-    required Set<String> Function() getManagedSourceIds,
     required bool Function() isPollingEnabled,
-    required Future<void> Function() syncMarkerCubes,
   })  : _isMounted = isMounted,
         _isStyleInitialized = isStyleInitialized,
         _isStyleInitInProgress = isStyleInitInProgress,
@@ -54,18 +51,15 @@ class MapMarkerRenderCoordinator {
         _getMapController = getMapController,
         _getLayersManager = getLayersManager,
         _getSelectionController = getSelectionController,
-        _getCubeSpinController = getCubeSpinController,
+        _getAmbientController = getAmbientController,
         _getManagedLayerIds = getManagedLayerIds,
-        _getManagedSourceIds = getManagedSourceIds,
-        _isPollingEnabled = isPollingEnabled,
-        _syncMarkerCubes = syncMarkerCubes;
+        _isPollingEnabled = isPollingEnabled;
 
   final String screenName;
   final String markerLayerId;
   final String pulseLayerId;
   final String cubeLayerId;
   final String cubeIconLayerId;
-  final String cubeSourceId;
 
   final bool Function() _isMounted;
   final bool Function() _isStyleInitialized;
@@ -76,24 +70,16 @@ class MapMarkerRenderCoordinator {
   final ml.MapLibreMapController? Function() _getMapController;
   final MapLayersManager? Function() _getLayersManager;
   final AnimationController Function() _getSelectionController;
-  final AnimationController Function() _getCubeSpinController;
+  final AnimationController Function() _getAmbientController;
   final Set<String> Function() _getManagedLayerIds;
-  final Set<String> Function() _getManagedSourceIds;
   final bool Function() _isPollingEnabled;
-  final Future<void> Function() _syncMarkerCubes;
 
   // ---------------------------------------------------------------------------
   // Owned state
   // ---------------------------------------------------------------------------
 
-  /// Whether the 3-D cube layer is currently visible.
+  /// Whether the isometric pedestal and elevated-badge layers are visible.
   bool cubeLayerVisible = false;
-
-  /// Current cube icon spin angle in degrees (0–360).
-  double cubeIconSpinDegrees = 0.0;
-
-  /// Current cube icon vertical bob offset in em units.
-  double cubeIconBobOffsetEm = 0.0;
 
   /// Current ambient pulse phase (0..1) driving the soft ring around each dot.
   double markerPulsePhase = 0.0;
@@ -108,8 +94,8 @@ class MapMarkerRenderCoordinator {
   // 3-D mode check
   // ---------------------------------------------------------------------------
 
-  /// Isometric view switches markers into their extrusion representation once
-  /// the camera crosses the pitch threshold, making the mode visually clear.
+  /// Isometric view switches markers to their screen-space pedestal
+  /// representation once the camera crosses the pitch threshold.
   bool get is3DModeActive {
     if (!AppConfig.isFeatureEnabled('mapIsometricView')) return false;
     return _getLastPitch() > MapScreenConstants.cubePitchThreshold;
@@ -130,34 +116,39 @@ class MapMarkerRenderCoordinator {
 
   /// Enables or disables the ambient marker animation ticker (dot pulse +
   /// floating-badge bob) based on current state. This runs whenever the map is
-  /// visible/active, independent of the experimental cube mode.
+  /// visible/active, independent of the current marker presentation.
   void updateAmbientTicker() {
+    final reduceMotion = _getKubusMapController().reduceMotion;
     final shouldAnimate = _isPollingEnabled() &&
         _isStyleInitialized() &&
-        _getMapController() != null;
+        _getMapController() != null &&
+        !reduceMotion;
 
     KubusMarkerLayerAnimationHelpers.updateAmbientTicker(
       shouldAnimate: shouldAnimate,
-      controller: _getCubeSpinController(),
+      controller: _getAmbientController(),
     );
+    if (reduceMotion &&
+        (markerPulsePhase != 0 || markerBadgeBobOffsetPx != 0)) {
+      markerPulsePhase = 0;
+      markerBadgeBobOffsetPx = 0;
+      requestStyleUpdate(force: true);
+    }
   }
 
   /// Called on every animation frame tick from both the selection pop and the
   /// ambient marker controllers.
   void handleAnimationTick() {
-    final ambientActive = _getCubeSpinController().isAnimating;
+    final ambientActive = _getAmbientController().isAnimating;
     final shouldPop = _getSelectionController().isAnimating;
 
     KubusMarkerLayerAnimationHelpers.handleMarkerLayerAnimationTick(
       mounted: _isMounted(),
       styleInitialized: _isStyleInitialized(),
       ambientActive: ambientActive,
-      shouldSpinCube: cubeLayerVisible && is3DModeActive,
       shouldPop: shouldPop,
       setPulsePhase: (v) => markerPulsePhase = v,
       setBadgeBobOffsetPx: (v) => markerBadgeBobOffsetPx = v,
-      setCubeIconSpinDegrees: (v) => cubeIconSpinDegrees = v,
-      setCubeIconBobOffsetEm: (v) => cubeIconBobOffsetEm = v,
       requestMarkerLayerStyleUpdate: () => requestStyleUpdate(),
     );
   }
@@ -185,8 +176,6 @@ class MapMarkerRenderCoordinator {
         selectedMarkerId: kubus.selectedMarkerId,
         selectionPopAnimationValue: _getSelectionController().value,
         cubeLayerVisible: cubeLayerVisible,
-        cubeIconSpinDegrees: cubeIconSpinDegrees,
-        cubeIconBobOffsetEm: cubeIconBobOffsetEm,
         markerPulsePhase: markerPulsePhase,
         markerBadgeBobOffsetPx: markerBadgeBobOffsetPx,
       ),
@@ -231,25 +220,7 @@ class MapMarkerRenderCoordinator {
 
     if (!_isMounted()) return;
     requestStyleUpdate(force: true);
-    if (shouldShowCubes) {
-      await _syncMarkerCubes();
-    } else {
-      try {
-        if (_getManagedSourceIds().contains(cubeSourceId)) {
-          await controller.setGeoJsonSource(
-            cubeSourceId,
-            const <String, dynamic>{
-              'type': 'FeatureCollection',
-              'features': <dynamic>[],
-            },
-          );
-        }
-      } catch (_) {
-        // Ignore source update failures during transitions.
-      }
-
-      updateAmbientTicker();
-    }
+    updateAmbientTicker();
   }
 
   // ---------------------------------------------------------------------------

@@ -90,7 +90,6 @@ void main() {
           markerHitboxImageId: 'marker-hitbox-image',
           markerDotLayerId: 'marker-dot',
           markerPulseLayerId: 'marker-pulse',
-          cubeSourceId: 'cubes',
           cubeLayerId: 'cube-layer',
           cubeIconLayerId: 'cube-icon-layer',
           locationSourceId: 'location',

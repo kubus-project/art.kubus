@@ -16,7 +16,6 @@ abstract final class MapScreenConstants {
   static const String markerHitboxImageId = 'kubus_hitbox_square_transparent';
   static const String markerDotLayerId = 'kubus_marker_dot_layer';
   static const String markerPulseLayerId = 'kubus_marker_pulse_layer';
-  static const String cubeSourceId = 'kubus_marker_cubes';
   static const String cubeLayerId = 'kubus_marker_cubes_layer';
   static const String cubeIconLayerId = 'kubus_marker_cubes_icon_layer';
   static const String locationSourceId = 'kubus_user_location';
@@ -47,9 +46,8 @@ abstract final class MapScreenConstants {
   /// track the camera zoom; fixed small levels produce cells thousands of
   /// pixels wide and collapse the whole viewport into one cluster.
   static int clusterGridLevelForZoom(double zoom) {
-    final double targetSpacingPx = zoom < 6.5
-        ? 56.0
-        : (zoom < 9.5 ? 64.0 : 72.0);
+    final double targetSpacingPx =
+        zoom < 6.5 ? 56.0 : (zoom < 9.5 ? 64.0 : 72.0);
     final level = GridUtils.resolvePrimaryGridLevel(
       zoom,
       targetScreenSpacing: targetSpacingPx,
@@ -90,7 +88,6 @@ abstract final class MapScreenConstants {
   // ---------------------------------------------------------------------------
   static const MapLayersIds mobileLayerIds = MapLayersIds(
     markerSourceId: markerSourceId,
-    cubeSourceId: cubeSourceId,
     locationSourceId: locationSourceId,
     markerLayerId: markerLayerId,
     markerHitboxLayerId: markerHitboxLayerId,
@@ -113,7 +110,6 @@ abstract final class MapScreenConstants {
   // ---------------------------------------------------------------------------
   static const MapLayersIds desktopLayerIds = MapLayersIds(
     markerSourceId: markerSourceId,
-    cubeSourceId: cubeSourceId,
     locationSourceId: locationSourceId,
     markerLayerId: markerLayerId,
     markerHitboxLayerId: markerHitboxLayerId,

@@ -137,7 +137,6 @@ void main() {
         markerHitboxImageId: 'kubus_hitbox_square_transparent',
         markerDotLayerId: 'kubus_marker_dot_layer',
         markerPulseLayerId: 'kubus_marker_pulse_layer',
-        cubeSourceId: 'kubus_marker_cubes',
         cubeLayerId: 'kubus_marker_cubes_layer',
         cubeIconLayerId: 'kubus_marker_cubes_icon_layer',
         locationSourceId: 'kubus_user_location',
@@ -162,6 +161,13 @@ void main() {
       expect(firstCallCount, greaterThan(0));
       expect(manager.hasSource(ids.markerSourceId), isTrue);
       expect(manager.hasLayer(ids.markerLayerId), isTrue);
+      expect(manager.hasLayer(ids.cubeLayerId), isTrue);
+      expect(
+        controller.calls,
+        contains(
+          'addSymbolLayer:${ids.markerSourceId}:${ids.cubeLayerId}',
+        ),
+      );
 
       await manager.ensureInitialized(styleEpoch: 1);
       expect(controller.calls.length, equals(firstCallCount));
@@ -182,7 +188,6 @@ void main() {
         markerHitboxImageId: 'kubus_hitbox_square_transparent',
         markerDotLayerId: 'kubus_marker_dot_layer',
         markerPulseLayerId: 'kubus_marker_pulse_layer',
-        cubeSourceId: 'kubus_marker_cubes',
         cubeLayerId: 'kubus_marker_cubes_layer',
         cubeIconLayerId: 'kubus_marker_cubes_icon_layer',
         locationSourceId: 'kubus_user_location',
@@ -221,7 +226,6 @@ void main() {
           markerHitboxImageId: 'kubus_hitbox_square_transparent',
           markerDotLayerId: 'kubus_marker_dot_layer',
           markerPulseLayerId: 'kubus_marker_pulse_layer',
-          cubeSourceId: 'kubus_marker_cubes',
           cubeLayerId: 'kubus_marker_cubes_layer',
           cubeIconLayerId: 'kubus_marker_cubes_icon_layer',
           locationSourceId: 'kubus_user_location',
@@ -292,7 +296,6 @@ void main() {
         markerHitboxImageId: 'kubus_hitbox_square_transparent',
         markerDotLayerId: 'kubus_marker_dot_layer',
         markerPulseLayerId: 'kubus_marker_pulse_layer',
-        cubeSourceId: 'kubus_marker_cubes',
         cubeLayerId: 'kubus_marker_cubes_layer',
         cubeIconLayerId: 'kubus_marker_cubes_icon_layer',
         locationSourceId: 'kubus_user_location',

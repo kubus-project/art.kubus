@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:art_kubus/services/walking_directions_service.dart';
@@ -43,14 +44,21 @@ http.Response _overpassResponse(List<Map<String, Object>> elements) =>
     );
 
 WalkingDirectionsService _service(
-  MockClient client, {
+  http.Client client, {
   double maximumSnapDistanceMeters = 300,
+  Iterable<String> endpoints = const <String>[
+    'https://overpass.test/api/interpreter',
+  ],
+  Duration timeout = const Duration(seconds: 20),
+  int maximumResponseBytes = 8 * 1024 * 1024,
 }) =>
     WalkingDirectionsService(
       client: client,
-      endpoint: 'https://overpass.test/api/interpreter',
+      endpoints: endpoints,
+      timeout: timeout,
       minimumRequestInterval: Duration.zero,
       maximumSnapDistanceMeters: maximumSnapDistanceMeters,
+      maximumResponseBytes: maximumResponseBytes,
     );
 
 void main() {
@@ -77,7 +85,18 @@ void main() {
 
       expect(request.method, 'POST');
       expect(request.url, Uri.parse('https://overpass.test/api/interpreter'));
-      expect(request.bodyFields['data'], contains('way["highway"]'));
+      expect(
+        request.bodyFields['data'],
+        contains('way["highway"~"^(footway|path|pedestrian|steps|'),
+      );
+      expect(
+        request.bodyFields['data'],
+        contains('["foot"~"^(yes|designated|permissive)\$",i]'),
+      );
+      expect(
+        request.bodyFields['data'],
+        isNot(contains('way["highway"]["area"!="yes"]')),
+      );
       expect(request.bodyFields['data'], contains('[maxsize:8388608]'));
       expect(route.points, contains(_east));
       expect(route.points.first, _origin);
@@ -198,8 +217,17 @@ void main() {
     test('rejects non-HTTPS graph endpoints', () {
       expect(
         () => WalkingDirectionsService(
-          endpoint: 'http://overpass.test/api/interpreter',
+          endpoints: const <String>[
+            'http://overpass.test/api/interpreter',
+          ],
         ),
+        throwsArgumentError,
+      );
+    });
+
+    test('rejects an empty graph endpoint list', () {
+      expect(
+        () => WalkingDirectionsService(endpoints: const <String>[]),
         throwsArgumentError,
       );
     });
@@ -213,7 +241,9 @@ void main() {
       });
       final service = WalkingDirectionsService(
         client: client,
-        endpoint: 'https://overpass.test/api/interpreter',
+        endpoints: const <String>[
+          'https://overpass.test/api/interpreter',
+        ],
         maximumRouteDistanceMeters: 100,
       );
 
@@ -241,5 +271,335 @@ void main() {
       );
       service.dispose();
     });
+
+    test('uses configured endpoints in order after a retryable response',
+        () async {
+      final requested = <Uri>[];
+      final client = MockClient((request) async {
+        requested.add(request.url);
+        if (requested.length == 1) {
+          return http.Response('temporarily unavailable', 503);
+        }
+        return _overpassResponse(<Map<String, Object>>[
+          _elementNode(1, _origin),
+          _elementNode(2, _east),
+          _elementNode(3, _destination),
+          _elementWay(10, <int>[1, 2, 3]),
+        ]);
+      });
+      final service = _service(
+        client,
+        endpoints: const <String>[
+          'https://first-overpass.test/api/interpreter',
+          'https://second-overpass.test/api/interpreter',
+        ],
+      );
+
+      final route = await service.route(
+        origin: _origin,
+        destination: _destination,
+      );
+
+      expect(requested, <Uri>[
+        Uri.parse('https://first-overpass.test/api/interpreter'),
+        Uri.parse('https://second-overpass.test/api/interpreter'),
+      ]);
+      expect(route.points, contains(_east));
+      service.dispose();
+    });
+
+    test('default endpoint list fails over between public OSM instances',
+        () async {
+      final requested = <Uri>[];
+      final client = MockClient((request) async {
+        requested.add(request.url);
+        if (requested.length == 1) return http.Response('busy', 429);
+        return _overpassResponse(<Map<String, Object>>[
+          _elementNode(1, _origin),
+          _elementNode(2, _east),
+          _elementNode(3, _destination),
+          _elementWay(10, <int>[1, 2, 3]),
+        ]);
+      });
+      final service = WalkingDirectionsService(
+        client: client,
+        minimumRequestInterval: Duration.zero,
+        maximumSnapDistanceMeters: 300,
+      );
+
+      await service.route(origin: _origin, destination: _destination);
+
+      expect(requested, <Uri>[
+        Uri.parse('https://overpass-api.de/api/interpreter'),
+        Uri.parse('https://overpass.private.coffee/api/interpreter'),
+      ]);
+      service.dispose();
+    });
+
+    for (final status in <int>[406, 408, 429, 500, 503, 599]) {
+      test('fails over after retryable HTTP $status', () async {
+        var requests = 0;
+        final client = MockClient((_) async {
+          requests += 1;
+          if (requests == 1) return http.Response('retry', status);
+          return _overpassResponse(<Map<String, Object>>[
+            _elementNode(1, _origin),
+            _elementNode(2, _east),
+            _elementNode(3, _destination),
+            _elementWay(10, <int>[1, 2, 3]),
+          ]);
+        });
+        final service = _service(
+          client,
+          endpoints: const <String>[
+            'https://first-overpass.test/api/interpreter',
+            'https://second-overpass.test/api/interpreter',
+          ],
+        );
+
+        await service.route(origin: _origin, destination: _destination);
+
+        expect(requests, 2);
+        service.dispose();
+      });
+    }
+
+    for (final status in <int>[400, 401, 403, 404, 405, 409, 422]) {
+      test('does not fail over after non-retryable HTTP $status', () async {
+        var requests = 0;
+        final client = MockClient((_) async {
+          requests += 1;
+          return http.Response('do not retry', status);
+        });
+        final service = _service(
+          client,
+          endpoints: const <String>[
+            'https://first-overpass.test/api/interpreter',
+            'https://second-overpass.test/api/interpreter',
+          ],
+        );
+
+        await expectLater(
+          service.route(origin: _origin, destination: _destination),
+          throwsA(
+            isA<WalkingDirectionsException>()
+                .having(
+                  (error) => error.type,
+                  'type',
+                  WalkingDirectionsErrorType.sourceHttp,
+                )
+                .having((error) => error.statusCode, 'statusCode', status)
+                .having(
+                  (error) => error.endpoint,
+                  'endpoint',
+                  Uri.parse('https://first-overpass.test/api/interpreter'),
+                ),
+          ),
+        );
+        expect(requests, 1);
+        service.dispose();
+      });
+    }
+
+    test('fails over after a transport error and preserves the final type',
+        () async {
+      var requests = 0;
+      final client = MockClient((request) async {
+        requests += 1;
+        throw http.ClientException('offline', request.url);
+      });
+      final service = _service(
+        client,
+        endpoints: const <String>[
+          'https://first-overpass.test/api/interpreter',
+          'https://second-overpass.test/api/interpreter',
+        ],
+      );
+
+      await expectLater(
+        service.route(origin: _origin, destination: _destination),
+        throwsA(
+          isA<WalkingDirectionsException>()
+              .having(
+                (error) => error.type,
+                'type',
+                WalkingDirectionsErrorType.sourceTransport,
+              )
+              .having(
+                (error) => error.endpoint,
+                'endpoint',
+                Uri.parse('https://second-overpass.test/api/interpreter'),
+              ),
+        ),
+      );
+      expect(requests, 2);
+      service.dispose();
+    });
+
+    test('fails over after a timeout and preserves the final type', () async {
+      var requests = 0;
+      final client = MockClient((_) {
+        requests += 1;
+        return Completer<http.Response>().future;
+      });
+      final service = _service(
+        client,
+        endpoints: const <String>[
+          'https://first-overpass.test/api/interpreter',
+          'https://second-overpass.test/api/interpreter',
+        ],
+        timeout: const Duration(milliseconds: 1),
+      );
+
+      await expectLater(
+        service.route(origin: _origin, destination: _destination),
+        throwsA(
+          isA<WalkingDirectionsException>()
+              .having(
+                (error) => error.type,
+                'type',
+                WalkingDirectionsErrorType.sourceTimeout,
+              )
+              .having(
+                (error) => error.endpoint,
+                'endpoint',
+                Uri.parse('https://second-overpass.test/api/interpreter'),
+              ),
+        ),
+      );
+      expect(requests, 2);
+      service.dispose();
+    });
+
+    test('fails over after a successful but malformed response', () async {
+      var requests = 0;
+      final client = MockClient((_) async {
+        requests += 1;
+        if (requests == 1) return http.Response('not json', 200);
+        return _overpassResponse(<Map<String, Object>>[
+          _elementNode(1, _origin),
+          _elementNode(2, _east),
+          _elementNode(3, _destination),
+          _elementWay(10, <int>[1, 2, 3]),
+        ]);
+      });
+      final service = _service(
+        client,
+        endpoints: const <String>[
+          'https://first-overpass.test/api/interpreter',
+          'https://second-overpass.test/api/interpreter',
+        ],
+      );
+
+      final route = await service.route(
+        origin: _origin,
+        destination: _destination,
+      );
+      expect(route.points, isNotEmpty);
+      expect(requests, 2);
+      service.dispose();
+    });
+
+    test('stops buffering an oversized response and uses the fallback',
+        () async {
+      var requests = 0;
+      final client = MockClient((_) async {
+        requests += 1;
+        if (requests == 1) {
+          final oversized = jsonEncode(<String, Object>{
+            'elements': List<String>.filled(2048, 'x').join(),
+          });
+          return http.Response(oversized, 200);
+        }
+        return _overpassResponse(<Map<String, Object>>[
+          _elementNode(1, _origin),
+          _elementNode(2, _east),
+          _elementNode(3, _destination),
+          _elementWay(10, <int>[1, 2, 3]),
+        ]);
+      });
+      final service = _service(
+        client,
+        endpoints: const <String>[
+          'https://first-overpass.test/api/interpreter',
+          'https://second-overpass.test/api/interpreter',
+        ],
+        maximumResponseBytes: 512,
+      );
+
+      final route = await service.route(
+        origin: _origin,
+        destination: _destination,
+      );
+      expect(route.points, isNotEmpty);
+      expect(requests, 2);
+      service.dispose();
+    });
+
+    test('cancels an obsolete graph request when a newer route starts',
+        () async {
+      final client = _AbortAwareClient(
+        response: _overpassResponse(<Map<String, Object>>[
+          _elementNode(1, _origin),
+          _elementNode(2, _east),
+          _elementNode(3, _destination),
+          _elementWay(10, <int>[1, 2, 3]),
+        ]),
+      );
+      final service = _service(client);
+
+      final obsolete = service.route(
+        origin: _origin,
+        destination: _destination,
+      );
+      await client.firstRequestStarted.future;
+      final current = service.route(origin: _east, destination: _destination);
+
+      await expectLater(
+        obsolete,
+        throwsA(
+          isA<WalkingDirectionsException>().having(
+            (error) => error.type,
+            'type',
+            WalkingDirectionsErrorType.sourceCancelled,
+          ),
+        ),
+      );
+      expect((await current).points.last, _destination);
+      expect(client.requests, 2);
+      service.dispose();
+    });
   });
+}
+
+class _AbortAwareClient extends http.BaseClient {
+  _AbortAwareClient({required this.response});
+
+  final http.Response response;
+  final Completer<void> firstRequestStarted = Completer<void>();
+  int requests = 0;
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) {
+    requests += 1;
+    if (requests > 1) return Future<http.StreamedResponse>.value(_streamed());
+    firstRequestStarted.complete();
+    final result = Completer<http.StreamedResponse>();
+    if (request case http.Abortable(:final abortTrigger?)) {
+      unawaited(
+        abortTrigger.then((_) {
+          if (!result.isCompleted) {
+            result.completeError(http.RequestAbortedException(request.url));
+          }
+        }),
+      );
+    }
+    return result.future;
+  }
+
+  http.StreamedResponse _streamed() => http.StreamedResponse(
+        Stream<List<int>>.value(response.bodyBytes),
+        response.statusCode,
+        headers: response.headers,
+      );
 }

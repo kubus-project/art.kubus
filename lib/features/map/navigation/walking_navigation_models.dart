@@ -23,6 +23,18 @@ enum WalkingNavigationStatus {
   error,
 }
 
+enum WalkingNavigationFailureKind {
+  locationUnavailable,
+  routeUnavailable,
+}
+
+@immutable
+class WalkingNavigationSessionLease {
+  const WalkingNavigationSessionLease(this.generation);
+
+  final int generation;
+}
+
 @immutable
 class WalkingRouteStep {
   const WalkingRouteStep({

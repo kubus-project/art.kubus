@@ -12,8 +12,6 @@ void main() {
         selectedMarkerId: null,
         selectionPopAnimationValue: 0.0,
         cubeLayerVisible: false,
-        cubeIconSpinDegrees: 0.0,
-        cubeIconBobOffsetEm: 0.0,
       );
 
       final expr = KubusMarkerLayerStyler.interactiveIconImageExpression(state);
@@ -27,8 +25,6 @@ void main() {
         selectedMarkerId: 'm1',
         selectionPopAnimationValue: 0.0,
         cubeLayerVisible: false,
-        cubeIconSpinDegrees: 0.0,
-        cubeIconBobOffsetEm: 0.0,
       );
 
       final expr = KubusMarkerLayerStyler.interactiveIconImageExpression(state);
@@ -36,7 +32,11 @@ void main() {
         expr,
         equals(<Object>[
           'case',
-          <Object>['==', <Object>['id'], 'm1'],
+          <Object>[
+            '==',
+            <Object>['id'],
+            'm1'
+          ],
           const <Object>['get', 'iconSelected'],
           const <Object>['get', 'icon'],
         ]),
@@ -50,8 +50,6 @@ void main() {
         selectedMarkerId: null,
         selectionPopAnimationValue: 0.0,
         cubeLayerVisible: false,
-        cubeIconSpinDegrees: 0.0,
-        cubeIconBobOffsetEm: 0.0,
       );
 
       final expr = KubusMarkerLayerStyler.interactiveIconSizeExpression(state);
@@ -78,8 +76,6 @@ void main() {
         // t=0 -> sin(0)=0 -> pop=1.0
         selectionPopAnimationValue: 0.0,
         cubeLayerVisible: false,
-        cubeIconSpinDegrees: 0.0,
-        cubeIconBobOffsetEm: 0.0,
       );
 
       final expr = KubusMarkerLayerStyler.interactiveIconSizeExpression(state);
@@ -103,11 +99,23 @@ void main() {
           '*',
           <Object>[
             'case',
-            <Object>['==', <Object>['id'], 'p'],
+            <Object>[
+              '==',
+              <Object>['id'],
+              'p'
+            ],
             MapMarkerStyleConfig.pressedScaleFactor,
-            <Object>['==', <Object>['id'], 's'],
+            <Object>[
+              '==',
+              <Object>['id'],
+              's'
+            ],
             1.0,
-            <Object>['==', <Object>['id'], 'h'],
+            <Object>[
+              '==',
+              <Object>['id'],
+              'h'
+            ],
             MapMarkerStyleConfig.hoverScaleFactor,
             1.0,
           ],

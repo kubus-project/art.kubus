@@ -65,14 +65,25 @@ class WalkingNavigationLocationCoordinator {
 
   bool get isRunning => _subscription != null;
 
-  void start({required void Function(Position position) onPosition}) {
+  void start({
+    required void Function(Position position) onPosition,
+    required void Function(Object error) onError,
+  }) {
     if (_subscription != null) return;
     _subscription = Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
         accuracy: LocationAccuracy.bestForNavigation,
         distanceFilter: 3,
       ),
-    ).listen(onPosition);
+    ).listen(
+      onPosition,
+      onError: (Object error, StackTrace stack) {
+        final failed = _subscription;
+        _subscription = null;
+        unawaited(failed?.cancel());
+        onError(error);
+      },
+    );
   }
 
   void pause() => _subscription?.pause();
