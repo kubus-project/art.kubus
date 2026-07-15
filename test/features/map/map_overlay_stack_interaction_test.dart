@@ -332,7 +332,6 @@ KubusMapController _buildMapController() {
         markerHitboxImageId: 'kubus_hitbox_square_transparent',
         markerDotLayerId: 'kubus_marker_dot_layer',
         markerPulseLayerId: 'kubus_marker_pulse_layer',
-        cubeSourceId: 'kubus_marker_cubes',
         cubeLayerId: 'kubus_marker_cubes_layer',
         cubeIconLayerId: 'kubus_marker_cubes_icon_layer',
         locationSourceId: 'kubus_user_location',

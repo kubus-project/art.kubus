@@ -91,8 +91,6 @@ class MapMarkerStyleConfig {
   static const Duration interactionDuration = Duration(milliseconds: 140);
   static const Duration selectionPopDuration = Duration(milliseconds: 180);
 
-  static const Duration cubeIconSpinPeriod = Duration(seconds: 18);
-
   static const double hoverScaleFactor = 1.04;
   static const double pressedScaleFactor = 0.97;
   static const double selectedPopScaleFactor = 1.06;
@@ -174,23 +172,14 @@ class MapMarkerStyleConfig {
 
   double get selectedPopScale => selectedPopScaleFactor;
 
-  /// Vertical offset (in "ems") for the floating icon symbol in 3D mode.
-  ///
-  /// This is multiplied by the icon size, so it scales with zoom automatically.
-  static const Duration cubeIconBobPeriod = Duration(milliseconds: 2400);
-  static const double cubeIconBobAmplitudeEm = 0.12;
-  static const double cubeFloatingIconBaseOffsetYEm = -1.85;
+  // Screen-space isometric pedestal sizing. The pedestal and badge use the
+  // same clustered GeoJSON source and stable zoom expression, so their visual
+  // relationship does not drift as the camera zooms or pitches.
+  static const double isometricPedestalScale = 0.92;
+  static const double isometricBadgeLiftPx = 42.0;
 
-  static const List<Object> cubeFloatingIconOffsetEm = <Object>[
-    0.0,
-    cubeFloatingIconBaseOffsetYEm,
-  ];
-
-  static List<Object> cubeFloatingIconOffsetEmWithBob(double bobOffsetEm) =>
-      <Object>[0.0, cubeFloatingIconBaseOffsetYEm + bobOffsetEm];
-
-  static double cubeSpinDegreesPerSecond() =>
-      360.0 / (cubeIconSpinPeriod.inMilliseconds / 1000.0);
+  static List<Object> isometricBadgeOffset(double bobPx) =>
+      <Object>[0.0, -isometricBadgeLiftPx + bobPx];
 
   static Color bestForegroundOn(Color background, Brightness brightness) {
     final white = const Color(0xFFFFFFFF);

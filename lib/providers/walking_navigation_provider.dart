@@ -29,6 +29,7 @@ class WalkingNavigationProvider extends ChangeNotifier {
   WalkingRoute? _route;
   LatLng? _currentPosition;
   String? _errorMessage;
+  WalkingNavigationFailureKind? _failureKind;
   int _activeStepIndex = 0;
   int _nearestGeometryIndex = 0;
   double _remainingDistanceMeters = 0;
@@ -56,6 +57,7 @@ class WalkingNavigationProvider extends ChangeNotifier {
           _status == WalkingNavigationStatus.arrived);
   bool get isCalculating => _status == WalkingNavigationStatus.calculating;
   double? get positionAccuracyMeters => _positionAccuracyMeters;
+  WalkingNavigationFailureKind? get failureKind => _failureKind;
 
   WalkingRouteStep? get activeStep {
     final steps = _route?.steps;
@@ -73,6 +75,7 @@ class WalkingNavigationProvider extends ChangeNotifier {
     _positionAccuracyMeters = null;
     _lastRouteRequestAt = null;
     _errorMessage = null;
+    _failureKind = null;
     _resetRouteProgress();
     _status = WalkingNavigationStatus.awaitingLocation;
     notifyListeners();
@@ -80,20 +83,25 @@ class WalkingNavigationProvider extends ChangeNotifier {
 
   /// Starts a bounded navigation session. The shared map location lifecycle
   /// supplies fixes, avoiding a second competing GPS subscription on mobile.
-  void start(WalkingNavigationIntent intent) {
-    if (!AppConfig.isFeatureEnabled('mapWalkingNavigation')) return;
+  WalkingNavigationSessionLease? start(WalkingNavigationIntent intent) {
+    if (!AppConfig.isFeatureEnabled('mapWalkingNavigation')) return null;
     prepare(intent);
+    return WalkingNavigationSessionLease(_requestGeneration);
   }
 
   Future<void> updatePosition(
     LatLng position, {
     double? accuracyMeters,
+    WalkingNavigationSessionLease? lease,
   }) async {
+    if (!_ownsSession(lease)) return;
     if (_intent == null || _status == WalkingNavigationStatus.idle) return;
     _currentPosition = position;
     _positionAccuracyMeters = accuracyMeters;
 
-    if (_status == WalkingNavigationStatus.awaitingLocation) {
+    if (_status == WalkingNavigationStatus.awaitingLocation ||
+        (_status == WalkingNavigationStatus.error &&
+            _failureKind == WalkingNavigationFailureKind.locationUnavailable)) {
       await _requestRoute(position, preserveCurrentRoute: false);
       return;
     }
@@ -131,18 +139,35 @@ class WalkingNavigationProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> retry() async {
+  Future<void> retry({WalkingNavigationSessionLease? lease}) async {
+    if (!_ownsSession(lease)) return;
     final position = _currentPosition;
     if (_intent == null || position == null) return;
     await _requestRoute(position, preserveCurrentRoute: false);
   }
 
-  void reportLocationUnavailable() {
-    if (_status != WalkingNavigationStatus.awaitingLocation) return;
+  void reportLocationUnavailable({WalkingNavigationSessionLease? lease}) {
+    if (!_ownsSession(lease)) return;
+    if (_status == WalkingNavigationStatus.idle ||
+        _status == WalkingNavigationStatus.arrived) {
+      return;
+    }
     _status = WalkingNavigationStatus.error;
     _errorMessage = 'Location is unavailable.';
+    _failureKind = WalkingNavigationFailureKind.locationUnavailable;
     notifyListeners();
   }
+
+  /// Stops only the session created by [lease]. A stale map route therefore
+  /// cannot tear down a newer walking-navigation session during disposal.
+  bool stopOwned(WalkingNavigationSessionLease? lease) {
+    if (lease == null || lease.generation != _requestGeneration) return false;
+    stop();
+    return true;
+  }
+
+  bool _ownsSession(WalkingNavigationSessionLease? lease) =>
+      lease == null || lease.generation == _requestGeneration;
 
   void stop() {
     _requestGeneration += 1;
@@ -154,6 +179,7 @@ class WalkingNavigationProvider extends ChangeNotifier {
     _currentPosition = null;
     _lastRouteRequestAt = null;
     _errorMessage = null;
+    _failureKind = null;
     _resetRouteProgress();
     _positionAccuracyMeters = null;
     notifyListeners();
@@ -175,6 +201,7 @@ class WalkingNavigationProvider extends ChangeNotifier {
     if (!preserveCurrentRoute) {
       _status = WalkingNavigationStatus.calculating;
       _errorMessage = null;
+      _failureKind = null;
       notifyListeners();
     }
 
@@ -188,6 +215,7 @@ class WalkingNavigationProvider extends ChangeNotifier {
         _route = route;
         _status = WalkingNavigationStatus.active;
         _errorMessage = null;
+        _failureKind = null;
         _resetRouteProgress();
         _updateProgress(origin, route);
         notifyListeners();
@@ -196,6 +224,7 @@ class WalkingNavigationProvider extends ChangeNotifier {
         if (!preserveCurrentRoute || _route == null) {
           _status = WalkingNavigationStatus.error;
           _errorMessage = error.toString();
+          _failureKind = WalkingNavigationFailureKind.routeUnavailable;
         }
         notifyListeners();
       } finally {

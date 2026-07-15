@@ -94,7 +94,6 @@ import '../features/map/controller/map_target_coordinator.dart';
 import '../features/map/engine/kubus_map_marker_sync_engine.dart';
 import '../features/map/nearby/nearby_art_controller.dart';
 import '../features/map/tutorial/map_tutorial_coordinator.dart';
-import '../utils/marker_cube_geometry.dart';
 import 'events/event_detail_screen.dart';
 import 'events/exhibition_detail_screen.dart';
 import '../widgets/glass_components.dart';
@@ -293,6 +292,7 @@ class _MapScreenState extends State<MapScreen>
   bool _styleInitialized = false;
   bool _styleInitializationInProgress = false;
   WalkingNavigationProvider? _walkingNavigationProvider;
+  WalkingNavigationSessionLease? _walkingNavigationLease;
   WalkingNavigationMapCoordinator? _walkingNavigationMapCoordinator;
   bool _walkingLocationPromptScheduled = false;
   int _styleEpoch = 0;
@@ -303,7 +303,6 @@ class _MapScreenState extends State<MapScreen>
   // Shared constants – canonical values live in MapScreenConstants.
   static const String _markerSourceId = MapScreenConstants.markerSourceId;
   static const String _markerLayerId = MapScreenConstants.markerLayerId;
-  static const String _cubeSourceId = MapScreenConstants.cubeSourceId;
   static const String _cubeLayerId = MapScreenConstants.cubeLayerId;
   static const String _cubeIconLayerId = MapScreenConstants.cubeIconLayerId;
   static const String _locationSourceId = MapScreenConstants.locationSourceId;
@@ -331,7 +330,6 @@ class _MapScreenState extends State<MapScreen>
   DateTime? _markerTapRippleAt;
   Color? _markerTapRippleColor;
   late final ValueNotifier<Offset?> _selectedMarkerAnchorNotifier;
-  final Debouncer _cubeSyncDebouncer = Debouncer();
   final Debouncer _radiusChangeDebouncer = Debouncer();
   late final MapTargetCoordinator _mapTargetCoordinator;
   String? _directTargetMarkerId;
@@ -452,11 +450,7 @@ class _MapScreenState extends State<MapScreen>
   @override
   void onMarkerSourceWrite() => _debugMarkerSourceWriteCount += 1;
   @override
-  Future<void> afterMarkerSync(ThemeProvider themeProvider) async {
-    if (_renderCoordinator.is3DModeActive) {
-      await _syncMarkerCubes(themeProvider: themeProvider);
-    }
-  }
+  Future<void> afterMarkerSync(ThemeProvider themeProvider) async {}
   // -------------------------------------------------------------------------
 
   int _debugMarkerSourceWriteCount = 0;
@@ -464,7 +458,7 @@ class _MapScreenState extends State<MapScreen>
   int _debugSheetExtentEventCount = 0;
   DateTime _debugSheetExtentWindowStart = DateTime.now();
 
-  late AnimationController _cubeIconSpinController;
+  late AnimationController _ambientMarkerController;
 
   final GlobalKey _mapViewKey = GlobalKey();
   bool? _lastAppliedMapThemeDark;
@@ -542,6 +536,10 @@ class _MapScreenState extends State<MapScreen>
       themeSpec: MapLayersThemeSpec(
         locationFill: scheme.secondary,
         locationStroke: scheme.surface,
+        isometricPedestalTop: scheme.surfaceContainerHighest,
+        isometricPedestalLeft: scheme.surfaceContainerHigh,
+        isometricPedestalRight: scheme.surfaceContainer,
+        isometricPedestalStroke: scheme.outlineVariant,
       ),
       debugLabel: 'MapScreen',
       onStyleReady: () async {
@@ -810,7 +808,6 @@ class _MapScreenState extends State<MapScreen>
       pulseLayerId: MapScreenConstants.markerPulseLayerId,
       cubeLayerId: _cubeLayerId,
       cubeIconLayerId: _cubeIconLayerId,
-      cubeSourceId: _cubeSourceId,
       isMounted: () => mounted,
       isStyleInitialized: () => _styleInitialized,
       isStyleInitInProgress: () => _styleInitializationInProgress,
@@ -820,15 +817,9 @@ class _MapScreenState extends State<MapScreen>
       getMapController: () => _mapController,
       getLayersManager: () => _layersManager,
       getSelectionController: () => _animationController,
-      getCubeSpinController: () => _cubeIconSpinController,
+      getAmbientController: () => _ambientMarkerController,
       getManagedLayerIds: () => _managedLayerIds,
-      getManagedSourceIds: () => _managedSourceIds,
       isPollingEnabled: () => _pollingEnabled,
-      syncMarkerCubes: () async {
-        if (!mounted) return;
-        final themeProvider = context.read<ThemeProvider>();
-        await _syncMarkerCubes(themeProvider: themeProvider);
-      },
     );
 
     _animationController = AnimationController(
@@ -840,13 +831,13 @@ class _MapScreenState extends State<MapScreen>
       duration: const Duration(milliseconds: 500),
       vsync: this,
     );
-    _cubeIconSpinController = AnimationController(
-      duration: MapMarkerStyleConfig.cubeIconSpinPeriod,
+    _ambientMarkerController = AnimationController(
+      duration: MapMarkerStyleConfig.badgeBobPeriod,
       vsync: this,
     )..addListener(_renderCoordinator.handleAnimationTick);
     _perf.controllerCreated('selection_pop');
     _perf.controllerCreated('location_indicator');
-    _perf.controllerCreated('cube_spin');
+    _perf.controllerCreated('marker_ambient');
     _perf.logEvent('initState');
 
     final bindingName = WidgetsBinding.instance.runtimeType.toString();
@@ -1054,7 +1045,10 @@ class _MapScreenState extends State<MapScreen>
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (widget.walkingNavigationIntent != null) {
-      _walkingNavigationProvider ??= context.read<WalkingNavigationProvider>();
+      final provider = _walkingNavigationProvider ??=
+          context.read<WalkingNavigationProvider>();
+      _walkingNavigationLease ??=
+          provider.start(widget.walkingNavigationIntent!);
       if (!_walkingLocationPromptScheduled) {
         _walkingLocationPromptScheduled = true;
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1063,7 +1057,9 @@ class _MapScreenState extends State<MapScreen>
             await _promptForLocationThenCenter(reason: 'walking_navigation');
             if (!mounted) return;
             if (!_hasLiveLocationFix) {
-              _walkingNavigationProvider?.reportLocationUnavailable();
+              _walkingNavigationProvider?.reportLocationUnavailable(
+                lease: _walkingNavigationLease,
+              );
             }
           }());
         });
@@ -1073,6 +1069,7 @@ class _MapScreenState extends State<MapScreen>
     _kubusMapController.setReduceMotion(
       media.disableAnimations || media.accessibleNavigation,
     );
+    _renderCoordinator.updateAmbientTicker();
 
     final route = ModalRoute.of(context);
     if (route is PageRoute<dynamic>) {
@@ -1522,7 +1519,6 @@ class _MapScreenState extends State<MapScreen>
     _perf.timerStopped('proximity_timer');
     // Search UI is local-only; no background polling required.
     _mapDataCoordinator.cancelPending();
-    _cubeSyncDebouncer.cancel();
     _radiusChangeDebouncer.cancel();
 
     _renderCoordinator.updateAmbientTicker();
@@ -1927,7 +1923,7 @@ class _MapScreenState extends State<MapScreen>
   @override
   void dispose() {
     if (widget.walkingNavigationIntent != null) {
-      _walkingNavigationProvider?.stop();
+      _walkingNavigationProvider?.stopOwned(_walkingNavigationLease);
     }
     _unsubscribeRouteObserver(source: 'dispose');
     MapAttributionHelper.setMobileMapEnabled(false);
@@ -2006,12 +2002,11 @@ class _MapScreenState extends State<MapScreen>
         markerDeletedSubscription.cancel().catchError((_) {/* ignore */}),
       );
     }
-    _cubeSyncDebouncer.dispose();
     _radiusChangeDebouncer.dispose();
     _animationController.dispose();
     _perf.controllerDisposed('selection_pop');
-    _cubeIconSpinController.dispose();
-    _perf.controllerDisposed('cube_spin');
+    _ambientMarkerController.dispose();
+    _perf.controllerDisposed('marker_ambient');
     _locationIndicatorController?.dispose();
     _perf.controllerDisposed('location_indicator');
     _markerStackPageController.dispose();
@@ -3403,7 +3398,7 @@ class _MapScreenState extends State<MapScreen>
             locationSettings: const LocationSettings(
               accuracy: LocationAccuracy.best,
             ),
-          );
+          ).timeout(const Duration(seconds: 12));
           resolvedAccuracyMeters = position.accuracy;
           resolvedTimestampMs = position.timestamp.millisecondsSinceEpoch;
           resolvedPosition = LatLng(position.latitude, position.longitude);
@@ -3507,7 +3502,9 @@ class _MapScreenState extends State<MapScreen>
           } catch (_) {}
         }
 
-        final locationData = await _mobileLocation!.getLocation();
+        final locationData = await _mobileLocation!
+            .getLocation()
+            .timeout(const Duration(seconds: 12));
         if (locationData.latitude != null && locationData.longitude != null) {
           resolvedPosition =
               LatLng(locationData.latitude!, locationData.longitude!);
@@ -3517,6 +3514,9 @@ class _MapScreenState extends State<MapScreen>
           if (rawTime != null) {
             resolvedTimestampMs = rawTime.round();
           }
+          // A successful one-shot fix proves the provider recovered; allow the
+          // continuous navigation stream to be established again.
+          _mobileLocationStreamFailed = false;
         }
 
         // Start the continuous stream only once we have a working service +
@@ -3550,6 +3550,9 @@ class _MapScreenState extends State<MapScreen>
               resolvedTimestampMs ?? DateTime.now().millisecondsSinceEpoch,
           isLiveFix: resolvedFromLiveFix,
         );
+        if (kIsWeb && resolvedFromLiveFix && _webPositionSubscription == null) {
+          _startWebLocationStream();
+        }
         // Only force refresh on initial load (when no markers exist)
         // Timer-based calls should respect the cache/throttling logic
         if (!fromTimer || _artMarkers.isEmpty) {
@@ -3618,13 +3621,17 @@ class _MapScreenState extends State<MapScreen>
           );
           _mobileLocationStreamFailed = true;
           _mobileLocationStreamStarted = false;
+          _hasLiveLocationFix = false;
+          _walkingNavigationProvider?.reportLocationUnavailable(
+            lease: _walkingNavigationLease,
+          );
+          final failedSubscription = _mobileLocationSubscription;
+          _mobileLocationSubscription = null;
           try {
-            if (_mobileLocationSubscription != null) {
+            if (failedSubscription != null) {
               _perf.subscriptionStopped('mobile_location_stream');
               unawaited(
-                _mobileLocationSubscription!
-                    .cancel()
-                    .catchError((_) {/* ignore */}),
+                failedSubscription.cancel().catchError((_) {/* ignore */}),
               );
             }
           } catch (_) {}
@@ -3654,14 +3661,34 @@ class _MapScreenState extends State<MapScreen>
           distanceFilter: 4,
         ),
       );
-      _webPositionSubscription = stream.listen((position) {
-        _updateCurrentPosition(
-          LatLng(position.latitude, position.longitude),
-          accuracyMeters: position.accuracy,
-          timestampMs: position.timestamp.millisecondsSinceEpoch,
-          isLiveFix: true,
-        );
-      });
+      _webPositionSubscription = stream.listen(
+        (position) {
+          _updateCurrentPosition(
+            LatLng(position.latitude, position.longitude),
+            accuracyMeters: position.accuracy,
+            timestampMs: position.timestamp.millisecondsSinceEpoch,
+            isLiveFix: true,
+          );
+        },
+        onError: (Object error, StackTrace stack) {
+          AppConfig.debugPrint(
+            'MapScreen: web location stream error: $error',
+          );
+          _hasLiveLocationFix = false;
+          _walkingNavigationProvider?.reportLocationUnavailable(
+            lease: _walkingNavigationLease,
+          );
+          final failedSubscription = _webPositionSubscription;
+          _webPositionSubscription = null;
+          if (failedSubscription != null) {
+            _perf.subscriptionStopped('web_location_stream');
+            unawaited(
+              failedSubscription.cancel().catchError((_) {/* ignore */}),
+            );
+          }
+          _startLocationTimer();
+        },
+      );
       _perf.subscriptionStarted('web_location_stream');
       _timer?.cancel();
       _timer = null;
@@ -3836,6 +3863,7 @@ class _MapScreenState extends State<MapScreen>
         walkingNavigation.updatePosition(
           position,
           accuracyMeters: accuracyMeters,
+          lease: _walkingNavigationLease,
         ),
       );
     }
@@ -4373,8 +4401,10 @@ class _MapScreenState extends State<MapScreen>
   Future<void> _retryWalkingNavigation(
     WalkingNavigationProvider navigation,
   ) async {
-    if (navigation.currentPosition != null) {
-      await navigation.retry();
+    if (navigation.currentPosition != null &&
+        navigation.failureKind !=
+            WalkingNavigationFailureKind.locationUnavailable) {
+      await navigation.retry(lease: _walkingNavigationLease);
       return;
     }
     await _prepareWalkingLocationRetry();
@@ -4382,9 +4412,9 @@ class _MapScreenState extends State<MapScreen>
     await _promptForLocationThenCenter(reason: 'walking_navigation_retry');
     if (!mounted) return;
     if (!_hasLiveLocationFix) {
-      navigation.reportLocationUnavailable();
+      navigation.reportLocationUnavailable(lease: _walkingNavigationLease);
     } else {
-      await navigation.retry();
+      await navigation.retry(lease: _walkingNavigationLease);
     }
   }
 
@@ -4411,59 +4441,6 @@ class _MapScreenState extends State<MapScreen>
 
   Future<void> _syncMapMarkers({required ThemeProvider themeProvider}) =>
       _markerSyncEngine.syncMarkers(themeProvider: themeProvider);
-
-  Future<void> _syncMarkerCubes({required ThemeProvider themeProvider}) async {
-    final controller = _mapController;
-    if (controller == null) return;
-    if (!_styleInitialized) return;
-    if (!_managedSourceIds.contains(_cubeSourceId)) return;
-    if (!mounted) return;
-    if (!_renderCoordinator.is3DModeActive) return;
-
-    final scheme = Theme.of(context).colorScheme;
-    final roles = KubusColorRoles.of(context);
-    final zoom = _lastZoom;
-    final renderedMarkers = _kubusMapController.buildRenderedMarkers();
-    final visibleMarkers = renderedMarkers
-        .map((m) => m.marker.copyWith(position: m.position))
-        .toList(growable: false);
-
-    final cubeFeatures = <Map<String, dynamic>>[];
-    for (final marker in visibleMarkers) {
-      final baseColor = AppColorUtils.markerSubjectColor(
-        markerType: marker.type.name,
-        metadata: marker.metadata,
-        scheme: scheme,
-        roles: roles,
-      );
-      // Compute cube dimensions in map meters so the 3D extrusion aligns
-      // with the 2D marker icon at any zoom.  Uses the same formula as desktop.
-      final cubeSizeMeters = MarkerCubeGeometry.cubeBaseSizeMeters(
-        zoom: zoom,
-        latitude: marker.position.latitude,
-      );
-      final heightMeters = cubeSizeMeters * 0.90;
-      final colorHex = MarkerCubeGeometry.toHex(baseColor);
-
-      cubeFeatures.add(
-        MarkerCubeGeometry.cubeFeatureForMarkerWithMeters(
-          marker: marker,
-          colorHex: colorHex,
-          sizeMeters: cubeSizeMeters,
-          heightMeters: heightMeters,
-          kind: 'cube',
-        ),
-      );
-    }
-
-    final cubeCollection = <String, dynamic>{
-      'type': 'FeatureCollection',
-      'features': cubeFeatures,
-    };
-
-    if (!mounted) return;
-    await controller.setGeoJsonSource(_cubeSourceId, cubeCollection);
-  }
 
   Widget _buildMarkerOverlay(
     ThemeProvider themeProvider,

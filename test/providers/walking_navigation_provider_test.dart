@@ -79,6 +79,49 @@ void main() {
     expect(api.requests, 0);
   });
 
+  test('late live fix recovers a location-unavailable session', () async {
+    final api = _FakeDirectionsApi(_route(origin, destination));
+    final provider = WalkingNavigationProvider(directionsApi: api);
+    addTearDown(provider.dispose);
+
+    provider.prepare(intent);
+    provider.reportLocationUnavailable();
+    expect(
+        provider.failureKind, WalkingNavigationFailureKind.locationUnavailable);
+
+    await provider.updatePosition(origin, accuracyMeters: 8);
+
+    expect(api.requests, 1);
+    expect(provider.status, WalkingNavigationStatus.active);
+    expect(provider.failureKind, isNull);
+  });
+
+  test('stale map lease cannot mutate or stop a newer navigation session',
+      () async {
+    final api = _FakeDirectionsApi(_route(origin, destination));
+    final provider = WalkingNavigationProvider(directionsApi: api);
+    addTearDown(provider.dispose);
+
+    final staleLease = provider.start(intent)!;
+    const replacement = WalkingNavigationIntent(
+      destinationId: 'artwork-2',
+      destinationLabel: 'Replacement artwork',
+      destination: LatLng(46.0600, 14.5100),
+    );
+    final currentLease = provider.start(replacement)!;
+
+    provider.reportLocationUnavailable(lease: staleLease);
+    await provider.updatePosition(origin, lease: staleLease);
+    await provider.retry(lease: staleLease);
+    expect(provider.stopOwned(staleLease), isFalse);
+    expect(provider.intent, replacement);
+    expect(provider.status, WalkingNavigationStatus.awaitingLocation);
+    expect(api.requests, 0);
+
+    expect(provider.stopOwned(currentLease), isTrue);
+    expect(provider.status, WalkingNavigationStatus.idle);
+  });
+
   test('a new intent starts a fresh request while the old one is in flight',
       () async {
     const secondDestination = LatLng(46.0600, 14.5100);

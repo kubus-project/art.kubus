@@ -187,8 +187,6 @@ class KubusMarkerLayerStyleState {
     required this.selectedMarkerId,
     required this.selectionPopAnimationValue,
     required this.cubeLayerVisible,
-    required this.cubeIconSpinDegrees,
-    required this.cubeIconBobOffsetEm,
     this.markerPulsePhase = 0.0,
     this.markerBadgeBobOffsetPx = 0.0,
   });
@@ -201,8 +199,6 @@ class KubusMarkerLayerStyleState {
   final double selectionPopAnimationValue;
 
   final bool cubeLayerVisible;
-  final double cubeIconSpinDegrees;
-  final double cubeIconBobOffsetEm;
 
   /// 0..1 ambient pulse phase driving the soft ring around each dot.
   final double markerPulsePhase;
@@ -315,8 +311,8 @@ class KubusMarkerLayerStyler {
     final double pop = selectedId == null
         ? 1.0
         : (1.0 +
-              (MapMarkerStyleConfig.selectedPopScaleFactor - 1.0) *
-                  math.sin(state.selectionPopAnimationValue * math.pi));
+            (MapMarkerStyleConfig.selectedPopScaleFactor - 1.0) *
+                math.sin(state.selectionPopAnimationValue * math.pi));
 
     // On MapLibre GL JS, `['zoom']` must be the input to a top-level
     // "step"/"interpolate". Encode interaction multipliers inside the stop
@@ -491,13 +487,12 @@ class KubusMarkerLayerStyler {
             iconOpacity: iconOpacity,
             iconAllowOverlap: true,
             iconIgnorePlacement: true,
-            iconAnchor: 'center',
+            iconAnchor: 'bottom',
             iconPitchAlignment: 'viewport',
             iconRotationAlignment: 'viewport',
-            iconOffset: MapMarkerStyleConfig.cubeFloatingIconOffsetEmWithBob(
-              state.cubeIconBobOffsetEm,
+            iconOffset: MapMarkerStyleConfig.isometricBadgeOffset(
+              state.markerBadgeBobOffsetPx,
             ),
-            iconRotate: state.cubeIconSpinDegrees,
             visibility: cubeIconVisible ? 'visible' : 'none',
           ),
         );
@@ -525,7 +520,6 @@ class MapLayersIds {
     required this.markerHitboxImageId,
     required this.markerDotLayerId,
     required this.markerPulseLayerId,
-    required this.cubeSourceId,
     required this.cubeLayerId,
     required this.cubeIconLayerId,
     required this.locationSourceId,
@@ -551,7 +545,6 @@ class MapLayersIds {
   /// Soft pulsing ring rendered beneath the dot.
   final String markerPulseLayerId;
 
-  final String cubeSourceId;
   final String cubeLayerId;
   final String cubeIconLayerId;
 
@@ -580,6 +573,10 @@ class MapLayersThemeSpec {
     this.walkingRouteCasingColor,
     this.walkingLocationGlyphColor,
     this.walkingLocationGlyphStrokeColor,
+    this.isometricPedestalTop,
+    this.isometricPedestalLeft,
+    this.isometricPedestalRight,
+    this.isometricPedestalStroke,
     this.pendingFill,
     this.pendingStroke,
   });
@@ -591,6 +588,10 @@ class MapLayersThemeSpec {
   final Color? walkingRouteCasingColor;
   final Color? walkingLocationGlyphColor;
   final Color? walkingLocationGlyphStrokeColor;
+  final Color? isometricPedestalTop;
+  final Color? isometricPedestalLeft;
+  final Color? isometricPedestalRight;
+  final Color? isometricPedestalStroke;
 
   final Color? pendingFill;
   final Color? pendingStroke;
@@ -602,6 +603,20 @@ class MapLayersThemeSpec {
       walkingLocationGlyphColor ?? locationFill;
   Color get resolvedWalkingLocationGlyphStrokeColor =>
       walkingLocationGlyphStrokeColor ?? locationStroke;
+  Color get resolvedIsometricPedestalTop =>
+      isometricPedestalTop ??
+      Color.alphaBlend(
+        locationFill.withValues(alpha: 0.18),
+        locationStroke,
+      );
+  Color get resolvedIsometricPedestalLeft =>
+      isometricPedestalLeft ??
+      Color.alphaBlend(locationFill.withValues(alpha: 0.10), locationStroke);
+  Color get resolvedIsometricPedestalRight =>
+      isometricPedestalRight ??
+      Color.alphaBlend(locationFill.withValues(alpha: 0.26), locationStroke);
+  Color get resolvedIsometricPedestalStroke =>
+      isometricPedestalStroke ?? locationFill.withValues(alpha: 0.48);
 }
 
 @immutable
@@ -669,12 +684,12 @@ class MapLayersManager {
     Set<String>? managedLayerIdsOut,
     Set<String>? managedSourceIdsOut,
     Set<String>? registeredMapImagesOut,
-  }) : _controller = controller,
-       _ids = ids,
-       _debugTracing = debugTracing,
-       _managedLayerIdsOut = managedLayerIdsOut,
-       _managedSourceIdsOut = managedSourceIdsOut,
-       _registeredMapImagesOut = registeredMapImagesOut;
+  })  : _controller = controller,
+        _ids = ids,
+        _debugTracing = debugTracing,
+        _managedLayerIdsOut = managedLayerIdsOut,
+        _managedSourceIdsOut = managedSourceIdsOut,
+        _registeredMapImagesOut = registeredMapImagesOut;
 
   final MapLayersController _controller;
   final MapLayersIds _ids;
@@ -705,6 +720,9 @@ class MapLayersManager {
   Map<String, dynamic> _walkingRouteData = _emptyFeatureCollection();
   bool _walkingNavigationVisible = false;
 
+  String get _isometricPedestalImageId =>
+      '${_ids.cubeLayerId}_screen_space_image';
+
   Completer<void>? _initCompleter;
 
   int _addSourceCalls = 0;
@@ -718,16 +736,16 @@ class MapLayersManager {
   int _modeToggles = 0;
 
   MapLayersManagerStats get stats => MapLayersManagerStats(
-    addSourceCalls: _addSourceCalls,
-    addLayerCalls: _addLayerCalls,
-    removeLayerCalls: _removeLayerCalls,
-    removeSourceCalls: _removeSourceCalls,
-    sourceUpdateCalls: _sourceUpdateCalls,
-    sourceUpdateSkips: _sourceUpdateSkips,
-    layerPropertiesCalls: _layerPropertiesCalls,
-    visibilityCalls: _visibilityCalls,
-    modeToggles: _modeToggles,
-  );
+        addSourceCalls: _addSourceCalls,
+        addLayerCalls: _addLayerCalls,
+        removeLayerCalls: _removeLayerCalls,
+        removeSourceCalls: _removeSourceCalls,
+        sourceUpdateCalls: _sourceUpdateCalls,
+        sourceUpdateSkips: _sourceUpdateSkips,
+        layerPropertiesCalls: _layerPropertiesCalls,
+        visibilityCalls: _visibilityCalls,
+        modeToggles: _modeToggles,
+      );
 
   bool hasLayer(String id) => _layerIds.contains(id);
 
@@ -906,16 +924,6 @@ class MapLayersManager {
     }
 
     return jsonEncode(canonicalize(value));
-  }
-
-  Future<void> upsertCubeData(Map<String, dynamic> featureCollection) async {
-    if (!hasSource(_ids.cubeSourceId)) return;
-    try {
-      _sourceUpdateCalls += 1;
-      await _controller.setGeoJsonSource(_ids.cubeSourceId, featureCollection);
-    } catch (_) {
-      // Best-effort.
-    }
   }
 
   Future<void> upsertUserLocationData(
@@ -1099,7 +1107,6 @@ class MapLayersManager {
     }
 
     await _safeRemoveSource(_ids.markerSourceId);
-    await _safeRemoveSource(_ids.cubeSourceId);
     await _safeRemoveSource(_ids.locationSourceId);
     await _safeRemoveSource(_ids.walkingRouteSourceId);
     if (_ids.pendingSourceId != null) {
@@ -1116,17 +1123,6 @@ class MapLayersManager {
     );
     _addSourceCalls += 1;
     _sourceIds.add(_ids.markerSourceId);
-
-    await _controller.addGeoJsonSource(
-      _ids.cubeSourceId,
-      const <String, dynamic>{
-        'type': 'FeatureCollection',
-        'features': <dynamic>[],
-      },
-      promoteId: 'id',
-    );
-    _addSourceCalls += 1;
-    _sourceIds.add(_ids.cubeSourceId);
 
     await _controller.addGeoJsonSource(
       _ids.walkingRouteSourceId,
@@ -1232,22 +1228,37 @@ class MapLayersManager {
     _layerIds.add(_ids.walkingRouteConnectorLayerId);
 
     // Layer order (bottom to top):
-    // 1) cube extrusion (experimental; hidden by default)
+    // 1) isometric screen-space pedestal (hidden outside pitched mode)
     // 2) marker pulse ring (flat on the ground, below the dot)
     // 3) marker coordinate dot (flat on the ground)
     // 4) marker floating badge symbol (hovers above the dot)
     // 5) cube floating icon (experimental; hidden by default)
     // 6) marker hitbox (transparent, on top for reliable taps)
 
-    await _controller.addFillExtrusionLayer(
-      _ids.cubeSourceId,
+    await _ensureIsometricPedestalImageRegistered(theme);
+    await _controller.addSymbolLayer(
+      _ids.markerSourceId,
       _ids.cubeLayerId,
-      ml.FillExtrusionLayerProperties(
-        fillExtrusionColor: <Object>['get', 'color'],
-        fillExtrusionHeight: <Object>['get', 'height'],
-        fillExtrusionBase: 0.0,
-        fillExtrusionOpacity: 0.95,
-        fillExtrusionVerticalGradient: false,
+      ml.SymbolLayerProperties(
+        iconImage: _isometricPedestalImageId,
+        iconSize: MapMarkerStyleConfig.iconSizeExpression(
+          constantScale: MapMarkerStyleConfig.isometricPedestalScale,
+          multiplier: <Object>[
+            'coalesce',
+            <Object>['get', 'entryScale'],
+            1.0,
+          ],
+        ),
+        iconOpacity: <Object>[
+          'coalesce',
+          <Object>['get', 'entryOpacity'],
+          1.0,
+        ],
+        iconAllowOverlap: true,
+        iconIgnorePlacement: true,
+        iconAnchor: 'bottom',
+        iconPitchAlignment: 'viewport',
+        iconRotationAlignment: 'viewport',
         visibility: 'none',
       ),
     );
@@ -1352,10 +1363,10 @@ class MapLayersManager {
         ],
         iconAllowOverlap: true,
         iconIgnorePlacement: true,
-        iconAnchor: 'center',
+        iconAnchor: 'bottom',
         iconPitchAlignment: 'viewport',
         iconRotationAlignment: 'viewport',
-        iconOffset: MapMarkerStyleConfig.cubeFloatingIconOffsetEm,
+        iconOffset: MapMarkerStyleConfig.isometricBadgeOffset(0),
         visibility: 'none',
       ),
     );
@@ -1648,6 +1659,79 @@ class MapLayersManager {
     }
   }
 
+  Future<void> _ensureIsometricPedestalImageRegistered(
+    MapLayersThemeSpec theme,
+  ) async {
+    if (_registeredImages.contains(_isometricPedestalImageId)) return;
+    try {
+      final bytes = await _createIsometricPedestalImage(theme);
+      await _controller.addImage(_isometricPedestalImageId, bytes);
+      _registeredImages.add(_isometricPedestalImageId);
+    } catch (_) {
+      // Marker badges remain usable if a renderer cannot create the pedestal.
+    }
+  }
+
+  Future<Uint8List> _createIsometricPedestalImage(
+    MapLayersThemeSpec theme,
+  ) async {
+    const logicalWidth = 58.0;
+    const logicalHeight = 38.0;
+    const pixelRatio = 2.0;
+    final recorder = ui.PictureRecorder();
+    final canvas = ui.Canvas(recorder)..scale(pixelRatio, pixelRatio);
+
+    final top = ui.Path()
+      ..moveTo(29, 1)
+      ..lineTo(56, 13)
+      ..lineTo(29, 25)
+      ..lineTo(2, 13)
+      ..close();
+    final left = ui.Path()
+      ..moveTo(2, 13)
+      ..lineTo(29, 25)
+      ..lineTo(29, 37)
+      ..lineTo(2, 25)
+      ..close();
+    final right = ui.Path()
+      ..moveTo(56, 13)
+      ..lineTo(29, 25)
+      ..lineTo(29, 37)
+      ..lineTo(56, 25)
+      ..close();
+
+    ui.Paint fill(Color color) => ui.Paint()
+      ..color = color
+      ..style = ui.PaintingStyle.fill;
+    final stroke = ui.Paint()
+      ..color = theme.resolvedIsometricPedestalStroke
+      ..style = ui.PaintingStyle.stroke
+      ..strokeWidth = 1.2
+      ..strokeJoin = ui.StrokeJoin.round;
+
+    canvas.drawPath(left, fill(theme.resolvedIsometricPedestalLeft));
+    canvas.drawPath(right, fill(theme.resolvedIsometricPedestalRight));
+    canvas.drawPath(top, fill(theme.resolvedIsometricPedestalTop));
+    canvas.drawPath(left, stroke);
+    canvas.drawPath(right, stroke);
+    canvas.drawPath(top, stroke);
+
+    final picture = recorder.endRecording();
+    final image = await picture.toImage(
+      (logicalWidth * pixelRatio).round(),
+      (logicalHeight * pixelRatio).round(),
+    );
+    try {
+      final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (bytes == null) {
+        throw StateError('Unable to rasterize isometric pedestal');
+      }
+      return bytes.buffer.asUint8List();
+    } finally {
+      image.dispose();
+    }
+  }
+
   Future<Uint8List> _createWalkingLocationImage(
     MapLayersThemeSpec theme,
   ) async {
@@ -1718,9 +1802,9 @@ class MapLayersManager {
   }
 
   static Map<String, dynamic> _emptyFeatureCollection() => <String, dynamic>{
-    'type': 'FeatureCollection',
-    'features': <dynamic>[],
-  };
+        'type': 'FeatureCollection',
+        'features': <dynamic>[],
+      };
 
   void _mirrorToScreenSets() {
     // Preserve existing guards in screens during incremental refactor.
