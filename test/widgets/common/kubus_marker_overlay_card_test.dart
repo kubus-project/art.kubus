@@ -109,6 +109,7 @@ void main() {
             width: 320,
             child: KubusMarkerOverlayCard(
               marker: marker,
+              artwork: _artwork(),
               baseColor: Colors.teal,
               displayTitle: 'A deliberately long marker title',
               canPresentExhibition: false,
@@ -147,6 +148,8 @@ void main() {
       expect(surface.width, lessThanOrEqualTo(320));
       expect(surface.height, lessThanOrEqualTo(208));
       expect(find.text('2/3'), findsOneWidget);
+      expect(find.text('Artist'), findsOneWidget);
+      expect(find.byTooltip('Quick actions'), findsOneWidget);
       final previewSemantics = tester.widget<Semantics>(
         find.byKey(const ValueKey<String>('marker_overlay_card_surface')),
       );
@@ -158,6 +161,10 @@ void main() {
       await tester.tap(find.byTooltip('Close'));
       await tester.tap(find.byTooltip('Next page'));
       await tester.tap(find.byTooltip('Previous page'));
+      await tester.tap(find.byTooltip('Quick actions'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Favorite'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('View details'));
       await tester.pump();
 
@@ -165,7 +172,7 @@ void main() {
       expect(nextCount, 1);
       expect(previousCount, 1);
       expect(detailsCount, 1);
-      expect(quickActionCount, 0);
+      expect(quickActionCount, 1);
 
       final primary = tester.getRect(
         find.byKey(const ValueKey<String>('marker_overlay_primary_action')),
