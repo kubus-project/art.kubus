@@ -30,6 +30,7 @@ import '../providers/wallet_provider.dart';
 import '../providers/profile_provider.dart';
 import '../providers/themeprovider.dart';
 import '../providers/map_deep_link_provider.dart';
+import '../providers/public_entity_takeover_provider.dart';
 import '../providers/navigation_provider.dart';
 import '../providers/main_tab_provider.dart';
 import '../providers/exhibitions_provider.dart';
@@ -44,6 +45,7 @@ import '../services/ar_integration_service.dart';
 import '../services/guest_session_service.dart';
 import '../services/telemetry/telemetry_service.dart';
 import '../services/map_marker_service.dart';
+import '../services/share/share_types.dart';
 import '../services/push_notification_service.dart';
 import '../services/map_attribution_helper.dart';
 import '../core/app_route_observer.dart';
@@ -85,6 +87,7 @@ import '../features/map/shared/map_screen_constants.dart';
 import '../features/map/map_layers_manager.dart';
 import '../features/map/map_overlay_stack.dart';
 import '../features/map/controller/kubus_map_controller.dart';
+import '../features/map/controller/map_target_coordinator.dart';
 import '../features/map/engine/kubus_map_marker_sync_engine.dart';
 import '../features/map/nearby/nearby_art_controller.dart';
 import '../features/map/tutorial/map_tutorial_coordinator.dart';
@@ -320,12 +323,11 @@ class _MapScreenState extends State<MapScreen>
   late final ValueNotifier<Offset?> _selectedMarkerAnchorNotifier;
   final Debouncer _cubeSyncDebouncer = Debouncer();
   final Debouncer _radiusChangeDebouncer = Debouncer();
-  bool _didOpenInitialSelection = false;
+  late final MapTargetCoordinator _mapTargetCoordinator;
+  String? _directTargetMarkerId;
   MapDeepLinkProvider? _mapDeepLinkProvider;
+  MapDeepLinkClaim? _mapDeepLinkClaim;
   MainTabProvider? _tabProvider;
-  bool _handlingDeepLinkIntent = false;
-  String? _lastDeepLinkMarkerId;
-  DateTime? _lastDeepLinkHandledAt;
   Timer? _proximityCheckTimer;
   bool _proximityChecksEnabled = false;
   StreamSubscription<ArtMarker>? _markerSocketSubscription;
@@ -543,6 +545,9 @@ class _MapScreenState extends State<MapScreen>
         _renderCoordinator.updateAmbientTicker();
       },
     );
+    if (mounted) {
+      _mapTargetCoordinator.setStyleReady(_styleInitialized);
+    }
   }
 
   @override
@@ -682,6 +687,7 @@ class _MapScreenState extends State<MapScreen>
           _syncMarkerStackPager(state.selectionToken);
           _renderCoordinator.requestStyleUpdate(force: true);
         }
+        _mapTargetCoordinator.selectionChanged(state.selectedMarkerId);
       },
       onBackgroundTap: () {
         _dismissMapContext();
@@ -693,6 +699,37 @@ class _MapScreenState extends State<MapScreen>
         _requestMarkerVisualSync();
       },
     );
+
+    _mapTargetCoordinator = MapTargetCoordinator(
+      loadedMarkers: () => _artMarkers,
+      fetchMarkerById: MapDataController().getArtMarkerById,
+      fetchMarkersByArtwork: MapDataController().getArtMarkersByArtwork,
+      loadMarkersAround: (position) =>
+          _loadArtMarkers(center: position, force: true),
+      mergeMarkers: _mergeDirectTargetMarkers,
+      moveCamera: (position, zoom) => _animateMapTo(position, zoom: zoom),
+      selectMarker: _showArtMarkerDialog,
+      setPinnedMarker: (markerId) {
+        if (_directTargetMarkerId == markerId) return;
+        _directTargetMarkerId = markerId;
+        if (mounted) _applyVisibleMarkers();
+      },
+      showFallback: _showMapTargetFallback,
+      onTerminal: _handleMapTargetTerminal,
+    );
+
+    final initialTarget = MapTargetIntent(
+      exactMarkerId: widget.initialMarkerId,
+      artworkId: widget.initialArtworkId,
+      subjectId: widget.initialSubjectId,
+      subjectType: widget.initialSubjectType,
+      preferredPosition: widget.initialCenter,
+      preferredLabel: widget.initialTargetLabel,
+      minZoom: widget.initialZoom ?? 16,
+    );
+    if (initialTarget.hasIdentity) {
+      unawaited(_mapTargetCoordinator.submit(initialTarget));
+    }
 
     _mapCameraController = MapCameraController(
       mapController: _kubusMapController,
@@ -1110,6 +1147,9 @@ class _MapScreenState extends State<MapScreen>
   }
 
   void _scheduleMapTutorialStartIfEligible({required String reason}) {
+    // A direct target must remain the only foreground task until its exact
+    // marker card is visible. The tutorial remains manually launchable.
+    if (_hasInitialDirectTarget) return;
     if (_mapTutorialStartScheduled) return;
     if (_mapTutorialCoordinator.visible) return;
     if (_mapTutorialStartAttempts >= _maxMapTutorialStartAttempts) return;
@@ -1163,6 +1203,12 @@ class _MapScreenState extends State<MapScreen>
       unawaited(_mapTutorialCoordinator.maybeStart());
     });
   }
+
+  bool get _hasInitialDirectTarget => <String?>[
+        widget.initialMarkerId,
+        widget.initialArtworkId,
+        widget.initialSubjectId,
+      ].any((value) => value?.trim().isNotEmpty ?? false);
 
   Future<void> _trackGuestMapEntry() async {
     try {
@@ -1843,7 +1889,13 @@ class _MapScreenState extends State<MapScreen>
   void dispose() {
     _unsubscribeRouteObserver(source: 'dispose');
     MapAttributionHelper.setMobileMapEnabled(false);
-    _mapDeepLinkProvider?.removeListener(_handleMapDeepLinkProviderChanged);
+    final mapDeepLinkProvider = _mapDeepLinkProvider;
+    mapDeepLinkProvider?.removeListener(_handleMapDeepLinkProviderChanged);
+    final mapDeepLinkClaim = _mapDeepLinkClaim;
+    if (mapDeepLinkClaim != null) {
+      mapDeepLinkProvider?.release(mapDeepLinkClaim.token);
+    }
+    _mapDeepLinkClaim = null;
     _mapDeepLinkProvider = null;
     _tabProvider?.removeListener(_handleTabProviderChanged);
     _tabProvider = null;
@@ -1858,6 +1910,7 @@ class _MapScreenState extends State<MapScreen>
     _markerVisualSyncCoordinator.dispose();
     _mapDataCoordinator.dispose();
     _mapUiStateCoordinator.dispose();
+    _mapTargetCoordinator.dispose();
     _kubusMapController.dispose();
     _deactivateDetachedMapController = null;
     _mapController = null;
@@ -2063,130 +2116,23 @@ class _MapScreenState extends State<MapScreen>
     );
   }
 
-  Future<void> _maybeOpenInitialSelection() async {
-    if (_didOpenInitialSelection) return;
-    final markerId = widget.initialMarkerId?.trim() ?? '';
-    final artworkId = widget.initialArtworkId?.trim() ?? '';
-    final subjectId = widget.initialSubjectId?.trim() ?? '';
-    if (markerId.isEmpty && artworkId.isEmpty && subjectId.isEmpty) return;
-
-    _didOpenInitialSelection = true;
-    if (markerId.isNotEmpty) {
-      final opened = await _openMarkerById(markerId);
-      if (opened) return;
-    }
-
-    await _openMarkerBySelection(
-      exactMarkerId: markerId,
-      artworkId: artworkId,
-      subjectId: subjectId,
-      subjectType: widget.initialSubjectType,
-      preferredLabel: widget.initialTargetLabel,
-      preferredPosition: widget.initialCenter,
-    );
-  }
-
   void _handleMapDeepLinkProviderChanged() {
     final provider = _mapDeepLinkProvider;
-    if (provider == null || _handlingDeepLinkIntent) return;
-
-    final intent = provider.consumePending();
-    if (intent == null) return;
-
-    unawaited(
-      _handleMapDeepLinkIntent(intent).catchError((e) {
-        if (kDebugMode) debugPrint('MapScreen: deep link intent error: $e');
-      }).whenComplete(() {
-        if (!mounted) return;
-        _handleMapDeepLinkProviderChanged();
-      }),
-    );
-  }
-
-  Future<void> _handleMapDeepLinkIntent(MapDeepLinkIntent intent) async {
-    final markerId = intent.markerId.trim();
-    if (markerId.isEmpty) return;
-
-    final now = DateTime.now();
-    final lastAt = _lastDeepLinkHandledAt;
-    if (_lastDeepLinkMarkerId == markerId &&
-        lastAt != null &&
-        now.difference(lastAt) < const Duration(seconds: 2)) {
-      return;
-    }
-
-    if (_handlingDeepLinkIntent) return;
-    _handlingDeepLinkIntent = true;
-    _lastDeepLinkMarkerId = markerId;
-    _lastDeepLinkHandledAt = now;
-
-    try {
-      if (intent.center != null) {
-        final zoom = intent.zoom ?? _lastZoom;
-        unawaited(_animateMapTo(intent.center!, zoom: zoom));
-      }
-
-      final opened = await _openMarkerById(markerId);
-      if (!opened && kDebugMode) {
-        debugPrint('MapScreen: deep link marker not resolved: $markerId');
-      }
-    } finally {
-      _handlingDeepLinkIntent = false;
-    }
+    if (provider == null) return;
+    final claim = provider.claimPending();
+    if (claim == null || claim.token == _mapDeepLinkClaim?.token) return;
+    _mapDeepLinkClaim = claim;
+    unawaited(_mapTargetCoordinator.submit(claim.intent));
   }
 
   Future<bool> _openMarkerById(String markerId) async {
     final id = markerId.trim();
     if (id.isEmpty) return false;
-
-    for (var attempt = 0; attempt < 4; attempt++) {
-      if (_kubusMapController.selectedMarkerId == id) {
-        final marker = _kubusMapController.selectedMarkerData;
-        if (marker != null) {
-          unawaited(
-              _animateMapTo(marker.position, zoom: math.max(_lastZoom, 15)));
-          _showArtMarkerDialog(marker);
-          return true;
-        }
-      }
-
-      final existing =
-          _artMarkers.where((m) => m.id == id).toList(growable: false);
-      if (existing.isNotEmpty) {
-        final marker = existing.first;
-        unawaited(
-            _animateMapTo(marker.position, zoom: math.max(_lastZoom, 15)));
-        _showArtMarkerDialog(marker);
-        return true;
-      }
-
-      try {
-        _perf.recordFetch('marker:get');
-        final marker = await MapDataController().getArtMarkerById(id);
-        if (!mounted) return false;
-        if (marker != null && marker.hasValidPosition) {
-          setState(() {
-            _artMarkers.removeWhere((m) => m.id == marker.id);
-            _artMarkers.add(marker);
-          });
-          _applyVisibleMarkers();
-          unawaited(
-              _animateMapTo(marker.position, zoom: math.max(_lastZoom, 15)));
-          _showArtMarkerDialog(marker);
-          return true;
-        }
-      } catch (_) {
-        // Keep retrying for hydration races.
-      }
-
-      if (attempt < 3) {
-        await Future<void>.delayed(
-          Duration(milliseconds: 220 * (attempt + 1)),
-        );
-        if (!mounted) return false;
-      }
-    }
-    return false;
+    _perf.recordFetch('marker:get');
+    final result = await _mapTargetCoordinator.submit(
+      MapTargetIntent(exactMarkerId: id, minZoom: math.max(_lastZoom, 16)),
+    );
+    return result == MapTargetResult.overlayOpened;
   }
 
   Future<bool> _openMarkerBySelection({
@@ -2197,63 +2143,84 @@ class _MapScreenState extends State<MapScreen>
     String? preferredLabel,
     LatLng? preferredPosition,
   }) async {
-    final markerId = exactMarkerId?.trim() ?? '';
-    final normalizedArtworkId = artworkId?.trim() ?? '';
-    final normalizedSubjectId = subjectId?.trim() ?? '';
-    final normalizedSubjectType = subjectType?.trim() ?? '';
-    if (markerId.isEmpty &&
-        normalizedArtworkId.isEmpty &&
-        normalizedSubjectId.isEmpty) {
-      return false;
+    final target = MapTargetIntent(
+      exactMarkerId: exactMarkerId,
+      artworkId: artworkId,
+      subjectId: subjectId,
+      subjectType: subjectType,
+      preferredLabel: preferredLabel,
+      preferredPosition: preferredPosition ?? widget.initialCenter,
+      minZoom: math.max(_lastZoom, 16),
+    );
+    if (!target.hasIdentity) return false;
+    final result = await _mapTargetCoordinator.submit(target);
+    return result == MapTargetResult.overlayOpened;
+  }
+
+  void _mergeDirectTargetMarkers(List<ArtMarker> markers) {
+    if (!mounted || markers.isEmpty) return;
+    final merged = ArtMarkerListDiff.upsertById(
+      current: _artMarkers,
+      updates: markers,
+    );
+    if (_markersEquivalent(_artMarkers, merged)) return;
+    setState(() => _artMarkers = merged);
+    _applyVisibleMarkers();
+    _mapTargetCoordinator.notifyMarkersChanged();
+  }
+
+  void _showMapTargetFallback(
+    MapTargetIntent intent,
+    MapTargetResult result,
+  ) {
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    final l10n = AppLocalizations.of(context);
+    if (messenger == null || l10n == null) return;
+    final message = result == MapTargetResult.coordinatesOnly
+        ? l10n.mapTargetMarkerUnavailableToast
+        : l10n.mapTargetNotFoundToast;
+    messenger.showKubusSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  void _handleMapTargetTerminal(
+    MapTargetIntent intent,
+    MapTargetResult result,
+  ) {
+    _markCanonicalMarkerTakeoverReady(intent, result);
+    final provider = _mapDeepLinkProvider;
+    final claim = _mapDeepLinkClaim;
+    if (provider == null || claim == null || !identical(claim.intent, intent)) {
+      return;
     }
+    _mapDeepLinkClaim = null;
+    provider.removeListener(_handleMapDeepLinkProviderChanged);
+    provider.acknowledge(claim.token);
+    provider.addListener(_handleMapDeepLinkProviderChanged);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _handleMapDeepLinkProviderChanged();
+    });
+  }
 
-    final targetPosition = preferredPosition ?? widget.initialCenter;
-    for (var attempt = 0; attempt < 4; attempt++) {
-      final existing = resolveBestMarkerCandidate(
-        _artMarkers,
-        exactMarkerId: markerId,
-        artworkId: normalizedArtworkId,
-        subjectId: normalizedSubjectId,
-        subjectType: normalizedSubjectType,
-        preferredLabel: preferredLabel,
-        preferredPosition: targetPosition,
-      );
-      if (existing != null) {
-        await _animateMapTo(existing.position, zoom: math.max(_lastZoom, 15));
-        _showArtMarkerDialog(existing);
-        return true;
-      }
-
-      if (targetPosition != null) {
-        await _loadArtMarkers(center: targetPosition, force: true);
-        if (!mounted) return false;
-
-        final refreshed = resolveBestMarkerCandidate(
-          _artMarkers,
-          exactMarkerId: markerId,
-          artworkId: normalizedArtworkId,
-          subjectId: normalizedSubjectId,
-          subjectType: normalizedSubjectType,
-          preferredLabel: preferredLabel,
-          preferredPosition: targetPosition,
+  void _markCanonicalMarkerTakeoverReady(
+    MapTargetIntent intent,
+    MapTargetResult result,
+  ) {
+    final markerId = intent.exactMarkerId?.trim() ?? '';
+    if (result != MapTargetResult.overlayOpened || markerId.isEmpty) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      try {
+        unawaited(
+          context.read<PublicEntityTakeoverProvider>().markEntityReady(
+                ShareEntityType.marker,
+                markerId,
+              ),
         );
-        if (refreshed != null) {
-          await _animateMapTo(refreshed.position,
-              zoom: math.max(_lastZoom, 15));
-          _showArtMarkerDialog(refreshed);
-          return true;
-        }
-      }
-
-      if (attempt < 3) {
-        await Future<void>.delayed(
-          Duration(milliseconds: 220 * (attempt + 1)),
-        );
-        if (!mounted) return false;
-      }
-    }
-
-    return false;
+      } catch (_) {}
+    });
   }
 
   Future<void> _loadArtMarkers(
@@ -4066,6 +4033,8 @@ class _MapScreenState extends State<MapScreen>
           _styleInitializationInProgress =
               _kubusMapController.styleInitializationInProgress;
           _styleEpoch = _kubusMapController.styleEpoch;
+          _mapTargetCoordinator.setMapControllerReady(true);
+          _mapTargetCoordinator.setStyleReady(false);
           AppConfig.debugPrint(
             'MapScreen: map created (dark=$isDark, style="$styleAsset")',
           );
@@ -4089,9 +4058,7 @@ class _MapScreenState extends State<MapScreen>
           // otherwise the first load may be anchored to the default center.
           if (_travelModeEnabled) {
             unawaited(
-              _loadMarkersForCurrentView(force: true)
-                  .then((_) => _maybeOpenInitialSelection())
-                  .catchError((e) {
+              _loadMarkersForCurrentView(force: true).catchError((e) {
                 if (kDebugMode) {
                   debugPrint('MapScreen: initial marker load error: $e');
                 }
@@ -4099,20 +4066,14 @@ class _MapScreenState extends State<MapScreen>
             );
           } else if (_artMarkers.isEmpty && !_isLoadingMarkers) {
             unawaited(
-              _loadMarkersForCurrentView(force: true)
-                  .then((_) => _maybeOpenInitialSelection())
-                  .catchError((e) {
+              _loadMarkersForCurrentView(force: true).catchError((e) {
                 if (kDebugMode) {
                   debugPrint('MapScreen: initial marker load error: $e');
                 }
               }),
             );
           } else {
-            unawaited(_maybeOpenInitialSelection().catchError((e) {
-              if (kDebugMode) {
-                debugPrint('MapScreen: open initial marker error: $e');
-              }
-            }));
+            _mapTargetCoordinator.notifyMarkersChanged();
           }
         },
       ),
@@ -4402,6 +4363,15 @@ class _MapScreenState extends State<MapScreen>
         mapMotion.overlayReposition,
       ),
       transitionMotion: mapMotion.overlayEnter,
+      onLayoutResolved: (_) {
+        final selectedMarker = selection.selectedMarker;
+        if (selectedMarker == null) return;
+        if (selection.selectionToken !=
+            _kubusMapController.selectionState.selectionToken) {
+          return;
+        }
+        _mapTargetCoordinator.acknowledgeOverlay(selectedMarker.id);
+      },
       cardBuilder: (context, layout) {
         return _buildCompactMarkerOverlay(themeProvider, selection, layout);
       },
@@ -5838,6 +5808,7 @@ class _MapScreenState extends State<MapScreen>
     // active quick filter can never hide the marker the user just asked for.
     final pinnedIds = <String>{
       if (selectedId != null) selectedId,
+      if (_directTargetMarkerId != null) _directTargetMarkerId!,
       for (final marker in _artMarkers)
         if (marker.id.startsWith('search_temp_')) marker.id,
     };

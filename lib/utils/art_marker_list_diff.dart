@@ -20,5 +20,19 @@ class ArtMarkerListDiff {
     merged.addAll(nextById.values);
     return merged;
   }
-}
 
+  /// Applies a partial marker response without removing markers that were not
+  /// part of that response.
+  static List<ArtMarker> upsertById({
+    required List<ArtMarker> current,
+    required Iterable<ArtMarker> updates,
+  }) {
+    final byId = <String, ArtMarker>{
+      for (final marker in current) marker.id: marker,
+    };
+    for (final marker in updates) {
+      byId[marker.id] = marker;
+    }
+    return byId.values.toList(growable: false);
+  }
+}

@@ -223,6 +223,7 @@ abstract class ProfileBackendApi {
 /// Minimal contract for marker endpoints used by providers.
 abstract class MarkerBackendApi {
   String? getAuthToken();
+  Future<List<ArtMarker>> getArtMarkersByArtwork(String artworkId);
   Future<List<ArtMarker>> getMyArtMarkers();
   Future<ArtMarker?> createArtMarkerRecord(Map<String, dynamic> payload);
   Future<ArtMarker?> updateArtMarkerRecord(
@@ -4012,6 +4013,50 @@ class BackendApiService
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.getArtMarker failed: $e');
       return null;
+    }
+  }
+
+  /// Get map markers linked through the authoritative artwork relation.
+  /// GET /api/art-markers/by-artwork/:artworkId
+  @override
+  Future<List<ArtMarker>> getArtMarkersByArtwork(String artworkId) async {
+    final id = artworkId.trim();
+    if (id.isEmpty) return const <ArtMarker>[];
+
+    try {
+      return await _performPublicRead<List<ArtMarker>>(
+        liveRead: (candidateBaseUrl) async {
+          final data = await _fetchJsonFromBaseUrl(
+            candidateBaseUrl,
+            '/api/art-markers/by-artwork/${Uri.encodeComponent(id)}',
+            includeAuth: false,
+            allowOrbitFallback: true,
+          );
+          final dynamic payload =
+              data['data'] ?? data['markers'] ?? data['artMarkers'];
+          final markerList = payload is List ? payload : const <dynamic>[];
+          return markerList
+              .whereType<Map>()
+              .map((entry) => _artMarkerFromBackendJson(
+                    Map<String, dynamic>.from(entry),
+                  ))
+              .toList(growable: false);
+        },
+        snapshotRead: () async {
+          final markers = await _loadSnapshotDatasetMaps('markers');
+          return markers
+              .map(_artMarkerFromBackendJson)
+              .where((marker) =>
+                  marker.isPublic &&
+                  marker.isActive &&
+                  (marker.artworkId ?? '').trim() == id)
+              .toList(growable: false);
+        },
+      );
+    } catch (e) {
+      AppConfig.debugPrint(
+          'BackendApiService.getArtMarkersByArtwork failed: $e');
+      return const <ArtMarker>[];
     }
   }
 
