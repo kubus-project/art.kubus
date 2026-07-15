@@ -100,6 +100,7 @@ class _AppInitializerState extends State<AppInitializer> {
     final decision = routing.decide(
       pending: pending,
       hasValidSession: false,
+      initialUri: widget.initialUri,
     );
     if (decision == null) return false;
     final destination = decision.preferredShellRoute == ShellRoutes.map
@@ -109,7 +110,7 @@ class _AppInitializerState extends State<AppInitializer> {
     navigator.pushReplacement(
       MaterialPageRoute(
         builder: (_) => destination,
-        settings: RouteSettings(name: decision.canonicalPath),
+        settings: RouteSettings(name: decision.browserRoutePath),
       ),
     );
     return true;
@@ -584,6 +585,7 @@ class _AppInitializerState extends State<AppInitializer> {
         final decision = const DeepLinkStartupRouting().decide(
           pending: pendingDeepLink,
           hasValidSession: hasValidSession,
+          initialUri: widget.initialUri,
         );
         if (decision == null) return;
 
@@ -614,7 +616,7 @@ class _AppInitializerState extends State<AppInitializer> {
         navigator.pushReplacement(
           MaterialPageRoute(
             builder: (_) => destination,
-            settings: RouteSettings(name: decision.canonicalPath),
+            settings: RouteSettings(name: decision.browserRoutePath),
           ),
         );
         return;

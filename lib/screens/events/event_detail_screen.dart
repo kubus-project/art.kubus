@@ -24,6 +24,7 @@ import '../../widgets/collaboration_panel.dart';
 import '../../widgets/promotion/promotion_builder_sheet.dart';
 import '../../widgets/detail/detail_shell_components.dart';
 import '../../widgets/detail/poap_detail_card.dart';
+import '../../widgets/public_entity_takeover_ready.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../widgets/glass_components.dart';
 import '../../widgets/kubus_snackbar.dart';
@@ -312,12 +313,21 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     final events = context.watch<EventsProvider>();
     final isSignedIn = context.watch<ProfileProvider>().isSignedIn;
 
-    final event = events.events.firstWhere(
-      (e) => e.id == widget.eventId,
-      orElse: () =>
-          widget.initialEvent ??
-          KubusEvent(id: widget.eventId, title: l10n.mapMarkerSubjectTypeEvent),
-    );
+    KubusEvent? loadedEvent;
+    for (final candidate in events.events) {
+      if (candidate.id == widget.eventId) {
+        loadedEvent = candidate;
+        break;
+      }
+    }
+    final initialEvent =
+        widget.initialEvent?.id == widget.eventId ? widget.initialEvent : null;
+    final exactEvent = loadedEvent ?? initialEvent;
+    final event = exactEvent ??
+        KubusEvent(
+          id: widget.eventId,
+          title: l10n.mapMarkerSubjectTypeEvent,
+        );
 
     final exhibitions = events.exhibitionsForEvent(widget.eventId);
     final exhibitionsProvider = context.watch<ExhibitionsProvider>();
@@ -325,7 +335,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     final canManage = _canManageEvent(event);
     final eventPoap = events.poapStatusFor(widget.eventId);
 
-    return AnimatedGradientBackground(
+    final content = AnimatedGradientBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(
@@ -460,7 +470,10 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                               if (events.isDetailLoading)
                                 Padding(
                                   padding: const EdgeInsets.only(top: 16),
-                                  child: InlineLoading(height: 4, borderRadius: BorderRadius.circular(2), color: scheme.primary),
+                                  child: InlineLoading(
+                                      height: 4,
+                                      borderRadius: BorderRadius.circular(2),
+                                      color: scheme.primary),
                                 ),
                             ],
                           ),
@@ -485,7 +498,10 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                       if (events.isDetailLoading)
                         Padding(
                           padding: const EdgeInsets.only(top: 16),
-                          child: InlineLoading(height: 4, borderRadius: BorderRadius.circular(2), color: scheme.primary),
+                          child: InlineLoading(
+                              height: 4,
+                              borderRadius: BorderRadius.circular(2),
+                              color: scheme.primary),
                         ),
                     ],
                   );
@@ -495,6 +511,12 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
           ),
         ),
       ),
+    );
+    if (exactEvent == null) return content;
+    return PublicEntityTakeoverReady(
+      type: ShareEntityType.event,
+      entityId: exactEvent.id,
+      child: content,
     );
   }
 }

@@ -238,6 +238,37 @@ test('Flutter index positions art.kubus as an open art map', () => {
   assert.doesNotMatch(html, /explicitLang|slTitle|legacyHeads/);
 });
 
+test('canonical public takeover waits for exact entity readiness and keeps root assets', () => {
+  const bootstrap = readFileSync(
+    resolve(repoRoot, 'web', 'flutter_bootstrap.js'),
+    'utf8',
+  );
+  const takeover = readFileSync(
+    resolve(repoRoot, 'web', 'public_flutter_takeover.js'),
+    'utf8',
+  );
+
+  assert.match(bootstrap, /entrypointBaseUrl:\s*"\/"/);
+  assert.match(bootstrap, /assetBase:\s*"\/"/);
+  assert.match(bootstrap, /canvasKitBaseUrl:\s*"\/canvaskit\/"/);
+  assert.match(bootstrap, /engineConfig\.hostElement = takeoverHost/);
+  assert.match(bootstrap, /flutterServiceWorkerVersion\s*=\s*\{\{flutter_service_worker_version\}\}/);
+  assert.match(bootstrap, /__kubusBuildVersion/);
+  assert.match(bootstrap, /serviceWorkerVersion:\s*flutterServiceWorkerVersion/);
+  assert.match(takeover, /kubus:public-entity-ready/);
+  assert.match(takeover, /kubus:public-entity-route-parsed/);
+  assert.match(takeover, /public_entity_route_parsed/);
+  assert.match(takeover, /value\.type === expected\.type/);
+  assert.match(takeover, /value\.id === expected\.id/);
+  assert.match(takeover, /value\.path === expected\.path/);
+  assert.match(takeover, /globalThis\.location\.pathname === expected\.path/);
+  assert.match(takeover, /publicDocument\.inert = true/);
+  assert.match(takeover, /host\.setAttribute\("aria-hidden", "true"\)/);
+  assert.match(takeover, /onBootstrapResourceError/);
+  assert.match(takeover, /flutter_takeover_failed/);
+  assert.doesNotMatch(takeover, /setTimeout\([^)]*,\s*2000\)/);
+});
+
 test('web routing reserves public HTML, interactive app and real 404 surfaces', () => {
   const htaccess = readFileSync(resolve(repoRoot, 'web', '.htaccess'), 'utf8');
   const gateway = readFileSync(resolve(repoRoot, 'web', 'seo-proxy.php'), 'utf8');

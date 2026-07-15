@@ -9,15 +9,40 @@
 // Force self-hosted CanvasKit (prevents falling back to the gstatic CDN).
 _flutter.buildConfig.useLocalCanvasKit = true;
 
-_flutter.loader.load({
-  serviceWorkerSettings: {
-    serviceWorkerVersion: {{flutter_service_worker_version}},
-  },
-  config: {
-    // Keep this aligned with the build output. If you build with
-    // `--web-renderer canvaskit`, forcing `html` here will cause:
-    // "FlutterLoader could not find a build compatible with configuration..."
-    renderer: "canvaskit",
-    canvasKitBaseUrl: "/canvaskit/",
-  },
-});
+const takeover = globalThis.kubusPublicTakeover;
+takeover?.bootstrapStarted();
+const flutterServiceWorkerVersion = {{flutter_service_worker_version}};
+globalThis.__kubusBuildVersion ||= String(
+  flutterServiceWorkerVersion || _flutter.buildConfig.engineRevision || "dev",
+);
+
+const engineConfig = {
+  renderer: "canvaskit",
+  entrypointBaseUrl: "/",
+  assetBase: "/",
+  canvasKitBaseUrl: "/canvaskit/",
+};
+const takeoverHost = takeover?.hostElement();
+if (takeoverHost) {
+  engineConfig.hostElement = takeoverHost;
+}
+
+try {
+  Promise.resolve(_flutter.loader.load({
+    serviceWorkerSettings: {
+      serviceWorkerVersion: flutterServiceWorkerVersion,
+    },
+    config: engineConfig,
+    onEntrypointLoaded: async (engineInitializer) => {
+      try {
+        const appRunner = await engineInitializer.initializeEngine(engineConfig);
+        takeover?.engineReady();
+        await appRunner.runApp();
+      } catch (_) {
+        takeover?.fail();
+      }
+    },
+  })).catch(() => takeover?.fail());
+} catch (_) {
+  takeover?.fail();
+}

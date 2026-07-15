@@ -42,15 +42,18 @@ account, or redirect a `publicRead` destination to sign-in.
   present it after the initial entity has opened and the visitor chooses to
   continue into an onboarding-relevant workflow.
 - EN and SL handoffs carry locale context separately from the stable entity ID.
-- Compact interactive paths (`/a/:id`, `/u/:id`, and peers) remain canonical in
-  the Flutter layer.
+- Canonical localized entity paths remain visible during progressive web
+  takeover. Compact paths (`/a/:id`, `/u/:id`, and peers) remain internal route
+  abstractions and explicit compatibility entry points.
 - Benign campaign and locale query parameters may pass through initialization,
   but query parameters never grant access.
 
 ## Contextual authentication and replay
 
-Contextual authentication keeps the compact public entity route as its return
-route. Cancelling sign-in returns to that entity rather than a generic shell.
+Contextual authentication keeps the exact canonical browser route as its return
+route when entry began on a canonical public document; other entry surfaces use
+their compact internal route. Cancelling sign-in returns to that entity rather
+than a generic shell.
 
 No mutation is replayed automatically by the generic gate. Follow, save, like,
 comment, and message actions require the visitor to confirm the action again

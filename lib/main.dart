@@ -57,6 +57,7 @@ import 'providers/security_gate_provider.dart';
 import 'providers/email_preferences_provider.dart';
 import 'providers/auth_deep_link_provider.dart';
 import 'providers/deep_link_provider.dart';
+import 'providers/public_entity_takeover_provider.dart';
 import 'providers/platform_deep_link_listener_provider.dart';
 import 'providers/main_tab_provider.dart';
 import 'providers/map_deep_link_provider.dart';
@@ -481,6 +482,8 @@ class _AppLauncherState extends State<AppLauncher> {
               // Session-scoped onboarding deferral for deep-link cold starts.
               ChangeNotifierProvider(
                   create: (context) => DeferredOnboardingProvider()),
+              ChangeNotifierProvider(
+                  create: (context) => PublicEntityTakeoverProvider()),
               ChangeNotifierProvider(create: (context) => AppRefreshProvider()),
               ChangeNotifierProvider(create: (context) => ConfigProvider()),
               ChangeNotifierProvider<AppModeProvider>(
@@ -1143,7 +1146,10 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
     final target = const ShareDeepLinkParser().parse(uri);
     if (target != null) {
       return MaterialPageRoute(
-        builder: (_) => DeepLinkBootstrapScreen(target: target),
+        builder: (_) => DeepLinkBootstrapScreen(
+          target: target,
+          initialUri: uri,
+        ),
         settings: settings,
       );
     }

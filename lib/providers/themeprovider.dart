@@ -77,7 +77,7 @@ class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
       final prefs = await SharedPreferences.getInstance();
 
       // Load theme mode
-      final themeModeIndex = prefs.getInt(_themeKey) ?? 2; // Default to dark
+      final themeModeIndex = prefs.getInt(_themeKey) ?? ThemeMode.system.index;
       _themeMode = ThemeMode.values[themeModeIndex];
 
       // Load accent color

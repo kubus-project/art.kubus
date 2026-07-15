@@ -2,26 +2,74 @@
 
 ## Architecture
 
-`app.kubus.site` has two deliberately separate web surfaces:
+`app.kubus.site` has two coordinated web layers:
 
-- The existing Flutter application owns `/`, `/app/*`, and the finite set of
-  interactive routes listed in `web/.htaccess`.
+- The Flutter application owns `/`, `/app/*`, and progressively enhances
+  eligible canonical entity responses in place.
 - The existing Express service renders localized public HTML for `/en/*`,
   `/sl/*`, compact share aliases, robots, and sitemaps. The static host routes
   only that finite surface through `web/seo-proxy.php` to `api.kubus.site`.
 
 The renderer reads the existing PostgreSQL public models. It does not call an
-authenticated API, branch on user agent, or load Flutter, MapLibre, wallet, or
-analytics JavaScript. This keeps initial responses useful without JavaScript
-while preserving Flutter as the interactive product. The public page's “Open
-in art.kubus” link targets `/app/<compact-entity-path>`; the existing deep-link
-parser ignores the prefix and opens the same entity screen. Flutter then keeps
-its established compact in-app route name in browser history.
+authenticated API or branch on user agent. The semantic response is complete
+before any optional Flutter, MapLibre, wallet, or application JavaScript runs.
+With takeover disabled or unavailable, the existing “Open in art.kubus” bridge
+continues to target `/app/<compact-entity-path>`.
 
 The Flutter handoff and authenticated-action boundary are defined in
 [`public-entry-access-policy.md`](public-entry-access-policy.md). In particular,
 ordinary eligible entity handoffs are public reads even when local account
 metadata is stale; authentication begins at an identity-required action.
+
+## Progressive takeover runtime contract
+
+The browser URL is the routing source of truth. A canonical entry such as
+`/en/artworks/:id` is parsed directly by Flutter and is not rewritten to a
+compact or `/app/*` path during initial takeover. Compact paths remain an
+internal routing abstraction and a compatibility entry surface.
+
+With the takeover flag enabled, an eligible `200` entity response contains its
+complete semantic document, an inert full-viewport Flutter host, and
+non-blocking root-relative bootstrap resources. Flutter 3.44.2 uses the
+single-view `hostElement` engine option; multi-view mode is not needed. The
+application dispatches `kubus:public-entity-ready` only after the requested
+entity screen has produced a meaningful frame. The controller validates entity
+type, stable ID, and current pathname before atomically switching accessibility
+state and crossfading for 200 ms. Reduced-motion clients switch without the
+crossfade. A generic engine frame, loader completion, or fixed delay is never a
+readiness signal.
+
+The inactive surface is inert and `aria-hidden` according to its actual visual
+state, so only one interface is keyboard- and screen-reader-active. The SSR DOM
+is retained as the no-JavaScript, slow-network, unsupported-browser, and
+bootstrap-failure fallback. Private, missing, hub, XML, and error responses do
+not contain takeover resources.
+
+The generated service worker remains an unregister-only tombstone. It has no
+fetch listener, navigation fallback, precache manifest, or cached `index.html`;
+canonical navigations therefore continue to reach the renderer and preserve
+real `404`/`503` status codes. Root-relative entrypoint, asset, CanvasKit,
+MapLibre, font, and worker paths prevent nested canonical routes from resolving
+assets below the entity URL. MapLibre is not downloaded with an entity detail;
+the shared map widget loads and awaits its runtime only when the visitor enters
+the map.
+
+## Browser history policy
+
+- Initial canonical entry retains the exact localized pathname, query, and
+  fragment; startup replacement uses that same route name and creates no
+  canonical-to-compact hop.
+- Mobile detail, map, artist, and authentication screens use the existing
+  Navigator stack. Back returns to the prior interactive entity frame rather
+  than revealing the inactive SSR surface.
+- Desktop shell sub-screens retain their in-shell stack. Browser Back consumes
+  that stack before it may leave the canonical entry route, matching the visible
+  back control.
+- Contextual sign-in receives the exact canonical return route. Cancellation
+  returns to the entity without a second canonical/compact history entry.
+- Subsequent explicit app navigation may use the established compact internal
+  route model; it must not redirect the initial entry between compact and
+  localized forms.
 
 This design is deployable through the current atomic static release and Node
 deployment on the existing LiteSpeed/cPanel host. The local PHP gateway removes
@@ -108,19 +156,22 @@ CSP and do not vary on cookies or authentication state.
 
 ## Deployment and rollback
 
-1. Deploy the backend with `FEATURE_ENABLE_SEO_PUBLIC_PAGES=true` and the public
-   URL variables documented in its `.env.example`.
-2. Verify the renderer directly on the backend before promoting web routing.
-3. Confirm PHP cURL is enabled on the web origin, then atomically deploy the
-   Flutter web artifact. The workflow smoke test checks public HTML, robots,
-   sitemap, and an unknown-path 404.
-4. Purge CDN HTML/XML entries if a release must become visible immediately.
+1. Deploy the root-hosted Flutter web artifact while
+   `FEATURE_ENABLE_PUBLIC_FLUTTER_TAKEOVER=false`.
+2. Verify bootstrap, CanvasKit, MapLibre, fonts, and the unregister-only service
+   worker from their root URLs.
+3. Deploy the renderer with `FEATURE_ENABLE_SEO_PUBLIC_PAGES=true` and takeover
+   support still disabled, then verify raw canonical HTML and error semantics.
+4. Enable `FEATURE_ENABLE_PUBLIC_FLUTTER_TAKEOVER`, purge cached canonical HTML,
+   and smoke-test EN/SL, slow load, failed bundle, browser Back, and no-JS.
 
-Rollback is feature-flagged: disable `FEATURE_ENABLE_SEO_PUBLIC_PAGES`, restore
-the prior web release symlink, and purge route caches. Flutter sharing has the
-compile-time `SEO_PUBLIC_PAGES_ENABLED=false` fallback to compact URLs. A web
-rollback and backend rollback should be coordinated so proxy routes never point
-at a disabled renderer.
+Immediate takeover rollback is feature-flagged: disable
+`FEATURE_ENABLE_PUBLIC_FLUTTER_TAKEOVER` and purge canonical HTML. This restores
+the known-good SSR document and explicit `/app/*` bridge without a database
+migration or app rollback. If the web artifact itself must be rolled back,
+restore the prior atomic release after disabling takeover, retain the service
+worker tombstone, and repeat raw HTML, real 404, bridge, and `/app/*` smoke tests.
+Disabling `FEATURE_ENABLE_SEO_PUBLIC_PAGES` is reserved for renderer rollback.
 
 ## Local development and validation
 
