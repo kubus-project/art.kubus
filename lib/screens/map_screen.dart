@@ -110,7 +110,6 @@ import '../widgets/map/dialogs/street_art_claims_dialog.dart';
 import '../widgets/map/glass/kubus_map_platform_backdrop_host.dart';
 import '../widgets/map/kubus_map_glass_surface.dart';
 import '../widgets/common/kubus_filter_panel.dart';
-import '../widgets/common/kubus_glass_icon_button.dart';
 import '../widgets/common/kubus_map_controls.dart';
 import '../widgets/common/kubus_cached_image.dart';
 import '../widgets/common/kubus_marker_overlay_card.dart';
@@ -375,7 +374,7 @@ class _MapScreenState extends State<MapScreen>
   bool _travelModeEnabled = false;
   bool _isometricViewEnabled = false;
 
-  static const double _nearbySheetMin = 0.16;
+  static const double _nearbySheetMin = 0.12;
   static const double _nearbySheetMax = 0.85;
   static const double _nearbySheetBlockingOnThreshold = _nearbySheetMin + 0.02;
   static const double _nearbySheetBlockingOffThreshold =
@@ -3694,7 +3693,7 @@ class _MapScreenState extends State<MapScreen>
       tilt: targetPitch,
       duration: duration ?? cameraMotion.duration,
       compositionYOffsetPx: compositionYOffsetPx,
-      queueIfNotReady: false,
+      queueIfNotReady: true,
     );
   }
 
@@ -3986,7 +3985,6 @@ class _MapScreenState extends State<MapScreen>
                         discoveryProgress,
                         isLoadingArtworks,
                       ),
-                    _buildMobileAttributionButton(),
                     _buildTopOverlays(theme, themeProvider, taskProvider),
                     // Keep marker overlay above map UI chrome (controls/search/sheet)
                     // so the selected marker card remains the top interactive layer.
@@ -4145,6 +4143,12 @@ class _MapScreenState extends State<MapScreen>
 
     if (adjustZoomForScale) {
       _lastZoom = nextZoom;
+    }
+    _lastPitch = enabled ? 54.736 : 0.0;
+    if (enabled && _lastBearing.abs() < 1.0) {
+      _lastBearing = 18.0;
+    } else if (!enabled) {
+      _lastBearing = 0.0;
     }
 
     if (!mounted) return;
@@ -5572,54 +5576,64 @@ class _MapScreenState extends State<MapScreen>
 
   Widget _buildPrimaryControls(MapUiStateSnapshot ui) {
     final l10n = AppLocalizations.of(context)!;
-    final hasSecondaryTools = AppConfig.isFeatureEnabled('mapTravelMode') ||
-        AppConfig.isFeatureEnabled('mapIsometricView');
+    // Attribution lives in More Tools, while optional modes remain feature
+    // gated inside that sheet.
+    const hasSecondaryTools = true;
     // Keep controls clear of the discovery module and the nearby sheet.
     // Smaller bottom offset moves controls slightly down.
-    final bottomOffset = KubusMapMetrics.resolveMobileNearbyPeekHeight(
-          MediaQuery.sizeOf(context).height,
-        ) +
-        KubusLayout.mainBottomNavBarHeight;
-    return Positioned(
-      right: KubusSpacing.md - KubusSpacing.xxs,
-      bottom: bottomOffset,
-      child: MapOverlayBlocker(
-        child: KubusMapControls(
-          controller: _kubusMapController,
-          layout: KubusMapPrimaryControlsLayout.mobileRightRail,
-          onCenterOnMe: () => unawaited(_handleCenterOnMeTap()),
-          onCreateMarker: () => unawaited(_handleCurrentLocationTap()),
-          centerOnMeActive: _autoFollow,
-          resetBearingTooltip: l10n.mapResetBearingTooltip,
-          centerOnMeKey: _tutorialCenterButtonKey,
-          centerOnMeTooltip: l10n.mapCenterOnMeTooltip,
-          createMarkerKey: _tutorialAddMarkerButtonKey,
-          createMarkerTooltip: l10n.mapAddMapMarkerTooltip,
-          createMarkerHighlighted:
-              ui.contextSurface == MapContextSurface.createMarker,
-          buttonSize: KubusMapMetrics.mobileControlSize,
-          showZoomControls: false,
-          showSecondaryTools: hasSecondaryTools,
-          onOpenSecondaryTools: _openMobileMapTools,
-          secondaryToolsKey: _tutorialTravelButtonKey,
-          secondaryToolsTooltip: l10n.mapToolsTitle,
-          showTravelModeToggle: false,
-          travelModeKey: _tutorialTravelButtonKey,
-          travelModeActive: _travelModeEnabled,
-          onToggleTravelMode: () {
-            unawaited(_setTravelModeEnabled(!_travelModeEnabled));
-          },
-          travelModeTooltipWhenActive: l10n.mapTravelModeDisableTooltip,
-          travelModeTooltipWhenInactive: l10n.mapTravelModeEnableTooltip,
-          showIsometricViewToggle: false,
-          isometricViewActive: _isometricViewEnabled,
-          onToggleIsometricView: () {
-            unawaited(_setIsometricViewEnabled(!_isometricViewEnabled));
-          },
-          isometricViewTooltipWhenActive: l10n.mapIsometricViewDisableTooltip,
-          isometricViewTooltipWhenInactive: l10n.mapIsometricViewEnableTooltip,
-        ),
-      ),
+    return ValueListenableBuilder<double>(
+      valueListenable: _nearbySheetExtentNotifier,
+      builder: (context, sheetExtent, _) {
+        final height = MediaQuery.sizeOf(context).height;
+        final sheetViewport =
+            math.max(0.0, height - KubusLayout.mainBottomNavBarHeight);
+        final bottomOffset = KubusLayout.mainBottomNavBarHeight +
+            sheetViewport * sheetExtent +
+            KubusMapMetrics.contextPanelSafeGap;
+        return Positioned(
+          right: KubusSpacing.md - KubusSpacing.xxs,
+          bottom: bottomOffset,
+          child: MapOverlayBlocker(
+            child: KubusMapControls(
+              controller: _kubusMapController,
+              layout: KubusMapPrimaryControlsLayout.mobileRightRail,
+              onCenterOnMe: () => unawaited(_handleCenterOnMeTap()),
+              onCreateMarker: () => unawaited(_handleCurrentLocationTap()),
+              centerOnMeActive: _autoFollow,
+              resetBearingTooltip: l10n.mapResetBearingTooltip,
+              centerOnMeKey: _tutorialCenterButtonKey,
+              centerOnMeTooltip: l10n.mapCenterOnMeTooltip,
+              createMarkerKey: _tutorialAddMarkerButtonKey,
+              createMarkerTooltip: l10n.mapAddMapMarkerTooltip,
+              createMarkerHighlighted:
+                  ui.contextSurface == MapContextSurface.createMarker,
+              buttonSize: KubusMapMetrics.mobileControlSize,
+              showZoomControls: false,
+              showSecondaryTools: hasSecondaryTools,
+              onOpenSecondaryTools: _openMobileMapTools,
+              secondaryToolsKey: _tutorialTravelButtonKey,
+              secondaryToolsTooltip: l10n.mapToolsTitle,
+              showTravelModeToggle: false,
+              travelModeKey: _tutorialTravelButtonKey,
+              travelModeActive: _travelModeEnabled,
+              onToggleTravelMode: () {
+                unawaited(_setTravelModeEnabled(!_travelModeEnabled));
+              },
+              travelModeTooltipWhenActive: l10n.mapTravelModeDisableTooltip,
+              travelModeTooltipWhenInactive: l10n.mapTravelModeEnableTooltip,
+              showIsometricViewToggle: false,
+              isometricViewActive: _isometricViewEnabled,
+              onToggleIsometricView: () {
+                unawaited(_setIsometricViewEnabled(!_isometricViewEnabled));
+              },
+              isometricViewTooltipWhenActive:
+                  l10n.mapIsometricViewDisableTooltip,
+              isometricViewTooltipWhenInactive:
+                  l10n.mapIsometricViewEnableTooltip,
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -5685,57 +5699,20 @@ class _MapScreenState extends State<MapScreen>
                         Navigator.of(sheetContext).pop();
                       },
                     ),
+                  ListTile(
+                    leading: const Icon(Icons.info_outline),
+                    title: const Text('Map attributions'),
+                    onTap: () {
+                      Navigator.of(sheetContext).pop();
+                      unawaited(showKubusMapAttributionDialog(context));
+                    },
+                  ),
                 ],
               ),
             ),
           ),
         );
       },
-    );
-  }
-
-  Widget _buildMobileAttributionButton() {
-    return Positioned(
-      left: KubusSpacing.md - KubusSpacing.xxs,
-      bottom: 0,
-      child: ValueListenableBuilder<double>(
-        valueListenable: _nearbySheetExtentNotifier,
-        builder: (context, sheetExtent, _) {
-          final media = MediaQuery.of(context);
-          final viewportHeight = media.size.height;
-          final safeBottom = MapOverlaySizing.bottomSafeInset(media);
-          final sheetHeight = viewportHeight * sheetExtent;
-          final bottomInset = math
-              .max(
-                sheetHeight + 12.0,
-                safeBottom + 12.0,
-              )
-              .clamp(12.0, math.max(12.0, viewportHeight - 12.0))
-              .toDouble();
-
-          return AnimatedPadding(
-            duration: const Duration(milliseconds: 120),
-            curve: Curves.easeOutCubic,
-            // Tuck the attribution button just above the Nearby Art sheet edge
-            // (it tracks the sheet's extent) instead of floating a full
-            // button-height above it.
-            padding: EdgeInsets.only(
-              bottom: bottomInset + KubusSpacing.sm,
-            ),
-            child: MapOverlayBlocker(
-              child: KubusGlassIconButton(
-                icon: Icons.info_outline,
-                tooltip: 'Map attributions',
-                borderRadius: KubusRadius.sm,
-                iconColor: Theme.of(context).colorScheme.primary,
-                enableBlur: kubusMapBlurEnabled(context),
-                onPressed: () =>
-                    unawaited(showKubusMapAttributionDialog(context)),
-              ),
-            ),
-          );
-        },
-      ),
     );
   }
 

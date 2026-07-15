@@ -171,6 +171,9 @@ class KubusMarkerOverlayCard extends StatelessWidget {
 
     final isPromoted =
         marker.isPromoted || (artwork?.promotion.isPromoted ?? false);
+    final compactArtist = artwork?.artist.trim().isNotEmpty == true
+        ? artwork!.artist.trim()
+        : (marker.artistName ?? '').trim();
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final actionFg = isDark ? Colors.white : Colors.black;
 
@@ -185,6 +188,7 @@ class KubusMarkerOverlayCard extends StatelessWidget {
         cacheHeight: cacheHeight,
         visibleDescription: visibleDescription,
         actionForeground: actionFg,
+        artistLabel: compactArtist,
       );
     }
 

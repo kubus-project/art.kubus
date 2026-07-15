@@ -917,9 +917,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
               child: DetailActionButton(
                 icon: Icons.navigation_rounded,
                 label: l10n.commonNavigate,
-                backgroundColor:
-                    scheme.secondaryContainer.withValues(alpha: 0.6),
-                foregroundColor: scheme.onSecondaryContainer,
+                backgroundColor: scheme.primaryContainer.withValues(alpha: 0.6),
+                foregroundColor: scheme.onPrimaryContainer,
                 onPressed: () => _showNavigationOptions(artwork),
               ),
             ),
