@@ -11,13 +11,13 @@ import '../../widgets/detail/detail_shell_components.dart';
 import '../web3/artist/artwork_ar_manager_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:flutter/services.dart';
 import '../../providers/artwork_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/saved_items_provider.dart';
 import '../../providers/attendance_provider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../providers/task_provider.dart';
+import '../../providers/public_entity_takeover_provider.dart';
 import '../../models/saved_item.dart';
 import '../../models/artwork.dart';
 import '../../models/artwork_comment.dart';
@@ -30,7 +30,7 @@ import '../../models/collectible.dart';
 import '../../utils/app_animations.dart';
 import '../../utils/artwork_media_resolver.dart';
 import '../../features/map/shared/map_screen_shared_helpers.dart';
-import '../../utils/map_navigation.dart';
+import '../../utils/artwork_location_actions.dart';
 import '../../utils/artwork_edit_navigation.dart';
 import '../../utils/wallet_action_guard.dart';
 import '../../utils/wallet_utils.dart';
@@ -71,8 +71,16 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
   late ScrollController _scrollController;
   bool _showComments = false;
 
-  String get _publicReturnRoute =>
-      '/a/${Uri.encodeComponent(widget.artworkId)}';
+  String _publicReturnRoute(BuildContext context) {
+    try {
+      return context
+              .read<PublicEntityTakeoverProvider>()
+              .returnRouteForArtwork(widget.artworkId) ??
+          '/a/${Uri.encodeComponent(widget.artworkId)}';
+    } catch (_) {
+      return '/a/${Uri.encodeComponent(widget.artworkId)}';
+    }
+  }
 
   Future<void> _toggleSaved(
     ArtworkProvider provider,
@@ -82,7 +90,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
     final authenticated = await const ContextualAuthGate().ensureAuthenticated(
       context,
       actionLabel: l10n.commonSave.toLowerCase(),
-      returnRoute: _publicReturnRoute,
+      returnRoute: _publicReturnRoute(context),
     );
     if (!authenticated || !mounted) return;
     await provider.toggleArtworkSaved(artworkId);
@@ -96,7 +104,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
     final authenticated = await const ContextualAuthGate().ensureAuthenticated(
       context,
       actionLabel: l10n.artworkDetailLike.toLowerCase(),
-      returnRoute: _publicReturnRoute,
+      returnRoute: _publicReturnRoute(context),
     );
     if (!authenticated || !mounted) return;
     await provider.toggleLike(artworkId);
@@ -108,6 +116,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
   bool _animationsInitialized = false;
   bool _artworkLoading = true;
   String? _artworkError;
+  bool _takeoverReadyScheduled = false;
   final Set<String> _deleteDialogOpenArtworkIds = <String>{};
   final Set<String> _deleteInFlightArtworkIds = <String>{};
   final Set<String> _deleteDialogOpenCommentIds = <String>{};
@@ -297,6 +306,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
           );
         }
 
+        _scheduleTakeoverReady(artwork.id);
         return AnimatedGradientBackground(
           child: Scaffold(
             backgroundColor: Colors.transparent,
@@ -404,6 +414,21 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         });
       }
     }
+  }
+
+  void _scheduleTakeoverReady(String artworkId) {
+    if (_takeoverReadyScheduled) return;
+    _takeoverReadyScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      try {
+        unawaited(
+          context
+              .read<PublicEntityTakeoverProvider>()
+              .markArtworkReady(artworkId),
+        );
+      } catch (_) {}
+    });
   }
 
   Widget _buildAppBar(Artwork artwork) {
@@ -817,6 +842,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
     final canShowStreetArtClaimCta =
         AppConfig.isFeatureEnabled('streetArtClaims') &&
             markerIdCandidate.isNotEmpty;
+    final hasLocation = ArtworkLocationActions.hasValidLocation(artwork);
 
     return Column(
       children: [
@@ -879,52 +905,71 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
           ),
         ],
         _buildAttendanceConfirmSection(artwork),
-        Row(
-          children: [
-            if (artwork.arEnabled && artwork.arStatus == ArtworkArStatus.ready)
+        if (artwork.arEnabled &&
+            (artwork.arStatus == ArtworkArStatus.ready || isOwner))
+          SizedBox(
+            width: double.infinity,
+            child: artwork.arStatus == ArtworkArStatus.ready
+                ? DetailActionButton(
+                    icon: Icons.qr_code_scanner_rounded,
+                    label: l10n.artDetailScanArAction,
+                    backgroundColor: scheme.primary,
+                    foregroundColor: scheme.onPrimary,
+                    onPressed: () => Navigator.pushNamed(context, '/ar'),
+                  )
+                : DetailActionButton(
+                    icon: Icons.qr_code_2,
+                    label: l10n.artDetailFinishArSetupAction,
+                    backgroundColor:
+                        scheme.primaryContainer.withValues(alpha: 0.35),
+                    foregroundColor: scheme.primary,
+                    onPressed: () async {
+                      final navigator = Navigator.of(context);
+                      await navigator.push(
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              ArtworkArManagerScreen(artworkId: artwork.id),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        if (hasLocation) ...[
+          if (artwork.arEnabled &&
+              (artwork.arStatus == ArtworkArStatus.ready || isOwner))
+            const SizedBox(height: DetailSpacing.md),
+          Row(
+            children: [
               Expanded(
+                flex: 3,
                 child: DetailActionButton(
-                  icon: Icons.qr_code_scanner_rounded,
-                  label: l10n.artDetailScanArAction,
+                  icon: Icons.map_outlined,
+                  label: l10n.artDetailShowOnMap,
                   backgroundColor: scheme.primary,
                   foregroundColor: scheme.onPrimary,
-                  onPressed: () => Navigator.pushNamed(context, '/ar'),
-                ),
-              )
-            else if (artwork.arEnabled && isOwner)
-              Expanded(
-                child: DetailActionButton(
-                  icon: Icons.qr_code_2,
-                  label: l10n.artDetailFinishArSetupAction,
-                  backgroundColor:
-                      scheme.primaryContainer.withValues(alpha: 0.35),
-                  foregroundColor: scheme.primary,
-                  onPressed: () async {
-                    final navigator = Navigator.of(context);
-                    await navigator.push(
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            ArtworkArManagerScreen(artworkId: artwork.id),
-                      ),
-                    );
-                  },
+                  onPressed: () =>
+                      ArtworkLocationActions.showOnMap(context, artwork),
                 ),
               ),
-            if (artwork.arEnabled &&
-                (artwork.arStatus == ArtworkArStatus.ready || isOwner))
               const SizedBox(width: DetailSpacing.md),
-            Expanded(
-              child: DetailActionButton(
-                icon: Icons.navigation_rounded,
-                label: l10n.commonNavigate,
-                backgroundColor:
-                    scheme.secondaryContainer.withValues(alpha: 0.6),
-                foregroundColor: scheme.onSecondaryContainer,
-                onPressed: () => _showNavigationOptions(artwork),
+              Expanded(
+                flex: 2,
+                child: DetailActionButton(
+                  icon: Icons.navigation_rounded,
+                  label: l10n.commonNavigate,
+                  backgroundColor:
+                      scheme.secondaryContainer.withValues(alpha: 0.6),
+                  foregroundColor: scheme.onSecondaryContainer,
+                  onPressed: () =>
+                      ArtworkLocationActions.showNavigationOptions(
+                    context,
+                    artwork,
+                  ),
+                ),
               ),
-            ),
-          ],
-        ),
+            ],
+          ),
+        ],
         if (canShowStreetArtClaimCta) ...[
           const SizedBox(height: DetailSpacing.md),
           Row(
@@ -1395,7 +1440,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                     navigator.pushNamed(
                       '/sign-in',
                       arguments: {
-                        'redirectRoute': '/artwork',
+                        'redirectRoute': _publicReturnRoute(context),
                         'redirectArguments': {
                           'artworkId': artwork.id,
                           'attendanceMarkerId': markerId,
@@ -1500,7 +1545,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                 nav.pushNamed(
                   '/sign-in',
                   arguments: {
-                    'redirectRoute': '/artwork',
+                    'redirectRoute': _publicReturnRoute(context),
                     'redirectArguments': {'artworkId': artwork.id},
                   },
                 );
@@ -2058,7 +2103,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
     final authenticated = await const ContextualAuthGate().ensureAuthenticated(
       context,
       actionLabel: l10n.commonComments.toLowerCase(),
-      returnRoute: _publicReturnRoute,
+      returnRoute: _publicReturnRoute(context),
     );
     if (!authenticated || !mounted) return;
 
@@ -2135,7 +2180,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                     navigator.pushNamed(
                       '/sign-in',
                       arguments: {
-                        'redirectRoute': '/artwork',
+                        'redirectRoute': _publicReturnRoute(context),
                         'redirectArguments': {'artworkId': artwork.id},
                       },
                     );
@@ -2168,281 +2213,6 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         ),
       );
     }
-  }
-
-  void _showNavigationOptions(Artwork artwork) {
-    final l10n = AppLocalizations.of(context)!;
-    final lat = artwork.position.latitude;
-    final lng = artwork.position.longitude;
-    final artTitle = artwork.title;
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(KubusRadius.xl),
-            topRight: Radius.circular(KubusRadius.xl),
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Handle
-              Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(KubusSpacing.lg),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      l10n.artDetailNavigateToTitle(artTitle),
-                      style: KubusTypography.inter(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 24),
-                    _buildNavigationOption(
-                      icon: Icons.map_outlined,
-                      title: l10n.commonOpenOnMap,
-                      onTap: () {
-                        Navigator.pop(context);
-                        MapNavigation.open(
-                          this.context,
-                          center: artwork.position,
-                          zoom: 16,
-                          autoFollow: false,
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    _buildNavigationOption(
-                      icon: Icons.map,
-                      title: l10n.artDetailNavigationGoogleMaps,
-                      onTap: () => _openInGoogleMaps(lat, lng, artTitle),
-                    ),
-                    const SizedBox(height: 12),
-                    _buildNavigationOption(
-                      icon: Icons.apple,
-                      title: l10n.artDetailNavigationAppleMaps,
-                      onTap: () => _openInAppleMaps(lat, lng, artTitle),
-                    ),
-                    const SizedBox(height: 12),
-                    _buildNavigationOption(
-                      icon: Icons.location_on,
-                      title: l10n.artDetailNavigationOtherMaps,
-                      onTap: () => _openInDefaultMaps(lat, lng, artTitle),
-                    ),
-                    const SizedBox(height: 12),
-                    _buildNavigationOption(
-                      icon: Icons.copy,
-                      title: l10n.artDetailNavigationCopyCoordinates,
-                      onTap: () => _copyCoordinates(lat, lng),
-                    ),
-                    const SizedBox(height: 16),
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: Text(
-                        l10n.commonCancel,
-                        style: KubusTypography.inter(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavigationOption({
-    required IconData icon,
-    required String title,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(KubusRadius.md),
-      child: Container(
-        padding: const EdgeInsets.all(KubusSpacing.md),
-        decoration: BoxDecoration(
-          border: Border.all(
-            color:
-                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
-          ),
-          borderRadius: BorderRadius.circular(KubusRadius.md),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              size: 24,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-            const SizedBox(width: KubusSpacing.md),
-            Text(
-              title,
-              style: KubusTypography.inter(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const Spacer(),
-            Icon(
-              Icons.arrow_forward_ios,
-              size: 16,
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.4),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _openInGoogleMaps(double lat, double lng, String title) async {
-    final l10n = AppLocalizations.of(context)!;
-    Navigator.pop(context);
-    final googleMapsUrl =
-        'https://www.google.com/maps/search/?api=1&query=$lat,$lng';
-    final googleMapsAppUrl = 'comgooglemaps://?q=$lat,$lng';
-
-    try {
-      if (await canLaunchUrl(Uri.parse(googleMapsAppUrl))) {
-        await launchUrl(Uri.parse(googleMapsAppUrl));
-      } else if (await canLaunchUrl(Uri.parse(googleMapsUrl))) {
-        await launchUrl(Uri.parse(googleMapsUrl),
-            mode: LaunchMode.externalApplication);
-      } else {
-        _showErrorDialog(l10n.artDetailNavigationCouldNotOpenGoogleMaps);
-      }
-    } catch (e) {
-      _showErrorDialog(
-          l10n.artDetailNavigationErrorOpeningGoogleMaps(e.toString()));
-    }
-  }
-
-  Future<void> _openInAppleMaps(double lat, double lng, String title) async {
-    final l10n = AppLocalizations.of(context)!;
-    Navigator.pop(context);
-    final appleMapsUrl = 'https://maps.apple.com/?q=$lat,$lng';
-    final appleMapsAppUrl = 'maps://?q=$lat,$lng';
-
-    try {
-      if (await canLaunchUrl(Uri.parse(appleMapsAppUrl))) {
-        await launchUrl(Uri.parse(appleMapsAppUrl));
-      } else if (await canLaunchUrl(Uri.parse(appleMapsUrl))) {
-        await launchUrl(Uri.parse(appleMapsUrl),
-            mode: LaunchMode.externalApplication);
-      } else {
-        _showErrorDialog(l10n.artDetailNavigationCouldNotOpenAppleMaps);
-      }
-    } catch (e) {
-      _showErrorDialog(
-          l10n.artDetailNavigationErrorOpeningAppleMaps(e.toString()));
-    }
-  }
-
-  Future<void> _openInDefaultMaps(double lat, double lng, String title) async {
-    final l10n = AppLocalizations.of(context)!;
-    Navigator.pop(context);
-    final defaultMapsUrl = 'geo:$lat,$lng?q=$lat,$lng($title)';
-
-    try {
-      if (await canLaunchUrl(Uri.parse(defaultMapsUrl))) {
-        await launchUrl(Uri.parse(defaultMapsUrl));
-      } else {
-        // Fallback to web maps
-        final webMapsUrl =
-            'https://www.openstreetmap.org/?mlat=$lat&mlon=$lng&zoom=15';
-        if (await canLaunchUrl(Uri.parse(webMapsUrl))) {
-          await launchUrl(Uri.parse(webMapsUrl),
-              mode: LaunchMode.externalApplication);
-        } else {
-          _showErrorDialog(l10n.artDetailNavigationCouldNotOpenMaps);
-        }
-      }
-    } catch (e) {
-      _showErrorDialog(l10n.artDetailNavigationErrorOpeningMaps(e.toString()));
-    }
-  }
-
-  Future<void> _copyCoordinates(double lat, double lng) async {
-    final l10n = AppLocalizations.of(context)!;
-    Navigator.pop(context);
-    final coordinates = '$lat, $lng';
-    await Clipboard.setData(ClipboardData(text: coordinates));
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showKubusSnackBar(
-        SnackBar(
-          content: Text(
-            l10n.artDetailCoordinatesCopiedToast(coordinates),
-            style: KubusTypography.inter(),
-          ),
-          duration: const Duration(seconds: 2),
-          backgroundColor: Theme.of(context).colorScheme.primary,
-        ),
-      );
-    }
-  }
-
-  void _showErrorDialog(String message) {
-    final l10n = AppLocalizations.of(context)!;
-    showKubusDialog(
-      context: context,
-      builder: (context) => KubusAlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        title: Text(
-          l10n.artDetailNavigationErrorTitle,
-          style: KubusTypography.inter(
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-        ),
-        content: Text(
-          message,
-          style: KubusTypography.inter(
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              l10n.commonOk,
-              style: KubusTypography.inter(
-                fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   Future<void> _showMintNFTDialog(Artwork artwork) async {

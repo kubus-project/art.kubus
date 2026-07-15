@@ -3772,6 +3772,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mapLocationUnavailableToast => 'Unable to determine your location.';
 
   @override
+  String get mapTargetMarkerUnavailableToast => 'No map marker is available for this item. Showing its saved location instead.';
+
+  @override
+  String get mapTargetNotFoundToast => 'This item is not available on the map.';
+
+  @override
   String get mapMarkerCreateWalletRequired => 'Create a profile and Wallet access before placing a marker tied to your own artwork.';
 
   @override
@@ -6652,6 +6658,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get artDetailNavigationGoogleMaps => 'Google Maps';
 
   @override
+  String get artDetailShowOnMap => 'Show on map';
+
+  @override
   String get artDetailNavigationAppleMaps => 'Apple Maps';
 
   @override
@@ -6659,6 +6668,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get artDetailNavigationCopyCoordinates => 'Copy coordinates';
+
+  @override
+  String get artDetailNavigationCouldNotCopyCoordinates => 'Could not copy coordinates';
 
   @override
   String get artDetailNavigationCouldNotOpenGoogleMaps => 'Could not open Google Maps';
