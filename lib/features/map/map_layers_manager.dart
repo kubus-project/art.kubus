@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -44,12 +45,21 @@ abstract class MapLayersController {
     ml.CircleLayerProperties properties,
   );
 
+  Future<void> addLineLayer(
+    String sourceId,
+    String layerId,
+    ml.LineLayerProperties properties, {
+    dynamic filter,
+  });
+
   Future<void> addImage(String name, Uint8List bytes);
 
   Future<void> setGeoJsonSource(String sourceId, Map<String, dynamic> data);
   Future<void> setLayerVisibility(String layerId, bool visible);
   Future<void> setLayerProperties(
-      String layerId, ml.LayerProperties properties);
+    String layerId,
+    ml.LayerProperties properties,
+  );
 
   /// Optional API: implemented via dynamic invocation to tolerate plugin
   /// version differences.
@@ -108,6 +118,22 @@ class MapLibreLayersController implements MapLayersController {
   }
 
   @override
+  Future<void> addLineLayer(
+    String sourceId,
+    String layerId,
+    ml.LineLayerProperties properties, {
+    dynamic filter,
+  }) {
+    return _controller.addLineLayer(
+      sourceId,
+      layerId,
+      properties,
+      filter: filter,
+      enableInteraction: false,
+    );
+  }
+
+  @override
   Future<void> addImage(String name, Uint8List bytes) {
     return _controller.addImage(name, bytes);
   }
@@ -124,7 +150,9 @@ class MapLibreLayersController implements MapLayersController {
 
   @override
   Future<void> setLayerProperties(
-      String layerId, ml.LayerProperties properties) {
+    String layerId,
+    ml.LayerProperties properties,
+  ) {
     return _controller.setLayerProperties(layerId, properties);
   }
 
@@ -287,8 +315,8 @@ class KubusMarkerLayerStyler {
     final double pop = selectedId == null
         ? 1.0
         : (1.0 +
-            (MapMarkerStyleConfig.selectedPopScaleFactor - 1.0) *
-                math.sin(state.selectionPopAnimationValue * math.pi));
+              (MapMarkerStyleConfig.selectedPopScaleFactor - 1.0) *
+                  math.sin(state.selectionPopAnimationValue * math.pi));
 
     // On MapLibre GL JS, `['zoom']` must be the input to a top-level
     // "step"/"interpolate". Encode interaction multipliers inside the stop
@@ -299,7 +327,7 @@ class KubusMarkerLayerStyler {
         <Object>[
           '==',
           <Object>['id'],
-          pressedId
+          pressedId,
         ],
         MapMarkerStyleConfig.pressedScaleFactor,
       ]);
@@ -309,7 +337,7 @@ class KubusMarkerLayerStyler {
         <Object>[
           '==',
           <Object>['id'],
-          selectedId
+          selectedId,
         ],
         pop,
       ]);
@@ -319,7 +347,7 @@ class KubusMarkerLayerStyler {
         <Object>[
           '==',
           <Object>['id'],
-          hoveredId
+          hoveredId,
         ],
         MapMarkerStyleConfig.hoverScaleFactor,
       ]);
@@ -333,7 +361,8 @@ class KubusMarkerLayerStyler {
   }
 
   static Object interactiveIconImageExpression(
-      KubusMarkerLayerStyleState state) {
+    KubusMarkerLayerStyleState state,
+  ) {
     final selectedId = state.selectedMarkerId;
     if (selectedId == null || selectedId.isEmpty) {
       return const <Object>['get', 'icon'];
@@ -343,7 +372,7 @@ class KubusMarkerLayerStyler {
       <Object>[
         '==',
         <Object>['id'],
-        selectedId
+        selectedId,
       ],
       const <Object>['get', 'iconSelected'],
       const <Object>['get', 'icon'],
@@ -398,7 +427,7 @@ class KubusMarkerLayerStyler {
             <Object>[
               '==',
               <Object>['id'],
-              selectedId
+              selectedId,
             ],
             2.0,
             1.0,
@@ -437,11 +466,13 @@ class KubusMarkerLayerStyler {
           pulseLayerId,
           ml.CircleLayerProperties(
             circleRadius: MapMarkerStyleConfig.pulseRadiusForPhase(
-                state.markerPulsePhase),
+              state.markerPulsePhase,
+            ),
             circleColor: const <Object>['get', 'color'],
             circleOpacity: markerVisible
                 ? MapMarkerStyleConfig.pulseOpacityForPhase(
-                    state.markerPulsePhase)
+                    state.markerPulsePhase,
+                  )
                 : 0.0,
             circleBlur: 0.35,
             circleStrokeWidth: 0.0,
@@ -499,6 +530,12 @@ class MapLayersIds {
     required this.cubeIconLayerId,
     required this.locationSourceId,
     required this.locationLayerId,
+    this.walkingRouteSourceId = 'kubus_walking_route',
+    this.walkingRouteCasingLayerId = 'kubus_walking_route_casing_layer',
+    this.walkingRouteLayerId = 'kubus_walking_route_layer',
+    this.walkingRouteConnectorLayerId = 'kubus_walking_route_connector_layer',
+    this.walkingLocationSymbolLayerId = 'kubus_walking_location_symbol_layer',
+    this.walkingLocationImageId = 'kubus_walking_location_person',
     this.pendingSourceId,
     this.pendingLayerId,
   });
@@ -521,6 +558,13 @@ class MapLayersIds {
   final String locationSourceId;
   final String locationLayerId;
 
+  final String walkingRouteSourceId;
+  final String walkingRouteCasingLayerId;
+  final String walkingRouteLayerId;
+  final String walkingRouteConnectorLayerId;
+  final String walkingLocationSymbolLayerId;
+  final String walkingLocationImageId;
+
   final String? pendingSourceId;
   final String? pendingLayerId;
 
@@ -532,6 +576,10 @@ class MapLayersThemeSpec {
   const MapLayersThemeSpec({
     required this.locationFill,
     required this.locationStroke,
+    this.walkingRouteColor,
+    this.walkingRouteCasingColor,
+    this.walkingLocationGlyphColor,
+    this.walkingLocationGlyphStrokeColor,
     this.pendingFill,
     this.pendingStroke,
   });
@@ -539,8 +587,21 @@ class MapLayersThemeSpec {
   final Color locationFill;
   final Color locationStroke;
 
+  final Color? walkingRouteColor;
+  final Color? walkingRouteCasingColor;
+  final Color? walkingLocationGlyphColor;
+  final Color? walkingLocationGlyphStrokeColor;
+
   final Color? pendingFill;
   final Color? pendingStroke;
+
+  Color get resolvedWalkingRouteColor => walkingRouteColor ?? locationFill;
+  Color get resolvedWalkingRouteCasingColor =>
+      walkingRouteCasingColor ?? locationStroke;
+  Color get resolvedWalkingLocationGlyphColor =>
+      walkingLocationGlyphColor ?? locationFill;
+  Color get resolvedWalkingLocationGlyphStrokeColor =>
+      walkingLocationGlyphStrokeColor ?? locationStroke;
 }
 
 @immutable
@@ -608,12 +669,12 @@ class MapLayersManager {
     Set<String>? managedLayerIdsOut,
     Set<String>? managedSourceIdsOut,
     Set<String>? registeredMapImagesOut,
-  })  : _controller = controller,
-        _ids = ids,
-        _debugTracing = debugTracing,
-        _managedLayerIdsOut = managedLayerIdsOut,
-        _managedSourceIdsOut = managedSourceIdsOut,
-        _registeredMapImagesOut = registeredMapImagesOut;
+  }) : _controller = controller,
+       _ids = ids,
+       _debugTracing = debugTracing,
+       _managedLayerIdsOut = managedLayerIdsOut,
+       _managedSourceIdsOut = managedSourceIdsOut,
+       _registeredMapImagesOut = registeredMapImagesOut;
 
   final MapLayersController _controller;
   final MapLayersIds _ids;
@@ -641,6 +702,8 @@ class MapLayersManager {
   int? _initializedForStyleEpoch;
   MapRenderMode _currentMode = MapRenderMode.twoD;
   MapLayersThemeSpec? _themeSpec;
+  Map<String, dynamic> _walkingRouteData = _emptyFeatureCollection();
+  bool _walkingNavigationVisible = false;
 
   Completer<void>? _initCompleter;
 
@@ -655,16 +718,16 @@ class MapLayersManager {
   int _modeToggles = 0;
 
   MapLayersManagerStats get stats => MapLayersManagerStats(
-        addSourceCalls: _addSourceCalls,
-        addLayerCalls: _addLayerCalls,
-        removeLayerCalls: _removeLayerCalls,
-        removeSourceCalls: _removeSourceCalls,
-        sourceUpdateCalls: _sourceUpdateCalls,
-        sourceUpdateSkips: _sourceUpdateSkips,
-        layerPropertiesCalls: _layerPropertiesCalls,
-        visibilityCalls: _visibilityCalls,
-        modeToggles: _modeToggles,
-      );
+    addSourceCalls: _addSourceCalls,
+    addLayerCalls: _addLayerCalls,
+    removeLayerCalls: _removeLayerCalls,
+    removeSourceCalls: _removeSourceCalls,
+    sourceUpdateCalls: _sourceUpdateCalls,
+    sourceUpdateSkips: _sourceUpdateSkips,
+    layerPropertiesCalls: _layerPropertiesCalls,
+    visibilityCalls: _visibilityCalls,
+    modeToggles: _modeToggles,
+  );
 
   bool hasLayer(String id) => _layerIds.contains(id);
 
@@ -837,9 +900,7 @@ class MapLayersManager {
         };
       }
       if (current is List) {
-        return <Object?>[
-          for (final item in current) canonicalize(item),
-        ];
+        return <Object?>[for (final item in current) canonicalize(item)];
       }
       return current;
     }
@@ -858,19 +919,58 @@ class MapLayersManager {
   }
 
   Future<void> upsertUserLocationData(
-      Map<String, dynamic> featureCollection) async {
+    Map<String, dynamic> featureCollection,
+  ) async {
     if (!hasSource(_ids.locationSourceId)) return;
     try {
       _sourceUpdateCalls += 1;
       await _controller.setGeoJsonSource(
-          _ids.locationSourceId, featureCollection);
+        _ids.locationSourceId,
+        featureCollection,
+      );
     } catch (_) {
       // Best-effort.
     }
   }
 
+  /// Retains and renders the complete walking route FeatureCollection.
+  ///
+  /// Route features use `properties.kind == "route"`; short connectors from
+  /// the exact user/artwork coordinates to the routable graph use
+  /// `properties.kind == "connector"`. Retaining the payload here lets a
+  /// MapLibre style reload restore an active navigation session without
+  /// waiting for another location or route calculation event.
+  Future<void> upsertWalkingRouteData(
+    Map<String, dynamic> featureCollection,
+  ) async {
+    _walkingRouteData = Map<String, dynamic>.from(featureCollection);
+    if (!hasSource(_ids.walkingRouteSourceId)) return;
+    try {
+      _sourceUpdateCalls += 1;
+      await _controller.setGeoJsonSource(
+        _ids.walkingRouteSourceId,
+        _walkingRouteData,
+      );
+    } catch (_) {
+      // Best-effort. The retained payload is replayed after the next style load.
+    }
+  }
+
+  /// Shows or hides the route and walking-person marker as one UI state.
+  ///
+  /// The ordinary location dot remains visible and is shared by navigation;
+  /// only the floating walking glyph is toggled here.
+  Future<void> setWalkingNavigationVisibility(bool visible) async {
+    _walkingNavigationVisible = visible;
+    await safeSetLayerVisibility(_ids.walkingRouteCasingLayerId, visible);
+    await safeSetLayerVisibility(_ids.walkingRouteLayerId, visible);
+    await safeSetLayerVisibility(_ids.walkingRouteConnectorLayerId, visible);
+    await safeSetLayerVisibility(_ids.walkingLocationSymbolLayerId, visible);
+  }
+
   Future<void> upsertPendingMarkerData(
-      Map<String, dynamic> featureCollection) async {
+    Map<String, dynamic> featureCollection,
+  ) async {
     final sourceId = _ids.pendingSourceId;
     if (sourceId == null) return;
     if (!hasSource(sourceId)) return;
@@ -981,6 +1081,19 @@ class MapLayersManager {
     await _safeRemoveLayerIfExists(existingLayerIds, _ids.cubeLayerId);
     await _safeRemoveLayerIfExists(existingLayerIds, _ids.cubeIconLayerId);
     await _safeRemoveLayerIfExists(existingLayerIds, _ids.locationLayerId);
+    await _safeRemoveLayerIfExists(
+      existingLayerIds,
+      _ids.walkingLocationSymbolLayerId,
+    );
+    await _safeRemoveLayerIfExists(
+      existingLayerIds,
+      _ids.walkingRouteConnectorLayerId,
+    );
+    await _safeRemoveLayerIfExists(existingLayerIds, _ids.walkingRouteLayerId);
+    await _safeRemoveLayerIfExists(
+      existingLayerIds,
+      _ids.walkingRouteCasingLayerId,
+    );
     if (_ids.pendingLayerId != null) {
       await _safeRemoveLayerIfExists(existingLayerIds, _ids.pendingLayerId!);
     }
@@ -988,6 +1101,7 @@ class MapLayersManager {
     await _safeRemoveSource(_ids.markerSourceId);
     await _safeRemoveSource(_ids.cubeSourceId);
     await _safeRemoveSource(_ids.locationSourceId);
+    await _safeRemoveSource(_ids.walkingRouteSourceId);
     if (_ids.pendingSourceId != null) {
       await _safeRemoveSource(_ids.pendingSourceId!);
     }
@@ -1013,6 +1127,109 @@ class MapLayersManager {
     );
     _addSourceCalls += 1;
     _sourceIds.add(_ids.cubeSourceId);
+
+    await _controller.addGeoJsonSource(
+      _ids.walkingRouteSourceId,
+      _walkingRouteData,
+    );
+    _addSourceCalls += 1;
+    _sourceIds.add(_ids.walkingRouteSourceId);
+
+    // Walking route layers sit below all art markers and the user location.
+    // A separate casing preserves contrast over both light and dark map styles,
+    // while approach connectors remain visibly distinct from routable paths.
+    await _controller.addLineLayer(
+      _ids.walkingRouteSourceId,
+      _ids.walkingRouteCasingLayerId,
+      ml.LineLayerProperties(
+        lineColor: MapLibreStyleUtils.hexRgb(
+          theme.resolvedWalkingRouteCasingColor,
+        ),
+        lineWidth: const <Object>[
+          'interpolate',
+          <Object>['linear'],
+          <Object>['zoom'],
+          11,
+          6.0,
+          16,
+          9.0,
+          20,
+          12.0,
+        ],
+        lineOpacity: 0.9,
+        lineCap: 'round',
+        lineJoin: 'round',
+        visibility: _walkingNavigationVisible ? 'visible' : 'none',
+      ),
+      filter: const <Object>[
+        '==',
+        <Object>['get', 'kind'],
+        'route',
+      ],
+    );
+    _addLayerCalls += 1;
+    _layerIds.add(_ids.walkingRouteCasingLayerId);
+
+    await _controller.addLineLayer(
+      _ids.walkingRouteSourceId,
+      _ids.walkingRouteLayerId,
+      ml.LineLayerProperties(
+        lineColor: MapLibreStyleUtils.hexRgb(theme.resolvedWalkingRouteColor),
+        lineWidth: const <Object>[
+          'interpolate',
+          <Object>['linear'],
+          <Object>['zoom'],
+          11,
+          3.0,
+          16,
+          5.0,
+          20,
+          7.0,
+        ],
+        lineOpacity: 1.0,
+        lineCap: 'round',
+        lineJoin: 'round',
+        visibility: _walkingNavigationVisible ? 'visible' : 'none',
+      ),
+      filter: const <Object>[
+        '==',
+        <Object>['get', 'kind'],
+        'route',
+      ],
+    );
+    _addLayerCalls += 1;
+    _layerIds.add(_ids.walkingRouteLayerId);
+
+    await _controller.addLineLayer(
+      _ids.walkingRouteSourceId,
+      _ids.walkingRouteConnectorLayerId,
+      ml.LineLayerProperties(
+        lineColor: MapLibreStyleUtils.hexRgb(theme.resolvedWalkingRouteColor),
+        lineWidth: const <Object>[
+          'interpolate',
+          <Object>['linear'],
+          <Object>['zoom'],
+          11,
+          2.0,
+          16,
+          3.5,
+          20,
+          5.0,
+        ],
+        lineOpacity: 0.8,
+        lineDasharray: const <double>[1.2, 1.2],
+        lineCap: 'round',
+        lineJoin: 'round',
+        visibility: _walkingNavigationVisible ? 'visible' : 'none',
+      ),
+      filter: const <Object>[
+        '==',
+        <Object>['get', 'kind'],
+        'connector',
+      ],
+    );
+    _addLayerCalls += 1;
+    _layerIds.add(_ids.walkingRouteConnectorLayerId);
 
     // Layer order (bottom to top):
     // 1) cube extrusion (experimental; hidden by default)
@@ -1066,7 +1283,7 @@ class MapLayersManager {
           <Object>[
             '==',
             <Object>['get', 'kind'],
-            'cluster'
+            'cluster',
           ],
           MapMarkerStyleConfig.clusterDotRadiusPx,
           MapMarkerStyleConfig.dotRadiusPx,
@@ -1159,7 +1376,7 @@ class MapLayersManager {
               <Object>[
                 '==',
                 <Object>['get', 'kind'],
-                'cluster'
+                'cluster',
               ],
               50,
               36,
@@ -1170,7 +1387,7 @@ class MapLayersManager {
               <Object>[
                 '==',
                 <Object>['get', 'kind'],
-                'cluster'
+                'cluster',
               ],
               64,
               44,
@@ -1181,7 +1398,7 @@ class MapLayersManager {
               <Object>[
                 '==',
                 <Object>['get', 'kind'],
-                'cluster'
+                'cluster',
               ],
               76,
               56,
@@ -1192,7 +1409,7 @@ class MapLayersManager {
               <Object>[
                 '==',
                 <Object>['get', 'kind'],
-                'cluster'
+                'cluster',
               ],
               84,
               76,
@@ -1231,7 +1448,7 @@ class MapLayersManager {
                 <Object>[
                   '==',
                   <Object>['get', 'kind'],
-                  'cluster'
+                  'cluster',
                 ],
                 25,
                 18,
@@ -1242,7 +1459,7 @@ class MapLayersManager {
                 <Object>[
                   '==',
                   <Object>['get', 'kind'],
-                  'cluster'
+                  'cluster',
                 ],
                 32,
                 22,
@@ -1253,7 +1470,7 @@ class MapLayersManager {
                 <Object>[
                   '==',
                   <Object>['get', 'kind'],
-                  'cluster'
+                  'cluster',
                 ],
                 38,
                 28,
@@ -1264,7 +1481,7 @@ class MapLayersManager {
                 <Object>[
                   '==',
                   <Object>['get', 'kind'],
-                  'cluster'
+                  'cluster',
                 ],
                 42,
                 38,
@@ -1313,6 +1530,27 @@ class MapLayersManager {
     _addLayerCalls += 1;
     _layerIds.add(_ids.locationLayerId);
 
+    await _ensureWalkingLocationImageRegistered(theme);
+    if (_registeredImages.contains(_ids.walkingLocationImageId)) {
+      await _controller.addSymbolLayer(
+        _ids.locationSourceId,
+        _ids.walkingLocationSymbolLayerId,
+        ml.SymbolLayerProperties(
+          iconImage: _ids.walkingLocationImageId,
+          iconSize: 0.6,
+          iconAllowOverlap: true,
+          iconIgnorePlacement: true,
+          iconAnchor: 'bottom',
+          iconOffset: const <double>[0, -0.35],
+          iconPitchAlignment: 'viewport',
+          iconRotationAlignment: 'viewport',
+          visibility: _walkingNavigationVisible ? 'visible' : 'none',
+        ),
+      );
+      _addLayerCalls += 1;
+      _layerIds.add(_ids.walkingLocationSymbolLayerId);
+    }
+
     if (_ids.supportsPending) {
       final pendingSourceId = _ids.pendingSourceId!;
       final pendingLayerId = _ids.pendingLayerId!;
@@ -1349,6 +1587,7 @@ class MapLayersManager {
     await safeSetLayerVisibility(_ids.cubeLayerId, false);
     await safeSetLayerVisibility(_ids.cubeIconLayerId, false);
     await safeSetLayerVisibility(_ids.markerLayerId, true);
+    await setWalkingNavigationVisibility(_walkingNavigationVisible);
   }
 
   Future<Set<String>> _fetchExistingLayerIds() async {
@@ -1396,11 +1635,92 @@ class MapLayersManager {
     }
   }
 
+  Future<void> _ensureWalkingLocationImageRegistered(
+    MapLayersThemeSpec theme,
+  ) async {
+    if (_registeredImages.contains(_ids.walkingLocationImageId)) return;
+    try {
+      final bytes = await _createWalkingLocationImage(theme);
+      await _controller.addImage(_ids.walkingLocationImageId, bytes);
+      _registeredImages.add(_ids.walkingLocationImageId);
+    } catch (_) {
+      // The route remains usable if a renderer cannot create the glyph.
+    }
+  }
+
+  Future<Uint8List> _createWalkingLocationImage(
+    MapLayersThemeSpec theme,
+  ) async {
+    const logicalWidth = 24.0;
+    const logicalHeight = 34.0;
+    const pixelRatio = 2.0;
+    final recorder = ui.PictureRecorder();
+    final canvas = ui.Canvas(recorder)..scale(pixelRatio, pixelRatio);
+
+    final outline = ui.Paint()
+      ..color = theme.resolvedWalkingLocationGlyphStrokeColor
+      ..style = ui.PaintingStyle.stroke
+      ..strokeWidth = 4.2
+      ..strokeCap = ui.StrokeCap.round
+      ..strokeJoin = ui.StrokeJoin.round;
+    final glyph = ui.Paint()
+      ..color = theme.resolvedWalkingLocationGlyphColor
+      ..style = ui.PaintingStyle.stroke
+      ..strokeWidth = 2.4
+      ..strokeCap = ui.StrokeCap.round
+      ..strokeJoin = ui.StrokeJoin.round;
+    final outlineFill = ui.Paint()
+      ..color = theme.resolvedWalkingLocationGlyphStrokeColor
+      ..style = ui.PaintingStyle.fill;
+    final glyphFill = ui.Paint()
+      ..color = theme.resolvedWalkingLocationGlyphColor
+      ..style = ui.PaintingStyle.fill;
+
+    void drawPerson(ui.Paint stroke, ui.Paint fill) {
+      canvas.drawCircle(const ui.Offset(12, 5), 3.0, fill);
+      final path = ui.Path()
+        ..moveTo(12, 10)
+        ..lineTo(11, 20)
+        ..moveTo(11.6, 13)
+        ..lineTo(5.5, 18)
+        ..moveTo(11.6, 13)
+        ..lineTo(18.5, 16.5)
+        ..moveTo(11, 20)
+        ..lineTo(5.5, 30)
+        ..moveTo(11, 20)
+        ..lineTo(19, 29.5);
+      canvas.drawPath(path, stroke);
+    }
+
+    drawPerson(outline, outlineFill);
+    drawPerson(glyph, glyphFill);
+
+    final picture = recorder.endRecording();
+    final image = await picture.toImage(
+      (logicalWidth * pixelRatio).round(),
+      (logicalHeight * pixelRatio).round(),
+    );
+    try {
+      final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (bytes == null) {
+        throw StateError('Unable to rasterize walking location glyph');
+      }
+      return bytes.buffer.asUint8List();
+    } finally {
+      image.dispose();
+    }
+  }
+
   Uint8List _createTransparentSquareImage() {
     const String base64Png =
         'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
     return Uint8List.fromList(base64Decode(base64Png));
   }
+
+  static Map<String, dynamic> _emptyFeatureCollection() => <String, dynamic>{
+    'type': 'FeatureCollection',
+    'features': <dynamic>[],
+  };
 
   void _mirrorToScreenSets() {
     // Preserve existing guards in screens during incremental refactor.

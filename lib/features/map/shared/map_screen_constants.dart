@@ -21,6 +21,15 @@ abstract final class MapScreenConstants {
   static const String cubeIconLayerId = 'kubus_marker_cubes_icon_layer';
   static const String locationSourceId = 'kubus_user_location';
   static const String locationLayerId = 'kubus_user_location_layer';
+  static const String walkingRouteSourceId = 'kubus_walking_route';
+  static const String walkingRouteCasingLayerId =
+      'kubus_walking_route_casing_layer';
+  static const String walkingRouteLayerId = 'kubus_walking_route_layer';
+  static const String walkingRouteConnectorLayerId =
+      'kubus_walking_route_connector_layer';
+  static const String walkingLocationSymbolLayerId =
+      'kubus_walking_location_symbol_layer';
+  static const String walkingLocationImageId = 'kubus_walking_location_person';
   static const String pendingSourceId = 'kubus_pending_marker';
   static const String pendingLayerId = 'kubus_pending_marker_layer';
 
@@ -38,8 +47,9 @@ abstract final class MapScreenConstants {
   /// track the camera zoom; fixed small levels produce cells thousands of
   /// pixels wide and collapse the whole viewport into one cluster.
   static int clusterGridLevelForZoom(double zoom) {
-    final double targetSpacingPx =
-        zoom < 6.5 ? 56.0 : (zoom < 9.5 ? 64.0 : 72.0);
+    final double targetSpacingPx = zoom < 6.5
+        ? 56.0
+        : (zoom < 9.5 ? 64.0 : 72.0);
     final level = GridUtils.resolvePrimaryGridLevel(
       zoom,
       targetScreenSpacing: targetSpacingPx,
@@ -62,8 +72,9 @@ abstract final class MapScreenConstants {
   // ---------------------------------------------------------------------------
   // Camera throttle
   // ---------------------------------------------------------------------------
-  static const Duration cameraUpdateThrottle =
-      Duration(milliseconds: 16); // ~60 fps
+  static const Duration cameraUpdateThrottle = Duration(
+    milliseconds: 16,
+  ); // ~60 fps
 
   // ---------------------------------------------------------------------------
   // Web MapLibre attribution
@@ -88,6 +99,12 @@ abstract final class MapScreenConstants {
     cubeLayerId: cubeLayerId,
     cubeIconLayerId: cubeIconLayerId,
     locationLayerId: locationLayerId,
+    walkingRouteSourceId: walkingRouteSourceId,
+    walkingRouteCasingLayerId: walkingRouteCasingLayerId,
+    walkingRouteLayerId: walkingRouteLayerId,
+    walkingRouteConnectorLayerId: walkingRouteConnectorLayerId,
+    walkingLocationSymbolLayerId: walkingLocationSymbolLayerId,
+    walkingLocationImageId: walkingLocationImageId,
     markerHitboxImageId: markerHitboxImageId,
   );
 
@@ -105,6 +122,12 @@ abstract final class MapScreenConstants {
     cubeLayerId: cubeLayerId,
     cubeIconLayerId: cubeIconLayerId,
     locationLayerId: locationLayerId,
+    walkingRouteSourceId: walkingRouteSourceId,
+    walkingRouteCasingLayerId: walkingRouteCasingLayerId,
+    walkingRouteLayerId: walkingRouteLayerId,
+    walkingRouteConnectorLayerId: walkingRouteConnectorLayerId,
+    walkingLocationSymbolLayerId: walkingLocationSymbolLayerId,
+    walkingLocationImageId: walkingLocationImageId,
     markerHitboxImageId: markerHitboxImageId,
     pendingSourceId: pendingSourceId,
     pendingLayerId: pendingLayerId,

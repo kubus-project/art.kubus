@@ -61,6 +61,7 @@ import 'providers/public_entity_takeover_provider.dart';
 import 'providers/platform_deep_link_listener_provider.dart';
 import 'providers/main_tab_provider.dart';
 import 'providers/map_deep_link_provider.dart';
+import 'providers/walking_navigation_provider.dart';
 import 'providers/deferred_onboarding_provider.dart';
 import 'core/app_initializer.dart';
 import 'core/startup_trace.dart';
@@ -479,6 +480,8 @@ class _AppLauncherState extends State<AppLauncher> {
               // Marker deep links open inside the already-mounted MapScreen.
               ChangeNotifierProvider(
                   create: (context) => MapDeepLinkProvider()),
+              ChangeNotifierProvider(
+                  create: (context) => WalkingNavigationProvider()),
               // Session-scoped onboarding deferral for deep-link cold starts.
               ChangeNotifierProvider(
                   create: (context) => DeferredOnboardingProvider()),
