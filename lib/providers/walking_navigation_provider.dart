@@ -9,8 +9,11 @@ import '../features/map/navigation/walking_navigation_models.dart';
 import '../services/walking_directions_service.dart';
 
 class WalkingNavigationProvider extends ChangeNotifier {
-  WalkingNavigationProvider({WalkingDirectionsApi? directionsApi})
-      : _directionsApi = directionsApi ?? WalkingDirectionsService();
+  WalkingNavigationProvider({
+    WalkingDirectionsApi? directionsApi,
+    DateTime Function()? now,
+  })  : _directionsApi = directionsApi ?? WalkingDirectionsService(),
+        _now = now ?? DateTime.now;
 
   static const double arrivalRadiusMeters = 25;
   static const double offRouteThresholdMeters = 45;
@@ -18,6 +21,7 @@ class WalkingNavigationProvider extends ChangeNotifier {
   static const Duration minimumRerouteInterval = Duration(seconds: 20);
 
   final WalkingDirectionsApi _directionsApi;
+  final DateTime Function() _now;
   final Distance _distance = const Distance();
 
   WalkingNavigationStatus _status = WalkingNavigationStatus.idle;
@@ -32,6 +36,7 @@ class WalkingNavigationProvider extends ChangeNotifier {
   int _offRouteSamples = 0;
   DateTime? _lastRouteRequestAt;
   Future<void>? _routeRequest;
+  int? _routeRequestGeneration;
   int _requestGeneration = 0;
   double? _positionAccuracyMeters;
   int _arrivalSamples = 0;
@@ -60,16 +65,15 @@ class WalkingNavigationProvider extends ChangeNotifier {
 
   void prepare(WalkingNavigationIntent intent) {
     _requestGeneration += 1;
+    _routeRequest = null;
+    _routeRequestGeneration = null;
     _intent = intent;
     _route = null;
     _currentPosition = null;
+    _positionAccuracyMeters = null;
+    _lastRouteRequestAt = null;
     _errorMessage = null;
-    _activeStepIndex = 0;
-    _nearestGeometryIndex = 0;
-    _remainingDistanceMeters = 0;
-    _remainingDurationSeconds = 0;
-    _offRouteSamples = 0;
-    _arrivalSamples = 0;
+    _resetRouteProgress();
     _status = WalkingNavigationStatus.awaitingLocation;
     notifyListeners();
   }
@@ -119,7 +123,7 @@ class WalkingNavigationProvider extends ChangeNotifier {
 
     final lastRequestAt = _lastRouteRequestAt;
     final canReroute = lastRequestAt == null ||
-        DateTime.now().difference(lastRequestAt) >= minimumRerouteInterval;
+        _now().difference(lastRequestAt) >= minimumRerouteInterval;
     if (_offRouteSamples >= offRouteSamplesBeforeReroute && canReroute) {
       _offRouteSamples = 0;
       unawaited(_requestRoute(position, preserveCurrentRoute: true));
@@ -142,16 +146,15 @@ class WalkingNavigationProvider extends ChangeNotifier {
 
   void stop() {
     _requestGeneration += 1;
+    _routeRequest = null;
+    _routeRequestGeneration = null;
     _status = WalkingNavigationStatus.idle;
     _intent = null;
     _route = null;
     _currentPosition = null;
+    _lastRouteRequestAt = null;
     _errorMessage = null;
-    _activeStepIndex = 0;
-    _remainingDistanceMeters = 0;
-    _remainingDurationSeconds = 0;
-    _offRouteSamples = 0;
-    _arrivalSamples = 0;
+    _resetRouteProgress();
     _positionAccuracyMeters = null;
     notifyListeners();
   }
@@ -161,12 +164,14 @@ class WalkingNavigationProvider extends ChangeNotifier {
     required bool preserveCurrentRoute,
   }) {
     final inFlight = _routeRequest;
-    if (inFlight != null) return inFlight;
+    if (inFlight != null && _routeRequestGeneration == _requestGeneration) {
+      return inFlight;
+    }
 
     final intent = _intent;
     if (intent == null) return Future<void>.value();
     final generation = _requestGeneration;
-    _lastRouteRequestAt = DateTime.now();
+    _lastRouteRequestAt = _now();
     if (!preserveCurrentRoute) {
       _status = WalkingNavigationStatus.calculating;
       _errorMessage = null;
@@ -183,8 +188,7 @@ class WalkingNavigationProvider extends ChangeNotifier {
         _route = route;
         _status = WalkingNavigationStatus.active;
         _errorMessage = null;
-        _activeStepIndex = 0;
-        _offRouteSamples = 0;
+        _resetRouteProgress();
         _updateProgress(origin, route);
         notifyListeners();
       } catch (error) {
@@ -195,11 +199,24 @@ class WalkingNavigationProvider extends ChangeNotifier {
         }
         notifyListeners();
       } finally {
-        _routeRequest = null;
+        if (_routeRequestGeneration == generation) {
+          _routeRequest = null;
+          _routeRequestGeneration = null;
+        }
       }
     }();
     _routeRequest = request;
+    _routeRequestGeneration = generation;
     return request;
+  }
+
+  void _resetRouteProgress() {
+    _activeStepIndex = 0;
+    _nearestGeometryIndex = 0;
+    _remainingDistanceMeters = 0;
+    _remainingDurationSeconds = 0;
+    _offRouteSamples = 0;
+    _arrivalSamples = 0;
   }
 
   void _updateProgress(LatLng position, WalkingRoute route) {

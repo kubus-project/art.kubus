@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:art_kubus/features/map/navigation/walking_navigation_models.dart';
 import 'package:art_kubus/providers/walking_navigation_provider.dart';
 import 'package:art_kubus/services/walking_directions_service.dart';
@@ -77,6 +79,198 @@ void main() {
     expect(api.requests, 0);
   });
 
+  test('a new intent starts a fresh request while the old one is in flight',
+      () async {
+    const secondDestination = LatLng(46.0600, 14.5100);
+    const secondIntent = WalkingNavigationIntent(
+      destinationId: 'artwork-2',
+      destinationLabel: 'Second artwork',
+      destination: secondDestination,
+    );
+    final firstRequest = Completer<WalkingRoute>();
+    final secondRequest = Completer<WalkingRoute>();
+    final api = _CompleterDirectionsApi(<Completer<WalkingRoute>>[
+      firstRequest,
+      secondRequest,
+    ]);
+    final provider = WalkingNavigationProvider(directionsApi: api);
+    addTearDown(provider.dispose);
+    var notifications = 0;
+    provider.addListener(() => notifications += 1);
+
+    provider.prepare(intent);
+    expect(notifications, 1);
+    final firstUpdate = provider.updatePosition(origin);
+    expect(api.destinations, <LatLng>[destination]);
+    expect(notifications, 2);
+
+    provider.prepare(secondIntent);
+    expect(notifications, 3);
+    final secondUpdate = provider.updatePosition(origin);
+    expect(api.destinations, <LatLng>[destination, secondDestination]);
+    expect(notifications, 4);
+
+    firstRequest.complete(_route(origin, destination));
+    await firstUpdate;
+    expect(notifications, 4);
+    final retry = provider.retry();
+    expect(api.destinations, <LatLng>[destination, secondDestination]);
+    expect(notifications, 4);
+
+    final secondRoute = _route(origin, secondDestination);
+    secondRequest.complete(secondRoute);
+    await Future.wait(<Future<void>>[secondUpdate, retry]);
+    expect(provider.intent, same(secondIntent));
+    expect(provider.route, same(secondRoute));
+    expect(provider.status, WalkingNavigationStatus.active);
+    expect(notifications, 5);
+  });
+
+  test('stop invalidates an in-flight request without a stale notification',
+      () async {
+    final request = Completer<WalkingRoute>();
+    final api = _CompleterDirectionsApi(<Completer<WalkingRoute>>[request]);
+    final provider = WalkingNavigationProvider(directionsApi: api);
+    addTearDown(provider.dispose);
+    var notifications = 0;
+    provider.addListener(() => notifications += 1);
+
+    provider.prepare(intent);
+    final update = provider.updatePosition(origin);
+    provider.stop();
+    expect(notifications, 3);
+
+    request.complete(_route(origin, destination));
+    await update;
+
+    expect(notifications, 3);
+    expect(provider.status, WalkingNavigationStatus.idle);
+    expect(provider.intent, isNull);
+    expect(provider.route, isNull);
+    expect(provider.currentPosition, isNull);
+    expect(provider.errorMessage, isNull);
+  });
+
+  test('reroute resets progress before applying the replacement geometry',
+      () async {
+    var now = DateTime(2026, 1, 1);
+    const midpoint = LatLng(46.0570, 14.5060);
+    const nearDestination = LatLng(46.05715, 14.50665);
+    const rerouteOrigin = LatLng(46.0600, 14.5000);
+    const detour = LatLng(46.0650, 14.5100);
+    final initialRoute = WalkingRoute(
+      points: const <LatLng>[
+        origin,
+        midpoint,
+        nearDestination,
+        destination,
+      ],
+      steps: const <WalkingRouteStep>[
+        WalkingRouteStep(
+          type: 'depart',
+          modifier: 'straight',
+          roadName: 'First street',
+          location: origin,
+          distanceMeters: 100,
+          durationSeconds: 75,
+          geometryIndex: 0,
+        ),
+        WalkingRouteStep(
+          type: 'turn',
+          modifier: 'right',
+          roadName: 'Middle street',
+          location: midpoint,
+          distanceMeters: 70,
+          durationSeconds: 55,
+          geometryIndex: 1,
+        ),
+        WalkingRouteStep(
+          type: 'turn',
+          modifier: 'left',
+          roadName: 'Last street',
+          location: nearDestination,
+          distanceMeters: 40,
+          durationSeconds: 30,
+          geometryIndex: 2,
+        ),
+        WalkingRouteStep(
+          type: 'arrive',
+          modifier: 'straight',
+          roadName: '',
+          location: destination,
+          distanceMeters: 0,
+          durationSeconds: 0,
+          geometryIndex: 3,
+        ),
+      ],
+      distanceMeters: 140,
+      durationSeconds: 105,
+    );
+    final replacementRoute = WalkingRoute(
+      points: const <LatLng>[rerouteOrigin, detour, destination],
+      steps: const <WalkingRouteStep>[
+        WalkingRouteStep(
+          type: 'depart',
+          modifier: 'straight',
+          roadName: 'Detour start',
+          location: rerouteOrigin,
+          distanceMeters: 1200,
+          durationSeconds: 900,
+          geometryIndex: 0,
+        ),
+        WalkingRouteStep(
+          type: 'turn',
+          modifier: 'right',
+          roadName: 'Detour finish',
+          location: detour,
+          distanceMeters: 600,
+          durationSeconds: 450,
+          geometryIndex: 1,
+        ),
+        WalkingRouteStep(
+          type: 'arrive',
+          modifier: 'straight',
+          roadName: '',
+          location: destination,
+          distanceMeters: 0,
+          durationSeconds: 0,
+          geometryIndex: 2,
+        ),
+      ],
+      distanceMeters: 1800,
+      durationSeconds: 1350,
+    );
+    final api = _SequenceDirectionsApi(<WalkingRoute>[
+      initialRoute,
+      replacementRoute,
+    ]);
+    final provider = WalkingNavigationProvider(
+      directionsApi: api,
+      now: () => now,
+    );
+    addTearDown(provider.dispose);
+    var notifications = 0;
+    provider.addListener(() => notifications += 1);
+
+    provider.prepare(intent);
+    await provider.updatePosition(origin, accuracyMeters: 5);
+    await provider.updatePosition(nearDestination, accuracyMeters: 5);
+    expect(provider.activeStepIndex, 3);
+    expect(provider.remainingDistanceMeters, lessThan(100));
+
+    now = now.add(WalkingNavigationProvider.minimumRerouteInterval);
+    await provider.updatePosition(rerouteOrigin, accuracyMeters: 5);
+    await provider.updatePosition(rerouteOrigin, accuracyMeters: 5);
+    await provider.updatePosition(rerouteOrigin, accuracyMeters: 5);
+    await Future<void>.delayed(Duration.zero);
+
+    expect(api.requests, 2);
+    expect(provider.route, same(replacementRoute));
+    expect(provider.activeStepIndex, 1);
+    expect(provider.remainingDistanceMeters, greaterThan(1000));
+    expect(notifications, 8);
+  });
+
   test('projects progress onto long route segments instead of vertices',
       () async {
     const longOrigin = LatLng(46, 14);
@@ -152,6 +346,45 @@ class _FakeDirectionsApi implements WalkingDirectionsApi {
     required LatLng origin,
     required LatLng destination,
   }) async {
+    requests += 1;
+    return result;
+  }
+
+  @override
+  void dispose() {}
+}
+
+class _CompleterDirectionsApi implements WalkingDirectionsApi {
+  _CompleterDirectionsApi(this.completers);
+
+  final List<Completer<WalkingRoute>> completers;
+  final List<LatLng> destinations = <LatLng>[];
+
+  @override
+  Future<WalkingRoute> route({
+    required LatLng origin,
+    required LatLng destination,
+  }) {
+    destinations.add(destination);
+    return completers[destinations.length - 1].future;
+  }
+
+  @override
+  void dispose() {}
+}
+
+class _SequenceDirectionsApi implements WalkingDirectionsApi {
+  _SequenceDirectionsApi(this.results);
+
+  final List<WalkingRoute> results;
+  int requests = 0;
+
+  @override
+  Future<WalkingRoute> route({
+    required LatLng origin,
+    required LatLng destination,
+  }) async {
+    final result = results[requests];
     requests += 1;
     return result;
   }
