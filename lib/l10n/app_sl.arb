@@ -2857,6 +2857,8 @@
       "title": {}
     }
   },
+  "artDetailNavigationInApp": "Navigacija za pešce v aplikaciji",
+  "artDetailNavigationInDevelopment": "V razvoju",
   "artDetailNavigationGoogleMaps": "Google Zemljevidi",
   "artDetailShowOnMap": "Prikaži na zemljevidu",
   "artDetailNavigationAppleMaps": "Apple Zemljevidi",

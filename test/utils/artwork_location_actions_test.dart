@@ -4,6 +4,7 @@ import 'package:art_kubus/screens/desktop/desktop_map_screen.dart';
 import 'package:art_kubus/screens/desktop/desktop_shell_scope.dart';
 import 'package:art_kubus/utils/artwork_location_actions.dart';
 import 'package:art_kubus/utils/map_navigation.dart';
+import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
@@ -135,7 +136,7 @@ void main() {
       );
       expect(
         ArtworkLocationActions.shouldShowAppleMaps(TargetPlatform.android),
-        isFalse,
+        isTrue,
       );
       expect(
         ArtworkLocationActions.shouldShowPlatformDefaultMaps(
@@ -203,11 +204,15 @@ void main() {
       await tester.pumpAndSettle();
 
       final bottomSheet = tester.widget<BottomSheet>(find.byType(BottomSheet));
-      expect(bottomSheet.backgroundColor, isNot(Colors.transparent));
+      expect(bottomSheet.backgroundColor, Colors.transparent);
+      expect(find.byType(BackdropGlassSheet), findsOneWidget);
+      expect(find.text('Navigacija za pešce v aplikaciji'), findsOneWidget);
+      expect(find.text('V razvoju'), findsOneWidget);
       expect(find.text('Google Zemljevidi'), findsOneWidget);
       expect(find.text('Drugi zemljevidi'), findsOneWidget);
-      expect(find.text('Apple Zemljevidi'), findsNothing);
+      expect(find.text('Apple Zemljevidi'), findsOneWidget);
 
+      await tester.ensureVisible(find.text('Kopiraj koordinate'));
       await tester.tap(find.text('Kopiraj koordinate'));
       await tester.pumpAndSettle();
 

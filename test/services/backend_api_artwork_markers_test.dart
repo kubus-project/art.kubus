@@ -73,6 +73,72 @@ void main() {
   );
 
   test(
+    'getArtMarkersByArtwork falls back to the public snapshot when the relation endpoint is unavailable',
+    () async {
+      const artworkId = '11111111-1111-4111-8111-111111111111';
+      const markerCid =
+          'bafybeigdyrzt5bq2dp2i5m2h3x2p6g7c6f3s4n5m6p7q8r9s0t1u2v3w4';
+      const placeholderCid =
+          'bafybeihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku';
+      const markerId = '22222222-2222-4222-8222-222222222222';
+      final registry = <String, dynamic>{
+        'version': '2026-07-15',
+        'generatedAt': '2026-07-15T10:00:00.000Z',
+        'datasets': <String, dynamic>{
+          for (final key in PublicFallbackService.requiredDatasetKeys)
+            key: <String, dynamic>{
+              'cid': key == 'markers' ? markerCid : placeholderCid,
+              'generatedAt': '2026-07-15T10:00:00.000Z',
+            },
+        },
+      };
+      final snapshotMarkers = <Map<String, dynamic>>[
+        <String, dynamic>{
+          'id': markerId,
+          'artworkId': artworkId,
+          'name': 'Snapshot artwork marker',
+          'latitude': 46.0569,
+          'longitude': 14.5058,
+          'markerType': 'artwork',
+          'type': 'artwork',
+          'category': 'Artwork',
+          'createdAt': '2026-07-01T10:00:00.000Z',
+          'createdBy': 'system',
+          'isPublic': true,
+          'isActive': true,
+        },
+      ];
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'public_snapshot_registry_cache_v1': jsonEncode(registry),
+        'public_snapshot_registry_raw_cache_v1': jsonEncode(registry),
+        'public_snapshot_dataset_raw_cache_v1_markers': jsonEncode(
+          snapshotMarkers,
+        ),
+        'public_snapshot_dataset_cid_cache_v1_markers': markerCid,
+      });
+      await PublicFallbackService().resetForTesting();
+
+      var requestCount = 0;
+      BackendApiService().setHttpClient(
+        MockClient((request) async {
+          requestCount += 1;
+          expect(request.url.path, '/api/art-markers/by-artwork/$artworkId');
+          return http.Response('{}', 404);
+        }),
+      );
+
+      final markers = await BackendApiService().getArtMarkersByArtwork(
+        artworkId,
+      );
+
+      expect(requestCount, 1);
+      expect(markers, hasLength(1));
+      expect(markers.single.id, markerId);
+      expect(markers.single.artworkId, artworkId);
+    },
+  );
+
+  test(
     'getArtMarkersByArtwork skips transport for a blank identifier',
     () async {
       var requestCount = 0;

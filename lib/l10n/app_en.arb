@@ -2999,6 +2999,8 @@
       "title": {}
     }
   },
+  "artDetailNavigationInApp": "In-app walking navigation",
+  "artDetailNavigationInDevelopment": "In development",
   "artDetailNavigationGoogleMaps": "Google Maps",
   "artDetailShowOnMap": "Show on map",
   "artDetailNavigationAppleMaps": "Apple Maps",
