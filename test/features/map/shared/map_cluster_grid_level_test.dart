@@ -3,6 +3,26 @@ import 'package:art_kubus/utils/grid_utils.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('mobile and desktop share walking navigation layer identities', () {
+    final mobile = MapScreenConstants.mobileLayerIds;
+    final desktop = MapScreenConstants.desktopLayerIds;
+
+    expect(
+        mobile.walkingRouteSourceId, MapScreenConstants.walkingRouteSourceId);
+    expect(desktop.walkingRouteSourceId, mobile.walkingRouteSourceId);
+    expect(desktop.walkingRouteCasingLayerId, mobile.walkingRouteCasingLayerId);
+    expect(desktop.walkingRouteLayerId, mobile.walkingRouteLayerId);
+    expect(
+      desktop.walkingRouteConnectorLayerId,
+      mobile.walkingRouteConnectorLayerId,
+    );
+    expect(
+      desktop.walkingLocationSymbolLayerId,
+      mobile.walkingLocationSymbolLayerId,
+    );
+    expect(desktop.walkingLocationImageId, mobile.walkingLocationImageId);
+  });
+
   group('MapScreenConstants.clusterGridLevelForZoom', () {
     test('cluster cells stay near the target on-screen size at every zoom', () {
       // Regression: the mobile map used fixed grid levels 2-6, producing

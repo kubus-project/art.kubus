@@ -95,6 +95,21 @@ class AppConfig {
   /// [enableMapExperimentalCubeMarkers].
   static const bool enableMapIsometricView = true;
 
+  /// Preview: calculate pedestrian routes on device from bounded OSM graph
+  /// data and render them in the existing art.kubus MapLibre map.
+  static const bool enableMapWalkingNavigation = bool.fromEnvironment(
+    'MAP_WALKING_NAVIGATION_ENABLED',
+    defaultValue: true,
+  );
+
+  /// Raw OpenStreetMap graph endpoint used by the client-side route engine.
+  /// This is deliberately configurable so the preview can move to an owned
+  /// Overpass deployment without changing navigation contracts.
+  static const String walkingGraphEndpoint = String.fromEnvironment(
+    'OVERPASS_WALKING_ENDPOINT',
+    defaultValue: 'https://overpass-api.de/api/interpreter',
+  );
+
   /// Map: experimental fill-extrusion "cube" markers + viewport floating icons.
   ///
   /// Off by default. The default marker representation is the stable floating
@@ -223,9 +238,8 @@ class AppConfig {
   /// API endpoints
   static const String baseApiUrl = String.fromEnvironment(
     'BACKEND_BASE_URL',
-    defaultValue: isDevelopment
-        ? 'https://api.kubus.site'
-        : 'https://api.kubus.site',
+    defaultValue:
+        isDevelopment ? 'https://api.kubus.site' : 'https://api.kubus.site',
   );
 
   /// Standby API endpoint used during primary backend failover.
@@ -392,9 +406,9 @@ class AppConfig {
   );
   static const int clientUploadModelTextureCompressionQuality =
       int.fromEnvironment(
-        'CLIENT_UPLOAD_MODEL_TEXTURE_COMPRESSION_QUALITY',
-        defaultValue: 82,
-      );
+    'CLIENT_UPLOAD_MODEL_TEXTURE_COMPRESSION_QUALITY',
+    defaultValue: 82,
+  );
   static const int clientUploadVideoFrameRate = int.fromEnvironment(
     'CLIENT_UPLOAD_VIDEO_FRAME_RATE',
     defaultValue: 30,
@@ -537,6 +551,8 @@ class AppConfig {
         return enableMapTravelMode;
       case 'mapIsometricView':
         return enableMapIsometricView;
+      case 'mapWalkingNavigation':
+        return enableMapWalkingNavigation;
       case 'mapExperimentalCubeMarkers':
         return enableMapExperimentalCubeMarkers;
       case 'streetArtMarkers':

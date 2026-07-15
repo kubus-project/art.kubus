@@ -208,6 +208,14 @@ void main() {
       expect(find.byType(BackdropGlassSheet), findsOneWidget);
       expect(find.text('Navigacija za pešce v aplikaciji'), findsOneWidget);
       expect(find.text('V razvoju'), findsOneWidget);
+      final inAppTile = tester.widget<ListTile>(
+        find.widgetWithText(ListTile, 'Navigacija za pešce v aplikaciji'),
+      );
+      expect(inAppTile.enabled, isTrue);
+      expect(
+        find.textContaining('Predogled hoje v napravi'),
+        findsOneWidget,
+      );
       expect(find.text('Google Zemljevidi'), findsOneWidget);
       expect(find.text('Drugi zemljevidi'), findsOneWidget);
       expect(find.text('Apple Zemljevidi'), findsOneWidget);

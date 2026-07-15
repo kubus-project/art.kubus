@@ -6661,6 +6661,50 @@ class AppLocalizationsEn extends AppLocalizations {
   String get artDetailNavigationInDevelopment => 'In development';
 
   @override
+  String get walkingNavigationPreviewNotice => 'On-device walking preview. Routes may be incomplete; stay aware of your surroundings.';
+
+  @override
+  String get walkingNavigationWaitingForLocation => 'Finding your location…';
+
+  @override
+  String get walkingNavigationCalculating => 'Calculating a pedestrian route on this device…';
+
+  @override
+  String get walkingNavigationArrived => 'You have arrived';
+
+  @override
+  String get walkingNavigationRouteUnavailable => 'A walkable route could not be calculated.';
+
+  @override
+  String get walkingNavigationRetry => 'Retry';
+
+  @override
+  String get walkingNavigationResume => 'Resume';
+
+  @override
+  String get walkingNavigationEnd => 'End';
+
+  @override
+  String get walkingNavigationContinue => 'Continue on the route';
+
+  @override
+  String get walkingNavigationTurnLeft => 'Turn left';
+
+  @override
+  String get walkingNavigationTurnRight => 'Turn right';
+
+  @override
+  String get walkingNavigationDepart => 'Start walking';
+
+  @override
+  String walkingNavigationRemaining(String distance, String minutes) {
+    return '$distance · $minutes';
+  }
+
+  @override
+  String get walkingNavigationRouteAttribution => 'Route data © OpenStreetMap contributors';
+
+  @override
   String get artDetailNavigationGoogleMaps => 'Google Maps';
 
   @override

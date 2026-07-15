@@ -24,6 +24,7 @@ import '../../providers/attestation_provider.dart';
 import '../../providers/marker_management_provider.dart';
 import '../../providers/presence_provider.dart';
 import '../../providers/public_entity_takeover_provider.dart';
+import '../../providers/walking_navigation_provider.dart';
 import '../../providers/tile_providers.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/wallet_provider.dart';
@@ -63,6 +64,8 @@ import '../../widgets/art_map_view.dart';
 import '../../widgets/map_marker_dialog.dart';
 import '../../widgets/map/panels/kubus_create_marker_panel.dart';
 import '../../widgets/map_overlay_blocker.dart';
+import '../../widgets/map/navigation/kubus_walking_navigation_panel.dart';
+import '../../widgets/map/navigation/kubus_walking_navigation_binding.dart';
 import '../../utils/grid_utils.dart';
 import '../../widgets/app_logo.dart';
 import '../../utils/app_animations.dart';
@@ -77,6 +80,8 @@ import '../events/exhibition_detail_screen.dart';
 import '../../features/map/controller/map_view_preferences_controller.dart';
 import '../../features/map/shared/map_marker_collision_config.dart';
 import '../../features/map/shared/map_screen_constants.dart';
+import '../../features/map/navigation/walking_navigation_models.dart';
+import '../../features/map/navigation/walking_navigation_map_coordinator.dart';
 import '../../features/map/shared/map_artwork_filtering.dart';
 import '../../features/map/shared/map_marker_filtering.dart';
 import '../../features/map/filters/map_filter_state.dart';
@@ -191,6 +196,7 @@ class DesktopMapScreen extends StatefulWidget {
   final String? initialSubjectId;
   final String? initialSubjectType;
   final String? initialTargetLabel;
+  final WalkingNavigationIntent? walkingNavigationIntent;
 
   const DesktopMapScreen({
     super.key,
@@ -202,6 +208,7 @@ class DesktopMapScreen extends StatefulWidget {
     this.initialSubjectId,
     this.initialSubjectType,
     this.initialTargetLabel,
+    this.walkingNavigationIntent,
   });
 
   @override
@@ -295,6 +302,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   final Distance _distance = const Distance();
   StreamSubscription<ArtMarker>? _markerStreamSub;
   StreamSubscription<String>? _markerDeletedSub;
+  final WalkingNavigationLocationCoordinator _walkingLocationCoordinator =
+      WalkingNavigationLocationCoordinator();
   bool _isAppForeground = true;
   bool _isRouteVisible = true;
   PageRoute<dynamic>? _subscribedRoute;
@@ -314,6 +323,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       MapScreenConstants.cameraUpdateThrottle; // ~60fps
   bool _styleInitialized = false;
   bool _styleInitializationInProgress = false;
+  WalkingNavigationProvider? _walkingNavigationProvider;
+  WalkingNavigationMapCoordinator? _walkingNavigationMapCoordinator;
   int _styleEpoch = 0;
   final Set<String> _registeredMapImages = <String>{};
   final Set<String> _managedLayerIds = <String>{};
@@ -721,6 +732,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     _perf.logEvent('initState');
 
     _autoFollow = widget.autoFollow;
+    if (widget.walkingNavigationIntent != null &&
+        AppConfig.isFeatureEnabled('mapWalkingNavigation')) {
+      _isometricViewEnabled = true;
+    }
     _cameraCenter = widget.initialCenter ?? const LatLng(46.0569, 14.5058);
     _cameraZoom = widget.initialZoom ?? _cameraZoom;
     MapAttributionHelper.setDesktopMapEnabled(true);
@@ -767,6 +782,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (widget.walkingNavigationIntent != null) {
+      _walkingNavigationProvider ??= context.read<WalkingNavigationProvider>();
+    }
     final media = MediaQuery.of(context);
     _kubusMapController.setReduceMotion(
       media.disableAnimations || media.accessibleNavigation,
@@ -1108,7 +1126,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       } else if (_filterState.scope == KubusMapScope.travel) {
         _filterState = _filterState.withScope(KubusMapScope.currentViewport);
       }
-      _isometricViewEnabled = next.isometricViewEnabled;
+      _isometricViewEnabled = widget.walkingNavigationIntent != null
+          ? true
+          : next.isometricViewEnabled;
     });
   }
 
@@ -1120,7 +1140,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       if (prefs.travelModeEnabled) {
         _filterState = _filterState.withScope(KubusMapScope.travel);
       }
-      _isometricViewEnabled = prefs.isometricViewEnabled;
+      _isometricViewEnabled = widget.walkingNavigationIntent != null
+          ? true
+          : prefs.isometricViewEnabled;
     });
   }
 
@@ -1660,6 +1682,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       } catch (_) {}
       _perf.subscriptionStopped('marker_socket_deleted');
     }
+    try {
+      _walkingLocationCoordinator.pause();
+    } catch (_) {}
   }
 
   void _resumePolling() {
@@ -1677,6 +1702,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       } catch (_) {}
       _perf.subscriptionStarted('marker_socket_deleted');
     }
+    try {
+      _walkingLocationCoordinator.resume();
+    } catch (_) {}
     _flushPendingMarkerRefresh();
   }
 
@@ -1723,6 +1751,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       },
     );
     _styleInitialized = false;
+    _walkingNavigationMapCoordinator?.resetForMapController();
     _mapTargetCoordinator.setMapControllerReady(true);
     _mapTargetCoordinator.setStyleReady(false);
     AppConfig.debugPrint(
@@ -1770,6 +1799,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           await _applyThemeToMapStyle(themeProvider: themeProvider);
           await _applyIsometricCamera(enabled: _isometricViewEnabled);
           await _syncUserLocation();
+          if (widget.walkingNavigationIntent != null && mounted) {
+            await _walkingCoordinator.sync(
+              context.read<WalkingNavigationProvider>(),
+            );
+          }
           await _syncPendingMarker();
           await _syncMapMarkers(themeProvider: themeProvider);
           await _renderCoordinator.updateRenderMode();
@@ -1792,6 +1826,71 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       featureId: 'me',
       position: _userLocation,
     );
+  }
+
+  Widget _buildWalkingNavigationOverlay() {
+    return KubusWalkingNavigationBinding(
+      coordinator: _walkingCoordinator,
+      builder: (context, navigation) {
+        if (!navigation.isVisible) return const SizedBox.shrink();
+        return Positioned(
+          top: KubusMapMetrics.desktopContextPanelTopInset,
+          left: 0,
+          right: 0,
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: KubusWalkingNavigationPanel(
+              navigation: navigation,
+              onEnd: () {
+                navigation.stop();
+                unawaited(_walkingLocationCoordinator.stop());
+              },
+              onResume: () => _resumeWalkingNavigation(navigation),
+              onRetry: () => unawaited(
+                _retryWalkingNavigation(navigation),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  WalkingNavigationMapCoordinator get _walkingCoordinator =>
+      _walkingNavigationMapCoordinator ??= WalkingNavigationMapCoordinator(
+        layersManager: () => _layersManager,
+        isStyleReady: () => _styleInitialized,
+        shouldFollow: () => _autoFollow,
+        followCamera: (position) =>
+            _moveCamera(position, math.max(_cameraZoom, 18)),
+      );
+
+  void _resumeWalkingNavigation(WalkingNavigationProvider navigation) {
+    final position = navigation.currentPosition;
+    if (position == null) return;
+    setState(() {
+      _autoFollow = true;
+      _isometricViewEnabled = true;
+    });
+    _kubusMapController.setAutoFollow(true);
+    unawaited(_applyIsometricCamera(enabled: true));
+    unawaited(_moveCamera(position, math.max(_cameraZoom, 18)));
+  }
+
+  Future<void> _retryWalkingNavigation(
+    WalkingNavigationProvider navigation,
+  ) async {
+    if (navigation.currentPosition != null) {
+      await navigation.retry();
+      return;
+    }
+    await _refreshUserLocation(animate: true);
+    if (!mounted) return;
+    if (_userLocation == null) {
+      navigation.reportLocationUnavailable();
+    } else {
+      await navigation.retry();
+    }
   }
 
   Future<void> _syncPendingMarker() async {
@@ -1981,6 +2080,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   @override
   void dispose() {
+    if (widget.walkingNavigationIntent != null) {
+      _walkingNavigationProvider?.stop();
+    }
     MapAttributionHelper.setDesktopMapEnabled(false);
     _unsubscribeRouteObserver(source: 'dispose');
     // Avoid leaving Explore-side panels open when navigating away.
@@ -2021,6 +2123,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       _perf.subscriptionStopped('marker_socket_deleted');
       unawaited(markerDeletedSub.cancel().catchError((_) {/* ignore */}));
     }
+    unawaited(_walkingLocationCoordinator.stop());
     _mapSearchController.removeListener(_handleMapSearchControllerChanged);
     _mapSearchController.dispose();
     _markerStackPageController.dispose();
@@ -2178,6 +2281,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                         );
                       },
                     ),
+
+                    if (widget.walkingNavigationIntent != null)
+                      _buildWalkingNavigationOverlay(),
 
                     // Discovery path card + attribution + map controls (bottom-right).
                     //
@@ -2419,6 +2525,15 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         }
       });
       unawaited(_syncUserLocation());
+      final walkingNavigation = _walkingNavigationProvider;
+      if (walkingNavigation != null && walkingNavigation.isVisible) {
+        await walkingNavigation.updatePosition(
+          current,
+          accuracyMeters: position.accuracy,
+        );
+        if (!mounted) return;
+        _startWalkingPositionStream();
+      }
 
       final selectedMarker = _kubusMapController.selectedMarkerData;
       if (selectedMarker != null) {
@@ -2442,6 +2557,32 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     } finally {
       if (mounted) setState(() => _isLocating = false);
     }
+  }
+
+  void _startWalkingPositionStream() {
+    if (_walkingLocationCoordinator.isRunning ||
+        widget.walkingNavigationIntent == null) {
+      return;
+    }
+    _walkingLocationCoordinator.start(onPosition: (position) {
+      if (!mounted) return;
+      final current = LatLng(position.latitude, position.longitude);
+      setState(() {
+        _userLocation = current;
+        _userLocationAccuracyMeters = position.accuracy;
+        _userLocationTimestampMs = position.timestamp.millisecondsSinceEpoch;
+      });
+      unawaited(_syncUserLocation());
+      final navigation = _walkingNavigationProvider;
+      if (navigation != null && navigation.isVisible) {
+        unawaited(
+          navigation.updatePosition(
+            current,
+            accuracyMeters: position.accuracy,
+          ),
+        );
+      }
+    });
   }
 
   Widget _buildSearchOverlayScaffold(

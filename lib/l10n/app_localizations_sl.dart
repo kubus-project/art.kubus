@@ -6675,6 +6675,50 @@ class AppLocalizationsSl extends AppLocalizations {
   String get artDetailNavigationInDevelopment => 'V razvoju';
 
   @override
+  String get walkingNavigationPreviewNotice => 'Predogled hoje v napravi. Poti so lahko nepopolne; spremljajte okolico.';
+
+  @override
+  String get walkingNavigationWaitingForLocation => 'Pridobivanje vaše lokacije…';
+
+  @override
+  String get walkingNavigationCalculating => 'Izračun poti za pešce v tej napravi…';
+
+  @override
+  String get walkingNavigationArrived => 'Prispeli ste';
+
+  @override
+  String get walkingNavigationRouteUnavailable => 'Poti za pešce ni bilo mogoče izračunati.';
+
+  @override
+  String get walkingNavigationRetry => 'Poskusi znova';
+
+  @override
+  String get walkingNavigationResume => 'Nadaljuj';
+
+  @override
+  String get walkingNavigationEnd => 'Končaj';
+
+  @override
+  String get walkingNavigationContinue => 'Nadaljujte po poti';
+
+  @override
+  String get walkingNavigationTurnLeft => 'Zavijte levo';
+
+  @override
+  String get walkingNavigationTurnRight => 'Zavijte desno';
+
+  @override
+  String get walkingNavigationDepart => 'Začnite hoditi';
+
+  @override
+  String walkingNavigationRemaining(String distance, String minutes) {
+    return '$distance · $minutes';
+  }
+
+  @override
+  String get walkingNavigationRouteAttribution => 'Podatki poti © sodelavci OpenStreetMap';
+
+  @override
   String get artDetailNavigationGoogleMaps => 'Google Zemljevidi';
 
   @override

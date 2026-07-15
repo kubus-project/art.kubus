@@ -50,6 +50,14 @@ class _RecordingLayersController implements MapLayersController {
   ) async {}
 
   @override
+  Future<void> addLineLayer(
+    String sourceId,
+    String layerId,
+    ml.LineLayerProperties properties, {
+    dynamic filter,
+  }) async {}
+
+  @override
   Future<void> addImage(String name, Uint8List bytes) async {}
 
   @override
@@ -166,28 +174,39 @@ void main() {
     expect(manager.stats.sourceUpdateSkips, 1);
   });
 
-  test('a slow source write retains only the latest queued marker frame',
-      () async {
-    final controller = _RecordingLayersController();
-    final manager = await _initializedManager(controller);
-    final gate = Completer<void>();
-    controller.sourceWriteGate = gate;
+  test(
+    'a slow source write retains only the latest queued marker frame',
+    () async {
+      final controller = _RecordingLayersController();
+      final manager = await _initializedManager(controller);
+      final gate = Completer<void>();
+      controller.sourceWriteGate = gate;
 
-    final first = manager.upsertMarkerData(_markerCollection(entryScale: 0.2));
-    await Future<void>.delayed(Duration.zero);
-    final stale = manager.upsertMarkerData(_markerCollection(entryScale: 0.5));
-    final latest = manager.upsertMarkerData(_markerCollection(entryScale: 1));
+      final first = manager.upsertMarkerData(
+        _markerCollection(entryScale: 0.2),
+      );
+      await Future<void>.delayed(Duration.zero);
+      final stale = manager.upsertMarkerData(
+        _markerCollection(entryScale: 0.5),
+      );
+      final latest = manager.upsertMarkerData(_markerCollection(entryScale: 1));
 
-    controller.sourceWriteGate = null;
-    gate.complete();
-    expect(await Future.wait(<Future<bool>>[first, stale, latest]),
-        <bool>[true, false, true]);
-    expect(controller.sourcePayloads, hasLength(2));
-    expect(
-      controller.sourcePayloads.last['features'][0]['properties']['entryScale'],
-      1,
-    );
-  });
+      controller.sourceWriteGate = null;
+      gate.complete();
+      expect(await Future.wait(<Future<bool>>[first, stale, latest]), <bool>[
+        true,
+        false,
+        true,
+      ]);
+      expect(controller.sourcePayloads, hasLength(2));
+      expect(
+        controller
+            .sourcePayloads
+            .last['features'][0]['properties']['entryScale'],
+        1,
+      );
+    },
+  );
 
   test('canonical fingerprint ignores map key order', () async {
     final controller = _RecordingLayersController();

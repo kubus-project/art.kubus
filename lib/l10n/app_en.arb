@@ -3001,6 +3001,26 @@
   },
   "artDetailNavigationInApp": "In-app walking navigation",
   "artDetailNavigationInDevelopment": "In development",
+  "walkingNavigationPreviewNotice": "On-device walking preview. Routes may be incomplete; stay aware of your surroundings.",
+  "walkingNavigationWaitingForLocation": "Finding your location…",
+  "walkingNavigationCalculating": "Calculating a pedestrian route on this device…",
+  "walkingNavigationArrived": "You have arrived",
+  "walkingNavigationRouteUnavailable": "A walkable route could not be calculated.",
+  "walkingNavigationRetry": "Retry",
+  "walkingNavigationResume": "Resume",
+  "walkingNavigationEnd": "End",
+  "walkingNavigationContinue": "Continue on the route",
+  "walkingNavigationTurnLeft": "Turn left",
+  "walkingNavigationTurnRight": "Turn right",
+  "walkingNavigationDepart": "Start walking",
+  "walkingNavigationRemaining": "{distance} · {minutes}",
+  "@walkingNavigationRemaining": {
+    "placeholders": {
+      "distance": {"type": "String"},
+      "minutes": {"type": "String"}
+    }
+  },
+  "walkingNavigationRouteAttribution": "Route data © OpenStreetMap contributors",
   "artDetailNavigationGoogleMaps": "Google Maps",
   "artDetailShowOnMap": "Show on map",
   "artDetailNavigationAppleMaps": "Apple Maps",
