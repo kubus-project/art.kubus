@@ -7,7 +7,14 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $root = Split-Path -Parent $PSScriptRoot
-$webArgs = @('build', 'web', "--base-href=$BaseHref", '--no-web-resources-cdn')
+$webArgs = @(
+  'build',
+  'web',
+  "--base-href=$BaseHref",
+  '--no-web-resources-cdn',
+  '--dart-define=PUBLIC_FLUTTER_TAKEOVER_ENABLED=true',
+  '--dart-define=SEO_PUBLIC_PAGES_ENABLED=true'
+)
 
 if ($DisableServiceWorker) {
   $webArgs += '--pwa-strategy=none'
