@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:art_kubus/features/map/navigation/walking_navigation_models.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/models/artwork.dart';
 import 'package:art_kubus/screens/desktop/desktop_map_screen.dart';
@@ -5,6 +8,7 @@ import 'package:art_kubus/screens/desktop/desktop_shell_scope.dart';
 import 'package:art_kubus/utils/artwork_location_actions.dart';
 import 'package:art_kubus/utils/map_navigation.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
+import 'package:art_kubus/widgets/navigation/kubus_navigation_option_row.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
@@ -28,6 +32,41 @@ Artwork _artwork({
 
 void main() {
   group('ArtworkLocationActions', () {
+    testWidgets('in-app option dismisses the sheet and starts walking flow',
+        (tester) async {
+      WalkingNavigationIntent? openedIntent;
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('en'),
+          supportedLocales: AppLocalizations.supportedLocales,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: TextButton(
+                onPressed: () => ArtworkLocationActions.showNavigationOptions(
+                  context,
+                  _artwork(),
+                  walkingOpener: (context, {required intent}) {
+                    openedIntent = intent;
+                  },
+                ),
+                child: const Text('Navigate'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Navigate'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('In-app walking navigation'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(BottomSheet), findsNothing);
+      expect(openedIntent?.destinationId, 'artwork-1');
+      expect(openedIntent?.destination, _artwork().position);
+    });
+
     test('accepts bounded coordinates and rejects invalid locations', () {
       expect(ArtworkLocationActions.hasValidLocation(_artwork()), isTrue);
       expect(
@@ -207,9 +246,12 @@ void main() {
       expect(bottomSheet.backgroundColor, Colors.transparent);
       expect(find.byType(BackdropGlassSheet), findsOneWidget);
       expect(find.text('Navigacija za pešce v aplikaciji'), findsOneWidget);
-      expect(find.text('V razvoju'), findsOneWidget);
-      final inAppTile = tester.widget<ListTile>(
-        find.widgetWithText(ListTile, 'Navigacija za pešce v aplikaciji'),
+      expect(find.text('Beta'), findsOneWidget);
+      final inAppTile = tester.widget<KubusNavigationOptionRow>(
+        find.widgetWithText(
+          KubusNavigationOptionRow,
+          'Navigacija za pešce v aplikaciji',
+        ),
       );
       expect(inAppTile.enabled, isTrue);
       expect(
@@ -276,4 +318,41 @@ void main() {
       expect((mapScreen as DesktopMapScreen).initialArtworkId, 'artwork-1');
     },
   );
+
+  test('walking launch does not submit a competing normal map target', () {
+    final source = File('lib/utils/map_navigation.dart').readAsStringSync();
+    final walkingBody =
+        source.substring(source.indexOf('static void openWalking'));
+    expect(walkingBody, isNot(contains('initialArtworkId:')));
+    expect(walkingBody, isNot(contains('initialMarkerId:')));
+    expect(walkingBody, contains('walkingNavigationIntent: intent'));
+
+    final mobileSource = File('lib/screens/map_screen.dart').readAsStringSync();
+    final desktopSource =
+        File('lib/screens/desktop/desktop_map_screen.dart').readAsStringSync();
+    expect(
+      mobileSource,
+      contains('widget.walkingNavigationIntent == null &&'),
+    );
+    expect(mobileSource, contains('initialTarget.hasIdentity'));
+    expect(
+      desktopSource,
+      contains('widget.walkingNavigationIntent == null &&'),
+    );
+    expect(desktopSource, contains('initialTarget.hasIdentity'));
+  });
+
+  test('walking external fallback preserves destination and travel mode', () {
+    const intent = WalkingNavigationIntent(
+      destinationId: 'artwork-1',
+      destinationLabel: 'Artwork',
+      destination: LatLng(46.056946, 14.505751),
+    );
+
+    final uri = MapNavigation.externalWalkingUri(intent);
+
+    expect(uri.host, 'www.google.com');
+    expect(uri.queryParameters['destination'], '46.056946,14.505751');
+    expect(uri.queryParameters['travelmode'], 'walking');
+  });
 }

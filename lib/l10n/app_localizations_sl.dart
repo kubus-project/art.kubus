@@ -6675,19 +6675,58 @@ class AppLocalizationsSl extends AppLocalizations {
   String get artDetailNavigationInDevelopment => 'V razvoju';
 
   @override
+  String get walkingNavigationBeta => 'Beta';
+
+  @override
   String get walkingNavigationPreviewNotice => 'Predogled hoje v napravi. Poti so lahko nepopolne; spremljajte okolico.';
 
   @override
   String get walkingNavigationWaitingForLocation => 'Pridobivanje vaše lokacije…';
 
   @override
+  String get walkingNavigationRequestingPermission => 'Zahteva za dostop do lokacije…';
+
+  @override
   String get walkingNavigationCalculating => 'Izračun poti za pešce v tej napravi…';
+
+  @override
+  String get walkingNavigationRerouting => 'Posodabljanje poti za pešce…';
 
   @override
   String get walkingNavigationArrived => 'Prispeli ste';
 
   @override
   String get walkingNavigationRouteUnavailable => 'Poti za pešce ni bilo mogoče izračunati.';
+
+  @override
+  String get walkingNavigationPermissionDenied => 'Za začetek navigacije za pešce je potreben dostop do lokacije.';
+
+  @override
+  String get walkingNavigationPermissionDeniedPermanently => 'Dostop do lokacije je za art.kubus blokiran. Omogočite ga v nastavitvah aplikacije.';
+
+  @override
+  String get walkingNavigationServicesDisabled => 'Za začetek navigacije za pešce vklopite lokacijske storitve.';
+
+  @override
+  String get walkingNavigationLocationUnavailable => 'Trenutna lokacija v živo še ni na voljo.';
+
+  @override
+  String get walkingNavigationLocationTimedOut => 'Pridobivanje lokacije v živo je trajalo predolgo.';
+
+  @override
+  String get walkingNavigationNoRoute => 'Povezana pot za pešce ni bila najdena.';
+
+  @override
+  String get walkingNavigationRouteTooLong => 'Cilj je zunaj podprte razdalje navigacije za pešce.';
+
+  @override
+  String get walkingNavigationRouteSourceTimeout => 'Vir poti za pešce se ni pravočasno odzval.';
+
+  @override
+  String get walkingNavigationRouteNetworkFailure => 'Vira poti za pešce ni bilo mogoče doseči.';
+
+  @override
+  String get walkingNavigationRouteMalformed => 'Vir poti za pešce je vrnil neveljaven odgovor.';
 
   @override
   String get walkingNavigationRetry => 'Poskusi znova';
@@ -6697,6 +6736,21 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get walkingNavigationEnd => 'Končaj';
+
+  @override
+  String get walkingNavigationAllowLocation => 'Dovoli lokacijo';
+
+  @override
+  String get walkingNavigationOpenAppSettings => 'Odpri nastavitve aplikacije';
+
+  @override
+  String get walkingNavigationOpenLocationSettings => 'Odpri nastavitve lokacije';
+
+  @override
+  String get walkingNavigationUseExternalMaps => 'Uporabi zunanje zemljevide';
+
+  @override
+  String get walkingNavigationViewDestination => 'Prikaži cilj';
 
   @override
   String get walkingNavigationContinue => 'Nadaljujte po poti';

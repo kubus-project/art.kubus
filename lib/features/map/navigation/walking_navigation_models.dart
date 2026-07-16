@@ -17,15 +17,36 @@ class WalkingNavigationIntent {
 enum WalkingNavigationStatus {
   idle,
   awaitingLocation,
+  requestingPermission,
   calculating,
   active,
+  rerouting,
   arrived,
   error,
 }
 
 enum WalkingNavigationFailureKind {
+  locationPermissionDenied,
+  locationPermissionDeniedPermanently,
+  locationServicesDisabled,
   locationUnavailable,
-  routeUnavailable,
+  locationTimedOut,
+  noRoute,
+  routeTooLong,
+  routeSourceTimeout,
+  routeNetwork,
+  routeMalformed,
+}
+
+enum WalkingLocationAccessStatus {
+  available,
+  permissionNotRequested,
+  requestingPermission,
+  permissionDenied,
+  permissionDeniedPermanently,
+  serviceDisabled,
+  liveLocationUnavailable,
+  timedOut,
 }
 
 @immutable

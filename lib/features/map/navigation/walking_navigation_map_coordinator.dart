@@ -1,13 +1,19 @@
 import 'dart:async';
 
-import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../providers/walking_navigation_provider.dart';
+import '../../../services/walking_location_service.dart';
 import '../map_layers_manager.dart';
 import 'walking_navigation_models.dart';
 
 /// Owns walking-route MapLibre side effects shared by mobile and desktop.
+///
+/// Camera priority while a session is visible is:
+/// walking follow > explicit Resume > passive destination/marker centering.
+/// A user gesture clears the screen's [shouldFollow] flag; only Resume restores
+/// it. Marker previews may still be opened explicitly, but never start or
+/// replace navigation camera ownership on their own.
 class WalkingNavigationMapCoordinator {
   WalkingNavigationMapCoordinator({
     required this.layersManager,
@@ -61,21 +67,19 @@ class WalkingNavigationMapCoordinator {
 /// Owns the continuous desktop walking-location subscription. Mobile reuses
 /// its existing map location stream, so only desktop starts this coordinator.
 class WalkingNavigationLocationCoordinator {
-  StreamSubscription<Position>? _subscription;
+  WalkingNavigationLocationCoordinator(this.locationApi);
+
+  final WalkingLocationApi locationApi;
+  StreamSubscription<WalkingLocationFix>? _subscription;
 
   bool get isRunning => _subscription != null;
 
   void start({
-    required void Function(Position position) onPosition,
+    required void Function(WalkingLocationFix fix) onPosition,
     required void Function(Object error) onError,
   }) {
     if (_subscription != null) return;
-    _subscription = Geolocator.getPositionStream(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.bestForNavigation,
-        distanceFilter: 3,
-      ),
-    ).listen(
+    _subscription = locationApi.liveFixes().listen(
       onPosition,
       onError: (Object error, StackTrace stack) {
         final failed = _subscription;

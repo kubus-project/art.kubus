@@ -209,7 +209,13 @@ void main() {
 
       await expectLater(
         service.route(origin: _origin, destination: _destination),
-        throwsA(isA<WalkingDirectionsException>()),
+        throwsA(
+          isA<WalkingDirectionsException>().having(
+            (error) => error.type,
+            'type',
+            WalkingDirectionsErrorType.noRoute,
+          ),
+        ),
       );
       service.dispose();
     });
@@ -249,7 +255,13 @@ void main() {
 
       await expectLater(
         service.route(origin: _origin, destination: _destination),
-        throwsA(isA<WalkingDirectionsException>()),
+        throwsA(
+          isA<WalkingDirectionsException>().having(
+            (error) => error.type,
+            'type',
+            WalkingDirectionsErrorType.routeTooLong,
+          ),
+        ),
       );
       expect(requests, 0);
       service.dispose();

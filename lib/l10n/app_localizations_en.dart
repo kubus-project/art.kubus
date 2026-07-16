@@ -6661,19 +6661,58 @@ class AppLocalizationsEn extends AppLocalizations {
   String get artDetailNavigationInDevelopment => 'In development';
 
   @override
+  String get walkingNavigationBeta => 'Beta';
+
+  @override
   String get walkingNavigationPreviewNotice => 'On-device walking preview. Routes may be incomplete; stay aware of your surroundings.';
 
   @override
   String get walkingNavigationWaitingForLocation => 'Finding your location…';
 
   @override
+  String get walkingNavigationRequestingPermission => 'Requesting location access…';
+
+  @override
   String get walkingNavigationCalculating => 'Calculating a pedestrian route on this device…';
+
+  @override
+  String get walkingNavigationRerouting => 'Updating your walking route…';
 
   @override
   String get walkingNavigationArrived => 'You have arrived';
 
   @override
   String get walkingNavigationRouteUnavailable => 'A walkable route could not be calculated.';
+
+  @override
+  String get walkingNavigationPermissionDenied => 'Location access is needed to start walking navigation.';
+
+  @override
+  String get walkingNavigationPermissionDeniedPermanently => 'Location access is blocked for art.kubus. Enable it in app settings.';
+
+  @override
+  String get walkingNavigationServicesDisabled => 'Turn on location services to start walking navigation.';
+
+  @override
+  String get walkingNavigationLocationUnavailable => 'A live location fix is not available yet.';
+
+  @override
+  String get walkingNavigationLocationTimedOut => 'Finding your live location took too long.';
+
+  @override
+  String get walkingNavigationNoRoute => 'No connected pedestrian route was found.';
+
+  @override
+  String get walkingNavigationRouteTooLong => 'This destination is outside the supported walking-navigation distance.';
+
+  @override
+  String get walkingNavigationRouteSourceTimeout => 'The walking route source timed out.';
+
+  @override
+  String get walkingNavigationRouteNetworkFailure => 'The walking route source could not be reached.';
+
+  @override
+  String get walkingNavigationRouteMalformed => 'The walking route source returned an invalid response.';
 
   @override
   String get walkingNavigationRetry => 'Retry';
@@ -6683,6 +6722,21 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get walkingNavigationEnd => 'End';
+
+  @override
+  String get walkingNavigationAllowLocation => 'Allow location';
+
+  @override
+  String get walkingNavigationOpenAppSettings => 'Open app settings';
+
+  @override
+  String get walkingNavigationOpenLocationSettings => 'Open location settings';
+
+  @override
+  String get walkingNavigationUseExternalMaps => 'Use external maps';
+
+  @override
+  String get walkingNavigationViewDestination => 'View destination';
 
   @override
   String get walkingNavigationContinue => 'Continue on the route';
