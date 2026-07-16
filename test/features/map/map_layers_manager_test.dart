@@ -359,6 +359,13 @@ void main() {
         controller.updatedSourceData[ids.walkingRouteSourceId],
         updatedRoute,
       );
+      await manager.setWalkingNavigationVisibility(false);
+      expect(
+        controller.calls,
+        contains(
+          'setLayerVisibility:${ids.walkingLocationSymbolLayerId}:false',
+        ),
+      );
     });
   });
 }

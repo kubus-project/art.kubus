@@ -191,7 +191,7 @@ void main() {
     expect(provider.intent, isNull);
     expect(provider.route, isNull);
     expect(provider.currentPosition, isNull);
-    expect(provider.errorMessage, isNull);
+    expect(provider.failureKind, isNull);
   });
 
   test('reroute resets progress before applying the replacement geometry',
@@ -311,7 +311,7 @@ void main() {
     expect(provider.route, same(replacementRoute));
     expect(provider.activeStepIndex, 1);
     expect(provider.remainingDistanceMeters, greaterThan(1000));
-    expect(notifications, 8);
+    expect(notifications, 9);
   });
 
   test('projects progress onto long route segments instead of vertices',
@@ -349,6 +349,77 @@ void main() {
 
     expect(provider.remainingDistanceMeters, inInclusiveRange(650, 900));
     expect(provider.status, WalkingNavigationStatus.active);
+  });
+
+  test('explicit retry re-arms a session without an existing position',
+      () async {
+    final provider = WalkingNavigationProvider(
+      directionsApi: _FakeDirectionsApi(_route(origin, destination)),
+    );
+    addTearDown(provider.dispose);
+
+    final lease = provider.start(intent);
+    provider.reportLocationAccess(
+      WalkingLocationAccessStatus.permissionDenied,
+      lease: lease,
+    );
+    expect(
+      provider.failureKind,
+      WalkingNavigationFailureKind.locationPermissionDenied,
+    );
+
+    await provider.retry(lease: lease);
+
+    expect(provider.status, WalkingNavigationStatus.awaitingLocation);
+    expect(provider.failureKind, isNull);
+    expect(provider.currentPosition, isNull);
+  });
+
+  for (final entry
+      in <WalkingDirectionsErrorType, WalkingNavigationFailureKind>{
+    WalkingDirectionsErrorType.noRoute: WalkingNavigationFailureKind.noRoute,
+    WalkingDirectionsErrorType.routeTooLong:
+        WalkingNavigationFailureKind.routeTooLong,
+    WalkingDirectionsErrorType.sourceTimeout:
+        WalkingNavigationFailureKind.routeSourceTimeout,
+    WalkingDirectionsErrorType.sourceTransport:
+        WalkingNavigationFailureKind.routeNetwork,
+    WalkingDirectionsErrorType.sourceInvalidResponse:
+        WalkingNavigationFailureKind.routeMalformed,
+  }.entries) {
+    test('maps ${entry.key.name} to ${entry.value.name}', () async {
+      final provider = WalkingNavigationProvider(
+        directionsApi: _ThrowingDirectionsApi(entry.key),
+      );
+      addTearDown(provider.dispose);
+
+      provider.start(intent);
+      await provider.updatePosition(origin);
+
+      expect(provider.status, WalkingNavigationStatus.error);
+      expect(provider.failureKind, entry.value);
+    });
+  }
+
+  test('typed location failures discard an older live position', () async {
+    final provider = WalkingNavigationProvider(
+      directionsApi: _FakeDirectionsApi(_route(origin, destination)),
+    );
+    addTearDown(provider.dispose);
+    final lease = provider.start(intent);
+    await provider.updatePosition(origin, lease: lease);
+    expect(provider.currentPosition, origin);
+
+    provider.reportLocationAccess(
+      WalkingLocationAccessStatus.serviceDisabled,
+      lease: lease,
+    );
+
+    expect(provider.currentPosition, isNull);
+    expect(
+      provider.failureKind,
+      WalkingNavigationFailureKind.locationServicesDisabled,
+    );
   });
 }
 
@@ -392,6 +463,24 @@ class _FakeDirectionsApi implements WalkingDirectionsApi {
     requests += 1;
     return result;
   }
+
+  @override
+  void dispose() {}
+}
+
+class _ThrowingDirectionsApi implements WalkingDirectionsApi {
+  _ThrowingDirectionsApi(this.type);
+
+  final WalkingDirectionsErrorType type;
+
+  @override
+  Future<WalkingRoute> route({
+    required LatLng origin,
+    required LatLng destination,
+  }) =>
+      Future<WalkingRoute>.error(
+        WalkingDirectionsException('internal detail', type: type),
+      );
 
   @override
   void dispose() {}

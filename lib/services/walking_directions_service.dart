@@ -21,7 +21,8 @@ abstract class WalkingDirectionsApi {
 }
 
 enum WalkingDirectionsErrorType {
-  routeUnavailable,
+  noRoute,
+  routeTooLong,
   sourceTransport,
   sourceTimeout,
   sourceHttp,
@@ -32,7 +33,7 @@ enum WalkingDirectionsErrorType {
 class WalkingDirectionsException implements Exception {
   const WalkingDirectionsException(
     this.message, {
-    this.type = WalkingDirectionsErrorType.routeUnavailable,
+    this.type = WalkingDirectionsErrorType.noRoute,
     this.endpoint,
     this.statusCode,
   });
@@ -123,6 +124,7 @@ class WalkingDirectionsService implements WalkingDirectionsApi {
     if (directDistance > _maximumRouteDistanceMeters) {
       throw const WalkingDirectionsException(
         'This walking route is too long for on-device navigation.',
+        type: WalkingDirectionsErrorType.routeTooLong,
       );
     }
     if (directDistance < 1) {

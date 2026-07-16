@@ -144,6 +144,12 @@ class KubusSizes {
   /// Trailing chevron icon size used in list tiles.
   static const double trailingChevron = 16.0;
 
+  /// Shared compact navigation-provider row height (48dp minimum tap target).
+  static const double navigationOptionRowHeight = 52.0;
+
+  /// Leading icon size for navigation-provider rows.
+  static const double navigationOptionIcon = 22.0;
+
   /// Small badge label size without changing typography tokens.
   ///
   /// Prefer [KubusTypography.textTheme.labelSmall] where possible; this exists

@@ -15,12 +15,22 @@ class KubusWalkingNavigationPanel extends StatelessWidget {
     required this.onEnd,
     required this.onResume,
     required this.onRetry,
+    required this.onAllowLocation,
+    required this.onOpenAppSettings,
+    required this.onOpenLocationSettings,
+    required this.onUseExternalMaps,
+    required this.onViewDestination,
   });
 
   final WalkingNavigationProvider navigation;
   final VoidCallback onEnd;
   final VoidCallback onResume;
   final VoidCallback onRetry;
+  final VoidCallback onAllowLocation;
+  final VoidCallback onOpenAppSettings;
+  final VoidCallback onOpenLocationSettings;
+  final VoidCallback onUseExternalMaps;
+  final VoidCallback onViewDestination;
 
   @override
   Widget build(BuildContext context) {
@@ -65,10 +75,9 @@ class KubusWalkingNavigationPanel extends StatelessWidget {
                       ),
                     ),
                     KubusBadge(
-                      text: l10n.artDetailNavigationInDevelopment,
+                      text: l10n.walkingNavigationBeta,
                       variant: KubusBadgeVariant.status,
                       accent: scheme.primary,
-                      icon: Icons.construction_outlined,
                       compact: true,
                     ),
                   ],
@@ -95,22 +104,12 @@ class KubusWalkingNavigationPanel extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: KubusSpacing.sm),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
+                Wrap(
+                  alignment: WrapAlignment.end,
+                  spacing: KubusSpacing.xs,
+                  runSpacing: KubusSpacing.xs,
                   children: [
-                    if (navigation.status == WalkingNavigationStatus.error)
-                      TextButton.icon(
-                        onPressed: onRetry,
-                        icon: const Icon(Icons.refresh),
-                        label: Text(l10n.walkingNavigationRetry),
-                      )
-                    else if (navigation.hasActiveRoute)
-                      TextButton.icon(
-                        onPressed: onResume,
-                        icon: const Icon(Icons.my_location),
-                        label: Text(l10n.walkingNavigationResume),
-                      ),
-                    const SizedBox(width: KubusSpacing.xs),
+                    ..._stateActions(l10n),
                     TextButton.icon(
                       onPressed: onEnd,
                       icon: const Icon(Icons.close),
@@ -126,6 +125,64 @@ class KubusWalkingNavigationPanel extends StatelessWidget {
     );
   }
 
+  List<Widget> _stateActions(AppLocalizations l10n) {
+    if (navigation.status == WalkingNavigationStatus.arrived) {
+      return <Widget>[
+        TextButton.icon(
+          onPressed: onViewDestination,
+          icon: const Icon(Icons.place_outlined),
+          label: Text(l10n.walkingNavigationViewDestination),
+        ),
+      ];
+    }
+    if (navigation.status == WalkingNavigationStatus.error) {
+      final primary = switch (navigation.failureKind) {
+        WalkingNavigationFailureKind.locationPermissionDenied =>
+          TextButton.icon(
+            onPressed: onAllowLocation,
+            icon: const Icon(Icons.location_on_outlined),
+            label: Text(l10n.walkingNavigationAllowLocation),
+          ),
+        WalkingNavigationFailureKind.locationPermissionDeniedPermanently =>
+          TextButton.icon(
+            onPressed: onOpenAppSettings,
+            icon: const Icon(Icons.settings_outlined),
+            label: Text(l10n.walkingNavigationOpenAppSettings),
+          ),
+        WalkingNavigationFailureKind.locationServicesDisabled =>
+          TextButton.icon(
+            onPressed: onOpenLocationSettings,
+            icon: const Icon(Icons.location_searching),
+            label: Text(l10n.walkingNavigationOpenLocationSettings),
+          ),
+        _ => TextButton.icon(
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh),
+            label: Text(l10n.walkingNavigationRetry),
+          ),
+      };
+      return <Widget>[
+        primary,
+        TextButton.icon(
+          onPressed: onUseExternalMaps,
+          icon: const Icon(Icons.open_in_new),
+          label: Text(l10n.walkingNavigationUseExternalMaps),
+        ),
+      ];
+    }
+    if (navigation.hasActiveRoute ||
+        navigation.status == WalkingNavigationStatus.rerouting) {
+      return <Widget>[
+        TextButton.icon(
+          onPressed: onResume,
+          icon: const Icon(Icons.my_location),
+          label: Text(l10n.walkingNavigationResume),
+        ),
+      ];
+    }
+    return const <Widget>[];
+  }
+
   String _instruction(
     AppLocalizations l10n,
     WalkingNavigationProvider navigation,
@@ -133,14 +190,37 @@ class KubusWalkingNavigationPanel extends StatelessWidget {
     switch (navigation.status) {
       case WalkingNavigationStatus.awaitingLocation:
         return l10n.walkingNavigationWaitingForLocation;
+      case WalkingNavigationStatus.requestingPermission:
+        return l10n.walkingNavigationRequestingPermission;
       case WalkingNavigationStatus.calculating:
         return l10n.walkingNavigationCalculating;
       case WalkingNavigationStatus.arrived:
         return l10n.walkingNavigationArrived;
       case WalkingNavigationStatus.error:
-        return navigation.errorMessage?.isNotEmpty == true
-            ? l10n.walkingNavigationRouteUnavailable
-            : l10n.walkingNavigationRouteUnavailable;
+        return switch (navigation.failureKind) {
+          WalkingNavigationFailureKind.locationPermissionDenied =>
+            l10n.walkingNavigationPermissionDenied,
+          WalkingNavigationFailureKind.locationPermissionDeniedPermanently =>
+            l10n.walkingNavigationPermissionDeniedPermanently,
+          WalkingNavigationFailureKind.locationServicesDisabled =>
+            l10n.walkingNavigationServicesDisabled,
+          WalkingNavigationFailureKind.locationUnavailable =>
+            l10n.walkingNavigationLocationUnavailable,
+          WalkingNavigationFailureKind.locationTimedOut =>
+            l10n.walkingNavigationLocationTimedOut,
+          WalkingNavigationFailureKind.noRoute => l10n.walkingNavigationNoRoute,
+          WalkingNavigationFailureKind.routeTooLong =>
+            l10n.walkingNavigationRouteTooLong,
+          WalkingNavigationFailureKind.routeSourceTimeout =>
+            l10n.walkingNavigationRouteSourceTimeout,
+          WalkingNavigationFailureKind.routeNetwork =>
+            l10n.walkingNavigationRouteNetworkFailure,
+          WalkingNavigationFailureKind.routeMalformed =>
+            l10n.walkingNavigationRouteMalformed,
+          null => l10n.walkingNavigationRouteUnavailable,
+        };
+      case WalkingNavigationStatus.rerouting:
+        return l10n.walkingNavigationRerouting;
       case WalkingNavigationStatus.active:
         final step = navigation.activeStep;
         final base = switch (step?.modifier) {

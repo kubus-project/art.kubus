@@ -7,12 +7,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:maplibre_gl/maplibre_gl.dart' as ml;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_compass/flutter_compass.dart';
-import 'package:location/location.dart' hide LocationAccuracy;
 import 'package:provider/provider.dart';
 import '../features/map/shared/map_screen_shared_helpers.dart';
 import '../features/map/shared/map_artwork_filtering.dart';
@@ -49,6 +47,8 @@ import '../services/map_marker_service.dart';
 import '../services/share/share_types.dart';
 import '../services/push_notification_service.dart';
 import '../services/map_attribution_helper.dart';
+import '../services/walking_location_service.dart';
+import '../services/walking_navigation_diagnostics.dart';
 import '../core/app_route_observer.dart';
 import '../core/startup_trace.dart';
 import '../models/art_marker.dart';
@@ -67,6 +67,7 @@ import '../utils/art_marker_list_diff.dart';
 import '../utils/debouncer.dart';
 import '../utils/map_marker_helper.dart';
 import '../utils/map_marker_subject_loader.dart';
+import '../utils/map_navigation.dart';
 import '../utils/map_viewport_utils.dart';
 import '../utils/map_perf_tracker.dart';
 import '../utils/map_performance_debug.dart';
@@ -230,6 +231,7 @@ class MapScreen extends StatefulWidget {
   final String? initialSubjectType;
   final String? initialTargetLabel;
   final WalkingNavigationIntent? walkingNavigationIntent;
+  final WalkingLocationApi? walkingLocationApi;
 
   const MapScreen({
     super.key,
@@ -242,6 +244,7 @@ class MapScreen extends StatefulWidget {
     this.initialSubjectType,
     this.initialTargetLabel,
     this.walkingNavigationIntent,
+    this.walkingLocationApi,
   });
 
   @override
@@ -251,18 +254,13 @@ class MapScreen extends StatefulWidget {
 class _MapScreenState extends State<MapScreen>
     with WidgetsBindingObserver, TickerProviderStateMixin, RouteAware
     implements KubusMapMarkerSyncHost {
-  static const String _kPrefLocationPermissionRequested =
-      'map_location_permission_requested';
-  static const String _kPrefLocationServiceRequested =
-      'map_location_service_requested';
-
   final MapPerfTracker _perf = MapPerfTracker('MapScreen');
   // Location and Map State
   LatLng? _currentPosition;
   double? _currentPositionAccuracyMeters;
   int? _currentPositionTimestampMs;
   bool _hasLiveLocationFix = false;
-  Location? _mobileLocation;
+  late final WalkingLocationApi _walkingLocationApi;
   Timer? _timer;
   ml.MapLibreMapController? _mapController;
   ml.MapLibreMapController? _deactivateDetachedMapController;
@@ -279,10 +277,8 @@ class _MapScreenState extends State<MapScreen>
   bool _autoFollow = true;
   double? _direction; // Compass direction
   StreamSubscription<CompassEvent>? _compassSubscription;
-  StreamSubscription<LocationData>? _mobileLocationSubscription;
-  StreamSubscription<Position>? _webPositionSubscription;
-  bool _mobileLocationStreamStarted = false;
-  bool _mobileLocationStreamFailed = false;
+  StreamSubscription<WalkingLocationFix>? _mobileLocationSubscription;
+  StreamSubscription<WalkingLocationFix>? _webPositionSubscription;
   bool _cameraIsMoving = false;
   double _lastBearing = 0.0;
   double _lastPitch = 0.0;
@@ -308,9 +304,6 @@ class _MapScreenState extends State<MapScreen>
   static const String _locationSourceId = MapScreenConstants.locationSourceId;
   static const String _locationLayerId = MapScreenConstants.locationLayerId;
 
-  // Avoid repeatedly requesting permission/service on each timer tick
-  bool _locationPermissionRequested = false;
-  bool _locationServiceRequested = false;
   AppLifecycleState? _lastLifecycleState;
 
   // Animation
@@ -566,6 +559,8 @@ class _MapScreenState extends State<MapScreen>
   @override
   void initState() {
     super.initState();
+    _walkingLocationApi =
+        widget.walkingLocationApi ?? const GeolocatorWalkingLocationService();
     StartupTrace.mark('map screen init');
     MapAttributionHelper.setMobileMapEnabled(true);
     _autoFollow = widget.autoFollow;
@@ -744,7 +739,7 @@ class _MapScreenState extends State<MapScreen>
       preferredLabel: widget.initialTargetLabel,
       minZoom: widget.initialZoom ?? 16,
     );
-    if (initialTarget.hasIdentity) {
+    if (widget.walkingNavigationIntent == null && initialTarget.hasIdentity) {
       unawaited(_mapTargetCoordinator.submit(initialTarget));
     }
 
@@ -853,7 +848,6 @@ class _MapScreenState extends State<MapScreen>
             .trackScreenVisit('map');
       }
 
-      await _loadPersistedPermissionFlags();
       if (!mounted) return;
 
       await _loadMapViewPreferences();
@@ -1873,22 +1867,6 @@ class _MapScreenState extends State<MapScreen>
     return bindings;
   }
 
-  Future<void> _loadPersistedPermissionFlags() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final p1 = prefs.getBool(_kPrefLocationPermissionRequested) ?? false;
-      final p2 = prefs.getBool(_kPrefLocationServiceRequested) ?? false;
-      if (!mounted) return;
-      setState(() {
-        _locationPermissionRequested = p1;
-        _locationServiceRequested = p2;
-      });
-    } catch (e) {
-      AppConfig.debugPrint(
-          'MapScreen: failed to load persisted permission flags: $e');
-    }
-  }
-
   @override
   void deactivate() {
     _deactivateRootTutorialOwner(reason: 'mobile-map-deactivate');
@@ -2035,10 +2013,6 @@ class _MapScreenState extends State<MapScreen>
   }
 
   void _initializeMap() {
-    if (!kIsWeb) {
-      _mobileLocation = Location();
-    }
-
     // Do not block first entry with OS permission dialogs. We'll still resolve
     // location immediately when already granted, and only prompt on explicit
     // user action (e.g. tapping the location controls).
@@ -3357,213 +3331,55 @@ class _MapScreenState extends State<MapScreen>
 
   Future<void> _getLocation(
       {bool fromTimer = false, bool promptForPermission = true}) async {
-    try {
-      LatLng? resolvedPosition;
-      double? resolvedAccuracyMeters;
-      int? resolvedTimestampMs;
-      var resolvedFromLiveFix = false;
-      final prefs = await SharedPreferences.getInstance();
+    final navigation = _walkingNavigationProvider;
+    if (promptForPermission && navigation?.isVisible == true) {
+      _hasLiveLocationFix = false;
+      navigation!.beginLocationRequest(lease: _walkingNavigationLease);
+    }
+    final result = await _walkingLocationApi.acquireLiveFix(
+      requestPermission: promptForPermission,
+    );
+    if (!mounted) return;
 
-      if (kIsWeb) {
-        final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-        if (!serviceEnabled) {
-          AppConfig.debugPrint('MapScreen: location services disabled on web');
-          resolvedPosition = _loadFallbackPosition(prefs);
-        }
-
-        LocationPermission permission = await Geolocator.checkPermission();
-        if (permission == LocationPermission.denied) {
-          if (!promptForPermission) {
-            AppConfig.debugPrint(
-                'MapScreen: location permission denied on web; using fallback if available');
-            resolvedPosition ??= _loadFallbackPosition(prefs);
-          } else {
-            permission = await Geolocator.requestPermission();
-            if (permission == LocationPermission.denied) {
-              AppConfig.debugPrint(
-                  'MapScreen: location permission denied on web');
-              resolvedPosition ??= _loadFallbackPosition(prefs);
-            }
-          }
-        }
-
-        if (permission == LocationPermission.deniedForever) {
-          AppConfig.debugPrint(
-              'MapScreen: location permission permanently denied on web');
-          resolvedPosition ??= _loadFallbackPosition(prefs);
-        }
-
-        if (resolvedPosition == null) {
-          final position = await Geolocator.getCurrentPosition(
-            locationSettings: const LocationSettings(
-              accuracy: LocationAccuracy.best,
-            ),
-          ).timeout(const Duration(seconds: 12));
-          resolvedAccuracyMeters = position.accuracy;
-          resolvedTimestampMs = position.timestamp.millisecondsSinceEpoch;
-          resolvedPosition = LatLng(position.latitude, position.longitude);
-          resolvedFromLiveFix = true;
-        }
-      } else {
-        _mobileLocation ??= Location();
-
-        // Avoid requesting service repeatedly: only request once while in-memory flag is false
-        bool serviceEnabled = await _mobileLocation!.serviceEnabled();
-        if (!serviceEnabled) {
-          if (!promptForPermission) {
-            AppConfig.debugPrint(
-                'MapScreen: location service disabled; skipping prompt (promptForPermission=false)');
-            resolvedPosition ??= _loadFallbackPosition(prefs);
-            if (resolvedPosition == null) return;
-          } else {
-            if (!_locationServiceRequested) {
-              _locationServiceRequested = true;
-              try {
-                await prefs.setBool(_kPrefLocationServiceRequested, true);
-              } catch (e) {
-                AppConfig.debugPrint(
-                    'MapScreen: failed to persist location service requested flag: $e');
-              }
-
-              serviceEnabled = await _mobileLocation!.requestService();
-
-              // Persist the result (reset the requested flag when enabled)
-              if (serviceEnabled) {
-                try {
-                  await prefs.setBool(_kPrefLocationServiceRequested, false);
-                } catch (_) {}
-                _locationServiceRequested = false;
-              }
-            } else {
-              // already requested before and still disabled - don't prompt again
-              AppConfig.debugPrint(
-                  'MapScreen: location service disabled (previously requested)');
-              resolvedPosition ??= _loadFallbackPosition(prefs);
-              if (resolvedPosition == null) return;
-            }
-          }
-
-          if (!serviceEnabled) {
-            resolvedPosition ??= _loadFallbackPosition(prefs);
-            if (resolvedPosition == null) return;
-          }
-        } else {
-          // reset flag if enabled
-          _locationServiceRequested = false;
-          try {
-            await prefs.setBool(_kPrefLocationServiceRequested, false);
-          } catch (_) {}
-        }
-
-        // Permission handling: request once and avoid spamming the dialog on subsequent timer ticks
-        PermissionStatus permissionGranted =
-            await _mobileLocation!.hasPermission();
-        if (permissionGranted == PermissionStatus.denied) {
-          if (!promptForPermission) {
-            AppConfig.debugPrint(
-                'MapScreen: location permission denied; skipping request (promptForPermission=false)');
-            resolvedPosition ??= _loadFallbackPosition(prefs);
-            if (resolvedPosition == null) return;
-          }
-
-          if (!_locationPermissionRequested) {
-            _locationPermissionRequested = true;
-            try {
-              await prefs.setBool(_kPrefLocationPermissionRequested, true);
-            } catch (e) {
-              AppConfig.debugPrint(
-                  'MapScreen: failed to persist permission-requested flag: $e');
-            }
-
-            permissionGranted = await _mobileLocation!.requestPermission();
-
-            if (permissionGranted == PermissionStatus.granted) {
-              try {
-                await prefs.setBool(_kPrefLocationPermissionRequested, false);
-              } catch (_) {}
-              _locationPermissionRequested = false;
-            }
-          } else {
-            // Already requested permission once; do not re-request repeatedly.
-            AppConfig.debugPrint(
-                'MapScreen: location permission denied and previously requested; skipping further requests');
-            resolvedPosition ??= _loadFallbackPosition(prefs);
-            if (resolvedPosition == null) return;
-          }
-          if (permissionGranted != PermissionStatus.granted) {
-            resolvedPosition ??= _loadFallbackPosition(prefs);
-            if (resolvedPosition == null) return;
-          }
-        } else if (permissionGranted == PermissionStatus.granted) {
-          // reset flag once permission is granted
-          _locationPermissionRequested = false;
-          try {
-            await prefs.setBool(_kPrefLocationPermissionRequested, false);
-          } catch (_) {}
-        }
-
-        final locationData = await _mobileLocation!
-            .getLocation()
-            .timeout(const Duration(seconds: 12));
-        if (locationData.latitude != null && locationData.longitude != null) {
-          resolvedPosition =
-              LatLng(locationData.latitude!, locationData.longitude!);
-          resolvedFromLiveFix = true;
-          resolvedAccuracyMeters = locationData.accuracy;
-          final rawTime = locationData.time;
-          if (rawTime != null) {
-            resolvedTimestampMs = rawTime.round();
-          }
-          // A successful one-shot fix proves the provider recovered; allow the
-          // continuous navigation stream to be established again.
-          _mobileLocationStreamFailed = false;
-        }
-
-        // Start the continuous stream only once we have a working service +
-        // granted permission. Starting it too early can crash certain OEM
-        // builds / emulators (plugin-side EventSink not ready).
-        if (!_mobileLocationStreamStarted && !_mobileLocationStreamFailed) {
-          _mobileLocationStreamStarted = true;
-          try {
-            _subscribeToMobileLocationStream();
-          } catch (e) {
-            _mobileLocationStreamFailed = true;
-            _mobileLocationStreamStarted = false;
-            AppConfig.debugPrint(
-              'MapScreen: failed to start mobile location stream: $e',
-            );
-          }
-        }
-      }
-
-      if (resolvedPosition != null) {
-        try {
-          await prefs.setDouble('last_known_lat', resolvedPosition.latitude);
-          await prefs.setDouble('last_known_lng', resolvedPosition.longitude);
-        } catch (_) {}
-        final shouldCenter = !fromTimer;
-        _updateCurrentPosition(
-          resolvedPosition,
-          shouldCenter: shouldCenter,
-          accuracyMeters: resolvedAccuracyMeters,
-          timestampMs:
-              resolvedTimestampMs ?? DateTime.now().millisecondsSinceEpoch,
-          isLiveFix: resolvedFromLiveFix,
+    final fix = result.fix;
+    if (!result.isAvailable || fix == null) {
+      if (promptForPermission && navigation?.isVisible == true) {
+        navigation!.reportLocationAccess(
+          result.status,
+          lease: _walkingNavigationLease,
         );
-        if (kIsWeb && resolvedFromLiveFix && _webPositionSubscription == null) {
-          _startWebLocationStream();
-        }
-        // Only force refresh on initial load (when no markers exist)
-        // Timer-based calls should respect the cache/throttling logic
-        if (!fromTimer || _artMarkers.isEmpty) {
-          await _maybeRefreshMarkers(
-            resolvedPosition,
-            force: false, // Let _maybeRefreshMarkers handle the logic
-          );
+      }
+      if (!promptForPermission) {
+        final prefs = await SharedPreferences.getInstance();
+        final fallback = _loadFallbackPosition(prefs);
+        if (fallback != null && mounted) {
+          _updateCurrentPosition(fallback, isLiveFix: false);
         }
       }
-    } catch (e) {
-      AppConfig.debugPrint('MapScreen: failed to get location: $e');
+      return;
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    try {
+      await prefs.setDouble('last_known_lat', fix.position.latitude);
+      await prefs.setDouble('last_known_lng', fix.position.longitude);
+    } catch (_) {}
+    if (!mounted) return;
+    _updateCurrentPosition(
+      fix.position,
+      shouldCenter: !fromTimer,
+      accuracyMeters: fix.accuracyMeters,
+      timestampMs: fix.timestamp.millisecondsSinceEpoch,
+      isLiveFix: true,
+    );
+    WalkingNavigationDiagnostics.record('first_live_fix_acquired');
+    if (kIsWeb) {
+      if (_webPositionSubscription == null) _startWebLocationStream();
+    } else if (_mobileLocationSubscription == null) {
+      _subscribeToMobileLocationStream();
+    }
+    if (!fromTimer || _artMarkers.isEmpty) {
+      await _maybeRefreshMarkers(fix.position, force: false);
     }
   }
 
@@ -3593,34 +3409,21 @@ class _MapScreenState extends State<MapScreen>
   }
 
   void _subscribeToMobileLocationStream() {
-    if (kIsWeb || _mobileLocation == null) {
-      return;
-    }
-    if (_mobileLocationSubscription != null) {
-      _perf.subscriptionStopped('mobile_location_stream');
-      unawaited(
-        _mobileLocationSubscription!.cancel().catchError((_) {/* ignore */}),
-      );
-    }
+    if (kIsWeb || _mobileLocationSubscription != null) return;
     try {
-      _mobileLocationSubscription = _mobileLocation!.onLocationChanged.listen(
-        (event) {
-          if (event.latitude != null && event.longitude != null) {
-            _updateCurrentPosition(
-              LatLng(event.latitude!, event.longitude!),
-              accuracyMeters: event.accuracy,
-              timestampMs:
-                  (event.time is num) ? (event.time as num).round() : null,
-              isLiveFix: true,
-            );
-          }
+      _mobileLocationSubscription = _walkingLocationApi.liveFixes().listen(
+        (fix) {
+          _updateCurrentPosition(
+            fix.position,
+            accuracyMeters: fix.accuracyMeters,
+            timestampMs: fix.timestamp.millisecondsSinceEpoch,
+            isLiveFix: true,
+          );
         },
         onError: (Object error, StackTrace st) {
           AppConfig.debugPrint(
             'MapScreen: mobile location stream error: $error',
           );
-          _mobileLocationStreamFailed = true;
-          _mobileLocationStreamStarted = false;
           _hasLiveLocationFix = false;
           _walkingNavigationProvider?.reportLocationUnavailable(
             lease: _walkingNavigationLease,
@@ -3655,18 +3458,13 @@ class _MapScreenState extends State<MapScreen>
     _webPositionSubscription?.cancel();
     _perf.subscriptionStopped('web_location_stream');
     try {
-      final stream = Geolocator.getPositionStream(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.best,
-          distanceFilter: 4,
-        ),
-      );
+      final stream = _walkingLocationApi.liveFixes();
       _webPositionSubscription = stream.listen(
-        (position) {
+        (fix) {
           _updateCurrentPosition(
-            LatLng(position.latitude, position.longitude),
-            accuracyMeters: position.accuracy,
-            timestampMs: position.timestamp.millisecondsSinceEpoch,
+            fix.position,
+            accuracyMeters: fix.accuracyMeters,
+            timestampMs: fix.timestamp.millisecondsSinceEpoch,
             isLiveFix: true,
           );
         },
@@ -3791,16 +3589,20 @@ class _MapScreenState extends State<MapScreen>
     await _getLocation(promptForPermission: true);
     if (!mounted) return;
 
-    if (_currentPosition == null) {
+    final isWalkingRequest = reason.startsWith('walking_navigation');
+    if (_currentPosition == null ||
+        (isWalkingRequest && !_hasLiveLocationFix)) {
       if (_autoFollow != previousAutoFollow) {
         setState(() {
           _autoFollow = previousAutoFollow;
         });
       }
-      messenger?.showKubusSnackBar(
-        SnackBar(content: Text(l10n.mapLocationUnavailableToast)),
-        tone: KubusSnackBarTone.warning,
-      );
+      if (!isWalkingRequest) {
+        messenger?.showKubusSnackBar(
+          SnackBar(content: Text(l10n.mapLocationUnavailableToast)),
+          tone: KubusSnackBarTone.warning,
+        );
+      }
       if (kDebugMode) {
         AppConfig.debugPrint(
           'MapScreen: location unavailable after user request (reason=$reason)',
@@ -4041,12 +3843,11 @@ class _MapScreenState extends State<MapScreen>
                         isLoadingArtworks,
                       ),
                     _buildTopOverlays(theme, themeProvider, taskProvider),
-                    if (widget.walkingNavigationIntent != null)
-                      _buildWalkingNavigationOverlay(),
-                    // Keep marker overlay above map UI chrome (controls/search/sheet)
-                    // so the selected marker card remains the top interactive layer.
                     if (ui.contextSurface == MapContextSurface.markerPreview)
                       _buildMarkerOverlay(themeProvider, ui.markerSelection),
+                    // Walking navigation owns foreground camera/UI priority.
+                    if (widget.walkingNavigationIntent != null)
+                      _buildWalkingNavigationOverlay(),
                   ],
                 ),
               ),
@@ -4362,11 +4163,24 @@ class _MapScreenState extends State<MapScreen>
             alignment: Alignment.topCenter,
             child: KubusWalkingNavigationPanel(
               navigation: navigation,
-              onEnd: navigation.stop,
+              onEnd: () => _endWalkingNavigation(navigation),
               onResume: () => _resumeWalkingNavigation(navigation),
               onRetry: () => unawaited(
                 _retryWalkingNavigation(navigation),
               ),
+              onAllowLocation: () => unawaited(
+                _requestWalkingLocation(navigation),
+              ),
+              onOpenAppSettings: () => unawaited(
+                _openWalkingAppSettings(navigation),
+              ),
+              onOpenLocationSettings: () => unawaited(
+                _openWalkingLocationSettings(navigation),
+              ),
+              onUseExternalMaps: () => unawaited(
+                _openExternalWalking(navigation),
+              ),
+              onViewDestination: () => _viewWalkingDestination(navigation),
             ),
           ),
         );
@@ -4396,46 +4210,72 @@ class _MapScreenState extends State<MapScreen>
     _kubusMapController.setAutoFollow(true);
     unawaited(_applyIsometricCamera(enabled: true));
     unawaited(_animateMapTo(position, zoom: math.max(_lastZoom, 18)));
+    WalkingNavigationDiagnostics.record('navigation_resumed');
+  }
+
+  void _endWalkingNavigation(WalkingNavigationProvider navigation) {
+    if (!navigation.stopOwned(_walkingNavigationLease)) return;
+    setState(() {
+      _autoFollow = false;
+      _isometricViewEnabled = false;
+    });
+    _kubusMapController.setAutoFollow(false);
+    _kubusMapController.dismissSelection();
+    unawaited(_applyIsometricCamera(enabled: false));
+  }
+
+  Future<void> _requestWalkingLocation(
+    WalkingNavigationProvider navigation,
+  ) async {
+    await navigation.retry(lease: _walkingNavigationLease);
+    if (!mounted) return;
+    await _promptForLocationThenCenter(reason: 'walking_navigation_allow');
+  }
+
+  Future<void> _openWalkingAppSettings(
+    WalkingNavigationProvider navigation,
+  ) async {
+    await _walkingLocationApi.openAppSettings();
+    if (!mounted) return;
+    await _requestWalkingLocation(navigation);
+  }
+
+  Future<void> _openWalkingLocationSettings(
+    WalkingNavigationProvider navigation,
+  ) async {
+    await _walkingLocationApi.openLocationSettings();
+    if (!mounted) return;
+    await _requestWalkingLocation(navigation);
+  }
+
+  Future<void> _openExternalWalking(
+    WalkingNavigationProvider navigation,
+  ) async {
+    final intent = navigation.intent;
+    if (intent != null) await MapNavigation.openExternalWalking(intent);
+  }
+
+  void _viewWalkingDestination(WalkingNavigationProvider navigation) {
+    final destination = navigation.intent?.destination;
+    if (destination == null) return;
+    _kubusMapController.dismissSelection();
+    unawaited(_animateMapTo(destination, zoom: math.max(_lastZoom, 17)));
   }
 
   Future<void> _retryWalkingNavigation(
     WalkingNavigationProvider navigation,
   ) async {
-    if (navigation.currentPosition != null &&
-        navigation.failureKind !=
-            WalkingNavigationFailureKind.locationUnavailable) {
+    if (!navigation.needsLiveLocation) {
       await navigation.retry(lease: _walkingNavigationLease);
       return;
     }
-    await _prepareWalkingLocationRetry();
-    if (!mounted) return;
+    await navigation.retry(lease: _walkingNavigationLease);
     await _promptForLocationThenCenter(reason: 'walking_navigation_retry');
     if (!mounted) return;
     if (!_hasLiveLocationFix) {
       navigation.reportLocationUnavailable(lease: _walkingNavigationLease);
     } else {
       await navigation.retry(lease: _walkingNavigationLease);
-    }
-  }
-
-  Future<void> _prepareWalkingLocationRetry() async {
-    if (!kIsWeb) {
-      final permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.deniedForever) {
-        await Geolocator.openAppSettings();
-      }
-      if (!await Geolocator.isLocationServiceEnabled()) {
-        await Geolocator.openLocationSettings();
-      }
-    }
-    _locationPermissionRequested = false;
-    _locationServiceRequested = false;
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(_kPrefLocationPermissionRequested, false);
-      await prefs.setBool(_kPrefLocationServiceRequested, false);
-    } catch (_) {
-      // In-memory reset is sufficient for the current explicit retry.
     }
   }
 
@@ -5513,7 +5353,7 @@ class _MapScreenState extends State<MapScreen>
           sizeFactor: anim,
           // Anchor the reveal to the top edge so the panel grows downward from
           // the search bar for a vertical size transition.
-          alignment: Alignment.topLeft,
+          axisAlignment: -1,
           child: child,
         ),
       ),

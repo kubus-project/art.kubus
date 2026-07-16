@@ -10,9 +10,10 @@ import '../l10n/app_localizations.dart';
 import '../models/artwork.dart';
 import '../config/config.dart';
 import '../features/map/navigation/walking_navigation_models.dart';
-import '../widgets/common/kubus_badge.dart';
 import '../widgets/glass_components.dart';
 import '../widgets/kubus_snackbar.dart';
+import '../widgets/navigation/kubus_navigation_option_row.dart';
+import '../services/walking_navigation_diagnostics.dart';
 import 'design_tokens.dart';
 import 'map_navigation.dart';
 
@@ -32,6 +33,10 @@ typedef ArtworkMapOpenCallback = void Function(
 typedef ArtworkCanLaunchUri = Future<bool> Function(Uri uri);
 typedef ArtworkLaunchUri = Future<bool> Function(Uri uri, LaunchMode mode);
 typedef ArtworkClipboardWriter = Future<void> Function(String text);
+typedef ArtworkWalkingOpenCallback = void Function(
+  BuildContext context, {
+  required WalkingNavigationIntent intent,
+});
 
 enum ArtworkExternalMapDestination {
   googleMaps,
@@ -206,6 +211,7 @@ class ArtworkLocationActions {
     ArtworkCanLaunchUri? canLaunch,
     ArtworkLaunchUri? launcher,
     ArtworkClipboardWriter? clipboardWriter,
+    ArtworkWalkingOpenCallback? walkingOpener,
   }) async {
     if (!hasValidLocation(artwork)) return;
     final l10n = AppLocalizations.of(context)!;
@@ -273,27 +279,26 @@ class ArtworkLocationActions {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: KubusSpacing.md),
-                  ListTile(
+                  KubusNavigationOptionRow(
+                    key: const ValueKey('navigation-option-in-app'),
                     enabled: AppConfig.isFeatureEnabled(
                       'mapWalkingNavigation',
                     ),
-                    leading: const Icon(Icons.directions_walk_outlined),
-                    title: Text(l10n.artDetailNavigationInApp),
-                    subtitle: Text(l10n.walkingNavigationPreviewNotice),
-                    trailing: KubusBadge(
-                      text: l10n.artDetailNavigationInDevelopment,
-                      variant: KubusBadgeVariant.status,
-                      accent: Theme.of(sheetContext).colorScheme.primary,
-                      icon: Icons.construction_outlined,
-                      compact: true,
-                    ),
+                    icon: Icons.directions_walk_outlined,
+                    label: l10n.artDetailNavigationInApp,
+                    statusLabel: l10n.walkingNavigationBeta,
+                    trailingIcon: Icons.chevron_right,
                     onTap: !AppConfig.isFeatureEnabled(
                       'mapWalkingNavigation',
                     )
                         ? null
                         : () {
                             Navigator.of(sheetContext).pop();
-                            MapNavigation.openWalking(
+                            WalkingNavigationDiagnostics.record(
+                              'navigation_option_selected',
+                              reason: 'in_app',
+                            );
+                            (walkingOpener ?? MapNavigation.openWalking)(
                               context,
                               intent: WalkingNavigationIntent(
                                 destinationId: artwork.id,
@@ -305,12 +310,18 @@ class ArtworkLocationActions {
                   ),
                   const SizedBox(height: KubusSpacing.xs),
                   for (final option in options)
-                    ListTile(
-                      leading: Icon(option.icon),
-                      title: Text(option.label),
-                      trailing: const Icon(Icons.open_in_new, size: 18),
+                    KubusNavigationOptionRow(
+                      key: ValueKey(
+                        'navigation-option-${option.destination.name}',
+                      ),
+                      icon: option.icon,
+                      label: option.label,
                       onTap: () {
                         Navigator.of(sheetContext).pop();
+                        WalkingNavigationDiagnostics.record(
+                          'navigation_option_selected',
+                          reason: option.destination.name,
+                        );
                         unawaited(_launchAndReport(
                           artwork,
                           option,
@@ -321,9 +332,11 @@ class ArtworkLocationActions {
                         ));
                       },
                     ),
-                  ListTile(
-                    leading: const Icon(Icons.copy_outlined),
-                    title: Text(l10n.artDetailNavigationCopyCoordinates),
+                  KubusNavigationOptionRow(
+                    key: const ValueKey('navigation-option-copy'),
+                    icon: Icons.copy_outlined,
+                    label: l10n.artDetailNavigationCopyCoordinates,
+                    trailingIcon: Icons.copy_outlined,
                     onTap: () {
                       Navigator.of(sheetContext).pop();
                       unawaited(_copyAndReport(
@@ -337,6 +350,22 @@ class ArtworkLocationActions {
                         clipboardWriter: clipboardWriter,
                       ));
                     },
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      KubusSpacing.md,
+                      KubusSpacing.sm,
+                      KubusSpacing.md,
+                      0,
+                    ),
+                    child: Text(
+                      l10n.walkingNavigationPreviewNotice,
+                      textAlign: TextAlign.center,
+                      style: KubusTypography.textTheme.bodySmall?.copyWith(
+                        color:
+                            Theme.of(sheetContext).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
                   ),
                   TextButton(
                     onPressed: () => Navigator.of(sheetContext).pop(),

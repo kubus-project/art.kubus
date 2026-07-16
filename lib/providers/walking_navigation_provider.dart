@@ -7,6 +7,7 @@ import 'package:latlong2/latlong.dart';
 import '../config/config.dart';
 import '../features/map/navigation/walking_navigation_models.dart';
 import '../services/walking_directions_service.dart';
+import '../services/walking_navigation_diagnostics.dart';
 
 class WalkingNavigationProvider extends ChangeNotifier {
   WalkingNavigationProvider({
@@ -28,7 +29,6 @@ class WalkingNavigationProvider extends ChangeNotifier {
   WalkingNavigationIntent? _intent;
   WalkingRoute? _route;
   LatLng? _currentPosition;
-  String? _errorMessage;
   WalkingNavigationFailureKind? _failureKind;
   int _activeStepIndex = 0;
   int _nearestGeometryIndex = 0;
@@ -46,7 +46,6 @@ class WalkingNavigationProvider extends ChangeNotifier {
   WalkingNavigationIntent? get intent => _intent;
   WalkingRoute? get route => _route;
   LatLng? get currentPosition => _currentPosition;
-  String? get errorMessage => _errorMessage;
   int get activeStepIndex => _activeStepIndex;
   double get remainingDistanceMeters => _remainingDistanceMeters;
   double get remainingDurationSeconds => _remainingDurationSeconds;
@@ -54,10 +53,20 @@ class WalkingNavigationProvider extends ChangeNotifier {
   bool get hasActiveRoute =>
       _route != null &&
       (_status == WalkingNavigationStatus.active ||
+          _status == WalkingNavigationStatus.rerouting ||
           _status == WalkingNavigationStatus.arrived);
   bool get isCalculating => _status == WalkingNavigationStatus.calculating;
   double? get positionAccuracyMeters => _positionAccuracyMeters;
   WalkingNavigationFailureKind? get failureKind => _failureKind;
+  bool get needsLiveLocation => switch (_failureKind) {
+        WalkingNavigationFailureKind.locationPermissionDenied ||
+        WalkingNavigationFailureKind.locationPermissionDeniedPermanently ||
+        WalkingNavigationFailureKind.locationServicesDisabled ||
+        WalkingNavigationFailureKind.locationUnavailable ||
+        WalkingNavigationFailureKind.locationTimedOut =>
+          true,
+        _ => _currentPosition == null,
+      };
 
   WalkingRouteStep? get activeStep {
     final steps = _route?.steps;
@@ -74,10 +83,10 @@ class WalkingNavigationProvider extends ChangeNotifier {
     _currentPosition = null;
     _positionAccuracyMeters = null;
     _lastRouteRequestAt = null;
-    _errorMessage = null;
     _failureKind = null;
     _resetRouteProgress();
     _status = WalkingNavigationStatus.awaitingLocation;
+    WalkingNavigationDiagnostics.record('session_started');
     notifyListeners();
   }
 
@@ -101,7 +110,7 @@ class WalkingNavigationProvider extends ChangeNotifier {
 
     if (_status == WalkingNavigationStatus.awaitingLocation ||
         (_status == WalkingNavigationStatus.error &&
-            _failureKind == WalkingNavigationFailureKind.locationUnavailable)) {
+            _isLocationFailure(_failureKind))) {
       await _requestRoute(position, preserveCurrentRoute: false);
       return;
     }
@@ -142,8 +151,55 @@ class WalkingNavigationProvider extends ChangeNotifier {
   Future<void> retry({WalkingNavigationSessionLease? lease}) async {
     if (!_ownsSession(lease)) return;
     final position = _currentPosition;
-    if (_intent == null || position == null) return;
+    if (_intent == null) return;
+    if (position == null) {
+      _status = WalkingNavigationStatus.awaitingLocation;
+      _failureKind = null;
+      notifyListeners();
+      return;
+    }
     await _requestRoute(position, preserveCurrentRoute: false);
+  }
+
+  void beginLocationRequest({WalkingNavigationSessionLease? lease}) {
+    if (!_ownsSession(lease) || _intent == null) return;
+    _status = WalkingNavigationStatus.requestingPermission;
+    _failureKind = null;
+    WalkingNavigationDiagnostics.record('location_request_started');
+    notifyListeners();
+  }
+
+  void reportLocationAccess(
+    WalkingLocationAccessStatus status, {
+    WalkingNavigationSessionLease? lease,
+  }) {
+    if (!_ownsSession(lease) || _intent == null) return;
+    if (status == WalkingLocationAccessStatus.available) return;
+    _currentPosition = null;
+    _positionAccuracyMeters = null;
+    _status = WalkingNavigationStatus.error;
+    _currentPosition = null;
+    _positionAccuracyMeters = null;
+    _failureKind = switch (status) {
+      WalkingLocationAccessStatus.permissionDenied =>
+        WalkingNavigationFailureKind.locationPermissionDenied,
+      WalkingLocationAccessStatus.permissionDeniedPermanently =>
+        WalkingNavigationFailureKind.locationPermissionDeniedPermanently,
+      WalkingLocationAccessStatus.serviceDisabled =>
+        WalkingNavigationFailureKind.locationServicesDisabled,
+      WalkingLocationAccessStatus.timedOut =>
+        WalkingNavigationFailureKind.locationTimedOut,
+      WalkingLocationAccessStatus.permissionNotRequested ||
+      WalkingLocationAccessStatus.requestingPermission ||
+      WalkingLocationAccessStatus.liveLocationUnavailable ||
+      WalkingLocationAccessStatus.available =>
+        WalkingNavigationFailureKind.locationUnavailable,
+    };
+    WalkingNavigationDiagnostics.record(
+      'permission_result',
+      reason: status.name,
+    );
+    notifyListeners();
   }
 
   void reportLocationUnavailable({WalkingNavigationSessionLease? lease}) {
@@ -153,8 +209,11 @@ class WalkingNavigationProvider extends ChangeNotifier {
       return;
     }
     _status = WalkingNavigationStatus.error;
-    _errorMessage = 'Location is unavailable.';
     _failureKind = WalkingNavigationFailureKind.locationUnavailable;
+    WalkingNavigationDiagnostics.record(
+      'route_request_failed',
+      reason: _failureKind!.name,
+    );
     notifyListeners();
   }
 
@@ -178,10 +237,10 @@ class WalkingNavigationProvider extends ChangeNotifier {
     _route = null;
     _currentPosition = null;
     _lastRouteRequestAt = null;
-    _errorMessage = null;
     _failureKind = null;
     _resetRouteProgress();
     _positionAccuracyMeters = null;
+    WalkingNavigationDiagnostics.record('navigation_ended');
     notifyListeners();
   }
 
@@ -198,10 +257,15 @@ class WalkingNavigationProvider extends ChangeNotifier {
     if (intent == null) return Future<void>.value();
     final generation = _requestGeneration;
     _lastRouteRequestAt = _now();
+    WalkingNavigationDiagnostics.record(
+      preserveCurrentRoute ? 'reroute_triggered' : 'route_request_started',
+    );
     if (!preserveCurrentRoute) {
       _status = WalkingNavigationStatus.calculating;
-      _errorMessage = null;
       _failureKind = null;
+      notifyListeners();
+    } else {
+      _status = WalkingNavigationStatus.rerouting;
       notifyListeners();
     }
 
@@ -214,18 +278,23 @@ class WalkingNavigationProvider extends ChangeNotifier {
         if (generation != _requestGeneration || _intent != intent) return;
         _route = route;
         _status = WalkingNavigationStatus.active;
-        _errorMessage = null;
         _failureKind = null;
         _resetRouteProgress();
         _updateProgress(origin, route);
+        WalkingNavigationDiagnostics.record('route_request_succeeded');
         notifyListeners();
       } catch (error) {
         if (generation != _requestGeneration || _intent != intent) return;
         if (!preserveCurrentRoute || _route == null) {
           _status = WalkingNavigationStatus.error;
-          _errorMessage = error.toString();
-          _failureKind = WalkingNavigationFailureKind.routeUnavailable;
+          _failureKind = _failureFor(error);
+        } else {
+          _status = WalkingNavigationStatus.active;
         }
+        WalkingNavigationDiagnostics.record(
+          'route_request_failed',
+          reason: _failureFor(error).name,
+        );
         notifyListeners();
       } finally {
         if (_routeRequestGeneration == generation) {
@@ -238,6 +307,37 @@ class WalkingNavigationProvider extends ChangeNotifier {
     _routeRequestGeneration = generation;
     return request;
   }
+
+  WalkingNavigationFailureKind _failureFor(Object error) {
+    if (error is! WalkingDirectionsException) {
+      return WalkingNavigationFailureKind.routeNetwork;
+    }
+    return switch (error.type) {
+      WalkingDirectionsErrorType.noRoute =>
+        WalkingNavigationFailureKind.noRoute,
+      WalkingDirectionsErrorType.routeTooLong =>
+        WalkingNavigationFailureKind.routeTooLong,
+      WalkingDirectionsErrorType.sourceTimeout =>
+        WalkingNavigationFailureKind.routeSourceTimeout,
+      WalkingDirectionsErrorType.sourceInvalidResponse =>
+        WalkingNavigationFailureKind.routeMalformed,
+      WalkingDirectionsErrorType.sourceTransport ||
+      WalkingDirectionsErrorType.sourceHttp ||
+      WalkingDirectionsErrorType.sourceCancelled =>
+        WalkingNavigationFailureKind.routeNetwork,
+    };
+  }
+
+  bool _isLocationFailure(WalkingNavigationFailureKind? failure) =>
+      switch (failure) {
+        WalkingNavigationFailureKind.locationPermissionDenied ||
+        WalkingNavigationFailureKind.locationPermissionDeniedPermanently ||
+        WalkingNavigationFailureKind.locationServicesDisabled ||
+        WalkingNavigationFailureKind.locationUnavailable ||
+        WalkingNavigationFailureKind.locationTimedOut =>
+          true,
+        _ => false,
+      };
 
   void _resetRouteProgress() {
     _activeStepIndex = 0;
@@ -265,10 +365,13 @@ class WalkingNavigationProvider extends ChangeNotifier {
       _activeStepIndex = route.steps.isEmpty ? 0 : route.steps.length - 1;
       _remainingDistanceMeters = 0;
       _remainingDurationSeconds = 0;
+      WalkingNavigationDiagnostics.record('destination_reached');
       return;
     }
 
-    _status = WalkingNavigationStatus.active;
+    if (_status != WalkingNavigationStatus.rerouting) {
+      _status = WalkingNavigationStatus.active;
+    }
     final projection = _projectOntoRoute(position, route.points);
     final projectedGeometryIndex =
         projection.segmentIndex + (projection.segmentFraction >= 0.5 ? 1 : 0);

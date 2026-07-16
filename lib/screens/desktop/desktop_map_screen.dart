@@ -8,7 +8,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:maplibre_gl/maplibre_gl.dart' as ml;
-import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -47,6 +46,8 @@ import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
 import '../../services/map_marker_service.dart';
 import '../../services/ar_service.dart';
+import '../../services/walking_location_service.dart';
+import '../../services/walking_navigation_diagnostics.dart';
 import '../../utils/map_marker_subject_loader.dart';
 import '../../utils/map_perf_tracker.dart';
 import '../../utils/map_performance_debug.dart';
@@ -72,6 +73,7 @@ import '../../utils/app_animations.dart';
 import '../../utils/app_color_utils.dart';
 import '../../utils/artwork_media_resolver.dart';
 import '../../utils/artwork_navigation.dart';
+import '../../utils/map_navigation.dart';
 import '../../utils/media_url_resolver.dart';
 import 'desktop_shell.dart';
 import 'art/desktop_artwork_detail_screen.dart';
@@ -196,6 +198,7 @@ class DesktopMapScreen extends StatefulWidget {
   final String? initialSubjectType;
   final String? initialTargetLabel;
   final WalkingNavigationIntent? walkingNavigationIntent;
+  final WalkingLocationApi? walkingLocationApi;
 
   const DesktopMapScreen({
     super.key,
@@ -208,6 +211,7 @@ class DesktopMapScreen extends StatefulWidget {
     this.initialSubjectType,
     this.initialTargetLabel,
     this.walkingNavigationIntent,
+    this.walkingLocationApi,
   });
 
   @override
@@ -301,8 +305,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   final Distance _distance = const Distance();
   StreamSubscription<ArtMarker>? _markerStreamSub;
   StreamSubscription<String>? _markerDeletedSub;
-  final WalkingNavigationLocationCoordinator _walkingLocationCoordinator =
-      WalkingNavigationLocationCoordinator();
+  late final WalkingLocationApi _walkingLocationApi;
+  late final WalkingNavigationLocationCoordinator _walkingLocationCoordinator;
   bool _isAppForeground = true;
   bool _isRouteVisible = true;
   PageRoute<dynamic>? _subscribedRoute;
@@ -440,6 +444,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   @override
   void initState() {
     super.initState();
+    _walkingLocationApi =
+        widget.walkingLocationApi ?? const GeolocatorWalkingLocationService();
+    _walkingLocationCoordinator =
+        WalkingNavigationLocationCoordinator(_walkingLocationApi);
     WidgetsBinding.instance.addObserver(this);
 
     // Guest-first funnel parity with the mobile map: record that a guest reached
@@ -623,7 +631,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       preferredLabel: widget.initialTargetLabel,
       minZoom: widget.initialZoom ?? 16,
     );
-    if (initialTarget.hasIdentity) {
+    if (widget.walkingNavigationIntent == null && initialTarget.hasIdentity) {
       unawaited(_mapTargetCoordinator.submit(initialTarget));
     }
     _selectedMarkerAnchorNotifier = _kubusMapController.selectedMarkerAnchor;
@@ -755,7 +763,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       // When initialCenter is provided (e.g. "Open on Map"), keep the camera focused on that target.
       final bool shouldAnimateToUser =
           widget.initialCenter == null && widget.autoFollow;
-      _refreshUserLocation(animate: shouldAnimateToUser);
+      _refreshUserLocation(
+        animate: shouldAnimateToUser,
+        requestPermission: widget.walkingNavigationIntent != null,
+      );
       _prefetchMarkerSubjects();
 
       // Desktop UX: show the nearby list in the functions sidebar (right panel)
@@ -1835,14 +1846,24 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             alignment: Alignment.topCenter,
             child: KubusWalkingNavigationPanel(
               navigation: navigation,
-              onEnd: () {
-                navigation.stop();
-                unawaited(_walkingLocationCoordinator.stop());
-              },
+              onEnd: () => _endWalkingNavigation(navigation),
               onResume: () => _resumeWalkingNavigation(navigation),
               onRetry: () => unawaited(
                 _retryWalkingNavigation(navigation),
               ),
+              onAllowLocation: () => unawaited(
+                _requestWalkingLocation(navigation),
+              ),
+              onOpenAppSettings: () => unawaited(
+                _openWalkingAppSettings(navigation),
+              ),
+              onOpenLocationSettings: () => unawaited(
+                _openWalkingLocationSettings(navigation),
+              ),
+              onUseExternalMaps: () => unawaited(
+                _openExternalWalking(navigation),
+              ),
+              onViewDestination: () => _viewWalkingDestination(navigation),
             ),
           ),
         );
@@ -1869,22 +1890,70 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     _kubusMapController.setAutoFollow(true);
     unawaited(_applyIsometricCamera(enabled: true));
     unawaited(_moveCamera(position, math.max(_cameraZoom, 18)));
+    WalkingNavigationDiagnostics.record('navigation_resumed');
+  }
+
+  void _endWalkingNavigation(WalkingNavigationProvider navigation) {
+    if (!navigation.stopOwned(_walkingNavigationLease)) return;
+    unawaited(_walkingLocationCoordinator.stop());
+    setState(() {
+      _autoFollow = false;
+      _isometricViewEnabled = false;
+    });
+    _kubusMapController.setAutoFollow(false);
+    _kubusMapController.dismissSelection();
+    unawaited(_applyIsometricCamera(enabled: false));
+  }
+
+  Future<void> _requestWalkingLocation(
+    WalkingNavigationProvider navigation,
+  ) async {
+    await navigation.retry(lease: _walkingNavigationLease);
+    if (!mounted) return;
+    await _refreshUserLocation(animate: true, requestPermission: true);
+  }
+
+  Future<void> _openWalkingAppSettings(
+    WalkingNavigationProvider navigation,
+  ) async {
+    await _walkingLocationApi.openAppSettings();
+    if (!mounted) return;
+    await _requestWalkingLocation(navigation);
+  }
+
+  Future<void> _openWalkingLocationSettings(
+    WalkingNavigationProvider navigation,
+  ) async {
+    await _walkingLocationApi.openLocationSettings();
+    if (!mounted) return;
+    await _requestWalkingLocation(navigation);
+  }
+
+  Future<void> _openExternalWalking(
+    WalkingNavigationProvider navigation,
+  ) async {
+    final intent = navigation.intent;
+    if (intent != null) await MapNavigation.openExternalWalking(intent);
+  }
+
+  void _viewWalkingDestination(WalkingNavigationProvider navigation) {
+    final destination = navigation.intent?.destination;
+    if (destination == null) return;
+    _kubusMapController.dismissSelection();
+    unawaited(_moveCamera(destination, math.max(_cameraZoom, 17)));
   }
 
   Future<void> _retryWalkingNavigation(
     WalkingNavigationProvider navigation,
   ) async {
-    if (navigation.currentPosition != null &&
-        navigation.failureKind !=
-            WalkingNavigationFailureKind.locationUnavailable) {
+    if (!navigation.needsLiveLocation) {
       await navigation.retry(lease: _walkingNavigationLease);
       return;
     }
-    await _refreshUserLocation(animate: true);
+    await navigation.retry(lease: _walkingNavigationLease);
+    await _refreshUserLocation(animate: true, requestPermission: true);
     if (!mounted) return;
-    if (_userLocation == null) {
-      navigation.reportLocationUnavailable(lease: _walkingNavigationLease);
-    } else {
+    if (!navigation.needsLiveLocation) {
       await navigation.retry(lease: _walkingNavigationLease);
     }
   }
@@ -2484,54 +2553,52 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     return map;
   }
 
-  Future<void> _refreshUserLocation({bool animate = false}) async {
+  Future<void> _refreshUserLocation({
+    bool animate = false,
+    bool requestPermission = false,
+  }) async {
     if (_isLocating) return;
     setState(() => _isLocating = true);
     try {
-      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        _walkingNavigationProvider?.reportLocationUnavailable(
-          lease: _walkingNavigationLease,
-        );
+      final navigation = _walkingNavigationProvider;
+      if (requestPermission && navigation?.isVisible == true) {
+        navigation!.beginLocationRequest(lease: _walkingNavigationLease);
+      }
+      final result = await _walkingLocationApi.acquireLiveFix(
+        requestPermission: requestPermission,
+      );
+      final fix = result.fix;
+      if (!result.isAvailable || fix == null) {
+        if (navigation?.isVisible == true) {
+          navigation!.reportLocationAccess(
+            result.status,
+            lease: _walkingNavigationLease,
+          );
+        }
         return;
       }
-      var permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
-        _walkingNavigationProvider?.reportLocationUnavailable(
-          lease: _walkingNavigationLease,
-        );
-        return;
-      }
-      final position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-        ),
-      ).timeout(const Duration(seconds: 12));
-      final current = LatLng(position.latitude, position.longitude);
+      final current = fix.position;
       if (!mounted) return;
       setState(() {
         _userLocation = current;
-        _userLocationAccuracyMeters = position.accuracy;
-        _userLocationTimestampMs = position.timestamp.millisecondsSinceEpoch;
+        _userLocationAccuracyMeters = fix.accuracyMeters;
+        _userLocationTimestampMs = fix.timestamp.millisecondsSinceEpoch;
         if (_autoFollow) {
           _cameraCenter = current;
         }
       });
       unawaited(_syncUserLocation());
-      final walkingNavigation = _walkingNavigationProvider;
+      final walkingNavigation = navigation;
       if (walkingNavigation != null && walkingNavigation.isVisible) {
         await walkingNavigation.updatePosition(
           current,
-          accuracyMeters: position.accuracy,
+          accuracyMeters: fix.accuracyMeters,
           lease: _walkingNavigationLease,
         );
         if (!mounted) return;
         _startWalkingPositionStream();
       }
+      WalkingNavigationDiagnostics.record('first_live_fix_acquired');
 
       final selectedMarker = _kubusMapController.selectedMarkerData;
       if (selectedMarker != null) {
@@ -2550,11 +2617,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       if (animate || _autoFollow) {
         _moveCamera(current, math.max(_effectiveZoom, 15));
       }
-    } catch (e) {
-      AppConfig.debugPrint('DesktopMapScreen: location fetch failed: $e');
-      _walkingNavigationProvider?.reportLocationUnavailable(
-        lease: _walkingNavigationLease,
-      );
     } finally {
       if (mounted) setState(() => _isLocating = false);
     }
@@ -2566,13 +2628,13 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       return;
     }
     _walkingLocationCoordinator.start(
-      onPosition: (position) {
+      onPosition: (fix) {
         if (!mounted) return;
-        final current = LatLng(position.latitude, position.longitude);
+        final current = fix.position;
         setState(() {
           _userLocation = current;
-          _userLocationAccuracyMeters = position.accuracy;
-          _userLocationTimestampMs = position.timestamp.millisecondsSinceEpoch;
+          _userLocationAccuracyMeters = fix.accuracyMeters;
+          _userLocationTimestampMs = fix.timestamp.millisecondsSinceEpoch;
         });
         unawaited(_syncUserLocation());
         final navigation = _walkingNavigationProvider;
@@ -2580,7 +2642,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           unawaited(
             navigation.updatePosition(
               current,
-              accuracyMeters: position.accuracy,
+              accuracyMeters: fix.accuracyMeters,
               lease: _walkingNavigationLease,
             ),
           );

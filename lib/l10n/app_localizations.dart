@@ -12773,6 +12773,8 @@ abstract class AppLocalizations {
   /// **'In development'**
   String get artDetailNavigationInDevelopment;
 
+  String get walkingNavigationBeta;
+
   /// No description provided for @walkingNavigationPreviewNotice.
   ///
   /// In en, this message translates to:
@@ -12785,11 +12787,15 @@ abstract class AppLocalizations {
   /// **'Finding your location…'**
   String get walkingNavigationWaitingForLocation;
 
+  String get walkingNavigationRequestingPermission;
+
   /// No description provided for @walkingNavigationCalculating.
   ///
   /// In en, this message translates to:
   /// **'Calculating a pedestrian route on this device…'**
   String get walkingNavigationCalculating;
+
+  String get walkingNavigationRerouting;
 
   /// No description provided for @walkingNavigationArrived.
   ///
@@ -12802,6 +12808,26 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'A walkable route could not be calculated.'**
   String get walkingNavigationRouteUnavailable;
+
+  String get walkingNavigationPermissionDenied;
+
+  String get walkingNavigationPermissionDeniedPermanently;
+
+  String get walkingNavigationServicesDisabled;
+
+  String get walkingNavigationLocationUnavailable;
+
+  String get walkingNavigationLocationTimedOut;
+
+  String get walkingNavigationNoRoute;
+
+  String get walkingNavigationRouteTooLong;
+
+  String get walkingNavigationRouteSourceTimeout;
+
+  String get walkingNavigationRouteNetworkFailure;
+
+  String get walkingNavigationRouteMalformed;
 
   /// No description provided for @walkingNavigationRetry.
   ///
@@ -12820,6 +12846,16 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'End'**
   String get walkingNavigationEnd;
+
+  String get walkingNavigationAllowLocation;
+
+  String get walkingNavigationOpenAppSettings;
+
+  String get walkingNavigationOpenLocationSettings;
+
+  String get walkingNavigationUseExternalMaps;
+
+  String get walkingNavigationViewDestination;
 
   /// No description provided for @walkingNavigationContinue.
   ///
