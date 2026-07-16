@@ -190,6 +190,26 @@ records, and mounts the Flutter build at `/app`. Validate raw responses with
 desktop and mobile sizes in Chromium and Firefox. The preview fixture exists
 only under `scripts/qa`; production always uses PostgreSQL.
 
+### Deployed canonical takeover smoke check
+
+After a production rollout, run the versioned smoke contract against a real
+eligible canonical entity and a real missing entity. It is deliberately opt-in:
+local development can keep takeover disabled, while a production activation
+fails closed when the renderer does not emit its complete takeover contract.
+
+```text
+PUBLIC_TAKEOVER_URL=https://app.kubus.site/en/artworks/<real-id>
+PUBLIC_TAKEOVER_MISSING_URL=https://app.kubus.site/en/artworks/<missing-id>
+EXPECT_PUBLIC_FLUTTER_TAKEOVER=true
+npm --prefix scripts/qa run qa:public-takeover
+```
+
+The check validates raw SSR content and canonical metadata, real 404 semantics,
+root JavaScript asset MIME types, the unregister-only service worker, exact
+entity-ready handoff in Chromium and Firefox, and that the browser retains the
+canonical localized URL. Set `EXPECT_PUBLIC_FLUTTER_TAKEOVER=false` only for
+the intentional pre-activation rollout phase.
+
 For the Flutter repository run `flutter test`, the QA contract tests under
 `scripts/qa`, `flutter analyze`, and `flutter build web --release`. For the
 backend run lint and Jest. The generated screenshots belong under

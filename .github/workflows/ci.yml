@@ -193,6 +193,8 @@ jobs:
           flutter build web --release \
             --build-name="${{ needs.build_metadata.outputs.version }}" \
             --build-number="${{ needs.build_metadata.outputs.build_number }}" \
+            --dart-define=PUBLIC_FLUTTER_TAKEOVER_ENABLED=true \
+            --dart-define=SEO_PUBLIC_PAGES_ENABLED=true \
             --dart-define-from-file=.dart_tool/public-build-defines.json
 
       - name: Pre-compress and checksum immutable web bundle

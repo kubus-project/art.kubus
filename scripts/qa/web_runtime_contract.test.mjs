@@ -306,6 +306,27 @@ test('production smoke verifies public HTML and unknown-route status', () => {
   assert.doesNotMatch(workflow, /deploy_sha=/);
 });
 
+test('deployed public takeover smoke remains opt-in and verifies the complete handoff', () => {
+  const smoke = readFileSync(
+    resolve(repoRoot, 'scripts', 'qa', 'public_flutter_takeover_smoke.mjs'),
+    'utf8',
+  );
+  const qaPackage = readFileSync(resolve(repoRoot, 'scripts', 'qa', 'package.json'), 'utf8');
+  const workflow = readFileSync(resolve(repoRoot, '.github', 'workflows', 'ci.yml'), 'utf8');
+
+  assert.match(qaPackage, /"qa:public-takeover": "node \.\/public_flutter_takeover_smoke\.mjs"/);
+  assert.match(smoke, /EXPECT_PUBLIC_FLUTTER_TAKEOVER/);
+  assert.match(smoke, /id=\["'\]public-document/);
+  assert.match(smoke, /id=\["'\]flutter-host/);
+  assert.match(smoke, /public_flutter_takeover\\\.js/);
+  assert.match(smoke, /flutter_bootstrap\\\.js/);
+  assert.match(smoke, /kubus:public-entity-ready/);
+  assert.match(smoke, /kubus-takeover-complete/);
+  assert.match(smoke, /flutter_service_worker\.js/);
+  assert.match(workflow, /--dart-define=PUBLIC_FLUTTER_TAKEOVER_ENABLED=true/);
+  assert.match(workflow, /--dart-define=SEO_PUBLIC_PAGES_ENABLED=true/);
+});
+
 test('web deployment retries SSH reachability before mutating the release root', () => {
   const workflow = readFileSync(
     resolve(repoRoot, '.github', 'workflows', 'deploy.yml'),
