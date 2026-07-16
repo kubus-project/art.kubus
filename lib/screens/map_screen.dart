@@ -5349,12 +5349,18 @@ class _MapScreenState extends State<MapScreen>
       switchOutCurve: panelMotion.curve,
       transitionBuilder: (child, anim) => FadeTransition(
         opacity: anim,
-        child: SizeTransition(
-          sizeFactor: anim,
-          // Anchor the reveal to the top edge so the panel grows downward from
-          // the search bar for a vertical size transition.
-          axisAlignment: -1,
+        child: AnimatedBuilder(
+          animation: anim,
           child: child,
+          builder: (context, child) => ClipRect(
+            child: Align(
+              // Keep the reveal anchored below the search bar across Flutter
+              // versions whose SizeTransition alignment API differs.
+              alignment: Alignment.topLeft,
+              heightFactor: anim.value,
+              child: child,
+            ),
+          ),
         ),
       ),
       child: _mapUiStateCoordinator.value.contextSurface ==
