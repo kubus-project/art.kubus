@@ -3997,7 +3997,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           accentColor: themeProvider.accentColor,
           onCenterOnMe: () {
             _kubusMapController.setAutoFollow(true);
-            _refreshUserLocation(animate: true);
+            _refreshUserLocation(animate: true, requestPermission: true);
             if (_userLocation == null) {
               unawaited(_moveCamera(const LatLng(46.0569, 14.5058), 15.0));
             }
