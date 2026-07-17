@@ -368,7 +368,18 @@ class ProfileProvider extends foundation.ChangeNotifier {
     final prefs = _prefs;
     if (prefs == null) return null;
     final persisted = prefs.getString(_personaKeyForWallet(wallet));
-    return UserPersonaX.tryParse(persisted);
+    final persistedPersona = UserPersonaX.tryParse(persisted);
+    if (persistedPersona != null) return persistedPersona;
+
+    // Established accounts (e.g. DAO-confirmed artists/institutions created
+    // before persona preferences existed) already declare their role on the
+    // profile itself — infer it instead of treating them as un-onboarded.
+    final user = _currentUser;
+    if (user != null) {
+      if (user.isInstitution) return UserPersona.institution;
+      if (user.isArtist) return UserPersona.creator;
+    }
+    return null;
   }
 
   bool get hasCompletedPersonaOnboarding {

@@ -325,22 +325,24 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                         SliverPadding(
                           padding: const EdgeInsets.all(DetailSpacing.xl),
                           sliver: SliverList(
+                            // Editorial rhythm: major zones breathe with the
+                            // larger card gap instead of packing tightly.
                             delegate: SliverChildListDelegate([
                               _buildArtInfo(artwork),
-                              const SizedBox(height: DetailSpacing.xl),
+                              const SizedBox(height: DetailSpacing.cardGap),
                               _buildGallerySection(artwork),
                               if (artwork.galleryUrls.isNotEmpty)
-                                const SizedBox(height: DetailSpacing.xl),
+                                const SizedBox(height: DetailSpacing.cardGap),
                               _buildDescription(artwork),
-                              const SizedBox(height: DetailSpacing.xl),
+                              const SizedBox(height: DetailSpacing.cardGap),
                               _buildSocialStats(artwork),
-                              const SizedBox(height: DetailSpacing.xl),
+                              const SizedBox(height: DetailSpacing.cardGap),
                               _buildActionButtons(
                                 artwork,
                                 isOwner: isOwner,
                                 canManage: canManage,
                               ),
-                              const SizedBox(height: DetailSpacing.xl),
+                              const SizedBox(height: DetailSpacing.cardGap),
                               if (AppConfig.isFeatureEnabled('collabInvites') &&
                                   isSignedIn) ...[
                                 CollaborationPanel(
@@ -436,8 +438,13 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
     final scheme = Theme.of(context).colorScheme;
     final coverUrl = ArtworkMediaResolver.resolveCover(artwork: artwork);
 
+    // Immersive, image-led opening: the artwork takes roughly half the
+    // viewport instead of a fixed 320px strip.
+    final screenHeight = MediaQuery.sizeOf(context).height;
+    final heroHeight = (screenHeight * 0.52).clamp(320.0, 520.0).toDouble();
+
     return SliverAppBar(
-      expandedHeight: 320,
+      expandedHeight: heroHeight,
       floating: false,
       pinned: true,
       backgroundColor: scheme.surface,
@@ -556,9 +563,23 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
   }
 
   Widget _buildArtInfo(Artwork artwork) {
+    final category = artwork.category.trim();
+    final showKicker = category.isNotEmpty && category != 'General';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Editorial opening: the category reads as a quiet kicker line above
+        // the title instead of competing as a chip below it.
+        if (showKicker) ...[
+          Text(
+            category.toUpperCase(),
+            style: DetailTypography.label(context).copyWith(
+              letterSpacing: 1.4,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: DetailSpacing.sm),
+        ],
         Text(
           artwork.title,
           style: KubusTextStyles.responsiveHeroTitle(context).copyWith(
@@ -571,12 +592,11 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
           artwork: artwork,
           style: DetailTypography.caption(context),
         ),
-        const SizedBox(height: DetailSpacing.lg),
+        const SizedBox(height: DetailSpacing.heroGap),
         Wrap(
           spacing: DetailSpacing.sm,
           runSpacing: DetailSpacing.sm,
           children: [
-            _buildInfoChip(Icons.category_outlined, artwork.category),
             if (artwork.arEnabled)
               _buildInfoChip(
                   Icons.view_in_ar_rounded, _arStatusLabel(artwork.arStatus)),
@@ -788,34 +808,34 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
 
   Widget _buildSocialStats(Artwork artwork) {
     final l10n = AppLocalizations.of(context)!;
-    return DetailCard(
-      padding: const EdgeInsets.symmetric(
-          vertical: DetailSpacing.lg, horizontal: DetailSpacing.md),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _buildStatItem(
-              Icons.favorite_rounded, artwork.likesCount, l10n.commonLikes),
-          _buildStatDivider(),
-          _buildStatItem(Icons.chat_bubble_outline_rounded,
-              artwork.commentsCount, l10n.commonComments),
-          _buildStatDivider(),
-          _buildStatItem(Icons.visibility_outlined, artwork.viewsCount,
-              l10n.artistGalleryStatViewsLabel),
-          _buildStatDivider(),
-          _buildStatItem(Icons.explore_outlined, artwork.discoveryCount,
-              l10n.profilePerformanceDiscoveriesTitle),
-        ],
-      ),
+    final scheme = Theme.of(context).colorScheme;
+    final hairline = Divider(
+      height: KubusSizes.hairline,
+      thickness: KubusSizes.hairline,
+      color: scheme.outlineVariant.withValues(alpha: 0.4),
     );
-  }
-
-  Widget _buildStatDivider() {
-    return Container(
-      height: 32,
-      width: 1,
-      color:
-          Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
+    // Quiet editorial figures between hairlines instead of another card box.
+    return Column(
+      children: [
+        hairline,
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: DetailSpacing.lg),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildStatItem(
+                  Icons.favorite_rounded, artwork.likesCount, l10n.commonLikes),
+              _buildStatItem(Icons.chat_bubble_outline_rounded,
+                  artwork.commentsCount, l10n.commonComments),
+              _buildStatItem(Icons.visibility_outlined, artwork.viewsCount,
+                  l10n.artistGalleryStatViewsLabel),
+              _buildStatItem(Icons.explore_outlined, artwork.discoveryCount,
+                  l10n.profilePerformanceDiscoveriesTitle),
+            ],
+          ),
+        ),
+        hairline,
+      ],
     );
   }
 

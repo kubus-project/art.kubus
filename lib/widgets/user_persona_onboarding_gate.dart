@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../models/dao.dart';
+import '../models/user_persona.dart';
+import '../providers/dao_provider.dart';
 import '../providers/profile_provider.dart';
 import '../services/onboarding_state_service.dart';
 import 'user_persona_onboarding_sheet.dart';
@@ -52,6 +55,30 @@ class _UserPersonaOnboardingGateState extends State<UserPersonaOnboardingGate> {
       }
 
       if (!profile.needsPersonaOnboarding) return;
+
+      // Established accounts must never see the picker: if the wallet has an
+      // approved DAO artist/institution review (older accounts may carry the
+      // role only there, not on the profile flags), silently persist the
+      // matching persona instead of prompting.
+      DAOProvider? daoProvider;
+      try {
+        daoProvider = context.read<DAOProvider>();
+      } catch (_) {
+        daoProvider = null; // Not registered in some embeddings/tests.
+      }
+      final review = daoProvider?.findReviewForWallet(wallet);
+      if (review != null && review.isApproved) {
+        final inferred = review.isInstitutionApplication
+            ? UserPersona.institution
+            : review.isArtistApplication
+                ? UserPersona.creator
+                : null;
+        if (inferred != null) {
+          unawaited(profile.setUserPersona(inferred));
+          unawaited(profile.markPersonaOnboardingSeen(walletAddress: wallet));
+          return;
+        }
+      }
 
       final prefs = await SharedPreferences.getInstance();
       final flowScopeKey = OnboardingStateService.buildAuthOnboardingScopeKey(

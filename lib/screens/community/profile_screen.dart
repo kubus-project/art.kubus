@@ -239,10 +239,18 @@ class _ProfileScreenState extends State<ProfileScreen>
                           bottomSpacing: DetailSpacing.xl,
                         ),
                       ),
-                      // Cultural content leads the profile: saved art,
-                      // highlights and posts come before the metrics zone
-                      // (badges, stats, performance), so the page reads as an
-                      // identity rather than an account dashboard.
+                      _buildStatsSection(),
+                      const SliverToBoxAdapter(
+                          child: SizedBox(height: DetailSpacing.xxl)),
+                      SliverToBoxAdapter(
+                        child: ProfileBadgesVerificationSection(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: DetailSpacing.lg,
+                          ),
+                        ),
+                      ),
+                      const SliverToBoxAdapter(
+                          child: SizedBox(height: DetailSpacing.xl)),
                       SliverToBoxAdapter(child: _buildSavedArtworksSection()),
                       const SliverToBoxAdapter(
                           child: SizedBox(height: DetailSpacing.xl)),
@@ -261,12 +269,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                       ),
                       const SliverToBoxAdapter(
                           child: SizedBox(height: DetailSpacing.xl)),
-                      SliverToBoxAdapter(child: _buildPostsSection()),
-                      if (isArtist) ...[
-                        const SliverToBoxAdapter(
-                            child: SizedBox(height: DetailSpacing.xl)),
-                        SliverToBoxAdapter(child: _buildArtistEventsShowcase()),
-                      ],
+                      SliverToBoxAdapter(child: _buildPerformanceStats()),
                       const SliverToBoxAdapter(
                           child: SizedBox(height: DetailSpacing.lg)),
                       SliverToBoxAdapter(
@@ -282,19 +285,12 @@ class _ProfileScreenState extends State<ProfileScreen>
                       ),
                       const SliverToBoxAdapter(
                           child: SizedBox(height: DetailSpacing.lg)),
-                      SliverToBoxAdapter(
-                        child: ProfileBadgesVerificationSection(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: DetailSpacing.lg,
-                          ),
-                        ),
-                      ),
-                      const SliverToBoxAdapter(
-                          child: SizedBox(height: DetailSpacing.xl)),
-                      _buildStatsSection(),
-                      const SliverToBoxAdapter(
-                          child: SizedBox(height: DetailSpacing.xl)),
-                      SliverToBoxAdapter(child: _buildPerformanceStats()),
+                      SliverToBoxAdapter(child: _buildPostsSection()),
+                      if (isArtist) ...[
+                        const SliverToBoxAdapter(
+                            child: SizedBox(height: DetailSpacing.xl)),
+                        SliverToBoxAdapter(child: _buildArtistEventsShowcase()),
+                      ],
                       const SliverToBoxAdapter(
                           child: SizedBox(height: DetailSpacing.xxl)),
                       const SliverToBoxAdapter(
@@ -732,26 +728,30 @@ class _ProfileScreenState extends State<ProfileScreen>
                     ),
                     SizedBox(height: isSmallScreen ? 6 : 8),
                     if (web3Provider.hasWalletIdentity) ...[
+                      // Technical identity stays quiet: a compact neutral
+                      // pill instead of an accent-framed centerpiece.
                       Container(
-                        padding: EdgeInsets.symmetric(
-                            horizontal: isSmallScreen ? 12 : 16,
-                            vertical: isSmallScreen ? 6 : 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: KubusSpacing.sm + KubusSpacing.xs,
+                          vertical: KubusSpacing.xs,
+                        ),
                         decoration: BoxDecoration(
-                          color:
-                              themeProvider.accentColor.withValues(alpha: 0.1),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest
+                              .withValues(alpha: 0.45),
                           borderRadius: BorderRadius.circular(KubusRadius.sm),
-                          border: Border.all(
-                            color: themeProvider.accentColor
-                                .withValues(alpha: 0.3),
-                          ),
+                          border: KubusBorders.hairline(context),
                         ),
                         child: Text(
                           web3Provider
                               .formatAddress(web3Provider.walletAddress),
-                          style: KubusTypography.inter(
-                            fontSize: isSmallScreen ? 12 : 14,
-                            fontWeight: FontWeight.w600,
-                            color: themeProvider.accentColor,
+                          style: KubusTextStyles.navMetaLabel.copyWith(
+                            fontFamily: 'RobotoMono',
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.62),
                           ),
                         ),
                       ),
@@ -1778,12 +1778,6 @@ class _ProfileScreenState extends State<ProfileScreen>
               publicCounters['artworks'] ?? stats?.artworksCreated;
           final nftsOwnedValue =
               publicCounters['nftsMinted'] ?? stats?.nftsOwned;
-          final followersValue = publicCounters['followers'] ??
-              stats?.followersCount ??
-              profileProvider.followersCount;
-          final followingValue = publicCounters['following'] ??
-              stats?.followingCount ??
-              profileProvider.followingCount;
           final publicStreetArtAddedValue =
               publicCounters['publicStreetArtAdded'];
 
@@ -1803,10 +1797,6 @@ class _ProfileScreenState extends State<ProfileScreen>
               : nftsOwnedValue == null
                   ? '\u2014'
                   : _formatCount(nftsOwnedValue);
-          final followersLabel =
-              publicLoading ? '\u2026' : _formatCount(followersValue);
-          final followingLabel =
-              publicLoading ? '\u2026' : _formatCount(followingValue);
           final publicStreetArtAddedLabel = publicLoading
               ? '\u2026'
               : publicStreetArtAddedValue == null
@@ -1864,18 +1854,14 @@ class _ProfileScreenState extends State<ProfileScreen>
                   Icons.location_on,
                   null),
               const SizedBox(height: 12),
+              // Followers/Following intentionally omitted here — the stats
+              // grid above already shows both; performance keeps only the
+              // metrics that appear nowhere else on the page.
               _buildPerformanceCard(
                   AppLocalizations.of(context)!
                       .profilePerformanceCreatedOwnedTitle,
                   '$createdLabel / $ownedLabel',
                   Icons.auto_fix_high,
-                  null),
-              const SizedBox(height: 12),
-              _buildPerformanceCard(
-                  AppLocalizations.of(context)!
-                      .profilePerformanceFollowersFollowingTitle,
-                  '$followersLabel / $followingLabel',
-                  Icons.group,
                   null),
               const SizedBox(height: 12),
               _buildPerformanceCard(

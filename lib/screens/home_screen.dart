@@ -642,12 +642,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       );
     }
 
+    // Persona-aware hierarchy: artists and institutions get their working
+    // dashboard first (stats, then quick actions); art lovers get discovery
+    // rails first with quick actions directly after them.
+    final currentUser = context.read<ProfileProvider>().currentUser;
+    final dashboardFirst = (currentUser?.isArtist ?? false) ||
+        (currentUser?.isInstitution ?? false);
+
     sections.add(animated(_buildWelcomeSection(headerDisplayName)));
     sections.add(SizedBox(height: spacing));
-    // Discovery first: the editorial art/exhibition/event rails lead the
-    // page; utility shortcuts, stats and wallet modules follow them.
-    sections.add(animated(_buildHomeRails()));
-    sections.add(SizedBox(height: spacing));
+    if (!dashboardFirst) {
+      sections.add(animated(_buildHomeRails()));
+      sections.add(SizedBox(height: spacing));
+    }
     if (desktopGuidedLayout) {
       sections.add(
         animated(
@@ -681,6 +688,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
         ),
       );
+    } else if (dashboardFirst) {
+      sections.add(animated(_buildStatsCards()));
+      sections.add(SizedBox(height: spacing));
+      sections.add(animated(_buildQuickActions()));
+      sections.add(SizedBox(height: spacing));
+      sections.add(animated(_buildWeb3Section()));
+      sections.add(SizedBox(height: spacing));
+      sections.add(animated(_buildRecentActivity()));
     } else {
       sections.add(animated(_buildQuickActions()));
       sections.add(SizedBox(height: spacing));
@@ -689,6 +704,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       sections.add(animated(_buildWeb3Section()));
       sections.add(SizedBox(height: spacing));
       sections.add(animated(_buildRecentActivity()));
+    }
+    if (dashboardFirst) {
+      sections.add(SizedBox(height: spacing));
+      sections.add(animated(_buildHomeRails()));
     }
     sections.add(SizedBox(height: spacing));
     sections.add(animated(const SupportSectionCard()));

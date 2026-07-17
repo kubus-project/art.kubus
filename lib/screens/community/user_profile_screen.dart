@@ -35,6 +35,7 @@ import '../../widgets/institution_badge.dart';
 import '../../widgets/community/community_post_card.dart';
 import '../../widgets/empty_state_card.dart';
 import '../../widgets/profile_artist_info_fields.dart';
+import '../../widgets/common/kubus_glass_icon_button.dart';
 import '../../widgets/common/kubus_stat_card.dart';
 import '../../widgets/common/kubus_screen_header.dart';
 import '../../widgets/detail/detail_shell_components.dart';
@@ -430,10 +431,6 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                     isInstitution: isInstitution,
                   ),
                   const SizedBox(height: DetailSpacing.md),
-                  // The primary relationship actions (follow/message) sit
-                  // directly under the identity header, above any counters.
-                  _buildActionButtons(themeProvider, l10n),
-                  const SizedBox(height: DetailSpacing.lg),
                   _buildStatsRow(l10n),
                   const SizedBox(height: DetailSpacing.md),
                   _buildAddedPublicArtSection(l10n),
@@ -729,6 +726,8 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                       ],
                     ),
                   ),
+                  const SizedBox(width: KubusSpacing.sm),
+                  _buildCompactHeaderActions(themeProvider, l10n),
                 ],
               ),
             ),
@@ -899,174 +898,150 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     return scheme.secondary;
   }
 
-  Widget _buildActionButtons(
+  Future<void> _openMessageConversation(AppLocalizations l10n) async {
+    final authenticated = await const ContextualAuthGate().ensureAuthenticated(
+      context,
+      actionLabel: l10n.userProfileMessageButtonLabel.toLowerCase(),
+      returnRoute: '/u/${Uri.encodeComponent(widget.userId)}',
+    );
+    if (!authenticated || !mounted) return;
+    final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+    // navigator variable no longer used; ConversationNavigator handles
+    // navigation.
+    final messenger = ScaffoldMessenger.of(context);
+    final chatAuth = chatProvider.isAuthenticated;
+    try {
+      final conv = await chatProvider.createConversation('', false, [user!.id]);
+      if (conv != null) {
+        if (!mounted) return;
+        final preloaded = Provider.of<ChatProvider>(context, listen: false)
+            .getPreloadedProfileMapsForConversation(conv.id);
+        // Ensure we pass non-empty members and sensible fallbacks for
+        // avatars / display names.
+        final rawMembers =
+            (preloaded['members'] as List<dynamic>?)?.cast<String>() ??
+                <String>[];
+        final members = rawMembers.isNotEmpty ? rawMembers : <String>[user!.id];
+        final rawAvatars = (preloaded['avatars'] as Map<String, String?>?) ??
+            <String, String?>{};
+        final avatars = Map<String, String?>.from(rawAvatars);
+        if (!avatars.containsKey(members.first) ||
+            (avatars[members.first] == null ||
+                avatars[members.first]!.isEmpty)) {
+          avatars[members.first] = user!.profileImageUrl;
+        }
+        final rawNames = (preloaded['names'] as Map<String, String?>?) ??
+            <String, String?>{};
+        final names = Map<String, String?>.from(rawNames);
+        if (!names.containsKey(members.first) ||
+            (names[members.first] == null || names[members.first]!.isEmpty)) {
+          names[members.first] = user!.name;
+        }
+        await ConversationNavigator.openConversationWithPreload(
+          context,
+          conv,
+          preloadedMembers: members,
+          preloadedAvatars: avatars,
+          preloadedDisplayNames: names,
+        );
+      } else {
+        if (!chatAuth) {
+          if (mounted) {
+            messenger.showKubusSnackBar(
+              SnackBar(
+                content: Text(l10n.userProfileMessageLoginRequiredToast),
+              ),
+            );
+          }
+        } else {
+          if (mounted) {
+            messenger.showKubusSnackBar(
+              SnackBar(
+                content: Text(l10n.userProfileConversationOpenFailedToast),
+              ),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('UserProfileScreen: failed to open conversation: $e');
+      if (!mounted) return;
+      messenger.showKubusSnackBar(
+        SnackBar(
+          content: Text(l10n.userProfileConversationOpenGenericErrorToast),
+        ),
+      );
+    }
+  }
+
+  /// Compact follow + message pair rendered beside the name on the cover
+  /// photo, replacing the old full-width action row further down the page.
+  Widget _buildCompactHeaderActions(
       ThemeProvider themeProvider, AppLocalizations l10n) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 12),
-      child: Row(
-        children: [
-          Expanded(
-            child: ScaleTransition(
-              scale: _followButtonAnimation,
-              child: ElevatedButton(
-                onPressed: _isFollowMutationInFlight ? null : _toggleFollow,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: user!.isFollowing
-                      ? Theme.of(context).colorScheme.surface
-                      : themeProvider.accentColor,
-                  foregroundColor: user!.isFollowing
-                      ? Theme.of(context).colorScheme.onSurface
-                      : Colors.white,
-                  side: user!.isFollowing
-                      ? BorderSide(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.2),
-                          width: 1.5,
-                        )
-                      : null,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  elevation: user!.isFollowing ? 0 : 2,
-                  shadowColor: Colors.black.withValues(alpha: 0.1),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(KubusRadius.md),
-                  ),
-                ),
-                child: _isFollowMutationInFlight
-                    ? SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: InlineLoading(
-                            tileSize: 4,
-                            color: user!.isFollowing
-                                ? Theme.of(context).colorScheme.onSurface
-                                : Colors.white),
-                      )
-                    : Text(
-                        user!.isFollowing
-                            ? l10n.userProfileFollowingButton
-                            : l10n.userProfileFollowButton,
-                        style: KubusTextStyles.actionTileTitle,
-                      ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          ElevatedButton(
-            onPressed: _isFollowMutationInFlight
-                ? null
-                : () async {
-                    final authenticated =
-                        await const ContextualAuthGate().ensureAuthenticated(
-                      context,
-                      actionLabel:
-                          l10n.userProfileMessageButtonLabel.toLowerCase(),
-                      returnRoute: '/u/${Uri.encodeComponent(widget.userId)}',
-                    );
-                    if (!authenticated || !mounted) return;
-                    final chatProvider =
-                        Provider.of<ChatProvider>(context, listen: false);
-                    // navigator variable no longer used; ConversationNavigator handles navigation
-                    final messenger = ScaffoldMessenger.of(context);
-                    final chatAuth = chatProvider.isAuthenticated;
-                    try {
-                      final conv = await chatProvider
-                          .createConversation('', false, [user!.id]);
-                      if (conv != null) {
-                        if (!mounted) return;
-                        final preloaded = Provider.of<ChatProvider>(context,
-                                listen: false)
-                            .getPreloadedProfileMapsForConversation(conv.id);
-                        // Ensure we pass non-empty members and sensible fallbacks for avatars / display names
-                        final rawMembers =
-                            (preloaded['members'] as List<dynamic>?)
-                                    ?.cast<String>() ??
-                                <String>[];
-                        final members = rawMembers.isNotEmpty
-                            ? rawMembers
-                            : <String>[user!.id];
-                        final rawAvatars =
-                            (preloaded['avatars'] as Map<String, String?>?) ??
-                                <String, String?>{};
-                        final avatars = Map<String, String?>.from(rawAvatars);
-                        if (!avatars.containsKey(members.first) ||
-                            (avatars[members.first] == null ||
-                                avatars[members.first]!.isEmpty)) {
-                          avatars[members.first] = user!.profileImageUrl;
-                        }
-                        final rawNames =
-                            (preloaded['names'] as Map<String, String?>?) ??
-                                <String, String?>{};
-                        final names = Map<String, String?>.from(rawNames);
-                        if (!names.containsKey(members.first) ||
-                            (names[members.first] == null ||
-                                names[members.first]!.isEmpty)) {
-                          names[members.first] = user!.name;
-                        }
-                        await ConversationNavigator.openConversationWithPreload(
-                          context,
-                          conv,
-                          preloadedMembers: members,
-                          preloadedAvatars: avatars,
-                          preloadedDisplayNames: names,
-                        );
-                      } else {
-                        if (!chatAuth) {
-                          if (mounted) {
-                            messenger.showKubusSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  l10n.userProfileMessageLoginRequiredToast,
-                                ),
-                              ),
-                            );
-                          }
-                        } else {
-                          if (mounted) {
-                            messenger.showKubusSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  l10n.userProfileConversationOpenFailedToast,
-                                ),
-                              ),
-                            );
-                          }
-                        }
-                      }
-                    } catch (e) {
-                      debugPrint(
-                          'UserProfileScreen: failed to open conversation: $e');
-                      if (!mounted) return;
-                      messenger.showKubusSnackBar(
-                        SnackBar(
-                          content: Text(
-                            l10n.userProfileConversationOpenGenericErrorToast,
-                          ),
-                        ),
-                      );
-                    }
-                  },
+    final scheme = Theme.of(context).colorScheme;
+    final isFollowing = user!.isFollowing;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ScaleTransition(
+          scale: _followButtonAnimation,
+          child: ElevatedButton(
+            onPressed: _isFollowMutationInFlight ? null : _toggleFollow,
             style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.surface,
-              foregroundColor: Theme.of(context).colorScheme.onSurface,
-              side: BorderSide(
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.2),
-                width: 1.5,
+              backgroundColor: isFollowing
+                  ? scheme.surface.withValues(alpha: 0.94)
+                  : themeProvider.accentColor,
+              foregroundColor:
+                  isFollowing ? scheme.onSurface : themeProvider.onAccentColor,
+              side: isFollowing
+                  ? BorderSide(
+                      color: scheme.onSurface.withValues(alpha: 0.2),
+                      width: 1.5,
+                    )
+                  : null,
+              padding: const EdgeInsets.symmetric(
+                horizontal: KubusSpacing.md,
+                vertical: KubusSpacing.sm,
               ),
-              elevation: 0,
-              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+              minimumSize: const Size(0, 36),
+              visualDensity: VisualDensity.compact,
+              elevation: isFollowing ? 0 : 2,
+              shadowColor: Colors.black.withValues(alpha: 0.1),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(KubusRadius.md),
+                borderRadius: BorderRadius.circular(KubusRadius.xl),
               ),
             ),
-            child: const Icon(Icons.message),
+            child: _isFollowMutationInFlight
+                ? SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: InlineLoading(
+                      tileSize: 4,
+                      color: isFollowing
+                          ? scheme.onSurface
+                          : themeProvider.onAccentColor,
+                    ),
+                  )
+                : Text(
+                    isFollowing
+                        ? l10n.userProfileFollowingButton
+                        : l10n.userProfileFollowButton,
+                    style: KubusTextStyles.actionTileSubtitle.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
           ),
-        ],
-      ),
+        ),
+        const SizedBox(width: KubusSpacing.sm),
+        KubusGlassIconButton(
+          icon: Icons.message_outlined,
+          size: 36,
+          tooltip: l10n.userProfileMessageButtonLabel,
+          onPressed: _isFollowMutationInFlight
+              ? null
+              : () => unawaited(_openMessageConversation(l10n)),
+        ),
+      ],
     );
   }
 
@@ -1090,7 +1065,9 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       publicProgress: _profileController.package?.achievementProgress,
       publicDefinitions: _profileController.package?.achievementDefinitions,
       padding: const EdgeInsets.symmetric(horizontal: 24),
-      showWhenEmpty: true,
+      // Visitors should not scroll past an empty-state card for a
+      // section the profile owner has no content in.
+      showWhenEmpty: false,
     );
   }
 
