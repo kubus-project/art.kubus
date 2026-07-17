@@ -340,23 +340,11 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                               ? KubusSpacing.lg
                               : KubusSpacing.md,
                         ),
-                        // Actions lead on wide screens (left, next to the
-                        // identity card) and precede the counters on narrow
-                        // ones — the relationship action is the profile's
-                        // primary CTA, not the stats.
+                        // Stats and action buttons in a row on wide screens
                         if (isWide)
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              SizedBox(
-                                width: 320,
-                                child: _buildActionButtons(
-                                  themeProvider,
-                                  l10n,
-                                  isCommunityOverlay: isCommunityOverlay,
-                                ),
-                              ),
-                              const SizedBox(width: KubusSpacing.lg),
                               Expanded(
                                 child: _buildStatsCards(
                                   themeProvider,
@@ -365,11 +353,21 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                                   isCommunityOverlay: isCommunityOverlay,
                                 ),
                               ),
+                              const SizedBox(width: KubusSpacing.lg),
+                              SizedBox(
+                                width: 320,
+                                child: _buildActionButtons(
+                                  themeProvider,
+                                  l10n,
+                                  isCommunityOverlay: isCommunityOverlay,
+                                ),
+                              ),
                             ],
                           )
                         else ...[
-                          _buildActionButtons(
+                          _buildStatsCards(
                             themeProvider,
+                            isLarge,
                             l10n,
                             isCommunityOverlay: isCommunityOverlay,
                           ),
@@ -378,9 +376,8 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                                 ? KubusSpacing.sm + KubusSpacing.xs
                                 : KubusSpacing.md,
                           ),
-                          _buildStatsCards(
+                          _buildActionButtons(
                             themeProvider,
-                            isLarge,
                             l10n,
                             isCommunityOverlay: isCommunityOverlay,
                           ),
@@ -1561,7 +1558,9 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       dataState: _profileController.achievementPreviewDataState,
       publicProgress: _profileController.package?.achievementProgress,
       publicDefinitions: _profileController.package?.achievementDefinitions,
-      showWhenEmpty: true,
+      // Visitors should not scroll past an empty-state card for a
+      // section the profile owner has no content in.
+      showWhenEmpty: false,
     );
   }
 

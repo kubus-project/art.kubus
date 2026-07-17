@@ -610,6 +610,11 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     );
   }
 
+  bool get _dashboardFirst {
+    final user = context.read<ProfileProvider>().currentUser;
+    return (user?.isArtist ?? false) || (user?.isInstitution ?? false);
+  }
+
   Widget _buildMainContent(AppAnimationTheme animationTheme) {
     return AnimatedBuilder(
       animation: _animationController,
@@ -644,33 +649,55 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                   ),
                 ),
 
-                // Discovery first: the editorial rails lead the page;
-                // stats and shortcuts follow them.
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(DetailSpacing.xxl, 0,
-                        DetailSpacing.xxl, DetailSpacing.xxl),
-                    child: _buildHomeRails(),
+                // Persona-aware hierarchy: artists/institutions get their
+                // working dashboard first (stats, quick actions, then
+                // discovery); art lovers get discovery rails first with
+                // quick actions directly after them.
+                if (_dashboardFirst) ...[
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(DetailSpacing.xxl, 0,
+                          DetailSpacing.xxl, DetailSpacing.xxl),
+                      child: _buildStatsGrid(),
+                    ),
                   ),
-                ),
-
-                // Stats grid
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(DetailSpacing.xxl, 0,
-                        DetailSpacing.xxl, DetailSpacing.xxl),
-                    child: _buildStatsGrid(),
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(DetailSpacing.xxl, 0,
+                          DetailSpacing.xxl, DetailSpacing.xxl),
+                      child: _buildQuickActions(),
+                    ),
                   ),
-                ),
-
-                // Quick actions
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(DetailSpacing.xxl, 0,
-                        DetailSpacing.xxl, DetailSpacing.xxl),
-                    child: _buildQuickActions(),
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                          DetailSpacing.xxl, 0, DetailSpacing.xxl, 56),
+                      child: _buildHomeRails(),
+                    ),
                   ),
-                ),
+                ] else ...[
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(DetailSpacing.xxl, 0,
+                          DetailSpacing.xxl, DetailSpacing.xxl),
+                      child: _buildHomeRails(),
+                    ),
+                  ),
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(DetailSpacing.xxl, 0,
+                          DetailSpacing.xxl, DetailSpacing.xxl),
+                      child: _buildQuickActions(),
+                    ),
+                  ),
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                          DetailSpacing.xxl, 0, DetailSpacing.xxl, 56),
+                      child: _buildStatsGrid(),
+                    ),
+                  ),
+                ],
 
                 // Support / Donate
                 SliverToBoxAdapter(

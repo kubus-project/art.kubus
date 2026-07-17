@@ -894,22 +894,24 @@ class _ProfileScreenState extends State<ProfileScreen>
                 ),
                 if (web3Provider.hasWalletIdentity) ...[
                   const SizedBox(height: KubusSpacing.sm),
+                  // Technical identity stays quiet: a compact neutral pill
+                  // instead of an accent-framed centerpiece.
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: KubusSpacing.md,
-                      vertical: KubusSpacing.sm,
+                      horizontal: KubusSpacing.sm + KubusSpacing.xs,
+                      vertical: KubusSpacing.xs,
                     ),
                     decoration: BoxDecoration(
-                      color: themeProvider.accentColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(KubusRadius.xl),
-                      border: Border.all(
-                        color: themeProvider.accentColor.withValues(alpha: 0.3),
-                      ),
+                      color: scheme.surfaceContainerHighest
+                          .withValues(alpha: 0.45),
+                      borderRadius: BorderRadius.circular(KubusRadius.sm),
+                      border: KubusBorders.hairline(context),
                     ),
                     child: Text(
                       web3Provider.formatAddress(web3Provider.walletAddress),
-                      style: KubusTextStyles.detailLabel.copyWith(
-                        color: themeProvider.accentColor,
+                      style: KubusTextStyles.navMetaLabel.copyWith(
+                        fontFamily: 'RobotoMono',
+                        color: scheme.onSurface.withValues(alpha: 0.62),
                       ),
                     ),
                   ),

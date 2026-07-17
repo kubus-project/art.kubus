@@ -126,10 +126,15 @@ class _KubusStatCardState extends State<KubusStatCard>
             widget.minHeight > 0)
         ? (widget.minHeight - 6).clamp(0.0, double.infinity)
         : widget.minHeight;
+    // Stat tiles are liquid glass like every other card: the tint is
+    // surface-based with only a hint of the accent. Tinting with the raw
+    // accent made the tiles render as solid colored blocks (especially in
+    // the near-opaque no-blur fallback).
     final glassStyle = KubusGlassStyle.resolve(
       context,
       surfaceType: KubusGlassSurfaceType.card,
-      tintBase: widget.tintBase ?? effectiveAccent,
+      tintBase: widget.tintBase ??
+          (Color.lerp(scheme.surface, effectiveAccent, 0.10) ?? scheme.surface),
     );
     final content = Container(
       clipBehavior: Clip.antiAlias,
