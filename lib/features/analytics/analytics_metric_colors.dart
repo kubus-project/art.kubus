@@ -33,17 +33,20 @@ class AnalyticsMetricColors {
       case 'arSessions':
       case 'arEnabledArtworks':
         return roles.statTeal;
+      // Category colors deliberately avoid statCoral/statGreen: those roles
+      // double as negative/positive judgment colors, so using them for
+      // categories made trend deltas indistinguishable from metric identity.
       case 'posts':
       case 'comments':
       case 'shares':
       case 'eventsHosted':
       case 'exhibitions':
-        return roles.statCoral;
+        return roles.statPurple;
       case 'artworks':
       case 'publicStreetArtAdded':
       case 'collections':
       case 'exhibitionArtworks':
-        return roles.statGreen;
+        return roles.statBlue;
       case 'achievementsUnlocked':
       case 'achievementTokensTotal':
       case 'nftsMinted':
