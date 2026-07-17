@@ -210,6 +210,12 @@ entity-ready handoff in Chromium and Firefox, and that the browser retains the
 canonical localized URL. Set `EXPECT_PUBLIC_FLUTTER_TAKEOVER=false` only for
 the intentional pre-activation rollout phase.
 
+The `production-web` GitHub environment must define `PUBLIC_TAKEOVER_URL`,
+`PUBLIC_TAKEOVER_MISSING_URL`, and `EXPECT_PUBLIC_FLUTTER_TAKEOVER=true` once
+production activation is complete. The atomic web deployment then runs the
+same canonical smoke in Chromium and Firefox before finalizing a release; a
+failure invokes the existing web-release rollback.
+
 For the Flutter repository run `flutter test`, the QA contract tests under
 `scripts/qa`, `flutter analyze`, and `flutter build web --release`. For the
 backend run lint and Jest. The generated screenshots belong under
