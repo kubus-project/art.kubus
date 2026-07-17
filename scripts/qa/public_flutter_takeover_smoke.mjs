@@ -163,10 +163,15 @@ async function verifyBrowser(browserType, browserName) {
     ensure(state.active && state.complete, `${browserName} did not activate takeover classes`);
     ensure(state.ssrHidden === 'true', `${browserName} left SSR active after readiness`);
     ensure(state.hostHidden === null, `${browserName} left Flutter host hidden after readiness`);
+    const parsed = state.events.find((event) => event.name === 'kubus:public-entity-route-parsed');
     const ready = state.events.find((event) => event.name === 'kubus:public-entity-ready');
+    ensure(parsed, `${browserName} did not emit canonical route-parsed`);
     ensure(ready, `${browserName} did not emit entity-ready`);
+    ensure(parsed.detail?.id === entityId, `${browserName} route-parsed ID did not match requested URL`);
+    ensure(parsed.detail?.path === new URL(canonicalUrl).pathname, `${browserName} route-parsed path did not match requested URL`);
     ensure(ready.detail?.id === entityId, `${browserName} entity-ready ID did not match requested URL`);
     ensure(ready.detail?.path === new URL(canonicalUrl).pathname, `${browserName} entity-ready path did not match requested URL`);
+    ensure(parsed.detail?.type === ready.detail?.type, `${browserName} route-parsed type did not match entity-ready type`);
     ensure(page.url() === canonicalUrl, `${browserName} changed URL during takeover`);
     ensure(consoleErrors.length === 0, `${browserName} console errors: ${consoleErrors.join(' | ')}`);
     ensure(failedRequests.length === 0, `${browserName} failed requests: ${JSON.stringify(failedRequests)}`);

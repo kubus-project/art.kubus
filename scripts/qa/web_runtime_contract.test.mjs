@@ -321,6 +321,9 @@ test('deployed public takeover smoke remains opt-in and verifies the complete ha
   assert.match(smoke, /public_flutter_takeover\\\.js/);
   assert.match(smoke, /flutter_bootstrap\\\.js/);
   assert.match(smoke, /kubus:public-entity-ready/);
+  assert.match(smoke, /did not emit canonical route-parsed/);
+  assert.match(smoke, /route-parsed ID did not match requested URL/);
+  assert.match(smoke, /route-parsed path did not match requested URL/);
   assert.match(smoke, /kubus-takeover-complete/);
   assert.match(smoke, /flutter_service_worker\.js/);
   assert.match(workflow, /--dart-define=PUBLIC_FLUTTER_TAKEOVER_ENABLED=true/);
