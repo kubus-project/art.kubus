@@ -8,7 +8,7 @@ The app uses a bottom navigation bar (mobile) or side rail (desktop) with these 
 
 | Tab | Mobile Screen | Desktop Screen | Purpose |
 |-----|--------------|----------------|---------|
-| Home | `HomeScreen` | `DesktopHomeScreen` | Dashboard and discovery |
+| Home | `HomeScreen` | `DesktopHomeScreen` | Discovery rails and dashboard context |
 | Map | `MapScreen` | `DesktopMapScreen` | Interactive art map |
 | Community | `CommunityScreen` | `DesktopCommunityScreen` | Social feed and groups |
 | Web3 | `WalletHome` | `DesktopWalletScreen` | Wallet and marketplace |
@@ -19,14 +19,14 @@ The app uses a bottom navigation bar (mobile) or side rail (desktop) with these 
 
 ### Home
 
-**Purpose:** Main dashboard with activity feed, quick actions, and artwork discovery.
+**Purpose:** Art discovery entry point with editorial content rails, plus quick actions and account context.
 
 **Key Features:**
+- Editorial discovery rails (artworks, artists, institutions, events, exhibitions) lead the page on mobile and desktop
 - Recent activity feed with stats charts
 - Quick navigation to wallet, marketplace, and studio
-- Nearby artwork recommendations
 - Search functionality
-- Desktop-guided content hierarchy on wide layouts (actions + Web3 context balanced against stats + activity)
+- Desktop-guided content hierarchy on wide layouts (actions + Web3 context balanced against stats + activity), below the discovery rails
 
 **Files:**
 - Mobile: `lib/screens/home_screen.dart`
