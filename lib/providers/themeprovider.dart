@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:ui' show PlatformDispatcher;
 
 import '../utils/app_animations.dart';
+import '../utils/app_color_utils.dart';
 import '../utils/kubus_color_roles.dart';
 import '../utils/design_tokens.dart';
 
@@ -23,11 +24,10 @@ class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
   // Getters
   ThemeMode get themeMode => _themeMode;
   Color get accentColor => _accentColor;
-  // Returns a contrasting text color suitable for accentColor (onAccent)
-  Color get onAccentColor {
-    final brightness = ThemeData.estimateBrightnessForColor(_accentColor);
-    return brightness == Brightness.dark ? Colors.white : Colors.black;
-  }
+  // Returns a contrasting text color suitable for accentColor (onAccent).
+  // Uses the same WCAG-optimal resolver as the ColorScheme on* pairs so
+  // accent foregrounds agree everywhere.
+  Color get onAccentColor => AppColorUtils.onColor(_accentColor);
 
   bool get isInitialized => _isInitialized;
 
@@ -164,16 +164,30 @@ class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
           displayColor: KubusColors.textPrimaryDark,
         ),
         pageTransitionsTheme: AppAnimations.pageTransitionsTheme,
+        // Every container role declares its `on*` pair explicitly: the
+        // ColorScheme.dark defaults are black-on-dark for onPrimary and the
+        // on*Container roles, which is exactly the "Navigate button
+        // disappears" bug class. Accent foregrounds are contrast-computed so
+        // dark accents (deep blue, oxblood, slate) stay readable.
         colorScheme: ColorScheme.dark(
           primary: _accentColor,
+          onPrimary: AppColorUtils.onColor(_accentColor),
           secondary: _accentColor.withValues(alpha: 0.8),
+          onSecondary: AppColorUtils.onColor(_accentColor),
+          tertiary: _accentColor,
+          onTertiary: AppColorUtils.onColor(_accentColor),
           surface: KubusColors.surfaceDark,
           onSurface: KubusColors.textPrimaryDark,
           primaryContainer:
               const Color(0xFF1A1A1A), // Keep custom for now or make token
+          onPrimaryContainer: KubusColors.textPrimaryDark,
           secondaryContainer: const Color(0xFF2A2A2A),
+          onSecondaryContainer: KubusColors.textPrimaryDark,
+          tertiaryContainer: KubusColors.surfaceDarkElevated,
+          onTertiaryContainer: KubusColors.textPrimaryDark,
           outline: KubusColors.outlineDark,
           error: KubusColors.errorDark,
+          onError: AppColorUtils.onColor(KubusColors.errorDark),
         ),
         scaffoldBackgroundColor: KubusColors.backgroundDark,
         appBarTheme: AppBarTheme(
@@ -216,7 +230,7 @@ class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
             backgroundColor: _accentColor,
-            foregroundColor: KubusColors.textPrimaryDark,
+            foregroundColor: AppColorUtils.onColor(_accentColor),
             elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: KubusRadius.circular(KubusRadius.sm),
@@ -265,13 +279,24 @@ class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
           displayColor: KubusColors.textPrimaryLight,
         ),
         pageTransitionsTheme: AppAnimations.pageTransitionsTheme,
+        // Mirror of the dark scheme: explicit `on*` pairs with
+        // contrast-computed accent foregrounds (light accents like amber gold
+        // would otherwise get unreadable white text from the defaults).
         colorScheme: ColorScheme.light(
           primary: _accentColor,
+          onPrimary: AppColorUtils.onColor(_accentColor),
           secondary: _accentColor.withValues(alpha: 0.8),
+          onSecondary: AppColorUtils.onColor(_accentColor),
+          tertiary: _accentColor,
+          onTertiary: AppColorUtils.onColor(_accentColor),
           surface: KubusColors.surfaceLight,
           onSurface: KubusColors.textPrimaryLight,
           primaryContainer: const Color(0xFFF5F5F7),
+          onPrimaryContainer: KubusColors.textPrimaryLight,
           secondaryContainer: const Color(0xFFE5E5EA),
+          onSecondaryContainer: KubusColors.textPrimaryLight,
+          tertiaryContainer: const Color(0xFFE5E5EA),
+          onTertiaryContainer: KubusColors.textPrimaryLight,
           outline: KubusColors.outlineLight,
           error: KubusColors.error,
         ),
@@ -317,7 +342,7 @@ class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
             backgroundColor: _accentColor,
-            foregroundColor: Colors.white,
+            foregroundColor: AppColorUtils.onColor(_accentColor),
             elevation: 2,
             shape: RoundedRectangleBorder(
               borderRadius: KubusRadius.circular(KubusRadius.sm),

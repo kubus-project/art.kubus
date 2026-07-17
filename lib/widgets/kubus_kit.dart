@@ -7,6 +7,7 @@
 /// |---|---|
 /// | Screen background | `AnimatedGradientBackground` |
 /// | Glass panel/card | `LiquidGlassPanel` / `LiquidGlassCard` / `KubusCard` |
+/// | Long-form reading section (descriptions, bios, curatorial text) | `KubusReadingSurface` (never glass) |
 /// | Small floating glass (chips/info) | `FrostedContainer` |
 /// | Bottom sheet | `BackdropGlassSheet` (inside `showModalBottomSheet`) |
 /// | Dialog | `KubusAlertDialog` via `showKubusDialog` |
@@ -37,6 +38,7 @@ export 'common/kubus_badge.dart';
 export 'common/kubus_glass_chip.dart';
 export 'common/kubus_meter_bar.dart';
 export 'common/kubus_glass_icon_button.dart';
+export 'common/kubus_reading_surface.dart';
 export 'common/kubus_screen_header.dart';
 export 'common/kubus_stat_card.dart';
 export 'common/kubus_text_field.dart';

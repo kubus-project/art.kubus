@@ -1,12 +1,24 @@
 import 'package:flutter/material.dart';
 import '../providers/glass_capabilities_provider.dart';
+import '../utils/app_color_utils.dart';
 import '../utils/design_tokens.dart';
 import 'glass_components.dart';
 import 'inline_loading.dart';
 
 enum KubusButtonVariant {
+  /// Monochrome hero action (white-on-dark / dark-on-white).
   primary,
+
+  /// Quiet surface-tinted action.
   secondary,
+
+  /// Accent-filled emphasis action. The foreground is contrast-computed from
+  /// the actual fill so user-selectable dark accents can never produce a
+  /// dark-on-dark button.
+  accent,
+
+  /// Destructive action filled with the theme error color.
+  destructive,
 }
 
 /// Shared hover/press micro-interaction shell for kubus buttons.
@@ -120,42 +132,46 @@ class KubusButton extends StatelessWidget {
     final isEnabled = !isLoading && onPressed != null;
 
     final defaultBackground = switch (variant) {
-      KubusButtonVariant.primary => isDark
-          ? Colors.white
-          : KubusColors.surfaceDark,
+      KubusButtonVariant.primary =>
+        isDark ? Colors.white : KubusColors.surfaceDark,
       KubusButtonVariant.secondary =>
         scheme.surface.withValues(alpha: isDark ? 0.9 : 0.96),
+      KubusButtonVariant.accent => scheme.primary,
+      KubusButtonVariant.destructive => scheme.error,
     };
+    final effectiveBackground = backgroundColor ?? defaultBackground;
     final defaultForeground = switch (variant) {
       KubusButtonVariant.primary =>
         isDark ? KubusColors.surfaceDark : Colors.white,
       KubusButtonVariant.secondary => scheme.onSurface,
+      // Contrast is computed from the resolved fill (which may be a caller
+      // override), never assumed from the theme.
+      KubusButtonVariant.accent ||
+      KubusButtonVariant.destructive =>
+        AppColorUtils.onColor(effectiveBackground),
     };
-    final effectiveBackground = backgroundColor ?? defaultBackground;
     final effectiveForeground = foregroundColor ?? defaultForeground;
-    final glassTint = switch (variant) {
-      KubusButtonVariant.primary => effectiveBackground.withValues(
-          alpha: isEnabled ? (isDark ? 0.96 : 0.92) : (isDark ? 0.76 : 0.74),
-        ),
-      KubusButtonVariant.secondary => effectiveBackground.withValues(
-          alpha: isEnabled ? (isDark ? 0.92 : 0.98) : (isDark ? 0.74 : 0.82),
-        ),
-    };
+    final isFilled = variant == KubusButtonVariant.primary ||
+        variant == KubusButtonVariant.accent ||
+        variant == KubusButtonVariant.destructive;
+    final glassTint = isFilled
+        ? effectiveBackground.withValues(
+            alpha: isEnabled ? (isDark ? 0.96 : 0.92) : (isDark ? 0.76 : 0.74),
+          )
+        : effectiveBackground.withValues(
+            alpha: isEnabled ? (isDark ? 0.92 : 0.98) : (isDark ? 0.74 : 0.82),
+          );
     final radius = KubusRadius.circular(KubusRadius.sm);
-    final borderColor = switch (variant) {
-      KubusButtonVariant.primary =>
-        effectiveBackground.withValues(
-          alpha: isEnabled ? (isDark ? 0.72 : 0.30) : (isDark ? 0.34 : 0.18),
-        ),
-      KubusButtonVariant.secondary => scheme.outlineVariant.withValues(
-          alpha: isDark
-              ? (isEnabled ? 0.24 : 0.14)
-              : (isEnabled ? 0.16 : 0.10),
-        ),
-    };
+    final borderColor = isFilled
+        ? effectiveBackground.withValues(
+            alpha: isEnabled ? (isDark ? 0.72 : 0.30) : (isDark ? 0.34 : 0.18),
+          )
+        : scheme.outlineVariant.withValues(
+            alpha:
+                isDark ? (isEnabled ? 0.24 : 0.14) : (isEnabled ? 0.16 : 0.10),
+          );
 
-    final displayIcon =
-        isSuccess && !isLoading ? Icons.check_rounded : icon;
+    final displayIcon = isSuccess && !isLoading ? Icons.check_rounded : icon;
 
     Widget content = isLoading
         ? SizedBox(
@@ -189,7 +205,8 @@ class KubusButton extends StatelessWidget {
       style: ElevatedButton.styleFrom(
         backgroundColor: Colors.transparent,
         foregroundColor: effectiveForeground,
-        overlayColor: effectiveForeground.withValues(alpha: isDark ? 0.10 : 0.08),
+        overlayColor:
+            effectiveForeground.withValues(alpha: isDark ? 0.10 : 0.08),
         shadowColor: Colors.transparent,
         disabledBackgroundColor: Colors.transparent,
         disabledForegroundColor: effectiveForeground.withValues(alpha: 0.55),
@@ -216,7 +233,7 @@ class KubusButton extends StatelessWidget {
           )
         : DecoratedBox(
             decoration: BoxDecoration(
-              color: variant == KubusButtonVariant.primary
+              color: isFilled
                   ? effectiveBackground.withValues(
                       alpha: isEnabled ? 1.0 : 0.82,
                     )
@@ -229,9 +246,7 @@ class KubusButton extends StatelessWidget {
     final button = _KubusButtonInteraction(
       enabled: isEnabled,
       borderRadius: radius,
-      glowColor: variant == KubusButtonVariant.primary
-          ? effectiveBackground
-          : scheme.onSurface,
+      glowColor: isFilled ? effectiveBackground : scheme.onSurface,
       child: Container(
         decoration: BoxDecoration(
           borderRadius: radius,
@@ -331,7 +346,8 @@ class KubusOutlineButton extends StatelessWidget {
             style: OutlinedButton.styleFrom(
               foregroundColor: contentColor,
               backgroundColor: Colors.transparent,
-              overlayColor: contentColor.withValues(alpha: isDark ? 0.10 : 0.08),
+              overlayColor:
+                  contentColor.withValues(alpha: isDark ? 0.10 : 0.08),
               shadowColor: Colors.transparent,
               side: BorderSide.none,
               padding: const EdgeInsets.symmetric(

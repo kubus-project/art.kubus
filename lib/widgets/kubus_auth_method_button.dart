@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../providers/glass_capabilities_provider.dart';
+import '../utils/app_color_utils.dart';
 import '../utils/design_tokens.dart';
 import 'glass_components.dart';
 import 'inline_loading.dart';
@@ -331,41 +332,50 @@ class KubusAuthMethodButtonStyle {
     final scheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
 
+    // Auth methods only present the monochrome hero and quiet variants, but
+    // the shared enum now also carries accent/destructive; fills follow the
+    // same rules as KubusButton with contrast-computed foregrounds.
     final defaultBackground = switch (variant) {
       KubusButtonVariant.primary =>
         isDark ? Colors.white : KubusColors.surfaceDark,
       KubusButtonVariant.secondary =>
         scheme.surface.withValues(alpha: isDark ? 0.9 : 0.96),
+      KubusButtonVariant.accent => scheme.primary,
+      KubusButtonVariant.destructive => scheme.error,
     };
+    final effectiveBackground = backgroundColor ?? defaultBackground;
     final defaultForeground = switch (variant) {
       KubusButtonVariant.primary =>
         isDark ? KubusColors.surfaceDark : Colors.white,
       KubusButtonVariant.secondary => scheme.onSurface,
+      KubusButtonVariant.accent ||
+      KubusButtonVariant.destructive =>
+        AppColorUtils.onColor(effectiveBackground),
     };
-    final effectiveBackground = backgroundColor ?? defaultBackground;
     final effectiveForeground = foregroundColor ?? defaultForeground;
-    final glassTint = switch (variant) {
-      KubusButtonVariant.primary => effectiveBackground.withValues(
-          alpha: enabled ? (isDark ? 0.96 : 0.92) : (isDark ? 0.76 : 0.74),
-        ),
-      KubusButtonVariant.secondary => effectiveBackground.withValues(
-          alpha: enabled ? (isDark ? 0.92 : 0.98) : (isDark ? 0.74 : 0.82),
-        ),
-    };
+    final isFilled = variant != KubusButtonVariant.secondary;
+    final glassTint = isFilled
+        ? effectiveBackground.withValues(
+            alpha: enabled ? (isDark ? 0.96 : 0.92) : (isDark ? 0.76 : 0.74),
+          )
+        : effectiveBackground.withValues(
+            alpha: enabled ? (isDark ? 0.92 : 0.98) : (isDark ? 0.74 : 0.82),
+          );
     final resolvedBorderColor = borderColor ??
-        switch (variant) {
-          KubusButtonVariant.primary => effectiveBackground.withValues(
-              alpha: enabled ? (isDark ? 0.72 : 0.30) : (isDark ? 0.34 : 0.18),
-            ),
-          KubusButtonVariant.secondary => scheme.outlineVariant.withValues(
-              alpha: isDark ? (enabled ? 0.24 : 0.14) : (enabled ? 0.16 : 0.10),
-            ),
-        };
+        (isFilled
+            ? effectiveBackground.withValues(
+                alpha:
+                    enabled ? (isDark ? 0.72 : 0.30) : (isDark ? 0.34 : 0.18),
+              )
+            : scheme.outlineVariant.withValues(
+                alpha:
+                    isDark ? (enabled ? 0.24 : 0.14) : (enabled ? 0.16 : 0.10),
+              ));
 
     return KubusAuthMethodButtonStyle(
       foregroundColor: effectiveForeground,
       glassTint: glassTint,
-      fallbackColor: variant == KubusButtonVariant.primary
+      fallbackColor: isFilled
           ? effectiveBackground.withValues(alpha: enabled ? 1.0 : 0.82)
           : glassTint,
       borderColor: resolvedBorderColor,

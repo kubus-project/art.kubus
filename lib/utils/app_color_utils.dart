@@ -215,6 +215,22 @@ class AppColorUtils {
     return background.computeLuminance() > 0.5 ? Colors.black87 : Colors.white;
   }
 
+  /// WCAG-optimal foreground for a solid [background] fill.
+  ///
+  /// Picks pure white or pure black — whichever has the higher contrast
+  /// ratio against [background]. Unlike [contrastText] (a 0.5-luminance
+  /// heuristic for decorative text), this maximizes measured contrast and is
+  /// the canonical resolver for on-accent/on-fill roles (theme `on*` pairs,
+  /// accent-filled buttons). Guarantees >= 4.5:1 for every color in
+  /// `ThemeProvider.availableAccentColors` (enforced by
+  /// `test/utils/theme_scheme_contrast_test.dart`).
+  static Color onColor(Color background) {
+    final luminance = background.computeLuminance();
+    final whiteContrast = 1.05 / (luminance + 0.05);
+    final blackContrast = (luminance + 0.05) / 0.05;
+    return whiteContrast >= blackContrast ? Colors.white : Colors.black;
+  }
+
   /// Get icon for activity category (consistent across desktop/mobile)
   static IconData activityIcon(ActivityCategory category) {
     switch (category) {
