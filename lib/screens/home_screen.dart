@@ -413,18 +413,22 @@ class _HomeWeb3Card extends StatelessWidget {
               Positioned(
                 top: 0,
                 right: 0,
-                child: Container(
-                  padding: const EdgeInsets.all(3),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.withValues(alpha: 0.9),
-                    borderRadius: BorderRadius.circular(KubusRadius.sm),
-                  ),
-                  child: const Icon(
-                    Icons.lock,
-                    size: 10,
-                    color: Colors.white,
-                  ),
-                ),
+                child: Builder(builder: (context) {
+                  final lockedAccent =
+                      KubusColorRoles.of(context).lockedFeature;
+                  return Container(
+                    padding: const EdgeInsets.all(3),
+                    decoration: BoxDecoration(
+                      color: lockedAccent.withValues(alpha: 0.9),
+                      borderRadius: BorderRadius.circular(KubusRadius.sm),
+                    ),
+                    child: Icon(
+                      Icons.lock,
+                      size: 10,
+                      color: AppColorUtils.onColor(lockedAccent),
+                    ),
+                  );
+                }),
               ),
           ],
         ),
@@ -640,6 +644,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
     sections.add(animated(_buildWelcomeSection(headerDisplayName)));
     sections.add(SizedBox(height: spacing));
+    // Discovery first: the editorial art/exhibition/event rails lead the
+    // page; utility shortcuts, stats and wallet modules follow them.
+    sections.add(animated(_buildHomeRails()));
+    sections.add(SizedBox(height: spacing));
     if (desktopGuidedLayout) {
       sections.add(
         animated(
@@ -682,8 +690,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       sections.add(SizedBox(height: spacing));
       sections.add(animated(_buildRecentActivity()));
     }
-    sections.add(SizedBox(height: spacing));
-    sections.add(animated(_buildHomeRails()));
     sections.add(SizedBox(height: spacing));
     sections.add(animated(const SupportSectionCard()));
 
@@ -1050,6 +1056,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final isArtist = profileProvider.currentUser?.isArtist ?? false;
     final isInstitution = profileProvider.currentUser?.isInstitution ?? false;
 
+    // Foreground over the accent gradient is contrast-computed so light
+    // accents (amber gold, terracotta) never get unreadable white text.
+    final onAccent = themeProvider.onAccentColor;
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final isSmallScreen = constraints.maxWidth < 375;
@@ -1103,7 +1113,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 style: KubusTextStyles.responsiveHeroTitle(
                                   context,
                                   availableWidth: isSmallScreen ? 220 : 320,
-                                ).copyWith(color: Colors.white),
+                                ).copyWith(color: onAccent),
                                 maxLines: isSmallScreen ? 2 : 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -1133,7 +1143,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         Text(
                           l10n.homeWelcomeSubtitle,
                           style: KubusTextStyles.heroSubtitle.copyWith(
-                            color: Colors.white.withValues(alpha: 0.9),
+                            color: onAccent.withValues(alpha: 0.9),
                             fontStyle: FontStyle.italic,
                           ),
                         ),
@@ -1144,12 +1154,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     width: iconBox,
                     height: iconBox,
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
+                      color: onAccent.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(KubusRadius.lg),
                     ),
                     child: Icon(
                       Icons.view_in_ar,
-                      color: Colors.white,
+                      color: onAccent,
                       size: iconSize,
                     ),
                   ),
@@ -1202,8 +1212,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 ElevatedButton.icon(
                   onPressed: () => _showWalletOnboarding(context),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: AppColorUtils.tealAccent,
+                    backgroundColor: onAccent,
+                    foregroundColor: AppColorUtils.onColor(onAccent),
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(KubusRadius.md),
@@ -1238,45 +1248,49 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           MaterialPageRoute(builder: (context) => const WalletHome()),
         );
       },
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: KubusSpacing.sm + KubusSpacing.xs,
-          vertical: KubusSpacing.xs + KubusSpacing.xxs,
-        ),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.2),
-          borderRadius: BorderRadius.circular(KubusRadius.sm),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 16,
-              height: 16,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(KubusRadius.sm),
-              ),
-              child: Center(
-                child: Text(
-                  symbol == 'KUB8' ? 'K' : 'S',
-                  style: KubusTextStyles.badgeCount.copyWith(
-                    color: Provider.of<ThemeProvider>(context).accentColor,
+      child: Builder(builder: (context) {
+        final themeProvider = Provider.of<ThemeProvider>(context);
+        final onAccent = themeProvider.onAccentColor;
+        return Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: KubusSpacing.sm + KubusSpacing.xs,
+            vertical: KubusSpacing.xs + KubusSpacing.xxs,
+          ),
+          decoration: BoxDecoration(
+            color: onAccent.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(KubusRadius.sm),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 16,
+                height: 16,
+                decoration: BoxDecoration(
+                  color: onAccent,
+                  borderRadius: BorderRadius.circular(KubusRadius.sm),
+                ),
+                child: Center(
+                  child: Text(
+                    symbol == 'KUB8' ? 'K' : 'S',
+                    style: KubusTextStyles.badgeCount.copyWith(
+                      color: themeProvider.accentColor,
+                    ),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(width: KubusSpacing.xs + KubusSpacing.xxs),
-            Text(
-              '$amount $symbol',
-              style: KubusTextStyles.navMetaLabel.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
+              const SizedBox(width: KubusSpacing.xs + KubusSpacing.xxs),
+              Text(
+                '$amount $symbol',
+                style: KubusTextStyles.navMetaLabel.copyWith(
+                  color: onAccent,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-            ),
-          ],
-        ),
-      ),
+            ],
+          ),
+        );
+      }),
     );
   }
 
