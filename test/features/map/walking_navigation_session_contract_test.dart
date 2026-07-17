@@ -44,4 +44,38 @@ void main() {
           desktop.indexOf('return _buildMarkerOverlayLayer(', desktopStack)),
     );
   });
+
+  test('desktop recenter requests permission while initial load stays passive', () {
+    final desktop =
+        File('lib/screens/desktop/desktop_map_screen.dart').readAsStringSync();
+    final compactDesktop = desktop.replaceAll(RegExp(r'\s+'), ' ');
+
+    final recenterStart = compactDesktop.indexOf('onCenterOnMe: () {');
+    final recenterEnd = compactDesktop.indexOf(
+      'if (_userLocation == null)',
+      recenterStart,
+    );
+    expect(recenterStart, greaterThanOrEqualTo(0));
+    expect(recenterEnd, greaterThan(recenterStart));
+    expect(
+      compactDesktop.substring(recenterStart, recenterEnd),
+      contains(
+        '_refreshUserLocation(animate: true, requestPermission: true);',
+      ),
+    );
+
+    final initialRefreshStart = compactDesktop.indexOf(
+      'final bool shouldAnimateToUser',
+    );
+    final initialRefreshEnd = compactDesktop.indexOf(
+      '_prefetchMarkerSubjects()',
+      initialRefreshStart,
+    );
+    expect(initialRefreshStart, greaterThanOrEqualTo(0));
+    expect(initialRefreshEnd, greaterThan(initialRefreshStart));
+    expect(
+      compactDesktop.substring(initialRefreshStart, initialRefreshEnd),
+      contains('requestPermission: widget.walkingNavigationIntent != null'),
+    );
+  });
 }
