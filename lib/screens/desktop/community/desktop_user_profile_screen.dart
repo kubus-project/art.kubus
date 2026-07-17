@@ -340,20 +340,14 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                               ? KubusSpacing.lg
                               : KubusSpacing.md,
                         ),
-                        // Stats and action buttons in a row on wide screens
+                        // Actions lead on wide screens (left, next to the
+                        // identity card) and precede the counters on narrow
+                        // ones — the relationship action is the profile's
+                        // primary CTA, not the stats.
                         if (isWide)
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Expanded(
-                                child: _buildStatsCards(
-                                  themeProvider,
-                                  isLarge,
-                                  l10n,
-                                  isCommunityOverlay: isCommunityOverlay,
-                                ),
-                              ),
-                              const SizedBox(width: KubusSpacing.lg),
                               SizedBox(
                                 width: 320,
                                 child: _buildActionButtons(
@@ -362,12 +356,20 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                                   isCommunityOverlay: isCommunityOverlay,
                                 ),
                               ),
+                              const SizedBox(width: KubusSpacing.lg),
+                              Expanded(
+                                child: _buildStatsCards(
+                                  themeProvider,
+                                  isLarge,
+                                  l10n,
+                                  isCommunityOverlay: isCommunityOverlay,
+                                ),
+                              ),
                             ],
                           )
                         else ...[
-                          _buildStatsCards(
+                          _buildActionButtons(
                             themeProvider,
-                            isLarge,
                             l10n,
                             isCommunityOverlay: isCommunityOverlay,
                           ),
@@ -376,8 +378,9 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                                 ? KubusSpacing.sm + KubusSpacing.xs
                                 : KubusSpacing.md,
                           ),
-                          _buildActionButtons(
+                          _buildStatsCards(
                             themeProvider,
+                            isLarge,
                             l10n,
                             isCommunityOverlay: isCommunityOverlay,
                           ),
@@ -549,6 +552,14 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
+              if (user!.isVerified) ...[
+                const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
+                Icon(
+                  Icons.verified,
+                  color: Theme.of(context).colorScheme.primary,
+                  size: KubusHeaderMetrics.actionIcon,
+                ),
+              ],
               if (isArtist) ...[
                 const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
                 const ArtistBadge(),
@@ -970,6 +981,16 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
+                              // Verification renders consistently with the
+                              // mobile public profile.
+                              if (user!.isVerified) ...[
+                                const SizedBox(width: KubusSpacing.sm),
+                                Icon(
+                                  Icons.verified,
+                                  color: themeProvider.accentColor,
+                                  size: KubusHeaderMetrics.actionIcon,
+                                ),
+                              ],
                               if (isArtist) ...[
                                 const SizedBox(width: KubusSpacing.sm),
                                 const ArtistBadge(),

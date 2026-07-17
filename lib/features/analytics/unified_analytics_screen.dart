@@ -559,8 +559,8 @@ class _UnifiedAnalyticsScreenState extends State<UnifiedAnalyticsScreen> {
     if (trend != null) {
       insights.add(
         AnalyticsInsightData(
-        title: trend >= 0 ? 'Momentum improved' : 'Momentum softened',
-        description:
+          title: trend >= 0 ? 'Momentum improved' : 'Momentum softened',
+          description:
               '$metricLabel is ${_formatChange(trend)} versus the previous period.',
           icon: trend >= 0
               ? Icons.arrow_upward_outlined

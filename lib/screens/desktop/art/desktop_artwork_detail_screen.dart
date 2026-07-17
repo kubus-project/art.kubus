@@ -33,6 +33,7 @@ import '../../../widgets/inline_loading.dart';
 import '../../../widgets/detail/detail_shell_components.dart';
 import '../../../widgets/detail/artwork_engagement_sections.dart';
 import '../../web3/artist/artwork_ar_manager_screen.dart';
+import '../../../widgets/common/kubus_reading_surface.dart';
 import '../../../widgets/common/kubus_screen_header.dart';
 import '../../../widgets/common/marker_attribution_section.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
@@ -440,8 +441,11 @@ class _DesktopArtworkDetailScreenState
 
     return LayoutBuilder(
       builder: (context, constraints) {
+        // Image-led: let the cover fill the pane width at its natural 14:9
+        // framing instead of capping it at a 320px strip. The upper clamp
+        // only guards ultra-wide panes.
         final tunedCoverHeight =
-            (constraints.maxWidth / (14 / 9)).clamp(220.0, 320.0).toDouble();
+            (constraints.maxWidth / (14 / 9)).clamp(260.0, 620.0).toDouble();
         return ArtworkGalleryView(
           imageUrls: [primaryCover],
           height: tunedCoverHeight,
@@ -671,6 +675,7 @@ class _DesktopArtworkDetailScreenState
   }
 
   Widget _buildDescription(Artwork artwork) {
+    final l10n = AppLocalizations.of(context)!;
     final text = (artwork.description).trim();
     final hasAttribution =
         ((artwork.imageAttribution ?? '').trim().isNotEmpty) ||
@@ -678,14 +683,15 @@ class _DesktopArtworkDetailScreenState
     if (text.isEmpty && !hasAttribution) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.only(top: DetailSpacing.lg),
-      child: DetailCard(
+      // Long-form reading content belongs on the quiet tonal surface, not on
+      // glass, so curatorial text stays comfortable to read.
+      child: KubusReadingSurface(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SectionHeader(title: 'Description'),
+            SectionHeader(title: l10n.commonDescription),
             const SizedBox(height: DetailSpacing.sm),
-            if (text.isNotEmpty)
-              Text(text, style: DetailTypography.body(context)),
+            if (text.isNotEmpty) ExpandableDetailText(text: text),
             // Photo author / licence attribution, below the description.
             MarkerAttributionSection.fromArtwork(artwork),
           ],
@@ -787,6 +793,8 @@ class _DesktopArtworkDetailScreenState
         AppConfig.isFeatureEnabled('streetArtClaims') &&
             markerIdCandidate.isNotEmpty;
 
+    // Navigate is the accent-filled primary location action (mirrors mobile);
+    // Show on map stays available as a quiet secondary chip.
     return DetailActionsSection(
       title: l10n.commonActions,
       maxVisibleActions: 5,
@@ -794,10 +802,14 @@ class _DesktopArtworkDetailScreenState
           ? SizedBox(
               width: double.infinity,
               child: DetailActionButton(
-                icon: Icons.map_outlined,
-                label: l10n.artDetailShowOnMap,
-                onPressed: () =>
-                    ArtworkLocationActions.showOnMap(context, artwork),
+                icon: Icons.navigation_rounded,
+                label: l10n.commonNavigate,
+                onPressed: () => unawaited(
+                  ArtworkLocationActions.showNavigationOptions(
+                    context,
+                    artwork,
+                  ),
+                ),
                 backgroundColor: Theme.of(context).colorScheme.primary,
                 foregroundColor: Theme.of(context).colorScheme.onPrimary,
               ),
@@ -817,12 +829,10 @@ class _DesktopArtworkDetailScreenState
       actions: [
         if (hasLocation)
           DetailSecondaryAction(
-            icon: Icons.navigation_outlined,
-            label: l10n.commonNavigate,
-            onTap: () => unawaited(
-              ArtworkLocationActions.showNavigationOptions(context, artwork),
-            ),
-            tooltip: l10n.commonNavigate,
+            icon: Icons.map_outlined,
+            label: l10n.artDetailShowOnMap,
+            onTap: () => ArtworkLocationActions.showOnMap(context, artwork),
+            tooltip: l10n.artDetailShowOnMap,
           ),
         if (hasLocation && showArPrimaryAction)
           DetailSecondaryAction(

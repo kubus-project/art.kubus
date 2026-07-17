@@ -239,18 +239,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                           bottomSpacing: DetailSpacing.xl,
                         ),
                       ),
-                      _buildStatsSection(),
-                      const SliverToBoxAdapter(
-                          child: SizedBox(height: DetailSpacing.xxl)),
-                      SliverToBoxAdapter(
-                        child: ProfileBadgesVerificationSection(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: DetailSpacing.lg,
-                          ),
-                        ),
-                      ),
-                      const SliverToBoxAdapter(
-                          child: SizedBox(height: DetailSpacing.xl)),
+                      // Cultural content leads the profile: saved art,
+                      // highlights and posts come before the metrics zone
+                      // (badges, stats, performance), so the page reads as an
+                      // identity rather than an account dashboard.
                       SliverToBoxAdapter(child: _buildSavedArtworksSection()),
                       const SliverToBoxAdapter(
                           child: SizedBox(height: DetailSpacing.xl)),
@@ -269,7 +261,12 @@ class _ProfileScreenState extends State<ProfileScreen>
                       ),
                       const SliverToBoxAdapter(
                           child: SizedBox(height: DetailSpacing.xl)),
-                      SliverToBoxAdapter(child: _buildPerformanceStats()),
+                      SliverToBoxAdapter(child: _buildPostsSection()),
+                      if (isArtist) ...[
+                        const SliverToBoxAdapter(
+                            child: SizedBox(height: DetailSpacing.xl)),
+                        SliverToBoxAdapter(child: _buildArtistEventsShowcase()),
+                      ],
                       const SliverToBoxAdapter(
                           child: SizedBox(height: DetailSpacing.lg)),
                       SliverToBoxAdapter(
@@ -285,12 +282,19 @@ class _ProfileScreenState extends State<ProfileScreen>
                       ),
                       const SliverToBoxAdapter(
                           child: SizedBox(height: DetailSpacing.lg)),
-                      SliverToBoxAdapter(child: _buildPostsSection()),
-                      if (isArtist) ...[
-                        const SliverToBoxAdapter(
-                            child: SizedBox(height: DetailSpacing.xl)),
-                        SliverToBoxAdapter(child: _buildArtistEventsShowcase()),
-                      ],
+                      SliverToBoxAdapter(
+                        child: ProfileBadgesVerificationSection(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: DetailSpacing.lg,
+                          ),
+                        ),
+                      ),
+                      const SliverToBoxAdapter(
+                          child: SizedBox(height: DetailSpacing.xl)),
+                      _buildStatsSection(),
+                      const SliverToBoxAdapter(
+                          child: SizedBox(height: DetailSpacing.xl)),
+                      SliverToBoxAdapter(child: _buildPerformanceStats()),
                       const SliverToBoxAdapter(
                           child: SizedBox(height: DetailSpacing.xxl)),
                       const SliverToBoxAdapter(

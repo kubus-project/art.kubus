@@ -35,6 +35,7 @@ import '../../widgets/home/home_promotion_rail.dart';
 import '../../widgets/profile_identity_summary.dart';
 import '../../utils/app_animations.dart';
 import '../../utils/activity_navigation.dart';
+import '../../utils/artwork_media_resolver.dart';
 import '../../utils/artwork_navigation.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/design_tokens.dart';
@@ -196,8 +197,9 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     if (walletAddress.trim().isEmpty) return;
     await Clipboard.setData(ClipboardData(text: walletAddress.trim()));
     if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
     ScaffoldMessenger.of(context).showKubusSnackBar(
-      const SnackBar(content: Text('Wallet address copied')),
+      SnackBar(content: Text(l10n.walletHomeAddressCopiedToast)),
     );
   }
 
@@ -642,6 +644,16 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                   ),
                 ),
 
+                // Discovery first: the editorial rails lead the page;
+                // stats and shortcuts follow them.
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(DetailSpacing.xxl, 0,
+                        DetailSpacing.xxl, DetailSpacing.xxl),
+                    child: _buildHomeRails(),
+                  ),
+                ),
+
                 // Stats grid
                 SliverToBoxAdapter(
                   child: Padding(
@@ -657,14 +669,6 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                     padding: const EdgeInsets.fromLTRB(DetailSpacing.xxl, 0,
                         DetailSpacing.xxl, DetailSpacing.xxl),
                     child: _buildQuickActions(),
-                  ),
-                ),
-
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                        DetailSpacing.xxl, 0, DetailSpacing.xxl, 56),
-                    child: _buildHomeRails(),
                   ),
                 ),
 
@@ -696,6 +700,15 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     );
     final isArtist = user?.isArtist ?? false;
     final isInstitution = user?.isInstitution ?? false;
+    // Same live network pill as mobile home: label from the provider and
+    // theme-role colors instead of a hardcoded orange DEVNET badge.
+    final scheme = Theme.of(context).colorScheme;
+    final networkName = web3Provider.currentNetwork.trim();
+    final networkLabel = networkName.isEmpty
+        ? l10n.commonNotAvailableShort
+        : networkName.toUpperCase();
+    final isMainnet = networkLabel == 'MAINNET';
+    final networkColor = isMainnet ? scheme.tertiary : scheme.secondary;
 
     return Container(
       padding: const EdgeInsets.all(DetailSpacing.xxl),
@@ -782,23 +795,23 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                                         vertical: KubusSpacing.xxs,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: Colors.orange
-                                            .withValues(alpha: 0.1),
+                                        color: networkColor.withValues(
+                                          alpha: 0.12,
+                                        ),
                                         borderRadius: BorderRadius.circular(
                                           KubusRadius.sm,
                                         ),
                                         border: KubusBorders.accentTint(
-                                          KubusColorRoles.of(context)
-                                              .warningAction,
+                                          networkColor,
                                         ),
                                       ),
                                       child: Text(
-                                        'DEVNET',
+                                        networkLabel,
                                         style: KubusTypography
                                             .textTheme.labelSmall
                                             ?.copyWith(
                                           fontWeight: FontWeight.w700,
-                                          color: Colors.orange,
+                                          color: networkColor,
                                         ),
                                       ),
                                     ),
@@ -1490,6 +1503,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
           );
         }
         if (rails.isEmpty) {
+          final l10n = AppLocalizations.of(context)!;
           final locale = Localizations.localeOf(context).languageCode;
           final hasError = (promotionProvider.error ?? '').trim().isNotEmpty;
           return EmptyStateCard(
@@ -1497,13 +1511,13 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                 ? Icons.campaign_outlined
                 : Icons.auto_awesome_mosaic_outlined,
             title: hasError
-                ? 'Home rails unavailable'
-                : 'Discovery rails are warming up',
+                ? l10n.homeRailsUnavailableTitle
+                : l10n.homeRailsWarmingTitle,
             description: hasError
-                ? 'We could not load ranked home rails right now.'
-                : 'Featured artworks, artists, institutions, events, and exhibitions will appear here once ranked content is available.',
+                ? l10n.homeRailsUnavailableDescription
+                : l10n.homeRailsWarmingDescription,
             showAction: hasError,
-            actionLabel: hasError ? 'Retry' : null,
+            actionLabel: hasError ? l10n.commonRetry : null,
             onAction: hasError
                 ? () {
                     context.read<PromotionProvider>().loadHomeRails(
@@ -1536,33 +1550,26 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     HomeRail rail,
     List<HomeRailItem> items,
   ) {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    // Localized titles shared with mobile home; icon accents come from theme
+    // roles instead of raw amber.
     final title = switch (rail.entityType) {
-      PromotionEntityType.artwork => 'Artworks',
-      PromotionEntityType.profile => 'Artists',
-      PromotionEntityType.institution => 'Institutions',
-      PromotionEntityType.event => 'Events',
-      PromotionEntityType.exhibition => 'Exhibitions',
-    };
-    final subtitle = switch (rail.entityType) {
-      PromotionEntityType.artwork =>
-        'Most viewed, interacted, and promoted artworks',
-      PromotionEntityType.profile =>
-        'Artist profiles ranked by activity and promotion',
-      PromotionEntityType.institution =>
-        'Institutions with active momentum and promotion',
-      PromotionEntityType.event => 'Upcoming and promoted events',
-      PromotionEntityType.exhibition => 'Upcoming and promoted exhibitions',
+      PromotionEntityType.artwork => l10n.homeRailArtworksTitle,
+      PromotionEntityType.profile => l10n.homeRailArtistsTitle,
+      PromotionEntityType.institution => l10n.homeRailInstitutionsTitle,
+      PromotionEntityType.event => l10n.homeRailEventsTitle,
+      PromotionEntityType.exhibition => l10n.homeRailExhibitionsTitle,
     };
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         DesktopSectionHeader(
           title: title,
-          subtitle: subtitle,
           icon: _iconForHomeRail(rail.entityType),
           iconColor: rail.entityType == PromotionEntityType.artwork
               ? AppColorUtils.tealAccent
-              : Colors.amber,
+              : scheme.primary,
         ),
         const SizedBox(height: DetailSpacing.xl),
         HomePromotionRailList(
@@ -1890,7 +1897,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
             const SizedBox(height: 12),
             if (isLoading)
               Center(
-                child: InlineLoading(tileSize: 4, color: themeProvider.accentColor),
+                child: InlineLoading(
+                    tileSize: 4, color: themeProvider.accentColor),
               )
             else if (hasError)
               DesktopCard(
@@ -1948,6 +1956,26 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     );
   }
 
+  Widget _trendingArtIconFallback() {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColorUtils.tealAccent.withValues(alpha: 0.4),
+            AppColorUtils.tealAccent.withValues(alpha: 0.15),
+          ],
+        ),
+      ),
+      child: Center(
+        child: Icon(
+          Icons.view_in_ar,
+          color: AppColorUtils.tealAccent,
+          size: 24,
+        ),
+      ),
+    );
+  }
+
   Widget _buildTrendingArtItem(
       _TrendingArtEntry entry, ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
@@ -1963,24 +1991,20 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
       borderRadius: BorderRadius.circular(DetailRadius.md),
       child: Row(
         children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  AppColorUtils.tealAccent.withValues(alpha: 0.4),
-                  AppColorUtils.tealAccent.withValues(alpha: 0.15),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(DetailRadius.sm),
-            ),
-            child: Center(
-              child: Icon(
-                Icons.view_in_ar,
-                color: AppColorUtils.tealAccent,
-                size: 24,
-              ),
+          // Trending art shows the artwork itself; the icon box is only the
+          // fallback for entries without resolvable media.
+          ClipRRect(
+            borderRadius: BorderRadius.circular(DetailRadius.sm),
+            child: SizedBox(
+              width: 48,
+              height: 48,
+              child: (entry.imageUrl != null && entry.imageUrl!.isNotEmpty)
+                  ? Image.network(
+                      entry.imageUrl!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => _trendingArtIconFallback(),
+                    )
+                  : _trendingArtIconFallback(),
             ),
           ),
           const SizedBox(width: DetailSpacing.md),
@@ -2081,7 +2105,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
             const SizedBox(height: DetailSpacing.md),
             if (isLoading)
               Center(
-                child: InlineLoading(tileSize: 4, color: themeProvider.accentColor),
+                child: InlineLoading(
+                    tileSize: 4, color: themeProvider.accentColor),
               )
             else if (hasError)
               DesktopCard(
@@ -2787,6 +2812,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         hasAR: art.arEnabled,
         score: _trendingScore(art),
         creatorWallet: wallet.isEmpty ? null : wallet,
+        imageUrl: ArtworkMediaResolver.resolveCover(artwork: art),
       ));
     }
 
@@ -2834,6 +2860,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         final authorLine = formatted.secondary == null
             ? formatted.primary
             : '${formatted.primary} • ${formatted.secondary!}';
+        final referencedArtwork = artworkMap[artId];
         entries.add(
           _TrendingArtEntry(
             id: artId,
@@ -2841,9 +2868,14 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
             title: ref.title,
             subtitle: authorLine,
             likes: post.likeCount,
-            hasAR: artworkMap[artId]?.arEnabled ?? true,
+            hasAR: referencedArtwork?.arEnabled ?? true,
             score: boost,
             creatorWallet: wallet.isEmpty ? null : wallet,
+            imageUrl: referencedArtwork == null
+                ? null
+                : ArtworkMediaResolver.resolveCover(
+                    artwork: referencedArtwork,
+                  ),
           ),
         );
       }
@@ -2948,6 +2980,7 @@ class _TrendingArtEntry {
   final bool hasAR;
   final double score;
   final String? creatorWallet;
+  final String? imageUrl;
 
   const _TrendingArtEntry({
     required this.id,
@@ -2958,6 +2991,7 @@ class _TrendingArtEntry {
     this.hasAR = false,
     required this.score,
     this.creatorWallet,
+    this.imageUrl,
   });
 
   _TrendingArtEntry copyWith({
@@ -2967,6 +3001,7 @@ class _TrendingArtEntry {
     bool? hasAR,
     double? score,
     String? creatorWallet,
+    String? imageUrl,
   }) {
     return _TrendingArtEntry(
       id: id,
@@ -2977,6 +3012,7 @@ class _TrendingArtEntry {
       hasAR: hasAR ?? this.hasAR,
       score: score ?? this.score,
       creatorWallet: creatorWallet ?? this.creatorWallet,
+      imageUrl: imageUrl ?? this.imageUrl,
     );
   }
 }

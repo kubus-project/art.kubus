@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../utils/app_color_utils.dart';
 import '../../utils/design_tokens.dart';
 import '../common/kubus_screen_header.dart';
 import '../glass_components.dart';
@@ -304,11 +305,11 @@ class DetailPrimaryCtaButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final resolvedForeground = foregroundColor ??
-        (ThemeData.estimateBrightnessForColor(backgroundColor) ==
-                Brightness.dark
-            ? KubusColors.textPrimaryDark
-            : KubusColors.textPrimaryLight);
+    // WCAG-optimal resolver (shared with the theme's on* pairs); the previous
+    // estimateBrightnessForColor heuristic picked white on mid-tone accents
+    // like amber gold, which lands below AA contrast.
+    final resolvedForeground =
+        foregroundColor ?? AppColorUtils.onColor(backgroundColor);
 
     return ElevatedButton.icon(
       onPressed: onPressed,
@@ -809,8 +810,7 @@ class DetailManagementSection extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
 
     return DetailCard(
-      backgroundColor:
-          scheme.surfaceContainerHighest.withValues(alpha: 0.24),
+      backgroundColor: scheme.surfaceContainerHighest.withValues(alpha: 0.24),
       child: DetailSection(
         title: title,
         collapsible: true,

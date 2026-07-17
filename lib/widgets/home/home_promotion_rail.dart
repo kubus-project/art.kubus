@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/promotion.dart';
+import '../../utils/kubus_color_roles.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../widgets/glass_components.dart';
 import '../../widgets/profile_identity_summary.dart';
@@ -13,7 +14,8 @@ typedef HomePromotionSubtitleBuilder = Widget? Function(
 
 typedef HomePromotionTapHandler = void Function(HomeRailItem item);
 
-typedef HomePromotionIconBuilder = IconData Function(PromotionEntityType entityType);
+typedef HomePromotionIconBuilder = IconData Function(
+    PromotionEntityType entityType);
 
 class HomePromotionRailList extends StatelessWidget {
   const HomePromotionRailList({
@@ -82,8 +84,7 @@ class HomePromotionRailList extends StatelessWidget {
                   enableHover: enableHover,
                   onTap: onItemTap == null ? null : () => onItemTap!(item),
                   subtitle: subtitleBuilder?.call(context, item),
-                  placeholderIcon:
-                      placeholderIconBuilder.call(item.entityType),
+                  placeholderIcon: placeholderIconBuilder.call(item.entityType),
                   profileFallbackLabel: profileFallbackLabel,
                   titleStyle: titleStyle,
                   subtitleStyle: subtitleStyle,
@@ -163,9 +164,8 @@ class _HomePromotionRailCardState extends State<_HomePromotionRailCard> {
       duration: const Duration(milliseconds: 180),
       curve: Curves.easeOutCubic,
       width: widget.width,
-      transform: _isHovered
-          ? Matrix4.translationValues(0, -2, 0)
-          : Matrix4.identity(),
+      transform:
+          _isHovered ? Matrix4.translationValues(0, -2, 0) : Matrix4.identity(),
       decoration: BoxDecoration(
         borderRadius: borderRadius,
         border: Border.all(
@@ -207,8 +207,10 @@ class _HomePromotionRailCardState extends State<_HomePromotionRailCard> {
     return MouseRegion(
       cursor:
           widget.onTap != null ? SystemMouseCursors.click : MouseCursor.defer,
-      onEnter: widget.enableHover ? (_) => setState(() => _isHovered = true) : null,
-      onExit: widget.enableHover ? (_) => setState(() => _isHovered = false) : null,
+      onEnter:
+          widget.enableHover ? (_) => setState(() => _isHovered = true) : null,
+      onExit:
+          widget.enableHover ? (_) => setState(() => _isHovered = false) : null,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: widget.onTap,
@@ -247,10 +249,14 @@ class _HomePromotionRailCardState extends State<_HomePromotionRailCard> {
                   ),
                 ),
                 if (widget.item.promotion.isPromoted)
-                  const Positioned(
+                  Positioned(
                     top: 10,
                     left: 10,
-                    child: Icon(Icons.star, color: Colors.amber, size: 18),
+                    child: Icon(
+                      Icons.star,
+                      color: KubusColorRoles.of(context).achievementGold,
+                      size: 18,
+                    ),
                   ),
               ],
             ),
@@ -317,10 +323,14 @@ class _HomePromotionRailCardState extends State<_HomePromotionRailCard> {
             ),
           ),
           if (widget.item.promotion.isPromoted)
-            const Positioned(
+            Positioned(
               top: 12,
               left: 12,
-              child: Icon(Icons.star, color: Colors.amber, size: 18),
+              child: Icon(
+                Icons.star,
+                color: KubusColorRoles.of(context).achievementGold,
+                size: 18,
+              ),
             ),
           Positioned.fill(
             child: Padding(

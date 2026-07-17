@@ -20252,6 +20252,18 @@ abstract class AppLocalizations {
   /// **'Institution'**
   String get commonInstitution;
 
+  /// Label for the artist identity badge.
+  ///
+  /// In en, this message translates to:
+  /// **'Artist'**
+  String get badgeArtistLabel;
+
+  /// Label for the institution identity badge.
+  ///
+  /// In en, this message translates to:
+  /// **'Institution'**
+  String get badgeInstitutionLabel;
+
   /// No description provided for @commonDetails.
   ///
   /// In en, this message translates to:

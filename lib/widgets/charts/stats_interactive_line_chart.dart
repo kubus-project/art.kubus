@@ -116,7 +116,7 @@ class StatsInteractiveLineChart extends StatelessWidget {
                             return Padding(
                               padding: const EdgeInsets.only(right: 6),
                               child: Text(
-                                value.round().toString(),
+                                _compactAxisLabel(value),
                                 style: KubusTextStyles.navMetaLabel.copyWith(
                                   color:
                                       scheme.onSurface.withValues(alpha: 0.65),
@@ -298,5 +298,26 @@ class StatsInteractiveLineChart extends StatelessWidget {
     if (count <= 14) return 2;
     if (count <= 30) return 5;
     return (count / 6).ceilToDouble();
+  }
+
+  /// Compact left-axis labels (1.5K, 2M) so large values never overflow the
+  /// reserved axis column as seven-digit strings.
+  static String _compactAxisLabel(double value) {
+    final rounded = value.round();
+    final abs = rounded.abs();
+    if (abs >= 1000000) {
+      final compact = rounded / 1000000;
+      return '${_trimTrailingZero(compact)}M';
+    }
+    if (abs >= 1000) {
+      final compact = rounded / 1000;
+      return '${_trimTrailingZero(compact)}K';
+    }
+    return rounded.toString();
+  }
+
+  static String _trimTrailingZero(double value) {
+    final text = value.toStringAsFixed(1);
+    return text.endsWith('.0') ? text.substring(0, text.length - 2) : text;
   }
 }

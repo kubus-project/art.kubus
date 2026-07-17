@@ -4582,6 +4582,8 @@
   "commonExhibition": "Razstava",
   "commonCollection": "Zbirka",
   "commonInstitution": "Institucija",
+  "badgeArtistLabel": "Umetnik",
+  "badgeInstitutionLabel": "Institucija",
   "commonDetails": "Podrobnosti",
   "communitySubjectLinkedLabel": "Povezano: {subjectType}",
   "@communitySubjectLinkedLabel": {

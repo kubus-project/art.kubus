@@ -28,6 +28,7 @@ import '../../utils/artwork_media_resolver.dart';
 import '../../utils/app_color_utils.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../widgets/collaboration_panel.dart';
+import '../../widgets/common/kubus_reading_surface.dart';
 import '../../widgets/detail/detail_shell_components.dart';
 import '../../widgets/detail/poap_detail_card.dart';
 import '../../utils/artwork_navigation.dart';
@@ -181,14 +182,18 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
     );
   }
 
-  List<Widget> _buildHeaderActions(
+  // Labeled quiet actions matching the event detail pattern, so the two
+  // detail screens present one action vocabulary instead of bare icons here.
+  List<DetailSecondaryAction> _buildHeaderActions(
     AppLocalizations l10n,
     Exhibition ex,
   ) {
     return [
-      IconButton(
+      DetailSecondaryAction(
+        icon: Icons.inbox_outlined,
+        label: l10n.eventDetailInvitesLabel,
         tooltip: l10n.exhibitionDetailInvitesTooltip,
-        onPressed: () {
+        onTap: () {
           final shellScope = DesktopShellScope.of(context);
           if (shellScope != null) {
             shellScope.pushScreen(
@@ -203,12 +208,12 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
             MaterialPageRoute(builder: (_) => const InvitesInboxScreen()),
           );
         },
-        icon: const Icon(Icons.inbox_outlined),
       ),
-      IconButton(
+      DetailSecondaryAction(
+        icon: Icons.refresh,
+        label: l10n.commonRefresh,
         tooltip: l10n.exhibitionDetailRefreshTooltip,
-        onPressed: _load,
-        icon: const Icon(Icons.refresh),
+        onTap: _load,
       ),
     ];
   }
@@ -1137,19 +1142,20 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                   padding: const EdgeInsets.only(bottom: DetailSpacing.md),
                   child: Align(
                     alignment: Alignment.centerRight,
-                    child: Wrap(
-                      spacing: 4,
-                      children: [
+                    child: DetailSecondaryActionCluster(
+                      maxVisible: 4,
+                      actions: [
                         ...headerActions,
-                        IconButton(
+                        DetailSecondaryAction(
+                          icon: Icons.more_horiz,
+                          label: l10n.commonActions,
                           tooltip: l10n.commonActions,
-                          onPressed: () => _showExhibitionManagementActions(
+                          onTap: () => _showExhibitionManagementActions(
                             ex,
                             canManage: canManage,
                             canPublish: canPublish,
                             canPromote: canPromote,
                           ),
-                          icon: const Icon(Icons.more_horiz),
                         ),
                       ],
                     ),
@@ -1512,8 +1518,30 @@ class _ExhibitionDetailsCard extends StatelessWidget {
       }
     }
 
-    // Editorial overview: identity, cover, key metadata and the context count
-    // live together in one calm zone.
+    // The exhibition cover leads the page as real content: it renders
+    // edge-to-edge above the overview card instead of inside glass framing.
+    final coverBlock = coverUrl != null
+        ? ClipRRect(
+            borderRadius: BorderRadius.circular(DetailRadius.md),
+            child: AspectRatio(
+              aspectRatio: 16 / 9,
+              child: Image.network(
+                coverUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                  color: scheme.surfaceContainerHighest,
+                  alignment: Alignment.center,
+                  child: Icon(Icons.broken_image_outlined,
+                      size: 48,
+                      color: scheme.onSurface.withValues(alpha: 0.35)),
+                ),
+              ),
+            ),
+          )
+        : null;
+
+    // Editorial overview: identity, key metadata and the context count live
+    // together in one calm zone.
     final overviewCard = DetailCard(
       borderRadius: DetailRadius.md,
       padding: DetailSpacing.editorialCardPadding,
@@ -1527,26 +1555,6 @@ class _ExhibitionDetailsCard extends StatelessWidget {
             trailing: null,
           ),
           const SizedBox(height: DetailSpacing.heroGap),
-          if (coverUrl != null) ...[
-            ClipRRect(
-              borderRadius: BorderRadius.circular(DetailRadius.sm),
-              child: AspectRatio(
-                aspectRatio: 16 / 9,
-                child: Image.network(
-                  coverUrl,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                    color: scheme.surfaceContainerHighest,
-                    alignment: Alignment.center,
-                    child: Icon(Icons.broken_image_outlined,
-                        size: 48,
-                        color: scheme.onSurface.withValues(alpha: 0.35)),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: DetailSpacing.heroGap),
-          ],
           DetailMetadataBlock(
             items: [
               if (dateRange != null)
@@ -1576,12 +1584,11 @@ class _ExhibitionDetailsCard extends StatelessWidget {
       ),
     );
 
-    // Editorial description gets its own roomy card so long copy can expand
-    // cleanly without crowding the overview metadata.
+    // Curatorial text reads long-form on the quiet reading surface (never
+    // glass) and can expand cleanly without crowding the overview metadata.
     final hasDescription = (exhibition.description ?? '').trim().isNotEmpty;
     final aboutCard = hasDescription
-        ? DetailCard(
-            borderRadius: DetailRadius.md,
+        ? KubusReadingSurface(
             padding: DetailSpacing.editorialCardPadding,
             child: ExpandableDetailText(
               text: exhibition.description!.trim(),
@@ -1658,6 +1665,10 @@ class _ExhibitionDetailsCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (coverBlock != null) ...[
+          coverBlock,
+          const SizedBox(height: DetailSpacing.heroGap),
+        ],
         overviewCard,
         if (aboutCard != null) ...[
           const SizedBox(height: DetailSpacing.cardGap),

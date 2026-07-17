@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../utils/design_tokens.dart';
 import '../utils/kubus_color_roles.dart';
 
@@ -45,7 +46,7 @@ class ArtistBadge extends StatelessWidget {
           Icon(Icons.brush_rounded, size: fontSize + 4, color: accent),
           const SizedBox(width: KubusSpacing.xs),
           Text(
-            'ARTIST',
+            AppLocalizations.of(context)!.badgeArtistLabel.toUpperCase(),
             style: KubusTextStyles.compactBadge.copyWith(
               fontSize: fontSize,
               fontWeight: FontWeight.w700,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../utils/app_color_utils.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/media_url_resolver.dart';
 import 'detail_shell_tokens.dart';
@@ -485,7 +486,9 @@ class DetailBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final bgColor = backgroundColor ?? scheme.primary;
-    final fgColor = textColor ?? Colors.white;
+    // Contrast-computed default: pale accents (gold, teal tints) made the old
+    // hardcoded white label unreadable.
+    final fgColor = textColor ?? AppColorUtils.onColor(bgColor);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),

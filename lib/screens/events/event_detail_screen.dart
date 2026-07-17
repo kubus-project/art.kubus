@@ -22,6 +22,7 @@ import '../../utils/map_navigation.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../widgets/collaboration_panel.dart';
 import '../../widgets/promotion/promotion_builder_sheet.dart';
+import '../../widgets/common/kubus_reading_surface.dart';
 import '../../widgets/detail/detail_shell_components.dart';
 import '../../widgets/detail/poap_detail_card.dart';
 import '../../widgets/public_entity_takeover_ready.dart';
@@ -561,7 +562,31 @@ class _EventDetailsCard extends StatelessWidget {
                 l10n.commonUnknown,
           );
 
-    // Editorial overview: identity, cover, schedule/location metadata and the
+    // The poster leads the page as real content: it renders edge-to-edge
+    // above the overview card instead of being framed inside glass.
+    final coverBlock = (coverUrl != null && coverUrl.isNotEmpty)
+        ? ClipRRect(
+            borderRadius: BorderRadius.circular(DetailRadius.md),
+            child: AspectRatio(
+              aspectRatio: 16 / 9,
+              child: Image.network(
+                coverUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                  color: scheme.surfaceContainerHighest,
+                  alignment: Alignment.center,
+                  child: Icon(
+                    Icons.broken_image_outlined,
+                    size: 46,
+                    color: scheme.onSurface.withValues(alpha: 0.38),
+                  ),
+                ),
+              ),
+            ),
+          )
+        : null;
+
+    // Editorial overview: identity, schedule/location metadata and the
     // linked-exhibitions count grouped in one calm zone.
     final overviewCard = DetailCard(
       borderRadius: DetailRadius.md,
@@ -575,28 +600,6 @@ class _EventDetailsCard extends StatelessWidget {
             subtitle: hostLabel,
           ),
           const SizedBox(height: DetailSpacing.heroGap),
-          if (coverUrl != null && coverUrl.isNotEmpty) ...[
-            ClipRRect(
-              borderRadius: BorderRadius.circular(DetailRadius.sm),
-              child: AspectRatio(
-                aspectRatio: 16 / 9,
-                child: Image.network(
-                  coverUrl,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                    color: scheme.surfaceContainerHighest,
-                    alignment: Alignment.center,
-                    child: Icon(
-                      Icons.broken_image_outlined,
-                      size: 46,
-                      color: scheme.onSurface.withValues(alpha: 0.38),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: DetailSpacing.heroGap),
-          ],
           DetailMetadataBlock(
             items: [
               if (dateRange != null)
@@ -626,22 +629,26 @@ class _EventDetailsCard extends StatelessWidget {
     );
 
     final hasDescription = (event.description ?? '').trim().isNotEmpty;
-    if (!hasDescription) return overviewCard;
 
-    // Editorial description gets its own roomy card so it reads long-form and
-    // can expand cleanly without crowding the overview metadata.
+    // Editorial description reads long-form on the quiet reading surface
+    // (never glass) and can expand cleanly without crowding the metadata.
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (coverBlock != null) ...[
+          coverBlock,
+          const SizedBox(height: DetailSpacing.heroGap),
+        ],
         overviewCard,
-        const SizedBox(height: DetailSpacing.cardGap),
-        DetailCard(
-          borderRadius: DetailRadius.md,
-          padding: DetailSpacing.editorialCardPadding,
-          child: ExpandableDetailText(
-            text: event.description!.trim(),
+        if (hasDescription) ...[
+          const SizedBox(height: DetailSpacing.cardGap),
+          KubusReadingSurface(
+            padding: DetailSpacing.editorialCardPadding,
+            child: ExpandableDetailText(
+              text: event.description!.trim(),
+            ),
           ),
-        ),
+        ],
       ],
     );
   }

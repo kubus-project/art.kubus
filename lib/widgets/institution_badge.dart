@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../utils/design_tokens.dart';
 import '../utils/kubus_color_roles.dart';
 
@@ -44,7 +45,7 @@ class InstitutionBadge extends StatelessWidget {
           Icon(Icons.apartment_rounded, size: fontSize + 4, color: accent),
           const SizedBox(width: KubusSpacing.xs),
           Text(
-            'INSTITUTION',
+            AppLocalizations.of(context)!.badgeInstitutionLabel.toUpperCase(),
             style: KubusTextStyles.compactBadge.copyWith(
               fontSize: fontSize,
               fontWeight: FontWeight.w700,

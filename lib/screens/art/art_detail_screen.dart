@@ -39,6 +39,7 @@ import '../../config/config.dart';
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
+import '../../widgets/common/kubus_reading_surface.dart';
 import '../../widgets/common/marker_attribution_section.dart';
 import '../../widgets/common/subject_options_sheet.dart';
 import '../../widgets/glass_components.dart';
@@ -560,10 +561,9 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
       children: [
         Text(
           artwork.title,
-          style: KubusTypography.inter(
-            fontSize: 24,
-            fontWeight: FontWeight.w700,
-            height: 1.2,
+          style: KubusTextStyles.responsiveHeroTitle(context).copyWith(
+            color: Theme.of(context).colorScheme.onSurface,
+            height: 1.15,
           ),
         ),
         const SizedBox(height: DetailSpacing.sm),
@@ -770,9 +770,18 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         Text(l10n.commonDescription,
             style: DetailTypography.sectionTitle(context)),
         const SizedBox(height: DetailSpacing.md),
-        Text(artwork.description, style: DetailTypography.body(context)),
-        // Photo author / licence attribution, below the description.
-        MarkerAttributionSection.fromArtwork(artwork),
+        // Long-form reading content sits on the quiet tonal surface (never
+        // glass) and clamps in place for long curatorial descriptions.
+        KubusReadingSurface(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ExpandableDetailText(text: artwork.description),
+              // Photo author / licence attribution, below the description.
+              MarkerAttributionSection.fromArtwork(artwork),
+            ],
+          ),
+        ),
       ],
     );
   }
@@ -938,33 +947,32 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
           if (artwork.arEnabled &&
               (artwork.arStatus == ArtworkArStatus.ready || isOwner))
             const SizedBox(height: DetailSpacing.md),
+          // Navigate is the accent-filled primary location action; Show on
+          // map is its quiet secondary. Both foregrounds come from the
+          // scheme's contrast-computed on* pairs — never local colors.
           Row(
             children: [
               Expanded(
                 flex: 3,
                 child: DetailActionButton(
-                  icon: Icons.map_outlined,
-                  label: l10n.artDetailShowOnMap,
+                  icon: Icons.navigation_rounded,
+                  label: l10n.commonNavigate,
                   backgroundColor: scheme.primary,
                   foregroundColor: scheme.onPrimary,
-                  onPressed: () =>
-                      ArtworkLocationActions.showOnMap(context, artwork),
+                  onPressed: () => ArtworkLocationActions.showNavigationOptions(
+                    context,
+                    artwork,
+                  ),
                 ),
               ),
               const SizedBox(width: DetailSpacing.md),
               Expanded(
                 flex: 2,
                 child: DetailActionButton(
-                  icon: Icons.navigation_rounded,
-                  label: l10n.commonNavigate,
-                  backgroundColor:
-                      scheme.secondaryContainer.withValues(alpha: 0.6),
-                  foregroundColor: scheme.onSecondaryContainer,
+                  icon: Icons.map_outlined,
+                  label: l10n.artDetailShowOnMap,
                   onPressed: () =>
-                      ArtworkLocationActions.showNavigationOptions(
-                    context,
-                    artwork,
-                  ),
+                      ArtworkLocationActions.showOnMap(context, artwork),
                 ),
               ),
             ],

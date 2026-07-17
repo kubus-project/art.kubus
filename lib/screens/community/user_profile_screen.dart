@@ -430,11 +430,13 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                     isInstitution: isInstitution,
                   ),
                   const SizedBox(height: DetailSpacing.md),
+                  // The primary relationship actions (follow/message) sit
+                  // directly under the identity header, above any counters.
+                  _buildActionButtons(themeProvider, l10n),
+                  const SizedBox(height: DetailSpacing.lg),
                   _buildStatsRow(l10n),
                   const SizedBox(height: DetailSpacing.md),
                   _buildAddedPublicArtSection(l10n),
-                  const SizedBox(height: DetailSpacing.lg),
-                  _buildActionButtons(themeProvider, l10n),
                   const SizedBox(height: DetailSpacing.lg),
                   if (isArtist) ...[
                     _buildArtistHighlightsGrid(l10n),

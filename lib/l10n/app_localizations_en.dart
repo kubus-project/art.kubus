@@ -10671,6 +10671,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonInstitution => 'Institution';
 
   @override
+  String get badgeArtistLabel => 'Artist';
+
+  @override
+  String get badgeInstitutionLabel => 'Institution';
+
+  @override
   String get commonDetails => 'Details';
 
   @override

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../../utils/design_tokens.dart';
+import '../../../utils/kubus_color_roles.dart';
 import '../../../widgets/charts/stats_interactive_line_chart.dart';
 import '../../../widgets/inline_loading.dart';
 import '../analytics_metric_colors.dart';
@@ -136,6 +137,7 @@ class _TrendValue extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final roles = KubusColorRoles.of(context);
     final change = summary.changePercent;
     final changeLabel = change == null
         ? 'N/A'
@@ -158,11 +160,13 @@ class _TrendValue extends StatelessWidget {
           style: KubusTypography.inter(
             fontSize: 12,
             fontWeight: FontWeight.w700,
+            // Judgment colors come from the shared roles so deltas read the
+            // same here as in the overview cards and compare rows.
             color: change == null
                 ? scheme.onSurface.withValues(alpha: 0.62)
                 : change >= 0
-                    ? scheme.primary
-                    : scheme.error,
+                    ? roles.positiveAction
+                    : roles.negativeAction,
           ),
         ),
       ],

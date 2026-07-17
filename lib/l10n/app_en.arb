@@ -4774,6 +4774,8 @@
   "commonExhibition": "Exhibition",
   "commonCollection": "Collection",
   "commonInstitution": "Institution",
+  "badgeArtistLabel": "Artist",
+  "badgeInstitutionLabel": "Institution",
   "commonDetails": "Details",
   "communitySubjectLinkedLabel": "Linked {subjectType}",
   "@communitySubjectLinkedLabel": {
