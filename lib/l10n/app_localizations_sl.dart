@@ -10695,6 +10695,12 @@ class AppLocalizationsSl extends AppLocalizations {
   String get commonInstitution => 'Institucija';
 
   @override
+  String get badgeArtistLabel => 'Umetnik';
+
+  @override
+  String get badgeInstitutionLabel => 'Institucija';
+
+  @override
   String get commonDetails => 'Podrobnosti';
 
   @override
