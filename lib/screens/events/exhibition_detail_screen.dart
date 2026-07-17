@@ -1540,21 +1540,21 @@ class _ExhibitionDetailsCard extends StatelessWidget {
           )
         : null;
 
-    // Editorial overview: identity, key metadata and the context count live
-    // together in one calm zone.
+    // Identity reads as open typography on the page; only the practical
+    // metadata sits in a calm card below it.
+    final identityBlock = DetailIdentityBlock(
+      title: exhibition.title,
+      kicker: l10n.commonExhibition,
+      subtitle: hostLabel,
+      trailing: null,
+    );
+
     final overviewCard = DetailCard(
       borderRadius: DetailRadius.md,
       padding: DetailSpacing.editorialCardPadding,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          DetailIdentityBlock(
-            title: exhibition.title,
-            kicker: l10n.commonExhibition,
-            subtitle: hostLabel,
-            trailing: null,
-          ),
-          const SizedBox(height: DetailSpacing.heroGap),
           DetailMetadataBlock(
             items: [
               if (dateRange != null)
@@ -1669,6 +1669,8 @@ class _ExhibitionDetailsCard extends StatelessWidget {
           coverBlock,
           const SizedBox(height: DetailSpacing.heroGap),
         ],
+        identityBlock,
+        const SizedBox(height: DetailSpacing.heroGap),
         overviewCard,
         if (aboutCard != null) ...[
           const SizedBox(height: DetailSpacing.cardGap),

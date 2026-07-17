@@ -586,20 +586,20 @@ class _EventDetailsCard extends StatelessWidget {
           )
         : null;
 
-    // Editorial overview: identity, schedule/location metadata and the
-    // linked-exhibitions count grouped in one calm zone.
+    // Identity reads as open typography on the page; only the practical
+    // metadata sits in a calm card below it.
+    final identityBlock = DetailIdentityBlock(
+      title: event.title,
+      kicker: l10n.mapMarkerSubjectTypeEvent,
+      subtitle: hostLabel,
+    );
+
     final overviewCard = DetailCard(
       borderRadius: DetailRadius.md,
       padding: DetailSpacing.editorialCardPadding,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          DetailIdentityBlock(
-            title: event.title,
-            kicker: l10n.mapMarkerSubjectTypeEvent,
-            subtitle: hostLabel,
-          ),
-          const SizedBox(height: DetailSpacing.heroGap),
           DetailMetadataBlock(
             items: [
               if (dateRange != null)
@@ -639,6 +639,8 @@ class _EventDetailsCard extends StatelessWidget {
           coverBlock,
           const SizedBox(height: DetailSpacing.heroGap),
         ],
+        identityBlock,
+        const SizedBox(height: DetailSpacing.heroGap),
         overviewCard,
         if (hasDescription) ...[
           const SizedBox(height: DetailSpacing.cardGap),

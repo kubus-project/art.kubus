@@ -372,7 +372,7 @@ class _DesktopArtworkDetailScreenState
     return ListView(
       children: [
         _buildMedia(artwork, coverUrl),
-        const SizedBox(height: DetailSpacing.lg),
+        const SizedBox(height: DetailSpacing.heroGap),
         DetailCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -466,7 +466,7 @@ class _DesktopArtworkDetailScreenState
     if (urls.isEmpty) return const SizedBox.shrink();
 
     return Padding(
-      padding: const EdgeInsets.only(top: DetailSpacing.lg),
+      padding: const EdgeInsets.only(top: DetailSpacing.cardGap),
       child: DetailCard(
         child: DetailSection(
           title: l10n.artistStudioTabGallery,
@@ -682,7 +682,7 @@ class _DesktopArtworkDetailScreenState
             ((artwork.imageAuthor ?? '').trim().isNotEmpty);
     if (text.isEmpty && !hasAttribution) return const SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.only(top: DetailSpacing.lg),
+      padding: const EdgeInsets.only(top: DetailSpacing.cardGap),
       // Long-form reading content belongs on the quiet tonal surface, not on
       // glass, so curatorial text stays comfortable to read.
       child: KubusReadingSurface(
