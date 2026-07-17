@@ -327,6 +327,23 @@ test('deployed public takeover smoke remains opt-in and verifies the complete ha
   assert.match(workflow, /--dart-define=SEO_PUBLIC_PAGES_ENABLED=true/);
 });
 
+test('production deployment enforces and can roll back the canonical takeover smoke', () => {
+  const workflow = readFileSync(
+    resolve(repoRoot, '.github', 'workflows', 'deploy.yml'),
+    'utf8',
+  );
+
+  assert.match(workflow, /EXPECT_PUBLIC_FLUTTER_TAKEOVER: \$\{\{ vars\.EXPECT_PUBLIC_FLUTTER_TAKEOVER/);
+  assert.match(workflow, /PUBLIC_TAKEOVER_URL: \$\{\{ vars\.PUBLIC_TAKEOVER_URL \}\}/);
+  assert.match(workflow, /PUBLIC_TAKEOVER_MISSING_URL: \$\{\{ vars\.PUBLIC_TAKEOVER_MISSING_URL \}\}/);
+  assert.match(workflow, /npx playwright install --with-deps chromium firefox/);
+  assert.match(workflow, /npm --prefix scripts\/qa run qa:public-takeover/);
+  assert.match(
+    workflow,
+    /id: smoke[\s\S]*?qa:public-takeover[\s\S]*?Roll back failed web smoke[\s\S]*?steps\.smoke\.outcome == 'failure'/,
+  );
+});
+
 test('web deployment retries SSH reachability before mutating the release root', () => {
   const workflow = readFileSync(
     resolve(repoRoot, '.github', 'workflows', 'deploy.yml'),

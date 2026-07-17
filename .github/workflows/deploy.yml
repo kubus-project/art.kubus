@@ -72,7 +72,7 @@ jobs:
         (github.event_name == 'workflow_dispatch' && inputs.deploy_web)
       }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 35
     environment: production-web
     steps:
       - name: Resolve and verify successful CI source
@@ -338,6 +338,9 @@ jobs:
         env:
           WEB_SMOKE_URL: ${{ steps.target.outputs.smoke_url }}
           SOURCE_SHA: ${{ steps.source.outputs.sha }}
+          EXPECT_PUBLIC_FLUTTER_TAKEOVER: ${{ vars.EXPECT_PUBLIC_FLUTTER_TAKEOVER || 'false' }}
+          PUBLIC_TAKEOVER_URL: ${{ vars.PUBLIC_TAKEOVER_URL }}
+          PUBLIC_TAKEOVER_MISSING_URL: ${{ vars.PUBLIC_TAKEOVER_MISSING_URL }}
         run: |
           set -euo pipefail
           response="$RUNNER_TEMP/web-smoke.html"
@@ -363,6 +366,27 @@ jobs:
           curl --fail --silent --show-error "$origin/robots.txt" --output "$robots"
           grep -q "Sitemap: $origin/sitemap.xml" "$robots"
           test "$(curl --silent --output /dev/null --write-out '%{http_code}' "$origin/__deploy_unknown_${SOURCE_SHA}")" = '404'
+
+          case "${EXPECT_PUBLIC_FLUTTER_TAKEOVER,,}" in
+            true|1|yes|on)
+              if [ -z "$PUBLIC_TAKEOVER_URL" ] || [ -z "$PUBLIC_TAKEOVER_MISSING_URL" ]; then
+                echo 'PUBLIC_TAKEOVER_URL and PUBLIC_TAKEOVER_MISSING_URL are required when takeover is expected.' >&2
+                exit 1
+              fi
+              npm --prefix scripts/qa ci
+              (
+                cd scripts/qa
+                npx playwright install --with-deps chromium firefox
+              )
+              npm --prefix scripts/qa run qa:public-takeover
+              ;;
+            false|0|no|off)
+              ;;
+            *)
+              echo 'EXPECT_PUBLIC_FLUTTER_TAKEOVER must be a boolean.' >&2
+              exit 1
+              ;;
+          esac
 
       - name: Roll back failed web smoke
         if: ${{ failure() && steps.promote.outcome == 'success' && steps.smoke.outcome == 'failure' }}
