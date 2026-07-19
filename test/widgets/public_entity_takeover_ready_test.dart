@@ -74,4 +74,64 @@ void main() {
 
     expect(provider.isReady, isFalse);
   });
+
+  testWidgets(
+      'signals from the painted frame before a shell rebuild disposes it',
+      (tester) async {
+    final provider = PublicEntityTakeoverProvider();
+    provider.seed(
+      initialUri: Uri.parse('/en/events/event-1'),
+      target: const ShareDeepLinkTarget(
+        type: ShareEntityType.event,
+        id: 'event-1',
+        localeCode: 'en',
+      ),
+    );
+
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: provider,
+        child: const MaterialApp(
+          home: _DisposeEntityOnFollowingFrame(),
+        ),
+      ),
+    );
+
+    expect(find.text('meaningful entity'), findsOneWidget);
+    expect(provider.isReady, isTrue);
+
+    await tester.pump();
+    expect(find.text('replacement shell'), findsOneWidget);
+  });
+}
+
+class _DisposeEntityOnFollowingFrame extends StatefulWidget {
+  const _DisposeEntityOnFollowingFrame();
+
+  @override
+  State<_DisposeEntityOnFollowingFrame> createState() =>
+      _DisposeEntityOnFollowingFrameState();
+}
+
+class _DisposeEntityOnFollowingFrameState
+    extends State<_DisposeEntityOnFollowingFrame> {
+  bool _showEntity = true;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() => _showEntity = false);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_showEntity) return const Text('replacement shell');
+    return const PublicEntityTakeoverReady(
+      type: ShareEntityType.event,
+      entityId: 'event-1',
+      child: Text('meaningful entity'),
+    );
+  }
 }
