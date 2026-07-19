@@ -422,15 +422,17 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
   void _scheduleTakeoverReady(String artworkId) {
     if (_takeoverReadyScheduled) return;
     _takeoverReadyScheduled = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      try {
-        unawaited(
-          context
-              .read<PublicEntityTakeoverProvider>()
-              .markArtworkReady(artworkId),
-        );
-      } catch (_) {}
+    WidgetsBinding.instance.scheduleFrameCallback((_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        try {
+          unawaited(
+            context
+                .read<PublicEntityTakeoverProvider>()
+                .markArtworkReady(artworkId),
+          );
+        } catch (_) {}
+      });
     });
   }
 

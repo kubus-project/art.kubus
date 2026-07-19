@@ -41,6 +41,7 @@ void main() {
           ),
         ),
       );
+      await tester.pump();
       expect(provider.isReady, isTrue);
     });
   }

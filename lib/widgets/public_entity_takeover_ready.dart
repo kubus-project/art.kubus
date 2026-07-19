@@ -50,19 +50,24 @@ class _PublicEntityTakeoverReadyState extends State<PublicEntityTakeoverReady> {
   void _scheduleReadySignal() {
     if (_scheduled) return;
     _scheduled = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      try {
-        unawaited(
-          context.read<PublicEntityTakeoverProvider>().markEntityReady(
-                widget.type,
-                widget.entityId,
-              ),
-        );
-      } catch (_) {
-        // Ordinary in-app detail routes may be rendered in isolated tests or
-        // embeds without the takeover provider.
-      }
+    // scheduleFrameCallback requests a fresh frame. Registering the readiness
+    // callback at its start guarantees dispatch after that entity frame paints,
+    // even when Firefox was idle as asynchronous data settled.
+    WidgetsBinding.instance.scheduleFrameCallback((_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        try {
+          unawaited(
+            context.read<PublicEntityTakeoverProvider>().markEntityReady(
+                  widget.type,
+                  widget.entityId,
+                ),
+          );
+        } catch (_) {
+          // Ordinary in-app detail routes may be rendered in isolated tests or
+          // embeds without the takeover provider.
+        }
+      });
     });
   }
 
