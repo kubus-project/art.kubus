@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/scheduler.dart';
 
 import '../config/config.dart';
 import '../services/public_entity_takeover_bridge.dart';
@@ -77,34 +76,26 @@ class PublicEntityTakeoverProvider extends ChangeNotifier {
     return current.browserRoute;
   }
 
-  Future<void> markArtworkReady(String artworkId) async {
-    await markEntityReady(ShareEntityType.artwork, artworkId);
+  Future<void> markArtworkReady(String artworkId) {
+    return markEntityReady(ShareEntityType.artwork, artworkId);
   }
 
   Future<void> markEntityReady(
     ShareEntityType type,
     String entityId,
-  ) async {
+  ) {
     final current = _target;
     if (current == null ||
         current.type != _wireType(type) ||
         current.id != entityId ||
         _readyDispatched) {
-      return;
+      return Future<void>.value();
     }
 
-    // Every production detail surface calls this method from a post-frame
-    // callback after its exact entity has painted. Waiting for endOfFrame again
-    // from SchedulerPhase.postFrameCallbacks can stall indefinitely when that
-    // static view does not schedule another frame (observed in Firefox). Keep
-    // the frame boundary for direct callers, but do not require a second frame
-    // when the caller is already beyond paint.
-    if (SchedulerBinding.instance.schedulerPhase !=
-        SchedulerPhase.postFrameCallbacks) {
-      await SchedulerBinding.instance.endOfFrame;
-    }
-    if (!identical(current, _target) || _readyDispatched) return;
-
+    // All production callers invoke readiness from a post-frame callback after
+    // the exact entity view has painted. A second provider-level frame wait is
+    // both redundant and unsafe: Firefox can leave that Future pending forever
+    // when the static detail view does not request another frame.
     _readyDispatched = true;
     dispatchPublicEntityReady(
       type: current.type,
@@ -112,6 +103,7 @@ class PublicEntityTakeoverProvider extends ChangeNotifier {
       path: current.path,
     );
     notifyListeners();
+    return Future<void>.value();
   }
 
   bool _sameTarget(

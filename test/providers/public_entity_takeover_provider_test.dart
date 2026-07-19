@@ -100,9 +100,9 @@ void main() {
     }
   });
 
-  testWidgets(
-    'readiness waits for the matching artwork and a completed frame',
-    (tester) async {
+  test(
+    'readiness accepts only the matching artwork after caller paint',
+    () async {
       final provider = PublicEntityTakeoverProvider();
       provider.seed(
         initialUri: Uri.parse('/sl/umetnine/art-42'),
@@ -117,8 +117,7 @@ void main() {
       expect(provider.isReady, isFalse);
 
       final ready = provider.markArtworkReady('art-42');
-      expect(provider.isReady, isFalse);
-      await tester.pump();
+      expect(provider.isReady, isTrue);
       await ready;
       expect(provider.isReady, isTrue);
     },
