@@ -432,6 +432,9 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         );
       } catch (_) {}
     });
+    // addPostFrameCallback alone does not schedule a frame. Firefox can be
+    // idle when the asynchronous entity load settles at the mobile breakpoint.
+    WidgetsBinding.instance.ensureVisualUpdate();
   }
 
   Widget _buildAppBar(Artwork artwork) {

@@ -359,6 +359,9 @@ class _DesktopArtworkDetailScreenState
         );
       } catch (_) {}
     });
+    // Keep readiness deterministic if the entity load finishes after the web
+    // engine has become idle; addPostFrameCallback does not request a frame.
+    WidgetsBinding.instance.ensureVisualUpdate();
   }
 
   Widget _buildLeftPane({

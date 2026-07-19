@@ -11,6 +11,10 @@ const browserNames = (process.env.PUBLIC_TAKEOVER_BROWSERS || 'chromium,firefox'
   .split(',')
   .map((value) => value.trim().toLowerCase())
   .filter(Boolean);
+const browserViewports = [
+  { name: 'desktop', viewport: { width: 1440, height: 1000 } },
+  { name: 'mobile', viewport: { width: 390, height: 844 } },
+];
 const entityId = new URL(canonicalUrl).pathname.split('/').filter(Boolean).at(-1);
 const optionalStandbyProbeUrl = optionalUrl('PUBLIC_TAKEOVER_OPTIONAL_STANDBY_URL');
 
@@ -117,9 +121,10 @@ function escapeRegex(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-async function verifyBrowser(browserType, browserName) {
+async function verifyBrowser(browserType, browserName, viewportName, viewport) {
+  const browserLabel = `${browserName}-${viewportName}`;
   const browser = await browserType.launch({ headless: true });
-  const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+  const context = await browser.newContext({ viewport });
   const page = await context.newPage();
   const consoleErrors = [];
   const externalBeaconCspErrors = [];
@@ -149,14 +154,15 @@ async function verifyBrowser(browserType, browserName) {
 
   try {
     const response = await page.goto(canonicalUrl, { waitUntil: 'domcontentloaded' });
-    ensure(response?.status() === 200, `${browserName} canonical URL returned ${response?.status()}`);
-    ensure(page.url() === canonicalUrl, `${browserName} rewrote canonical URL to ${page.url()}`);
+    ensure(response?.status() === 200, `${browserLabel} canonical URL returned ${response?.status()}`);
+    ensure(page.url() === canonicalUrl, `${browserLabel} rewrote canonical URL to ${page.url()}`);
 
     if (!expectTakeover) {
-      ensure(await page.locator('h1').count() > 0, `${browserName} SSR page has no H1`);
-      ensure(await page.locator('#flutter-host').count() === 0, `${browserName} saw Flutter host while takeover disabled`);
+      ensure(await page.locator('h1').count() > 0, `${browserLabel} SSR page has no H1`);
+      ensure(await page.locator('#flutter-host').count() === 0, `${browserLabel} saw Flutter host while takeover disabled`);
       return {
         browser: browserName,
+        viewport: viewportName,
         takeover: false,
         consoleErrors,
         externalBeaconCspErrors,
@@ -165,7 +171,7 @@ async function verifyBrowser(browserType, browserName) {
     }
 
     await page.locator('#public-document h1').waitFor();
-    ensure(await page.locator('#public-document').evaluate((node) => !node.inert), `${browserName} SSR was hidden before readiness`);
+    ensure(await page.locator('#public-document').evaluate((node) => !node.inert), `${browserLabel} SSR was hidden before readiness`);
     await page.waitForFunction(() => document.documentElement.classList.contains('kubus-takeover-complete'), null, { timeout: 90000 });
     const state = await page.evaluate(() => ({
       events: globalThis.__kubusTakeoverSmokeEvents,
@@ -175,30 +181,31 @@ async function verifyBrowser(browserType, browserName) {
       hostHidden: document.querySelector('#flutter-host')?.getAttribute('aria-hidden'),
       marks: Object.fromEntries(performance.getEntriesByType('mark').map((entry) => [entry.name, Math.round(entry.startTime)])),
     }));
-    ensure(state.active && state.complete, `${browserName} did not activate takeover classes`);
-    ensure(state.ssrHidden === 'true', `${browserName} left SSR active after readiness`);
-    ensure(state.hostHidden === null, `${browserName} left Flutter host hidden after readiness`);
+    ensure(state.active && state.complete, `${browserLabel} did not activate takeover classes`);
+    ensure(state.ssrHidden === 'true', `${browserLabel} left SSR active after readiness`);
+    ensure(state.hostHidden === null, `${browserLabel} left Flutter host hidden after readiness`);
     const parsed = state.events.find((event) => event.name === 'kubus:public-entity-route-parsed');
     const ready = state.events.find((event) => event.name === 'kubus:public-entity-ready');
-    ensure(parsed, `${browserName} did not emit canonical route-parsed`);
-    ensure(ready, `${browserName} did not emit entity-ready`);
+    ensure(parsed, `${browserLabel} did not emit canonical route-parsed`);
+    ensure(ready, `${browserLabel} did not emit entity-ready`);
     const parsedDetail = parseTakeoverEventDetail(parsed.detail);
     const readyDetail = parseTakeoverEventDetail(ready.detail);
-    ensure(parsedDetail?.id === entityId, `${browserName} route-parsed ID did not match requested URL`);
-    ensure(parsedDetail?.path === new URL(canonicalUrl).pathname, `${browserName} route-parsed path did not match requested URL`);
-    ensure(readyDetail?.id === entityId, `${browserName} entity-ready ID did not match requested URL`);
-    ensure(readyDetail?.path === new URL(canonicalUrl).pathname, `${browserName} entity-ready path did not match requested URL`);
-    ensure(parsedDetail?.type === readyDetail?.type, `${browserName} route-parsed type did not match entity-ready type`);
-    ensure(page.url() === canonicalUrl, `${browserName} changed URL during takeover`);
+    ensure(parsedDetail?.id === entityId, `${browserLabel} route-parsed ID did not match requested URL`);
+    ensure(parsedDetail?.path === new URL(canonicalUrl).pathname, `${browserLabel} route-parsed path did not match requested URL`);
+    ensure(readyDetail?.id === entityId, `${browserLabel} entity-ready ID did not match requested URL`);
+    ensure(readyDetail?.path === new URL(canonicalUrl).pathname, `${browserLabel} entity-ready path did not match requested URL`);
+    ensure(parsedDetail?.type === readyDetail?.type, `${browserLabel} route-parsed type did not match entity-ready type`);
+    ensure(page.url() === canonicalUrl, `${browserLabel} changed URL during takeover`);
     const failures = classifyBrowserFailures({
       consoleErrors,
       failedRequests,
       optionalStandbyProbeUrl,
     });
-    ensure(failures.criticalConsoleErrors.length === 0, `${browserName} console errors: ${failures.criticalConsoleErrors.join(' | ')}`);
-    ensure(failures.criticalFailedRequests.length === 0, `${browserName} failed requests: ${JSON.stringify(failures.criticalFailedRequests)}`);
+    ensure(failures.criticalConsoleErrors.length === 0, `${browserLabel} console errors: ${failures.criticalConsoleErrors.join(' | ')}`);
+    ensure(failures.criticalFailedRequests.length === 0, `${browserLabel} failed requests: ${JSON.stringify(failures.criticalFailedRequests)}`);
     return {
       browser: browserName,
+      viewport: viewportName,
       takeover: true,
       marks: state.marks,
       consoleErrors: failures.criticalConsoleErrors,
@@ -219,6 +226,8 @@ const browserResults = [];
 for (const browserName of browserNames) {
   const browserType = browserTypes[browserName];
   ensure(browserType, `Unsupported browser: ${browserName}`);
-  browserResults.push(await verifyBrowser(browserType, browserName));
+  for (const { name, viewport } of browserViewports) {
+    browserResults.push(await verifyBrowser(browserType, browserName, name, viewport));
+  }
 }
 console.log(JSON.stringify({ canonicalUrl, expectTakeover, rawHttp, browserResults }, null, 2));

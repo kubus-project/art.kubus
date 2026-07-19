@@ -64,6 +64,10 @@ class _PublicEntityTakeoverReadyState extends State<PublicEntityTakeoverReady> {
         // embeds without the takeover provider.
       }
     });
+    // addPostFrameCallback does not request a frame. Entity data can settle
+    // after Firefox has gone idle (especially at the mobile breakpoint), so
+    // explicitly ensure the painted-view callback cannot remain queued.
+    WidgetsBinding.instance.ensureVisualUpdate();
   }
 
   @override
