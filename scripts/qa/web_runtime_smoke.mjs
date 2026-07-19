@@ -242,7 +242,7 @@ async function installStableNetworkStubs(page) {
   });
 }
 
-async function captureRuntime(contextOptions, name) {
+async function captureRuntime(contextOptions, name, { appLanguage } = {}) {
   const context = await browser.newContext(contextOptions);
   const page = await context.newPage();
   const consoleEntries = [];
@@ -268,7 +268,10 @@ async function captureRuntime(contextOptions, name) {
   });
   await installStableNetworkStubs(page);
 
-  await page.addInitScript(() => {
+  // The app's locale is app-controlled (LocaleProvider, default 'sl',
+  // persisted under selected_language) — the browser locale alone does not
+  // change UI copy, so language captures must seed the stored preference.
+  await page.addInitScript((language) => {
     const set = (key, value) => localStorage.setItem(`flutter.${key}`, value);
     set('has_completed_onboarding', 'true');
     set('has_seen_welcome', 'true');
@@ -276,7 +279,10 @@ async function captureRuntime(contextOptions, name) {
     set('skipOnboardingForReturningUsers', 'true');
     set('map_onboarding_mobile_seen_v2', 'true');
     set('map_onboarding_desktop_seen_v2', 'true');
-  });
+    if (language) {
+      set('selected_language', JSON.stringify(language));
+    }
+  }, appLanguage || null);
 
   // Every capture uses a fresh Playwright context. Do not pass the production
   // clear_sw escape hatch here: index.html responds to it with location.replace,
@@ -396,6 +402,7 @@ function matrixContexts() {
             colorScheme,
             locale,
           },
+          appLanguage: locale.slice(0, 2),
         });
       }
     }
@@ -403,6 +410,7 @@ function matrixContexts() {
   // Reduced-motion spot checks on the two extreme viewports.
   contexts.push({
     name: 'mobile-390x844-dark-en-reduced-motion',
+    appLanguage: 'en',
     options: {
       viewport: { width: 390, height: 844 },
       deviceScaleFactor: 1,
@@ -413,6 +421,7 @@ function matrixContexts() {
   });
   contexts.push({
     name: 'desktop-1440x1000-light-en-reduced-motion',
+    appLanguage: 'en',
     options: {
       viewport: { width: 1440, height: 1000 },
       deviceScaleFactor: 1,
@@ -435,7 +444,11 @@ try {
   const captures = [];
   if (fullMatrix) {
     for (const context of matrixContexts()) {
-      captures.push(await captureRuntime(context.options, context.name));
+      captures.push(
+        await captureRuntime(context.options, context.name, {
+          appLanguage: context.appLanguage || null,
+        }),
+      );
     }
   } else {
     captures.push(
