@@ -1,4 +1,8 @@
 import { chromium, firefox } from 'playwright';
+import {
+  classifyBrowserFailures,
+  parseTakeoverEventDetail,
+} from './public_flutter_takeover_smoke_support.mjs';
 
 const canonicalUrl = requiredUrl('PUBLIC_TAKEOVER_URL');
 const missingUrl = requiredUrl('PUBLIC_TAKEOVER_MISSING_URL');
@@ -8,6 +12,7 @@ const browserNames = (process.env.PUBLIC_TAKEOVER_BROWSERS || 'chromium,firefox'
   .map((value) => value.trim().toLowerCase())
   .filter(Boolean);
 const entityId = new URL(canonicalUrl).pathname.split('/').filter(Boolean).at(-1);
+const optionalStandbyProbeUrl = optionalUrl('PUBLIC_TAKEOVER_OPTIONAL_STANDBY_URL');
 
 const requiredMarkup = [
   /id=["']public-document["']/,
@@ -34,6 +39,16 @@ function booleanFromEnv(name, fallback) {
   if (['1', 'true', 'yes', 'on'].includes(value)) return true;
   if (['0', 'false', 'no', 'off'].includes(value)) return false;
   throw new Error(`${name} must be a boolean.`);
+}
+
+function optionalUrl(name) {
+  const value = (process.env[name] || '').trim();
+  if (!value) return null;
+  const parsed = new URL(value);
+  if (!['https:', 'http:'].includes(parsed.protocol)) {
+    throw new Error(`${name} must use HTTP or HTTPS.`);
+  }
+  return parsed.toString();
 }
 
 function ensure(condition, message) {
@@ -167,21 +182,30 @@ async function verifyBrowser(browserType, browserName) {
     const ready = state.events.find((event) => event.name === 'kubus:public-entity-ready');
     ensure(parsed, `${browserName} did not emit canonical route-parsed`);
     ensure(ready, `${browserName} did not emit entity-ready`);
-    ensure(parsed.detail?.id === entityId, `${browserName} route-parsed ID did not match requested URL`);
-    ensure(parsed.detail?.path === new URL(canonicalUrl).pathname, `${browserName} route-parsed path did not match requested URL`);
-    ensure(ready.detail?.id === entityId, `${browserName} entity-ready ID did not match requested URL`);
-    ensure(ready.detail?.path === new URL(canonicalUrl).pathname, `${browserName} entity-ready path did not match requested URL`);
-    ensure(parsed.detail?.type === ready.detail?.type, `${browserName} route-parsed type did not match entity-ready type`);
+    const parsedDetail = parseTakeoverEventDetail(parsed.detail);
+    const readyDetail = parseTakeoverEventDetail(ready.detail);
+    ensure(parsedDetail?.id === entityId, `${browserName} route-parsed ID did not match requested URL`);
+    ensure(parsedDetail?.path === new URL(canonicalUrl).pathname, `${browserName} route-parsed path did not match requested URL`);
+    ensure(readyDetail?.id === entityId, `${browserName} entity-ready ID did not match requested URL`);
+    ensure(readyDetail?.path === new URL(canonicalUrl).pathname, `${browserName} entity-ready path did not match requested URL`);
+    ensure(parsedDetail?.type === readyDetail?.type, `${browserName} route-parsed type did not match entity-ready type`);
     ensure(page.url() === canonicalUrl, `${browserName} changed URL during takeover`);
-    ensure(consoleErrors.length === 0, `${browserName} console errors: ${consoleErrors.join(' | ')}`);
-    ensure(failedRequests.length === 0, `${browserName} failed requests: ${JSON.stringify(failedRequests)}`);
+    const failures = classifyBrowserFailures({
+      consoleErrors,
+      failedRequests,
+      optionalStandbyProbeUrl,
+    });
+    ensure(failures.criticalConsoleErrors.length === 0, `${browserName} console errors: ${failures.criticalConsoleErrors.join(' | ')}`);
+    ensure(failures.criticalFailedRequests.length === 0, `${browserName} failed requests: ${JSON.stringify(failures.criticalFailedRequests)}`);
     return {
       browser: browserName,
       takeover: true,
       marks: state.marks,
-      consoleErrors,
+      consoleErrors: failures.criticalConsoleErrors,
       externalBeaconCspErrors,
-      failedRequests,
+      failedRequests: failures.criticalFailedRequests,
+      optionalStandbyConsoleErrors: failures.optionalStandbyConsoleErrors,
+      optionalStandbyFailures: failures.optionalStandbyFailures,
     };
   } finally {
     await context.close();

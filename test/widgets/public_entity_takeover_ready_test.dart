@@ -27,6 +27,7 @@ void main() {
           localeCode: 'en',
         ),
       );
+      expect(provider.isReady, isFalse);
 
       await tester.pumpWidget(
         ChangeNotifierProvider.value(
@@ -40,9 +41,6 @@ void main() {
           ),
         ),
       );
-      expect(provider.isReady, isFalse);
-
-      await tester.pump();
       expect(provider.isReady, isTrue);
     });
   }

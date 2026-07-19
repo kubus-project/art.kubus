@@ -341,6 +341,7 @@ jobs:
           EXPECT_PUBLIC_FLUTTER_TAKEOVER: ${{ vars.EXPECT_PUBLIC_FLUTTER_TAKEOVER || 'false' }}
           PUBLIC_TAKEOVER_URL: ${{ vars.PUBLIC_TAKEOVER_URL }}
           PUBLIC_TAKEOVER_MISSING_URL: ${{ vars.PUBLIC_TAKEOVER_MISSING_URL }}
+          PUBLIC_TAKEOVER_OPTIONAL_STANDBY_URL: ${{ vars.PUBLIC_TAKEOVER_OPTIONAL_STANDBY_URL }}
         run: |
           set -euo pipefail
           response="$RUNNER_TEMP/web-smoke.html"
