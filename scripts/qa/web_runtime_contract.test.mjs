@@ -5,9 +5,52 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import { buildStableApiStub } from './web_runtime_contract.mjs';
+import {
+  classifyBrowserFailures,
+  parseTakeoverEventDetail,
+} from './public_flutter_takeover_smoke_support.mjs';
 import { resolveBuildMetadata } from '../../scripts/resolve_ci_build_metadata.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
+
+test('takeover smoke parses the serialized Flutter event contract', () => {
+  assert.deepEqual(
+    parseTakeoverEventDetail('{"type":"artwork","id":"art-1","path":"/en/artworks/art-1"}'),
+    { type: 'artwork', id: 'art-1', path: '/en/artworks/art-1' },
+  );
+  assert.equal(parseTakeoverEventDetail('{invalid'), null);
+});
+
+test('takeover smoke separates an explicitly configured standby probe failure', () => {
+  const result = classifyBrowserFailures({
+    consoleErrors: [
+      "Access to fetch at 'https://bapi.kubus.site/health/writable' was blocked by CORS policy",
+      'Failed to load resource: net::ERR_FAILED',
+    ],
+    failedRequests: [
+      { url: 'https://bapi.kubus.site/health/writable', error: 'net::ERR_FAILED' },
+    ],
+    optionalStandbyProbeUrl: 'https://bapi.kubus.site',
+  });
+
+  assert.deepEqual(result.criticalConsoleErrors, []);
+  assert.deepEqual(result.criticalFailedRequests, []);
+  assert.equal(result.optionalStandbyFailures.length, 1);
+  assert.equal(result.optionalStandbyConsoleErrors.length, 2);
+});
+
+test('takeover smoke keeps unrelated browser failures fatal', () => {
+  const result = classifyBrowserFailures({
+    consoleErrors: ['Application exploded'],
+    failedRequests: [
+      { url: 'https://api.kubus.site/api/artworks/art-1', error: 'net::ERR_FAILED' },
+    ],
+    optionalStandbyProbeUrl: 'https://bapi.kubus.site',
+  });
+
+  assert.deepEqual(result.criticalConsoleErrors, ['Application exploded']);
+  assert.equal(result.criticalFailedRequests.length, 1);
+});
 
 function jsonBody(response) {
   return JSON.parse(response.body);
@@ -339,6 +382,7 @@ test('production deployment enforces and can roll back the canonical takeover sm
   assert.match(workflow, /EXPECT_PUBLIC_FLUTTER_TAKEOVER: \$\{\{ vars\.EXPECT_PUBLIC_FLUTTER_TAKEOVER/);
   assert.match(workflow, /PUBLIC_TAKEOVER_URL: \$\{\{ vars\.PUBLIC_TAKEOVER_URL \}\}/);
   assert.match(workflow, /PUBLIC_TAKEOVER_MISSING_URL: \$\{\{ vars\.PUBLIC_TAKEOVER_MISSING_URL \}\}/);
+  assert.match(workflow, /PUBLIC_TAKEOVER_OPTIONAL_STANDBY_URL: \$\{\{ vars\.PUBLIC_TAKEOVER_OPTIONAL_STANDBY_URL \}\}/);
   assert.match(workflow, /npx playwright install --with-deps chromium firefox/);
   assert.match(workflow, /npm --prefix scripts\/qa run qa:public-takeover/);
   assert.match(

@@ -93,7 +93,16 @@ class PublicEntityTakeoverProvider extends ChangeNotifier {
       return;
     }
 
-    await SchedulerBinding.instance.endOfFrame;
+    // Every production detail surface calls this method from a post-frame
+    // callback after its exact entity has painted. Waiting for endOfFrame again
+    // from SchedulerPhase.postFrameCallbacks can stall indefinitely when that
+    // static view does not schedule another frame (observed in Firefox). Keep
+    // the frame boundary for direct callers, but do not require a second frame
+    // when the caller is already beyond paint.
+    if (SchedulerBinding.instance.schedulerPhase !=
+        SchedulerPhase.postFrameCallbacks) {
+      await SchedulerBinding.instance.endOfFrame;
+    }
     if (!identical(current, _target) || _readyDispatched) return;
 
     _readyDispatched = true;
