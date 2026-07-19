@@ -371,6 +371,8 @@ test('deployed public takeover smoke remains opt-in and verifies the complete ha
   assert.match(smoke, /flutter_service_worker\.js/);
   assert.match(smoke, /name: 'desktop', viewport: \{ width: 1440, height: 1000 \}/);
   assert.match(smoke, /name: 'mobile', viewport: \{ width: 390, height: 844 \}/);
+  assert.match(smoke, /PUBLIC_TAKEOVER_BROWSER_REPETITIONS/);
+  assert.match(smoke, /expectTakeover \? 2 : 1/);
   assert.match(workflow, /--dart-define=PUBLIC_FLUTTER_TAKEOVER_ENABLED=true/);
   assert.match(workflow, /--dart-define=SEO_PUBLIC_PAGES_ENABLED=true/);
 });

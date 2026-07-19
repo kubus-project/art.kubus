@@ -15,6 +15,10 @@ const browserViewports = [
   { name: 'desktop', viewport: { width: 1440, height: 1000 } },
   { name: 'mobile', viewport: { width: 390, height: 844 } },
 ];
+const browserRepetitions = positiveIntegerFromEnv(
+  'PUBLIC_TAKEOVER_BROWSER_REPETITIONS',
+  expectTakeover ? 2 : 1,
+);
 const entityId = new URL(canonicalUrl).pathname.split('/').filter(Boolean).at(-1);
 const optionalStandbyProbeUrl = optionalUrl('PUBLIC_TAKEOVER_OPTIONAL_STANDBY_URL');
 
@@ -43,6 +47,16 @@ function booleanFromEnv(name, fallback) {
   if (['1', 'true', 'yes', 'on'].includes(value)) return true;
   if (['0', 'false', 'no', 'off'].includes(value)) return false;
   throw new Error(`${name} must be a boolean.`);
+}
+
+function positiveIntegerFromEnv(name, fallback) {
+  const value = (process.env[name] || '').trim();
+  if (!value) return fallback;
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed < 1 || parsed > 5) {
+    throw new Error(`${name} must be an integer between 1 and 5.`);
+  }
+  return parsed;
 }
 
 function optionalUrl(name) {
@@ -121,8 +135,14 @@ function escapeRegex(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-async function verifyBrowser(browserType, browserName, viewportName, viewport) {
-  const browserLabel = `${browserName}-${viewportName}`;
+async function verifyBrowser(
+  browserType,
+  browserName,
+  viewportName,
+  viewport,
+  repetition,
+) {
+  const browserLabel = `${browserName}-${viewportName}-run-${repetition}`;
   const browser = await browserType.launch({ headless: true });
   const context = await browser.newContext({ viewport });
   const page = await context.newPage();
@@ -163,6 +183,7 @@ async function verifyBrowser(browserType, browserName, viewportName, viewport) {
       return {
         browser: browserName,
         viewport: viewportName,
+        repetition,
         takeover: false,
         consoleErrors,
         externalBeaconCspErrors,
@@ -206,6 +227,7 @@ async function verifyBrowser(browserType, browserName, viewportName, viewport) {
     return {
       browser: browserName,
       viewport: viewportName,
+      repetition,
       takeover: true,
       marks: state.marks,
       consoleErrors: failures.criticalConsoleErrors,
@@ -227,7 +249,23 @@ for (const browserName of browserNames) {
   const browserType = browserTypes[browserName];
   ensure(browserType, `Unsupported browser: ${browserName}`);
   for (const { name, viewport } of browserViewports) {
-    browserResults.push(await verifyBrowser(browserType, browserName, name, viewport));
+    for (let repetition = 1; repetition <= browserRepetitions; repetition += 1) {
+      browserResults.push(
+        await verifyBrowser(
+          browserType,
+          browserName,
+          name,
+          viewport,
+          repetition,
+        ),
+      );
+    }
   }
 }
-console.log(JSON.stringify({ canonicalUrl, expectTakeover, rawHttp, browserResults }, null, 2));
+console.log(JSON.stringify({
+  canonicalUrl,
+  expectTakeover,
+  browserRepetitions,
+  rawHttp,
+  browserResults,
+}, null, 2));
