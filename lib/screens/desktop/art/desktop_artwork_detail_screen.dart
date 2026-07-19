@@ -349,19 +349,18 @@ class _DesktopArtworkDetailScreenState
   void _scheduleTakeoverReady(String artworkId) {
     if (_takeoverReadyScheduled) return;
     _takeoverReadyScheduled = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      try {
-        unawaited(
-          context
-              .read<PublicEntityTakeoverProvider>()
-              .markArtworkReady(artworkId),
-        );
-      } catch (_) {}
+    WidgetsBinding.instance.scheduleFrameCallback((_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        try {
+          unawaited(
+            context
+                .read<PublicEntityTakeoverProvider>()
+                .markArtworkReady(artworkId),
+          );
+        } catch (_) {}
+      });
     });
-    // Keep readiness deterministic if the entity load finishes after the web
-    // engine has become idle; addPostFrameCallback does not request a frame.
-    WidgetsBinding.instance.ensureVisualUpdate();
   }
 
   Widget _buildLeftPane({
