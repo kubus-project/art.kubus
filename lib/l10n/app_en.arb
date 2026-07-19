@@ -5895,5 +5895,224 @@
       "current": { "type": "int" },
       "total": { "type": "int" }
     }
-  }
+  },
+  "analyticsMetricFollowersLabel": "Followers",
+  "analyticsMetricFollowersDescription": "People following this profile.",
+  "analyticsMetricFollowingLabel": "Following",
+  "analyticsMetricFollowingDescription": "Profiles followed by this wallet.",
+  "analyticsMetricPostsLabel": "Posts",
+  "analyticsMetricPostsDescription": "Community posts published by this profile.",
+  "analyticsMetricCommentsLabel": "Comments",
+  "analyticsMetricCommentsDescription": "Comments written by this profile.",
+  "analyticsMetricArtworksLabel": "Artworks",
+  "analyticsMetricArtworksDescription": "Active artworks attributed to this profile.",
+  "analyticsMetricPublicStreetArtAddedLabel": "Street art",
+  "analyticsMetricPublicStreetArtAddedDescription": "Public street art markers added by this profile.",
+  "analyticsMetricArEnabledArtworksLabel": "AR artworks",
+  "analyticsMetricArEnabledArtworksDescription": "Published artworks with AR enabled.",
+  "analyticsMetricCollectionsLabel": "Collections",
+  "analyticsMetricCollectionsDescription": "Collections created by this profile.",
+  "analyticsMetricLikesGivenLabel": "Likes given",
+  "analyticsMetricLikesGivenDescription": "Likes this profile has sent.",
+  "analyticsMetricAchievementsUnlockedLabel": "Achievements",
+  "analyticsMetricAchievementsUnlockedDescription": "Unlocked achievements.",
+  "analyticsMetricLikesReceivedDescription": "Likes received across public work and posts.",
+  "analyticsMetricViewsReceivedDescription": "Views across public work, posts, events, and exhibitions.",
+  "analyticsMetricEventsHostedLabel": "Events hosted",
+  "analyticsMetricEventsHostedDescription": "Events owned or hosted by this profile.",
+  "analyticsMetricVisitorsReceivedLabel": "Visitors",
+  "analyticsMetricVisitorsReceivedDescription": "Views on hosted events and exhibitions.",
+  "analyticsMetricExhibitionsLabel": "Exhibitions",
+  "analyticsMetricExhibitionsDescription": "Exhibitions this profile participates in.",
+  "analyticsMetricExhibitionArtworksLabel": "Exhibition artworks",
+  "analyticsMetricExhibitionArtworksDescription": "Artworks included in owned exhibitions.",
+  "analyticsMetricArtworksDiscoveredLabel": "Discoveries",
+  "analyticsMetricArtworksDiscoveredDescription": "Artworks discovered by this profile.",
+  "analyticsMetricArSessionsLabel": "AR sessions",
+  "analyticsMetricArSessionsDescription": "AR sessions started by this profile.",
+  "analyticsMetricViewsGivenDescription": "Content views by this profile.",
+  "analyticsMetricEngagementDescription": "Weighted likes, comments, shares, and saves.",
+  "analyticsMetricViewsLabel": "Views",
+  "analyticsMetricViewsDescription": "View events for the selected entity.",
+  "analyticsMetricLikesLabel": "Likes",
+  "analyticsMetricLikesDescription": "Likes on the selected entity.",
+  "analyticsMetricSharesLabel": "Shares",
+  "analyticsMetricSharesDescription": "Share events for the selected entity.",
+  "analyticsMetricSavesLabel": "Saves",
+  "analyticsMetricSavesDescription": "Saved bookmarks for the selected entity.",
+  "analyticsMetricUsersLabel": "Users",
+  "analyticsMetricUsersDescription": "Registered user count.",
+  "analyticsMetricProfilesLabel": "Profiles",
+  "analyticsMetricProfilesDescription": "Public profile count.",
+  "analyticsMetricGroupsLabel": "Groups",
+  "analyticsMetricGroupsDescription": "Public community groups.",
+  "analyticsMetricFollowsLabel": "Follows",
+  "analyticsMetricFollowsDescription": "Follow relationships across the platform.",
+  "analyticsMetricDaoTotalProposalsLabel": "Total proposals",
+  "analyticsMetricDaoTotalProposalsDescription": "Governance proposals created in the DAO.",
+  "analyticsMetricDaoActiveProposalsLabel": "Active proposals",
+  "analyticsMetricDaoActiveProposalsDescription": "Proposals currently open for governance action.",
+  "analyticsMetricDaoVotesCastLabel": "Votes cast",
+  "analyticsMetricDaoVotesCastDescription": "Votes submitted across DAO proposals.",
+  "analyticsMetricDaoDelegatesLabel": "Delegates",
+  "analyticsMetricDaoDelegatesDescription": "Delegates available for voting power delegation.",
+  "analyticsMetricDaoAverageVotingPowerLabel": "Avg voting power",
+  "analyticsMetricDaoAverageVotingPowerDescription": "Average voting power across delegates.",
+  "analyticsMetricDaoTreasuryAmountLabel": "Treasury",
+  "analyticsMetricDaoTreasuryAmountDescription": "Current DAO treasury value.",
+  "analyticsMetricDaoTreasuryInflowLabel": "Treasury inflow",
+  "analyticsMetricDaoTreasuryInflowDescription": "Positive treasury transactions.",
+  "analyticsMetricDaoTreasuryOutflowLabel": "Treasury outflow",
+  "analyticsMetricDaoTreasuryOutflowDescription": "Outgoing treasury transactions.",
+  "analyticsMetricDaoRecentTransactionsLabel": "Recent transactions",
+  "analyticsMetricDaoRecentTransactionsDescription": "Recent DAO treasury and execution activity.",
+  "analyticsPresetProfileTitle": "Profile analytics",
+  "analyticsPresetProfileScopeLabel": "Profile",
+  "analyticsPresetProfileSubtitle": "Audience, publishing, and profile engagement.",
+  "analyticsPresetCommunityTitle": "Community analytics",
+  "analyticsPresetCommunityScopeLabel": "Community",
+  "analyticsPresetCommunitySubtitle": "Posting, conversation, and community response.",
+  "analyticsPresetArtistTitle": "Artist analytics",
+  "analyticsPresetArtistScopeLabel": "Artist studio",
+  "analyticsPresetInstitutionTitle": "Institution analytics",
+  "analyticsPresetInstitutionScopeLabel": "Institution hub",
+  "analyticsPresetPlatformTitle": "Platform analytics",
+  "analyticsPresetPlatformScopeLabel": "Platform",
+  "analyticsPresetPlatformSubtitle": "Admin-only platform health and usage.",
+  "analyticsPresetDaoTitle": "DAO analytics",
+  "analyticsPresetDaoScopeLabel": "DAO",
+  "analyticsPresetDaoSubtitle": "Governance proposals, voting, delegates, and treasury flow.",
+  "analyticsScopePublicLabel": "Public",
+  "analyticsScopePrivateLabel": "Private",
+  "analyticsBlockedWalletRequiredTitle": "Connect your wallet",
+  "analyticsBlockedWalletRequiredDescription": "Analytics are available after a wallet is connected.",
+  "analyticsBlockedDisabledTitle": "Analytics disabled",
+  "analyticsBlockedDisabledDescription": "Enable analytics in Settings to view charts and insights.",
+  "analyticsBlockedAdminRequiredTitle": "Admin analytics",
+  "analyticsBlockedAdminRequiredDescription": "Platform analytics require an admin session.",
+  "analyticsBlockedOwnerRequiredTitle": "Private analytics",
+  "analyticsBlockedOwnerRequiredDescription": "Use the wallet that owns this workspace.",
+  "analyticsBlockedPrivateOnlyTitle": "Private analytics",
+  "analyticsBlockedPrivateOnlyDescription": "This analytics workspace is available to its owner only.",
+  "analyticsBlockedArtistPendingTitle": "Artist review pending",
+  "analyticsBlockedArtistPendingDescription": "Artist analytics unlock after DAO approval.",
+  "analyticsBlockedArtistRejectedTitle": "Artist review rejected",
+  "analyticsBlockedArtistRejectedDescription": "Submit an approved artist review before using artist analytics.",
+  "analyticsBlockedArtistRoleMismatchTitle": "Artist analytics unavailable",
+  "analyticsBlockedArtistRoleMismatchDescription": "Use an approved artist wallet for artist analytics.",
+  "analyticsBlockedArtistApprovalRequiredTitle": "Artist approval required",
+  "analyticsBlockedArtistApprovalRequiredDescription": "Apply for DAO artist review to unlock artist analytics.",
+  "analyticsBlockedInstitutionPendingTitle": "Institution review pending",
+  "analyticsBlockedInstitutionPendingDescription": "Institution analytics unlock after DAO approval.",
+  "analyticsBlockedInstitutionRejectedTitle": "Institution review rejected",
+  "analyticsBlockedInstitutionRejectedDescription": "Submit an approved institution review before using analytics.",
+  "analyticsBlockedInstitutionRoleMismatchTitle": "Institution analytics unavailable",
+  "analyticsBlockedInstitutionRoleMismatchDescription": "Use an approved institution wallet for institution analytics.",
+  "analyticsBlockedInstitutionApprovalRequiredTitle": "Institution approval required",
+  "analyticsBlockedInstitutionApprovalRequiredDescription": "Apply for DAO institution review to unlock institution analytics.",
+  "analyticsNoMetricsTitle": "No supported metrics",
+  "analyticsNoMetricsDescription": "This analytics preset has no metrics for the current scope.",
+  "analyticsSeriesUnavailableTitle": "Series unavailable",
+  "analyticsSeriesUnavailableDescription": "This metric is available as a snapshot only.",
+  "analyticsLoadingLabel": "Loading analytics",
+  "analyticsRefreshingLabel": "Updating…",
+  "analyticsExportAction": "Export",
+  "analyticsTrendTitle": "{metric} trend",
+  "@analyticsTrendTitle": {
+    "placeholders": {
+      "metric": {}
+    }
+  },
+  "analyticsTrendComparedSubtitle": "{timeframe} compared with the previous period",
+  "@analyticsTrendComparedSubtitle": {
+    "placeholders": {
+      "timeframe": {}
+    }
+  },
+  "analyticsTrendErrorTitle": "Unable to load trend",
+  "analyticsTrendErrorDescription": "Try a different metric or timeframe.",
+  "analyticsSeriesCurrentLabel": "Current",
+  "analyticsSeriesPreviousLabel": "Previous",
+  "analyticsComparisonSectionTitle": "Comparison",
+  "analyticsComparisonsEmptyTitle": "No comparison yet",
+  "analyticsBreakdownSectionTitle": "Breakdown",
+  "analyticsPreviousValueLabel": "Previous: {value}",
+  "@analyticsPreviousValueLabel": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "analyticsComparisonAverageBucketLabel": "Average bucket",
+  "analyticsComparisonActivityCoverage": "Activity coverage",
+  "analyticsInsightActivePatternTitle": "Active {timeframe} pattern",
+  "@analyticsInsightActivePatternTitle": {
+    "placeholders": {
+      "timeframe": {}
+    }
+  },
+  "analyticsInsightActivePatternDescription": "{activeBuckets} of {totalBuckets} intervals recorded {metric}.",
+  "@analyticsInsightActivePatternDescription": {
+    "placeholders": {
+      "activeBuckets": {},
+      "totalBuckets": {},
+      "metric": {}
+    }
+  },
+  "analyticsInsightPeakTitle": "Peak interval",
+  "analyticsInsightPeakDescription": "The strongest interval reached {value}.",
+  "@analyticsInsightPeakDescription": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "analyticsInsightMomentumUpTitle": "Momentum improved",
+  "analyticsInsightMomentumDownTitle": "Momentum softened",
+  "analyticsInsightMomentumDescription": "{metric} is {change} versus the previous period.",
+  "@analyticsInsightMomentumDescription": {
+    "placeholders": {
+      "metric": {},
+      "change": {}
+    }
+  },
+  "analyticsShareMetricValue": "Metric: {metric}",
+  "@analyticsShareMetricValue": {
+    "placeholders": {
+      "metric": {}
+    }
+  },
+  "analyticsShareTotalValue": "Total: {total}",
+  "@analyticsShareTotalValue": {
+    "placeholders": {
+      "total": {}
+    }
+  },
+  "analyticsExportSubjectLabel": "{preset} {metric} export",
+  "@analyticsExportSubjectLabel": {
+    "placeholders": {
+      "preset": {},
+      "metric": {}
+    }
+  },
+  "analyticsCardSemanticsLabel": "{metric} analytics",
+  "@analyticsCardSemanticsLabel": {
+    "placeholders": {
+      "metric": {}
+    }
+  },
+  "analyticsFilterSheetTitle": "Analytics filters",
+  "analyticsFilterTimeframeSectionTitle": "Time period",
+  "analyticsFilterSummaryTooltip": "Adjust analytics filters",
+  "analyticsTimeframeLabel24h": "Last 24 hours",
+  "analyticsTimeframeLabel7d": "Last 7 days",
+  "analyticsTimeframeLabel30d": "Last 30 days",
+  "analyticsTimeframeLabel90d": "Last 90 days",
+  "analyticsTimeframeLabel1y": "Last year",
+  "desktopProfileAnalyticsDialogIntro": "Open the unified analytics experience and start in the context you want to review.",
+  "desktopProfileAnalyticsProfileSubtitle": "Profile reach, follower growth, views, and owned signals.",
+  "desktopProfileAnalyticsCommunitySubtitle": "Community posting, likes, and engagement in the same analytics UI.",
+  "profileAccountHealthTitle": "Account health",
+  "profileAccountHealthAdvisoryLabel": "Account suggestions",
+  "commonNotNow": "Not now",
+  "commonDismiss": "Dismiss",
+  "authSecureAccountBannerCta": "Secure"
 }

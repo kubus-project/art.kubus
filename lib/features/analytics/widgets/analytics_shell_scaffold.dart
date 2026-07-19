@@ -1,13 +1,25 @@
 import 'package:flutter/material.dart';
 
 import '../../../utils/design_tokens.dart';
+import '../../../widgets/glass_components.dart';
+import 'analytics_filter_summary_bar.dart';
 
+/// Sliver shell for the unified analytics experience.
+///
+/// Filter composition is responsive instead of a fixed-extent contract:
+/// - narrow layouts pin [filterSummary] (a compact one-line summary whose
+///   extent is deterministic and text-scale aware — min == max, so there is
+///   no shrink animation and nothing to clip);
+/// - wide layouts render [filterBar] as a plain sliver with intrinsic
+///   height, so wrapped chips, long Slovenian labels, and large text scales
+///   simply take the space they need.
 class AnalyticsShellScaffold extends StatelessWidget {
   const AnalyticsShellScaffold({
     super.key,
     required this.embedded,
     required this.header,
     required this.filterBar,
+    required this.filterSummary,
     required this.overview,
     required this.trend,
     required this.insights,
@@ -16,7 +28,13 @@ class AnalyticsShellScaffold extends StatelessWidget {
 
   final bool embedded;
   final Widget header;
+
+  /// Wide-layout toolbar (intrinsic height, unpinned).
   final Widget filterBar;
+
+  /// Narrow-layout pinned summary; opens the canonical filter sheet.
+  final Widget filterSummary;
+
   final Widget overview;
   final Widget trend;
   final Widget insights;
@@ -24,22 +42,26 @@ class AnalyticsShellScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final compact = MediaQuery.sizeOf(context).width < 720;
+
     final body = CustomScrollView(
       slivers: [
         SliverToBoxAdapter(child: header),
-        SliverPersistentHeader(
-          pinned: true,
-          delegate: _AnalyticsFilterHeaderDelegate(child: filterBar),
-        ),
+        if (compact)
+          SliverPersistentHeader(
+            pinned: true,
+            delegate: _AnalyticsFilterSummaryDelegate(
+              child: filterSummary,
+              extent: AnalyticsFilterSummaryBar.extentFor(context),
+            ),
+          )
+        else
+          SliverToBoxAdapter(child: filterBar),
         SliverPadding(
           padding: EdgeInsets.fromLTRB(
-            MediaQuery.sizeOf(context).width < 720
-                ? KubusSpacing.md
-                : KubusSpacing.xl,
+            compact ? KubusSpacing.md : KubusSpacing.xl,
             KubusSpacing.md,
-            MediaQuery.sizeOf(context).width < 720
-                ? KubusSpacing.md
-                : KubusSpacing.xl,
+            compact ? KubusSpacing.md : KubusSpacing.xl,
             KubusSpacing.xxl,
           ),
           sliver: SliverToBoxAdapter(
@@ -149,16 +171,20 @@ class _AnalyticsResponsiveBody extends StatelessWidget {
   }
 }
 
-class _AnalyticsFilterHeaderDelegate extends SliverPersistentHeaderDelegate {
-  _AnalyticsFilterHeaderDelegate({required this.child});
+class _AnalyticsFilterSummaryDelegate extends SliverPersistentHeaderDelegate {
+  _AnalyticsFilterSummaryDelegate({
+    required this.child,
+    required this.extent,
+  });
 
   final Widget child;
+  final double extent;
 
   @override
-  double get minExtent => 86;
+  double get minExtent => extent;
 
   @override
-  double get maxExtent => 148;
+  double get maxExtent => extent;
 
   @override
   Widget build(
@@ -166,14 +192,19 @@ class _AnalyticsFilterHeaderDelegate extends SliverPersistentHeaderDelegate {
     double shrinkOffset,
     bool overlapsContent,
   ) {
-    return Material(
-      color: Colors.transparent,
+    // The pinned summary floats over scrolled content, so it inherits the
+    // canonical glass stack (blur capability detection + fallback included).
+    return FrostedContainer(
+      padding: EdgeInsets.zero,
+      margin: EdgeInsets.zero,
+      borderRadius: BorderRadius.zero,
+      showBorder: false,
       child: SizedBox.expand(child: child),
     );
   }
 
   @override
-  bool shouldRebuild(covariant _AnalyticsFilterHeaderDelegate oldDelegate) {
-    return oldDelegate.child != child;
+  bool shouldRebuild(covariant _AnalyticsFilterSummaryDelegate oldDelegate) {
+    return oldDelegate.child != child || oldDelegate.extent != extent;
   }
 }

@@ -13,4 +13,3 @@ void main() {
     expect(sl.profileYearsActiveValue(2).contains('#'), isFalse);
   });
 }
-

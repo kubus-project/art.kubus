@@ -44,6 +44,24 @@ class AnalyticsViewerContext {
   }
 }
 
+/// Typed reason a viewer cannot open an analytics surface. Display copy for
+/// every reason lives in `AnalyticsBlockedCopy` so it stays localized.
+enum AnalyticsBlockedReason {
+  walletRequired,
+  analyticsDisabled,
+  adminRequired,
+  ownerRequired,
+  privateOnly,
+  artistReviewPending,
+  artistReviewRejected,
+  artistRoleMismatch,
+  artistApprovalRequired,
+  institutionReviewPending,
+  institutionReviewRejected,
+  institutionRoleMismatch,
+  institutionApprovalRequired,
+}
+
 class AnalyticsCapabilities {
   const AnalyticsCapabilities({
     required this.canView,
@@ -52,8 +70,7 @@ class AnalyticsCapabilities {
     required this.scope,
     required this.allowedMetrics,
     required this.allowedOverviewMetrics,
-    this.blockedTitle,
-    this.blockedDescription,
+    this.blockedReason,
   });
 
   final bool canView;
@@ -62,8 +79,7 @@ class AnalyticsCapabilities {
   final AnalyticsScope scope;
   final List<AnalyticsMetricDefinition> allowedMetrics;
   final List<AnalyticsMetricDefinition> allowedOverviewMetrics;
-  final String? blockedTitle;
-  final String? blockedDescription;
+  final AnalyticsBlockedReason? blockedReason;
 
   bool get hasSeriesAccess =>
       canView &&
@@ -86,63 +102,38 @@ class AnalyticsCapabilityResolver {
     final subjectMissing = preset.entityType != AnalyticsEntityType.platform &&
         viewer.subjectId.trim().isEmpty;
     if (subjectMissing) {
-      return _blocked(
-        preset: preset,
-        title: 'Connect your wallet',
-        description: 'Analytics are available after a wallet is connected.',
-      );
+      return _blocked(AnalyticsBlockedReason.walletRequired);
     }
 
     if (!viewer.analyticsEnabled) {
-      return _blocked(
-        preset: preset,
-        title: 'Analytics disabled',
-        description:
-            'Enable analytics in Settings to view charts and insights.',
-      );
+      return _blocked(AnalyticsBlockedReason.analyticsDisabled);
     }
 
     if (preset.roleRequirement == AnalyticsRoleRequirement.admin) {
       if (!viewer.isAdmin) {
-        return _blocked(
-          preset: preset,
-          title: 'Admin analytics',
-          description: 'Platform analytics require an admin session.',
-        );
+        return _blocked(AnalyticsBlockedReason.adminRequired);
       }
       return _allowed(preset: preset, canViewPrivate: true);
     }
 
     if (preset.requiresOwner && !viewer.isOwner) {
-      return _blocked(
-        preset: preset,
-        title: 'Private analytics',
-        description: 'Use the wallet that owns this workspace.',
-      );
+      return _blocked(AnalyticsBlockedReason.ownerRequired);
     }
 
     final roleBlock = _roleBlockReason(preset, viewer);
     if (roleBlock != null) {
-      return _blocked(
-        preset: preset,
-        title: roleBlock.$1,
-        description: roleBlock.$2,
-      );
+      return _blocked(roleBlock);
     }
 
     final canViewPrivate = viewer.isOwner;
     if (!canViewPrivate && !preset.allowsPublicView) {
-      return _blocked(
-        preset: preset,
-        title: 'Private analytics',
-        description: 'This analytics workspace is available to its owner only.',
-      );
+      return _blocked(AnalyticsBlockedReason.privateOnly);
     }
 
     return _allowed(preset: preset, canViewPrivate: canViewPrivate);
   }
 
-  static (String, String)? _roleBlockReason(
+  static AnalyticsBlockedReason? _roleBlockReason(
     AnalyticsPreset preset,
     AnalyticsViewerContext viewer,
   ) {
@@ -150,60 +141,34 @@ class AnalyticsCapabilityResolver {
       case AnalyticsRoleRequirement.none:
         return null;
       case AnalyticsRoleRequirement.admin:
-        return viewer.isAdmin
-            ? null
-            : ('Admin analytics', 'Platform analytics require admin access.');
+        return viewer.isAdmin ? null : AnalyticsBlockedReason.adminRequired;
       case AnalyticsRoleRequirement.artist:
         if (_approvedForArtist(viewer)) return null;
         final verification = viewer.roleVerification;
         if (verification.isPendingFor(DaoRoleType.artist)) {
-          return (
-            'Artist review pending',
-            'Artist analytics unlock after DAO approval.'
-          );
+          return AnalyticsBlockedReason.artistReviewPending;
         }
         if (verification.isRejectedFor(DaoRoleType.artist)) {
-          return (
-            'Artist review rejected',
-            'Submit an approved artist review before using artist analytics.'
-          );
+          return AnalyticsBlockedReason.artistReviewRejected;
         }
         if (viewer.persona == UserPersona.institution ||
             viewer.profileIsInstitution) {
-          return (
-            'Artist analytics unavailable',
-            'Use an approved artist wallet for artist analytics.'
-          );
+          return AnalyticsBlockedReason.artistRoleMismatch;
         }
-        return (
-          'Artist approval required',
-          'Apply for DAO artist review to unlock artist analytics.'
-        );
+        return AnalyticsBlockedReason.artistApprovalRequired;
       case AnalyticsRoleRequirement.institution:
         if (_approvedForInstitution(viewer)) return null;
         final verification = viewer.roleVerification;
         if (verification.isPendingFor(DaoRoleType.institution)) {
-          return (
-            'Institution review pending',
-            'Institution analytics unlock after DAO approval.'
-          );
+          return AnalyticsBlockedReason.institutionReviewPending;
         }
         if (verification.isRejectedFor(DaoRoleType.institution)) {
-          return (
-            'Institution review rejected',
-            'Submit an approved institution review before using analytics.'
-          );
+          return AnalyticsBlockedReason.institutionReviewRejected;
         }
         if (viewer.persona == UserPersona.creator || viewer.profileIsArtist) {
-          return (
-            'Institution analytics unavailable',
-            'Use an approved institution wallet for institution analytics.'
-          );
+          return AnalyticsBlockedReason.institutionRoleMismatch;
         }
-        return (
-          'Institution approval required',
-          'Apply for DAO institution review to unlock institution analytics.'
-        );
+        return AnalyticsBlockedReason.institutionApprovalRequired;
     }
   }
 
@@ -245,11 +210,7 @@ class AnalyticsCapabilityResolver {
         .toList(growable: false);
   }
 
-  static AnalyticsCapabilities _blocked({
-    required AnalyticsPreset preset,
-    required String title,
-    required String description,
-  }) {
+  static AnalyticsCapabilities _blocked(AnalyticsBlockedReason reason) {
     return AnalyticsCapabilities(
       canView: false,
       canViewPrivate: false,
@@ -257,8 +218,7 @@ class AnalyticsCapabilityResolver {
       scope: AnalyticsScope.public,
       allowedMetrics: const <AnalyticsMetricDefinition>[],
       allowedOverviewMetrics: const <AnalyticsMetricDefinition>[],
-      blockedTitle: title,
-      blockedDescription: description,
+      blockedReason: reason,
     );
   }
 }

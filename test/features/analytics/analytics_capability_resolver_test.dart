@@ -55,7 +55,7 @@ void main() {
 
     expect(capabilities.canView, isFalse);
     expect(capabilities.canViewPrivate, isFalse);
-    expect(capabilities.blockedTitle, 'Private analytics');
+    expect(capabilities.blockedReason, AnalyticsBlockedReason.ownerRequired);
   });
 
   test('dao analytics are public and use governance metrics', () {
@@ -107,7 +107,10 @@ void main() {
     );
 
     expect(pending.canView, isFalse);
-    expect(pending.blockedTitle, 'Artist review pending');
+    expect(
+      pending.blockedReason,
+      AnalyticsBlockedReason.artistReviewPending,
+    );
 
     final approved = AnalyticsCapabilityResolver.resolve(
       preset: AnalyticsPresets.artist,
@@ -131,7 +134,10 @@ void main() {
     );
 
     expect(capabilities.canView, isFalse);
-    expect(capabilities.blockedTitle, 'Institution analytics unavailable');
+    expect(
+      capabilities.blockedReason,
+      AnalyticsBlockedReason.institutionRoleMismatch,
+    );
   });
 
   test('platform analytics require admin context', () {

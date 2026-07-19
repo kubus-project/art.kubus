@@ -13,6 +13,7 @@ import '../../providers/stats_provider.dart';
 import '../../providers/web3provider.dart';
 import '../../utils/wallet_utils.dart';
 import '../../widgets/kubus_snackbar.dart';
+import 'analytics_blocked_copy.dart';
 import 'analytics_capability_resolver.dart';
 import 'analytics_entity_registry.dart';
 import 'analytics_metric_registry.dart';
@@ -21,6 +22,7 @@ import 'analytics_time.dart';
 import 'analytics_view_models.dart';
 import 'widgets/analytics_compare_panel.dart';
 import 'widgets/analytics_filter_bar.dart';
+import 'widgets/analytics_filter_summary_bar.dart';
 import 'widgets/analytics_header.dart';
 import 'widgets/analytics_insights_panel.dart';
 import 'widgets/analytics_overview_grid.dart';
@@ -107,10 +109,11 @@ class _UnifiedAnalyticsScreenState extends State<UnifiedAnalyticsScreen> {
     );
 
     if (!capabilities.canView) {
+      final reason =
+          capabilities.blockedReason ?? AnalyticsBlockedReason.privateOnly;
       final permissionState = AnalyticsPermissionState(
-        title: capabilities.blockedTitle ?? 'Analytics unavailable',
-        description: capabilities.blockedDescription ??
-            'This analytics surface is not available for this wallet.',
+        title: AnalyticsBlockedCopy.title(l10n, reason),
+        description: AnalyticsBlockedCopy.description(l10n, reason),
       );
       if (widget.embedded) return permissionState;
       return Scaffold(
@@ -121,13 +124,12 @@ class _UnifiedAnalyticsScreenState extends State<UnifiedAnalyticsScreen> {
 
     final metrics = capabilities.allowedMetrics;
     if (metrics.isEmpty) {
-      const empty = AnalyticsPermissionState(
-        title: 'No supported metrics',
-        description:
-            'This analytics preset has no metrics for the current scope.',
+      final empty = AnalyticsPermissionState(
+        title: l10n.analyticsNoMetricsTitle,
+        description: l10n.analyticsNoMetricsDescription,
       );
       if (widget.embedded) return empty;
-      return const Scaffold(
+      return Scaffold(
         backgroundColor: Colors.transparent,
         body: SafeArea(child: empty),
       );
@@ -299,16 +301,16 @@ class _UnifiedAnalyticsScreenState extends State<UnifiedAnalyticsScreen> {
       summary: summary,
     );
     final insights = _insights(selectedMetric, summary, timeframe, l10n);
-    final comparisons = _comparisons(selectedMetric, summary);
+    final comparisons = _comparisons(selectedMetric, summary, l10n);
 
     return AnalyticsShellScaffold(
       embedded: widget.embedded,
       header: AnalyticsHeader(
-        title: preset.title,
+        title: preset.localizedTitle(l10n),
         subtitle: preset.localizedSubtitle(l10n),
-        scopeLabel: preset.scopeLabel,
+        scopeLabel: preset.localizedScopeLabel(l10n),
         icon: preset.icon,
-        scopeBadge: capabilities.scope.label,
+        scopeBadge: capabilities.scope.localizedLabel(l10n),
         availablePresets: availablePresets,
         activePreset: preset,
         onPresetSelected: (kind) {
@@ -344,6 +346,21 @@ class _UnifiedAnalyticsScreenState extends State<UnifiedAnalyticsScreen> {
           filtersProvider.setTimeframeFor(preset.contextKey, next);
         },
       ),
+      filterSummary: AnalyticsFilterSummaryBar(
+        metrics: metrics,
+        selectedMetricId: selectedMetric.id,
+        timeframe: timeframe,
+        onMetricChanged: (metricId) {
+          filtersProvider.setMetricFor(
+            preset.contextKey,
+            metricId,
+            allowedMetrics: metrics.map((metric) => metric.id),
+          );
+        },
+        onTimeframeChanged: (next) {
+          filtersProvider.setTimeframeFor(preset.contextKey, next);
+        },
+      ),
       overview: AnalyticsOverviewGrid(
         cards: overviewCards,
         isLoading: snapshotLoading,
@@ -365,9 +382,10 @@ class _UnifiedAnalyticsScreenState extends State<UnifiedAnalyticsScreen> {
               isLoading: seriesLoading,
               error: seriesError,
             )
-          : const AnalyticsInlineEmptyState(
-              title: 'Series unavailable',
-              description: 'This metric is available as a snapshot only.',
+          : AnalyticsInlineEmptyState(
+              title: l10n.analyticsSeriesUnavailableTitle,
+              description: l10n.analyticsSeriesUnavailableDescription,
+              kind: AnalyticsInlineStateKind.unsupported,
             ),
       insights: AnalyticsInsightsPanel(insights: insights),
       comparison: AnalyticsComparePanel(
@@ -520,8 +538,9 @@ class _UnifiedAnalyticsScreenState extends State<UnifiedAnalyticsScreen> {
           ),
           icon: selectedMetric.icon,
           subtitle: selectedMetric.localizedDescription(l10n),
-          changeLabel:
-              summary.hasData ? _formatChange(summary.changePercent) : null,
+          changeLabel: summary.hasData
+              ? _formatChange(l10n, summary.changePercent)
+              : null,
           isPositive: summary.changePercent == null
               ? null
               : summary.changePercent! >= 0,
@@ -544,24 +563,34 @@ class _UnifiedAnalyticsScreenState extends State<UnifiedAnalyticsScreen> {
     final metricLabel = metric.localizedLabel(l10n);
     final insights = <AnalyticsInsightData>[
       AnalyticsInsightData(
-        title: 'Active ${timeframe.toUpperCase()} pattern',
-        description:
-            '$activeBuckets of $totalBuckets buckets recorded ${metricLabel.toLowerCase()}.',
+        title: l10n.analyticsInsightActivePatternTitle(
+          timeframe.toUpperCase(),
+        ),
+        description: l10n.analyticsInsightActivePatternDescription(
+          activeBuckets,
+          totalBuckets,
+          metricLabel.toLowerCase(),
+        ),
         icon: Icons.calendar_today_outlined,
       ),
       AnalyticsInsightData(
-        title: 'Peak bucket',
-        description:
-            'The strongest bucket reached ${metric.formatValue(summary.peak)}.',
+        title: l10n.analyticsInsightPeakTitle,
+        description: l10n.analyticsInsightPeakDescription(
+          metric.formatValue(summary.peak),
+        ),
         icon: Icons.trending_up_outlined,
       ),
     ];
     if (trend != null) {
       insights.add(
         AnalyticsInsightData(
-          title: trend >= 0 ? 'Momentum improved' : 'Momentum softened',
-          description:
-              '$metricLabel is ${_formatChange(trend)} versus the previous period.',
+          title: trend >= 0
+              ? l10n.analyticsInsightMomentumUpTitle
+              : l10n.analyticsInsightMomentumDownTitle,
+          description: l10n.analyticsInsightMomentumDescription(
+            metricLabel,
+            _formatChange(l10n, trend),
+          ),
           icon: trend >= 0
               ? Icons.arrow_upward_outlined
               : Icons.arrow_downward_outlined,
@@ -574,34 +603,35 @@ class _UnifiedAnalyticsScreenState extends State<UnifiedAnalyticsScreen> {
   List<AnalyticsComparisonData> _comparisons(
     AnalyticsMetricDefinition metric,
     AnalyticsSeriesSummary summary,
+    AppLocalizations l10n,
   ) {
     if (summary.values.isEmpty && summary.previousValues.isEmpty) {
       return const <AnalyticsComparisonData>[];
     }
     return <AnalyticsComparisonData>[
       AnalyticsComparisonData(
-        label: 'Total',
+        label: l10n.analyticsComparisonTotal,
         currentValue: metric.formatValue(summary.currentTotal),
         previousValue: metric.formatValue(summary.previousTotal),
         isPositive: summary.currentTotal >= summary.previousTotal,
       ),
       AnalyticsComparisonData(
-        label: 'Average bucket',
+        label: l10n.analyticsComparisonAverageBucketLabel,
         currentValue: metric.formatValue(summary.average),
         previousValue: metric.formatValue(summary.previousAverage),
         isPositive: summary.average >= summary.previousAverage,
       ),
       AnalyticsComparisonData(
-        label: 'Consistency',
+        label: l10n.analyticsKeyMetricConsistency,
         currentValue: '${(summary.consistency * 100).toStringAsFixed(0)}%',
-        previousValue: 'Activity coverage',
+        previousValue: l10n.analyticsComparisonActivityCoverage,
         isPositive: summary.consistency >= 0.5,
       ),
     ];
   }
 
-  String _formatChange(double? value) {
-    if (value == null) return 'N/A';
+  String _formatChange(AppLocalizations l10n, double? value) {
+    if (value == null) return l10n.commonNotAvailableShort;
     return '${value >= 0 ? '+' : '-'}${value.abs().toStringAsFixed(1)}%';
   }
 
@@ -615,16 +645,21 @@ class _UnifiedAnalyticsScreenState extends State<UnifiedAnalyticsScreen> {
     final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
     final metricLabel = metric.localizedLabel(l10n);
+    final presetTitle = preset.localizedTitle(l10n);
     final text = StringBuffer()
-      ..writeln(preset.title)
-      ..writeln('Metric: $metricLabel')
-      ..writeln('Period: ${timeframe.toUpperCase()}')
-      ..writeln('Total: ${metric.formatValue(summary.currentTotal)}')
-      ..writeln('Change: ${_formatChange(summary.changePercent)}');
+      ..writeln(presetTitle)
+      ..writeln(l10n.analyticsShareMetricValue(metricLabel))
+      ..writeln(l10n.analyticsSharePeriodValue(timeframe.toUpperCase()))
+      ..writeln(l10n.analyticsShareTotalValue(
+        metric.formatValue(summary.currentTotal),
+      ))
+      ..writeln(l10n.analyticsShareChangeValue(
+        _formatChange(l10n, summary.changePercent),
+      ));
 
     try {
       await SharePlus.instance.share(
-        ShareParams(text: text.toString(), subject: preset.title),
+        ShareParams(text: text.toString(), subject: presetTitle),
       );
     } catch (_) {
       if (!mounted) return;
@@ -676,7 +711,10 @@ class _UnifiedAnalyticsScreenState extends State<UnifiedAnalyticsScreen> {
       await SharePlus.instance.share(
         ShareParams(
           text: buffer.toString(),
-          subject: '${preset.title} $metricLabel export',
+          subject: l10n.analyticsExportSubjectLabel(
+            preset.localizedTitle(l10n),
+            metricLabel,
+          ),
         ),
       );
     } catch (_) {

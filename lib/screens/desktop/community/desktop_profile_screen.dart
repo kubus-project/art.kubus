@@ -585,7 +585,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Open the unified analytics experience and start in the context you want to review.',
+                l10n.desktopProfileAnalyticsDialogIntro,
                 style: KubusTypography.inter(
                   fontSize: 13,
                   color: scheme.onSurface.withValues(alpha: 0.75),
@@ -601,7 +601,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   style: KubusTypography.inter(fontWeight: FontWeight.w600),
                 ),
                 subtitle: Text(
-                  'Profile reach, follower growth, views, and owned signals.',
+                  l10n.desktopProfileAnalyticsProfileSubtitle,
                   style: KubusTypography.inter(fontSize: 12),
                 ),
                 onTap: () {
@@ -627,7 +627,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   style: KubusTypography.inter(fontWeight: FontWeight.w600),
                 ),
                 subtitle: Text(
-                  'Community posting, likes, and engagement in the same analytics UI.',
+                  l10n.desktopProfileAnalyticsCommunitySubtitle,
                   style: KubusTypography.inter(fontSize: 12),
                 ),
                 onTap: () {

@@ -19,8 +19,6 @@ enum AnalyticsChartKind {
 class AnalyticsMetricDefinition {
   const AnalyticsMetricDefinition({
     required this.id,
-    required this.label,
-    required this.description,
     required this.icon,
     required this.format,
     required this.supportedEntities,
@@ -36,8 +34,6 @@ class AnalyticsMetricDefinition {
   });
 
   final String id;
-  final String label;
-  final String description;
   final IconData icon;
   final AnalyticsMetricFormat format;
   final Set<AnalyticsEntityType> supportedEntities;
@@ -74,24 +70,170 @@ class AnalyticsMetricDefinition {
 
   String localizedLabel(AppLocalizations l10n) {
     switch (id) {
+      case 'followers':
+        return l10n.analyticsMetricFollowersLabel;
+      case 'following':
+        return l10n.analyticsMetricFollowingLabel;
+      case 'posts':
+        return l10n.analyticsMetricPostsLabel;
+      case 'comments':
+        return l10n.analyticsMetricCommentsLabel;
+      case 'artworks':
+        return l10n.analyticsMetricArtworksLabel;
+      case 'publicStreetArtAdded':
+        return l10n.analyticsMetricPublicStreetArtAddedLabel;
+      case 'arEnabledArtworks':
+        return l10n.analyticsMetricArEnabledArtworksLabel;
+      case 'collections':
+        return l10n.analyticsMetricCollectionsLabel;
       case 'nftsMinted':
         return l10n.analyticsMetricArchiveObjectsCreatedLabel;
+      case 'likesGiven':
+        return l10n.analyticsMetricLikesGivenLabel;
+      case 'achievementsUnlocked':
+        return l10n.analyticsMetricAchievementsUnlockedLabel;
       case 'achievementTokensTotal':
         return l10n.analyticsMetricKub8RecognitionLabel;
-      default:
-        return label;
+      case 'likesReceived':
+        return l10n.analyticsMetricLikesReceivedLabel;
+      case 'viewsReceived':
+        return l10n.analyticsMetricViewsReceivedLabel;
+      case 'eventsHosted':
+        return l10n.analyticsMetricEventsHostedLabel;
+      case 'visitorsReceived':
+        return l10n.analyticsMetricVisitorsReceivedLabel;
+      case 'exhibitions':
+        return l10n.analyticsMetricExhibitionsLabel;
+      case 'exhibitionArtworks':
+        return l10n.analyticsMetricExhibitionArtworksLabel;
+      case 'artworksDiscovered':
+        return l10n.analyticsMetricArtworksDiscoveredLabel;
+      case 'arSessions':
+        return l10n.analyticsMetricArSessionsLabel;
+      case 'viewsGiven':
+        return l10n.analyticsMetricViewsGivenLabel;
+      case 'engagement':
+        return l10n.analyticsMetricEngagementLabel;
+      case 'views':
+        return l10n.analyticsMetricViewsLabel;
+      case 'likes':
+        return l10n.analyticsMetricLikesLabel;
+      case 'shares':
+        return l10n.analyticsMetricSharesLabel;
+      case 'saves':
+        return l10n.analyticsMetricSavesLabel;
+      case 'users':
+        return l10n.analyticsMetricUsersLabel;
+      case 'profiles':
+        return l10n.analyticsMetricProfilesLabel;
+      case 'groups':
+        return l10n.analyticsMetricGroupsLabel;
+      case 'follows':
+        return l10n.analyticsMetricFollowsLabel;
+      case 'daoTotalProposals':
+        return l10n.analyticsMetricDaoTotalProposalsLabel;
+      case 'daoActiveProposals':
+        return l10n.analyticsMetricDaoActiveProposalsLabel;
+      case 'daoVotesCast':
+        return l10n.analyticsMetricDaoVotesCastLabel;
+      case 'daoDelegates':
+        return l10n.analyticsMetricDaoDelegatesLabel;
+      case 'daoAverageVotingPower':
+        return l10n.analyticsMetricDaoAverageVotingPowerLabel;
+      case 'daoTreasuryAmount':
+        return l10n.analyticsMetricDaoTreasuryAmountLabel;
+      case 'daoTreasuryInflow':
+        return l10n.analyticsMetricDaoTreasuryInflowLabel;
+      case 'daoTreasuryOutflow':
+        return l10n.analyticsMetricDaoTreasuryOutflowLabel;
+      case 'daoRecentTransactions':
+        return l10n.analyticsMetricDaoRecentTransactionsLabel;
     }
+    return id;
   }
 
   String localizedDescription(AppLocalizations l10n) {
     switch (id) {
+      case 'followers':
+        return l10n.analyticsMetricFollowersDescription;
+      case 'following':
+        return l10n.analyticsMetricFollowingDescription;
+      case 'posts':
+        return l10n.analyticsMetricPostsDescription;
+      case 'comments':
+        return l10n.analyticsMetricCommentsDescription;
+      case 'artworks':
+        return l10n.analyticsMetricArtworksDescription;
+      case 'publicStreetArtAdded':
+        return l10n.analyticsMetricPublicStreetArtAddedDescription;
+      case 'arEnabledArtworks':
+        return l10n.analyticsMetricArEnabledArtworksDescription;
+      case 'collections':
+        return l10n.analyticsMetricCollectionsDescription;
       case 'nftsMinted':
         return l10n.analyticsMetricArchiveObjectsCreatedDescription;
+      case 'likesGiven':
+        return l10n.analyticsMetricLikesGivenDescription;
+      case 'achievementsUnlocked':
+        return l10n.analyticsMetricAchievementsUnlockedDescription;
       case 'achievementTokensTotal':
         return l10n.analyticsMetricKub8RecognitionDescription;
-      default:
-        return description;
+      case 'likesReceived':
+        return l10n.analyticsMetricLikesReceivedDescription;
+      case 'viewsReceived':
+        return l10n.analyticsMetricViewsReceivedDescription;
+      case 'eventsHosted':
+        return l10n.analyticsMetricEventsHostedDescription;
+      case 'visitorsReceived':
+        return l10n.analyticsMetricVisitorsReceivedDescription;
+      case 'exhibitions':
+        return l10n.analyticsMetricExhibitionsDescription;
+      case 'exhibitionArtworks':
+        return l10n.analyticsMetricExhibitionArtworksDescription;
+      case 'artworksDiscovered':
+        return l10n.analyticsMetricArtworksDiscoveredDescription;
+      case 'arSessions':
+        return l10n.analyticsMetricArSessionsDescription;
+      case 'viewsGiven':
+        return l10n.analyticsMetricViewsGivenDescription;
+      case 'engagement':
+        return l10n.analyticsMetricEngagementDescription;
+      case 'views':
+        return l10n.analyticsMetricViewsDescription;
+      case 'likes':
+        return l10n.analyticsMetricLikesDescription;
+      case 'shares':
+        return l10n.analyticsMetricSharesDescription;
+      case 'saves':
+        return l10n.analyticsMetricSavesDescription;
+      case 'users':
+        return l10n.analyticsMetricUsersDescription;
+      case 'profiles':
+        return l10n.analyticsMetricProfilesDescription;
+      case 'groups':
+        return l10n.analyticsMetricGroupsDescription;
+      case 'follows':
+        return l10n.analyticsMetricFollowsDescription;
+      case 'daoTotalProposals':
+        return l10n.analyticsMetricDaoTotalProposalsDescription;
+      case 'daoActiveProposals':
+        return l10n.analyticsMetricDaoActiveProposalsDescription;
+      case 'daoVotesCast':
+        return l10n.analyticsMetricDaoVotesCastDescription;
+      case 'daoDelegates':
+        return l10n.analyticsMetricDaoDelegatesDescription;
+      case 'daoAverageVotingPower':
+        return l10n.analyticsMetricDaoAverageVotingPowerDescription;
+      case 'daoTreasuryAmount':
+        return l10n.analyticsMetricDaoTreasuryAmountDescription;
+      case 'daoTreasuryInflow':
+        return l10n.analyticsMetricDaoTreasuryInflowDescription;
+      case 'daoTreasuryOutflow':
+        return l10n.analyticsMetricDaoTreasuryOutflowDescription;
+      case 'daoRecentTransactions':
+        return l10n.analyticsMetricDaoRecentTransactionsDescription;
     }
+    return id;
   }
 }
 
@@ -124,8 +266,6 @@ class AnalyticsMetricRegistry {
       <AnalyticsMetricDefinition>[
     AnalyticsMetricDefinition(
       id: 'followers',
-      label: 'Followers',
-      description: 'People following this profile.',
       icon: Icons.people_outline,
       format: AnalyticsMetricFormat.compact,
       supportedEntities: userEntity,
@@ -133,8 +273,6 @@ class AnalyticsMetricRegistry {
     ),
     AnalyticsMetricDefinition(
       id: 'following',
-      label: 'Following',
-      description: 'Profiles followed by this wallet.',
       icon: Icons.person_add_alt_1_outlined,
       format: AnalyticsMetricFormat.compact,
       supportedEntities: userEntity,
@@ -142,8 +280,6 @@ class AnalyticsMetricRegistry {
     ),
     AnalyticsMetricDefinition(
       id: 'posts',
-      label: 'Posts',
-      description: 'Community posts published by this profile.',
       icon: Icons.forum_outlined,
       format: AnalyticsMetricFormat.compact,
       supportedEntities: userEntity,
@@ -151,8 +287,6 @@ class AnalyticsMetricRegistry {
     ),
     AnalyticsMetricDefinition(
       id: 'comments',
-      label: 'Comments',
-      description: 'Comments written by this profile.',
       icon: Icons.chat_bubble_outline,
       format: AnalyticsMetricFormat.compact,
       supportedEntities: userEntity,
@@ -161,8 +295,6 @@ class AnalyticsMetricRegistry {
     ),
     AnalyticsMetricDefinition(
       id: 'artworks',
-      label: 'Artworks',
-      description: 'Active artworks attributed to this profile.',
       icon: Icons.palette_outlined,
       format: AnalyticsMetricFormat.compact,
       supportedEntities: {
@@ -175,8 +307,6 @@ class AnalyticsMetricRegistry {
     ),
     AnalyticsMetricDefinition(
       id: 'publicStreetArtAdded',
-      label: 'Street art',
-      description: 'Public street art markers added by this profile.',
       icon: Icons.place_outlined,
       format: AnalyticsMetricFormat.compact,
       supportedEntities: userEntity,
@@ -185,8 +315,6 @@ class AnalyticsMetricRegistry {
     ),
     AnalyticsMetricDefinition(
       id: 'arEnabledArtworks',
-      label: 'AR artworks',
-      description: 'Published artworks with AR enabled.',
       icon: Icons.view_in_ar_outlined,
       format: AnalyticsMetricFormat.compact,
       supportedEntities: {
@@ -198,8 +326,6 @@ class AnalyticsMetricRegistry {
     ),
     AnalyticsMetricDefinition(
       id: 'collections',
-      label: 'Collections',
-      description: 'Collections created by this profile.',
       icon: Icons.collections_bookmark_outlined,
       format: AnalyticsMetricFormat.compact,
       supportedEntities: {
@@ -211,8 +337,6 @@ class AnalyticsMetricRegistry {
     ),
     AnalyticsMetricDefinition(
       id: 'nftsMinted',
-      label: 'analyticsMetricArchiveObjectsCreatedLabel',
-      description: 'analyticsMetricArchiveObjectsCreatedDescription',
       icon: Icons.token_outlined,
       format: AnalyticsMetricFormat.compact,
       supportedEntities: userEntity,
@@ -221,8 +345,6 @@ class AnalyticsMetricRegistry {
     ),
     AnalyticsMetricDefinition(
       id: 'likesGiven',
-      label: 'Likes given',
-      description: 'Likes this profile has sent.',
       icon: Icons.favorite_border,
       format: AnalyticsMetricFormat.compact,
       supportedEntities: userEntity,
@@ -230,8 +352,6 @@ class AnalyticsMetricRegistry {
     ),
     AnalyticsMetricDefinition(
       id: 'achievementsUnlocked',
-      label: 'Achievements',
-      description: 'Unlocked achievements.',
       icon: Icons.emoji_events_outlined,
       format: AnalyticsMetricFormat.compact,
       supportedEntities: userEntity,
@@ -239,8 +359,6 @@ class AnalyticsMetricRegistry {
     ),
     AnalyticsMetricDefinition(
       id: 'achievementTokensTotal',
-      label: 'analyticsMetricKub8RecognitionLabel',
-      description: 'analyticsMetricKub8RecognitionDescription',
       icon: Icons.payments_outlined,
       format: AnalyticsMetricFormat.kub8,
       supportedEntities: userEntity,
@@ -248,8 +366,6 @@ class AnalyticsMetricRegistry {
     ),
     AnalyticsMetricDefinition(
       id: 'likesReceived',
-      label: 'Likes received',
-      description: 'Likes received across public work and posts.',
       icon: Icons.favorite_outline,
       format: AnalyticsMetricFormat.compact,
       supportedEntities: userEntity,
@@ -257,8 +373,6 @@ class AnalyticsMetricRegistry {
     ),
     AnalyticsMetricDefinition(
       id: 'viewsReceived',
-      label: 'Views received',
-      description: 'Views across public work, posts, events, and exhibitions.',
       icon: Icons.visibility_outlined,
       format: AnalyticsMetricFormat.compact,
       supportedEntities: userEntity,
@@ -270,8 +384,6 @@ class AnalyticsMetricRegistry {
     ),
     AnalyticsMetricDefinition(
       id: 'eventsHosted',
-      label: 'Events hosted',
-      description: 'Events owned or hosted by this profile.',
       icon: Icons.event_available_outlined,
       format: AnalyticsMetricFormat.compact,
       supportedEntities: userEntity,
@@ -279,8 +391,6 @@ class AnalyticsMetricRegistry {
     ),
     AnalyticsMetricDefinition(
       id: 'visitorsReceived',
-      label: 'Visitors',
-      description: 'Views on hosted events and exhibitions.',
       icon: Icons.groups_outlined,
       format: AnalyticsMetricFormat.compact,
       supportedEntities: userEntity,
@@ -288,8 +398,6 @@ class AnalyticsMetricRegistry {
     ),
     AnalyticsMetricDefinition(
       id: 'exhibitions',
-      label: 'Exhibitions',
-      description: 'Exhibitions this profile participates in.',
       icon: AppColorUtils.exhibitionIcon,
       format: AnalyticsMetricFormat.compact,
       supportedEntities: userEntity,
@@ -297,8 +405,6 @@ class AnalyticsMetricRegistry {
     ),
     AnalyticsMetricDefinition(
       id: 'exhibitionArtworks',
-      label: 'Exhibition artworks',
-      description: 'Artworks included in owned exhibitions.',
       icon: AppColorUtils.exhibitionIcon,
       format: AnalyticsMetricFormat.compact,
       supportedEntities: userEntity,
@@ -307,8 +413,6 @@ class AnalyticsMetricRegistry {
     ),
     AnalyticsMetricDefinition(
       id: 'artworksDiscovered',
-      label: 'Discoveries',
-      description: 'Artworks discovered by this profile.',
       icon: Icons.explore_outlined,
       format: AnalyticsMetricFormat.compact,
       supportedEntities: userEntity,
@@ -317,8 +421,6 @@ class AnalyticsMetricRegistry {
     ),
     AnalyticsMetricDefinition(
       id: 'arSessions',
-      label: 'AR sessions',
-      description: 'AR sessions started by this profile.',
       icon: Icons.view_in_ar_outlined,
       format: AnalyticsMetricFormat.compact,
       supportedEntities: userEntity,
@@ -327,8 +429,6 @@ class AnalyticsMetricRegistry {
     ),
     AnalyticsMetricDefinition(
       id: 'viewsGiven',
-      label: 'Views given',
-      description: 'Content views by this profile.',
       icon: Icons.remove_red_eye_outlined,
       format: AnalyticsMetricFormat.compact,
       supportedEntities: userEntity,
@@ -338,8 +438,6 @@ class AnalyticsMetricRegistry {
     ),
     AnalyticsMetricDefinition(
       id: 'engagement',
-      label: 'Engagement',
-      description: 'Weighted likes, comments, shares, and saves.',
       icon: Icons.bolt_outlined,
       format: AnalyticsMetricFormat.compact,
       supportedEntities: {
@@ -354,8 +452,6 @@ class AnalyticsMetricRegistry {
     ),
     AnalyticsMetricDefinition(
       id: 'views',
-      label: 'Views',
-      description: 'View events for the selected entity.',
       icon: Icons.visibility_outlined,
       format: AnalyticsMetricFormat.compact,
       supportedEntities: {
@@ -373,8 +469,6 @@ class AnalyticsMetricRegistry {
     ),
     AnalyticsMetricDefinition(
       id: 'likes',
-      label: 'Likes',
-      description: 'Likes on the selected entity.',
       icon: Icons.favorite_outline,
       format: AnalyticsMetricFormat.compact,
       supportedEntities: {
@@ -386,8 +480,6 @@ class AnalyticsMetricRegistry {
     ),
     AnalyticsMetricDefinition(
       id: 'shares',
-      label: 'Shares',
-      description: 'Share events for the selected entity.',
       icon: Icons.ios_share_outlined,
       format: AnalyticsMetricFormat.compact,
       supportedEntities: {
@@ -401,8 +493,6 @@ class AnalyticsMetricRegistry {
     ),
     AnalyticsMetricDefinition(
       id: 'saves',
-      label: 'Saves',
-      description: 'Saved bookmarks for the selected entity.',
       icon: Icons.bookmark_border,
       format: AnalyticsMetricFormat.compact,
       supportedEntities: contentEntities,
@@ -410,8 +500,6 @@ class AnalyticsMetricRegistry {
     ),
     AnalyticsMetricDefinition(
       id: 'users',
-      label: 'Users',
-      description: 'Registered user count.',
       icon: Icons.people_alt_outlined,
       format: AnalyticsMetricFormat.compact,
       supportedEntities: platformEntity,
@@ -420,8 +508,6 @@ class AnalyticsMetricRegistry {
     ),
     AnalyticsMetricDefinition(
       id: 'profiles',
-      label: 'Profiles',
-      description: 'Public profile count.',
       icon: Icons.badge_outlined,
       format: AnalyticsMetricFormat.compact,
       supportedEntities: platformEntity,
@@ -430,8 +516,6 @@ class AnalyticsMetricRegistry {
     ),
     AnalyticsMetricDefinition(
       id: 'groups',
-      label: 'Groups',
-      description: 'Public community groups.',
       icon: Icons.groups_2_outlined,
       format: AnalyticsMetricFormat.compact,
       supportedEntities: platformEntity,
@@ -440,8 +524,6 @@ class AnalyticsMetricRegistry {
     ),
     AnalyticsMetricDefinition(
       id: 'follows',
-      label: 'Follows',
-      description: 'Follow relationships across the platform.',
       icon: Icons.person_add_alt_1_outlined,
       format: AnalyticsMetricFormat.compact,
       supportedEntities: platformEntity,
@@ -449,8 +531,6 @@ class AnalyticsMetricRegistry {
     ),
     AnalyticsMetricDefinition(
       id: 'daoTotalProposals',
-      label: 'Total proposals',
-      description: 'Governance proposals created in the DAO.',
       icon: Icons.how_to_vote_outlined,
       format: AnalyticsMetricFormat.compact,
       supportedEntities: daoEntity,
@@ -460,8 +540,6 @@ class AnalyticsMetricRegistry {
     ),
     AnalyticsMetricDefinition(
       id: 'daoActiveProposals',
-      label: 'Active proposals',
-      description: 'Proposals currently open for governance action.',
       icon: Icons.schedule_outlined,
       format: AnalyticsMetricFormat.compact,
       supportedEntities: daoEntity,
@@ -471,8 +549,6 @@ class AnalyticsMetricRegistry {
     ),
     AnalyticsMetricDefinition(
       id: 'daoVotesCast',
-      label: 'Votes cast',
-      description: 'Votes submitted across DAO proposals.',
       icon: Icons.ballot_outlined,
       format: AnalyticsMetricFormat.compact,
       supportedEntities: daoEntity,
@@ -482,8 +558,6 @@ class AnalyticsMetricRegistry {
     ),
     AnalyticsMetricDefinition(
       id: 'daoDelegates',
-      label: 'Delegates',
-      description: 'Delegates available for voting power delegation.',
       icon: Icons.groups_2_outlined,
       format: AnalyticsMetricFormat.compact,
       supportedEntities: daoEntity,
@@ -491,8 +565,6 @@ class AnalyticsMetricRegistry {
     ),
     AnalyticsMetricDefinition(
       id: 'daoAverageVotingPower',
-      label: 'Avg voting power',
-      description: 'Average voting power across delegates.',
       icon: Icons.account_balance_wallet_outlined,
       format: AnalyticsMetricFormat.kub8,
       supportedEntities: daoEntity,
@@ -501,8 +573,6 @@ class AnalyticsMetricRegistry {
     ),
     AnalyticsMetricDefinition(
       id: 'daoTreasuryAmount',
-      label: 'Treasury',
-      description: 'Current DAO treasury value.',
       icon: Icons.account_balance_outlined,
       format: AnalyticsMetricFormat.kub8,
       supportedEntities: daoEntity,
@@ -511,8 +581,6 @@ class AnalyticsMetricRegistry {
     ),
     AnalyticsMetricDefinition(
       id: 'daoTreasuryInflow',
-      label: 'Treasury inflow',
-      description: 'Positive treasury transactions.',
       icon: Icons.trending_up_outlined,
       format: AnalyticsMetricFormat.kub8,
       supportedEntities: daoEntity,
@@ -522,8 +590,6 @@ class AnalyticsMetricRegistry {
     ),
     AnalyticsMetricDefinition(
       id: 'daoTreasuryOutflow',
-      label: 'Treasury outflow',
-      description: 'Outgoing treasury transactions.',
       icon: Icons.trending_down_outlined,
       format: AnalyticsMetricFormat.kub8,
       supportedEntities: daoEntity,
@@ -533,8 +599,6 @@ class AnalyticsMetricRegistry {
     ),
     AnalyticsMetricDefinition(
       id: 'daoRecentTransactions',
-      label: 'Recent transactions',
-      description: 'Recent DAO treasury and execution activity.',
       icon: Icons.receipt_long_outlined,
       format: AnalyticsMetricFormat.compact,
       supportedEntities: daoEntity,
