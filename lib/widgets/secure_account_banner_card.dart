@@ -13,10 +13,16 @@ class SecureAccountBannerCard extends StatefulWidget {
     super.key,
     this.padding = EdgeInsets.zero,
     this.bottomSpacing = 0,
+    this.onVisibilityResolved,
   });
 
   final EdgeInsetsGeometry padding;
   final double bottomSpacing;
+
+  /// Reports whether the banner actually renders once its async state
+  /// resolves (and again whenever that changes, e.g. on dismiss), so
+  /// grouping sections can decide their own chrome.
+  final ValueChanged<bool>? onVisibilityResolved;
 
   @override
   State<SecureAccountBannerCard> createState() =>
@@ -109,12 +115,14 @@ class _SecureAccountBannerCardState extends State<SecureAccountBannerCard> {
         _shouldShow =
             emailAuthEnabled && !dismissed && !(hasEmail && hasPassword);
       });
+      widget.onVisibilityResolved?.call(_shouldShow);
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _loaded = true;
         _shouldShow = false;
       });
+      widget.onVisibilityResolved?.call(false);
     }
   }
 
@@ -125,6 +133,7 @@ class _SecureAccountBannerCardState extends State<SecureAccountBannerCard> {
     } catch (_) {}
     if (!mounted) return;
     setState(() => _shouldShow = false);
+    widget.onVisibilityResolved?.call(false);
   }
 
   Future<void> _openSecureAccount() async {
@@ -194,7 +203,7 @@ class _SecureAccountBannerCardState extends State<SecureAccountBannerCard> {
                 ),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                tooltip: 'Dismiss',
+                tooltip: l10n.commonDismiss,
               ),
             ],
           ),
@@ -204,7 +213,7 @@ class _SecureAccountBannerCardState extends State<SecureAccountBannerCard> {
               TextButton(
                 onPressed: _dismiss,
                 child: Text(
-                  'Not now',
+                  l10n.commonNotNow,
                   style: KubusTextStyles.navLabel.copyWith(
                     fontWeight: FontWeight.w600,
                     color: scheme.onSurface.withValues(alpha: 0.7),
@@ -216,7 +225,7 @@ class _SecureAccountBannerCardState extends State<SecureAccountBannerCard> {
                 onPressed: _openSecureAccount,
                 icon: const Icon(Icons.arrow_forward_rounded, size: 18),
                 label: Text(
-                  'Secure',
+                  l10n.authSecureAccountBannerCta,
                   style: KubusTextStyles.navLabel.copyWith(
                     fontWeight: FontWeight.w700,
                   ),

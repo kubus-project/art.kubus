@@ -51,8 +51,7 @@ import '../events/event_detail_screen.dart';
 import '../../widgets/artist_badge.dart';
 import '../../widgets/institution_badge.dart';
 import '../../widgets/email_verification_status_badge.dart';
-import '../../widgets/secure_account_banner_card.dart';
-import '../../widgets/wallet_backup_banner_card.dart';
+import '../../widgets/profile/profile_account_health_section.dart';
 import '../../widgets/profile/profile_achievements_preview_section.dart';
 import '../../widgets/profile/profile_badges_verification_section.dart';
 import '../../models/dao.dart';
@@ -224,19 +223,13 @@ class _ProfileScreenState extends State<ProfileScreen>
                       const SliverToBoxAdapter(
                           child: SizedBox(height: DetailSpacing.xl)),
                       const SliverToBoxAdapter(
-                        child: SecureAccountBannerCard(
+                        child: Padding(
                           padding: EdgeInsets.symmetric(
                             horizontal: DetailSpacing.lg,
                           ),
-                          bottomSpacing: DetailSpacing.xl,
-                        ),
-                      ),
-                      const SliverToBoxAdapter(
-                        child: WalletBackupBannerCard(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: DetailSpacing.lg,
+                          child: ProfileAccountHealthSection(
+                            bottomSpacing: DetailSpacing.xl,
                           ),
-                          bottomSpacing: DetailSpacing.xl,
                         ),
                       ),
                       _buildStatsSection(),

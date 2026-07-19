@@ -36,8 +36,7 @@ import '../../community/profile_screen_methods.dart';
 import '../../../widgets/artist_badge.dart';
 import '../../../widgets/institution_badge.dart';
 import '../../../widgets/email_verification_status_badge.dart';
-import '../../../widgets/secure_account_banner_card.dart';
-import '../../../widgets/wallet_backup_banner_card.dart';
+import '../../../widgets/profile/profile_account_health_section.dart';
 import '../../../widgets/profile/profile_achievements_preview_section.dart';
 import '../../../widgets/profile/profile_badges_verification_section.dart';
 import '../../../models/dao.dart';
@@ -173,7 +172,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     final isEmbeddedSubScreen = DesktopShellScope.of(context)?.canPop ?? false;
     final screenWidth = MediaQuery.of(context).size.width;
     final isLarge = screenWidth >= 1200;
-    final isWide = screenWidth >= 1400;
 
     final walletAddress = profileProvider.currentUser?.walletAddress ?? '';
     final DAOReview? daoReview = walletAddress.isNotEmpty
@@ -209,27 +207,25 @@ class _ProfileScreenState extends State<ProfileScreen>
                           showNavigationChrome: !isEmbeddedSubScreen,
                         ),
                         const SizedBox(height: DetailSpacing.xl),
-                        // Profile card with inline stats on wide screens
+                        // Identity leads; cultural content follows
+                        // immediately. Owner utilities (stats, account
+                        // health, badges, achievements) live in the side
+                        // column so the first viewport reads as a cultural
+                        // identity, not account management.
                         _buildProfileCard(themeProvider, profileProvider,
                             isArtist, isInstitution),
-                        const SizedBox(height: DetailSpacing.lg),
-                        const SecureAccountBannerCard(
-                            bottomSpacing: DetailSpacing.lg),
-                        const WalletBackupBannerCard(
-                            bottomSpacing: DetailSpacing.lg),
-                        _buildStatsCards(
-                            themeProvider, profileProvider, isLarge),
                         const SizedBox(height: DetailSpacing.xl),
-                        // Two-column layout for wide screens
-                        if (isWide)
+                        if (isLarge)
                           _buildTwoColumnLayout(
                             themeProvider: themeProvider,
+                            profileProvider: profileProvider,
                             isArtist: isArtist,
                             isInstitution: isInstitution,
                           )
                         else
                           _buildSingleColumnContent(
                             themeProvider: themeProvider,
+                            profileProvider: profileProvider,
                             isArtist: isArtist,
                             isInstitution: isInstitution,
                           ),
@@ -246,31 +242,19 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  /// Two-column layout for wide desktop screens (>=1400px)
+  /// Two-column layout from 1200 px: the wide main column carries cultural
+  /// content; the narrow side column carries owner context (compact stats,
+  /// account health, badges, performance, achievements).
   Widget _buildTwoColumnLayout({
     required ThemeProvider themeProvider,
+    required ProfileProvider profileProvider,
     required bool isArtist,
     required bool isInstitution,
   }) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Left column: Performance + Achievements (narrower)
-        SizedBox(
-          width: 380,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildBadgesVerificationSection(),
-              const SizedBox(height: DetailSpacing.lg),
-              _buildPerformanceStatsSection(),
-              const SizedBox(height: DetailSpacing.lg),
-              _buildAchievementsSection(),
-            ],
-          ),
-        ),
-        const SizedBox(width: DetailSpacing.xl),
-        // Right column: Content sections + Posts (wider)
+        // Main column: cultural content leads the viewport.
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -297,13 +281,35 @@ class _ProfileScreenState extends State<ProfileScreen>
             ],
           ),
         ),
+        const SizedBox(width: DetailSpacing.xl),
+        // Side column: owner context and account administration.
+        SizedBox(
+          width: 360,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildStatsCards(themeProvider, profileProvider, false),
+              const SizedBox(height: DetailSpacing.lg),
+              const ProfileAccountHealthSection(
+                bottomSpacing: DetailSpacing.lg,
+              ),
+              _buildBadgesVerificationSection(),
+              const SizedBox(height: DetailSpacing.lg),
+              _buildPerformanceStatsSection(),
+              const SizedBox(height: DetailSpacing.lg),
+              _buildAchievementsSection(),
+            ],
+          ),
+        ),
       ],
     );
   }
 
-  /// Single column layout for narrower screens (<1400px)
+  /// Single column layout for narrower screens (<1200px): cultural content
+  /// first, then owner stats and account administration.
   Widget _buildSingleColumnContent({
     required ThemeProvider themeProvider,
+    required ProfileProvider profileProvider,
     required bool isArtist,
     required bool isInstitution,
   }) {
@@ -329,6 +335,11 @@ class _ProfileScreenState extends State<ProfileScreen>
         ],
         _buildSavedItemsSection(themeProvider),
         const SizedBox(height: DetailSpacing.lg),
+        _buildStatsCards(themeProvider, profileProvider, false),
+        const SizedBox(height: DetailSpacing.lg),
+        const ProfileAccountHealthSection(
+          bottomSpacing: DetailSpacing.lg,
+        ),
         _buildPerformanceStatsSection(),
         const SizedBox(height: DetailSpacing.lg),
         _buildBadgesVerificationSection(),
