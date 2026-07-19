@@ -136,14 +136,13 @@ function escapeRegex(value) {
 }
 
 async function verifyBrowser(
-  browserType,
+  browser,
   browserName,
   viewportName,
   viewport,
   repetition,
 ) {
   const browserLabel = `${browserName}-${viewportName}-run-${repetition}`;
-  const browser = await browserType.launch({ headless: true });
   const context = await browser.newContext({ viewport });
   const page = await context.newPage();
   const consoleErrors = [];
@@ -238,7 +237,6 @@ async function verifyBrowser(
     };
   } finally {
     await context.close();
-    await browser.close();
   }
 }
 
@@ -248,18 +246,23 @@ const browserResults = [];
 for (const browserName of browserNames) {
   const browserType = browserTypes[browserName];
   ensure(browserType, `Unsupported browser: ${browserName}`);
-  for (const { name, viewport } of browserViewports) {
-    for (let repetition = 1; repetition <= browserRepetitions; repetition += 1) {
-      browserResults.push(
-        await verifyBrowser(
-          browserType,
-          browserName,
-          name,
-          viewport,
-          repetition,
-        ),
-      );
+  const browser = await browserType.launch({ headless: true });
+  try {
+    for (const { name, viewport } of browserViewports) {
+      for (let repetition = 1; repetition <= browserRepetitions; repetition += 1) {
+        browserResults.push(
+          await verifyBrowser(
+            browser,
+            browserName,
+            name,
+            viewport,
+            repetition,
+          ),
+        );
+      }
     }
+  } finally {
+    await browser.close();
   }
 }
 console.log(JSON.stringify({
