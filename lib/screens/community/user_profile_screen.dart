@@ -35,11 +35,12 @@ import '../../widgets/institution_badge.dart';
 import '../../widgets/community/community_post_card.dart';
 import '../../widgets/empty_state_card.dart';
 import '../../widgets/profile_artist_info_fields.dart';
-import '../../widgets/common/kubus_glass_icon_button.dart';
 import '../../widgets/common/kubus_stat_card.dart';
 import '../../widgets/common/kubus_screen_header.dart';
 import '../../widgets/detail/detail_shell_components.dart';
+import '../../widgets/detail/profile_relationship_actions.dart';
 import '../../widgets/detail/shared_section_widgets.dart';
+import '../../utils/profile_handle.dart';
 import 'post_detail_screen.dart';
 import '../../utils/artwork_navigation.dart';
 import '../art/collection_detail_screen.dart';
@@ -79,8 +80,7 @@ class UserProfileScreen extends StatefulWidget {
   State<UserProfileScreen> createState() => _UserProfileScreenState();
 }
 
-class _UserProfileScreenState extends State<UserProfileScreen>
-    with TickerProviderStateMixin {
+class _UserProfileScreenState extends State<UserProfileScreen> {
   User? user;
   late final ProfilePackageController _profileController;
   bool isLoading = true;
@@ -89,8 +89,6 @@ class _UserProfileScreenState extends State<UserProfileScreen>
   bool _isLastPage = false;
   bool _loadingMore = false;
   String? _postsError;
-  late AnimationController _followButtonController;
-  late Animation<double> _followButtonAnimation;
   late ScrollController _scrollController;
   bool _artistDataLoading = false;
   bool _artistDataLoaded = false;
@@ -104,13 +102,6 @@ class _UserProfileScreenState extends State<UserProfileScreen>
   @override
   void initState() {
     super.initState();
-    _followButtonController = AnimationController(
-      duration: const Duration(milliseconds: 200),
-      vsync: this,
-    );
-    _followButtonAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
-      CurvedAnimation(parent: _followButtonController, curve: Curves.easeInOut),
-    );
     _scrollController = ScrollController();
     _scrollController.addListener(() {
       if (_scrollController.position.pixels >=
@@ -149,7 +140,6 @@ class _UserProfileScreenState extends State<UserProfileScreen>
   void dispose() {
     _profileController.removeListener(_syncProfileControllerState);
     _profileController.dispose();
-    _followButtonController.dispose();
     try {
       Provider.of<WalletProvider>(context, listen: false)
           .removeListener(_onWalletChanged);
@@ -251,12 +241,6 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     final theme = Theme.of(context);
 
     setState(() => _isFollowMutationInFlight = true);
-
-    _followButtonController.forward().then((_) {
-      if (mounted) {
-        _followButtonController.reverse();
-      }
-    });
 
     UserFollowMutationResult mutation;
     try {
@@ -543,14 +527,6 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       cornerRadiusFactor: avatarCornerRadiusFactor,
     );
     final scheme = Theme.of(context).colorScheme;
-    final username = user!.username.trim();
-    final usernameLabel = username.isEmpty
-        ? ''
-        : (username.startsWith('@') ? username : '@$username');
-    final titleColor = hasCoverImage ? Colors.white : scheme.onSurface;
-    final subtitleColor = hasCoverImage
-        ? Colors.white.withValues(alpha: 0.82)
-        : scheme.onSurface.withValues(alpha: 0.70);
 
     return Column(
       children: [
@@ -675,63 +651,19 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                       ),
                     ),
                   ),
-                  const SizedBox(width: KubusSpacing.md),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Row(
-                          children: [
-                            Flexible(
-                              child: Text(
-                                user!.name,
-                                style: KubusTextStyles.screenTitle.copyWith(
-                                  color: titleColor,
-                                  letterSpacing: -0.2,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            if (user!.isVerified) ...[
-                              const SizedBox(width: KubusSpacing.sm),
-                              Icon(
-                                Icons.verified,
-                                color: hasCoverImage
-                                    ? Colors.white
-                                    : themeProvider.accentColor,
-                                size: KubusHeaderMetrics.actionIcon,
-                              ),
-                            ],
-                            if (isArtist) ...[
-                              const SizedBox(width: KubusSpacing.sm),
-                              const ArtistBadge(),
-                            ],
-                            if (isInstitution) ...[
-                              const SizedBox(width: KubusSpacing.sm),
-                              const InstitutionBadge(),
-                            ],
-                          ],
-                        ),
-                        if (usernameLabel.isNotEmpty) ...[
-                          const SizedBox(height: KubusSpacing.xs),
-                          Text(
-                            usernameLabel,
-                            style: KubusTextStyles.profileHandle.copyWith(
-                              color: subtitleColor,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: KubusSpacing.sm),
-                  _buildCompactHeaderActions(themeProvider, l10n),
                 ],
               ),
             ),
           ],
+        ),
+        const SizedBox(height: KubusSpacing.md),
+        // Identity + relationship actions live BELOW the cover so the full
+        // handle never competes horizontally with Follow/Message.
+        _buildIdentityAndActions(
+          themeProvider,
+          l10n,
+          isArtist: isArtist,
+          isInstitution: isInstitution,
         ),
         const SizedBox(height: KubusSpacing.md),
         LiquidGlassCard(
@@ -974,72 +906,73 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     }
   }
 
-  /// Compact follow + message pair rendered beside the name on the cover
-  /// photo, replacing the old full-width action row further down the page.
-  Widget _buildCompactHeaderActions(
-      ThemeProvider themeProvider, AppLocalizations l10n) {
+  /// Identity (name, badges, handle) followed by the canonical Follow/Message
+  /// relationship actions, rendered below the cover. The handle sits on its own
+  /// dedicated line so it is never truncated by the actions or badges.
+  Widget _buildIdentityAndActions(
+    ThemeProvider themeProvider,
+    AppLocalizations l10n, {
+    required bool isArtist,
+    required bool isInstitution,
+  }) {
     final scheme = Theme.of(context).colorScheme;
-    final isFollowing = user!.isFollowing;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
+    final handle = ProfileHandle.normalize(user!.username);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        ScaleTransition(
-          scale: _followButtonAnimation,
-          child: ElevatedButton(
-            onPressed: _isFollowMutationInFlight ? null : _toggleFollow,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: isFollowing
-                  ? scheme.surface.withValues(alpha: 0.94)
-                  : themeProvider.accentColor,
-              foregroundColor:
-                  isFollowing ? scheme.onSurface : themeProvider.onAccentColor,
-              side: isFollowing
-                  ? BorderSide(
-                      color: scheme.onSurface.withValues(alpha: 0.2),
-                      width: 1.5,
-                    )
-                  : null,
-              padding: const EdgeInsets.symmetric(
-                horizontal: KubusSpacing.md,
-                vertical: KubusSpacing.sm,
-              ),
-              minimumSize: const Size(0, 36),
-              visualDensity: VisualDensity.compact,
-              elevation: isFollowing ? 0 : 2,
-              shadowColor: Colors.black.withValues(alpha: 0.1),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(KubusRadius.xl),
+        // Name + verification/role badges. Long names may wrap to two lines;
+        // badges stay associated with the name without stealing handle width.
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              child: Text(
+                user!.name,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: KubusTextStyles.screenTitle.copyWith(
+                  color: scheme.onSurface,
+                  letterSpacing: -0.2,
+                ),
               ),
             ),
-            child: _isFollowMutationInFlight
-                ? SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: InlineLoading(
-                      tileSize: 4,
-                      color: isFollowing
-                          ? scheme.onSurface
-                          : themeProvider.onAccentColor,
-                    ),
-                  )
-                : Text(
-                    isFollowing
-                        ? l10n.userProfileFollowingButton
-                        : l10n.userProfileFollowButton,
-                    style: KubusTextStyles.actionTileSubtitle.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-          ),
+            if (user!.isVerified) ...[
+              const SizedBox(width: KubusSpacing.sm),
+              Icon(
+                Icons.verified,
+                color: themeProvider.accentColor,
+                size: KubusHeaderMetrics.actionIcon,
+              ),
+            ],
+            if (isArtist) ...[
+              const SizedBox(width: KubusSpacing.sm),
+              const ArtistBadge(),
+            ],
+            if (isInstitution) ...[
+              const SizedBox(width: KubusSpacing.sm),
+              const InstitutionBadge(),
+            ],
+          ],
         ),
-        const SizedBox(width: KubusSpacing.sm),
-        KubusGlassIconButton(
-          icon: Icons.message_outlined,
-          size: 36,
-          tooltip: l10n.userProfileMessageButtonLabel,
-          onPressed: _isFollowMutationInFlight
-              ? null
-              : () => unawaited(_openMessageConversation(l10n)),
+        if (handle != null) ...[
+          const SizedBox(height: KubusSpacing.xs),
+          // Full handle on its own line — never ellipsized at standard scale.
+          Text(
+            handle,
+            style: KubusTextStyles.profileHandle.copyWith(
+              color: scheme.onSurface.withValues(alpha: 0.70),
+            ),
+          ),
+        ],
+        const SizedBox(height: KubusSpacing.md),
+        ProfileRelationshipActions(
+          isFollowing: user!.isFollowing,
+          isFollowLoading: _isFollowMutationInFlight,
+          onFollow: () => unawaited(_toggleFollow()),
+          onMessage: () => unawaited(_openMessageConversation(l10n)),
+          followLabel: l10n.userProfileFollowButton,
+          followingLabel: l10n.userProfileFollowingButton,
+          messageLabel: l10n.userProfileMessageButtonLabel,
         ),
       ],
     );
