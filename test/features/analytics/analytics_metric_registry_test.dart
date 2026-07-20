@@ -1,12 +1,15 @@
 import 'package:art_kubus/features/analytics/analytics_entity_registry.dart';
 import 'package:art_kubus/features/analytics/analytics_metric_registry.dart';
+import 'package:art_kubus/l10n/app_localizations_en.dart';
+import 'package:art_kubus/l10n/app_localizations_sl.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('registry exposes canonical user metrics with grouping metadata', () {
     final viewsReceived = AnalyticsMetricRegistry.requireById('viewsReceived');
 
-    expect(viewsReceived.label, 'Views received');
+    expect(
+        viewsReceived.localizedLabel(AppLocalizationsEn()), 'Views received');
     expect(viewsReceived.supportsEntity(AnalyticsEntityType.user), isTrue);
     expect(viewsReceived.supportsScope(AnalyticsScope.public), isTrue);
     expect(viewsReceived.supportsScope(AnalyticsScope.private), isTrue);
@@ -85,6 +88,25 @@ void main() {
     expect(publicMetrics, contains('viewsReceived'));
     expect(publicMetrics, isNot(contains('engagement')));
     expect(publicMetrics, isNot(contains('artworksDiscovered')));
+  });
+
+  test('every metric resolves localized copy in EN and SL', () {
+    final en = AppLocalizationsEn();
+    final sl = AppLocalizationsSl();
+    for (final metric in AnalyticsMetricRegistry.metrics) {
+      for (final l10n in [en, sl]) {
+        final label = metric.localizedLabel(l10n);
+        final description = metric.localizedDescription(l10n);
+        expect(label, isNotEmpty,
+            reason: '${metric.id} label ${l10n.localeName}');
+        expect(label, isNot(metric.id),
+            reason: '${metric.id} label must not fall back to the id');
+        expect(description, isNotEmpty,
+            reason: '${metric.id} description ${l10n.localeName}');
+        expect(description, isNot(metric.id),
+            reason: '${metric.id} description must not fall back to the id');
+      }
+    }
   });
 
   test('compact formatting remains stable for large analytics counters', () {

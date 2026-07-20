@@ -25041,6 +25041,967 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Step {current} of {total}'**
   String onboardingStageProgress(int current, int total);
+
+  /// No description provided for @analyticsMetricFollowersLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Followers'**
+  String get analyticsMetricFollowersLabel;
+
+  /// No description provided for @analyticsMetricFollowersDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'People following this profile.'**
+  String get analyticsMetricFollowersDescription;
+
+  /// No description provided for @analyticsMetricFollowingLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Following'**
+  String get analyticsMetricFollowingLabel;
+
+  /// No description provided for @analyticsMetricFollowingDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Profiles followed by this wallet.'**
+  String get analyticsMetricFollowingDescription;
+
+  /// No description provided for @analyticsMetricPostsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Posts'**
+  String get analyticsMetricPostsLabel;
+
+  /// No description provided for @analyticsMetricPostsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Community posts published by this profile.'**
+  String get analyticsMetricPostsDescription;
+
+  /// No description provided for @analyticsMetricCommentsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Comments'**
+  String get analyticsMetricCommentsLabel;
+
+  /// No description provided for @analyticsMetricCommentsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Comments written by this profile.'**
+  String get analyticsMetricCommentsDescription;
+
+  /// No description provided for @analyticsMetricArtworksLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Artworks'**
+  String get analyticsMetricArtworksLabel;
+
+  /// No description provided for @analyticsMetricArtworksDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Active artworks attributed to this profile.'**
+  String get analyticsMetricArtworksDescription;
+
+  /// No description provided for @analyticsMetricPublicStreetArtAddedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Street art'**
+  String get analyticsMetricPublicStreetArtAddedLabel;
+
+  /// No description provided for @analyticsMetricPublicStreetArtAddedDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Public street art markers added by this profile.'**
+  String get analyticsMetricPublicStreetArtAddedDescription;
+
+  /// No description provided for @analyticsMetricArEnabledArtworksLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'AR artworks'**
+  String get analyticsMetricArEnabledArtworksLabel;
+
+  /// No description provided for @analyticsMetricArEnabledArtworksDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Published artworks with AR enabled.'**
+  String get analyticsMetricArEnabledArtworksDescription;
+
+  /// No description provided for @analyticsMetricCollectionsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Collections'**
+  String get analyticsMetricCollectionsLabel;
+
+  /// No description provided for @analyticsMetricCollectionsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Collections created by this profile.'**
+  String get analyticsMetricCollectionsDescription;
+
+  /// No description provided for @analyticsMetricLikesGivenLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Likes given'**
+  String get analyticsMetricLikesGivenLabel;
+
+  /// No description provided for @analyticsMetricLikesGivenDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Likes this profile has sent.'**
+  String get analyticsMetricLikesGivenDescription;
+
+  /// No description provided for @analyticsMetricAchievementsUnlockedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Achievements'**
+  String get analyticsMetricAchievementsUnlockedLabel;
+
+  /// No description provided for @analyticsMetricAchievementsUnlockedDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlocked achievements.'**
+  String get analyticsMetricAchievementsUnlockedDescription;
+
+  /// No description provided for @analyticsMetricLikesReceivedDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Likes received across public work and posts.'**
+  String get analyticsMetricLikesReceivedDescription;
+
+  /// No description provided for @analyticsMetricViewsReceivedDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Views across public work, posts, events, and exhibitions.'**
+  String get analyticsMetricViewsReceivedDescription;
+
+  /// No description provided for @analyticsMetricEventsHostedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Events hosted'**
+  String get analyticsMetricEventsHostedLabel;
+
+  /// No description provided for @analyticsMetricEventsHostedDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Events owned or hosted by this profile.'**
+  String get analyticsMetricEventsHostedDescription;
+
+  /// No description provided for @analyticsMetricVisitorsReceivedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Visitors'**
+  String get analyticsMetricVisitorsReceivedLabel;
+
+  /// No description provided for @analyticsMetricVisitorsReceivedDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Views on hosted events and exhibitions.'**
+  String get analyticsMetricVisitorsReceivedDescription;
+
+  /// No description provided for @analyticsMetricExhibitionsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Exhibitions'**
+  String get analyticsMetricExhibitionsLabel;
+
+  /// No description provided for @analyticsMetricExhibitionsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Exhibitions this profile participates in.'**
+  String get analyticsMetricExhibitionsDescription;
+
+  /// No description provided for @analyticsMetricExhibitionArtworksLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Exhibition artworks'**
+  String get analyticsMetricExhibitionArtworksLabel;
+
+  /// No description provided for @analyticsMetricExhibitionArtworksDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Artworks included in owned exhibitions.'**
+  String get analyticsMetricExhibitionArtworksDescription;
+
+  /// No description provided for @analyticsMetricArtworksDiscoveredLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Discoveries'**
+  String get analyticsMetricArtworksDiscoveredLabel;
+
+  /// No description provided for @analyticsMetricArtworksDiscoveredDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Artworks discovered by this profile.'**
+  String get analyticsMetricArtworksDiscoveredDescription;
+
+  /// No description provided for @analyticsMetricArSessionsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'AR sessions'**
+  String get analyticsMetricArSessionsLabel;
+
+  /// No description provided for @analyticsMetricArSessionsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'AR sessions started by this profile.'**
+  String get analyticsMetricArSessionsDescription;
+
+  /// No description provided for @analyticsMetricViewsGivenDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Content views by this profile.'**
+  String get analyticsMetricViewsGivenDescription;
+
+  /// No description provided for @analyticsMetricEngagementDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Weighted likes, comments, shares, and saves.'**
+  String get analyticsMetricEngagementDescription;
+
+  /// No description provided for @analyticsMetricViewsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Views'**
+  String get analyticsMetricViewsLabel;
+
+  /// No description provided for @analyticsMetricViewsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'View events for the selected entity.'**
+  String get analyticsMetricViewsDescription;
+
+  /// No description provided for @analyticsMetricLikesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Likes'**
+  String get analyticsMetricLikesLabel;
+
+  /// No description provided for @analyticsMetricLikesDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Likes on the selected entity.'**
+  String get analyticsMetricLikesDescription;
+
+  /// No description provided for @analyticsMetricSharesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Shares'**
+  String get analyticsMetricSharesLabel;
+
+  /// No description provided for @analyticsMetricSharesDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Share events for the selected entity.'**
+  String get analyticsMetricSharesDescription;
+
+  /// No description provided for @analyticsMetricSavesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Saves'**
+  String get analyticsMetricSavesLabel;
+
+  /// No description provided for @analyticsMetricSavesDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved bookmarks for the selected entity.'**
+  String get analyticsMetricSavesDescription;
+
+  /// No description provided for @analyticsMetricUsersLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Users'**
+  String get analyticsMetricUsersLabel;
+
+  /// No description provided for @analyticsMetricUsersDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Registered user count.'**
+  String get analyticsMetricUsersDescription;
+
+  /// No description provided for @analyticsMetricProfilesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Profiles'**
+  String get analyticsMetricProfilesLabel;
+
+  /// No description provided for @analyticsMetricProfilesDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Public profile count.'**
+  String get analyticsMetricProfilesDescription;
+
+  /// No description provided for @analyticsMetricGroupsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Groups'**
+  String get analyticsMetricGroupsLabel;
+
+  /// No description provided for @analyticsMetricGroupsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Public community groups.'**
+  String get analyticsMetricGroupsDescription;
+
+  /// No description provided for @analyticsMetricFollowsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Follows'**
+  String get analyticsMetricFollowsLabel;
+
+  /// No description provided for @analyticsMetricFollowsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow relationships across the platform.'**
+  String get analyticsMetricFollowsDescription;
+
+  /// No description provided for @analyticsMetricDaoTotalProposalsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Total proposals'**
+  String get analyticsMetricDaoTotalProposalsLabel;
+
+  /// No description provided for @analyticsMetricDaoTotalProposalsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Governance proposals created in the DAO.'**
+  String get analyticsMetricDaoTotalProposalsDescription;
+
+  /// No description provided for @analyticsMetricDaoActiveProposalsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Active proposals'**
+  String get analyticsMetricDaoActiveProposalsLabel;
+
+  /// No description provided for @analyticsMetricDaoActiveProposalsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Proposals currently open for governance action.'**
+  String get analyticsMetricDaoActiveProposalsDescription;
+
+  /// No description provided for @analyticsMetricDaoVotesCastLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Votes cast'**
+  String get analyticsMetricDaoVotesCastLabel;
+
+  /// No description provided for @analyticsMetricDaoVotesCastDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Votes submitted across DAO proposals.'**
+  String get analyticsMetricDaoVotesCastDescription;
+
+  /// No description provided for @analyticsMetricDaoDelegatesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Delegates'**
+  String get analyticsMetricDaoDelegatesLabel;
+
+  /// No description provided for @analyticsMetricDaoDelegatesDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Delegates available for voting power delegation.'**
+  String get analyticsMetricDaoDelegatesDescription;
+
+  /// No description provided for @analyticsMetricDaoAverageVotingPowerLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Avg voting power'**
+  String get analyticsMetricDaoAverageVotingPowerLabel;
+
+  /// No description provided for @analyticsMetricDaoAverageVotingPowerDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Average voting power across delegates.'**
+  String get analyticsMetricDaoAverageVotingPowerDescription;
+
+  /// No description provided for @analyticsMetricDaoTreasuryAmountLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Treasury'**
+  String get analyticsMetricDaoTreasuryAmountLabel;
+
+  /// No description provided for @analyticsMetricDaoTreasuryAmountDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Current DAO treasury value.'**
+  String get analyticsMetricDaoTreasuryAmountDescription;
+
+  /// No description provided for @analyticsMetricDaoTreasuryInflowLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Treasury inflow'**
+  String get analyticsMetricDaoTreasuryInflowLabel;
+
+  /// No description provided for @analyticsMetricDaoTreasuryInflowDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Positive treasury transactions.'**
+  String get analyticsMetricDaoTreasuryInflowDescription;
+
+  /// No description provided for @analyticsMetricDaoTreasuryOutflowLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Treasury outflow'**
+  String get analyticsMetricDaoTreasuryOutflowLabel;
+
+  /// No description provided for @analyticsMetricDaoTreasuryOutflowDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Outgoing treasury transactions.'**
+  String get analyticsMetricDaoTreasuryOutflowDescription;
+
+  /// No description provided for @analyticsMetricDaoRecentTransactionsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent transactions'**
+  String get analyticsMetricDaoRecentTransactionsLabel;
+
+  /// No description provided for @analyticsMetricDaoRecentTransactionsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent DAO treasury and execution activity.'**
+  String get analyticsMetricDaoRecentTransactionsDescription;
+
+  /// No description provided for @analyticsPresetProfileTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile analytics'**
+  String get analyticsPresetProfileTitle;
+
+  /// No description provided for @analyticsPresetProfileScopeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile'**
+  String get analyticsPresetProfileScopeLabel;
+
+  /// No description provided for @analyticsPresetProfileSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Audience, publishing, and profile engagement.'**
+  String get analyticsPresetProfileSubtitle;
+
+  /// No description provided for @analyticsPresetCommunityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Community analytics'**
+  String get analyticsPresetCommunityTitle;
+
+  /// No description provided for @analyticsPresetCommunityScopeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Community'**
+  String get analyticsPresetCommunityScopeLabel;
+
+  /// No description provided for @analyticsPresetCommunitySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Posting, conversation, and community response.'**
+  String get analyticsPresetCommunitySubtitle;
+
+  /// No description provided for @analyticsPresetArtistTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Artist analytics'**
+  String get analyticsPresetArtistTitle;
+
+  /// No description provided for @analyticsPresetArtistScopeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Artist studio'**
+  String get analyticsPresetArtistScopeLabel;
+
+  /// No description provided for @analyticsPresetInstitutionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Institution analytics'**
+  String get analyticsPresetInstitutionTitle;
+
+  /// No description provided for @analyticsPresetInstitutionScopeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Institution hub'**
+  String get analyticsPresetInstitutionScopeLabel;
+
+  /// No description provided for @analyticsPresetPlatformTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Platform analytics'**
+  String get analyticsPresetPlatformTitle;
+
+  /// No description provided for @analyticsPresetPlatformScopeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Platform'**
+  String get analyticsPresetPlatformScopeLabel;
+
+  /// No description provided for @analyticsPresetPlatformSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Admin-only platform health and usage.'**
+  String get analyticsPresetPlatformSubtitle;
+
+  /// No description provided for @analyticsPresetDaoTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'DAO analytics'**
+  String get analyticsPresetDaoTitle;
+
+  /// No description provided for @analyticsPresetDaoScopeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'DAO'**
+  String get analyticsPresetDaoScopeLabel;
+
+  /// No description provided for @analyticsPresetDaoSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Governance proposals, voting, delegates, and treasury flow.'**
+  String get analyticsPresetDaoSubtitle;
+
+  /// No description provided for @analyticsScopePublicLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Public'**
+  String get analyticsScopePublicLabel;
+
+  /// No description provided for @analyticsScopePrivateLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Private'**
+  String get analyticsScopePrivateLabel;
+
+  /// No description provided for @analyticsBlockedWalletRequiredTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect your wallet'**
+  String get analyticsBlockedWalletRequiredTitle;
+
+  /// No description provided for @analyticsBlockedWalletRequiredDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Analytics are available after a wallet is connected.'**
+  String get analyticsBlockedWalletRequiredDescription;
+
+  /// No description provided for @analyticsBlockedDisabledTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Analytics disabled'**
+  String get analyticsBlockedDisabledTitle;
+
+  /// No description provided for @analyticsBlockedDisabledDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable analytics in Settings to view charts and insights.'**
+  String get analyticsBlockedDisabledDescription;
+
+  /// No description provided for @analyticsBlockedAdminRequiredTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Admin analytics'**
+  String get analyticsBlockedAdminRequiredTitle;
+
+  /// No description provided for @analyticsBlockedAdminRequiredDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Platform analytics require an admin session.'**
+  String get analyticsBlockedAdminRequiredDescription;
+
+  /// No description provided for @analyticsBlockedOwnerRequiredTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Private analytics'**
+  String get analyticsBlockedOwnerRequiredTitle;
+
+  /// No description provided for @analyticsBlockedOwnerRequiredDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Use the wallet that owns this workspace.'**
+  String get analyticsBlockedOwnerRequiredDescription;
+
+  /// No description provided for @analyticsBlockedPrivateOnlyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Private analytics'**
+  String get analyticsBlockedPrivateOnlyTitle;
+
+  /// No description provided for @analyticsBlockedPrivateOnlyDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'This analytics workspace is available to its owner only.'**
+  String get analyticsBlockedPrivateOnlyDescription;
+
+  /// No description provided for @analyticsBlockedArtistPendingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Artist review pending'**
+  String get analyticsBlockedArtistPendingTitle;
+
+  /// No description provided for @analyticsBlockedArtistPendingDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Artist analytics unlock after DAO approval.'**
+  String get analyticsBlockedArtistPendingDescription;
+
+  /// No description provided for @analyticsBlockedArtistRejectedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Artist review rejected'**
+  String get analyticsBlockedArtistRejectedTitle;
+
+  /// No description provided for @analyticsBlockedArtistRejectedDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit an approved artist review before using artist analytics.'**
+  String get analyticsBlockedArtistRejectedDescription;
+
+  /// No description provided for @analyticsBlockedArtistRoleMismatchTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Artist analytics unavailable'**
+  String get analyticsBlockedArtistRoleMismatchTitle;
+
+  /// No description provided for @analyticsBlockedArtistRoleMismatchDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Use an approved artist wallet for artist analytics.'**
+  String get analyticsBlockedArtistRoleMismatchDescription;
+
+  /// No description provided for @analyticsBlockedArtistApprovalRequiredTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Artist approval required'**
+  String get analyticsBlockedArtistApprovalRequiredTitle;
+
+  /// No description provided for @analyticsBlockedArtistApprovalRequiredDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply for DAO artist review to unlock artist analytics.'**
+  String get analyticsBlockedArtistApprovalRequiredDescription;
+
+  /// No description provided for @analyticsBlockedInstitutionPendingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Institution review pending'**
+  String get analyticsBlockedInstitutionPendingTitle;
+
+  /// No description provided for @analyticsBlockedInstitutionPendingDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Institution analytics unlock after DAO approval.'**
+  String get analyticsBlockedInstitutionPendingDescription;
+
+  /// No description provided for @analyticsBlockedInstitutionRejectedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Institution review rejected'**
+  String get analyticsBlockedInstitutionRejectedTitle;
+
+  /// No description provided for @analyticsBlockedInstitutionRejectedDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit an approved institution review before using analytics.'**
+  String get analyticsBlockedInstitutionRejectedDescription;
+
+  /// No description provided for @analyticsBlockedInstitutionRoleMismatchTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Institution analytics unavailable'**
+  String get analyticsBlockedInstitutionRoleMismatchTitle;
+
+  /// No description provided for @analyticsBlockedInstitutionRoleMismatchDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Use an approved institution wallet for institution analytics.'**
+  String get analyticsBlockedInstitutionRoleMismatchDescription;
+
+  /// No description provided for @analyticsBlockedInstitutionApprovalRequiredTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Institution approval required'**
+  String get analyticsBlockedInstitutionApprovalRequiredTitle;
+
+  /// No description provided for @analyticsBlockedInstitutionApprovalRequiredDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply for DAO institution review to unlock institution analytics.'**
+  String get analyticsBlockedInstitutionApprovalRequiredDescription;
+
+  /// No description provided for @analyticsNoMetricsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No supported metrics'**
+  String get analyticsNoMetricsTitle;
+
+  /// No description provided for @analyticsNoMetricsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'This analytics preset has no metrics for the current scope.'**
+  String get analyticsNoMetricsDescription;
+
+  /// No description provided for @analyticsSeriesUnavailableTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Series unavailable'**
+  String get analyticsSeriesUnavailableTitle;
+
+  /// No description provided for @analyticsSeriesUnavailableDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'This metric is available as a snapshot only.'**
+  String get analyticsSeriesUnavailableDescription;
+
+  /// No description provided for @analyticsLoadingLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading analytics'**
+  String get analyticsLoadingLabel;
+
+  /// No description provided for @analyticsRefreshingLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Updating…'**
+  String get analyticsRefreshingLabel;
+
+  /// No description provided for @analyticsExportAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Export'**
+  String get analyticsExportAction;
+
+  /// No description provided for @analyticsTrendTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{metric} trend'**
+  String analyticsTrendTitle(Object metric);
+
+  /// No description provided for @analyticsTrendComparedSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{timeframe} compared with the previous period'**
+  String analyticsTrendComparedSubtitle(Object timeframe);
+
+  /// No description provided for @analyticsTrendErrorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load trend'**
+  String get analyticsTrendErrorTitle;
+
+  /// No description provided for @analyticsTrendErrorDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Try a different metric or timeframe.'**
+  String get analyticsTrendErrorDescription;
+
+  /// No description provided for @analyticsSeriesCurrentLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Current'**
+  String get analyticsSeriesCurrentLabel;
+
+  /// No description provided for @analyticsSeriesPreviousLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous'**
+  String get analyticsSeriesPreviousLabel;
+
+  /// No description provided for @analyticsComparisonSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Comparison'**
+  String get analyticsComparisonSectionTitle;
+
+  /// No description provided for @analyticsComparisonsEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No comparison yet'**
+  String get analyticsComparisonsEmptyTitle;
+
+  /// No description provided for @analyticsBreakdownSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Breakdown'**
+  String get analyticsBreakdownSectionTitle;
+
+  /// No description provided for @analyticsPreviousValueLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous: {value}'**
+  String analyticsPreviousValueLabel(Object value);
+
+  /// No description provided for @analyticsComparisonAverageBucketLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Average bucket'**
+  String get analyticsComparisonAverageBucketLabel;
+
+  /// No description provided for @analyticsComparisonActivityCoverage.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity coverage'**
+  String get analyticsComparisonActivityCoverage;
+
+  /// No description provided for @analyticsInsightActivePatternTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Active {timeframe} pattern'**
+  String analyticsInsightActivePatternTitle(Object timeframe);
+
+  /// No description provided for @analyticsInsightActivePatternDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'{activeBuckets} of {totalBuckets} intervals recorded {metric}.'**
+  String analyticsInsightActivePatternDescription(
+      Object activeBuckets, Object totalBuckets, Object metric);
+
+  /// No description provided for @analyticsInsightPeakTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Peak interval'**
+  String get analyticsInsightPeakTitle;
+
+  /// No description provided for @analyticsInsightPeakDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'The strongest interval reached {value}.'**
+  String analyticsInsightPeakDescription(Object value);
+
+  /// No description provided for @analyticsInsightMomentumUpTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Momentum improved'**
+  String get analyticsInsightMomentumUpTitle;
+
+  /// No description provided for @analyticsInsightMomentumDownTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Momentum softened'**
+  String get analyticsInsightMomentumDownTitle;
+
+  /// No description provided for @analyticsInsightMomentumDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'{metric} is {change} versus the previous period.'**
+  String analyticsInsightMomentumDescription(Object metric, Object change);
+
+  /// No description provided for @analyticsShareMetricValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Metric: {metric}'**
+  String analyticsShareMetricValue(Object metric);
+
+  /// No description provided for @analyticsShareTotalValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Total: {total}'**
+  String analyticsShareTotalValue(Object total);
+
+  /// No description provided for @analyticsExportSubjectLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'{preset} {metric} export'**
+  String analyticsExportSubjectLabel(Object preset, Object metric);
+
+  /// No description provided for @analyticsCardSemanticsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'{metric} analytics'**
+  String analyticsCardSemanticsLabel(Object metric);
+
+  /// No description provided for @analyticsFilterSheetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Analytics filters'**
+  String get analyticsFilterSheetTitle;
+
+  /// No description provided for @analyticsFilterTimeframeSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Time period'**
+  String get analyticsFilterTimeframeSectionTitle;
+
+  /// No description provided for @analyticsFilterSummaryTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Adjust analytics filters'**
+  String get analyticsFilterSummaryTooltip;
+
+  /// No description provided for @analyticsTimeframeLabel24h.
+  ///
+  /// In en, this message translates to:
+  /// **'Last 24 hours'**
+  String get analyticsTimeframeLabel24h;
+
+  /// No description provided for @analyticsTimeframeLabel7d.
+  ///
+  /// In en, this message translates to:
+  /// **'Last 7 days'**
+  String get analyticsTimeframeLabel7d;
+
+  /// No description provided for @analyticsTimeframeLabel30d.
+  ///
+  /// In en, this message translates to:
+  /// **'Last 30 days'**
+  String get analyticsTimeframeLabel30d;
+
+  /// No description provided for @analyticsTimeframeLabel90d.
+  ///
+  /// In en, this message translates to:
+  /// **'Last 90 days'**
+  String get analyticsTimeframeLabel90d;
+
+  /// No description provided for @analyticsTimeframeLabel1y.
+  ///
+  /// In en, this message translates to:
+  /// **'Last year'**
+  String get analyticsTimeframeLabel1y;
+
+  /// No description provided for @desktopProfileAnalyticsDialogIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Open the unified analytics experience and start in the context you want to review.'**
+  String get desktopProfileAnalyticsDialogIntro;
+
+  /// No description provided for @desktopProfileAnalyticsProfileSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile reach, follower growth, views, and owned signals.'**
+  String get desktopProfileAnalyticsProfileSubtitle;
+
+  /// No description provided for @desktopProfileAnalyticsCommunitySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Community posting, likes, and engagement in the same analytics UI.'**
+  String get desktopProfileAnalyticsCommunitySubtitle;
+
+  /// No description provided for @profileAccountHealthTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Account health'**
+  String get profileAccountHealthTitle;
+
+  /// No description provided for @profileAccountHealthAdvisoryLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Account suggestions'**
+  String get profileAccountHealthAdvisoryLabel;
+
+  /// No description provided for @commonNotNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Not now'**
+  String get commonNotNow;
+
+  /// No description provided for @commonDismiss.
+  ///
+  /// In en, this message translates to:
+  /// **'Dismiss'**
+  String get commonDismiss;
+
+  /// No description provided for @authSecureAccountBannerCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Secure'**
+  String get authSecureAccountBannerCta;
 }
 
 class _AppLocalizationsDelegate

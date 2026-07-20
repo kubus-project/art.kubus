@@ -5875,5 +5875,224 @@
       "current": { "type": "int" },
       "total": { "type": "int" }
     }
-  }
+  },
+  "analyticsMetricFollowersLabel": "Sledilci",
+  "analyticsMetricFollowersDescription": "Osebe, ki sledijo temu profilu.",
+  "analyticsMetricFollowingLabel": "Sledim",
+  "analyticsMetricFollowingDescription": "Profili, ki jim ta denarnica sledi.",
+  "analyticsMetricPostsLabel": "Objave",
+  "analyticsMetricPostsDescription": "Objave v skupnosti, ki jih je objavil ta profil.",
+  "analyticsMetricCommentsLabel": "Komentarji",
+  "analyticsMetricCommentsDescription": "Komentarji, ki jih je napisal ta profil.",
+  "analyticsMetricArtworksLabel": "Umetnine",
+  "analyticsMetricArtworksDescription": "Aktivne umetnine, pripisane temu profilu.",
+  "analyticsMetricPublicStreetArtAddedLabel": "Ulična umetnost",
+  "analyticsMetricPublicStreetArtAddedDescription": "Javne oznake ulične umetnosti, ki jih je dodal ta profil.",
+  "analyticsMetricArEnabledArtworksLabel": "AR umetnine",
+  "analyticsMetricArEnabledArtworksDescription": "Objavljene umetnine z omogočenim AR.",
+  "analyticsMetricCollectionsLabel": "Zbirke",
+  "analyticsMetricCollectionsDescription": "Zbirke, ki jih je ustvaril ta profil.",
+  "analyticsMetricLikesGivenLabel": "Oddani všečki",
+  "analyticsMetricLikesGivenDescription": "Všečki, ki jih je ta profil oddal.",
+  "analyticsMetricAchievementsUnlockedLabel": "Dosežki",
+  "analyticsMetricAchievementsUnlockedDescription": "Odklenjeni dosežki.",
+  "analyticsMetricLikesReceivedDescription": "Prejeti všečki na javnih delih in objavah.",
+  "analyticsMetricViewsReceivedDescription": "Ogledi javnih del, objav, dogodkov in razstav.",
+  "analyticsMetricEventsHostedLabel": "Gostovani dogodki",
+  "analyticsMetricEventsHostedDescription": "Dogodki v lasti ali gostovanju tega profila.",
+  "analyticsMetricVisitorsReceivedLabel": "Obiskovalci",
+  "analyticsMetricVisitorsReceivedDescription": "Ogledi gostovanih dogodkov in razstav.",
+  "analyticsMetricExhibitionsLabel": "Razstave",
+  "analyticsMetricExhibitionsDescription": "Razstave, v katerih sodeluje ta profil.",
+  "analyticsMetricExhibitionArtworksLabel": "Razstavljene umetnine",
+  "analyticsMetricExhibitionArtworksDescription": "Umetnine, vključene v lastne razstave.",
+  "analyticsMetricArtworksDiscoveredLabel": "Odkritja",
+  "analyticsMetricArtworksDiscoveredDescription": "Umetnine, ki jih je ta profil odkril.",
+  "analyticsMetricArSessionsLabel": "AR seje",
+  "analyticsMetricArSessionsDescription": "AR seje, ki jih je začel ta profil.",
+  "analyticsMetricViewsGivenDescription": "Ogledi vsebin s tega profila.",
+  "analyticsMetricEngagementDescription": "Uteženi všečki, komentarji, deljenja in shranjevanja.",
+  "analyticsMetricViewsLabel": "Ogledi",
+  "analyticsMetricViewsDescription": "Ogledi izbrane entitete.",
+  "analyticsMetricLikesLabel": "Všečki",
+  "analyticsMetricLikesDescription": "Všečki izbrane entitete.",
+  "analyticsMetricSharesLabel": "Deljenja",
+  "analyticsMetricSharesDescription": "Deljenja izbrane entitete.",
+  "analyticsMetricSavesLabel": "Shranjevanja",
+  "analyticsMetricSavesDescription": "Shranjeni zaznamki izbrane entitete.",
+  "analyticsMetricUsersLabel": "Uporabniki",
+  "analyticsMetricUsersDescription": "Število registriranih uporabnikov.",
+  "analyticsMetricProfilesLabel": "Profili",
+  "analyticsMetricProfilesDescription": "Število javnih profilov.",
+  "analyticsMetricGroupsLabel": "Skupine",
+  "analyticsMetricGroupsDescription": "Javne skupine skupnosti.",
+  "analyticsMetricFollowsLabel": "Sledenja",
+  "analyticsMetricFollowsDescription": "Sledilske povezave na platformi.",
+  "analyticsMetricDaoTotalProposalsLabel": "Vsi predlogi",
+  "analyticsMetricDaoTotalProposalsDescription": "Predlogi upravljanja, ustvarjeni v DAO.",
+  "analyticsMetricDaoActiveProposalsLabel": "Aktivni predlogi",
+  "analyticsMetricDaoActiveProposalsDescription": "Predlogi, trenutno odprti za glasovanje.",
+  "analyticsMetricDaoVotesCastLabel": "Oddani glasovi",
+  "analyticsMetricDaoVotesCastDescription": "Glasovi, oddani pri predlogih DAO.",
+  "analyticsMetricDaoDelegatesLabel": "Delegati",
+  "analyticsMetricDaoDelegatesDescription": "Delegati, na katere je mogoče prenesti glasovalno moč.",
+  "analyticsMetricDaoAverageVotingPowerLabel": "Povpr. glasovalna moč",
+  "analyticsMetricDaoAverageVotingPowerDescription": "Povprečna glasovalna moč delegatov.",
+  "analyticsMetricDaoTreasuryAmountLabel": "Zakladnica",
+  "analyticsMetricDaoTreasuryAmountDescription": "Trenutna vrednost zakladnice DAO.",
+  "analyticsMetricDaoTreasuryInflowLabel": "Prilivi v zakladnico",
+  "analyticsMetricDaoTreasuryInflowDescription": "Prilivi sredstev v zakladnico DAO.",
+  "analyticsMetricDaoTreasuryOutflowLabel": "Odlivi iz zakladnice",
+  "analyticsMetricDaoTreasuryOutflowDescription": "Odlivi sredstev iz zakladnice DAO.",
+  "analyticsMetricDaoRecentTransactionsLabel": "Nedavne transakcije",
+  "analyticsMetricDaoRecentTransactionsDescription": "Nedavna aktivnost zakladnice in izvrševanja DAO.",
+  "analyticsPresetProfileTitle": "Analitika profila",
+  "analyticsPresetProfileScopeLabel": "Profil",
+  "analyticsPresetProfileSubtitle": "Občinstvo, objavljanje in vključenost profila.",
+  "analyticsPresetCommunityTitle": "Analitika skupnosti",
+  "analyticsPresetCommunityScopeLabel": "Skupnost",
+  "analyticsPresetCommunitySubtitle": "Objave, pogovori in odziv skupnosti.",
+  "analyticsPresetArtistTitle": "Analitika umetnika",
+  "analyticsPresetArtistScopeLabel": "Umetniški studio",
+  "analyticsPresetInstitutionTitle": "Analitika institucije",
+  "analyticsPresetInstitutionScopeLabel": "Središče institucije",
+  "analyticsPresetPlatformTitle": "Analitika platforme",
+  "analyticsPresetPlatformScopeLabel": "Platforma",
+  "analyticsPresetPlatformSubtitle": "Zdravje in uporaba platforme (samo za skrbnike).",
+  "analyticsPresetDaoTitle": "Analitika DAO",
+  "analyticsPresetDaoScopeLabel": "DAO",
+  "analyticsPresetDaoSubtitle": "Predlogi upravljanja, glasovanje, delegati in tok zakladnice.",
+  "analyticsScopePublicLabel": "Javno",
+  "analyticsScopePrivateLabel": "Zasebno",
+  "analyticsBlockedWalletRequiredTitle": "Poveži denarnico",
+  "analyticsBlockedWalletRequiredDescription": "Analitika je na voljo, ko je denarnica povezana.",
+  "analyticsBlockedDisabledTitle": "Analitika je onemogočena",
+  "analyticsBlockedDisabledDescription": "V nastavitvah omogoči analitiko za prikaz grafov in vpogledov.",
+  "analyticsBlockedAdminRequiredTitle": "Skrbniška analitika",
+  "analyticsBlockedAdminRequiredDescription": "Analitika platforme zahteva skrbniško sejo.",
+  "analyticsBlockedOwnerRequiredTitle": "Zasebna analitika",
+  "analyticsBlockedOwnerRequiredDescription": "Uporabi denarnico, ki je lastnica tega delovnega prostora.",
+  "analyticsBlockedPrivateOnlyTitle": "Zasebna analitika",
+  "analyticsBlockedPrivateOnlyDescription": "Ta analitični prostor je na voljo samo lastniku.",
+  "analyticsBlockedArtistPendingTitle": "Preverjanje umetnika je v teku",
+  "analyticsBlockedArtistPendingDescription": "Analitika umetnika se odklene po odobritvi DAO.",
+  "analyticsBlockedArtistRejectedTitle": "Preverjanje umetnika je zavrnjeno",
+  "analyticsBlockedArtistRejectedDescription": "Za uporabo analitike umetnika je potrebna odobrena umetniška vloga.",
+  "analyticsBlockedArtistRoleMismatchTitle": "Analitika umetnika ni na voljo",
+  "analyticsBlockedArtistRoleMismatchDescription": "Za analitiko umetnika uporabi odobreno umetniško denarnico.",
+  "analyticsBlockedArtistApprovalRequiredTitle": "Potrebna je odobritev umetnika",
+  "analyticsBlockedArtistApprovalRequiredDescription": "Za odklep analitike umetnika oddaj vlogo za DAO preverjanje umetnika.",
+  "analyticsBlockedInstitutionPendingTitle": "Preverjanje institucije je v teku",
+  "analyticsBlockedInstitutionPendingDescription": "Analitika institucije se odklene po odobritvi DAO.",
+  "analyticsBlockedInstitutionRejectedTitle": "Preverjanje institucije je zavrnjeno",
+  "analyticsBlockedInstitutionRejectedDescription": "Za uporabo analitike je potrebna odobrena vloga institucije.",
+  "analyticsBlockedInstitutionRoleMismatchTitle": "Analitika institucije ni na voljo",
+  "analyticsBlockedInstitutionRoleMismatchDescription": "Za analitiko institucije uporabi odobreno denarnico institucije.",
+  "analyticsBlockedInstitutionApprovalRequiredTitle": "Potrebna je odobritev institucije",
+  "analyticsBlockedInstitutionApprovalRequiredDescription": "Za odklep analitike institucije oddaj vlogo za DAO preverjanje institucije.",
+  "analyticsNoMetricsTitle": "Ni podprtih metrik",
+  "analyticsNoMetricsDescription": "Ta analitični pogled nima metrik za trenutni obseg.",
+  "analyticsSeriesUnavailableTitle": "Časovna vrsta ni na voljo",
+  "analyticsSeriesUnavailableDescription": "Ta metrika je na voljo samo kot trenutni posnetek.",
+  "analyticsLoadingLabel": "Nalaganje analitike",
+  "analyticsRefreshingLabel": "Posodabljanje …",
+  "analyticsExportAction": "Izvozi",
+  "analyticsTrendTitle": "{metric} – trend",
+  "@analyticsTrendTitle": {
+    "placeholders": {
+      "metric": {}
+    }
+  },
+  "analyticsTrendComparedSubtitle": "{timeframe} v primerjavi s prejšnjim obdobjem",
+  "@analyticsTrendComparedSubtitle": {
+    "placeholders": {
+      "timeframe": {}
+    }
+  },
+  "analyticsTrendErrorTitle": "Trenda ni mogoče naložiti",
+  "analyticsTrendErrorDescription": "Poskusi z drugo metriko ali drugim obdobjem.",
+  "analyticsSeriesCurrentLabel": "Trenutno",
+  "analyticsSeriesPreviousLabel": "Prejšnje",
+  "analyticsComparisonSectionTitle": "Primerjava",
+  "analyticsComparisonsEmptyTitle": "Primerjave še ni",
+  "analyticsBreakdownSectionTitle": "Razčlenitev",
+  "analyticsPreviousValueLabel": "Prejšnje: {value}",
+  "@analyticsPreviousValueLabel": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "analyticsComparisonAverageBucketLabel": "Povprečje na interval",
+  "analyticsComparisonActivityCoverage": "Pokritost aktivnosti",
+  "analyticsInsightActivePatternTitle": "Vzorec aktivnosti ({timeframe})",
+  "@analyticsInsightActivePatternTitle": {
+    "placeholders": {
+      "timeframe": {}
+    }
+  },
+  "analyticsInsightActivePatternDescription": "{activeBuckets} od {totalBuckets} intervalov je zabeležilo: {metric}.",
+  "@analyticsInsightActivePatternDescription": {
+    "placeholders": {
+      "activeBuckets": {},
+      "totalBuckets": {},
+      "metric": {}
+    }
+  },
+  "analyticsInsightPeakTitle": "Najmočnejši interval",
+  "analyticsInsightPeakDescription": "Najmočnejši interval je dosegel {value}.",
+  "@analyticsInsightPeakDescription": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "analyticsInsightMomentumUpTitle": "Zagon se je okrepil",
+  "analyticsInsightMomentumDownTitle": "Zagon se je umiril",
+  "analyticsInsightMomentumDescription": "{metric}: {change} glede na prejšnje obdobje.",
+  "@analyticsInsightMomentumDescription": {
+    "placeholders": {
+      "metric": {},
+      "change": {}
+    }
+  },
+  "analyticsShareMetricValue": "Metrika: {metric}",
+  "@analyticsShareMetricValue": {
+    "placeholders": {
+      "metric": {}
+    }
+  },
+  "analyticsShareTotalValue": "Skupaj: {total}",
+  "@analyticsShareTotalValue": {
+    "placeholders": {
+      "total": {}
+    }
+  },
+  "analyticsExportSubjectLabel": "Izvoz: {preset} – {metric}",
+  "@analyticsExportSubjectLabel": {
+    "placeholders": {
+      "preset": {},
+      "metric": {}
+    }
+  },
+  "analyticsCardSemanticsLabel": "Analitika: {metric}",
+  "@analyticsCardSemanticsLabel": {
+    "placeholders": {
+      "metric": {}
+    }
+  },
+  "analyticsFilterSheetTitle": "Filtri analitike",
+  "analyticsFilterTimeframeSectionTitle": "Časovno obdobje",
+  "analyticsFilterSummaryTooltip": "Prilagodi filtre analitike",
+  "analyticsTimeframeLabel24h": "Zadnjih 24 ur",
+  "analyticsTimeframeLabel7d": "Zadnjih 7 dni",
+  "analyticsTimeframeLabel30d": "Zadnjih 30 dni",
+  "analyticsTimeframeLabel90d": "Zadnjih 90 dni",
+  "analyticsTimeframeLabel1y": "Zadnje leto",
+  "desktopProfileAnalyticsDialogIntro": "Odpri enotno analitiko in začni v kontekstu, ki ga želiš pregledati.",
+  "desktopProfileAnalyticsProfileSubtitle": "Doseg profila, rast sledilcev, ogledi in lastni signali.",
+  "desktopProfileAnalyticsCommunitySubtitle": "Objave v skupnosti, všečki in vključenost v isti analitiki.",
+  "profileAccountHealthTitle": "Zdravje računa",
+  "profileAccountHealthAdvisoryLabel": "Predlogi za račun",
+  "commonNotNow": "Ne zdaj",
+  "commonDismiss": "Opusti",
+  "authSecureAccountBannerCta": "Zavaruj"
 }

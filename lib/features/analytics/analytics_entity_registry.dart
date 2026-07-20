@@ -1,3 +1,5 @@
+import '../../l10n/app_localizations.dart';
+
 enum AnalyticsEntityType {
   user,
   artwork,
@@ -40,27 +42,6 @@ extension AnalyticsEntityTypeX on AnalyticsEntityType {
         return 'platform';
     }
   }
-
-  String get label {
-    switch (this) {
-      case AnalyticsEntityType.user:
-        return 'Profile';
-      case AnalyticsEntityType.artwork:
-        return 'Artwork';
-      case AnalyticsEntityType.collection:
-        return 'Collection';
-      case AnalyticsEntityType.post:
-        return 'Community post';
-      case AnalyticsEntityType.event:
-        return 'Event';
-      case AnalyticsEntityType.exhibition:
-        return 'Exhibition';
-      case AnalyticsEntityType.dao:
-        return 'DAO';
-      case AnalyticsEntityType.platform:
-        return 'Platform';
-    }
-  }
 }
 
 extension AnalyticsScopeX on AnalyticsScope {
@@ -73,12 +54,12 @@ extension AnalyticsScopeX on AnalyticsScope {
     }
   }
 
-  String get label {
+  String localizedLabel(AppLocalizations l10n) {
     switch (this) {
       case AnalyticsScope.public:
-        return 'Public';
+        return l10n.analyticsScopePublicLabel;
       case AnalyticsScope.private:
-        return 'Private';
+        return l10n.analyticsScopePrivateLabel;
     }
   }
 }
@@ -90,15 +71,6 @@ extension AnalyticsGroupByX on AnalyticsGroupBy {
         return 'source';
       case AnalyticsGroupBy.targetType:
         return 'targetType';
-    }
-  }
-
-  String get label {
-    switch (this) {
-      case AnalyticsGroupBy.source:
-        return 'Source';
-      case AnalyticsGroupBy.targetType:
-        return 'Target type';
     }
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../analytics_metric_colors.dart';
@@ -107,7 +108,9 @@ class _AnalyticsLeadCard extends StatelessWidget {
     return Semantics(
       button: true,
       selected: true,
-      label: '${data.title} analytics',
+      label: AppLocalizations.of(context)!.analyticsCardSemanticsLabel(
+        data.title,
+      ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
@@ -249,7 +252,9 @@ class _AnalyticsSupportingCardState extends State<_AnalyticsSupportingCard> {
       child: Semantics(
         button: true,
         selected: false,
-        label: '${widget.data.title} analytics',
+        label: AppLocalizations.of(context)!.analyticsCardSemanticsLabel(
+          widget.data.title,
+        ),
         child: Material(
           color: Colors.transparent,
           child: InkWell(

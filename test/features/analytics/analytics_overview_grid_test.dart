@@ -1,5 +1,6 @@
 import 'package:art_kubus/features/analytics/analytics_view_models.dart';
 import 'package:art_kubus/features/analytics/widgets/analytics_overview_grid.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -10,6 +11,8 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: ThemeData.light(useMaterial3: true),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: MediaQuery(
             data: const MediaQueryData(size: Size(900, 600)),
@@ -48,6 +51,8 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: ThemeData.light(useMaterial3: true),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: MediaQuery(
             data: const MediaQueryData(size: Size(900, 600)),

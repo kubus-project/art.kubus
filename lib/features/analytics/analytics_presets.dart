@@ -25,9 +25,6 @@ class AnalyticsPreset {
   const AnalyticsPreset({
     required this.kind,
     required this.contextKey,
-    required this.title,
-    required this.subtitle,
-    required this.scopeLabel,
     required this.entityType,
     required this.icon,
     required this.metricIds,
@@ -43,9 +40,6 @@ class AnalyticsPreset {
 
   final AnalyticsPresetKind kind;
   final String contextKey;
-  final String title;
-  final String subtitle;
-  final String scopeLabel;
   final AnalyticsEntityType entityType;
   final IconData icon;
   final List<String> metricIds;
@@ -82,14 +76,54 @@ class AnalyticsPreset {
     return metrics.first;
   }
 
+  String localizedTitle(AppLocalizations l10n) {
+    switch (kind) {
+      case AnalyticsPresetKind.profile:
+        return l10n.analyticsPresetProfileTitle;
+      case AnalyticsPresetKind.artist:
+        return l10n.analyticsPresetArtistTitle;
+      case AnalyticsPresetKind.institution:
+        return l10n.analyticsPresetInstitutionTitle;
+      case AnalyticsPresetKind.community:
+        return l10n.analyticsPresetCommunityTitle;
+      case AnalyticsPresetKind.dao:
+        return l10n.analyticsPresetDaoTitle;
+      case AnalyticsPresetKind.platform:
+        return l10n.analyticsPresetPlatformTitle;
+    }
+  }
+
+  String localizedScopeLabel(AppLocalizations l10n) {
+    switch (kind) {
+      case AnalyticsPresetKind.profile:
+        return l10n.analyticsPresetProfileScopeLabel;
+      case AnalyticsPresetKind.artist:
+        return l10n.analyticsPresetArtistScopeLabel;
+      case AnalyticsPresetKind.institution:
+        return l10n.analyticsPresetInstitutionScopeLabel;
+      case AnalyticsPresetKind.community:
+        return l10n.analyticsPresetCommunityScopeLabel;
+      case AnalyticsPresetKind.dao:
+        return l10n.analyticsPresetDaoScopeLabel;
+      case AnalyticsPresetKind.platform:
+        return l10n.analyticsPresetPlatformScopeLabel;
+    }
+  }
+
   String localizedSubtitle(AppLocalizations l10n) {
     switch (kind) {
+      case AnalyticsPresetKind.profile:
+        return l10n.analyticsPresetProfileSubtitle;
       case AnalyticsPresetKind.artist:
         return l10n.analyticsPresetArtistSubtitle;
       case AnalyticsPresetKind.institution:
         return l10n.analyticsPresetInstitutionSubtitle;
-      default:
-        return subtitle;
+      case AnalyticsPresetKind.community:
+        return l10n.analyticsPresetCommunitySubtitle;
+      case AnalyticsPresetKind.dao:
+        return l10n.analyticsPresetDaoSubtitle;
+      case AnalyticsPresetKind.platform:
+        return l10n.analyticsPresetPlatformSubtitle;
     }
   }
 }
@@ -100,9 +134,6 @@ class AnalyticsPresets {
   static const profile = AnalyticsPreset(
     kind: AnalyticsPresetKind.profile,
     contextKey: AnalyticsFiltersProvider.profileContextKey,
-    title: 'Profile analytics',
-    subtitle: 'Audience, publishing, and profile engagement.',
-    scopeLabel: 'Profile',
     entityType: AnalyticsEntityType.user,
     icon: Icons.person_outline,
     defaultMetricId: 'viewsReceived',
@@ -130,9 +161,6 @@ class AnalyticsPresets {
   static const community = AnalyticsPreset(
     kind: AnalyticsPresetKind.community,
     contextKey: AnalyticsFiltersProvider.communityContextKey,
-    title: 'Community analytics',
-    subtitle: 'Posting, conversation, and community response.',
-    scopeLabel: 'Community',
     entityType: AnalyticsEntityType.user,
     icon: Icons.forum_outlined,
     defaultMetricId: 'posts',
@@ -157,9 +185,6 @@ class AnalyticsPresets {
   static const artist = AnalyticsPreset(
     kind: AnalyticsPresetKind.artist,
     contextKey: AnalyticsFiltersProvider.artistContextKey,
-    title: 'Artist analytics',
-    subtitle: 'analyticsPresetArtistSubtitle',
-    scopeLabel: 'Artist studio',
     entityType: AnalyticsEntityType.user,
     icon: Icons.palette_outlined,
     defaultMetricId: 'viewsReceived',
@@ -187,9 +212,6 @@ class AnalyticsPresets {
   static const institution = AnalyticsPreset(
     kind: AnalyticsPresetKind.institution,
     contextKey: AnalyticsFiltersProvider.institutionContextKey,
-    title: 'Institution analytics',
-    subtitle: 'analyticsPresetInstitutionSubtitle',
-    scopeLabel: 'Institution hub',
     entityType: AnalyticsEntityType.user,
     icon: Icons.account_balance_outlined,
     defaultMetricId: 'viewsReceived',
@@ -217,9 +239,6 @@ class AnalyticsPresets {
   static const platform = AnalyticsPreset(
     kind: AnalyticsPresetKind.platform,
     contextKey: 'platform',
-    title: 'Platform analytics',
-    subtitle: 'Admin-only platform health and usage.',
-    scopeLabel: 'Platform',
     entityType: AnalyticsEntityType.platform,
     icon: Icons.admin_panel_settings_outlined,
     defaultMetricId: 'views',
@@ -242,9 +261,6 @@ class AnalyticsPresets {
   static const dao = AnalyticsPreset(
     kind: AnalyticsPresetKind.dao,
     contextKey: AnalyticsFiltersProvider.daoContextKey,
-    title: 'DAO analytics',
-    subtitle: 'Governance proposals, voting, delegates, and treasury flow.',
-    scopeLabel: 'DAO',
     entityType: AnalyticsEntityType.dao,
     icon: Icons.how_to_vote_outlined,
     defaultMetricId: 'daoTotalProposals',

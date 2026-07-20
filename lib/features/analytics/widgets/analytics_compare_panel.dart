@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../analytics_metric_registry.dart';
 import '../analytics_view_models.dart';
+import 'analytics_section_panel.dart';
 import 'analytics_state_widgets.dart';
 
 class AnalyticsComparePanel extends StatelessWidget {
@@ -19,30 +21,16 @@ class AnalyticsComparePanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.all(KubusSpacing.lg),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest.withValues(alpha: 0.64),
-        borderRadius: BorderRadius.circular(KubusRadius.md),
-        border: Border.all(color: scheme.outline.withValues(alpha: 0.12)),
-      ),
+    final l10n = AppLocalizations.of(context)!;
+    return AnalyticsSectionPanel(
+      title: l10n.analyticsComparisonSectionTitle,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Comparison',
-            style: KubusTypography.inter(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              color: scheme.onSurface,
-            ),
-          ),
-          const SizedBox(height: KubusSpacing.md),
           if (comparisons.isEmpty)
-            const AnalyticsInlineEmptyState(
-              title: 'No comparison yet',
-              description:
-                  'Comparison data appears after the first trend load.',
+            AnalyticsInlineEmptyState(
+              title: l10n.analyticsComparisonsEmptyTitle,
+              description: l10n.analyticsComparisonsEmptyDescription,
               icon: Icons.compare_arrows_outlined,
             )
           else
@@ -50,7 +38,7 @@ class AnalyticsComparePanel extends StatelessWidget {
           if (groupTotals.isNotEmpty) ...[
             const SizedBox(height: KubusSpacing.lg),
             Text(
-              'Breakdown',
+              l10n.analyticsBreakdownSectionTitle,
               style: KubusTypography.inter(
                 fontSize: 14,
                 fontWeight: FontWeight.w800,
@@ -65,7 +53,7 @@ class AnalyticsComparePanel extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        _humanizeGroup(entry.key),
+                        _humanizeGroup(entry.key, l10n),
                         overflow: TextOverflow.ellipsis,
                         style: KubusTypography.inter(
                           fontSize: 12,
@@ -91,9 +79,9 @@ class AnalyticsComparePanel extends StatelessWidget {
     );
   }
 
-  String _humanizeGroup(String group) {
+  String _humanizeGroup(String group, AppLocalizations l10n) {
     final raw = group.trim();
-    if (raw.isEmpty) return 'Unknown';
+    if (raw.isEmpty) return l10n.commonUnknown;
     final spaced = raw.replaceAll('_', ' ').replaceAll('-', ' ');
     return spaced[0].toUpperCase() + spaced.substring(1);
   }
@@ -108,6 +96,7 @@ class _ComparisonRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final roles = KubusColorRoles.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final color = item.isPositive == null
         ? scheme.onSurface.withValues(alpha: 0.6)
         : item.isPositive!
@@ -132,7 +121,7 @@ class _ComparisonRow extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Previous: ${item.previousValue}',
+                  l10n.analyticsPreviousValueLabel(item.previousValue),
                   style: KubusTypography.inter(
                     fontSize: 11,
                     color: scheme.onSurface.withValues(alpha: 0.58),

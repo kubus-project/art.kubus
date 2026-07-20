@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../utils/design_tokens.dart';
 import '../analytics_metric_colors.dart';
 import '../analytics_presets.dart';
@@ -100,6 +101,7 @@ class AnalyticsHeader extends StatelessWidget {
       ],
     );
 
+    final l10n = AppLocalizations.of(context)!;
     final actions = Wrap(
       spacing: KubusSpacing.sm,
       runSpacing: KubusSpacing.sm,
@@ -111,7 +113,7 @@ class AnalyticsHeader extends StatelessWidget {
             size: 18,
             color: accent,
           ),
-          label: const Text('Share'),
+          label: Text(l10n.commonShare),
         ),
         FilledButton.tonalIcon(
           onPressed: canExport ? onExport : null,
@@ -120,7 +122,7 @@ class AnalyticsHeader extends StatelessWidget {
             size: 18,
             color: canExport ? accent : null,
           ),
-          label: const Text('Export'),
+          label: Text(l10n.analyticsExportAction),
         ),
       ],
     );
@@ -166,7 +168,7 @@ class AnalyticsHeader extends StatelessWidget {
                         ? chipAccent
                         : chipAccent.withValues(alpha: 0.72),
                   ),
-                  label: Text(preset.scopeLabel),
+                  label: Text(preset.localizedScopeLabel(l10n)),
                   onSelected: (_) {
                     if (!selected) onPresetSelected(preset.kind);
                   },

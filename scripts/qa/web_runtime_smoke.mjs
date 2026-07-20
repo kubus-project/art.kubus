@@ -1,4 +1,5 @@
-import { spawn } from 'node:child_process';
+import { execSync, spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -17,8 +18,104 @@ const artifactDir = path.resolve(
 const requestedUrl = (process.env.APP_URL || '').trim();
 const qaPort = Number(process.env.QA_PORT || process.env.PORT || 8090);
 const appUrl = requestedUrl || `http://127.0.0.1:${qaPort}`;
+// QA_MATRIX=full expands the two default captures into the responsive ×
+// theme × locale (+ reduced-motion) matrix.
+const fullMatrix = (process.env.QA_MATRIX || '').trim() === 'full';
 
 await fs.mkdir(artifactDir, { recursive: true });
+
+function sha256(buffer) {
+  return createHash('sha256').update(buffer).digest('hex');
+}
+
+/**
+ * Refuse to run against a server this harness did not start. A leftover
+ * proxy from an earlier session once served a stale bundle on the QA port
+ * and silently invalidated a whole screenshot round; failing fast here
+ * makes that impossible. Explicit APP_URL runs opt out (the caller owns
+ * that server), but the served-bundle fingerprint check still applies.
+ */
+async function assertPortIsFree() {
+  if (requestedUrl) return;
+  let responded = false;
+  try {
+    const response = await fetch(appUrl, {
+      signal: AbortSignal.timeout(1500),
+    });
+    responded = Boolean(response);
+  } catch {
+    // No listener — the port is ours to take.
+  }
+  if (responded) {
+    throw new Error(
+      `${appUrl} is already serving content before the QA proxy started. ` +
+        'A stale server owns the port; kill it and re-run.',
+    );
+  }
+}
+
+/**
+ * Prove the screenshots come from the intended build: hash the on-disk
+ * bundle, hash the served bundle, and require them to match. The git commit
+ * and dirty state pin the evidence to a revision.
+ */
+async function collectBuildFingerprint() {
+  const bundlePath = path.join(rootDir, 'build', 'web', 'main.dart.js');
+  const diskBundle = await fs.readFile(bundlePath);
+  const diskHash = sha256(diskBundle);
+
+  const servedResponse = await fetch(`${appUrl}/main.dart.js`);
+  if (!servedResponse.ok) {
+    throw new Error(
+      `Could not fetch served bundle for fingerprinting: HTTP ${servedResponse.status}`,
+    );
+  }
+  const servedHash = sha256(Buffer.from(await servedResponse.arrayBuffer()));
+
+  if (servedHash !== diskHash) {
+    throw new Error(
+      `Served main.dart.js (${servedHash.slice(0, 12)}) does not match ` +
+        `build/web/main.dart.js (${diskHash.slice(0, 12)}). ` +
+        'The server is delivering a different build than the local output.',
+    );
+  }
+
+  let gitCommit = 'unknown';
+  let gitDirty = null;
+  try {
+    gitCommit = execSync('git rev-parse HEAD', { cwd: rootDir })
+      .toString()
+      .trim();
+    gitDirty =
+      execSync('git status --porcelain --untracked-files=no', { cwd: rootDir })
+        .toString()
+        .trim().length > 0;
+  } catch {
+    // Not a git checkout — record the hashes only.
+  }
+
+  let version = null;
+  try {
+    version = JSON.parse(
+      await fs.readFile(
+        path.join(rootDir, 'build', 'web', 'version.json'),
+        'utf8',
+      ),
+    );
+  } catch {
+    // version.json is optional.
+  }
+
+  return {
+    appUrl,
+    gitCommit,
+    gitDirty,
+    mainDartJsSha256: diskHash,
+    servedMainDartJsSha256: servedHash,
+    version,
+    capturedAt: new Date().toISOString(),
+  };
+}
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -145,7 +242,7 @@ async function installStableNetworkStubs(page) {
   });
 }
 
-async function captureRuntime(contextOptions, name) {
+async function captureRuntime(contextOptions, name, { appLanguage } = {}) {
   const context = await browser.newContext(contextOptions);
   const page = await context.newPage();
   const consoleEntries = [];
@@ -171,7 +268,10 @@ async function captureRuntime(contextOptions, name) {
   });
   await installStableNetworkStubs(page);
 
-  await page.addInitScript(() => {
+  // The app's locale is app-controlled (LocaleProvider, default 'sl',
+  // persisted under selected_language) — the browser locale alone does not
+  // change UI copy, so language captures must seed the stored preference.
+  await page.addInitScript((language) => {
     const set = (key, value) => localStorage.setItem(`flutter.${key}`, value);
     set('has_completed_onboarding', 'true');
     set('has_seen_welcome', 'true');
@@ -179,7 +279,10 @@ async function captureRuntime(contextOptions, name) {
     set('skipOnboardingForReturningUsers', 'true');
     set('map_onboarding_mobile_seen_v2', 'true');
     set('map_onboarding_desktop_seen_v2', 'true');
-  });
+    if (language) {
+      set('selected_language', JSON.stringify(language));
+    }
+  }, appLanguage || null);
 
   // Every capture uses a fresh Playwright context. Do not pass the production
   // clear_sw escape hatch here: index.html responds to it with location.replace,
@@ -264,29 +367,128 @@ async function captureRuntime(contextOptions, name) {
       `${name}: request failures found: ${requestFailures.join(' | ')}`,
     );
   }
+
+  return {
+    name,
+    screenshot: path.basename(screenshotPath),
+    viewport: contextOptions.viewport || null,
+    colorScheme: contextOptions.colorScheme || 'light',
+    locale: contextOptions.locale || 'en-US',
+    reducedMotion: contextOptions.reducedMotion || 'no-preference',
+    consoleErrorCount: consoleErrors.length,
+    httpErrorCount: httpErrors.length,
+    pageErrorCount: pageErrors.length,
+    requestFailureCount: requestFailures.length,
+  };
+}
+
+/** Capture contexts for the full responsive × theme × locale matrix. */
+function matrixContexts() {
+  const viewports = [
+    { name: 'mobile-390x844', width: 390, height: 844 },
+    { name: 'mobile-412x915', width: 412, height: 915 },
+    { name: 'tablet-1024x768', width: 1024, height: 768 },
+    { name: 'desktop-1440x1000', width: 1440, height: 1000 },
+  ];
+  const contexts = [];
+  for (const viewport of viewports) {
+    for (const colorScheme of ['light', 'dark']) {
+      for (const locale of ['en-US', 'sl-SI']) {
+        contexts.push({
+          name: `${viewport.name}-${colorScheme}-${locale.slice(0, 2)}`,
+          options: {
+            viewport: { width: viewport.width, height: viewport.height },
+            deviceScaleFactor: 1,
+            colorScheme,
+            locale,
+          },
+          appLanguage: locale.slice(0, 2),
+        });
+      }
+    }
+  }
+  // Reduced-motion spot checks on the two extreme viewports.
+  contexts.push({
+    name: 'mobile-390x844-dark-en-reduced-motion',
+    appLanguage: 'en',
+    options: {
+      viewport: { width: 390, height: 844 },
+      deviceScaleFactor: 1,
+      colorScheme: 'dark',
+      locale: 'en-US',
+      reducedMotion: 'reduce',
+    },
+  });
+  contexts.push({
+    name: 'desktop-1440x1000-light-en-reduced-motion',
+    appLanguage: 'en',
+    options: {
+      viewport: { width: 1440, height: 1000 },
+      deviceScaleFactor: 1,
+      colorScheme: 'light',
+      locale: 'en-US',
+      reducedMotion: 'reduce',
+    },
+  });
+  return contexts;
 }
 
 let proxy = null;
 let browser = null;
 try {
+  await assertPortIsFree();
   proxy = await startProxyIfNeeded();
+  const fingerprint = await collectBuildFingerprint();
   browser = await chromium.launch({ headless: true });
 
-  await captureRuntime(
-    {
-      viewport: { width: 1440, height: 1100 },
-      deviceScaleFactor: 1,
-    },
-    'desktop-home',
-  );
-  await captureRuntime(
-    {
-      ...devices['iPhone 13'],
-    },
-    'mobile-home',
+  const captures = [];
+  if (fullMatrix) {
+    for (const context of matrixContexts()) {
+      captures.push(
+        await captureRuntime(context.options, context.name, {
+          appLanguage: context.appLanguage || null,
+        }),
+      );
+    }
+  } else {
+    captures.push(
+      await captureRuntime(
+        {
+          viewport: { width: 1440, height: 1100 },
+          deviceScaleFactor: 1,
+        },
+        'desktop-home',
+      ),
+    );
+    captures.push(
+      await captureRuntime(
+        {
+          ...devices['iPhone 13'],
+        },
+        'mobile-home',
+      ),
+    );
+  }
+
+  await fs.writeFile(
+    path.join(artifactDir, 'report.json'),
+    JSON.stringify(
+      {
+        passed: true,
+        matrix: fullMatrix ? 'full' : 'default',
+        fingerprint,
+        captures,
+      },
+      null,
+      2,
+    ),
+    'utf8',
   );
 
-  console.log(`Web runtime smoke passed. Artifacts: ${artifactDir}`);
+  console.log(
+    `Web runtime smoke passed (${captures.length} captures, commit ` +
+      `${fingerprint.gitCommit.slice(0, 8)}). Artifacts: ${artifactDir}`,
+  );
 } finally {
   if (browser) await browser.close();
   await stopProxy(proxy);

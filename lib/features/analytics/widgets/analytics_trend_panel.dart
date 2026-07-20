@@ -8,6 +8,7 @@ import '../../../widgets/inline_loading.dart';
 import '../analytics_metric_colors.dart';
 import '../analytics_metric_registry.dart';
 import '../analytics_time.dart';
+import 'analytics_section_panel.dart';
 import 'analytics_state_widgets.dart';
 
 class AnalyticsTrendPanel extends StatelessWidget {
@@ -30,65 +31,32 @@ class AnalyticsTrendPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
     final compact = MediaQuery.sizeOf(context).width < 720;
     final height = compact ? 260.0 : 360.0;
 
-    return Container(
-      padding: const EdgeInsets.all(KubusSpacing.lg),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest.withValues(alpha: 0.72),
-        borderRadius: BorderRadius.circular(KubusRadius.md),
-        border: Border.all(color: scheme.outline.withValues(alpha: 0.12)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${metric.localizedLabel(l10n)} trend',
-                      style: KubusTypography.inter(
-                        fontSize: compact ? 18 : 22,
-                        fontWeight: FontWeight.w800,
-                        color: scheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: KubusSpacing.xs),
-                    Text(
-                      '${timeframe.toUpperCase()} compared with the previous period',
-                      style: KubusTypography.inter(
-                        fontSize: 12,
-                        color: scheme.onSurface.withValues(alpha: 0.65),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              _TrendValue(metric: metric, summary: summary),
-            ],
-          ),
-          const SizedBox(height: KubusSpacing.lg),
-          SizedBox(
-            height: height,
-            child: _buildChart(context, height),
-          ),
-        ],
+    return AnalyticsSectionPanel(
+      title: l10n.analyticsTrendTitle(metric.localizedLabel(l10n)),
+      subtitle: l10n.analyticsTrendComparedSubtitle(timeframe.toUpperCase()),
+      trailing: _TrendValue(metric: metric, summary: summary),
+      // A refresh with previous data keeps the chart in place; only the
+      // small kit loader signals the update.
+      isRefreshing: isLoading && summary.hasData,
+      child: SizedBox(
+        height: height,
+        child: _buildChart(context, height),
       ),
     );
   }
 
   Widget _buildChart(BuildContext context, double height) {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     if (error != null && summary.values.every((value) => value == 0)) {
-      return const AnalyticsInlineEmptyState(
-        title: 'Unable to load trend',
-        description: 'Try a different metric or timeframe.',
+      return AnalyticsInlineEmptyState(
+        title: l10n.analyticsTrendErrorTitle,
+        description: l10n.analyticsTrendErrorDescription,
+        kind: AnalyticsInlineStateKind.error,
       );
     }
     if (isLoading && !summary.hasData) {
@@ -97,22 +65,22 @@ class AnalyticsTrendPanel extends StatelessWidget {
       );
     }
     if (!summary.hasData) {
-      return const AnalyticsInlineEmptyState(
-        title: 'No trend data yet',
-        description: 'Activity will appear here as it is recorded.',
+      return AnalyticsInlineEmptyState(
+        title: l10n.analyticsNoDataYetTitle,
+        description: l10n.analyticsNoDataYetDescription,
       );
     }
     final accent = AnalyticsMetricColors.resolve(context, metric.id);
     return StatsInteractiveLineChart(
       series: <StatsLineSeries>[
         StatsLineSeries(
-          label: 'Current',
+          label: l10n.analyticsSeriesCurrentLabel,
           values: summary.values,
           color: accent,
           showArea: true,
         ),
         StatsLineSeries(
-          label: 'Previous',
+          label: l10n.analyticsSeriesPreviousLabel,
           values: summary.previousValues,
           color: scheme.secondary.withValues(alpha: 0.72),
         ),
@@ -138,9 +106,10 @@ class _TrendValue extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final roles = KubusColorRoles.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final change = summary.changePercent;
     final changeLabel = change == null
-        ? 'N/A'
+        ? l10n.commonNotAvailableShort
         : '${change >= 0 ? '+' : '-'}${change.abs().toStringAsFixed(1)}%';
 
     return Column(
@@ -155,19 +124,33 @@ class _TrendValue extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 2),
-        Text(
-          changeLabel,
-          style: KubusTypography.inter(
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-            // Judgment colors come from the shared roles so deltas read the
-            // same here as in the overview cards and compare rows.
-            color: change == null
-                ? scheme.onSurface.withValues(alpha: 0.62)
-                : change >= 0
-                    ? roles.positiveAction
-                    : roles.negativeAction,
-          ),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (change != null)
+              Icon(
+                change >= 0
+                    ? Icons.arrow_upward_rounded
+                    : Icons.arrow_downward_rounded,
+                size: 13,
+                // Judgment colors come from the shared roles so deltas read
+                // the same here as in the overview cards and compare rows.
+                color:
+                    change >= 0 ? roles.positiveAction : roles.negativeAction,
+              ),
+            Text(
+              changeLabel,
+              style: KubusTypography.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: change == null
+                    ? scheme.onSurface.withValues(alpha: 0.62)
+                    : change >= 0
+                        ? roles.positiveAction
+                        : roles.negativeAction,
+              ),
+            ),
+          ],
         ),
       ],
     );

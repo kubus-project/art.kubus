@@ -17,10 +17,16 @@ class WalletBackupBannerCard extends StatefulWidget {
     super.key,
     this.padding = EdgeInsets.zero,
     this.bottomSpacing = 0,
+    this.onVisibilityResolved,
   });
 
   final EdgeInsetsGeometry padding;
   final double bottomSpacing;
+
+  /// Reports whether the banner actually renders once its async state
+  /// resolves (and again when it changes), so grouping sections can decide
+  /// their own chrome.
+  final ValueChanged<bool>? onVisibilityResolved;
 
   @override
   State<WalletBackupBannerCard> createState() => _WalletBackupBannerCardState();
@@ -89,6 +95,7 @@ class _WalletBackupBannerCardState extends State<WalletBackupBannerCard> {
         _lastResolvedWallet = walletAddress;
         _shouldShow = shouldShow;
       });
+      widget.onVisibilityResolved?.call(_shouldShow);
     } catch (_) {
       if (!mounted) return;
       setState(() {
@@ -96,6 +103,7 @@ class _WalletBackupBannerCardState extends State<WalletBackupBannerCard> {
         _lastResolvedWallet = null;
         _shouldShow = false;
       });
+      widget.onVisibilityResolved?.call(false);
     }
   }
 
