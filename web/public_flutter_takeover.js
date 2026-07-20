@@ -14,6 +14,11 @@
     path: host.dataset.entityPath || "",
   });
   let transitionCleanup = null;
+  let readinessFallback = null;
+  let parsedEntity = null;
+  let engineIsReady = false;
+  let entityIsReady = false;
+
   const onBootstrapResourceError = (event) => {
     const target = event.target;
     if (!(target instanceof HTMLScriptElement)) return;
@@ -25,6 +30,13 @@
   const mark = (name) => {
     if (globalThis.performance && typeof globalThis.performance.mark === "function") {
       globalThis.performance.mark(name);
+    }
+  };
+
+  const clearReadinessFallback = () => {
+    if (readinessFallback !== null) {
+      globalThis.clearTimeout(readinessFallback);
+      readinessFallback = null;
     }
   };
 
@@ -72,6 +84,7 @@
   };
 
   const activate = () => {
+    clearReadinessFallback();
     if (root.classList.contains("kubus-takeover-active")) {
       return;
     }
@@ -101,15 +114,34 @@
     }, 260);
   };
 
+  const scheduleReadinessFallback = () => {
+    if (!engineIsReady || !parsedEntity || entityIsReady || readinessFallback !== null) {
+      return;
+    }
+    readinessFallback = globalThis.setTimeout(() => {
+      readinessFallback = null;
+      if (!engineIsReady || !parsedEntity || entityIsReady) {
+        return;
+      }
+      mark("public_entity_ready_fallback");
+      globalThis.dispatchEvent(new CustomEvent("kubus:public-entity-ready", {
+        detail: parsedEntity,
+      }));
+    }, 1500);
+  };
+
   globalThis.addEventListener("kubus:public-entity-ready", (event) => {
     if (isExpectedEntity(event.detail)) {
+      entityIsReady = true;
       mark("public_entity_ready");
       activate();
     }
   });
   globalThis.addEventListener("kubus:public-entity-route-parsed", (event) => {
     if (isExpectedEntity(event.detail)) {
+      parsedEntity = parseDetail(event.detail);
       mark("public_entity_route_parsed");
+      scheduleReadinessFallback();
     }
   });
 
@@ -122,10 +154,13 @@
     bootstrapStarted: () => mark("flutter_bootstrap_started"),
     engineReady: () => {
       globalThis.removeEventListener("error", onBootstrapResourceError, true);
+      engineIsReady = true;
       mark("flutter_engine_ready");
+      scheduleReadinessFallback();
     },
     fail: () => {
       globalThis.removeEventListener("error", onBootstrapResourceError, true);
+      clearReadinessFallback();
       if (transitionCleanup !== null) {
         globalThis.clearTimeout(transitionCleanup);
         transitionCleanup = null;
