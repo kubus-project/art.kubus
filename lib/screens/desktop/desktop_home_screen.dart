@@ -42,6 +42,7 @@ import '../../utils/design_tokens.dart';
 import '../../utils/home_search_destination.dart';
 import '../../utils/home_header_display_name.dart';
 import '../../utils/home_rail_creator_identity.dart';
+import '../../utils/home_rail_semantics.dart';
 import '../../utils/home_activity_cards.dart';
 import '../../utils/home/home_quick_action_executor.dart';
 import '../../utils/home/home_quick_action_models.dart';
@@ -1578,9 +1579,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     List<HomeRailItem> items,
   ) {
     final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
-    // Localized titles shared with mobile home; icon accents come from theme
-    // roles instead of raw amber.
+    // Localized titles shared with mobile home; icon accents come from the
+    // shared HomeRailSemantics resolver instead of raw amber.
     final title = switch (rail.entityType) {
       PromotionEntityType.artwork => l10n.homeRailArtworksTitle,
       PromotionEntityType.profile => l10n.homeRailArtistsTitle,
@@ -1594,9 +1594,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         DesktopSectionHeader(
           title: title,
           icon: _iconForHomeRail(rail.entityType),
-          iconColor: rail.entityType == PromotionEntityType.artwork
-              ? AppColorUtils.tealAccent
-              : scheme.primary,
+          iconColor: HomeRailSemantics.of(context, rail.entityType),
         ),
         const SizedBox(height: DetailSpacing.xl),
         HomePromotionRailList(

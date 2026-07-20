@@ -48,6 +48,7 @@ import '../utils/app_animations.dart';
 import '../utils/app_color_utils.dart';
 import '../utils/kubus_color_roles.dart';
 import '../utils/design_tokens.dart';
+import '../utils/home_rail_semantics.dart';
 import '../utils/keyboard_inset_resolver.dart';
 import '../utils/kubus_labs_feature.dart';
 import '../utils/map_navigation.dart';
@@ -2300,9 +2301,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         SharedSectionHeader(
           title: title,
           icon: _iconForRailItem(rail.entityType),
-          iconColor: rail.entityType == PromotionEntityType.artwork
-              ? AppColorUtils.tealAccent
-              : scheme.primary,
+          iconColor: HomeRailSemantics.of(context, rail.entityType),
           padding: EdgeInsets.zero,
         ),
         const SizedBox(height: 16),
