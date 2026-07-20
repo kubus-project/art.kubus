@@ -40,6 +40,8 @@ import '../../../providers/wallet_provider.dart';
 import '../../../services/socket_service.dart';
 import '../../../screens/community/profile_screen_methods.dart';
 import '../../../widgets/detail/shared_section_widgets.dart';
+import '../../../widgets/detail/profile_relationship_actions.dart';
+import '../../../utils/profile_handle.dart';
 import '../../../models/dao.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/user_profile_navigation.dart';
@@ -92,7 +94,6 @@ class UserProfileScreen extends StatefulWidget {
 class _UserProfileScreenState extends State<UserProfileScreen>
     with TickerProviderStateMixin {
   late AnimationController _animationController;
-  late AnimationController _followButtonController;
   late ScrollController _scrollController;
 
   User? user;
@@ -147,10 +148,6 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       duration: const Duration(milliseconds: 600),
       vsync: this,
     );
-    _followButtonController = AnimationController(
-      duration: const Duration(milliseconds: 200),
-      vsync: this,
-    );
     _scrollController = ScrollController();
     _scrollController.addListener(() {
       if (_scrollController.position.pixels >=
@@ -193,7 +190,6 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     _profileController.removeListener(_syncProfileControllerState);
     _profileController.dispose();
     _animationController.dispose();
-    _followButtonController.dispose();
     _scrollController.dispose();
     try {
       Provider.of<WalletProvider>(context, listen: false)
@@ -248,7 +244,6 @@ class _UserProfileScreenState extends State<UserProfileScreen>
             DesktopProfilePresentation.communityOverlay;
     final screenWidth = MediaQuery.of(context).size.width;
     final isLarge = !isCommunityOverlay && screenWidth >= 1200;
-    final isWide = !isCommunityOverlay && screenWidth >= 1400;
 
     if (isLoading) {
       return Scaffold(
@@ -340,55 +335,34 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                               ? KubusSpacing.lg
                               : KubusSpacing.md,
                         ),
-                        // Stats and action buttons in a row on wide screens
-                        if (isWide)
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: _buildStatsCards(
-                                  themeProvider,
-                                  isLarge,
-                                  l10n,
-                                  isCommunityOverlay: isCommunityOverlay,
-                                ),
-                              ),
-                              const SizedBox(width: KubusSpacing.lg),
-                              SizedBox(
-                                width: 320,
-                                child: _buildActionButtons(
-                                  themeProvider,
-                                  l10n,
-                                  isCommunityOverlay: isCommunityOverlay,
-                                ),
-                              ),
-                            ],
-                          )
-                        else ...[
-                          _buildStatsCards(
-                            themeProvider,
-                            isLarge,
-                            l10n,
-                            isCommunityOverlay: isCommunityOverlay,
-                          ),
-                          SizedBox(
-                            height: isCommunityOverlay
-                                ? KubusSpacing.sm + KubusSpacing.xs
-                                : KubusSpacing.md,
-                          ),
-                          _buildActionButtons(
-                            themeProvider,
-                            l10n,
-                            isCommunityOverlay: isCommunityOverlay,
-                          ),
-                        ],
+                        // Identity -> relationship actions -> statistics.
+                        // Actions sit directly under the identity and ahead of
+                        // stats so statistics never dominate the first viewport.
+                        _buildActionButtons(
+                          themeProvider,
+                          l10n,
+                          isCommunityOverlay: isCommunityOverlay,
+                        ),
+                        SizedBox(
+                          height: isCommunityOverlay
+                              ? KubusSpacing.sm + KubusSpacing.xs
+                              : KubusSpacing.md,
+                        ),
+                        _buildStatsCards(
+                          themeProvider,
+                          isLarge,
+                          l10n,
+                          isCommunityOverlay: isCommunityOverlay,
+                        ),
                         SizedBox(
                           height: isCommunityOverlay
                               ? KubusSpacing.sm + KubusSpacing.xs
                               : KubusSpacing.lg,
                         ),
-                        // Two-column layout for wide screens
-                        if (isWide)
+                        // Wide two-column content begins at ~1200px so
+                        // intermediate desktop widths do not inherit the mobile
+                        // single-column layout.
+                        if (isLarge)
                           _buildTwoColumnLayout(
                             themeProvider: themeProvider,
                             isArtist: isArtist,
@@ -617,7 +591,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     AppLocalizations l10n,
   ) {
     final scheme = Theme.of(context).colorScheme;
-    final username = user?.username.trim() ?? '';
+    final handle = ProfileHandle.normalize(user?.username);
     const tooltipOffset = KubusSpacing.lg;
 
     final actions = <Widget>[
@@ -693,7 +667,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
             padding: EdgeInsets.zero,
             compact: true,
             title: user!.name,
-            subtitle: username.isEmpty ? null : '@$username',
+            subtitle: handle,
             titleStyle: KubusTextStyles.screenTitle.copyWith(
               color: scheme.onSurface,
               letterSpacing: -0.2,
@@ -998,13 +972,16 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                               ],
                             ],
                           ),
-                          const SizedBox(height: KubusSpacing.xs),
-                          Text(
-                            user!.username,
-                            style: KubusTextStyles.profileHandle.copyWith(
-                              color: scheme.onSurface.withValues(alpha: 0.60),
+                          if (ProfileHandle.normalize(user!.username)
+                              case final handle?) ...[
+                            const SizedBox(height: KubusSpacing.xs),
+                            Text(
+                              handle,
+                              style: KubusTextStyles.profileHandle.copyWith(
+                                color: scheme.onSurface.withValues(alpha: 0.60),
+                              ),
                             ),
-                          ),
+                          ],
                         ],
                       ),
                     ),
@@ -1182,72 +1159,30 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     AppLocalizations l10n, {
     required bool isCommunityOverlay,
   }) {
-    final scheme = Theme.of(context).colorScheme;
-    final cardStyle = KubusGlassStyle.resolve(
-      context,
-      surfaceType: KubusGlassSurfaceType.card,
-      tintBase: scheme.surface,
-    );
-    final radius = BorderRadius.circular(KubusRadius.lg);
-    final followButton = ScaleTransition(
-      scale: Tween<double>(begin: 1.0, end: 0.95).animate(
-        CurvedAnimation(
-          parent: _followButtonController,
-          curve: Curves.easeInOut,
-        ),
-      ),
-      child: DesktopActionButton(
-        label: user!.isFollowing
-            ? l10n.userProfileFollowingButton
-            : l10n.userProfileFollowButton,
-        icon: user!.isFollowing
-            ? Icons.person_remove_outlined
-            : Icons.person_add_outlined,
-        onPressed: _toggleFollow,
-        isPrimary: !user!.isFollowing,
-        isLoading: _isFollowMutationInFlight,
-      ),
-    );
-    final messageButton = DesktopActionButton(
-      label: l10n.userProfileMessageButtonLabel,
-      icon: Icons.mail_outlined,
-      onPressed: _openConversation,
-      isPrimary: false,
+    // Canonical relationship actions shared with mobile — same button
+    // vocabulary, sizing and states, no separate DesktopActionButton utility
+    // card. Auth gating and conversation navigation live in the callbacks.
+    final actions = ProfileRelationshipActions(
+      isFollowing: user!.isFollowing,
+      isFollowLoading: _isFollowMutationInFlight,
+      onFollow: () => unawaited(_toggleFollow()),
+      onMessage: () => unawaited(_openConversation()),
+      followLabel: l10n.userProfileFollowButton,
+      followingLabel: l10n.userProfileFollowingButton,
+      messageLabel: l10n.userProfileMessageButtonLabel,
     );
 
     if (isCommunityOverlay) {
-      return DesktopGrid(
-        minCrossAxisCount: 2,
-        maxCrossAxisCount: 2,
-        childAspectRatio: 2.3,
-        spacing: KubusSpacing.md,
-        children: [
-          followButton,
-          messageButton,
-        ],
-      );
+      return actions;
     }
 
-    return LiquidGlassCard(
-      padding: const EdgeInsets.all(KubusChromeMetrics.cardPadding),
-      margin: EdgeInsets.zero,
-      borderRadius: radius,
-      blurSigma: cardStyle.blurSigma,
-      fallbackMinOpacity: cardStyle.fallbackMinOpacity,
-      showBorder: true,
-      backgroundColor: cardStyle.tintColor,
-      child: Column(
-        children: [
-          SizedBox(
-            width: double.infinity,
-            child: followButton,
-          ),
-          const SizedBox(height: KubusSpacing.md),
-          SizedBox(
-            width: double.infinity,
-            child: messageButton,
-          ),
-        ],
+    // Keep the actions visually connected to the identity and restrained in
+    // width rather than stretching across the full content column.
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 420),
+        child: actions,
       ),
     );
   }
@@ -1699,12 +1634,6 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     final theme = Theme.of(context);
 
     setState(() => _isFollowMutationInFlight = true);
-
-    _followButtonController.forward().then((_) {
-      if (mounted) {
-        _followButtonController.reverse();
-      }
-    });
 
     UserFollowMutationResult mutation;
     try {
