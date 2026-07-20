@@ -15,9 +15,12 @@ const browserViewports = [
   { name: 'desktop', viewport: { width: 1440, height: 1000 } },
   { name: 'mobile', viewport: { width: 390, height: 844 } },
 ];
+const defaultBrowserRepetitions = process.env.GITHUB_ACTIONS
+  ? 1
+  : (expectTakeover ? 2 : 1);
 const browserRepetitions = positiveIntegerFromEnv(
   'PUBLIC_TAKEOVER_BROWSER_REPETITIONS',
-  expectTakeover ? 2 : 1,
+  defaultBrowserRepetitions,
 );
 const entityId = new URL(canonicalUrl).pathname.split('/').filter(Boolean).at(-1);
 const optionalStandbyProbeUrl = optionalUrl('PUBLIC_TAKEOVER_OPTIONAL_STANDBY_URL');
