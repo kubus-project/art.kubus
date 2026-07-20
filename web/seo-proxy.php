@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 const KUBUS_SEO_UPSTREAM_ORIGIN = 'https://api.kubus.site';
+const KUBUS_TAKEOVER_CSP = "default-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' https: data: blob:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https: wss: blob:; media-src 'self' https: data: blob:; worker-src 'self' blob:; frame-src https://accounts.google.com; base-uri 'self'; form-action 'none'; frame-ancestors 'none'";
 
 function sendGatewayError(int $status, string $title, string $message): void
 {
@@ -25,11 +26,11 @@ function sendGatewayError(int $status, string $title, string $message): void
 
 function isPublicSeoPath(string $path): bool
 {
-    if (preg_match('/[\\x00-\\x1F\\x7F\\\\]/', $path) === 1) {
+    if (preg_match('/[\x00-\x1F\x7F\\\\]/', $path) === 1) {
         return false;
     }
 
-    if (preg_match('#^/(?:robots\\.txt|sitemap\\.xml|sitemaps/[^/]+\\.xml)$#', $path) === 1) {
+    if (preg_match('#^/(?:robots\.txt|sitemap\.xml|sitemaps/[^/]+\.xml)$#', $path) === 1) {
         return true;
     }
 
@@ -43,13 +44,91 @@ function isPublicSeoPath(string $path): bool
     ) === 1;
 }
 
+function takeoverTargetForPath(string $path): ?array
+{
+    if (preg_match('#^/(en|sl)/([^/]+)/([^/]+)/?$#', $path, $matches) !== 1) {
+        return null;
+    }
+
+    $segments = [
+        'en' => [
+            'artworks' => 'artwork',
+            'profiles' => 'profile',
+            'events' => 'event',
+            'exhibitions' => 'exhibition',
+            'posts' => 'post',
+            'collections' => 'collection',
+            'map' => 'marker',
+        ],
+        'sl' => [
+            'umetnine' => 'artwork',
+            'profili' => 'profile',
+            'dogodki' => 'event',
+            'razstave' => 'exhibition',
+            'objave' => 'post',
+            'zbirke' => 'collection',
+            'zemljevid' => 'marker',
+        ],
+    ];
+
+    $locale = $matches[1];
+    $segment = $matches[2];
+    $type = $segments[$locale][$segment] ?? null;
+    if (!is_string($type)) {
+        return null;
+    }
+
+    $id = rawurldecode($matches[3]);
+    if ($id === '' || strlen($id) > 255 || preg_match('/[\x00-\x1F\x7F<>]/', $id) === 1) {
+        return null;
+    }
+
+    return [
+        'type' => $type,
+        'id' => $id,
+        'path' => rtrim($path, '/'),
+    ];
+}
+
+function injectTakeoverShell(string $html, array $target): ?string
+{
+    if (stripos($html, 'id="flutter-host"') !== false || stripos($html, "id='flutter-host'") !== false) {
+        return $html;
+    }
+    if (stripos($html, '</head>') === false || stripos($html, '<body') === false || stripos($html, '</body>') === false) {
+        return null;
+    }
+
+    $type = htmlspecialchars((string) $target['type'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    $id = htmlspecialchars((string) $target['id'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    $path = htmlspecialchars((string) $target['path'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    $takeoverStyle = '<base href="/"><style id="kubus-takeover-edge-style">#flutter-host{position:fixed;inset:0;width:100%;height:100%;z-index:1000;visibility:visible;opacity:1;pointer-events:none;background:inherit}#public-document{position:relative;z-index:1001;min-height:100vh;background:inherit;opacity:1;transition:opacity 200ms ease}html.kubus-takeover-active #flutter-host{pointer-events:auto}html.kubus-takeover-active #public-document{opacity:0;pointer-events:none}html.kubus-takeover-complete #public-document{visibility:hidden}@media(prefers-reduced-motion:reduce){#public-document{transition-duration:.01ms!important}}</style>';
+    $html = preg_replace('/<\/head>/i', $takeoverStyle . '</head>', $html, 1);
+    if (!is_string($html)) {
+        return null;
+    }
+
+    $html = preg_replace('/(<body\b[^>]*>)/i', '$1<div id="public-document">', $html, 1);
+    if (!is_string($html)) {
+        return null;
+    }
+
+    $bootstrap = '</div><div id="flutter-host" aria-hidden="true" inert data-entity-type="' . $type . '" data-entity-id="' . $id . '" data-entity-path="' . $path . '"></div>'
+        . '<script src="https://accounts.google.com/gsi/client" async defer></script>'
+        . '<script src="/public_flutter_takeover.js" defer></script>'
+        . '<script src="/flutter_bootstrap.js" defer></script>';
+    $html = preg_replace('/<\/body>/i', $bootstrap . '</body>', $html, 1);
+
+    return is_string($html) ? $html : null;
+}
+
 function appendForwardHeader(array &$headers, string $serverKey, string $headerName): void
 {
     $value = $_SERVER[$serverKey] ?? null;
     if (!is_string($value) || $value === '' || strlen($value) > 2048) {
         return;
     }
-    if (preg_match('/[\\x00-\\x1F\\x7F]/', $value) === 1) {
+    if (preg_match('/[\x00-\x1F\x7F]/', $value) === 1) {
         return;
     }
     $headers[] = $headerName . ': ' . $value;
@@ -62,7 +141,7 @@ if ($method !== 'GET' && $method !== 'HEAD') {
 }
 
 $requestTarget = (string) ($_SERVER['REQUEST_URI'] ?? '/');
-if ($requestTarget === '' || strlen($requestTarget) > 8192 || preg_match('/[\\x00-\\x1F\\x7F]/', $requestTarget) === 1) {
+if ($requestTarget === '' || strlen($requestTarget) > 8192 || preg_match('/[\x00-\x1F\x7F]/', $requestTarget) === 1) {
     sendGatewayError(400, 'Invalid request', 'The requested public address is malformed.');
 }
 
@@ -122,7 +201,7 @@ $options = [
         }
         $name = strtolower(trim(substr($trimmed, 0, $separator)));
         $value = trim(substr($trimmed, $separator + 1));
-        if ($name !== '' && $value !== '' && preg_match('/[\\r\\n]/', $value) !== 1) {
+        if ($name !== '' && $value !== '' && preg_match('/[\r\n]/', $value) !== 1) {
             $upstreamHeaders[$name] = $value;
         }
         return $length;
@@ -144,6 +223,18 @@ curl_close($curl);
 
 if ($failed) {
     sendGatewayError(503, 'Public pages temporarily unavailable', 'Please try again shortly.');
+}
+
+$takeoverTarget = $method === 'GET' && $status === 200 && is_string($body)
+    ? takeoverTargetForPath($parts['path'])
+    : null;
+if ($takeoverTarget !== null) {
+    $enhancedBody = injectTakeoverShell($body, $takeoverTarget);
+    if ($enhancedBody !== null) {
+        $body = $enhancedBody;
+        $upstreamHeaders['content-security-policy'] = KUBUS_TAKEOVER_CSP;
+        unset($upstreamHeaders['etag'], $upstreamHeaders['last-modified']);
+    }
 }
 
 http_response_code($status);
