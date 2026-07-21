@@ -82,7 +82,7 @@ production `PASS`.
 | Analytics | NOT_STARTED | Batch 12 |
 | Accessibility | NOT_STARTED | Batch 13 |
 | Mobile / Desktop QA | NOT_STARTED | Batch 13 |
-| Backend gitlink bump | BLOCKED_INTERNAL | Must move `backend` **and** `backend-open-art-wt` together after art.kubus-backend#12 merges; CI enforces equality (D-9) |
+| Backend gitlink bump | READY | Duplicate gitlink retired; `backend` is the sole canonical pin and CI validates it |
 | Production deployment | BLOCKED_EXTERNAL | Protected workflow: SSH credentials + environment approval |
 | Rollback verification | BLOCKED_EXTERNAL | Rollback path exists; exercising it needs the same credentials |
 

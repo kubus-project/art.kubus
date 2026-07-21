@@ -134,7 +134,7 @@ The current repository-scoped deployment secrets must be copied by a human into 
 
 ## Backend coordination
 
-The parent repository retains the early parity check requiring `backend` and `backend-open-art-wt` to pin the same commit. Cross-repository branch reachability is not enforced in the main PR workflow because the backend is private and GitHub's repository token cannot deterministically inspect it without widening permissions.
+The parent repository uses `backend` as its sole canonical backend gitlink. CI rejects duplicate backend gitlinks and verifies the canonical private repository URL and immutable commit shape. Cross-repository branch reachability is not enforced in the main PR workflow because the backend is private and GitHub's repository token cannot deterministically inspect it without widening permissions.
 
 The backend follow-up migration must create backend `dev` from verified backend `master`, add the same topic/release/hotfix policy, protect both branches, and provide a read-only deterministic provenance mechanism. After that migration, parent `dev` gitlinks must point to commits reachable from backend `dev`; parent `master` gitlinks must point to commits reachable from backend `master`.
 

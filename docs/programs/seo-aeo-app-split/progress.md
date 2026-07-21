@@ -39,9 +39,9 @@ correct. Treat `art.kubus-backend` as the authoritative remote and
 
 ### Worktrees deliberately not touched
 
-- `art.kubus/backend-open-art-wt` — a **second** gitlink to the same backend
-  remote, at `47f4fe07…` while `backend` is at `876507d2…`. It shows as a
-  modified gitlink in `git status`. It was left unstaged and unmodified.
+- The historical duplicate backend gitlink was not changed by this program and
+  was later retired by the repository-governance migration. `backend` is now
+  the sole canonical parent-repository pin.
 - `art.kubus/../art.kubus-*-wt`, `…-release`, `…-refresh` — sibling worktrees
   from unrelated in-flight work. Not touched.
 - `art.kubus.site_webpage` reported 107 modified files. `git diff` is **empty**;

@@ -85,7 +85,7 @@ export function classifyPaths(paths) {
       result.ios = true;
       recognized = true;
     }
-    if (path === 'backend' || path === 'backend-open-art-wt' || /^scripts\/ci\/checkout_backend_submodules\.sh$/.test(path)) {
+    if (path === 'backend' || /^scripts\/ci\/(?:checkout_backend_submodules\.sh|backend_gitlink_contract\.mjs)$/.test(path)) {
       result.backend = true;
       recognized = true;
     }
@@ -107,7 +107,7 @@ export function classifyPaths(paths) {
       /^version\.json$/,
       /^package\.json$/,
       /^scripts\/(?:sync_versions\.js|sync_all_versions\.mjs|resolve_ci_build_metadata\.mjs)$/,
-    ]) || path === 'backend' || path === 'backend-open-art-wt') {
+    ]) || path === 'backend') {
       result.versioning = true;
       recognized = true;
     }

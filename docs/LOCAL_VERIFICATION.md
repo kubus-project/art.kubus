@@ -95,9 +95,8 @@ npm run verify:backend
 
 `backend:status` reports whether `backend/` is available as a checked-out
 submodule, the backend HEAD, dirty state, and whether backend validation can run.
-It also reports `backend-open-art-wt` mirror configuration, HEAD, and dirty state
-so the auxiliary backend worktree cannot silently drift. CI requires both
-gitlinks and fails when either is missing or points at a different commit.
+CI requires `backend` to remain the sole canonical gitlink, to use the private
+backend repository URL, and to resolve to a full immutable commit SHA.
 
 Targeted profile media and CORS checks:
 
