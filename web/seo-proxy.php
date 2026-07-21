@@ -122,6 +122,42 @@ function injectTakeoverShell(string $html, array $target): ?string
     return is_string($html) ? $html : null;
 }
 
+/**
+ * Deployment revision identity.
+ *
+ * CI writes kubus-web-revision.txt into the immutable web artifact so a
+ * deployed release can be matched against the exact tested commit. The value is
+ * a commit SHA only - never a path, credential or host detail. When the file is
+ * absent the header is omitted entirely rather than reporting a guessed or
+ * stale revision.
+ */
+function webRevision(): ?string
+{
+    static $cached = false;
+    static $value = null;
+
+    if ($cached) {
+        return $value;
+    }
+    $cached = true;
+
+    $path = __DIR__ . '/kubus-web-revision.txt';
+    if (!is_readable($path)) {
+        return $value;
+    }
+    $raw = @file_get_contents($path);
+    if (!is_string($raw)) {
+        return $value;
+    }
+    $raw = trim($raw);
+    if (preg_match('/^[0-9a-f]{7,64}$/i', $raw) !== 1) {
+        return $value;
+    }
+
+    $value = $raw;
+    return $value;
+}
+
 function appendForwardHeader(array &$headers, string $serverKey, string $headerName): void
 {
     $value = $_SERVER[$serverKey] ?? null;
@@ -250,6 +286,7 @@ $allowedResponseHeaders = [
     'retry-after' => 'Retry-After',
     'vary' => 'Vary',
     'x-robots-tag' => 'X-Robots-Tag',
+    'x-kubus-backend-revision' => 'X-Kubus-Backend-Revision',
 ];
 
 foreach ($allowedResponseHeaders as $sourceName => $responseName) {
@@ -265,6 +302,11 @@ if (!isset($upstreamHeaders['content-type'])) {
     header('Content-Type: text/html; charset=utf-8');
 }
 header('X-Content-Type-Options: nosniff');
+
+$revision = webRevision();
+if ($revision !== null) {
+    header('X-Kubus-Web-Revision: ' . $revision);
+}
 
 if ($method !== 'HEAD' && $status !== 204 && $status !== 304) {
     echo $body;
