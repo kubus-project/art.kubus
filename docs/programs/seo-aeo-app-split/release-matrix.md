@@ -1,6 +1,15 @@
 # Release matrix — SEO / AEO / app-distribution program
 
-Last updated: 2026-07-21 (post-correction round)
+Last updated: 2026-07-21 (recovery + completion round; CI evidence collected)
+
+## CI evidence (GitHub Actions, completed runs)
+
+| Repository | Head | Conclusion |
+|---|---|---|
+| art.kubus | `688e9bf9` | success |
+| art.kubus-backend | `85fb005c` | success (incl. PostgreSQL editorial-migration-contract) |
+| kubus.site | `41b3608` | success (incl. Apache 29/29 + network-guarded determinism) |
+| art.kubus.site | `4842e5a` | PR #2 opened; `ci:seo` + vitest 44/44 verified locally |
 
 Status vocabulary: `PASS` (verified by executed evidence in the relevant
 environment) · `FAIL` (executed validation showed incorrect behavior) ·
@@ -47,9 +56,12 @@ production `PASS`.
 | kubus.site robots correctness | IMPLEMENTED_NOT_DEPLOYED | single wildcard group, own sitemap only, verified in `dist/robots.txt` |
 | kubus.site metadata | IMPLEMENTED_NOT_DEPLOYED | mandated title/description; `npm run build` + `vue-tsc` clean |
 | kubus.site pre-rendered metadata | NOT_STARTED | route-level metadata still client-side (`@vueuse/head`) |
-| Admin editorial authority | FAIL | `GET /api/editorial/articles?site=kubus` returns `items: []` while the site renders 4 seed articles — admin does **not** own this content yet (D-10) |
-| Editorial snapshot and rollback | NOT_STARTED | Batch 4 |
-| Marketing schema resolver | NOT_STARTED | Batch 5 |
+| Admin editorial authority | IMPLEMENTED_NOT_DEPLOYED | Runtime: 200-empty/404 authoritative, no seed resurrection (16/16 tests, CI green). Content: migration 082 proven against PostgreSQL locally + in CI; production DB not yet migrated |
+| Editorial snapshot (deterministic, offline) | PASS | `editorial/snapshot.json` committed; byte-identical regeneration under a live-proven network guard (CI green @ 41b3608) |
+| Migration 082 conflict safety | PASS (PostgreSQL) | Human draft preserved unpublished; human edit survives re-run; seed-owned rows refresh; executed locally (exit 0) and in CI @ 85fb005c |
+| Journal fallback semantics | PASS (tests) | 200-items/200-empty/404/403/network/timeout/500/malformed all classified; 16/16 against the real bundled module |
+| Slug + XML safety contract | PASS (tests) | 20/20: canonical-form validation, traversal/control rejection, XML escaping + injection neutralization, duplicate canonical rejection |
+| Marketing schema resolver | IMPLEMENTED_NOT_DEPLOYED | art.kubus.site PR #2: 0 SoftwareApplication on 105 pages; WebApplication only on download EN/SL; AboutPage; FAQ opt-in; noindex utilities; pinned by check-seo-output |
 | Page consolidation | NOT_STARTED | Batch 6 — Search Console data in hand |
 | Ljubljana EN / SL | NOT_STARTED | Batch 7 |
 | City indexability policy | NOT_STARTED | Batch 7 |

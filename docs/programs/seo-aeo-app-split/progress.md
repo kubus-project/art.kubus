@@ -323,6 +323,65 @@ Repository-level work for each remains executable and is not blocked.
 
 ---
 
+## 10b. Recovery + completion round (2026-07-21, second session)
+
+The previous session was interrupted mid-implementation. All uncommitted work
+survived on disk and was preserved to `/tmp/art-kubus-seo-recovery/` (patches,
+untracked tarball, SHAs, gitlink state) before any further edit. One recovered
+file needed repair: the journal fallback test bundling lacked a define for
+`import.meta.env` (a Vite construct, undefined under plain Node), which failed
+the `before()` hook and cancelled all 16 tests.
+
+### CI evidence (GitHub Actions, all completed — not inferred)
+
+| Repository | Head | Run conclusion | Notable jobs |
+|---|---|---|---|
+| art.kubus | `688e9bf9` | **success** | full pipeline incl. `php -l` gateways + Apache `web_routing` 14/14 |
+| art.kubus-backend | `85fb005c` | **success** | incl. new `editorial-migration-contract` (PostgreSQL) |
+| kubus.site | `41b3608` | **success** | setup-node + pinned toolchain + `npm ci` + lint + 20/20 contract + 16/16 fallback + parity + network-guarded determinism + build + Apache 29/29 |
+| art.kubus.site | `4842e5a` | pending (PR #2 opened) | `ci:seo` + vitest verified locally |
+
+### What the CI iteration surfaced (each fixed, not worked around)
+
+1. **kubus.site lockfile** — `.gitignore` explicitly ignored `package-lock.json`;
+   setup-node failed before installing anything. Lockfile tracked, toolchain
+   pinned (`npm@11.7.0`, Node 22.15), `esbuild` declared directly, `npm ci`
+   verified from a clean state with `node_modules` removed.
+2. **No ESLint config existed** — the lint script ran bare defaults (ES5) and
+   could never have passed. Adding a minimal config immediately caught a real
+   production bug: `public/sw.js` was syntactically invalid (missing paren), so
+   the service worker has never installed in any browser.
+3. **`unshare -rn` is blocked on GitHub's Ubuntu 24 runners** — the offline
+   determinism proof now intercepts Node's net/dgram/dns primitives via a
+   `--require` preload that exits 86, and the step first proves the guard live
+   with a deliberate fetch (fails as vacuous otherwise).
+4. **Backend lint** — a literal U+FEFF in the contract script; replaced with a
+   `charCodeAt` check.
+
+### Editorial authority (Batch 4) — completed structurally
+
+- `editorial/snapshot.json` + `snapshot.meta.json`: the committed, validated
+  snapshot is now the single bundled artifact; `JOURNAL_SEED` removed.
+- `npm run editorial:sync` is the only network-enabled editorial operation;
+  build/`routes:check` are proven offline.
+- `journal.ts` outcome classification: 200-empty and 404 are authoritative (no
+  seed resurrection); fallback only for network/timeout/5xx/malformed; other
+  4xx surfaces rather than masks. 16/16 tests against the real bundled module.
+- Migration 082 conflict guard (`created_by AND updated_by = seed actor`)
+  **executed against real PostgreSQL** (postgis 15-3.4): full chain, field
+  assertions, idempotency, human-draft-preserved-unpublished, human-edit
+  survival, seed-refresh, duplicate rejection, real public service reading —
+  all passed, exit 0, then green in CI at `85fb005c`.
+
+### Batch 5 (typed schema resolver) — implemented
+
+art.kubus.site PR #2 (`4842e5a`): blanket `SoftwareApplication` removed from
+all 105 pages; `WebApplication` only on download EN/SL (no `MobileApplication`
+— no native distribution exists to claim); `AboutPage` on about EN/SL;
+`FAQPage` gated on explicit `faqSlugs` opt-in; `newsletter`/`socials` noindexed
+and sitemap-excluded; all pinned by `check-seo-output.cjs`. `ci:seo` exit 0,
+vitest 44/44.
+
 ## 11. Next executable action
 
 Open draft PRs for the two committed branches, then start **Batch 5**
