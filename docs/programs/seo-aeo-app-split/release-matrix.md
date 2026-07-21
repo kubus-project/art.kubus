@@ -67,6 +67,8 @@ production `PASS`.
 | Page consolidation (Batch 6) | IMPLEMENTED_NOT_DEPLOYED | Similarity measured (<0.15 → differentiate, not merge); 32 keywords/locale with one indexable owner each; 9 collisions resolved. art.kubus.site#3 CI **2/2 green @ 4f8345f** |
 | City indexability policy (Batch 7) | IMPLEMENTED_NOT_DEPLOYED | Data-or-demand policy, 11 vitest cases; 8 cities indexed / 4 demoted against measured production + Search Console signals. Same PR, same green runs |
 | City sitemap declaration | IMPLEMENTED_NOT_DEPLOYED | Pre-existing defect fixed: Zagreb/Trieste/Vienna/Rijeka were indexable but absent from the sitemap |
+| Social preview cards (Batch 8) | IMPLEMENTED_NOT_DEPLOYED | All 105 pages shared one **128×128** logo as og:image, far below the 1200×630 previews require; now per-page cards with declared dimensions and a proper default fallback. art.kubus.site#4 CI **2/2 green @ `bec838b`**; assertions negative-tested (missing file and wrong dimensions both fail) |
+| Rich city/artwork imagery | BLOCKED_EXTERNAL | Real map tiles and artwork photography unavailable offline; registry, slots, resolution, validation and fallback complete and will carry them unchanged |
 | Ljubljana EN/SL rich content | BLOCKED_EXTERNAL | City editorial API returns zero records for every city; program forbids fabricating artworks, artists, institutions, routes or verification claims |
 | Page consolidation | NOT_STARTED | Batch 6 — Search Console data in hand |
 | Ljubljana EN / SL | NOT_STARTED | Batch 7 |
