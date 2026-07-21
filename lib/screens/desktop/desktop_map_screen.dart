@@ -329,6 +329,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   WalkingNavigationProvider? _walkingNavigationProvider;
   WalkingNavigationSessionLease? _walkingNavigationLease;
   WalkingNavigationMapCoordinator? _walkingNavigationMapCoordinator;
+  bool _walkingSessionStartScheduled = false;
   int _styleEpoch = 0;
   final Set<String> _registeredMapImages = <String>{};
   final Set<String> _managedLayerIds = <String>{};
@@ -781,10 +782,19 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (widget.walkingNavigationIntent != null) {
-      final provider = _walkingNavigationProvider ??=
-          context.read<WalkingNavigationProvider>();
-      _walkingNavigationLease ??=
-          provider.start(widget.walkingNavigationIntent!);
+      _walkingNavigationProvider ??= context.read<WalkingNavigationProvider>();
+      if (!_walkingSessionStartScheduled) {
+        _walkingSessionStartScheduled = true;
+        // `start` notifies listeners; running it during the build phase makes
+        // the provider scope rebuild mid-build.
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          final provider = _walkingNavigationProvider;
+          final intent = widget.walkingNavigationIntent;
+          if (provider == null || intent == null) return;
+          _walkingNavigationLease ??= provider.start(intent);
+        });
+      }
     }
     final media = MediaQuery.of(context);
     _kubusMapController.setReduceMotion(
@@ -1878,11 +1888,32 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         shouldFollow: () => _autoFollow,
         followCamera: (position) =>
             _moveCamera(position, math.max(_cameraZoom, 18)),
+        fitRouteBounds: _fitWalkingRouteBounds,
       );
+
+  /// Route overview padding: the desktop navigation panel and Nearby Art rail
+  /// occupy the leading edge, so the route is fitted into the remaining canvas.
+  Future<void> _fitWalkingRouteBounds(WalkingRouteBounds bounds) async {
+    if (!mounted) return;
+    await _kubusMapController.fitBounds(
+      bounds.southWest,
+      bounds.northEast,
+      padding: const EdgeInsets.only(
+        left: _walkingRouteOverviewSidePadding,
+        right: KubusSpacing.xl,
+        top: KubusSpacing.xl,
+        bottom: _walkingRouteOverviewBottomPadding,
+      ),
+    );
+  }
+
+  static const double _walkingRouteOverviewSidePadding = 380;
+  static const double _walkingRouteOverviewBottomPadding = 120;
 
   void _resumeWalkingNavigation(WalkingNavigationProvider navigation) {
     final position = navigation.currentPosition;
     if (position == null) return;
+    _walkingCoordinator.resumeFollow();
     setState(() {
       _autoFollow = true;
       _isometricViewEnabled = true;
@@ -2188,6 +2219,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       unawaited(markerDeletedSub.cancel().catchError((_) {/* ignore */}));
     }
     unawaited(_walkingLocationCoordinator.stop());
+    _walkingNavigationMapCoordinator?.dispose();
     _mapSearchController.removeListener(_handleMapSearchControllerChanged);
     _mapSearchController.dispose();
     _markerStackPageController.dispose();
@@ -2583,7 +2615,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         _userLocation = current;
         _userLocationAccuracyMeters = fix.accuracyMeters;
         _userLocationTimestampMs = fix.timestamp.millisecondsSinceEpoch;
-        if (_autoFollow) {
+        // The route overview owns the camera until Resume; see the mobile
+        // screen for the same rule.
+        if (_autoFollow &&
+            !(_walkingNavigationMapCoordinator?.isRouteOverviewActive ??
+                false)) {
           _cameraCenter = current;
         }
       });
@@ -2598,7 +2634,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         if (!mounted) return;
         _startWalkingPositionStream();
       }
-      WalkingNavigationDiagnostics.record('first_live_fix_acquired');
+      WalkingNavigationDiagnostics.record('live_fix_acquired');
 
       final selectedMarker = _kubusMapController.selectedMarkerData;
       if (selectedMarker != null) {

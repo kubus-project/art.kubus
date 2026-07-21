@@ -2162,6 +2162,61 @@ class KubusMapController {
     );
   }
 
+  /// Fits a geographic box into the visible viewport.
+  ///
+  /// [padding] is in logical pixels and must account for navigation panels,
+  /// safe areas, map controls, the Nearby Art surface, and desktop side rails,
+  /// so the fitted geometry is never technically inside the map but visually
+  /// behind an overlay. MapLibre resets tilt and bearing to 0 for a bounds fit,
+  /// which is what a route overview wants before follow mode re-applies pitch.
+  Future<bool> fitBounds(
+    LatLng southWest,
+    LatLng northEast, {
+    EdgeInsets padding = EdgeInsets.zero,
+    Duration duration = const Duration(milliseconds: 550),
+  }) async {
+    final controller = _mapController;
+    if (controller == null) return false;
+
+    // A zero-area box makes MapLibre refuse the fit on some platforms.
+    const minimumSpan = 0.0004; // ~45 m
+    final latSpan = (northEast.latitude - southWest.latitude).abs();
+    final lngSpan = (northEast.longitude - southWest.longitude).abs();
+    final latPad = latSpan < minimumSpan ? (minimumSpan - latSpan) / 2 : 0.0;
+    final lngPad = lngSpan < minimumSpan ? (minimumSpan - lngSpan) / 2 : 0.0;
+
+    final bounds = ml.LatLngBounds(
+      southwest: ml.LatLng(
+        (southWest.latitude - latPad).clamp(-90.0, 90.0),
+        (southWest.longitude - lngPad).clamp(-180.0, 180.0),
+      ),
+      northeast: ml.LatLng(
+        (northEast.latitude + latPad).clamp(-90.0, 90.0),
+        (northEast.longitude + lngPad).clamp(-180.0, 180.0),
+      ),
+    );
+
+    _programmaticCameraMove = true;
+    try {
+      await controller.animateCamera(
+        ml.CameraUpdate.newLatLngBounds(
+          bounds,
+          left: padding.left,
+          top: padding.top,
+          right: padding.right,
+          bottom: padding.bottom,
+        ),
+        duration: duration,
+      );
+      return true;
+    } catch (e) {
+      if (kDebugMode) {
+        AppConfig.debugPrint('KubusMapController: fitBounds failed: $e');
+      }
+      return false;
+    }
+  }
+
   Future<void> resetBearing() async {
     if (_camera.bearing.abs() < 0.5) return;
     await animateTo(
