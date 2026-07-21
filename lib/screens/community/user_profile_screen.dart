@@ -127,6 +127,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     (() async {
       try {
         await SocketService().connect();
+        if (!mounted) return;
         SocketService().addPostListener(_handleIncomingPost);
       } catch (_) {}
     })();
