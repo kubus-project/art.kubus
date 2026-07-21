@@ -28,7 +28,9 @@ printf '%s' "$EXPECTED_DEPLOYMENT_HOST" | grep -Eq '^[A-Za-z0-9.-]+$' || die "EX
 [ "$SFTP_SERVER" = "$EXPECTED_DEPLOYMENT_HOST" ] || die "SFTP_SERVER does not match EXPECTED_DEPLOYMENT_HOST"
 printf '%s' "$SFTP_USERNAME" | grep -Eq '^[A-Za-z0-9._-]+$' || die "SFTP_USERNAME contains unsupported characters"
 printf '%s' "$SFTP_PORT" | grep -Eq '^[0-9]+$' || die "SFTP_PORT must be numeric"
-[ "$SFTP_PORT" -ge 1 ] && [ "$SFTP_PORT" -le 65535 ] || die "SFTP_PORT is out of range"
+if [ "$SFTP_PORT" -lt 1 ] || [ "$SFTP_PORT" -gt 65535 ]; then
+  die "SFTP_PORT is out of range"
+fi
 printf '%s' "$RETAIN_RELEASE_COUNT" | grep -Eq '^[0-9]+$' || die "RETAIN_RELEASE_COUNT must be numeric"
 [ "$RETAIN_RELEASE_COUNT" -le 50 ] || die "RETAIN_RELEASE_COUNT must not exceed 50"
 
