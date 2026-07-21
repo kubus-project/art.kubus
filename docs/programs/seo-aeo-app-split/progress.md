@@ -382,6 +382,49 @@ all 105 pages; `WebApplication` only on download EN/SL (no `MobileApplication`
 and sitemap-excluded; all pinned by `check-seo-output.cjs`. `ci:seo` exit 0,
 vitest 44/44.
 
+## 10c. Batches 6-7 (2026-07-21)
+
+### Batch 6 — search-intent consolidation (art.kubus.site PR #2, `3d5c84f`)
+
+Measured 4-gram Jaccard similarity across the overlapping cluster **before**
+deciding: uniformly below 0.15. The pages are genuinely differentiated
+(~1450 words each), so the cannibalization is at title/keyword level, not
+content. Redirect-merging would have destroyed real content to fix a title
+problem; consolidation is by intent ownership instead.
+
+Owners: `/map/` (use the map), `/public-art/` (explain public art),
+`/murals-near-me/` (location-led — untouched, best SL performer),
+`/discover-local-art/` (general guide). Redundant variants
+(`public-art-map`, `local-art-map`, `street-art-map`,
+`how-to-discover-local-art`) → `noindex, follow`, sitemap-excluded, reversible.
+
+A new `check-seo-output` assertion — two indexable pages may not share a
+`primaryKeyword` — surfaced **five further collisions manual audit missed**,
+including an SL-only one. All resolved by giving head terms to the page with
+demonstrated performance.
+
+### Batch 7 — city indexability policy (`ec8c306`)
+
+Production probe: only **Ljubljana (62 eligible artworks)** and **Maribor
+(60)** have entity backing. Ten configured cities have no canonical hub
+(`/en/cities/{slug}` → 404) and the city editorial API returns empty
+`artists`/`places` for every city.
+
+A naive data threshold would have deindexed **Zagreb** — zero entity backing
+but 140 impressions and 4 clicks, the second-best city page on the site. The
+policy therefore qualifies on **data OR demand**; demotion requires failing
+both. Outcome: 8 indexed (2 on data, 6 on demand), 4 demoted (villach, koper,
+venezia, gorizia — zero clicks, ≤20 impressions, no data).
+
+Pre-existing defect found: `sitemapIncludeSlugs` covered only the five
+backend-recognised Slovenian cities, so Zagreb/Trieste/Vienna/Rijeka were
+indexable but never declared in the sitemap. Now declared.
+
+**Ljubljana rich content remains BLOCKED_EXTERNAL**: the city editorial system
+holds no records, and the program forbids fabricating artworks, artists,
+institutions, routes or verification claims. The eligibility policy and
+evidence ship; the content needs data to exist first.
+
 ## 11. Next executable action
 
 Open draft PRs for the two committed branches, then start **Batch 5**
