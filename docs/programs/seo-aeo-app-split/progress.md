@@ -196,8 +196,15 @@ pos 7.7), `/en/` (137 impr, pos 6.05, 1.46% CTR), `/sl/murali-v-blizini/`
 
 Commit `7b6c8202` on `goal/seo-aeo-app-split`.
 
-- `web/.htaccess`: root now `308 → /en`; `?lang=sl` → `/sl`. `QSA` preserves UTM
-  through the redirect. `/app` keeps the interactive shell.
+- `web/.htaccess`: root now `308 → /en`; `?lang=sl` → `/sl`. `/app` keeps the
+  interactive shell.
+
+  **Correction (superseded).** The first implementation used `QSA` and this
+  ledger claimed it produced a clean `/sl`. It did not: `QSA` *appends* the
+  original query, so `/?lang=sl` resolved to `/sl?lang=sl` — the obsolete
+  language parameter retained on a URL whose locale is already in the path.
+  Fixed in `8f359538` by matching the four positions `lang=` can occupy and
+  reassembling the surviving parameters. Now verified under real Apache.
 - `web/manifest.json`: `start_url` `"."` → `"/app"` (see decision log D-2),
   `scope: "/"`, and the blockchain-forward description replaced with
   discovery-first positioning.
@@ -211,6 +218,37 @@ Commit `7b6c8202` on `goal/seo-aeo-app-split`.
   failed and auto-rolled-back against the redirected root**), plus root
   canonicalization, compact-alias resolution, and served-revision equality with
   the deployed commit.
+
+### Correction round (2026-07-21, after PR review)
+
+Executed evidence replaced three claims that had been asserted from reading
+code rather than running it.
+
+| Claim previously made | What execution showed |
+|---|---|
+| `?lang=sl` redirects cleanly to `/sl` | `QSA` retained it: `/sl?lang=sl` |
+| kubus.site unknown routes all 404 | `/contact/anything`, `/monograph/anything` etc. returned 200; any invalid `/journal/{slug}` returned 200 |
+| `/home/` → `301 /` | Two hops: `/home/` → `/home` → `/`, because the trailing-slash rule ran first |
+
+Work added in this round:
+
+- **art.kubus** `8f359538`: four-rule `lang=` stripping; `scripts/qa/web_routing_contract.mjs`
+  executed under `httpd:2.4` (**14/14**) and wired into a new `web_routing` CI
+  job; `php -l` over every `web/*.php` in the guardrails job; the production
+  contract moved *inside* the post-deploy smoke step so failures reach the
+  existing rollback guard, extended with the Slovenian canonical entity and all
+  language-query cases.
+- **kubus.site** `8f9b002`: `route-manifest.json` as the single source of truth;
+  router resolves paths via `routePath(name)`; `.htaccess` allowlist and sitemap
+  generated from it; `npm run routes:check` fails on drift or hardcoded literals;
+  static routes matched exactly; journal slugs enumerated, not wildcarded;
+  redirects emitted above the trailing-slash rule to remove the 301 chain;
+  HTTPS rule honors `X-Forwarded-Proto`; new CI runs **29/29** routing
+  assertions against real Apache. `seo.config.json` and `generate-sitemap.cjs`
+  removed as duplicate sources.
+- **art.kubus-backend** `b3fbf10`: `X-Kubus-Backend-Revision` at the
+  `setPublicHeaders` choke point, reusing `deploymentMetadataService`; **54/54**
+  jest tests pass including 4 new; `docs/DEPLOYMENT_REVISION_IDENTITY.md`.
 
 ### Batch 3 — kubus.site cleanup (IMPLEMENTED_NOT_DEPLOYED)
 

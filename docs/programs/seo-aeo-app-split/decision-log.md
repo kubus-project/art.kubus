@@ -124,6 +124,115 @@ left implicit.
 
 ---
 
+## D-7 — QSA cannot express "drop one parameter", so four rules do
+
+**Date:** 2026-07-21
+**Status:** Implemented and verified under Apache, not deployed
+
+The first root canonicalization used `QSA` on both rules and this program's
+ledger claimed `/?lang=sl` produced a clean `/sl`. It did not. `QSA` *appends*
+the original query to the target, so the result was `/sl?lang=sl`: the obsolete
+language parameter retained on a URL whose locale is already in the path, and a
+second crawlable variant of the same document.
+
+Two requirements conflict. `lang=` must be **dropped**, because it is
+superseded by the path. Tracking parameters must be **kept**, or attribution
+dies at the redirect. `QSA` is all-or-nothing and `QSD` discards everything.
+
+**Decision:** match the four positions `lang=` can occupy in a query string —
+only, first, last, middle — and reassemble the surviving parameters in each
+case. Verbose, but each rule is independently testable and the middle case is
+the one that silently produces `?a=1b=2` if the separator is mishandled.
+
+Matching is **case-sensitive** because the captured locale becomes the redirect
+target: accepting `?lang=SL` would emit `/SL`. Unrecognized values fall through
+to `/en` with the query untouched.
+
+**Why it was missed:** the rule was reviewed by reading, and the reading was
+wrong about what `QSA` does to a target that already has no query. This is the
+class of error that only execution catches — hence D-8.
+
+---
+
+## D-8 — Rewrite rules are not reviewable, only executable
+
+**Date:** 2026-07-21
+**Status:** Implemented, running in CI
+
+Three separate defects in this program came from rules that read correctly and
+behaved differently: the `QSA` retention above, the kubus.site fallback ordering
+that made HTTPS and trailing-slash rules unreachable dead code, and a `/home/`
+→ `/home` → `/` redirect **chain** that only appeared when the assertions were
+actually run.
+
+`mod_rewrite` semantics depend on rule order, `[L]` termination, per-rule query
+handling and `RewriteCond` scoping. None of that is visible by inspection.
+
+**Decision:** every `.htaccess` change must be executed against a real Apache
+serving the real build with `AllowOverride All`, in CI.
+
+- `art.kubus`: `scripts/qa/web_routing_contract.mjs`, `web_routing` job — 14/14.
+- `kubus.site`: `scripts/qa/routing-contract.mjs`, new CI — 29/29.
+
+`AllowOverride All` matters: without it Apache ignores `.htaccess` entirely and
+every assertion would pass against default behavior, producing a green build
+that proves nothing.
+
+**Cost accepted:** CI now depends on pulling `httpd:2.4`.
+
+---
+
+## D-9 — The backend gitlink must move as a pair, so it does not move yet
+
+**Date:** 2026-07-21
+**Status:** Deliberately deferred
+
+`art.kubus` pins the backend **twice**: `backend` and `backend-open-art-wt`.
+`ci.yml` does not merely tolerate this, it *enforces* equality:
+
+```bash
+if [ "$canonical_expected" != "$public_expected" ]; then
+  echo "The two backend gitlinks must point to the same verified backend commit."
+```
+
+This collides with the instruction to leave the dirty `backend-open-art-wt`
+gitlink untouched: bumping only `backend` to pick up the backend revision work
+would fail CI immediately.
+
+**Decision:** do **not** bump either gitlink in this program's art.kubus PR. The
+backend change ships as its own PR (art.kubus-backend#12). Once merged, a
+separate deliberate commit moves **both** pins to the same merged SHA.
+
+Neither gitlink was staged in any commit here; both remain modified in the
+working tree only.
+
+---
+
+## D-10 — The editorial API is empty, so the seed cannot be trusted away
+
+**Date:** 2026-07-21
+**Status:** Recorded; migration outstanding
+
+`services/journal.ts` documents itself as hydrating admin-published content with
+the bundled seed as fallback. In reality
+`GET /api/editorial/articles?site=kubus&locale=en` returns `items: []`, while
+the site renders four articles from `JOURNAL_SEED`.
+
+So admin is **not** currently the source of truth for kubus.site journal
+content, despite the code comment.
+
+**Decision:** the generated journal allowlist is the **union** of API slugs and
+seed slugs, not "prefer the API". Trusting the API alone would have generated an
+allowlist that 404s all four live articles the moment it shipped. Union can only
+over-permit, which degrades to the SPA rendering its own not-found state —
+never to a live article disappearing.
+
+**Outstanding:** migrating the four seed articles into admin so the editorial
+system genuinely owns them. Until then, any claim that admin is the editorial
+source of truth for kubus.site is false.
+
+---
+
 ## D-6 — A failing contract check was a test bug, and was fixed as one
 
 **Date:** 2026-07-21
