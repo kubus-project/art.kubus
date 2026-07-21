@@ -54,6 +54,29 @@ jobs:
             exit 1
           fi
 
+      - name: Validate deployed PHP gateways
+        shell: bash
+        # web/*.php is served by LiteSpeed in production. A syntax error there
+        # takes down every public SEO document (robots, sitemaps, localized
+        # pages, entity pages and compact aliases) while the Flutter shell keeps
+        # working, so it fails quietly rather than obviously. Nothing else in
+        # this pipeline parses PHP.
+        run: |
+          set -euo pipefail
+          sudo apt-get update -y >/dev/null
+          sudo apt-get install -y --no-install-recommends php-cli >/dev/null
+          php --version
+
+          mapfile -t php_files < <(find web -type f -name '*.php' | sort)
+          if [ "${#php_files[@]}" -eq 0 ]; then
+            echo 'No PHP gateway files found under web/; expected at least seo-proxy.php.' >&2
+            exit 1
+          fi
+          for file in "${php_files[@]}"; do
+            echo "  php -l $file"
+            php -l "$file"
+          done
+
       - name: Set up pinned Node
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
@@ -559,3 +582,62 @@ jobs:
           path: output/playwright/artifacts
           if-no-files-found: warn
           retention-days: 14
+
+  web_routing:
+    name: Apache rewrite contract for web/.htaccess
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          submodules: false
+
+      # mod_rewrite behaviour cannot be reviewed by reading the file: rule
+      # order, [L] termination and QSA/QSD query handling interact. The lang=
+      # stripping needs four rules because QSA cannot express "drop one
+      # parameter, keep the rest", and only execution proves the joining.
+      # PHP is not installed here on purpose - every assertion concerns
+      # redirects and routing decided before the seo-proxy.php handoff.
+      - name: Serve web/ under Apache
+        run: |
+          set -euo pipefail
+          docker run -d --name kubus-web -p 8081:80 \
+            -v "$PWD/web:/usr/local/apache2/htdocs:ro" \
+            httpd:2.4 \
+            sh -c "sed -i \
+                -e 's|^#LoadModule rewrite_module|LoadModule rewrite_module|' \
+                -e 's|^#LoadModule headers_module|LoadModule headers_module|' \
+                -e 's|^#LoadModule mime_module|LoadModule mime_module|' \
+                -e 's|^#LoadModule access_compat_module|LoadModule access_compat_module|' \
+                conf/httpd.conf \
+              && printf '%s\n' \
+                '<Directory \"/usr/local/apache2/htdocs\">' \
+                '  Options -Indexes +FollowSymLinks' \
+                '  AllowOverride All' \
+                '  Require all granted' \
+                '</Directory>' >> conf/httpd.conf \
+              && httpd-foreground"
+
+          for attempt in $(seq 1 30); do
+            if [ "$(curl --silent --output /dev/null --write-out '%{http_code}' http://localhost:8081/)" != '000' ]; then
+              echo "Apache is serving."
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Apache did not become ready." >&2
+          docker logs kubus-web >&2
+          exit 1
+
+      - name: Routing contract
+        env:
+          KUBUS_BASE: http://localhost:8081
+        run: node scripts/qa/web_routing_contract.mjs
+
+      - name: Apache log on failure
+        if: failure()
+        run: docker logs kubus-web 2>&1 | tail -50
+
+      - name: Stop Apache
+        if: always()
+        run: docker rm -f kubus-web || true

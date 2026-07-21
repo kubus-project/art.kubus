@@ -78,7 +78,37 @@ async function main() {
   // Root must collapse into the localized canonical in one permanent hop and
   // must never serve the app shell as a competing indexable homepage.
   await checkRedirect('root canonicalization', '/', 308, `${ORIGIN}/en`);
-  await checkRedirect('root language alias (?lang=sl)', '/?lang=sl', 308, `${ORIGIN}/sl`);
+
+  // ?lang= selects the locale and is then dropped: carrying it through would
+  // produce /sl?lang=sl, a redundant parameter on a URL whose locale is already
+  // in the path. Tracking parameters must survive, so attribution is not lost
+  // at the redirect.
+  await checkRedirect('language alias dropped (?lang=sl)', '/?lang=sl', 308, `${ORIGIN}/sl`);
+  await checkRedirect('language alias dropped (?lang=en)', '/?lang=en', 308, `${ORIGIN}/en`);
+  await checkRedirect(
+    'tracking preserved without lang',
+    '/?utm_source=test',
+    308,
+    `${ORIGIN}/en?utm_source=test`,
+  );
+  await checkRedirect(
+    'lang dropped, tracking preserved (lang first)',
+    '/?lang=sl&utm_source=test',
+    308,
+    `${ORIGIN}/sl?utm_source=test`,
+  );
+  await checkRedirect(
+    'lang dropped, tracking preserved (lang last)',
+    '/?utm_source=test&lang=sl',
+    308,
+    `${ORIGIN}/sl?utm_source=test`,
+  );
+  await checkRedirect(
+    'lang dropped, tracking preserved (lang mid)',
+    '/?utm_source=test&lang=sl&utm_medium=cpc',
+    308,
+    `${ORIGIN}/sl?utm_source=test&utm_medium=cpc`,
+  );
 
   // --- Localized public homepages -------------------------------------------
   for (const [locale, altLocale] of [['en', 'sl'], ['sl', 'en']]) {
@@ -173,6 +203,25 @@ async function main() {
 
       const jsonLd = html.includes('application/ld+json');
       record('entity emits JSON-LD', jsonLd, `json_ld=${jsonLd}`);
+    }
+
+    // The Slovenian canonical is a distinct document, not a redirect back to
+    // English, and must point at itself.
+    const slRes = await checkStatus(
+      'Slovenian canonical entity renders',
+      `/sl/umetnine/${ARTWORK_ID}`,
+      200,
+    );
+    if (slRes && slRes.status === 200) {
+      const html = await slRes.text();
+      const canonical = firstMatch(html, /<link[^>]+rel="canonical"[^>]+href="([^"]+)"/i);
+      record(
+        'SL entity canonical is self-referential',
+        canonical === `${ORIGIN}/sl/umetnine/${ARTWORK_ID}`,
+        `canonical=${canonical ?? '<absent>'}`,
+      );
+      const altEn = html.includes(`${ORIGIN}/en/artworks/${ARTWORK_ID}`);
+      record('SL entity links EN alternate', altEn, `en_alternate=${altEn}`);
     }
   } else {
     record(

@@ -103,9 +103,37 @@
   # which duplicated /en as a second indexable homepage with no canonical, no
   # hreflang and no server-rendered content. Root now collapses into the
   # localized canonical in exactly one permanent hop; the interactive app keeps
-  # its own entry at /app. QSA preserves UTM attribution through the redirect.
-  RewriteCond %{QUERY_STRING} (^|&)lang=sl(&|$) [NC]
-  RewriteRule ^$ /sl [R=308,L,NE,QSA]
+  # its own entry at /app.
+  #
+  # ?lang=xx is an obsolete language alias. It selects the target locale and is
+  # then DROPPED, because carrying it onto /sl would produce /sl?lang=sl - a
+  # redundant parameter on a URL whose locale is already in the path, and a
+  # source of duplicate crawlable variants. Tracking parameters are preserved.
+  #
+  # QSA cannot express "drop one parameter, keep the rest", so the four
+  # positions lang= can occupy in a query string are matched explicitly:
+  # only, first, last, middle. Anything else falls through to the default rule
+  # below, where QSA preserves the query untouched.
+  #
+  #   /?lang=sl                  -> /sl
+  #   /?lang=sl&utm_source=x     -> /sl?utm_source=x
+  #   /?utm_source=x&lang=sl     -> /sl?utm_source=x
+  #   /?a=1&lang=sl&b=2          -> /sl?a=1&b=2
+  #   /?utm_source=x             -> /en?utm_source=x
+  #
+  # Matching is case-sensitive on purpose: the locale is reused verbatim as the
+  # redirect target, so accepting ?lang=SL would emit /SL.
+  RewriteCond %{QUERY_STRING} ^lang=(en|sl)$
+  RewriteRule ^$ /%1? [R=308,L,NE]
+
+  RewriteCond %{QUERY_STRING} ^lang=(en|sl)&(.+)$
+  RewriteRule ^$ /%1?%2 [R=308,L,NE]
+
+  RewriteCond %{QUERY_STRING} ^(.+)&lang=(en|sl)$
+  RewriteRule ^$ /%2?%1 [R=308,L,NE]
+
+  RewriteCond %{QUERY_STRING} ^(.+)&lang=(en|sl)&(.+)$
+  RewriteRule ^$ /%2?%1&%3 [R=308,L,NE]
 
   RewriteRule ^$ /en [R=308,L,NE,QSA]
 
