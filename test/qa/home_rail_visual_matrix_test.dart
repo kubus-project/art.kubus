@@ -148,7 +148,7 @@ final List<HomeRailItem> _allEntityTypes = PromotionEntityType.values
     .toList(growable: false);
 
 Future<List<int>> _capture(WidgetTester tester) async {
-  final boundary = tester.binding.renderViewElement!.renderObject!;
+  final boundary = tester.binding.rootElement!.renderObject!;
   final layer = boundary.debugLayer! as OffsetLayer;
   late final List<int> bytes;
   await tester.runAsync(() async {
