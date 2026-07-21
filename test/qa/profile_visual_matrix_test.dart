@@ -28,10 +28,20 @@ import '../support/qa_font_loader.dart';
 ///
 /// Run with:
 /// ```
-/// puro flutter test test/qa/profile_visual_matrix_test.dart
+/// KUBUS_RUN_VISUAL_QA=1 puro flutter test test/qa/profile_visual_matrix_test.dart
 /// ```
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  const optInVariable = 'KUBUS_RUN_VISUAL_QA';
+  if (Platform.environment[optInVariable] != '1') {
+    test(
+      'visual QA matrix is opt-in',
+      () {},
+      skip: 'Set $optInVariable=1 to generate screenshot evidence.',
+    );
+    return;
+  }
 
   final outputDir = Directory('output/qa/profile-visual-matrix');
   final captures = <Map<String, Object?>>[];
