@@ -120,13 +120,16 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     _profileController.addListener(_syncProfileControllerState);
     _syncProfileControllerState();
     unawaited(_profileController.load());
-    // Listen for incoming posts via socket to update profile feed in real-time
-    try {
-      (() async {
+    // Listen for incoming posts via socket to update profile feed in real-time.
+    // The try/catch must live *inside* the async closure: wrapping the
+    // invocation instead only guards the synchronous act of starting the
+    // Future, so a connect() failure would escape as an uncaught zone error.
+    (() async {
+      try {
         await SocketService().connect();
         SocketService().addPostListener(_handleIncomingPost);
-      })();
-    } catch (_) {}
+      } catch (_) {}
+    })();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       try {
         final wp = Provider.of<WalletProvider>(context, listen: false);
