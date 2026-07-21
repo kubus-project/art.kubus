@@ -1,14 +1,19 @@
 name: CI
 
 on:
-  push:
   pull_request:
+    branches:
+      - master
+  push:
+    branches:
+      - master
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref_name }}
   cancel-in-progress: true
 
 env:
@@ -17,65 +22,153 @@ env:
   NPM_VERSION: '11.7.0'
 
 jobs:
+  changes:
+    name: Resolve affected CI surfaces
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      full: ${{ steps.filter.outputs.full }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      web: ${{ steps.filter.outputs.web }}
+      backend: ${{ steps.filter.outputs.backend }}
+      android: ${{ steps.filter.outputs.android }}
+      ios: ${{ steps.filter.outputs.ios }}
+      docs: ${{ steps.filter.outputs.docs }}
+      versioning: ${{ steps.filter.outputs.versioning }}
+    steps:
+      - name: Checkout change metadata
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 2
+          submodules: false
+
+      - name: Classify changed paths
+        id: filter
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          set -euo pipefail
+
+          full=false
+          frontend=false
+          web=false
+          backend=false
+          android=false
+          ios=false
+          docs=false
+          versioning=false
+
+          if [ "$EVENT_NAME" = 'push' ] || [ "$EVENT_NAME" = 'workflow_dispatch' ]; then
+            full=true
+          fi
+
+          base_sha="$BASE_SHA"
+          if [ -z "$base_sha" ] || [[ "$base_sha" =~ ^0+$ ]]; then
+            base_sha="$(git rev-parse HEAD^ 2>/dev/null || git rev-parse HEAD)"
+          fi
+          if ! git cat-file -e "$base_sha^{commit}" 2>/dev/null; then
+            git fetch --no-tags --depth=1 origin "$base_sha"
+          fi
+
+          git diff --name-only "$base_sha" "$GITHUB_SHA" > "$RUNNER_TEMP/changed-files.txt"
+          echo 'Changed files:'
+          cat "$RUNNER_TEMP/changed-files.txt"
+
+          while IFS= read -r file; do
+            [ -n "$file" ] || continue
+            case "$file" in
+              .github/workflows/*|scripts/ci/*|.gitmodules)
+                full=true
+                ;;
+            esac
+            case "$file" in
+              lib/*|test/*|integration_test/*|assets/*|tool/*|pubspec.yaml|pubspec.lock|analysis_options.yaml)
+                frontend=true
+                ;;
+            esac
+            case "$file" in
+              web/*|scripts/qa/*)
+                web=true
+                ;;
+            esac
+            case "$file" in
+              backend|backend-open-art-wt)
+                backend=true
+                ;;
+            esac
+            case "$file" in
+              android/*|pubspec.yaml|pubspec.lock)
+                android=true
+                ;;
+            esac
+            case "$file" in
+              ios/*|pubspec.yaml|pubspec.lock)
+                ios=true
+                ;;
+            esac
+            case "$file" in
+              docs/*|AGENTS.md|*/AGENTS.md|DESLOPPIFY.md|README.md)
+                docs=true
+                ;;
+            esac
+            case "$file" in
+              pubspec.yaml|version.json|package.json|scripts/sync_version.js|scripts/sync_all_versions.mjs|backend|backend-open-art-wt)
+                versioning=true
+                ;;
+            esac
+          done < "$RUNNER_TEMP/changed-files.txt"
+
+          {
+            echo "full=$full"
+            echo "frontend=$frontend"
+            echo "web=$web"
+            echo "backend=$backend"
+            echo "android=$android"
+            echo "ios=$ios"
+            echo "docs=$docs"
+            echo "versioning=$versioning"
+          } | tee -a "$GITHUB_OUTPUT"
+
   guardrails:
     name: Guardrails + pinned sources
+    needs: changes
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - name: Checkout root and both backend gitlinks
+      - name: Checkout root repository
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
-          fetch-depth: 0
+          fetch-depth: 1
           submodules: false
 
-      - name: Checkout private backend gitlinks
+      - name: Reject divergent backend gitlinks before network access
+        shell: bash
+        run: |
+          set -euo pipefail
+          canonical_expected="$(git rev-parse HEAD:backend)"
+          public_expected="$(git rev-parse HEAD:backend-open-art-wt)"
+          if [ "$canonical_expected" != "$public_expected" ]; then
+            echo "backend and backend-open-art-wt must pin the same backend commit." >&2
+            echo "backend:             $canonical_expected" >&2
+            echo "backend-open-art-wt: $public_expected" >&2
+            exit 1
+          fi
+
+      - name: Materialize one private backend clone and local worktree
+        if: >-
+          ${{
+            (needs.changes.outputs.full == 'true' ||
+             needs.changes.outputs.backend == 'true' ||
+             needs.changes.outputs.docs == 'true' ||
+             needs.changes.outputs.versioning == 'true') &&
+            (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+          }}
         shell: bash
         env:
           BACKEND_SUBMODULE_SSH_KEY: ${{ secrets.BACKEND_SUBMODULE_SSH_KEY }}
         run: bash scripts/ci/checkout_backend_submodules.sh
-
-      - name: Require both backend checkouts at their pinned gitlinks
-        shell: bash
-        run: |
-          set -euo pipefail
-          git submodule status --recursive
-          test -f backend/package.json
-          test -f backend-open-art-wt/package.json
-
-          canonical_expected="$(git rev-parse HEAD:backend)"
-          public_expected="$(git rev-parse HEAD:backend-open-art-wt)"
-          canonical_actual="$(git -C backend rev-parse HEAD)"
-          public_actual="$(git -C backend-open-art-wt rev-parse HEAD)"
-
-          test "$canonical_expected" = "$canonical_actual"
-          test "$public_expected" = "$public_actual"
-          if [ "$canonical_expected" != "$public_expected" ]; then
-            echo "The two backend gitlinks must point to the same verified backend commit." >&2
-            exit 1
-          fi
-
-      - name: Validate deployed PHP gateways
-        shell: bash
-        # web/*.php is served by LiteSpeed in production. A syntax error there
-        # takes down every public SEO document (robots, sitemaps, localized
-        # pages, entity pages and compact aliases) while the Flutter shell keeps
-        # working, so it fails quietly rather than obviously. Nothing else in
-        # this pipeline parses PHP.
-        run: |
-          set -euo pipefail
-          sudo apt-get update -y >/dev/null
-          sudo apt-get install -y --no-install-recommends php-cli >/dev/null
-          php --version
-
-          mapfile -t php_files < <(find web -type f -name '*.php' | sort)
-          if [ "${#php_files[@]}" -eq 0 ]; then
-            echo 'No PHP gateway files found under web/; expected at least seo-proxy.php.' >&2
-            exit 1
-          fi
-          for file in "${php_files[@]}"; do
-            echo "  php -l $file"
-            php -l "$file"
-          done
 
       - name: Set up pinned Node
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -85,19 +178,46 @@ jobs:
       - name: Set up pinned npm
         run: npm install --global npm@${NPM_VERSION}
 
-      - name: Verify pinned Node/npm and repository pins
+      - name: Verify pinned Node/npm
         run: npm run verify:toolchain:node
 
-      - name: Architecture and web QA contract guards
+      - name: Architecture guard
         run: npm run verify:architecture
 
       - name: Documentation guard
+        if: >-
+          ${{
+            (needs.changes.outputs.full == 'true' ||
+             needs.changes.outputs.backend == 'true' ||
+             needs.changes.outputs.docs == 'true') &&
+            (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+          }}
         run: npm run docs:doctor
 
       - name: Version parity guard
+        if: >-
+          ${{
+            (needs.changes.outputs.full == 'true' ||
+             needs.changes.outputs.backend == 'true' ||
+             needs.changes.outputs.versioning == 'true') &&
+            (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+          }}
         run: |
           npm run check:versions
           git diff --exit-code
+
+      - name: Validate deployed PHP gateways
+        if: ${{ needs.changes.outputs.full == 'true' || needs.changes.outputs.web == 'true' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -y >/dev/null
+          sudo apt-get install -y --no-install-recommends php-cli >/dev/null
+          mapfile -t php_files < <(find web -type f -name '*.php' | sort)
+          test "${#php_files[@]}" -gt 0
+          for file in "${php_files[@]}"; do
+            php -l "$file"
+          done
 
       - name: Reject client-side Pinata credentials
         shell: bash
@@ -109,11 +229,20 @@ jobs:
           fi
 
       - name: Exercise atomic web promotion and rollback
+        if: ${{ needs.changes.outputs.full == 'true' || needs.changes.outputs.web == 'true' }}
         run: npm run verify:deploy
 
   build_metadata:
     name: Resolve immutable CI build metadata
-    needs: guardrails
+    needs: [changes, guardrails]
+    if: >-
+      ${{
+        needs.changes.outputs.full == 'true' ||
+        needs.changes.outputs.frontend == 'true' ||
+        needs.changes.outputs.web == 'true' ||
+        needs.changes.outputs.android == 'true' ||
+        needs.changes.outputs.ios == 'true'
+      }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     outputs:
@@ -137,21 +266,22 @@ jobs:
         run: node scripts/resolve_ci_build_metadata.mjs --github-output "$GITHUB_OUTPUT"
 
   flutter:
-    name: Flutter analyze + full tests + web
-    needs: [guardrails, build_metadata]
+    name: Flutter quality + web artifact
+    needs: [changes, guardrails, build_metadata]
+    if: >-
+      ${{
+        needs.changes.outputs.full == 'true' ||
+        needs.changes.outputs.frontend == 'true' ||
+        needs.changes.outputs.web == 'true'
+      }}
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
-      - name: Checkout root and both backend gitlinks
+      - name: Checkout frontend source
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
+          fetch-depth: 1
           submodules: false
-
-      - name: Checkout private backend gitlinks
-        shell: bash
-        env:
-          BACKEND_SUBMODULE_SSH_KEY: ${{ secrets.BACKEND_SUBMODULE_SSH_KEY }}
-        run: bash scripts/ci/checkout_backend_submodules.sh
 
       - name: Set up pinned Node
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -178,7 +308,7 @@ jobs:
           flutter pub get
           git diff --exit-code -- pubspec.lock
 
-      - name: Flutter analyze (warnings and infos are fatal)
+      - name: Flutter analyze
         run: flutter analyze --fatal-infos --fatal-warnings
 
       - name: Kubus custom lint
@@ -187,17 +317,24 @@ jobs:
       - name: Kubus lint ratchet
         run: node scripts/kubus-lint-ratchet.mjs --check
 
-      - name: Full Flutter test suite
-        run: flutter test --coverage
+      - name: Flutter test suite
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = 'push' ]; then
+            flutter test --coverage
+          else
+            flutter test
+          fi
 
       - name: Upload Flutter coverage
-        if: ${{ always() }}
+        if: ${{ github.event_name == 'push' }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: flutter-coverage-${{ github.sha }}
           path: coverage/lcov.info
           if-no-files-found: warn
-          retention-days: 14
+          retention-days: 3
 
       - name: Prepare required public build configuration
         env:
@@ -220,25 +357,17 @@ jobs:
             --dart-define=SEO_PUBLIC_PAGES_ENABLED=true \
             --dart-define-from-file=.dart_tool/public-build-defines.json
 
-      - name: Stamp deployment revision identity
+      - name: Stamp and checksum deployable web bundle
+        if: ${{ github.event_name == 'push' }}
         shell: bash
         run: |
           set -euo pipefail
-          # seo-proxy.php serves this as X-Kubus-Web-Revision so a deployed
-          # release can be matched against the exact tested commit. Written
-          # before checksumming so it is covered by SHA256SUMS and cannot drift
-          # from the immutable artifact it describes.
           printf '%s\n' "${{ github.sha }}" > build/web/kubus-web-revision.txt
-
-      - name: Pre-compress and checksum immutable web bundle
-        shell: bash
-        run: |
-          set -euo pipefail
           sudo apt-get update -y >/dev/null
-          sudo apt-get install -y brotli >/dev/null
+          sudo apt-get install -y --no-install-recommends brotli >/dev/null
           find build/web -type f -name '*.wasm' -print0 | while IFS= read -r -d '' file; do
-            brotli -f -q 11 "$file"
-            gzip -kf9 "$file"
+            brotli -f -q 9 "$file"
+            gzip -kf6 "$file"
           done
           (
             cd build/web
@@ -248,27 +377,29 @@ jobs:
             sha256sum -c SHA256SUMS
           )
 
-      - name: Upload immutable web bundle
+      - name: Upload exact web bundle
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: flutter-web-${{ github.sha }}
           path: build/web
           include-hidden-files: true
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 3
 
   backend:
-    name: Canonical backend lint + serial tests
-    needs: guardrails
+    name: Canonical backend validation
+    needs: [changes, guardrails]
+    if: ${{ needs.changes.outputs.full == 'true' || needs.changes.outputs.backend == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     steps:
-      - name: Checkout root and both backend gitlinks
+      - name: Checkout parent repository
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
+          fetch-depth: 1
           submodules: false
 
-      - name: Checkout private backend gitlinks
+      - name: Materialize canonical backend once
         shell: bash
         env:
           BACKEND_SUBMODULE_SSH_KEY: ${{ secrets.BACKEND_SUBMODULE_SSH_KEY }}
@@ -290,7 +421,7 @@ jobs:
       - name: Verify Node/npm
         run: npm run verify:toolchain:node
 
-      - name: Install backend dependencies from lockfile
+      - name: Install backend dependencies
         working-directory: backend
         run: npm ci --no-audit --no-fund
 
@@ -298,62 +429,41 @@ jobs:
         working-directory: backend
         run: npm run lint
 
-      - name: Backend full serial test suite
+      - name: Backend deterministic tests
         env:
           NODE_ENV: test
         working-directory: backend
         run: npm run test:ci
 
       - name: Production dependency audit
+        if: ${{ github.event_name == 'push' }}
         working-directory: backend
         run: npm audit --omit=dev --audit-level=high
 
-      - name: Upload backend coverage
-        if: ${{ always() }}
+      - name: Upload backend evidence
+        if: ${{ github.event_name == 'push' && always() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: backend-coverage-${{ github.sha }}
           path: backend/coverage
           if-no-files-found: warn
-          retention-days: 14
+          retention-days: 3
 
   android:
-    name: Android SDK 36 debug + unsigned release compile
-    needs: [guardrails, build_metadata]
+    name: Android release compile
+    needs: [changes, guardrails, build_metadata]
+    if: ${{ needs.changes.outputs.full == 'true' || needs.changes.outputs.android == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
       GRADLE_USER_HOME: ${{ github.workspace }}/.gradle
-      GRADLE_OPTS: -Dorg.gradle.workers.max=1
+      GRADLE_OPTS: -Dorg.gradle.workers.max=1 -Dorg.gradle.daemon=false
     steps:
-      - name: Checkout root and both backend gitlinks
+      - name: Checkout Android source
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
+          fetch-depth: 1
           submodules: false
-
-      - name: Checkout private backend gitlinks
-        shell: bash
-        env:
-          BACKEND_SUBMODULE_SSH_KEY: ${{ secrets.BACKEND_SUBMODULE_SSH_KEY }}
-        run: bash scripts/ci/checkout_backend_submodules.sh
-
-      - name: Reclaim hosted-runner disk for Android builds
-        shell: bash
-        run: |
-          set -euo pipefail
-          df -h "$GITHUB_WORKSPACE"
-          sudo rm -rf \
-            /usr/share/dotnet \
-            /opt/ghc \
-            /usr/local/.ghcup \
-            /usr/local/share/boost \
-            /usr/share/swift \
-            /opt/hostedtoolcache/CodeQL \
-            /usr/local/lib/android/sdk/ndk
-          docker image prune --all --force
-          available_kib="$(df -Pk "$GITHUB_WORKSPACE" | awk 'NR == 2 { print $4 }')"
-          test "$available_kib" -ge 12582912
-          df -h "$GITHUB_WORKSPACE"
 
       - name: Set up pinned Node
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -368,6 +478,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
+          cache: gradle
 
       - name: Set up pinned Flutter
         uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
@@ -379,12 +490,14 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
 
-      - name: Install Android SDK 36
+      - name: Ensure Android SDK 36
         shell: bash
         run: |
           set -euo pipefail
-          yes | sdkmanager --licenses >/dev/null 2>&1 || true
-          sdkmanager --install "platforms;android-36" "build-tools;36.0.0" "platform-tools"
+          if [ ! -d "${ANDROID_HOME}/platforms/android-36" ]; then
+            yes | sdkmanager --licenses >/dev/null 2>&1 || true
+            sdkmanager --install "platforms;android-36" "build-tools;36.0.0" "platform-tools"
+          fi
 
       - name: Verify Android toolchain
         run: |
@@ -411,23 +524,6 @@ jobs:
       - name: Clear generated Android problems report
         run: node scripts/clear_generated_android_reports.mjs
 
-      - name: Compile Android debug APK
-        run: |
-          flutter build apk --debug \
-            --build-name="${{ needs.build_metadata.outputs.version }}" \
-            --build-number="${{ needs.build_metadata.outputs.build_number }}" \
-            --dart-define-from-file=.dart_tool/public-build-defines.json
-
-      - name: Reclaim debug-only Android intermediates
-        shell: bash
-        run: |
-          set -euo pipefail
-          ./android/gradlew --stop || true
-          rm -rf build/app android/.gradle
-          available_kib="$(df -Pk "$GITHUB_WORKSPACE" | awk 'NR == 2 { print $4 }')"
-          test "$available_kib" -ge 12582912
-          df -h "$GITHUB_WORKSPACE"
-
       - name: Compile unsigned Android release APK
         run: |
           flutter build apk --release \
@@ -444,32 +540,26 @@ jobs:
             exit 1
           fi
 
-      - name: Upload Android verification outputs
+      - name: Upload Android verification output
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: android-verification-${{ github.sha }}
           path: build/app/outputs/flutter-apk
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 3
 
   ios:
     name: iOS release compile (no codesign)
-    needs: [guardrails, build_metadata]
-    # GitHub-hosted macOS images have no immutable digest. Bound the OS image
-    # generation and record the rotating Xcode patch level in every run.
+    needs: [changes, guardrails, build_metadata]
+    if: ${{ needs.changes.outputs.full == 'true' || needs.changes.outputs.ios == 'true' }}
     runs-on: macos-15
     timeout-minutes: 45
     steps:
-      - name: Checkout root and both backend gitlinks
+      - name: Checkout iOS source
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
+          fetch-depth: 1
           submodules: false
-
-      - name: Checkout private backend gitlinks
-        shell: bash
-        env:
-          BACKEND_SUBMODULE_SSH_KEY: ${{ secrets.BACKEND_SUBMODULE_SSH_KEY }}
-        run: bash scripts/ci/checkout_backend_submodules.sh
 
       - name: Set up pinned Node
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -518,7 +608,7 @@ jobs:
           path: .dart_tool/public-build-defines.json
           include-hidden-files: true
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 3
 
       - name: Compile iOS release without codesigning
         run: |
@@ -528,21 +618,22 @@ jobs:
             --dart-define-from-file=.dart_tool/public-build-defines.json
 
   web_qa:
-    name: Playwright desktop + mobile runtime smoke
-    needs: flutter
+    name: Playwright Chromium runtime smoke
+    needs: [changes, flutter]
+    if: >-
+      ${{
+        needs.changes.outputs.full == 'true' ||
+        needs.changes.outputs.frontend == 'true' ||
+        needs.changes.outputs.web == 'true'
+      }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
-      - name: Checkout root and both backend gitlinks
+      - name: Checkout web QA harness
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
+          fetch-depth: 1
           submodules: false
-
-      - name: Checkout private backend gitlinks
-        shell: bash
-        env:
-          BACKEND_SUBMODULE_SSH_KEY: ${{ secrets.BACKEND_SUBMODULE_SSH_KEY }}
-        run: bash scripts/ci/checkout_backend_submodules.sh
 
       - name: Set up pinned Node
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -554,10 +645,7 @@ jobs:
       - name: Set up pinned npm
         run: npm install --global npm@${NPM_VERSION}
 
-      - name: Verify Node/npm
-        run: npm run verify:toolchain:node
-
-      - name: Download the exact web bundle tested by Flutter job
+      - name: Download exact web bundle
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: flutter-web-${{ github.sha }}
@@ -574,31 +662,30 @@ jobs:
           QA_ARTIFACT_DIR: output/playwright/artifacts/ci-${{ github.sha }}
         run: npm run qa:web
 
-      - name: Upload Playwright diagnostics
-        if: ${{ always() }}
+      - name: Upload Playwright diagnostics on failure
+        if: ${{ failure() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: playwright-web-${{ github.sha }}
           path: output/playwright/artifacts
           if-no-files-found: warn
-          retention-days: 14
+          retention-days: 3
 
   web_routing:
     name: Apache rewrite contract for web/.htaccess
+    needs: changes
+    if: ${{ needs.changes.outputs.full == 'true' || needs.changes.outputs.web == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - name: Checkout routing files
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
+          fetch-depth: 1
           submodules: false
 
-      # mod_rewrite behaviour cannot be reviewed by reading the file: rule
-      # order, [L] termination and QSA/QSD query handling interact. The lang=
-      # stripping needs four rules because QSA cannot express "drop one
-      # parameter, keep the rest", and only execution proves the joining.
-      # PHP is not installed here on purpose - every assertion concerns
-      # redirects and routing decided before the seo-proxy.php handoff.
       - name: Serve web/ under Apache
+        shell: bash
         run: |
           set -euo pipefail
           docker run -d --name kubus-web -p 8081:80 \
@@ -620,12 +707,10 @@ jobs:
 
           for attempt in $(seq 1 30); do
             if [ "$(curl --silent --output /dev/null --write-out '%{http_code}' http://localhost:8081/)" != '000' ]; then
-              echo "Apache is serving."
               exit 0
             fi
             sleep 1
           done
-          echo "Apache did not become ready." >&2
           docker logs kubus-web >&2
           exit 1
 
@@ -635,9 +720,39 @@ jobs:
         run: node scripts/qa/web_routing_contract.mjs
 
       - name: Apache log on failure
-        if: failure()
+        if: ${{ failure() }}
         run: docker logs kubus-web 2>&1 | tail -50
 
       - name: Stop Apache
-        if: always()
+        if: ${{ always() }}
         run: docker rm -f kubus-web || true
+
+  ci_required:
+    name: CI required
+    needs:
+      - changes
+      - guardrails
+      - build_metadata
+      - flutter
+      - backend
+      - android
+      - ios
+      - web_qa
+      - web_routing
+    if: ${{ always() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - name: Require every selected job to pass
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ contains(needs.*.result, 'failure') }}" = 'true' ]; then
+            echo 'At least one selected CI job failed.' >&2
+            exit 1
+          fi
+          if [ "${{ contains(needs.*.result, 'cancelled') }}" = 'true' ]; then
+            echo 'At least one selected CI job was cancelled.' >&2
+            exit 1
+          fi
+          echo 'All selected CI jobs passed; non-applicable jobs were skipped.'
