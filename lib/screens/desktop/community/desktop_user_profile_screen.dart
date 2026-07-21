@@ -167,12 +167,16 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     _syncProfileControllerState();
     unawaited(_profileController.load());
 
-    try {
-      (() async {
+    // The try/catch must live *inside* the async closure: wrapping the
+    // invocation instead only guards the synchronous act of starting the
+    // Future, so a connect() failure would escape as an uncaught zone error.
+    (() async {
+      try {
         await SocketService().connect();
+        if (!mounted) return;
         SocketService().addPostListener(_handleIncomingPost);
-      })();
-    } catch (_) {}
+      } catch (_) {}
+    })();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       try {
