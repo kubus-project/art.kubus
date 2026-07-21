@@ -104,6 +104,8 @@ import 'widgets/security_gate_overlay.dart';
 
 import 'screens/collab/invites_inbox_screen.dart';
 import 'services/share/share_deep_link_parser.dart';
+import 'features/map/navigation/walking_navigation_debug_harness.dart';
+import 'screens/debug/walking_route_render_harness_screen.dart';
 
 class _UnhandledErrorDedupe {
   static const Duration _dedupeWindow = Duration(seconds: 2);
@@ -1092,6 +1094,18 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
           ),
         );
       }
+    }
+
+    // Debug-only deterministic walking-route rendering harness. `isEnabled` is
+    // false whenever asserts are stripped, so release builds never expose it.
+    if (uri.path == WalkingNavigationDebugHarness.routeName &&
+        WalkingNavigationDebugHarness.isEnabled) {
+      return MaterialPageRoute(
+        builder: (_) => WalkingRouteRenderHarnessScreen(
+          useLiveRoutingSource: uri.queryParameters['live'] == '1',
+        ),
+        settings: RouteSettings(name: WalkingNavigationDebugHarness.routeName),
+      );
     }
 
     if (uri.path == '/promotions') {

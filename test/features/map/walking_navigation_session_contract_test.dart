@@ -9,8 +9,11 @@ void main() {
         File('lib/screens/desktop/desktop_map_screen.dart').readAsStringSync();
 
     for (final source in <String>[mobile, desktop]) {
-      expect(
-          source, contains('provider.start(widget.walkingNavigationIntent!)'));
+      // The session lease is created from the intent, but only after the build
+      // phase: `start` notifies listeners and would otherwise rebuild the
+      // provider scope mid-build.
+      expect(source, contains('_walkingNavigationLease ??= provider.start('));
+      expect(source, contains('addPostFrameCallback'));
       expect(source, contains('stopOwned(_walkingNavigationLease)'));
       expect(source, contains('lease: _walkingNavigationLease'));
       expect(source, contains('WalkingLocationApi? walkingLocationApi'));
@@ -45,7 +48,8 @@ void main() {
     );
   });
 
-  test('desktop recenter requests permission while initial load stays passive', () {
+  test('desktop recenter requests permission while initial load stays passive',
+      () {
     final desktop =
         File('lib/screens/desktop/desktop_map_screen.dart').readAsStringSync();
     final compactDesktop = desktop.replaceAll(RegExp(r'\s+'), ' ');

@@ -21,7 +21,7 @@ class WalkingNavigationProvider extends ChangeNotifier {
   static const int offRouteSamplesBeforeReroute = 3;
   static const Duration minimumRerouteInterval = Duration(seconds: 20);
 
-  final WalkingDirectionsApi _directionsApi;
+  WalkingDirectionsApi _directionsApi;
   final DateTime Function() _now;
   final Distance _distance = const Distance();
 
@@ -98,6 +98,23 @@ class WalkingNavigationProvider extends ChangeNotifier {
     return WalkingNavigationSessionLease(_requestGeneration);
   }
 
+  /// Debug-only: replaces the routing source with a deterministic one so the
+  /// rendering pipeline can be exercised without Overpass or the network.
+  ///
+  /// Returns false (and changes nothing) in release builds, where asserts are
+  /// stripped and the harness must be unreachable.
+  bool debugUseDirectionsApi(WalkingDirectionsApi api) {
+    var enabled = false;
+    assert(() {
+      enabled = true;
+      return true;
+    }());
+    if (!enabled) return false;
+    _directionsApi.dispose();
+    _directionsApi = api;
+    return true;
+  }
+
   Future<void> updatePosition(
     LatLng position, {
     double? accuracyMeters,
@@ -108,9 +125,17 @@ class WalkingNavigationProvider extends ChangeNotifier {
     _currentPosition = position;
     _positionAccuracyMeters = accuracyMeters;
 
-    if (_status == WalkingNavigationStatus.awaitingLocation ||
-        (_status == WalkingNavigationStatus.error &&
-            _isLocationFailure(_failureKind))) {
+    // Any live fix received while the session still has no route must start
+    // routing. Matching only `awaitingLocation` stranded every real session,
+    // because the screens always announce `beginLocationRequest` before the
+    // first fix arrives, leaving the status at `requestingPermission`.
+    final needsFirstRoute = _route == null &&
+        _status != WalkingNavigationStatus.calculating &&
+        _status != WalkingNavigationStatus.error;
+    final recoveringFromLocationFailure =
+        _status == WalkingNavigationStatus.error &&
+            _isLocationFailure(_failureKind);
+    if (needsFirstRoute || recoveringFromLocationFailure) {
       await _requestRoute(position, preserveCurrentRoute: false);
       return;
     }
@@ -208,6 +233,13 @@ class WalkingNavigationProvider extends ChangeNotifier {
         _status == WalkingNavigationStatus.arrived) {
       return;
     }
+    // Never downgrade an already-typed location failure: permission-denied and
+    // service-disabled states carry the settings recovery action, which a
+    // generic `locationUnavailable` would silently drop.
+    if (_status == WalkingNavigationStatus.error &&
+        _isLocationFailure(_failureKind)) {
+      return;
+    }
     _status = WalkingNavigationStatus.error;
     _failureKind = WalkingNavigationFailureKind.locationUnavailable;
     WalkingNavigationDiagnostics.record(
@@ -281,7 +313,10 @@ class WalkingNavigationProvider extends ChangeNotifier {
         _failureKind = null;
         _resetRouteProgress();
         _updateProgress(origin, route);
-        WalkingNavigationDiagnostics.record('route_request_succeeded');
+        WalkingNavigationDiagnostics.record(
+          'route_created',
+          reason: 'points=${route.points.length}',
+        );
         notifyListeners();
       } catch (error) {
         if (generation != _requestGeneration || _intent != intent) return;

@@ -118,6 +118,7 @@ import '../widgets/map/dialogs/street_art_claims_dialog.dart';
 import '../widgets/map/glass/kubus_map_platform_backdrop_host.dart';
 import '../widgets/map/kubus_map_glass_surface.dart';
 import '../widgets/common/kubus_filter_panel.dart';
+import '../widgets/common/kubus_glass_icon_button.dart';
 import '../widgets/common/kubus_map_controls.dart';
 import '../widgets/common/kubus_cached_image.dart';
 import '../widgets/common/kubus_marker_overlay_card.dart';
@@ -1039,22 +1040,24 @@ class _MapScreenState extends State<MapScreen>
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (widget.walkingNavigationIntent != null) {
-      final provider = _walkingNavigationProvider ??=
-          context.read<WalkingNavigationProvider>();
-      _walkingNavigationLease ??=
-          provider.start(widget.walkingNavigationIntent!);
+      _walkingNavigationProvider ??= context.read<WalkingNavigationProvider>();
       if (!_walkingLocationPromptScheduled) {
         _walkingLocationPromptScheduled = true;
+        // `start` notifies listeners, so it must not run while the framework is
+        // building this subtree; deferring it also keeps the lease and the
+        // location prompt in one ordered step.
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (!mounted) return;
+          final provider = _walkingNavigationProvider;
+          final intent = widget.walkingNavigationIntent;
+          if (provider == null || intent == null) return;
+          _walkingNavigationLease ??= provider.start(intent);
           unawaited(() async {
-            await _promptForLocationThenCenter(reason: 'walking_navigation');
+            final status = await _promptForLocationThenCenter(
+              reason: 'walking_navigation',
+            );
             if (!mounted) return;
-            if (!_hasLiveLocationFix) {
-              _walkingNavigationProvider?.reportLocationUnavailable(
-                lease: _walkingNavigationLease,
-              );
-            }
+            _reportWalkingLocationStartupOutcome(status);
           }());
         });
       }
@@ -1989,6 +1992,7 @@ class _MapScreenState extends State<MapScreen>
     _perf.controllerDisposed('location_indicator');
     _markerStackPageController.dispose();
     _sheetController.dispose();
+    _walkingNavigationMapCoordinator?.dispose();
     _nearbySheetExtentNotifier.dispose();
     _mapBackdropHostController.dispose();
     WidgetsBinding.instance.removeObserver(this);
@@ -3329,7 +3333,13 @@ class _MapScreenState extends State<MapScreen>
     }
   }
 
-  Future<void> _getLocation(
+  /// Returns the bounded outcome of the location request.
+  ///
+  /// Navigation startup must react to the awaited result rather than to a
+  /// shared boolean, so a still-starting stream is never raced against an
+  /// immediate `locationUnavailable` transition, and a precise permission or
+  /// service failure is never downgraded to a generic one.
+  Future<WalkingLocationAccessStatus?> _getLocation(
       {bool fromTimer = false, bool promptForPermission = true}) async {
     final navigation = _walkingNavigationProvider;
     if (promptForPermission && navigation?.isVisible == true) {
@@ -3339,7 +3349,8 @@ class _MapScreenState extends State<MapScreen>
     final result = await _walkingLocationApi.acquireLiveFix(
       requestPermission: promptForPermission,
     );
-    if (!mounted) return;
+    // The screen (and therefore the session) went away mid-request.
+    if (!mounted) return null;
 
     final fix = result.fix;
     if (!result.isAvailable || fix == null) {
@@ -3356,7 +3367,7 @@ class _MapScreenState extends State<MapScreen>
           _updateCurrentPosition(fallback, isLiveFix: false);
         }
       }
-      return;
+      return result.status;
     }
 
     final prefs = await SharedPreferences.getInstance();
@@ -3364,7 +3375,7 @@ class _MapScreenState extends State<MapScreen>
       await prefs.setDouble('last_known_lat', fix.position.latitude);
       await prefs.setDouble('last_known_lng', fix.position.longitude);
     } catch (_) {}
-    if (!mounted) return;
+    if (!mounted) return null;
     _updateCurrentPosition(
       fix.position,
       shouldCenter: !fromTimer,
@@ -3372,7 +3383,7 @@ class _MapScreenState extends State<MapScreen>
       timestampMs: fix.timestamp.millisecondsSinceEpoch,
       isLiveFix: true,
     );
-    WalkingNavigationDiagnostics.record('first_live_fix_acquired');
+    WalkingNavigationDiagnostics.record('live_fix_acquired');
     if (kIsWeb) {
       if (_webPositionSubscription == null) _startWebLocationStream();
     } else if (_mobileLocationSubscription == null) {
@@ -3381,6 +3392,7 @@ class _MapScreenState extends State<MapScreen>
     if (!fromTimer || _artMarkers.isEmpty) {
       await _maybeRefreshMarkers(fix.position, force: false);
     }
+    return WalkingLocationAccessStatus.available;
   }
 
   void _startLocationTimer() {
@@ -3572,8 +3584,10 @@ class _MapScreenState extends State<MapScreen>
     return scaledLooksReasonable ? scaled : raw;
   }
 
-  Future<void> _promptForLocationThenCenter({required String reason}) async {
-    if (!mounted) return;
+  Future<WalkingLocationAccessStatus?> _promptForLocationThenCenter({
+    required String reason,
+  }) async {
+    if (!mounted) return null;
     final messenger = ScaffoldMessenger.maybeOf(context);
     final l10n = AppLocalizations.of(context)!;
 
@@ -3586,8 +3600,8 @@ class _MapScreenState extends State<MapScreen>
       _kubusMapController.setAutoFollow(true);
     }
 
-    await _getLocation(promptForPermission: true);
-    if (!mounted) return;
+    final status = await _getLocation(promptForPermission: true);
+    if (!mounted) return null;
 
     final isWalkingRequest = reason.startsWith('walking_navigation');
     if (_currentPosition == null ||
@@ -3608,18 +3622,22 @@ class _MapScreenState extends State<MapScreen>
           'MapScreen: location unavailable after user request (reason=$reason)',
         );
       }
-      return;
+      return status;
     }
 
     // Best-effort: center immediately so UI doesn't feel "stuck" while waiting
-    // for a periodic timer/stream tick.
-    unawaited(
-      _animateMapTo(
-        _currentPosition!,
-        zoom: math.max(_lastZoom, 16),
-        rotation: _autoFollow ? _direction : null,
-      ),
-    );
+    // for a periodic timer/stream tick. Walking navigation instead waits for
+    // the route overview, which frames the whole route rather than the walker.
+    if (!isWalkingRequest) {
+      unawaited(
+        _animateMapTo(
+          _currentPosition!,
+          zoom: math.max(_lastZoom, 16),
+          rotation: _autoFollow ? _direction : null,
+        ),
+      );
+    }
+    return status;
   }
 
   Future<void> _handleCenterOnMeTap() async {
@@ -3650,7 +3668,13 @@ class _MapScreenState extends State<MapScreen>
   }) {
     if (!mounted) return;
     final bool isInitial = _currentPosition == null;
-    final bool allowCenter = shouldCenter || _autoFollow || isInitial;
+    // The walking route overview owns the camera until the user resumes
+    // following; otherwise the next fix instantly re-centres at close zoom and
+    // pushes the freshly fitted route back out of the viewport.
+    final bool routeOverviewOwnsCamera =
+        _walkingNavigationMapCoordinator?.isRouteOverviewActive ?? false;
+    final bool allowCenter =
+        !routeOverviewOwnsCamera && (shouldCenter || _autoFollow || isInitial);
 
     setState(() {
       _currentPosition = position;
@@ -3834,20 +3858,27 @@ class _MapScreenState extends State<MapScreen>
                       ),
                     if (ui.contextSurface == MapContextSurface.none)
                       _buildPrimaryControls(ui),
-                    if (ui.contextSurface == MapContextSurface.none ||
-                        ui.contextSurface == MapContextSurface.nearby)
+                    // Walking navigation is a focused, full-bleed mode: the
+                    // browse chrome (search, Discovery Path, Nearby Art) is
+                    // suppressed so only the map, the route, the instruction
+                    // panel, and the exit affordance remain.
+                    if (!_isWalkingFocusedMode &&
+                        (ui.contextSurface == MapContextSurface.none ||
+                            ui.contextSurface == MapContextSurface.nearby))
                       _buildBottomSheet(
                         theme,
                         filteredArtworks,
                         discoveryProgress,
                         isLoadingArtworks,
                       ),
-                    _buildTopOverlays(theme, themeProvider, taskProvider),
+                    if (!_isWalkingFocusedMode)
+                      _buildTopOverlays(theme, themeProvider, taskProvider),
                     if (ui.contextSurface == MapContextSurface.markerPreview)
                       _buildMarkerOverlay(themeProvider, ui.markerSelection),
                     // Walking navigation owns foreground camera/UI priority.
                     if (widget.walkingNavigationIntent != null)
                       _buildWalkingNavigationOverlay(),
+                    if (_isWalkingFocusedMode) _buildWalkingExitButton(),
                   ],
                 ),
               ),
@@ -4150,6 +4181,33 @@ class _MapScreenState extends State<MapScreen>
     );
   }
 
+  /// Always-available exit from focused walking mode.
+  ///
+  /// The instruction panel hides itself once the session is idle, so the exit
+  /// cannot live inside it: without this the user could be left on a chrome-less
+  /// map with no way back.
+  Widget _buildWalkingExitButton() {
+    final l10n = AppLocalizations.of(context)!;
+    return Positioned(
+      left: KubusSpacing.md,
+      top: MediaQuery.paddingOf(context).top + KubusSpacing.sm,
+      child: KubusGlassIconButton(
+        icon: Icons.arrow_back_rounded,
+        tooltip: l10n.commonBack,
+        onPressed: _exitWalkingNavigationScreen,
+      ),
+    );
+  }
+
+  void _exitWalkingNavigationScreen() {
+    final navigation = _walkingNavigationProvider;
+    if (navigation != null) {
+      navigation.stopOwned(_walkingNavigationLease);
+    }
+    final navigator = Navigator.of(context);
+    if (navigator.canPop()) navigator.pop();
+  }
+
   Widget _buildWalkingNavigationOverlay() {
     return KubusWalkingNavigationBinding(
       coordinator: _walkingCoordinator,
@@ -4188,6 +4246,12 @@ class _MapScreenState extends State<MapScreen>
     );
   }
 
+  /// Walking navigation is entered as its own pushed route, so it owns the
+  /// whole screen: the shell's bottom bar is not present and the browse chrome
+  /// is suppressed. Only the map, route, instruction panel, map controls, and
+  /// the exit affordance remain.
+  bool get _isWalkingFocusedMode => widget.walkingNavigationIntent != null;
+
   WalkingNavigationMapCoordinator get _walkingCoordinator =>
       _walkingNavigationMapCoordinator ??= WalkingNavigationMapCoordinator(
         layersManager: () => _layersManager,
@@ -4198,11 +4262,36 @@ class _MapScreenState extends State<MapScreen>
           zoom: math.max(_lastZoom, 18),
           rotation: _direction,
         ),
+        fitRouteBounds: _fitWalkingRouteBounds,
       );
+
+  /// Route overview padding: the instruction panel and Nearby Art sheet own the
+  /// bottom of the mobile viewport, the status bar and search bar the top.
+  Future<void> _fitWalkingRouteBounds(WalkingRouteBounds bounds) async {
+    if (!mounted) return;
+    final media = MediaQuery.of(context);
+    await _kubusMapController.fitBounds(
+      bounds.southWest,
+      bounds.northEast,
+      padding: EdgeInsets.only(
+        left: KubusSpacing.lg,
+        right: KubusSpacing.lg,
+        top: media.padding.top + _walkingRouteOverviewTopPadding,
+        bottom: media.padding.bottom + _walkingRouteOverviewBottomPadding,
+      ),
+    );
+  }
+
+  /// Instruction panel stacked above the map in focused mode.
+  static const double _walkingRouteOverviewTopPadding = 220;
+
+  /// Map controls and the safe area in focused mode.
+  static const double _walkingRouteOverviewBottomPadding = 120;
 
   void _resumeWalkingNavigation(WalkingNavigationProvider navigation) {
     final position = navigation.currentPosition;
     if (position == null) return;
+    _walkingCoordinator.resumeFollow();
     setState(() {
       _autoFollow = true;
       _isometricViewEnabled = true;
@@ -4215,6 +4304,15 @@ class _MapScreenState extends State<MapScreen>
 
   void _endWalkingNavigation(WalkingNavigationProvider navigation) {
     if (!navigation.stopOwned(_walkingNavigationLease)) return;
+    // Focused mode hides the browse chrome, so ending navigation must leave the
+    // screen rather than strand the user on a bare map with no way back.
+    if (_isWalkingFocusedMode) {
+      final navigator = Navigator.of(context);
+      if (navigator.canPop()) {
+        navigator.pop();
+        return;
+      }
+    }
     setState(() {
       _autoFollow = false;
       _isometricViewEnabled = false;
@@ -4248,6 +4346,23 @@ class _MapScreenState extends State<MapScreen>
     await _requestWalkingLocation(navigation);
   }
 
+  /// Applies the awaited location-startup outcome to the walking session.
+  ///
+  /// A typed permission/service/timeout failure was already reported by
+  /// [_getLocation] with its precise recovery action, so it must not be
+  /// overwritten with a generic `locationUnavailable`. A null status means the
+  /// screen was disposed mid-request and the session is no longer ours.
+  void _reportWalkingLocationStartupOutcome(
+    WalkingLocationAccessStatus? status,
+  ) {
+    if (status == null) return;
+    if (status != WalkingLocationAccessStatus.available) return;
+    if (_hasLiveLocationFix) return;
+    _walkingNavigationProvider?.reportLocationUnavailable(
+      lease: _walkingNavigationLease,
+    );
+  }
+
   Future<void> _openExternalWalking(
     WalkingNavigationProvider navigation,
   ) async {
@@ -4270,12 +4385,15 @@ class _MapScreenState extends State<MapScreen>
       return;
     }
     await navigation.retry(lease: _walkingNavigationLease);
-    await _promptForLocationThenCenter(reason: 'walking_navigation_retry');
+    final status = await _promptForLocationThenCenter(
+      reason: 'walking_navigation_retry',
+    );
     if (!mounted) return;
-    if (!_hasLiveLocationFix) {
-      navigation.reportLocationUnavailable(lease: _walkingNavigationLease);
-    } else {
+    if (status == WalkingLocationAccessStatus.available &&
+        _hasLiveLocationFix) {
       await navigation.retry(lease: _walkingNavigationLease);
+    } else {
+      _reportWalkingLocationStartupOutcome(status);
     }
   }
 
@@ -5529,10 +5647,15 @@ class _MapScreenState extends State<MapScreen>
       valueListenable: _nearbySheetExtentNotifier,
       builder: (context, sheetExtent, _) {
         final height = MediaQuery.sizeOf(context).height;
-        final sheetViewport =
-            math.max(0.0, height - KubusLayout.mainBottomNavBarHeight);
-        final bottomOffset = KubusLayout.mainBottomNavBarHeight +
-            sheetViewport * sheetExtent +
+        // Focused walking mode has neither the shell bottom bar nor the Nearby
+        // Art sheet, so the controls sit against the safe area instead.
+        final navBarHeight =
+            _isWalkingFocusedMode ? 0.0 : KubusLayout.mainBottomNavBarHeight;
+        final effectiveExtent = _isWalkingFocusedMode ? 0.0 : sheetExtent;
+        final sheetViewport = math.max(0.0, height - navBarHeight);
+        final bottomOffset = navBarHeight +
+            sheetViewport * effectiveExtent +
+            MediaQuery.paddingOf(context).bottom +
             KubusMapMetrics.contextPanelSafeGap;
         return Positioned(
           right: KubusSpacing.md - KubusSpacing.xxs,

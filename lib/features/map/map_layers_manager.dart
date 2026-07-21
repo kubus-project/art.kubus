@@ -511,7 +511,58 @@ enum MapRenderMode {
   threeD,
 }
 
+/// Why a walking-route map mutation succeeded or failed.
+///
+/// Walking-navigation route rendering is the one map surface that must be
+/// observable and retryable: a silently swallowed failure leaves the user with
+/// no route line and no recovery path.
+enum WalkingRouteMutationStatus {
+  success,
+
+  /// The route GeoJSON source is not present in the active style.
+  sourceMissing,
+
+  /// One or more required route layers are not present in the active style.
+  layerMissing,
+
+  /// Layer installation has not completed for any style epoch yet.
+  styleNotReady,
+
+  /// The caller asked for an epoch that is no longer the installed one.
+  staleStyleEpoch,
+
+  /// Geometry was rejected before reaching MapLibre.
+  invalidGeometry,
+
+  /// MapLibre accepted the call but reported a failure.
+  controllerRejected,
+
+  /// An unexpected platform or plugin error.
+  platformError,
+}
+
+/// Typed outcome of a walking-route source or layer mutation.
 @immutable
+class WalkingRouteMutationResult {
+  const WalkingRouteMutationResult(this.status, {this.detail});
+
+  const WalkingRouteMutationResult.success()
+      : status = WalkingRouteMutationStatus.success,
+        detail = null;
+
+  final WalkingRouteMutationStatus status;
+
+  /// Coordinate-free diagnostic detail (layer id, error type name).
+  final String? detail;
+
+  bool get isSuccess => status == WalkingRouteMutationStatus.success;
+
+  @override
+  String toString() => detail == null
+      ? 'WalkingRouteMutationResult(${status.name})'
+      : 'WalkingRouteMutationResult(${status.name}: $detail)';
+}
+
 class MapLayersIds {
   const MapLayersIds({
     required this.markerSourceId,
@@ -719,6 +770,10 @@ class MapLayersManager {
   MapLayersThemeSpec? _themeSpec;
   Map<String, dynamic> _walkingRouteData = _emptyFeatureCollection();
   bool _walkingNavigationVisible = false;
+
+  /// Runtime type of the error that aborted walking-route layer installation
+  /// for the current style, or null when installation succeeded.
+  String? _walkingRouteInstallError;
 
   String get _isometricPedestalImageId =>
       '${_ids.cubeLayerId}_screen_space_image';
@@ -941,6 +996,17 @@ class MapLayersManager {
     }
   }
 
+  /// Style epoch the currently installed layers belong to, or null when no
+  /// installation has completed yet.
+  int? get initializedStyleEpoch => _initializedForStyleEpoch;
+
+  /// Route layers that must all exist before a route can be considered drawn.
+  List<String> get requiredWalkingRouteLayerIds => <String>[
+        _ids.walkingRouteCasingLayerId,
+        _ids.walkingRouteLayerId,
+        _ids.walkingRouteConnectorLayerId,
+      ];
+
   /// Retains and renders the complete walking route FeatureCollection.
   ///
   /// Route features use `properties.kind == "route"`; short connectors from
@@ -948,32 +1014,123 @@ class MapLayersManager {
   /// `properties.kind == "connector"`. Retaining the payload here lets a
   /// MapLibre style reload restore an active navigation session without
   /// waiting for another location or route calculation event.
-  Future<void> upsertWalkingRouteData(
-    Map<String, dynamic> featureCollection,
-  ) async {
+  ///
+  /// Unlike the generic best-effort map mutations, this reports a typed result
+  /// so the walking-navigation coordinator can retry instead of caching a
+  /// write that never reached MapLibre.
+  Future<WalkingRouteMutationResult> upsertWalkingRouteData(
+    Map<String, dynamic> featureCollection, {
+    int? expectedStyleEpoch,
+  }) async {
+    // Retain first: the payload is replayed when the next style installs its
+    // sources, even if this write cannot land right now.
     _walkingRouteData = Map<String, dynamic>.from(featureCollection);
-    if (!hasSource(_ids.walkingRouteSourceId)) return;
+
+    if (_initializedForStyleEpoch == null) {
+      return const WalkingRouteMutationResult(
+        WalkingRouteMutationStatus.styleNotReady,
+      );
+    }
+    if (expectedStyleEpoch != null &&
+        expectedStyleEpoch != _initializedForStyleEpoch) {
+      return const WalkingRouteMutationResult(
+        WalkingRouteMutationStatus.staleStyleEpoch,
+      );
+    }
+    if (!hasSource(_ids.walkingRouteSourceId)) {
+      return WalkingRouteMutationResult(
+        WalkingRouteMutationStatus.sourceMissing,
+        detail: _walkingRouteInstallError ?? _ids.walkingRouteSourceId,
+      );
+    }
+
     try {
       _sourceUpdateCalls += 1;
       await _controller.setGeoJsonSource(
         _ids.walkingRouteSourceId,
         _walkingRouteData,
       );
-    } catch (_) {
-      // Best-effort. The retained payload is replayed after the next style load.
+    } catch (error) {
+      return WalkingRouteMutationResult(
+        WalkingRouteMutationStatus.platformError,
+        detail: error.runtimeType.toString(),
+      );
     }
+
+    // A style swap that completed while the write was in flight means the
+    // payload landed in a source that no longer exists.
+    if (expectedStyleEpoch != null &&
+        expectedStyleEpoch != _initializedForStyleEpoch) {
+      return const WalkingRouteMutationResult(
+        WalkingRouteMutationStatus.staleStyleEpoch,
+      );
+    }
+    return const WalkingRouteMutationResult.success();
   }
 
   /// Shows or hides the route and walking-person marker as one UI state.
   ///
   /// The ordinary location dot remains visible and is shared by navigation;
-  /// only the floating walking glyph is toggled here.
-  Future<void> setWalkingNavigationVisibility(bool visible) async {
+  /// only the floating walking glyph is toggled here. Reports a typed result so
+  /// a rejected visibility write is retried rather than assumed applied.
+  Future<WalkingRouteMutationResult> setWalkingNavigationVisibility(
+    bool visible, {
+    int? expectedStyleEpoch,
+  }) async {
     _walkingNavigationVisible = visible;
-    await safeSetLayerVisibility(_ids.walkingRouteCasingLayerId, visible);
-    await safeSetLayerVisibility(_ids.walkingRouteLayerId, visible);
-    await safeSetLayerVisibility(_ids.walkingRouteConnectorLayerId, visible);
-    await safeSetLayerVisibility(_ids.walkingLocationSymbolLayerId, visible);
+
+    if (_initializedForStyleEpoch == null) {
+      return const WalkingRouteMutationResult(
+        WalkingRouteMutationStatus.styleNotReady,
+      );
+    }
+    if (expectedStyleEpoch != null &&
+        expectedStyleEpoch != _initializedForStyleEpoch) {
+      return const WalkingRouteMutationResult(
+        WalkingRouteMutationStatus.staleStyleEpoch,
+      );
+    }
+
+    final missing = requiredWalkingRouteLayerIds
+        .where((id) => !hasLayer(id))
+        .toList(growable: false);
+    if (missing.isNotEmpty) {
+      return WalkingRouteMutationResult(
+        WalkingRouteMutationStatus.layerMissing,
+        detail: missing.join(','),
+      );
+    }
+
+    return _applyWalkingNavigationVisibility(visible);
+  }
+
+  /// Applies visibility to whichever walking layers currently exist.
+  ///
+  /// Used directly during style installation, where the epoch is not published
+  /// yet and the public guards would refuse the very write that seeds the
+  /// freshly created layers.
+  Future<WalkingRouteMutationResult> _applyWalkingNavigationVisibility(
+    bool visible,
+  ) async {
+    // The walking glyph layer is optional: it is skipped when the glyph image
+    // could not be rasterized, and its absence must not block the route line.
+    final targets = <String>[
+      ...requiredWalkingRouteLayerIds.where(hasLayer),
+      if (hasLayer(_ids.walkingLocationSymbolLayerId))
+        _ids.walkingLocationSymbolLayerId,
+    ];
+    for (final layerId in targets) {
+      try {
+        _visibilityCalls += 1;
+        await _controller.setLayerVisibility(layerId, visible);
+      } catch (error) {
+        return WalkingRouteMutationResult(
+          WalkingRouteMutationStatus.platformError,
+          detail: '$layerId:${error.runtimeType}',
+        );
+      }
+    }
+    return const WalkingRouteMutationResult.success();
   }
 
   Future<void> upsertPendingMarkerData(
@@ -1124,6 +1281,28 @@ class MapLayersManager {
     _addSourceCalls += 1;
     _sourceIds.add(_ids.markerSourceId);
 
+    // Walking route source and layers are installed inside their own guard.
+    // A route-layer failure must degrade to a typed, retryable navigation state
+    // instead of aborting the whole style and leaving the map with no markers.
+    _walkingRouteInstallError = null;
+    try {
+      await _installWalkingRouteLayers(theme);
+    } catch (error) {
+      _walkingRouteInstallError = error.runtimeType.toString();
+      if (_debugTracing && kDebugMode) {
+        debugPrint('MapLayersManager: walking route install failed: $error');
+      }
+    }
+
+    await _installMarkerAndLocationLayers(theme, styleEpoch: styleEpoch);
+  }
+
+  /// Installs the walking-route source and its casing/route/connector layers.
+  ///
+  /// Route layers sit below all art markers and the user location. A separate
+  /// casing preserves contrast over both light and dark map styles, while
+  /// approach connectors remain visibly distinct from routable paths.
+  Future<void> _installWalkingRouteLayers(MapLayersThemeSpec theme) async {
     await _controller.addGeoJsonSource(
       _ids.walkingRouteSourceId,
       _walkingRouteData,
@@ -1131,9 +1310,6 @@ class MapLayersManager {
     _addSourceCalls += 1;
     _sourceIds.add(_ids.walkingRouteSourceId);
 
-    // Walking route layers sit below all art markers and the user location.
-    // A separate casing preserves contrast over both light and dark map styles,
-    // while approach connectors remain visibly distinct from routable paths.
     await _controller.addLineLayer(
       _ids.walkingRouteSourceId,
       _ids.walkingRouteCasingLayerId,
@@ -1226,7 +1402,12 @@ class MapLayersManager {
     );
     _addLayerCalls += 1;
     _layerIds.add(_ids.walkingRouteConnectorLayerId);
+  }
 
+  Future<void> _installMarkerAndLocationLayers(
+    MapLayersThemeSpec theme, {
+    required int styleEpoch,
+  }) async {
     // Layer order (bottom to top):
     // 1) isometric screen-space pedestal (hidden outside pitched mode)
     // 2) marker pulse ring (flat on the ground, below the dot)
@@ -1598,7 +1779,7 @@ class MapLayersManager {
     await safeSetLayerVisibility(_ids.cubeLayerId, false);
     await safeSetLayerVisibility(_ids.cubeIconLayerId, false);
     await safeSetLayerVisibility(_ids.markerLayerId, true);
-    await setWalkingNavigationVisibility(_walkingNavigationVisible);
+    await _applyWalkingNavigationVisibility(_walkingNavigationVisible);
   }
 
   Future<Set<String>> _fetchExistingLayerIds() async {
