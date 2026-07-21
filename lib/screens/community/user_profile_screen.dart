@@ -30,17 +30,16 @@ import '../../providers/profile_package_controller.dart';
 import '../../core/conversation_navigator.dart';
 import '../../widgets/avatar_widget.dart';
 import '../../widgets/user_activity_status_line.dart';
-import '../../widgets/artist_badge.dart';
-import '../../widgets/institution_badge.dart';
 import '../../widgets/community/community_post_card.dart';
 import '../../widgets/empty_state_card.dart';
 import '../../widgets/profile_artist_info_fields.dart';
 import '../../widgets/common/kubus_stat_card.dart';
 import '../../widgets/common/kubus_screen_header.dart';
 import '../../widgets/detail/detail_shell_components.dart';
+import '../../widgets/detail/profile_identity_block.dart';
 import '../../widgets/detail/profile_relationship_actions.dart';
+import '../../widgets/detail/profile_utility_actions.dart';
 import '../../widgets/detail/shared_section_widgets.dart';
-import '../../utils/profile_handle.dart';
 import 'post_detail_screen.dart';
 import '../../utils/artwork_navigation.dart';
 import '../art/collection_detail_screen.dart';
@@ -392,10 +391,17 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             style: KubusTextStyles.mobileAppBarTitle,
           ),
           actions: [
-            IconButton(
-              tooltip: l10n.commonMore,
-              onPressed: _showMoreOptions,
-              icon: const Icon(Icons.more_vert),
+            Padding(
+              padding: const EdgeInsets.only(right: KubusSpacing.sm),
+              child: ProfileUtilityActions(
+                actions: [
+                  ProfileUtilityAction(
+                    icon: Icons.more_horiz,
+                    tooltip: l10n.commonMore,
+                    onPressed: _showMoreOptions,
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -660,7 +666,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         // Identity + relationship actions live BELOW the cover so the full
         // handle never competes horizontally with Follow/Message.
         _buildIdentityAndActions(
-          themeProvider,
           l10n,
           isArtist: isArtist,
           isInstitution: isInstitution,
@@ -906,64 +911,25 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     }
   }
 
-  /// Identity (name, badges, handle) followed by the canonical Follow/Message
-  /// relationship actions, rendered below the cover. The handle sits on its own
-  /// dedicated line so it is never truncated by the actions or badges.
+  /// Canonical identity followed by the canonical Follow/Message relationship
+  /// actions, rendered below the cover. [ProfileIdentityBlock] guarantees the
+  /// handle its own never-ellipsized line, so neither the actions nor the role
+  /// badges can truncate it.
   Widget _buildIdentityAndActions(
-    ThemeProvider themeProvider,
     AppLocalizations l10n, {
     required bool isArtist,
     required bool isInstitution,
   }) {
-    final scheme = Theme.of(context).colorScheme;
-    final handle = ProfileHandle.normalize(user!.username);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Name + verification/role badges. Long names may wrap to two lines;
-        // badges stay associated with the name without stealing handle width.
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Expanded(
-              child: Text(
-                user!.name,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: KubusTextStyles.screenTitle.copyWith(
-                  color: scheme.onSurface,
-                  letterSpacing: -0.2,
-                ),
-              ),
-            ),
-            if (user!.isVerified) ...[
-              const SizedBox(width: KubusSpacing.sm),
-              Icon(
-                Icons.verified,
-                color: themeProvider.accentColor,
-                size: KubusHeaderMetrics.actionIcon,
-              ),
-            ],
-            if (isArtist) ...[
-              const SizedBox(width: KubusSpacing.sm),
-              const ArtistBadge(),
-            ],
-            if (isInstitution) ...[
-              const SizedBox(width: KubusSpacing.sm),
-              const InstitutionBadge(),
-            ],
-          ],
+        ProfileIdentityBlock(
+          displayName: user!.name,
+          handle: user!.username,
+          isVerified: user!.isVerified,
+          isArtist: isArtist,
+          isInstitution: isInstitution,
         ),
-        if (handle != null) ...[
-          const SizedBox(height: KubusSpacing.xs),
-          // Full handle on its own line — never ellipsized at standard scale.
-          Text(
-            handle,
-            style: KubusTextStyles.profileHandle.copyWith(
-              color: scheme.onSurface.withValues(alpha: 0.70),
-            ),
-          ),
-        ],
         const SizedBox(height: KubusSpacing.md),
         ProfileRelationshipActions(
           isFollowing: user!.isFollowing,

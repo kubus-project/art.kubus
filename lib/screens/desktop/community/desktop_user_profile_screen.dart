@@ -31,8 +31,6 @@ import '../../../providers/profile_package_controller.dart';
 import '../../../core/conversation_navigator.dart';
 import '../../../widgets/avatar_widget.dart';
 import '../../../widgets/user_activity_status_line.dart';
-import '../../../widgets/artist_badge.dart';
-import '../../../widgets/institution_badge.dart';
 import '../../../widgets/empty_state_card.dart';
 import '../../../widgets/profile_artist_info_fields.dart';
 import '../../../screens/community/post_detail_screen.dart';
@@ -41,7 +39,8 @@ import '../../../services/socket_service.dart';
 import '../../../screens/community/profile_screen_methods.dart';
 import '../../../widgets/detail/shared_section_widgets.dart';
 import '../../../widgets/detail/profile_relationship_actions.dart';
-import '../../../utils/profile_handle.dart';
+import '../../../widgets/detail/profile_identity_block.dart';
+import '../../../widgets/detail/profile_utility_actions.dart';
 import '../../../models/dao.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/user_profile_navigation.dart';
@@ -53,8 +52,6 @@ import '../../../utils/kubus_color_roles.dart';
 import '../../activity/advanced_analytics_screen.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
-import '../../../widgets/common/kubus_glass_icon_button.dart';
-import '../../../widgets/common/kubus_screen_header.dart';
 import '../../../widgets/community/community_post_card.dart';
 import '../../../widgets/profile/profile_achievements_preview_section.dart';
 import '../../../widgets/public_entity_takeover_ready.dart';
@@ -312,16 +309,10 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         if (isCommunityOverlay)
-                          _buildOverlayHeader(
-                            themeProvider,
-                            isArtist,
-                            isInstitution,
-                            l10n,
-                          )
+                          _buildOverlayHeader(l10n)
                         else ...[
                           const SizedBox(height: KubusSpacing.lg),
-                          _buildHeader(
-                              themeProvider, isArtist, isInstitution, l10n),
+                          _buildHeader(l10n),
                         ],
                         SizedBox(
                           height: isCommunityOverlay
@@ -488,226 +479,108 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     );
   }
 
-  Widget _buildHeader(ThemeProvider themeProvider, bool isArtist,
-      bool isInstitution, AppLocalizations l10n) {
+  void _handleBack() {
+    // When this screen is shown inside DesktopShellScope (in-shell stack),
+    // we must pop the shell stack instead of the app Navigator.
+    final shellScope = DesktopShellScope.of(context);
+    if (shellScope?.canPop ?? false) {
+      shellScope!.popScreen();
+      return;
+    }
+    Navigator.of(context).maybePop();
+  }
+
+  void _handleShare() {
+    final targetWallet = user?.id.toString().trim();
+    if (targetWallet == null || targetWallet.isEmpty) return;
+    ShareService().showShareSheet(
+      context,
+      target: ShareTarget.profile(
+        walletAddress: targetWallet,
+        title: user?.name,
+      ),
+      sourceScreen: 'desktop_user_profile',
+    );
+  }
+
+  void _handleAnalytics() {
+    final wallet = user?.id.toString().trim() ?? '';
+    if (wallet.isEmpty) return;
+    _openAnalyticsDialog(wallet);
+  }
+
+  bool get _analyticsAvailable =>
+      AppConfig.isFeatureEnabled('analytics') &&
+      _canOpenAnalyticsForViewedUser();
+
+  /// Share / Analytics / More, shared verbatim by the full-page header and the
+  /// community overlay so the two surfaces cannot drift apart.
+  List<ProfileUtilityAction> _profileUtilityActions(AppLocalizations l10n) {
+    return <ProfileUtilityAction>[
+      ProfileUtilityAction(
+        icon: Icons.share_outlined,
+        tooltip: l10n.userProfileShareTooltip,
+        onPressed: _handleShare,
+      ),
+      if (_analyticsAvailable)
+        ProfileUtilityAction(
+          icon: Icons.analytics_outlined,
+          tooltip: l10n.navigationScreenAnalytics,
+          onPressed: _handleAnalytics,
+        ),
+      ProfileUtilityAction(
+        icon: Icons.more_horiz,
+        tooltip: l10n.userProfileMoreTooltip,
+        onPressed: _showMoreOptions,
+      ),
+    ];
+  }
+
+  /// Full-page desktop chrome: Back on the left, Share / Analytics / More on
+  /// the right.
+  ///
+  /// Identity-free for the same reason as the overlay chrome: the profile card
+  /// directly below renders the canonical [ProfileIdentityBlock] exactly once,
+  /// so the name and handle never repeat within one viewport and the handle
+  /// never shares horizontal space with an action control.
+  Widget _buildHeader(AppLocalizations l10n) {
     return Row(
       children: [
-        IconButton(
-          onPressed: () {
-            // When this screen is shown inside DesktopShellScope (in-shell stack),
-            // we must pop the shell stack instead of the app Navigator.
-            final shellScope = DesktopShellScope.of(context);
-            if (shellScope?.canPop ?? false) {
-              shellScope!.popScreen();
-              return;
-            }
-            Navigator.of(context).maybePop();
-          },
-          icon: Icon(
-            Icons.arrow_back,
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-          tooltip: l10n.commonBack,
+        ProfileUtilityActions(
+          alignment: WrapAlignment.start,
+          actions: [
+            ProfileUtilityAction(
+              icon: Icons.arrow_back,
+              tooltip: l10n.commonBack,
+              onPressed: _handleBack,
+            ),
+          ],
         ),
-        const SizedBox(width: KubusSpacing.md),
-        Expanded(
-          child: Row(
-            children: [
-              Flexible(
-                child: Text(
-                  user!.name,
-                  style: KubusTextStyles.heroTitle.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface,
-                    letterSpacing: -0.5,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              if (user!.isVerified) ...[
-                const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
-                Icon(
-                  Icons.verified,
-                  color: Theme.of(context).colorScheme.primary,
-                  size: KubusHeaderMetrics.actionIcon,
-                ),
-              ],
-              if (isArtist) ...[
-                const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
-                const ArtistBadge(),
-              ],
-              if (isInstitution) ...[
-                const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
-                const InstitutionBadge(),
-              ],
-            ],
-          ),
-        ),
-        DesktopActionButton(
-          label: l10n.userProfileShareTooltip,
-          icon: Icons.share_outlined,
-          onPressed: () {
-            final targetWallet = user?.id.toString().trim();
-            if (targetWallet == null || targetWallet.isEmpty) return;
-            ShareService().showShareSheet(
-              context,
-              target: ShareTarget.profile(
-                  walletAddress: targetWallet, title: user?.name),
-              sourceScreen: 'desktop_user_profile',
-            );
-          },
-          isPrimary: false,
-        ),
-        const SizedBox(width: 12),
-        if (AppConfig.isFeatureEnabled('analytics') &&
-            _canOpenAnalyticsForViewedUser()) ...[
-          DesktopActionButton(
-            label: l10n.navigationScreenAnalytics,
-            icon: Icons.analytics_outlined,
-            onPressed: () {
-              final wallet = user?.id.toString().trim() ?? '';
-              if (wallet.isEmpty) return;
-              _openAnalyticsDialog(wallet);
-            },
-            isPrimary: false,
-          ),
-          const SizedBox(width: 12),
-        ],
-        IconButton(
-          onPressed: _showMoreOptions,
-          icon: Icon(
-            Icons.more_vert,
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-          tooltip: l10n.userProfileMoreTooltip,
-        ),
+        const Spacer(),
+        ProfileUtilityActions(actions: _profileUtilityActions(l10n)),
       ],
     );
   }
 
-  Widget _buildOverlayHeader(
-    ThemeProvider themeProvider,
-    bool isArtist,
-    bool isInstitution,
-    AppLocalizations l10n,
-  ) {
-    final scheme = Theme.of(context).colorScheme;
-    final handle = ProfileHandle.normalize(user?.username);
-    const tooltipOffset = KubusSpacing.lg;
-
-    final actions = <Widget>[
-      KubusGlassIconButton(
-        icon: Icons.share_outlined,
-        tooltip: l10n.userProfileShareTooltip,
-        tooltipPreferBelow: true,
-        tooltipVerticalOffset: tooltipOffset,
-        size: KubusHeaderMetrics.actionHitArea,
-        borderRadius: KubusRadius.md,
-        onPressed: () {
-          final targetWallet = user?.id.toString().trim();
-          if (targetWallet == null || targetWallet.isEmpty) return;
-          ShareService().showShareSheet(
-            context,
-            target: ShareTarget.profile(
-              walletAddress: targetWallet,
-              title: user?.name,
-            ),
-            sourceScreen: 'desktop_user_profile',
-          );
-        },
-      ),
-      const SizedBox(width: KubusSpacing.xs),
-      if (AppConfig.isFeatureEnabled('analytics') &&
-          _canOpenAnalyticsForViewedUser()) ...[
-        KubusGlassIconButton(
-          icon: Icons.analytics_outlined,
-          tooltip: l10n.navigationScreenAnalytics,
-          tooltipPreferBelow: true,
-          tooltipVerticalOffset: tooltipOffset,
-          size: KubusHeaderMetrics.actionHitArea,
-          borderRadius: KubusRadius.md,
-          onPressed: () {
-            final wallet = user?.id.toString().trim() ?? '';
-            if (wallet.isEmpty) return;
-            _openAnalyticsDialog(wallet);
-          },
-        ),
-        const SizedBox(width: KubusSpacing.xs),
-      ],
-      KubusGlassIconButton(
-        icon: Icons.more_horiz,
-        tooltip: l10n.userProfileMoreTooltip,
-        tooltipPreferBelow: true,
-        tooltipVerticalOffset: tooltipOffset,
-        size: KubusHeaderMetrics.actionHitArea,
-        borderRadius: KubusRadius.md,
-        onPressed: _showMoreOptions,
-      ),
-      const SizedBox(width: KubusSpacing.xs),
-      KubusGlassIconButton(
-        icon: Icons.close,
-        tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
-        tooltipPreferBelow: true,
-        tooltipVerticalOffset: tooltipOffset,
-        size: KubusHeaderMetrics.actionHitArea,
-        borderRadius: KubusRadius.md,
-        onPressed: () => Navigator.of(context).maybePop(),
-      ),
-    ];
-
-    return LiquidGlassCard(
-      padding: const EdgeInsets.symmetric(
-        horizontal: KubusChromeMetrics.cardPadding,
-        vertical: KubusSpacing.md,
-      ),
-      borderRadius: BorderRadius.circular(KubusRadius.lg),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          KubusScreenHeaderBar(
-            padding: EdgeInsets.zero,
-            compact: true,
-            title: user!.name,
-            subtitle: handle,
-            titleStyle: KubusTextStyles.screenTitle.copyWith(
-              color: scheme.onSurface,
-              letterSpacing: -0.2,
-            ),
-            subtitleStyle: KubusTextStyles.profileHandle.copyWith(
-              color: scheme.onSurface.withValues(alpha: 0.60),
-            ),
-            actions: actions,
-          ),
-          if (isArtist || isInstitution) ...[
-            const SizedBox(height: KubusSpacing.sm),
-            Wrap(
-              spacing: KubusSpacing.sm + KubusSpacing.xxs,
-              runSpacing: KubusSpacing.xs,
-              children: [
-                if (isArtist) const ArtistBadge(),
-                if (isInstitution) const InstitutionBadge(),
-              ],
-            ),
-          ],
-          const SizedBox(height: KubusSpacing.sm + KubusSpacing.xxs),
-          Container(
-            width: double.infinity,
-            padding:
-                const EdgeInsets.only(top: KubusSpacing.sm + KubusSpacing.xxs),
-            decoration: BoxDecoration(
-              border: Border(
-                top: BorderSide(
-                  color: scheme.outline.withValues(alpha: 0.12),
-                  width: KubusSizes.hairline,
-                ),
-              ),
-            ),
-            child: UserActivityStatusLine(
-              walletAddress: user!.id,
-              textAlign: TextAlign.start,
-              textStyle: KubusTextStyles.navMetaLabel.copyWith(
-                color: scheme.onSurface.withValues(alpha: 0.62),
-              ),
-            ),
+  /// Community-overlay chrome: Share / Analytics / More / Close.
+  ///
+  /// Deliberately identity-free. The overlay's identity (avatar, name, badges,
+  /// handle) and its activity status render exactly once, in the profile card
+  /// directly below — previously both were duplicated here. Keeping this row to
+  /// pure chrome is also what guarantees the handle never shares horizontal
+  /// space with an action control, at any overlay width and with Analytics
+  /// enabled or disabled, while Close stays immediately discoverable in the
+  /// overlay's top-right corner.
+  Widget _buildOverlayHeader(AppLocalizations l10n) {
+    return Align(
+      alignment: AlignmentDirectional.centerEnd,
+      child: ProfileUtilityActions(
+        actions: [
+          ..._profileUtilityActions(l10n),
+          ProfileUtilityAction(
+            icon: Icons.close,
+            tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+            onPressed: () => Navigator.of(context).maybePop(),
           ),
         ],
       ),
@@ -821,19 +694,28 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     );
     final scheme = Theme.of(context).colorScheme;
 
+    // The avatar overlaps the cover's bottom edge by a small *fixed* amount —
+    // never by the identity content's height. Previously the whole avatar +
+    // identity row was `Positioned(bottom:)` inside the cover `Stack`, so at
+    // large text scales the wrapped name grew upward past the stack's own top
+    // edge and visually collided with the utility toolbar above the card. Text
+    // now lays out in normal flow below the cover and can never overlap
+    // anything above it, regardless of name length or text scale.
+    const avatarOverlap = 32.0;
+
     return LiquidGlassCard(
       padding: EdgeInsets.zero,
       borderRadius: BorderRadius.circular(KubusRadius.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Stack(
-            children: [
-              ClipRRect(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(KubusRadius.lg),
-                ),
-                child: Container(
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(KubusRadius.lg),
+            ),
+            child: Stack(
+              children: [
+                Container(
                   height: hasCoverImage
                       ? _kProfileCoverHeightWithImage
                       : _kProfileCoverHeightWithoutImage,
@@ -873,123 +755,87 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                         )
                       : null,
                 ),
-              ),
-              Positioned.fill(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(KubusRadius.lg),
-                    ),
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.black
-                            .withValues(alpha: hasCoverImage ? 0.12 : 0),
-                        Colors.transparent,
-                        Colors.black.withValues(alpha: 0.26),
-                      ],
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black
+                              .withValues(alpha: hasCoverImage ? 0.12 : 0),
+                          Colors.transparent,
+                          Colors.black.withValues(alpha: 0.26),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-              Positioned(
-                left: KubusSpacing.lg,
-                right: KubusSpacing.lg,
-                bottom: KubusSpacing.lg,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: scheme.surface.withValues(alpha: 0.94),
-                        borderRadius: BorderRadius.circular(
-                          avatarRingShapeRadius,
-                        ),
-                        border: Border.all(
-                          color: scheme.outline.withValues(alpha: 0.24),
-                          width: KubusSizes.hairline + 0.2,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Theme.of(context)
-                                .shadowColor
-                                .withValues(alpha: 0.12),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(avatarRingPadding),
-                        child: AvatarWidget(
-                          wallet: user!.id,
-                          avatarUrl: user!.profileImageUrl,
-                          radius: avatarRadius,
-                          borderWidth: 0,
-                          borderColor: Colors.transparent,
-                          cornerRadiusFactor: avatarCornerRadiusFactor,
-                          enableProfileNavigation: false,
-                          heroTag: widget.heroTag,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: KubusSpacing.md),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          Row(
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  user!.name,
-                                  style: KubusTextStyles.screenTitle.copyWith(
-                                    color: scheme.onSurface,
-                                    letterSpacing: -0.2,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              // Verification renders consistently with the
-                              // mobile public profile.
-                              if (user!.isVerified) ...[
-                                const SizedBox(width: KubusSpacing.sm),
-                                Icon(
-                                  Icons.verified,
-                                  color: themeProvider.accentColor,
-                                  size: KubusHeaderMetrics.actionIcon,
-                                ),
-                              ],
-                              if (isArtist) ...[
-                                const SizedBox(width: KubusSpacing.sm),
-                                const ArtistBadge(),
-                              ],
-                              if (isInstitution) ...[
-                                const SizedBox(width: KubusSpacing.sm),
-                                const InstitutionBadge(),
-                              ],
-                            ],
-                          ),
-                          if (ProfileHandle.normalize(user!.username)
-                              case final handle?) ...[
-                            const SizedBox(height: KubusSpacing.xs),
-                            Text(
-                              handle,
-                              style: KubusTextStyles.profileHandle.copyWith(
-                                color: scheme.onSurface.withValues(alpha: 0.60),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
+          Padding(
+            padding: const EdgeInsets.only(
+              left: KubusSpacing.lg,
+              right: KubusSpacing.lg,
+              top: -avatarOverlap,
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: scheme.surface.withValues(alpha: 0.94),
+                    borderRadius: BorderRadius.circular(
+                      avatarRingShapeRadius,
+                    ),
+                    border: Border.all(
+                      color: scheme.outline.withValues(alpha: 0.24),
+                      width: KubusSizes.hairline + 0.2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Theme.of(context)
+                            .shadowColor
+                            .withValues(alpha: 0.12),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(avatarRingPadding),
+                    child: AvatarWidget(
+                      wallet: user!.id,
+                      avatarUrl: user!.profileImageUrl,
+                      radius: avatarRadius,
+                      borderWidth: 0,
+                      borderColor: Colors.transparent,
+                      cornerRadiusFactor: avatarCornerRadiusFactor,
+                      enableProfileNavigation: false,
+                      heroTag: widget.heroTag,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: KubusSpacing.md),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: KubusSpacing.sm),
+                    child: ProfileIdentityBlock(
+                      displayName: user!.name,
+                      handle: user!.username,
+                      isVerified: user!.isVerified,
+                      isArtist: isArtist,
+                      isInstitution: isInstitution,
+                      nameColor: scheme.onSurface,
+                      handleColor: scheme.onSurface.withValues(alpha: 0.60),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: KubusSpacing.sm),
           Container(
             width: double.infinity,
             decoration: BoxDecoration(

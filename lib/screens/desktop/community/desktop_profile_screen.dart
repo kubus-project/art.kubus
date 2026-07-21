@@ -17,7 +17,8 @@ import '../../../services/share/share_service.dart';
 import '../../../services/share/share_types.dart';
 import '../../../utils/artwork_navigation.dart';
 import '../../../utils/app_color_utils.dart';
-import '../../../utils/profile_handle.dart';
+import '../../../widgets/detail/profile_identity_block.dart';
+import '../../../widgets/detail/profile_utility_actions.dart';
 import '../../../utils/media_url_resolver.dart';
 import '../../../utils/profile_showcase_normalizer.dart';
 import '../../../community/community_interactions.dart';
@@ -34,8 +35,6 @@ import '../../../widgets/profile_artist_info_fields.dart';
 import '../../../widgets/detail/detail_shell_components.dart';
 import '../../../widgets/detail/shared_section_widgets.dart';
 import '../../community/profile_screen_methods.dart';
-import '../../../widgets/artist_badge.dart';
-import '../../../widgets/institution_badge.dart';
 import '../../../widgets/email_verification_status_badge.dart';
 import '../../../widgets/profile/profile_account_health_section.dart';
 import '../../../widgets/profile/profile_achievements_preview_section.dart';
@@ -81,7 +80,9 @@ class _ProfileScreenState extends State<ProfileScreen>
   List<Map<String, dynamic>> _artistCollections = [];
   List<Map<String, dynamic>> _artistEvents = [];
   bool _showActivityStatus = true;
-  bool _profilePrefsListenerAttached = false;
+  /// Captured in `didChangeDependencies` so `dispose` never has to look the
+  /// provider up through a deactivated `BuildContext`.
+  ProfileProvider? _listenedProfileProvider;
   bool _didScheduleAchievementHydration = false;
 
   @override
@@ -106,9 +107,11 @@ class _ProfileScreenState extends State<ProfileScreen>
     super.didChangeDependencies();
     final profileProvider =
         Provider.of<ProfileProvider>(context, listen: false);
-    if (!_profilePrefsListenerAttached) {
+    if (_listenedProfileProvider != profileProvider) {
+      _listenedProfileProvider
+          ?.removeListener(_handleProfilePreferencesChanged);
       profileProvider.addListener(_handleProfilePreferencesChanged);
-      _profilePrefsListenerAttached = true;
+      _listenedProfileProvider = profileProvider;
     }
     if (!_didScheduleDataFetch) {
       _didScheduleDataFetch = true;
@@ -143,11 +146,10 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   @override
   void dispose() {
-    if (_profilePrefsListenerAttached) {
-      Provider.of<ProfileProvider>(context, listen: false)
-          .removeListener(_handleProfilePreferencesChanged);
-      _profilePrefsListenerAttached = false;
-    }
+    // Use the reference captured in didChangeDependencies: looking a provider
+    // up through `context` here would query a deactivated element.
+    _listenedProfileProvider?.removeListener(_handleProfilePreferencesChanged);
+    _listenedProfileProvider = null;
     _animationController.dispose();
     super.dispose();
   }
@@ -355,19 +357,20 @@ class _ProfileScreenState extends State<ProfileScreen>
   Widget _buildHeader({required bool showNavigationChrome}) {
     final l10n = AppLocalizations.of(context)!;
 
+    // Owner utility actions use the same canonical square controls as the
+    // public profile and the community overlay, so all five profile surfaces
+    // share one action vocabulary, hit area and focus treatment.
     Widget buildActions() {
-      return Row(
-        children: [
-          DesktopActionButton(
-            label: l10n.desktopProfileShareProfileLabel,
+      return ProfileUtilityActions(
+        actions: [
+          ProfileUtilityAction(
             icon: Icons.share_outlined,
+            tooltip: l10n.desktopProfileShareProfileLabel,
             onPressed: _shareProfile,
-            isPrimary: false,
           ),
-          const SizedBox(width: DetailSpacing.md),
-          DesktopActionButton(
-            label: l10n.profileInvitesTooltip,
+          ProfileUtilityAction(
             icon: Icons.inbox_outlined,
+            tooltip: l10n.profileInvitesTooltip,
             onPressed: () {
               final shellScope = DesktopShellScope.of(context);
               if (shellScope != null) {
@@ -384,13 +387,11 @@ class _ProfileScreenState extends State<ProfileScreen>
                 ),
               );
             },
-            isPrimary: false,
           ),
-          const SizedBox(width: DetailSpacing.md),
-          if (AppConfig.isFeatureEnabled('analytics')) ...[
-            DesktopActionButton(
-              label: l10n.navigationScreenAnalytics,
+          if (AppConfig.isFeatureEnabled('analytics'))
+            ProfileUtilityAction(
               icon: Icons.analytics_outlined,
+              tooltip: l10n.navigationScreenAnalytics,
               onPressed: () {
                 final wallet = context
                         .read<ProfileProvider>()
@@ -400,13 +401,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                 if (wallet.trim().isEmpty) return;
                 _openAnalyticsDialog(wallet);
               },
-              isPrimary: false,
             ),
-            const SizedBox(width: DetailSpacing.md),
-          ],
-          DesktopActionButton(
-            label: l10n.navigationScreenSettings,
+          ProfileUtilityAction(
             icon: Icons.settings_outlined,
+            tooltip: l10n.navigationScreenSettings,
             onPressed: () {
               final shellScope = DesktopShellScope.of(context);
               if (shellScope != null) {
@@ -422,7 +420,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                 ),
               );
             },
-            isPrimary: false,
           ),
         ],
       );
@@ -693,24 +690,29 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
     final scheme = Theme.of(context).colorScheme;
     final displayName = user?.displayName ?? user?.username ?? 'Art Enthusiast';
-    final usernameLabel = ProfileHandle.normalize(user?.username);
-    final titleColor = hasCoverImage ? Colors.white : scheme.onSurface;
-    final subtitleColor = hasCoverImage
-        ? Colors.white.withValues(alpha: 0.78)
-        : scheme.onSurface.withValues(alpha: 0.62);
+
+    // The avatar overlaps the cover's bottom edge by a small *fixed* amount —
+    // never by the identity content's height. Previously the whole avatar +
+    // identity row was `Positioned(bottom:)` inside the cover `Stack`, so at
+    // large text scales a wrapped display name grew upward past the stack's
+    // own top edge and visually collided with the header actions above the
+    // card. Text now lays out in normal flow below the cover and can never
+    // overlap anything above it, so identity colors no longer need to adapt to
+    // sitting on top of the cover image.
+    const avatarOverlap = 32.0;
 
     return DesktopCard(
       padding: EdgeInsets.zero,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Stack(
-            children: [
-              ClipRRect(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(KubusRadius.lg),
-                ),
-                child: Container(
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(KubusRadius.lg),
+            ),
+            child: Stack(
+              children: [
+                Container(
                   height: hasCoverImage ? 228 : 156,
                   width: double.infinity,
                   decoration: BoxDecoration(
@@ -748,131 +750,101 @@ class _ProfileScreenState extends State<ProfileScreen>
                         )
                       : null,
                 ),
-              ),
-              Positioned.fill(
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(KubusRadius.lg),
-                    ),
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.black
-                            .withValues(alpha: hasCoverImage ? 0.12 : 0),
-                        Colors.transparent,
-                        Colors.black.withValues(alpha: 0.26),
-                      ],
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black
+                              .withValues(alpha: hasCoverImage ? 0.12 : 0),
+                          Colors.transparent,
+                          Colors.black.withValues(alpha: 0.26),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-              Positioned(
-                top: KubusSpacing.md,
-                right: KubusSpacing.md,
-                child: KubusGlassIconButton(
-                  icon: Icons.edit_outlined,
-                  tooltip: AppLocalizations.of(context)!
-                      .settingsEditProfileTileTitle,
-                  size: KubusHeaderMetrics.actionHitArea,
-                  borderRadius: KubusRadius.md,
-                  iconColor: hasCoverImage ? Colors.white : scheme.onSurface,
-                  tooltipPreferBelow: true,
-                  tooltipVerticalOffset: KubusSpacing.sm,
-                  onPressed: _editProfile,
+                Positioned(
+                  top: KubusSpacing.md,
+                  right: KubusSpacing.md,
+                  child: KubusGlassIconButton(
+                    icon: Icons.edit_outlined,
+                    tooltip: AppLocalizations.of(context)!
+                        .settingsEditProfileTileTitle,
+                    size: KubusHeaderMetrics.actionHitArea,
+                    borderRadius: KubusRadius.md,
+                    iconColor: hasCoverImage ? Colors.white : scheme.onSurface,
+                    tooltipPreferBelow: true,
+                    tooltipVerticalOffset: KubusSpacing.sm,
+                    onPressed: _editProfile,
+                  ),
                 ),
-              ),
-              Positioned(
-                left: KubusSpacing.lg,
-                right: KubusSpacing.lg,
-                bottom: KubusSpacing.lg,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: scheme.surface.withValues(alpha: 0.94),
-                        borderRadius: BorderRadius.circular(
-                          avatarRingShapeRadius,
-                        ),
-                        border: Border.all(
-                          color: scheme.outline.withValues(alpha: 0.24),
-                          width: KubusSizes.hairline + 0.2,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Theme.of(context)
-                                .shadowColor
-                                .withValues(alpha: 0.12),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(avatarRingPadding),
-                        child: AvatarWidget(
-                          wallet: user?.walletAddress ?? '',
-                          avatarUrl: user?.avatar,
-                          radius: avatarRadius,
-                          borderWidth: 0,
-                          borderColor: Colors.transparent,
-                          cornerRadiusFactor: avatarCornerRadiusFactor,
-                          enableProfileNavigation: false,
-                          showStatusIndicator: _showActivityStatus,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: KubusSpacing.md),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          Row(
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  displayName,
-                                  style: KubusTextStyles.screenTitle.copyWith(
-                                    color: titleColor,
-                                    letterSpacing: -0.2,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              if (isArtist) ...[
-                                const SizedBox(
-                                  width: KubusSpacing.sm + KubusSpacing.xs,
-                                ),
-                                const ArtistBadge(),
-                              ],
-                              if (isInstitution) ...[
-                                const SizedBox(
-                                  width: KubusSpacing.sm + KubusSpacing.xs,
-                                ),
-                                const InstitutionBadge(),
-                              ],
-                            ],
-                          ),
-                          if (usernameLabel != null) ...[
-                            const SizedBox(height: KubusSpacing.xs),
-                            Text(
-                              usernameLabel,
-                              style: KubusTextStyles.profileHandle.copyWith(
-                                color: subtitleColor,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
+          Padding(
+            padding: const EdgeInsets.only(
+              left: KubusSpacing.lg,
+              right: KubusSpacing.lg,
+              top: -avatarOverlap,
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: scheme.surface.withValues(alpha: 0.94),
+                    borderRadius: BorderRadius.circular(
+                      avatarRingShapeRadius,
+                    ),
+                    border: Border.all(
+                      color: scheme.outline.withValues(alpha: 0.24),
+                      width: KubusSizes.hairline + 0.2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Theme.of(context)
+                            .shadowColor
+                            .withValues(alpha: 0.12),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(avatarRingPadding),
+                    child: AvatarWidget(
+                      wallet: user?.walletAddress ?? '',
+                      avatarUrl: user?.avatar,
+                      radius: avatarRadius,
+                      borderWidth: 0,
+                      borderColor: Colors.transparent,
+                      cornerRadiusFactor: avatarCornerRadiusFactor,
+                      enableProfileNavigation: false,
+                      showStatusIndicator: _showActivityStatus,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: KubusSpacing.md),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: KubusSpacing.sm),
+                    child: ProfileIdentityBlock(
+                      displayName: displayName,
+                      handle: user?.username,
+                      isArtist: isArtist,
+                      isInstitution: isInstitution,
+                      nameColor: scheme.onSurface,
+                      handleColor: scheme.onSurface.withValues(alpha: 0.62),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: KubusSpacing.sm),
           Container(
             width: double.infinity,
             decoration: BoxDecoration(

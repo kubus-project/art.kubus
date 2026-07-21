@@ -24,7 +24,7 @@ import '../../services/share/share_types.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../utils/profile_showcase_normalizer.dart';
 import '../../utils/app_color_utils.dart';
-import '../../utils/profile_handle.dart';
+import '../../widgets/detail/profile_identity_block.dart';
 import '../../community/community_interactions.dart';
 import '../web3/wallet/wallet_home.dart';
 import '../settings_screen.dart';
@@ -49,8 +49,6 @@ import 'post_detail_screen.dart';
 import '../../utils/artwork_navigation.dart';
 import '../art/collection_detail_screen.dart';
 import '../events/event_detail_screen.dart';
-import '../../widgets/artist_badge.dart';
-import '../../widgets/institution_badge.dart';
 import '../../widgets/email_verification_status_badge.dart';
 import '../../widgets/profile/profile_account_health_section.dart';
 import '../../widgets/profile/profile_achievements_preview_section.dart';
@@ -82,7 +80,9 @@ class _ProfileScreenState extends State<ProfileScreen>
   List<Map<String, dynamic>> _artistArtworks = [];
   List<Map<String, dynamic>> _artistCollections = [];
   List<Map<String, dynamic>> _artistEvents = [];
-  bool _profilePrefsListenerAttached = false;
+  /// Captured in `didChangeDependencies` so `dispose` never has to look the
+  /// provider up through a deactivated `BuildContext`.
+  ProfileProvider? _listenedProfileProvider;
   bool _didScheduleAchievementHydration = false;
   String? _failedCoverImageUrl;
 
@@ -128,9 +128,11 @@ class _ProfileScreenState extends State<ProfileScreen>
     super.didChangeDependencies();
     final profileProvider =
         Provider.of<ProfileProvider>(context, listen: false);
-    if (!_profilePrefsListenerAttached) {
+    if (_listenedProfileProvider != profileProvider) {
+      _listenedProfileProvider
+          ?.removeListener(_handleProfilePreferencesChanged);
       profileProvider.addListener(_handleProfilePreferencesChanged);
-      _profilePrefsListenerAttached = true;
+      _listenedProfileProvider = profileProvider;
     }
     if (!_didScheduleDataFetch) {
       _didScheduleDataFetch = true;
@@ -167,11 +169,10 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   @override
   void dispose() {
-    if (_profilePrefsListenerAttached) {
-      Provider.of<ProfileProvider>(context, listen: false)
-          .removeListener(_handleProfilePreferencesChanged);
-      _profilePrefsListenerAttached = false;
-    }
+    // Use the reference captured in didChangeDependencies: looking a provider
+    // up through `context` here would query a deactivated element.
+    _listenedProfileProvider?.removeListener(_handleProfilePreferencesChanged);
+    _listenedProfileProvider = null;
     _animationController.dispose();
     super.dispose();
   }
@@ -348,13 +349,6 @@ class _ProfileScreenState extends State<ProfileScreen>
           final displayName = profileProvider.currentUser?.displayName ??
               profileProvider.currentUser?.username ??
               AppLocalizations.of(context)!.profilePersonaArtEnthusiast;
-          final usernameLabel =
-              ProfileHandle.normalize(profileProvider.currentUser?.username);
-          final identityTitleColor =
-              hasCoverImage ? Colors.white : scheme.onSurface;
-          final identitySubtitleColor = hasCoverImage
-              ? Colors.white.withValues(alpha: 0.82)
-              : scheme.onSurface.withValues(alpha: 0.70);
           final topActionGap = isSmallScreen
               ? KubusSpacing.xs + KubusSpacing.xxs
               : KubusSpacing.sm;
@@ -583,105 +577,74 @@ class _ProfileScreenState extends State<ProfileScreen>
                             ),
                           ),
                         ),
+                        // Avatar only — a small fixed-size overlay that can
+                        // never grow with text scale. The identity (name,
+                        // badges, handle) used to share this Positioned and
+                        // could grow upward at large text scales far enough to
+                        // collide with the top bar's Positioned(top: 0) actions
+                        // above (this Stack uses `clipBehavior: Clip.none`, so
+                        // that overlap was never clipped away). It now renders
+                        // in normal flow below the cover instead, where layout
+                        // can never overlap a sibling.
                         Positioned(
                           left: isSmallScreen ? 12 : 16,
-                          right: isSmallScreen ? 12 : 16,
                           bottom: isSmallScreen ? 12 : 16,
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              DecoratedBox(
-                                decoration: BoxDecoration(
-                                  color: scheme.surface.withValues(alpha: 0.94),
-                                  borderRadius: BorderRadius.circular(
-                                    avatarRingShapeRadius,
-                                  ),
-                                  border: Border.all(
-                                    color:
-                                        scheme.outline.withValues(alpha: 0.24),
-                                    width: KubusSizes.hairline + 0.2,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Theme.of(context)
-                                          .shadowColor
-                                          .withValues(alpha: avatarShadowAlpha),
-                                      blurRadius: avatarShadowBlur,
-                                      offset:
-                                          const Offset(0, avatarShadowOffsetY),
-                                    ),
-                                  ],
-                                ),
-                                child: Padding(
-                                  padding:
-                                      const EdgeInsets.all(avatarRingPadding),
-                                  child: AvatarWidget(
-                                    wallet: profileProvider
-                                            .currentUser?.walletAddress ??
-                                        '',
-                                    avatarUrl:
-                                        profileProvider.currentUser?.avatar,
-                                    radius: avatarRadius,
-                                    borderWidth: 0,
-                                    borderColor: Colors.transparent,
-                                    cornerRadiusFactor:
-                                        avatarCornerRadiusFactor,
-                                    enableProfileNavigation: false,
-                                    showStatusIndicator: _showActivityStatus,
-                                  ),
-                                ),
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: scheme.surface.withValues(alpha: 0.94),
+                              borderRadius: BorderRadius.circular(
+                                avatarRingShapeRadius,
                               ),
-                              const SizedBox(width: KubusSpacing.md),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Flexible(
-                                          child: Text(
-                                            displayName,
-                                            style: KubusTextStyles.screenTitle
-                                                .copyWith(
-                                              color: identityTitleColor,
-                                              letterSpacing: -0.2,
-                                            ),
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                        if (isArtist) ...[
-                                          const SizedBox(
-                                              width: KubusSpacing.sm),
-                                          const ArtistBadge(),
-                                        ],
-                                        if (isInstitution) ...[
-                                          const SizedBox(
-                                              width: KubusSpacing.sm),
-                                          const InstitutionBadge(),
-                                        ],
-                                      ],
-                                    ),
-                                    if (usernameLabel != null) ...[
-                                      const SizedBox(height: KubusSpacing.xs),
-                                      Text(
-                                        usernameLabel,
-                                        style: KubusTextStyles.profileHandle
-                                            .copyWith(
-                                          color: identitySubtitleColor,
-                                        ),
-                                      ),
-                                    ],
-                                  ],
-                                ),
+                              border: Border.all(
+                                color: scheme.outline.withValues(alpha: 0.24),
+                                width: KubusSizes.hairline + 0.2,
                               ),
-                            ],
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Theme.of(context)
+                                      .shadowColor
+                                      .withValues(alpha: avatarShadowAlpha),
+                                  blurRadius: avatarShadowBlur,
+                                  offset: const Offset(0, avatarShadowOffsetY),
+                                ),
+                              ],
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(avatarRingPadding),
+                              child: AvatarWidget(
+                                wallet: profileProvider
+                                        .currentUser?.walletAddress ??
+                                    '',
+                                avatarUrl: profileProvider.currentUser?.avatar,
+                                radius: avatarRadius,
+                                borderWidth: 0,
+                                borderColor: Colors.transparent,
+                                cornerRadiusFactor: avatarCornerRadiusFactor,
+                                enableProfileNavigation: false,
+                                showStatusIndicator: _showActivityStatus,
+                              ),
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ),
                 ],
+              ),
+              Padding(
+                padding: EdgeInsets.only(
+                  left: (isSmallScreen ? 12 : 16) +
+                      (avatarRadius + avatarRingPadding) * 2 +
+                      KubusSpacing.md,
+                  right: isSmallScreen ? 12 : 16,
+                  top: KubusSpacing.xs,
+                ),
+                child: ProfileIdentityBlock(
+                  displayName: displayName,
+                  handle: profileProvider.currentUser?.username,
+                  isArtist: isArtist,
+                  isInstitution: isInstitution,
+                ),
               ),
               const SizedBox(height: KubusSpacing.md),
               // Rest of profile content

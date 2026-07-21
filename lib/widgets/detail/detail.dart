@@ -5,3 +5,6 @@
 library;
 
 export 'detail_shell_components.dart';
+export 'profile_identity_block.dart';
+export 'profile_relationship_actions.dart';
+export 'profile_utility_actions.dart';
