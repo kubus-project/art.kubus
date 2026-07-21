@@ -9,7 +9,9 @@ Last updated: 2026-07-21 (recovery + completion round; CI evidence collected)
 | art.kubus | `688e9bf9` | success |
 | art.kubus-backend | `85fb005c` | success (incl. PostgreSQL editorial-migration-contract) |
 | kubus.site | `41b3608` | success (incl. Apache 29/29 + network-guarded determinism) |
-| art.kubus.site | `4842e5a` | PR #2 opened; `ci:seo` + vitest 44/44 verified locally |
+| art.kubus.site | `4842e5a` | **MERGED** (Batch 5 only — Batches 6-7 follow in #3) |
+| art.kubus.site#3 | `4f8345f` | **2/2 green** — Batches 6-7, rebased onto merged master |
+| art.kubus#52 (docs) | `e8c0ee2` | **FAIL, inherited** — `master` has divergent backend gitlinks (`a2229f7b` ≠ `47f4fe07`); PR #51 fixes it. Docs-only diff |
 
 Status vocabulary: `PASS` (verified by executed evidence in the relevant
 environment) · `FAIL` (executed validation showed incorrect behavior) ·
@@ -62,8 +64,8 @@ production `PASS`.
 | Journal fallback semantics | PASS (tests) | 200-items/200-empty/404/403/network/timeout/500/malformed all classified; 16/16 against the real bundled module |
 | Slug + XML safety contract | PASS (tests) | 20/20: canonical-form validation, traversal/control rejection, XML escaping + injection neutralization, duplicate canonical rejection |
 | Marketing schema resolver | IMPLEMENTED_NOT_DEPLOYED | art.kubus.site PR #2: 0 SoftwareApplication on 105 pages; WebApplication only on download EN/SL; AboutPage; FAQ opt-in; noindex utilities; pinned by check-seo-output |
-| Page consolidation (Batch 6) | IMPLEMENTED_NOT_DEPLOYED | Similarity measured (<0.15 → differentiate, not merge); 32 keywords/locale with one indexable owner each; 9 collisions resolved; `ci:seo` exit 0 |
-| City indexability policy (Batch 7) | IMPLEMENTED_NOT_DEPLOYED | Data-or-demand policy, 11 vitest cases; 8 cities indexed / 4 demoted against measured production + Search Console signals |
+| Page consolidation (Batch 6) | IMPLEMENTED_NOT_DEPLOYED | Similarity measured (<0.15 → differentiate, not merge); 32 keywords/locale with one indexable owner each; 9 collisions resolved. art.kubus.site#3 CI **2/2 green @ 4f8345f** |
+| City indexability policy (Batch 7) | IMPLEMENTED_NOT_DEPLOYED | Data-or-demand policy, 11 vitest cases; 8 cities indexed / 4 demoted against measured production + Search Console signals. Same PR, same green runs |
 | City sitemap declaration | IMPLEMENTED_NOT_DEPLOYED | Pre-existing defect fixed: Zagreb/Trieste/Vienna/Rijeka were indexable but absent from the sitemap |
 | Ljubljana EN/SL rich content | BLOCKED_EXTERNAL | City editorial API returns zero records for every city; program forbids fabricating artworks, artists, institutions, routes or verification claims |
 | Page consolidation | NOT_STARTED | Batch 6 — Search Console data in hand |
