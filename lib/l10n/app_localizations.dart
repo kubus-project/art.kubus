@@ -79,8 +79,7 @@ abstract class AppLocalizations {
     return Localizations.of<AppLocalizations>(context, AppLocalizations);
   }
 
-  static const LocalizationsDelegate<AppLocalizations> delegate =
-      _AppLocalizationsDelegate();
+  static const LocalizationsDelegate<AppLocalizations> delegate = _AppLocalizationsDelegate();
 
   /// A list of this localizations delegate along with the default localizations
   /// delegates.
@@ -92,8 +91,7 @@ abstract class AppLocalizations {
   /// Additional delegates can be added by appending to this list in
   /// MaterialApp. This list does not have to be used at all if a custom list
   /// of delegates is preferred or required.
-  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
-      <LocalizationsDelegate<dynamic>>[
+  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates = <LocalizationsDelegate<dynamic>>[
     delegate,
     GlobalMaterialLocalizations.delegate,
     GlobalCupertinoLocalizations.delegate,
@@ -338,8 +336,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Archive records for {artworkTitle} by {artistName}'**
-  String archiveObjectSeriesDefaultDescription(
-      Object artworkTitle, Object artistName);
+  String archiveObjectSeriesDefaultDescription(Object artworkTitle, Object artistName);
 
   /// No description provided for @archiveObjectSeriesCreateFailed.
   ///
@@ -387,8 +384,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Achievement unlocked\n{title}{extra}\n+{amount} {currency} recognition'**
-  String communityAchievementUnlockedToast(
-      Object title, Object extra, Object amount, Object currency);
+  String communityAchievementUnlockedToast(Object title, Object extra, Object amount, Object currency);
 
   /// No description provided for @communityViewAchievementsAction.
   ///
@@ -442,8 +438,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Archive record {status} for {title}'**
-  String recentActivityArchiveObjectStatusDescription(
-      Object status, Object title);
+  String recentActivityArchiveObjectStatusDescription(Object status, Object title);
 
   /// No description provided for @recentActivityFallbackArtworkTitle.
   ///
@@ -4385,8 +4380,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Account: {accountStatus} · Wallet: {walletStatus} · Access: {signerStatus}'**
-  String walletSessionStatusSummary(
-      Object accountStatus, Object walletStatus, Object signerStatus);
+  String walletSessionStatusSummary(Object accountStatus, Object walletStatus, Object signerStatus);
 
   /// No description provided for @walletActionSignInRequiredToast.
   ///
@@ -12258,8 +12252,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{token} · {amount} · {date}'**
-  String receiveTokenSidebarTransferSubtitle(
-      Object token, Object amount, Object date);
+  String receiveTokenSidebarTransferSubtitle(Object token, Object amount, Object date);
 
   /// No description provided for @sendTokenTitle.
   ///
@@ -12355,8 +12348,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{token} · {amount} · {date}'**
-  String sendTokenSidebarRecipientSubtitle(
-      Object token, Object amount, Object date);
+  String sendTokenSidebarRecipientSubtitle(Object token, Object amount, Object date);
 
   /// No description provided for @sendTokenSidebarSummaryTitle.
   ///
@@ -12530,8 +12522,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{amount} {token} submitted. Tx: {signature}'**
-  String sendTokenSendSuccessWithSignatureToast(
-      Object amount, Object token, Object signature);
+  String sendTokenSendSuccessWithSignatureToast(Object amount, Object token, Object signature);
 
   /// No description provided for @sendTokenSendFailedToast.
   ///
@@ -12773,6 +12764,10 @@ abstract class AppLocalizations {
   /// **'In development'**
   String get artDetailNavigationInDevelopment;
 
+  /// No description provided for @walkingNavigationBeta.
+  ///
+  /// In en, this message translates to:
+  /// **'Beta'**
   String get walkingNavigationBeta;
 
   /// No description provided for @walkingNavigationPreviewNotice.
@@ -12787,6 +12782,10 @@ abstract class AppLocalizations {
   /// **'Finding your location…'**
   String get walkingNavigationWaitingForLocation;
 
+  /// No description provided for @walkingNavigationRequestingPermission.
+  ///
+  /// In en, this message translates to:
+  /// **'Requesting location access…'**
   String get walkingNavigationRequestingPermission;
 
   /// No description provided for @walkingNavigationCalculating.
@@ -12795,6 +12794,10 @@ abstract class AppLocalizations {
   /// **'Calculating a pedestrian route on this device…'**
   String get walkingNavigationCalculating;
 
+  /// No description provided for @walkingNavigationRerouting.
+  ///
+  /// In en, this message translates to:
+  /// **'Updating your walking route…'**
   String get walkingNavigationRerouting;
 
   /// No description provided for @walkingNavigationArrived.
@@ -12809,24 +12812,64 @@ abstract class AppLocalizations {
   /// **'A walkable route could not be calculated.'**
   String get walkingNavigationRouteUnavailable;
 
+  /// No description provided for @walkingNavigationPermissionDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Location access is needed to start walking navigation.'**
   String get walkingNavigationPermissionDenied;
 
+  /// No description provided for @walkingNavigationPermissionDeniedPermanently.
+  ///
+  /// In en, this message translates to:
+  /// **'Location access is blocked for art.kubus. Enable it in app settings.'**
   String get walkingNavigationPermissionDeniedPermanently;
 
+  /// No description provided for @walkingNavigationServicesDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on location services to start walking navigation.'**
   String get walkingNavigationServicesDisabled;
 
+  /// No description provided for @walkingNavigationLocationUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'A live location fix is not available yet.'**
   String get walkingNavigationLocationUnavailable;
 
+  /// No description provided for @walkingNavigationLocationTimedOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Finding your live location took too long.'**
   String get walkingNavigationLocationTimedOut;
 
+  /// No description provided for @walkingNavigationNoRoute.
+  ///
+  /// In en, this message translates to:
+  /// **'No connected pedestrian route was found.'**
   String get walkingNavigationNoRoute;
 
+  /// No description provided for @walkingNavigationRouteTooLong.
+  ///
+  /// In en, this message translates to:
+  /// **'This destination is outside the supported walking-navigation distance.'**
   String get walkingNavigationRouteTooLong;
 
+  /// No description provided for @walkingNavigationRouteSourceTimeout.
+  ///
+  /// In en, this message translates to:
+  /// **'The walking route source timed out.'**
   String get walkingNavigationRouteSourceTimeout;
 
+  /// No description provided for @walkingNavigationRouteNetworkFailure.
+  ///
+  /// In en, this message translates to:
+  /// **'The walking route source could not be reached.'**
   String get walkingNavigationRouteNetworkFailure;
 
+  /// No description provided for @walkingNavigationRouteMalformed.
+  ///
+  /// In en, this message translates to:
+  /// **'The walking route source returned an invalid response.'**
   String get walkingNavigationRouteMalformed;
 
   /// No description provided for @walkingNavigationRetry.
@@ -12847,14 +12890,34 @@ abstract class AppLocalizations {
   /// **'End'**
   String get walkingNavigationEnd;
 
+  /// No description provided for @walkingNavigationAllowLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow location'**
   String get walkingNavigationAllowLocation;
 
+  /// No description provided for @walkingNavigationOpenAppSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Open app settings'**
   String get walkingNavigationOpenAppSettings;
 
+  /// No description provided for @walkingNavigationOpenLocationSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Open location settings'**
   String get walkingNavigationOpenLocationSettings;
 
+  /// No description provided for @walkingNavigationUseExternalMaps.
+  ///
+  /// In en, this message translates to:
+  /// **'Use external maps'**
   String get walkingNavigationUseExternalMaps;
 
+  /// No description provided for @walkingNavigationViewDestination.
+  ///
+  /// In en, this message translates to:
+  /// **'View destination'**
   String get walkingNavigationViewDestination;
 
   /// No description provided for @walkingNavigationContinue.
@@ -15543,8 +15606,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Open details for {title}, token {tokenId}'**
-  String marketplaceOpenCollectibleDetailsSemantic(
-      Object title, Object tokenId);
+  String marketplaceOpenCollectibleDetailsSemantic(Object title, Object tokenId);
 
   /// No description provided for @marketplaceShareTooltip.
   ///
@@ -16354,8 +16416,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Are you sure you want to delegate your {votingPower} voting power to {delegateName}?'**
-  String daoDelegateVotingPowerDialogBody(
-      Object votingPower, Object delegateName);
+  String daoDelegateVotingPowerDialogBody(Object votingPower, Object delegateName);
 
   /// No description provided for @daoDelegationBenefitsTitle.
   ///
@@ -19775,8 +19836,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Swap submitted: {fromToken} ? {toToken}. Tx: {signature}'**
-  String walletSwapSubmittedToastWithSignature(
-      Object fromToken, Object toToken, Object signature);
+  String walletSwapSubmittedToastWithSignature(Object fromToken, Object toToken, Object signature);
 
   /// No description provided for @walletTransactionConfirmationsLabel.
   ///
@@ -20252,13 +20312,13 @@ abstract class AppLocalizations {
   /// **'Institution'**
   String get commonInstitution;
 
-  /// Label for the artist identity badge.
+  /// No description provided for @badgeArtistLabel.
   ///
   /// In en, this message translates to:
   /// **'Artist'**
   String get badgeArtistLabel;
 
-  /// Label for the institution identity badge.
+  /// No description provided for @badgeInstitutionLabel.
   ///
   /// In en, this message translates to:
   /// **'Institution'**
@@ -20941,6 +21001,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Username must be 50 characters or fewer'**
   String get profileEditUsernameMaxLengthError;
+
+  /// No description provided for @profileEditUsernameReservedError.
+  ///
+  /// In en, this message translates to:
+  /// **'That username is reserved. Please pick a different one.'**
+  String get profileEditUsernameReservedError;
+
+  /// No description provided for @profileEditUsernameWalletLikeError.
+  ///
+  /// In en, this message translates to:
+  /// **'That looks like a wallet address. Please pick a readable username.'**
+  String get profileEditUsernameWalletLikeError;
 
   /// No description provided for @authUsernameAlreadyTaken.
   ///
@@ -23178,8 +23250,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Activity was recorded on {activeBuckets} of {totalBuckets} buckets.'**
-  String analyticsRecommendationConsistencyDescription(
-      Object activeBuckets, Object totalBuckets);
+  String analyticsRecommendationConsistencyDescription(Object activeBuckets, Object totalBuckets);
 
   /// No description provided for @analyticsRecommendationReverseDecline.
   ///
@@ -23503,8 +23574,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{totalVotes} votes · {supportPct}% support'**
-  String daoProposalVotesSupportSummaryLabel(
-      Object totalVotes, Object supportPct);
+  String daoProposalVotesSupportSummaryLabel(Object totalVotes, Object supportPct);
 
   /// No description provided for @commonSearchHint.
   ///
@@ -25850,8 +25920,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{activeBuckets} of {totalBuckets} intervals recorded {metric}.'**
-  String analyticsInsightActivePatternDescription(
-      Object activeBuckets, Object totalBuckets, Object metric);
+  String analyticsInsightActivePatternDescription(Object activeBuckets, Object totalBuckets, Object metric);
 
   /// No description provided for @analyticsInsightPeakTitle.
   ///
@@ -26004,8 +26073,7 @@ abstract class AppLocalizations {
   String get authSecureAccountBannerCta;
 }
 
-class _AppLocalizationsDelegate
-    extends LocalizationsDelegate<AppLocalizations> {
+class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
   const _AppLocalizationsDelegate();
 
   @override
@@ -26014,25 +26082,25 @@ class _AppLocalizationsDelegate
   }
 
   @override
-  bool isSupported(Locale locale) =>
-      <String>['en', 'sl'].contains(locale.languageCode);
+  bool isSupported(Locale locale) => <String>['en', 'sl'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
 }
 
 AppLocalizations lookupAppLocalizations(Locale locale) {
+
+
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
-    case 'en':
-      return AppLocalizationsEn();
-    case 'sl':
-      return AppLocalizationsSl();
+    case 'en': return AppLocalizationsEn();
+    case 'sl': return AppLocalizationsSl();
   }
 
   throw FlutterError(
-      'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
-      'an issue with the localizations generation tool. Please file an issue '
-      'on GitHub with a reproducible sample app and the gen-l10n configuration '
-      'that was used.');
+    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+    'an issue with the localizations generation tool. Please file an issue '
+    'on GitHub with a reproducible sample app and the gen-l10n configuration '
+    'that was used.'
+  );
 }

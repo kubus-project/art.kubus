@@ -4901,6 +4901,8 @@
   "profileEditUsernameRequiredError": "Username is required",
   "profileEditUsernameMinLengthError": "Username must be at least 3 characters",
   "profileEditUsernameMaxLengthError": "Username must be 50 characters or fewer",
+  "profileEditUsernameReservedError": "That username is reserved. Please pick a different one.",
+  "profileEditUsernameWalletLikeError": "That looks like a wallet address. Please pick a readable username.",
   "authUsernameAlreadyTaken": "Username already taken",
   "profileEditDisplayNameLabel": "Display name",
   "profileEditDisplayNameHint": "Enter display name",

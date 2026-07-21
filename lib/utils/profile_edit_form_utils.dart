@@ -1,22 +1,21 @@
 import 'package:art_kubus/l10n/app_localizations.dart';
 
+import 'username_policy.dart';
+import 'username_policy_messages.dart';
+
 class ProfileEditFormUtils {
-  static const int usernameMinLength = 3;
+  /// Kept as the historical name for [UsernamePolicy.minLength]; the policy is
+  /// the single source of truth.
+  static const int usernameMinLength = UsernamePolicy.minLength;
   static const int bioMaxLength = 500;
 
+  /// Validates a username against the canonical [UsernamePolicy], the same
+  /// contract that decides whether the resulting handle is displayed.
   static String? validateUsername(
     AppLocalizations l10n,
     String? value,
-  ) {
-    final trimmed = value?.trim() ?? '';
-    if (trimmed.isEmpty) {
-      return l10n.profileEditUsernameRequiredError;
-    }
-    if (trimmed.length < usernameMinLength) {
-      return l10n.profileEditUsernameMinLengthError;
-    }
-    return null;
-  }
+  ) =>
+      usernameRejectionMessage(l10n, UsernamePolicy.rejectionFor(value));
 
   static String? validateDisplayName(
     AppLocalizations l10n,
