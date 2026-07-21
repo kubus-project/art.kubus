@@ -197,6 +197,16 @@ jobs:
             --dart-define=SEO_PUBLIC_PAGES_ENABLED=true \
             --dart-define-from-file=.dart_tool/public-build-defines.json
 
+      - name: Stamp deployment revision identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          # seo-proxy.php serves this as X-Kubus-Web-Revision so a deployed
+          # release can be matched against the exact tested commit. Written
+          # before checksumming so it is covered by SHA256SUMS and cannot drift
+          # from the immutable artifact it describes.
+          printf '%s\n' "${{ github.sha }}" > build/web/kubus-web-revision.txt
+
       - name: Pre-compress and checksum immutable web bundle
         shell: bash
         run: |
