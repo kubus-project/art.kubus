@@ -2,9 +2,13 @@ import 'dart:convert';
 
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
+import 'package:art_kubus/utils/username_policy.dart';
+import 'package:art_kubus/utils/username_policy_messages.dart';
 
-const int authMethodsPanelUsernameMinLength = 3;
-const int authMethodsPanelUsernameMaxLength = 50;
+/// Onboarding length bounds are the canonical [UsernamePolicy] bounds; they are
+/// re-exported under the historical names so existing callers keep compiling.
+const int authMethodsPanelUsernameMinLength = UsernamePolicy.minLength;
+const int authMethodsPanelUsernameMaxLength = UsernamePolicy.maxLength;
 
 Map<String, dynamic>? decodeAuthMethodsPanelErrorPayload(Object error) {
   Map<String, dynamic>? tryDecode(String raw) {
@@ -81,15 +85,9 @@ String? validateAuthMethodsPanelUsername(
   String rawUsername, {
   required bool required,
 }) {
-  final username = rawUsername.trim();
-  if (username.isEmpty) {
-    return required ? l10n.profileEditUsernameRequiredError : null;
-  }
-  if (username.length < authMethodsPanelUsernameMinLength) {
-    return l10n.profileEditUsernameMinLengthError;
-  }
-  if (username.length > authMethodsPanelUsernameMaxLength) {
-    return l10n.profileEditUsernameMaxLengthError;
-  }
-  return null;
+  final rejection = UsernamePolicy.rejectionFor(rawUsername);
+  // Onboarding may leave the username blank; every other rule is the canonical
+  // policy shared with profile edit and handle presentation.
+  if (rejection == UsernameRejection.empty && !required) return null;
+  return usernameRejectionMessage(l10n, rejection);
 }

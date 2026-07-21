@@ -73,17 +73,20 @@ void main() {
       expect(ProfileHandle.normalize('Иван'), '@Иван');
     });
 
-    test('does not invent an arbitrary maximum length (no 24-char cap)', () {
-      // 30 chars: past CreatorDisplayFormat's conservative 24-char slug cap but
-      // below the wallet-like heuristic's 32-char threshold, so a genuine long
-      // username is preserved verbatim rather than truncated.
-      final long = 'a' * 30;
+    test('uses the application maximum (50), not a slug cap', () {
+      // Past CreatorDisplayFormat's conservative 24-char slug cap, and past the
+      // old 32-char wallet heuristic, but within the varchar(50) column the
+      // canonical UsernamePolicy enforces.
+      const long = 'annakovacstreetmuralistljubljana2026';
+      expect(long.length, greaterThan(32));
       expect(ProfileHandle.normalize(long), '@$long');
+      expect(ProfileHandle.normalize('a' * 51), isNull);
     });
 
-    test('treats 32+ char continuous alphanumeric blobs as wallet-like', () {
-      // Shared WalletUtils heuristic is the de-facto bound for plain handles;
-      // ProfileHandle defers to it rather than inventing its own cap.
+    test('still hides values that really are base58 wallet keys', () {
+      // 40 chars drawn purely from the base58 alphabet is indistinguishable
+      // from a Solana address, so it stays hidden — and UsernamePolicy refuses
+      // it at edit time too, keeping validation and presentation in agreement.
       expect(ProfileHandle.normalize('a' * 40), isNull);
     });
 
