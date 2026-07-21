@@ -271,8 +271,7 @@ void main() {
 
 /// Rasterizes the whole rendered surface to PNG bytes.
 Future<List<int>> _captureRoot(WidgetTester tester) async {
-  final boundary =
-      tester.binding.renderViewElement!.renderObject! as RenderObject;
+  final boundary = tester.binding.rootElement!.renderObject!;
   final layer = boundary.debugLayer! as OffsetLayer;
   late final List<int> bytes;
   await tester.runAsync(() async {
