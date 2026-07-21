@@ -14,6 +14,8 @@ Ship production-ready Flutter features (AR, Solana, OrbitDB, storage) without br
 
 Preflight: always review **all** `AGENTS.md` files in this repo (root, `lib/**`, `backend/**`) before making changes.
 
+Branch and deployment governance is defined in [`docs/engineering/branching-and-deployment.md`](../docs/engineering/branching-and-deployment.md). Work from current `origin/dev` on a topic branch, preferably in a dedicated worktree. Never commit directly to `dev` or `master`; ordinary PRs target `dev`, while only `dev` release PRs and `hotfix/*` PRs target `master`. Do not merge PRs, deploy production, approve production environments, or change environment secrets without explicit authorization.
+
 ---
 
 ## Non-Negotiables
@@ -106,3 +108,4 @@ Backend endpoints are not guaranteed to exist in dev; the app must remain usable
 - Search before creating new code (`rg` first).
 - Prefer typed models over `Map<String, dynamic>` unless parsing API JSON.
 - Keep changes minimal, coherent, and production-grade.
+- Investigate CI failures instead of bypassing required checks. Preserve immutable artifacts, host verification, atomic promotion, smoke testing, and rollback in deployment code.

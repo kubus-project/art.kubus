@@ -1,0 +1,134 @@
+name: Scheduled quality
+
+on:
+  schedule:
+    - cron: '23 3 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: scheduled-quality
+  cancel-in-progress: true
+
+env:
+  FLUTTER_VERSION: '3.44.2'
+  NODE_VERSION: '22.15.0'
+
+jobs:
+  source:
+    name: Verify trusted scheduled source
+    runs-on: ubuntu-24.04
+    outputs:
+      sha: ${{ steps.source.outputs.sha }}
+    steps:
+      - id: source
+        shell: bash
+        env:
+          SOURCE_REF: ${{ github.ref }}
+          SOURCE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          case "$SOURCE_REF" in refs/heads/dev|refs/heads/master) ;; *) echo 'Scheduled quality accepts only dev or master.' >&2; exit 1 ;; esac
+          [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          echo "sha=$SOURCE_SHA" >> "$GITHUB_OUTPUT"
+
+  browser_matrix:
+    name: Chromium, Firefox, and WebKit smoke
+    needs: source
+    uses: ./.github/workflows/web-artifact.yml
+    with:
+      deployment_environment: development
+      source_sha: ${{ needs.source.outputs.sha }}
+      full_browser_matrix: false
+      browser_set: chromium,firefox,webkit
+
+  flutter_platform_matrix:
+    name: Flutter test on ${{ matrix.os }}
+    needs: source
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025, macos-15]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          ref: ${{ needs.source.outputs.sha }}
+          submodules: false
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze --fatal-infos --fatal-warnings
+      - run: flutter test
+
+  trusted_backend:
+    name: Full private backend quality and migration contracts
+    needs: source
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          ref: ${{ needs.source.outputs.sha }}
+          submodules: false
+      - name: Materialize private backend from trusted branch
+        env:
+          BACKEND_SUBMODULE_SSH_KEY: ${{ secrets.BACKEND_SUBMODULE_SSH_KEY }}
+        run: bash scripts/ci/checkout_backend_submodules.sh
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci --no-audit --no-fund
+        working-directory: backend
+      - run: npm run lint
+        working-directory: backend
+      - run: npm run test:ci
+        working-directory: backend
+        env:
+          NODE_ENV: test
+      - run: npm audit --omit=dev --audit-level=high
+        working-directory: backend
+      - run: npm run schema:parity
+        working-directory: backend
+
+  architecture_docs_and_audits:
+    name: Architecture, docs, and dependency audits
+    needs: source
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          ref: ${{ needs.source.outputs.sha }}
+          submodules: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: scripts/qa/package-lock.json
+      - run: npm run verify:architecture
+      - run: npm run docs:doctor
+      - run: npm --prefix scripts/qa ci --no-audit --no-fund
+      - run: npm --prefix scripts/qa audit --audit-level=high
+
+  production_canary:
+    name: Safe read-only production canary
+    needs: source
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check non-mutating production surfaces
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' https://app.kubus.site/app)" = 200
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' https://app.kubus.site/en)" = 200
+          curl --fail --silent --show-error https://app.kubus.site/robots.txt | grep -q 'Sitemap: https://app.kubus.site/sitemap.xml'

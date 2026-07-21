@@ -6,6 +6,22 @@ Mission: keep the Flutter + Node.js stack stable while extending AR, Solana, Orb
 
 Preflight: always review **all** `AGENTS.md` files in this repo (root, `lib/**`, `backend/**`) before making changes.
 Security handbook: `art.kubus-threat-model.md` is the living security baseline and hardening backlog.
+Engineering workflow: `docs/engineering/branching-and-deployment.md` is the canonical branch, CI, deployment, and release guide.
+
+## Branch, worktree, CI, and release governance
+
+- `master` is production-only. `dev` is the integration branch. Never develop or commit directly on either branch.
+- Before editing, run `git status`, `git branch --show-current`, and `git fetch origin`. Stop if the current branch is `master` or `dev`.
+- Ordinary work starts from the current `origin/dev`, uses a topic branch (`feature/`, `fix/`, `refactor/`, `ci/`, `docs/`, or `chore/`), and preferably uses a dedicated worktree.
+- Validate the topic branch by confirming that it has a merge base with the latest `origin/dev`; report meaningful divergence instead of requiring the branch tip to remain an ancestor after it gains commits.
+- Ordinary pull requests target `dev`. Only release pull requests from `dev` and emergency `hotfix/*` pull requests may target `master`.
+- Release pull requests use a merge commit. Ordinary topic pull requests into `dev` may use squash merge.
+- A production hotfix starts from `master` and must subsequently be merged or cherry-picked into `dev`.
+- Agents must not merge pull requests, deploy production, approve a protected production environment, or change environment secrets without explicit user authorization.
+- Investigate CI failures; never bypass, weaken, or rename required checks merely to obtain a green result.
+- Deployment changes must retain exact-SHA immutable artifacts, verified SSH hosts, safe remote paths, checksum verification, atomic promotion, revision-aware smoke tests, and automatic rollback.
+- UI changes require responsive validation and visual evidence where layout or appearance changes. Backend schema changes must continue to update both schema snapshots.
+- Keep these rules consistent across nested `AGENTS.md` files, Copilot instructions, contributor documentation, and the canonical engineering guide.
 
 ---
 

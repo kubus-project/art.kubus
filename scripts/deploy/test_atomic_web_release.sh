@@ -12,7 +12,8 @@ RELEASE_ROOT="$tmp_root/releases-root"
 INCOMING_DIR="$RELEASE_ROOT/incoming-$SOURCE_SHA"
 RELEASE_DIR="$RELEASE_ROOT/releases/$SOURCE_SHA"
 LIVE_DIR="$tmp_root/current"
-export SOURCE_SHA RELEASE_ROOT INCOMING_DIR RELEASE_DIR LIVE_DIR
+RETAIN_RELEASE_COUNT=1
+export SOURCE_SHA RELEASE_ROOT INCOMING_DIR RELEASE_DIR LIVE_DIR RETAIN_RELEASE_COUNT
 
 mkdir -p "$tmp_root/previous" "$INCOMING_DIR" "$tmp_root/payload"
 printf 'previous\n' > "$tmp_root/previous/index.html"
@@ -41,8 +42,15 @@ sh "$release_script" rollback
 
 sh "$release_script" promote
 [ "$(readlink "$LIVE_DIR")" = "$RELEASE_DIR" ]
+old_release_one="$RELEASE_ROOT/releases/1111111111111111111111111111111111111111"
+old_release_two="$RELEASE_ROOT/releases/2222222222222222222222222222222222222222"
+mkdir -p "$old_release_one" "$old_release_two"
+touch -t 202001010000 "$old_release_one"
+touch -t 202101010000 "$old_release_two"
 sh "$release_script" finalize
 [ ! -e "$RELEASE_ROOT/rollback-$SOURCE_SHA" ]
+[ ! -e "$old_release_one" ]
+[ -d "$old_release_two" ]
 rm -rf "$INCOMING_DIR"
 [ ! -e "$INCOMING_DIR" ]
 

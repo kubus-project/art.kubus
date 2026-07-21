@@ -1,158 +1,49 @@
 # Deployment gates
 
-The `Deploy` workflow promotes artifacts produced by a successful `CI` run. It
-does not rebuild source after CI. Both deployment environments retain their
-scoped secrets, but routine successful `master` CI must not require a reviewer
-gate: promotion and alpha publishing are automatic.
+The canonical branch and release model is documented in [`engineering/branching-and-deployment.md`](engineering/branching-and-deployment.md). This file records the operational gates used by the workflows.
+
+## Trust boundaries
+
+- `pr-validation.yml` runs unprivileged validation for PRs into `dev` and release-candidate PRs into `master`. It never references web deployment, Basic Auth, or mobile-signing secrets.
+- `deploy-development.yml` accepts only the exact current `dev` SHA and enters `development-web`.
+- `release-production.yml` accepts only the exact current `master` SHA and enters protected `production-web`.
+- `mobile-release.yml` accepts a `v*` tag or explicit manual run whose exact commit is contained by `master`; signing occurs only inside `android-release` or `ios-release`.
+- `scheduled-quality.yml` runs expensive trusted-source validation weekly or manually.
+
+Build and privileged deployment are separate jobs. A web artifact is named `flutter-web-<development|production>-<sha>`, contains `kubus-web-revision.txt`, `kubus-deployment-metadata.json`, and `SHA256SUMS`, and is consumed only when all three identities agree.
 
 ## Public build configuration
 
-Configure these repository or environment variables for CI. They are compiled
-into client applications and must never contain server credentials:
+The following repository variables are compiled into client applications and must never contain server credentials:
 
 - `KUBUS_BACKEND_URL`
 - `KUBUS_GOOGLE_CLIENT_ID`
 - `KUBUS_GOOGLE_WEB_CLIENT_ID`
 - `KUBUS_GOOGLE_IOS_CLIENT_ID`
+- optional `KUBUS_WALLETCONNECT_PROJECT_ID`
 
-`KUBUS_WALLETCONNECT_PROJECT_ID` is optional. When it is absent, compatible
-injected Solana browser wallets (including Wallet Standard providers) remain
-available, while the Reown QR/mobile fallback is disabled cleanly.
+Client-side Pinata credentials are forbidden and rejected by CI.
 
-Pinata API and secret keys are backend-only and are rejected from client build
-configuration by CI.
+## Web environments
 
-## Web promotion environment
+Create `development-web` and `production-web` with independent values. Both require environment variables `SFTP_PORT`, `WEB_SERVER_DIR`, `WEB_RELEASES_DIR`, `WEB_SMOKE_URL`, `ENVIRONMENT_NAME`, and `EXPECTED_DEPLOYMENT_HOST`. Both require environment secrets `SFTP_SERVER`, `SFTP_USERNAME`, `SFTP_PRIVATE_KEY`, `SFTP_PRIVATE_KEY_PASSPHRASE` when encrypted, and `SFTP_HOST_FINGERPRINT`.
 
-Public entity route ownership, required backend variables, proxy prerequisites,
-and coordinated rollback are documented in
-[`seo-public-pages.md`](seo-public-pages.md). Enable the renderer and validate it
-before promoting a web artifact whose `.htaccess` proxies localized public
-routes.
+`development-web` additionally requires `HTTP_BASIC_USERNAME` and `HTTP_BASIC_PASSWORD`. Restrict it to `dev`. Restrict `production-web` to `master` and require explicit approval. Repository-scoped deployment credentials must be migrated into `production-web`, independently provisioned for staging, and then removed from repository scope; do not copy production values blindly.
 
-Create a `production-web` environment with these secrets and variables. Do not
-configure required reviewers or a wait timer: the workflow automatically uploads
-the verified artifact and atomically promotes it after successful `master` CI.
+The live path must be a symlink to an immutable release directory. An approved manual run may set `bootstrap_web_root=true` once to preserve a physical document root below the release tree and replace it with the symlink. Normal pushes never bootstrap.
 
-- `SFTP_SERVER`
-- `SFTP_USERNAME`
-- `SFTP_PRIVATE_KEY`
-- `SFTP_HOST_FINGERPRINT`
-- `SFTP_PRIVATE_KEY_PASSPHRASE` when the key is encrypted
+Before upload, the workflow verifies the selected branch still points to the exact built SHA. It validates the expected hostname, safe absolute paths, SSH fingerprint, and remote availability of SSH commands, SHA-256, tar, symlinks, and atomic rename. It then uploads a checksum-protected archive, promotes through `atomic_web_release.sh`, runs environment-specific smoke, and rolls back on post-promotion failure. Finalization removes temporary upload data and retains a controlled number of previous SHA releases.
 
-Configure these environment variables:
+Development smoke verifies Basic Auth, `/app`, localized routes, the exact revision, staging `X-Robots-Tag`, deny-all `robots.txt`, and the absence of staging canonicals or sitemaps. Production smoke preserves root canonicalization, `/app`, localized semantic HTML, production robots/sitemap behavior, real 404s, revision identity, compact aliases, Flutter takeover, and the production SEO contract.
 
-- `SFTP_PORT` (defaults to `22`)
-- `WEB_SERVER_DIR`: absolute path to the symlink served as the live web root;
-  use `{SFTP_USERNAME}` when the protected username must not be exposed in a
-  repository variable (for example `/home/{SFTP_USERNAME}/app.kubus.site`)
-- `WEB_RELEASES_DIR`: optional absolute directory for immutable releases; the
-  same `{SFTP_USERNAME}` placeholder is supported
-- `WEB_SMOKE_URL`: public URL whose HTML loads the Flutter bootstrap
+## Mobile environments
 
-`WEB_SERVER_DIR` must be a symlink before the first automated promotion. If an
-existing document root is a physical directory, migrate it once during an
-approved maintenance window by manually dispatching `Deploy` with
-`bootstrap_web_root=true`. The bootstrap requires the live directory to be a
-direct child of the authenticated SFTP home, moves it beneath
-`WEB_RELEASES_DIR/releases/`, and replaces it with a symlink. It is idempotent,
-preserves the existing directory as the rollback target, and refuses symlinks
-that point outside the immutable releases tree. Ordinary automatic promotions
-never perform this migration.
+`android-release` contains `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEY_ALIAS`, `ANDROID_KEYSTORE_PASSWORD`, and `ANDROID_KEY_PASSWORD`. It builds and verifies signed APK and AAB packages.
 
-Every promotion verifies both the downloaded artifact checksum and the
-per-file checksum manifest, writes an immutable SHA-named release directory,
-atomically replaces the live symlink, and performs an HTTP smoke test. The smoke
-request forces normal cache revalidation with HTTP headers instead of adding a
-query parameter that hosting security filters can reject. A failed smoke restores
-the exact previous symlink target. CI exercises the same promotion and rollback
-script with `npm run verify:deploy`.
+When `IOS_RELEASE_ENABLED=true`, `ios-release` contains `IOS_DISTRIBUTION_CERTIFICATE_BASE64`, `IOS_DISTRIBUTION_CERTIFICATE_PASSWORD`, and `IOS_PROVISIONING_PROFILE_BASE64`, plus `IOS_TEAM_ID`, `IOS_BUNDLE_ID`, and optional `IOS_EXPORT_METHOD`. The workflow validates the profile identity, uses an ephemeral keychain, verifies the signed IPA, and removes signing material in an always-run cleanup step.
 
-Before any remote file operation, deployment checks the configured SSH endpoint
-up to six times with bounded backoff. A persistent connectivity failure stops
-before the release root is touched; restore the server's SSH service or inbound
-port access before retrying the workflow.
+GitHub Release publication uses immutable tags and artifacts and is separate from all web deployments. No mobile signing or publication occurs for pull requests.
 
-## Mobile release environments
+## Recovery
 
-Create a protected `android-release` environment with:
-
-- `ANDROID_KEYSTORE_BASE64`
-- `ANDROID_KEY_ALIAS`
-- `ANDROID_KEYSTORE_PASSWORD`
-- `ANDROID_KEY_PASSWORD`
-
-CI compiles an unsigned release APK. After successful `master` CI, `Deploy`
-derives `v<pubspec-version>-alpha`, signs that exact tested artifact, and creates
-an immutable prerelease when neither the release nor tag exists. Later commits
-at the same application version detect the existing release and skip signing
-successfully; they never replace its APK or move its tag. Bump `pubspec.yaml`
-before the next automatic alpha release.
-
-Manual `Deploy` runs can still sign a selected successful CI artifact without
-publishing it. Manual publication requires a new explicit tag and remains
-immutable.
-
-### iOS IPA publication
-
-CI continues to compile an unsigned iOS release on macOS. To attach a signed
-IPA to each new alpha release, create the `ios-release` environment and add:
-
-- `IOS_DISTRIBUTION_CERTIFICATE_BASE64`: base64-encoded Apple Distribution
-  `.p12` certificate
-- `IOS_DISTRIBUTION_CERTIFICATE_PASSWORD`
-- `IOS_PROVISIONING_PROFILE_BASE64`: base64-encoded profile matching the
-  distribution certificate and production bundle ID
-
-Set these repository variables only after the environment has those secrets:
-
-- `IOS_RELEASE_ENABLED=true`
-- `IOS_TEAM_ID`: ten-character Apple Developer team ID
-- `IOS_BUNDLE_ID=com.art.kubus`: the registered production application
-  bundle ID. It must match the source build setting and provisioning profile.
-- `IOS_EXPORT_METHOD`: optional; defaults to `ad-hoc`. Accepted values are
-  `ad-hoc`, `app-store`, `development`, and `enterprise`.
-
-The signing job downloads the exact CI public-build inputs, checks that the
-profile's team and application identifier match the configured values, installs
-the certificate into a temporary keychain, verifies the signed IPA's bundle ID
-and signature, uploads a SHA-256 checksum, then attaches both files to the
-already-created immutable alpha release. It deletes the temporary keychain and
-generated signing configuration in an always-run cleanup step.
-
-Register `com.art.kubus` as an explicit App ID in Apple Developer before
-creating the profile. Update or create the Google iOS OAuth client for that
-same bundle ID, then set its client ID in the existing
-`KUBUS_GOOGLE_IOS_CLIENT_ID` repository variable. CI writes the matching
-native `Info.plist` configuration from that value; do not commit a generated
-Google configuration file.
-
-`ad-hoc` IPAs only install on devices registered in the provisioning profile.
-For TestFlight or App Store distribution, choose `app-store` and upload the
-resulting IPA through the approved App Store Connect release process; attaching
-an IPA to GitHub does not publish it to TestFlight.
-
-Until `IOS_RELEASE_ENABLED` is set, the iOS signing job is intentionally
-skipped so missing Apple credentials cannot block the established Android and
-web release path.
-
-## CI build metadata
-
-`version.json` and `pubspec.yaml` retain the manually selected `X.Y.Z` version.
-Every CI workflow derives its own UTC build date and Android-safe build number
-without committing generated version changes. The build number uses
-`YYDDDNNNN`: the UTC two-digit year, day of year, and a one-to-10,000 sequence
-derived from the GitHub workflow run number. It is monotonic across normal CI
-runs, supports up to 10,000 runs per day, and stays below Android's
-`versionCode` limit.
-
-The generated metadata is passed to all Flutter web, Android, and iOS builds as
-both Flutter build arguments and Dart defines. A semantic version bump remains
-a deliberate source change and is the only event that creates the next alpha
-release tag.
-
-## Manual promotion
-
-A manual run requires the successful CI run ID and its full 40-character commit
-SHA. The workflow queries GitHub before downloading artifacts and fails if the
-workflow name, conclusion, or commit does not match.
+An upload or checksum failure occurs before promotion and cannot change the live symlink. A smoke failure after promotion invokes rollback to the exact previous target. If rollback itself fails, stop and inspect the release-specific state; do not delete it blindly or start a second promotion. Production deployment or environment approval always requires explicit human authorization.

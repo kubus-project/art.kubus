@@ -5,6 +5,15 @@ Ship Flutter UI without breaking Kubus design tokens, theme roles, feature flags
 
 Preflight: review all `AGENTS.md` files (root, `lib/**`, `backend/**`) before making changes.
 
+## Branch governance
+
+The root `AGENTS.md` branch, worktree, CI, and release rules are mandatory here.
+
+Work on a topic branch created from the current `origin/dev`.
+Do not commit directly to `dev` or `master`.
+Ordinary pull requests target `dev`.
+Only release and emergency hotfix pull requests target `master`.
+
 ## Design tokens & Kubus colors (single source of truth)
 - Import `package:art_kubus/widgets/kubus_kit.dart` for the canonical component set; its dartdoc has the component decision table.
 - Never inline `Color(0x...)`, raw `Border.all`/`BorderSide` colors, `BackdropFilter`, or `GoogleFonts.*` in widgets — enforced by `packages/kubus_lints` (grandfathered files carry `// ignore_for_file` headers; `tool/kubus_lint_ratchet.json` only ratchets down).

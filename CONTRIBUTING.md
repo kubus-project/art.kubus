@@ -10,23 +10,26 @@ Backend implementation and production operations remain proprietary unless expli
 ## Before you start
 
 - Read `AGENTS.md` and `.github/copilot-instructions.md` for project guardrails.
+- Read [`docs/engineering/branching-and-deployment.md`](docs/engineering/branching-and-deployment.md) for the canonical branch and release model.
 - Check existing issues/PRs before opening a new one.
 - Keep changes small and focused.
 
 ## Development flow
 
-1. Fork the repository.
-2. Create a branch from `main`.
+1. Fetch the repository and start from the current `origin/dev`.
+2. Create a focused topic branch, preferably in a dedicated worktree. Do not commit directly to `dev` or `master`.
 3. Make changes with clear commit messages.
 4. Run validation locally:
    - `flutter pub get`
    - `flutter analyze`
    - `flutter test`
-5. Open a pull request with:
+5. Open an ordinary pull request targeting `dev` with:
    - problem statement,
    - scope of change,
    - screenshots (if UI),
    - test notes.
+
+Production releases are merge-commit pull requests from `dev` to `master`. Emergency `hotfix/*` branches start from `master`, target `master`, and must subsequently be reconciled into `dev`. Contributors and agents must not merge pull requests or deploy production without explicit authorization.
 
 ## Coding expectations
 

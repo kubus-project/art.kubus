@@ -3,7 +3,6 @@ name: Pages (docs)
 on:
   push:
     branches:
-      - main
       - master
     paths:
       - 'docs/**'
@@ -41,8 +40,9 @@ jobs:
             echo "Add docs/index.html (recommended for static Pages) or docs/index.md." >&2
             exit 1
           fi
-          echo "Docs files:";
-          ls -la docs | head -n 50
+          echo "Publishing production-facing documentation from master only."
+          echo "Docs files:"
+          find docs -maxdepth 1 -mindepth 1 -print | sort | head -n 50
 
       # If your docs are already plain markdown/static files, we can publish as-is.
       # GitHub Pages will render Markdown in the repository view, but Pages serves static assets.
