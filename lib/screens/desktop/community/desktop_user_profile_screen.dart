@@ -695,13 +695,16 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     final scheme = Theme.of(context).colorScheme;
 
     // The avatar overlaps the cover's bottom edge by a small *fixed* amount —
-    // never by the identity content's height. Previously the whole avatar +
-    // identity row was `Positioned(bottom:)` inside the cover `Stack`, so at
-    // large text scales the wrapped name grew upward past the stack's own top
-    // edge and visually collided with the utility toolbar above the card. Text
-    // now lays out in normal flow below the cover and can never overlap
-    // anything above it, regardless of name length or text scale.
+    // it is a constant-size circle, so `Positioned(bottom:)` inside the cover
+    // `Stack` is safe for it (bounded, cannot grow with text scale). Identity
+    // text is different: it used to share that same Positioned row, so at
+    // large text scales a wrapped display name grew upward past the stack's
+    // own top edge and visually collided with the utility toolbar above the
+    // card. Identity now lays out in normal flow below the cover — using only
+    // non-negative padding, since Flutter's `Padding` asserts
+    // `padding.isNonNegative` — and can never overlap anything above it.
     const avatarOverlap = 32.0;
+    final avatarDiameter = (avatarRadius + avatarRingPadding) * 2;
 
     return LiquidGlassCard(
       padding: EdgeInsets.zero,
@@ -714,6 +717,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
               top: Radius.circular(KubusRadius.lg),
             ),
             child: Stack(
+              clipBehavior: Clip.none,
               children: [
                 Container(
                   height: hasCoverImage
@@ -771,68 +775,62 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                     ),
                   ),
                 ),
+                Positioned(
+                  left: KubusSpacing.lg,
+                  bottom: -avatarOverlap,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: scheme.surface.withValues(alpha: 0.94),
+                      borderRadius: BorderRadius.circular(
+                        avatarRingShapeRadius,
+                      ),
+                      border: Border.all(
+                        color: scheme.outline.withValues(alpha: 0.24),
+                        width: KubusSizes.hairline + 0.2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Theme.of(context)
+                              .shadowColor
+                              .withValues(alpha: 0.12),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(avatarRingPadding),
+                      child: AvatarWidget(
+                        wallet: user!.id,
+                        avatarUrl: user!.profileImageUrl,
+                        radius: avatarRadius,
+                        borderWidth: 0,
+                        borderColor: Colors.transparent,
+                        cornerRadiusFactor: avatarCornerRadiusFactor,
+                        enableProfileNavigation: false,
+                        heroTag: widget.heroTag,
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
           Padding(
-            padding: const EdgeInsets.only(
-              left: KubusSpacing.lg,
+            padding: EdgeInsets.only(
+              left: KubusSpacing.lg + avatarDiameter + KubusSpacing.md,
               right: KubusSpacing.lg,
-              top: -avatarOverlap,
+              top: avatarOverlap,
+              bottom: KubusSpacing.sm,
             ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: scheme.surface.withValues(alpha: 0.94),
-                    borderRadius: BorderRadius.circular(
-                      avatarRingShapeRadius,
-                    ),
-                    border: Border.all(
-                      color: scheme.outline.withValues(alpha: 0.24),
-                      width: KubusSizes.hairline + 0.2,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Theme.of(context)
-                            .shadowColor
-                            .withValues(alpha: 0.12),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(avatarRingPadding),
-                    child: AvatarWidget(
-                      wallet: user!.id,
-                      avatarUrl: user!.profileImageUrl,
-                      radius: avatarRadius,
-                      borderWidth: 0,
-                      borderColor: Colors.transparent,
-                      cornerRadiusFactor: avatarCornerRadiusFactor,
-                      enableProfileNavigation: false,
-                      heroTag: widget.heroTag,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: KubusSpacing.md),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: KubusSpacing.sm),
-                    child: ProfileIdentityBlock(
-                      displayName: user!.name,
-                      handle: user!.username,
-                      isVerified: user!.isVerified,
-                      isArtist: isArtist,
-                      isInstitution: isInstitution,
-                      nameColor: scheme.onSurface,
-                      handleColor: scheme.onSurface.withValues(alpha: 0.60),
-                    ),
-                  ),
-                ),
-              ],
+            child: ProfileIdentityBlock(
+              displayName: user!.name,
+              handle: user!.username,
+              isVerified: user!.isVerified,
+              isArtist: isArtist,
+              isInstitution: isInstitution,
+              nameColor: scheme.onSurface,
+              handleColor: scheme.onSurface.withValues(alpha: 0.60),
             ),
           ),
           const SizedBox(height: KubusSpacing.sm),
