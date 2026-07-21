@@ -91,10 +91,12 @@ test('branch deployments have isolated sources, environments, and concurrency', 
   assert.match(development, /group:\s*deploy-development/);
   assert.match(development, /environment_name:\s*development-web/);
   assert.doesNotMatch(development, /production-web|branches:\s*\n\s*- master/);
+  assert.doesNotMatch(development, /secrets:\s*inherit/);
   assert.match(production, /branches:\s*\n\s*- master/);
   assert.match(production, /group:\s*deploy-production/);
   assert.match(production, /environment_name:\s*production-web/);
   assert.doesNotMatch(production, /development-web|branches:\s*\n\s*- dev/);
+  assert.doesNotMatch(production, /secrets:\s*inherit/);
 });
 
 test('privileged deployment preserves SHA, stale-head, host, smoke, and rollback gates', () => {
