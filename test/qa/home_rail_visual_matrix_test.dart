@@ -19,6 +19,16 @@ import '../support/qa_font_loader.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  const optInVariable = 'KUBUS_RUN_VISUAL_QA';
+  if (Platform.environment[optInVariable] != '1') {
+    test(
+      'visual QA matrix is opt-in',
+      () {},
+      skip: 'Set $optInVariable=1 to generate screenshot evidence.',
+    );
+    return;
+  }
+
   final outputDir = Directory('output/qa/home-rails');
   final captures = <Map<String, Object?>>[];
 
