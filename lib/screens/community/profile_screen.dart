@@ -24,6 +24,7 @@ import '../../services/share/share_types.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../utils/profile_showcase_normalizer.dart';
 import '../../utils/app_color_utils.dart';
+import '../../utils/profile_handle.dart';
 import '../../community/community_interactions.dart';
 import '../web3/wallet/wallet_home.dart';
 import '../settings_screen.dart';
@@ -347,10 +348,8 @@ class _ProfileScreenState extends State<ProfileScreen>
           final displayName = profileProvider.currentUser?.displayName ??
               profileProvider.currentUser?.username ??
               AppLocalizations.of(context)!.profilePersonaArtEnthusiast;
-          final username = profileProvider.currentUser?.username.trim() ?? '';
-          final usernameLabel = username.isEmpty
-              ? ''
-              : (username.startsWith('@') ? username : '@$username');
+          final usernameLabel =
+              ProfileHandle.normalize(profileProvider.currentUser?.username);
           final identityTitleColor =
               hasCoverImage ? Colors.white : scheme.onSurface;
           final identitySubtitleColor = hasCoverImage
@@ -663,7 +662,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                         ],
                                       ],
                                     ),
-                                    if (usernameLabel.isNotEmpty) ...[
+                                    if (usernameLabel != null) ...[
                                       const SizedBox(height: KubusSpacing.xs),
                                       Text(
                                         usernameLabel,
@@ -671,7 +670,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                                             .copyWith(
                                           color: identitySubtitleColor,
                                         ),
-                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ],
                                   ],

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/promotion.dart';
+import '../../utils/home_rail_semantics.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../widgets/glass_components.dart';
@@ -144,11 +145,15 @@ class _HomePromotionRailCard extends StatefulWidget {
 
 class _HomePromotionRailCardState extends State<_HomePromotionRailCard> {
   bool _isHovered = false;
+  bool _isFocused = false;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    // Entity-semantic accent shared with the section header, map markers and
+    // the desktop rail via the single HomeRailSemantics resolver.
+    final accent = HomeRailSemantics.of(context, widget.item.entityType);
     final style = KubusGlassStyle.resolve(
       context,
       surfaceType: KubusGlassSurfaceType.card,
@@ -157,27 +162,34 @@ class _HomePromotionRailCardState extends State<_HomePromotionRailCard> {
     final borderRadius = BorderRadius.circular(18);
 
     final cardChild = widget.item.entityType == PromotionEntityType.profile
-        ? _buildProfileCard(context)
-        : _buildMediaCard(context);
+        ? _buildProfileCard(context, accent)
+        : _buildMediaCard(context, accent);
+
+    // Keyboard focus is a first-class, always-available signal; hover lift is
+    // opt-in per surface (desktop rails). Both drive the same accent edge.
+    final highlighted = _isFocused || (_isHovered && widget.enableHover);
+    final lifted = _isFocused || (_isHovered && widget.enableHover);
 
     final decorated = AnimatedContainer(
       duration: const Duration(milliseconds: 180),
       curve: Curves.easeOutCubic,
       width: widget.width,
       transform:
-          _isHovered ? Matrix4.translationValues(0, -2, 0) : Matrix4.identity(),
+          lifted ? Matrix4.translationValues(0, -2, 0) : Matrix4.identity(),
       decoration: BoxDecoration(
         borderRadius: borderRadius,
         border: Border.all(
-          color: _isHovered && widget.enableHover
-              ? scheme.primary.withValues(alpha: 0.22)
-              : scheme.outline.withValues(alpha: 0.14),
-          width: _isHovered && widget.enableHover ? 1.25 : 1,
+          color: _isFocused
+              ? accent.withValues(alpha: 0.85)
+              : highlighted
+                  ? accent.withValues(alpha: 0.42)
+                  : scheme.outline.withValues(alpha: 0.14),
+          width: _isFocused ? 2 : (highlighted ? 1.25 : 1),
         ),
-        boxShadow: _isHovered && widget.enableHover
+        boxShadow: highlighted
             ? [
                 BoxShadow(
-                  color: scheme.shadow.withValues(alpha: 0.10),
+                  color: accent.withValues(alpha: 0.14),
                   blurRadius: 18,
                   offset: const Offset(0, 8),
                 ),
@@ -204,13 +216,22 @@ class _HomePromotionRailCardState extends State<_HomePromotionRailCard> {
       ),
     );
 
-    return MouseRegion(
-      cursor:
+    return FocusableActionDetector(
+      enabled: widget.onTap != null,
+      mouseCursor:
           widget.onTap != null ? SystemMouseCursors.click : MouseCursor.defer,
-      onEnter:
-          widget.enableHover ? (_) => setState(() => _isHovered = true) : null,
-      onExit:
-          widget.enableHover ? (_) => setState(() => _isHovered = false) : null,
+      actions: <Type, Action<Intent>>{
+        ActivateIntent: CallbackAction<ActivateIntent>(
+          onInvoke: (_) {
+            widget.onTap?.call();
+            return null;
+          },
+        ),
+      },
+      onShowHoverHighlight: widget.enableHover
+          ? (hovered) => setState(() => _isHovered = hovered)
+          : null,
+      onShowFocusHighlight: (focused) => setState(() => _isFocused = focused),
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: widget.onTap,
@@ -219,7 +240,7 @@ class _HomePromotionRailCardState extends State<_HomePromotionRailCard> {
     );
   }
 
-  Widget _buildMediaCard(BuildContext context) {
+  Widget _buildMediaCard(BuildContext context, Color accent) {
     final scheme = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -234,6 +255,15 @@ class _HomePromotionRailCardState extends State<_HomePromotionRailCard> {
                 _CardImageSurface(
                   imageUrl: widget.item.imageUrl,
                   placeholderIcon: widget.placeholderIcon,
+                  accent: accent,
+                ),
+                // Restrained entity-semantic edge along the base of the media.
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: Container(
+                      height: 3, color: accent.withValues(alpha: 0.9)),
                 ),
                 DecoratedBox(
                   decoration: BoxDecoration(
@@ -291,7 +321,7 @@ class _HomePromotionRailCardState extends State<_HomePromotionRailCard> {
     );
   }
 
-  Widget _buildProfileCard(BuildContext context) {
+  Widget _buildProfileCard(BuildContext context, Color accent) {
     final theme = Theme.of(context);
     final identity = ProfileIdentityData.fromHomeRailItem(
       widget.item,
@@ -308,6 +338,14 @@ class _HomePromotionRailCardState extends State<_HomePromotionRailCard> {
             imageUrl: backgroundUrl,
             placeholderIcon: widget.placeholderIcon,
             alignPlaceholderToTop: false,
+            accent: accent,
+          ),
+          // Restrained entity-semantic edge along the base of the profile card.
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: Container(height: 3, color: accent.withValues(alpha: 0.9)),
           ),
           DecoratedBox(
             decoration: BoxDecoration(
@@ -365,11 +403,13 @@ class _CardImageSurface extends StatelessWidget {
   const _CardImageSurface({
     required this.imageUrl,
     required this.placeholderIcon,
+    required this.accent,
     this.alignPlaceholderToTop = true,
   });
 
   final String? imageUrl;
   final IconData placeholderIcon;
+  final Color accent;
   final bool alignPlaceholderToTop;
 
   @override
@@ -396,12 +436,14 @@ class _CardImageSurface extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return DecoratedBox(
       decoration: BoxDecoration(
+        // Entity-semantic placeholder tint so an image-less card still reads as
+        // its rail type; the calm surface base keeps it restrained.
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            scheme.primary.withValues(alpha: 0.22),
-            scheme.secondary.withValues(alpha: 0.18),
+            accent.withValues(alpha: 0.24),
+            accent.withValues(alpha: 0.12),
             scheme.surfaceContainerHigh.withValues(alpha: 0.28),
           ],
         ),

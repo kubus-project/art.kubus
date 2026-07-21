@@ -17,6 +17,7 @@ import '../../../services/share/share_service.dart';
 import '../../../services/share/share_types.dart';
 import '../../../utils/artwork_navigation.dart';
 import '../../../utils/app_color_utils.dart';
+import '../../../utils/profile_handle.dart';
 import '../../../utils/media_url_resolver.dart';
 import '../../../utils/profile_showcase_normalizer.dart';
 import '../../../community/community_interactions.dart';
@@ -692,10 +693,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
     final scheme = Theme.of(context).colorScheme;
     final displayName = user?.displayName ?? user?.username ?? 'Art Enthusiast';
-    final username = user?.username.trim() ?? '';
-    final usernameLabel = username.isEmpty
-        ? ''
-        : (username.startsWith('@') ? username : '@$username');
+    final usernameLabel = ProfileHandle.normalize(user?.username);
     final titleColor = hasCoverImage ? Colors.white : scheme.onSurface;
     final subtitleColor = hasCoverImage
         ? Colors.white.withValues(alpha: 0.78)
@@ -858,14 +856,13 @@ class _ProfileScreenState extends State<ProfileScreen>
                               ],
                             ],
                           ),
-                          if (usernameLabel.isNotEmpty) ...[
+                          if (usernameLabel != null) ...[
                             const SizedBox(height: KubusSpacing.xs),
                             Text(
                               usernameLabel,
                               style: KubusTextStyles.profileHandle.copyWith(
                                 color: subtitleColor,
                               ),
-                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ],
