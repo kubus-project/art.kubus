@@ -69,6 +69,7 @@ app.*.map.json
 /backend/ssl/**
 /output/playwright/artifacts/
 /output/visual-qa/
+/output/qa/
 
 # Firebase configuration files
 /android/app/google-services.json
