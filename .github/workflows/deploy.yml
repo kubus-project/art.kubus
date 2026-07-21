@@ -342,18 +342,31 @@ jobs:
           PUBLIC_TAKEOVER_URL: ${{ vars.PUBLIC_TAKEOVER_URL }}
           PUBLIC_TAKEOVER_MISSING_URL: ${{ vars.PUBLIC_TAKEOVER_MISSING_URL }}
           PUBLIC_TAKEOVER_OPTIONAL_STANDBY_URL: ${{ vars.PUBLIC_TAKEOVER_OPTIONAL_STANDBY_URL }}
+          PUBLIC_CONTRACT_ARTWORK_ID: ${{ vars.PUBLIC_CONTRACT_ARTWORK_ID }}
         run: |
           set -euo pipefail
+          origin="$(printf '%s' "$WEB_SMOKE_URL" | sed -E 's#(https?://[^/]+).*#\1#')"
+
+          # Root canonicalization: exactly one permanent hop into the localized
+          # canonical. Root must NOT serve the Flutter shell, or it becomes a
+          # second indexable homepage competing with /en.
+          root_status="$(curl --silent --output /dev/null --write-out '%{http_code}' "$origin/")"
+          root_target="$(curl --silent --output /dev/null --write-out '%{redirect_url}' "$origin/")"
+          if [ "$root_status" != '308' ] || [ "$root_target" != "$origin/en" ]; then
+            echo "Root canonicalization broken: expected 308 -> $origin/en, got $root_status -> $root_target" >&2
+            exit 1
+          fi
+
+          # The interactive app keeps its own entry at /app (PWA start_url).
           response="$RUNNER_TEMP/web-smoke.html"
-          curl --fail --silent --show-error --location \
+          curl --fail --silent --show-error \
             --retry 5 --retry-delay 3 --retry-all-errors \
             --header 'Cache-Control: no-cache' \
             --header 'Pragma: no-cache' \
-            "$WEB_SMOKE_URL" \
+            "$origin/app" \
             --output "$response"
           grep -Eq 'flutter_bootstrap\.js|main\.dart\.js' "$response"
 
-          origin="$(printf '%s' "$WEB_SMOKE_URL" | sed -E 's#(https?://[^/]+).*#\1#')"
           public_home="$RUNNER_TEMP/public-home.html"
           robots="$RUNNER_TEMP/robots.txt"
           curl --fail --silent --show-error --retry 5 --retry-delay 3 \
@@ -367,6 +380,29 @@ jobs:
           curl --fail --silent --show-error "$origin/robots.txt" --output "$robots"
           grep -q "Sitemap: $origin/sitemap.xml" "$robots"
           test "$(curl --silent --output /dev/null --write-out '%{http_code}' "$origin/__deploy_unknown_${SOURCE_SHA}")" = '404'
+
+          # Deployment revision identity: production must serve the exact tested
+          # commit. Guards against a promoted symlink that did not actually
+          # switch, or a stale cached artifact surviving the release.
+          served_revision="$(curl --silent --head "$origin/en" \
+            | tr -d '\r' \
+            | awk 'BEGIN{IGNORECASE=1} /^X-Kubus-Web-Revision:/ {print $2}')"
+          if [ "$served_revision" != "$SOURCE_SHA" ]; then
+            echo "Revision drift: production serves '${served_revision:-<absent>}', expected '$SOURCE_SHA'." >&2
+            exit 1
+          fi
+
+          # Compact aliases must resolve in one permanent hop to the localized
+          # canonical entity URL, never to a generic app shell.
+          if [ -n "${PUBLIC_TAKEOVER_URL:-}" ]; then
+            alias_id="$(printf '%s' "$PUBLIC_TAKEOVER_URL" | sed -E 's#.*/##')"
+            alias_status="$(curl --silent --output /dev/null --write-out '%{http_code}' "$origin/a/$alias_id")"
+            alias_target="$(curl --silent --output /dev/null --write-out '%{redirect_url}' "$origin/a/$alias_id")"
+            if [ "$alias_status" != '308' ] || [ "$alias_target" != "$origin/en/artworks/$alias_id" ]; then
+              echo "Compact alias broken: expected 308 -> $origin/en/artworks/$alias_id, got $alias_status -> $alias_target" >&2
+              exit 1
+            fi
+          fi
 
           case "${EXPECT_PUBLIC_FLUTTER_TAKEOVER,,}" in
             true|1|yes|on)
@@ -388,6 +424,22 @@ jobs:
               exit 1
               ;;
           esac
+
+          # Full public SEO transport contract. Runs inside this step on purpose:
+          # a failure here must reach the rollback guard below, which keys on
+          # steps.smoke.outcome. The eligible artwork id comes from protected
+          # deployment configuration - PUBLIC_CONTRACT_ARTWORK_ID when set,
+          # otherwise the id already configured for the takeover smoke.
+          contract_id="${PUBLIC_CONTRACT_ARTWORK_ID:-}"
+          if [ -z "$contract_id" ] && [ -n "${PUBLIC_TAKEOVER_URL:-}" ]; then
+            contract_id="$(printf '%s' "$PUBLIC_TAKEOVER_URL" | sed -E 's#.*/##')"
+          fi
+          if [ -z "$contract_id" ]; then
+            echo 'No eligible artwork id available; set PUBLIC_CONTRACT_ARTWORK_ID or PUBLIC_TAKEOVER_URL.' >&2
+            exit 1
+          fi
+          KUBUS_ORIGIN="$origin" KUBUS_ARTWORK_ID="$contract_id" \
+            node scripts/qa/production_seo_contract.mjs
 
       - name: Roll back failed web smoke
         if: ${{ failure() && steps.promote.outcome == 'success' && steps.smoke.outcome == 'failure' }}
