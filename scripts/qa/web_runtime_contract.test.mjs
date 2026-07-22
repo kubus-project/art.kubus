@@ -16,6 +16,10 @@ const workflow = (name) => readFileSync(
   resolve(repoRoot, '.github', 'workflows', name),
   'utf8',
 );
+const deployAction = () => readFileSync(
+  resolve(repoRoot, '.github', 'actions', 'deploy-web-artifact', 'action.yml'),
+  'utf8',
+);
 
 test('takeover smoke parses the serialized Flutter event contract', () => {
   assert.deepEqual(
@@ -126,11 +130,11 @@ test('web-root migration remains an explicit manual deployment action', () => {
     assert.match(caller, /bootstrap_web_root:\s*[\s\S]*?default:\s*false\s*[\s\S]*?type:\s*boolean/);
     assert.match(caller, /bootstrap_web_root: \$\{\{ github\.event_name == 'workflow_dispatch' && inputs\.bootstrap_web_root \}\}/);
   }
-  const reusable = workflow('web-deploy-reusable.yml');
+  const deploy = deployAction();
   assert.equal(
-    (reusable.match(/if:\s*\$\{\{[^}\r\n]*inputs\.bootstrap_web_root[^}\r\n]*\}\}/g) || []).length,
+    (deploy.match(/if:\s*\$\{\{[^}\r\n]*inputs\.bootstrap_web_root == 'true'[^}\r\n]*\}\}/g) || []).length,
     2,
-    'both bootstrap steps must require the explicit caller input',
+    "both bootstrap steps must require the explicit caller input to equal the string 'true'",
   );
 });
 
@@ -351,13 +355,23 @@ test('deployed public takeover smoke remains opt-in and verifies the complete ha
 });
 
 test('production deployment enforces and can roll back the canonical takeover smoke', () => {
-  const deploy = workflow('web-deploy-reusable.yml');
+  const deploy = deployAction();
+  const release = workflow('release-production.yml');
   const smoke = readFileSync(resolve(repoRoot, 'scripts', 'deploy', 'smoke_production_web.sh'), 'utf8');
 
-  assert.match(deploy, /EXPECT_PUBLIC_FLUTTER_TAKEOVER: \$\{\{ vars\.EXPECT_PUBLIC_FLUTTER_TAKEOVER/);
-  assert.match(deploy, /PUBLIC_TAKEOVER_URL: \$\{\{ vars\.PUBLIC_TAKEOVER_URL \}\}/);
-  assert.match(deploy, /PUBLIC_TAKEOVER_MISSING_URL: \$\{\{ vars\.PUBLIC_TAKEOVER_MISSING_URL \}\}/);
-  assert.match(deploy, /PUBLIC_TAKEOVER_OPTIONAL_STANDBY_URL: \$\{\{ vars\.PUBLIC_TAKEOVER_OPTIONAL_STANDBY_URL \}\}/);
+  // The composite action consumes takeover configuration as inputs; a composite
+  // action cannot read the `vars` context directly.
+  assert.match(deploy, /EXPECT_PUBLIC_FLUTTER_TAKEOVER: \$\{\{ inputs\.expect_public_flutter_takeover/);
+  assert.match(deploy, /PUBLIC_TAKEOVER_URL: \$\{\{ inputs\.public_takeover_url \}\}/);
+  assert.match(deploy, /PUBLIC_TAKEOVER_MISSING_URL: \$\{\{ inputs\.public_takeover_missing_url \}\}/);
+  assert.match(deploy, /PUBLIC_TAKEOVER_OPTIONAL_STANDBY_URL: \$\{\{ inputs\.public_takeover_optional_standby_url \}\}/);
+
+  // The environment-bound production caller forwards those variables from `vars`.
+  assert.match(release, /expect_public_flutter_takeover: \$\{\{ vars\.EXPECT_PUBLIC_FLUTTER_TAKEOVER \}\}/);
+  assert.match(release, /public_takeover_url: \$\{\{ vars\.PUBLIC_TAKEOVER_URL \}\}/);
+  assert.match(release, /public_takeover_missing_url: \$\{\{ vars\.PUBLIC_TAKEOVER_MISSING_URL \}\}/);
+  assert.match(release, /public_takeover_optional_standby_url: \$\{\{ vars\.PUBLIC_TAKEOVER_OPTIONAL_STANDBY_URL \}\}/);
+
   assert.match(smoke, /npx playwright install --with-deps chromium firefox/);
   assert.match(smoke, /npm --prefix scripts\/qa run qa:public-takeover/);
   assert.match(
@@ -367,7 +381,7 @@ test('production deployment enforces and can roll back the canonical takeover sm
 });
 
 test('web deployment retries SSH reachability before mutating the release root', () => {
-  const deploy = workflow('web-deploy-reusable.yml');
+  const deploy = deployAction();
 
   assert.match(deploy, /Wait for SSH deployment endpoint/);
   assert.match(deploy, /for attempt in 1 2 3 4 5 6/);
