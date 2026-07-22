@@ -82,4 +82,4 @@ resolver; `ProfileHeaderShell` actively used or removed.
 ## Rollback boundaries
 Each phase is an independent commit. `profile_handle.dart` and
 `home_rail_semantics.dart` are additive; screen wiring reverts per-commit.
-`backend-open-art-wt` (unrelated local change) is never staged.
+Unrelated backend gitlink changes are never staged as part of this UI plan.

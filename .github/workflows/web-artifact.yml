@@ -1,0 +1,196 @@
+name: Reusable immutable web artifact
+
+on:
+  workflow_call:
+    inputs:
+      deployment_environment:
+        description: 'Artifact policy: development or production'
+        required: true
+        type: string
+      source_sha:
+        description: Exact 40-character source commit
+        required: true
+        type: string
+      full_browser_matrix:
+        description: Run the extended responsive browser matrix
+        required: false
+        default: false
+        type: boolean
+      browser_set:
+        description: Comma-separated Playwright browsers
+        required: false
+        default: chromium
+        type: string
+    outputs:
+      artifact_name:
+        description: Immutable artifact name
+        value: ${{ jobs.build.outputs.artifact_name }}
+
+permissions:
+  contents: read
+
+env:
+  FLUTTER_VERSION: '3.44.2'
+  NODE_VERSION: '22.15.0'
+  NPM_VERSION: '11.7.0'
+
+jobs:
+  build:
+    name: Build and locally smoke exact web artifact
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    outputs:
+      artifact_name: ${{ steps.artifact.outputs.name }}
+    steps:
+      - name: Validate reusable workflow inputs
+        shell: bash
+        env:
+          DEPLOYMENT_ENVIRONMENT: ${{ inputs.deployment_environment }}
+          SOURCE_SHA: ${{ inputs.source_sha }}
+        run: |
+          set -euo pipefail
+          case "$DEPLOYMENT_ENVIRONMENT" in development|production) ;; *) exit 1 ;; esac
+          [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
+
+      - name: Checkout exact source
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          ref: ${{ inputs.source_sha }}
+          fetch-depth: 1
+          submodules: false
+
+      - name: Verify checkout identity
+        shell: bash
+        env:
+          SOURCE_SHA: ${{ inputs.source_sha }}
+        run: test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+
+      - name: Set up pinned Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: scripts/qa/package-lock.json
+
+      - name: Set up pinned npm
+        run: npm install --global "npm@${NPM_VERSION}"
+
+      - name: Set up pinned Flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Verify toolchains and locked dependencies
+        run: |
+          npm run verify:toolchain:node
+          npm run verify:toolchain:flutter
+          flutter pub get
+          git diff --exit-code -- pubspec.lock
+
+      - name: Resolve immutable build metadata
+        id: metadata
+        run: node scripts/resolve_ci_build_metadata.mjs --github-output "$GITHUB_OUTPUT"
+
+      - name: Prepare public build configuration
+        env:
+          KUBUS_BACKEND_URL: ${{ vars.KUBUS_BACKEND_URL }}
+          KUBUS_GOOGLE_CLIENT_ID: ${{ vars.KUBUS_GOOGLE_CLIENT_ID }}
+          KUBUS_GOOGLE_WEB_CLIENT_ID: ${{ vars.KUBUS_GOOGLE_WEB_CLIENT_ID }}
+          KUBUS_GOOGLE_IOS_CLIENT_ID: ${{ vars.KUBUS_GOOGLE_IOS_CLIENT_ID }}
+          KUBUS_WALLETCONNECT_PROJECT_ID: ${{ vars.KUBUS_WALLETCONNECT_PROJECT_ID }}
+          KUBUS_APP_VERSION: ${{ steps.metadata.outputs.version }}
+          KUBUS_BUILD_NUMBER: ${{ steps.metadata.outputs.build_number }}
+          KUBUS_BUILD_DATE: ${{ steps.metadata.outputs.build_date }}
+        run: node scripts/prepare_public_build_config.mjs --web
+
+      - name: Build release web bundle
+        run: |
+          flutter build web --release \
+            --build-name="${{ steps.metadata.outputs.version }}" \
+            --build-number="${{ steps.metadata.outputs.build_number }}" \
+            --dart-define=PUBLIC_FLUTTER_TAKEOVER_ENABLED=true \
+            --dart-define=SEO_PUBLIC_PAGES_ENABLED=true \
+            --dart-define-from-file=.dart_tool/public-build-defines.json
+
+      - name: Apply environment policy and revision metadata
+        run: >-
+          node scripts/deploy/prepare_web_artifact.mjs
+          --environment '${{ inputs.deployment_environment }}'
+          --source-sha '${{ inputs.source_sha }}'
+          --directory build/web
+
+      - name: Compress WebAssembly and generate checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -y >/dev/null
+          sudo apt-get install -y --no-install-recommends brotli >/dev/null
+          find build/web -type f -name '*.wasm' -print0 | while IFS= read -r -d '' file; do
+            brotli -f -q 9 "$file"
+            gzip -kf6 "$file"
+          done
+          (
+            cd build/web
+            manifest="$(mktemp)"
+            find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > "$manifest"
+            mv "$manifest" SHA256SUMS
+            sha256sum -c SHA256SUMS
+          )
+
+      - name: Install web smoke harness
+        run: npm --prefix scripts/qa ci --no-audit --no-fund
+
+      - name: Resolve Playwright version
+        id: playwright_version
+        shell: bash
+        run: echo "version=$(node -p "require('./scripts/qa/node_modules/playwright/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browser binaries
+        id: playwright_cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright_version.outputs.version }}-${{ inputs.browser_set }}
+
+      - name: Install Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ inputs.browser_set }}" = chromium ] && [ "${{ steps.playwright_cache.outputs.cache-hit }}" = true ]; then
+            npm --prefix scripts/qa exec -- playwright install-deps chromium
+          else
+            browsers="${{ inputs.browser_set }}"
+            npm --prefix scripts/qa exec -- playwright install --with-deps ${browsers//,/ }
+          fi
+
+      - name: Run local browser smoke against exact bundle
+        env:
+          QA_ARTIFACT_DIR: output/playwright/artifacts/web-${{ inputs.source_sha }}
+          QA_MATRIX: ${{ inputs.full_browser_matrix && 'full' || 'default' }}
+          QA_BROWSERS: ${{ inputs.browser_set }}
+        run: npm run qa:web
+
+      - name: Upload browser diagnostics on failure
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: web-smoke-diagnostics-${{ inputs.source_sha }}
+          path: output/playwright/artifacts
+          if-no-files-found: warn
+          retention-days: 3
+
+      - name: Resolve immutable artifact name
+        id: artifact
+        shell: bash
+        run: echo "name=flutter-web-${{ inputs.deployment_environment }}-${{ inputs.source_sha }}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload immutable web artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{ steps.artifact.outputs.name }}
+          path: build/web
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7

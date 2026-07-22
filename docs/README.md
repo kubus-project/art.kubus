@@ -6,6 +6,7 @@ If you’re new to the repo, start with `GETTING_STARTED.md`.
 
 ## Start here
 
+- **Branching, CI, and deployment**: [`engineering/branching-and-deployment.md`](engineering/branching-and-deployment.md)
 - **Setup / run / build**: `GETTING_STARTED.md`
 - **What the app does**: `FEATURES.md`
 - **Where things live in the UI**: `SCREENS.md`

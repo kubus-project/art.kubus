@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { chromium, devices } from 'playwright';
+import { chromium, devices, firefox, webkit } from 'playwright';
 
 import { buildStableApiStub } from './web_runtime_contract.mjs';
 
@@ -21,6 +21,14 @@ const appUrl = requestedUrl || `http://127.0.0.1:${qaPort}`;
 // QA_MATRIX=full expands the two default captures into the responsive ×
 // theme × locale (+ reduced-motion) matrix.
 const fullMatrix = (process.env.QA_MATRIX || '').trim() === 'full';
+const browserTypes = { chromium, firefox, webkit };
+const requestedBrowsers = (process.env.QA_BROWSERS || 'chromium')
+  .split(',')
+  .map((value) => value.trim())
+  .filter(Boolean);
+for (const browserName of requestedBrowsers) {
+  if (!browserTypes[browserName]) throw new Error(`Unsupported QA browser: ${browserName}`);
+}
 
 await fs.mkdir(artifactDir, { recursive: true });
 
@@ -439,35 +447,36 @@ try {
   await assertPortIsFree();
   proxy = await startProxyIfNeeded();
   const fingerprint = await collectBuildFingerprint();
-  browser = await chromium.launch({ headless: true });
-
   const captures = [];
-  if (fullMatrix) {
-    for (const context of matrixContexts()) {
+  for (const browserName of requestedBrowsers) {
+    browser = await browserTypes[browserName].launch({ headless: true });
+    const suffix = requestedBrowsers.length > 1 ? `-${browserName}` : '';
+    const mobileOptions = { ...devices['iPhone 13'] };
+    if (browserName === 'firefox') {
+      delete mobileOptions.isMobile;
+      delete mobileOptions.hasTouch;
+    }
+    if (fullMatrix) {
+      for (const context of matrixContexts()) {
+        captures.push(
+          await captureRuntime(context.options, `${context.name}${suffix}`, {
+            appLanguage: context.appLanguage || null,
+          }),
+        );
+      }
+    } else {
       captures.push(
-        await captureRuntime(context.options, context.name, {
-          appLanguage: context.appLanguage || null,
-        }),
+        await captureRuntime(
+          { viewport: { width: 1440, height: 1100 }, deviceScaleFactor: 1 },
+          `desktop-home${suffix}`,
+        ),
+      );
+      captures.push(
+        await captureRuntime(mobileOptions, `mobile-home${suffix}`),
       );
     }
-  } else {
-    captures.push(
-      await captureRuntime(
-        {
-          viewport: { width: 1440, height: 1100 },
-          deviceScaleFactor: 1,
-        },
-        'desktop-home',
-      ),
-    );
-    captures.push(
-      await captureRuntime(
-        {
-          ...devices['iPhone 13'],
-        },
-        'mobile-home',
-      ),
-    );
+    await browser.close();
+    browser = null;
   }
 
   await fs.writeFile(
@@ -476,6 +485,7 @@ try {
       {
         passed: true,
         matrix: fullMatrix ? 'full' : 'default',
+        browsers: requestedBrowsers,
         fingerprint,
         captures,
       },

@@ -2,6 +2,8 @@
 
 Run these commands before opening or merging a PR.
 
+Ordinary work starts from the current `origin/dev` on a topic branch and targets `dev`. Release-candidate PRs run a broader tier before `dev` can merge into production-only `master`. See [`engineering/branching-and-deployment.md`](engineering/branching-and-deployment.md).
+
 ## Stable root commands
 
 From the repo root:
@@ -9,6 +11,7 @@ From the repo root:
 ```powershell
 npm run verify:architecture
 npm run verify:docs
+npm run verify:ci
 npm run verify:backend-status
 npm run verify:flutter
 npm run verify:backend
@@ -63,6 +66,8 @@ without launching a browser.
 `docs:doctor` checks required `AGENTS.md` files, local verification docs,
 Markdown links in the docs index, and generated-artifact hygiene.
 
+`verify:ci` executes the changed-path classifier, branch-provenance, aggregate-job, artifact-preparation, Basic Auth/noindex smoke, and atomic deployment contract tests. Run `actionlint` on `.github/workflows/*.yml` and `shellcheck` on modified shell scripts before pushing workflow changes.
+
 ## Flutter app
 
 Targeted profile media checks:
@@ -90,9 +95,8 @@ npm run verify:backend
 
 `backend:status` reports whether `backend/` is available as a checked-out
 submodule, the backend HEAD, dirty state, and whether backend validation can run.
-It also reports `backend-open-art-wt` mirror configuration, HEAD, and dirty state
-so the auxiliary backend worktree cannot silently drift. CI requires both
-gitlinks and fails when either is missing or points at a different commit.
+CI requires `backend` to remain the sole canonical gitlink, to use the private
+backend repository URL, and to resolve to a full immutable commit SHA.
 
 Targeted profile media and CORS checks:
 

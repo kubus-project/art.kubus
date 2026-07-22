@@ -1,0 +1,339 @@
+name: Pull request validation
+
+on:
+  pull_request:
+    branches: [dev, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-validation-${{ github.event.pull_request.number || github.ref_name }}
+  cancel-in-progress: true
+
+env:
+  FLUTTER_VERSION: '3.44.2'
+  NODE_VERSION: '22.15.0'
+  NPM_VERSION: '11.7.0'
+
+jobs:
+  source_policy:
+    name: Validate PR branch provenance
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with: { fetch-depth: 1, submodules: false }
+      - name: Enforce integration and release source policy
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          HEAD_REF: ${{ github.head_ref }}
+          HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          REPOSITORY: ${{ github.repository }}
+        run: node scripts/ci/validate_pr_source.mjs
+
+  changes:
+    name: Resolve affected CI surfaces
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      full: ${{ steps.classify.outputs.full }}
+      frontend: ${{ steps.classify.outputs.frontend }}
+      web: ${{ steps.classify.outputs.web }}
+      backend: ${{ steps.classify.outputs.backend }}
+      android: ${{ steps.classify.outputs.android }}
+      ios: ${{ steps.classify.outputs.ios }}
+      docs: ${{ steps.classify.outputs.docs }}
+      versioning: ${{ steps.classify.outputs.versioning }}
+      ci: ${{ steps.classify.outputs.ci }}
+      deployment: ${{ steps.classify.outputs.deployment }}
+      agents: ${{ steps.classify.outputs.agents }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with: { fetch-depth: 0, submodules: false }
+      - name: Classify changed paths
+        id: classify
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = workflow_dispatch ]; then
+            git ls-files > "$RUNNER_TEMP/changed-files.txt"
+          else
+            git diff --name-only "$BASE_SHA" "$GITHUB_SHA" > "$RUNNER_TEMP/changed-files.txt"
+          fi
+          node scripts/ci/classify_changed_paths.mjs --files "$RUNNER_TEMP/changed-files.txt" --github-output "$GITHUB_OUTPUT"
+          if [ "$EVENT_NAME" = workflow_dispatch ] || [ "$BASE_REF" = master ]; then
+            echo 'full=true' >> "$GITHUB_OUTPUT"
+          fi
+
+  guardrails:
+    name: Repository, CI, and deployment guardrails
+    needs: [source_policy, changes]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with: { fetch-depth: 2, submodules: false }
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - run: npm install --global "npm@${NPM_VERSION}"
+      - name: Verify Node, architecture, CI policy, and gitlinks
+        run: |
+          npm run verify:toolchain:node
+          npm run verify:architecture
+          node --test scripts/ci/workflow_contracts.test.mjs
+          node scripts/ci/backend_gitlink_contract.mjs
+      - name: Validate deployment contracts locally
+        if: ${{ needs.changes.outputs.full == 'true' || needs.changes.outputs.deployment == 'true' }}
+        run: npm run verify:ci
+      - name: Validate PHP gateway syntax
+        if: ${{ needs.changes.outputs.full == 'true' || needs.changes.outputs.web == 'true' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -y >/dev/null
+          sudo apt-get install -y --no-install-recommends php-cli >/dev/null
+          mapfile -t php_files < <(find web -type f -name '*.php' | sort)
+          test "${#php_files[@]}" -gt 0
+          for file in "${php_files[@]}"; do php -l "$file"; done
+      - name: Reject client-side Pinata credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          if rg -n 'KUBUS_PINATA_(API|SECRET)_KEY' .github lib web android scripts; then
+            echo 'Client-side Pinata credentials are forbidden.' >&2
+            exit 1
+          fi
+
+  documentation:
+    name: Documentation and agent consistency
+    needs: [changes, guardrails]
+    if: >-
+      ${{
+        needs.changes.outputs.full == 'true' ||
+        needs.changes.outputs.docs == 'true' ||
+        needs.changes.outputs.agents == 'true' ||
+        needs.changes.outputs.ci == 'true'
+      }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with: { submodules: false }
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - run: npm run docs:doctor
+      - name: Reject obsolete main-branch guidance
+        shell: bash
+        run: |
+          set -euo pipefail
+          if rg -n 'branch from .*main' CONTRIBUTING.md .github/copilot-instructions.md docs/engineering/branching-and-deployment.md; then
+            echo 'Obsolete main-branch guidance found.' >&2
+            exit 1
+          fi
+
+  flutter_quality:
+    name: Flutter analysis, lint, format, and tests
+    needs: [changes, guardrails]
+    if: ${{ needs.changes.outputs.full == 'true' || needs.changes.outputs.frontend == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with: { fetch-depth: 0, submodules: false }
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - run: npm install --global "npm@${NPM_VERSION}"
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Resolve locked dependencies
+        run: |
+          flutter pub get
+          git diff --exit-code -- pubspec.lock
+      - name: Check changed Dart formatting
+        if: ${{ github.event_name == 'pull_request' }}
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          mapfile -t dart_files < <(git diff --diff-filter=ACMR --name-only "$BASE_SHA" HEAD -- '*.dart')
+          if [ "${#dart_files[@]}" -gt 0 ]; then dart format --output=none --set-exit-if-changed "${dart_files[@]}"; fi
+      - name: Analyze and custom lint
+        run: |
+          flutter analyze --fatal-infos --fatal-warnings
+          dart run custom_lint
+          node scripts/kubus-lint-ratchet.mjs --check
+      - name: Flutter test suite
+        shell: bash
+        env:
+          RELEASE_CANDIDATE: ${{ github.base_ref == 'master' || github.event_name == 'workflow_dispatch' }}
+        run: |
+          set -euo pipefail
+          if [ "$RELEASE_CANDIDATE" = true ]; then flutter test --coverage; else flutter test; fi
+      - name: Upload release-candidate coverage
+        if: ${{ github.base_ref == 'master' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: flutter-coverage-${{ github.sha }}
+          path: coverage/lcov.info
+          if-no-files-found: error
+          retention-days: 3
+
+  web_artifact:
+    name: Release web build and browser smoke
+    needs: [changes, guardrails]
+    if: >-
+      ${{
+        needs.changes.outputs.full == 'true' ||
+        needs.changes.outputs.frontend == 'true' ||
+        needs.changes.outputs.web == 'true'
+      }}
+    uses: ./.github/workflows/web-artifact.yml
+    with:
+      deployment_environment: ${{ github.base_ref == 'master' && 'production' || 'development' }}
+      source_sha: ${{ github.sha }}
+      full_browser_matrix: ${{ github.base_ref == 'master' }}
+
+  backend_contract:
+    name: Backend compatibility contract
+    needs: [changes, guardrails]
+    if: >-
+      ${{
+        needs.changes.outputs.full == 'true' ||
+        needs.changes.outputs.backend == 'true' ||
+        needs.changes.outputs.versioning == 'true'
+      }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with: { submodules: false }
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - run: node scripts/ci/backend_gitlink_contract.mjs
+      - run: node scripts/sync_all_versions.mjs --check --target frontend
+      - name: Record private backend trust boundary
+        run: echo 'Private backend execution stays in trusted scheduled/backend CI; PR code receives no cross-repository credential.'
+
+  android:
+    name: Android release compile without signing
+    needs: [changes, guardrails]
+    if: ${{ needs.changes.outputs.full == 'true' || needs.changes.outputs.android == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      GRADLE_USER_HOME: ${{ github.workspace }}/.gradle
+      GRADLE_OPTS: -Dorg.gradle.workers.max=1 -Dorg.gradle.daemon=false
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with: { submodules: false }
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - run: npm install --global "npm@${NPM_VERSION}"
+      - uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
+      - name: Install Android SDK 36
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -d "${ANDROID_HOME}/platforms/android-36" ]; then
+            yes | sdkmanager --licenses >/dev/null 2>&1 || true
+            sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0' 'platform-tools'
+          fi
+      - run: flutter pub get
+      - run: flutter build apk --release
+
+  ios:
+    name: iOS release compile without codesigning
+    needs: [changes, guardrails]
+    if: ${{ needs.changes.outputs.full == 'true' || needs.changes.outputs.ios == 'true' }}
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with: { submodules: false }
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter build ios --release --no-codesign
+
+  web_routing:
+    name: Apache production routing contract
+    needs: [changes, guardrails]
+    if: ${{ needs.changes.outputs.full == 'true' || needs.changes.outputs.web == 'true' || needs.changes.outputs.deployment == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with: { submodules: false }
+      - name: Serve web source under version-pinned Apache
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run -d --name kubus-web -p 8081:80 \
+            -v "$PWD/web:/usr/local/apache2/htdocs:ro" \
+            httpd:2.4.65-alpine3.22 \
+            sh -c "sed -i -e 's|^#LoadModule rewrite_module|LoadModule rewrite_module|' -e 's|^#LoadModule headers_module|LoadModule headers_module|' conf/httpd.conf && printf '%s\n' '<Directory \"/usr/local/apache2/htdocs\">' 'AllowOverride All' 'Require all granted' '</Directory>' >> conf/httpd.conf && httpd-foreground"
+          for _ in $(seq 1 30); do
+            if [ "$(curl --silent --output /dev/null --write-out '%{http_code}' http://localhost:8081/)" != 000 ]; then exit 0; fi
+            sleep 1
+          done
+          docker logs kubus-web >&2
+          exit 1
+      - run: KUBUS_BASE=http://localhost:8081 node scripts/qa/web_routing_contract.mjs
+      - if: ${{ failure() }}
+        run: docker logs kubus-web 2>&1 | tail -50
+      - if: ${{ always() }}
+        run: docker rm -f kubus-web
+
+  required:
+    name: PR validation required
+    needs:
+      - source_policy
+      - changes
+      - guardrails
+      - documentation
+      - flutter_quality
+      - web_artifact
+      - backend_contract
+      - android
+      - ios
+      - web_routing
+    if: ${{ always() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with: { submodules: false }
+      - name: Require success or legitimate skip from every declared job
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+          EXPECTED_JOBS: source_policy,changes,guardrails,documentation,flutter_quality,web_artifact,backend_contract,android,ios,web_routing
+        run: node scripts/ci/validate_job_results.mjs

@@ -5,6 +5,15 @@ Maintain feature parity with mobile screens while adapting layout for desktop.
 
 Preflight: review all `AGENTS.md` files (root, `lib/**`, `backend/**`) before making changes.
 
+## Branch governance
+
+The root `AGENTS.md` branch, worktree, CI, and release rules are mandatory here.
+
+Work on a topic branch created from the current `origin/dev`.
+Do not commit directly to `dev` or `master`.
+Ordinary pull requests target `dev`.
+Only release and emergency hotfix pull requests target `master`.
+
 ## Parity rules
 - Reuse the same providers/services/models as mobile (`lib/screens/**`).
 - Match feature flags from `AppConfig.isFeatureEnabled(...)` (see `lib/config/config.dart`).

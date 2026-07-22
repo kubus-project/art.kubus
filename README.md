@@ -130,6 +130,7 @@ Active development. Expect rapid iteration and occasional breaking changes while
 ## Contributing, support, and policies
 
 - Contributing: [`CONTRIBUTING.md`](CONTRIBUTING.md)
+- Branching and deployment: [`docs/engineering/branching-and-deployment.md`](docs/engineering/branching-and-deployment.md)
 - Support: [`SUPPORT.md`](SUPPORT.md)
 - Security: [`SECURITY.md`](SECURITY.md)
 - Governance: [`GOVERNANCE.md`](GOVERNANCE.md)

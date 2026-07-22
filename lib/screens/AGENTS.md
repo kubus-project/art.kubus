@@ -5,6 +5,15 @@ Deliver stable, theme-consistent UI with feature flags and safe async handling.
 
 Preflight: review all `AGENTS.md` files (root, `lib/**`, `backend/**`) before making changes.
 
+## Branch governance
+
+The root `AGENTS.md` branch, worktree, CI, and release rules are mandatory here.
+
+Work on a topic branch created from the current `origin/dev`.
+Do not commit directly to `dev` or `master`.
+Ordinary pull requests target `dev`.
+Only release and emergency hotfix pull requests target `master`.
+
 ## Theme + tokens
 - Use `Theme.of(context).colorScheme` and `ThemeProvider.accentColor`.
 - Use tokens from `lib/utils/design_tokens.dart` (`KubusSpacing`, `KubusRadius`, `KubusLayout`, `KubusTypography`).

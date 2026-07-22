@@ -1,0 +1,63 @@
+name: Release production web
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+    inputs:
+      bootstrap_web_root:
+        description: One-time explicitly approved migration of the production web root to the atomic symlink layout
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  source:
+    name: Resolve exact master source
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      sha: ${{ steps.resolve.outputs.sha }}
+    steps:
+      - name: Reject non-master invocation
+        id: resolve
+        shell: bash
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+          SOURCE_REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          test "$SOURCE_REF" = refs/heads/master
+          [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          echo "sha=$SOURCE_SHA" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build immutable production artifact
+    needs: source
+    uses: ./.github/workflows/web-artifact.yml
+    with:
+      deployment_environment: production
+      source_sha: ${{ needs.source.outputs.sha }}
+      full_browser_matrix: true
+
+  deploy:
+    name: Promote protected production artifact
+    needs: [source, build]
+    uses: ./.github/workflows/web-deploy-reusable.yml
+    with:
+      artifact_name: ${{ needs.build.outputs.artifact_name }}
+      source_sha: ${{ needs.source.outputs.sha }}
+      source_branch: master
+      logical_environment: production
+      environment_name: production-web
+      retained_release_count: 10
+      bootstrap_web_root: ${{ github.event_name == 'workflow_dispatch' && inputs.bootstrap_web_root }}

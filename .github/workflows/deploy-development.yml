@@ -1,0 +1,63 @@
+name: Deploy development web
+
+on:
+  push:
+    branches:
+      - dev
+  workflow_dispatch:
+    inputs:
+      bootstrap_web_root:
+        description: One-time approved migration of the staging web root to the atomic symlink layout
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: deploy-development
+  cancel-in-progress: false
+
+jobs:
+  source:
+    name: Resolve exact dev source
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      sha: ${{ steps.resolve.outputs.sha }}
+    steps:
+      - name: Reject non-dev invocation
+        id: resolve
+        shell: bash
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+          SOURCE_REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          test "$SOURCE_REF" = refs/heads/dev
+          [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          echo "sha=$SOURCE_SHA" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build immutable development artifact
+    needs: source
+    uses: ./.github/workflows/web-artifact.yml
+    with:
+      deployment_environment: development
+      source_sha: ${{ needs.source.outputs.sha }}
+      full_browser_matrix: false
+
+  deploy:
+    name: Promote staging artifact
+    needs: [source, build]
+    uses: ./.github/workflows/web-deploy-reusable.yml
+    with:
+      artifact_name: ${{ needs.build.outputs.artifact_name }}
+      source_sha: ${{ needs.source.outputs.sha }}
+      source_branch: dev
+      logical_environment: development
+      environment_name: development-web
+      retained_release_count: 5
+      bootstrap_web_root: ${{ github.event_name == 'workflow_dispatch' && inputs.bootstrap_web_root }}

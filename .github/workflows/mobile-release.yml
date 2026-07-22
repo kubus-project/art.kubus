@@ -1,0 +1,237 @@
+name: Mobile release
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      release_tag: { description: 'New v-prefixed release tag', required: true, type: string }
+      publish_github_release: { description: 'Publish an immutable GitHub Release', required: false, default: false, type: boolean }
+      prerelease: { description: 'Mark as prerelease', required: false, default: true, type: boolean }
+permissions:
+  contents: read
+concurrency:
+  group: mobile-release-${{ github.ref_name }}
+  cancel-in-progress: false
+env:
+  FLUTTER_VERSION: '3.44.2'
+  NODE_VERSION: '22.15.0'
+  NPM_VERSION: '11.7.0'
+jobs:
+  source:
+    name: Verify tag and production ancestry
+    runs-on: ubuntu-24.04
+    outputs:
+      sha: ${{ steps.source.outputs.sha }}
+      tag: ${{ steps.source.outputs.tag }}
+      publish: ${{ steps.source.outputs.publish }}
+      prerelease: ${{ steps.source.outputs.prerelease }}
+      version: ${{ steps.metadata.outputs.version }}
+      build_number: ${{ steps.metadata.outputs.build_number }}
+      build_date: ${{ steps.metadata.outputs.build_date }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with: { fetch-depth: 0, submodules: false }
+      - id: source
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          SOURCE_SHA: ${{ github.sha }}
+          PUSH_TAG: ${{ github.ref_name }}
+          MANUAL_TAG: ${{ inputs.release_tag }}
+          MANUAL_PUBLISH: ${{ inputs.publish_github_release }}
+          MANUAL_PRERELEASE: ${{ inputs.prerelease }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin master
+          git merge-base --is-ancestor "$SOURCE_SHA" origin/master
+          if [ "$EVENT_NAME" = push ]; then
+            tag="$PUSH_TAG"; publish=true; prerelease=false
+            test "$(git rev-parse "$tag^{commit}")" = "$SOURCE_SHA"
+          else
+            tag="$MANUAL_TAG"; publish="$MANUAL_PUBLISH"; prerelease="$MANUAL_PRERELEASE"
+          fi
+          [[ "$tag" =~ ^v[0-9A-Za-z._-]+$ ]]
+          [[ "$tag" != *..* ]]
+          printf 'sha=%s\ntag=%s\npublish=%s\nprerelease=%s\n' "$SOURCE_SHA" "$tag" "$publish" "$prerelease" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - id: metadata
+        run: node scripts/resolve_ci_build_metadata.mjs --github-output "$GITHUB_OUTPUT"
+
+  android:
+    name: Sign Android APK and AAB
+    needs: source
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    environment: android-release
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          ref: ${{ needs.source.outputs.sha }}
+          submodules: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - run: npm install --global "npm@${NPM_VERSION}"
+      - uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4
+        with: { distribution: temurin, java-version: '21', cache: gradle }
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with: { flutter-version: '3.44.2', channel: stable, cache: true }
+      - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
+      - name: Configure protected Android signing
+        shell: bash
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS_SECRET: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEYSTORE_PASSWORD_SECRET: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD_SECRET: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for value in "$ANDROID_KEYSTORE_BASE64" "$ANDROID_KEY_ALIAS_SECRET" "$ANDROID_KEYSTORE_PASSWORD_SECRET" "$ANDROID_KEY_PASSWORD_SECRET"; do test -n "$value"; done
+          key_path="$RUNNER_TEMP/art-kubus-release.jks"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$key_path"
+          chmod 600 "$key_path"
+          printf 'ANDROID_KEYSTORE_PATH=%s\nANDROID_KEY_ALIAS=%s\nANDROID_KEYSTORE_PASSWORD=%s\nANDROID_KEY_PASSWORD=%s\nKUBUS_REQUIRE_RELEASE_SIGNING=true\n' "$key_path" "$ANDROID_KEY_ALIAS_SECRET" "$ANDROID_KEYSTORE_PASSWORD_SECRET" "$ANDROID_KEY_PASSWORD_SECRET" >> "$GITHUB_ENV"
+      - run: flutter pub get
+      - name: Prepare build configuration
+        env:
+          KUBUS_BACKEND_URL: ${{ vars.KUBUS_BACKEND_URL }}
+          KUBUS_GOOGLE_CLIENT_ID: ${{ vars.KUBUS_GOOGLE_CLIENT_ID }}
+          KUBUS_GOOGLE_WEB_CLIENT_ID: ${{ vars.KUBUS_GOOGLE_WEB_CLIENT_ID }}
+          KUBUS_GOOGLE_IOS_CLIENT_ID: ${{ vars.KUBUS_GOOGLE_IOS_CLIENT_ID }}
+          KUBUS_WALLETCONNECT_PROJECT_ID: ${{ vars.KUBUS_WALLETCONNECT_PROJECT_ID }}
+          KUBUS_APP_VERSION: ${{ needs.source.outputs.version }}
+          KUBUS_BUILD_NUMBER: ${{ needs.source.outputs.build_number }}
+          KUBUS_BUILD_DATE: ${{ needs.source.outputs.build_date }}
+        run: node scripts/prepare_public_build_config.mjs
+      - name: Build signed packages
+        run: |
+          flutter build apk --release --build-name="${{ needs.source.outputs.version }}" --build-number="${{ needs.source.outputs.build_number }}" --dart-define-from-file=.dart_tool/public-build-defines.json
+          flutter build appbundle --release --build-name="${{ needs.source.outputs.version }}" --build-number="${{ needs.source.outputs.build_number }}" --dart-define-from-file=.dart_tool/public-build-defines.json
+      - name: Verify and package Android release
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk="$(find build/app/outputs/flutter-apk -type f -name '*release*.apk' -print -quit)"
+          aab="$(find build/app/outputs/bundle/release -type f -name '*.aab' -print -quit)"
+          test -f "$apk"; test -f "$aab"
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$apk"
+          jarsigner -verify -strict "$aab"
+          mkdir -p release/android
+          cp "$apk" "release/android/art.kubus-${{ needs.source.outputs.tag }}-${{ needs.source.outputs.sha }}.apk"
+          cp "$aab" "release/android/art.kubus-${{ needs.source.outputs.tag }}-${{ needs.source.outputs.sha }}.aab"
+          (cd release/android && sha256sum ./* > SHA256SUMS)
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: android-release-${{ needs.source.outputs.sha }}
+          path: release/android
+          if-no-files-found: error
+          retention-days: 30
+
+  ios:
+    name: Sign iOS IPA
+    needs: source
+    if: ${{ vars.IOS_RELEASE_ENABLED == 'true' }}
+    runs-on: macos-15
+    timeout-minutes: 50
+    environment: ios-release
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          ref: ${{ needs.source.outputs.sha }}
+          submodules: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - run: npm install --global "npm@${NPM_VERSION}"
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with: { flutter-version: '3.44.2', channel: stable, cache: true }
+      - run: flutter pub get
+      - name: Prepare build configuration
+        env:
+          KUBUS_BACKEND_URL: ${{ vars.KUBUS_BACKEND_URL }}
+          KUBUS_GOOGLE_CLIENT_ID: ${{ vars.KUBUS_GOOGLE_CLIENT_ID }}
+          KUBUS_GOOGLE_WEB_CLIENT_ID: ${{ vars.KUBUS_GOOGLE_WEB_CLIENT_ID }}
+          KUBUS_GOOGLE_IOS_CLIENT_ID: ${{ vars.KUBUS_GOOGLE_IOS_CLIENT_ID }}
+          KUBUS_WALLETCONNECT_PROJECT_ID: ${{ vars.KUBUS_WALLETCONNECT_PROJECT_ID }}
+          KUBUS_APP_VERSION: ${{ needs.source.outputs.version }}
+          KUBUS_BUILD_NUMBER: ${{ needs.source.outputs.build_number }}
+          KUBUS_BUILD_DATE: ${{ needs.source.outputs.build_date }}
+        run: node scripts/prepare_public_build_config.mjs
+      - name: Configure protected iOS signing
+        env:
+          IOS_DISTRIBUTION_CERTIFICATE_BASE64: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_BASE64 }}
+          IOS_DISTRIBUTION_CERTIFICATE_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_PASSWORD }}
+          IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+          IOS_TEAM_ID: ${{ vars.IOS_TEAM_ID }}
+          IOS_BUNDLE_ID: ${{ vars.IOS_BUNDLE_ID }}
+          IOS_EXPORT_METHOD: ${{ vars.IOS_EXPORT_METHOD }}
+        run: bash scripts/deploy/configure_ios_signing.sh
+      - name: Build signed IPA
+        run: flutter build ipa --release --build-name="${{ needs.source.outputs.version }}" --build-number="${{ needs.source.outputs.build_number }}" --export-options-plist="$IOS_EXPORT_OPTIONS" --dart-define-from-file=.dart_tool/public-build-defines.json
+      - name: Verify and package IPA
+        shell: bash
+        env:
+          EXPECTED_BUNDLE_ID: ${{ vars.IOS_BUNDLE_ID }}
+        run: |
+          set -euo pipefail
+          ipa="$(find build/ios/ipa -type f -name '*.ipa' -print -quit)"
+          test -f "$ipa"
+          extraction="$RUNNER_TEMP/ipa"
+          unzip -q "$ipa" -d "$extraction"
+          app="$extraction/Payload/Runner.app"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$app/Info.plist" | grep -Fx "$EXPECTED_BUNDLE_ID"
+          codesign --verify --deep --strict --verbose=2 "$app"
+          mkdir -p release/ios
+          cp "$ipa" "release/ios/art.kubus-${{ needs.source.outputs.tag }}-${{ needs.source.outputs.sha }}.ipa"
+          (cd release/ios && shasum -a 256 ./* > SHA256SUMS)
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ios-release-${{ needs.source.outputs.sha }}
+          path: release/ios
+          if-no-files-found: error
+          retention-days: 30
+      - name: Remove ephemeral iOS signing material
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          set +e
+          security delete-keychain "$IOS_SIGNING_KEYCHAIN" 2>/dev/null || true
+          rm -f ios/Flutter/Release-CI.xcconfig
+
+  publish:
+    name: Publish immutable GitHub Release
+    needs: [source, android, ios]
+    if: >-
+      ${{
+        always() &&
+        needs.source.outputs.publish == 'true' &&
+        needs.android.result == 'success' &&
+        (needs.ios.result == 'success' || needs.ios.result == 'skipped')
+      }}
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: '*-release-${{ needs.source.outputs.sha }}'
+          path: release
+          merge-multiple: false
+      - name: Verify release checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          find release -name SHA256SUMS -print0 | while IFS= read -r -d '' manifest; do (cd "$(dirname "$manifest")" && sha256sum -c SHA256SUMS); done
+      - uses: ncipollo/release-action@339a81892b84b4eeb0f6e744e4574d79d0d9b8dd # v1
+        with:
+          tag: ${{ needs.source.outputs.tag }}
+          commit: ${{ needs.source.outputs.sha }}
+          name: art.kubus ${{ needs.source.outputs.tag }}
+          prerelease: ${{ needs.source.outputs.prerelease }}
+          generateReleaseNotes: true
+          allowUpdates: false
+          replacesArtifacts: false
+          artifacts: release/**/*

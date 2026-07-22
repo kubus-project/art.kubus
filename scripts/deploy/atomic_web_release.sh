@@ -33,6 +33,10 @@ validate_contract() {
   [ "$RELEASE_DIR" = "$RELEASE_ROOT/releases/$SOURCE_SHA" ] \
     || die "RELEASE_DIR is outside the release contract"
   [ -L "$LIVE_DIR" ] || die "LIVE_DIR must be a pre-provisioned symlink"
+  printf '%s' "$RETAIN_RELEASE_COUNT" | grep -Eq '^[0-9]+$' \
+    || die "RETAIN_RELEASE_COUNT must be a non-negative integer"
+  [ "$RETAIN_RELEASE_COUNT" -le 50 ] \
+    || die "RETAIN_RELEASE_COUNT must not exceed 50"
 }
 
 verify_release() {
@@ -92,12 +96,28 @@ rollback() {
   mv -Tf "$rollback_link" "$LIVE_DIR"
   [ "$(readlink "$LIVE_DIR")" = "$previous_target" ] \
     || die "atomic rollback did not restore the previous release"
+  rm -f "$rollback_file"
+}
+
+prune_releases() {
+  kept=0
+  for candidate in $(ls -1dt "$RELEASE_ROOT"/releases/* 2>/dev/null || true); do
+    [ -d "$candidate" ] || continue
+    [ ! -L "$candidate" ] || continue
+    [ "$candidate" != "$RELEASE_DIR" ] || continue
+    basename "$candidate" | grep -Eq '^[0-9a-f]{40}$' || continue
+    kept=$((kept + 1))
+    if [ "$kept" -gt "$RETAIN_RELEASE_COUNT" ]; then
+      rm -rf -- "$candidate"
+    fi
+  done
 }
 
 finalize() {
   [ "$(readlink "$LIVE_DIR")" = "$RELEASE_DIR" ] \
     || die "requested release is not current; refusing finalization"
   rm -f "$RELEASE_ROOT/rollback-$SOURCE_SHA"
+  prune_releases
 }
 
 mode="${1:-}"
@@ -106,6 +126,7 @@ mode="${1:-}"
 : "${RELEASE_ROOT:?RELEASE_ROOT is required}"
 : "${INCOMING_DIR:?INCOMING_DIR is required}"
 : "${RELEASE_DIR:?RELEASE_DIR is required}"
+: "${RETAIN_RELEASE_COUNT:=5}"
 validate_contract
 
 case "$mode" in

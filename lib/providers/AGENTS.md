@@ -5,6 +5,15 @@ Own state in `ChangeNotifier` providers, and keep app initialization stable and 
 
 Preflight: review all `AGENTS.md` files (root, `lib/**`, `backend/**`) before making changes.
 
+## Branch governance
+
+The root `AGENTS.md` branch, worktree, CI, and release rules are mandatory here.
+
+Work on a topic branch created from the current `origin/dev`.
+Do not commit directly to `dev` or `master`.
+Ordinary pull requests target `dev`.
+Only release and emergency hotfix pull requests target `master`.
+
 ## Initialization order (source of truth)
 - Providers are wired in `lib/main.dart` (MultiProvider + ProxyProviders).
 - Startup sequence is in `lib/core/app_initializer.dart`.
