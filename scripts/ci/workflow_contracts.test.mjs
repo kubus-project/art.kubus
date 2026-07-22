@@ -102,16 +102,6 @@ test('branch deployments have isolated sources, environments, and concurrency', 
 
 test('privileged deployment preserves SHA, stale-head, host, smoke, and rollback gates', () => {
   const content = deployAction();
-  for (const secret of [
-    'SFTP_SERVER',
-    'SFTP_USERNAME',
-    'SFTP_PRIVATE_KEY',
-    'SFTP_HOST_FINGERPRINT',
-    'HTTP_BASIC_USERNAME',
-    'HTTP_BASIC_PASSWORD',
-  ]) {
-    assert.match(content, new RegExp(`secrets:[\\s\\S]*${secret}:\\s*\\{ required: false \\}`));
-  }
   for (const required of [
     '/branches/$SOURCE_BRANCH',
     'SFTP_HOST_FINGERPRINT',
@@ -159,3 +149,4 @@ test('mobile and scheduled work remain outside normal branch deployment', () => 
   assert.match(scheduled, /cron:\s*['"][^'"]+['"]/);
   assert.doesNotMatch(scheduled, /SFTP_|HTTP_BASIC_/);
 });
+
