@@ -69,11 +69,11 @@ The authoritative divergence signal is:
 
 ```bash
 git fetch --prune origin
-git rev-list --left-right --count origin/master...origin/dev
+git rev-list --left-right --cherry-pick --count origin/master...origin/dev
 # output: "<commits only on master>\t<commits only on dev>"
 ```
 
-A nonzero first number ("commits only on `master`") means reconciliation is required. Treat it as a release blocker for further `dev` work.
+`--cherry-pick` omits patch-equivalent commits, so a hotfix that was reconciled into `dev` by cherry-pick (a new SHA with the same change) does not count and a genuine unreconciled release merge still does. A nonzero first number ("commits only on `master`") means reconciliation is required. Treat it as a release blocker for further `dev` work.
 
 Reconcile with exactly one of these non-rewriting actions, then open a PR to `dev`:
 

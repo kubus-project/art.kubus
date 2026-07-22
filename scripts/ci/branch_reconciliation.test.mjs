@@ -37,7 +37,7 @@ test('rejects malformed divergence counts', () => {
 test('countLeftRight parses git rev-list --left-right --count output', () => {
   const fakeRun = (command, args) => {
     assert.equal(command, 'git');
-    assert.deepEqual(args, ['rev-list', '--left-right', '--count', 'origin/master...origin/dev']);
+    assert.deepEqual(args, ['rev-list', '--left-right', '--cherry-pick', '--count', 'origin/master...origin/dev']);
     return '6\t11\n';
   };
   assert.deepEqual(countLeftRight('origin/master', 'origin/dev', fakeRun), { behind: 6, ahead: 11 });

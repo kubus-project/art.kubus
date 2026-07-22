@@ -5,6 +5,11 @@
 // protected branches diverge. This check treats any nonzero "commits only on
 // the base branch" count as requiring reconciliation before ordinary work.
 //
+// The count uses `--cherry-pick`, so a hotfix reconciled into `dev` by
+// cherry-pick (a patch-equivalent commit with a different SHA) is treated as
+// reconciled and does not keep the guard red. Genuine unreconciled ancestry
+// (a release merge that never returned to `dev`) still counts.
+//
 // See docs/engineering/branching-and-deployment.md ("Post-release reconciliation").
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -45,7 +50,7 @@ export function evaluateReconciliation({
  * so the parsing contract can be exercised without a live repository.
  */
 export function countLeftRight(baseRef, headRef, run = defaultRun) {
-  const raw = run('git', ['rev-list', '--left-right', '--count', `${baseRef}...${headRef}`]);
+  const raw = run('git', ['rev-list', '--left-right', '--cherry-pick', '--count', `${baseRef}...${headRef}`]);
   const parts = String(raw).trim().split(/\s+/);
   if (parts.length !== 2) {
     throw new Error(`unexpected rev-list output: ${JSON.stringify(raw)}`);
