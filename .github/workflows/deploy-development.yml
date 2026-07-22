@@ -61,4 +61,3 @@ jobs:
       environment_name: development-web
       retained_release_count: 5
       bootstrap_web_root: ${{ github.event_name == 'workflow_dispatch' && inputs.bootstrap_web_root }}
-    secrets: inherit

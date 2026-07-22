@@ -12,6 +12,10 @@ import {
 import { resolveBuildMetadata } from '../../scripts/resolve_ci_build_metadata.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
+const workflow = (name) => readFileSync(
+  resolve(repoRoot, '.github', 'workflows', name),
+  'utf8',
+);
 
 test('takeover smoke parses the serialized Flutter event contract', () => {
   assert.deepEqual(
@@ -103,37 +107,30 @@ test('API stubs reject hosts outside the explicit QA boundary', () => {
 });
 
 test('immutable web artifact preserves files covered by its checksum manifest', () => {
-  const workflow = readFileSync(
-    resolve(repoRoot, '.github', 'workflows', 'ci.yml'),
-    'utf8',
-  );
-  const stepStart = workflow.indexOf('- name: Upload immutable web bundle');
+  const buildWorkflow = workflow('web-artifact.yml');
+  const stepStart = buildWorkflow.indexOf('- name: Upload immutable web artifact');
   assert.notEqual(stepStart, -1, 'CI must upload the immutable web bundle');
 
-  const nextStep = workflow.indexOf('\n      - name:', stepStart + 1);
-  const uploadStep = workflow.slice(
+  const nextStep = buildWorkflow.indexOf('\n      - name:', stepStart + 1);
+  const uploadStep = buildWorkflow.slice(
     stepStart,
-    nextStep === -1 ? workflow.length : nextStep,
+    nextStep === -1 ? buildWorkflow.length : nextStep,
   );
   assert.match(uploadStep, /\binclude-hidden-files:\s*true\b/);
+  assert.match(buildWorkflow, /sha256sum -c SHA256SUMS/);
 });
 
 test('web-root migration remains an explicit manual deployment action', () => {
-  const workflow = readFileSync(
-    resolve(repoRoot, '.github', 'workflows', 'deploy.yml'),
-    'utf8',
-  );
-  assert.match(
-    workflow,
-    /bootstrap_web_root:\s*[\s\S]*?default:\s*false\s*[\s\S]*?type:\s*boolean/,
-  );
-
-  const manualGate =
-    "if: ${{ github.event_name == 'workflow_dispatch' && inputs.bootstrap_web_root }}";
+  for (const name of ['deploy-development.yml', 'release-production.yml']) {
+    const caller = workflow(name);
+    assert.match(caller, /bootstrap_web_root:\s*[\s\S]*?default:\s*false\s*[\s\S]*?type:\s*boolean/);
+    assert.match(caller, /bootstrap_web_root: \$\{\{ github\.event_name == 'workflow_dispatch' && inputs\.bootstrap_web_root \}\}/);
+  }
+  const reusable = workflow('web-deploy-reusable.yml');
   assert.equal(
-    workflow.split(manualGate).length - 1,
+    (reusable.match(/if: \$\{\{ inputs\.bootstrap_web_root \}\}/g) || []).length,
     2,
-    'both bootstrap steps must require an explicit manual dispatch',
+    'both bootstrap steps must require the explicit caller input',
   );
 });
 
@@ -173,69 +170,48 @@ test('CI build metadata keeps semantic versions manual and increments Android-sa
   );
 });
 
-test('CI applies its generated build metadata to every Flutter platform build', () => {
-  const workflow = readFileSync(
-    resolve(repoRoot, '.github', 'workflows', 'ci.yml'),
-    'utf8',
-  );
+test('release artifact workflows propagate generated metadata to platform builds', () => {
+  const web = workflow('web-artifact.yml');
+  const mobile = workflow('mobile-release.yml');
   const config = readFileSync(resolve(repoRoot, 'lib', 'config', 'config.dart'), 'utf8');
 
-  assert.equal(
-    (workflow.match(/Resolve CI build metadata/g) || []).length,
-    1,
-    'one job must resolve metadata and all Flutter platform jobs must consume it',
-  );
-  assert.match(workflow, /build_metadata:[\s\S]*?outputs:[\s\S]*?build_number:/);
-  assert.match(workflow, /needs: \[guardrails, build_metadata\]/);
-  assert.match(workflow, /--build-number="\$\{\{ needs\.build_metadata\.outputs\.build_number \}\}"/);
-  assert.match(workflow, /KUBUS_BUILD_DATE: \$\{\{ needs\.build_metadata\.outputs\.build_date \}\}/);
+  assert.match(web, /id: metadata[\s\S]*?resolve_ci_build_metadata\.mjs/);
+  assert.match(web, /--build-number="\$\{\{ steps\.metadata\.outputs\.build_number \}\}"/);
+  assert.match(web, /KUBUS_BUILD_DATE: \$\{\{ steps\.metadata\.outputs\.build_date \}\}/);
+  assert.match(mobile, /build_number: \$\{\{ steps\.metadata\.outputs\.build_number \}\}/);
+  assert.equal((mobile.match(/--build-number="\$\{\{ needs\.source\.outputs\.build_number \}\}"/g) || []).length, 3);
   assert.match(config, /String\.fromEnvironment\(\s*'KUBUS_APP_VERSION'/);
   assert.match(config, /int\.fromEnvironment\(\s*'KUBUS_BUILD_NUMBER'/);
   assert.match(config, /String\.fromEnvironment\(\s*'KUBUS_BUILD_DATE'/);
 });
 
-test('Android CI reclaims disk before release compilation without dropping the debug gate', () => {
-  const workflow = readFileSync(
-    resolve(repoRoot, '.github', 'workflows', 'ci.yml'),
-    'utf8',
-  );
-  const androidJob = workflow.slice(workflow.indexOf('\n  android:'), workflow.indexOf('\n  ios:'));
+test('Android PR compilation stays unsigned and signing remains release-only', () => {
+  const validation = workflow('pr-validation.yml');
+  const mobile = workflow('mobile-release.yml');
+  const androidJob = validation.slice(validation.indexOf('\n  android:'), validation.indexOf('\n  ios:'));
 
-  assert.match(androidJob, /Reclaim hosted-runner disk for Android builds/);
-  assert.match(androidJob, /docker image prune --all --force/);
-  assert.match(androidJob, /test "\$available_kib" -ge 12582912/);
-  assert.match(androidJob, /Compile Android debug APK[\s\S]*?Reclaim debug-only Android intermediates[\s\S]*?Compile unsigned Android release APK/);
-  assert.match(androidJob, /rm -rf build\/app android\/.gradle/);
+  assert.match(androidJob, /needs\.changes\.outputs\.android == 'true'/);
+  assert.match(androidJob, /flutter build apk --release/);
+  assert.doesNotMatch(androidJob, /ANDROID_KEYSTORE|android-release/);
+  assert.match(mobile, /environment: android-release/);
+  assert.match(mobile, /ANDROID_KEYSTORE_BASE64/);
 });
 
-test('successful master CI publishes one immutable alpha release per version', () => {
-  const workflow = readFileSync(
-    resolve(repoRoot, '.github', 'workflows', 'deploy.yml'),
-    'utf8',
-  );
+test('mobile publication is explicit, master-derived, and immutable', () => {
+  const mobile = workflow('mobile-release.yml');
 
-  assert.match(
-    workflow,
-    /signed_apk:[\s\S]*?github\.event_name == 'workflow_run'[\s\S]*?github\.event\.workflow_run\.conclusion == 'success'/,
-  );
-  assert.match(workflow, /release_tag="v\$\{version\}-alpha"/);
-  assert.match(workflow, /releases\/tags\/\$release_tag/);
-  assert.match(
-    workflow,
-    /Immutable release \$release_tag already exists; skipping signing and publication/,
-  );
-  assert.match(workflow, /should_build=false/);
-  assert.match(
-    workflow,
-    /Tag \$release_tag exists without a GitHub Release; refusing to mutate it/,
-  );
-  assert.match(workflow, /allowUpdates:\s*false/);
-  assert.match(workflow, /replacesArtifacts:\s*false/);
+  assert.match(mobile, /tags: \['v\*'\]/);
+  assert.match(mobile, /git merge-base --is-ancestor "\$SOURCE_SHA" origin\/master/);
+  assert.doesNotMatch(mobile, /workflow_run|branches:\s*\[?master/);
+  assert.match(mobile, /environment: android-release/);
+  assert.match(mobile, /environment: ios-release/);
+  assert.match(mobile, /allowUpdates:\s*false/);
+  assert.match(mobile, /replacesArtifacts:\s*false/);
 });
 
 test('iOS publication signs a configured IPA from exact CI inputs before attaching it', () => {
-  const ci = readFileSync(resolve(repoRoot, '.github', 'workflows', 'ci.yml'), 'utf8');
-  const deploy = readFileSync(resolve(repoRoot, '.github', 'workflows', 'deploy.yml'), 'utf8');
+  const mobile = workflow('mobile-release.yml');
+  const signing = readFileSync(resolve(repoRoot, 'scripts', 'deploy', 'configure_ios_signing.sh'), 'utf8');
   const releaseConfig = readFileSync(resolve(repoRoot, 'ios', 'Flutter', 'Release.xcconfig'), 'utf8');
   const buildConfig = readFileSync(resolve(repoRoot, 'scripts', 'prepare_public_build_config.mjs'), 'utf8');
   const project = readFileSync(
@@ -243,17 +219,15 @@ test('iOS publication signs a configured IPA from exact CI inputs before attachi
     'utf8',
   );
 
-  assert.match(ci, /Retain exact iOS release build inputs/);
-  assert.match(ci, /name: ios-release-inputs-\$\{\{ github\.sha \}\}/);
-  assert.match(deploy, /signed_ipa:[\s\S]*?vars\.IOS_RELEASE_ENABLED == 'true'/);
-  assert.match(deploy, /environment: ios-release/);
-  assert.match(deploy, /IOS_DISTRIBUTION_CERTIFICATE_BASE64/);
-  assert.match(deploy, /IOS_PROVISIONING_PROFILE_BASE64/);
-  assert.match(deploy, /test "\$profile_app_id" = "\$IOS_TEAM_ID\.\$IOS_BUNDLE_ID"/);
-  assert.match(deploy, /flutter build ipa --release/);
-  assert.match(deploy, /codesign --verify --deep --strict/);
-  assert.match(deploy, /gh release upload/);
-  assert.match(deploy, /security delete-keychain/);
+  assert.match(mobile, /if: \$\{\{ vars\.IOS_RELEASE_ENABLED == 'true' \}\}/);
+  assert.match(mobile, /environment: ios-release/);
+  assert.match(mobile, /IOS_DISTRIBUTION_CERTIFICATE_BASE64/);
+  assert.match(mobile, /IOS_PROVISIONING_PROFILE_BASE64/);
+  assert.match(signing, /\[ "\$profile_app_id" = "\$IOS_TEAM_ID\.\$IOS_BUNDLE_ID" \]/);
+  assert.match(mobile, /flutter build ipa --release/);
+  assert.match(mobile, /codesign --verify --deep --strict/);
+  assert.match(mobile, /ncipollo\/release-action@[0-9a-f]{40}/);
+  assert.match(mobile, /security delete-keychain/);
   assert.match(
     releaseConfig,
     /KUBUS_IOS_BUNDLE_ID=com\.art\.kubus\r?\n#include\? "Release-CI\.xcconfig"/,
@@ -336,17 +310,14 @@ test('web routing reserves public HTML, interactive app and real 404 surfaces', 
 });
 
 test('production smoke verifies public HTML and unknown-route status', () => {
-  const workflow = readFileSync(
-    resolve(repoRoot, '.github', 'workflows', 'deploy.yml'),
-    'utf8',
-  );
+  const smoke = readFileSync(resolve(repoRoot, 'scripts', 'deploy', 'smoke_production_web.sh'), 'utf8');
 
-  assert.match(workflow, /Public HTML unexpectedly loads the interactive app bundle/);
-  assert.match(workflow, /__deploy_unknown_\$\{SOURCE_SHA\}/);
-  assert.match(workflow, /test .*http_code.* = '404'/);
-  assert.match(workflow, /--header 'Cache-Control: no-cache'/);
-  assert.match(workflow, /--header 'Pragma: no-cache'/);
-  assert.doesNotMatch(workflow, /deploy_sha=/);
+  assert.match(smoke, /public HTML unexpectedly loads the interactive app bundle/i);
+  assert.match(smoke, /__deploy_unknown_\$SOURCE_SHA/);
+  assert.match(smoke, /write-out '%\{http_code\}'.* = 404/);
+  assert.match(smoke, /--header 'Cache-Control: no-cache'/);
+  assert.match(smoke, /--header 'Pragma: no-cache'/);
+  assert.doesNotMatch(smoke, /deploy_sha=/);
 });
 
 test('deployed public takeover smoke remains opt-in and verifies the complete handoff', () => {
@@ -355,7 +326,7 @@ test('deployed public takeover smoke remains opt-in and verifies the complete ha
     'utf8',
   );
   const qaPackage = readFileSync(resolve(repoRoot, 'scripts', 'qa', 'package.json'), 'utf8');
-  const workflow = readFileSync(resolve(repoRoot, '.github', 'workflows', 'ci.yml'), 'utf8');
+  const buildWorkflow = workflow('web-artifact.yml');
 
   assert.match(qaPackage, /"qa:public-takeover": "node \.\/public_flutter_takeover_smoke\.mjs"/);
   assert.match(smoke, /EXPECT_PUBLIC_FLUTTER_TAKEOVER/);
@@ -375,41 +346,36 @@ test('deployed public takeover smoke remains opt-in and verifies the complete ha
   assert.match(smoke, /expectTakeover \? 2 : 1/);
   assert.match(smoke, /const browser = await browserType\.launch/);
   assert.match(smoke, /finally \{\s*await browser\.close\(\);/);
-  assert.match(workflow, /--dart-define=PUBLIC_FLUTTER_TAKEOVER_ENABLED=true/);
-  assert.match(workflow, /--dart-define=SEO_PUBLIC_PAGES_ENABLED=true/);
+  assert.match(buildWorkflow, /--dart-define=PUBLIC_FLUTTER_TAKEOVER_ENABLED=true/);
+  assert.match(buildWorkflow, /--dart-define=SEO_PUBLIC_PAGES_ENABLED=true/);
 });
 
 test('production deployment enforces and can roll back the canonical takeover smoke', () => {
-  const workflow = readFileSync(
-    resolve(repoRoot, '.github', 'workflows', 'deploy.yml'),
-    'utf8',
-  );
+  const deploy = workflow('web-deploy-reusable.yml');
+  const smoke = readFileSync(resolve(repoRoot, 'scripts', 'deploy', 'smoke_production_web.sh'), 'utf8');
 
-  assert.match(workflow, /EXPECT_PUBLIC_FLUTTER_TAKEOVER: \$\{\{ vars\.EXPECT_PUBLIC_FLUTTER_TAKEOVER/);
-  assert.match(workflow, /PUBLIC_TAKEOVER_URL: \$\{\{ vars\.PUBLIC_TAKEOVER_URL \}\}/);
-  assert.match(workflow, /PUBLIC_TAKEOVER_MISSING_URL: \$\{\{ vars\.PUBLIC_TAKEOVER_MISSING_URL \}\}/);
-  assert.match(workflow, /PUBLIC_TAKEOVER_OPTIONAL_STANDBY_URL: \$\{\{ vars\.PUBLIC_TAKEOVER_OPTIONAL_STANDBY_URL \}\}/);
-  assert.match(workflow, /npx playwright install --with-deps chromium firefox/);
-  assert.match(workflow, /npm --prefix scripts\/qa run qa:public-takeover/);
+  assert.match(deploy, /EXPECT_PUBLIC_FLUTTER_TAKEOVER: \$\{\{ vars\.EXPECT_PUBLIC_FLUTTER_TAKEOVER/);
+  assert.match(deploy, /PUBLIC_TAKEOVER_URL: \$\{\{ vars\.PUBLIC_TAKEOVER_URL \}\}/);
+  assert.match(deploy, /PUBLIC_TAKEOVER_MISSING_URL: \$\{\{ vars\.PUBLIC_TAKEOVER_MISSING_URL \}\}/);
+  assert.match(deploy, /PUBLIC_TAKEOVER_OPTIONAL_STANDBY_URL: \$\{\{ vars\.PUBLIC_TAKEOVER_OPTIONAL_STANDBY_URL \}\}/);
+  assert.match(smoke, /npx playwright install --with-deps chromium firefox/);
+  assert.match(smoke, /npm --prefix scripts\/qa run qa:public-takeover/);
   assert.match(
-    workflow,
-    /id: smoke[\s\S]*?qa:public-takeover[\s\S]*?Roll back failed web smoke[\s\S]*?steps\.smoke\.outcome == 'failure'/,
+    deploy,
+    /id: production_smoke[\s\S]*?smoke_production_web\.sh[\s\S]*?Roll back failed post-promotion smoke[\s\S]*?steps\.production_smoke\.outcome == 'failure'/,
   );
 });
 
 test('web deployment retries SSH reachability before mutating the release root', () => {
-  const workflow = readFileSync(
-    resolve(repoRoot, '.github', 'workflows', 'deploy.yml'),
-    'utf8',
-  );
+  const deploy = workflow('web-deploy-reusable.yml');
 
-  assert.match(workflow, /Wait for SSH deployment endpoint/);
-  assert.match(workflow, /for attempt in 1 2 3 4 5 6/);
-  assert.match(workflow, /timeout 15 bash -c/);
-  assert.match(workflow, /no remote files were changed/);
+  assert.match(deploy, /Wait for SSH deployment endpoint/);
+  assert.match(deploy, /for attempt in 1 2 3 4 5 6/);
+  assert.match(deploy, /timeout 15 bash -c/);
+  assert.match(deploy, /no remote files were changed/);
   assert.match(
-    workflow,
-    /Wait for SSH deployment endpoint[\s\S]*?Prepare versioned remote upload directory/,
+    deploy,
+    /Wait for SSH deployment endpoint[\s\S]*?Prepare versioned incoming directory/,
   );
 });
 

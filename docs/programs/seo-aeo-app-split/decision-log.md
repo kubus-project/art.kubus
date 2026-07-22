@@ -21,9 +21,9 @@ Both were partially right. `.gitmodules` and `git ls-files --stage` show
 on its own branch and let the parent gitlink follow in a separate commit. Never
 edit backend files expecting them to land in an `art.kubus` commit.
 
-**Note:** a second gitlink, `backend-open-art-wt`, points at the same remote at a
-*different* SHA and is dirty in `git status`. It belongs to unrelated in-flight
-work and is left untouched.
+**Superseded note:** a second gitlink existed during this investigation. The
+repository-governance migration later retired it; `backend` is now the only
+canonical backend gitlink.
 
 ---
 
@@ -182,29 +182,25 @@ that proves nothing.
 
 ---
 
-## D-9 — The backend gitlink must move as a pair, so it does not move yet
+## D-9 — Historical duplicate backend pin (superseded)
 
 **Date:** 2026-07-21
-**Status:** Deliberately deferred
+**Status:** Superseded by the repository-governance migration
 
-`art.kubus` pins the backend **twice**: `backend` and `backend-open-art-wt`.
-`ci.yml` does not merely tolerate this, it *enforces* equality:
+At the time of this decision, `art.kubus` pinned the backend twice and the old
+CI workflow enforced equality:
 
 ```bash
 if [ "$canonical_expected" != "$public_expected" ]; then
   echo "The two backend gitlinks must point to the same verified backend commit."
 ```
 
-This collides with the instruction to leave the dirty `backend-open-art-wt`
-gitlink untouched: bumping only `backend` to pick up the backend revision work
-would fail CI immediately.
+That constraint no longer exists. The duplicate pin and its compatibility
+checkout were removed; CI now validates one canonical `backend` gitlink.
 
-**Decision:** do **not** bump either gitlink in this program's art.kubus PR. The
-backend change ships as its own PR (art.kubus-backend#12). Once merged, a
-separate deliberate commit moves **both** pins to the same merged SHA.
-
-Neither gitlink was staged in any commit here; both remain modified in the
-working tree only.
+**Historical decision:** this program did not bump the pins. The backend change
+remained a separate PR, and later governance work completed the single-pin
+migration.
 
 ---
 
