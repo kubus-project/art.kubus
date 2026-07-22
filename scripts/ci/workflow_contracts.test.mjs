@@ -149,4 +149,3 @@ test('mobile and scheduled work remain outside normal branch deployment', () => 
   assert.match(scheduled, /cron:\s*['"][^'"]+['"]/);
   assert.doesNotMatch(scheduled, /SFTP_|HTTP_BASIC_/);
 });
-
