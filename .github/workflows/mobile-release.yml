@@ -219,7 +219,7 @@ jobs:
         with:
           pattern: '*-release-${{ needs.source.outputs.sha }}'
           path: release
-          merge-multiple: true
+          merge-multiple: false
       - name: Verify release checksums
         shell: bash
         run: |
