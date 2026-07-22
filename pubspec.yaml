@@ -127,6 +127,8 @@ dependencies:
 # The scaleByVector3 method was removed in vector_math 2.1.4
 # This override uses a forked version or we handle it differently
 dependency_overrides:
+  # connectivity_plus 7.2+ requires an Xcode 26.1 SDK API unavailable on CI.
+  connectivity_plus: 7.0.0
   # Override vector_math for all packages
   vector_math: ^2.1.4
   # Reown AppKit 1.8.x requires pointycastle 4. Solana still pulls bip39 with
