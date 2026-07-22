@@ -451,6 +451,11 @@ try {
   for (const browserName of requestedBrowsers) {
     browser = await browserTypes[browserName].launch({ headless: true });
     const suffix = requestedBrowsers.length > 1 ? `-${browserName}` : '';
+    const mobileOptions = { ...devices['iPhone 13'] };
+    if (browserName === 'firefox') {
+      delete mobileOptions.isMobile;
+      delete mobileOptions.hasTouch;
+    }
     if (fullMatrix) {
       for (const context of matrixContexts()) {
         captures.push(
@@ -467,7 +472,7 @@ try {
         ),
       );
       captures.push(
-        await captureRuntime({ ...devices['iPhone 13'] }, `mobile-home${suffix}`),
+        await captureRuntime(mobileOptions, `mobile-home${suffix}`),
       );
     }
     await browser.close();
