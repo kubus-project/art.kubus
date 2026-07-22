@@ -134,9 +134,35 @@ The current repository-scoped deployment secrets must be copied by a human into 
 
 ## Backend coordination
 
-The parent repository retains the early parity check requiring `backend` and `backend-open-art-wt` to pin the same commit. Cross-repository branch reachability is not enforced in the main PR workflow because the backend is private and GitHub's repository token cannot deterministically inspect it without widening permissions.
+The parent repository uses `backend` as its sole canonical backend gitlink. CI rejects duplicate backend gitlinks and verifies the canonical private repository URL and immutable commit shape. Cross-repository branch reachability is not enforced in the main PR workflow because the backend is private and GitHub's repository token cannot deterministically inspect it without widening permissions.
 
 The backend follow-up migration must create backend `dev` from verified backend `master`, add the same topic/release/hotfix policy, protect both branches, and provide a read-only deterministic provenance mechanism. After that migration, parent `dev` gitlinks must point to commits reachable from backend `dev`; parent `master` gitlinks must point to commits reachable from backend `master`.
+
+### Related repository migration ledger
+
+Inspection found that each related repository still defaults to `master` and
+has no `dev` branch. None is required for the main repository's workflow to
+build or fail closed, so each migration belongs in its own reviewed PR:
+
+- `kubus-project/art.kubus-backend`: create `dev` from verified `master`, split
+  trusted integration/release CI, protect both branches, then enforce parent
+  gitlink reachability from backend `dev` or `master` in trusted CI.
+- `kubus-project/art.kubus.site`: keep public publishing on `master`; introduce
+  a separate non-production environment before enabling automatic deploys from
+  its future `dev` branch.
+- `kubus-project/kubus.site`: keep the public corporate site on `master`; move
+  ordinary site PRs to a protected `dev` branch and add preview/staging without
+  reusing production hosting credentials.
+- `kubus-project/admin.kubus`: create a protected `dev` branch and isolated
+  admin staging environment before moving ordinary PRs; production admin
+  credentials must remain restricted to `master`.
+- `kubus-project/kubus-node`: create a protected `dev` branch and non-production
+  node/runtime environment; release only reviewed `dev` commits through
+  `master`, with hotfix reconciliation back to `dev`.
+
+Do not change any related repository's default branch until its own `dev`
+workflow, staging target, PR retargeting, protections, and secret boundaries
+have been validated.
 
 ## Branch protection expectations
 

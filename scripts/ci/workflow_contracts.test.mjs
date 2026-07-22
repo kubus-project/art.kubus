@@ -1,9 +1,15 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 import { classifyPaths } from './classify_changed_paths.mjs';
 import { validateJobResults } from './validate_job_results.mjs';
 import { validatePrSource } from './validate_pr_source.mjs';
+
+const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
+const workflow = (name) => readFileSync(resolve(repositoryRoot, '.github/workflows', name), 'utf8');
 
 test('documentation-only changes avoid platform compilation', () => {
   const result = classifyPaths(['docs/README.md', 'CONTRIBUTING.md']);
@@ -68,4 +74,77 @@ test('aggregate accepts success/skipped and rejects failure, cancellation, or mi
   assert.throws(() => validateJobResults({ a: { result: 'failure' } }, ['a']));
   assert.throws(() => validateJobResults({ a: { result: 'cancelled' } }, ['a']));
   assert.throws(() => validateJobResults({}, ['a']));
+});
+
+test('PR validation is deployment-secret-free and has a stable aggregate', () => {
+  const content = workflow('pr-validation.yml');
+  assert.match(content, /branches:\s*\[dev, master\]/);
+  assert.match(content, /name:\s*PR validation required/);
+  assert.doesNotMatch(content, /pull_request_target|workflow_run/);
+  assert.doesNotMatch(content, /SFTP_|HTTP_BASIC_|SIGNING_|APPLE_/);
+});
+
+test('branch deployments have isolated sources, environments, and concurrency', () => {
+  const development = workflow('deploy-development.yml');
+  const production = workflow('release-production.yml');
+  assert.match(development, /branches:\s*\n\s*- dev/);
+  assert.match(development, /group:\s*deploy-development/);
+  assert.match(development, /environment_name:\s*development-web/);
+  assert.doesNotMatch(development, /production-web|branches:\s*\n\s*- master/);
+  assert.doesNotMatch(development, /secrets:\s*inherit/);
+  assert.match(production, /branches:\s*\n\s*- master/);
+  assert.match(production, /group:\s*deploy-production/);
+  assert.match(production, /environment_name:\s*production-web/);
+  assert.doesNotMatch(production, /development-web|branches:\s*\n\s*- dev/);
+  assert.doesNotMatch(production, /secrets:\s*inherit/);
+});
+
+test('privileged deployment preserves SHA, stale-head, host, smoke, and rollback gates', () => {
+  const content = workflow('web-deploy-reusable.yml');
+  for (const required of [
+    '/branches/$SOURCE_BRANCH',
+    'SFTP_HOST_FINGERPRINT',
+    'EXPECTED_DEPLOYMENT_HOST',
+    'smoke_development_web.sh',
+    'smoke_production_web.sh',
+    'SOURCE_SHA',
+  ]) {
+    assert.ok(content.includes(required), `missing deployment gate: ${required}`);
+  }
+  assert.match(content, /development:development-web:dev\|production:production-web:master/);
+  assert.match(content, /atomic_web_release\.sh" promote/);
+  assert.match(content, /atomic_web_release\.sh" rollback/);
+  assert.match(content, /::add-mask::\$HTTP_BASIC_USERNAME/);
+  assert.match(content, /::add-mask::\$HTTP_BASIC_PASSWORD/);
+});
+
+test('all third-party actions are pinned to immutable commit SHAs', () => {
+  for (const name of [
+    'pr-validation.yml',
+    'deploy-development.yml',
+    'release-production.yml',
+    'mobile-release.yml',
+    'scheduled-quality.yml',
+    'pages.yml',
+    'web-artifact.yml',
+    'web-deploy-reusable.yml',
+  ]) {
+    const content = workflow(name);
+    for (const match of content.matchAll(/^\s*uses:\s*(\S+)/gm)) {
+      const reference = match[1];
+      if (reference.startsWith('./')) continue;
+      assert.match(reference, /@[0-9a-f]{40}$/, `${name} has a mutable action reference: ${reference}`);
+    }
+  }
+});
+
+test('mobile and scheduled work remain outside normal branch deployment', () => {
+  const mobile = workflow('mobile-release.yml');
+  const scheduled = workflow('scheduled-quality.yml');
+  assert.match(mobile, /tags:\s*\[['"]v\*['"]\]/);
+  assert.match(mobile, /android-release/);
+  assert.match(mobile, /ios-release/);
+  assert.doesNotMatch(mobile, /pull_request:/);
+  assert.match(scheduled, /cron:\s*['"][^'"]+['"]/);
+  assert.doesNotMatch(scheduled, /SFTP_|HTTP_BASIC_/);
 });

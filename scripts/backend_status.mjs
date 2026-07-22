@@ -5,7 +5,6 @@ import { fileURLToPath } from 'node:url';
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const backendDir = resolve(rootDir, 'backend');
-const mirrorDir = resolve(rootDir, 'backend-open-art-wt');
 const writeGithubOutput = process.argv.includes('--github-output');
 
 function runGit(args, cwd = rootDir) {
@@ -65,7 +64,6 @@ function inspectGitlink(relativePath, directory) {
 }
 
 const backendInfo = inspectGitlink('backend', backendDir);
-const mirrorInfo = inspectGitlink('backend-open-art-wt', mirrorDir);
 const submoduleConfigured = backendInfo.configured;
 const backendDirectoryPresent = isDirectory(backendDir);
 const packageJsonPresent = backendInfo.packageJsonPresent;
@@ -86,12 +84,6 @@ console.log(`- backend/package.json present: ${packageJsonPresent ? 'yes' : 'no'
 console.log(`- submodule status: ${submoduleStatus.output || submoduleStatus.error || 'unavailable'}`);
 console.log(`- backend HEAD: ${backendHead.output || 'unavailable'}`);
 console.log(`- backend worktree: ${dirty ? 'dirty' : packageJsonPresent ? 'clean' : 'unavailable'}`);
-console.log(`- backend-open-art-wt configured: ${mirrorInfo.configured ? 'yes' : 'no'}`);
-console.log(`- backend-open-art-wt directory present: ${mirrorInfo.directoryPresent ? 'yes' : 'no'}`);
-console.log(`- backend-open-art-wt/package.json present: ${mirrorInfo.packageJsonPresent ? 'yes' : 'no'}`);
-console.log(`- backend-open-art-wt submodule status: ${mirrorInfo.submoduleStatus.output || mirrorInfo.submoduleStatus.error || 'unavailable'}`);
-console.log(`- backend-open-art-wt HEAD: ${mirrorInfo.head.output || 'unavailable'}`);
-console.log(`- backend-open-art-wt worktree: ${mirrorInfo.dirty ? 'dirty' : mirrorInfo.packageJsonPresent ? 'clean' : 'unavailable'}`);
 console.log(`- backend validation: ${validationAvailable ? 'available' : 'skipped'} (${reason})`);
 
 setOutput('ok', validationAvailable ? 'true' : 'false');
@@ -100,6 +92,3 @@ setOutput('submodule_configured', submoduleConfigured ? 'true' : 'false');
 setOutput('submodule_status', submoduleStatus.output || submoduleStatus.error || 'unavailable');
 setOutput('backend_head', backendHead.output || 'unavailable');
 setOutput('dirty', dirty ? 'true' : 'false');
-setOutput('backend_open_art_wt_configured', mirrorInfo.configured ? 'true' : 'false');
-setOutput('backend_open_art_wt_head', mirrorInfo.head.output || 'unavailable');
-setOutput('backend_open_art_wt_dirty', mirrorInfo.dirty ? 'true' : 'false');

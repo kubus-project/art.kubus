@@ -2,7 +2,7 @@
 
 set -eu
 
-script_dir="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+script_dir="$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)"
 release_script="$script_dir/atomic_web_release.sh"
 tmp_root="$(mktemp -d)"
 trap 'rm -rf "$tmp_root"' EXIT HUP INT TERM
@@ -23,9 +23,8 @@ printf '<html>candidate</html>\n' > "$tmp_root/payload/index.html"
 printf 'bootstrap\n' > "$tmp_root/payload/flutter_bootstrap.js"
 (
   cd "$tmp_root/payload"
-  find . -type f ! -name SHA256SUMS -print0 \
-    | sort -z \
-    | xargs -0 sha256sum > SHA256SUMS
+  find . -type f ! -name SHA256SUMS -print0 > "$tmp_root/payload-files"
+  sort -z "$tmp_root/payload-files" | xargs -0 sha256sum > SHA256SUMS
 )
 archive="art-kubus-web-$SOURCE_SHA.tar.gz"
 tar -C "$tmp_root/payload" -czf "$INCOMING_DIR/$archive" .

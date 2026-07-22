@@ -158,7 +158,6 @@ requireIncludes('docs/README.md', [
 requireIncludes('docs/LOCAL_VERIFICATION.md', [
   'npm run docs:doctor',
   'npm run backend:status',
-  'backend-open-art-wt',
   'npm run qa:web',
   'npm run verify:all',
   'npm run verify:ci',
@@ -167,7 +166,6 @@ requireIncludes('docs/LOCAL_VERIFICATION.md', [
 ]);
 requireIncludes('.gitmodules', [
   'path = backend',
-  'path = backend-open-art-wt',
   'git@github.com:kubus-project/art.kubus-backend.git',
 ]);
 requireIncludes('AGENTS.md', [
