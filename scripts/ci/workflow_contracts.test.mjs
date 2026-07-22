@@ -129,6 +129,59 @@ test('privileged deployment preserves SHA, stale-head, host, smoke, and rollback
   assert.match(content, /::add-mask::\$HTTP_BASIC_PASSWORD/);
 });
 
+test('composite deploy action is context-safe and fed environment config by its callers', () => {
+  const action = deployAction();
+
+  // A composite action cannot resolve the `vars` or `secrets` contexts at
+  // runtime; referencing them makes the action fail to load. Every environment
+  // value must arrive as an explicit input forwarded by the environment-bound
+  // caller. This is the exact defect that broke staging and production deploys.
+  assert.doesNotMatch(action, /\$\{\{\s*vars\./, 'composite action must not read the vars context');
+  assert.doesNotMatch(action, /\$\{\{\s*secrets\./, 'composite action must not read the secrets context');
+
+  // Environment variables previously read via `vars.*` are now required inputs.
+  for (const input of [
+    'environment_variable_name',
+    'sftp_port',
+    'web_server_dir',
+    'web_releases_dir',
+    'web_smoke_url',
+    'expected_deployment_host',
+  ]) {
+    assert.match(action, new RegExp(`${input}:\\s*\\{ required: true \\}`), `missing required input: ${input}`);
+  }
+
+  // Both environment-bound callers forward the environment variables and secrets.
+  for (const name of ['deploy-development.yml', 'release-production.yml']) {
+    const caller = workflow(name);
+    assert.match(caller, /environment_variable_name:\s*\$\{\{ vars\.ENVIRONMENT_NAME \}\}/);
+    assert.match(caller, /sftp_port:\s*\$\{\{ vars\.SFTP_PORT \}\}/);
+    assert.match(caller, /web_server_dir:\s*\$\{\{ vars\.WEB_SERVER_DIR \}\}/);
+    assert.match(caller, /web_releases_dir:\s*\$\{\{ vars\.WEB_RELEASES_DIR \}\}/);
+    assert.match(caller, /web_smoke_url:\s*\$\{\{ vars\.WEB_SMOKE_URL \}\}/);
+    assert.match(caller, /expected_deployment_host:\s*\$\{\{ vars\.EXPECTED_DEPLOYMENT_HOST \}\}/);
+    assert.match(caller, /sftp_server:\s*\$\{\{ secrets\.SFTP_SERVER \}\}/);
+    assert.match(caller, /sftp_host_fingerprint:\s*\$\{\{ secrets\.SFTP_HOST_FINGERPRINT \}\}/);
+  }
+
+  // Production additionally forwards the public-takeover smoke configuration.
+  const production = workflow('release-production.yml');
+  for (const input of [
+    'expect_public_flutter_takeover',
+    'public_takeover_url',
+    'public_takeover_missing_url',
+    'public_takeover_optional_standby_url',
+  ]) {
+    assert.match(production, new RegExp(`${input}:\\s*\\$\\{\\{ vars\\.`), `production caller must forward ${input}`);
+  }
+
+  // The obsolete reusable deployment workflow must stay deleted.
+  assert.throws(
+    () => workflow('web-deploy-reusable.yml'),
+    'the reusable deployment workflow must not be reintroduced',
+  );
+});
+
 test('all third-party actions are pinned to immutable commit SHAs', () => {
   for (const name of [
     'pr-validation.yml',
