@@ -10,6 +10,7 @@ import { validatePrSource } from './validate_pr_source.mjs';
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const workflow = (name) => readFileSync(resolve(repositoryRoot, '.github/workflows', name), 'utf8');
+const deployAction = () => readFileSync(resolve(repositoryRoot, '.github/actions/deploy-web-artifact/action.yml'), 'utf8');
 
 test('documentation-only changes avoid platform compilation', () => {
   const result = classifyPaths(['docs/README.md', 'CONTRIBUTING.md']);
@@ -100,16 +101,16 @@ test('branch deployments have isolated sources, environments, and concurrency', 
 });
 
 test('privileged deployment preserves SHA, stale-head, host, smoke, and rollback gates', () => {
-  const content = workflow('web-deploy-reusable.yml');
-  for (const secret of [
-    'SFTP_SERVER',
-    'SFTP_USERNAME',
-    'SFTP_PRIVATE_KEY',
-    'SFTP_HOST_FINGERPRINT',
-    'HTTP_BASIC_USERNAME',
-    'HTTP_BASIC_PASSWORD',
-  ]) {
-    assert.match(content, new RegExp(`secrets:[\\s\\S]*${secret}:\\s*\\{ required: false \\}`));
+  const content = deployAction();
+  assert.match(content, /using:\s*composite/);
+  for (const input of ['sftp_server', 'sftp_username', 'sftp_private_key', 'sftp_host_fingerprint']) {
+    assert.match(content, new RegExp(`${input}:\\s*\\{ required: true \\}`));
+  }
+  assert.match(content, /inputs\.bootstrap_web_root == 'true'/);
+  for (const caller of [workflow('deploy-development.yml'), workflow('release-production.yml')]) {
+    assert.match(caller, /uses:\s*\.\/\.github\/actions\/deploy-web-artifact/);
+    assert.match(caller, /sftp_server:\s*\$\{\{ secrets\.SFTP_SERVER \}\}/);
+    assert.match(caller, /sftp_private_key:\s*\$\{\{ secrets\.SFTP_PRIVATE_KEY \}\}/);
   }
   for (const required of [
     '/branches/$SOURCE_BRANCH',
@@ -137,9 +138,9 @@ test('all third-party actions are pinned to immutable commit SHAs', () => {
     'scheduled-quality.yml',
     'pages.yml',
     'web-artifact.yml',
-    'web-deploy-reusable.yml',
+    '../actions/deploy-web-artifact/action.yml',
   ]) {
-    const content = workflow(name);
+    const content = name.startsWith('../') ? deployAction() : workflow(name);
     for (const match of content.matchAll(/^\s*uses:\s*(\S+)/gm)) {
       const reference = match[1];
       if (reference.startsWith('./')) continue;
