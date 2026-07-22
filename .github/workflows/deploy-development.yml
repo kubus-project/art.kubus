@@ -52,12 +52,34 @@ jobs:
   deploy:
     name: Promote staging artifact
     needs: [source, build]
-    uses: ./.github/workflows/web-deploy-reusable.yml
-    with:
-      artifact_name: ${{ needs.build.outputs.artifact_name }}
-      source_sha: ${{ needs.source.outputs.sha }}
-      source_branch: dev
-      logical_environment: development
-      environment_name: development-web
-      retained_release_count: 5
-      bootstrap_web_root: ${{ github.event_name == 'workflow_dispatch' && inputs.bootstrap_web_root }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    environment:
+      name: development-web
+      url: ${{ vars.WEB_SMOKE_URL }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: ./.github/actions/deploy-web-artifact
+        with:
+          artifact_name: ${{ needs.build.outputs.artifact_name }}
+          source_sha: ${{ needs.source.outputs.sha }}
+          source_branch: dev
+          logical_environment: development
+          environment_name: development-web
+          retained_release_count: 5
+          # GitHub Environment variables, forwarded explicitly because a composite
+          # action cannot read the `vars` context.
+          environment_variable_name: ${{ vars.ENVIRONMENT_NAME }}
+          sftp_port: ${{ vars.SFTP_PORT }}
+          web_server_dir: ${{ vars.WEB_SERVER_DIR }}
+          web_releases_dir: ${{ vars.WEB_RELEASES_DIR }}
+          web_smoke_url: ${{ vars.WEB_SMOKE_URL }}
+          expected_deployment_host: ${{ vars.EXPECTED_DEPLOYMENT_HOST }}
+          bootstrap_web_root: ${{ github.event_name == 'workflow_dispatch' && inputs.bootstrap_web_root }}
+          sftp_server: ${{ secrets.SFTP_SERVER }}
+          sftp_username: ${{ secrets.SFTP_USERNAME }}
+          sftp_private_key: ${{ secrets.SFTP_PRIVATE_KEY }}
+          sftp_private_key_passphrase: ${{ secrets.SFTP_PRIVATE_KEY_PASSPHRASE }}
+          sftp_host_fingerprint: ${{ secrets.SFTP_HOST_FINGERPRINT }}
+          http_basic_username: ${{ secrets.HTTP_BASIC_USERNAME }}
+          http_basic_password: ${{ secrets.HTTP_BASIC_PASSWORD }}

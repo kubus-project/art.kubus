@@ -52,12 +52,37 @@ jobs:
   deploy:
     name: Promote protected production artifact
     needs: [source, build]
-    uses: ./.github/workflows/web-deploy-reusable.yml
-    with:
-      artifact_name: ${{ needs.build.outputs.artifact_name }}
-      source_sha: ${{ needs.source.outputs.sha }}
-      source_branch: master
-      logical_environment: production
-      environment_name: production-web
-      retained_release_count: 10
-      bootstrap_web_root: ${{ github.event_name == 'workflow_dispatch' && inputs.bootstrap_web_root }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    environment:
+      name: production-web
+      url: ${{ vars.WEB_SMOKE_URL }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: ./.github/actions/deploy-web-artifact
+        with:
+          artifact_name: ${{ needs.build.outputs.artifact_name }}
+          source_sha: ${{ needs.source.outputs.sha }}
+          source_branch: master
+          logical_environment: production
+          environment_name: production-web
+          retained_release_count: 10
+          # GitHub Environment variables, forwarded explicitly because a composite
+          # action cannot read the `vars` context.
+          environment_variable_name: ${{ vars.ENVIRONMENT_NAME }}
+          sftp_port: ${{ vars.SFTP_PORT }}
+          web_server_dir: ${{ vars.WEB_SERVER_DIR }}
+          web_releases_dir: ${{ vars.WEB_RELEASES_DIR }}
+          web_smoke_url: ${{ vars.WEB_SMOKE_URL }}
+          expected_deployment_host: ${{ vars.EXPECTED_DEPLOYMENT_HOST }}
+          expect_public_flutter_takeover: ${{ vars.EXPECT_PUBLIC_FLUTTER_TAKEOVER }}
+          public_takeover_url: ${{ vars.PUBLIC_TAKEOVER_URL }}
+          public_takeover_missing_url: ${{ vars.PUBLIC_TAKEOVER_MISSING_URL }}
+          public_takeover_optional_standby_url: ${{ vars.PUBLIC_TAKEOVER_OPTIONAL_STANDBY_URL }}
+          public_contract_artwork_id: ${{ vars.PUBLIC_CONTRACT_ARTWORK_ID }}
+          bootstrap_web_root: ${{ github.event_name == 'workflow_dispatch' && inputs.bootstrap_web_root }}
+          sftp_server: ${{ secrets.SFTP_SERVER }}
+          sftp_username: ${{ secrets.SFTP_USERNAME }}
+          sftp_private_key: ${{ secrets.SFTP_PRIVATE_KEY }}
+          sftp_private_key_passphrase: ${{ secrets.SFTP_PRIVATE_KEY_PASSPHRASE }}
+          sftp_host_fingerprint: ${{ secrets.SFTP_HOST_FINGERPRINT }}

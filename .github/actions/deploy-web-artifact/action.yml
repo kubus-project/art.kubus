@@ -1,0 +1,381 @@
+name: Deploy exact web artifact
+description: Promotes a verified immutable web artifact with guarded rollback.
+inputs:
+  artifact_name: { required: true }
+  source_sha: { required: true }
+  source_branch: { required: true }
+  logical_environment: { required: true }
+  environment_name: { required: true }
+  retained_release_count: { required: true }
+  bootstrap_web_root: { required: false, default: false }
+  sftp_server: { required: true }
+  sftp_username: { required: true }
+  sftp_private_key: { required: true }
+  sftp_private_key_passphrase: { required: false }
+  sftp_host_fingerprint: { required: true }
+  http_basic_username: { required: false }
+  http_basic_password: { required: false }
+  # Environment-scoped configuration. A composite action cannot read the `vars`
+  # context, so every GitHub Environment variable is forwarded explicitly by the
+  # environment-bound caller workflow.
+  environment_variable_name: { required: true }
+  sftp_port: { required: true }
+  web_server_dir: { required: true }
+  web_releases_dir: { required: true }
+  web_smoke_url: { required: true }
+  expected_deployment_host: { required: true }
+  # Production-only public takeover smoke configuration (unused for development).
+  expect_public_flutter_takeover: { required: false }
+  public_takeover_url: { required: false }
+  public_takeover_missing_url: { required: false }
+  public_takeover_optional_standby_url: { required: false }
+  public_contract_artwork_id: { required: false }
+runs:
+  using: composite
+  steps:
+    - name: Validate immutable deployment request
+      shell: bash
+      env:
+        SOURCE_SHA: ${{ inputs.source_sha }}
+        SOURCE_BRANCH: ${{ inputs.source_branch }}
+        LOGICAL_ENVIRONMENT: ${{ inputs.logical_environment }}
+        ENVIRONMENT_NAME_INPUT: ${{ inputs.environment_name }}
+      run: |
+        set -euo pipefail
+        [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
+        [[ "$SOURCE_BRANCH" =~ ^[A-Za-z0-9._/-]+$ ]]
+        [[ "$SOURCE_BRANCH" != *..* ]]
+        case "$LOGICAL_ENVIRONMENT:$ENVIRONMENT_NAME_INPUT:$SOURCE_BRANCH" in
+          development:development-web:dev|production:production-web:master) ;;
+          *) echo 'Invalid branch/environment deployment boundary.' >&2; exit 1 ;;
+        esac
+
+    - name: Confirm source is still the latest protected branch head
+      id: source_current
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        SOURCE_SHA: ${{ inputs.source_sha }}
+        SOURCE_BRANCH: ${{ inputs.source_branch }}
+      run: |
+        set -euo pipefail
+        response="$RUNNER_TEMP/branch.json"
+        curl --fail --silent --show-error --location \
+          --header "Authorization: Bearer $GH_TOKEN" \
+          --header 'X-GitHub-Api-Version: 2022-11-28' \
+          "${{ github.api_url }}/repos/${{ github.repository }}/branches/$SOURCE_BRANCH" > "$response"
+        latest_sha="$(jq -r '.commit.sha' "$response")"
+        if [ "$latest_sha" != "$SOURCE_SHA" ]; then
+          echo "Deployment is stale: $SOURCE_BRANCH is now $latest_sha; no remote change will be made."
+          echo 'stale=true' >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+        echo 'stale=false' >> "$GITHUB_OUTPUT"
+
+    - name: Checkout exact trusted deployment logic
+      if: steps.source_current.outputs.stale != 'true'
+      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      with:
+        ref: ${{ inputs.source_sha }}
+        fetch-depth: 1
+        submodules: false
+
+    - name: Download exact immutable artifact
+      if: steps.source_current.outputs.stale != 'true'
+      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+      with:
+        name: ${{ inputs.artifact_name }}
+        path: build/web
+
+    - name: Verify provenance, checksums, and package archive
+      if: steps.source_current.outputs.stale != 'true'
+      shell: bash
+      env:
+        SOURCE_SHA: ${{ inputs.source_sha }}
+        LOGICAL_ENVIRONMENT: ${{ inputs.logical_environment }}
+        ARTIFACT_NAME: ${{ inputs.artifact_name }}
+      run: |
+        set -euo pipefail
+        test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+        test -f build/web/index.html
+        test -f build/web/SHA256SUMS
+        test "$(tr -d '\r\n' < build/web/kubus-web-revision.txt)" = "$SOURCE_SHA"
+        test "$(jq -r '.sourceSha' build/web/kubus-deployment-metadata.json)" = "$SOURCE_SHA"
+        test "$(jq -r '.environment' build/web/kubus-deployment-metadata.json)" = "$LOGICAL_ENVIRONMENT"
+        test "$(jq -r '.artifact' build/web/kubus-deployment-metadata.json)" = "$ARTIFACT_NAME"
+        (cd build/web && sha256sum -c SHA256SUMS)
+        mkdir -p deployment
+        archive="art-kubus-web-$SOURCE_SHA.tar.gz"
+        tar -C build/web -czf "deployment/$archive" .
+        (cd deployment && sha256sum "$archive" > "$archive.sha256")
+        cp scripts/deploy/atomic_web_release.sh deployment/
+
+    - name: Validate environment-scoped deployment target
+      if: steps.source_current.outputs.stale != 'true'
+      id: target
+      shell: bash
+      env:
+        DEPLOYMENT_ENVIRONMENT: ${{ inputs.logical_environment }}
+        ENVIRONMENT_NAME: ${{ inputs.environment_variable_name }}
+        SOURCE_SHA: ${{ inputs.source_sha }}
+        SFTP_SERVER: ${{ inputs.sftp_server }}
+        SFTP_USERNAME: ${{ inputs.sftp_username }}
+        SFTP_PRIVATE_KEY: ${{ inputs.sftp_private_key }}
+        SFTP_HOST_FINGERPRINT: ${{ inputs.sftp_host_fingerprint }}
+        SFTP_PORT: ${{ inputs.sftp_port }}
+        WEB_SERVER_DIR: ${{ inputs.web_server_dir }}
+        WEB_RELEASES_DIR: ${{ inputs.web_releases_dir }}
+        WEB_SMOKE_URL: ${{ inputs.web_smoke_url }}
+        EXPECTED_DEPLOYMENT_HOST: ${{ inputs.expected_deployment_host }}
+        RETAIN_RELEASE_COUNT: ${{ inputs.retained_release_count }}
+      run: bash scripts/deploy/validate_deployment_target.sh
+
+    - name: Wait for SSH deployment endpoint
+      if: steps.source_current.outputs.stale != 'true'
+      shell: bash
+      env:
+        SFTP_SERVER: ${{ inputs.sftp_server }}
+        SFTP_PORT: ${{ inputs.sftp_port }}
+      run: |
+        set -euo pipefail
+        for attempt in 1 2 3 4 5 6; do
+          if timeout 15 bash -c "</dev/tcp/$SFTP_SERVER/$SFTP_PORT" 2>/dev/null; then
+            echo 'SSH deployment endpoint is reachable.'
+            exit 0
+          fi
+          if [ "$attempt" -lt 6 ]; then sleep "$((attempt * 10))"; fi
+        done
+        echo 'SSH deployment endpoint remained unreachable; no remote files were changed.' >&2
+        exit 1
+
+    - name: Verify remote atomic deployment capabilities
+      if: steps.source_current.outputs.stale != 'true'
+      uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1
+      env:
+        SOURCE_SHA: ${{ inputs.source_sha }}
+        RELEASE_ROOT: ${{ steps.target.outputs.release_root }}
+      with:
+        host: ${{ inputs.sftp_server }}
+        username: ${{ inputs.sftp_username }}
+        port: ${{ inputs.sftp_port }}
+        key: ${{ inputs.sftp_private_key }}
+        passphrase: ${{ inputs.sftp_private_key_passphrase }}
+        fingerprint: ${{ inputs.sftp_host_fingerprint }}
+        envs: SOURCE_SHA,RELEASE_ROOT
+        script_stop: true
+        script: |
+          set -eu
+          for command_name in sha256sum tar readlink ln mv; do command -v "$command_name" >/dev/null; done
+          probe="$RELEASE_ROOT/capability-$SOURCE_SHA"
+          trap 'rm -rf "$probe"' EXIT HUP INT TERM
+          rm -rf "$probe"
+          mkdir -p "$probe/a" "$probe/b"
+          printf 'capability\n' > "$probe/a/value"
+          (cd "$probe/a" && sha256sum value > SHA256SUMS && sha256sum -c SHA256SUMS)
+          ln -s "$probe/a" "$probe/current"
+          ln -s "$probe/b" "$probe/current.next"
+          mv -Tf "$probe/current.next" "$probe/current"
+          test "$(readlink "$probe/current")" = "$probe/b"
+
+    - name: Upload approved bootstrap helper
+      if: ${{ steps.source_current.outputs.stale != 'true' && inputs.bootstrap_web_root == 'true' }}
+      uses: appleboy/scp-action@ff85246acaad7bdce478db94a363cd2bf7c90345 # v1
+      with:
+        host: ${{ inputs.sftp_server }}
+        username: ${{ inputs.sftp_username }}
+        port: ${{ inputs.sftp_port }}
+        key: ${{ inputs.sftp_private_key }}
+        passphrase: ${{ inputs.sftp_private_key_passphrase }}
+        fingerprint: ${{ inputs.sftp_host_fingerprint }}
+        source: scripts/deploy/bootstrap_atomic_web_root.sh
+        target: ${{ steps.target.outputs.release_root }}/bootstrap-${{ inputs.source_sha }}
+        strip_components: 2
+        overwrite: true
+
+    - name: Bootstrap atomic web root
+      if: ${{ steps.source_current.outputs.stale != 'true' && inputs.bootstrap_web_root == 'true' }}
+      uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1
+      env:
+        SOURCE_SHA: ${{ inputs.source_sha }}
+        LIVE_DIR: ${{ steps.target.outputs.live_dir }}
+        RELEASE_ROOT: ${{ steps.target.outputs.release_root }}
+        BOOTSTRAP_DIR: ${{ steps.target.outputs.release_root }}/bootstrap-${{ inputs.source_sha }}
+      with:
+        host: ${{ inputs.sftp_server }}
+        username: ${{ inputs.sftp_username }}
+        port: ${{ inputs.sftp_port }}
+        key: ${{ inputs.sftp_private_key }}
+        passphrase: ${{ inputs.sftp_private_key_passphrase }}
+        fingerprint: ${{ inputs.sftp_host_fingerprint }}
+        envs: SOURCE_SHA,LIVE_DIR,RELEASE_ROOT,BOOTSTRAP_DIR
+        script_stop: true
+        script: |
+          set -eu
+          trap 'rm -rf "$BOOTSTRAP_DIR"' EXIT HUP INT TERM
+          sh "$BOOTSTRAP_DIR/bootstrap_atomic_web_root.sh" "$LIVE_DIR" "$RELEASE_ROOT" "$SOURCE_SHA"
+
+    - name: Prepare versioned incoming directory
+      if: steps.source_current.outputs.stale != 'true'
+      uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1
+      env:
+        LIVE_DIR: ${{ steps.target.outputs.live_dir }}
+        INCOMING_DIR: ${{ steps.target.outputs.incoming_dir }}
+        RELEASE_ROOT: ${{ steps.target.outputs.release_root }}
+        RELEASE_DIR: ${{ steps.target.outputs.release_dir }}
+      with:
+        host: ${{ inputs.sftp_server }}
+        username: ${{ inputs.sftp_username }}
+        port: ${{ inputs.sftp_port }}
+        key: ${{ inputs.sftp_private_key }}
+        passphrase: ${{ inputs.sftp_private_key_passphrase }}
+        fingerprint: ${{ inputs.sftp_host_fingerprint }}
+        envs: LIVE_DIR,INCOMING_DIR,RELEASE_ROOT,RELEASE_DIR
+        script_stop: true
+        script: |
+          set -eu
+          test -L "$LIVE_DIR"
+          if [ -e "$RELEASE_DIR" ]; then test -d "$RELEASE_DIR"; fi
+          rm -rf "$INCOMING_DIR"
+          mkdir -p "$INCOMING_DIR" "$RELEASE_ROOT/releases"
+
+    - name: Upload versioned archive over SCP
+      if: steps.source_current.outputs.stale != 'true'
+      uses: appleboy/scp-action@ff85246acaad7bdce478db94a363cd2bf7c90345 # v1
+      with:
+        host: ${{ inputs.sftp_server }}
+        username: ${{ inputs.sftp_username }}
+        port: ${{ inputs.sftp_port }}
+        key: ${{ inputs.sftp_private_key }}
+        passphrase: ${{ inputs.sftp_private_key_passphrase }}
+        fingerprint: ${{ inputs.sftp_host_fingerprint }}
+        source: deployment/*
+        target: ${{ steps.target.outputs.incoming_dir }}
+        strip_components: 1
+        overwrite: true
+
+    - name: Verify remote checksums and atomically promote
+      if: steps.source_current.outputs.stale != 'true'
+      id: promote
+      uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1
+      env:
+        SOURCE_SHA: ${{ inputs.source_sha }}
+        LIVE_DIR: ${{ steps.target.outputs.live_dir }}
+        RELEASE_ROOT: ${{ steps.target.outputs.release_root }}
+        INCOMING_DIR: ${{ steps.target.outputs.incoming_dir }}
+        RELEASE_DIR: ${{ steps.target.outputs.release_dir }}
+        RETAIN_RELEASE_COUNT: ${{ inputs.retained_release_count }}
+      with:
+        host: ${{ inputs.sftp_server }}
+        username: ${{ inputs.sftp_username }}
+        port: ${{ inputs.sftp_port }}
+        key: ${{ inputs.sftp_private_key }}
+        passphrase: ${{ inputs.sftp_private_key_passphrase }}
+        fingerprint: ${{ inputs.sftp_host_fingerprint }}
+        envs: SOURCE_SHA,LIVE_DIR,RELEASE_ROOT,INCOMING_DIR,RELEASE_DIR,RETAIN_RELEASE_COUNT
+        script_stop: true
+        script: sh "$INCOMING_DIR/atomic_web_release.sh" promote
+
+    - name: Mask staging HTTP credentials
+      if: ${{ steps.source_current.outputs.stale != 'true' && inputs.logical_environment == 'development' }}
+      shell: bash
+      env:
+        HTTP_BASIC_USERNAME: ${{ inputs.http_basic_username }}
+        HTTP_BASIC_PASSWORD: ${{ inputs.http_basic_password }}
+      run: |
+        test -n "$HTTP_BASIC_USERNAME"
+        test -n "$HTTP_BASIC_PASSWORD"
+        echo "::add-mask::$HTTP_BASIC_USERNAME"
+        echo "::add-mask::$HTTP_BASIC_PASSWORD"
+
+    - name: Password-aware development smoke
+      id: development_smoke
+      if: ${{ steps.source_current.outputs.stale != 'true' && inputs.logical_environment == 'development' }}
+      shell: bash
+      env:
+        WEB_SMOKE_URL: ${{ steps.target.outputs.smoke_url }}
+        SOURCE_SHA: ${{ inputs.source_sha }}
+        HTTP_BASIC_USERNAME: ${{ inputs.http_basic_username }}
+        HTTP_BASIC_PASSWORD: ${{ inputs.http_basic_password }}
+      run: bash scripts/deploy/smoke_development_web.sh
+
+    - name: Production routing, SEO, takeover, and revision smoke
+      id: production_smoke
+      if: ${{ steps.source_current.outputs.stale != 'true' && inputs.logical_environment == 'production' }}
+      shell: bash
+      env:
+        WEB_SMOKE_URL: ${{ steps.target.outputs.smoke_url }}
+        SOURCE_SHA: ${{ inputs.source_sha }}
+        EXPECT_PUBLIC_FLUTTER_TAKEOVER: ${{ inputs.expect_public_flutter_takeover }}
+        PUBLIC_TAKEOVER_URL: ${{ inputs.public_takeover_url }}
+        PUBLIC_TAKEOVER_MISSING_URL: ${{ inputs.public_takeover_missing_url }}
+        PUBLIC_TAKEOVER_OPTIONAL_STANDBY_URL: ${{ inputs.public_takeover_optional_standby_url }}
+        PUBLIC_CONTRACT_ARTWORK_ID: ${{ inputs.public_contract_artwork_id }}
+      run: bash scripts/deploy/smoke_production_web.sh
+
+    - name: Roll back failed post-promotion smoke
+      id: rollback
+      if: >-
+        ${{
+          failure() &&
+          steps.source_current.outputs.stale != 'true' &&
+          steps.promote.outcome == 'success' &&
+          (steps.development_smoke.outcome == 'failure' || steps.production_smoke.outcome == 'failure')
+        }}
+      uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1
+      env:
+        SOURCE_SHA: ${{ inputs.source_sha }}
+        LIVE_DIR: ${{ steps.target.outputs.live_dir }}
+        RELEASE_ROOT: ${{ steps.target.outputs.release_root }}
+        INCOMING_DIR: ${{ steps.target.outputs.incoming_dir }}
+        RELEASE_DIR: ${{ steps.target.outputs.release_dir }}
+        RETAIN_RELEASE_COUNT: ${{ inputs.retained_release_count }}
+      with:
+        host: ${{ inputs.sftp_server }}
+        username: ${{ inputs.sftp_username }}
+        port: ${{ inputs.sftp_port }}
+        key: ${{ inputs.sftp_private_key }}
+        passphrase: ${{ inputs.sftp_private_key_passphrase }}
+        fingerprint: ${{ inputs.sftp_host_fingerprint }}
+        envs: SOURCE_SHA,LIVE_DIR,RELEASE_ROOT,INCOMING_DIR,RELEASE_DIR,RETAIN_RELEASE_COUNT
+        script_stop: true
+        script: sh "$INCOMING_DIR/atomic_web_release.sh" rollback
+
+    - name: Remove failed incoming upload after successful rollback
+      if: ${{ always() && steps.source_current.outputs.stale != 'true' && steps.rollback.outcome == 'success' }}
+      uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1
+      env:
+        INCOMING_DIR: ${{ steps.target.outputs.incoming_dir }}
+      with:
+        host: ${{ inputs.sftp_server }}
+        username: ${{ inputs.sftp_username }}
+        port: ${{ inputs.sftp_port }}
+        key: ${{ inputs.sftp_private_key }}
+        passphrase: ${{ inputs.sftp_private_key_passphrase }}
+        fingerprint: ${{ inputs.sftp_host_fingerprint }}
+        envs: INCOMING_DIR
+        script_stop: true
+        script: rm -rf "$INCOMING_DIR"
+
+    - name: Finalize successful promotion and retain controlled history
+      if: ${{ success() && steps.source_current.outputs.stale != 'true' }}
+      uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1
+      env:
+        SOURCE_SHA: ${{ inputs.source_sha }}
+        LIVE_DIR: ${{ steps.target.outputs.live_dir }}
+        RELEASE_ROOT: ${{ steps.target.outputs.release_root }}
+        INCOMING_DIR: ${{ steps.target.outputs.incoming_dir }}
+        RELEASE_DIR: ${{ steps.target.outputs.release_dir }}
+        RETAIN_RELEASE_COUNT: ${{ inputs.retained_release_count }}
+      with:
+        host: ${{ inputs.sftp_server }}
+        username: ${{ inputs.sftp_username }}
+        port: ${{ inputs.sftp_port }}
+        key: ${{ inputs.sftp_private_key }}
+        passphrase: ${{ inputs.sftp_private_key_passphrase }}
+        fingerprint: ${{ inputs.sftp_host_fingerprint }}
+        envs: SOURCE_SHA,LIVE_DIR,RELEASE_ROOT,INCOMING_DIR,RELEASE_DIR,RETAIN_RELEASE_COUNT
+        script_stop: true
+        script: |
+          set -eu
+          sh "$INCOMING_DIR/atomic_web_release.sh" finalize
+          rm -rf "$INCOMING_DIR"

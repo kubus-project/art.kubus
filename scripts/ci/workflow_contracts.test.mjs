@@ -10,6 +10,7 @@ import { validatePrSource } from './validate_pr_source.mjs';
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const workflow = (name) => readFileSync(resolve(repositoryRoot, '.github/workflows', name), 'utf8');
+const deployAction = () => readFileSync(resolve(repositoryRoot, '.github/actions/deploy-web-artifact/action.yml'), 'utf8');
 
 test('documentation-only changes avoid platform compilation', () => {
   const result = classifyPaths(['docs/README.md', 'CONTRIBUTING.md']);
@@ -100,7 +101,17 @@ test('branch deployments have isolated sources, environments, and concurrency', 
 });
 
 test('privileged deployment preserves SHA, stale-head, host, smoke, and rollback gates', () => {
-  const content = workflow('web-deploy-reusable.yml');
+  const content = deployAction();
+  assert.match(content, /using:\s*composite/);
+  for (const input of ['sftp_server', 'sftp_username', 'sftp_private_key', 'sftp_host_fingerprint']) {
+    assert.match(content, new RegExp(`${input}:\\s*\\{ required: true \\}`));
+  }
+  assert.match(content, /inputs\.bootstrap_web_root == 'true'/);
+  for (const caller of [workflow('deploy-development.yml'), workflow('release-production.yml')]) {
+    assert.match(caller, /uses:\s*\.\/\.github\/actions\/deploy-web-artifact/);
+    assert.match(caller, /sftp_server:\s*\$\{\{ secrets\.SFTP_SERVER \}\}/);
+    assert.match(caller, /sftp_private_key:\s*\$\{\{ secrets\.SFTP_PRIVATE_KEY \}\}/);
+  }
   for (const required of [
     '/branches/$SOURCE_BRANCH',
     'SFTP_HOST_FINGERPRINT',
@@ -118,6 +129,59 @@ test('privileged deployment preserves SHA, stale-head, host, smoke, and rollback
   assert.match(content, /::add-mask::\$HTTP_BASIC_PASSWORD/);
 });
 
+test('composite deploy action is context-safe and fed environment config by its callers', () => {
+  const action = deployAction();
+
+  // A composite action cannot resolve the `vars` or `secrets` contexts at
+  // runtime; referencing them makes the action fail to load. Every environment
+  // value must arrive as an explicit input forwarded by the environment-bound
+  // caller. This is the exact defect that broke staging and production deploys.
+  assert.doesNotMatch(action, /\$\{\{\s*vars\./, 'composite action must not read the vars context');
+  assert.doesNotMatch(action, /\$\{\{\s*secrets\./, 'composite action must not read the secrets context');
+
+  // Environment variables previously read via `vars.*` are now required inputs.
+  for (const input of [
+    'environment_variable_name',
+    'sftp_port',
+    'web_server_dir',
+    'web_releases_dir',
+    'web_smoke_url',
+    'expected_deployment_host',
+  ]) {
+    assert.match(action, new RegExp(`${input}:\\s*\\{ required: true \\}`), `missing required input: ${input}`);
+  }
+
+  // Both environment-bound callers forward the environment variables and secrets.
+  for (const name of ['deploy-development.yml', 'release-production.yml']) {
+    const caller = workflow(name);
+    assert.match(caller, /environment_variable_name:\s*\$\{\{ vars\.ENVIRONMENT_NAME \}\}/);
+    assert.match(caller, /sftp_port:\s*\$\{\{ vars\.SFTP_PORT \}\}/);
+    assert.match(caller, /web_server_dir:\s*\$\{\{ vars\.WEB_SERVER_DIR \}\}/);
+    assert.match(caller, /web_releases_dir:\s*\$\{\{ vars\.WEB_RELEASES_DIR \}\}/);
+    assert.match(caller, /web_smoke_url:\s*\$\{\{ vars\.WEB_SMOKE_URL \}\}/);
+    assert.match(caller, /expected_deployment_host:\s*\$\{\{ vars\.EXPECTED_DEPLOYMENT_HOST \}\}/);
+    assert.match(caller, /sftp_server:\s*\$\{\{ secrets\.SFTP_SERVER \}\}/);
+    assert.match(caller, /sftp_host_fingerprint:\s*\$\{\{ secrets\.SFTP_HOST_FINGERPRINT \}\}/);
+  }
+
+  // Production additionally forwards the public-takeover smoke configuration.
+  const production = workflow('release-production.yml');
+  for (const input of [
+    'expect_public_flutter_takeover',
+    'public_takeover_url',
+    'public_takeover_missing_url',
+    'public_takeover_optional_standby_url',
+  ]) {
+    assert.match(production, new RegExp(`${input}:\\s*\\$\\{\\{ vars\\.`), `production caller must forward ${input}`);
+  }
+
+  // The obsolete reusable deployment workflow must stay deleted.
+  assert.throws(
+    () => workflow('web-deploy-reusable.yml'),
+    'the reusable deployment workflow must not be reintroduced',
+  );
+});
+
 test('all third-party actions are pinned to immutable commit SHAs', () => {
   for (const name of [
     'pr-validation.yml',
@@ -127,9 +191,9 @@ test('all third-party actions are pinned to immutable commit SHAs', () => {
     'scheduled-quality.yml',
     'pages.yml',
     'web-artifact.yml',
-    'web-deploy-reusable.yml',
+    '../actions/deploy-web-artifact/action.yml',
   ]) {
-    const content = workflow(name);
+    const content = name.startsWith('../') ? deployAction() : workflow(name);
     for (const match of content.matchAll(/^\s*uses:\s*(\S+)/gm)) {
       const reference = match[1];
       if (reference.startsWith('./')) continue;
