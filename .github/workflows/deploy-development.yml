@@ -67,6 +67,14 @@ jobs:
           logical_environment: development
           environment_name: development-web
           retained_release_count: 5
+          # GitHub Environment variables, forwarded explicitly because a composite
+          # action cannot read the `vars` context.
+          environment_variable_name: ${{ vars.ENVIRONMENT_NAME }}
+          sftp_port: ${{ vars.SFTP_PORT }}
+          web_server_dir: ${{ vars.WEB_SERVER_DIR }}
+          web_releases_dir: ${{ vars.WEB_RELEASES_DIR }}
+          web_smoke_url: ${{ vars.WEB_SMOKE_URL }}
+          expected_deployment_host: ${{ vars.EXPECTED_DEPLOYMENT_HOST }}
           bootstrap_web_root: ${{ github.event_name == 'workflow_dispatch' && inputs.bootstrap_web_root }}
           sftp_server: ${{ secrets.SFTP_SERVER }}
           sftp_username: ${{ secrets.SFTP_USERNAME }}

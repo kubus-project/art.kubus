@@ -67,6 +67,19 @@ jobs:
           logical_environment: production
           environment_name: production-web
           retained_release_count: 10
+          # GitHub Environment variables, forwarded explicitly because a composite
+          # action cannot read the `vars` context.
+          environment_variable_name: ${{ vars.ENVIRONMENT_NAME }}
+          sftp_port: ${{ vars.SFTP_PORT }}
+          web_server_dir: ${{ vars.WEB_SERVER_DIR }}
+          web_releases_dir: ${{ vars.WEB_RELEASES_DIR }}
+          web_smoke_url: ${{ vars.WEB_SMOKE_URL }}
+          expected_deployment_host: ${{ vars.EXPECTED_DEPLOYMENT_HOST }}
+          expect_public_flutter_takeover: ${{ vars.EXPECT_PUBLIC_FLUTTER_TAKEOVER }}
+          public_takeover_url: ${{ vars.PUBLIC_TAKEOVER_URL }}
+          public_takeover_missing_url: ${{ vars.PUBLIC_TAKEOVER_MISSING_URL }}
+          public_takeover_optional_standby_url: ${{ vars.PUBLIC_TAKEOVER_OPTIONAL_STANDBY_URL }}
+          public_contract_artwork_id: ${{ vars.PUBLIC_CONTRACT_ARTWORK_ID }}
           bootstrap_web_root: ${{ github.event_name == 'workflow_dispatch' && inputs.bootstrap_web_root }}
           sftp_server: ${{ secrets.SFTP_SERVER }}
           sftp_username: ${{ secrets.SFTP_USERNAME }}
