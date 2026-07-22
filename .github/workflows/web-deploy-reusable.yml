@@ -10,6 +10,14 @@ on:
       environment_name: { required: true, type: string }
       retained_release_count: { required: true, type: number }
       bootstrap_web_root: { required: false, default: false, type: boolean }
+    secrets:
+      SFTP_SERVER: { required: false }
+      SFTP_USERNAME: { required: false }
+      SFTP_PRIVATE_KEY: { required: false }
+      SFTP_PRIVATE_KEY_PASSPHRASE: { required: false }
+      SFTP_HOST_FINGERPRINT: { required: false }
+      HTTP_BASIC_USERNAME: { required: false }
+      HTTP_BASIC_PASSWORD: { required: false }
 
 permissions:
   actions: read
