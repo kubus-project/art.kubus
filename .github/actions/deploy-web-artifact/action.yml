@@ -1,36 +1,22 @@
-name: Reusable protected web deployment
-
-on:
-  workflow_call:
-    inputs:
-      artifact_name: { required: true, type: string }
-      source_sha: { required: true, type: string }
-      source_branch: { required: true, type: string }
-      logical_environment: { required: true, type: string }
-      environment_name: { required: true, type: string }
-      retained_release_count: { required: true, type: number }
-      bootstrap_web_root: { required: false, default: false, type: boolean }
-    secrets:
-      SFTP_SERVER: { required: false }
-      SFTP_USERNAME: { required: false }
-      SFTP_PRIVATE_KEY: { required: false }
-      SFTP_PRIVATE_KEY_PASSPHRASE: { required: false }
-      SFTP_HOST_FINGERPRINT: { required: false }
-      HTTP_BASIC_USERNAME: { required: false }
-      HTTP_BASIC_PASSWORD: { required: false }
-
-permissions:
-  actions: read
-  contents: read
-
-jobs:
-  deploy:
-    name: Deploy exact artifact with rollback protection
-    runs-on: ubuntu-24.04
-    timeout-minutes: 45
-    environment:
-      name: ${{ inputs.environment_name }}
-      url: ${{ vars.WEB_SMOKE_URL }}
+name: Deploy exact web artifact
+description: Promotes a verified immutable web artifact with guarded rollback.
+inputs:
+  artifact_name: { required: true }
+  source_sha: { required: true }
+  source_branch: { required: true }
+  logical_environment: { required: true }
+  environment_name: { required: true }
+  retained_release_count: { required: true }
+  bootstrap_web_root: { required: false, default: false }
+  sftp_server: { required: true }
+  sftp_username: { required: true }
+  sftp_private_key: { required: true }
+  sftp_private_key_passphrase: { required: false }
+  sftp_host_fingerprint: { required: true }
+  http_basic_username: { required: false }
+  http_basic_password: { required: false }
+runs:
+  using: composite
     steps:
       - name: Validate immutable deployment request
         shell: bash
@@ -117,10 +103,10 @@ jobs:
           DEPLOYMENT_ENVIRONMENT: ${{ inputs.logical_environment }}
           ENVIRONMENT_NAME: ${{ vars.ENVIRONMENT_NAME }}
           SOURCE_SHA: ${{ inputs.source_sha }}
-          SFTP_SERVER: ${{ secrets.SFTP_SERVER }}
-          SFTP_USERNAME: ${{ secrets.SFTP_USERNAME }}
-          SFTP_PRIVATE_KEY: ${{ secrets.SFTP_PRIVATE_KEY }}
-          SFTP_HOST_FINGERPRINT: ${{ secrets.SFTP_HOST_FINGERPRINT }}
+          SFTP_SERVER: ${{ inputs.sftp_server }}
+          SFTP_USERNAME: ${{ inputs.sftp_username }}
+          SFTP_PRIVATE_KEY: ${{ inputs.sftp_private_key }}
+          SFTP_HOST_FINGERPRINT: ${{ inputs.sftp_host_fingerprint }}
           SFTP_PORT: ${{ vars.SFTP_PORT }}
           WEB_SERVER_DIR: ${{ vars.WEB_SERVER_DIR }}
           WEB_RELEASES_DIR: ${{ vars.WEB_RELEASES_DIR }}
@@ -133,7 +119,7 @@ jobs:
         if: steps.source_current.outputs.stale != 'true'
         shell: bash
         env:
-          SFTP_SERVER: ${{ secrets.SFTP_SERVER }}
+          SFTP_SERVER: ${{ inputs.sftp_server }}
           SFTP_PORT: ${{ vars.SFTP_PORT }}
         run: |
           set -euo pipefail
@@ -154,12 +140,12 @@ jobs:
           SOURCE_SHA: ${{ inputs.source_sha }}
           RELEASE_ROOT: ${{ steps.target.outputs.release_root }}
         with:
-          host: ${{ secrets.SFTP_SERVER }}
-          username: ${{ secrets.SFTP_USERNAME }}
+          host: ${{ inputs.sftp_server }}
+          username: ${{ inputs.sftp_username }}
           port: ${{ vars.SFTP_PORT }}
-          key: ${{ secrets.SFTP_PRIVATE_KEY }}
-          passphrase: ${{ secrets.SFTP_PRIVATE_KEY_PASSPHRASE }}
-          fingerprint: ${{ secrets.SFTP_HOST_FINGERPRINT }}
+          key: ${{ inputs.sftp_private_key }}
+          passphrase: ${{ inputs.sftp_private_key_PASSPHRASE }}
+          fingerprint: ${{ inputs.sftp_host_fingerprint }}
           envs: SOURCE_SHA,RELEASE_ROOT
           script_stop: true
           script: |
@@ -180,12 +166,12 @@ jobs:
         if: ${{ steps.source_current.outputs.stale != 'true' && inputs.bootstrap_web_root }}
         uses: appleboy/scp-action@ff85246acaad7bdce478db94a363cd2bf7c90345 # v1
         with:
-          host: ${{ secrets.SFTP_SERVER }}
-          username: ${{ secrets.SFTP_USERNAME }}
+          host: ${{ inputs.sftp_server }}
+          username: ${{ inputs.sftp_username }}
           port: ${{ vars.SFTP_PORT }}
-          key: ${{ secrets.SFTP_PRIVATE_KEY }}
-          passphrase: ${{ secrets.SFTP_PRIVATE_KEY_PASSPHRASE }}
-          fingerprint: ${{ secrets.SFTP_HOST_FINGERPRINT }}
+          key: ${{ inputs.sftp_private_key }}
+          passphrase: ${{ inputs.sftp_private_key_PASSPHRASE }}
+          fingerprint: ${{ inputs.sftp_host_fingerprint }}
           source: scripts/deploy/bootstrap_atomic_web_root.sh
           target: ${{ steps.target.outputs.release_root }}/bootstrap-${{ inputs.source_sha }}
           strip_components: 2
@@ -200,12 +186,12 @@ jobs:
           RELEASE_ROOT: ${{ steps.target.outputs.release_root }}
           BOOTSTRAP_DIR: ${{ steps.target.outputs.release_root }}/bootstrap-${{ inputs.source_sha }}
         with:
-          host: ${{ secrets.SFTP_SERVER }}
-          username: ${{ secrets.SFTP_USERNAME }}
+          host: ${{ inputs.sftp_server }}
+          username: ${{ inputs.sftp_username }}
           port: ${{ vars.SFTP_PORT }}
-          key: ${{ secrets.SFTP_PRIVATE_KEY }}
-          passphrase: ${{ secrets.SFTP_PRIVATE_KEY_PASSPHRASE }}
-          fingerprint: ${{ secrets.SFTP_HOST_FINGERPRINT }}
+          key: ${{ inputs.sftp_private_key }}
+          passphrase: ${{ inputs.sftp_private_key_PASSPHRASE }}
+          fingerprint: ${{ inputs.sftp_host_fingerprint }}
           envs: SOURCE_SHA,LIVE_DIR,RELEASE_ROOT,BOOTSTRAP_DIR
           script_stop: true
           script: |
@@ -222,12 +208,12 @@ jobs:
           RELEASE_ROOT: ${{ steps.target.outputs.release_root }}
           RELEASE_DIR: ${{ steps.target.outputs.release_dir }}
         with:
-          host: ${{ secrets.SFTP_SERVER }}
-          username: ${{ secrets.SFTP_USERNAME }}
+          host: ${{ inputs.sftp_server }}
+          username: ${{ inputs.sftp_username }}
           port: ${{ vars.SFTP_PORT }}
-          key: ${{ secrets.SFTP_PRIVATE_KEY }}
-          passphrase: ${{ secrets.SFTP_PRIVATE_KEY_PASSPHRASE }}
-          fingerprint: ${{ secrets.SFTP_HOST_FINGERPRINT }}
+          key: ${{ inputs.sftp_private_key }}
+          passphrase: ${{ inputs.sftp_private_key_PASSPHRASE }}
+          fingerprint: ${{ inputs.sftp_host_fingerprint }}
           envs: LIVE_DIR,INCOMING_DIR,RELEASE_ROOT,RELEASE_DIR
           script_stop: true
           script: |
@@ -241,12 +227,12 @@ jobs:
         if: steps.source_current.outputs.stale != 'true'
         uses: appleboy/scp-action@ff85246acaad7bdce478db94a363cd2bf7c90345 # v1
         with:
-          host: ${{ secrets.SFTP_SERVER }}
-          username: ${{ secrets.SFTP_USERNAME }}
+          host: ${{ inputs.sftp_server }}
+          username: ${{ inputs.sftp_username }}
           port: ${{ vars.SFTP_PORT }}
-          key: ${{ secrets.SFTP_PRIVATE_KEY }}
-          passphrase: ${{ secrets.SFTP_PRIVATE_KEY_PASSPHRASE }}
-          fingerprint: ${{ secrets.SFTP_HOST_FINGERPRINT }}
+          key: ${{ inputs.sftp_private_key }}
+          passphrase: ${{ inputs.sftp_private_key_PASSPHRASE }}
+          fingerprint: ${{ inputs.sftp_host_fingerprint }}
           source: deployment/*
           target: ${{ steps.target.outputs.incoming_dir }}
           strip_components: 1
@@ -264,12 +250,12 @@ jobs:
           RELEASE_DIR: ${{ steps.target.outputs.release_dir }}
           RETAIN_RELEASE_COUNT: ${{ inputs.retained_release_count }}
         with:
-          host: ${{ secrets.SFTP_SERVER }}
-          username: ${{ secrets.SFTP_USERNAME }}
+          host: ${{ inputs.sftp_server }}
+          username: ${{ inputs.sftp_username }}
           port: ${{ vars.SFTP_PORT }}
-          key: ${{ secrets.SFTP_PRIVATE_KEY }}
-          passphrase: ${{ secrets.SFTP_PRIVATE_KEY_PASSPHRASE }}
-          fingerprint: ${{ secrets.SFTP_HOST_FINGERPRINT }}
+          key: ${{ inputs.sftp_private_key }}
+          passphrase: ${{ inputs.sftp_private_key_PASSPHRASE }}
+          fingerprint: ${{ inputs.sftp_host_fingerprint }}
           envs: SOURCE_SHA,LIVE_DIR,RELEASE_ROOT,INCOMING_DIR,RELEASE_DIR,RETAIN_RELEASE_COUNT
           script_stop: true
           script: sh "$INCOMING_DIR/atomic_web_release.sh" promote
@@ -278,8 +264,8 @@ jobs:
         if: ${{ steps.source_current.outputs.stale != 'true' && inputs.logical_environment == 'development' }}
         shell: bash
         env:
-          HTTP_BASIC_USERNAME: ${{ secrets.HTTP_BASIC_USERNAME }}
-          HTTP_BASIC_PASSWORD: ${{ secrets.HTTP_BASIC_PASSWORD }}
+          HTTP_BASIC_USERNAME: ${{ inputs.http_basic_username }}
+          HTTP_BASIC_PASSWORD: ${{ inputs.http_basic_password }}
         run: |
           test -n "$HTTP_BASIC_USERNAME"
           test -n "$HTTP_BASIC_PASSWORD"
@@ -293,8 +279,8 @@ jobs:
         env:
           WEB_SMOKE_URL: ${{ steps.target.outputs.smoke_url }}
           SOURCE_SHA: ${{ inputs.source_sha }}
-          HTTP_BASIC_USERNAME: ${{ secrets.HTTP_BASIC_USERNAME }}
-          HTTP_BASIC_PASSWORD: ${{ secrets.HTTP_BASIC_PASSWORD }}
+          HTTP_BASIC_USERNAME: ${{ inputs.http_basic_username }}
+          HTTP_BASIC_PASSWORD: ${{ inputs.http_basic_password }}
         run: bash scripts/deploy/smoke_development_web.sh
 
       - name: Production routing, SEO, takeover, and revision smoke
@@ -329,12 +315,12 @@ jobs:
           RELEASE_DIR: ${{ steps.target.outputs.release_dir }}
           RETAIN_RELEASE_COUNT: ${{ inputs.retained_release_count }}
         with:
-          host: ${{ secrets.SFTP_SERVER }}
-          username: ${{ secrets.SFTP_USERNAME }}
+          host: ${{ inputs.sftp_server }}
+          username: ${{ inputs.sftp_username }}
           port: ${{ vars.SFTP_PORT }}
-          key: ${{ secrets.SFTP_PRIVATE_KEY }}
-          passphrase: ${{ secrets.SFTP_PRIVATE_KEY_PASSPHRASE }}
-          fingerprint: ${{ secrets.SFTP_HOST_FINGERPRINT }}
+          key: ${{ inputs.sftp_private_key }}
+          passphrase: ${{ inputs.sftp_private_key_PASSPHRASE }}
+          fingerprint: ${{ inputs.sftp_host_fingerprint }}
           envs: SOURCE_SHA,LIVE_DIR,RELEASE_ROOT,INCOMING_DIR,RELEASE_DIR,RETAIN_RELEASE_COUNT
           script_stop: true
           script: sh "$INCOMING_DIR/atomic_web_release.sh" rollback
@@ -345,12 +331,12 @@ jobs:
         env:
           INCOMING_DIR: ${{ steps.target.outputs.incoming_dir }}
         with:
-          host: ${{ secrets.SFTP_SERVER }}
-          username: ${{ secrets.SFTP_USERNAME }}
+          host: ${{ inputs.sftp_server }}
+          username: ${{ inputs.sftp_username }}
           port: ${{ vars.SFTP_PORT }}
-          key: ${{ secrets.SFTP_PRIVATE_KEY }}
-          passphrase: ${{ secrets.SFTP_PRIVATE_KEY_PASSPHRASE }}
-          fingerprint: ${{ secrets.SFTP_HOST_FINGERPRINT }}
+          key: ${{ inputs.sftp_private_key }}
+          passphrase: ${{ inputs.sftp_private_key_PASSPHRASE }}
+          fingerprint: ${{ inputs.sftp_host_fingerprint }}
           envs: INCOMING_DIR
           script_stop: true
           script: rm -rf "$INCOMING_DIR"
@@ -366,12 +352,12 @@ jobs:
           RELEASE_DIR: ${{ steps.target.outputs.release_dir }}
           RETAIN_RELEASE_COUNT: ${{ inputs.retained_release_count }}
         with:
-          host: ${{ secrets.SFTP_SERVER }}
-          username: ${{ secrets.SFTP_USERNAME }}
+          host: ${{ inputs.sftp_server }}
+          username: ${{ inputs.sftp_username }}
           port: ${{ vars.SFTP_PORT }}
-          key: ${{ secrets.SFTP_PRIVATE_KEY }}
-          passphrase: ${{ secrets.SFTP_PRIVATE_KEY_PASSPHRASE }}
-          fingerprint: ${{ secrets.SFTP_HOST_FINGERPRINT }}
+          key: ${{ inputs.sftp_private_key }}
+          passphrase: ${{ inputs.sftp_private_key_PASSPHRASE }}
+          fingerprint: ${{ inputs.sftp_host_fingerprint }}
           envs: SOURCE_SHA,LIVE_DIR,RELEASE_ROOT,INCOMING_DIR,RELEASE_DIR,RETAIN_RELEASE_COUNT
           script_stop: true
           script: |

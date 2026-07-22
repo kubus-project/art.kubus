@@ -10,6 +10,7 @@ import { validatePrSource } from './validate_pr_source.mjs';
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const workflow = (name) => readFileSync(resolve(repositoryRoot, '.github/workflows', name), 'utf8');
+const deployAction = () => readFileSync(resolve(repositoryRoot, '.github/actions/deploy-web-artifact/action.yml'), 'utf8');
 
 test('documentation-only changes avoid platform compilation', () => {
   const result = classifyPaths(['docs/README.md', 'CONTRIBUTING.md']);
@@ -100,7 +101,7 @@ test('branch deployments have isolated sources, environments, and concurrency', 
 });
 
 test('privileged deployment preserves SHA, stale-head, host, smoke, and rollback gates', () => {
-  const content = workflow('web-deploy-reusable.yml');
+  const content = deployAction();
   for (const secret of [
     'SFTP_SERVER',
     'SFTP_USERNAME',
@@ -137,9 +138,9 @@ test('all third-party actions are pinned to immutable commit SHAs', () => {
     'scheduled-quality.yml',
     'pages.yml',
     'web-artifact.yml',
-    'web-deploy-reusable.yml',
+    '../actions/deploy-web-artifact/action.yml',
   ]) {
-    const content = workflow(name);
+    const content = name.startsWith('../') ? deployAction() : workflow(name);
     for (const match of content.matchAll(/^\s*uses:\s*(\S+)/gm)) {
       const reference = match[1];
       if (reference.startsWith('./')) continue;
