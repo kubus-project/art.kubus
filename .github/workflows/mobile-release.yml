@@ -117,7 +117,9 @@ jobs:
           aab="$(find build/app/outputs/bundle/release -type f -name '*.aab' -print -quit)"
           test -f "$apk"; test -f "$aab"
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$apk"
-          jarsigner -verify -certs "$aab"
+          aab_verification="$(jarsigner -verify -certs "$aab")"
+          printf '%s\n' "$aab_verification"
+          grep -Fqx 'jar verified.' <<< "$aab_verification"
           mkdir -p release/android
           cp "$apk" "release/android/art.kubus-${{ needs.source.outputs.tag }}-${{ needs.source.outputs.sha }}.apk"
           cp "$aab" "release/android/art.kubus-${{ needs.source.outputs.tag }}-${{ needs.source.outputs.sha }}.aab"
