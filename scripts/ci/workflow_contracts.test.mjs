@@ -101,6 +101,16 @@ test('branch deployments have isolated sources, environments, and concurrency', 
 
 test('privileged deployment preserves SHA, stale-head, host, smoke, and rollback gates', () => {
   const content = workflow('web-deploy-reusable.yml');
+  for (const secret of [
+    'SFTP_SERVER',
+    'SFTP_USERNAME',
+    'SFTP_PRIVATE_KEY',
+    'SFTP_HOST_FINGERPRINT',
+    'HTTP_BASIC_USERNAME',
+    'HTTP_BASIC_PASSWORD',
+  ]) {
+    assert.match(content, new RegExp(`secrets:[\\s\\S]*${secret}:\\s*\\{ required: false \\}`));
+  }
   for (const required of [
     '/branches/$SOURCE_BRANCH',
     'SFTP_HOST_FINGERPRINT',

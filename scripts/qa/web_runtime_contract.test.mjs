@@ -128,7 +128,7 @@ test('web-root migration remains an explicit manual deployment action', () => {
   }
   const reusable = workflow('web-deploy-reusable.yml');
   assert.equal(
-    (reusable.match(/if: \$\{\{ inputs\.bootstrap_web_root \}\}/g) || []).length,
+    (reusable.match(/if:\s*\$\{\{[^}\r\n]*inputs\.bootstrap_web_root[^}\r\n]*\}\}/g) || []).length,
     2,
     'both bootstrap steps must require the explicit caller input',
   );
