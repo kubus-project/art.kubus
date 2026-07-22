@@ -17,6 +17,7 @@ Engineering workflow: `docs/engineering/branching-and-deployment.md` is the cano
 - Ordinary pull requests target `dev`. Only release pull requests from `dev` and emergency `hotfix/*` pull requests may target `master`.
 - Release pull requests use a merge commit. Ordinary topic pull requests into `dev` may use squash merge.
 - A production hotfix starts from `master` and must subsequently be merged or cherry-picked into `dev`.
+- After any `dev -> master` release merges, reconcile that ancestry back into `dev` before resuming development: `git rev-list --left-right --count origin/master...origin/dev` must report `0` commits only on `master`. Use a non-rewriting merge-commit reconciliation (`npm run verify:branch-reconciliation` guards this; see `docs/engineering/branching-and-deployment.md`).
 - Agents must not merge pull requests, deploy production, approve a protected production environment, or change environment secrets without explicit user authorization.
 - Investigate CI failures; never bypass, weaken, or rename required checks merely to obtain a green result.
 - Deployment changes must retain exact-SHA immutable artifacts, verified SSH hosts, safe remote paths, checksum verification, atomic promotion, revision-aware smoke tests, and automatic rollback.

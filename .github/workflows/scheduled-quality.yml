@@ -119,6 +119,23 @@ jobs:
       - run: npm --prefix scripts/qa ci --no-audit --no-fund
       - run: npm --prefix scripts/qa audit --audit-level=high
 
+  branch_reconciliation:
+    name: Release ancestry reconciliation guard
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+          submodules: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Fetch protected branch heads
+        run: git fetch --no-tags --prune origin +refs/heads/master:refs/remotes/origin/master +refs/heads/dev:refs/remotes/origin/dev
+      - name: Assert master release ancestry is reconciled into dev
+        run: npm run verify:branch-reconciliation
+
   production_canary:
     name: Safe read-only production canary
     needs: source
