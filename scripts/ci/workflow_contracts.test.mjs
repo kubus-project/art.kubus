@@ -102,6 +102,16 @@ test('branch deployments have isolated sources, environments, and concurrency', 
 
 test('privileged deployment preserves SHA, stale-head, host, smoke, and rollback gates', () => {
   const content = deployAction();
+  assert.match(content, /using:\s*composite/);
+  for (const input of ['sftp_server', 'sftp_username', 'sftp_private_key', 'sftp_host_fingerprint']) {
+    assert.match(content, new RegExp(`${input}:\\s*\\{ required: true \\}`));
+  }
+  assert.match(content, /inputs\.bootstrap_web_root == 'true'/);
+  for (const caller of [workflow('deploy-development.yml'), workflow('release-production.yml')]) {
+    assert.match(caller, /uses:\s*\.\/\.github\/actions\/deploy-web-artifact/);
+    assert.match(caller, /sftp_server:\s*\$\{\{ secrets\.SFTP_SERVER \}\}/);
+    assert.match(caller, /sftp_private_key:\s*\$\{\{ secrets\.SFTP_PRIVATE_KEY \}\}/);
+  }
   for (const required of [
     '/branches/$SOURCE_BRANCH',
     'SFTP_HOST_FINGERPRINT',

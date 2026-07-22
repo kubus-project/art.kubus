@@ -163,7 +163,7 @@ runs:
           test "$(readlink "$probe/current")" = "$probe/b"
 
     - name: Upload approved bootstrap helper
-      if: ${{ steps.source_current.outputs.stale != 'true' && inputs.bootstrap_web_root }}
+      if: ${{ steps.source_current.outputs.stale != 'true' && inputs.bootstrap_web_root == 'true' }}
       uses: appleboy/scp-action@ff85246acaad7bdce478db94a363cd2bf7c90345 # v1
       with:
         host: ${{ inputs.sftp_server }}
@@ -178,7 +178,7 @@ runs:
         overwrite: true
 
     - name: Bootstrap atomic web root
-      if: ${{ steps.source_current.outputs.stale != 'true' && inputs.bootstrap_web_root }}
+      if: ${{ steps.source_current.outputs.stale != 'true' && inputs.bootstrap_web_root == 'true' }}
       uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1
       env:
         SOURCE_SHA: ${{ inputs.source_sha }}
