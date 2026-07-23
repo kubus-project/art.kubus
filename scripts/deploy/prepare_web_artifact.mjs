@@ -30,6 +30,12 @@ const stagingBlock = `<IfModule mod_headers.c>
 `;
 
 let htaccess = readFileSync(htaccessPath, 'utf8');
+if (
+  /# (?:BEGIN|END) KUBUS HOST DEVELOPMENT AUTH/i.test(htaccess)
+  || /^\s*(?:AuthType|AuthName|AuthUserFile|Require\s+valid-user)(?:\s|$)/im.test(htaccess)
+) {
+  throw new Error('source artifact must not contain host-local HTTP authentication policy');
+}
 if (environment === 'development') {
   if (!htaccess.includes('X-Robots-Tag "noindex, nofollow, noarchive"')) {
     htaccess = stagingBlock + htaccess;
