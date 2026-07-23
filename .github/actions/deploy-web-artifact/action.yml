@@ -15,6 +15,8 @@ inputs:
   sftp_host_fingerprint: { required: true }
   http_basic_username: { required: false }
   http_basic_password: { required: false }
+  # Optional token that lets CI smoke requests pass the origin host's WAF/bot filter.
+  smoke_bypass_token: { required: false }
   # Environment-scoped configuration. A composite action cannot read the `vars`
   # context, so every GitHub Environment variable is forwarded explicitly by the
   # environment-bound caller workflow.
@@ -296,6 +298,7 @@ runs:
         SOURCE_SHA: ${{ inputs.source_sha }}
         HTTP_BASIC_USERNAME: ${{ inputs.http_basic_username }}
         HTTP_BASIC_PASSWORD: ${{ inputs.http_basic_password }}
+        SMOKE_BYPASS_TOKEN: ${{ inputs.smoke_bypass_token }}
       run: bash scripts/deploy/smoke_development_web.sh
 
     - name: Production routing, SEO, takeover, and revision smoke
@@ -310,6 +313,7 @@ runs:
         PUBLIC_TAKEOVER_MISSING_URL: ${{ inputs.public_takeover_missing_url }}
         PUBLIC_TAKEOVER_OPTIONAL_STANDBY_URL: ${{ inputs.public_takeover_optional_standby_url }}
         PUBLIC_CONTRACT_ARTWORK_ID: ${{ inputs.public_contract_artwork_id }}
+        SMOKE_BYPASS_TOKEN: ${{ inputs.smoke_bypass_token }}
       run: bash scripts/deploy/smoke_production_web.sh
 
     - name: Roll back failed post-promotion smoke

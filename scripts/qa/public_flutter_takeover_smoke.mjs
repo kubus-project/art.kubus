@@ -11,6 +11,11 @@ const browserNames = (process.env.PUBLIC_TAKEOVER_BROWSERS || 'chromium,firefox'
   .split(',')
   .map((value) => value.trim().toLowerCase())
   .filter(Boolean);
+// Optional WAF bypass header (see smoke_production_web.sh); undefined when unset.
+const browserBypassHeaders = (() => {
+  const token = (process.env.SMOKE_BYPASS_TOKEN || '').trim();
+  return token ? { 'X-Deploy-Smoke': token } : undefined;
+})();
 const browserViewports = [
   { name: 'desktop', viewport: { width: 1440, height: 1000 } },
   { name: 'mobile', viewport: { width: 390, height: 844 } },
@@ -146,7 +151,7 @@ async function verifyBrowser(
   repetition,
 ) {
   const browserLabel = `${browserName}-${viewportName}-run-${repetition}`;
-  const context = await browser.newContext({ viewport });
+  const context = await browser.newContext({ viewport, extraHTTPHeaders: browserBypassHeaders });
   const page = await context.newPage();
   const consoleErrors = [];
   const externalBeaconCspErrors = [];

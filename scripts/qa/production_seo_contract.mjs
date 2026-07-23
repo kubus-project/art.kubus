@@ -17,6 +17,9 @@ const ORIGIN = (process.env.KUBUS_ORIGIN ?? 'https://app.kubus.site').replace(/\
 const ARTWORK_ID = process.env.KUBUS_ARTWORK_ID ?? '';
 const MISSING_ID = '00000000-0000-0000-0000-000000000000';
 const TIMEOUT_MS = Number(process.env.KUBUS_TIMEOUT_MS ?? 25000);
+// Optional WAF bypass header (see smoke_production_web.sh); empty when unset.
+const SMOKE_BYPASS_TOKEN = (process.env.SMOKE_BYPASS_TOKEN ?? '').trim();
+const BYPASS_HEADERS = SMOKE_BYPASS_TOKEN ? { 'X-Deploy-Smoke': SMOKE_BYPASS_TOKEN } : {};
 
 const results = [];
 
@@ -33,7 +36,7 @@ async function fetchNoRedirect(path, init = {}) {
     return await fetch(`${ORIGIN}${path}`, {
       redirect: 'manual',
       signal: controller.signal,
-      headers: { 'Cache-Control': 'no-cache', ...(init.headers ?? {}) },
+      headers: { 'Cache-Control': 'no-cache', ...BYPASS_HEADERS, ...(init.headers ?? {}) },
       ...init,
     });
   } finally {
