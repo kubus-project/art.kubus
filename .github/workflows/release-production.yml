@@ -58,7 +58,7 @@ jobs:
       name: production-web
       url: ${{ vars.WEB_SMOKE_URL }}
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
       - uses: ./.github/actions/deploy-web-artifact
         with:
           artifact_name: ${{ needs.build.outputs.artifact_name }}
@@ -86,3 +86,4 @@ jobs:
           sftp_private_key: ${{ secrets.SFTP_PRIVATE_KEY }}
           sftp_private_key_passphrase: ${{ secrets.SFTP_PRIVATE_KEY_PASSPHRASE }}
           sftp_host_fingerprint: ${{ secrets.SFTP_HOST_FINGERPRINT }}
+          smoke_bypass_token: ${{ secrets.SMOKE_BYPASS_TOKEN }}

@@ -112,6 +112,7 @@ test('API stubs reject hosts outside the explicit QA boundary', () => {
 
 test('immutable web artifact preserves files covered by its checksum manifest', () => {
   const buildWorkflow = workflow('web-artifact.yml');
+  const deploy = deployAction();
   const stepStart = buildWorkflow.indexOf('- name: Upload immutable web artifact');
   assert.notEqual(stepStart, -1, 'CI must upload the immutable web bundle');
 
@@ -122,6 +123,11 @@ test('immutable web artifact preserves files covered by its checksum manifest', 
   );
   assert.match(uploadStep, /\binclude-hidden-files:\s*true\b/);
   assert.match(buildWorkflow, /sha256sum -c SHA256SUMS/);
+  assert.match(
+    deploy,
+    /Verify provenance, checksums, and package archive[\s\S]*?\(cd build\/web && sha256sum -c SHA256SUMS\)[\s\S]*?Apply and verify host-local development protection/,
+  );
+  assert.doesNotMatch(buildWorkflow, /DEV_HTPASSWD_FILE|AuthUserFile/);
 });
 
 test('web-root migration remains an explicit manual deployment action', () => {
@@ -350,6 +356,11 @@ test('deployed public takeover smoke remains opt-in and verifies the complete ha
   assert.match(smoke, /expectTakeover \? 2 : 1/);
   assert.match(smoke, /const browser = await browserType\.launch/);
   assert.match(smoke, /finally \{\s*await browser\.close\(\);/);
+  // The WAF bypass secret must be scoped to the deployment origin (raw fetches
+  // and per-request Playwright routing) and never broadcast context-wide.
+  assert.match(smoke, /function bypassHeadersFor\(/);
+  assert.match(smoke, /\.origin === targetOrigin/);
+  assert.doesNotMatch(smoke, /extraHTTPHeaders/);
   assert.match(buildWorkflow, /--dart-define=PUBLIC_FLUTTER_TAKEOVER_ENABLED=true/);
   assert.match(buildWorkflow, /--dart-define=SEO_PUBLIC_PAGES_ENABLED=true/);
 });

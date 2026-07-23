@@ -11,6 +11,21 @@ const browserNames = (process.env.PUBLIC_TAKEOVER_BROWSERS || 'chromium,firefox'
   .split(',')
   .map((value) => value.trim().toLowerCase())
   .filter(Boolean);
+// Optional WAF bypass header (see smoke_production_web.sh). It is only sent to
+// the deployment origin so the secret is never disclosed to third-party hosts
+// (e.g. the Cloudflare beacon) that the takeover page may contact.
+const smokeBypassToken = (process.env.SMOKE_BYPASS_TOKEN || '').trim();
+const targetOrigin = new URL(canonicalUrl).origin;
+function bypassHeadersFor(url) {
+  if (!smokeBypassToken) return {};
+  try {
+    return new URL(url, canonicalUrl).origin === targetOrigin
+      ? { 'X-Deploy-Smoke': smokeBypassToken }
+      : {};
+  } catch {
+    return {};
+  }
+}
 const browserViewports = [
   { name: 'desktop', viewport: { width: 1440, height: 1000 } },
   { name: 'mobile', viewport: { width: 390, height: 844 } },
@@ -92,7 +107,7 @@ function isExternalBeaconCspFailure(request) {
 
 async function fetchResponse(url) {
   const response = await fetch(url, {
-    headers: { 'cache-control': 'no-cache' },
+    headers: { 'cache-control': 'no-cache', ...bypassHeadersFor(url) },
     redirect: 'manual',
   });
   return { response, body: await response.text() };
@@ -119,11 +134,12 @@ async function verifyRawHttp() {
   if (expectTakeover) {
     for (const path of ['/public_flutter_takeover.js', '/flutter_bootstrap.js', '/main.dart.js']) {
       const assetUrl = new URL(path, canonicalUrl).toString();
-      const asset = await fetch(assetUrl, { redirect: 'error' });
+      const asset = await fetch(assetUrl, { redirect: 'error', headers: bypassHeadersFor(assetUrl) });
       ensure(asset.status === 200, `${path} returned ${asset.status}`);
       ensure(asset.headers.get('content-type')?.includes('javascript'), `${path} has invalid MIME type`);
     }
-    const serviceWorker = await fetch(new URL('/flutter_service_worker.js', canonicalUrl));
+    const serviceWorkerUrl = new URL('/flutter_service_worker.js', canonicalUrl).toString();
+    const serviceWorker = await fetch(serviceWorkerUrl, { headers: bypassHeadersFor(serviceWorkerUrl) });
     const workerSource = await serviceWorker.text();
     ensure(serviceWorker.status === 200, `service worker returned ${serviceWorker.status}`);
     ensure(/unregister/.test(workerSource), 'service worker is not an unregister tombstone');
@@ -148,6 +164,20 @@ async function verifyBrowser(
   const browserLabel = `${browserName}-${viewportName}-run-${repetition}`;
   const context = await browser.newContext({ viewport });
   const page = await context.newPage();
+  if (smokeBypassToken) {
+    // Inject the bypass header only for same-origin requests; third-party
+    // resources the page loads must never receive the secret token.
+    await page.route('**/*', async (route) => {
+      const request = route.request();
+      let sameOrigin = false;
+      try { sameOrigin = new URL(request.url()).origin === targetOrigin; } catch { sameOrigin = false; }
+      if (sameOrigin) {
+        await route.continue({ headers: { ...request.headers(), 'x-deploy-smoke': smokeBypassToken } });
+      } else {
+        await route.continue();
+      }
+    });
+  }
   const consoleErrors = [];
   const externalBeaconCspErrors = [];
   const failedRequests = [];

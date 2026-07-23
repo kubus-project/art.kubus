@@ -15,6 +15,8 @@ inputs:
   sftp_host_fingerprint: { required: true }
   http_basic_username: { required: false }
   http_basic_password: { required: false }
+  # Optional token that lets CI smoke requests pass the origin host's WAF/bot filter.
+  smoke_bypass_token: { required: false }
   # Environment-scoped configuration. A composite action cannot read the `vars`
   # context, so every GitHub Environment variable is forwarded explicitly by the
   # environment-bound caller workflow.
@@ -165,7 +167,7 @@ runs:
         script_stop: true
         script: |
           set -eu
-          for command_name in sha256sum tar readlink ln mv; do command -v "$command_name" >/dev/null; done
+          for command_name in awk grep sed sha256sum tar readlink ln mv; do command -v "$command_name" >/dev/null; done
           probe="$RELEASE_ROOT/capability-$SOURCE_SHA"
           trap 'rm -rf "$probe"' EXIT HUP INT TERM
           rm -rf "$probe"
@@ -253,11 +255,12 @@ runs:
         strip_components: 1
         overwrite: true
 
-    - name: Verify remote checksums and atomically promote
-      if: steps.source_current.outputs.stale != 'true'
-      id: promote
+    - name: Apply and verify host-local development protection
+      if: ${{ steps.source_current.outputs.stale != 'true' && inputs.logical_environment == 'development' }}
+      id: prepare_development
       uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1
       env:
+        DEPLOYMENT_ENVIRONMENT: ${{ inputs.logical_environment }}
         SOURCE_SHA: ${{ inputs.source_sha }}
         LIVE_DIR: ${{ steps.target.outputs.live_dir }}
         RELEASE_ROOT: ${{ steps.target.outputs.release_root }}
@@ -271,7 +274,53 @@ runs:
         key: ${{ inputs.sftp_private_key }}
         passphrase: ${{ inputs.sftp_private_key_passphrase }}
         fingerprint: ${{ inputs.sftp_host_fingerprint }}
-        envs: SOURCE_SHA,LIVE_DIR,RELEASE_ROOT,INCOMING_DIR,RELEASE_DIR,RETAIN_RELEASE_COUNT
+        envs: DEPLOYMENT_ENVIRONMENT,SOURCE_SHA,LIVE_DIR,RELEASE_ROOT,INCOMING_DIR,RELEASE_DIR,RETAIN_RELEASE_COUNT
+        script_stop: true
+        script: sh "$INCOMING_DIR/atomic_web_release.sh" prepare
+
+    - name: Verify production release is free of staging protection
+      if: ${{ steps.source_current.outputs.stale != 'true' && inputs.logical_environment == 'production' }}
+      id: prepare_production
+      uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1
+      env:
+        DEPLOYMENT_ENVIRONMENT: ${{ inputs.logical_environment }}
+        SOURCE_SHA: ${{ inputs.source_sha }}
+        LIVE_DIR: ${{ steps.target.outputs.live_dir }}
+        RELEASE_ROOT: ${{ steps.target.outputs.release_root }}
+        INCOMING_DIR: ${{ steps.target.outputs.incoming_dir }}
+        RELEASE_DIR: ${{ steps.target.outputs.release_dir }}
+        RETAIN_RELEASE_COUNT: ${{ inputs.retained_release_count }}
+      with:
+        host: ${{ inputs.sftp_server }}
+        username: ${{ inputs.sftp_username }}
+        port: ${{ inputs.sftp_port }}
+        key: ${{ inputs.sftp_private_key }}
+        passphrase: ${{ inputs.sftp_private_key_passphrase }}
+        fingerprint: ${{ inputs.sftp_host_fingerprint }}
+        envs: DEPLOYMENT_ENVIRONMENT,SOURCE_SHA,LIVE_DIR,RELEASE_ROOT,INCOMING_DIR,RELEASE_DIR,RETAIN_RELEASE_COUNT
+        script_stop: true
+        script: sh "$INCOMING_DIR/atomic_web_release.sh" prepare
+
+    - name: Atomically promote prepared release
+      if: steps.source_current.outputs.stale != 'true'
+      id: promote
+      uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1
+      env:
+        DEPLOYMENT_ENVIRONMENT: ${{ inputs.logical_environment }}
+        SOURCE_SHA: ${{ inputs.source_sha }}
+        LIVE_DIR: ${{ steps.target.outputs.live_dir }}
+        RELEASE_ROOT: ${{ steps.target.outputs.release_root }}
+        INCOMING_DIR: ${{ steps.target.outputs.incoming_dir }}
+        RELEASE_DIR: ${{ steps.target.outputs.release_dir }}
+        RETAIN_RELEASE_COUNT: ${{ inputs.retained_release_count }}
+      with:
+        host: ${{ inputs.sftp_server }}
+        username: ${{ inputs.sftp_username }}
+        port: ${{ inputs.sftp_port }}
+        key: ${{ inputs.sftp_private_key }}
+        passphrase: ${{ inputs.sftp_private_key_passphrase }}
+        fingerprint: ${{ inputs.sftp_host_fingerprint }}
+        envs: DEPLOYMENT_ENVIRONMENT,SOURCE_SHA,LIVE_DIR,RELEASE_ROOT,INCOMING_DIR,RELEASE_DIR,RETAIN_RELEASE_COUNT
         script_stop: true
         script: sh "$INCOMING_DIR/atomic_web_release.sh" promote
 
@@ -296,6 +345,7 @@ runs:
         SOURCE_SHA: ${{ inputs.source_sha }}
         HTTP_BASIC_USERNAME: ${{ inputs.http_basic_username }}
         HTTP_BASIC_PASSWORD: ${{ inputs.http_basic_password }}
+        SMOKE_BYPASS_TOKEN: ${{ inputs.smoke_bypass_token }}
       run: bash scripts/deploy/smoke_development_web.sh
 
     - name: Production routing, SEO, takeover, and revision smoke
@@ -310,6 +360,7 @@ runs:
         PUBLIC_TAKEOVER_MISSING_URL: ${{ inputs.public_takeover_missing_url }}
         PUBLIC_TAKEOVER_OPTIONAL_STANDBY_URL: ${{ inputs.public_takeover_optional_standby_url }}
         PUBLIC_CONTRACT_ARTWORK_ID: ${{ inputs.public_contract_artwork_id }}
+        SMOKE_BYPASS_TOKEN: ${{ inputs.smoke_bypass_token }}
       run: bash scripts/deploy/smoke_production_web.sh
 
     - name: Roll back failed post-promotion smoke
@@ -323,6 +374,7 @@ runs:
         }}
       uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1
       env:
+        DEPLOYMENT_ENVIRONMENT: ${{ inputs.logical_environment }}
         SOURCE_SHA: ${{ inputs.source_sha }}
         LIVE_DIR: ${{ steps.target.outputs.live_dir }}
         RELEASE_ROOT: ${{ steps.target.outputs.release_root }}
@@ -336,7 +388,7 @@ runs:
         key: ${{ inputs.sftp_private_key }}
         passphrase: ${{ inputs.sftp_private_key_passphrase }}
         fingerprint: ${{ inputs.sftp_host_fingerprint }}
-        envs: SOURCE_SHA,LIVE_DIR,RELEASE_ROOT,INCOMING_DIR,RELEASE_DIR,RETAIN_RELEASE_COUNT
+        envs: DEPLOYMENT_ENVIRONMENT,SOURCE_SHA,LIVE_DIR,RELEASE_ROOT,INCOMING_DIR,RELEASE_DIR,RETAIN_RELEASE_COUNT
         script_stop: true
         script: sh "$INCOMING_DIR/atomic_web_release.sh" rollback
 
@@ -360,6 +412,7 @@ runs:
       if: ${{ success() && steps.source_current.outputs.stale != 'true' }}
       uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1
       env:
+        DEPLOYMENT_ENVIRONMENT: ${{ inputs.logical_environment }}
         SOURCE_SHA: ${{ inputs.source_sha }}
         LIVE_DIR: ${{ steps.target.outputs.live_dir }}
         RELEASE_ROOT: ${{ steps.target.outputs.release_root }}
@@ -373,7 +426,7 @@ runs:
         key: ${{ inputs.sftp_private_key }}
         passphrase: ${{ inputs.sftp_private_key_passphrase }}
         fingerprint: ${{ inputs.sftp_host_fingerprint }}
-        envs: SOURCE_SHA,LIVE_DIR,RELEASE_ROOT,INCOMING_DIR,RELEASE_DIR,RETAIN_RELEASE_COUNT
+        envs: DEPLOYMENT_ENVIRONMENT,SOURCE_SHA,LIVE_DIR,RELEASE_ROOT,INCOMING_DIR,RELEASE_DIR,RETAIN_RELEASE_COUNT
         script_stop: true
         script: |
           set -eu

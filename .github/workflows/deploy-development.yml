@@ -58,7 +58,7 @@ jobs:
       name: development-web
       url: ${{ vars.WEB_SMOKE_URL }}
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
       - uses: ./.github/actions/deploy-web-artifact
         with:
           artifact_name: ${{ needs.build.outputs.artifact_name }}
@@ -83,3 +83,4 @@ jobs:
           sftp_host_fingerprint: ${{ secrets.SFTP_HOST_FINGERPRINT }}
           http_basic_username: ${{ secrets.HTTP_BASIC_USERNAME }}
           http_basic_password: ${{ secrets.HTTP_BASIC_PASSWORD }}
+          smoke_bypass_token: ${{ secrets.SMOKE_BYPASS_TOKEN }}

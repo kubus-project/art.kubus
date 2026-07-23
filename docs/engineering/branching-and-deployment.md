@@ -116,6 +116,25 @@ CI failures must be investigated. Do not bypass a required check, convert failur
 
 The privileged job uses only the `development-web` environment. Promotion is serialized by `deploy-development` with cancellation disabled. An unauthenticated smoke requires the configured protected response and authentication challenge. Authenticated smoke checks `/app`, localized routes, the revision, `X-Robots-Tag`, and the deny-all `robots.txt`. If smoke fails after promotion, the previous symlink is restored automatically.
 
+### cPanel Basic Auth across atomic releases
+
+cPanel Directory Privacy writes its Basic Auth directives into the active document root's `.htaccess`. The atomic deployment makes that document root a symlink to an immutable release and changes the symlink target during promotion. Directory Privacy therefore protected the old target, but the newly built target initially contained only the application's routing rules. The post-promotion smoke correctly detected the resulting unauthenticated `200` and rolled back.
+
+Development now has a remote, pre-promotion host-policy phase. After the uploaded archive and its original CI checksums are verified, the remote release script:
+
+1. reads the existing cPanel-managed `AuthUserFile` directive from the currently protected release;
+2. accepts it only when it resolves within the authenticated account's cPanel-managed password area and names a readable, non-empty credential file;
+3. prepends one deterministic development auth block to a fresh copy of the application's complete `.htaccess`;
+4. verifies that the application rules are byte-for-byte identical to the rules covered by the original artifact manifest;
+5. records a separate host-policy digest outside the document root, without recording the resolved path; and
+6. permits the live symlink switch only after those checks pass.
+
+The original `SHA256SUMS` is never regenerated after the host-local overlay. A retry reuses and verifies an existing immutable SHA directory without duplicating the auth block; it never deletes or replaces that directory. The freshly uploaded artifact manifest must exactly match the existing release's original manifest, and a freshly prepared overlay must exactly match the existing release's host policy, or preparation fails closed. If the current cPanel policy, password file, application `.htaccess`, overlay structure, environment boundary, or separate policy record cannot be verified, preparation fails before promotion and the current live release stays selected.
+
+The htpasswd path remains server-local. Do not add it, an account username, or an account home directory to a GitHub variable, secret description, workflow, artifact, log, screenshot, or pull request. `DEV_HTPASSWD_FILE` is not part of the deployment contract. Normal cPanel access is sufficient; no WHM, reseller package, or vhost edit is required.
+
+Production uses a separate preparation branch that rejects the development markers and all `AuthType`, `AuthUserFile`, and `Require valid-user` directives. It never derives or installs the cPanel policy.
+
 Staging must emit:
 
 ```text
@@ -130,6 +149,25 @@ Disallow: /
 ```
 
 Staging pages must not name `dev.kubus.site` as a production canonical or publish a staging sitemap.
+
+To verify that the Imunify360 exception bypasses only the WAF rule and never Basic Auth, prepare a private curl netrc file containing the development credentials and, separately, a mode-`0600` curl config containing the `X-Deploy-Smoke` header. Do not print either file or pass secret values directly in a URL. Run these four probes:
+
+```bash
+curl --head https://dev.kubus.site/app
+curl --head --netrc-file "$DEV_NETRC" https://dev.kubus.site/app
+curl --head --config "$DEV_SMOKE_HEADER_CONFIG" https://dev.kubus.site/app
+curl --head --config "$DEV_SMOKE_HEADER_CONFIG" --netrc-file "$DEV_NETRC" https://dev.kubus.site/app
+```
+
+The results must be `401`, `200`, `401`, and `200`, respectively; both `401` responses must include `WWW-Authenticate`. The authenticated responses must retain staging `X-Robots-Tag`, and `kubus-web-revision.txt` must equal the deployed `dev` SHA.
+
+Run the workflow manually from the `dev` ref with:
+
+```bash
+gh workflow run deploy-development.yml --ref dev -f bootstrap_web_root=false
+```
+
+The bootstrap input remains `false` for ordinary retries. Set it only for the separately approved one-time migration of a physical document root to the atomic symlink layout.
 
 ## Production deployment
 
@@ -168,6 +206,10 @@ Both web environments define separate values for these secrets:
 - `SFTP_HOST_FINGERPRINT`
 
 `development-web` additionally defines `HTTP_BASIC_USERNAME` and `HTTP_BASIC_PASSWORD`. Never copy production credentials blindly, place secret values in repository variables, or include credentials in URLs, logs, artifacts, screenshots, or PR descriptions.
+
+Optional per-environment secret `SMOKE_BYPASS_TOKEN`: when the origin host's WAF/bot filter blocks the CI runner's IP (e.g. LiteSpeed/Imunify360 returning `415`), set this secret and configure the host to skip that filter only for requests carrying `X-Deploy-Smoke: <token>`. The post-deploy smoke sends that header on every request (curl, `fetch`, and Playwright) while keeping Basic Auth and all other assertions intact. Leave it unset when the runner reaches the host directly (e.g. a self-hosted runner).
+
+No htpasswd location is configured in GitHub. The development remote script derives it from cPanel's current server-local Directory Privacy policy and never emits it.
 
 The current repository-scoped deployment secrets must be copied by a human into `production-web`, independently provisioned for `development-web`, and then removed from repository scope. Until that move is complete, environment separation is not cryptographically complete and staging deployment must remain disabled.
 
@@ -213,8 +255,13 @@ Administrative bypass is for emergencies only. Default-branch changes wait until
 
 ## Failure recovery
 
-- Failed PR validation: reproduce the failing job; do not bypass it.
+- No deployment run: first verify that the event was a push to `dev` or a manual dispatch on `dev`. Opening or closing an unmerged pull request is not a deployment trigger.
+- Waiting for `development-web`: the deploy job has reached a GitHub Environment approval gate; no privileged deployment step has started until approval is granted.
+- Failed build: inspect the reusable artifact job. No remote promotion occurred.
 - Stale staging run: the latest-head guard exits before remote mutation; allow the newer serialized run to continue.
+- Failed preparation or promotion: inspect the named host-policy/checksum or atomic-promotion step. A host-policy failure occurs before the live symlink changes.
+- Failed post-promotion smoke with successful rollback: the candidate was selected, a runtime assertion failed, and the rollback step restored the prior symlink. Treat the workflow as failed even though rollback succeeded.
+- Failed PR validation: reproduce the failing job; do not bypass it.
 - Upload/checksum failure: no promotion occurred; remove only the SHA-specific incoming directory and retry.
 - Post-promotion smoke failure: run the automated rollback, verify the prior revision, and preserve diagnostics.
 - Production failure before environment approval: no production mutation occurred.
