@@ -23,11 +23,31 @@ if [ -n "${SMOKE_BYPASS_TOKEN:-}" ]; then
 fi
 smoke_curl() { curl "${smoke_bypass_args[@]}" "$@"; }
 
-root_status="$(smoke_curl --silent --output /dev/null --write-out '%{http_code}' "$origin/")"
-root_target="$(smoke_curl --silent --output /dev/null --write-out '%{redirect_url}' "$origin/")"
-if [ "$root_status" != 308 ] || [ "$root_target" != "$origin/en" ]; then
-  die "root canonicalization expected 308 to $origin/en, got $root_status to $root_target"
-fi
+# Root is the first request after the atomic symlink swap, and it was the only
+# assertion here without a retry, so any single transient response (a host
+# filter's first-contact challenge, or LiteSpeed still holding the previous
+# release's document root) failed the deploy and rolled back a good release.
+# curl's own --retry cannot cover this: it only retries transient statuses
+# (408/429/5xx), and --write-out has to observe the status rather than --fail on
+# it, so the poll is explicit. Status and target come from one request so the two
+# can never describe different responses.
+root_attempts=6
+root_status=''
+root_target=''
+attempt=1
+while :; do
+  root_probe="$(smoke_curl --silent --output /dev/null --write-out '%{http_code} %{redirect_url}' "$origin/")"
+  root_status="${root_probe%% *}"
+  root_target="${root_probe#* }"
+  if [ "$root_status" = 308 ] && [ "$root_target" = "$origin/en" ]; then
+    break
+  fi
+  if [ "$attempt" -ge "$root_attempts" ]; then
+    die "root canonicalization expected 308 to $origin/en, got $root_status to $root_target after $root_attempts attempts"
+  fi
+  attempt=$((attempt + 1))
+  sleep 3
+done
 
 smoke_curl --fail --silent --show-error --retry 5 --retry-delay 3 --retry-all-errors \
   --header 'Cache-Control: no-cache' --header 'Pragma: no-cache' \

@@ -1,7 +1,18 @@
 <IfModule mod_headers.c>
   # Keep the renderer's stricter CSP on proxied public HTML. Static Flutter
   # responses do not set one, so they receive the established app policy.
-  Header setifempty Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://fonts.googleapis.com https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https: wss: blob:; media-src 'self' blob: data: https:; worker-src 'self' blob:; object-src 'none'; frame-src 'self' https://accounts.google.com;"
+  #
+  # This is scoped by filename rather than written as `Header setifempty`,
+  # because LiteSpeed's mod_headers does not implement that verb: it parsed
+  # "setifempty" as the header NAME and shipped a literal `setifempty:` response
+  # header, so the app policy was never actually applied. Public documents are
+  # internally rewritten to seo-proxy.php (below), which sets its own stricter
+  # policy; only the static documents resolve to a real .html file, so matching
+  # on that extension applies the app policy exactly where it was intended and
+  # never clobbers the gateway's.
+  <FilesMatch "\.html$">
+    Header set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://fonts.googleapis.com https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https: wss: blob:; media-src 'self' blob: data: https:; worker-src 'self' blob:; object-src 'none'; frame-src 'self' https://accounts.google.com;"
+  </FilesMatch>
 
   # --- Caching ---------------------------------------------------------------
   # LiteSpeed defaults to "Cache-Control: private", which prevents any CDN/edge
