@@ -11,6 +11,7 @@ import '../../models/promotion.dart';
 import '../../providers/events_provider.dart';
 import '../../providers/exhibitions_provider.dart';
 import '../../providers/profile_provider.dart';
+import '../../services/telemetry/telemetry_service.dart';
 import '../../screens/collab/invites_inbox_screen.dart';
 import '../../services/backend_api_service.dart'
     show BackendApiRequestException;
@@ -53,6 +54,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
       if (!mounted) return;
       final events = context.read<EventsProvider>();
       unawaited(events.recordEventView(widget.eventId, source: 'event_detail'));
+      unawaited(TelemetryService().trackEventViewed(widget.eventId));
       unawaited(_load());
     });
   }

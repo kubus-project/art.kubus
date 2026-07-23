@@ -971,6 +971,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   Future<void> _trackGuestMapEntry() async {
     try {
+      await TelemetryService().trackMapOpened();
       if (await GuestSessionService.isGuestActive()) {
         await TelemetryService().trackGuestMapLoaded();
       }

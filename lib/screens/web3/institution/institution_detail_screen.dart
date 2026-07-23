@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -5,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../../../models/institution.dart';
 import '../../../providers/institution_provider.dart';
 import '../../../services/backend_api_service.dart';
+import '../../../services/telemetry/telemetry_service.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/media_url_resolver.dart';
 import '../../../widgets/empty_state_card.dart';
@@ -39,6 +42,7 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadInstitution();
+      unawaited(TelemetryService().trackInstitutionViewed(widget.institutionId));
     });
   }
 
