@@ -95,9 +95,52 @@ sh "$release_script" rollback
 [ "$(readlink "$LIVE_DIR")" = "$previous_release" ]
 [ "$(cat "$LIVE_DIR/index.html")" = 'previous' ]
 
+# A rolled-back SHA directory is immutable. A retry with different artifact
+# contents must fail closed without replacing that directory.
+release_identity="$(stat -c '%d:%i' "$RELEASE_DIR")"
+mismatched_payload="$tmp_root/mismatched-payload"
+cp -R "$payload" "$mismatched_payload"
+printf '<html>different candidate</html>\n' > "$mismatched_payload/index.html"
+build_archive "$mismatched_payload" "$INCOMING_DIR" "$SOURCE_SHA"
+mismatch_output="$tmp_root/mismatched-retry.log"
+if sh "$release_script" prepare >"$mismatch_output" 2>&1; then
+  echo 'development preparation unexpectedly replaced an immutable SHA release' >&2
+  exit 1
+fi
+grep -Fq 'existing immutable release does not match the uploaded artifact manifest' "$mismatch_output"
+[ "$(stat -c '%d:%i' "$RELEASE_DIR")" = "$release_identity" ]
+[ "$(readlink "$LIVE_DIR")" = "$previous_release" ]
+
+# Reusing the immutable release also requires its prepared overlay to match the
+# current cPanel policy. A moved auth source fails closed even while the old
+# credential file remains readable.
+build_archive "$payload" "$INCOMING_DIR" "$SOURCE_SHA"
+rotated_auth_source="$HOME/.htpasswds/rotated.example.test/passwd"
+mkdir -p "$(dirname "$rotated_auth_source")"
+printf 'smoke-user:rotated-hash\n' > "$rotated_auth_source"
+rotated_live_htaccess="$tmp_root/rotated-live.htaccess"
+sed "s|AuthUserFile \"$auth_source\"|AuthUserFile \"$rotated_auth_source\"|" \
+  "$previous_release/.htaccess" > "$rotated_live_htaccess"
+mv "$rotated_live_htaccess" "$previous_release/.htaccess"
+policy_mismatch_output="$tmp_root/policy-mismatched-retry.log"
+if sh "$release_script" prepare >"$policy_mismatch_output" 2>&1; then
+  echo 'development preparation unexpectedly reused a stale host policy' >&2
+  exit 1
+fi
+grep -Fq 'existing immutable release does not match the current host policy' \
+  "$policy_mismatch_output"
+[ "$(stat -c '%d:%i' "$RELEASE_DIR")" = "$release_identity" ]
+[ "$(readlink "$LIVE_DIR")" = "$previous_release" ]
+restored_live_htaccess="$tmp_root/restored-live.htaccess"
+sed "s|AuthUserFile \"$rotated_auth_source\"|AuthUserFile \"$auth_source\"|" \
+  "$previous_release/.htaccess" > "$restored_live_htaccess"
+mv "$restored_live_htaccess" "$previous_release/.htaccess"
+
 # A failed deployment can be prepared and promoted again without duplicating
-# host policy or regenerating the original artifact checksum manifest.
+# host policy, replacing the immutable SHA directory, or regenerating the
+# original artifact checksum manifest.
 sh "$release_script" prepare
+[ "$(stat -c '%d:%i' "$RELEASE_DIR")" = "$release_identity" ]
 [ "$(grep -Fc '# BEGIN KUBUS HOST DEVELOPMENT AUTH' "$RELEASE_DIR/.htaccess")" -eq 1 ]
 cmp "$tmp_root/original-SHA256SUMS" "$RELEASE_DIR/SHA256SUMS"
 sh "$release_script" promote

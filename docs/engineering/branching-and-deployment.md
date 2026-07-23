@@ -129,7 +129,7 @@ Development now has a remote, pre-promotion host-policy phase. After the uploade
 5. records a separate host-policy digest outside the document root, without recording the resolved path; and
 6. permits the live symlink switch only after those checks pass.
 
-The original `SHA256SUMS` is never regenerated after the host-local overlay. A retry rebuilds or verifies the same prepared release without duplicating the auth block. If the current cPanel policy, password file, application `.htaccess`, overlay structure, environment boundary, or separate policy record cannot be verified, preparation fails before promotion and the current live release stays selected.
+The original `SHA256SUMS` is never regenerated after the host-local overlay. A retry reuses and verifies an existing immutable SHA directory without duplicating the auth block; it never deletes or replaces that directory. The freshly uploaded artifact manifest must exactly match the existing release's original manifest, and a freshly prepared overlay must exactly match the existing release's host policy, or preparation fails closed. If the current cPanel policy, password file, application `.htaccess`, overlay structure, environment boundary, or separate policy record cannot be verified, preparation fails before promotion and the current live release stays selected.
 
 The htpasswd path remains server-local. Do not add it, an account username, or an account home directory to a GitHub variable, secret description, workflow, artifact, log, screenshot, or pull request. `DEV_HTPASSWD_FILE` is not part of the deployment contract. Normal cPanel access is sufficient; no WHM, reseller package, or vhost edit is required.
 
