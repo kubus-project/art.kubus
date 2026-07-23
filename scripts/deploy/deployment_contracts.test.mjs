@@ -42,16 +42,32 @@ test('artifact preparation isolates staging indexing policy from production', as
     await mkdir(directory);
     await writeFile(path.join(directory, 'index.html'), '<html><script src="flutter_bootstrap.js"></script></html>');
     await writeFile(path.join(directory, '.htaccess'), '<IfModule mod_rewrite.c>\nRewriteEngine On\n</IfModule>\n');
-    await run(process.execPath, [path.join(scriptDir, 'prepare_web_artifact.mjs'), '--environment', environment, '--source-sha', sha, '--directory', directory]);
+    const htpasswdPath = '/home/test/.htpasswds/dev.kubus.site/passwd';
+    await run(process.execPath, [path.join(scriptDir, 'prepare_web_artifact.mjs'), '--environment', environment, '--source-sha', sha, '--directory', directory], { DEV_HTPASSWD_FILE: htpasswdPath });
     assert.equal((await readFile(path.join(directory, 'kubus-web-revision.txt'), 'utf8')).trim(), sha);
     const htaccess = await readFile(path.join(directory, '.htaccess'), 'utf8');
     if (environment === 'development') {
       assert.match(htaccess, /X-Robots-Tag "noindex, nofollow, noarchive"/);
       assert.equal(await readFile(path.join(directory, 'robots.txt'), 'utf8'), 'User-agent: *\nDisallow: /\n');
+      assert.match(htaccess, /AuthType Basic/);
+      assert.match(htaccess, /Require valid-user/);
+      assert.ok(htaccess.includes(`AuthUserFile "${htpasswdPath}"`), 'dev artifact must reference the configured htpasswd file');
     } else {
       assert.doesNotMatch(htaccess, /X-Robots-Tag/);
+      assert.doesNotMatch(htaccess, /AuthType Basic/);
     }
   }
+});
+
+test('development artifact stays auth-free when no htpasswd file is configured', async () => {
+  const temp = await mkdtemp(path.join(os.tmpdir(), 'kubus-artifact-noauth-'));
+  const sha = '0123456789abcdef0123456789abcdef01234567';
+  await writeFile(path.join(temp, 'index.html'), '<html></html>');
+  await writeFile(path.join(temp, '.htaccess'), '<IfModule mod_rewrite.c>\nRewriteEngine On\n</IfModule>\n');
+  await run(process.execPath, [path.join(scriptDir, 'prepare_web_artifact.mjs'), '--environment', 'development', '--source-sha', sha, '--directory', temp], { DEV_HTPASSWD_FILE: '' });
+  const htaccess = await readFile(path.join(temp, '.htaccess'), 'utf8');
+  assert.doesNotMatch(htaccess, /AuthType Basic/);
+  assert.match(htaccess, /X-Robots-Tag "noindex, nofollow, noarchive"/);
 });
 
 test('deployment target validation rejects host confusion and emits safe SHA paths', async () => {

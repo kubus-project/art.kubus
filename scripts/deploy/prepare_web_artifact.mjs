@@ -29,14 +29,34 @@ const stagingBlock = `<IfModule mod_headers.c>
 
 `;
 
+// Staging Basic Auth (development only). The atomic deploy replaces the docroot
+// .htaccess on every release, so cPanel Directory Privacy does not survive; bake
+// the auth into each immutable artifact instead, referencing a persistent
+// htpasswd file supplied via DEV_HTPASSWD_FILE. Production is never protected.
+const authUserFile = (process.env.DEV_HTPASSWD_FILE || '').trim();
+const authRealm = (process.env.DEV_AUTH_REALM || 'Protected staging').replace(/["\r\n]/g, '').trim();
+
 let htaccess = readFileSync(htaccessPath, 'utf8');
 if (environment === 'development') {
+  if (authUserFile) {
+    if (!authUserFile.startsWith('/') || authUserFile.includes('..')) {
+      throw new Error('DEV_HTPASSWD_FILE must be a safe absolute path');
+    }
+    if (!htaccess.includes('# kubus-staging-auth')) {
+      htaccess = `# kubus-staging-auth\nAuthType Basic\nAuthName "${authRealm}"\nAuthUserFile "${authUserFile}"\nRequire valid-user\n\n${htaccess}`;
+    }
+  }
   if (!htaccess.includes('X-Robots-Tag "noindex, nofollow, noarchive"')) {
     htaccess = stagingBlock + htaccess;
   }
   writeFileSync(join(artifactDir, 'robots.txt'), 'User-agent: *\nDisallow: /\n');
-} else if (htaccess.includes('X-Robots-Tag "noindex, nofollow, noarchive"')) {
-  throw new Error('production artifact unexpectedly contains the staging noindex block');
+} else {
+  if (htaccess.includes('X-Robots-Tag "noindex, nofollow, noarchive"')) {
+    throw new Error('production artifact unexpectedly contains the staging noindex block');
+  }
+  if (/^\s*AuthType\s+Basic/im.test(htaccess) || htaccess.includes('# kubus-staging-auth')) {
+    throw new Error('production artifact unexpectedly contains a staging auth block');
+  }
 }
 writeFileSync(htaccessPath, htaccess);
 writeFileSync(join(artifactDir, 'kubus-web-revision.txt'), `${sourceSha}\n`);

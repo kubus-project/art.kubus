@@ -115,6 +115,11 @@ jobs:
             --dart-define-from-file=.dart_tool/public-build-defines.json
 
       - name: Apply environment policy and revision metadata
+        env:
+          # Persistent staging htpasswd path (development only); baked into the
+          # immutable artifact so Basic Auth survives atomic release swaps.
+          DEV_HTPASSWD_FILE: ${{ vars.DEV_HTPASSWD_FILE }}
+          DEV_AUTH_REALM: ${{ vars.DEV_AUTH_REALM }}
         run: >-
           node scripts/deploy/prepare_web_artifact.mjs
           --environment '${{ inputs.deployment_environment }}'
