@@ -89,6 +89,8 @@ test('branch deployments have isolated sources, environments, and concurrency', 
   const development = workflow('deploy-development.yml');
   const production = workflow('release-production.yml');
   assert.match(development, /branches:\s*\n\s*- dev/);
+  assert.match(development, /\bworkflow_dispatch:/);
+  assert.doesNotMatch(development, /\bpull_request:|\bpull_request_target:/);
   assert.match(development, /group:\s*deploy-development/);
   assert.match(development, /environment_name:\s*development-web/);
   assert.doesNotMatch(development, /production-web|branches:\s*\n\s*- master/);
@@ -123,8 +125,15 @@ test('privileged deployment preserves SHA, stale-head, host, smoke, and rollback
     assert.ok(content.includes(required), `missing deployment gate: ${required}`);
   }
   assert.match(content, /development:development-web:dev\|production:production-web:master/);
+  assert.match(content, /atomic_web_release\.sh" prepare/);
   assert.match(content, /atomic_web_release\.sh" promote/);
   assert.match(content, /atomic_web_release\.sh" rollback/);
+  assert.match(
+    content,
+    /Apply and verify host-local development protection[\s\S]*?atomic_web_release\.sh" prepare[\s\S]*?Atomically promote prepared release[\s\S]*?atomic_web_release\.sh" promote/,
+  );
+  assert.match(content, /Verify production release is free of staging protection/);
+  assert.doesNotMatch(content, /DEV_HTPASSWD_FILE|\/home\//);
   assert.match(content, /::add-mask::\$HTTP_BASIC_USERNAME/);
   assert.match(content, /::add-mask::\$HTTP_BASIC_PASSWORD/);
 });
