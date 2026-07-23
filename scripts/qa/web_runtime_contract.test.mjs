@@ -361,8 +361,46 @@ test('deployed public takeover smoke remains opt-in and verifies the complete ha
   assert.match(smoke, /function bypassHeadersFor\(/);
   assert.match(smoke, /\.origin === targetOrigin/);
   assert.doesNotMatch(smoke, /extraHTTPHeaders/);
+  // Playwright routing injects the header only on the same-origin branch.
+  assert.match(
+    smoke,
+    /if \(sameOrigin\) \{\s*await route\.continue\(\{ headers: \{ \.\.\.request\.headers\(\), 'x-deploy-smoke': smokeBypassToken \} \}\);\s*\} else \{\s*await route\.continue\(\);/,
+  );
   assert.match(buildWorkflow, /--dart-define=PUBLIC_FLUTTER_TAKEOVER_ENABLED=true/);
   assert.match(buildWorkflow, /--dart-define=SEO_PUBLIC_PAGES_ENABLED=true/);
+});
+
+test('production SEO contract scopes the WAF header to the origin and classifies 415 without leaking the token', () => {
+  const contract = readFileSync(
+    resolve(repoRoot, 'scripts', 'qa', 'production_seo_contract.mjs'),
+    'utf8',
+  );
+  // The header set is derived from the token and only spread into same-origin
+  // requests (all fetches target `${ORIGIN}${path}`); no absolute external URL
+  // is ever fetched with the bypass header.
+  assert.match(contract, /const BYPASS_HEADERS = SMOKE_BYPASS_TOKEN \? \{ 'X-Deploy-Smoke': SMOKE_BYPASS_TOKEN \} : \{\};/);
+  assert.match(contract, /fetch\(`\$\{ORIGIN\}\$\{path\}`/);
+  assert.doesNotMatch(contract, /fetch\(`https?:\/\/\$\{?(?!ORIGIN)/);
+  // A 415 anywhere is surfaced as a WAF diagnosis, never as a content failure,
+  // and the token value is never printed.
+  assert.match(contract, /if \(response\.status === 415\) wafBlockObserved = true;/);
+  assert.match(contract, /WAF diagnosis \(token value never shown\)/);
+  assert.doesNotMatch(contract, /console\.(log|error)\([^\n]*SMOKE_BYPASS_TOKEN/);
+});
+
+test('production smoke fails closed on a WAF 415 with a token-safe diagnosis', () => {
+  const smoke = readFileSync(resolve(repoRoot, 'scripts', 'deploy', 'smoke_production_web.sh'), 'utf8');
+  const diagnostics = readFileSync(resolve(repoRoot, 'scripts', 'deploy', 'waf_smoke_diagnostics.sh'), 'utf8');
+
+  // The smoke sources the shared diagnosis and calls it before failing the root
+  // assertion; it still dies (fail closed) -- a 415 is never a pass.
+  assert.match(smoke, /waf_smoke_diagnostics\.sh/);
+  assert.match(smoke, /waf_diagnose "\$origin" "\$root_status" "\$root_target"/);
+  assert.match(smoke, /die "root canonicalization expected 308/);
+  // The diagnosis never echoes the token and rejects the ineffective .htaccess
+  // pseudo-fix explicitly.
+  assert.doesNotMatch(diagnostics, /echo[^\n]*\$SMOKE_BYPASS_TOKEN|printf[^\n]*\$SMOKE_BYPASS_TOKEN/);
+  assert.match(diagnostics, /an \.htaccess rule cannot fix this/);
 });
 
 test('production deployment enforces and can roll back the canonical takeover smoke', () => {

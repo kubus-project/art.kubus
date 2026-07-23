@@ -175,6 +175,14 @@ The bootstrap input remains `false` for ordinary retries. Set it only for the se
 
 Production retains the existing security and recovery contract: immutable SHA directories, verified SSH fingerprint, safe absolute paths, archive and per-file SHA-256 verification, symlink-based atomic promotion, exact revision verification, app/routing/canonical/SEO/takeover smoke, rollback after any post-promotion critical failure, and cleanup only after success. Production deployment is never authorized merely because a workflow or PR exists.
 
+### Post-promotion smoke and the origin WAF (HTTP 415)
+
+The production origin (`app.kubus.site`) is a LiteSpeed host fronted by an Imunify360-style reverse-proxy bot filter. That filter greylists datacenter IP ranges and answers them with `HTTP 415`, while an ordinary client IP receives the correct `308 -> /en` canonicalization (verified: the `415` appears only from the GitHub-hosted runner and even a wrong `X-Deploy-Smoke` header from a normal IP still returns `308`, so the block is keyed on IP reputation, not content). The post-promotion smoke runs on a GitHub-hosted runner, so without an exception it receives `415`, fails the `root canonicalization` assertion, and rolls back a good release.
+
+Every production smoke client already sends `X-Deploy-Smoke: <SMOKE_BYPASS_TOKEN>` scoped to the deployment origin, and `release-production.yml` forwards the environment secret. The remaining piece is a **host-side** rule that recognises the header. It cannot be an `.htaccess` directive: the reverse-proxy filter decides before LiteSpeed reads `.htaccess`, so a blocked request never reaches Apache/LiteSpeed rewrite or header processing. The setup and verification runbook (a one-time root/WHM action, with a trusted-runner fallback) is [`production-waf-smoke-exception.md`](production-waf-smoke-exception.md).
+
+Until the host rule exists, the smoke **fails closed** with a token-safe diagnosis that names the exact mode instead of an opaque `got 415`: missing/unforwarded token, host rule not installed (header ignored, still `415`), transient WAF state, or an ordinary application/routing/SEO failure. A `415` is never converted into a pass. The shared classifier is `scripts/deploy/waf_smoke_diagnostics.sh`; the read-only verifier is `scripts/deploy/waf_smoke_probe.sh`. Neither ever prints the token.
+
 ## Mobile releases
 
 `mobile-release.yml` is independent from web deployment. A `v*` tag or explicit manual run resolves a commit already contained by `master`, builds and signs Android APK/AAB in `android-release`, optionally signs an IPA in `ios-release`, verifies checksums and signatures, and publishes GitHub Release metadata only when the workflow is explicitly in publishing mode. Pull requests never receive signing material.
@@ -207,7 +215,7 @@ Both web environments define separate values for these secrets:
 
 `development-web` additionally defines `HTTP_BASIC_USERNAME` and `HTTP_BASIC_PASSWORD`. Never copy production credentials blindly, place secret values in repository variables, or include credentials in URLs, logs, artifacts, screenshots, or PR descriptions.
 
-Optional per-environment secret `SMOKE_BYPASS_TOKEN`: when the origin host's WAF/bot filter blocks the CI runner's IP (e.g. LiteSpeed/Imunify360 returning `415`), set this secret and configure the host to skip that filter only for requests carrying `X-Deploy-Smoke: <token>`. The post-deploy smoke sends that header on every request (curl, `fetch`, and Playwright) while keeping Basic Auth and all other assertions intact. Leave it unset when the runner reaches the host directly (e.g. a self-hosted runner).
+Optional per-environment secret `SMOKE_BYPASS_TOKEN`: when the origin host's WAF/bot filter blocks the CI runner's IP (e.g. LiteSpeed/Imunify360 returning `415`), set this secret and configure the host to skip that filter only for requests carrying `X-Deploy-Smoke: <token>`. The post-deploy smoke sends that header on every request (curl, `fetch`, and Playwright), scoped to the deployment origin so third-party hosts never receive it, while keeping Basic Auth and all other assertions intact. Leave it unset when the runner reaches the host directly (e.g. a self-hosted or trusted-IP runner). The host-side rule is **not** an `.htaccess` change; see [`production-waf-smoke-exception.md`](production-waf-smoke-exception.md) for the exact root/WHM setup, the trusted-runner fallback, and the read-only verification probe. The token value must never appear in a repository variable, source file, artifact, log, screenshot, or PR text.
 
 No htpasswd location is configured in GitHub. The development remote script derives it from cPanel's current server-local Directory Privacy policy and never emits it.
 
@@ -264,6 +272,7 @@ Administrative bypass is for emergencies only. Default-branch changes wait until
 - Failed PR validation: reproduce the failing job; do not bypass it.
 - Upload/checksum failure: no promotion occurred; remove only the SHA-specific incoming directory and retry.
 - Post-promotion smoke failure: run the automated rollback, verify the prior revision, and preserve diagnostics.
+- Production smoke `root canonicalization ... got 415`: the origin WAF is blocking the runner, not an application regression. Read the printed WAF diagnosis to tell apart a missing/unforwarded `SMOKE_BYPASS_TOKEN`, a host rule that is not installed (bypass-header request still `415`), a transient WAF state, or an ordinary app failure. Fix per [`production-waf-smoke-exception.md`](production-waf-smoke-exception.md); confirm with `scripts/deploy/waf_smoke_probe.sh` before re-releasing. The rollback already restored the prior release, so production stayed healthy.
 - Production failure before environment approval: no production mutation occurred.
 - Hotfix release: reconcile the exact fix into `dev` before ordinary development proceeds.
 - Lost or rotated credentials: stop deployment, rotate through environment settings, verify the host fingerprint out of band, and never commit replacement material.

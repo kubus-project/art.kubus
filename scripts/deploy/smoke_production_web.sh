@@ -14,6 +14,9 @@ origin="$(printf '%s' "$WEB_SMOKE_URL" | sed -E 's#(https?://[^/]+).*#\1#')"
 work_dir="$(mktemp -d)"
 trap 'rm -rf "$work_dir"' EXIT HUP INT TERM
 
+# shellcheck source=scripts/deploy/waf_smoke_diagnostics.sh
+. "$(dirname "$0")/waf_smoke_diagnostics.sh"
+
 # Optional WAF bypass header so the CI runner's requests reach the origin. The
 # host is configured to skip its bot/IP filter only when this header carries the
 # SMOKE_BYPASS_TOKEN secret; every production assertion below still applies.
@@ -31,7 +34,13 @@ smoke_curl() { curl "${smoke_bypass_args[@]}" "$@"; }
 # (408/429/5xx), and --write-out has to observe the status rather than --fail on
 # it, so the poll is explicit. Status and target come from one request so the two
 # can never describe different responses.
-root_attempts=6
+# Retry count and delay default to the production values; the contract tests
+# override them (to run fast) without changing any assertion. Both are clamped
+# so an override can never silently disable the poll.
+root_attempts="${SMOKE_ROOT_ATTEMPTS:-6}"
+root_delay="${SMOKE_ROOT_DELAY_SECONDS:-3}"
+printf '%s' "$root_attempts" | grep -Eq '^[1-9][0-9]*$' || root_attempts=6
+printf '%s' "$root_delay" | grep -Eq '^[0-9]+$' || root_delay=3
 root_status=''
 root_target=''
 attempt=1
@@ -43,10 +52,13 @@ while :; do
     break
   fi
   if [ "$attempt" -ge "$root_attempts" ]; then
+    # Classify the failure (WAF IP block vs. missing token vs. app fault) so a
+    # 415 is not mistaken for an application regression. Never prints the token.
+    waf_diagnose "$origin" "$root_status" "$root_target" || true
     die "root canonicalization expected 308 to $origin/en, got $root_status to $root_target after $root_attempts attempts"
   fi
   attempt=$((attempt + 1))
-  sleep 3
+  sleep "$root_delay"
 done
 
 smoke_curl --fail --silent --show-error --retry 5 --retry-delay 3 --retry-all-errors \

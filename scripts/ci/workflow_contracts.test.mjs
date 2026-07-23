@@ -191,6 +191,32 @@ test('composite deploy action is context-safe and fed environment config by its 
   );
 });
 
+test('production deployment forwards the WAF smoke-bypass secret to the production smoke', () => {
+  const action = deployAction();
+  const production = workflow('release-production.yml');
+  const development = workflow('deploy-development.yml');
+
+  // The composite action declares the optional token input and never resolves a
+  // secret context itself.
+  assert.match(action, /smoke_bypass_token:\s*\{ required: false \}/);
+  assert.match(action, /SMOKE_BYPASS_TOKEN:\s*\$\{\{ inputs\.smoke_bypass_token \}\}/);
+
+  // The production smoke step receives the token as an environment variable.
+  assert.match(
+    action,
+    /id: production_smoke[\s\S]*?SMOKE_BYPASS_TOKEN:\s*\$\{\{ inputs\.smoke_bypass_token \}\}[\s\S]*?smoke_production_web\.sh/,
+  );
+
+  // Both environment-bound callers forward the environment-scoped secret.
+  for (const caller of [production, development]) {
+    assert.match(caller, /smoke_bypass_token:\s*\$\{\{ secrets\.SMOKE_BYPASS_TOKEN \}\}/);
+  }
+
+  // The token is never exposed as a plain repository variable or echoed.
+  assert.doesNotMatch(action, /vars\.SMOKE_BYPASS_TOKEN/);
+  assert.doesNotMatch(action, /echo[^\n]*SMOKE_BYPASS_TOKEN/);
+});
+
 test('all third-party actions are pinned to immutable commit SHAs', () => {
   for (const name of [
     'pr-validation.yml',

@@ -22,6 +22,10 @@ const SMOKE_BYPASS_TOKEN = (process.env.SMOKE_BYPASS_TOKEN ?? '').trim();
 const BYPASS_HEADERS = SMOKE_BYPASS_TOKEN ? { 'X-Deploy-Smoke': SMOKE_BYPASS_TOKEN } : {};
 
 const results = [];
+// Set when any request is answered with 415, the signature the origin's
+// Imunify360/LiteSpeed bot filter returns to a blocked (datacenter) IP. Used to
+// print an actionable, token-free hint instead of a misleading "content" fault.
+let wafBlockObserved = false;
 
 function record(name, ok, detail) {
   results.push({ name, ok, detail });
@@ -33,12 +37,14 @@ async function fetchNoRedirect(path, init = {}) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
-    return await fetch(`${ORIGIN}${path}`, {
+    const response = await fetch(`${ORIGIN}${path}`, {
       redirect: 'manual',
       signal: controller.signal,
       headers: { 'Cache-Control': 'no-cache', ...BYPASS_HEADERS, ...(init.headers ?? {}) },
       ...init,
     });
+    if (response.status === 415) wafBlockObserved = true;
+    return response;
   } finally {
     clearTimeout(timer);
   }
@@ -244,6 +250,22 @@ async function main() {
   if (failed.length > 0) {
     console.log('\nFailed checks:');
     for (const f of failed) console.log(`  - ${f.name}: ${f.detail}`);
+    if (wafBlockObserved) {
+      const tokenConfigured = SMOKE_BYPASS_TOKEN.length > 0;
+      console.log(
+        '\nWAF diagnosis (token value never shown): at least one request was answered '
+        + 'with HTTP 415, the signature the origin Imunify360/LiteSpeed filter returns to '
+        + 'a blocked datacenter IP. This is a network filter, not a content regression.',
+      );
+      console.log(
+        tokenConfigured
+          ? '  SMOKE_BYPASS_TOKEN is set here, so the host WAF exception for the '
+            + 'X-Deploy-Smoke header is not active. Install/repair the host rule per '
+            + 'docs/engineering/production-waf-smoke-exception.md.'
+          : '  SMOKE_BYPASS_TOKEN is empty here (unset in the production-web environment or '
+            + 'not forwarded by the workflow), so no bypass header was sent.',
+      );
+    }
     process.exitCode = 1;
   }
 }
