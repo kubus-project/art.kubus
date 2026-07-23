@@ -21,6 +21,7 @@ Engineering workflow: `docs/engineering/branching-and-deployment.md` is the cano
 - Agents must not merge pull requests, deploy production, approve a protected production environment, or change environment secrets without explicit user authorization.
 - Investigate CI failures; never bypass, weaken, or rename required checks merely to obtain a green result.
 - Deployment changes must retain exact-SHA immutable artifacts, verified SSH hosts, safe remote paths, checksum verification, atomic promotion, revision-aware smoke tests, and automatic rollback.
+- Development Basic Auth is a host-local policy applied and verified before atomic promotion; never place its resolved account path in repository configuration, CI artifacts, or logs. Production must reject development authentication policy.
 - UI changes require responsive validation and visual evidence where layout or appearance changes. Backend schema changes must continue to update both schema snapshots.
 - Keep these rules consistent across nested `AGENTS.md` files, Copilot instructions, contributor documentation, and the canonical engineering guide.
 
