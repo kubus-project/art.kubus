@@ -169,6 +169,8 @@ Both web environments define separate values for these secrets:
 
 `development-web` additionally defines `HTTP_BASIC_USERNAME` and `HTTP_BASIC_PASSWORD`. Never copy production credentials blindly, place secret values in repository variables, or include credentials in URLs, logs, artifacts, screenshots, or PR descriptions.
 
+Optional per-environment secret `SMOKE_BYPASS_TOKEN`: when the origin host's WAF/bot filter blocks the CI runner's IP (e.g. LiteSpeed/Imunify360 returning `415`), set this secret and configure the host to skip that filter only for requests carrying `X-Deploy-Smoke: <token>`. The post-deploy smoke sends that header on every request (curl, `fetch`, and Playwright) while keeping Basic Auth and all other assertions intact. Leave it unset when the runner reaches the host directly (e.g. a self-hosted runner).
+
 The current repository-scoped deployment secrets must be copied by a human into `production-web`, independently provisioned for `development-web`, and then removed from repository scope. Until that move is complete, environment separation is not cryptographically complete and staging deployment must remain disabled.
 
 ## Backend coordination

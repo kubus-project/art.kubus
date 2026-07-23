@@ -350,6 +350,11 @@ test('deployed public takeover smoke remains opt-in and verifies the complete ha
   assert.match(smoke, /expectTakeover \? 2 : 1/);
   assert.match(smoke, /const browser = await browserType\.launch/);
   assert.match(smoke, /finally \{\s*await browser\.close\(\);/);
+  // The WAF bypass secret must be scoped to the deployment origin (raw fetches
+  // and per-request Playwright routing) and never broadcast context-wide.
+  assert.match(smoke, /function bypassHeadersFor\(/);
+  assert.match(smoke, /\.origin === targetOrigin/);
+  assert.doesNotMatch(smoke, /extraHTTPHeaders/);
   assert.match(buildWorkflow, /--dart-define=PUBLIC_FLUTTER_TAKEOVER_ENABLED=true/);
   assert.match(buildWorkflow, /--dart-define=SEO_PUBLIC_PAGES_ENABLED=true/);
 });

@@ -83,3 +83,4 @@ jobs:
           sftp_host_fingerprint: ${{ secrets.SFTP_HOST_FINGERPRINT }}
           http_basic_username: ${{ secrets.HTTP_BASIC_USERNAME }}
           http_basic_password: ${{ secrets.HTTP_BASIC_PASSWORD }}
+          smoke_bypass_token: ${{ secrets.SMOKE_BYPASS_TOKEN }}

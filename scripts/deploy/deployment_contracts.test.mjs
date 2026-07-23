@@ -84,7 +84,10 @@ test('development smoke validates Basic Auth, revision, routes, and noindex with
   const password = 'stage-password';
   const sha = '89abcdef0123456789abcdef0123456789abcdef';
   const expectedAuth = `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`;
+  const bypassToken = 'ci-waf-bypass-token';
+  const bypassHeaderSeen = new Set();
   const server = http.createServer((request, response) => {
+    bypassHeaderSeen.add(request.headers['x-deploy-smoke'] ?? '(none)');
     if (request.headers.authorization !== expectedAuth) {
       response.writeHead(401, { 'WWW-Authenticate': 'Basic realm="staging"' });
       response.end('protected');
@@ -116,8 +119,11 @@ test('development smoke validates Basic Auth, revision, routes, and noindex with
       SOURCE_SHA: sha,
       HTTP_BASIC_USERNAME: username,
       HTTP_BASIC_PASSWORD: password,
+      SMOKE_BYPASS_TOKEN: bypassToken,
     });
-    assert.doesNotMatch(result.stdout + result.stderr, new RegExp(`${username}|${password}`));
+    assert.doesNotMatch(result.stdout + result.stderr, new RegExp(`${username}|${password}|${bypassToken}`));
+    assert.ok(bypassHeaderSeen.has(bypassToken), 'smoke must send the X-Deploy-Smoke bypass header when the token is set');
+    assert.ok(!bypassHeaderSeen.has('(none)'), 'every smoke request (incl. the unauthenticated probe) must carry the bypass header');
   } finally {
     await new Promise((resolve) => server.close(resolve));
   }
