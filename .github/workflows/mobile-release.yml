@@ -78,7 +78,7 @@ jobs:
         with: { distribution: temurin, java-version: '21', cache: gradle }
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with: { flutter-version: '3.44.2', channel: stable, cache: true }
-      - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
+      - uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699 # v4.0.1
       - name: Configure protected Android signing
         shell: bash
         env:
