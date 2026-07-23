@@ -29,7 +29,7 @@ jobs:
       build_number: ${{ steps.metadata.outputs.build_number }}
       build_date: ${{ steps.metadata.outputs.build_date }}
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
         with: { fetch-depth: 0, submodules: false }
       - id: source
         shell: bash
@@ -66,7 +66,7 @@ jobs:
     timeout-minutes: 50
     environment: android-release
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
         with:
           ref: ${{ needs.source.outputs.sha }}
           submodules: false
@@ -139,7 +139,7 @@ jobs:
     timeout-minutes: 50
     environment: ios-release
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
         with:
           ref: ${{ needs.source.outputs.sha }}
           submodules: false
