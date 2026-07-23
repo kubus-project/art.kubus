@@ -15,6 +15,23 @@ inputs:
   sftp_host_fingerprint: { required: true }
   http_basic_username: { required: false }
   http_basic_password: { required: false }
+  # Optional token that lets CI smoke requests pass the origin host's WAF/bot filter.
+  smoke_bypass_token: { required: false }
+  # Environment-scoped configuration. A composite action cannot read the `vars`
+  # context, so every GitHub Environment variable is forwarded explicitly by the
+  # environment-bound caller workflow.
+  environment_variable_name: { required: true }
+  sftp_port: { required: true }
+  web_server_dir: { required: true }
+  web_releases_dir: { required: true }
+  web_smoke_url: { required: true }
+  expected_deployment_host: { required: true }
+  # Production-only public takeover smoke configuration (unused for development).
+  expect_public_flutter_takeover: { required: false }
+  public_takeover_url: { required: false }
+  public_takeover_missing_url: { required: false }
+  public_takeover_optional_standby_url: { required: false }
+  public_contract_artwork_id: { required: false }
 runs:
   using: composite
   steps:
@@ -101,17 +118,17 @@ runs:
       shell: bash
       env:
         DEPLOYMENT_ENVIRONMENT: ${{ inputs.logical_environment }}
-        ENVIRONMENT_NAME: ${{ vars.ENVIRONMENT_NAME }}
+        ENVIRONMENT_NAME: ${{ inputs.environment_variable_name }}
         SOURCE_SHA: ${{ inputs.source_sha }}
         SFTP_SERVER: ${{ inputs.sftp_server }}
         SFTP_USERNAME: ${{ inputs.sftp_username }}
         SFTP_PRIVATE_KEY: ${{ inputs.sftp_private_key }}
         SFTP_HOST_FINGERPRINT: ${{ inputs.sftp_host_fingerprint }}
-        SFTP_PORT: ${{ vars.SFTP_PORT }}
-        WEB_SERVER_DIR: ${{ vars.WEB_SERVER_DIR }}
-        WEB_RELEASES_DIR: ${{ vars.WEB_RELEASES_DIR }}
-        WEB_SMOKE_URL: ${{ vars.WEB_SMOKE_URL }}
-        EXPECTED_DEPLOYMENT_HOST: ${{ vars.EXPECTED_DEPLOYMENT_HOST }}
+        SFTP_PORT: ${{ inputs.sftp_port }}
+        WEB_SERVER_DIR: ${{ inputs.web_server_dir }}
+        WEB_RELEASES_DIR: ${{ inputs.web_releases_dir }}
+        WEB_SMOKE_URL: ${{ inputs.web_smoke_url }}
+        EXPECTED_DEPLOYMENT_HOST: ${{ inputs.expected_deployment_host }}
         RETAIN_RELEASE_COUNT: ${{ inputs.retained_release_count }}
       run: bash scripts/deploy/validate_deployment_target.sh
 
@@ -120,7 +137,7 @@ runs:
       shell: bash
       env:
         SFTP_SERVER: ${{ inputs.sftp_server }}
-        SFTP_PORT: ${{ vars.SFTP_PORT }}
+        SFTP_PORT: ${{ inputs.sftp_port }}
       run: |
         set -euo pipefail
         for attempt in 1 2 3 4 5 6; do
@@ -142,7 +159,7 @@ runs:
       with:
         host: ${{ inputs.sftp_server }}
         username: ${{ inputs.sftp_username }}
-        port: ${{ vars.SFTP_PORT }}
+        port: ${{ inputs.sftp_port }}
         key: ${{ inputs.sftp_private_key }}
         passphrase: ${{ inputs.sftp_private_key_passphrase }}
         fingerprint: ${{ inputs.sftp_host_fingerprint }}
@@ -168,7 +185,7 @@ runs:
       with:
         host: ${{ inputs.sftp_server }}
         username: ${{ inputs.sftp_username }}
-        port: ${{ vars.SFTP_PORT }}
+        port: ${{ inputs.sftp_port }}
         key: ${{ inputs.sftp_private_key }}
         passphrase: ${{ inputs.sftp_private_key_passphrase }}
         fingerprint: ${{ inputs.sftp_host_fingerprint }}
@@ -188,7 +205,7 @@ runs:
       with:
         host: ${{ inputs.sftp_server }}
         username: ${{ inputs.sftp_username }}
-        port: ${{ vars.SFTP_PORT }}
+        port: ${{ inputs.sftp_port }}
         key: ${{ inputs.sftp_private_key }}
         passphrase: ${{ inputs.sftp_private_key_passphrase }}
         fingerprint: ${{ inputs.sftp_host_fingerprint }}
@@ -210,7 +227,7 @@ runs:
       with:
         host: ${{ inputs.sftp_server }}
         username: ${{ inputs.sftp_username }}
-        port: ${{ vars.SFTP_PORT }}
+        port: ${{ inputs.sftp_port }}
         key: ${{ inputs.sftp_private_key }}
         passphrase: ${{ inputs.sftp_private_key_passphrase }}
         fingerprint: ${{ inputs.sftp_host_fingerprint }}
@@ -229,7 +246,7 @@ runs:
       with:
         host: ${{ inputs.sftp_server }}
         username: ${{ inputs.sftp_username }}
-        port: ${{ vars.SFTP_PORT }}
+        port: ${{ inputs.sftp_port }}
         key: ${{ inputs.sftp_private_key }}
         passphrase: ${{ inputs.sftp_private_key_passphrase }}
         fingerprint: ${{ inputs.sftp_host_fingerprint }}
@@ -252,7 +269,7 @@ runs:
       with:
         host: ${{ inputs.sftp_server }}
         username: ${{ inputs.sftp_username }}
-        port: ${{ vars.SFTP_PORT }}
+        port: ${{ inputs.sftp_port }}
         key: ${{ inputs.sftp_private_key }}
         passphrase: ${{ inputs.sftp_private_key_passphrase }}
         fingerprint: ${{ inputs.sftp_host_fingerprint }}
@@ -281,6 +298,7 @@ runs:
         SOURCE_SHA: ${{ inputs.source_sha }}
         HTTP_BASIC_USERNAME: ${{ inputs.http_basic_username }}
         HTTP_BASIC_PASSWORD: ${{ inputs.http_basic_password }}
+        SMOKE_BYPASS_TOKEN: ${{ inputs.smoke_bypass_token }}
       run: bash scripts/deploy/smoke_development_web.sh
 
     - name: Production routing, SEO, takeover, and revision smoke
@@ -290,11 +308,12 @@ runs:
       env:
         WEB_SMOKE_URL: ${{ steps.target.outputs.smoke_url }}
         SOURCE_SHA: ${{ inputs.source_sha }}
-        EXPECT_PUBLIC_FLUTTER_TAKEOVER: ${{ vars.EXPECT_PUBLIC_FLUTTER_TAKEOVER }}
-        PUBLIC_TAKEOVER_URL: ${{ vars.PUBLIC_TAKEOVER_URL }}
-        PUBLIC_TAKEOVER_MISSING_URL: ${{ vars.PUBLIC_TAKEOVER_MISSING_URL }}
-        PUBLIC_TAKEOVER_OPTIONAL_STANDBY_URL: ${{ vars.PUBLIC_TAKEOVER_OPTIONAL_STANDBY_URL }}
-        PUBLIC_CONTRACT_ARTWORK_ID: ${{ vars.PUBLIC_CONTRACT_ARTWORK_ID }}
+        EXPECT_PUBLIC_FLUTTER_TAKEOVER: ${{ inputs.expect_public_flutter_takeover }}
+        PUBLIC_TAKEOVER_URL: ${{ inputs.public_takeover_url }}
+        PUBLIC_TAKEOVER_MISSING_URL: ${{ inputs.public_takeover_missing_url }}
+        PUBLIC_TAKEOVER_OPTIONAL_STANDBY_URL: ${{ inputs.public_takeover_optional_standby_url }}
+        PUBLIC_CONTRACT_ARTWORK_ID: ${{ inputs.public_contract_artwork_id }}
+        SMOKE_BYPASS_TOKEN: ${{ inputs.smoke_bypass_token }}
       run: bash scripts/deploy/smoke_production_web.sh
 
     - name: Roll back failed post-promotion smoke
@@ -317,7 +336,7 @@ runs:
       with:
         host: ${{ inputs.sftp_server }}
         username: ${{ inputs.sftp_username }}
-        port: ${{ vars.SFTP_PORT }}
+        port: ${{ inputs.sftp_port }}
         key: ${{ inputs.sftp_private_key }}
         passphrase: ${{ inputs.sftp_private_key_passphrase }}
         fingerprint: ${{ inputs.sftp_host_fingerprint }}
@@ -333,7 +352,7 @@ runs:
       with:
         host: ${{ inputs.sftp_server }}
         username: ${{ inputs.sftp_username }}
-        port: ${{ vars.SFTP_PORT }}
+        port: ${{ inputs.sftp_port }}
         key: ${{ inputs.sftp_private_key }}
         passphrase: ${{ inputs.sftp_private_key_passphrase }}
         fingerprint: ${{ inputs.sftp_host_fingerprint }}
@@ -354,7 +373,7 @@ runs:
       with:
         host: ${{ inputs.sftp_server }}
         username: ${{ inputs.sftp_username }}
-        port: ${{ vars.SFTP_PORT }}
+        port: ${{ inputs.sftp_port }}
         key: ${{ inputs.sftp_private_key }}
         passphrase: ${{ inputs.sftp_private_key_passphrase }}
         fingerprint: ${{ inputs.sftp_host_fingerprint }}

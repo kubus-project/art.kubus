@@ -49,6 +49,8 @@ dev -> release-candidate pull request -> merge commit on master -> protected pro
 
 Use a merge commit for `dev -> master`. Squashing a long-lived branch release makes `dev` and `master` histories incompatible and creates misleading future release diffs. Ordinary topic PRs into `dev` may be squash-merged.
 
+Every `dev -> master` release must be reconciled back into `dev` immediately after it merges — this is not optional and is the mirror image of the hotfix rule below. The release merge commit created on `master` is not an ancestor of `dev`, so until it is reconciled `master` diverges: it carries the release merge (and anything merged directly to `master`) as commits that are not on `dev`. See [Post-release reconciliation](#post-release-reconciliation).
+
 Emergency production fixes follow:
 
 ```text
@@ -58,6 +60,43 @@ master -> hotfix/specific-name -> pull request to master -> production
 ```
 
 After a hotfix reaches `master`, merge or cherry-pick it into `dev` promptly and record the reconciliation PR. Agents do not merge PRs without explicit authorization.
+
+## Post-release reconciliation
+
+A successful `dev -> master` release (or any commit that lands on `master`, such as a hotfix) leaves `master` ahead of `dev` by at least the release merge commit. Ordinary development must not resume on `dev` until that ancestry is reconciled back, or the branches drift apart and the next release diff becomes misleading.
+
+The authoritative divergence signal is:
+
+```bash
+git fetch --prune origin
+git rev-list --left-right --cherry-pick --count origin/master...origin/dev
+# output: "<commits only on master>\t<commits only on dev>"
+```
+
+`--cherry-pick` omits patch-equivalent commits, so a hotfix that was reconciled into `dev` by cherry-pick (a new SHA with the same change) does not count and a genuine unreconciled release merge still does. A nonzero first number ("commits only on `master`") means reconciliation is required. Treat it as a release blocker for further `dev` work.
+
+Reconcile with exactly one of these non-rewriting actions, then open a PR to `dev`:
+
+- merge the resulting `master` release merge commit back into `dev`:
+
+  ```bash
+  git switch --create chore/sync-master-into-dev-<date> origin/dev
+  git merge --no-ff origin/master   # ancestry-only when master carries no unique content
+  ```
+
+- or an equivalent non-rewriting ancestry reconciliation PR.
+
+Rules:
+
+- Use a merge commit. Never squash a reconciliation and never rebase a protected branch — either would drop the `master` parent link and leave the divergence open.
+- Never "fix" the count by changing the default branch, force-updating a ref, or resetting `dev`/`master`.
+- Inspect merge conflicts semantically: preserve the newer validated `dev` architecture and any genuine production-only fix from `master`.
+
+Enforcement:
+
+- `npm run verify:branch-reconciliation` runs `scripts/ci/check_branch_reconciliation.mjs`, which fails when `origin/master` has commits not yet reconciled into `origin/dev`. Override the compared refs with `RECONCILE_BASE_REF` / `RECONCILE_HEAD_REF`.
+- The weekly `scheduled-quality.yml` **Release ancestry reconciliation guard** job runs this check so unreconciled divergence surfaces automatically.
+- The parsing/verdict logic is unit-tested in `scripts/ci/branch_reconciliation.test.mjs` (part of `npm run verify:ci`).
 
 ## CI tiers
 
@@ -129,6 +168,8 @@ Both web environments define separate values for these secrets:
 - `SFTP_HOST_FINGERPRINT`
 
 `development-web` additionally defines `HTTP_BASIC_USERNAME` and `HTTP_BASIC_PASSWORD`. Never copy production credentials blindly, place secret values in repository variables, or include credentials in URLs, logs, artifacts, screenshots, or PR descriptions.
+
+Optional per-environment secret `SMOKE_BYPASS_TOKEN`: when the origin host's WAF/bot filter blocks the CI runner's IP (e.g. LiteSpeed/Imunify360 returning `415`), set this secret and configure the host to skip that filter only for requests carrying `X-Deploy-Smoke: <token>`. The post-deploy smoke sends that header on every request (curl, `fetch`, and Playwright) while keeping Basic Auth and all other assertions intact. Leave it unset when the runner reaches the host directly (e.g. a self-hosted runner).
 
 The current repository-scoped deployment secrets must be copied by a human into `production-web`, independently provisioned for `development-web`, and then removed from repository scope. Until that move is complete, environment separation is not cryptographically complete and staging deployment must remain disabled.
 
