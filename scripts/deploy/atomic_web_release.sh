@@ -275,15 +275,13 @@ prepare() {
     production) ;;
   esac
 
-  current_target="$(readlink "$LIVE_DIR")"
   if [ -e "$RELEASE_DIR" ] || [ -L "$RELEASE_DIR" ]; then
     [ -d "$RELEASE_DIR" ] || die "immutable release path is not a directory"
-    if [ "$current_target" = "$RELEASE_DIR" ]; then
-      rm -rf "$candidate"
-      verify_prepared_release "$RELEASE_DIR"
-      return
-    fi
-    rm -rf "$RELEASE_DIR"
+    cmp -s "$candidate/SHA256SUMS" "$RELEASE_DIR/SHA256SUMS" \
+      || die "existing immutable release does not match the uploaded artifact manifest"
+    rm -rf "$candidate"
+    verify_prepared_release "$RELEASE_DIR"
+    return
   fi
 
   mkdir -p "$RELEASE_ROOT/releases"
