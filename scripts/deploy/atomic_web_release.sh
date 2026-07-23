@@ -279,6 +279,8 @@ prepare() {
     [ -d "$RELEASE_DIR" ] || die "immutable release path is not a directory"
     cmp -s "$candidate/SHA256SUMS" "$RELEASE_DIR/SHA256SUMS" \
       || die "existing immutable release does not match the uploaded artifact manifest"
+    cmp -s "$candidate/.htaccess" "$RELEASE_DIR/.htaccess" \
+      || die "existing immutable release does not match the current host policy"
     rm -rf "$candidate"
     verify_prepared_release "$RELEASE_DIR"
     return
