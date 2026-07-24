@@ -47,6 +47,35 @@ test('takeover smoke separates an explicitly configured standby probe failure', 
   assert.equal(result.optionalStandbyConsoleErrors.length, 2);
 });
 
+test('takeover smoke tolerates best-effort analytics beacons on the standby origin', () => {
+  const result = classifyBrowserFailures({
+    consoleErrors: [],
+    failedRequests: [
+      // Firefox rejects the proxied fire-and-forget beacon; not user-facing.
+      { url: 'https://bapi.kubus.site/api/analytics/app', error: 'NS_ERROR_DOM_BAD_URI' },
+      { url: 'https://bapi.kubus.site/api/analytics/entity/view', error: 'net::ERR_FAILED' },
+    ],
+    optionalStandbyProbeUrl: 'https://bapi.kubus.site',
+  });
+
+  assert.deepEqual(result.criticalFailedRequests, []);
+  assert.equal(result.optionalStandbyFailures.length, 2);
+});
+
+test('takeover smoke keeps non-analytics standby backend failures fatal', () => {
+  // A real data endpoint on the standby origin must still fail the smoke; only
+  // the writable probe and analytics beacons are tolerated.
+  const result = classifyBrowserFailures({
+    consoleErrors: [],
+    failedRequests: [
+      { url: 'https://bapi.kubus.site/api/artworks/art-1', error: 'net::ERR_FAILED' },
+    ],
+    optionalStandbyProbeUrl: 'https://bapi.kubus.site',
+  });
+
+  assert.equal(result.criticalFailedRequests.length, 1);
+});
+
 test('takeover smoke keeps unrelated browser failures fatal', () => {
   const result = classifyBrowserFailures({
     consoleErrors: ['Application exploded'],
