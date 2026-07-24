@@ -218,7 +218,7 @@ test('host-local policy is applied remotely without changing original artifact p
 test('production smoke contract preserves routing, SEO, revision, takeover, and unknown-route checks', async () => {
   const source = await readFile(path.join(scriptDir, 'smoke_production_web.sh'), 'utf8');
   for (const required of [
-    'root canonicalization expected 308',
+    'root did not boot the Flutter application',
     'kubus-web-revision.txt',
     'production robots.txt lacks the production sitemap',
     'unknown production route is not a real 404',
@@ -254,9 +254,11 @@ function startWafOrigin({ token, mode, appBodyOverride }) {
 
     // Authorized (or open): production-like responses. Only the root probe and
     // /app are exercised by these tests; later assertions are covered elsewhere.
+    // Root now boots the Flutter application directly (no 308 to /en), so the
+    // root probe expects 200 with the Flutter bootstrap in the body.
     if (request.url === '/') {
-      response.writeHead(308, { Location: '/en' });
-      response.end();
+      response.writeHead(200, { 'Content-Type': 'text/html' });
+      response.end('<html><script src="flutter_bootstrap.js"></script></html>');
       return;
     }
     if (request.url === '/app') {
@@ -330,7 +332,7 @@ test('production smoke fails closed on a persistent WAF 415 and names the missin
     assert.ok(error, 'smoke must fail closed when the origin persistently returns 415');
     // The failure is classified as a WAF block with the exception not installed,
     // never mistaken for an application regression.
-    assert.match(error.message, /root canonicalization expected 308/);
+    assert.match(error.message, /root did not boot the Flutter application/);
     assert.match(error.message, /host WAF exception for X-Deploy-Smoke is NOT active/);
     // A 415 is never converted into a pass.
     assert.doesNotMatch(error.message, /Production web smoke passed/);
@@ -366,9 +368,9 @@ test('production smoke sends the bypass header on every request and clears the W
     }).then(() => null, (e) => e);
 
     assert.ok(error, 'smoke must still fail on the broken /app response');
-    // Root canonicalization passed (the WAF was cleared); the failure is the app.
-    assert.doesNotMatch(error.message, /root canonicalization expected 308/);
-    assert.match(error.message, /\/app does not serve Flutter/);
+    // Root boot passed (the WAF was cleared); the failure is the app.
+    assert.doesNotMatch(error.message, /root did not boot the Flutter application/);
+    assert.match(error.message, /\/app compatibility entry does not serve Flutter/);
     assert.doesNotMatch(error.message, new RegExp(token));
     // Both the root probe and the /app request carried the header.
     assert.ok(seen.some((r) => r.url === '/' && r.header === token));
@@ -487,9 +489,9 @@ test('production smoke routes every request through SMOKE_SOCKS_PROXY when set',
     }).then(() => null, (e) => e);
 
     assert.ok(error, 'smoke still fails on the broken /app response');
-    // Root canonicalization passed *through the tunnel*; failure is the app.
-    assert.doesNotMatch(error.message, /root canonicalization expected 308/);
-    assert.match(error.message, /\/app does not serve Flutter/);
+    // Root boot passed *through the tunnel*; failure is the app.
+    assert.doesNotMatch(error.message, /root did not boot the Flutter application/);
+    assert.match(error.message, /\/app compatibility entry does not serve Flutter/);
     // Proof the curl requests egressed through the SOCKS proxy to the origin.
     assert.ok(
       socks.connects.some((c) => c.port === origin.port),
@@ -516,7 +518,7 @@ test('smoke fails closed when the SOCKS egress proxy is unreachable (never silen
       SMOKE_SOCKS_PROXY: `socks5h://127.0.0.1:${deadPort}`,
     }).then(() => null, (e) => e);
     assert.ok(error, 'smoke must fail when it cannot tunnel to the origin');
-    assert.match(error.message, /root canonicalization expected 308/);
+    assert.match(error.message, /root did not boot the Flutter application/);
   } finally {
     await new Promise((resolve) => origin.server.close(resolve));
   }

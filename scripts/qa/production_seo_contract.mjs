@@ -2,9 +2,15 @@
 // Reusable production SEO transport contract for app.kubus.site.
 //
 // Asserts the public routing contract end to end against a live origin:
-// root canonicalization, compact alias redirects, localized canonical entity
-// rendering, real 404s, robots/sitemap ownership, and semantic-renderer versus
-// app-shell separation.
+// direct application entry at the root and bare locale roots (/, /en, /sl),
+// compact alias redirects, localized canonical entity rendering on DEEPER public
+// routes, real 404s, and robots/sitemap ownership.
+//
+// Architecture note: /, /en and /sl now boot the Flutter application directly
+// (the app shell is the required response there and stays indexable). Semantic
+// server-rendered HTML lives on deeper localized public-entity routes
+// (/en/artworks/:id, /sl/umetnine/:id, compact aliases, sitemaps, robots). This
+// supersedes the previous "root 308 -> /en, semantic /en|/sl homepage" contract.
 //
 // Usage:
 //   node scripts/qa/production_seo_contract.mjs
@@ -121,74 +127,30 @@ async function main() {
   await initTransport();
   console.log(`Production SEO contract against ${ORIGIN}\n`);
 
-  // --- Root canonicalization -------------------------------------------------
-  // Root must collapse into the localized canonical in one permanent hop and
-  // must never serve the app shell as a competing indexable homepage.
-  await checkRedirect('root canonicalization', '/', 308, `${ORIGIN}/en`);
-
-  // ?lang= selects the locale and is then dropped: carrying it through would
-  // produce /sl?lang=sl, a redundant parameter on a URL whose locale is already
-  // in the path. Tracking parameters must survive, so attribution is not lost
-  // at the redirect.
-  await checkRedirect('language alias dropped (?lang=sl)', '/?lang=sl', 308, `${ORIGIN}/sl`);
-  await checkRedirect('language alias dropped (?lang=en)', '/?lang=en', 308, `${ORIGIN}/en`);
-  await checkRedirect(
-    'tracking preserved without lang',
-    '/?utm_source=test',
-    308,
-    `${ORIGIN}/en?utm_source=test`,
-  );
-  await checkRedirect(
-    'lang dropped, tracking preserved (lang first)',
-    '/?lang=sl&utm_source=test',
-    308,
-    `${ORIGIN}/sl?utm_source=test`,
-  );
-  await checkRedirect(
-    'lang dropped, tracking preserved (lang last)',
-    '/?utm_source=test&lang=sl',
-    308,
-    `${ORIGIN}/sl?utm_source=test`,
-  );
-  await checkRedirect(
-    'lang dropped, tracking preserved (lang mid)',
-    '/?utm_source=test&lang=sl&utm_medium=cpc',
-    308,
-    `${ORIGIN}/sl?utm_source=test&utm_medium=cpc`,
-  );
-
-  // --- Localized public homepages -------------------------------------------
-  for (const [locale, altLocale] of [['en', 'sl'], ['sl', 'en']]) {
-    const res = await checkStatus(`localized homepage /${locale}`, `/${locale}`, 200);
+  // --- Direct application entry: root and bare locale roots ------------------
+  // Root and the bare locale roots boot the Flutter application directly. There
+  // is no longer a 308 to /en and no generic server-rendered homepage; the app
+  // shell is the required response and stays indexable. The launch locale is
+  // resolved inside the app (LocaleProvider.localeCodeFromUri), so ?lang=/?locale=
+  // enter the app rather than redirecting, and unrelated parameters are carried
+  // through untouched.
+  const appShellEntries = [
+    ['root boots the app', '/'],
+    ['bare /en boots the app', '/en'],
+    ['bare /sl boots the app', '/sl'],
+    ['/app compatibility entry boots the app', '/app'],
+    ['?lang=sl enters the app (no redirect)', '/?lang=sl'],
+    ['?lang=en enters the app (no redirect)', '/?lang=en'],
+    ['?locale=sl enters the app (no redirect)', '/?locale=sl'],
+    ['tracking param enters the app (no redirect)', '/?utm_source=test'],
+    ['lang + tracking enters the app (no redirect)', '/?lang=sl&utm_source=test'],
+  ];
+  for (const [name, path] of appShellEntries) {
+    const res = await checkStatus(name, path, 200);
     if (!res || res.status !== 200) continue;
     const html = await res.text();
-
-    const canonical = firstMatch(html, /<link[^>]+rel="canonical"[^>]+href="([^"]+)"/i);
-    record(
-      `/${locale} canonical`,
-      canonical === `${ORIGIN}/${locale}`,
-      `canonical=${canonical ?? '<absent>'}`,
-    );
-
-    const hasSelf = html.includes(`hreflang="${locale}"`);
-    const hasAlt = html.includes(`hreflang="${altLocale}"`);
-    record(`/${locale} reciprocal hreflang`, hasSelf && hasAlt, `self=${hasSelf} alt=${hasAlt}`);
-
-    const h1 = firstMatch(html, /<h1[^>]*>([^<]+)<\/h1>/i);
-    record(`/${locale} server-rendered H1`, Boolean(h1), `h1=${h1 ?? '<absent>'}`);
-
-    // Locale homepages are the semantic surface; the interactive bundle must
-    // not load here or crawlers index an empty shell.
-    const leaksBundle = /flutter_bootstrap\.js|main\.dart\.js/.test(html);
-    record(`/${locale} is semantic, not app shell`, !leaksBundle, `bundle_present=${leaksBundle}`);
-  }
-
-  // --- Interactive app namespace --------------------------------------------
-  const appRes = await checkStatus('app namespace /app', '/app', 200);
-  if (appRes && appRes.status === 200) {
-    const html = await appRes.text();
     const hasBundle = /flutter_bootstrap\.js|main\.dart\.js/.test(html);
-    record('/app serves the interactive shell', hasBundle, `bundle_present=${hasBundle}`);
+    record(`${name}: serves Flutter shell`, hasBundle, `bundle_present=${hasBundle}`);
   }
 
   // --- Robots and sitemap ownership -----------------------------------------
@@ -279,7 +241,13 @@ async function main() {
   }
 
   // --- Honest failure behavior ----------------------------------------------
+  // Deeper localized paths are owned by the renderer, which returns a real 404
+  // for anything that is not a live public entity. Unknown localized paths must
+  // NOT degrade into an indexable Flutter soft 404, and unknown root paths stay
+  // real 404s.
   await checkStatus('missing entity is a real 404', `/en/artworks/${MISSING_ID}`, 404);
+  await checkStatus('unknown localized path is a real 404', '/en/__unknown-contract-probe', 404);
+  await checkStatus('unknown SL localized path is a real 404', '/sl/__unknown-contract-probe', 404);
   await checkStatus('unknown route is a real 404', '/__unknown-contract-probe', 404);
 
   // --- Summary ---------------------------------------------------------------

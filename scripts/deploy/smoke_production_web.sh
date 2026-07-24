@@ -35,14 +35,16 @@ if [ -n "${SMOKE_BYPASS_TOKEN:-}" ]; then
 fi
 smoke_curl() { curl "${smoke_proxy_args[@]}" "${smoke_bypass_args[@]}" "$@"; }
 
-# Root is the first request after the atomic symlink swap, and it was the only
-# assertion here without a retry, so any single transient response (a host
-# filter's first-contact challenge, or LiteSpeed still holding the previous
-# release's document root) failed the deploy and rolled back a good release.
-# curl's own --retry cannot cover this: it only retries transient statuses
-# (408/429/5xx), and --write-out has to observe the status rather than --fail on
-# it, so the poll is explicit. Status and target come from one request so the two
-# can never describe different responses.
+# The application now boots directly at the site root: there is no longer a 308
+# to /en, and /en and /sl are localized Flutter entries rather than generic
+# server-rendered homepages. Root is still the first request after the atomic
+# symlink swap, and it was the only assertion here without a retry, so any single
+# transient response (a host filter's first-contact challenge, or LiteSpeed still
+# holding the previous release's document root) failed the deploy and rolled back
+# a good release. curl's own --retry cannot cover this: it only retries transient
+# statuses (408/429/5xx), and the body has to be inspected rather than --fail on
+# status, so the poll is explicit. Status and body come from one request so the
+# two can never describe different responses.
 # Retry count and delay default to the production values; the contract tests
 # override them (to run fast) without changing any assertion. Both are clamped
 # so an override can never silently disable the poll.
@@ -51,23 +53,20 @@ root_delay="${SMOKE_ROOT_DELAY_SECONDS:-3}"
 printf '%s' "$root_attempts" | grep -Eq '^[1-9][0-9]*$' || root_attempts=6
 printf '%s' "$root_delay" | grep -Eq '^[0-9]+$' || root_delay=3
 root_status=''
-root_target=''
 attempt=1
 while :; do
   # A connection-level curl failure (e.g. the SSH egress tunnel not yet ready, or
-  # a dropped connection) must be retried like any other non-308, not abort the
+  # a dropped connection) must be retried like any other non-200, not abort the
   # script under `set -e`; `|| true` keeps the poll in control of the outcome.
-  root_probe="$(smoke_curl --silent --output /dev/null --write-out '%{http_code} %{redirect_url}' "$origin/" || true)"
-  root_status="${root_probe%% *}"
-  root_target="${root_probe#* }"
-  if [ "$root_status" = 308 ] && [ "$root_target" = "$origin/en" ]; then
+  root_status="$(smoke_curl --silent --output "$work_dir/root.html" --write-out '%{http_code}' "$origin/" || true)"
+  if [ "$root_status" = 200 ] && grep -Eq 'flutter_bootstrap\.js|main\.dart\.js' "$work_dir/root.html"; then
     break
   fi
   if [ "$attempt" -ge "$root_attempts" ]; then
     # Classify the failure (WAF IP block vs. missing token vs. app fault) so a
     # 415 is not mistaken for an application regression. Never prints the token.
-    waf_diagnose "$origin" "$root_status" "$root_target" || true
-    die "root canonicalization expected 308 to $origin/en, got $root_status to $root_target after $root_attempts attempts"
+    waf_diagnose "$origin" "$root_status" "" || true
+    die "root did not boot the Flutter application: expected 200 with the Flutter bootstrap, got $root_status after $root_attempts attempts"
   fi
   attempt=$((attempt + 1))
   sleep "$root_delay"
@@ -76,23 +75,29 @@ done
 smoke_curl --fail --silent --show-error --retry 5 --retry-delay 3 --retry-all-errors \
   --header 'Cache-Control: no-cache' --header 'Pragma: no-cache' \
   "$origin/app" --output "$work_dir/app.html"
-grep -Eq 'flutter_bootstrap\.js|main\.dart\.js' "$work_dir/app.html" || die "/app does not serve Flutter"
+grep -Eq 'flutter_bootstrap\.js|main\.dart\.js' "$work_dir/app.html" || die "/app compatibility entry does not serve Flutter"
 
+# /en and /sl are now localized Flutter entries. Flutter is REQUIRED here; its
+# presence is no longer a failure signal. Deep localized public-entity routes
+# keep their server-rendered semantic HTML and are asserted by
+# production_seo_contract.mjs (invoked below) and the public-takeover smoke.
 smoke_curl --fail --silent --show-error --retry 5 --retry-delay 3 "$origin/en" --output "$work_dir/en.html"
-grep -q '<h1>' "$work_dir/en.html" || die "localized production home lacks an h1"
-grep -q 'rel="canonical"' "$work_dir/en.html" || die "localized production home lacks a canonical"
-if grep -Eq 'flutter_bootstrap\.js|main\.dart\.js|maplibre' "$work_dir/en.html"; then
-  die "public HTML unexpectedly loads the interactive app bundle"
-fi
+grep -Eq 'flutter_bootstrap\.js|main\.dart\.js' "$work_dir/en.html" || die "/en does not boot the Flutter application"
+smoke_curl --fail --silent --show-error --retry 5 --retry-delay 3 "$origin/sl" --output "$work_dir/sl.html"
+grep -Eq 'flutter_bootstrap\.js|main\.dart\.js' "$work_dir/sl.html" || die "/sl does not boot the Flutter application"
+
 smoke_curl --fail --silent --show-error "$origin/robots.txt" --output "$work_dir/robots.txt"
 grep -q "Sitemap: $origin/sitemap.xml" "$work_dir/robots.txt" || die "production robots.txt lacks the production sitemap"
 if grep -Eiq '^Disallow: /$' "$work_dir/robots.txt"; then die "production robots.txt contains the staging deny-all rule"; fi
+smoke_curl --fail --silent --show-error "$origin/sitemap.xml" --output "$work_dir/sitemap.xml"
+grep -Eq '<sitemapindex|<urlset' "$work_dir/sitemap.xml" || die "production sitemap.xml is not a valid sitemap index or urlset"
 test "$(smoke_curl --silent --output /dev/null --write-out '%{http_code}' "$origin/__deploy_unknown_$SOURCE_SHA")" = 404 || die "unknown production route is not a real 404"
 
-served_revision="$(smoke_curl --silent --head "$origin/en" | tr -d '\r' | awk 'BEGIN{IGNORECASE=1} /^X-Kubus-Web-Revision:/ {print $2; exit}')"
-if [ -z "$served_revision" ]; then
-  served_revision="$(smoke_curl --fail --silent --show-error "$origin/kubus-web-revision.txt" | tr -d '\r\n')"
-fi
+# Revision verification is decoupled from the SEO PHP gateway: /en is now a static
+# Flutter entry and does not set the renderer's X-Kubus-Web-Revision header. The
+# immutable artifact always ships /kubus-web-revision.txt, so read it directly and
+# require an exact match with the deployed source SHA.
+served_revision="$(smoke_curl --fail --silent --show-error "$origin/kubus-web-revision.txt" | tr -d '\r\n')"
 [ "$served_revision" = "$SOURCE_SHA" ] || die "production revision does not match the source SHA"
 
 if [ -n "${PUBLIC_TAKEOVER_URL:-}" ]; then
