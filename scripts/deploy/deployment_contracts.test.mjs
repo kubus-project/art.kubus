@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { mkdtemp, mkdir, readFile, writeFile } from 'node:fs/promises';
 import http from 'node:http';
+import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -276,6 +277,43 @@ function startWafOrigin({ token, mode, appBodyOverride }) {
 const sha40 = 'abcdef0123456789abcdef0123456789abcdef01';
 const fastRoot = { SMOKE_ROOT_ATTEMPTS: '2', SMOKE_ROOT_DELAY_SECONDS: '0' };
 
+// Minimal SOCKS5 CONNECT proxy (no auth) so a test can prove the smoke actually
+// egresses through SMOKE_SOCKS_PROXY. Records every CONNECT target.
+function startSocks5Proxy() {
+  const connects = [];
+  const server = net.createServer((socket) => {
+    socket.once('data', (greeting) => {
+      if (greeting[0] !== 0x05) { socket.end(); return; }
+      socket.write(Buffer.from([0x05, 0x00])); // no-auth
+      socket.once('data', (req) => {
+        if (req[0] !== 0x05 || req[1] !== 0x01) { socket.end(); return; } // CONNECT only
+        const atyp = req[3];
+        let host;
+        let offset;
+        if (atyp === 0x01) { host = `${req[4]}.${req[5]}.${req[6]}.${req[7]}`; offset = 8; }
+        else if (atyp === 0x03) { const len = req[4]; host = req.slice(5, 5 + len).toString(); offset = 5 + len; }
+        else { socket.end(); return; }
+        const port = req.readUInt16BE(offset);
+        connects.push({ host, port });
+        const target = host === '0.0.0.0' ? '127.0.0.1' : host;
+        const upstream = net.connect(port, target, () => {
+          socket.write(Buffer.from([0x05, 0x00, 0x00, 0x01, 0, 0, 0, 0, 0, 0]));
+          socket.pipe(upstream);
+          upstream.pipe(socket);
+        });
+        upstream.on('error', () => {
+          socket.write(Buffer.from([0x05, 0x01, 0x00, 0x01, 0, 0, 0, 0, 0, 0]));
+          socket.end();
+        });
+      });
+    });
+    socket.on('error', () => {});
+  });
+  return new Promise((resolve) => {
+    server.listen(0, '127.0.0.1', () => resolve({ server, connects, port: server.address().port }));
+  });
+}
+
 test('production smoke fails closed on a persistent WAF 415 and names the missing host rule', async () => {
   const token = 'prod-waf-token-DO-NOT-LEAK';
   const { server, seen, port } = await startWafOrigin({ token, mode: 'exception-missing' });
@@ -431,4 +469,82 @@ test('waf smoke probe classifies each host state without leaking the token', asy
       await new Promise((resolve) => server.close(resolve));
     }
   }
+});
+
+// --- SSH SOCKS egress transport ---------------------------------------------
+
+test('production smoke routes every request through SMOKE_SOCKS_PROXY when set', async () => {
+  const origin = await startWafOrigin({ token: undefined, mode: 'open', appBodyOverride: '<html>no bundle</html>' });
+  const socks = await startSocks5Proxy();
+  try {
+    const error = await run(bash, [path.join(scriptDir, 'smoke_production_web.sh')], {
+      ...fastRoot,
+      WEB_SMOKE_URL: `http://127.0.0.1:${origin.port}/`,
+      SOURCE_SHA: sha40,
+      EXPECT_PUBLIC_FLUTTER_TAKEOVER: 'false',
+      PUBLIC_CONTRACT_ARTWORK_ID: '00000000-0000-4000-8000-000000000000',
+      SMOKE_SOCKS_PROXY: `socks5h://127.0.0.1:${socks.port}`,
+    }).then(() => null, (e) => e);
+
+    assert.ok(error, 'smoke still fails on the broken /app response');
+    // Root canonicalization passed *through the tunnel*; failure is the app.
+    assert.doesNotMatch(error.message, /root canonicalization expected 308/);
+    assert.match(error.message, /\/app does not serve Flutter/);
+    // Proof the curl requests egressed through the SOCKS proxy to the origin.
+    assert.ok(
+      socks.connects.some((c) => c.port === origin.port),
+      'the smoke must connect to the origin through the SOCKS proxy',
+    );
+  } finally {
+    await new Promise((resolve) => origin.server.close(resolve));
+    await new Promise((resolve) => socks.server.close(resolve));
+  }
+});
+
+test('smoke fails closed when the SOCKS egress proxy is unreachable (never silently direct)', async () => {
+  // Point at a closed proxy port: curl cannot tunnel, so the root probe cannot
+  // reach the origin and the deploy fails rather than bypassing the tunnel.
+  const origin = await startWafOrigin({ token: undefined, mode: 'open' });
+  const deadPort = 1; // nothing listens here
+  try {
+    const error = await run(bash, [path.join(scriptDir, 'smoke_production_web.sh')], {
+      ...fastRoot,
+      WEB_SMOKE_URL: `http://127.0.0.1:${origin.port}/`,
+      SOURCE_SHA: sha40,
+      EXPECT_PUBLIC_FLUTTER_TAKEOVER: 'false',
+      PUBLIC_CONTRACT_ARTWORK_ID: '00000000-0000-4000-8000-000000000000',
+      SMOKE_SOCKS_PROXY: `socks5h://127.0.0.1:${deadPort}`,
+    }).then(() => null, (e) => e);
+    assert.ok(error, 'smoke must fail when it cannot tunnel to the origin');
+    assert.match(error.message, /root canonicalization expected 308/);
+  } finally {
+    await new Promise((resolve) => origin.server.close(resolve));
+  }
+});
+
+test('SSH egress opener fails closed on missing config and on an unreachable host', async () => {
+  const opener = path.join(scriptDir, 'open_smoke_ssh_egress.sh');
+  const temp = await mkdtemp(path.join(os.tmpdir(), 'kubus-egress-'));
+
+  // Missing required configuration -> refuses.
+  const missing = await run(bash, [opener], {
+    GITHUB_ENV: path.join(temp, 'env1'),
+  }).then(() => null, (e) => e);
+  assert.ok(missing, 'opener must refuse without SSH configuration');
+  assert.match(missing.message, /is required/);
+
+  // Fully configured but the host has no SSH endpoint -> fails closed before any
+  // tunnel is advertised (no host key can be verified).
+  const unreachable = await run(bash, [opener], {
+    GITHUB_ENV: path.join(temp, 'env2'),
+    SMOKE_EGRESS_STATE_DIR: path.join(temp, 'state'),
+    SFTP_SERVER: '127.0.0.1',
+    SFTP_USERNAME: 'nobody',
+    SFTP_PORT: '1',
+    SFTP_PRIVATE_KEY: 'not-a-real-key',
+    SFTP_HOST_FINGERPRINT: 'SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+    WEB_SMOKE_URL: 'https://app.example.test/',
+  }).then(() => null, (e) => e);
+  assert.ok(unreachable, 'opener must fail closed when the host is unreachable');
+  assert.doesNotMatch(unreachable.message ?? '', /SMOKE_SOCKS_PROXY=/);
 });

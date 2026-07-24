@@ -379,7 +379,7 @@ test('production SEO contract scopes the WAF header to the origin and classifies
   // requests (all fetches target `${ORIGIN}${path}`); no absolute external URL
   // is ever fetched with the bypass header.
   assert.match(contract, /const BYPASS_HEADERS = SMOKE_BYPASS_TOKEN \? \{ 'X-Deploy-Smoke': SMOKE_BYPASS_TOKEN \} : \{\};/);
-  assert.match(contract, /fetch\(`\$\{ORIGIN\}\$\{path\}`/);
+  assert.match(contract, /httpFetch\(`\$\{ORIGIN\}\$\{path\}`/);
   assert.doesNotMatch(contract, /fetch\(`https?:\/\/\$\{?(?!ORIGIN)/);
   // A 415 anywhere is surfaced as a WAF diagnosis, never as a content failure,
   // and the token value is never printed.
@@ -401,6 +401,32 @@ test('production smoke fails closed on a WAF 415 with a token-safe diagnosis', (
   // pseudo-fix explicitly.
   assert.doesNotMatch(diagnostics, /echo[^\n]*\$SMOKE_BYPASS_TOKEN|printf[^\n]*\$SMOKE_BYPASS_TOKEN/);
   assert.match(diagnostics, /an \.htaccess rule cannot fix this/);
+});
+
+test('smoke clients route through the SSH SOCKS egress when SMOKE_SOCKS_PROXY is set', () => {
+  const prodSmoke = readFileSync(resolve(repoRoot, 'scripts', 'deploy', 'smoke_production_web.sh'), 'utf8');
+  const devSmoke = readFileSync(resolve(repoRoot, 'scripts', 'deploy', 'smoke_development_web.sh'), 'utf8');
+  const seo = readFileSync(resolve(repoRoot, 'scripts', 'qa', 'production_seo_contract.mjs'), 'utf8');
+  const takeover = readFileSync(resolve(repoRoot, 'scripts', 'qa', 'public_flutter_takeover_smoke.mjs'), 'utf8');
+
+  // curl clients add --proxy from SMOKE_SOCKS_PROXY, only when it is set.
+  for (const smoke of [prodSmoke, devSmoke]) {
+    assert.match(smoke, /SMOKE_SOCKS_PROXY/);
+    assert.match(smoke, /smoke_proxy_args=\(--proxy "\$SMOKE_SOCKS_PROXY"\)/);
+  }
+
+  // Node SEO contract routes through Playwright's SOCKS-capable request API only
+  // when proxying (no new dependency), and adapts it to the fetch shape.
+  assert.match(seo, /const SMOKE_SOCKS_PROXY = \(process\.env\.SMOKE_SOCKS_PROXY \?\? ''\)\.trim\(\);/);
+  assert.match(seo, /await import\('playwright'\)/);
+  assert.match(seo, /await httpFetch\(`\$\{ORIGIN\}\$\{path\}`/);
+
+  // Playwright takeover routes both the browsers and the raw probes through the
+  // proxy; the raw probes go through an API request context, browsers via launch.
+  assert.match(takeover, /const smokeSocksProxy = \(process\.env\.SMOKE_SOCKS_PROXY \|\| ''\)\.trim\(\);/);
+  assert.match(takeover, /\.\.\.\(smokeProxyOption \? \{ proxy: smokeProxyOption \} : \{\}\)/);
+  assert.match(takeover, /await rawFetch\(/);
+  assert.doesNotMatch(takeover, /await fetch\(/);
 });
 
 test('production deployment enforces and can roll back the canonical takeover smoke', () => {

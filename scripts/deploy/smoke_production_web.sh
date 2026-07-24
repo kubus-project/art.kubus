@@ -17,6 +17,15 @@ trap 'rm -rf "$work_dir"' EXIT HUP INT TERM
 # shellcheck source=scripts/deploy/waf_smoke_diagnostics.sh
 . "$(dirname "$0")/waf_smoke_diagnostics.sh"
 
+# Optional SSH SOCKS egress: when set, every smoke request is routed through the
+# deployment host so it leaves from the host's trusted IP instead of the CI
+# runner's greylisted datacenter IP (see open_smoke_ssh_egress.sh). The Node SEO
+# contract and Playwright takeover inherit SMOKE_SOCKS_PROXY from the environment.
+smoke_proxy_args=()
+if [ -n "${SMOKE_SOCKS_PROXY:-}" ]; then
+  smoke_proxy_args=(--proxy "$SMOKE_SOCKS_PROXY")
+fi
+
 # Optional WAF bypass header so the CI runner's requests reach the origin. The
 # host is configured to skip its bot/IP filter only when this header carries the
 # SMOKE_BYPASS_TOKEN secret; every production assertion below still applies.
@@ -24,7 +33,7 @@ smoke_bypass_args=()
 if [ -n "${SMOKE_BYPASS_TOKEN:-}" ]; then
   smoke_bypass_args=(--header "X-Deploy-Smoke: $SMOKE_BYPASS_TOKEN")
 fi
-smoke_curl() { curl "${smoke_bypass_args[@]}" "$@"; }
+smoke_curl() { curl "${smoke_proxy_args[@]}" "${smoke_bypass_args[@]}" "$@"; }
 
 # Root is the first request after the atomic symlink swap, and it was the only
 # assertion here without a retry, so any single transient response (a host
@@ -45,7 +54,10 @@ root_status=''
 root_target=''
 attempt=1
 while :; do
-  root_probe="$(smoke_curl --silent --output /dev/null --write-out '%{http_code} %{redirect_url}' "$origin/")"
+  # A connection-level curl failure (e.g. the SSH egress tunnel not yet ready, or
+  # a dropped connection) must be retried like any other non-308, not abort the
+  # script under `set -e`; `|| true` keeps the poll in control of the outcome.
+  root_probe="$(smoke_curl --silent --output /dev/null --write-out '%{http_code} %{redirect_url}' "$origin/" || true)"
   root_status="${root_probe%% *}"
   root_target="${root_probe#* }"
   if [ "$root_status" = 308 ] && [ "$root_target" = "$origin/en" ]; then
@@ -109,6 +121,13 @@ if [ -z "$contract_id" ] && [ -n "${PUBLIC_TAKEOVER_URL:-}" ]; then
   contract_id="$(printf '%s' "$PUBLIC_TAKEOVER_URL" | sed -E 's#.*/##')"
 fi
 [ -n "$contract_id" ] || die "PUBLIC_CONTRACT_ARTWORK_ID or PUBLIC_TAKEOVER_URL is required"
+# When routing through the SSH egress tunnel the SEO contract uses Playwright's
+# request API (SOCKS-capable), so it needs qa deps installed. The takeover branch
+# above already installs them in production; install here too if we are proxying
+# and that has not happened (no browser binaries are needed for the request API).
+if [ -n "${SMOKE_SOCKS_PROXY:-}" ] && [ ! -d scripts/qa/node_modules ]; then
+  npm --prefix scripts/qa ci --no-audit --no-fund
+fi
 KUBUS_ORIGIN="$origin" KUBUS_ARTWORK_ID="$contract_id" node scripts/qa/production_seo_contract.mjs
 
 echo "Production web smoke passed for revision $SOURCE_SHA."

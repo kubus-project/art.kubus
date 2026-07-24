@@ -27,13 +27,16 @@
 _waf_probe_status() {
   _waf_send_header="$1"
   _waf_origin="$2"
-  if [ "$_waf_send_header" = with-header ] && [ -n "${SMOKE_BYPASS_TOKEN:-}" ]; then
-    curl --silent --output /dev/null --write-out '%{http_code}' --max-time 15 \
-      --header "X-Deploy-Smoke: $SMOKE_BYPASS_TOKEN" "$_waf_origin/" 2>/dev/null || printf '000'
-  else
-    curl --silent --output /dev/null --write-out '%{http_code}' --max-time 15 \
-      "$_waf_origin/" 2>/dev/null || printf '000'
+  # Honor the SSH SOCKS egress tunnel when one is configured, so the diagnosis
+  # reflects the same transport the smoke uses.
+  set -- --silent --output /dev/null --write-out '%{http_code}' --max-time 15
+  if [ -n "${SMOKE_SOCKS_PROXY:-}" ]; then
+    set -- "$@" --proxy "$SMOKE_SOCKS_PROXY"
   fi
+  if [ "$_waf_send_header" = with-header ] && [ -n "${SMOKE_BYPASS_TOKEN:-}" ]; then
+    set -- "$@" --header "X-Deploy-Smoke: $SMOKE_BYPASS_TOKEN"
+  fi
+  curl "$@" "$_waf_origin/" 2>/dev/null || printf '000'
 }
 
 # waf_diagnose <origin> <observed_status> [observed_target]

@@ -87,3 +87,4 @@ jobs:
           sftp_private_key_passphrase: ${{ secrets.SFTP_PRIVATE_KEY_PASSPHRASE }}
           sftp_host_fingerprint: ${{ secrets.SFTP_HOST_FINGERPRINT }}
           smoke_bypass_token: ${{ secrets.SMOKE_BYPASS_TOKEN }}
+          use_ssh_smoke_egress: ${{ vars.USE_SSH_SMOKE_EGRESS }}

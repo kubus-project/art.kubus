@@ -21,6 +21,43 @@ const TIMEOUT_MS = Number(process.env.KUBUS_TIMEOUT_MS ?? 25000);
 const SMOKE_BYPASS_TOKEN = (process.env.SMOKE_BYPASS_TOKEN ?? '').trim();
 const BYPASS_HEADERS = SMOKE_BYPASS_TOKEN ? { 'X-Deploy-Smoke': SMOKE_BYPASS_TOKEN } : {};
 
+// Optional SSH SOCKS egress (see open_smoke_ssh_egress.sh): when set, requests
+// leave from the deployment host's trusted IP instead of the runner's greylisted
+// IP. Node's global fetch cannot use a SOCKS proxy, so when proxying we route
+// through Playwright's APIRequestContext (already a pinned dependency, native
+// SOCKS support, no extra package) and adapt it to the fetch-like shape used
+// below. Playwright expects socks5:// (DNS is resolved proxy-side regardless).
+const SMOKE_SOCKS_PROXY = (process.env.SMOKE_SOCKS_PROXY ?? '').trim();
+let httpFetch = globalThis.fetch;
+let apiContext = null;
+
+async function initTransport() {
+  if (!SMOKE_SOCKS_PROXY) return;
+  const { request } = await import('playwright');
+  apiContext = await request.newContext({
+    proxy: { server: SMOKE_SOCKS_PROXY.replace(/^socks5h:/, 'socks5:') },
+  });
+  httpFetch = async (url, init = {}) => {
+    const response = await apiContext.fetch(url, {
+      method: init.method ?? 'GET',
+      headers: init.headers ?? {},
+      maxRedirects: 0,
+      failOnStatusCode: false,
+      timeout: TIMEOUT_MS,
+    });
+    const headers = response.headers();
+    return {
+      status: response.status(),
+      headers: { get: (name) => headers[name.toLowerCase()] ?? null },
+      text: () => response.text(),
+    };
+  };
+}
+
+async function disposeTransport() {
+  if (apiContext) await apiContext.dispose();
+}
+
 const results = [];
 // Set when any request is answered with 415, the signature the origin's
 // Imunify360/LiteSpeed bot filter returns to a blocked (datacenter) IP. Used to
@@ -37,7 +74,7 @@ async function fetchNoRedirect(path, init = {}) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
-    const response = await fetch(`${ORIGIN}${path}`, {
+    const response = await httpFetch(`${ORIGIN}${path}`, {
       redirect: 'manual',
       signal: controller.signal,
       headers: { 'Cache-Control': 'no-cache', ...BYPASS_HEADERS, ...(init.headers ?? {}) },
@@ -81,6 +118,7 @@ async function checkRedirect(name, path, expectedStatus, expectedLocation) {
 }
 
 async function main() {
+  await initTransport();
   console.log(`Production SEO contract against ${ORIGIN}\n`);
 
   // --- Root canonicalization -------------------------------------------------
@@ -270,7 +308,9 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error(`Contract run aborted: ${error.stack ?? error.message}`);
-  process.exitCode = 1;
-});
+main()
+  .catch((error) => {
+    console.error(`Contract run aborted: ${error.stack ?? error.message}`);
+    process.exitCode = 1;
+  })
+  .finally(() => disposeTransport());
