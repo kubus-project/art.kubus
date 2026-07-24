@@ -84,3 +84,4 @@ jobs:
           http_basic_username: ${{ secrets.HTTP_BASIC_USERNAME }}
           http_basic_password: ${{ secrets.HTTP_BASIC_PASSWORD }}
           smoke_bypass_token: ${{ secrets.SMOKE_BYPASS_TOKEN }}
+          use_ssh_smoke_egress: ${{ vars.USE_SSH_SMOKE_EGRESS }}

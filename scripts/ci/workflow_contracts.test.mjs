@@ -191,6 +191,60 @@ test('composite deploy action is context-safe and fed environment config by its 
   );
 });
 
+test('production deployment forwards the WAF smoke-bypass secret to the production smoke', () => {
+  const action = deployAction();
+  const production = workflow('release-production.yml');
+  const development = workflow('deploy-development.yml');
+
+  // The composite action declares the optional token input and never resolves a
+  // secret context itself.
+  assert.match(action, /smoke_bypass_token:\s*\{ required: false \}/);
+  assert.match(action, /SMOKE_BYPASS_TOKEN:\s*\$\{\{ inputs\.smoke_bypass_token \}\}/);
+
+  // The production smoke step receives the token as an environment variable.
+  assert.match(
+    action,
+    /id: production_smoke[\s\S]*?SMOKE_BYPASS_TOKEN:\s*\$\{\{ inputs\.smoke_bypass_token \}\}[\s\S]*?smoke_production_web\.sh/,
+  );
+
+  // Both environment-bound callers forward the environment-scoped secret.
+  for (const caller of [production, development]) {
+    assert.match(caller, /smoke_bypass_token:\s*\$\{\{ secrets\.SMOKE_BYPASS_TOKEN \}\}/);
+  }
+
+  // The token is never exposed as a plain repository variable or echoed.
+  assert.doesNotMatch(action, /vars\.SMOKE_BYPASS_TOKEN/);
+  assert.doesNotMatch(action, /echo[^\n]*SMOKE_BYPASS_TOKEN/);
+});
+
+test('optional SSH smoke egress is opt-in, verified, and torn down for both environments', () => {
+  const action = deployAction();
+
+  // Declared optional input, defaulting off.
+  assert.match(action, /use_ssh_smoke_egress:\s*\{ required: false, default: false \}/);
+
+  // Opening is gated on the flag and a live (non-stale) deploy, and runs the
+  // verified opener; teardown always runs when the flag is on.
+  assert.match(
+    action,
+    /Open verified SSH smoke egress[\s\S]*?inputs\.use_ssh_smoke_egress == 'true'[\s\S]*?open_smoke_ssh_egress\.sh/,
+  );
+  assert.match(
+    action,
+    /Close SSH smoke egress[\s\S]*?always\(\)[\s\S]*?inputs\.use_ssh_smoke_egress == 'true'[\s\S]*?close_smoke_ssh_egress\.sh/,
+  );
+  // The tunnel opens before the smoke steps run.
+  assert.ok(
+    action.indexOf('open_smoke_ssh_egress.sh') < action.indexOf('smoke_production_web.sh'),
+    'the egress tunnel must open before the production smoke',
+  );
+
+  // Both environment-bound callers forward the flag from environment vars.
+  for (const name of ['deploy-development.yml', 'release-production.yml']) {
+    assert.match(workflow(name), /use_ssh_smoke_egress:\s*\$\{\{ vars\.USE_SSH_SMOKE_EGRESS \}\}/);
+  }
+});
+
 test('all third-party actions are pinned to immutable commit SHAs', () => {
   for (const name of [
     'pr-validation.yml',
