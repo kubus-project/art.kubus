@@ -1,7 +1,7 @@
 {
     "name": "art.kubus - Public Art Discovery Platform",
     "short_name": "art.kubus",
-    "start_url": "/app",
+    "start_url": "/",
     "scope": "/",
     "display": "standalone",
     "background_color": "#0175C2",

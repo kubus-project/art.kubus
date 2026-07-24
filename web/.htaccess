@@ -97,8 +97,25 @@
   RewriteCond %{REQUEST_METHOD} ^(?:GET|HEAD)$ [NC]
   RewriteRule ^(?:robots\.txt|sitemap\.xml|sitemaps/[^/]+\.xml)$ seo-proxy.php [L,QSA]
 
+  # Bare locale roots boot the Flutter application directly: English at /en,
+  # Slovenian at /sl. They stay indexable static shells (no noindex is added);
+  # only DEEPER localized paths carry a public entity and are server-rendered.
+  # This supersedes PR #49, where /en and /sl were generic server-rendered
+  # homepages and the root issued a 308 to /en. The Flutter locale resolver
+  # (LocaleProvider.localeCodeFromUri) reads the /en|/sl path prefix and selects
+  # the language before the first meaningful frame.
+  RewriteRule ^(?:en|sl)/?$ index.html [L]
+
+  # Deeper localized public-record routes (e.g. /en/artworks/:id,
+  # /sl/umetnine/:id) stay server-rendered by the existing Node renderer via the
+  # fixed-origin PHP gateway. The renderer owns eligibility, moderation,
+  # deletion and canonical/hreflang decisions, and returns a real 404 for any
+  # localized path that is not a live public entity — so unknown /en/* and /sl/*
+  # never degrade into an indexable Flutter soft 404. `/.+` requires at least one
+  # segment after the locale, so the bare-locale rule above always wins for the
+  # app entries.
   RewriteCond %{REQUEST_METHOD} ^(?:GET|HEAD)$ [NC]
-  RewriteRule ^(?:en|sl)(?:/.*)?$ seo-proxy.php [L,QSA]
+  RewriteRule ^(?:en|sl)/.+ seo-proxy.php [L,QSA]
 
   RewriteCond %{REQUEST_METHOD} ^(?:GET|HEAD)$ [NC]
   RewriteRule ^(?:a|u|e|x|p|c|n|m|artwork|artworks|profile|profiles|user|users|post|posts|event|events|exhibition|exhibitions|collection|collections|nft|nfts|collectible|collectibles|marker|markers|art-marker|art-markers)/[^/]+/?$ seo-proxy.php [L,QSA]
@@ -110,43 +127,23 @@
   RewriteCond %{REQUEST_FILENAME} !-d
   RewriteRule ^app(?:/.*)?$ index.html [L]
 
-  # Root canonicalization. Root previously served the Flutter shell directly,
-  # which duplicated /en as a second indexable homepage with no canonical, no
-  # hreflang and no server-rendered content. Root now collapses into the
-  # localized canonical in exactly one permanent hop; the interactive app keeps
-  # its own entry at /app.
+  # Root boots the Flutter application directly and stays indexable. It is the
+  # interactive entry; there is no longer a 308 to /en and no generic
+  # server-rendered homepage. The launch locale is resolved inside the app:
+  # ?lang=en|sl and ?locale=en|sl select the language
+  # (LocaleProvider.localeCodeFromUri), otherwise the persisted/default locale
+  # applies. The full query string is preserved verbatim on the client URL, so
+  # unrelated parameters (utm_*, etc.) reach the app untouched and never trigger
+  # an extra redirect hop.
   #
-  # ?lang=xx is an obsolete language alias. It selects the target locale and is
-  # then DROPPED, because carrying it onto /sl would produce /sl?lang=sl - a
-  # redundant parameter on a URL whose locale is already in the path, and a
-  # source of duplicate crawlable variants. Tracking parameters are preserved.
+  #   /                      -> Flutter (persisted/default locale)
+  #   /?lang=sl              -> Flutter (Slovenian)
+  #   /?lang=sl&utm_source=x -> Flutter (Slovenian), utm_source preserved
+  #   /?locale=en            -> Flutter (English)
   #
-  # QSA cannot express "drop one parameter, keep the rest", so the four
-  # positions lang= can occupy in a query string are matched explicitly:
-  # only, first, last, middle. Anything else falls through to the default rule
-  # below, where QSA preserves the query untouched.
-  #
-  #   /?lang=sl                  -> /sl
-  #   /?lang=sl&utm_source=x     -> /sl?utm_source=x
-  #   /?utm_source=x&lang=sl     -> /sl?utm_source=x
-  #   /?a=1&lang=sl&b=2          -> /sl?a=1&b=2
-  #   /?utm_source=x             -> /en?utm_source=x
-  #
-  # Matching is case-sensitive on purpose: the locale is reused verbatim as the
-  # redirect target, so accepting ?lang=SL would emit /SL.
-  RewriteCond %{QUERY_STRING} ^lang=(en|sl)$
-  RewriteRule ^$ /%1? [R=308,L,NE]
-
-  RewriteCond %{QUERY_STRING} ^lang=(en|sl)&(.+)$
-  RewriteRule ^$ /%1?%2 [R=308,L,NE]
-
-  RewriteCond %{QUERY_STRING} ^(.+)&lang=(en|sl)$
-  RewriteRule ^$ /%2?%1 [R=308,L,NE]
-
-  RewriteCond %{QUERY_STRING} ^(.+)&lang=(en|sl)&(.+)$
-  RewriteRule ^$ /%2?%1&%3 [R=308,L,NE]
-
-  RewriteRule ^$ /en [R=308,L,NE,QSA]
+  # This supersedes the previous root canonicalization and ?lang stripping from
+  # PR #49.
+  RewriteRule ^$ index.html [L]
 
   # Preserve the existing finite Flutter route surface. Authentication,
   # settings, checkout and wallet pages stay interactive but are never exposed

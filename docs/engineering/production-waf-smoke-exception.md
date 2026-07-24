@@ -13,16 +13,18 @@ deployment contract.
 atomically promotes it. The post-promotion smoke then verifies the live site.
 That smoke runs on a GitHub-hosted runner (a datacenter IP), and the production
 origin's bot filter answers datacenter IPs with **HTTP 415** while a normal
-client IP receives the correct `308 -> /en` canonicalization.
+client IP receives the direct application shell (**HTTP 200**) at the root.
+(Before decision-log D-11 the root returned `308 -> /en`; the WAF behaviour is
+unchanged, only the app's own response changed.)
 
 Verified behaviour:
 
 - From an ordinary client IP, `GET https://app.kubus.site/` returns
-  `308 Permanent Redirect -> https://app.kubus.site/en`, and it does so **even
-  when an incorrect `X-Deploy-Smoke` header is sent**. The block is therefore
-  keyed on IP reputation, not on request content.
+  `200 OK` and boots the Flutter shell, and it does so **even when an incorrect
+  `X-Deploy-Smoke` header is sent**. The block is therefore keyed on IP
+  reputation, not on request content.
 - From the GitHub-hosted runner, the same request returns `415`, so the smoke's
-  `root canonicalization expected 308 ... got 415` assertion fails and the
+  `root did not boot the Flutter application ... got 415` assertion fails and the
   deployment correctly rolls back.
 - Response headers show `Server: LiteSpeed` and a `PH_HPXY_CHECK` cookie, the
   signature of an Imunify360-style reverse-proxy bot filter (WebShield) in front
@@ -161,8 +163,8 @@ WEB_SMOKE_URL=https://app.kubus.site/ \
 
 Expected once the rule is active:
 
-- with the correct header the origin returns `308 -> /en` (probe exits `0`,
-  reports the exception is ACTIVE);
+- with the correct header the origin returns `200` and boots the app shell
+  (probe exits `0`, reports the exception is ACTIVE);
 - a header-less request from the same host still returns `415` (the filter is
   intact for everyone else);
 - an incorrect header value still returns `415`.

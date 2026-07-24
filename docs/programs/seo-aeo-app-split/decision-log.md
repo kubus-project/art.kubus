@@ -30,7 +30,12 @@ canonical backend gitlink.
 ## D-2 — Root canonicalization requires a paired PWA `start_url` change
 
 **Date:** 2026-07-21
-**Status:** Implemented, not deployed
+**Status:** Superseded by [D-11](#d-11--root-and-bare-locale-roots-boot-the-app-directly-supersedes-d-2)
+
+> **Superseded 2026-07-24.** The `/ → 308 /en` + semantic `/en`|`/sl` homepage +
+> PWA `start_url: /app` architecture below was reversed: `/`, `/en`, `/sl` now
+> boot the app directly. The paired-change principle (root and `start_url` move
+> together) still holds. Retained verbatim for history.
 
 The brief mandates `https://app.kubus.site/ → 308 /en`. The existing
 `.htaccess` carried an explicit comment stating the opposite intent: *"Root
@@ -241,3 +246,51 @@ RFC 7231. The assertion wrongly demanded an absolute URL.
 **Decision:** fix the assertion to resolve `Location` against the origin.
 Explicitly *not* "fix" production to satisfy a bad test. Recorded because the
 opposite reflex is the more common failure mode.
+
+---
+
+## D-11 — Root and bare locale roots boot the app directly (supersedes D-2)
+
+**Date:** 2026-07-24
+**Status:** Implemented, not deployed
+**Branch:** `hotfix/direct-app-entry-and-deployment`
+
+D-2 made `https://app.kubus.site/ → 308 /en` and turned `/en` and `/sl` into
+generic server-rendered homepages, with the PWA `start_url` at `/app`. Product
+direction changed: `/`, `/en` and `/sl` must **open the Flutter application
+directly** (English at `/en`, Slovenian at `/sl`) while remaining indexable.
+Semantic SEO/AEO is retained where it actually earns its keep — on the deeper
+public-entity routes — not on a generic homepage.
+
+**Decision:**
+
+- `web/.htaccess`: `RewriteRule ^$ index.html [L]` and
+  `RewriteRule ^(?:en|sl)/?$ index.html [L]` serve the app shell at the root and
+  bare locale roots. Only **deeper** localized paths
+  (`RewriteRule ^(?:en|sl)/.+ seo-proxy.php`) reach the renderer. The old broad
+  `^(?:en|sl)(?:/.*)?$ seo-proxy.php` rule and the entire root-canonicalization /
+  `?lang=` stripping block are removed. Unknown localized paths still 404 through
+  the renderer; unknown root paths still 404.
+- Locale is now resolved **inside the app**: `LocaleProvider.localeCodeFromUri`
+  reads the `/en`|`/sl` path prefix (entity paths included), then `?lang=`/
+  `?locale=`, applied during `initialize()` so the first frame is correct with no
+  persisted-locale flash. `?lang=` therefore enters the app rather than
+  redirecting, and unrelated query parameters (`utm_*`) are preserved verbatim.
+- `web/manifest.json` `start_url` → `/`.
+- Newly generated app-entry links (`web/404.html` CTA, `WebApplication` JSON-LD
+  `url`) point at `/`. Old `/app` and `/app/*` links stay parseable and served
+  (the `^app(?:/.*)?$ index.html` rule and `ShareDeepLinkParser` are unchanged).
+- Contracts follow: `smoke_production_web.sh`, `production_seo_contract.mjs` and
+  `web_routing_contract.mjs` assert `/`, `/en`, `/sl`, `/app` → **200 app shell**,
+  keep every deep-entity semantic assertion, and decouple revision verification
+  from the SEO PHP gateway (`/kubus-web-revision.txt` is authoritative because
+  `/en` no longer runs through `seo-proxy.php`).
+
+**Cost / trade-off:** the generic crawlable homepage at `/en`/`/sl` is gone; the
+app shell canonicalizes to `/en`. Discoverability now rests on the deep entity
+pages, sitemaps and robots, which are unchanged. Public entity canonicals are
+**not** modified.
+
+**Superseded:** D-2. Its root-canonicalization and PWA-`start_url`-`/app`
+reasoning is history; the paired-change insight (never redirect the root without
+moving `start_url` in lockstep) still holds — here both move to `/` together.
