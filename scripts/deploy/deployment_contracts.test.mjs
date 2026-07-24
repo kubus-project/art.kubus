@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { mkdtemp, mkdir, readFile, writeFile } from 'node:fs/promises';
 import http from 'node:http';
+import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -225,4 +226,325 @@ test('production smoke contract preserves routing, SEO, revision, takeover, and 
     'production_seo_contract.mjs',
   ]) assert.match(source, new RegExp(required.replaceAll('.', '\\.')));
   assert.doesNotMatch(source, /--user\s+https?:\/\/[^\s]*@/);
+});
+
+// --- Production WAF-bypass smoke contract -----------------------------------
+//
+// A deterministic origin that reproduces the production failure: the LiteSpeed/
+// Imunify360 filter answers a "blocked" request with 415 and only lets a request
+// through when it carries the exact X-Deploy-Smoke token.
+//
+//   mode 'exception-active'  -> correct token: real responses; else 415
+//   mode 'exception-missing' -> always 415 (host rule not installed)
+//   mode 'open'              -> always the real responses (no WAF)
+function startWafOrigin({ token, mode, appBodyOverride }) {
+  const seen = [];
+  const server = http.createServer((request, response) => {
+    const header = request.headers['x-deploy-smoke'];
+    seen.push({ url: request.url, method: request.method, header: header ?? null });
+
+    const authorized = header === token && token !== undefined && token !== '';
+    const blocked = mode === 'exception-missing'
+      || (mode === 'exception-active' && !authorized);
+    if (blocked) {
+      response.writeHead(415, { 'Content-Type': 'text/plain' });
+      response.end('blocked by waf');
+      return;
+    }
+
+    // Authorized (or open): production-like responses. Only the root probe and
+    // /app are exercised by these tests; later assertions are covered elsewhere.
+    if (request.url === '/') {
+      response.writeHead(308, { Location: '/en' });
+      response.end();
+      return;
+    }
+    if (request.url === '/app') {
+      response.writeHead(200, { 'Content-Type': 'text/html' });
+      response.end(appBodyOverride ?? '<html><script src="flutter_bootstrap.js"></script></html>');
+      return;
+    }
+    response.writeHead(404, { 'Content-Type': 'text/plain' });
+    response.end('missing');
+  });
+  return new Promise((resolve) => {
+    server.listen(0, '127.0.0.1', () => {
+      resolve({ server, seen, port: server.address().port });
+    });
+  });
+}
+
+const sha40 = 'abcdef0123456789abcdef0123456789abcdef01';
+const fastRoot = { SMOKE_ROOT_ATTEMPTS: '2', SMOKE_ROOT_DELAY_SECONDS: '0' };
+
+// Minimal SOCKS5 CONNECT proxy (no auth) so a test can prove the smoke actually
+// egresses through SMOKE_SOCKS_PROXY. Records every CONNECT target.
+function startSocks5Proxy() {
+  const connects = [];
+  const server = net.createServer((socket) => {
+    socket.once('data', (greeting) => {
+      if (greeting[0] !== 0x05) { socket.end(); return; }
+      socket.write(Buffer.from([0x05, 0x00])); // no-auth
+      socket.once('data', (req) => {
+        if (req[0] !== 0x05 || req[1] !== 0x01) { socket.end(); return; } // CONNECT only
+        const atyp = req[3];
+        let host;
+        let offset;
+        if (atyp === 0x01) { host = `${req[4]}.${req[5]}.${req[6]}.${req[7]}`; offset = 8; }
+        else if (atyp === 0x03) { const len = req[4]; host = req.slice(5, 5 + len).toString(); offset = 5 + len; }
+        else { socket.end(); return; }
+        const port = req.readUInt16BE(offset);
+        connects.push({ host, port });
+        const target = host === '0.0.0.0' ? '127.0.0.1' : host;
+        const upstream = net.connect(port, target, () => {
+          socket.write(Buffer.from([0x05, 0x00, 0x00, 0x01, 0, 0, 0, 0, 0, 0]));
+          socket.pipe(upstream);
+          upstream.pipe(socket);
+        });
+        upstream.on('error', () => {
+          socket.write(Buffer.from([0x05, 0x01, 0x00, 0x01, 0, 0, 0, 0, 0, 0]));
+          socket.end();
+        });
+      });
+    });
+    socket.on('error', () => {});
+  });
+  return new Promise((resolve) => {
+    server.listen(0, '127.0.0.1', () => resolve({ server, connects, port: server.address().port }));
+  });
+}
+
+test('production smoke fails closed on a persistent WAF 415 and names the missing host rule', async () => {
+  const token = 'prod-waf-token-DO-NOT-LEAK';
+  const { server, seen, port } = await startWafOrigin({ token, mode: 'exception-missing' });
+  try {
+    const error = await run(bash, [path.join(scriptDir, 'smoke_production_web.sh')], {
+      ...fastRoot,
+      WEB_SMOKE_URL: `http://127.0.0.1:${port}/`,
+      SOURCE_SHA: sha40,
+      EXPECT_PUBLIC_FLUTTER_TAKEOVER: 'false',
+      PUBLIC_CONTRACT_ARTWORK_ID: '00000000-0000-4000-8000-000000000000',
+      SMOKE_BYPASS_TOKEN: token,
+    }).then(() => null, (e) => e);
+
+    assert.ok(error, 'smoke must fail closed when the origin persistently returns 415');
+    // The failure is classified as a WAF block with the exception not installed,
+    // never mistaken for an application regression.
+    assert.match(error.message, /root canonicalization expected 308/);
+    assert.match(error.message, /host WAF exception for X-Deploy-Smoke is NOT active/);
+    // A 415 is never converted into a pass.
+    assert.doesNotMatch(error.message, /Production web smoke passed/);
+    // The token value never appears in any output.
+    assert.doesNotMatch(error.message, new RegExp(token));
+    // The runner still sent the bypass header on the root probe (plumbing works).
+    assert.ok(
+      seen.some((r) => r.url === '/' && r.header === token),
+      'the root probe must carry the X-Deploy-Smoke header when the token is set',
+    );
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test('production smoke sends the bypass header on every request and clears the WAF when the host honors it', async () => {
+  const token = 'prod-waf-token-ANOTHER-SECRET';
+  // Break /app so the smoke fails *after* the root probe: this proves the header
+  // cleared the WAF on the root request and was resent on /app.
+  const { server, seen, port } = await startWafOrigin({
+    token,
+    mode: 'exception-active',
+    appBodyOverride: '<html>no bundle here</html>',
+  });
+  try {
+    const error = await run(bash, [path.join(scriptDir, 'smoke_production_web.sh')], {
+      ...fastRoot,
+      WEB_SMOKE_URL: `http://127.0.0.1:${port}/`,
+      SOURCE_SHA: sha40,
+      EXPECT_PUBLIC_FLUTTER_TAKEOVER: 'false',
+      PUBLIC_CONTRACT_ARTWORK_ID: '00000000-0000-4000-8000-000000000000',
+      SMOKE_BYPASS_TOKEN: token,
+    }).then(() => null, (e) => e);
+
+    assert.ok(error, 'smoke must still fail on the broken /app response');
+    // Root canonicalization passed (the WAF was cleared); the failure is the app.
+    assert.doesNotMatch(error.message, /root canonicalization expected 308/);
+    assert.match(error.message, /\/app does not serve Flutter/);
+    assert.doesNotMatch(error.message, new RegExp(token));
+    // Both the root probe and the /app request carried the header.
+    assert.ok(seen.some((r) => r.url === '/' && r.header === token));
+    assert.ok(seen.some((r) => r.url === '/app' && r.header === token));
+    // No request was ever made without the header while the token was set.
+    assert.ok(
+      !seen.some((r) => r.header === null),
+      'no smoke request may omit the bypass header when the token is configured',
+    );
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test('production smoke sends no bypass header when the token is absent', async () => {
+  // No token: every request must be header-free, and the failure must say so.
+  const { server, seen, port } = await startWafOrigin({ token: undefined, mode: 'exception-active' });
+  try {
+    const error = await run(bash, [path.join(scriptDir, 'smoke_production_web.sh')], {
+      ...fastRoot,
+      WEB_SMOKE_URL: `http://127.0.0.1:${port}/`,
+      SOURCE_SHA: sha40,
+      EXPECT_PUBLIC_FLUTTER_TAKEOVER: 'false',
+      PUBLIC_CONTRACT_ARTWORK_ID: '00000000-0000-4000-8000-000000000000',
+      // SMOKE_BYPASS_TOKEN intentionally unset.
+    }).then(() => null, (e) => e);
+
+    assert.ok(error, 'smoke fails when the origin blocks a header-free runner');
+    assert.match(error.message, /SMOKE_BYPASS_TOKEN is empty/);
+    assert.ok(
+      seen.every((r) => r.header === null),
+      'no request may carry the bypass header when the token is unset',
+    );
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test('waf smoke probe classifies each host state without leaking the token', async () => {
+  const token = 'probe-token-STRICTLY-SECRET';
+  const probe = path.join(scriptDir, 'waf_smoke_probe.sh');
+
+  // 1. Host exception active + correct token -> reachable, exit 0.
+  {
+    const { server, port } = await startWafOrigin({ token, mode: 'exception-active' });
+    try {
+      const { stdout, stderr } = await run(bash, [probe], {
+        WEB_SMOKE_URL: `http://127.0.0.1:${port}/`,
+        SMOKE_BYPASS_TOKEN: token,
+      });
+      assert.match(stdout + stderr, /origin is reachable/);
+      assert.doesNotMatch(stdout + stderr, new RegExp(token));
+    } finally {
+      await new Promise((resolve) => server.close(resolve));
+    }
+  }
+
+  // 2. Host exception missing + token set -> not active, exit 1.
+  {
+    const { server, port } = await startWafOrigin({ token, mode: 'exception-missing' });
+    try {
+      const error = await run(bash, [probe], {
+        WEB_SMOKE_URL: `http://127.0.0.1:${port}/`,
+        SMOKE_BYPASS_TOKEN: token,
+      }).then(() => null, (e) => e);
+      assert.ok(error, 'probe must exit non-zero when the exception is not active');
+      assert.match(error.message, /host WAF exception for X-Deploy-Smoke is NOT active/);
+      assert.doesNotMatch(error.message, new RegExp(token));
+    } finally {
+      await new Promise((resolve) => server.close(resolve));
+    }
+  }
+
+  // 3. Token unset -> reports the empty token, exit 1.
+  {
+    const { server, seen, port } = await startWafOrigin({ token: undefined, mode: 'exception-active' });
+    try {
+      const error = await run(bash, [probe], {
+        WEB_SMOKE_URL: `http://127.0.0.1:${port}/`,
+      }).then(() => null, (e) => e);
+      assert.ok(error, 'probe must exit non-zero when the token is unset and the WAF blocks');
+      assert.match(error.message, /SMOKE_BYPASS_TOKEN is empty/);
+      assert.ok(seen.every((r) => r.header === null));
+    } finally {
+      await new Promise((resolve) => server.close(resolve));
+    }
+  }
+
+  // 4. No WAF at all -> reachable and explicitly not a WAF block, exit 0.
+  {
+    const { server, port } = await startWafOrigin({ token: undefined, mode: 'open' });
+    try {
+      const { stdout, stderr } = await run(bash, [probe], {
+        WEB_SMOKE_URL: `http://127.0.0.1:${port}/`,
+      });
+      assert.match(stdout + stderr, /not a WAF IP block/);
+    } finally {
+      await new Promise((resolve) => server.close(resolve));
+    }
+  }
+});
+
+// --- SSH SOCKS egress transport ---------------------------------------------
+
+test('production smoke routes every request through SMOKE_SOCKS_PROXY when set', async () => {
+  const origin = await startWafOrigin({ token: undefined, mode: 'open', appBodyOverride: '<html>no bundle</html>' });
+  const socks = await startSocks5Proxy();
+  try {
+    const error = await run(bash, [path.join(scriptDir, 'smoke_production_web.sh')], {
+      ...fastRoot,
+      WEB_SMOKE_URL: `http://127.0.0.1:${origin.port}/`,
+      SOURCE_SHA: sha40,
+      EXPECT_PUBLIC_FLUTTER_TAKEOVER: 'false',
+      PUBLIC_CONTRACT_ARTWORK_ID: '00000000-0000-4000-8000-000000000000',
+      SMOKE_SOCKS_PROXY: `socks5h://127.0.0.1:${socks.port}`,
+    }).then(() => null, (e) => e);
+
+    assert.ok(error, 'smoke still fails on the broken /app response');
+    // Root canonicalization passed *through the tunnel*; failure is the app.
+    assert.doesNotMatch(error.message, /root canonicalization expected 308/);
+    assert.match(error.message, /\/app does not serve Flutter/);
+    // Proof the curl requests egressed through the SOCKS proxy to the origin.
+    assert.ok(
+      socks.connects.some((c) => c.port === origin.port),
+      'the smoke must connect to the origin through the SOCKS proxy',
+    );
+  } finally {
+    await new Promise((resolve) => origin.server.close(resolve));
+    await new Promise((resolve) => socks.server.close(resolve));
+  }
+});
+
+test('smoke fails closed when the SOCKS egress proxy is unreachable (never silently direct)', async () => {
+  // Point at a closed proxy port: curl cannot tunnel, so the root probe cannot
+  // reach the origin and the deploy fails rather than bypassing the tunnel.
+  const origin = await startWafOrigin({ token: undefined, mode: 'open' });
+  const deadPort = 1; // nothing listens here
+  try {
+    const error = await run(bash, [path.join(scriptDir, 'smoke_production_web.sh')], {
+      ...fastRoot,
+      WEB_SMOKE_URL: `http://127.0.0.1:${origin.port}/`,
+      SOURCE_SHA: sha40,
+      EXPECT_PUBLIC_FLUTTER_TAKEOVER: 'false',
+      PUBLIC_CONTRACT_ARTWORK_ID: '00000000-0000-4000-8000-000000000000',
+      SMOKE_SOCKS_PROXY: `socks5h://127.0.0.1:${deadPort}`,
+    }).then(() => null, (e) => e);
+    assert.ok(error, 'smoke must fail when it cannot tunnel to the origin');
+    assert.match(error.message, /root canonicalization expected 308/);
+  } finally {
+    await new Promise((resolve) => origin.server.close(resolve));
+  }
+});
+
+test('SSH egress opener fails closed on missing config and on an unreachable host', async () => {
+  const opener = path.join(scriptDir, 'open_smoke_ssh_egress.sh');
+  const temp = await mkdtemp(path.join(os.tmpdir(), 'kubus-egress-'));
+
+  // Missing required configuration -> refuses.
+  const missing = await run(bash, [opener], {
+    GITHUB_ENV: path.join(temp, 'env1'),
+  }).then(() => null, (e) => e);
+  assert.ok(missing, 'opener must refuse without SSH configuration');
+  assert.match(missing.message, /is required/);
+
+  // Fully configured but the host has no SSH endpoint -> fails closed before any
+  // tunnel is advertised (no host key can be verified).
+  const unreachable = await run(bash, [opener], {
+    GITHUB_ENV: path.join(temp, 'env2'),
+    SMOKE_EGRESS_STATE_DIR: path.join(temp, 'state'),
+    SFTP_SERVER: '127.0.0.1',
+    SFTP_USERNAME: 'nobody',
+    SFTP_PORT: '1',
+    SFTP_PRIVATE_KEY: 'not-a-real-key',
+    SFTP_HOST_FINGERPRINT: 'SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+    WEB_SMOKE_URL: 'https://app.example.test/',
+  }).then(() => null, (e) => e);
+  assert.ok(unreachable, 'opener must fail closed when the host is unreachable');
+  assert.doesNotMatch(unreachable.message ?? '', /SMOKE_SOCKS_PROXY=/);
 });

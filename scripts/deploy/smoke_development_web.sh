@@ -28,6 +28,15 @@ host="$(printf '%s' "$origin" | sed -E 's#^https?://([^/:]+).*#\1#')"
 } > "$netrc"
 chmod 600 "$netrc"
 
+# Optional SSH SOCKS egress: route every request through the deployment host so
+# it leaves from the host's trusted IP rather than the runner's greylisted
+# datacenter IP (see open_smoke_ssh_egress.sh). Basic Auth and every assertion
+# below still apply.
+smoke_proxy_args=()
+if [ -n "${SMOKE_SOCKS_PROXY:-}" ]; then
+  smoke_proxy_args=(--proxy "$SMOKE_SOCKS_PROXY")
+fi
+
 # Optional WAF bypass header so the CI runner's requests reach the origin. The
 # host is configured to skip its bot/IP filter only when this header carries the
 # SMOKE_BYPASS_TOKEN secret; Basic Auth and every assertion below still apply.
@@ -37,11 +46,11 @@ if [ -n "${SMOKE_BYPASS_TOKEN:-}" ]; then
 fi
 
 unauth_headers="$work_dir/unauth-headers"
-unauth_status="$(curl --silent --show-error "${smoke_bypass_args[@]}" --dump-header "$unauth_headers" --output /dev/null --write-out '%{http_code}' "$origin/app")"
+unauth_status="$(curl --silent --show-error "${smoke_proxy_args[@]}" "${smoke_bypass_args[@]}" --dump-header "$unauth_headers" --output /dev/null --write-out '%{http_code}' "$origin/app")"
 [ "$unauth_status" = "${PROTECTED_HTTP_STATUS:-401}" ] || die "unauthenticated request returned $unauth_status"
 grep -Eiq '^WWW-Authenticate:' "$unauth_headers" || die "unauthenticated response lacks an authentication challenge"
 
-curl_auth=(--silent --show-error --fail --retry 3 --retry-delay 2 --netrc-file "$netrc" "${smoke_bypass_args[@]}")
+curl_auth=(--silent --show-error --fail --retry 3 --retry-delay 2 --netrc-file "$netrc" "${smoke_proxy_args[@]}" "${smoke_bypass_args[@]}")
 app_headers="$work_dir/app-headers"
 app_body="$work_dir/app.html"
 curl "${curl_auth[@]}" --dump-header "$app_headers" "$origin/app" --output "$app_body"
