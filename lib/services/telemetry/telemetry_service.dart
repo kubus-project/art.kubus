@@ -307,7 +307,8 @@ class TelemetryService {
     await trackEvent(AppTelemetryEventTypes.nearbyDiscoveryUsed);
   }
 
-  Future<void> trackArtworkViewed(String artworkId, {String? institutionId}) async {
+  Future<void> trackArtworkViewed(String artworkId,
+      {String? institutionId}) async {
     await trackEvent(
       AppTelemetryEventTypes.artworkViewed,
       extra: {
@@ -355,7 +356,8 @@ class TelemetryService {
     );
   }
 
-  Future<void> trackQrOpened({String? campaign, String? targetType, String? targetId}) async {
+  Future<void> trackQrOpened(
+      {String? campaign, String? targetType, String? targetId}) async {
     await trackEvent(
       AppTelemetryEventTypes.qrOpened,
       extra: {
