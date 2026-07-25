@@ -296,6 +296,106 @@ class TelemetryService {
     await _trackOncePerSession(AppTelemetryEventTypes.guestMapLoaded);
   }
 
+  /// Public discovery funnel. These power institutional pilot reporting (how
+  /// visitors discover and engage with a programme). Pass only ids / coarse
+  /// context — never precise location history.
+  Future<void> trackMapOpened() async {
+    await _trackOncePerSession(AppTelemetryEventTypes.mapOpened);
+  }
+
+  Future<void> trackNearbyDiscoveryUsed() async {
+    await trackEvent(AppTelemetryEventTypes.nearbyDiscoveryUsed);
+  }
+
+  Future<void> trackArtworkViewed(String artworkId,
+      {String? institutionId}) async {
+    await trackEvent(
+      AppTelemetryEventTypes.artworkViewed,
+      extra: {
+        'artwork_id': artworkId,
+        if (institutionId != null) 'institution_id': institutionId,
+      },
+    );
+  }
+
+  Future<void> trackEventViewed(String eventId, {String? institutionId}) async {
+    await trackEvent(
+      AppTelemetryEventTypes.eventViewed,
+      extra: {
+        'event_id': eventId,
+        if (institutionId != null) 'institution_id': institutionId,
+      },
+    );
+  }
+
+  Future<void> trackInstitutionViewed(String institutionId) async {
+    await trackEvent(
+      AppTelemetryEventTypes.institutionViewed,
+      extra: {'institution_id': institutionId},
+    );
+  }
+
+  Future<void> trackRouteOpened(String routeId) async {
+    await trackEvent(
+      AppTelemetryEventTypes.routeOpened,
+      extra: {'route_id': routeId},
+    );
+  }
+
+  Future<void> trackRouteStarted(String routeId) async {
+    await trackEvent(
+      AppTelemetryEventTypes.routeStarted,
+      extra: {'route_id': routeId},
+    );
+  }
+
+  Future<void> trackRouteCompleted(String routeId) async {
+    await trackEvent(
+      AppTelemetryEventTypes.routeCompleted,
+      extra: {'route_id': routeId},
+    );
+  }
+
+  Future<void> trackQrOpened(
+      {String? campaign, String? targetType, String? targetId}) async {
+    await trackEvent(
+      AppTelemetryEventTypes.qrOpened,
+      extra: {
+        if (campaign != null) 'campaign': campaign,
+        if (targetType != null) 'target_type': targetType,
+        if (targetId != null) 'target_id': targetId,
+      },
+    );
+  }
+
+  Future<void> trackContributionStarted({String? kind}) async {
+    await trackEvent(
+      AppTelemetryEventTypes.contributionStarted,
+      extra: {if (kind != null) 'kind': kind},
+    );
+  }
+
+  Future<void> trackContributionSubmitted({String? kind}) async {
+    await trackEvent(
+      AppTelemetryEventTypes.contributionSubmitted,
+      extra: {if (kind != null) 'kind': kind},
+    );
+  }
+
+  Future<void> trackArtistProfileCreated({bool claimed = false}) async {
+    await trackEvent(
+      AppTelemetryEventTypes.artistProfileCreated,
+      extra: {'claimed': claimed},
+    );
+  }
+
+  Future<void> trackInstitutionalCtaClicked(String cta) async {
+    await trackEvent(
+      AppTelemetryEventTypes.institutionalCtaClicked,
+      extra: {'cta': cta},
+    );
+  }
+
   Map<String, Object?> _loadEntryAttribution(SharedPreferences prefs) {
     try {
       final attribution = <String, Object?>{};

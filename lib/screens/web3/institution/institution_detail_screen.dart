@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -5,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../../../models/institution.dart';
 import '../../../providers/institution_provider.dart';
 import '../../../services/backend_api_service.dart';
+import '../../../services/telemetry/telemetry_service.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/media_url_resolver.dart';
 import '../../../widgets/empty_state_card.dart';
@@ -23,7 +26,8 @@ class InstitutionDetailScreen extends StatefulWidget {
   final bool embedded;
 
   @override
-  State<InstitutionDetailScreen> createState() => _InstitutionDetailScreenState();
+  State<InstitutionDetailScreen> createState() =>
+      _InstitutionDetailScreenState();
 }
 
 class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
@@ -39,6 +43,8 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadInstitution();
+      unawaited(
+          TelemetryService().trackInstitutionViewed(widget.institutionId));
     });
   }
 
@@ -52,7 +58,8 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
 
     try {
       final provider = context.read<InstitutionProvider>();
-      Institution? institution = provider.getInstitutionById(widget.institutionId);
+      Institution? institution =
+          provider.getInstitutionById(widget.institutionId);
       var events = provider.getEventsByInstitution(widget.institutionId);
 
       if (institution == null || events.isEmpty) {
@@ -257,7 +264,8 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
       return const EmptyStateCard(
         icon: Icons.event_busy_outlined,
         title: 'No events yet',
-        description: 'This institution does not have public events scheduled right now.',
+        description:
+            'This institution does not have public events scheduled right now.',
       );
     }
 
@@ -276,40 +284,40 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
           ),
           const SizedBox(height: KubusSpacing.md),
           ...visibleEvents.map(
-                (event) => Padding(
-                  padding: EdgeInsets.only(
-                    bottom: identical(event, visibleEvents.last)
-                        ? 0
-                        : KubusSpacing.sm,
-                  ),
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: KubusSpacing.sm,
-                      vertical: KubusSpacing.xs,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(KubusRadius.md),
-                    ),
-                    tileColor: scheme.surfaceContainerHighest.withValues(alpha: 0.24),
-                    leading: Icon(
-                      Icons.event_outlined,
-                      color: scheme.primary,
-                    ),
-                    title: Text(
-                      event.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    subtitle: Text(
-                      '${_formatDateRange(context, event)}\n${event.location}',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => _openEvent(event),
-                  ),
-                ),
+            (event) => Padding(
+              padding: EdgeInsets.only(
+                bottom:
+                    identical(event, visibleEvents.last) ? 0 : KubusSpacing.sm,
               ),
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: KubusSpacing.sm,
+                  vertical: KubusSpacing.xs,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(KubusRadius.md),
+                ),
+                tileColor:
+                    scheme.surfaceContainerHighest.withValues(alpha: 0.24),
+                leading: Icon(
+                  Icons.event_outlined,
+                  color: scheme.primary,
+                ),
+                title: Text(
+                  event.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                subtitle: Text(
+                  '${_formatDateRange(context, event)}\n${event.location}',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => _openEvent(event),
+              ),
+            ),
+          ),
         ],
       ),
     );
