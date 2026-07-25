@@ -197,7 +197,16 @@ class _AppInitializerState extends State<AppInitializer> {
 
       final localeProvider =
           Provider.of<LocaleProvider>(context, listen: false);
-      await _safeStep<void>('locale.initialize', localeProvider.initialize,
+      // Resolve the launch locale from the entry URL BEFORE initialize() so a
+      // direct /en or /sl entry (or ?lang=/?locale=) renders in the right
+      // language on the first meaningful frame instead of flashing the persisted
+      // locale first. On web the launch path (e.g. /en) is not always threaded
+      // through widget.initialUri, so fall back to Uri.base, which reflects the
+      // browser location at cold start.
+      final entryUri = widget.initialUri ?? (kIsWeb ? Uri.base : null);
+      final entryLocale = LocaleProvider.localeCodeFromUri(entryUri);
+      await _safeStep<void>('locale.initialize',
+          () => localeProvider.initialize(overrideLanguageCode: entryLocale),
           timeout: const Duration(seconds: 4));
       final deepLinkLocale = _pendingShareTarget?.localeCode;
       final launchLocale = widget.initialUri?.queryParameters['lang'] ??

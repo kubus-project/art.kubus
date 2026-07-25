@@ -4,7 +4,8 @@
 # The production origin (app.kubus.site) is a LiteSpeed host fronted by an
 # Imunify360-style reverse-proxy bot filter. That filter greylists datacenter
 # IP ranges and answers them with HTTP 415, while a normal client IP receives
-# the correct 308 -> /en canonicalization. The GitHub-hosted runner therefore
+# the direct application shell (HTTP 200) at the root. The GitHub-hosted runner
+# therefore
 # cannot reach the origin unless the host is configured to skip that filter for
 # requests carrying the secret `X-Deploy-Smoke: <SMOKE_BYPASS_TOKEN>` header.
 #

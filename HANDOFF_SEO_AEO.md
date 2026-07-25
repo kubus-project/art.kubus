@@ -8,6 +8,41 @@ Batches 9–13 in order.
 
 ---
 
+## 2026-07-24 — Direct app-entry hotfix (decision log D-11)
+
+A product-direction change reverses the root-canonicalization architecture from
+Batch 2 / D-2: `/`, `/en` and `/sl` now **boot the Flutter app directly**
+(indexable), and semantic SEO/AEO is retained only on the deeper public-entity
+routes. See `docs/programs/seo-aeo-app-split/decision-log.md` **D-11**.
+
+| Field | Value |
+| --- | --- |
+| Production hotfix branch | `hotfix/direct-app-entry-and-deployment` |
+| Master base SHA | `a4c4911e012df8e108da441c1e1d9ce526715d22` |
+| Hotfix head SHA (master PR) | `9895578d` |
+| Master PR | [#89](https://github.com/kubus-project/art.kubus/pull/89) → `master` (**OPEN, do not merge**) |
+| Dev-sync branch | `hotfix/direct-app-entry-and-deployment-dev-sync` (base `2b9afdb1`) |
+| Dev PR | opened against `dev` (see PR list) |
+| Latest failed Actions run | [`30110527537`](https://github.com/kubus-project/art.kubus/actions/runs/30110527537) |
+| Latest failed step | `Promote protected production artifact` → `deploy-web-artifact` |
+| Actions root cause | `atomic web release: existing immutable release does not match the uploaded artifact manifest` — a divergent `releases/a4c4911e` already on the host; the immutability guard (#81, tested in `test_atomic_web_release.sh:98-112`) correctly fails closed. **Host-state + external approval, NOT a code defect.** The prior run's analytics-beacon failure was already fixed by #87 (`2b9afdb1`, in `a4c4911e`). |
+| Corrected route contract | `/`, `/en`, `/sl`, `/app` → `200` Flutter shell; deep `/{locale}/{seg}/{id}` → semantic renderer; unknown → real 404 |
+| Shell indexing decision | shell stays indexable; no `noindex` added; canonical `/en` |
+| `/app` compatibility | `/app` and `/app/*` still served + parseable; new links target `/` |
+| PWA decision | `manifest.json start_url: /app → /`; `scope` stays `/` |
+| Public SEO/AEO preservation | deep-entity canonical/hreflang/JSON-LD/takeover/compact-alias/sitemap/robots all unchanged; entity canonicals untouched |
+| Revision verification | `/kubus-web-revision.txt` (decoupled from the SEO PHP gateway; `/en` is now a static shell) |
+| Validation | node --test 58/58; verify:ci + verify:deploy; Apache contract 15/15 (httpd:2.4); flutter locale tests 12/12; flutter analyze clean |
+| SSH egress / rollback / atomic promotion | unchanged; failed direct-entry assertion still rolls back |
+| Implementation | COMPLETE |
+| Repository validation | COMPLETE (heavy: shellcheck/php/actionlint/flutter build web/Playwright run in CI) |
+| Production deployment | PENDING_EXTERNAL (protected approval; + one-time host cleanup of `releases/a4c4911e` only if that exact SHA is redeployed) |
+| Post-deploy verification | PENDING_EXTERNAL |
+| Rollback verification | Covered by `deployment_contracts.test.mjs` (failed root assertion → rollback) |
+| Next executable action | Review + merge #89 to `master`; approve `production-web`; if redeploying `a4c4911e` specifically, clear the host orphan first |
+
+---
+
 ## Repositories and local paths
 
 ```

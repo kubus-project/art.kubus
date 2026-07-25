@@ -34,7 +34,7 @@ The live path must be a symlink to an immutable release directory. An approved m
 
 Before upload, the workflow verifies the selected branch still points to the exact built SHA. It validates the expected hostname, safe absolute paths, SSH fingerprint, and remote availability of SSH commands, SHA-256, tar, symlinks, and atomic rename. It then uploads a checksum-protected archive, promotes through `atomic_web_release.sh`, runs environment-specific smoke, and rolls back on post-promotion failure. Finalization removes temporary upload data and retains a controlled number of previous SHA releases.
 
-Development smoke verifies Basic Auth, `/app`, localized routes, the exact revision, staging `X-Robots-Tag`, deny-all `robots.txt`, and the absence of staging canonicals or sitemaps. Production smoke preserves root canonicalization, `/app`, localized semantic HTML, production robots/sitemap behavior, real 404s, revision identity, compact aliases, Flutter takeover, and the production SEO contract.
+Development smoke verifies Basic Auth, `/app`, localized routes, the exact revision, staging `X-Robots-Tag`, deny-all `robots.txt`, and the absence of staging canonicals or sitemaps. Production smoke verifies direct application entry (`/`, `/en`, `/sl` and the `/app` compatibility entry all return `200` and boot the Flutter shell — see decision log D-11), production robots/sitemap behavior, real 404s, revision identity (via `/kubus-web-revision.txt`), compact aliases and deep-entity semantic HTML, Flutter takeover, and the production SEO contract.
 
 ## Mobile environments
 

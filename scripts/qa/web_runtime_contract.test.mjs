@@ -348,10 +348,14 @@ test('web routing reserves public HTML, interactive app and real 404 surfaces', 
   assert.match(notFound, /href="\/en\/artworks"/);
 });
 
-test('production smoke verifies public HTML and unknown-route status', () => {
+test('production smoke verifies direct app entry and unknown-route status', () => {
   const smoke = readFileSync(resolve(repoRoot, 'scripts', 'deploy', 'smoke_production_web.sh'), 'utf8');
 
-  assert.match(smoke, /public HTML unexpectedly loads the interactive app bundle/i);
+  // Root, /en and /sl now boot the Flutter application directly; Flutter is
+  // required at the locale entries rather than being a failure signal.
+  assert.match(smoke, /\/en does not boot the Flutter application/);
+  assert.match(smoke, /\/sl does not boot the Flutter application/);
+  assert.doesNotMatch(smoke, /public HTML unexpectedly loads the interactive app bundle/i);
   assert.match(smoke, /__deploy_unknown_\$SOURCE_SHA/);
   assert.match(smoke, /write-out '%\{http_code\}'.* = 404/);
   assert.match(smoke, /--header 'Cache-Control: no-cache'/);
@@ -424,8 +428,8 @@ test('production smoke fails closed on a WAF 415 with a token-safe diagnosis', (
   // The smoke sources the shared diagnosis and calls it before failing the root
   // assertion; it still dies (fail closed) -- a 415 is never a pass.
   assert.match(smoke, /waf_smoke_diagnostics\.sh/);
-  assert.match(smoke, /waf_diagnose "\$origin" "\$root_status" "\$root_target"/);
-  assert.match(smoke, /die "root canonicalization expected 308/);
+  assert.match(smoke, /waf_diagnose "\$origin" "\$root_status" ""/);
+  assert.match(smoke, /die "root did not boot the Flutter application/);
   // The diagnosis never echoes the token and rejects the ineffective .htaccess
   // pseudo-fix explicitly.
   assert.doesNotMatch(diagnostics, /echo[^\n]*\$SMOKE_BYPASS_TOKEN|printf[^\n]*\$SMOKE_BYPASS_TOKEN/);

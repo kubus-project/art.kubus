@@ -1,5 +1,10 @@
 # Public entry access policy
 
+> **Updated 2026-07-24 (decision log D-11).** The preferred application entry is
+> now `/` (and `/en`, `/sl` for locale). `/app` and `/app/*` remain
+> backward-compatible and parseable, but newly generated app-entry/handoff links
+> target the direct-entry roots. Public entity canonicals are unchanged.
+
 Public content is public everywhere. Authentication gates an action that needs
 identity; it does not gate viewing an eligible entity.
 
