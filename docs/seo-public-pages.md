@@ -1,5 +1,13 @@
 # Public entity pages and technical SEO
 
+> **Updated 2026-07-24 (decision log D-11).** `/`, `/en` and `/sl` now boot the
+> Flutter application directly (indexable app shell), not a generic
+> server-rendered homepage. Semantic SEO/AEO described below applies to the
+> **deeper** public-entity routes (`/{locale}/{segment}/{id}`, compact aliases,
+> sitemaps, robots), which are unchanged. Where this document still describes a
+> semantic `/en`/`/sl` homepage or a `/ → 308 /en` redirect, that is superseded
+> history.
+
 ## Architecture
 
 `app.kubus.site` has two coordinated web layers:
