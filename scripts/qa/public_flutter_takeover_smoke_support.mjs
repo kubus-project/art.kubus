@@ -15,11 +15,19 @@ export function classifyBrowserFailures({
   const expectedProbe = optionalStandbyProbeUrl
     ? new URL('/health/writable', optionalStandbyProbeUrl)
     : null;
+  // The optional standby backend may be unreachable during the takeover smoke.
+  // Its writable health probe and its best-effort, fire-and-forget analytics
+  // beacons must not gate a deploy: they carry no user-facing behavior, and
+  // (e.g.) a proxied Firefox rejects the beacon with NS_ERROR_DOM_BAD_URI even
+  // though the takeover itself completed. Takeover success is asserted
+  // separately; only requests to the standby origin are tolerated here.
   const isOptionalProbe = (value) => {
     if (!expectedProbe) return false;
-    const actual = new URL(value);
-    return actual.origin === expectedProbe.origin
-      && actual.pathname === expectedProbe.pathname;
+    let actual;
+    try { actual = new URL(value); } catch { return false; }
+    if (actual.origin !== expectedProbe.origin) return false;
+    return actual.pathname === expectedProbe.pathname
+      || /^\/api\/analytics(\/|$)/.test(actual.pathname);
   };
 
   const optionalStandbyFailures = failedRequests.filter((request) =>

@@ -1,8 +1,34 @@
-import { chromium, firefox } from 'playwright';
+import { chromium, firefox, request } from 'playwright';
 import {
   classifyBrowserFailures,
   parseTakeoverEventDetail,
 } from './public_flutter_takeover_smoke_support.mjs';
+
+// Optional SSH SOCKS egress (see open_smoke_ssh_egress.sh): when set, both the
+// browsers and the raw HTTP probes leave from the deployment host's trusted IP
+// instead of the runner's greylisted datacenter IP. Playwright expects socks5://.
+const smokeSocksProxy = (process.env.SMOKE_SOCKS_PROXY || '').trim();
+const smokeProxyOption = smokeSocksProxy
+  ? { server: smokeSocksProxy.replace(/^socks5h:/, 'socks5:') }
+  : undefined;
+let smokeApiContext = null;
+
+async function rawFetch(url, init = {}) {
+  if (!smokeProxyOption) return fetch(url, init);
+  if (!smokeApiContext) smokeApiContext = await request.newContext({ proxy: smokeProxyOption });
+  const response = await smokeApiContext.fetch(url, {
+    method: init.method ?? 'GET',
+    headers: init.headers ?? {},
+    maxRedirects: (init.redirect === 'manual' || init.redirect === 'error') ? 0 : 20,
+    failOnStatusCode: false,
+  });
+  const headers = response.headers();
+  return {
+    status: response.status(),
+    headers: { get: (name) => headers[name.toLowerCase()] ?? null },
+    text: () => response.text(),
+  };
+}
 
 const canonicalUrl = requiredUrl('PUBLIC_TAKEOVER_URL');
 const missingUrl = requiredUrl('PUBLIC_TAKEOVER_MISSING_URL');
@@ -106,7 +132,7 @@ function isExternalBeaconCspFailure(request) {
 }
 
 async function fetchResponse(url) {
-  const response = await fetch(url, {
+  const response = await rawFetch(url, {
     headers: { 'cache-control': 'no-cache', ...bypassHeadersFor(url) },
     redirect: 'manual',
   });
@@ -134,12 +160,12 @@ async function verifyRawHttp() {
   if (expectTakeover) {
     for (const path of ['/public_flutter_takeover.js', '/flutter_bootstrap.js', '/main.dart.js']) {
       const assetUrl = new URL(path, canonicalUrl).toString();
-      const asset = await fetch(assetUrl, { redirect: 'error', headers: bypassHeadersFor(assetUrl) });
+      const asset = await rawFetch(assetUrl, { redirect: 'error', headers: bypassHeadersFor(assetUrl) });
       ensure(asset.status === 200, `${path} returned ${asset.status}`);
       ensure(asset.headers.get('content-type')?.includes('javascript'), `${path} has invalid MIME type`);
     }
     const serviceWorkerUrl = new URL('/flutter_service_worker.js', canonicalUrl).toString();
-    const serviceWorker = await fetch(serviceWorkerUrl, { headers: bypassHeadersFor(serviceWorkerUrl) });
+    const serviceWorker = await rawFetch(serviceWorkerUrl, { headers: bypassHeadersFor(serviceWorkerUrl) });
     const workerSource = await serviceWorker.text();
     ensure(serviceWorker.status === 200, `service worker returned ${serviceWorker.status}`);
     ensure(/unregister/.test(workerSource), 'service worker is not an unregister tombstone');
@@ -279,7 +305,10 @@ const browserResults = [];
 for (const browserName of browserNames) {
   const browserType = browserTypes[browserName];
   ensure(browserType, `Unsupported browser: ${browserName}`);
-  const browser = await browserType.launch({ headless: true });
+  const browser = await browserType.launch({
+    headless: true,
+    ...(smokeProxyOption ? { proxy: smokeProxyOption } : {}),
+  });
   try {
     for (const { name, viewport } of browserViewports) {
       for (let repetition = 1; repetition <= browserRepetitions; repetition += 1) {
@@ -298,6 +327,7 @@ for (const browserName of browserNames) {
     await browser.close();
   }
 }
+if (smokeApiContext) await smokeApiContext.dispose();
 console.log(JSON.stringify({
   canonicalUrl,
   expectTakeover,

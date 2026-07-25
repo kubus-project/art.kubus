@@ -58,11 +58,11 @@ artists, institutions, events, exhibitions, collections, public posts and public
 map records.
 
 ```
-/                          → 308 /en
-/{locale}                  localized public homepage (semantic, no app bundle)
+/                          → 200 Flutter app shell (indexable; PWA start_url)
+/{locale}                  → 200 Flutter app shell in that locale (/en, /sl)
 /{locale}/{segment}/{id}   canonical entity document (+ progressive takeover)
 /a/{id}, /u/{id}, …        compact aliases → 308 to the localized canonical
-/app, /app/*               the interactive application (PWA start_url)
+/app, /app/*               backward-compatible interactive entry (still served)
 /robots.txt, /sitemap.xml  backend-generated
 ```
 

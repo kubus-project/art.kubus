@@ -47,6 +47,35 @@ test('takeover smoke separates an explicitly configured standby probe failure', 
   assert.equal(result.optionalStandbyConsoleErrors.length, 2);
 });
 
+test('takeover smoke tolerates best-effort analytics beacons on the standby origin', () => {
+  const result = classifyBrowserFailures({
+    consoleErrors: [],
+    failedRequests: [
+      // Firefox rejects the proxied fire-and-forget beacon; not user-facing.
+      { url: 'https://bapi.kubus.site/api/analytics/app', error: 'NS_ERROR_DOM_BAD_URI' },
+      { url: 'https://bapi.kubus.site/api/analytics/entity/view', error: 'net::ERR_FAILED' },
+    ],
+    optionalStandbyProbeUrl: 'https://bapi.kubus.site',
+  });
+
+  assert.deepEqual(result.criticalFailedRequests, []);
+  assert.equal(result.optionalStandbyFailures.length, 2);
+});
+
+test('takeover smoke keeps non-analytics standby backend failures fatal', () => {
+  // A real data endpoint on the standby origin must still fail the smoke; only
+  // the writable probe and analytics beacons are tolerated.
+  const result = classifyBrowserFailures({
+    consoleErrors: [],
+    failedRequests: [
+      { url: 'https://bapi.kubus.site/api/artworks/art-1', error: 'net::ERR_FAILED' },
+    ],
+    optionalStandbyProbeUrl: 'https://bapi.kubus.site',
+  });
+
+  assert.equal(result.criticalFailedRequests.length, 1);
+});
+
 test('takeover smoke keeps unrelated browser failures fatal', () => {
   const result = classifyBrowserFailures({
     consoleErrors: ['Application exploded'],
@@ -319,10 +348,14 @@ test('web routing reserves public HTML, interactive app and real 404 surfaces', 
   assert.match(notFound, /href="\/en\/artworks"/);
 });
 
-test('production smoke verifies public HTML and unknown-route status', () => {
+test('production smoke verifies direct app entry and unknown-route status', () => {
   const smoke = readFileSync(resolve(repoRoot, 'scripts', 'deploy', 'smoke_production_web.sh'), 'utf8');
 
-  assert.match(smoke, /public HTML unexpectedly loads the interactive app bundle/i);
+  // Root, /en and /sl now boot the Flutter application directly; Flutter is
+  // required at the locale entries rather than being a failure signal.
+  assert.match(smoke, /\/en does not boot the Flutter application/);
+  assert.match(smoke, /\/sl does not boot the Flutter application/);
+  assert.doesNotMatch(smoke, /public HTML unexpectedly loads the interactive app bundle/i);
   assert.match(smoke, /__deploy_unknown_\$SOURCE_SHA/);
   assert.match(smoke, /write-out '%\{http_code\}'.* = 404/);
   assert.match(smoke, /--header 'Cache-Control: no-cache'/);
@@ -379,7 +412,7 @@ test('production SEO contract scopes the WAF header to the origin and classifies
   // requests (all fetches target `${ORIGIN}${path}`); no absolute external URL
   // is ever fetched with the bypass header.
   assert.match(contract, /const BYPASS_HEADERS = SMOKE_BYPASS_TOKEN \? \{ 'X-Deploy-Smoke': SMOKE_BYPASS_TOKEN \} : \{\};/);
-  assert.match(contract, /fetch\(`\$\{ORIGIN\}\$\{path\}`/);
+  assert.match(contract, /httpFetch\(`\$\{ORIGIN\}\$\{path\}`/);
   assert.doesNotMatch(contract, /fetch\(`https?:\/\/\$\{?(?!ORIGIN)/);
   // A 415 anywhere is surfaced as a WAF diagnosis, never as a content failure,
   // and the token value is never printed.
@@ -395,12 +428,38 @@ test('production smoke fails closed on a WAF 415 with a token-safe diagnosis', (
   // The smoke sources the shared diagnosis and calls it before failing the root
   // assertion; it still dies (fail closed) -- a 415 is never a pass.
   assert.match(smoke, /waf_smoke_diagnostics\.sh/);
-  assert.match(smoke, /waf_diagnose "\$origin" "\$root_status" "\$root_target"/);
-  assert.match(smoke, /die "root canonicalization expected 308/);
+  assert.match(smoke, /waf_diagnose "\$origin" "\$root_status" ""/);
+  assert.match(smoke, /die "root did not boot the Flutter application/);
   // The diagnosis never echoes the token and rejects the ineffective .htaccess
   // pseudo-fix explicitly.
   assert.doesNotMatch(diagnostics, /echo[^\n]*\$SMOKE_BYPASS_TOKEN|printf[^\n]*\$SMOKE_BYPASS_TOKEN/);
   assert.match(diagnostics, /an \.htaccess rule cannot fix this/);
+});
+
+test('smoke clients route through the SSH SOCKS egress when SMOKE_SOCKS_PROXY is set', () => {
+  const prodSmoke = readFileSync(resolve(repoRoot, 'scripts', 'deploy', 'smoke_production_web.sh'), 'utf8');
+  const devSmoke = readFileSync(resolve(repoRoot, 'scripts', 'deploy', 'smoke_development_web.sh'), 'utf8');
+  const seo = readFileSync(resolve(repoRoot, 'scripts', 'qa', 'production_seo_contract.mjs'), 'utf8');
+  const takeover = readFileSync(resolve(repoRoot, 'scripts', 'qa', 'public_flutter_takeover_smoke.mjs'), 'utf8');
+
+  // curl clients add --proxy from SMOKE_SOCKS_PROXY, only when it is set.
+  for (const smoke of [prodSmoke, devSmoke]) {
+    assert.match(smoke, /SMOKE_SOCKS_PROXY/);
+    assert.match(smoke, /smoke_proxy_args=\(--proxy "\$SMOKE_SOCKS_PROXY"\)/);
+  }
+
+  // Node SEO contract routes through Playwright's SOCKS-capable request API only
+  // when proxying (no new dependency), and adapts it to the fetch shape.
+  assert.match(seo, /const SMOKE_SOCKS_PROXY = \(process\.env\.SMOKE_SOCKS_PROXY \?\? ''\)\.trim\(\);/);
+  assert.match(seo, /await import\('playwright'\)/);
+  assert.match(seo, /await httpFetch\(`\$\{ORIGIN\}\$\{path\}`/);
+
+  // Playwright takeover routes both the browsers and the raw probes through the
+  // proxy; the raw probes go through an API request context, browsers via launch.
+  assert.match(takeover, /const smokeSocksProxy = \(process\.env\.SMOKE_SOCKS_PROXY \|\| ''\)\.trim\(\);/);
+  assert.match(takeover, /\.\.\.\(smokeProxyOption \? \{ proxy: smokeProxyOption \} : \{\}\)/);
+  assert.match(takeover, /await rawFetch\(/);
+  assert.doesNotMatch(takeover, /await fetch\(/);
 });
 
 test('production deployment enforces and can roll back the canonical takeover smoke', () => {

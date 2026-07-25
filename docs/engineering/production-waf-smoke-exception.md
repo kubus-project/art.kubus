@@ -13,16 +13,18 @@ deployment contract.
 atomically promotes it. The post-promotion smoke then verifies the live site.
 That smoke runs on a GitHub-hosted runner (a datacenter IP), and the production
 origin's bot filter answers datacenter IPs with **HTTP 415** while a normal
-client IP receives the correct `308 -> /en` canonicalization.
+client IP receives the direct application shell (**HTTP 200**) at the root.
+(Before decision-log D-11 the root returned `308 -> /en`; the WAF behaviour is
+unchanged, only the app's own response changed.)
 
 Verified behaviour:
 
 - From an ordinary client IP, `GET https://app.kubus.site/` returns
-  `308 Permanent Redirect -> https://app.kubus.site/en`, and it does so **even
-  when an incorrect `X-Deploy-Smoke` header is sent**. The block is therefore
-  keyed on IP reputation, not on request content.
+  `200 OK` and boots the Flutter shell, and it does so **even when an incorrect
+  `X-Deploy-Smoke` header is sent**. The block is therefore keyed on IP
+  reputation, not on request content.
 - From the GitHub-hosted runner, the same request returns `415`, so the smoke's
-  `root canonicalization expected 308 ... got 415` assertion fails and the
+  `root did not boot the Flutter application ... got 415` assertion fails and the
   deployment correctly rolls back.
 - Response headers show `Server: LiteSpeed` and a `PH_HPXY_CHECK` cookie, the
   signature of an Imunify360-style reverse-proxy bot filter (WebShield) in front
@@ -48,7 +50,44 @@ pseudo-fix here and is intentionally not implemented for production. The fix
 must live in the WAF/reverse-proxy layer (Option A) or move the smoke to a
 non-datacenter IP (Option C).
 
-## Option A (preferred): header-scoped Imunify360 / WAF exception
+## Option D (best for cPanel-only shared hosting): SSH SOCKS egress
+
+This needs **no host-admin action** and keeps GitHub-hosted runners. Instead of
+asking the origin to trust the runner, the smoke borrows the deployment SSH
+channel (port 22, which the bot filter does not touch) and routes all of its web
+requests *through the host*, so they egress from the host's own trusted IP. The
+greylist never applies, and every assertion still runs against the real
+vhost/TLS/`.htaccess`/app.
+
+It is opt-in per environment via a GitHub Environment variable:
+
+- Set `USE_SSH_SMOKE_EGRESS = true` in the `development-web` and/or
+  `production-web` environment.
+- The deploy then opens a verified SSH dynamic (SOCKS5) tunnel with the existing
+  SFTP key and host fingerprint (`scripts/deploy/open_smoke_ssh_egress.sh`),
+  points curl (`--proxy socks5h://...`), the Node SEO contract (Playwright's
+  SOCKS-capable request API), and the Playwright takeover (browser + API request
+  proxy) at it, then tears it down (`scripts/deploy/close_smoke_ssh_egress.sh`).
+- The tunnel is **verified and fail-closed**: the host key must match
+  `SFTP_HOST_FINGERPRINT`, and if the host refuses TCP forwarding or the tunnel
+  cannot carry traffic, the deploy stops with a precise message instead of
+  silently smoking direct. The private key, passphrase, and token are never
+  printed.
+
+The one host requirement is that SSH **TCP forwarding is permitted** for the
+deploy user (`AllowTcpForwarding yes`, the common default). Many shared cPanel
+SSH accounts allow it; some jailed accounts disable it. You cannot test this
+from your laptop with the deploy key (it lives only in GitHub secrets), so the
+opener detects it at deploy time: if the first run reports
+`the host most likely disallows TCP forwarding`, ask the host to enable
+forwarding for the deploy user (a small request) or use Option A/C.
+
+Coverage note: routing through the host verifies that the *promoted release
+serves correctly*; it does not re-check external reachability, which is already
+healthy (real visitors get `308`; only the CI runner's IP is filtered). No
+assertion is dropped, nothing becomes non-blocking, and a `415` is never a pass.
+
+## Option A: header-scoped Imunify360 / WAF exception (needs WHM/root)
 
 A server administrator with WHM/root performs this once. The account/cPanel user
 that CI deploys as cannot configure the proxy filter, so this is a human step.
@@ -66,7 +105,7 @@ security rule and all other traffic unchanged.
    ModSecurity form (place it where the server's Imunify360/WAF custom rules are
    loaded, not in an account `.htaccess`):
 
-   ```
+   ```apache
    SecRule REQUEST_HEADERS:X-Deploy-Smoke "@streq REPLACE_WITH_TOKEN" \
      "id:19010723,phase:1,pass,nolog,allow,\
       ctl:ruleEngine=Off,\
@@ -124,8 +163,8 @@ WEB_SMOKE_URL=https://app.kubus.site/ \
 
 Expected once the rule is active:
 
-- with the correct header the origin returns `308 -> /en` (probe exits `0`,
-  reports the exception is ACTIVE);
+- with the correct header the origin returns `200` and boots the app shell
+  (probe exits `0`, reports the exception is ACTIVE);
 - a header-less request from the same host still returns `415` (the filter is
   intact for everyone else);
 - an incorrect header value still returns `415`.

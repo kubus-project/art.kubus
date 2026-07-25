@@ -17,6 +17,11 @@ inputs:
   http_basic_password: { required: false }
   # Optional token that lets CI smoke requests pass the origin host's WAF/bot filter.
   smoke_bypass_token: { required: false }
+  # Optional: route the post-deploy smoke through an SSH SOCKS tunnel to the
+  # deployment host so it egresses from the host's trusted IP instead of the
+  # runner's greylisted datacenter IP. 'true' opens a verified tunnel (fails
+  # closed if the host disallows TCP forwarding); anything else keeps direct smoke.
+  use_ssh_smoke_egress: { required: false, default: false }
   # Environment-scoped configuration. A composite action cannot read the `vars`
   # context, so every GitHub Environment variable is forwarded explicitly by the
   # environment-bound caller workflow.
@@ -336,6 +341,19 @@ runs:
         echo "::add-mask::$HTTP_BASIC_USERNAME"
         echo "::add-mask::$HTTP_BASIC_PASSWORD"
 
+    - name: Open verified SSH smoke egress
+      if: ${{ steps.source_current.outputs.stale != 'true' && inputs.use_ssh_smoke_egress == 'true' }}
+      shell: bash
+      env:
+        SFTP_SERVER: ${{ inputs.sftp_server }}
+        SFTP_USERNAME: ${{ inputs.sftp_username }}
+        SFTP_PORT: ${{ inputs.sftp_port }}
+        SFTP_PRIVATE_KEY: ${{ inputs.sftp_private_key }}
+        SFTP_PRIVATE_KEY_PASSPHRASE: ${{ inputs.sftp_private_key_passphrase }}
+        SFTP_HOST_FINGERPRINT: ${{ inputs.sftp_host_fingerprint }}
+        WEB_SMOKE_URL: ${{ steps.target.outputs.smoke_url }}
+      run: bash scripts/deploy/open_smoke_ssh_egress.sh
+
     - name: Password-aware development smoke
       id: development_smoke
       if: ${{ steps.source_current.outputs.stale != 'true' && inputs.logical_environment == 'development' }}
@@ -432,3 +450,8 @@ runs:
           set -eu
           sh "$INCOMING_DIR/atomic_web_release.sh" finalize
           rm -rf "$INCOMING_DIR"
+
+    - name: Close SSH smoke egress
+      if: ${{ always() && steps.source_current.outputs.stale != 'true' && inputs.use_ssh_smoke_egress == 'true' }}
+      shell: bash
+      run: bash scripts/deploy/close_smoke_ssh_egress.sh
