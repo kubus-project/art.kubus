@@ -15,6 +15,7 @@ import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/app_color_utils.dart';
+import '../../utils/kubus_color_roles.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../utils/profile_showcase_normalizer.dart';
 import '../../community/community_interactions.dart';
@@ -693,14 +694,14 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               ),
               if (user!.bio.trim().isNotEmpty) ...[
                 const SizedBox(height: KubusSpacing.sm),
-                Text(
-                  user!.bio,
+                ExpandableDetailText(
+                  text: user!.bio,
+                  collapsedMaxLines: 4,
+                  textAlign: TextAlign.center,
+                  alignment: CrossAxisAlignment.center,
                   style: KubusTextStyles.detailBody.copyWith(
                     color: scheme.onSurface.withValues(alpha: 0.78),
                   ),
-                  textAlign: TextAlign.center,
-                  maxLines: 4,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ],
               const SizedBox(height: KubusSpacing.sm),
@@ -828,15 +829,25 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     );
   }
 
+  // Mirrors desktop_user_profile_screen's _profileStatAccentForIcon so the
+  // stat grid is color-coded the same way on every layout, instead of
+  // falling back to the generic ColorScheme roles (which read as one flat
+  // hue in this app's dark theme).
   Color _accentForProfileStat(IconData icon) {
-    final scheme = Theme.of(context).colorScheme;
-    if (icon == Icons.people_outline || icon == Icons.person_add_alt_outlined) {
-      return scheme.tertiary;
-    }
+    final roles = KubusColorRoles.of(context);
     if (icon == Icons.palette_outlined || icon == AppColorUtils.streetArtIcon) {
-      return scheme.primary;
+      return roles.web3ArtistStudioAccent;
     }
-    return scheme.secondary;
+    if (icon == Icons.article_outlined) {
+      return roles.statBlue;
+    }
+    if (icon == Icons.people_outline) {
+      return roles.statCoral;
+    }
+    if (icon == Icons.person_add_alt_outlined) {
+      return roles.statTeal;
+    }
+    return Theme.of(context).colorScheme.primary;
   }
 
   Future<void> _openMessageConversation(AppLocalizations l10n) async {
