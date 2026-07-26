@@ -57,6 +57,7 @@ jobs:
         with:
           ref: ${{ inputs.source_sha }}
           fetch-depth: 1
+          submodules: false
 
       - name: Verify checkout identity
         shell: bash
