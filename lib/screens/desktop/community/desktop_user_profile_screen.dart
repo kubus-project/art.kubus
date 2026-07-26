@@ -38,6 +38,7 @@ import '../../../providers/wallet_provider.dart';
 import '../../../services/socket_service.dart';
 import '../../../screens/community/profile_screen_methods.dart';
 import '../../../widgets/detail/shared_section_widgets.dart';
+import '../../../widgets/detail/expandable_detail_text.dart';
 import '../../../widgets/detail/profile_relationship_actions.dart';
 import '../../../widgets/detail/profile_identity_block.dart';
 import '../../../widgets/detail/profile_utility_actions.dart';
@@ -873,13 +874,12 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                 ),
                 if (user!.bio.isNotEmpty) ...[
                   const SizedBox(height: KubusSpacing.sm),
-                  Text(
-                    user!.bio,
+                  ExpandableDetailText(
+                    text: user!.bio,
+                    collapsedMaxLines: 3,
                     style: KubusTextStyles.detailBody.copyWith(
                       color: scheme.onSurface.withValues(alpha: 0.78),
                     ),
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
                 const SizedBox(height: KubusSpacing.sm),

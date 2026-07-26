@@ -924,13 +924,12 @@ class _ProfileScreenState extends State<ProfileScreen>
                         width: KubusSizes.hairline,
                       ),
                     ),
-                    child: Text(
-                      user!.bio,
+                    child: ExpandableDetailText(
+                      text: user!.bio,
+                      collapsedMaxLines: 3,
                       style: KubusTextStyles.detailBody.copyWith(
                         color: scheme.onSurface.withValues(alpha: 0.78),
                       ),
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],
