@@ -80,6 +80,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   List<Map<String, dynamic>> _artistCollections = [];
   List<Map<String, dynamic>> _artistEvents = [];
   bool _showActivityStatus = true;
+
   /// Captured in `didChangeDependencies` so `dispose` never has to look the
   /// provider up through a deactivated `BuildContext`.
   ProfileProvider? _listenedProfileProvider;
