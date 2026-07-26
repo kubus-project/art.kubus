@@ -276,6 +276,56 @@ void main() {
     );
   });
 
+  testWidgets('anchored layout callback reports the exact rendered card rect',
+      (tester) async {
+    final anchor = ValueNotifier<Offset?>(const Offset(150, 300));
+    addTearDown(anchor.dispose);
+    KubusMarkerOverlayResolvedLayout? resolved;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 300,
+            height: 360,
+            child: KubusMarkerOverlayCardWrapper(
+              anchorListenable: anchor,
+              placementStrategy: KubusMarkerOverlayPlacementStrategy.anchored,
+              widthResolver: (_, __) => 260,
+              maxHeightResolver: (_, __) => 180,
+              heightResolver: (_, __, ___) => 160,
+              horizontalPadding: 12,
+              markerOffset: 24,
+              animation: const KubusMarkerOverlayAnimationConfig(
+                duration: Duration.zero,
+                allowsSpatialTransform: false,
+              ),
+              onLayoutResolved: (layout) => resolved = layout,
+              cardBuilder: (_, layout) => ColoredBox(
+                key: const ValueKey<String>('reported_card'),
+                color: Colors.orange,
+                child: SizedBox(
+                  width: layout.cardWidth,
+                  height: layout.cardHeight,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final cardRect =
+        tester.getRect(find.byKey(const ValueKey<String>('reported_card')));
+    expect(resolved, isNotNull);
+    expect(resolved!.cardLeft, cardRect.left);
+    expect(resolved!.cardTop, cardRect.top);
+    expect(resolved!.layout.cardWidth, cardRect.width);
+    expect(resolved!.layout.cardHeight, cardRect.height);
+    expect(cardRect.bottom, lessThanOrEqualTo(anchor.value!.dy - 24));
+  });
+
   for (final viewport in <Size>[const Size(360, 640), const Size(390, 844)]) {
     testWidgets(
       'bottom-docked preview respects ${viewport.width.toInt()}px safe bounds',

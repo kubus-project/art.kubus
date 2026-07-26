@@ -4191,6 +4191,9 @@ class AppLocalizationsSl extends AppLocalizations {
   String get mapToolsTitle => 'Orodja zemljevida';
 
   @override
+  String get mapAttributionsTitle => 'Avtorstvo zemljevida';
+
+  @override
   String get mapZoomInTooltip => 'Približaj';
 
   @override

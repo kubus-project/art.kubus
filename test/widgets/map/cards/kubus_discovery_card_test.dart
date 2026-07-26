@@ -1,4 +1,5 @@
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/widgets/map/cards/kubus_discovery_card.dart';
 import 'package:art_kubus/widgets/map/discovery/kubus_discovery_path_card.dart';
 import 'package:flutter/material.dart';
@@ -153,5 +154,67 @@ void main() {
     expect(find.text('Task A'), findsOneWidget);
     expect(find.text('Task B'), findsOneWidget);
     expect(tester.getSize(find.text('Task A')).height, greaterThan(0));
+  });
+
+  testWidgets('responsive surface radius reaches the shared path card',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: KubusDiscoveryCard(
+            overallProgress: 0.5,
+            expanded: false,
+            taskRows: const <Widget>[],
+            onToggleExpanded: () {},
+            titleStyle: const TextStyle(fontSize: 14),
+            percentStyle: const TextStyle(fontSize: 12),
+            surfaceRadius: KubusRadius.md,
+          ),
+        ),
+      ),
+    );
+
+    final pathCard = tester.widget<KubusDiscoveryPathCard>(
+      find.byType(KubusDiscoveryPathCard),
+    );
+    expect(pathCard.surfaceRadius, KubusRadius.md);
+    expect(pathCard.glassPadding, const EdgeInsets.all(KubusSpacing.md));
+  });
+
+  testWidgets('compact Slovenian discovery header remains overflow-safe',
+      (tester) async {
+    tester.view.physicalSize = const Size(360, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('sl'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: SizedBox(
+            width: 280,
+            child: KubusDiscoveryCard(
+              overallProgress: 0.73,
+              expanded: false,
+              compactWhenCollapsed: true,
+              compactProgressLabel: '11/15',
+              taskRows: const <Widget>[],
+              onToggleExpanded: () {},
+              titleStyle: const TextStyle(fontSize: 14),
+              percentStyle: const TextStyle(fontSize: 12),
+              surfaceRadius: KubusRadius.md,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(tester.takeException(), isNull);
+    expect(find.byType(KubusDiscoveryPathCard), findsOneWidget);
   });
 }

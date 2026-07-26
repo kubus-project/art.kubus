@@ -1,6 +1,7 @@
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/providers/themeprovider.dart';
 import 'package:art_kubus/services/search_service.dart';
+import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/widgets/common/kubus_glass_chip.dart';
 import 'package:art_kubus/widgets/map/kubus_map_glass_surface.dart';
 import 'package:art_kubus/widgets/search/kubus_general_search.dart';
@@ -42,11 +43,13 @@ class _MapSearchHarness extends StatelessWidget {
     required this.controller,
     required this.themeProvider,
     required this.onResultTap,
+    this.borderRadius,
   });
 
   final KubusSearchController controller;
   final ThemeProvider themeProvider;
   final ValueChanged<KubusSearchResult> onResultTap;
+  final double? borderRadius;
 
   @override
   Widget build(BuildContext context) {
@@ -71,6 +74,7 @@ class _MapSearchHarness extends StatelessWidget {
                   // MapLibre platform view.
                   enableBlur: false,
                   useMapGlassSurface: true,
+                  borderRadius: borderRadius,
                 ),
               ),
               KubusSearchResultsOverlay(
@@ -101,6 +105,34 @@ void main() {
   });
 
   group('KubusSearchBar map glass mode', () {
+    testWidgets('map field accepts the restrained tokenized radius',
+        (tester) async {
+      final controller = KubusSearchController(
+        searchService: _FakeSearchService(const <KubusSearchResult>[]),
+        config: const KubusSearchConfig(scope: KubusSearchScope.map),
+      );
+      final themeProvider = ThemeProvider();
+      addTearDown(controller.dispose);
+      addTearDown(themeProvider.dispose);
+
+      await tester.pumpWidget(
+        _MapSearchHarness(
+          controller: controller,
+          themeProvider: themeProvider,
+          borderRadius: KubusRadius.md,
+          onResultTap: (_) {},
+        ),
+      );
+
+      final searchBar = tester.widget<KubusSearchBar>(
+        find.byType(KubusSearchBar),
+      );
+      expect(
+        searchBar.style?.borderRadius,
+        BorderRadius.circular(KubusRadius.md),
+      );
+    });
+
     testWidgets(
         'fallback over the map drops BackdropFilter and adds the material sheen',
         (tester) async {
@@ -197,8 +229,7 @@ void main() {
   });
 
   group('KubusSearchResultsOverlay map glass mode', () {
-    testWidgets(
-        'dropdown fallback shows the sheen and results remain tappable',
+    testWidgets('dropdown fallback shows the sheen and results remain tappable',
         (tester) async {
       final themeProvider = ThemeProvider();
       addTearDown(themeProvider.dispose);

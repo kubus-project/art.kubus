@@ -4191,6 +4191,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mapToolsTitle => 'Map tools';
 
   @override
+  String get mapAttributionsTitle => 'Map attributions';
+
+  @override
   String get mapZoomInTooltip => 'Zoom in';
 
   @override

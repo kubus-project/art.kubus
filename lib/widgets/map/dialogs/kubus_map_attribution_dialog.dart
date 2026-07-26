@@ -50,7 +50,7 @@ Future<void> showKubusMapAttributionDialog(BuildContext context) async {
       }
 
       return KubusAlertDialog(
-        title: const Text('Map attributions'),
+        title: Text(l10n.mapAttributionsTitle),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,

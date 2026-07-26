@@ -8228,6 +8228,12 @@ abstract class AppLocalizations {
   /// **'Map tools'**
   String get mapToolsTitle;
 
+  /// No description provided for @mapAttributionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Map attributions'**
+  String get mapAttributionsTitle;
+
   /// No description provided for @mapZoomInTooltip.
   ///
   /// In en, this message translates to:

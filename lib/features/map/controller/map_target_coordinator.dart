@@ -119,6 +119,7 @@ class MapTargetCoordinator {
   bool _disposed = false;
   int _generation = 0;
   String? _awaitingOverlayMarkerId;
+  int? _awaitingOverlaySelectionToken;
   String? _pinnedMarkerId;
   Completer<MapTargetResult>? _completion;
 
@@ -148,6 +149,7 @@ class MapTargetCoordinator {
     _pending = intent;
     _completion = Completer<MapTargetResult>();
     _awaitingOverlayMarkerId = null;
+    _awaitingOverlaySelectionToken = null;
     _phase = MapTargetPhase.waitingForMap;
     _generation += 1;
     _requestDrive();
@@ -169,23 +171,36 @@ class MapTargetCoordinator {
 
   void notifyMarkersChanged() => _requestDrive();
 
-  void acknowledgeOverlay(String markerId) {
+  void acknowledgeOverlay(
+    String markerId, {
+    int? selectionToken,
+  }) {
     if (_disposed || _phase != MapTargetPhase.waitingForOverlay) return;
     final normalizedId = markerId.trim();
     if (normalizedId.isEmpty || normalizedId != _awaitingOverlayMarkerId) {
       return;
     }
+    final expectedToken = _awaitingOverlaySelectionToken;
+    if (expectedToken != null && selectionToken != expectedToken) return;
     final intent = _pending;
     if (intent == null) return;
     _finish(intent, MapTargetResult.overlayOpened, clearPin: false);
   }
 
-  void selectionChanged(String? markerId) {
+  void selectionChanged(
+    String? markerId, {
+    int? selectionToken,
+  }) {
     if (_disposed) return;
     final normalizedId = markerId?.trim() ?? '';
     final expectedId = _awaitingOverlayMarkerId ?? _pinnedMarkerId;
     if (expectedId == null) return;
-    if (normalizedId == expectedId) return;
+    if (normalizedId == expectedId) {
+      if (_phase == MapTargetPhase.waitingForOverlay) {
+        _awaitingOverlaySelectionToken = selectionToken;
+      }
+      return;
+    }
 
     final intent = _pending;
     if (intent != null) {
@@ -213,6 +228,7 @@ class MapTargetCoordinator {
     final completion = _completion;
     _completion = null;
     _awaitingOverlayMarkerId = null;
+    _awaitingOverlaySelectionToken = null;
     if (completion != null && !completion.isCompleted) {
       completion.complete(MapTargetResult.cancelled);
     }
@@ -367,6 +383,7 @@ class MapTargetCoordinator {
     final completion = _completion;
     _completion = null;
     _awaitingOverlayMarkerId = null;
+    _awaitingOverlaySelectionToken = null;
     _phase = MapTargetPhase.completed;
     if (clearPin) _clearPin();
     if (completion != null && !completion.isCompleted) {

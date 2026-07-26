@@ -36,13 +36,14 @@ class KubusDiscoveryCard extends StatelessWidget {
     required this.onToggleExpanded,
     required this.titleStyle,
     required this.percentStyle,
-    this.glassPadding = const EdgeInsets.all(14),
+    this.glassPadding = const EdgeInsets.all(KubusSpacing.md),
     this.constraints,
     this.enableMouseRegion = false,
     this.mouseCursor = SystemMouseCursors.basic,
-    this.badgeGap = 10,
-    this.tasksTopGap = 10,
+    this.badgeGap = KubusSpacing.sm,
+    this.tasksTopGap = KubusSpacing.sm,
     this.expandButtonSize = 36,
+    this.surfaceRadius = KubusRadius.lg,
     this.toggleConfigs = const <KubusDiscoveryToggleConfig>[],
     this.footer,
     this.expansionDirection = KubusDiscoveryExpansionDirection.downward,
@@ -66,6 +67,10 @@ class KubusDiscoveryCard extends StatelessWidget {
   final double tasksTopGap;
   final double expandButtonSize;
 
+  /// Shared surface radius. Mobile map composition opts into
+  /// [KubusRadius.md]; desktop keeps the roomier [KubusRadius.lg].
+  final double surfaceRadius;
+
   final List<KubusDiscoveryToggleConfig> toggleConfigs;
   final Widget? footer;
   final bool compactWhenCollapsed;
@@ -80,10 +85,10 @@ class KubusDiscoveryCard extends StatelessWidget {
     final expandedRows = <Widget>[
       ...taskRows,
       if (toggleConfigs.isNotEmpty) ...[
-        const SizedBox(height: 8),
+        const SizedBox(height: KubusSpacing.sm),
         Wrap(
-          spacing: 8,
-          runSpacing: 8,
+          spacing: KubusSpacing.sm,
+          runSpacing: KubusSpacing.sm,
           children: [
             for (final toggle in toggleConfigs)
               Tooltip(
@@ -100,7 +105,7 @@ class KubusDiscoveryCard extends StatelessWidget {
         ),
       ],
       if (footer != null) ...[
-        const SizedBox(height: 10),
+        const SizedBox(height: KubusSpacing.sm),
         footer!,
       ],
     ];
@@ -137,6 +142,7 @@ class KubusDiscoveryCard extends StatelessWidget {
       mouseCursor: mouseCursor,
       badgeGap: badgeGap,
       tasksTopGap: tasksTopGap,
+      surfaceRadius: surfaceRadius,
     );
   }
 }

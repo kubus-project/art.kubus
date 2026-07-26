@@ -32,6 +32,7 @@ class KubusGeneralSearch extends StatefulWidget {
     this.trailingBuilder,
     this.style,
     this.height,
+    this.borderRadius,
   });
 
   final KubusSearchController controller;
@@ -46,6 +47,11 @@ class KubusGeneralSearch extends StatefulWidget {
   /// when null. The map uses a slightly taller field on small screens so the
   /// search bar is more usable / easier to tap.
   final double? height;
+
+  /// Optional radius override for context-specific search surfaces. Map search
+  /// uses [KubusRadius.md] for a restrained rectangular treatment while other
+  /// search fields retain their existing default.
+  final double? borderRadius;
 
   /// Routes the underlying [KubusSearchBar] through the map-aware glass language
   /// so its tinted fallback (over the MapLibre platform view) gets the shared
@@ -117,7 +123,8 @@ class _KubusGeneralSearchState extends State<KubusGeneralSearch> {
       tintBase: scheme.surface,
     );
     return KubusSearchBarStyle(
-      borderRadius: BorderRadius.circular(KubusRadius.lg),
+      borderRadius:
+          BorderRadius.circular(widget.borderRadius ?? KubusRadius.lg),
       backgroundColor: surfaceStyle.tintColor,
       borderColor: scheme.outline.withValues(alpha: 0.18),
       focusedBorderColor: accent,
