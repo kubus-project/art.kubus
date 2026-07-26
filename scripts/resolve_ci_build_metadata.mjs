@@ -33,14 +33,26 @@ function parseBuildDate(value) {
   return { year, date };
 }
 
+function parseVersion(version) {
+  if (!/^\d+\.\d+\.\d+$/.test(version || '')) {
+    throw new Error('version.json version must use X.Y.Z.');
+  }
+  return version;
+}
+
+function parseSourceSha(sourceSha) {
+  if (!/^[0-9a-f]{40}$/.test(sourceSha || '')) {
+    throw new Error('web source SHA must be a full lowercase commit SHA.');
+  }
+  return sourceSha;
+}
+
 function utcDateToday() {
   return new Date().toISOString().slice(0, 10);
 }
 
 export function resolveBuildMetadata({ version, buildDate, runNumber }) {
-  if (!/^\d+\.\d+\.\d+$/.test(version || '')) {
-    throw new Error('version.json version must use X.Y.Z.');
-  }
+  parseVersion(version);
   if (!Number.isSafeInteger(runNumber) || runNumber < 1) {
     throw new Error('CI run number must be a positive integer.');
   }
@@ -62,16 +74,52 @@ export function resolveBuildMetadata({ version, buildDate, runNumber }) {
   };
 }
 
+export function deterministicWebBuildNumber(sourceSha) {
+  const validatedSha = parseSourceSha(sourceSha);
+  const modulus = androidVersionCodeLimit - 1;
+  let value = 0;
+  for (const digit of validatedSha) {
+    value = (value * 16 + Number.parseInt(digit, 16)) % modulus;
+  }
+  return value + 1;
+}
+
+export function resolveWebBuildMetadata({ version, buildDate, sourceSha }) {
+  parseVersion(version);
+  parseBuildDate(buildDate);
+
+  return {
+    version,
+    buildDate,
+    buildNumber: deterministicWebBuildNumber(sourceSha),
+  };
+}
+
 function main() {
   const manifest = JSON.parse(readFileSync(resolve(rootDir, 'version.json'), 'utf8'));
-  const buildDate = valueFromArgs('build-date') || utcDateToday();
-  const runNumberText = valueFromArgs('run-number') || process.env.GITHUB_RUN_NUMBER;
-  const runNumber = Number.parseInt(runNumberText || '', 10);
-  const metadata = resolveBuildMetadata({
-    version: manifest.version,
-    buildDate,
-    runNumber,
-  });
+  const mode = valueFromArgs('mode') || 'mobile';
+  const requestedBuildDate = valueFromArgs('build-date');
+  let metadata;
+
+  if (mode === 'web') {
+    if (!requestedBuildDate) {
+      throw new Error('web metadata mode requires --build-date from the source commit.');
+    }
+    metadata = resolveWebBuildMetadata({
+      version: manifest.version,
+      buildDate: requestedBuildDate,
+      sourceSha: valueFromArgs('source-sha') || process.env.GITHUB_SHA,
+    });
+  } else if (mode === 'mobile') {
+    const runNumberText = valueFromArgs('run-number') || process.env.GITHUB_RUN_NUMBER;
+    metadata = resolveBuildMetadata({
+      version: manifest.version,
+      buildDate: requestedBuildDate || utcDateToday(),
+      runNumber: Number.parseInt(runNumberText || '', 10),
+    });
+  } else {
+    throw new Error('metadata mode must be web or mobile.');
+  }
 
   const githubOutputPath = valueFromArgs('github-output');
   if (githubOutputPath) {
