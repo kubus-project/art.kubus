@@ -52,6 +52,27 @@ class AppTelemetryEventTypes {
   static const String guestAppLoaded = 'guest_app_loaded';
   static const String guestMapLoaded = 'guest_map_loaded';
 
+  // Public discovery funnel. These support institutional pilot reporting
+  // (how visitors discover and engage with a programme). Payloads should carry
+  // only ids/coarse context, never precise location history.
+  static const String mapOpened = 'map_opened';
+  static const String nearbyDiscoveryUsed = 'nearby_discovery_used';
+  static const String artworkViewed = 'artwork_viewed';
+  static const String eventViewed = 'event_viewed';
+  static const String institutionViewed = 'institution_viewed';
+  static const String routeOpened = 'route_opened';
+  static const String routeStarted = 'route_started';
+  static const String routeCompleted = 'route_completed';
+  static const String qrOpened = 'qr_opened';
+
+  // Contribution funnel.
+  static const String contributionStarted = 'contribution_started';
+  static const String contributionSubmitted = 'contribution_submitted';
+  static const String artistProfileCreated = 'artist_profile_created';
+
+  // Institutional funnel.
+  static const String institutionalCtaClicked = 'institutional_cta_clicked';
+
   static const Set<String> allowed = {
     screenView,
     screenDuration,
@@ -68,5 +89,18 @@ class AppTelemetryEventTypes {
     arSessionStart,
     guestAppLoaded,
     guestMapLoaded,
+    mapOpened,
+    nearbyDiscoveryUsed,
+    artworkViewed,
+    eventViewed,
+    institutionViewed,
+    routeOpened,
+    routeStarted,
+    routeCompleted,
+    qrOpened,
+    contributionStarted,
+    contributionSubmitted,
+    artistProfileCreated,
+    institutionalCtaClicked,
   };
 }

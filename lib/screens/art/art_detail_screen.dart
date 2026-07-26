@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'dart:async';
 
+import '../../services/telemetry/telemetry_service.dart';
+
 import 'package:flutter/material.dart';
 import '../../widgets/inline_loading.dart';
 import '../../widgets/avatar_widget.dart';
@@ -139,6 +141,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
       if (!mounted) return;
       _loadArtworkDetails();
       context.read<ArtworkProvider>().incrementViewCount(widget.artworkId);
+      unawaited(TelemetryService().trackArtworkViewed(widget.artworkId));
     });
   }
 

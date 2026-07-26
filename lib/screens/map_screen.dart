@@ -1241,6 +1241,9 @@ class _MapScreenState extends State<MapScreen>
 
   Future<void> _trackGuestMapEntry() async {
     try {
+      // Public discovery signal for all visitors (once per session); the
+      // guest-only event stays scoped to cold ?mode=guest entries.
+      await TelemetryService().trackMapOpened();
       if (await GuestSessionService.isGuestActive()) {
         await TelemetryService().trackGuestMapLoaded();
       }
