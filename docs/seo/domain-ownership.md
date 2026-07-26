@@ -68,7 +68,9 @@ map records.
 
 Rules:
 
-- Root is a redirect, never a second indexable homepage.
+- Root (`/` and `/{locale}`) serves the Flutter app shell directly (200,
+  indexable, PWA `start_url`) — it is not a redirect. Only compact aliases
+  (`/a/{id}`, `/u/{id}`, …) redirect, and only to their localized canonical.
 - Entity documents are server-rendered semantic HTML first; Flutter takes over
   progressively for real browsers. Crawlers must always get the HTML.
 - Missing entities and unknown routes return real `404`s, never a shell.
