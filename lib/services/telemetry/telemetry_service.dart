@@ -520,6 +520,10 @@ class TelemetryService {
 
   Future<void> _trackOncePerSession(String eventType,
       {Map<String, Object?> extra = const {}}) async {
+    await ensureInitialized();
+    if (!_enabled) return;
+    _rotateSessionIfNeeded();
+
     final key = '$_sessionId::$eventType';
     if (_onceKeys.contains(key)) return;
     _onceKeys.add(key);
