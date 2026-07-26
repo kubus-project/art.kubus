@@ -98,7 +98,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   List<Map<String, dynamic>> _artistEvents = [];
   String? _failedCoverImageUrl;
   bool _isFollowMutationInFlight = false;
-  bool _bioExpanded = false;
 
   @override
   void initState() {
@@ -695,7 +694,15 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               ),
               if (user!.bio.trim().isNotEmpty) ...[
                 const SizedBox(height: KubusSpacing.sm),
-                _buildBio(scheme),
+                ExpandableDetailText(
+                  text: user!.bio,
+                  collapsedMaxLines: 4,
+                  textAlign: TextAlign.center,
+                  alignment: CrossAxisAlignment.center,
+                  style: KubusTextStyles.detailBody.copyWith(
+                    color: scheme.onSurface.withValues(alpha: 0.78),
+                  ),
+                ),
               ],
               const SizedBox(height: KubusSpacing.sm),
               ProfileArtistInfoFields(
@@ -716,57 +723,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  static const int _bioCollapsedLines = 4;
-
-  // Bio is unbounded user text — rather than silently truncating it with an
-  // ellipsis, measure whether it actually overflows _bioCollapsedLines and
-  // only then offer an inline expand/collapse toggle, so short bios never
-  // show a pointless "Expand" link.
-  Widget _buildBio(ColorScheme scheme) {
-    final l10n = AppLocalizations.of(context)!;
-    final style = KubusTextStyles.detailBody.copyWith(
-      color: scheme.onSurface.withValues(alpha: 0.78),
-    );
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final painter = TextPainter(
-          text: TextSpan(text: user!.bio, style: style),
-          maxLines: _bioCollapsedLines,
-          textDirection: Directionality.of(context),
-          textAlign: TextAlign.center,
-        )..layout(maxWidth: constraints.maxWidth);
-        final overflows = painter.didExceedMaxLines;
-
-        return Column(
-          children: [
-            Text(
-              user!.bio,
-              style: style,
-              textAlign: TextAlign.center,
-              maxLines: _bioExpanded ? null : _bioCollapsedLines,
-              overflow:
-                  _bioExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
-            ),
-            if (overflows) ...[
-              const SizedBox(height: KubusSpacing.xxs),
-              GestureDetector(
-                onTap: () => setState(() => _bioExpanded = !_bioExpanded),
-                child: Text(
-                  _bioExpanded ? l10n.commonCollapse : l10n.commonExpand,
-                  style: style.copyWith(
-                    color: scheme.primary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ],
-        );
-      },
     );
   }
 
