@@ -21,7 +21,6 @@ import '../features/map/shared/map_marker_overlay_actions.dart';
 import '../features/map/shared/map_marker_chrome_occlusion_plan.dart';
 import '../features/map/shared/map_marker_overlay_presentation.dart';
 import '../features/map/shared/map_marker_selection_resolver.dart';
-import '../features/map/shared/map_marker_overlay_viewport_planner.dart';
 import '../features/map/shared/map_overlay_sizing.dart';
 import '../features/map/shared/map_passive_chrome_visibility.dart';
 import '../features/map/shared/map_search_filter_assembly.dart';
@@ -409,12 +408,6 @@ class _MapScreenState extends State<MapScreen>
       ValueNotifier<MapMarkerChromeOcclusionPlan>(
     MapMarkerChromeOcclusionPlan.visible(revision: 0),
   );
-  int _markerOverlayLayoutRevision = 0;
-  String? _markerOverlayLayoutSignature;
-  int? _lastCorrectedMarkerOverlayLayoutRevision;
-  int? _markerCompositionInFlightToken;
-  int? _awaitingFinalMarkerLayoutToken;
-  int? _acknowledgedMarkerOverlayToken;
   int? _scheduledChromeMeasurementRevision;
   Rect? _latestMarkerCardRect;
 
@@ -731,6 +724,12 @@ class _MapScreenState extends State<MapScreen>
       },
       onRequestMarkerDataSync: () {
         _requestMarkerVisualSync();
+      },
+      onMarkerOverlayAcknowledged: (markerId, selectionToken) {
+        _mapTargetCoordinator.acknowledgeOverlay(
+          markerId,
+          selectionToken: selectionToken,
+        );
       },
     );
 
@@ -3519,16 +3518,11 @@ class _MapScreenState extends State<MapScreen>
   }
 
   void _resetMarkerOverlayComposition() {
-    _markerOverlayLayoutRevision += 1;
-    _markerOverlayLayoutSignature = null;
-    _lastCorrectedMarkerOverlayLayoutRevision = null;
-    _markerCompositionInFlightToken = null;
-    _awaitingFinalMarkerLayoutToken = null;
-    _acknowledgedMarkerOverlayToken = null;
+    _kubusMapController.resetMarkerOverlayComposition();
     _scheduledChromeMeasurementRevision = null;
     _latestMarkerCardRect = null;
     final visible = MapMarkerChromeOcclusionPlan.visible(
-      revision: _markerOverlayLayoutRevision,
+      revision: 0,
     );
     if (_markerChromeOcclusionNotifier.value != visible) {
       _markerChromeOcclusionNotifier.value = visible;
@@ -3598,120 +3592,33 @@ class _MapScreenState extends State<MapScreen>
       (cardSize.height / 24).round(),
       resolvedLayout.mediaQuery.orientation.name,
     ].join(':');
-    if (_markerOverlayLayoutSignature != signature) {
-      _markerOverlayLayoutSignature = signature;
-      _markerOverlayLayoutRevision += 1;
-      _lastCorrectedMarkerOverlayLayoutRevision = null;
-      _markerCompositionInFlightToken = null;
-      _awaitingFinalMarkerLayoutToken = null;
-    }
-
     _publishMarkerChromeOcclusion(cardRect);
-
-    // Passive chrome only depends on the resolved Flutter geometry. Keep it
-    // responsive while the platform map style is still initializing, but do
-    // not compose or acknowledge a target until the camera is ready.
-    if (_styleInitializationInProgress || !_styleInitialized) return;
-
-    // Focused walking navigation owns the camera. The marker card may remain
-    // renderable, but its layout must never interrupt route overview/follow.
-    if (_isWalkingFocusedMode) {
-      if (finalLayoutIsValid) _acknowledgeMarkerOverlay(selection);
-      return;
-    }
-
-    final selectionToken = selection.selectionToken;
-    final compositionIsOurs = _markerCompositionInFlightToken == selectionToken;
-    if ((_kubusMapController.programmaticCameraMove ||
-            _kubusMapController.cameraIsMoving) &&
-        !compositionIsOurs) {
-      // Search, Nearby, deep-link focus, and other camera owners finish first.
-      // Camera idle refreshes the live anchor and triggers a fresh layout.
-      return;
-    }
-    if (compositionIsOurs) return;
-
-    if (_awaitingFinalMarkerLayoutToken == selectionToken) {
-      _awaitingFinalMarkerLayoutToken = null;
-      if (finalLayoutIsValid) _acknowledgeMarkerOverlay(selection);
-      return;
-    }
-
     final media = resolvedLayout.mediaQuery;
-    // [viewportSize] comes from the actual MapView render box, whose height
-    // already reflects the mobile shell's navigation allocation. Adding the
-    // shell bar again raises the guide by roughly one full navigation row.
-    final persistentBottomReservation = MapOverlaySizing.bottomSafeInset(media);
-    final plan = planSelectedMarkerOverlayViewport(
-      viewportSize: viewportSize,
-      markerAnchor: anchor,
-      cardSize: cardSize,
-      safeInsets: EdgeInsets.fromLTRB(
-        media.padding.left,
-        MapOverlaySizing.topSafeInset(media),
-        media.padding.right,
-        persistentBottomReservation,
-      ),
-      markerOffset: resolvedLayout.markerOffset,
-      topChromePx: MapOverlaySizing.defaultVerticalPadding,
-      bottomChromePx: MapOverlaySizing.defaultVerticalPadding,
-      maxNudgePx: math.max(120.0, viewportSize.height * 0.75),
-      verticalComposition: MapMarkerOverlayVerticalComposition.lowerThird,
-      layoutRevision: _markerOverlayLayoutRevision,
-      expectedLayoutRevision: _markerOverlayLayoutRevision,
-      lastCorrectedLayoutRevision: _lastCorrectedMarkerOverlayLayoutRevision,
-    );
-
-    if (!plan.canApplyCorrection) {
-      if (finalLayoutIsValid) _acknowledgeMarkerOverlay(selection);
-      return;
-    }
-
-    _lastCorrectedMarkerOverlayLayoutRevision = _markerOverlayLayoutRevision;
-    _markerCompositionInFlightToken = selectionToken;
     final cameraMotion = KubusMapMotion.fromMediaQuery(
       animationTheme: context.animationTheme,
       mediaQuery: media,
     ).overlayReposition;
-    unawaited(() async {
-      var succeeded = false;
-      try {
-        await _mapCameraController.animateTo(
-          marker.position,
-          zoom: _lastZoom,
-          rotation: _lastBearing,
-          tilt: _desiredPitch(),
-          duration: cameraMotion.duration,
-          compositionYOffsetPx: plan.compositionYOffsetPx,
-          queueIfNotReady: false,
-        );
-        succeeded = true;
-      } catch (_) {
-        // A style/controller transition can invalidate a queued projection.
-        // Release this revision so the next stable anchor may retry.
-      }
-      if (!mounted ||
-          selectionToken != _kubusMapController.selectionState.selectionToken) {
-        return;
-      }
-      _markerCompositionInFlightToken = null;
-      if (succeeded) {
-        _awaitingFinalMarkerLayoutToken = selectionToken;
-      } else {
-        _lastCorrectedMarkerOverlayLayoutRevision = null;
-      }
-      _kubusMapController.queueOverlayAnchorRefresh(force: true);
-    }());
-  }
-
-  void _acknowledgeMarkerOverlay(MapMarkerSelectionState selection) {
-    if (_acknowledgedMarkerOverlayToken == selection.selectionToken) return;
-    final marker = selection.selectedMarker;
-    if (marker == null) return;
-    _acknowledgedMarkerOverlayToken = selection.selectionToken;
-    _mapTargetCoordinator.acknowledgeOverlay(
-      marker.id,
-      selectionToken: selection.selectionToken,
+    _kubusMapController.handleMarkerOverlayComposition(
+      KubusMarkerOverlayCompositionRequest(
+        selectionToken: selection.selectionToken,
+        marker: marker,
+        layoutSignature: signature,
+        viewportSize: viewportSize,
+        markerAnchor: anchor,
+        cardSize: cardSize,
+        safeInsets: EdgeInsets.fromLTRB(
+          media.padding.left,
+          MapOverlaySizing.topSafeInset(media),
+          media.padding.right,
+          MapOverlaySizing.bottomSafeInset(media),
+        ),
+        markerOffset: resolvedLayout.markerOffset,
+        topChromePx: resolvedLayout.topPadding,
+        bottomChromePx: resolvedLayout.bottomPadding,
+        finalLayoutIsValid: finalLayoutIsValid,
+        cameraReserved: _isWalkingFocusedMode,
+        cameraDuration: cameraMotion.duration,
+      ),
     );
   }
 
@@ -3719,12 +3626,12 @@ class _MapScreenState extends State<MapScreen>
     _latestMarkerCardRect = cardRect;
     _resolveMarkerChromeOcclusion(cardRect);
 
-    final revision = _markerOverlayLayoutRevision;
+    final revision = _kubusMapController.markerOverlayLayoutRevision;
     if (_scheduledChromeMeasurementRevision == revision) return;
     _scheduledChromeMeasurementRevision = revision;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted ||
-          revision != _markerOverlayLayoutRevision ||
+          revision != _kubusMapController.markerOverlayLayoutRevision ||
           _kubusMapController.selectedMarkerId == null) {
         return;
       }
@@ -3741,7 +3648,7 @@ class _MapScreenState extends State<MapScreen>
     final controlsRect = _rectInMapViewport(_primaryControlsKey);
     final nearbyRect = _rectInMapViewport(_nearbyPeekKey);
     final next = MapMarkerChromeOcclusionPlan.resolve(
-      revision: _markerOverlayLayoutRevision,
+      revision: _kubusMapController.markerOverlayLayoutRevision,
       cardRect: cardRect,
       searchRect: searchRect,
       discoveryRect: discoveryRect,

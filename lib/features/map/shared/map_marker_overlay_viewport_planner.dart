@@ -108,10 +108,10 @@ MapMarkerOverlayViewportPlan planSelectedMarkerOverlayViewport({
   final safeRight = (viewportWidth - safeInsets.right)
       .clamp(safeLeft, viewportWidth)
       .toDouble();
-  final safeTop = math
-      .max(safeInsets.top, topChromePx)
-      .clamp(0.0, viewportHeight)
-      .toDouble();
+  // The overlay wrapper reserves both the device safe area and its own chrome
+  // padding. Keep the camera planner on that exact same coordinate system.
+  final safeTop =
+      (safeInsets.top + topChromePx).clamp(0.0, viewportHeight).toDouble();
   final safeBottom =
       (viewportHeight - math.max(safeInsets.bottom, bottomChromePx))
           .clamp(safeTop, viewportHeight)

@@ -106,10 +106,10 @@ void main() {
         bottomChromePx: 120,
       );
 
-      expect(plan.safeTop, 80);
+      expect(plan.safeTop, 104);
       expect(plan.safeBottom, 680);
-      expect(plan.targetAnchorY, 480);
-      expect(plan.compositionYOffsetPx, 30);
+      expect(plan.targetAnchorY, 488);
+      expect(plan.compositionYOffsetPx, 38);
     });
 
     test('bottom navigation reservation raises the lower-third guide', () {
