@@ -280,7 +280,11 @@ class KubusMarkerOverlayCardWrapper extends StatelessWidget {
                       child: UnconstrainedBox(
                         alignment: Alignment.bottomLeft,
                         constrainedAxis: Axis.horizontal,
-                        child: SizedBox(width: cardWidth, child: card),
+                        child: SizedBox(
+                          width: cardWidth,
+                          height: cardHeight,
+                          child: card,
+                        ),
                       ),
                     ),
                   ],
@@ -312,6 +316,7 @@ class KubusMarkerOverlayCardWrapper extends StatelessWidget {
                   child: UnconstrainedBox(
                     child: SizedBox(
                       width: cardWidth,
+                      height: cardHeight,
                       child: card,
                     ),
                   ),
@@ -369,6 +374,7 @@ class KubusMarkerOverlayCardWrapper extends StatelessWidget {
               constrainedAxis: Axis.horizontal,
               child: SizedBox(
                 width: cardWidth,
+                height: cardHeight,
                 child: card,
               ),
             );

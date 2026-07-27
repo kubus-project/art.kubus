@@ -13,6 +13,7 @@ import '../../../utils/map_tap_gating.dart';
 import '../shared/map_marker_collision_config.dart';
 import '../shared/map_marker_collision_utils.dart';
 import '../shared/map_marker_entrance_tracker.dart';
+import '../shared/map_marker_overlay_viewport_planner.dart';
 import '../shared/map_cluster_activation.dart';
 import '../map_layers_manager.dart';
 
@@ -23,6 +24,39 @@ class KubusMapControllerIds {
   });
 
   final MapLayersIds layers;
+}
+
+@immutable
+class KubusMarkerOverlayCompositionRequest {
+  const KubusMarkerOverlayCompositionRequest({
+    required this.selectionToken,
+    required this.marker,
+    required this.layoutSignature,
+    required this.viewportSize,
+    required this.markerAnchor,
+    required this.cardSize,
+    required this.safeInsets,
+    required this.markerOffset,
+    required this.topChromePx,
+    required this.bottomChromePx,
+    required this.finalLayoutIsValid,
+    required this.cameraReserved,
+    required this.cameraDuration,
+  });
+
+  final int selectionToken;
+  final ArtMarker marker;
+  final String layoutSignature;
+  final Size viewportSize;
+  final Offset markerAnchor;
+  final Size cardSize;
+  final EdgeInsets safeInsets;
+  final double markerOffset;
+  final double topChromePx;
+  final double bottomChromePx;
+  final bool finalLayoutIsValid;
+  final bool cameraReserved;
+  final Duration cameraDuration;
 }
 
 @immutable
@@ -162,6 +196,7 @@ class KubusMapController {
     this.onBackgroundTap,
     this.onRequestMarkerLayerStyleUpdate,
     this.onRequestMarkerDataSync,
+    this.onMarkerOverlayAcknowledged,
   })  : _distance = distance,
         managedLayerIds = managedLayerIdsOut ?? <String>{},
         managedSourceIds = managedSourceIdsOut ?? <String>{},
@@ -198,6 +233,10 @@ class KubusMapController {
   /// Called when marker feature payload should be rebuilt (spiderfy or
   /// viewport entry animation state changed).
   final VoidCallback? onRequestMarkerDataSync;
+
+  /// Called once a selected marker's overlay has reached its final placement.
+  final void Function(String markerId, int selectionToken)?
+      onMarkerOverlayAcknowledged;
 
   ml.MapLibreMapController? _mapController;
   MapLayersManager? _layersManager;
@@ -313,6 +352,13 @@ class KubusMapController {
   int _debugMarkerDataSyncCount = 0;
   int _debugQueuedMarkerDataSyncCount = 0;
 
+  int _markerOverlayLayoutRevision = 0;
+  String? _markerOverlayLayoutSignature;
+  int? _lastCorrectedMarkerOverlayLayoutRevision;
+  int? _markerCompositionInFlightToken;
+  int? _awaitingFinalMarkerLayoutToken;
+  int? _acknowledgedMarkerOverlayToken;
+
   KubusMapCameraState get camera => _camera;
   bool get autoFollow => _autoFollow;
   bool get cameraIsMoving => _cameraIsMoving;
@@ -329,6 +375,111 @@ class KubusMapController {
   String? get expandedCoordinateKey => _expandedCoordinateKey;
   bool get hasExpandedSameLocation => _expandedCoordinateKey != null;
   bool get reduceMotion => _reduceMotion;
+  int get markerOverlayLayoutRevision => _markerOverlayLayoutRevision;
+
+  void resetMarkerOverlayComposition() {
+    _markerOverlayLayoutRevision += 1;
+    _markerOverlayLayoutSignature = null;
+    _lastCorrectedMarkerOverlayLayoutRevision = null;
+    _markerCompositionInFlightToken = null;
+    _awaitingFinalMarkerLayoutToken = null;
+    _acknowledgedMarkerOverlayToken = null;
+  }
+
+  /// Owns the one-shot camera correction for an anchored marker overlay.
+  /// Screens provide measured Flutter geometry only; selection, camera motion,
+  /// revision tracking, and target acknowledgement stay shared here.
+  void handleMarkerOverlayComposition(
+    KubusMarkerOverlayCompositionRequest request,
+  ) {
+    if (!_styleInitialized || _styleInitializationInProgress) return;
+    if (request.selectionToken != _markerSelectionToken ||
+        request.marker.id != _selectedMarkerId) {
+      return;
+    }
+
+    if (_markerOverlayLayoutSignature != request.layoutSignature) {
+      _markerOverlayLayoutSignature = request.layoutSignature;
+      _markerOverlayLayoutRevision += 1;
+      _lastCorrectedMarkerOverlayLayoutRevision = null;
+      _markerCompositionInFlightToken = null;
+      _awaitingFinalMarkerLayoutToken = null;
+    }
+
+    void acknowledge() {
+      if (!request.finalLayoutIsValid ||
+          _acknowledgedMarkerOverlayToken == request.selectionToken) {
+        return;
+      }
+      _acknowledgedMarkerOverlayToken = request.selectionToken;
+      onMarkerOverlayAcknowledged?.call(
+          request.marker.id, request.selectionToken);
+    }
+
+    if (request.cameraReserved) {
+      acknowledge();
+      return;
+    }
+
+    final selectionToken = request.selectionToken;
+    final compositionIsOurs = _markerCompositionInFlightToken == selectionToken;
+    if ((_programmaticCameraMove || _cameraIsMoving) && !compositionIsOurs) {
+      return;
+    }
+    if (compositionIsOurs) return;
+
+    if (_awaitingFinalMarkerLayoutToken == selectionToken) {
+      _awaitingFinalMarkerLayoutToken = null;
+      acknowledge();
+      return;
+    }
+
+    final plan = planSelectedMarkerOverlayViewport(
+      viewportSize: request.viewportSize,
+      markerAnchor: request.markerAnchor,
+      cardSize: request.cardSize,
+      safeInsets: request.safeInsets,
+      markerOffset: request.markerOffset,
+      topChromePx: request.topChromePx,
+      bottomChromePx: request.bottomChromePx,
+      maxNudgePx: math.max(120.0, request.viewportSize.height * 0.75),
+      verticalComposition: MapMarkerOverlayVerticalComposition.lowerThird,
+      layoutRevision: _markerOverlayLayoutRevision,
+      expectedLayoutRevision: _markerOverlayLayoutRevision,
+      lastCorrectedLayoutRevision: _lastCorrectedMarkerOverlayLayoutRevision,
+    );
+    if (!plan.canApplyCorrection) {
+      acknowledge();
+      return;
+    }
+
+    _lastCorrectedMarkerOverlayLayoutRevision = _markerOverlayLayoutRevision;
+    _markerCompositionInFlightToken = selectionToken;
+    unawaited(() async {
+      var succeeded = false;
+      try {
+        await animateTo(
+          request.marker.position,
+          zoom: _camera.zoom,
+          rotation: _camera.bearing,
+          tilt: _camera.pitch,
+          duration: request.cameraDuration,
+          compositionYOffsetPx: plan.compositionYOffsetPx,
+        );
+        succeeded = true;
+      } catch (_) {
+        // A style/controller transition can invalidate a queued projection.
+      }
+      if (selectionToken != _markerSelectionToken) return;
+      _markerCompositionInFlightToken = null;
+      if (succeeded) {
+        _awaitingFinalMarkerLayoutToken = selectionToken;
+      } else {
+        _lastCorrectedMarkerOverlayLayoutRevision = null;
+      }
+      queueOverlayAnchorRefresh(force: true);
+    }());
+  }
 
   String? get hoveredMarkerId => _hoveredMarkerId;
   String? get pressedMarkerId => _pressedMarkerId;

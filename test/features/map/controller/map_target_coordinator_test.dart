@@ -181,6 +181,35 @@ void main() {
     expect(await future, MapTargetResult.overlayOpened);
   });
 
+  test('rejects stale selection-token acknowledgement and completes once',
+      () async {
+    final harness = _Harness()..markers.add(_marker(id: 'm1'));
+    harness.coordinator.setMapControllerReady(true);
+    harness.coordinator.setStyleReady(true);
+
+    final future = harness.coordinator.submit(
+      const MapTargetIntent(exactMarkerId: 'm1'),
+    );
+    var completions = 0;
+    future.then((_) => completions += 1);
+    await harness.settle();
+
+    harness.coordinator.selectionChanged('m1', selectionToken: 12);
+    harness.coordinator.acknowledgeOverlay('m1', selectionToken: 11);
+    await harness.settle();
+    expect(completions, 0);
+    expect(harness.coordinator.phase, MapTargetPhase.waitingForOverlay);
+
+    harness.coordinator.acknowledgeOverlay('m1', selectionToken: 12);
+    expect(await future, MapTargetResult.overlayOpened);
+    expect(completions, 1);
+
+    harness.coordinator.acknowledgeOverlay('m1', selectionToken: 12);
+    await harness.settle();
+    expect(completions, 1);
+    expect(harness.coordinator.phase, MapTargetPhase.completed);
+  });
+
   test('missing marker centers on preferred coordinates without selection',
       () async {
     final harness = _Harness();

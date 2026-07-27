@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../../utils/app_animations.dart';
+import '../../../utils/design_tokens.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/kubus_map_tokens.dart';
 import '../../inline_progress.dart';
@@ -40,6 +41,9 @@ class KubusDiscoveryPathCard extends StatelessWidget {
   final double badgeGap;
   final double tasksTopGap;
 
+  /// Tokenized radius selected by the responsive map composition.
+  final double surfaceRadius;
+
   /// Direction the expandable task area grows in. Defaults to [downward] so the
   /// mobile/existing behaviour stays unchanged unless a caller opts in.
   final KubusDiscoveryExpansionDirection expansionDirection;
@@ -56,12 +60,13 @@ class KubusDiscoveryPathCard extends StatelessWidget {
     required this.toggleButton,
     required this.titleStyle,
     required this.percentStyle,
-    this.glassPadding = const EdgeInsets.all(14),
+    this.glassPadding = const EdgeInsets.all(KubusSpacing.md),
     this.constraints,
     this.enableMouseRegion = false,
     this.mouseCursor = SystemMouseCursors.basic,
-    this.badgeGap = 10,
-    this.tasksTopGap = 10,
+    this.badgeGap = KubusSpacing.sm,
+    this.tasksTopGap = KubusSpacing.sm,
+    this.surfaceRadius = KubusRadius.lg,
     this.expansionDirection = KubusDiscoveryExpansionDirection.downward,
     this.compactWhenCollapsed = false,
     this.compactProgressLabel,
@@ -83,7 +88,7 @@ class KubusDiscoveryPathCard extends StatelessWidget {
       end: Alignment.bottomRight,
     );
 
-    final radius = BorderRadius.circular(18);
+    final radius = BorderRadius.circular(surfaceRadius);
     final animation = context.animationTheme;
     final mapMotion = KubusMapMotion.fromMediaQuery(
       animationTheme: animation,

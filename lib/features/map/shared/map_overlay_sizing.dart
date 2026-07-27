@@ -29,10 +29,10 @@ class MapMarkerOverlayCardLayoutConfig {
 class MapOverlaySizing {
   const MapOverlaySizing._();
 
-  static const double minCardWidth = KubusMapMetrics.markerPreviewMinWidth;
-  static const double maxCardWidth = KubusMapMetrics.markerPreviewMaxWidth;
+  static const double minCardWidth = KubusMapMetrics.markerOverlayCardMinWidth;
+  static const double maxCardWidth = KubusMapMetrics.markerOverlayCardMaxWidth;
   static const double preferredCardWidth =
-      KubusMapMetrics.markerPreviewPreferredWidth;
+      KubusMapMetrics.markerOverlayCardPreferredWidth;
   static const double minCardHeight = 280.0;
   static const double maxCardHeight = 500.0;
   static const double fixedCardHeight = 420.0;
@@ -79,6 +79,9 @@ class MapOverlaySizing {
     required double maxCardHeight,
     required bool isCompactWidth,
   }) {
+    if (maxCardHeight < minCardHeight) {
+      return math.max(1.0, maxCardHeight).toDouble();
+    }
     final raw = math.max(estimatedHeight, minCardHeight);
     return raw.clamp(minCardHeight, maxCardHeight).toDouble();
   }
@@ -87,6 +90,9 @@ class MapOverlaySizing {
     required double maxCardHeight,
     double preferredHeight = fixedCardHeight,
   }) {
+    if (maxCardHeight < minCardHeight) {
+      return math.max(1.0, maxCardHeight).toDouble();
+    }
     final clampedPreferred =
         preferredHeight.clamp(minCardHeight, maxCardHeight).toDouble();
     return clampedPreferred;

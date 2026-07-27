@@ -9,6 +9,31 @@ import 'kubus_map_platform_backdrop_dom_stub.dart'
 
 export 'kubus_map_platform_backdrop_controller.dart';
 
+/// Keeps a mounted glass surface from publishing a separate platform backdrop
+/// region while an ancestor has made that surface visually hidden.
+class KubusMapBackdropRegionVisibility extends InheritedWidget {
+  const KubusMapBackdropRegionVisibility({
+    super.key,
+    required this.visible,
+    required super.child,
+  });
+
+  final bool visible;
+
+  static bool isVisible(BuildContext context) {
+    return context
+            .dependOnInheritedWidgetOfExactType<
+                KubusMapBackdropRegionVisibility>()
+            ?.visible ??
+        true;
+  }
+
+  @override
+  bool updateShouldNotify(KubusMapBackdropRegionVisibility oldWidget) {
+    return visible != oldWidget.visible;
+  }
+}
+
 class KubusMapPlatformBackdropHost extends StatefulWidget {
   const KubusMapPlatformBackdropHost({
     super.key,
@@ -109,16 +134,19 @@ class _KubusMapBackdropRegionTrackerState
     extends State<KubusMapBackdropRegionTracker> {
   KubusMapBackdropHostController? _controller;
   Rect? _lastRect;
+  bool _ancestorVisible = true;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final nextController = KubusMapBackdropScope.maybeOf(context);
+    final nextVisible = KubusMapBackdropRegionVisibility.isVisible(context);
     if (_controller != nextController) {
       _controller?.removeRegion(widget.id, deferNotify: true);
       _controller = nextController;
-      _scheduleSync();
     }
+    _ancestorVisible = nextVisible;
+    _scheduleSync();
   }
 
   @override
@@ -144,8 +172,9 @@ class _KubusMapBackdropRegionTrackerState
   void _syncRegion() {
     if (!mounted) return;
     final controller = _controller;
-    if (!widget.enabled || controller == null) {
+    if (!widget.enabled || !_ancestorVisible || controller == null) {
       controller?.removeRegion(widget.id);
+      _lastRect = null;
       return;
     }
     final renderObject = context.findRenderObject();

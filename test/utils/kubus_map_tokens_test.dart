@@ -23,38 +23,29 @@ void main() {
         KubusMapMetrics.mobileControlSize,
         greaterThanOrEqualTo(KubusMapMetrics.minimumTouchTarget),
       );
+      expect(KubusMapMetrics.markerOverlayCardMinWidth, greaterThan(0));
       expect(
-        KubusMapMetrics.mobileMarkerPreviewMaxHeight,
-        lessThanOrEqualTo(220),
-      );
-      expect(
-        KubusMapMetrics.mobileMarkerPreviewMediaSize,
-        lessThan(KubusMapMetrics.mobileMarkerPreviewMaxHeight),
+        KubusMapMetrics.markerOverlayCardPreferredWidth,
+        inInclusiveRange(
+          KubusMapMetrics.markerOverlayCardMinWidth,
+          KubusMapMetrics.markerOverlayCardMaxWidth,
+        ),
       );
     });
 
-    test('clamps search and preview widths at representative viewports', () {
+    test('clamps search widths at representative viewports', () {
       const widths = <double>[360, 768, 1024, 1280, 1440];
 
       for (final width in widths) {
         final search = KubusMapMetrics.resolveSearchWidth(width);
-        final preview = KubusMapMetrics.resolveMarkerPreviewWidth(width);
 
         expect(search, greaterThan(0), reason: 'search at $width');
         expect(search, lessThanOrEqualTo(KubusMapMetrics.searchMaxWidth));
         expect(search, lessThan(width));
-        expect(preview, greaterThan(0), reason: 'preview at $width');
-        expect(
-          preview,
-          lessThanOrEqualTo(KubusMapMetrics.markerPreviewMaxWidth),
-        );
-        expect(preview, lessThan(width));
       }
 
       expect(KubusMapMetrics.resolveSearchWidth(360), 336);
       expect(KubusMapMetrics.resolveSearchWidth(768), 560);
-      expect(KubusMapMetrics.resolveMarkerPreviewWidth(360), 320);
-      expect(KubusMapMetrics.resolveMarkerPreviewWidth(768), 320);
     });
 
     test('context panel preserves map area at intermediate and wide widths',
@@ -79,43 +70,6 @@ void main() {
 
       expect(KubusMapMetrics.resolveDesktopContextPanelWidth(1280), 360);
       expect(KubusMapMetrics.resolveDesktopContextPanelWidth(1440), 360);
-    });
-
-    test('nearby peek and marker dock relationships remain bounded', () {
-      expect(KubusMapMetrics.resolveMobileNearbyPeekHeight(640), 72);
-      expect(KubusMapMetrics.resolveMobileNearbyPeekHeight(844), 84.4);
-      expect(KubusMapMetrics.resolveMobileNearbyPeekHeight(1200), 96);
-
-      final withoutNearby = KubusMapMetrics.resolveMobileMarkerDockBottomInset(
-        viewportHeight: 844,
-        safeBottom: 24,
-        nearbyPeekVisible: false,
-      );
-      final withNearby = KubusMapMetrics.resolveMobileMarkerDockBottomInset(
-        viewportHeight: 844,
-        safeBottom: 24,
-        nearbyPeekVisible: true,
-      );
-      expect(
-        withNearby - withoutNearby,
-        KubusMapMetrics.resolveMobileNearbyPeekHeight(844) +
-            KubusMapMetrics.mobileMarkerDockGap,
-      );
-    });
-
-    test('large accessibility text receives additional preview height', () {
-      expect(
-        KubusMapMetrics.resolveMobileMarkerPreviewMaxHeight(
-          const MediaQueryData(textScaler: TextScaler.linear(1)),
-        ),
-        KubusMapMetrics.mobileMarkerPreviewMaxHeight,
-      );
-      expect(
-        KubusMapMetrics.resolveMobileMarkerPreviewMaxHeight(
-          const MediaQueryData(textScaler: TextScaler.linear(2)),
-        ),
-        KubusMapMetrics.mobileMarkerPreviewLargeTextMaxHeight,
-      );
     });
   });
 

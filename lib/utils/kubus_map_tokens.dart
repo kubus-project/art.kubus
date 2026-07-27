@@ -30,9 +30,8 @@ enum KubusMapLayoutTier {
 ///
 /// This inventory intentionally covers values that recur across the mobile and
 /// desktop map compositions: chrome insets, search width, primary touch
-/// controls, dominant context panels, marker previews, and the relationship
-/// between the mobile marker dock and Nearby peek. General-purpose spacing and
-/// navigation dimensions continue to come from [KubusSpacing],
+/// controls, dominant context panels, and marker overlay cards.
+/// General-purpose spacing and navigation dimensions continue to come from [KubusSpacing],
 /// [KubusHeaderMetrics], and [KubusLayout].
 abstract final class KubusMapMetrics {
   /// Compact layouts end immediately before a 768 px canvas.
@@ -64,35 +63,10 @@ abstract final class KubusMapMetrics {
   /// Maximum share of a non-compact viewport occupied by a context panel.
   static const double desktopContextPanelMaxViewportFraction = 0.38;
 
-  /// Marker previews share the established overlay card sizing range.
-  static const double markerPreviewMinWidth = 272.0;
-  static const double markerPreviewPreferredWidth = 320.0;
-  static const double markerPreviewMaxWidth = 336.0;
-
-  /// Stable visual separation between a marker and its desktop preview.
-  static const double markerPreviewGap = KubusSpacing.md;
-
-  /// Horizontal inset for the bottom-docked compact marker preview.
-  static const double mobileMarkerPreviewInset =
-      KubusSpacing.sm + KubusSpacing.xs;
-
-  /// Maximum height of the map-first mobile marker preview.
-  static const double mobileMarkerPreviewMaxHeight = 208.0;
-
-  /// Accessibility allowance for large text without clipping the marker card.
-  static const double mobileMarkerPreviewLargeTextMaxHeight = 288.0;
-
-  /// Square cover size used by the compact mobile marker preview.
-  static const double mobileMarkerPreviewMediaSize = 72.0;
-  static const double mobileMarkerPreviewLargeTextMediaSize = 56.0;
-
-  /// Vertical separation between the marker dock and Nearby peek.
-  static const double mobileMarkerDockGap = KubusSpacing.sm;
-
-  /// Nearby stays discoverable without permanently consuming the map canvas.
-  static const double mobileNearbyPeekMinHeight = 72.0;
-  static const double mobileNearbyPeekMaxHeight = 96.0;
-  static const double mobileNearbyPeekViewportFraction = 0.10;
+  /// Marker overlay cards share this readable width range.
+  static const double markerOverlayCardMinWidth = 272.0;
+  static const double markerOverlayCardPreferredWidth = 320.0;
+  static const double markerOverlayCardMaxWidth = 336.0;
 
   /// Separation between a dominant panel and adjacent map chrome.
   static const double contextPanelSafeGap = KubusSpacing.md;
@@ -144,55 +118,6 @@ abstract final class KubusMapMetrics {
     return desktopContextPanelPreferredWidth
         .clamp(effectiveMinimum, maximumForViewport)
         .toDouble();
-  }
-
-  /// Resolves a marker preview width within the available horizontal canvas.
-  static double resolveMarkerPreviewWidth(double availableWidth) {
-    final insetAvailable = math.max(
-      0.0,
-      availableWidth - (mobileMarkerPreviewInset * 2.0),
-    );
-    if (insetAvailable < markerPreviewMinWidth) {
-      return insetAvailable;
-    }
-    return markerPreviewPreferredWidth
-        .clamp(markerPreviewMinWidth,
-            math.min(markerPreviewMaxWidth, insetAvailable))
-        .toDouble();
-  }
-
-  /// Allows the compact preview to grow for accessibility text scaling while
-  /// retaining the calmer fixed-height presentation at normal text sizes.
-  static double resolveMobileMarkerPreviewMaxHeight(MediaQueryData media) {
-    final textScale = media.textScaler.scale(1.0);
-    return textScale > 1.3
-        ? mobileMarkerPreviewLargeTextMaxHeight
-        : mobileMarkerPreviewMaxHeight;
-  }
-
-  /// Resolves the collapsed Nearby affordance from viewport height.
-  static double resolveMobileNearbyPeekHeight(double viewportHeight) {
-    return (viewportHeight * mobileNearbyPeekViewportFraction)
-        .clamp(mobileNearbyPeekMinHeight, mobileNearbyPeekMaxHeight)
-        .toDouble();
-  }
-
-  /// Bottom inset for a mobile marker dock, including safe area and navigation.
-  ///
-  /// When Nearby is visible the dock yields to its compact peek. When marker
-  /// context becomes dominant callers can hide Nearby and pass `false`.
-  static double resolveMobileMarkerDockBottomInset({
-    required double viewportHeight,
-    required double safeBottom,
-    required bool nearbyPeekVisible,
-  }) {
-    final nearbyHeight = nearbyPeekVisible
-        ? resolveMobileNearbyPeekHeight(viewportHeight) + mobileMarkerDockGap
-        : 0.0;
-    return math.max(0.0, safeBottom) +
-        KubusLayout.mainBottomNavBarHeight +
-        mobileMarkerDockGap +
-        nearbyHeight;
   }
 }
 
