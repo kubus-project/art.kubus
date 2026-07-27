@@ -4,11 +4,16 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   late String source;
+  late String controllerSource;
 
   setUpAll(() {
     source = File('lib/screens/map_screen.dart')
         .readAsStringSync()
         .replaceAll('\r\n', '\n');
+    controllerSource =
+        File('lib/features/map/controller/kubus_map_controller.dart')
+            .readAsStringSync()
+            .replaceAll('\r\n', '\n');
   });
 
   group('mobile map dominant-surface integration', () {
@@ -72,18 +77,21 @@ void main() {
 
     test('composition is one-shot, lower-third, and walking isolated', () {
       expect(
-        source,
+        controllerSource,
         contains(
           'verticalComposition: '
           'MapMarkerOverlayVerticalComposition.lowerThird',
         ),
       );
-      expect(source, contains('_lastCorrectedMarkerOverlayLayoutRevision'));
-      expect(source, contains('_markerCompositionInFlightToken'));
-      expect(source, contains('if (_isWalkingFocusedMode)'));
       expect(
-        source,
-        contains('_kubusMapController.queueOverlayAnchorRefresh(force: true)'),
+        controllerSource,
+        contains('_lastCorrectedMarkerOverlayLayoutRevision'),
+      );
+      expect(controllerSource, contains('_markerCompositionInFlightToken'));
+      expect(source, contains('cameraReserved: _isWalkingFocusedMode'));
+      expect(
+        controllerSource,
+        contains('queueOverlayAnchorRefresh(force: true)'),
       );
     });
 
@@ -91,12 +99,13 @@ void main() {
       final handlerStart =
           source.indexOf('void _handleMarkerOverlayLayoutResolved(');
       final nextMethod = source.indexOf(
-        'void _acknowledgeMarkerOverlay(',
+        'void _publishMarkerChromeOcclusion(',
         handlerStart,
       );
       final handler = source.substring(handlerStart, nextMethod);
-      expect(handler, contains('_awaitingFinalMarkerLayoutToken'));
-      expect(handler, contains('_acknowledgeMarkerOverlay(selection)'));
+      expect(handler, contains('handleMarkerOverlayComposition'));
+      expect(controllerSource, contains('_awaitingFinalMarkerLayoutToken'));
+      expect(controllerSource, contains('onMarkerOverlayAcknowledged'));
       expect(
         source,
         contains('selectionToken: selection.selectionToken'),
