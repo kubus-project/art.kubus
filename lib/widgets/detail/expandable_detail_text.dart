@@ -16,11 +16,21 @@ class ExpandableDetailText extends StatefulWidget {
     required this.text,
     this.collapsedMaxLines = 8,
     this.style,
+    this.textAlign = TextAlign.start,
+    this.alignment = CrossAxisAlignment.start,
   });
 
   final String text;
   final int collapsedMaxLines;
   final TextStyle? style;
+
+  /// Alignment of the text itself. Callers that center body copy (e.g. a
+  /// profile bio) should pass [TextAlign.center] alongside
+  /// [CrossAxisAlignment.center] in [alignment].
+  final TextAlign textAlign;
+
+  /// Alignment of the block as a whole — the text and the toggle button.
+  final CrossAxisAlignment alignment;
 
   @override
   State<ExpandableDetailText> createState() => _ExpandableDetailTextState();
@@ -51,12 +61,13 @@ class _ExpandableDetailTextState extends State<ExpandableDetailText> {
         painter.dispose();
 
         if (!overflows) {
-          return Text(widget.text, style: style);
+          return Text(widget.text, style: style, textAlign: widget.textAlign);
         }
 
         Widget body = Text(
           widget.text,
           style: style,
+          textAlign: widget.textAlign,
           maxLines: _expanded ? null : widget.collapsedMaxLines,
           overflow: _expanded ? null : TextOverflow.clip,
         );
@@ -81,7 +92,7 @@ class _ExpandableDetailTextState extends State<ExpandableDetailText> {
         }
 
         return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: widget.alignment,
           children: [
             AnimatedSize(
               duration: const Duration(milliseconds: 220),
@@ -91,7 +102,11 @@ class _ExpandableDetailTextState extends State<ExpandableDetailText> {
             ),
             const SizedBox(height: DetailSpacing.sm),
             Align(
-              alignment: Alignment.centerLeft,
+              alignment: switch (widget.alignment) {
+                CrossAxisAlignment.center => Alignment.center,
+                CrossAxisAlignment.end => Alignment.centerRight,
+                _ => Alignment.centerLeft,
+              },
               child: TextButton.icon(
                 onPressed: _toggle,
                 style: TextButton.styleFrom(
