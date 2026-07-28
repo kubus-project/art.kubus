@@ -43,9 +43,13 @@ dependencies:
   provider: ^6.1.5
   location: ^8.0.1
   latlong2: ^0.9.1
-  maplibre_gl: ^0.26.1
+  # >=0.26.2 required: from that version `maplibre_gl_web` resolves `assets/...`
+  # style strings through `rootBundle` instead of fetching them as plain URLs.
+  # `MapStyleService` relies on that behaviour (see `_toWebAssetKey`); on 0.26.1
+  # the asset key would be fetched verbatim as a URL and 404.
+  maplibre_gl: ^0.26.2
   # Explicit web implementation registration hardening (release cache edge-cases).
-  maplibre_gl_web: ^0.26.1
+  maplibre_gl_web: ^0.26.2
   shared_preferences: ^2.5.5
   flutter_secure_storage: ^9.2.4
   local_auth: ^3.0.0

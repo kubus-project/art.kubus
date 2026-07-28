@@ -127,6 +127,88 @@ void main() {
     );
   });
 
+  group('ArtMapView style-load watchdog outcome', () {
+    // Regression: when `MapLibreMap.onPlatformViewCreated` throws inside
+    // `initPlatform(...)` (e.g. the web plugin fails to load the style asset)
+    // it never calls `onMapCreated`, so `ArtMapView` never gets a controller.
+    // The watchdog used to `return` early in that case, so a failed style left
+    // a blank canvas with no error card and no retry, forever.
+    test('surfaces a failure when the map never produced a controller', () {
+      expect(
+        ArtMapView.styleTimeoutOutcomeForTest(
+          styleLoaded: false,
+          didFallback: false,
+          isWeb: true,
+          webGLRecovering: false,
+          hasController: false,
+        ),
+        MapStyleTimeoutOutcome.failWithoutFallback,
+      );
+    });
+
+    test('falls back when a controller exists but the style never loaded', () {
+      expect(
+        ArtMapView.styleTimeoutOutcomeForTest(
+          styleLoaded: false,
+          didFallback: false,
+          isWeb: true,
+          webGLRecovering: false,
+          hasController: true,
+        ),
+        MapStyleTimeoutOutcome.failAndFallback,
+      );
+    });
+
+    test('ignores timeouts once the style loaded or a fallback ran', () {
+      expect(
+        ArtMapView.styleTimeoutOutcomeForTest(
+          styleLoaded: true,
+          didFallback: false,
+          isWeb: true,
+          webGLRecovering: false,
+          hasController: true,
+        ),
+        MapStyleTimeoutOutcome.ignore,
+      );
+
+      expect(
+        ArtMapView.styleTimeoutOutcomeForTest(
+          styleLoaded: false,
+          didFallback: true,
+          isWeb: true,
+          webGLRecovering: false,
+          hasController: true,
+        ),
+        MapStyleTimeoutOutcome.ignore,
+      );
+    });
+
+    test('ignores timeouts while web is recovering a lost WebGL context', () {
+      expect(
+        ArtMapView.styleTimeoutOutcomeForTest(
+          styleLoaded: false,
+          didFallback: false,
+          isWeb: true,
+          webGLRecovering: true,
+          hasController: false,
+        ),
+        MapStyleTimeoutOutcome.ignore,
+      );
+
+      // WebGL recovery is web-only; native must still report the failure.
+      expect(
+        ArtMapView.styleTimeoutOutcomeForTest(
+          styleLoaded: false,
+          didFallback: false,
+          isWeb: false,
+          webGLRecovering: true,
+          hasController: true,
+        ),
+        MapStyleTimeoutOutcome.failAndFallback,
+      );
+    });
+  });
+
   test('ArtMapView unresolved style backdrop is opaque and non-white', () {
     final light = ArtMapView.mapLoadingBackdropColorForTest(isDarkMode: false);
     final dark = ArtMapView.mapLoadingBackdropColorForTest(isDarkMode: true);

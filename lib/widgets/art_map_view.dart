@@ -14,6 +14,22 @@ import '../services/web_maplibre_runtime.dart';
 import '../utils/design_tokens.dart';
 import 'kubus_snackbar.dart';
 
+/// What [ArtMapView]'s style-load watchdog should do when it fires.
+enum MapStyleTimeoutOutcome {
+  /// The style already loaded, a fallback already ran, or the browser is still
+  /// recovering a lost WebGL context — do nothing.
+  ignore,
+
+  /// The map never produced a controller, so there is nothing to swap a
+  /// fallback style onto. Surface the error card + retry button instead of
+  /// leaving a blank canvas up forever.
+  failWithoutFallback,
+
+  /// The map exists but never reported a loaded style — show the error card and
+  /// try the bundled fallback style.
+  failAndFallback,
+}
+
 /// Shared MapLibre layer used by both mobile and desktop map screens.
 ///
 /// UI overlays (filters, marker cards, discovery progress, etc.) remain
@@ -90,6 +106,29 @@ class ArtMapView extends StatefulWidget {
     required bool pendingStyleApply,
   }) {
     return styleLoaded && !styleFailed && !pendingStyleApply;
+  }
+
+  /// Decides what the style-load watchdog does when it fires.
+  ///
+  /// Kept pure so the "platform view never initialized" path is testable: when
+  /// `MapLibreMap.onPlatformViewCreated` throws inside `initPlatform(...)` it
+  /// never invokes `onMapCreated`, so [ArtMapView] never receives a controller
+  /// and cannot apply a fallback style. That case must still surface the error
+  /// card rather than hang on a blank canvas.
+  @visibleForTesting
+  static MapStyleTimeoutOutcome styleTimeoutOutcomeForTest({
+    required bool styleLoaded,
+    required bool didFallback,
+    required bool isWeb,
+    required bool webGLRecovering,
+    required bool hasController,
+  }) {
+    if (styleLoaded) return MapStyleTimeoutOutcome.ignore;
+    if (didFallback) return MapStyleTimeoutOutcome.ignore;
+    // WebGL loss is transient; the recovery path re-arms the watchdog.
+    if (isWeb && webGLRecovering) return MapStyleTimeoutOutcome.ignore;
+    if (!hasController) return MapStyleTimeoutOutcome.failWithoutFallback;
+    return MapStyleTimeoutOutcome.failAndFallback;
   }
 
   /// Web-only policy for MapLibre's `preserveDrawingBuffer`.
@@ -196,6 +235,7 @@ class _ArtMapViewState extends State<ArtMapView> {
   int? _debugMapId;
 
   Timer? _styleLoadTimer;
+  bool _styleWatchdogArmed = false;
   bool _styleLoaded = false;
   bool _didFallback = false;
   bool _styleFailed = false;
@@ -449,6 +489,7 @@ class _ArtMapViewState extends State<ArtMapView> {
 
   void _resetStyleLoadState() {
     _styleLoadTimer?.cancel();
+    _styleWatchdogArmed = false;
     _styleLoaded = false;
     _didFallback = false;
     _styleFailed = false;
@@ -541,19 +582,33 @@ class _ArtMapViewState extends State<ArtMapView> {
 
   void _startStyleHealthCheck() {
     _styleLoadTimer?.cancel();
+    _styleWatchdogArmed = true;
     _styleLoadTimer = Timer(MapStyleService.styleLoadTimeout, () {
       if (!mounted || _disposed) return;
-      if (_styleLoaded) return;
-      if (_didFallback) return;
-      if (kIsWeb && _webGLRecovering) return;
 
-      final controller = _controller;
-      if (controller == null) return;
+      final outcome = ArtMapView.styleTimeoutOutcomeForTest(
+        styleLoaded: _styleLoaded,
+        didFallback: _didFallback,
+        isWeb: kIsWeb,
+        webGLRecovering: _webGLRecovering,
+        hasController: _controller != null,
+      );
 
-      _markStyleFailure('Map style failed to load.');
-      AppConfig.debugPrint(
-          'ArtMapView: style load timeout; switching to fallback');
-      unawaited(_attemptFallbackStyle());
+      switch (outcome) {
+        case MapStyleTimeoutOutcome.ignore:
+          return;
+        case MapStyleTimeoutOutcome.failWithoutFallback:
+          AppConfig.debugPrint(
+              'ArtMapView: map never initialized within style load timeout');
+          _markStyleFailure('Map failed to load.');
+          return;
+        case MapStyleTimeoutOutcome.failAndFallback:
+          _markStyleFailure('Map style failed to load.');
+          AppConfig.debugPrint(
+              'ArtMapView: style load timeout; switching to fallback');
+          unawaited(_attemptFallbackStyle());
+          return;
+      }
     });
   }
 
@@ -598,6 +653,16 @@ class _ArtMapViewState extends State<ArtMapView> {
       return SizedBox.expand(
         child: ColoredBox(color: _mapLoadingBackdropColor()),
       );
+    }
+
+    // Arm the style watchdog as soon as the platform view is about to be
+    // created rather than waiting for `onMapCreated`: platform init can fail
+    // before `onMapCreated` is ever invoked, and previously nothing would then
+    // ever time out, so the map hung on a blank canvas with no error card.
+    // `_startStyleHealthCheck()` is idempotent-guarded via `_styleWatchdogArmed`
+    // so rebuilds do not keep restarting the timeout window.
+    if (!_styleWatchdogArmed) {
+      _startStyleHealthCheck();
     }
 
     return LayoutBuilder(
