@@ -215,7 +215,9 @@ void main() {
     // instance alive (same const key), so the retry button only hid the
     // error card until the next watchdog timeout instead of actually
     // retrying.
-    test('requires recreation when the platform view never produced a controller', () {
+    test(
+        'requires recreation when the platform view never produced a controller',
+        () {
       expect(
         ArtMapView.retryRequiresMapRecreation(hasController: false),
         isTrue,
