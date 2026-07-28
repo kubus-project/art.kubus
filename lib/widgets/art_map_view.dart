@@ -131,6 +131,19 @@ class ArtMapView extends StatefulWidget {
     return MapStyleTimeoutOutcome.failAndFallback;
   }
 
+  /// Whether a manual retry from the error card must force the MapLibre
+  /// platform view to be recreated (by changing its widget key) rather than
+  /// just re-applying a style to the existing controller.
+  ///
+  /// True exactly when there is no controller: `initPlatform` failed before
+  /// `onMapCreated` ever fired, so there is nothing to call `setStyle` on,
+  /// and rebuilding with the same key would keep the failed platform view
+  /// alive — the retry button would then only hide the error card until the
+  /// next watchdog timeout instead of actually retrying.
+  @visibleForTesting
+  static bool retryRequiresMapRecreation({required bool hasController}) =>
+      !hasController;
+
   /// Web-only policy for MapLibre's `preserveDrawingBuffer`.
   ///
   /// Mobile browsers are more prone to compositing artifacts ("burn-in"/trail
@@ -233,6 +246,14 @@ class _ArtMapViewState extends State<ArtMapView> {
   bool _pendingStyleApply = false;
   bool _mapCreated = false;
   int? _debugMapId;
+
+  // Bumped on retry when the platform view never produced a controller (i.e.
+  // `initPlatform` failed before `onMapCreated`). The MapLibreMap widget's key
+  // is derived from this, so bumping it forces Flutter to tear down and
+  // recreate the platform view instead of rebuilding in place; a rebuild with
+  // the same key would keep the failed view alive and retry would never do
+  // anything but hide the error card until the next timeout.
+  int _mapViewEpoch = 0;
 
   Timer? _styleLoadTimer;
   bool _styleWatchdogArmed = false;
@@ -675,7 +696,7 @@ class _ArtMapViewState extends State<ArtMapView> {
           child: Stack(
             children: [
               ml.MapLibreMap(
-                key: const ValueKey('art_map_view_maplibre'),
+                key: ValueKey<String>('art_map_view_maplibre-$_mapViewEpoch'),
                 styleString: resolved,
                 // MapLibre is a platform view on all supported targets (incl.
                 // web via MapLibre GL JS). Leaving this null can cause the
@@ -862,14 +883,27 @@ class _ArtMapViewState extends State<ArtMapView> {
                             _styleFailureReason ?? 'Map style failed to load.',
                         onRetry: () {
                           if (!mounted) return;
+                          final needsRecreate =
+                              ArtMapView.retryRequiresMapRecreation(
+                            hasController: _controller != null,
+                          );
                           setState(() {
                             _styleFailed = false;
                             _styleFailureReason = null;
+                            if (needsRecreate) {
+                              _mapViewEpoch += 1;
+                            }
                           });
                           _resetStyleLoadState();
                           _refreshStyleFuture();
                           _startStyleHealthCheck();
-                          unawaited(_applyStyleToController());
+                          // A fresh platform view will report its own style via
+                          // onMapCreated -> _resetStyleLoadState; only apply the
+                          // resolved style directly when a controller already
+                          // exists (the failAndFallback case).
+                          if (!needsRecreate) {
+                            unawaited(_applyStyleToController());
+                          }
                         },
                       ),
                     ),

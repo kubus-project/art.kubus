@@ -209,6 +209,27 @@ void main() {
     });
   });
 
+  group('ArtMapView retry recreation policy', () {
+    // Regression: retrying without recreating the platform view when it
+    // never produced a controller used to leave the failed MapLibreMap
+    // instance alive (same const key), so the retry button only hid the
+    // error card until the next watchdog timeout instead of actually
+    // retrying.
+    test('requires recreation when the platform view never produced a controller', () {
+      expect(
+        ArtMapView.retryRequiresMapRecreation(hasController: false),
+        isTrue,
+      );
+    });
+
+    test('does not require recreation when a controller already exists', () {
+      expect(
+        ArtMapView.retryRequiresMapRecreation(hasController: true),
+        isFalse,
+      );
+    });
+  });
+
   test('ArtMapView unresolved style backdrop is opaque and non-white', () {
     final light = ArtMapView.mapLoadingBackdropColorForTest(isDarkMode: false);
     final dark = ArtMapView.mapLoadingBackdropColorForTest(isDarkMode: true);
