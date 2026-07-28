@@ -4412,15 +4412,18 @@ class _MapScreenState extends State<MapScreen>
         ? const ValueKey<String>('marker_overlay_empty')
         : ValueKey<String>(
             'marker_overlay:selection:${selection.selectionToken}');
-    final media = MediaQuery.of(context);
     final mapMotion = KubusMapMotion.fromMediaQuery(
       animationTheme: context.animationTheme,
-      mediaQuery: media,
+      mediaQuery: MediaQuery.of(context),
     );
-    final dockBottomInset = KubusMapMetrics.resolveMobileMarkerDockBottomInset(
-      viewportHeight: media.size.height,
-      safeBottom: media.padding.bottom,
-      nearbyPeekVisible: false,
+    // Mirrors desktop_map_screen.dart's anchored marker overlay (isDesktop:
+    // true there, false here) so mobile gets the same full anchored card
+    // instead of the retired bottom-docked compact preview.
+    final referenceLayout = MapOverlaySizing.resolveMarkerOverlayCardLayout(
+      constraints: const BoxConstraints(maxWidth: 1000, maxHeight: 800),
+      media: MediaQuery.of(context),
+      isDesktop: false,
+      topChromePx: KubusMapMetrics.compactChromeInset,
     );
     return KubusMapMarkerOverlayShell.build(
       isVisible: marker != null,
@@ -4433,25 +4436,51 @@ class _MapScreenState extends State<MapScreen>
       blockMapGestures: false,
       dismissOnBackdropTap: false,
       placementStrategy:
-          overlay_wrapper.KubusMarkerOverlayPlacementStrategy.bottomDocked,
+          overlay_wrapper.KubusMarkerOverlayPlacementStrategy.anchored,
       widthResolver: (constraints, mediaQuery) {
-        return KubusMapMetrics.resolveMarkerPreviewWidth(constraints.maxWidth);
+        return MapOverlaySizing.resolveMarkerOverlayCardLayout(
+          constraints: constraints,
+          media: mediaQuery,
+          isDesktop: false,
+          topChromePx: KubusMapMetrics.compactChromeInset,
+        ).width;
       },
       maxHeightResolver: (constraints, mediaQuery) {
-        final available = math.max(
-          1.0,
-          constraints.maxHeight - dockBottomInset - mediaQuery.padding.top,
+        return MapOverlaySizing.resolveMarkerOverlayCardLayout(
+          constraints: constraints,
+          media: mediaQuery,
+          isDesktop: false,
+          topChromePx: KubusMapMetrics.compactChromeInset,
+        ).maxHeight;
+      },
+      heightResolver: (constraints, mediaQuery, maxCardHeight) {
+        final selectedMarker = selection.selectedMarker;
+        if (selectedMarker == null) {
+          return MapOverlaySizing.resolveFixedCardHeight(
+            maxCardHeight: maxCardHeight,
+          );
+        }
+        final selectedArtwork = selectedMarker.isExhibitionMarker
+            ? null
+            : context
+                .read<ArtworkProvider>()
+                .getArtworkById(selectedMarker.artworkId ?? '');
+        final linkedEvent = KubusMarkerOverlayHelpers.resolveLinkedEvent(
+          marker: selectedMarker,
+          events: context.read<EventsProvider>().events,
         );
-        return math.min(
-          KubusMapMetrics.resolveMobileMarkerPreviewMaxHeight(mediaQuery),
-          available,
+        return KubusMarkerOverlayHelpers.estimateCardHeight(
+          marker: selectedMarker,
+          artwork: selectedArtwork,
+          event: linkedEvent,
+          maxCardHeight: maxCardHeight,
+          isCompactWidth: constraints.maxWidth < 600,
         );
       },
-      heightResolver: (_, __, maxCardHeight) => maxCardHeight,
-      markerOffset: KubusMapMetrics.markerPreviewGap,
-      horizontalPadding: KubusMapMetrics.mobileMarkerPreviewInset,
-      topPadding: KubusMapMetrics.compactChromeInset,
-      bottomPadding: dockBottomInset,
+      markerOffset: referenceLayout.markerOffset,
+      horizontalPadding: referenceLayout.horizontalPadding,
+      topPadding: referenceLayout.topPadding,
+      bottomPadding: referenceLayout.bottomPadding,
       animation: overlay_wrapper.KubusMarkerOverlayAnimationConfig.fromMotion(
         mapMotion.overlayReposition,
       ),
@@ -4466,7 +4495,7 @@ class _MapScreenState extends State<MapScreen>
         _mapTargetCoordinator.acknowledgeOverlay(selectedMarker.id);
       },
       cardBuilder: (context, layout) {
-        return _buildCompactMarkerOverlay(themeProvider, selection, layout);
+        return _buildMarkerOverlayCard(themeProvider, selection, layout);
       },
     );
   }
@@ -4527,7 +4556,7 @@ class _MapScreenState extends State<MapScreen>
     );
   }
 
-  Widget _buildCompactMarkerOverlay(
+  Widget _buildMarkerOverlayCard(
     ThemeProvider themeProvider,
     MapMarkerSelectionState selection,
     overlay_wrapper.KubusMarkerOverlayLayoutState layout,
@@ -4638,7 +4667,7 @@ class _MapScreenState extends State<MapScreen>
               }
             : null,
         maxCardHeight: maxCardHeight,
-        cardPresentation: KubusMarkerOverlayCardPresentation.compactMobile,
+        cardPresentation: KubusMarkerOverlayCardPresentation.standard,
       );
     }
 
