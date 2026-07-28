@@ -2,6 +2,7 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/providers/themeprovider.dart';
 import 'package:art_kubus/services/search_service.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
+import 'package:art_kubus/utils/kubus_map_tokens.dart';
 import 'package:art_kubus/widgets/common/kubus_glass_chip.dart';
 import 'package:art_kubus/widgets/map/kubus_map_glass_surface.dart';
 import 'package:art_kubus/widgets/search/kubus_general_search.dart';
@@ -105,7 +106,7 @@ void main() {
   });
 
   group('KubusSearchBar map glass mode', () {
-    testWidgets('map field accepts the restrained tokenized radius',
+    testWidgets('map field renders the rectangular header radius',
         (tester) async {
       final controller = KubusSearchController(
         searchService: _FakeSearchService(const <KubusSearchResult>[]),
@@ -115,11 +116,19 @@ void main() {
       addTearDown(controller.dispose);
       addTearDown(themeProvider.dispose);
 
+      // Regression guard for the map header shape. The field previously used
+      // KubusRadius.lg (16, "Large Containers") and then KubusRadius.md (12),
+      // both of which still read as a rounded pill on a 48px-tall field. The
+      // map now consumes KubusMapMetrics.headerSurfaceRadius, which must stay
+      // on the documented "Buttons, Inputs" token.
+      expect(KubusMapMetrics.headerSurfaceRadius, KubusRadius.sm);
+      expect(KubusRadius.sm, 8.0);
+
       await tester.pumpWidget(
         _MapSearchHarness(
           controller: controller,
           themeProvider: themeProvider,
-          borderRadius: KubusRadius.md,
+          borderRadius: KubusMapMetrics.headerSurfaceRadius,
           onResultTap: (_) {},
         ),
       );
@@ -129,8 +138,21 @@ void main() {
       );
       expect(
         searchBar.style?.borderRadius,
-        BorderRadius.circular(KubusRadius.md),
+        BorderRadius.circular(KubusRadius.sm),
       );
+
+      // ...and the radius must actually reach the painted decoration.
+      final decoration = tester
+          .widget<AnimatedContainer>(
+            find
+                .descendant(
+                  of: find.byType(KubusSearchBar),
+                  matching: find.byType(AnimatedContainer),
+                )
+                .first,
+          )
+          .decoration as BoxDecoration;
+      expect(decoration.borderRadius, BorderRadius.circular(KubusRadius.sm));
     });
 
     testWidgets(
