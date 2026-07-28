@@ -692,6 +692,14 @@ class _ArtMapViewState extends State<ArtMapView> {
           Size(constraints.maxWidth, constraints.maxHeight),
         );
 
+        // Capture the epoch this specific platform view was built under. A
+        // retry that bumps `_mapViewEpoch` disposes this widget but cannot
+        // cancel MapLibre's in-flight `initPlatform`; if that original
+        // initialization was merely slow (not actually failed) and completes
+        // after the replacement view, its callbacks must be recognized as
+        // stale and ignored rather than overwriting state that now belongs
+        // to the newer view.
+        final viewEpoch = _mapViewEpoch;
         return SizedBox.expand(
           child: Stack(
             children: [
@@ -749,6 +757,17 @@ class _ArtMapViewState extends State<ArtMapView> {
                     // Widget is going away; don't attach this controller.
                     return;
                   }
+                  if (viewEpoch != _mapViewEpoch) {
+                    // A retry superseded this view before its (slow, not
+                    // actually failed) initialization finished. Ignore the
+                    // stale callback instead of overwriting the controller
+                    // for the view that replaced it.
+                    AppConfig.debugPrint(
+                      'ArtMapView: ignoring onMapCreated from superseded '
+                      'view epoch $viewEpoch (current: $_mapViewEpoch)',
+                    );
+                    return;
+                  }
                   assert(() {
                     if (_mapCreated) {
                       AppConfig.debugPrint(
@@ -775,6 +794,7 @@ class _ArtMapViewState extends State<ArtMapView> {
                 },
                 onStyleLoadedCallback: () {
                   if (_disposed) return;
+                  if (viewEpoch != _mapViewEpoch) return;
                   _styleStopwatch?.stop();
                   _styleLoadTimer?.cancel();
                   final elapsedMs = _styleStopwatch?.elapsedMilliseconds;
