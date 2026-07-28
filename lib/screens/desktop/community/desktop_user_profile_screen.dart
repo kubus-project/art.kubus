@@ -38,6 +38,7 @@ import '../../../providers/wallet_provider.dart';
 import '../../../services/socket_service.dart';
 import '../../../screens/community/profile_screen_methods.dart';
 import '../../../widgets/detail/shared_section_widgets.dart';
+import '../../../widgets/detail/expandable_detail_text.dart';
 import '../../../widgets/detail/profile_relationship_actions.dart';
 import '../../../widgets/detail/profile_identity_block.dart';
 import '../../../widgets/detail/profile_utility_actions.dart';
@@ -716,109 +717,121 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(KubusRadius.lg),
-            ),
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Container(
-                  height: hasCoverImage
-                      ? _kProfileCoverHeightWithImage
-                      : _kProfileCoverHeightWithoutImage,
-                  width: double.infinity,
-                  decoration: hasCoverImage
-                      ? null
-                      : BoxDecoration(
+          Stack(
+            // The cover art is clipped to rounded top corners, but the avatar
+            // must NOT be: it deliberately overflows past the cover's bottom
+            // edge (see avatarOverlap below), and a ClipRRect always clips to
+            // its child's layout bounds regardless of the child Stack's own
+            // Clip.none — so the avatar has to live in this outer,
+            // unclipped Stack rather than inside the ClipRRect below.
+            clipBehavior: Clip.none,
+            children: [
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(KubusRadius.lg),
+                ),
+                child: Stack(
+                  children: [
+                    Container(
+                      height: hasCoverImage
+                          ? _kProfileCoverHeightWithImage
+                          : _kProfileCoverHeightWithoutImage,
+                      width: double.infinity,
+                      decoration: hasCoverImage
+                          ? null
+                          : BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  themeProvider.accentColor
+                                      .withValues(alpha: 0.28),
+                                  themeProvider.accentColor
+                                      .withValues(alpha: 0.08),
+                                ],
+                              ),
+                            ),
+                      child: hasCoverImage
+                          ? Image.network(
+                              coverImageUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        themeProvider.accentColor
+                                            .withValues(alpha: 0.28),
+                                        themeProvider.accentColor
+                                            .withValues(alpha: 0.08),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            )
+                          : null,
+                    ),
+                    Positioned.fill(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
                           gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
                             colors: [
-                              themeProvider.accentColor.withValues(alpha: 0.28),
-                              themeProvider.accentColor.withValues(alpha: 0.08),
+                              Colors.black
+                                  .withValues(alpha: hasCoverImage ? 0.12 : 0),
+                              Colors.transparent,
+                              Colors.black.withValues(alpha: 0.26),
                             ],
                           ),
                         ),
-                  child: hasCoverImage
-                      ? Image.network(
-                          coverImageUrl,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: [
-                                    themeProvider.accentColor
-                                        .withValues(alpha: 0.28),
-                                    themeProvider.accentColor
-                                        .withValues(alpha: 0.08),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                        )
-                      : null,
-                ),
-                Positioned.fill(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.black
-                              .withValues(alpha: hasCoverImage ? 0.12 : 0),
-                          Colors.transparent,
-                          Colors.black.withValues(alpha: 0.26),
-                        ],
                       ),
+                    ),
+                  ],
+                ),
+              ),
+              Positioned(
+                left: KubusSpacing.lg,
+                bottom: -avatarOverlap,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: scheme.surface.withValues(alpha: 0.94),
+                    borderRadius: BorderRadius.circular(
+                      avatarRingShapeRadius,
+                    ),
+                    border: Border.all(
+                      color: scheme.outline.withValues(alpha: 0.24),
+                      width: KubusSizes.hairline + 0.2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Theme.of(context)
+                            .shadowColor
+                            .withValues(alpha: 0.12),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(avatarRingPadding),
+                    child: AvatarWidget(
+                      wallet: user!.id,
+                      avatarUrl: user!.profileImageUrl,
+                      radius: avatarRadius,
+                      borderWidth: 0,
+                      borderColor: Colors.transparent,
+                      cornerRadiusFactor: avatarCornerRadiusFactor,
+                      enableProfileNavigation: false,
+                      heroTag: widget.heroTag,
                     ),
                   ),
                 ),
-                Positioned(
-                  left: KubusSpacing.lg,
-                  bottom: -avatarOverlap,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: scheme.surface.withValues(alpha: 0.94),
-                      borderRadius: BorderRadius.circular(
-                        avatarRingShapeRadius,
-                      ),
-                      border: Border.all(
-                        color: scheme.outline.withValues(alpha: 0.24),
-                        width: KubusSizes.hairline + 0.2,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Theme.of(context)
-                              .shadowColor
-                              .withValues(alpha: 0.12),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(avatarRingPadding),
-                      child: AvatarWidget(
-                        wallet: user!.id,
-                        avatarUrl: user!.profileImageUrl,
-                        radius: avatarRadius,
-                        borderWidth: 0,
-                        borderColor: Colors.transparent,
-                        cornerRadiusFactor: avatarCornerRadiusFactor,
-                        enableProfileNavigation: false,
-                        heroTag: widget.heroTag,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
           Padding(
             padding: EdgeInsets.only(
@@ -861,13 +874,12 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                 ),
                 if (user!.bio.isNotEmpty) ...[
                   const SizedBox(height: KubusSpacing.sm),
-                  Text(
-                    user!.bio,
+                  ExpandableDetailText(
+                    text: user!.bio,
+                    collapsedMaxLines: 3,
                     style: KubusTextStyles.detailBody.copyWith(
                       color: scheme.onSurface.withValues(alpha: 0.78),
                     ),
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
                 const SizedBox(height: KubusSpacing.sm),
