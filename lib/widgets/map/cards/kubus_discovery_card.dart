@@ -67,8 +67,9 @@ class KubusDiscoveryCard extends StatelessWidget {
   final double tasksTopGap;
   final double expandButtonSize;
 
-  /// Shared surface radius. Mobile map composition opts into
-  /// [KubusRadius.md]; desktop keeps the roomier [KubusRadius.lg].
+  /// Shared surface radius. The mobile map composition opts into
+  /// [KubusRadius.sm] so the collapsed bar matches the search field stacked
+  /// above it; desktop keeps the roomier [KubusRadius.lg].
   final double surfaceRadius;
 
   final List<KubusDiscoveryToggleConfig> toggleConfigs;

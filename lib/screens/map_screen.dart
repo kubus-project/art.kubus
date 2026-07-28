@@ -4951,6 +4951,9 @@ class _MapScreenState extends State<MapScreen>
       accentColor: themeProvider.accentColor,
       minCharsHint: l10n.mapSearchMinCharsHint,
       noResultsText: l10n.mapNoSuggestions,
+      // Keep the suggestions panel on the same radius as the field it hangs
+      // off, so the header reads as one rectangular composition.
+      dropdownRadius: KubusMapMetrics.headerSurfaceRadius,
       onDismiss: _dismissSearchResults,
       onResultTap: (result) {
         unawaited(_handleSearchResultTap(result));
@@ -5341,21 +5344,39 @@ class _MapScreenState extends State<MapScreen>
       semanticsLabel: l10n.mapSearchHint,
       enableBlur: kubusMapBlurEnabled(context),
       useMapGlassSurface: true,
-      borderRadius: KubusRadius.md,
+      borderRadius: KubusMapMetrics.headerSurfaceRadius,
       height: fieldHeight,
       onSubmitted: (_) => _mapSearchController.onSubmitted(),
       trailingBuilder: (context, query) {
         if (query.trim().isNotEmpty) {
-          return IconButton(
-            tooltip: l10n.mapClearSearchTooltip,
-            icon: Icon(Icons.close, color: hintColor),
-            onPressed: () =>
-                _mapSearchController.clearQueryWithContext(context),
-          );
+          return _buildSearchClearToggle(l10n, hintColor);
         }
 
         return _buildSearchFilterToggle(l10n, hintColor);
       },
+    );
+  }
+
+  /// Clear control for the search field.
+  ///
+  /// Uses the same canonical [KubusGlassIconButton] as
+  /// [_buildSearchFilterToggle] (same 44px tap target, same rectangular
+  /// radius) so the two trailing controls swap in and out without the field
+  /// chrome jumping between a bare Material icon button and the map's glass
+  /// language.
+  Widget _buildSearchClearToggle(AppLocalizations l10n, Color hintColor) {
+    return KubusGlassIconButton(
+      icon: Icons.close,
+      tooltip: l10n.mapClearSearchTooltip,
+      semanticsLabel: l10n.mapClearSearchTooltip,
+      size: KubusHeaderMetrics.actionHitArea,
+      iconColor: hintColor,
+      borderRadius: KubusMapMetrics.headerSurfaceRadius,
+      enableBlur: kubusMapBlurEnabled(context),
+      tooltipPreferBelow: false,
+      tooltipVerticalOffset: 18,
+      tooltipMargin: const EdgeInsets.symmetric(horizontal: 24),
+      onPressed: () => _mapSearchController.clearQueryWithContext(context),
     );
   }
 
@@ -5379,7 +5400,7 @@ class _MapScreenState extends State<MapScreen>
         size: KubusHeaderMetrics.actionHitArea,
         accentColor: accent,
         iconColor: hintColor,
-        borderRadius: KubusRadius.sm,
+        borderRadius: KubusMapMetrics.headerSurfaceRadius,
         enableBlur: kubusMapBlurEnabled(context),
         tooltipPreferBelow: false,
         tooltipVerticalOffset: 18,
@@ -5753,7 +5774,7 @@ class _MapScreenState extends State<MapScreen>
       badgeGap: KubusSpacing.sm + KubusSpacing.xxs,
       tasksTopGap: KubusSpacing.sm + KubusSpacing.xxs,
       compactWhenCollapsed: true,
-      surfaceRadius: KubusRadius.md,
+      surfaceRadius: KubusMapMetrics.headerSurfaceRadius,
     );
   }
 

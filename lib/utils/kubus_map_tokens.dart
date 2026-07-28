@@ -52,6 +52,16 @@ abstract final class KubusMapMetrics {
   /// Minimum interactive dimension for every map control.
   static const double minimumTouchTarget = KubusHeaderMetrics.actionHitArea;
 
+  /// Corner radius shared by the stacked mobile map header surfaces (search
+  /// field and discovery path bar).
+  ///
+  /// These two sit directly on top of each other, so they must resolve to the
+  /// same token or the header reads as two unrelated shapes. [KubusRadius.sm]
+  /// is the documented "Buttons, Inputs" radius: it keeps the header
+  /// rectangular instead of the pill/capsule silhouette produced by the larger
+  /// container tokens.
+  static const double headerSurfaceRadius = KubusRadius.sm;
+
   /// Visible mobile primary control size, including its tap target.
   static const double mobileControlSize = 48.0;
 
