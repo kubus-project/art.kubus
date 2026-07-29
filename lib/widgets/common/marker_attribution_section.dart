@@ -4,6 +4,7 @@ import '../../l10n/app_localizations.dart';
 import '../../utils/design_tokens.dart';
 import '../../models/art_marker.dart';
 import '../../models/artwork.dart';
+import '../../utils/artwork_media_resolver.dart';
 
 /// Attribution block rendered below a description: artwork artist, photo
 /// author/licence, and data source.
@@ -50,6 +51,36 @@ class MarkerAttributionSection extends StatelessWidget {
       imageAttribution: artwork.imageAttribution,
       imageAuthor: artwork.imageAuthor,
       imageLicense: artwork.imageLicense,
+    );
+  }
+
+  /// Attribution resolved from a linked artwork and its map marker.
+  ///
+  /// Attribution follows the same source precedence as the rendered cover:
+  /// artwork media first, then marker media when the artwork has no cover.
+  factory MarkerAttributionSection.fromMarkerAndArtwork(
+    ArtMarker? marker,
+    Artwork? artwork, {
+    Key? key,
+  }) {
+    final usesArtworkCover =
+        ArtworkMediaResolver.resolveCover(artwork: artwork) != null;
+    final imageAuthor =
+        usesArtworkCover ? artwork?.imageAuthor : marker?.imageAuthor;
+    final imageLicense =
+        usesArtworkCover ? artwork?.imageLicense : marker?.imageLicense;
+    final imageAttribution =
+        usesArtworkCover ? artwork?.imageAttribution : marker?.imageAttribution;
+    final hasStructuredPhotoCredit =
+        _clean(imageAuthor) != null && _clean(imageLicense) != null;
+    return MarkerAttributionSection(
+      key: key,
+      // Linked-artwork surfaces already render the artwork creator byline.
+      artist: artwork == null ? marker?.artistName : null,
+      imageAttribution: hasStructuredPhotoCredit ? null : imageAttribution,
+      imageAuthor: imageAuthor,
+      imageLicense: imageLicense,
+      sourceAttribution: marker?.sourceAttribution,
     );
   }
 
@@ -108,7 +139,8 @@ class MarkerAttributionSection extends StatelessWidget {
 
     if (artistValue != null &&
         !RegExp(r'^unknown$', caseSensitive: false).hasMatch(artistValue)) {
-      addRow(Icons.brush_outlined, l10n.markerAttributionArtistLabel, artistValue);
+      addRow(
+          Icons.brush_outlined, l10n.markerAttributionArtistLabel, artistValue);
     }
     if (photoLine.isNotEmpty) {
       addRow(

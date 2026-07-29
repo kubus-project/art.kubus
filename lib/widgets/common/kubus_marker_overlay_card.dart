@@ -13,6 +13,7 @@ import '../artwork_creator_byline.dart';
 import '../inline_loading.dart';
 import '../map/kubus_map_glass_surface.dart';
 import 'kubus_cached_image.dart';
+import 'marker_attribution_section.dart';
 
 part 'kubus_marker_overlay_card_support.dart';
 part 'kubus_marker_overlay_card_header.dart';
@@ -208,6 +209,10 @@ class KubusMarkerOverlayCard extends StatelessWidget {
               ),
             ),
           ],
+          MarkerAttributionSection.fromMarkerAndArtwork(
+            marker,
+            artwork,
+          ),
         ],
       ),
     );
