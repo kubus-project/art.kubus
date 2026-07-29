@@ -4083,7 +4083,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final useMapBlur = kubusMapBlurEnabled(context);
     return KubusGlassIconButton(
       icon: Icons.info_outline,
-      tooltip: 'Map attributions',
+      tooltip: AppLocalizations.of(context)!.mapAttributionsTitle,
       borderRadius: KubusRadius.sm,
       iconColor: Theme.of(context).colorScheme.primary,
       enableBlur: useMapBlur,

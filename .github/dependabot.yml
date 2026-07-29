@@ -1,20 +1,30 @@
 version: 2
+
 updates:
   - package-ecosystem: github-actions
     directory: /
     target-branch: dev
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
-    labels:
-      - dependencies
-      - ci
+      day: monday
+      time: "06:00"
+      timezone: Europe/Ljubljana
+    open-pull-requests-limit: 2
+    groups:
+      github-actions:
+        patterns:
+          - "*"
 
   - package-ecosystem: npm
     directory: /
     target-branch: dev
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
-    labels:
-      - dependencies
+      day: monday
+      time: "06:30"
+      timezone: Europe/Ljubljana
+    open-pull-requests-limit: 2
+    groups:
+      npm-dependencies:
+        patterns:
+          - "*"

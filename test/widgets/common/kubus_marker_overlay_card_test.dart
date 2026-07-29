@@ -94,7 +94,7 @@ void main() {
   });
 
   testWidgets(
-    'compact mobile preview stays map-first and keeps core actions accessible',
+    'full marker card keeps artist, quick actions, and stack controls accessible',
     (tester) async {
       final marker = _marker();
       var closeCount = 0;
@@ -113,13 +113,11 @@ void main() {
               baseColor: Colors.teal,
               displayTitle: 'A deliberately long marker title',
               canPresentExhibition: false,
-              description:
-                  'A compact description that should remain a single calm line.',
+              description: 'A concise marker description.',
               onClose: () => closeCount += 1,
               onPrimaryAction: () => detailsCount += 1,
               primaryActionIcon: Icons.arrow_forward,
               primaryActionLabel: 'View details',
-              presentation: KubusMarkerOverlayCardPresentation.compactMobile,
               stackCount: 3,
               stackIndex: 1,
               onPreviousStacked: () => previousCount += 1,
@@ -129,13 +127,15 @@ void main() {
                 MarkerOverlayActionSpec(
                   icon: Icons.favorite_outline,
                   label: 'Favorite',
+                  tooltip: 'Favorite',
+                  semanticsLabel: 'Favorite',
                   isActive: false,
                   activeColor: Colors.teal,
                   onTap: () => quickActionCount += 1,
                 ),
               ],
               maxWidth: 320,
-              maxHeight: 208,
+              maxHeight: 420,
             ),
           ),
         ),
@@ -146,10 +146,12 @@ void main() {
         find.byKey(const ValueKey<String>('marker_overlay_card_surface')),
       );
       expect(surface.width, lessThanOrEqualTo(320));
-      expect(surface.height, lessThanOrEqualTo(208));
-      expect(find.text('2/3'), findsOneWidget);
-      expect(find.text('Artist'), findsOneWidget);
-      expect(find.byTooltip('Quick actions'), findsOneWidget);
+      expect(surface.height, lessThanOrEqualTo(420));
+      expect(
+        find.textContaining('Artist', findRichText: true),
+        findsOneWidget,
+      );
+      expect(find.byTooltip('Favorite'), findsOneWidget);
       final previewSemantics = tester.widget<Semantics>(
         find.byKey(const ValueKey<String>('marker_overlay_card_surface')),
       );
@@ -161,9 +163,7 @@ void main() {
       await tester.tap(find.byTooltip('Close'));
       await tester.tap(find.byTooltip('Next page'));
       await tester.tap(find.byTooltip('Previous page'));
-      await tester.tap(find.byTooltip('Quick actions'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Favorite'));
+      await tester.tap(find.byTooltip('Favorite'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('View details'));
       await tester.pump();
@@ -181,7 +181,7 @@ void main() {
     },
   );
 
-  testWidgets('compact mobile preview supports large accessibility text',
+  testWidgets('full mobile card supports large accessibility text',
       (tester) async {
     final marker = _marker();
     await tester.pumpWidget(
@@ -203,9 +203,8 @@ void main() {
               onPrimaryAction: () {},
               primaryActionIcon: Icons.arrow_forward,
               primaryActionLabel: 'View details',
-              presentation: KubusMarkerOverlayCardPresentation.compactMobile,
               maxWidth: 328,
-              maxHeight: 288,
+              maxHeight: 360,
             ),
           ),
         ),
@@ -216,7 +215,7 @@ void main() {
     final surface = tester.getRect(
       find.byKey(const ValueKey<String>('marker_overlay_card_surface')),
     );
-    expect(surface.height, lessThanOrEqualTo(288));
+    expect(surface.height, lessThanOrEqualTo(360));
     expect(find.text('Accessible marker title'), findsOneWidget);
     expect(find.byTooltip('Close'), findsOneWidget);
     expect(find.text('View details'), findsOneWidget);

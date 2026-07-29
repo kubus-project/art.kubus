@@ -14,6 +14,22 @@ import '../services/web_maplibre_runtime.dart';
 import '../utils/design_tokens.dart';
 import 'kubus_snackbar.dart';
 
+/// What [ArtMapView]'s style-load watchdog should do when it fires.
+enum MapStyleTimeoutOutcome {
+  /// The style already loaded, a fallback already ran, or the browser is still
+  /// recovering a lost WebGL context — do nothing.
+  ignore,
+
+  /// The map never produced a controller, so there is nothing to swap a
+  /// fallback style onto. Surface the error card + retry button instead of
+  /// leaving a blank canvas up forever.
+  failWithoutFallback,
+
+  /// The map exists but never reported a loaded style — show the error card and
+  /// try the bundled fallback style.
+  failAndFallback,
+}
+
 /// Shared MapLibre layer used by both mobile and desktop map screens.
 ///
 /// UI overlays (filters, marker cards, discovery progress, etc.) remain
@@ -91,6 +107,42 @@ class ArtMapView extends StatefulWidget {
   }) {
     return styleLoaded && !styleFailed && !pendingStyleApply;
   }
+
+  /// Decides what the style-load watchdog does when it fires.
+  ///
+  /// Kept pure so the "platform view never initialized" path is testable: when
+  /// `MapLibreMap.onPlatformViewCreated` throws inside `initPlatform(...)` it
+  /// never invokes `onMapCreated`, so [ArtMapView] never receives a controller
+  /// and cannot apply a fallback style. That case must still surface the error
+  /// card rather than hang on a blank canvas.
+  @visibleForTesting
+  static MapStyleTimeoutOutcome styleTimeoutOutcomeForTest({
+    required bool styleLoaded,
+    required bool didFallback,
+    required bool isWeb,
+    required bool webGLRecovering,
+    required bool hasController,
+  }) {
+    if (styleLoaded) return MapStyleTimeoutOutcome.ignore;
+    if (didFallback) return MapStyleTimeoutOutcome.ignore;
+    // WebGL loss is transient; the recovery path re-arms the watchdog.
+    if (isWeb && webGLRecovering) return MapStyleTimeoutOutcome.ignore;
+    if (!hasController) return MapStyleTimeoutOutcome.failWithoutFallback;
+    return MapStyleTimeoutOutcome.failAndFallback;
+  }
+
+  /// Whether a manual retry from the error card must force the MapLibre
+  /// platform view to be recreated (by changing its widget key) rather than
+  /// just re-applying a style to the existing controller.
+  ///
+  /// True exactly when there is no controller: `initPlatform` failed before
+  /// `onMapCreated` ever fired, so there is nothing to call `setStyle` on,
+  /// and rebuilding with the same key would keep the failed platform view
+  /// alive — the retry button would then only hide the error card until the
+  /// next watchdog timeout instead of actually retrying.
+  @visibleForTesting
+  static bool retryRequiresMapRecreation({required bool hasController}) =>
+      !hasController;
 
   /// Web-only policy for MapLibre's `preserveDrawingBuffer`.
   ///
@@ -195,7 +247,16 @@ class _ArtMapViewState extends State<ArtMapView> {
   bool _mapCreated = false;
   int? _debugMapId;
 
+  // Bumped on retry when the platform view never produced a controller (i.e.
+  // `initPlatform` failed before `onMapCreated`). The MapLibreMap widget's key
+  // is derived from this, so bumping it forces Flutter to tear down and
+  // recreate the platform view instead of rebuilding in place; a rebuild with
+  // the same key would keep the failed view alive and retry would never do
+  // anything but hide the error card until the next timeout.
+  int _mapViewEpoch = 0;
+
   Timer? _styleLoadTimer;
+  bool _styleWatchdogArmed = false;
   bool _styleLoaded = false;
   bool _didFallback = false;
   bool _styleFailed = false;
@@ -449,6 +510,7 @@ class _ArtMapViewState extends State<ArtMapView> {
 
   void _resetStyleLoadState() {
     _styleLoadTimer?.cancel();
+    _styleWatchdogArmed = false;
     _styleLoaded = false;
     _didFallback = false;
     _styleFailed = false;
@@ -541,19 +603,33 @@ class _ArtMapViewState extends State<ArtMapView> {
 
   void _startStyleHealthCheck() {
     _styleLoadTimer?.cancel();
+    _styleWatchdogArmed = true;
     _styleLoadTimer = Timer(MapStyleService.styleLoadTimeout, () {
       if (!mounted || _disposed) return;
-      if (_styleLoaded) return;
-      if (_didFallback) return;
-      if (kIsWeb && _webGLRecovering) return;
 
-      final controller = _controller;
-      if (controller == null) return;
+      final outcome = ArtMapView.styleTimeoutOutcomeForTest(
+        styleLoaded: _styleLoaded,
+        didFallback: _didFallback,
+        isWeb: kIsWeb,
+        webGLRecovering: _webGLRecovering,
+        hasController: _controller != null,
+      );
 
-      _markStyleFailure('Map style failed to load.');
-      AppConfig.debugPrint(
-          'ArtMapView: style load timeout; switching to fallback');
-      unawaited(_attemptFallbackStyle());
+      switch (outcome) {
+        case MapStyleTimeoutOutcome.ignore:
+          return;
+        case MapStyleTimeoutOutcome.failWithoutFallback:
+          AppConfig.debugPrint(
+              'ArtMapView: map never initialized within style load timeout');
+          _markStyleFailure('Map failed to load.');
+          return;
+        case MapStyleTimeoutOutcome.failAndFallback:
+          _markStyleFailure('Map style failed to load.');
+          AppConfig.debugPrint(
+              'ArtMapView: style load timeout; switching to fallback');
+          unawaited(_attemptFallbackStyle());
+          return;
+      }
     });
   }
 
@@ -600,17 +676,35 @@ class _ArtMapViewState extends State<ArtMapView> {
       );
     }
 
+    // Arm the style watchdog as soon as the platform view is about to be
+    // created rather than waiting for `onMapCreated`: platform init can fail
+    // before `onMapCreated` is ever invoked, and previously nothing would then
+    // ever time out, so the map hung on a blank canvas with no error card.
+    // `_startStyleHealthCheck()` is idempotent-guarded via `_styleWatchdogArmed`
+    // so rebuilds do not keep restarting the timeout window.
+    if (!_styleWatchdogArmed) {
+      _startStyleHealthCheck();
+    }
+
     return LayoutBuilder(
       builder: (context, constraints) {
         _handleWebLayoutChanged(
           Size(constraints.maxWidth, constraints.maxHeight),
         );
 
+        // Capture the epoch this specific platform view was built under. A
+        // retry that bumps `_mapViewEpoch` disposes this widget but cannot
+        // cancel MapLibre's in-flight `initPlatform`; if that original
+        // initialization was merely slow (not actually failed) and completes
+        // after the replacement view, its callbacks must be recognized as
+        // stale and ignored rather than overwriting state that now belongs
+        // to the newer view.
+        final viewEpoch = _mapViewEpoch;
         return SizedBox.expand(
           child: Stack(
             children: [
               ml.MapLibreMap(
-                key: const ValueKey('art_map_view_maplibre'),
+                key: ValueKey<String>('art_map_view_maplibre-$_mapViewEpoch'),
                 styleString: resolved,
                 // MapLibre is a platform view on all supported targets (incl.
                 // web via MapLibre GL JS). Leaving this null can cause the
@@ -663,6 +757,17 @@ class _ArtMapViewState extends State<ArtMapView> {
                     // Widget is going away; don't attach this controller.
                     return;
                   }
+                  if (viewEpoch != _mapViewEpoch) {
+                    // A retry superseded this view before its (slow, not
+                    // actually failed) initialization finished. Ignore the
+                    // stale callback instead of overwriting the controller
+                    // for the view that replaced it.
+                    AppConfig.debugPrint(
+                      'ArtMapView: ignoring onMapCreated from superseded '
+                      'view epoch $viewEpoch (current: $_mapViewEpoch)',
+                    );
+                    return;
+                  }
                   assert(() {
                     if (_mapCreated) {
                       AppConfig.debugPrint(
@@ -689,6 +794,7 @@ class _ArtMapViewState extends State<ArtMapView> {
                 },
                 onStyleLoadedCallback: () {
                   if (_disposed) return;
+                  if (viewEpoch != _mapViewEpoch) return;
                   _styleStopwatch?.stop();
                   _styleLoadTimer?.cancel();
                   final elapsedMs = _styleStopwatch?.elapsedMilliseconds;
@@ -797,14 +903,27 @@ class _ArtMapViewState extends State<ArtMapView> {
                             _styleFailureReason ?? 'Map style failed to load.',
                         onRetry: () {
                           if (!mounted) return;
+                          final needsRecreate =
+                              ArtMapView.retryRequiresMapRecreation(
+                            hasController: _controller != null,
+                          );
                           setState(() {
                             _styleFailed = false;
                             _styleFailureReason = null;
+                            if (needsRecreate) {
+                              _mapViewEpoch += 1;
+                            }
                           });
                           _resetStyleLoadState();
                           _refreshStyleFuture();
                           _startStyleHealthCheck();
-                          unawaited(_applyStyleToController());
+                          // A fresh platform view will report its own style via
+                          // onMapCreated -> _resetStyleLoadState; only apply the
+                          // resolved style directly when a controller already
+                          // exists (the failAndFallback case).
+                          if (!needsRecreate) {
+                            unawaited(_applyStyleToController());
+                          }
                         },
                       ),
                     ),
