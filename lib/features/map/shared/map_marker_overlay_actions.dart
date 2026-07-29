@@ -52,7 +52,11 @@ List<MarkerOverlayActionSpec> buildMarkerOverlayActions({
     );
   }
 
-  final savedItemsProvider = context.read<SavedItemsProvider>();
+  // Watched, not read: the Save action's icon and label are derived from this
+  // provider, so the overlay must rebuild when a toggle (or a save made
+  // elsewhere) notifies listeners. `read` left the card showing stale state
+  // until an unrelated map rebuild happened to arrive.
+  final savedItemsProvider = context.watch<SavedItemsProvider>();
 
   if (event != null) {
     final isSaved = savedItemsProvider.isEventSaved(event.id);
