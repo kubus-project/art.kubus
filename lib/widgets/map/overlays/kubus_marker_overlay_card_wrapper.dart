@@ -502,9 +502,7 @@ class _KubusMarkerOverlayAnimatedPositionedState
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) widget.onLayoutSettled();
-    });
+    widget.onLayoutSettled();
   }
 
   @override
@@ -515,9 +513,7 @@ class _KubusMarkerOverlayAnimatedPositionedState
     final positionChanged =
         oldWidget.left != widget.left || oldWidget.top != widget.top;
     if (!positionChanged && oldWidget.geometryKey != widget.geometryKey) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) widget.onLayoutSettled();
-      });
+      widget.onLayoutSettled();
     }
   }
 
