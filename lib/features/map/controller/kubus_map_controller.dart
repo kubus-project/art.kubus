@@ -357,7 +357,6 @@ class KubusMapController {
   int? _lastCorrectedMarkerOverlayLayoutRevision;
   int? _markerCompositionInFlightToken;
   int? _awaitingFinalMarkerLayoutToken;
-  int? _acknowledgedMarkerOverlayToken;
 
   KubusMapCameraState get camera => _camera;
   bool get autoFollow => _autoFollow;
@@ -383,7 +382,6 @@ class KubusMapController {
     _lastCorrectedMarkerOverlayLayoutRevision = null;
     _markerCompositionInFlightToken = null;
     _awaitingFinalMarkerLayoutToken = null;
-    _acknowledgedMarkerOverlayToken = null;
   }
 
   /// Owns the one-shot camera correction for an anchored marker overlay.
@@ -407,11 +405,7 @@ class KubusMapController {
     }
 
     void acknowledge() {
-      if (!request.finalLayoutIsValid ||
-          _acknowledgedMarkerOverlayToken == request.selectionToken) {
-        return;
-      }
-      _acknowledgedMarkerOverlayToken = request.selectionToken;
+      if (!request.finalLayoutIsValid) return;
       onMarkerOverlayAcknowledged?.call(
           request.marker.id, request.selectionToken);
     }
