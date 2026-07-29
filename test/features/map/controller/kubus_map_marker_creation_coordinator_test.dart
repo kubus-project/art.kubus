@@ -19,27 +19,27 @@ void main() {
   final createdAt = DateTime.utc(2026, 7, 29);
 
   Artwork artwork() => Artwork(
-    id: 'artwork-1',
-    walletAddress: 'wallet-1',
-    title: 'Street art',
-    artist: 'Artist',
-    description: 'Description',
-    imageUrl: 'https://cdn.example/cover.jpg',
-    position: snappedPosition,
-    rewards: 0,
-    createdAt: createdAt,
-  );
+        id: 'artwork-1',
+        walletAddress: 'wallet-1',
+        title: 'Street art',
+        artist: 'Artist',
+        description: 'Description',
+        imageUrl: 'https://cdn.example/cover.jpg',
+        position: snappedPosition,
+        rewards: 0,
+        createdAt: createdAt,
+      );
 
   ArtMarker marker() => ArtMarker(
-    id: 'marker-1',
-    name: 'Street art',
-    description: 'Description',
-    position: snappedPosition,
-    type: ArtMarkerType.streetArt,
-    artworkId: 'artwork-1',
-    createdAt: createdAt,
-    createdBy: 'wallet-1',
-  );
+        id: 'marker-1',
+        name: 'Street art',
+        description: 'Description',
+        position: snappedPosition,
+        type: ArtMarkerType.streetArt,
+        artworkId: 'artwork-1',
+        createdAt: createdAt,
+        createdBy: 'wallet-1',
+      );
 
   MapMarkerFormResult form({
     String? imageAuthor = 'Photographer',
@@ -110,33 +110,31 @@ void main() {
       final coordinator = KubusMapMarkerCreationCoordinator(
         coverUploader: coverUploader(),
         artworkCreator: artworkCreator(createdArtwork),
-        artworkRollback:
-            (
-              Artwork? artwork, {
-              required bool markerPersistenceAttempted,
-            }) async {
-              fail('Successful persistence must not roll back its artwork.');
-            },
-        markerPersister:
-            ({
-              required LatLng location,
-              required String title,
-              required String description,
-              required ArtMarkerType type,
-              required String category,
-              required String? artworkId,
-              required Map<String, dynamic>? metadata,
-              required List<String> tags,
-              required bool isPublic,
-              required double scale,
-              required String? modelCID,
-              required String? modelURL,
-            }) async {
-              expect(location, snappedPosition);
-              expect(artworkId, createdArtwork.id);
-              persistedMetadata = metadata;
-              return persistedMarker;
-            },
+        artworkRollback: (
+          Artwork? artwork, {
+          required bool markerPersistenceAttempted,
+        }) async {
+          fail('Successful persistence must not roll back its artwork.');
+        },
+        markerPersister: ({
+          required LatLng location,
+          required String title,
+          required String description,
+          required ArtMarkerType type,
+          required String category,
+          required String? artworkId,
+          required Map<String, dynamic>? metadata,
+          required List<String> tags,
+          required bool isPublic,
+          required double scale,
+          required String? modelCID,
+          required String? modelURL,
+        }) async {
+          expect(location, snappedPosition);
+          expect(artworkId, createdArtwork.id);
+          persistedMetadata = metadata;
+          return persistedMarker;
+        },
       );
 
       final outcome = await coordinator.createMarker(
@@ -174,30 +172,28 @@ void main() {
       final coordinator = KubusMapMarkerCreationCoordinator(
         coverUploader: coverUploader(),
         artworkCreator: artworkCreator(artwork()),
-        artworkRollback:
-            (
-              Artwork? artwork, {
-              required bool markerPersistenceAttempted,
-            }) async {
-              rollbackCalls++;
-            },
-        markerPersister:
-            ({
-              required LatLng location,
-              required String title,
-              required String description,
-              required ArtMarkerType type,
-              required String category,
-              required String? artworkId,
-              required Map<String, dynamic>? metadata,
-              required List<String> tags,
-              required bool isPublic,
-              required double scale,
-              required String? modelCID,
-              required String? modelURL,
-            }) async {
-              return null;
-            },
+        artworkRollback: (
+          Artwork? artwork, {
+          required bool markerPersistenceAttempted,
+        }) async {
+          rollbackCalls++;
+        },
+        markerPersister: ({
+          required LatLng location,
+          required String title,
+          required String description,
+          required ArtMarkerType type,
+          required String category,
+          required String? artworkId,
+          required Map<String, dynamic>? metadata,
+          required List<String> tags,
+          required bool isPublic,
+          required double scale,
+          required String? modelCID,
+          required String? modelURL,
+        }) async {
+          return null;
+        },
       );
 
       final outcome = await coordinator.createMarker(
@@ -224,24 +220,23 @@ void main() {
       final coordinator = KubusMapMarkerCreationCoordinator(
         coverUploader: coverUploader(),
         artworkCreator: artworkCreator(artwork()),
-        markerPersister:
-            ({
-              required LatLng location,
-              required String title,
-              required String description,
-              required ArtMarkerType type,
-              required String category,
-              required String? artworkId,
-              required Map<String, dynamic>? metadata,
-              required List<String> tags,
-              required bool isPublic,
-              required double scale,
-              required String? modelCID,
-              required String? modelURL,
-            }) async {
-              persistenceCalls++;
-              return marker();
-            },
+        markerPersister: ({
+          required LatLng location,
+          required String title,
+          required String description,
+          required ArtMarkerType type,
+          required String category,
+          required String? artworkId,
+          required Map<String, dynamic>? metadata,
+          required List<String> tags,
+          required bool isPublic,
+          required double scale,
+          required String? modelCID,
+          required String? modelURL,
+        }) async {
+          persistenceCalls++;
+          return marker();
+        },
       );
 
       final outcome = await coordinator.createMarker(

@@ -11,54 +11,50 @@ import '../../../utils/grid_utils.dart';
 import '../../../widgets/map_marker_dialog.dart';
 import '../shared/map_screen_shared_helpers.dart';
 
-typedef KubusStreetArtCoverUploader =
-    Future<String?> Function({
-      required Uint8List fileBytes,
-      required String? fileName,
-      required String? fileType,
-      required String? walletAddress,
-      required String source,
-      required String debugLabel,
-    });
+typedef KubusStreetArtCoverUploader = Future<String?> Function({
+  required Uint8List fileBytes,
+  required String? fileName,
+  required String? fileType,
+  required String? walletAddress,
+  required String source,
+  required String debugLabel,
+});
 
-typedef KubusStreetArtArtworkCreator =
-    Future<Artwork> Function({
-      required String title,
-      required String description,
-      required String coverImageUrl,
-      required String walletAddress,
-      required String category,
-      required LatLng position,
-      required bool isPublic,
-      required String? artistName,
-      required String imageAuthor,
-      required String imageLicense,
-    });
+typedef KubusStreetArtArtworkCreator = Future<Artwork> Function({
+  required String title,
+  required String description,
+  required String coverImageUrl,
+  required String walletAddress,
+  required String category,
+  required LatLng position,
+  required bool isPublic,
+  required String? artistName,
+  required String imageAuthor,
+  required String imageLicense,
+});
 
-typedef KubusStreetArtArtworkRollback =
-    Future<void> Function(
-      Artwork? artwork, {
-      required bool markerPersistenceAttempted,
-    });
+typedef KubusStreetArtArtworkRollback = Future<void> Function(
+  Artwork? artwork, {
+  required bool markerPersistenceAttempted,
+});
 
-typedef KubusMarkerPersister =
-    Future<ArtMarker?> Function({
-      required LatLng location,
-      required String title,
-      required String description,
-      required ArtMarkerType type,
-      required String category,
-      required String? artworkId,
-      required Map<String, dynamic>? metadata,
-      required List<String> tags,
-      required bool isPublic,
-      required double scale,
-      required String? modelCID,
-      required String? modelURL,
-    });
+typedef KubusMarkerPersister = Future<ArtMarker?> Function({
+  required LatLng location,
+  required String title,
+  required String description,
+  required ArtMarkerType type,
+  required String category,
+  required String? artworkId,
+  required Map<String, dynamic>? metadata,
+  required List<String> tags,
+  required bool isPublic,
+  required double scale,
+  required String? modelCID,
+  required String? modelURL,
+});
 
-typedef KubusExhibitionRelationWriter =
-    Future<void> Function(String exhibitionId, List<String> entityIds);
+typedef KubusExhibitionRelationWriter = Future<void> Function(
+    String exhibitionId, List<String> entityIds);
 
 @immutable
 class KubusMapMarkerCreationMessages {
@@ -93,10 +89,10 @@ class KubusMapMarkerCreationOutcome {
   const KubusMapMarkerCreationOutcome._({this.marker, this.error});
 
   const KubusMapMarkerCreationOutcome.success(ArtMarker marker)
-    : this._(marker: marker);
+      : this._(marker: marker);
 
   const KubusMapMarkerCreationOutcome.failure([Object? error])
-    : this._(error: error);
+      : this._(error: error);
 
   final ArtMarker? marker;
   final Object? error;
@@ -117,19 +113,17 @@ class KubusMapMarkerCreationCoordinator {
     KubusStreetArtArtworkCreator? artworkCreator,
     KubusStreetArtArtworkRollback? artworkRollback,
     KubusMarkerPersister? markerPersister,
-  }) : assert(
-         mapMarkerService != null || markerPersister != null,
-         'A map marker service or marker persister is required.',
-       ),
-       _coverUploader =
-           coverUploader ?? KubusMapMarkerCreationHelpers.uploadStreetArtCover,
-       _artworkCreator =
-           artworkCreator ??
-           KubusMapMarkerCreationHelpers.createStreetArtArtwork,
-       _artworkRollback =
-           artworkRollback ??
-           KubusMapMarkerCreationHelpers.rollbackStreetArtArtwork,
-       _markerPersister = markerPersister ?? mapMarkerService!.createMarker;
+  })  : assert(
+          mapMarkerService != null || markerPersister != null,
+          'A map marker service or marker persister is required.',
+        ),
+        _coverUploader =
+            coverUploader ?? KubusMapMarkerCreationHelpers.uploadStreetArtCover,
+        _artworkCreator = artworkCreator ??
+            KubusMapMarkerCreationHelpers.createStreetArtArtwork,
+        _artworkRollback = artworkRollback ??
+            KubusMapMarkerCreationHelpers.rollbackStreetArtArtwork,
+        _markerPersister = markerPersister ?? mapMarkerService!.createMarker;
 
   static const String _source = 'map_marker_creation_coordinator';
   static const String _debugLabel = 'KubusMapMarkerCreationCoordinator';
@@ -181,11 +175,11 @@ class KubusMapMarkerCreationCoordinator {
       );
       final snappedPosition =
           snapToVisibleGrid?.call(requestedPosition, currentZoom) ??
-          gridCell.center;
+              gridCell.center;
       final resolvedCategory = form.category.isNotEmpty
           ? form.category
           : form.subject?.type.defaultCategory ??
-                form.subjectType.defaultCategory;
+              form.subjectType.defaultCategory;
 
       var linkedArtwork = form.linkedArtwork;
       if (KubusMapMarkerCreationHelpers.shouldCreateStreetArtArtwork(
