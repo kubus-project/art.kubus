@@ -268,6 +268,91 @@ class KubusMapMarkerCreationHelpers {
 
     return coverImageUrl;
   }
+
+  static bool shouldCreateStreetArtArtwork({
+    required ArtMarkerType markerType,
+    required MarkerSubjectType? subjectType,
+    required Artwork? linkedArtwork,
+  }) {
+    final isStreetArtMarker = subjectType == MarkerSubjectType.streetArt ||
+        markerType == ArtMarkerType.streetArt;
+    return isStreetArtMarker && linkedArtwork == null;
+  }
+
+  static Future<Artwork> createStreetArtArtwork({
+    required String title,
+    required String description,
+    required String coverImageUrl,
+    required String walletAddress,
+    required String category,
+    required LatLng position,
+    required bool isPublic,
+    required String? artistName,
+    required String imageAuthor,
+    required String imageLicense,
+  }) async {
+    final normalizedCategory =
+        category.trim().isEmpty ? 'Street Art' : category.trim();
+    final attribution = '$imageAuthor / $imageLicense';
+    final artwork = await BackendApiService().createArtworkRecord(
+      title: title,
+      description: description,
+      imageUrl: coverImageUrl,
+      walletAddress: walletAddress,
+      artistName: artistName,
+      imageAuthor: imageAuthor,
+      imageLicense: imageLicense,
+      imageAttribution: attribution,
+      category: normalizedCategory,
+      tags: <String>[
+        'street art',
+        if (normalizedCategory.toLowerCase() != 'street art')
+          normalizedCategory,
+      ],
+      isPublic: isPublic,
+      enableAR: false,
+      latitude: position.latitude,
+      longitude: position.longitude,
+      metadata: const <String, dynamic>{
+        'createdFrom': 'map_street_art_marker',
+        'subjectType': 'streetArt',
+      },
+    );
+    if (artwork == null) {
+      throw StateError('Street-art artwork creation returned no record.');
+    }
+    return artwork;
+  }
+
+  static bool shouldRollbackStreetArtArtwork({
+    required Artwork? artwork,
+    required bool markerPersistenceAttempted,
+  }) {
+    return !markerPersistenceAttempted &&
+        artwork != null &&
+        artwork.id.trim().isNotEmpty;
+  }
+
+  static Future<void> rollbackStreetArtArtwork(
+    Artwork? artwork, {
+    required bool markerPersistenceAttempted,
+  }) async {
+    if (!shouldRollbackStreetArtArtwork(
+      artwork: artwork,
+      markerPersistenceAttempted: markerPersistenceAttempted,
+    )) {
+      return;
+    }
+    final artworkToRollback = artwork!;
+    try {
+      await BackendApiService().deleteArtwork(artworkToRollback.id);
+    } catch (error) {
+      AppConfig.debugPrint(
+        'KubusMapMarkerCreationHelpers: failed to roll back artwork '
+        '${artworkToRollback.id}: $error',
+      );
+    }
+  }
 }
 
 class KubusMapStyleInitHelpers {

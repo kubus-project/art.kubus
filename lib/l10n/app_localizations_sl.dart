@@ -4371,10 +4371,18 @@ class AppLocalizationsSl extends AppLocalizations {
   String get mapMarkerDialogImageAuthorHint => 'Kdo je posnel fotografijo?';
 
   @override
+  String get mapMarkerDialogImageAuthorRequiredError =>
+      'Avtor fotografije je obvezen za ulično umetnost.';
+
+  @override
   String get mapMarkerDialogImageLicenseLabel => 'Licenca fotografije';
 
   @override
   String get mapMarkerDialogImageLicenseHint => 'npr. CC BY-SA 4.0';
+
+  @override
+  String get mapMarkerDialogImageLicenseRequiredError =>
+      'Licenca fotografije je obvezna za ulično umetnost.';
 
   @override
   String get markerAttributionArtistLabel => 'Umetnik';

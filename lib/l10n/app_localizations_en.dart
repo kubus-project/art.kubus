@@ -4334,10 +4334,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mapMarkerDialogImageAuthorHint => 'Who took the photo?';
 
   @override
+  String get mapMarkerDialogImageAuthorRequiredError =>
+      'Photo author is required for street art.';
+
+  @override
   String get mapMarkerDialogImageLicenseLabel => 'Photo license';
 
   @override
   String get mapMarkerDialogImageLicenseHint => 'e.g. CC BY-SA 4.0';
+
+  @override
+  String get mapMarkerDialogImageLicenseRequiredError =>
+      'Photo license is required for street art.';
 
   @override
   String get markerAttributionArtistLabel => 'Artist';

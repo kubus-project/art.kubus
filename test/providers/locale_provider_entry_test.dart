@@ -93,6 +93,13 @@ void main() {
       expect(provider.languageCode, 'en');
     });
 
+    test('fresh installs default to English', () async {
+      SharedPreferences.setMockInitialValues({});
+      final provider = LocaleProvider();
+      await provider.initialize();
+      expect(provider.languageCode, 'en');
+    });
+
     test('an unsupported override is ignored in favour of persisted/default',
         () async {
       SharedPreferences.setMockInitialValues(

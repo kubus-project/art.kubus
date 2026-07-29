@@ -1,10 +1,13 @@
 import 'package:art_kubus/features/map/shared/map_screen_shared_helpers.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/models/art_marker.dart';
+import 'package:art_kubus/models/artwork.dart';
+import 'package:art_kubus/models/map_marker_subject.dart';
 import 'package:art_kubus/utils/app_color_utils.dart';
 import 'package:art_kubus/utils/custom_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:latlong2/latlong.dart';
 
 void main() {
   test('resolveArtMarkerIcon maps each marker type to expected icon', () {
@@ -95,5 +98,70 @@ void main() {
         AppColorUtils.markerSubjectIcon('street_art'), CustomIcons.fragrance);
     expect(
         AppColorUtils.markerSubjectIcon('public_art'), CustomIcons.fragrance);
+  });
+
+  test('street-art creation adds an artwork only when none is linked', () {
+    final linkedArtwork = Artwork(
+      id: 'art-1',
+      title: 'Linked',
+      artist: 'Artist',
+      description: 'Description',
+      position: const LatLng(46.05, 14.5),
+      rewards: 0,
+      createdAt: DateTime(2026),
+    );
+
+    expect(
+      KubusMapMarkerCreationHelpers.shouldCreateStreetArtArtwork(
+        markerType: ArtMarkerType.streetArt,
+        subjectType: MarkerSubjectType.streetArt,
+        linkedArtwork: null,
+      ),
+      isTrue,
+    );
+    expect(
+      KubusMapMarkerCreationHelpers.shouldCreateStreetArtArtwork(
+        markerType: ArtMarkerType.streetArt,
+        subjectType: MarkerSubjectType.streetArt,
+        linkedArtwork: linkedArtwork,
+      ),
+      isFalse,
+    );
+    expect(
+      KubusMapMarkerCreationHelpers.shouldCreateStreetArtArtwork(
+        markerType: ArtMarkerType.other,
+        subjectType: MarkerSubjectType.misc,
+        linkedArtwork: null,
+      ),
+      isFalse,
+    );
+  });
+
+  test('street-art artwork rollback stops once marker persistence is attempted',
+      () {
+    final artwork = Artwork(
+      id: 'art-rollback',
+      title: 'Pending marker artwork',
+      artist: 'Artist',
+      description: 'Description',
+      position: const LatLng(46.05, 14.5),
+      rewards: 0,
+      createdAt: DateTime(2026),
+    );
+
+    expect(
+      KubusMapMarkerCreationHelpers.shouldRollbackStreetArtArtwork(
+        artwork: artwork,
+        markerPersistenceAttempted: false,
+      ),
+      isTrue,
+    );
+    expect(
+      KubusMapMarkerCreationHelpers.shouldRollbackStreetArtArtwork(
+        artwork: artwork,
+        markerPersistenceAttempted: true,
+      ),
+      isFalse,
+    );
   });
 }
