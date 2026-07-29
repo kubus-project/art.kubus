@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../config/config.dart';
 
 class LocaleProvider extends ChangeNotifier {
-  static const Locale defaultLocale = Locale('sl');
+  static const Locale defaultLocale = Locale('en');
   static const Set<String> supportedLanguageCodes = {'sl', 'en'};
 
   Locale _locale = defaultLocale;

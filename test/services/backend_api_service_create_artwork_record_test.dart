@@ -63,6 +63,9 @@ void main() {
               'walletAddress': _wallet,
               'artistName': 'Creator',
               'category': 'Digital Art',
+              'imageAuthor': 'Photo Creator',
+              'imageLicense': 'CC BY-SA 4.0',
+              'imageAttribution': 'Photo Creator / CC BY-SA 4.0',
             },
           }),
           201,
@@ -78,6 +81,10 @@ void main() {
       walletAddress: _wallet,
       category: 'Digital Art',
       tags: const <String>['launch'],
+      imageAuthor: 'Photo Creator',
+      imageLicense: 'CC BY-SA 4.0',
+      imageAttribution: 'Photo Creator / CC BY-SA 4.0',
+      imageSourceUrl: 'https://example.test/source',
     );
 
     expect(artwork, isNotNull);
@@ -85,6 +92,15 @@ void main() {
     expect(artwork.title, 'Created');
     expect(requestBody['walletAddress'], _wallet);
     expect(requestBody['tags'], <String>['launch']);
+    expect(requestBody['imageAuthor'], 'Photo Creator');
+    expect(requestBody['imageLicense'], 'CC BY-SA 4.0');
+    expect(
+      requestBody['imageAttribution'],
+      'Photo Creator / CC BY-SA 4.0',
+    );
+    expect(requestBody['imageSourceUrl'], 'https://example.test/source');
+    expect(artwork.imageAuthor, 'Photo Creator');
+    expect(artwork.imageLicense, 'CC BY-SA 4.0');
   });
 
   test('createArtworkRecord throws BackendApiRequestException on non-2xx',

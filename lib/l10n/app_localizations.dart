@@ -7700,6 +7700,12 @@ abstract class AppLocalizations {
   /// **'Who took the photo?'**
   String get mapMarkerDialogImageAuthorHint;
 
+  /// No description provided for @mapMarkerDialogImageAuthorRequiredError.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo author is required for street art.'**
+  String get mapMarkerDialogImageAuthorRequiredError;
+
   /// No description provided for @mapMarkerDialogImageLicenseLabel.
   ///
   /// In en, this message translates to:
@@ -7711,6 +7717,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'e.g. CC BY-SA 4.0'**
   String get mapMarkerDialogImageLicenseHint;
+
+  /// No description provided for @mapMarkerDialogImageLicenseRequiredError.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo license is required for street art.'**
+  String get mapMarkerDialogImageLicenseRequiredError;
 
   /// No description provided for @markerAttributionArtistLabel.
   ///

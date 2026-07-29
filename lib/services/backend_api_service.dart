@@ -5284,6 +5284,10 @@ class BackendApiService
     required String walletAddress,
     String? imageCid,
     String? artistName,
+    String? imageAuthor,
+    String? imageLicense,
+    String? imageAttribution,
+    String? imageSourceUrl,
     String category = 'General',
     List<String> tags = const [],
     List<String> galleryUrls = const [],
@@ -5323,6 +5327,14 @@ class BackendApiService
         'walletAddress': walletAddress,
         if (artistName != null && artistName.isNotEmpty)
           'artistName': artistName,
+        if (imageAuthor != null && imageAuthor.trim().isNotEmpty)
+          'imageAuthor': imageAuthor.trim(),
+        if (imageLicense != null && imageLicense.trim().isNotEmpty)
+          'imageLicense': imageLicense.trim(),
+        if (imageAttribution != null && imageAttribution.trim().isNotEmpty)
+          'imageAttribution': imageAttribution.trim(),
+        if (imageSourceUrl != null && imageSourceUrl.trim().isNotEmpty)
+          'imageSourceUrl': imageSourceUrl.trim(),
         'category': category,
         'tags': tags,
         if (galleryUrls.isNotEmpty) 'galleryUrls': galleryUrls,
