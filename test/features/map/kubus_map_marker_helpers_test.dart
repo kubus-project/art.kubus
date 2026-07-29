@@ -136,4 +136,32 @@ void main() {
       isFalse,
     );
   });
+
+  test('street-art artwork rollback stops once marker persistence is attempted',
+      () {
+    final artwork = Artwork(
+      id: 'art-rollback',
+      title: 'Pending marker artwork',
+      artist: 'Artist',
+      description: 'Description',
+      position: const LatLng(46.05, 14.5),
+      rewards: 0,
+      createdAt: DateTime(2026),
+    );
+
+    expect(
+      KubusMapMarkerCreationHelpers.shouldRollbackStreetArtArtwork(
+        artwork: artwork,
+        markerPersistenceAttempted: false,
+      ),
+      isTrue,
+    );
+    expect(
+      KubusMapMarkerCreationHelpers.shouldRollbackStreetArtArtwork(
+        artwork: artwork,
+        markerPersistenceAttempted: true,
+      ),
+      isFalse,
+    );
+  });
 }

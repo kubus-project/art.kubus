@@ -6044,6 +6044,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     required MapMarkerFormResult form,
   }) async {
     Artwork? createdStreetArtArtwork;
+    var markerPersistenceAttempted = false;
     try {
       final l10n = AppLocalizations.of(context)!;
       final exhibitionsProvider = context.read<ExhibitionsProvider>();
@@ -6116,6 +6117,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         linkedArtwork = createdStreetArtArtwork;
       }
 
+      markerPersistenceAttempted = true;
       final marker = await _mapMarkerService.createMarker(
         location: snappedPosition,
         title: form.title,
@@ -6209,11 +6211,13 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       }
       await KubusMapMarkerCreationHelpers.rollbackStreetArtArtwork(
         createdStreetArtArtwork,
+        markerPersistenceAttempted: markerPersistenceAttempted,
       );
       return false;
     } on StateError catch (e) {
       await KubusMapMarkerCreationHelpers.rollbackStreetArtArtwork(
         createdStreetArtArtwork,
+        markerPersistenceAttempted: markerPersistenceAttempted,
       );
       if (mounted) {
         final messenger = ScaffoldMessenger.of(context);
@@ -6227,6 +6231,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     } catch (e) {
       await KubusMapMarkerCreationHelpers.rollbackStreetArtArtwork(
         createdStreetArtArtwork,
+        markerPersistenceAttempted: markerPersistenceAttempted,
       );
       AppConfig.debugPrint('DesktopMapScreen: error creating marker: $e');
       return false;

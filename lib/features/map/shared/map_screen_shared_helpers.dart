@@ -324,14 +324,32 @@ class KubusMapMarkerCreationHelpers {
     return artwork;
   }
 
-  static Future<void> rollbackStreetArtArtwork(Artwork? artwork) async {
-    if (artwork == null || artwork.id.trim().isEmpty) return;
+  static bool shouldRollbackStreetArtArtwork({
+    required Artwork? artwork,
+    required bool markerPersistenceAttempted,
+  }) {
+    return !markerPersistenceAttempted &&
+        artwork != null &&
+        artwork.id.trim().isNotEmpty;
+  }
+
+  static Future<void> rollbackStreetArtArtwork(
+    Artwork? artwork, {
+    required bool markerPersistenceAttempted,
+  }) async {
+    if (!shouldRollbackStreetArtArtwork(
+      artwork: artwork,
+      markerPersistenceAttempted: markerPersistenceAttempted,
+    )) {
+      return;
+    }
+    final artworkToRollback = artwork!;
     try {
-      await BackendApiService().deleteArtwork(artwork.id);
+      await BackendApiService().deleteArtwork(artworkToRollback.id);
     } catch (error) {
       AppConfig.debugPrint(
         'KubusMapMarkerCreationHelpers: failed to roll back artwork '
-        '${artwork.id}: $error',
+        '${artworkToRollback.id}: $error',
       );
     }
   }

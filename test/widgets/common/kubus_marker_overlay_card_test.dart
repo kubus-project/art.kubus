@@ -228,11 +228,25 @@ void main() {
     );
   });
 
-  testWidgets('marker card renders structured photo author and license',
+  testWidgets('marker card credits the artwork image instead of marker media',
       (tester) async {
     final marker = _marker().copyWith(
       metadata: const <String, dynamic>{
-        'imageAuthor': 'Photo Creator',
+        'imageAuthor': 'Marker Photo Creator',
+        'imageLicense': 'Marker License',
+      },
+    );
+    final artwork = Artwork(
+      id: 'art-attributed',
+      title: 'Artwork',
+      artist: 'Artist',
+      description: 'Artwork description',
+      imageUrl: _imageUrl,
+      position: const LatLng(46.0569, 14.5058),
+      rewards: 3,
+      createdAt: DateTime(2024, 1, 1),
+      metadata: const <String, dynamic>{
+        'imageAuthor': 'Artwork Photo Creator',
         'imageLicense': 'CC BY-SA 4.0',
       },
     );
@@ -243,7 +257,7 @@ void main() {
           width: 340,
           child: KubusMarkerOverlayCard(
             marker: marker,
-            artwork: _artwork(),
+            artwork: artwork,
             baseColor: Colors.teal,
             displayTitle: 'Attributed artwork',
             canPresentExhibition: false,
@@ -260,9 +274,62 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.textContaining('Photo Creator / CC BY-SA 4.0'),
+      find.textContaining('Artwork Photo Creator / CC BY-SA 4.0'),
       findsOneWidget,
     );
+    expect(find.textContaining('Marker Photo Creator'), findsNothing);
+  });
+
+  testWidgets('marker card uses marker attribution when artwork has no cover',
+      (tester) async {
+    final marker = _marker().copyWith(
+      metadata: <String, dynamic>{
+        'coverImageUrl': _imageUrl,
+        'imageAuthor': 'Marker Photo Creator',
+        'imageLicense': 'CC BY 4.0',
+      },
+    );
+    final artwork = Artwork(
+      id: 'art-without-cover',
+      title: 'Artwork',
+      artist: 'Artist',
+      description: 'Artwork description',
+      position: const LatLng(46.0569, 14.5058),
+      rewards: 3,
+      createdAt: DateTime(2024, 1, 1),
+      metadata: const <String, dynamic>{
+        'imageAuthor': 'Unused Artwork Photo Creator',
+        'imageLicense': 'Unused License',
+      },
+    );
+
+    await tester.pumpWidget(
+      _wrap(
+        SizedBox(
+          width: 340,
+          child: KubusMarkerOverlayCard(
+            marker: marker,
+            artwork: artwork,
+            baseColor: Colors.teal,
+            displayTitle: 'Marker-backed artwork',
+            canPresentExhibition: false,
+            onClose: () {},
+            onPrimaryAction: () {},
+            primaryActionIcon: Icons.arrow_forward,
+            primaryActionLabel: 'View details',
+            maxWidth: 340,
+            maxHeight: 520,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining('Marker Photo Creator / CC BY 4.0'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('Unused Artwork Photo Creator'), findsNothing);
   });
 
   testWidgets(

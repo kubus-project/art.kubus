@@ -3138,6 +3138,7 @@ class _MapScreenState extends State<MapScreen>
   Future<bool> _createMarkerAtPosition(
       LatLng position, MapMarkerFormResult form) async {
     Artwork? createdStreetArtArtwork;
+    var markerPersistenceAttempted = false;
     try {
       final l10n = AppLocalizations.of(context)!;
       final exhibitionsProvider = context.read<ExhibitionsProvider>();
@@ -3217,6 +3218,7 @@ class _MapScreenState extends State<MapScreen>
         );
         linkedArtwork = createdStreetArtArtwork;
       }
+      markerPersistenceAttempted = true;
       final marker = await _mapMarkerService.createMarker(
         location: snappedPosition,
         title: form.title,
@@ -3317,6 +3319,7 @@ class _MapScreenState extends State<MapScreen>
       } else {
         await KubusMapMarkerCreationHelpers.rollbackStreetArtArtwork(
           createdStreetArtArtwork,
+          markerPersistenceAttempted: markerPersistenceAttempted,
         );
         AppConfig.debugPrint(
             'MapScreen: failed to create marker (returned null)');
@@ -3326,6 +3329,7 @@ class _MapScreenState extends State<MapScreen>
     } on StateError catch (e) {
       await KubusMapMarkerCreationHelpers.rollbackStreetArtArtwork(
         createdStreetArtArtwork,
+        markerPersistenceAttempted: markerPersistenceAttempted,
       );
       if (mounted) {
         final messenger = ScaffoldMessenger.of(context);
@@ -3339,6 +3343,7 @@ class _MapScreenState extends State<MapScreen>
     } catch (e) {
       await KubusMapMarkerCreationHelpers.rollbackStreetArtArtwork(
         createdStreetArtArtwork,
+        markerPersistenceAttempted: markerPersistenceAttempted,
       );
       AppConfig.debugPrint(
           'MapScreen: Error creating marker at current location: $e');
