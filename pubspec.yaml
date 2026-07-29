@@ -16,7 +16,7 @@ publish_to: "none" # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 0.7.1+26072201
+version: 0.7.2+26072901
 
 environment:
   sdk: ">=3.6.0 <4.0.0"
@@ -43,9 +43,13 @@ dependencies:
   provider: ^6.1.5
   location: ^8.0.1
   latlong2: ^0.9.1
-  maplibre_gl: ^0.26.1
+  # >=0.26.2 required: from that version `maplibre_gl_web` resolves `assets/...`
+  # style strings through `rootBundle` instead of fetching them as plain URLs.
+  # `MapStyleService` relies on that behaviour (see `_toWebAssetKey`); on 0.26.1
+  # the asset key would be fetched verbatim as a URL and 404.
+  maplibre_gl: ^0.26.2
   # Explicit web implementation registration hardening (release cache edge-cases).
-  maplibre_gl_web: ^0.26.1
+  maplibre_gl_web: ^0.26.2
   shared_preferences: ^2.5.5
   flutter_secure_storage: ^9.2.4
   local_auth: ^3.0.0

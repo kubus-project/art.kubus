@@ -1725,6 +1725,7 @@
   "mapCenterOnMeTooltip": "Center on me",
   "mapAddMapMarkerTooltip": "Add map marker",
   "mapToolsTitle": "Map tools",
+  "mapAttributionsTitle": "Map attributions",
   "mapZoomInTooltip": "Zoom in",
   "mapTravelModeTooltip": "Travel mode",
   "mapTravelModeEnableTooltip": "Enable travel mode",

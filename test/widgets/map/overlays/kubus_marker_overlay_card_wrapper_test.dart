@@ -237,6 +237,98 @@ void main() {
     );
   });
 
+  testWidgets('anchored layout waits for reposition animation to settle',
+      (tester) async {
+    final anchor = ValueNotifier<Offset?>(const Offset(100, 260));
+    addTearDown(anchor.dispose);
+    final reportedLayouts = <KubusMarkerOverlayResolvedLayout>[];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 400,
+            height: 400,
+            child: KubusMarkerOverlayCardWrapper(
+              anchorListenable: anchor,
+              widthResolver: (_, __) => 160,
+              maxHeightResolver: (_, __) => 160,
+              heightResolver: (_, __, ___) => 120,
+              animation: const KubusMarkerOverlayAnimationConfig(
+                duration: Duration(milliseconds: 200),
+                curve: Curves.linear,
+              ),
+              onLayoutResolved: reportedLayouts.add,
+              cardBuilder: (_, layout) => SizedBox(
+                key: const ValueKey<String>('settling_card'),
+                width: layout.cardWidth,
+                height: layout.cardHeight,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    reportedLayouts.clear();
+
+    anchor.value = const Offset(300, 260);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(reportedLayouts, isEmpty);
+
+    await tester.pumpAndSettle();
+    expect(reportedLayouts, hasLength(1));
+    expect(
+      reportedLayouts.single.cardLeft,
+      tester.getRect(find.byKey(const ValueKey<String>('settling_card'))).left,
+    );
+  });
+
+  testWidgets('anchored layout publishes non-positional geometry changes',
+      (tester) async {
+    final anchor = ValueNotifier<Offset?>(const Offset(150, 20));
+    addTearDown(anchor.dispose);
+    var cardHeight = 120.0;
+    final reportedLayouts = <KubusMarkerOverlayResolvedLayout>[];
+
+    Widget buildOverlay() => MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 400,
+              height: 400,
+              child: KubusMarkerOverlayCardWrapper(
+                anchorListenable: anchor,
+                widthResolver: (_, __) => 160,
+                maxHeightResolver: (_, __) => 200,
+                heightResolver: (_, __, ___) => cardHeight,
+                animation: const KubusMarkerOverlayAnimationConfig(
+                  duration: Duration(milliseconds: 200),
+                  curve: Curves.linear,
+                ),
+                onLayoutResolved: reportedLayouts.add,
+                cardBuilder: (_, layout) => SizedBox(
+                  width: layout.cardWidth,
+                  height: layout.cardHeight,
+                ),
+              ),
+            ),
+          ),
+        );
+
+    await tester.pumpWidget(buildOverlay());
+    await tester.pumpAndSettle();
+    reportedLayouts.clear();
+
+    cardHeight = 180;
+    await tester.pumpWidget(buildOverlay());
+    await tester.pump();
+
+    expect(reportedLayouts, hasLength(1));
+    expect(reportedLayouts.single.layout.cardHeight, 180);
+    expect(reportedLayouts.single.cardTop, 12);
+  });
+
   testWidgets('reduced motion repositions anchored preview immediately',
       (tester) async {
     final anchor = ValueNotifier<Offset?>(const Offset(100, 260));
@@ -274,6 +366,56 @@ void main() {
       tester.getTopLeft(find.byKey(const ValueKey<String>('reduced_card'))).dx,
       closeTo(220, 0.01),
     );
+  });
+
+  testWidgets('anchored layout callback reports the exact rendered card rect',
+      (tester) async {
+    final anchor = ValueNotifier<Offset?>(const Offset(150, 300));
+    addTearDown(anchor.dispose);
+    KubusMarkerOverlayResolvedLayout? resolved;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 300,
+            height: 360,
+            child: KubusMarkerOverlayCardWrapper(
+              anchorListenable: anchor,
+              placementStrategy: KubusMarkerOverlayPlacementStrategy.anchored,
+              widthResolver: (_, __) => 260,
+              maxHeightResolver: (_, __) => 180,
+              heightResolver: (_, __, ___) => 160,
+              horizontalPadding: 12,
+              markerOffset: 24,
+              animation: const KubusMarkerOverlayAnimationConfig(
+                duration: Duration.zero,
+                allowsSpatialTransform: false,
+              ),
+              onLayoutResolved: (layout) => resolved = layout,
+              cardBuilder: (_, layout) => ColoredBox(
+                key: const ValueKey<String>('reported_card'),
+                color: Colors.orange,
+                child: SizedBox(
+                  width: layout.cardWidth,
+                  height: layout.cardHeight,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final cardRect =
+        tester.getRect(find.byKey(const ValueKey<String>('reported_card')));
+    expect(resolved, isNotNull);
+    expect(resolved!.cardLeft, cardRect.left);
+    expect(resolved!.cardTop, cardRect.top);
+    expect(resolved!.layout.cardWidth, cardRect.width);
+    expect(resolved!.layout.cardHeight, cardRect.height);
+    expect(cardRect.bottom, lessThanOrEqualTo(anchor.value!.dy - 24));
   });
 
   for (final viewport in <Size>[const Size(360, 640), const Size(390, 844)]) {

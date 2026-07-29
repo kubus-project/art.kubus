@@ -113,7 +113,6 @@ class KubusMapFilterCatalog {
       ),
     ];
   }
-
 }
 
 class KubusMapFilterChipStrip extends StatelessWidget {
@@ -326,6 +325,7 @@ class KubusMapSearchOverlayAssembly extends StatelessWidget {
     this.sidePanelAnimated = false,
     this.positionAnimationDuration,
     this.positionAnimationCurve,
+    this.dropdownRadius,
   });
 
   final KubusSearchController controller;
@@ -350,6 +350,12 @@ class KubusMapSearchOverlayAssembly extends StatelessWidget {
   final EdgeInsets sidePanelInnerPadding;
   final KubusSearchSidePanelSurfaceMode sidePanelSurfaceMode;
   final double sidePanelRadius;
+
+  /// Radius for the floating results dropdown. Callers that give the search
+  /// field a non-default radius should pass the same value so the dropdown
+  /// stays visually attached to the field instead of reading as a rounder,
+  /// separate panel. Defaults to the panel token.
+  final double? dropdownRadius;
   final bool sidePanelAnimated;
 
   /// Panel motion; falls back to [AppAnimationTheme.medium] when unset.
@@ -406,6 +412,7 @@ class KubusMapSearchOverlayAssembly extends StatelessWidget {
             // This assembly always floats over the live map, so route the
             // results dropdown through the map-aware glass language too.
             useMapGlassSurface: true,
+            panelRadius: dropdownRadius,
           ),
           leading: leading,
           filterChips: filterChips,

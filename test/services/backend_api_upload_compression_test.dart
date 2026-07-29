@@ -117,6 +117,39 @@ void main() {
     expect(body, contains('disabled_by_caller'));
   });
 
+  test('uploadFile preserves PNG MIME when compression is skipped', () async {
+    late String body;
+
+    BackendApiService().setHttpClient(
+      MockClient((request) async {
+        body = latin1.decode(request.bodyBytes);
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'data': {'relativeUrl': '/uploads/cover.png'}
+          }),
+          200,
+        );
+      }),
+    );
+
+    await BackendApiService().uploadFile(
+      fileBytes: <int>[0x89, 0x50, 0x4e, 0x47],
+      fileName: 'cover.png',
+      fileType: 'image/png',
+      compressionPolicy: const UploadCompressionPolicyDto(
+        imageMinBytes: 1024,
+      ),
+    );
+
+    expect(body, contains('filename="cover.png"'));
+    expect(body.toLowerCase(), contains('content-type: image/png'));
+    expect(
+      body.toLowerCase(),
+      isNot(contains('content-type: application/octet-stream')),
+    );
+  });
+
   test('uploadFile forwards normalized target storage to backend', () async {
     late String body;
 

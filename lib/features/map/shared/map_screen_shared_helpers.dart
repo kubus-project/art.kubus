@@ -569,8 +569,9 @@ class KubusMapDiscoveryCardHelpers {
     bool enableMouseRegion = false,
     MouseCursor mouseCursor = SystemMouseCursors.basic,
     double expandButtonSize = 36,
-    double badgeGap = 10,
-    double tasksTopGap = 10,
+    double badgeGap = KubusSpacing.sm,
+    double tasksTopGap = KubusSpacing.sm,
+    double surfaceRadius = KubusRadius.lg,
     KubusDiscoveryExpansionDirection expansionDirection =
         KubusDiscoveryExpansionDirection.downward,
     bool compactWhenCollapsed = false,
@@ -605,6 +606,7 @@ class KubusMapDiscoveryCardHelpers {
       expandButtonSize: expandButtonSize,
       badgeGap: badgeGap,
       tasksTopGap: tasksTopGap,
+      surfaceRadius: surfaceRadius,
     );
   }
 }
@@ -817,8 +819,6 @@ class KubusMarkerOverlayHelpers {
     VoidCallback? onPreviousStacked,
     GestureDragEndCallback? onHorizontalDragEnd,
     required double maxCardHeight,
-    KubusMarkerOverlayCardPresentation cardPresentation =
-        KubusMarkerOverlayCardPresentation.standard,
   }) {
     final l10n = AppLocalizations.of(context)!;
     final presentation = resolveMarkerOverlayPresentation(
@@ -858,7 +858,6 @@ class KubusMarkerOverlayHelpers {
       onSelectStackIndex: onSelectStackIndex,
       onHorizontalDragEnd: onHorizontalDragEnd,
       maxHeight: maxCardHeight,
-      presentation: cardPresentation,
     );
   }
 }

@@ -1,6 +1,8 @@
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/providers/themeprovider.dart';
 import 'package:art_kubus/services/search_service.dart';
+import 'package:art_kubus/utils/design_tokens.dart';
+import 'package:art_kubus/utils/kubus_map_tokens.dart';
 import 'package:art_kubus/widgets/common/kubus_glass_chip.dart';
 import 'package:art_kubus/widgets/map/kubus_map_glass_surface.dart';
 import 'package:art_kubus/widgets/search/kubus_general_search.dart';
@@ -42,11 +44,13 @@ class _MapSearchHarness extends StatelessWidget {
     required this.controller,
     required this.themeProvider,
     required this.onResultTap,
+    this.borderRadius,
   });
 
   final KubusSearchController controller;
   final ThemeProvider themeProvider;
   final ValueChanged<KubusSearchResult> onResultTap;
+  final double? borderRadius;
 
   @override
   Widget build(BuildContext context) {
@@ -71,6 +75,7 @@ class _MapSearchHarness extends StatelessWidget {
                   // MapLibre platform view.
                   enableBlur: false,
                   useMapGlassSurface: true,
+                  borderRadius: borderRadius,
                 ),
               ),
               KubusSearchResultsOverlay(
@@ -101,6 +106,55 @@ void main() {
   });
 
   group('KubusSearchBar map glass mode', () {
+    testWidgets('map field renders the rectangular header radius',
+        (tester) async {
+      final controller = KubusSearchController(
+        searchService: _FakeSearchService(const <KubusSearchResult>[]),
+        config: const KubusSearchConfig(scope: KubusSearchScope.map),
+      );
+      final themeProvider = ThemeProvider();
+      addTearDown(controller.dispose);
+      addTearDown(themeProvider.dispose);
+
+      // Regression guard for the map header shape. The field previously used
+      // KubusRadius.lg (16, "Large Containers") and then KubusRadius.md (12),
+      // both of which still read as a rounded pill on a 48px-tall field. The
+      // map now consumes KubusMapMetrics.headerSurfaceRadius, which must stay
+      // on the documented "Buttons, Inputs" token.
+      expect(KubusMapMetrics.headerSurfaceRadius, KubusRadius.sm);
+      expect(KubusRadius.sm, 8.0);
+
+      await tester.pumpWidget(
+        _MapSearchHarness(
+          controller: controller,
+          themeProvider: themeProvider,
+          borderRadius: KubusMapMetrics.headerSurfaceRadius,
+          onResultTap: (_) {},
+        ),
+      );
+
+      final searchBar = tester.widget<KubusSearchBar>(
+        find.byType(KubusSearchBar),
+      );
+      expect(
+        searchBar.style?.borderRadius,
+        BorderRadius.circular(KubusRadius.sm),
+      );
+
+      // ...and the radius must actually reach the painted decoration.
+      final decoration = tester
+          .widget<AnimatedContainer>(
+            find
+                .descendant(
+                  of: find.byType(KubusSearchBar),
+                  matching: find.byType(AnimatedContainer),
+                )
+                .first,
+          )
+          .decoration as BoxDecoration;
+      expect(decoration.borderRadius, BorderRadius.circular(KubusRadius.sm));
+    });
+
     testWidgets(
         'fallback over the map drops BackdropFilter and adds the material sheen',
         (tester) async {
@@ -197,8 +251,7 @@ void main() {
   });
 
   group('KubusSearchResultsOverlay map glass mode', () {
-    testWidgets(
-        'dropdown fallback shows the sheen and results remain tappable',
+    testWidgets('dropdown fallback shows the sheen and results remain tappable',
         (tester) async {
       final themeProvider = ThemeProvider();
       addTearDown(themeProvider.dispose);

@@ -32,6 +32,7 @@ class KubusGeneralSearch extends StatefulWidget {
     this.trailingBuilder,
     this.style,
     this.height,
+    this.borderRadius,
   });
 
   final KubusSearchController controller;
@@ -46,6 +47,12 @@ class KubusGeneralSearch extends StatefulWidget {
   /// when null. The map uses a slightly taller field on small screens so the
   /// search bar is more usable / easier to tap.
   final double? height;
+
+  /// Optional radius override for context-specific search surfaces. Map search
+  /// uses the shared header radius ([KubusRadius.sm], the documented "Buttons,
+  /// Inputs" token) so the field reads as a rectangular input rather than a
+  /// pill; other search fields retain their existing default.
+  final double? borderRadius;
 
   /// Routes the underlying [KubusSearchBar] through the map-aware glass language
   /// so its tinted fallback (over the MapLibre platform view) gets the shared
@@ -117,7 +124,8 @@ class _KubusGeneralSearchState extends State<KubusGeneralSearch> {
       tintBase: scheme.surface,
     );
     return KubusSearchBarStyle(
-      borderRadius: BorderRadius.circular(KubusRadius.lg),
+      borderRadius:
+          BorderRadius.circular(widget.borderRadius ?? KubusRadius.lg),
       backgroundColor: surfaceStyle.tintColor,
       borderColor: scheme.outline.withValues(alpha: 0.18),
       focusedBorderColor: accent,
@@ -215,6 +223,7 @@ class KubusSearchResultsOverlay extends StatelessWidget {
     this.enabled = true,
     this.useMapGlassSurface = false,
     this.enableBlur,
+    this.panelRadius,
   });
 
   final KubusSearchController controller;
@@ -246,6 +255,12 @@ class KubusSearchResultsOverlay extends StatelessWidget {
   /// field stay consistent (and so callers/tests can force the safe-tint
   /// fallback where real blur must never sit in front of the results text).
   final bool? enableBlur;
+
+  /// Optional radius override for the floating results panel. Pass the same
+  /// value the adjacent field uses so the dropdown does not read as a rounder,
+  /// unrelated surface hanging off a rectangular input. Defaults to the panel
+  /// token ([KubusRadius.lg]).
+  final double? panelRadius;
 
   Widget _buildIconBadge(
     BuildContext context,
@@ -368,7 +383,8 @@ class KubusSearchResultsOverlay extends StatelessWidget {
         final panelBlurEnabled = useMapGlassSurface
             ? (enableBlur ?? kubusMapBlurEnabled(context))
             : true;
-        final panelRadius = BorderRadius.circular(KubusRadius.lg);
+        final resolvedPanelRadius =
+            BorderRadius.circular(panelRadius ?? KubusRadius.lg);
 
         return Positioned.fill(
           child: Stack(
@@ -390,7 +406,7 @@ class KubusSearchResultsOverlay extends StatelessWidget {
                     ),
                     child: _KubusDropdownSurface(
                       useMapGlassSurface: useMapGlassSurface,
-                      panelRadius: panelRadius,
+                      panelRadius: resolvedPanelRadius,
                       blurSigma: surfaceStyle.blurSigma,
                       tintColor: surfaceStyle.tintColor,
                       fallbackMinOpacity: surfaceStyle.fallbackMinOpacity,
