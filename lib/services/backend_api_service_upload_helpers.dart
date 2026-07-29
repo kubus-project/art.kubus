@@ -191,6 +191,7 @@ Future<Map<String, dynamic>> _backendApiUploadFileImpl(
         bytes: uploadBytes,
         fileName: fileName,
         fileType: fileType,
+        contentType: uploadContentType,
         metadata: initialMetadata,
         policy: compressionPolicy ?? UploadCompressionPolicyDto.standard,
       ),
@@ -198,7 +199,7 @@ Future<Map<String, dynamic>> _backendApiUploadFileImpl(
     );
     uploadBytes = compression.bytes;
     uploadFileName = compression.fileName;
-    uploadContentType = compression.contentType;
+    uploadContentType = compression.contentType ?? uploadContentType;
     initialMetadata.addAll(compression.toMetadataFields());
   } else {
     initialMetadata.addAll(
