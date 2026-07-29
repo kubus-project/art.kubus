@@ -388,6 +388,17 @@ class KubusMarkerOverlayCardWrapper extends StatelessWidget {
                       top: top,
                       duration: resolvedAnimation.duration,
                       curve: resolvedAnimation.curve,
+                      geometryKey: Object.hashAll(<Object?>[
+                        cardWidth,
+                        cardHeight,
+                        constraints.maxWidth,
+                        constraints.maxHeight,
+                        media.padding,
+                        horizontalPadding,
+                        topPadding,
+                        bottomPadding,
+                        markerOffset,
+                      ]),
                       onLayoutSettled: () =>
                           _scheduleLayoutCallback(resolvedLayout),
                       child: positionedCard,
@@ -468,6 +479,7 @@ class _KubusMarkerOverlayAnimatedPositioned extends StatefulWidget {
     required this.top,
     required this.duration,
     required this.curve,
+    required this.geometryKey,
     required this.onLayoutSettled,
     required this.child,
   });
@@ -476,6 +488,7 @@ class _KubusMarkerOverlayAnimatedPositioned extends StatefulWidget {
   final double top;
   final Duration duration;
   final Curve curve;
+  final int geometryKey;
   final VoidCallback onLayoutSettled;
   final Widget child;
 
@@ -492,6 +505,18 @@ class _KubusMarkerOverlayAnimatedPositionedState
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) widget.onLayoutSettled();
     });
+  }
+
+  @override
+  void didUpdateWidget(covariant _KubusMarkerOverlayAnimatedPositioned oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final positionChanged =
+        oldWidget.left != widget.left || oldWidget.top != widget.top;
+    if (!positionChanged && oldWidget.geometryKey != widget.geometryKey) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) widget.onLayoutSettled();
+      });
+    }
   }
 
   @override

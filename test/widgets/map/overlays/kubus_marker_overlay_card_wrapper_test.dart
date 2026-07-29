@@ -285,6 +285,50 @@ void main() {
     );
   });
 
+  testWidgets('anchored layout publishes non-positional geometry changes',
+      (tester) async {
+    final anchor = ValueNotifier<Offset?>(const Offset(150, 20));
+    addTearDown(anchor.dispose);
+    var cardHeight = 120.0;
+    final reportedLayouts = <KubusMarkerOverlayResolvedLayout>[];
+
+    Widget buildOverlay() => MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 400,
+              height: 400,
+              child: KubusMarkerOverlayCardWrapper(
+                anchorListenable: anchor,
+                widthResolver: (_, __) => 160,
+                maxHeightResolver: (_, __) => 200,
+                heightResolver: (_, __, ___) => cardHeight,
+                animation: const KubusMarkerOverlayAnimationConfig(
+                  duration: Duration(milliseconds: 200),
+                  curve: Curves.linear,
+                ),
+                onLayoutResolved: reportedLayouts.add,
+                cardBuilder: (_, layout) => SizedBox(
+                  width: layout.cardWidth,
+                  height: layout.cardHeight,
+                ),
+              ),
+            ),
+          ),
+        );
+
+    await tester.pumpWidget(buildOverlay());
+    await tester.pumpAndSettle();
+    reportedLayouts.clear();
+
+    cardHeight = 180;
+    await tester.pumpWidget(buildOverlay());
+    await tester.pump();
+
+    expect(reportedLayouts, hasLength(1));
+    expect(reportedLayouts.single.layout.cardHeight, 180);
+    expect(reportedLayouts.single.cardTop, 12);
+  });
+
   testWidgets('reduced motion repositions anchored preview immediately',
       (tester) async {
     final anchor = ValueNotifier<Offset?>(const Offset(100, 260));
