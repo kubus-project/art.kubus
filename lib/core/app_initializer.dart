@@ -127,9 +127,16 @@ class _AppInitializerState extends State<AppInitializer> {
     // Mirror the normal direct-map entry: both map screens suppress automatic
     // coach marks by reading the guest flag, so it has to be persisted before
     // the map mounts. Awaited, not fired off, to keep that ordering.
-    try {
-      await GuestSessionService.activateGuestMode();
-    } catch (_) {}
+    //
+    // Bounded, because this helper is itself a fallback: a hung preferences
+    // plugin is one of the reasons the watchdog fires, and the same plugin
+    // backs guest mode. On timeout the visitor may see coach marks, which is
+    // far better than never leaving the loading screen.
+    await _safeStep(
+      'activate guest mode for direct map entry',
+      GuestSessionService.activateGuestMode,
+      timeout: const Duration(seconds: 2),
+    );
     if (!mounted || _didNavigate) return true;
     try {
       Provider.of<DeferredOnboardingProvider>(
