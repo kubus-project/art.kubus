@@ -13,6 +13,11 @@ class ExhibitionsProvider extends ChangeNotifier {
   final List<Exhibition> _exhibitions = <Exhibition>[];
   final List<Exhibition> _myExhibitions = <Exhibition>[];
   final Map<String, Exhibition> _byId = <String, Exhibition>{};
+
+  /// Ids whose cached entry came from a detail endpoint rather than a list
+  /// page. List payloads omit detail-only fields, so callers that need the full
+  /// record must still fetch even though `_byId` already has an entry.
+  final Set<String> _detailHydratedIds = <String>{};
   final Map<String, ExhibitionPoapStatus> _poapByExhibitionId =
       <String, ExhibitionPoapStatus>{};
   final Map<String, List<KubusEvent>> _programEventsByExhibitionId =
@@ -38,6 +43,10 @@ class ExhibitionsProvider extends ChangeNotifier {
   List<Exhibition> get myExhibitions => List.unmodifiable(_myExhibitions);
   Exhibition? get selectedExhibition => _selected;
   Exhibition? exhibitionById(String id) => _byId[id.trim()];
+
+  /// Whether [exhibitionById] would return a detail-loaded record for [id].
+  bool isExhibitionDetailHydrated(String id) =>
+      _detailHydratedIds.contains(id.trim());
 
   bool get isListLoading => _isListLoading;
   bool get isDetailLoading => _isDetailLoading;
@@ -115,9 +124,10 @@ class ExhibitionsProvider extends ChangeNotifier {
         _byId
           ..clear()
           ..addEntries(next.map((e) => MapEntry(e.id, e)));
+        _detailHydratedIds.clear();
       } else {
         for (final ex in next) {
-          _upsert(ex, notify: false);
+          _upsert(ex, notify: false, detailHydrated: false);
         }
       }
       notifyListeners();
@@ -130,14 +140,18 @@ class ExhibitionsProvider extends ChangeNotifier {
   }
 
   Future<Exhibition?> fetchExhibition(String id, {bool force = false}) async {
-    if (!force && _byId.containsKey(id)) return _byId[id];
+    // A list-cache entry is not a substitute for the detail payload: only skip
+    // the request when this id was already loaded from the detail endpoint.
+    if (!force && _detailHydratedIds.contains(id.trim())) {
+      return _byId[id.trim()];
+    }
 
     _setFlag(_Flag.detail, true);
     _error = null;
     try {
       final ex = await _api.getExhibition(id);
       if (ex != null) {
-        _upsert(ex, notify: false);
+        _upsert(ex, notify: false, detailHydrated: true);
         notifyListeners();
       }
       return ex;
@@ -172,7 +186,7 @@ class ExhibitionsProvider extends ChangeNotifier {
     try {
       final created = await _api.createExhibition(payload);
       if (created != null) {
-        _upsert(created, notify: false);
+        _upsert(created, notify: false, detailHydrated: true);
         _selected = created;
         notifyListeners();
       }
@@ -193,7 +207,7 @@ class ExhibitionsProvider extends ChangeNotifier {
     try {
       final updated = await _api.updateExhibition(id, updates);
       if (updated != null) {
-        _upsert(updated, notify: false);
+        _upsert(updated, notify: false, detailHydrated: true);
         if (_selected?.id == id) _selected = updated;
         notifyListeners();
       }
@@ -241,6 +255,7 @@ class ExhibitionsProvider extends ChangeNotifier {
       _exhibitions.removeWhere((e) => e.id == id);
       _myExhibitions.removeWhere((e) => e.id == id);
       _byId.remove(id);
+      _detailHydratedIds.remove(id.trim());
       _poapByExhibitionId.remove(id);
       _programEventsByExhibitionId.remove(id);
       if (_selected?.id == id) _selected = null;
@@ -558,8 +573,20 @@ class ExhibitionsProvider extends ChangeNotifier {
     }
   }
 
-  void _upsert(Exhibition exhibition, {bool notify = true}) {
+  /// [detailHydrated] records whether [exhibition] carries the detail payload.
+  /// `null` keeps whatever the cached entry was already marked as, for callers
+  /// that patch an existing record in place.
+  void _upsert(
+    Exhibition exhibition, {
+    bool notify = true,
+    bool? detailHydrated,
+  }) {
     _byId[exhibition.id] = exhibition;
+    if (detailHydrated == true) {
+      _detailHydratedIds.add(exhibition.id.trim());
+    } else if (detailHydrated == false) {
+      _detailHydratedIds.remove(exhibition.id.trim());
+    }
     final idx = _exhibitions.indexWhere((e) => e.id == exhibition.id);
     if (idx >= 0) {
       _exhibitions[idx] = exhibition;

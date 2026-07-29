@@ -96,7 +96,7 @@ import '../../features/map/shared/map_search_filter_assembly.dart';
 import '../../features/map/map_layers_manager.dart';
 import '../../features/map/map_overlay_stack.dart';
 import '../../features/map/controller/kubus_map_controller.dart';
-import '../../features/map/controller/map_marker_linked_subject_hydrator.dart';
+import '../../features/map/controller/map_marker_linked_subject_coordinator.dart';
 import '../../features/map/controller/map_target_coordinator.dart';
 import '../../features/map/engine/kubus_map_marker_sync_engine.dart';
 import '../../features/map/tutorial/map_tutorial_coordinator.dart';
@@ -230,8 +230,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   late final MarkerVisualSyncCoordinator _markerVisualSyncCoordinator;
   late final MapDataCoordinator _mapDataCoordinator;
   late final NearbyArtController _nearbyArtController;
-  final MapMarkerLinkedSubjectHydrator _linkedSubjectHydrator =
-      MapMarkerLinkedSubjectHydrator();
+  late final MapMarkerLinkedSubjectCoordinator _linkedSubjectCoordinator;
   late final MapUiStateCoordinator _mapUiStateCoordinator;
   late final MapMarkerRenderCoordinator _renderCoordinator;
   final KubusMapBackdropHostController _mapBackdropHostController =
@@ -543,7 +542,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
         final marker = state.selectedMarker;
         if (marker != null) {
-          unawaited(_ensureLinkedMarkerSubjectLoaded(marker));
+          _linkedSubjectCoordinator.selectionChanged(marker);
           // Run selection-only side effects once per selection token.
           if (tokenChanged) {
             _renderCoordinator.startSelectionPopAnimation();
@@ -691,6 +690,24 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     _nearbyArtController = NearbyArtController(
       map: KubusNearbyArtMapDelegate(_kubusMapController),
       distance: _distance,
+    );
+
+    _linkedSubjectCoordinator = MapMarkerLinkedSubjectCoordinator(
+      cachedEvent: (id) => context.read<EventsProvider>().eventById(id),
+      cachedExhibition: (id) =>
+          context.read<ExhibitionsProvider>().exhibitionById(id),
+      isEventDetailHydrated: (id) =>
+          context.read<EventsProvider>().isEventDetailHydrated(id),
+      isExhibitionDetailHydrated: (id) =>
+          context.read<ExhibitionsProvider>().isExhibitionDetailHydrated(id),
+      fetchEvent: (id) => context.read<EventsProvider>().fetchEvent(id),
+      fetchExhibition: (id) =>
+          context.read<ExhibitionsProvider>().fetchExhibition(id),
+      selectedMarkerId: () => _kubusMapController.selectedMarkerId,
+      onSubjectHydrated: () {
+        if (!mounted) return;
+        setState(() {});
+      },
     );
 
     _renderCoordinator = MapMarkerRenderCoordinator(
@@ -2233,6 +2250,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     _mapDataCoordinator.dispose();
     _mapUiStateCoordinator.dispose();
     _mapTargetCoordinator.dispose();
+    _linkedSubjectCoordinator.dispose();
     _kubusMapController.dispose();
     _mapBackdropHostController.dispose();
     WidgetsBinding.instance.removeObserver(this);
@@ -5171,6 +5189,13 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     }
   }
 
+  /// Repaints the marker overlay after a save/like toggle so the action icon
+  /// and label reflect the new engagement state immediately.
+  void _handleOverlayEngagementChanged() {
+    if (!mounted) return;
+    setState(() {});
+  }
+
   Widget _buildMarkerOverlayCard(
     ArtMarker marker,
     Artwork? artwork,
@@ -5185,7 +5210,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }) {
     final baseColor = _resolveArtMarkerColor(marker, themeProvider);
     final primaryExhibition = marker.resolvedExhibitionSummary;
-    final linkedSubjects = _linkedSubjectSnapshot(marker);
+    final linkedSubjects = _linkedSubjectCoordinator.resolveCached(marker);
     final linkedEvent = linkedSubjects.event ??
         KubusMarkerOverlayHelpers.resolveLinkedEvent(
           marker: marker,
@@ -5227,6 +5252,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               unawaited(_openStreetArtClaimsDialog(marker));
             }
           : null,
+      onEngagementChanged: _handleOverlayEngagementChanged,
     );
 
     void openDetails() {
@@ -5331,7 +5357,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           marker: selectedMarker,
           events: context.read<EventsProvider>().events,
         );
-        final linkedSubjects = _linkedSubjectSnapshot(selectedMarker);
+        final linkedSubjects =
+            _linkedSubjectCoordinator.resolveCached(selectedMarker);
 
         return KubusMarkerOverlayHelpers.estimateCardHeight(
           marker: selectedMarker,
@@ -5620,8 +5647,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     }
 
     final eventsProvider = context.read<EventsProvider>();
+    // No cache-first hop through `eventById`: a list-page entry is missing
+    // detail fields. `fetchEvent` already returns instantly for ids that were
+    // detail-loaded, so this stays cheap without serving list-shaped data.
     final fetched = event ??
-        eventsProvider.eventById(eventId) ??
         await (() async {
           try {
             return await eventsProvider.fetchEvent(eventId);
@@ -5725,7 +5754,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
     Object? fetchError;
     final fetched = initialExhibition ??
-        exhibitionsProvider.exhibitionById(resolved.id) ??
         await (() async {
           try {
             return await exhibitionsProvider.fetchExhibition(resolved.id);
@@ -5814,26 +5842,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           _isClaimingSelectedExhibitionPoap = false;
         });
       }
-    }
-  }
-
-  MapMarkerLinkedSubjectSnapshot _linkedSubjectSnapshot(ArtMarker marker) {
-    return _linkedSubjectHydrator.resolveCached(
-      marker: marker,
-      eventsProvider: context.read<EventsProvider>(),
-      exhibitionsProvider: context.read<ExhibitionsProvider>(),
-    );
-  }
-
-  Future<void> _ensureLinkedMarkerSubjectLoaded(ArtMarker marker) async {
-    final hydrated = await _linkedSubjectHydrator.hydrate(
-      marker: marker,
-      eventsProvider: context.read<EventsProvider>(),
-      exhibitionsProvider: context.read<ExhibitionsProvider>(),
-    );
-    if (!hydrated || !mounted) return;
-    if (_kubusMapController.selectedMarkerId == marker.id) {
-      setState(() {});
     }
   }
 

@@ -119,11 +119,25 @@ class _AppInitializerState extends State<AppInitializer> {
     return true;
   }
 
-  bool _openPreferredPublicMap(
+  Future<bool> _openPreferredPublicMap(
     NavigatorState navigator, {
     String initialStepId = 'account',
-  }) {
+  }) async {
     if (!_isDirectPublicMapEntry) return false;
+    // Mirror the normal direct-map entry: both map screens suppress automatic
+    // coach marks by reading the guest flag, so it has to be persisted before
+    // the map mounts. Awaited, not fired off, to keep that ordering.
+    //
+    // Bounded, because this helper is itself a fallback: a hung preferences
+    // plugin is one of the reasons the watchdog fires, and the same plugin
+    // backs guest mode. On timeout the visitor may see coach marks, which is
+    // far better than never leaving the loading screen.
+    await _safeStep(
+      'activate guest mode for direct map entry',
+      GuestSessionService.activateGuestMode,
+      timeout: const Duration(seconds: 2),
+    );
+    if (!mounted || _didNavigate) return true;
     try {
       Provider.of<DeferredOnboardingProvider>(
         navigator.context,
@@ -148,20 +162,25 @@ class _AppInitializerState extends State<AppInitializer> {
     // Safety net: never stay on AppLoading forever (e.g. due to a plugin hang on web/desktop).
     _startupWatchdog?.cancel();
     _startupWatchdog = Timer(const Duration(seconds: 20), () {
-      if (!mounted || _didNavigate) return;
-      final navigator = appNavigatorKey.currentState;
-      if (navigator == null) return;
-      if (_openPendingPublicTarget(navigator)) return;
-      if (_openPreferredPublicMap(navigator)) return;
-      final isDesktop = DesktopBreakpoints.isDesktop(navigator.context);
-      _didNavigate = true;
-      navigator.pushReplacement(
-        MaterialPageRoute(
-          builder: (_) => OnboardingFlowScreen(forceDesktop: isDesktop),
-          settings: const RouteSettings(name: '/onboarding'),
-        ),
-      );
+      unawaited(_handleStartupWatchdogTimeout());
     });
+  }
+
+  Future<void> _handleStartupWatchdogTimeout() async {
+    if (!mounted || _didNavigate) return;
+    final navigator = appNavigatorKey.currentState;
+    if (navigator == null) return;
+    if (_openPendingPublicTarget(navigator)) return;
+    if (await _openPreferredPublicMap(navigator)) return;
+    if (!mounted || _didNavigate) return;
+    final isDesktop = DesktopBreakpoints.isDesktop(navigator.context);
+    _didNavigate = true;
+    navigator.pushReplacement(
+      MaterialPageRoute(
+        builder: (_) => OnboardingFlowScreen(forceDesktop: isDesktop),
+        settings: const RouteSettings(name: '/onboarding'),
+      ),
+    );
   }
 
   @override
@@ -879,7 +898,8 @@ class _AppInitializerState extends State<AppInitializer> {
       AppConfig.debugPrint('AppInitializer: init stack: $st');
       if (!mounted) return;
       if (_openPendingPublicTarget(navigator)) return;
-      if (_openPreferredPublicMap(navigator)) return;
+      if (await _openPreferredPublicMap(navigator)) return;
+      if (!mounted) return;
       final isDesktop = DesktopBreakpoints.isDesktop(context);
       _didNavigate = true;
       navigator.pushReplacement(
