@@ -2349,13 +2349,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                       bottom: KubusMapMetrics.desktopContextPanelBottomInset,
                       width: contextPanelWidth,
                       child: MapOverlayBlocker(
-                        child:
-                            _buildLeftPanelChild(
-                              themeProvider,
-                              animationTheme,
-                              selectedEventExhibitionsCount:
-                                  selectedEventExhibitionsCount,
-                            ),
+                        child: _buildLeftPanelChild(
+                          themeProvider,
+                          animationTheme,
+                          selectedEventExhibitionsCount:
+                              selectedEventExhibitionsCount,
+                        ),
                       ),
                     ),
 
@@ -5187,8 +5186,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final baseColor = _resolveArtMarkerColor(marker, themeProvider);
     final primaryExhibition = marker.resolvedExhibitionSummary;
     final linkedSubjects = _linkedSubjectSnapshot(marker);
-    final linkedEvent =
-        linkedSubjects.event ??
+    final linkedEvent = linkedSubjects.event ??
         KubusMarkerOverlayHelpers.resolveLinkedEvent(
           marker: marker,
           events: context.read<EventsProvider>().events,
@@ -5622,8 +5620,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     }
 
     final eventsProvider = context.read<EventsProvider>();
-    final fetched =
-        event ??
+    final fetched = event ??
         eventsProvider.eventById(eventId) ??
         await (() async {
           try {
@@ -5727,8 +5724,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     }
 
     Object? fetchError;
-    final fetched =
-        initialExhibition ??
+    final fetched = initialExhibition ??
         exhibitionsProvider.exhibitionById(resolved.id) ??
         await (() async {
           try {
@@ -5767,13 +5763,13 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       exhibitionsProvider
           .fetchExhibitionPoap(resolved.id, force: true)
           .catchError((Object error, StackTrace _) {
-            if (kDebugMode) {
-              debugPrint(
-                'DesktopMapScreen: exhibition POAP fetch failed: $error',
-              );
-            }
-            return null;
-          }),
+        if (kDebugMode) {
+          debugPrint(
+            'DesktopMapScreen: exhibition POAP fetch failed: $error',
+          );
+        }
+        return null;
+      }),
     );
   }
 

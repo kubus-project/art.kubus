@@ -37,9 +37,8 @@ class MapMarkerLinkedSubjectHydrator {
             (marker.resolvedExhibitionSummary?.id ?? marker.subjectId ?? '')
                 .trim();
         return MapMarkerLinkedSubjectSnapshot(
-          exhibition: id.isEmpty
-              ? null
-              : exhibitionsProvider.exhibitionById(id),
+          exhibition:
+              id.isEmpty ? null : exhibitionsProvider.exhibitionById(id),
         );
       case MapMarkerOverlayLinkedSubjectKind.none:
       case MapMarkerOverlayLinkedSubjectKind.artwork:
@@ -76,8 +75,8 @@ class MapMarkerLinkedSubjectHydrator {
             exhibitionsProvider.exhibitionById(id) != null) {
           return Future<bool>.value(false);
         }
-        load = () async =>
-            await exhibitionsProvider.fetchExhibition(id) != null;
+        load =
+            () async => await exhibitionsProvider.fetchExhibition(id) != null;
       case MapMarkerOverlayLinkedSubjectKind.none:
       case MapMarkerOverlayLinkedSubjectKind.artwork:
       case MapMarkerOverlayLinkedSubjectKind.institution:

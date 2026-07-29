@@ -4819,8 +4819,7 @@ class _MapScreenState extends State<MapScreen>
 
       final pagePrimaryExhibition = pageMarker.resolvedExhibitionSummary;
       final linkedSubjects = _linkedSubjectSnapshot(pageMarker);
-      final pageEvent =
-          linkedSubjects.event ??
+      final pageEvent = linkedSubjects.event ??
           KubusMarkerOverlayHelpers.resolveLinkedEvent(
             marker: pageMarker,
             events: context.read<EventsProvider>().events,
@@ -5167,8 +5166,7 @@ class _MapScreenState extends State<MapScreen>
 
     final eventsProvider = context.read<EventsProvider>();
     final navigator = Navigator.of(context);
-    final fetched =
-        event ??
+    final fetched = event ??
         eventsProvider.eventById(eventId) ??
         await (() async {
           try {
@@ -5259,8 +5257,7 @@ class _MapScreenState extends State<MapScreen>
     }
 
     Object? fetchError;
-    final fetched =
-        initialExhibition ??
+    final fetched = initialExhibition ??
         exhibitionsProvider.exhibitionById(resolved.id) ??
         await (() async {
           try {

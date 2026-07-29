@@ -66,12 +66,12 @@ List<MarkerOverlayActionSpec> buildMarkerOverlayActions({
         semanticsLabel: 'marker_event_save',
         onTap: () {
           unawaited(() async {
-            final authenticated = await const ContextualAuthGate()
-                .ensureAuthenticated(
-                  context,
-                  actionLabel: l10n.commonSave.toLowerCase(),
-                  returnRoute: '/map',
-                );
+            final authenticated =
+                await const ContextualAuthGate().ensureAuthenticated(
+              context,
+              actionLabel: l10n.commonSave.toLowerCase(),
+              returnRoute: '/map',
+            );
             if (!authenticated || !context.mounted) return;
             await savedItemsProvider.toggleEventSaved(event.id);
             onEngagementChanged?.call();
@@ -109,12 +109,12 @@ List<MarkerOverlayActionSpec> buildMarkerOverlayActions({
         semanticsLabel: 'marker_exhibition_save',
         onTap: () {
           unawaited(() async {
-            final authenticated = await const ContextualAuthGate()
-                .ensureAuthenticated(
-                  context,
-                  actionLabel: l10n.commonSave.toLowerCase(),
-                  returnRoute: '/map',
-                );
+            final authenticated =
+                await const ContextualAuthGate().ensureAuthenticated(
+              context,
+              actionLabel: l10n.commonSave.toLowerCase(),
+              returnRoute: '/map',
+            );
             if (!authenticated || !context.mounted) return;
             await savedItemsProvider.toggleExhibitionSaved(exhibition.id);
             onEngagementChanged?.call();
@@ -159,12 +159,12 @@ List<MarkerOverlayActionSpec> buildMarkerOverlayActions({
       semanticsLabel: 'marker_save',
       onTap: () {
         unawaited(() async {
-          final authenticated = await const ContextualAuthGate()
-              .ensureAuthenticated(
-                context,
-                actionLabel: l10n.commonSave.toLowerCase(),
-                returnRoute: '/map',
-              );
+          final authenticated =
+              await const ContextualAuthGate().ensureAuthenticated(
+            context,
+            actionLabel: l10n.commonSave.toLowerCase(),
+            returnRoute: '/map',
+          );
           if (!authenticated || !context.mounted) return;
           await artworkProvider.toggleArtworkSaved(artwork.id);
           onEngagementChanged?.call();
@@ -199,12 +199,12 @@ List<MarkerOverlayActionSpec> buildMarkerOverlayActions({
       semanticsLabel: 'marker_like',
       onTap: () {
         unawaited(() async {
-          final authenticated = await const ContextualAuthGate()
-              .ensureAuthenticated(
-                context,
-                actionLabel: l10n.commonLikes.toLowerCase(),
-                returnRoute: '/map',
-              );
+          final authenticated =
+              await const ContextualAuthGate().ensureAuthenticated(
+            context,
+            actionLabel: l10n.commonLikes.toLowerCase(),
+            returnRoute: '/map',
+          );
           if (!authenticated || !context.mounted) return;
           await artworkProvider.toggleLike(artwork.id);
           onEngagementChanged?.call();

@@ -85,16 +85,16 @@ MapMarkerOverlayPresentation resolveMarkerOverlayPresentation({
   final markerTitle = marker.name.trim();
   final canonicalSubjectTitle =
       linkedKind == MapMarkerOverlayLinkedSubjectKind.event ||
-          linkedKind == MapMarkerOverlayLinkedSubjectKind.exhibition
-      ? linkedTitle?.trim()
-      : null;
+              linkedKind == MapMarkerOverlayLinkedSubjectKind.exhibition
+          ? linkedTitle?.trim()
+          : null;
   final title = canonicalSubjectTitle?.isNotEmpty == true
       ? canonicalSubjectTitle!
       : markerTitle.isNotEmpty
-      ? markerTitle
-      : (linkedTitle?.trim().isNotEmpty == true
-            ? linkedTitle!.trim()
-            : 'Marker');
+          ? markerTitle
+          : (linkedTitle?.trim().isNotEmpty == true
+              ? linkedTitle!.trim()
+              : 'Marker');
 
   final markerDescription = marker.description.trim();
   final subjectDescription = _resolveFallbackDescription(
@@ -105,12 +105,12 @@ MapMarkerOverlayPresentation resolveMarkerOverlayPresentation({
   );
   final preferCanonicalSubject =
       linkedKind == MapMarkerOverlayLinkedSubjectKind.event ||
-      linkedKind == MapMarkerOverlayLinkedSubjectKind.exhibition;
+          linkedKind == MapMarkerOverlayLinkedSubjectKind.exhibition;
   final description = preferCanonicalSubject && subjectDescription.isNotEmpty
       ? subjectDescription
       : markerDescription.isNotEmpty
-      ? markerDescription
-      : subjectDescription;
+          ? markerDescription
+          : subjectDescription;
 
   return MapMarkerOverlayPresentation(
     title: title,
@@ -327,11 +327,8 @@ String? _buildLocationAndDateSubtitle({
   required DateTime? endsAt,
 }) {
   final parts = <String>[];
-  final location = locationParts
-      .map(_normalizeText)
-      .whereType<String>()
-      .toSet()
-      .join(', ');
+  final location =
+      locationParts.map(_normalizeText).whereType<String>().toSet().join(', ');
   if (location.isNotEmpty) {
     parts.add(location);
   }

@@ -31,8 +31,7 @@ class ContextualAuthGate {
     }
 
     final l10n = AppLocalizations.of(context)!;
-    final shouldSignIn =
-        await showDialog<bool>(
+    final shouldSignIn = await showDialog<bool>(
           context: context,
           builder: (dialogContext) => AlertDialog(
             title: Text(l10n.contextualAuthTitle(actionLabel)),
