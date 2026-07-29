@@ -3137,8 +3137,11 @@ class _MapScreenState extends State<MapScreen>
 
   Future<bool> _createMarkerAtPosition(
       LatLng position, MapMarkerFormResult form) async {
+    Artwork? createdStreetArtArtwork;
     try {
+      final l10n = AppLocalizations.of(context)!;
       final exhibitionsProvider = context.read<ExhibitionsProvider>();
+      final artworkProvider = context.read<ArtworkProvider>();
       final markerManagementProvider = context.read<MarkerManagementProvider>();
       final walletAddress = context.read<WalletProvider>().currentWalletAddress;
       final tileProviders = Provider.of<TileProviders?>(context, listen: false);
@@ -3178,15 +3181,51 @@ class _MapScreenState extends State<MapScreen>
           ? form.category
           : form.subject?.type.defaultCategory ??
               form.subjectType.defaultCategory;
+      var linkedArtwork = form.linkedArtwork;
+      if (KubusMapMarkerCreationHelpers.shouldCreateStreetArtArtwork(
+        markerType: form.markerType,
+        subjectType: form.subjectType,
+        linkedArtwork: linkedArtwork,
+      )) {
+        final normalizedWallet = (walletAddress ?? '').trim();
+        final normalizedAuthor = (form.imageAuthor ?? '').trim();
+        final normalizedLicense = (form.imageLicense ?? '').trim();
+        if (coverImageUrl == null || coverImageUrl.isEmpty) {
+          throw StateError(l10n.mapMarkerCreateFailedToast);
+        }
+        if (normalizedWallet.isEmpty) {
+          throw StateError(l10n.mapMarkerCreateWalletRequired);
+        }
+        if (normalizedAuthor.isEmpty) {
+          throw StateError(l10n.mapMarkerDialogImageAuthorRequiredError);
+        }
+        if (normalizedLicense.isEmpty) {
+          throw StateError(l10n.mapMarkerDialogImageLicenseRequiredError);
+        }
+        createdStreetArtArtwork =
+            await KubusMapMarkerCreationHelpers.createStreetArtArtwork(
+          title: form.title,
+          description: form.description,
+          coverImageUrl: coverImageUrl,
+          walletAddress: normalizedWallet,
+          category: resolvedCategory,
+          position: snappedPosition,
+          isPublic: form.isPublic,
+          artistName: form.artistName,
+          imageAuthor: normalizedAuthor,
+          imageLicense: normalizedLicense,
+        );
+        linkedArtwork = createdStreetArtArtwork;
+      }
       final marker = await _mapMarkerService.createMarker(
         location: snappedPosition,
         title: form.title,
         description: form.description,
         type: form.markerType,
         category: resolvedCategory,
-        artworkId: form.linkedArtwork?.id,
-        modelCID: form.linkedArtwork?.model3DCID,
-        modelURL: form.linkedArtwork?.model3DURL,
+        artworkId: linkedArtwork?.id,
+        modelCID: linkedArtwork?.model3DCID,
+        modelURL: linkedArtwork?.model3DURL,
         isPublic: form.isPublic,
         metadata: {
           'snapZoom': currentZoom,
@@ -3204,9 +3243,9 @@ class _MapScreenState extends State<MapScreen>
             'subjectTitle': form.subject!.title,
             'subjectSubtitle': form.subject!.subtitle,
           },
-          if (form.linkedArtwork != null) ...{
-            'linkedArtworkId': form.linkedArtwork!.id,
-            'linkedArtworkTitle': form.linkedArtwork!.title,
+          if (linkedArtwork != null) ...{
+            'linkedArtworkId': linkedArtwork.id,
+            'linkedArtworkTitle': linkedArtwork.title,
           },
           if (coverImageUrl != null && coverImageUrl.isNotEmpty)
             'coverImageUrl': coverImageUrl,
@@ -3232,12 +3271,19 @@ class _MapScreenState extends State<MapScreen>
       );
 
       if (marker != null) {
+        final persistedStreetArtArtwork = createdStreetArtArtwork;
+        // The marker now owns this artwork relationship. Do not roll the
+        // artwork back if a later, non-persistence UI update fails.
+        createdStreetArtArtwork = null;
         AppConfig.debugPrint(
             'MapScreen: marker created and saved: ${marker.id}');
 
         // Keep the management surface in sync even when markers are created
         // outside of ManageMarkersScreen.
         markerManagementProvider.ingestMarker(marker);
+        if (persistedStreetArtArtwork != null) {
+          artworkProvider.addOrUpdateArtwork(persistedStreetArtArtwork);
+        }
 
         if (form.subjectType == MarkerSubjectType.exhibition) {
           final exhibitionId = (form.subject?.id ?? '').trim();
@@ -3249,7 +3295,7 @@ class _MapScreenState extends State<MapScreen>
               // Non-fatal: endpoint may be disabled or user may not have permissions.
             }
 
-            final linkedArtworkId = (form.linkedArtwork?.id ?? '').trim();
+            final linkedArtworkId = (linkedArtwork?.id ?? '').trim();
             if (linkedArtworkId.isNotEmpty) {
               try {
                 await exhibitionsProvider
@@ -3269,12 +3315,18 @@ class _MapScreenState extends State<MapScreen>
         _applyVisibleMarkers();
         return true;
       } else {
+        await KubusMapMarkerCreationHelpers.rollbackStreetArtArtwork(
+          createdStreetArtArtwork,
+        );
         AppConfig.debugPrint(
             'MapScreen: failed to create marker (returned null)');
       }
 
       return false;
     } on StateError catch (e) {
+      await KubusMapMarkerCreationHelpers.rollbackStreetArtArtwork(
+        createdStreetArtArtwork,
+      );
       if (mounted) {
         final messenger = ScaffoldMessenger.of(context);
         messenger.showKubusSnackBar(
@@ -3285,6 +3337,9 @@ class _MapScreenState extends State<MapScreen>
       AppConfig.debugPrint('MapScreen: marker creation rejected: $e');
       return false;
     } catch (e) {
+      await KubusMapMarkerCreationHelpers.rollbackStreetArtArtwork(
+        createdStreetArtArtwork,
+      );
       AppConfig.debugPrint(
           'MapScreen: Error creating marker at current location: $e');
       return false;

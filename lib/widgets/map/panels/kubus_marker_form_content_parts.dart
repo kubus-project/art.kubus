@@ -240,12 +240,24 @@ class KubusMarkerFormBody extends StatelessWidget {
                 controller: imageAuthorController,
                 labelText: l10n.mapMarkerDialogImageAuthorLabel,
                 hintText: l10n.mapMarkerDialogImageAuthorHint,
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return l10n.mapMarkerDialogImageAuthorRequiredError;
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: KubusSpacing.sm),
               KubusMarkerFormTextField(
                 controller: imageLicenseController,
                 labelText: l10n.mapMarkerDialogImageLicenseLabel,
                 hintText: l10n.mapMarkerDialogImageLicenseHint,
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return l10n.mapMarkerDialogImageLicenseRequiredError;
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: KubusSpacing.md),
             ],

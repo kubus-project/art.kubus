@@ -302,6 +302,15 @@ class BackendPublicObjectTransport {
           (payload['walletAddress'] ?? payload['wallet_address'] ?? '')
               .toString(),
       artistName: payload['artistName']?.toString(),
+      imageAuthor:
+          (payload['imageAuthor'] ?? payload['image_author'])?.toString(),
+      imageLicense:
+          (payload['imageLicense'] ?? payload['image_license'])?.toString(),
+      imageAttribution:
+          (payload['imageAttribution'] ?? payload['image_attribution'])
+              ?.toString(),
+      imageSourceUrl: (payload['imageSourceUrl'] ?? payload['image_source_url'])
+          ?.toString(),
       category: (payload['category'] ?? 'General').toString(),
       tags: (payload['tags'] as List?)?.map((e) => e.toString()).toList() ??
           const <String>[],

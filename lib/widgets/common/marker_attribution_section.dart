@@ -53,6 +53,33 @@ class MarkerAttributionSection extends StatelessWidget {
     );
   }
 
+  /// Attribution resolved from a linked artwork and its map marker.
+  ///
+  /// Marker metadata wins because it describes the exact photo rendered on the
+  /// map; artwork fields keep imported and API-hydrated records complete when
+  /// the marker carries only linkage metadata.
+  factory MarkerAttributionSection.fromMarkerAndArtwork(
+    ArtMarker? marker,
+    Artwork? artwork, {
+    Key? key,
+  }) {
+    final imageAuthor = marker?.imageAuthor ?? artwork?.imageAuthor;
+    final imageLicense = marker?.imageLicense ?? artwork?.imageLicense;
+    final hasStructuredPhotoCredit =
+        _clean(imageAuthor) != null && _clean(imageLicense) != null;
+    return MarkerAttributionSection(
+      key: key,
+      // Linked-artwork surfaces already render the artwork creator byline.
+      artist: artwork == null ? marker?.artistName : null,
+      imageAttribution: hasStructuredPhotoCredit
+          ? null
+          : marker?.imageAttribution ?? artwork?.imageAttribution,
+      imageAuthor: imageAuthor,
+      imageLicense: imageLicense,
+      sourceAttribution: marker?.sourceAttribution,
+    );
+  }
+
   final String? artist;
   final String? imageAttribution;
   final String? imageAuthor;
@@ -108,7 +135,8 @@ class MarkerAttributionSection extends StatelessWidget {
 
     if (artistValue != null &&
         !RegExp(r'^unknown$', caseSensitive: false).hasMatch(artistValue)) {
-      addRow(Icons.brush_outlined, l10n.markerAttributionArtistLabel, artistValue);
+      addRow(
+          Icons.brush_outlined, l10n.markerAttributionArtistLabel, artistValue);
     }
     if (photoLine.isNotEmpty) {
       addRow(

@@ -228,6 +228,43 @@ void main() {
     );
   });
 
+  testWidgets('marker card renders structured photo author and license',
+      (tester) async {
+    final marker = _marker().copyWith(
+      metadata: const <String, dynamic>{
+        'imageAuthor': 'Photo Creator',
+        'imageLicense': 'CC BY-SA 4.0',
+      },
+    );
+
+    await tester.pumpWidget(
+      _wrap(
+        SizedBox(
+          width: 340,
+          child: KubusMarkerOverlayCard(
+            marker: marker,
+            artwork: _artwork(),
+            baseColor: Colors.teal,
+            displayTitle: 'Attributed artwork',
+            canPresentExhibition: false,
+            onClose: () {},
+            onPrimaryAction: () {},
+            primaryActionIcon: Icons.arrow_forward,
+            primaryActionLabel: 'View details',
+            maxWidth: 340,
+            maxHeight: 520,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining('Photo Creator / CC BY-SA 4.0'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets(
     'constrained marker overlay card keeps cover image filling media box',
     (tester) async {
