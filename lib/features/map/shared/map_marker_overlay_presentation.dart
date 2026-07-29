@@ -1,6 +1,7 @@
 import '../../../models/art_marker.dart';
 import '../../../models/artwork.dart';
 import '../../../models/event.dart';
+import '../../../models/exhibition.dart';
 
 enum MapMarkerOverlayLinkedSubjectKind {
   none,
@@ -43,20 +44,25 @@ class MapMarkerOverlayPresentation {
     required this.description,
     required this.linkedSubject,
     required this.primaryTarget,
+    this.mediaUrl,
+    this.mediaUpdatedAt,
   });
 
   final String title;
   final String description;
   final MapMarkerOverlayLinkedSubjectContext linkedSubject;
   final MapMarkerOverlayPrimaryTarget primaryTarget;
+  final String? mediaUrl;
+  final DateTime? mediaUpdatedAt;
 }
 
 MapMarkerOverlayPresentation resolveMarkerOverlayPresentation({
   required ArtMarker marker,
   Artwork? artwork,
   KubusEvent? event,
+  Exhibition? exhibition,
 }) {
-  final linkedKind = _resolveLinkedSubjectKind(marker);
+  final linkedKind = resolveMarkerOverlayLinkedSubjectKind(marker);
   final linkedId = _resolveLinkedSubjectId(
     marker: marker,
     artwork: artwork,
@@ -66,29 +72,45 @@ MapMarkerOverlayPresentation resolveMarkerOverlayPresentation({
     marker: marker,
     artwork: artwork,
     event: event,
+    exhibition: exhibition,
     kind: linkedKind,
   );
   final linkedSubtitle = _resolveLinkedSubjectSubtitle(
     marker: marker,
     event: event,
+    exhibition: exhibition,
     kind: linkedKind,
   );
 
   final markerTitle = marker.name.trim();
-  final title = markerTitle.isNotEmpty
-      ? markerTitle
-      : (linkedTitle?.trim().isNotEmpty == true
-          ? linkedTitle!.trim()
-          : 'Marker');
+  final canonicalSubjectTitle =
+      linkedKind == MapMarkerOverlayLinkedSubjectKind.event ||
+              linkedKind == MapMarkerOverlayLinkedSubjectKind.exhibition
+          ? linkedTitle?.trim()
+          : null;
+  final title = canonicalSubjectTitle?.isNotEmpty == true
+      ? canonicalSubjectTitle!
+      : markerTitle.isNotEmpty
+          ? markerTitle
+          : (linkedTitle?.trim().isNotEmpty == true
+              ? linkedTitle!.trim()
+              : 'Marker');
 
   final markerDescription = marker.description.trim();
-  final description = markerDescription.isNotEmpty
-      ? markerDescription
-      : _resolveFallbackDescription(
-          artwork: artwork,
-          event: event,
-          kind: linkedKind,
-        );
+  final subjectDescription = _resolveFallbackDescription(
+    artwork: artwork,
+    event: event,
+    exhibition: exhibition,
+    kind: linkedKind,
+  );
+  final preferCanonicalSubject =
+      linkedKind == MapMarkerOverlayLinkedSubjectKind.event ||
+          linkedKind == MapMarkerOverlayLinkedSubjectKind.exhibition;
+  final description = preferCanonicalSubject && subjectDescription.isNotEmpty
+      ? subjectDescription
+      : markerDescription.isNotEmpty
+          ? markerDescription
+          : subjectDescription;
 
   return MapMarkerOverlayPresentation(
     title: title,
@@ -105,10 +127,24 @@ MapMarkerOverlayPresentation resolveMarkerOverlayPresentation({
       linkedKind: linkedKind,
       linkedSubjectId: linkedId,
     ),
+    mediaUrl: switch (linkedKind) {
+      MapMarkerOverlayLinkedSubjectKind.event => event?.coverUrl,
+      MapMarkerOverlayLinkedSubjectKind.exhibition => exhibition?.coverUrl,
+      _ => null,
+    },
+    mediaUpdatedAt: switch (linkedKind) {
+      MapMarkerOverlayLinkedSubjectKind.event =>
+        event?.updatedAt ?? event?.createdAt,
+      MapMarkerOverlayLinkedSubjectKind.exhibition =>
+        exhibition?.updatedAt ?? exhibition?.createdAt,
+      _ => null,
+    },
   );
 }
 
-MapMarkerOverlayLinkedSubjectKind _resolveLinkedSubjectKind(ArtMarker marker) {
+MapMarkerOverlayLinkedSubjectKind resolveMarkerOverlayLinkedSubjectKind(
+  ArtMarker marker,
+) {
   final subjectType = (marker.subjectType ?? '').trim().toLowerCase();
   if (subjectType.contains('exhibition')) {
     return MapMarkerOverlayLinkedSubjectKind.exhibition;
@@ -161,6 +197,7 @@ String? _resolveLinkedSubjectTitle({
   required ArtMarker marker,
   required Artwork? artwork,
   required KubusEvent? event,
+  required Exhibition? exhibition,
   required MapMarkerOverlayLinkedSubjectKind kind,
 }) {
   switch (kind) {
@@ -168,7 +205,8 @@ String? _resolveLinkedSubjectTitle({
       return _normalizeText(artwork?.title) ??
           _normalizeText(marker.subjectTitle);
     case MapMarkerOverlayLinkedSubjectKind.exhibition:
-      return _normalizeText(marker.resolvedExhibitionSummary?.title) ??
+      return _normalizeText(exhibition?.title) ??
+          _normalizeText(marker.resolvedExhibitionSummary?.title) ??
           _normalizeText(marker.subjectTitle);
     case MapMarkerOverlayLinkedSubjectKind.event:
       return _normalizeText(event?.title) ??
@@ -185,17 +223,20 @@ String? _resolveLinkedSubjectTitle({
 String? _resolveLinkedSubjectSubtitle({
   required ArtMarker marker,
   required KubusEvent? event,
+  required Exhibition? exhibition,
   required MapMarkerOverlayLinkedSubjectKind kind,
 }) {
-  final metadataSubtitle = _readMetadataString(
-    marker.metadata,
-    const <String>['subjectSubtitle', 'subject_subtitle'],
-  );
+  final metadataSubtitle = _readMetadataString(marker.metadata, const <String>[
+    'subjectSubtitle',
+    'subject_subtitle',
+  ]);
   switch (kind) {
     case MapMarkerOverlayLinkedSubjectKind.event:
       final eventSubtitle = _buildEventSubtitle(event);
       return eventSubtitle ?? metadataSubtitle;
     case MapMarkerOverlayLinkedSubjectKind.exhibition:
+      final exhibitionSubtitle = _buildExhibitionSubtitle(exhibition);
+      return exhibitionSubtitle ?? metadataSubtitle;
     case MapMarkerOverlayLinkedSubjectKind.institution:
     case MapMarkerOverlayLinkedSubjectKind.group:
     case MapMarkerOverlayLinkedSubjectKind.misc:
@@ -209,6 +250,7 @@ String? _resolveLinkedSubjectSubtitle({
 String _resolveFallbackDescription({
   required Artwork? artwork,
   required KubusEvent? event,
+  required Exhibition? exhibition,
   required MapMarkerOverlayLinkedSubjectKind kind,
 }) {
   switch (kind) {
@@ -217,6 +259,7 @@ String _resolveFallbackDescription({
     case MapMarkerOverlayLinkedSubjectKind.event:
       return (event?.description ?? '').trim();
     case MapMarkerOverlayLinkedSubjectKind.exhibition:
+      return (exhibition?.description ?? '').trim();
     case MapMarkerOverlayLinkedSubjectKind.institution:
     case MapMarkerOverlayLinkedSubjectKind.group:
     case MapMarkerOverlayLinkedSubjectKind.misc:
@@ -262,12 +305,34 @@ MapMarkerOverlayPrimaryTarget _resolvePrimaryTarget({
 
 String? _buildEventSubtitle(KubusEvent? event) {
   if (event == null) return null;
+  return _buildLocationAndDateSubtitle(
+    locationParts: <String?>[event.locationName, event.city, event.country],
+    startsAt: event.startsAt,
+    endsAt: event.endsAt,
+  );
+}
+
+String? _buildExhibitionSubtitle(Exhibition? exhibition) {
+  if (exhibition == null) return null;
+  return _buildLocationAndDateSubtitle(
+    locationParts: <String?>[exhibition.locationName],
+    startsAt: exhibition.startsAt,
+    endsAt: exhibition.endsAt,
+  );
+}
+
+String? _buildLocationAndDateSubtitle({
+  required Iterable<String?> locationParts,
+  required DateTime? startsAt,
+  required DateTime? endsAt,
+}) {
   final parts = <String>[];
-  final location = _normalizeText(event.locationName);
-  if (location != null) {
+  final location =
+      locationParts.map(_normalizeText).whereType<String>().toSet().join(', ');
+  if (location.isNotEmpty) {
     parts.add(location);
   }
-  final range = _formatEventRange(event.startsAt, event.endsAt);
+  final range = _formatEventRange(startsAt, endsAt);
   if (range != null) {
     parts.add(range);
   }

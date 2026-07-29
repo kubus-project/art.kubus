@@ -2,6 +2,7 @@ import 'package:art_kubus/features/map/shared/map_marker_overlay_presentation.da
 import 'package:art_kubus/models/art_marker.dart';
 import 'package:art_kubus/models/artwork.dart';
 import 'package:art_kubus/models/event.dart';
+import 'package:art_kubus/models/exhibition.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -51,6 +52,21 @@ KubusEvent _event() {
     startsAt: DateTime(2025, 5, 1),
     endsAt: DateTime(2025, 5, 3),
     locationName: 'Ljubljana',
+    coverUrl: 'https://example.test/event.jpg',
+    updatedAt: DateTime(2025, 4, 20),
+  );
+}
+
+Exhibition _exhibition() {
+  return Exhibition(
+    id: 'exh-1',
+    title: 'Summer Show',
+    description: 'Exhibition description',
+    startsAt: DateTime(2025, 6, 1),
+    endsAt: DateTime(2025, 6, 10),
+    locationName: 'Gallery K',
+    coverUrl: 'https://example.test/exhibition.jpg',
+    updatedAt: DateTime(2025, 5, 20),
   );
 }
 
@@ -88,8 +104,7 @@ void main() {
       );
     });
 
-    test(
-        'keeps exhibition-linked markers marker-first while exposing exhibition context',
+    test('uses hydrated exhibition content in the quick details presentation',
         () {
       final presentation = resolveMarkerOverlayPresentation(
         marker: _marker(
@@ -105,20 +120,21 @@ void main() {
             ExhibitionSummaryDto(id: 'exh-1', title: 'Summer Show'),
           ],
         ),
+        exhibition: _exhibition(),
       );
 
-      expect(presentation.title, 'Hall B Marker');
-      expect(presentation.description, 'Second room entry point.');
+      expect(presentation.title, 'Summer Show');
+      expect(presentation.description, 'Exhibition description');
       expect(
         presentation.linkedSubject.kind,
         MapMarkerOverlayLinkedSubjectKind.exhibition,
       );
       expect(presentation.linkedSubject.id, 'exh-1');
       expect(presentation.linkedSubject.title, 'Summer Show');
-      expect(
-        presentation.linkedSubject.subtitle,
-        'Gallery - 2025-06-01 -> 2025-06-10',
-      );
+      expect(presentation.linkedSubject.subtitle, contains('Gallery K'));
+      expect(presentation.linkedSubject.subtitle, contains('2025-06-01'));
+      expect(presentation.mediaUrl, 'https://example.test/exhibition.jpg');
+      expect(presentation.mediaUpdatedAt, DateTime(2025, 5, 20));
       expect(
         presentation.primaryTarget,
         MapMarkerOverlayPrimaryTarget.exhibition,
@@ -139,8 +155,8 @@ void main() {
         event: _event(),
       );
 
-      expect(presentation.title, 'Stage Right');
-      expect(presentation.description, 'Meet beside the installation.');
+      expect(presentation.title, 'City Walk');
+      expect(presentation.description, 'Event description');
       expect(
         presentation.linkedSubject.kind,
         MapMarkerOverlayLinkedSubjectKind.event,
@@ -149,6 +165,8 @@ void main() {
       expect(presentation.linkedSubject.title, 'City Walk');
       expect(presentation.linkedSubject.subtitle, contains('Ljubljana'));
       expect(presentation.linkedSubject.subtitle, contains('2025-05-01'));
+      expect(presentation.mediaUrl, 'https://example.test/event.jpg');
+      expect(presentation.mediaUpdatedAt, DateTime(2025, 4, 20));
       expect(
         presentation.primaryTarget,
         MapMarkerOverlayPrimaryTarget.event,

@@ -61,6 +61,8 @@ class KubusMarkerOverlayCard extends StatelessWidget {
     this.onCardTap,
     this.onTitleTap,
     this.artwork,
+    this.subjectImageUrl,
+    this.subjectImageUpdatedAt,
     this.distanceText,
     this.description,
     this.linkedSubjectTypeLabel,
@@ -81,6 +83,8 @@ class KubusMarkerOverlayCard extends StatelessWidget {
 
   final ArtMarker marker;
   final Artwork? artwork;
+  final String? subjectImageUrl;
+  final DateTime? subjectImageUpdatedAt;
 
   final Color baseColor;
   final String displayTitle;
@@ -139,16 +143,19 @@ class KubusMarkerOverlayCard extends StatelessWidget {
       maxChars: maxPreviewChars,
     );
 
-    final rawImageUrl = ArtworkMediaResolver.resolveCover(
-      artwork: artwork,
-      metadata: marker.metadata,
-    );
+    final linkedSubjectImageUrl = (subjectImageUrl ?? '').trim();
+    final rawImageUrl = linkedSubjectImageUrl.isNotEmpty
+        ? linkedSubjectImageUrl
+        : ArtworkMediaResolver.resolveCover(
+            artwork: artwork,
+            metadata: marker.metadata,
+          );
     final imageUrl = MediaUrlResolver.resolveDisplayUrl(
       rawImageUrl,
       maxWidth: 960,
     );
     final imageVersion = KubusCachedImage.versionTokenFromDate(
-      artwork?.updatedAt ?? marker.updatedAt,
+      subjectImageUpdatedAt ?? artwork?.updatedAt ?? marker.updatedAt,
     );
     final dpr =
         (MediaQuery.maybeOf(context)?.devicePixelRatio ?? 1.0).clamp(1.0, 2.0);

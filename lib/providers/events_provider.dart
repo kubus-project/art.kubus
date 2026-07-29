@@ -32,6 +32,7 @@ class EventsProvider extends ChangeNotifier {
 
   List<KubusEvent> get events => List.unmodifiable(_events);
   KubusEvent? get selectedEvent => _selected;
+  KubusEvent? eventById(String id) => _byId[id.trim()];
 
   bool get isListLoading => _isListLoading;
   bool get isDetailLoading => _isDetailLoading;
