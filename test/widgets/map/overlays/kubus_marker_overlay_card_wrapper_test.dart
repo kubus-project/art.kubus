@@ -237,6 +237,54 @@ void main() {
     );
   });
 
+  testWidgets('anchored layout waits for reposition animation to settle',
+      (tester) async {
+    final anchor = ValueNotifier<Offset?>(const Offset(100, 260));
+    addTearDown(anchor.dispose);
+    final reportedLayouts = <KubusMarkerOverlayResolvedLayout>[];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 400,
+            height: 400,
+            child: KubusMarkerOverlayCardWrapper(
+              anchorListenable: anchor,
+              widthResolver: (_, __) => 160,
+              maxHeightResolver: (_, __) => 160,
+              heightResolver: (_, __, ___) => 120,
+              animation: const KubusMarkerOverlayAnimationConfig(
+                duration: Duration(milliseconds: 200),
+                curve: Curves.linear,
+              ),
+              onLayoutResolved: reportedLayouts.add,
+              cardBuilder: (_, layout) => SizedBox(
+                key: const ValueKey<String>('settling_card'),
+                width: layout.cardWidth,
+                height: layout.cardHeight,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    reportedLayouts.clear();
+
+    anchor.value = const Offset(300, 260);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(reportedLayouts, isEmpty);
+
+    await tester.pumpAndSettle();
+    expect(reportedLayouts, hasLength(1));
+    expect(
+      reportedLayouts.single.cardLeft,
+      tester.getRect(find.byKey(const ValueKey<String>('settling_card'))).left,
+    );
+  });
+
   testWidgets('reduced motion repositions anchored preview immediately',
       (tester) async {
     final anchor = ValueNotifier<Offset?>(const Offset(100, 260));

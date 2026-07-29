@@ -353,18 +353,16 @@ class KubusMarkerOverlayCardWrapper extends StatelessWidget {
                 )
                 .toDouble();
 
-            _scheduleLayoutCallback(
-              KubusMarkerOverlayResolvedLayout(
-                layout: layout,
-                viewportSize: constraints.biggest,
-                mediaQuery: media,
-                horizontalPadding: horizontalPadding,
-                topPadding: topPadding,
-                bottomPadding: bottomPadding,
-                markerOffset: markerOffset,
-                cardLeft: left,
-                cardTop: top,
-              ),
+            final resolvedLayout = KubusMarkerOverlayResolvedLayout(
+              layout: layout,
+              viewportSize: constraints.biggest,
+              mediaQuery: media,
+              horizontalPadding: horizontalPadding,
+              topPadding: topPadding,
+              bottomPadding: bottomPadding,
+              markerOffset: markerOffset,
+              cardLeft: left,
+              cardTop: top,
             );
 
             final resolvedAnimation =
@@ -385,18 +383,21 @@ class KubusMarkerOverlayCardWrapper extends StatelessWidget {
                 children: [
                   if (resolvedAnimation.allowsSpatialTransform &&
                       resolvedAnimation.duration > Duration.zero)
-                    AnimatedPositioned(
+                    _KubusMarkerOverlayAnimatedPositioned(
                       left: left,
                       top: top,
                       duration: resolvedAnimation.duration,
                       curve: resolvedAnimation.curve,
+                      onLayoutSettled: () =>
+                          _scheduleLayoutCallback(resolvedLayout),
                       child: positionedCard,
                     )
                   else
-                    Positioned(
+                    _buildStaticAnchoredCard(
                       left: left,
                       top: top,
                       child: positionedCard,
+                      resolvedLayout: resolvedLayout,
                     ),
                 ],
               ),
@@ -413,6 +414,16 @@ class KubusMarkerOverlayCardWrapper extends StatelessWidget {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       callback(layout);
     });
+  }
+
+  Widget _buildStaticAnchoredCard({
+    required double left,
+    required double top,
+    required Widget child,
+    required KubusMarkerOverlayResolvedLayout resolvedLayout,
+  }) {
+    _scheduleLayoutCallback(resolvedLayout);
+    return Positioned(left: left, top: top, child: child);
   }
 
   Widget _buildWrappedCard(
@@ -448,6 +459,51 @@ class KubusMarkerOverlayCardWrapper extends StatelessWidget {
         anchor.dy <= constraints.maxHeight * 1.5;
 
     return looksUsable ? anchor : fallback;
+  }
+}
+
+class _KubusMarkerOverlayAnimatedPositioned extends StatefulWidget {
+  const _KubusMarkerOverlayAnimatedPositioned({
+    required this.left,
+    required this.top,
+    required this.duration,
+    required this.curve,
+    required this.onLayoutSettled,
+    required this.child,
+  });
+
+  final double left;
+  final double top;
+  final Duration duration;
+  final Curve curve;
+  final VoidCallback onLayoutSettled;
+  final Widget child;
+
+  @override
+  State<_KubusMarkerOverlayAnimatedPositioned> createState() =>
+      _KubusMarkerOverlayAnimatedPositionedState();
+}
+
+class _KubusMarkerOverlayAnimatedPositionedState
+    extends State<_KubusMarkerOverlayAnimatedPositioned> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) widget.onLayoutSettled();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedPositioned(
+      left: widget.left,
+      top: widget.top,
+      duration: widget.duration,
+      curve: widget.curve,
+      onEnd: widget.onLayoutSettled,
+      child: widget.child,
+    );
   }
 }
 
