@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../l10n/app_localizations.dart';
+import '../providers/deferred_onboarding_provider.dart';
 import 'backend_api_service.dart';
 
 /// Gates identity-required actions without blocking public content viewing.
@@ -18,8 +20,19 @@ class ContextualAuthGate {
   }) async {
     if (BackendApiService().hasAuthSession) return true;
 
+    try {
+      final deferred = context.read<DeferredOnboardingProvider>();
+      if (deferred.maybeShowOnboardingForProtectedAction(context)) {
+        return false;
+      }
+    } catch (_) {
+      // Contexts outside the application provider tree keep the normal
+      // contextual sign-in dialog behavior.
+    }
+
     final l10n = AppLocalizations.of(context)!;
-    final shouldSignIn = await showDialog<bool>(
+    final shouldSignIn =
+        await showDialog<bool>(
           context: context,
           builder: (dialogContext) => AlertDialog(
             title: Text(l10n.contextualAuthTitle(actionLabel)),
@@ -41,9 +54,7 @@ class ContextualAuthGate {
 
     await Navigator.of(context).pushNamed(
       '/sign-in',
-      arguments: <String, Object?>{
-        'redirectRoute': returnRoute,
-      },
+      arguments: <String, Object?>{'redirectRoute': returnRoute},
     );
     return false;
   }

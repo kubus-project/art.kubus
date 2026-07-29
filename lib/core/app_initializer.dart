@@ -64,6 +64,9 @@ class _AppInitializerState extends State<AppInitializer> {
     return ShellRoutes.resolvePreferredShellRoute(widget.preferredShellRoute);
   }
 
+  bool get _isDirectPublicMapEntry =>
+      (widget.preferredShellRoute ?? '').trim() == ShellRoutes.map;
+
   Future<void> _refreshServerVersion(ConfigProvider configProvider) async {
     final fetched = await BackendApiService().fetchServerVersion(
       timeout: const Duration(seconds: 3),
@@ -116,6 +119,25 @@ class _AppInitializerState extends State<AppInitializer> {
     return true;
   }
 
+  bool _openPreferredPublicMap(
+    NavigatorState navigator, {
+    String initialStepId = 'account',
+  }) {
+    if (!_isDirectPublicMapEntry) return false;
+    try {
+      Provider.of<DeferredOnboardingProvider>(
+        navigator.context,
+        listen: false,
+      ).enableForProtectedAction(
+        initialStepId: initialStepId,
+        completionRoute: ShellRoutes.map,
+      );
+    } catch (_) {}
+    _didNavigate = true;
+    navigator.pushReplacementNamed(ShellRoutes.map);
+    return true;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -130,6 +152,7 @@ class _AppInitializerState extends State<AppInitializer> {
       final navigator = appNavigatorKey.currentState;
       if (navigator == null) return;
       if (_openPendingPublicTarget(navigator)) return;
+      if (_openPreferredPublicMap(navigator)) return;
       final isDesktop = DesktopBreakpoints.isDesktop(navigator.context);
       _didNavigate = true;
       navigator.pushReplacement(
@@ -631,6 +654,41 @@ class _AppInitializerState extends State<AppInitializer> {
         return;
       }
 
+      // `/map` is a public discovery entry. Signed-out visitors must reach the
+      // map before onboarding or sign-in, regardless of first-launch or stale
+      // local-account state. The first identity-required action consumes this
+      // session-scoped deferral through ContextualAuthGate.
+      if (shouldOpenPublicMapBeforeOnboarding(
+        preferredShellRoute: widget.preferredShellRoute,
+        hasValidSession: hasValidSession,
+      )) {
+        final deferredOnboarding = Provider.of<DeferredOnboardingProvider>(
+          context,
+          listen: false,
+        );
+        await GuestSessionService.activateGuestMode(prefs: prefs);
+        if (!mounted) return;
+        final hasPendingVerificationEmail =
+            prefs.getBool('onboarding_pending_email_verification_v1') ?? false;
+        final pendingVerificationEmail =
+            (prefs.getString('onboarding_verification_email_v3') ?? '').trim();
+        final deferredStep =
+            (pendingAuthOnboardingStepId ?? '').trim().isNotEmpty
+            ? pendingAuthOnboardingStepId!.trim()
+            : hasPendingAuthOnboarding &&
+                  hasPendingVerificationEmail &&
+                  pendingVerificationEmail.isNotEmpty
+            ? 'verifyEmail'
+            : 'account';
+        deferredOnboarding.enableForProtectedAction(
+          initialStepId: deferredStep,
+          completionRoute: ShellRoutes.map,
+        );
+        _didNavigate = true;
+        navigator.pushReplacementNamed(ShellRoutes.map);
+        return;
+      }
+
       if (hasPendingAuthOnboarding) {
         // Use the helper to decide if this is a no-session pending-auth case.
         // The helper returns 'none' for valid-session cases (deferred to resolver below).
@@ -821,6 +879,7 @@ class _AppInitializerState extends State<AppInitializer> {
       AppConfig.debugPrint('AppInitializer: init stack: $st');
       if (!mounted) return;
       if (_openPendingPublicTarget(navigator)) return;
+      if (_openPreferredPublicMap(navigator)) return;
       final isDesktop = DesktopBreakpoints.isDesktop(context);
       _didNavigate = true;
       navigator.pushReplacement(

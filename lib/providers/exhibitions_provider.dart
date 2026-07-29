@@ -37,6 +37,7 @@ class ExhibitionsProvider extends ChangeNotifier {
   List<Exhibition> get exhibitions => List.unmodifiable(_exhibitions);
   List<Exhibition> get myExhibitions => List.unmodifiable(_myExhibitions);
   Exhibition? get selectedExhibition => _selected;
+  Exhibition? exhibitionById(String id) => _byId[id.trim()];
 
   bool get isListLoading => _isListLoading;
   bool get isDetailLoading => _isDetailLoading;

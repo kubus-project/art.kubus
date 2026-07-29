@@ -99,7 +99,7 @@ extension _KubusMarkerOverlayCardHeaderParts on KubusMarkerOverlayCard {
                   if (showLinkedTitle) const SizedBox(height: 2),
                   Text(
                     normalizedLinkedSubtitle,
-                    maxLines: 1,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: KubusTypography.textTheme.bodySmall?.copyWith(
                       color: scheme.onSurfaceVariant.withValues(alpha: 0.9),
