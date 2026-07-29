@@ -508,7 +508,9 @@ class _KubusMarkerOverlayAnimatedPositionedState
   }
 
   @override
-  void didUpdateWidget(covariant _KubusMarkerOverlayAnimatedPositioned oldWidget) {
+  void didUpdateWidget(
+    covariant _KubusMarkerOverlayAnimatedPositioned oldWidget,
+  ) {
     super.didUpdateWidget(oldWidget);
     final positionChanged =
         oldWidget.left != widget.left || oldWidget.top != widget.top;
