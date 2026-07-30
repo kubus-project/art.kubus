@@ -145,6 +145,7 @@ import '../map_core/map_marker_render_coordinator.dart';
 import '../../providers/task_provider.dart';
 import '../../models/task.dart';
 import '../../models/pending_action_intent.dart';
+import '../../widgets/map/kubus_activation_prompt_card.dart';
 
 /// Desktop map screen with Google Maps-style presentation
 /// Features side panel for artwork details and filters
@@ -2428,6 +2429,22 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     // MapLibre/OSM corner. This cluster is the last child in the Stack
                     // so the discovery path and controls always render above the map,
                     // side panels, glass chrome and any anchored marker overlay card.
+                    // Engagement prompt, anchored to the left gutter so the
+                    // control toolbar and attribution cluster on the right stay
+                    // clear. Declared before that cluster so the controls
+                    // always render above it.
+                    Positioned(
+                      left: _hasLeftDetailPanel
+                          ? contextPanelWidth +
+                              KubusMapMetrics.desktopChromeInset
+                          : KubusMapMetrics.desktopChromeInset,
+                      bottom: KubusMapMetrics.desktopChromeInset +
+                          KubusSpacing.xxl,
+                      child: const SizedBox(
+                        width: 360,
+                        child: KubusActivationPromptCard(maxWidth: 360),
+                      ),
+                    ),
                     Positioned(
                       left: _hasLeftDetailPanel
                           ? contextPanelWidth +

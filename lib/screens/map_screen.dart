@@ -137,6 +137,7 @@ import 'map_core/marker_visual_sync_coordinator.dart';
 import 'map_core/map_data_coordinator.dart';
 import 'map_core/map_ui_state_coordinator.dart';
 import 'map_core/map_marker_render_coordinator.dart';
+import '../widgets/map/kubus_activation_prompt_card.dart';
 
 enum _MarkerSocketScope { inScope, outOfScope, unknown }
 
@@ -3923,6 +3924,18 @@ class _MapScreenState extends State<MapScreen>
                       ),
                     if (!_isWalkingFocusedMode)
                       _buildTopOverlays(theme, themeProvider, taskProvider),
+                    // Engagement prompt. Only in the plain browse state, and
+                    // seated above the Nearby peek and the map attribution
+                    // (attributionBottomMargin already accounts for both), so
+                    // it never covers map chrome or credit.
+                    if (!_isWalkingFocusedMode &&
+                        ui.contextSurface == MapContextSurface.none)
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: attributionBottomMargin + KubusSpacing.md,
+                        child: const KubusActivationPromptCard(),
+                      ),
                     if (ui.contextSurface == MapContextSurface.markerPreview)
                       _buildMarkerOverlay(themeProvider, ui.markerSelection),
                     // Walking navigation owns foreground camera/UI priority.

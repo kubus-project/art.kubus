@@ -410,7 +410,9 @@ class _ConnectWalletState extends State<ConnectWallet>
       unawaited(TelemetryService().trackSignInSuccess(method: 'wallet'));
       return;
     }
-    unawaited(TelemetryService().trackSignUpSuccess(method: 'wallet'));
+    // The signup branch is intentionally silent here: signup_success and
+    // account_session_created are emitted once from PostAuthCoordinator, after
+    // an authenticated session exists.
   }
 
   void _trackWalletAuthFailure(String errorClass) {

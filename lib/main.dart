@@ -102,11 +102,13 @@ import 'services/webgl_context_helper.dart';
 
 import 'widgets/glass_components.dart';
 import 'widgets/security_gate_overlay.dart';
+import 'widgets/auth/pending_action_continuation.dart';
 
 import 'screens/collab/invites_inbox_screen.dart';
 import 'services/share/share_deep_link_parser.dart';
 import 'features/map/navigation/walking_navigation_debug_harness.dart';
 import 'screens/debug/walking_route_render_harness_screen.dart';
+import 'providers/activation_prompt_provider.dart';
 
 class _UnhandledErrorDedupe {
   static const Duration _dedupeWindow = Duration(seconds: 2);
@@ -492,6 +494,10 @@ class _AppLauncherState extends State<AppLauncher> {
               // it can be offered back to them after they create an account.
               ChangeNotifierProvider(
                   create: (context) => PendingActionProvider()),
+              // Non-blocking "create a free account" prompt, armed only after
+              // a visitor has shown real interest.
+              ChangeNotifierProvider(
+                  create: (context) => ActivationPromptProvider()),
               ChangeNotifierProvider(
                   create: (context) => PublicEntityTakeoverProvider()),
               ChangeNotifierProvider(create: (context) => AppRefreshProvider()),
@@ -1341,11 +1347,20 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
           darkTheme: themeProvider.darkTheme,
           themeMode: themeProvider.themeMode,
           builder: (context, child) {
+            // Report the resolved UI locale so the funnel can compare the
+            // English and Slovenian experiences.
+            TelemetryService()
+                .setLocale(Localizations.localeOf(context).languageCode);
             return AnimatedGradientBackground(
               animate: false,
               intensity: 0.22,
               child: SecurityGateOverlay(
-                child: child ?? const SizedBox.shrink(),
+                // Mounted above the navigator so a restored pending action can
+                // be confirmed on whichever entity the visitor was returned to,
+                // on mobile and desktop alike.
+                child: PendingActionContinuationHost(
+                  child: child ?? const SizedBox.shrink(),
+                ),
               ),
             );
           },

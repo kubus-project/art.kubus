@@ -252,7 +252,8 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
         normalized.payload!,
         origin: AuthOrigin.wallet,
       );
-      unawaited(TelemetryService().trackSignUpSuccess(method: 'wallet'));
+      // signup_success is emitted once, from PostAuthCoordinator, when the
+      // session exists. Emitting it here too double-counted wallet signups.
       return;
     }
 
@@ -424,13 +425,32 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
       messenger.showKubusSnackBar(
         SnackBar(content: Text(l10n.authVerifyEmailRegistrationToast)),
       );
-      unawaited(TelemetryService().trackSignUpSuccess(method: 'email'));
+      // Registration was accepted, but no session exists yet — the visitor is
+      // on the verification wall and may never come back. Reporting this as a
+      // signup *success* made the metric non-comparable with google/wallet
+      // (which do have a session at their success point) and overstated
+      // activation. `signup_success` now fires from PostAuthCoordinator, at
+      // the point an authenticated session actually exists.
+      final verificationRequested =
+          (responseData['emailVerificationSent'] == true) ||
+              (responseData['requiresEmailVerification'] == true);
+      unawaited(TelemetryService().trackRegistrationSubmitted(
+        method: 'email',
+        requiresEmailVerification: verificationRequested,
+      ));
+      if (responseData['emailVerificationSent'] == true) {
+        unawaited(TelemetryService().trackEmailVerificationSent());
+      }
       AppConfig.debugPrint(
           'AuthMethodsPanel._registerWithEmail: success path complete');
       // Note: email registration no longer creates a session until verification.
       // Avoid writing local account/session state here.
     } on TimeoutException catch (e) {
       widget.onError?.call(e);
+      // A timeout is a failed attempt like any other: omitting it left
+      // attempts != successes + failures in the funnel.
+      unawaited(TelemetryService().trackSignUpFailure(
+          method: 'email', errorClass: 'timeout'));
       if (!mounted) return;
       messenger.showKubusSnackBar(
         SnackBar(content: Text(l10n.commonNetworkErrorToast)),
@@ -511,7 +531,6 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
         origin: widget.googleAuthOrigin,
       );
       await _handleAuthSuccess(result, origin: _googlePostAuthOrigin);
-      unawaited(TelemetryService().trackSignUpSuccess(method: 'google'));
     } catch (e) {
       widget.onError?.call(e);
       unawaited(TelemetryService().trackSignUpFailure(
@@ -701,9 +720,6 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
           );
           if (!mounted) return;
           await _handleAuthSuccess(result, origin: _googlePostAuthOrigin);
-          unawaited(
-            TelemetryService().trackSignUpSuccess(method: 'google'),
-          );
         } finally {
           if (mounted) {
             setState(() => _isGoogleSubmitting = false);

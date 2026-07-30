@@ -76,12 +76,37 @@ class AuthRedirectController {
     bool removeAuthStack = true,
     AuthOrigin origin = AuthOrigin.emailPassword,
     bool requiresWalletSetup = false,
+    bool minimalAccount = false,
   }) async {
     final targetWallet = (walletAddress ?? '').toString().trim();
     final flowScopeKey = OnboardingStateService.buildAuthOnboardingScopeKey(
       walletAddress: targetWallet.isEmpty ? null : targetWallet,
       userId: userId,
     );
+
+    // Minimal-account mode: the visitor created this account only to finish a
+    // small action they already started. Role, profile, wallet, DAO and
+    // permission steps are everything *except* what identity needs, so they
+    // become progressive onboarding the visitor can complete later instead of
+    // a wall between them and the thing they came to do.
+    //
+    // Note: unlike the rest of this method, this branch writes — it clears the
+    // pending-onboarding marker so a later cold start does not re-impose the
+    // flow we just deliberately skipped.
+    if (minimalAccount) {
+      await OnboardingStateService.clearPendingAuthOnboarding(
+        prefs: prefs,
+        scopeKey: flowScopeKey,
+      );
+      return PostAuthRedirectResult(
+        state: PostAuthRouteState.ready,
+        routeName: (redirectRoute ?? '').trim().isEmpty
+            ? '/main'
+            : redirectRoute!.trim(),
+        removeAuthStack: removeAuthStack,
+        arguments: redirectArguments,
+      );
+    }
 
     final resumeState =
         await AuthOnboardingService.resolveStructuredOnboardingResume(

@@ -51,6 +51,8 @@ import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../widgets/map/dialogs/street_art_claims_dialog.dart';
 import '../../models/pending_action_intent.dart';
+import '../../providers/activation_prompt_provider.dart';
+import '../../services/meta/meta_conversion_adapter.dart';
 
 class ArtDetailScreen extends StatefulWidget {
   final String artworkId;
@@ -153,6 +155,11 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
       _loadArtworkDetails();
       context.read<ArtworkProvider>().incrementViewCount(widget.artworkId);
       unawaited(TelemetryService().trackArtworkViewed(widget.artworkId));
+      unawaited(context.read<ActivationPromptProvider>().recordEntityView());
+      unawaited(MetaConversionAdapter.instance.trackViewContent(
+        contentType: 'artwork',
+        contentId: widget.artworkId,
+      ));
     });
   }
 
