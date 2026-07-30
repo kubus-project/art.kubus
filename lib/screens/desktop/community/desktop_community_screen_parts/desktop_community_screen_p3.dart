@@ -85,6 +85,10 @@ extension _DesktopCommunityScreenStatePart3 on _DesktopCommunityScreenState {
       context,
       actionLabel: l10n.commonSave.toLowerCase(),
       returnRoute: '/p/${Uri.encodeComponent(post.id)}',
+      actionType: PendingActionType.save,
+      targetType: PendingActionTargetType.post,
+      targetId: post.id,
+      sourceScreen: 'desktop_community_feed',
     );
     if (!authenticated || !mounted) return;
     try {

@@ -8,6 +8,7 @@ import '../../../models/art_marker.dart';
 import '../../../models/artwork.dart';
 import '../../../models/event.dart';
 import '../../../models/exhibition.dart';
+import '../../../models/pending_action_intent.dart';
 import '../../../config/config.dart';
 import '../../../providers/artwork_provider.dart';
 import '../../../providers/saved_items_provider.dart';
@@ -32,6 +33,11 @@ List<MarkerOverlayActionSpec> buildMarkerOverlayActions({
   final scheme = Theme.of(context).colorScheme;
   final artworkProvider = context.read<ArtworkProvider>();
   final actions = <MarkerOverlayActionSpec>[];
+
+  // Return to the exact marker, not the generic map. `/m/<id>` is the canonical
+  // public marker route, so a visitor who authenticates mid-action lands back
+  // on the overlay they were looking at.
+  final markerReturnRoute = '/m/${Uri.encodeComponent(marker.id)}';
 
   final canShowClaimAction = AppConfig.isFeatureEnabled('streetArtClaims') &&
       marker.type == ArtMarkerType.streetArt &&
@@ -74,7 +80,13 @@ List<MarkerOverlayActionSpec> buildMarkerOverlayActions({
                 await const ContextualAuthGate().ensureAuthenticated(
               context,
               actionLabel: l10n.commonSave.toLowerCase(),
-              returnRoute: '/map',
+              returnRoute: markerReturnRoute,
+              actionType: PendingActionType.save,
+              targetType: PendingActionTargetType.event,
+              targetId: event.id,
+              targetLabel: event.title,
+              markerId: marker.id,
+              sourceScreen: sourceScreen,
             );
             if (!authenticated || !context.mounted) return;
             await savedItemsProvider.toggleEventSaved(event.id);
@@ -117,7 +129,13 @@ List<MarkerOverlayActionSpec> buildMarkerOverlayActions({
                 await const ContextualAuthGate().ensureAuthenticated(
               context,
               actionLabel: l10n.commonSave.toLowerCase(),
-              returnRoute: '/map',
+              returnRoute: markerReturnRoute,
+              actionType: PendingActionType.save,
+              targetType: PendingActionTargetType.exhibition,
+              targetId: exhibition.id,
+              targetLabel: exhibition.title,
+              markerId: marker.id,
+              sourceScreen: sourceScreen,
             );
             if (!authenticated || !context.mounted) return;
             await savedItemsProvider.toggleExhibitionSaved(exhibition.id);
@@ -167,7 +185,13 @@ List<MarkerOverlayActionSpec> buildMarkerOverlayActions({
               await const ContextualAuthGate().ensureAuthenticated(
             context,
             actionLabel: l10n.commonSave.toLowerCase(),
-            returnRoute: '/map',
+            returnRoute: markerReturnRoute,
+            actionType: PendingActionType.save,
+            targetType: PendingActionTargetType.artwork,
+            targetId: artwork.id,
+            targetLabel: artwork.title,
+            markerId: marker.id,
+            sourceScreen: sourceScreen,
           );
           if (!authenticated || !context.mounted) return;
           await artworkProvider.toggleArtworkSaved(artwork.id);
@@ -207,7 +231,13 @@ List<MarkerOverlayActionSpec> buildMarkerOverlayActions({
               await const ContextualAuthGate().ensureAuthenticated(
             context,
             actionLabel: l10n.commonLikes.toLowerCase(),
-            returnRoute: '/map',
+            returnRoute: markerReturnRoute,
+            actionType: PendingActionType.like,
+            targetType: PendingActionTargetType.artwork,
+            targetId: artwork.id,
+            targetLabel: artwork.title,
+            markerId: marker.id,
+            sourceScreen: sourceScreen,
           );
           if (!authenticated || !context.mounted) return;
           await artworkProvider.toggleLike(artwork.id);

@@ -20,6 +20,7 @@ import '../glass_components.dart';
 import '../inline_loading.dart';
 import '../kubus_snackbar.dart';
 import 'detail_shell_components.dart';
+import '../../models/pending_action_intent.dart';
 
 enum ArtworkCommentsLayoutMode {
   fill,
@@ -920,6 +921,11 @@ class _ArtworkCommentsExpandableCardState
       context,
       actionLabel: l10n.commonComments.toLowerCase(),
       returnRoute: '/a/${Uri.encodeComponent(widget.artwork.id)}',
+      actionType: PendingActionType.comment,
+      targetType: PendingActionTargetType.artwork,
+      targetId: widget.artwork.id,
+      targetLabel: widget.artwork.title,
+      sourceScreen: 'artwork_engagement',
     );
     if (!authenticated || !mounted) return;
 

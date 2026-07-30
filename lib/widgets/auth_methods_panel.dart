@@ -56,6 +56,8 @@ class AuthMethodsPanel extends StatefulWidget {
     this.googleAuthOrigin = 'signin',
     this.onError,
     this.onSwitchToSignIn,
+    this.redirectRoute,
+    this.redirectArguments,
   });
 
   final bool embedded;
@@ -71,6 +73,15 @@ class AuthMethodsPanel extends StatefulWidget {
   final String googleAuthOrigin;
   final ValueChanged<Object>? onError;
   final VoidCallback? onSwitchToSignIn;
+
+  /// Where to land after a successful registration.
+  ///
+  /// Registration is the likelier branch for a guest who hit a contextual
+  /// activation prompt, so the route that triggered the prompt has to survive
+  /// this screen — otherwise the visitor is dropped on a generic shell and
+  /// loses the artwork or marker they were looking at.
+  final String? redirectRoute;
+  final Object? redirectArguments;
 
   @override
   State<AuthMethodsPanel> createState() => _AuthMethodsPanelState();
@@ -191,6 +202,8 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
         screenWidth: screenWidth,
         payload: payload,
         origin: origin,
+        redirectRoute: widget.redirectRoute,
+        redirectArguments: widget.redirectArguments,
         walletAddress: normalizedWalletAddress,
         userId: userId,
         embedded: widget.embedded,

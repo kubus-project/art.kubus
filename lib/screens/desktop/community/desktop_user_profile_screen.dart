@@ -56,6 +56,7 @@ import 'package:art_kubus/widgets/glass_components.dart';
 import '../../../widgets/community/community_post_card.dart';
 import '../../../widgets/profile/profile_achievements_preview_section.dart';
 import '../../../widgets/public_entity_takeover_ready.dart';
+import '../../../models/pending_action_intent.dart';
 
 const double _kProfileOverlayMaxWidth = 920.0;
 const double _kProfileCoverHeightWithImage = 216.0;
@@ -1488,6 +1489,11 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       context,
       actionLabel: l10n.commonFollow.toLowerCase(),
       returnRoute: '/u/${Uri.encodeComponent(widget.userId)}',
+      actionType: PendingActionType.follow,
+      targetType: PendingActionTargetType.user,
+      targetId: profile.id,
+      targetLabel: profile.name,
+      sourceScreen: 'desktop_user_profile',
     );
     if (!authenticated || !mounted) return;
     final messenger = ScaffoldMessenger.of(context);

@@ -39,6 +39,7 @@ import '../../utils/community_subject_navigation.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../utils/profile_identity_navigation.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import '../../models/pending_action_intent.dart';
 
 enum PostDetailInitialAction { edit, delete, report, options }
 
@@ -355,6 +356,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       context,
       actionLabel: l10n.commonComments.toLowerCase(),
       returnRoute: '/p/${Uri.encodeComponent(_post!.id)}',
+      actionType: PendingActionType.comment,
+      targetType: PendingActionTargetType.post,
+      targetId: _post!.id,
+      sourceScreen: 'post_detail',
     );
     if (!authenticated || !mounted) return;
     _commentController.clear();
@@ -1661,6 +1666,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       context,
       actionLabel: l10n.commonSave.toLowerCase(),
       returnRoute: '/p/${Uri.encodeComponent(post.id)}',
+      actionType: PendingActionType.save,
+      targetType: PendingActionTargetType.post,
+      targetId: post.id,
+      sourceScreen: 'post_detail',
     );
     if (!authenticated || !mounted) return;
     try {

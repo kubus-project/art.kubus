@@ -40,6 +40,7 @@ import '../../widgets/empty_state_card.dart';
 import '../../widgets/inline_loading.dart';
 import 'post_detail_screen.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import '../../models/pending_action_intent.dart';
 
 class GroupFeedScreen extends StatefulWidget {
   const GroupFeedScreen({
@@ -961,6 +962,10 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
       context,
       actionLabel: l10n.commonSave.toLowerCase(),
       returnRoute: '/p/${Uri.encodeComponent(post.id)}',
+      actionType: PendingActionType.save,
+      targetType: PendingActionTargetType.post,
+      targetId: post.id,
+      sourceScreen: 'group_feed',
     );
     if (!authenticated || !mounted) return;
     try {

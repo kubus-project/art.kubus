@@ -144,6 +144,7 @@ import '../map_core/map_ui_state_coordinator.dart';
 import '../map_core/map_marker_render_coordinator.dart';
 import '../../providers/task_provider.dart';
 import '../../models/task.dart';
+import '../../models/pending_action_intent.dart';
 
 /// Desktop map screen with Google Maps-style presentation
 /// Features side panel for artwork details and filters
@@ -3259,6 +3260,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                         context,
                         actionLabel: l10n.commonSave.toLowerCase(),
                         returnRoute: '/a/${Uri.encodeComponent(artwork.id)}',
+                        actionType: PendingActionType.save,
+                        targetType: PendingActionTargetType.artwork,
+                        targetId: artwork.id,
+                        targetLabel: artwork.title,
+                        sourceScreen: 'desktop_map_detail',
                       );
                       if (!authenticated || !context.mounted) return;
                       await artworkProvider.toggleArtworkSaved(artwork.id);
@@ -3278,6 +3284,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                         context,
                         actionLabel: l10n.commonLikes.toLowerCase(),
                         returnRoute: '/a/${Uri.encodeComponent(artwork.id)}',
+                        actionType: PendingActionType.like,
+                        targetType: PendingActionTargetType.artwork,
+                        targetId: artwork.id,
+                        targetLabel: artwork.title,
+                        sourceScreen: 'desktop_map_detail',
                       );
                       if (!authenticated || !context.mounted) return;
                       await artworkProvider.toggleLike(artwork.id);

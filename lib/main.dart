@@ -63,6 +63,7 @@ import 'providers/main_tab_provider.dart';
 import 'providers/map_deep_link_provider.dart';
 import 'providers/walking_navigation_provider.dart';
 import 'providers/deferred_onboarding_provider.dart';
+import 'providers/pending_action_provider.dart';
 import 'core/app_initializer.dart';
 import 'core/startup_trace.dart';
 import 'core/app_navigator.dart';
@@ -487,6 +488,10 @@ class _AppLauncherState extends State<AppLauncher> {
               // Session-scoped onboarding deferral for deep-link cold starts.
               ChangeNotifierProvider(
                   create: (context) => DeferredOnboardingProvider()),
+              // Remembers the identity-dependent action a guest attempted, so
+              // it can be offered back to them after they create an account.
+              ChangeNotifierProvider(
+                  create: (context) => PendingActionProvider()),
               ChangeNotifierProvider(
                   create: (context) => PublicEntityTakeoverProvider()),
               ChangeNotifierProvider(create: (context) => AppRefreshProvider()),
@@ -973,7 +978,16 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
           }
           return const SignInScreen();
         },
-        '/register': (context) => const RegisterScreen(),
+        '/register': (context) {
+          final args = ModalRoute.of(context)?.settings.arguments;
+          if (args is Map) {
+            return RegisterScreen(
+              redirectRoute: args['redirectRoute']?.toString(),
+              redirectArguments: args['redirectArguments'],
+            );
+          }
+          return const RegisterScreen();
+        },
         '/secure-account': (context) => const SecureAccountScreen(),
         '/verify-email': (context) {
           final args = ModalRoute.of(context)?.settings.arguments;

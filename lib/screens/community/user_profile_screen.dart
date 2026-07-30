@@ -53,6 +53,7 @@ import '../../widgets/glass_components.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import '../../widgets/profile/profile_achievements_preview_section.dart';
 import '../../widgets/public_entity_takeover_ready.dart';
+import '../../models/pending_action_intent.dart';
 
 class UserProfileScreen extends StatefulWidget {
   final String userId;
@@ -239,6 +240,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       context,
       actionLabel: l10n.commonFollow.toLowerCase(),
       returnRoute: '/u/${Uri.encodeComponent(widget.userId)}',
+      actionType: PendingActionType.follow,
+      targetType: PendingActionTargetType.user,
+      targetId: profile.id,
+      targetLabel: profile.name,
+      sourceScreen: 'user_profile',
     );
     if (!authenticated || !mounted) return;
     final messenger = ScaffoldMessenger.of(context);

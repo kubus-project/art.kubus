@@ -427,50 +427,64 @@ class ArtworkProvider extends ChangeNotifier {
 
   /// Like/Unlike artwork
   Future<void> toggleLike(String artworkId) async {
-    _setLoading('like_$artworkId', true);
+    final artwork = getArtworkById(artworkId);
+    if (artwork == null) return;
+    await setLiked(artworkId, !artwork.isLikedByCurrentUser);
+  }
+
+  /// Drives the like state to [liked] and reports whether it now holds.
+  ///
+  /// Idempotent by design: a replayed action (for example one a visitor
+  /// confirmed after signing up) must never flip a like the user already has.
+  Future<bool> setLiked(String artworkId, bool liked) async {
+    final id = artworkId.trim();
+    if (id.isEmpty) return false;
+
+    final artwork = getArtworkById(id);
+    if (artwork == null) return false;
+    if (artwork.isLikedByCurrentUser == liked) return true;
+
+    _setLoading('like_$id', true);
+    final original = artwork;
     try {
-      final artwork = getArtworkById(artworkId);
-      if (artwork != null) {
-        final wasLiked = artwork.isLikedByCurrentUser;
-        final original = artwork;
-        final updatedArtwork = artwork.copyWith(
-          isLikedByCurrentUser: !artwork.isLikedByCurrentUser,
-          likesCount: artwork.isLikedByCurrentUser
-              ? artwork.likesCount - 1
-              : artwork.likesCount + 1,
+      addOrUpdateArtwork(
+        artwork.copyWith(
+          isLikedByCurrentUser: liked,
+          likesCount: liked ? artwork.likesCount + 1 : artwork.likesCount - 1,
+        ),
+      );
+
+      if (liked) {
+        UserActionLogger.logArtworkLike(
+          artworkId: artwork.id,
+          artworkTitle: artwork.title,
+          artistName: artwork.artist,
         );
-        addOrUpdateArtwork(updatedArtwork);
-
-        if (!wasLiked) {
-          UserActionLogger.logArtworkLike(
-            artworkId: artwork.id,
-            artworkTitle: artwork.title,
-            artistName: artwork.artist,
-          );
-        }
-
-        // Sync with backend and reconcile count.
-        try {
-          final updatedCount = (!wasLiked)
-              ? await _backendApi.likeArtwork(artworkId)
-              : await _backendApi.unlikeArtwork(artworkId);
-
-          if (updatedCount != null) {
-            final latest = getArtworkById(artworkId);
-            if (latest != null) {
-              addOrUpdateArtwork(latest.copyWith(likesCount: updatedCount));
-            }
-          }
-        } catch (e) {
-          // Rollback optimistic state on failure.
-          addOrUpdateArtwork(original);
-          rethrow;
-        }
       }
+
+      // Sync with backend and reconcile count.
+      try {
+        final updatedCount = liked
+            ? await _backendApi.likeArtwork(id)
+            : await _backendApi.unlikeArtwork(id);
+
+        if (updatedCount != null) {
+          final latest = getArtworkById(id);
+          if (latest != null) {
+            addOrUpdateArtwork(latest.copyWith(likesCount: updatedCount));
+          }
+        }
+      } catch (e) {
+        // Rollback optimistic state on failure.
+        addOrUpdateArtwork(original);
+        rethrow;
+      }
+      return true;
     } catch (e) {
-      _setError('Failed to toggle like: $e');
+      _setError('Failed to update like: $e');
+      return false;
     } finally {
-      _setLoading('like_$artworkId', false);
+      _setLoading('like_$id', false);
     }
   }
 
@@ -478,40 +492,55 @@ class ArtworkProvider extends ChangeNotifier {
   Future<void> toggleArtworkSaved(String artworkId) async {
     final id = artworkId.trim();
     if (id.isEmpty) return;
+    final previousSaved = _savedItemsProvider?.isArtworkSaved(id) ?? false;
+    await setArtworkSavedState(id, !previousSaved);
+  }
+
+  /// Drives the bookmark state to [saved] and reports whether it now holds.
+  ///
+  /// Idempotent for the same reason as [setLiked]: confirming a pending save
+  /// must not un-save an artwork the visitor saved in the meantime.
+  Future<bool> setArtworkSavedState(String artworkId, bool saved) async {
+    final id = artworkId.trim();
+    if (id.isEmpty) return false;
+
+    final savedProvider = _savedItemsProvider;
+    if (savedProvider != null && savedProvider.isArtworkSaved(id) == saved) {
+      return true;
+    }
 
     _setLoading('save_$id', true);
-    final savedProvider = _savedItemsProvider;
     final artwork = getArtworkById(id);
-    final previousSaved = savedProvider?.isArtworkSaved(id) ?? false;
-    final nextSaved = !previousSaved;
     final nextTimestamp = DateTime.now();
 
     try {
       if (savedProvider != null) {
         await savedProvider.setArtworkSaved(
           id,
-          nextSaved,
-          timestamp: nextSaved ? nextTimestamp : null,
+          saved,
+          timestamp: saved ? nextTimestamp : null,
         );
       }
 
       if (artwork != null) {
         addOrUpdateArtwork(
           artwork.copyWith(
-            isFavoriteByCurrentUser: nextSaved,
+            isFavoriteByCurrentUser: saved,
           ),
         );
       }
 
-      if (nextSaved) {
+      if (saved) {
         UserActionLogger.logArtworkSave(
           artworkId: id,
           artworkTitle: artwork?.title ?? id,
           artistName: artwork?.artist,
         );
       }
+      return true;
     } catch (e) {
-      _setError('Failed to toggle artwork saved: $e');
+      _setError('Failed to update artwork saved state: $e');
+      return false;
     } finally {
       _setLoading('save_$id', false);
     }

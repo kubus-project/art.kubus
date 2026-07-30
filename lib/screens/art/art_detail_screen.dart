@@ -50,6 +50,7 @@ import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../widgets/map/dialogs/street_art_claims_dialog.dart';
+import '../../models/pending_action_intent.dart';
 
 class ArtDetailScreen extends StatefulWidget {
   final String artworkId;
@@ -94,6 +95,11 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
       context,
       actionLabel: l10n.commonSave.toLowerCase(),
       returnRoute: _publicReturnRoute(context),
+      actionType: PendingActionType.save,
+      targetType: PendingActionTargetType.artwork,
+      targetId: artworkId,
+      targetLabel: provider.getArtworkById(artworkId)?.title,
+      sourceScreen: 'artwork_detail',
     );
     if (!authenticated || !mounted) return;
     await provider.toggleArtworkSaved(artworkId);
@@ -108,6 +114,11 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
       context,
       actionLabel: l10n.artworkDetailLike.toLowerCase(),
       returnRoute: _publicReturnRoute(context),
+      actionType: PendingActionType.like,
+      targetType: PendingActionTargetType.artwork,
+      targetId: artworkId,
+      targetLabel: provider.getArtworkById(artworkId)?.title,
+      sourceScreen: 'artwork_detail',
     );
     if (!authenticated || !mounted) return;
     await provider.toggleLike(artworkId);
