@@ -11,8 +11,17 @@ extension _KubusMarkerOverlayCardMediaParts on KubusMarkerOverlayCard {
     required int cacheHeight,
     required double imageHeight,
   }) {
-    final resolvedHeight = imageHeight.clamp(132.0, 180.0).toDouble();
+    // The height already comes from the shared composition resolver, which
+    // reserves the matching space in the overlay. Re-clamping here is what
+    // previously let the media collapse whenever `maxHeight` was present.
+    final resolvedHeight = imageHeight
+        .clamp(
+          MarkerOverlayCardMetrics.mediaHeightMinimum,
+          MarkerOverlayCardMetrics.mediaHeightRegular,
+        )
+        .toDouble();
     return ClipRRect(
+      key: const ValueKey<String>('marker_overlay_media'),
       borderRadius: BorderRadius.circular(KubusRadius.md),
       child: SizedBox(
         height: resolvedHeight,

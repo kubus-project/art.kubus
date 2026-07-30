@@ -221,11 +221,15 @@ class ArtMarker {
 
   /// Create from Map (from storage/API)
   factory ArtMarker.fromMap(Map<String, dynamic> map) {
-    final metadata = _normalizeMetadata(map['metadata']);
+    final metadata = _normalizeMetadata(
+      map['metadata'],
+      topLevel: map,
+    );
     final exhibitionSummaries = _parseExhibitionSummaries(map, metadata);
     final markerType = parseMarkerType(
       map['markerType'] ?? map['type'] ?? map['category'],
       metadata,
+      exhibitionSummaries,
     );
     final updatedAtRaw = map['updatedAt'] ?? map['updated_at'];
     final updatedAt = DateTime.tryParse(updatedAtRaw?.toString() ?? '');
@@ -362,35 +366,69 @@ class ArtMarker {
   static ArtMarkerType parseMarkerType(
     dynamic raw, [
     Map<String, dynamic>? metadata,
+    List<ExhibitionSummaryDto>? exhibitionSummaries,
   ]) {
-    return _parseMarkerType(raw, metadata);
+    return _parseMarkerType(
+      raw,
+      metadata,
+      exhibitionSummaries:
+          exhibitionSummaries ?? const <ExhibitionSummaryDto>[],
+    );
   }
 
   static ArtMarkerType _parseMarkerType(
-      dynamic raw, Map<String, dynamic>? metadata) {
-    final metaType = metadata?['subjectType'] ?? metadata?['subject_type'];
-    final metaCategory =
-        metadata?['subjectCategory'] ?? metadata?['subject_category'];
-    final metaLabel = metadata?['subjectLabel'] ?? metadata?['subject_label'];
+    dynamic raw,
+    Map<String, dynamic>? metadata, {
+    List<ExhibitionSummaryDto> exhibitionSummaries =
+        const <ExhibitionSummaryDto>[],
+  }) {
+    final metaType = _readSubjectField(metadata, const <String>[
+      'subjectType',
+      'subject_type',
+    ]);
+    final metaCategory = _readSubjectField(metadata, const <String>[
+      'subjectCategory',
+      'subject_category',
+    ]);
+    final metaLabel = _readSubjectField(metadata, const <String>[
+      'subjectLabel',
+      'subject_label',
+    ]);
+
+    // An explicit subject declaration describes the linked entity; the
+    // transport `markerType`/`type` may only be the storage kind
+    // (`geolocation`, `qr`, ...) or a stale/looser label. When a marker says
+    // `subjectType: exhibition` while the transport says `event`, the subject
+    // is authoritative — otherwise the quick card, the hydration coordinator
+    // and the More info route disagree about which entity the marker links to.
+    final declaredSubjectType = (metaType ?? '').trim().toLowerCase();
+    if (declaredSubjectType.isNotEmpty) {
+      final subjectKind = _markerTypeFromToken(declaredSubjectType);
+      if (subjectKind != null) return subjectKind;
+    }
 
     String normalized = raw?.toString().trim().toLowerCase() ?? '';
     if ((normalized.isEmpty || normalized == 'geolocation') &&
-        metaType is String) {
+        metaType != null) {
       normalized = metaType.trim().toLowerCase();
     }
-    if (metaCategory is String && normalized.isEmpty) {
+    if (metaCategory != null && normalized.isEmpty) {
       normalized = metaCategory.trim().toLowerCase();
     }
-    if (metaLabel is String && normalized.isEmpty) {
+    if (metaLabel != null && normalized.isEmpty) {
       normalized = metaLabel.trim().toLowerCase();
     }
 
-    final metadataTypeText = [
-      if (metaType is String) metaType,
-      if (metaCategory is String) metaCategory,
-      if (metaLabel is String) metaLabel,
+    final metadataTypeText = <String>[
+      if (metaType != null) metaType,
+      if (metaCategory != null) metaCategory,
+      if (metaLabel != null) metaLabel,
     ].join(' ').trim().toLowerCase();
     if (_matchesExhibitionType(metadataTypeText)) {
+      return ArtMarkerType.exhibition;
+    }
+
+    if (normalized.isEmpty && exhibitionSummaries.isNotEmpty) {
       return ArtMarkerType.exhibition;
     }
 
@@ -438,6 +476,50 @@ class ArtMarker {
       return ArtMarkerType.artwork;
     }
     return ArtMarkerType.other;
+  }
+
+  /// Maps an explicit subject-type declaration onto a marker kind.
+  ///
+  /// Returns `null` for transport-only values (`geolocation`, `qr`, ...) so the
+  /// caller falls back to the looser `markerType`/`category` heuristics.
+  static ArtMarkerType? _markerTypeFromToken(String value) {
+    final normalized = value.replaceAll(RegExp(r'\s+'), ' ').trim();
+    if (normalized.isEmpty) return null;
+    if (normalized.contains('institution') ||
+        normalized.contains('museum') ||
+        normalized.contains('gallery')) {
+      return ArtMarkerType.institution;
+    }
+    if (normalized.contains('streetart') ||
+        normalized.contains('street_art') ||
+        normalized.contains('street-art') ||
+        normalized.contains('street art') ||
+        normalized.contains('publicart') ||
+        normalized.contains('public_art') ||
+        normalized.contains('public-art') ||
+        normalized.contains('public art')) {
+      return ArtMarkerType.streetArt;
+    }
+    if (_matchesExhibitionType(normalized)) return ArtMarkerType.exhibition;
+    if (normalized.contains('event')) return ArtMarkerType.event;
+    if (normalized.contains('residency') ||
+        normalized.contains('group') ||
+        normalized.contains('dao')) {
+      return ArtMarkerType.residency;
+    }
+    if (normalized.contains('drop') || normalized.contains('airdrop')) {
+      return ArtMarkerType.drop;
+    }
+    if (normalized.contains('experience') ||
+        _containsTypeToken(normalized, 'ar') ||
+        _containsTypeToken(normalized, 'xr')) {
+      return ArtMarkerType.experience;
+    }
+    if (normalized.contains('artwork')) return ArtMarkerType.artwork;
+    if (normalized.contains('misc') || normalized.contains('other')) {
+      return ArtMarkerType.other;
+    }
+    return null;
   }
 
   static bool _matchesExhibitionType(String value) {
@@ -492,14 +574,73 @@ class ArtMarker {
     return const {'x': 0, 'y': 0, 'z': 0};
   }
 
-  static Map<String, dynamic>? _normalizeMetadata(dynamic raw) {
+  /// Canonical linked-subject metadata keys, in camel/snake pairs.
+  ///
+  /// Transports disagree about where these live: `/api/art-markers` nests them
+  /// under `metadata`, OrbitDB documents and some seed/import payloads put them
+  /// at the top level, and older payloads nest them one level deeper under
+  /// `metadata.metadata` / `metadata.meta`. Normalizing all three shapes into
+  /// one place at parse time is what keeps every consumer (quick card, linked
+  /// subject hydration, More info routing) reading the same identity.
+  static const List<List<String>> _subjectFieldAliases = <List<String>>[
+    <String>['subjectType', 'subject_type'],
+    <String>['subjectId', 'subject_id'],
+    <String>['subjectTitle', 'subject_title'],
+    <String>['subjectSubtitle', 'subject_subtitle'],
+    <String>['subjectCategory', 'subject_category'],
+    <String>['subjectLabel', 'subject_label'],
+    <String>['exhibitionId', 'exhibition_id'],
+    <String>['exhibitionTitle', 'exhibition_title'],
+    <String>['eventId', 'event_id'],
+    <String>['eventTitle', 'event_title'],
+  ];
+
+  static Map<String, dynamic>? _normalizeMetadata(
+    dynamic raw, {
+    Map<String, dynamic>? topLevel,
+  }) {
     Map<String, dynamic>? metadata;
     if (raw is Map<String, dynamic>) {
       metadata = Map<String, dynamic>.from(raw);
     } else if (raw is Map) {
       metadata = raw.map((key, value) => MapEntry(key.toString(), value));
     }
+
+    if (topLevel == null) return metadata;
+
+    // Promote top-level subject declarations so `subjectType`/`subjectId`/... are
+    // readable through the marker getters regardless of transport shape. Nested
+    // values already win via [_metadataString]; an existing metadata entry is
+    // never overwritten.
+    for (final aliases in _subjectFieldAliases) {
+      final promoted = _firstStringFromMap(topLevel, aliases);
+      if (promoted == null) continue;
+      final existing = _readSubjectField(metadata, aliases);
+      if (existing != null) continue;
+      metadata ??= <String, dynamic>{};
+      metadata[aliases.first] = promoted;
+    }
+
     return metadata;
+  }
+
+  /// Reads one subject field from [map], falling back to a single nested
+  /// `metadata`/`meta` map.
+  static String? _readSubjectField(
+    Map<String, dynamic>? map,
+    List<String> keys,
+  ) {
+    if (map == null) return null;
+    final direct = _firstStringFromMap(map, keys);
+    if (direct != null) return direct;
+    final nested = map['metadata'] ?? map['meta'];
+    if (nested is Map) {
+      return _firstStringFromMap(
+        nested.map((key, value) => MapEntry(key.toString(), value)),
+        keys,
+      );
+    }
+    return null;
   }
 
   static String? _firstStringFromMap(
@@ -627,6 +768,81 @@ class ArtMarker {
   String? get sourceAttribution =>
       _metadataString(const ['sourceAttribution', 'source_attribution']);
 
+  /// Optional secondary line supplied by the marker payload.
+  String? get subjectSubtitle =>
+      _metadataString(const ['subjectSubtitle', 'subject_subtitle']);
+
+  /// Category/type label for the linked subject (event type, exhibition kind).
+  String? get subjectCategory => _metadataString(const [
+        'subjectCategory',
+        'subject_category',
+        'subjectLabel',
+        'subject_label',
+      ]);
+
+  /// Human-readable venue/place for the marker or its linked subject.
+  String? get locationName => _metadataString(const [
+        'locationName',
+        'location_name',
+        'venueName',
+        'venue_name',
+        'venue',
+        'address',
+        'city',
+      ]);
+
+  /// Start of the linked subject's schedule, when the marker carries one.
+  DateTime? get subjectStartsAt => _metadataDate(const [
+        'startsAt',
+        'starts_at',
+        'startDate',
+        'start_date',
+        'eventStartsAt',
+        'event_starts_at',
+      ]);
+
+  /// End of the linked subject's schedule, when the marker carries one.
+  DateTime? get subjectEndsAt => _metadataDate(const [
+        'endsAt',
+        'ends_at',
+        'endDate',
+        'end_date',
+        'eventEndsAt',
+        'event_ends_at',
+      ]);
+
+  /// `YYYY-MM-DD` (or a range) built from the marker's own schedule metadata.
+  ///
+  /// Used so an event/exhibition marker whose canonical entity has not been
+  /// hydrated (or no longer exists) can still show its date context.
+  String? get subjectDateRangeLabel =>
+      formatMarkerDateRange(subjectStartsAt, subjectEndsAt);
+
+  /// Formats a marker/subject date range using the app's compact map format.
+  static String? formatMarkerDateRange(DateTime? startsAt, DateTime? endsAt) {
+    String formatDate(DateTime value) {
+      final local = value.toLocal();
+      final month = local.month.toString().padLeft(2, '0');
+      final day = local.day.toString().padLeft(2, '0');
+      return '${local.year}-$month-$day';
+    }
+
+    if (startsAt == null && endsAt == null) return null;
+    if (startsAt != null && endsAt != null) {
+      final start = formatDate(startsAt);
+      final end = formatDate(endsAt);
+      if (start == end) return start;
+      return '$start -> $end';
+    }
+    return formatDate(startsAt ?? endsAt!);
+  }
+
+  DateTime? _metadataDate(List<String> keys) {
+    final raw = _metadataString(keys);
+    if (raw == null) return null;
+    return DateTime.tryParse(raw);
+  }
+
   bool get isCommunityMarker {
     dynamic readRaw(Map<String, dynamic>? map) {
       if (map == null) return null;
@@ -695,9 +911,21 @@ class ArtMarker {
     return normalized != null && normalized.contains('exhibition');
   }
 
+  /// True when the marker explicitly declares an event (and not an exhibition)
+  /// as its linked subject.
+  bool get isEventSubject {
+    final normalized = subjectType?.toLowerCase();
+    if (normalized == null) return false;
+    if (normalized.contains('exhibition')) return false;
+    return normalized.contains('event');
+  }
+
   bool get isExhibitionMarker {
-    if (type == ArtMarkerType.exhibition) return true;
     if (isExhibitionSubject) return true;
+    // A declared event subject must never be treated as an exhibition, even
+    // when the transport `markerType` says otherwise.
+    if (isEventSubject) return false;
+    if (type == ArtMarkerType.exhibition) return true;
     final resolved = resolvedExhibitionSummary;
     if (resolved == null || resolved.id.trim().isEmpty) return false;
     return artworkId == null || artworkId!.isEmpty;

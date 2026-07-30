@@ -60,7 +60,6 @@ import '../widgets/map_marker_style_config.dart';
 import '../utils/app_animations.dart';
 import '../utils/artwork_navigation.dart';
 import '../utils/grid_utils.dart';
-import '../utils/artwork_media_resolver.dart';
 import '../utils/design_tokens.dart';
 
 import '../utils/app_color_utils.dart';
@@ -77,7 +76,6 @@ import '../utils/map_performance_debug.dart';
 import '../utils/presence_marker_visit.dart';
 import '../utils/geo_bounds.dart';
 import '../utils/institution_navigation.dart';
-import '../utils/media_url_resolver.dart';
 import '../utils/user_profile_navigation.dart';
 import '../widgets/map_marker_dialog.dart';
 import '../providers/tile_providers.dart';
@@ -125,12 +123,11 @@ import '../widgets/map/kubus_map_glass_surface.dart';
 import '../widgets/common/kubus_filter_panel.dart';
 import '../widgets/common/kubus_glass_icon_button.dart';
 import '../widgets/common/kubus_map_controls.dart';
-import '../widgets/common/kubus_cached_image.dart';
 import '../widgets/common/kubus_marker_overlay_card.dart';
-import '../widgets/common/marker_attribution_section.dart';
 import '../widgets/common/kubus_search_overlay_scaffold.dart';
 import '../widgets/map/overlays/kubus_marker_overlay_card_wrapper.dart'
     as overlay_wrapper;
+import 'map/marker_info_detail_screen.dart';
 import 'map_core/map_marker_interaction_controller.dart';
 import 'map_core/map_camera_controller.dart';
 import 'map_core/marker_visual_sync_coordinator.dart';
@@ -4702,13 +4699,53 @@ class _MapScreenState extends State<MapScreen>
         );
         final linkedSubjects =
             _linkedSubjectCoordinator.resolveCached(selectedMarker);
+        final resolvedEvent = linkedSubjects.event ?? linkedEvent;
+        final resolvedExhibition = linkedSubjects.exhibition;
+        final cardWidth = MapOverlaySizing.resolveMarkerOverlayCardLayout(
+          constraints: constraints,
+          media: mediaQuery,
+          isDesktop: false,
+          topChromePx: MapOverlaySizing.defaultVerticalPadding,
+        ).width;
         return KubusMarkerOverlayHelpers.estimateCardHeight(
           marker: selectedMarker,
           artwork: selectedArtwork,
-          event: linkedSubjects.event ?? linkedEvent,
-          exhibition: linkedSubjects.exhibition,
+          event: resolvedEvent,
+          exhibition: resolvedExhibition,
           maxCardHeight: maxCardHeight,
-          isCompactWidth: constraints.maxWidth < 600,
+          cardWidth: cardWidth,
+          textScale: mediaQuery.textScaler.scale(100) / 100,
+          distanceText: KubusMarkerOverlayHelpers.resolveDistanceText(
+            userLocation: _currentPosition,
+            marker: selectedMarker,
+            distance: _distanceCalculator,
+          ),
+          canPresentExhibition:
+              KubusMarkerOverlayHelpers.canPresentExhibitionForMarker(
+            marker: selectedMarker,
+            artwork: selectedArtwork,
+            event: resolvedEvent,
+            exhibition: resolvedExhibition,
+          ),
+          hasSecondaryActions: markerOverlayHasSecondaryActions(
+            marker: selectedMarker,
+            artwork: selectedArtwork,
+            event: resolvedEvent,
+            exhibition: resolvedExhibition,
+            canPresentExhibition:
+                KubusMarkerOverlayHelpers.canPresentExhibitionForMarker(
+              marker: selectedMarker,
+              artwork: selectedArtwork,
+              event: resolvedEvent,
+              exhibition: resolvedExhibition,
+            ),
+            canClaimStreetArt: KubusMarkerOverlayHelpers.canOpenStreetArtClaims(
+              selectedMarker,
+            ),
+          ),
+          stackCount: selection.stackedMarkers.isEmpty
+              ? 1
+              : selection.stackedMarkers.length,
         );
       },
       fallbackAnchorResolver: (constraints) {
@@ -4832,22 +4869,13 @@ class _MapScreenState extends State<MapScreen>
             events: context.read<EventsProvider>().events,
           );
       final pageExhibition = linkedSubjects.exhibition;
-      final presentation = resolveMarkerOverlayPresentation(
+      final canPresentExhibition =
+          KubusMarkerOverlayHelpers.canPresentExhibitionForMarker(
         marker: pageMarker,
         artwork: pageArtwork,
         event: pageEvent,
         exhibition: pageExhibition,
       );
-      final exhibitionsFeatureEnabled =
-          AppConfig.isFeatureEnabled('exhibitions');
-      // A stale exhibitionsApiAvailable=false flag must not suppress a marker
-      // that carries a valid exhibition id; the open flow retries the fetch
-      // and falls back to marker info on a real failure.
-      final canPresentExhibition = presentation.primaryTarget ==
-              MapMarkerOverlayPrimaryTarget.exhibition &&
-          exhibitionsFeatureEnabled &&
-          pagePrimaryExhibition != null &&
-          pagePrimaryExhibition.id.isNotEmpty;
 
       final pageDistanceText = KubusMarkerOverlayHelpers.resolveDistanceText(
         userLocation: _currentPosition,
@@ -5154,7 +5182,13 @@ class _MapScreenState extends State<MapScreen>
         await _openMarkerDetail(marker, artwork, requestId: requestId);
         return;
       case MapMarkerOverlayPrimaryTarget.markerInfo:
-        await _showMarkerInfoFallback(marker, requestId: requestId);
+        await _openMarkerInfoDetail(
+          marker,
+          artwork: artwork,
+          event: resolvedEvent,
+          exhibition: hydratedExhibition,
+          requestId: requestId,
+        );
         return;
     }
   }
@@ -5168,7 +5202,7 @@ class _MapScreenState extends State<MapScreen>
     if (eventId.isEmpty ||
         !AppConfig.isFeatureEnabled('events') ||
         (event == null && BackendApiService().eventsApiAvailable == false)) {
-      await _showMarkerInfoFallback(marker, requestId: requestId);
+      await _openMarkerInfoDetail(marker, requestId: requestId);
       return;
     }
 
@@ -5188,7 +5222,9 @@ class _MapScreenState extends State<MapScreen>
 
     if (!_isCurrentMarkerOpenRequest(marker, requestId)) return;
     if (fetched == null) {
-      await _showMarkerInfoFallback(marker, requestId: requestId);
+      // Orphaned or unreachable event: present marker information through the
+      // shared full-detail surface, never the legacy alert dialog.
+      await _openMarkerInfoDetail(marker, requestId: requestId);
       return;
     }
 
@@ -5211,7 +5247,7 @@ class _MapScreenState extends State<MapScreen>
       data: marker.metadata,
     );
     if (institutionId.isEmpty && profileTargetId == null) {
-      await _showMarkerInfoFallback(marker, requestId: requestId);
+      await _openMarkerInfoDetail(marker, requestId: requestId);
       return;
     }
 
@@ -5244,7 +5280,7 @@ class _MapScreenState extends State<MapScreen>
 
     if (resolved == null || resolved.id.isEmpty) {
       if (isExhibitionMarker) {
-        await _showMarkerInfoFallback(marker, requestId: requestId);
+        await _openMarkerInfoDetail(marker, requestId: requestId);
         return;
       }
       await _openMarkerDetail(marker, artwork, requestId: requestId);
@@ -5294,7 +5330,9 @@ class _MapScreenState extends State<MapScreen>
         );
         setState(() {});
       }
-      await _showMarkerInfoFallback(marker, requestId: requestId);
+      // Missing/404 exhibition: keep the user on the shared marker-detail
+      // surface instead of the obsolete popup.
+      await _openMarkerInfoDetail(marker, requestId: requestId);
       return;
     }
 
@@ -5330,7 +5368,7 @@ class _MapScreenState extends State<MapScreen>
     if (!_isCurrentMarkerOpenRequest(marker, requestId)) return;
 
     if (resolvedArtwork == null) {
-      await _showMarkerInfoFallback(marker, requestId: requestId);
+      await _openMarkerInfoDetail(marker, requestId: requestId);
       return;
     }
 
@@ -5344,22 +5382,26 @@ class _MapScreenState extends State<MapScreen>
     );
   }
 
-  Future<void> _showMarkerInfoFallback(
+  /// Opens the shared generic marker-detail surface.
+  ///
+  /// Used whenever a marker has no canonical linked entity to open (missing
+  /// subject id, orphaned reference, 404, or a failed fetch). Mobile pushes the
+  /// full-detail page; the desktop screen docks the same content into its
+  /// left-hand detail panel. The obsolete marker-info alert dialog is gone: a
+  /// hydration failure must never bypass the marker card into a popup.
+  Future<void> _openMarkerInfoDetail(
     ArtMarker marker, {
+    Artwork? artwork,
+    KubusEvent? event,
+    Exhibition? exhibition,
     int? requestId,
   }) async {
     if (!_isCurrentMarkerOpenRequest(marker, requestId)) return;
-    final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
-    final themeProvider = context.read<ThemeProvider>();
-    final dpr = MediaQuery.maybeOf(context)?.devicePixelRatio ?? 1.0;
-    final cacheWidth = (640 * dpr).clamp(256.0, 1600.0).round();
-    final cacheHeight = (360 * dpr).clamp(144.0, 1200.0).round();
-    final coverUrl = MediaUrlResolver.resolveDisplayUrl(
-      ArtworkMediaResolver.resolveCover(
-        metadata: marker.metadata,
-      ),
-      maxWidth: cacheWidth,
+    final navigator = Navigator.of(context);
+    final distanceText = KubusMarkerOverlayHelpers.resolveDistanceText(
+      userLocation: _currentPosition,
+      marker: marker,
+      distance: _distanceCalculator,
     );
 
     if (!_mapUiStateCoordinator.openMarkerDetails()) return;
@@ -5376,77 +5418,17 @@ class _MapScreenState extends State<MapScreen>
               MapContextSurface.markerDetails) {
         return;
       }
-      await showKubusDialog<void>(
-        context: context,
-        useRootNavigator: false,
-        builder: (dialogContext) => KubusAlertDialog(
-          backgroundColor: scheme.surface,
-          title: Text(
-            marker.subjectTitle?.trim().isNotEmpty == true
-                ? marker.subjectTitle!.trim()
-                : marker.name,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: KubusTypography.outfit(
-              fontWeight: FontWeight.w700,
-              color: scheme.onSurface,
-            ),
+      await navigator.push<void>(
+        MaterialPageRoute<void>(
+          builder: (_) => MarkerInfoDetailScreen(
+            marker: marker,
+            artwork: artwork,
+            event: event,
+            exhibition: exhibition,
+            distanceLabel: distanceText,
+            linkedSubjectUnavailable:
+                isMarkerOverlayLinkedSubjectUnavailable(marker),
           ),
-          content: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 520),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (coverUrl != null && coverUrl.isNotEmpty)
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: KubusCachedImage(
-                      imageUrl: coverUrl,
-                      width: double.infinity,
-                      height: 160,
-                      fit: BoxFit.cover,
-                      filterQuality: FilterQuality.low,
-                      cacheWidth: cacheWidth,
-                      cacheHeight: cacheHeight,
-                      maxDisplayWidth: cacheWidth,
-                      cacheVersion: KubusCachedImage.versionTokenFromDate(
-                        marker.updatedAt,
-                      ),
-                      errorBuilder: (_, __, ___) =>
-                          KubusMapMarkerHelpers.markerImageFallback(
-                        baseColor: _resolveArtMarkerColor(
-                          marker,
-                          themeProvider,
-                        ),
-                        scheme: scheme,
-                        marker: marker,
-                      ),
-                    ),
-                  ),
-                const SizedBox(height: 12),
-                Flexible(
-                  child: Text(
-                    marker.description.isNotEmpty
-                        ? marker.description
-                        : l10n.mapNoLinkedArtworkForMarker,
-                    maxLines: 12,
-                    overflow: TextOverflow.ellipsis,
-                    style:
-                        KubusTypography.outfit(color: scheme.onSurfaceVariant),
-                  ),
-                ),
-                // Artist / photo / source attribution, below the description.
-                MarkerAttributionSection.fromMarker(marker),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: Text(l10n.commonClose),
-            ),
-          ],
         ),
       );
     } finally {
