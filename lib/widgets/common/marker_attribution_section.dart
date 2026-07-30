@@ -140,18 +140,40 @@ class MarkerAttributionSection extends StatelessWidget {
   /// Row count for the marker + linked artwork combination rendered by
   /// [MarkerAttributionSection.fromMarkerAndArtwork].
   static int rowCountForMarkerAndArtwork(ArtMarker? marker, Artwork? artwork) {
+    return rowValuesForMarkerAndArtwork(marker, artwork).length;
+  }
+
+  /// The credit values this section renders, in render order.
+  ///
+  /// Exposed so the marker quick card's height estimator can predict which rows
+  /// wrap onto a second line (each row renders up to [rowMaxLines]) instead of
+  /// assuming every credit fits on one line — long artist/photo/source credits
+  /// are common on open-data markers.
+  static List<String> rowValuesForMarkerAndArtwork(
+    ArtMarker? marker,
+    Artwork? artwork,
+  ) {
     final section = MarkerAttributionSection.fromMarkerAndArtwork(
       marker,
       artwork,
     );
-    return rowCountFrom(
-      artist: section.artist,
+    final values = <String>[];
+    if (_rendersArtist(section.artist)) {
+      values.add(_clean(section.artist)!);
+    }
+    final photoLine = _photoLine(
       imageAttribution: section.imageAttribution,
       imageAuthor: section.imageAuthor,
       imageLicense: section.imageLicense,
-      sourceAttribution: section.sourceAttribution,
     );
+    if (photoLine.isNotEmpty) values.add(photoLine);
+    final source = _clean(section.sourceAttribution);
+    if (source != null) values.add(source);
+    return values;
   }
+
+  /// Maximum lines one credit row renders (see the `Text` below).
+  static const int rowMaxLines = 2;
 
   @override
   Widget build(BuildContext context) {

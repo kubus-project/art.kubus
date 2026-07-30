@@ -135,7 +135,7 @@ class KubusMarkerOverlayCard extends StatelessWidget {
     required double textScale,
   }) {
     return MarkerOverlayCardMetrics.resolveComposition(
-      spec: contentSpec(),
+      spec: contentSpec(isCompactWidth: isCompactWidth),
       availableHeight: availableHeight,
       isCompactWidth: isCompactWidth,
       textScale: textScale,
@@ -143,7 +143,7 @@ class KubusMarkerOverlayCard extends StatelessWidget {
   }
 
   /// The height-relevant content this card renders.
-  MarkerOverlayCardContentSpec contentSpec() {
+  MarkerOverlayCardContentSpec contentSpec({bool isCompactWidth = false}) {
     final rawDescriptionCandidate = (description ??
             (marker.description.isNotEmpty
                 ? marker.description
@@ -153,6 +153,8 @@ class KubusMarkerOverlayCard extends StatelessWidget {
         ? rawDescriptionCandidate
         : (linkedSubjectSubtitle ?? '').trim();
     final linkedTitle = (linkedSubjectTitle ?? '').trim();
+    final attributionValues =
+        MarkerAttributionSection.rowValuesForMarkerAndArtwork(marker, artwork);
 
     return MarkerOverlayCardContentSpec(
       description: truncateMarkerOverlayDescription(
@@ -161,9 +163,19 @@ class KubusMarkerOverlayCard extends StatelessWidget {
         maxChars: maxPreviewChars,
       ),
       badgeCount: _badgeCount(),
-      attributionRows: MarkerAttributionSection.rowCountForMarkerAndArtwork(
-        marker,
-        artwork,
+      attributionRows: attributionValues.length,
+      attributionLines: attributionValues.fold<int>(
+        0,
+        (total, value) =>
+            total +
+            MarkerOverlayCardMetrics.attributionLinesForValue(
+              value,
+              isCompactWidth: isCompactWidth,
+            ),
+      ),
+      titleLines: MarkerOverlayCardMetrics.titleLinesFor(
+        displayTitle,
+        isCompactWidth: isCompactWidth,
       ),
       hasKicker: (linkedSubjectTypeLabel ?? '').trim().isNotEmpty ||
           canPresentExhibition,
@@ -182,8 +194,7 @@ class KubusMarkerOverlayCard extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     const cardPadding = MarkerOverlayCardMetrics.cardPadding;
 
-    final spec = contentSpec();
-    final visibleDescription = spec.description;
+    final badgeCount = _badgeCount();
 
     final linkedSubjectImageUrl = (subjectImageUrl ?? '').trim();
     final rawImageUrl = linkedSubjectImageUrl.isNotEmpty
@@ -220,6 +231,7 @@ class KubusMarkerOverlayCard extends StatelessWidget {
     Widget buildCardSurface(
       MarkerOverlayCardComposition composition, {
       required bool hasBoundedHeight,
+      required String visibleDescription,
     }) {
       final imageHeight = composition.mediaHeight;
       final cacheHeight =
@@ -238,7 +250,7 @@ class KubusMarkerOverlayCard extends StatelessWidget {
             cacheHeight: cacheHeight,
             imageHeight: imageHeight,
           ),
-        if (spec.badgeCount > 0) ...[
+        if (badgeCount > 0) ...[
           if (composition.showMedia)
             const SizedBox(height: MarkerOverlayCardMetrics.innerGap),
           _buildMetadataTier(
@@ -253,7 +265,7 @@ class KubusMarkerOverlayCard extends StatelessWidget {
           ),
         ],
         if (showDescription) ...[
-          if (composition.showMedia || spec.badgeCount > 0)
+          if (composition.showMedia || badgeCount > 0)
             const SizedBox(height: MarkerOverlayCardMetrics.innerGap),
           // Flexible, not scrollable: the description block absorbs whatever
           // slack the reserved height leaves and clips with an ellipsis when the
@@ -370,7 +382,11 @@ class KubusMarkerOverlayCard extends StatelessWidget {
             (constraints.maxHeight.isFinite ? constraints.maxHeight : null);
         final isCompactWidth =
             MarkerOverlayCardMetrics.isCompactCard(resolvedMaxWidth);
-        final composition = resolveComposition(
+        // One spec, one composition: the rendered content and the reserved
+        // height are derived from the same model at the same width.
+        final spec = contentSpec(isCompactWidth: isCompactWidth);
+        final composition = MarkerOverlayCardMetrics.resolveComposition(
+          spec: spec,
           availableHeight: resolvedMaxHeight ?? double.infinity,
           isCompactWidth: isCompactWidth,
           textScale: textScale,
@@ -384,6 +400,7 @@ class KubusMarkerOverlayCard extends StatelessWidget {
           child: buildCardSurface(
             composition,
             hasBoundedHeight: resolvedMaxHeight != null,
+            visibleDescription: spec.description,
           ),
         );
       },

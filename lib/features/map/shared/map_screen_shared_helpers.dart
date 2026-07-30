@@ -730,6 +730,7 @@ class KubusMarkerOverlayHelpers {
       canPresentExhibition: canPresentExhibition,
       hasSecondaryActions: hasSecondaryActions,
       stackCount: stackCount,
+      isCompactWidth: isCompactWidth,
     );
     final composition = MarkerOverlayCardMetrics.resolveComposition(
       spec: spec,

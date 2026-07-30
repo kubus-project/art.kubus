@@ -94,17 +94,34 @@ class MarkerOverlayCardContentSpec {
     required this.hasByline,
     required this.secondaryActionRows,
     required this.hasPager,
+    this.attributionLines = 0,
+    this.titleLines = MarkerOverlayCardMetrics.headerTitleLines,
   });
 
   final String description;
   final int badgeCount;
+
+  /// Number of credit rows the attribution block renders.
   final int attributionRows;
+
+  /// Total *rendered lines* across those credit rows.
+  ///
+  /// Long credits wrap onto a second line, so this is not always equal to
+  /// [attributionRows]. Defaults to one line per row when not supplied.
+  final int attributionLines;
+
+  /// Title lines the header renders (1 or 2).
+  final int titleLines;
+
   final bool hasKicker;
   final bool hasLinkedTitle;
   final bool hasLinkedSubtitle;
   final bool hasByline;
   final int secondaryActionRows;
   final bool hasPager;
+
+  int get effectiveAttributionLines =>
+      attributionLines > 0 ? attributionLines : attributionRows;
 }
 
 /// Shared constants + composition resolver for the marker quick card.
@@ -189,8 +206,45 @@ class MarkerOverlayCardMetrics {
   static const double approxCharsPerLineRegular = 46.0;
 
   // --- Attribution ---
-  static const double attributionChromeHeight = 17.0;
-  static const double attributionRowHeight = 21.0;
+  /// Divider + surrounding gaps above the first credit row.
+  static const double attributionChromeHeight = 20.0;
+
+  /// One rendered credit line (12px text at 1.3 line height, plus row padding).
+  static const double attributionLineHeight = 16.0;
+
+  /// Extra per-row padding applied by the section's row `Padding`.
+  static const double attributionRowPadding = 4.0;
+
+  /// Characters that fit on one credit line, including the label prefix.
+  static const double attributionCharsPerLineCompact = 34.0;
+  static const double attributionCharsPerLineRegular = 42.0;
+
+  /// Allowance for the localized `Artist:` / `Photo:` / `Source:` prefix.
+  static const int attributionLabelAllowance = 8;
+
+  /// Predicts the rendered line count of one credit row.
+  static int attributionLinesForValue(
+    String value, {
+    required bool isCompactWidth,
+  }) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) return 0;
+    final charsPerLine = isCompactWidth
+        ? attributionCharsPerLineCompact
+        : attributionCharsPerLineRegular;
+    final approx =
+        ((trimmed.length + attributionLabelAllowance) / charsPerLine).ceil();
+    return approx.clamp(1, MarkerAttributionSection.rowMaxLines).toInt();
+  }
+
+  /// Title lines the header renders for [title].
+  static int titleLinesFor(String title, {required bool isCompactWidth}) {
+    final trimmed = title.trim();
+    if (trimmed.isEmpty) return 1;
+    final charsPerLine = isCompactWidth ? 26.0 : 30.0;
+    final approx = (trimmed.length / charsPerLine).ceil();
+    return approx.clamp(1, headerTitleLines).toInt();
+  }
 
   // --- Footer ---
   static const double actionRowHeight = KubusHeaderMetrics.actionHitArea;
@@ -220,7 +274,9 @@ class MarkerOverlayCardMetrics {
     double textScale,
   ) {
     final scale = _safeTextScale(textScale);
-    var height = headerTitleLineHeight * headerTitleLines * scale;
+    var height = headerTitleLineHeight *
+        spec.titleLines.clamp(1, headerTitleLines) *
+        scale;
     if (spec.hasKicker) {
       height += (headerKickerHeight * scale) + headerKickerGap;
     }
@@ -258,7 +314,8 @@ class MarkerOverlayCardMetrics {
     if (spec.attributionRows <= 0) return 0.0;
     final scale = _safeTextScale(textScale);
     return attributionChromeHeight +
-        (spec.attributionRows * attributionRowHeight * scale);
+        (spec.attributionRows * attributionRowPadding) +
+        (spec.effectiveAttributionLines * attributionLineHeight * scale);
   }
 
   /// Height the footer (secondary actions, pager, primary CTA) occupies.
@@ -491,6 +548,7 @@ class MarkerOverlayCardMetrics {
     bool canPresentExhibition = false,
     bool hasSecondaryActions = false,
     int stackCount = 1,
+    bool isCompactWidth = false,
     MapMarkerOverlayPresentation? presentation,
   }) {
     final resolved = presentation ??
@@ -514,6 +572,8 @@ class MarkerOverlayCardMetrics {
 
     final linkedTitle = (resolved.linkedSubject.title ?? '').trim();
     final displayTitle = resolved.title.trim();
+    final attributionValues =
+        MarkerAttributionSection.rowValuesForMarkerAndArtwork(marker, artwork);
 
     return MarkerOverlayCardContentSpec(
       description: description,
@@ -523,10 +583,14 @@ class MarkerOverlayCardMetrics {
         distanceText: distanceText,
         canPresentExhibition: canPresentExhibition,
       ),
-      attributionRows: MarkerAttributionSection.rowCountForMarkerAndArtwork(
-        marker,
-        artwork,
+      attributionRows: attributionValues.length,
+      attributionLines: attributionValues.fold<int>(
+        0,
+        (total, value) =>
+            total +
+            attributionLinesForValue(value, isCompactWidth: isCompactWidth),
       ),
+      titleLines: titleLinesFor(displayTitle, isCompactWidth: isCompactWidth),
       hasKicker: resolved.linkedSubject.kind !=
               MapMarkerOverlayLinkedSubjectKind.none ||
           canPresentExhibition,

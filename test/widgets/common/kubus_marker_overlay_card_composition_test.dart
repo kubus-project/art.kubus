@@ -303,6 +303,64 @@ void main() {
       expect(estimated, lessThanOrEqualTo(640));
     });
 
+    test('long credits reserve two lines per attribution row', () {
+      // Long artist/photo/source credits wrap onto a second line. Reserving one
+      // line each is what previously squeezed the description block and clipped
+      // it mid-line on the orphaned-marker fixture.
+      final longCredits = _eventMarker(
+        description: _words(40),
+        extraMetadata: <String, dynamic>{
+          'artistName':
+              'Klara Perusek in collaboration with the neighbourhood workshop',
+          'imageAuthor':
+              'Kino Siska documentation team, photographed by A. Novak',
+          'imageLicense':
+              'CC BY-SA 4.0 (Creative Commons Attribution-ShareAlike)',
+          'sourceAttribution':
+              'Data: OpenStreetMap contributors and the municipal cultural register',
+        },
+      );
+      final shortCredits = _eventMarker(
+        description: _words(40),
+        extraMetadata: <String, dynamic>{
+          'artistName': 'K. P.',
+          'imageAuthor': 'KS',
+          'imageLicense': 'CC0',
+          'sourceAttribution': 'OSM',
+        },
+      );
+
+      final longSpec = MarkerOverlayCardMetrics.resolveContentSpec(
+        marker: longCredits,
+      );
+      final shortSpec = MarkerOverlayCardMetrics.resolveContentSpec(
+        marker: shortCredits,
+      );
+
+      expect(longSpec.attributionRows, 3);
+      expect(shortSpec.attributionRows, 3);
+      expect(longSpec.effectiveAttributionLines, greaterThan(3));
+      expect(shortSpec.effectiveAttributionLines, 3);
+      expect(
+        MarkerOverlayCardMetrics.attributionHeight(longSpec, 1.0),
+        greaterThan(MarkerOverlayCardMetrics.attributionHeight(shortSpec, 1.0)),
+      );
+    });
+
+    test('a one-line title does not reserve two title lines', () {
+      expect(
+        MarkerOverlayCardMetrics.titleLinesFor('Short', isCompactWidth: false),
+        1,
+      );
+      expect(
+        MarkerOverlayCardMetrics.titleLinesFor(
+          'A considerably longer marker title that has to wrap',
+          isCompactWidth: false,
+        ),
+        2,
+      );
+    });
+
     test('attribution row count matches what the section renders', () {
       final marker = _eventMarker(
         extraMetadata: <String, dynamic>{
