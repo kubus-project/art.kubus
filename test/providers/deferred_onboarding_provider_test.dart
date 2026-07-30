@@ -21,4 +21,29 @@ void main() {
 
     expect(provider.initialStepId, 'account');
   });
+
+  test('public map defers onboarding until a protected action', () {
+    final provider = DeferredOnboardingProvider();
+
+    provider.enableForProtectedAction(
+      initialStepId: 'account',
+      completionRoute: '/map',
+    );
+
+    expect(provider.enabledForSession, isTrue);
+    expect(provider.initialDeepLinkHandled, isTrue);
+    expect(provider.trigger, DeferredOnboardingTrigger.protectedAction);
+    expect(provider.initialStepId, 'account');
+    expect(provider.completionRoute, '/map');
+  });
+
+  test('deep-link navigation does not override public map action deferral', () {
+    final provider = DeferredOnboardingProvider();
+
+    provider.enableForProtectedAction();
+    provider.markInitialDeepLinkHandled();
+
+    expect(provider.trigger, DeferredOnboardingTrigger.protectedAction);
+    expect(provider.completionRoute, '/map');
+  });
 }

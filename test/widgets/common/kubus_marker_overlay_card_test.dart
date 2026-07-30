@@ -563,6 +563,42 @@ void main() {
   );
 
   testWidgets(
+    'linked event and exhibition details can wrap onto a second line',
+    (tester) async {
+      final marker = _marker();
+      const subtitle =
+          'Kino Šiška, Ljubljana, Slovenia - 2026-08-14 -> 2026-08-15';
+
+      await tester.pumpWidget(
+        _wrap(
+          SizedBox(
+            width: 340,
+            child: KubusMarkerOverlayCard(
+              marker: marker,
+              baseColor: Colors.teal,
+              displayTitle: 'Ljubljana Night Art Walk',
+              canPresentExhibition: false,
+              linkedSubjectTypeLabel: 'Event',
+              linkedSubjectTitle: 'Ljubljana Night Art Walk',
+              linkedSubjectSubtitle: subtitle,
+              description: marker.description,
+              onClose: () {},
+              onPrimaryAction: () {},
+              primaryActionIcon: Icons.arrow_forward,
+              primaryActionLabel: 'View details',
+              maxWidth: 340,
+              maxHeight: 420,
+            ),
+          ),
+        ),
+      );
+
+      final subtitleWidget = tester.widget<Text>(find.text(subtitle));
+      expect(subtitleWidget.maxLines, 2);
+    },
+  );
+
+  testWidgets(
     'long description uses a compact floating-card preview budget',
     (tester) async {
       final marker = _marker();

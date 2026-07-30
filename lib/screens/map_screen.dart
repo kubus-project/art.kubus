@@ -55,6 +55,7 @@ import '../core/app_route_observer.dart';
 import '../core/startup_trace.dart';
 import '../models/art_marker.dart';
 import '../models/event.dart';
+import '../models/exhibition.dart';
 import '../widgets/map_marker_style_config.dart';
 import '../utils/app_animations.dart';
 import '../utils/artwork_navigation.dart';
@@ -82,6 +83,7 @@ import '../providers/tile_providers.dart';
 import '../widgets/art_map_view.dart';
 import 'dart:ui' as ui;
 import '../services/backend_api_service.dart';
+import '../services/contextual_auth_gate.dart';
 import '../services/map_data_controller.dart';
 import '../services/map_style_service.dart';
 import '../config/config.dart';
@@ -93,6 +95,7 @@ import '../features/map/map_layers_manager.dart';
 import '../features/map/map_overlay_stack.dart';
 import '../features/map/controller/kubus_map_controller.dart';
 import '../features/map/controller/kubus_map_marker_creation_coordinator.dart';
+import '../features/map/controller/map_marker_linked_subject_coordinator.dart';
 import '../features/map/controller/map_target_coordinator.dart';
 import '../features/map/engine/kubus_map_marker_sync_engine.dart';
 import '../features/map/nearby/nearby_art_controller.dart';
@@ -273,6 +276,7 @@ class _MapScreenState extends State<MapScreen>
   late final MapCameraController _mapCameraController;
   late final MarkerVisualSyncCoordinator _markerVisualSyncCoordinator;
   late final NearbyArtController _nearbyArtController;
+  late final MapMarkerLinkedSubjectCoordinator _linkedSubjectCoordinator;
   late final MapUiStateCoordinator _mapUiStateCoordinator;
   late final MapMarkerRenderCoordinator _renderCoordinator;
   final KubusMapBackdropHostController _mapBackdropHostController =
@@ -687,6 +691,7 @@ class _MapScreenState extends State<MapScreen>
         }
 
         if (marker != null) {
+          _linkedSubjectCoordinator.selectionChanged(marker);
           if (tokenChanged) {
             _renderCoordinator.startSelectionPopAnimation();
             _renderCoordinator.requestStyleUpdate(force: true);
@@ -820,6 +825,24 @@ class _MapScreenState extends State<MapScreen>
     _nearbyArtController = NearbyArtController(
       map: KubusNearbyArtMapDelegate(_kubusMapController),
       distance: _distanceCalculator,
+    );
+
+    _linkedSubjectCoordinator = MapMarkerLinkedSubjectCoordinator(
+      cachedEvent: (id) => context.read<EventsProvider>().eventById(id),
+      cachedExhibition: (id) =>
+          context.read<ExhibitionsProvider>().exhibitionById(id),
+      isEventDetailHydrated: (id) =>
+          context.read<EventsProvider>().isEventDetailHydrated(id),
+      isExhibitionDetailHydrated: (id) =>
+          context.read<ExhibitionsProvider>().isExhibitionDetailHydrated(id),
+      fetchEvent: (id) => context.read<EventsProvider>().fetchEvent(id),
+      fetchExhibition: (id) =>
+          context.read<ExhibitionsProvider>().fetchExhibition(id),
+      selectedMarkerId: () => _kubusMapController.selectedMarkerId,
+      onSubjectHydrated: () {
+        if (!mounted) return;
+        setState(() {});
+      },
     );
 
     _renderCoordinator = MapMarkerRenderCoordinator(
@@ -1957,6 +1980,7 @@ class _MapScreenState extends State<MapScreen>
     _mapDataCoordinator.dispose();
     _mapUiStateCoordinator.dispose();
     _mapTargetCoordinator.dispose();
+    _linkedSubjectCoordinator.dispose();
     _kubusMapController.dispose();
     _deactivateDetachedMapController = null;
     _mapController = null;
@@ -2968,6 +2992,13 @@ class _MapScreenState extends State<MapScreen>
     }
   }
 
+  /// Repaints the marker overlay after a save/like toggle so the action icon
+  /// and label reflect the new engagement state immediately.
+  void _handleOverlayEngagementChanged() {
+    if (!mounted) return;
+    setState(() {});
+  }
+
   void _showArtMarkerDialog(ArtMarker marker) {
     // For compatibility with legacy calls: center and show inline overlay
     _handleMarkerTap(marker);
@@ -3041,6 +3072,14 @@ class _MapScreenState extends State<MapScreen>
   }
 
   Future<void> _startMarkerCreationFlow({LatLng? position}) async {
+    final l10n = AppLocalizations.of(context)!;
+    final authenticated = await const ContextualAuthGate().ensureAuthenticated(
+      context,
+      actionLabel: l10n.mapAddMapMarkerTooltip.toLowerCase(),
+      returnRoute: '/map',
+    );
+    if (!authenticated || !mounted) return;
+
     LatLng? targetPosition = position;
     if (targetPosition == null && _currentPosition == null) {
       await _promptForLocationThenCenter(reason: 'marker_creation');
@@ -3054,7 +3093,6 @@ class _MapScreenState extends State<MapScreen>
     if (!mounted) return;
     final subjectData = refreshed ?? _snapshotMarkerSubjectData();
 
-    final l10n = AppLocalizations.of(context)!;
     final wallet = context.read<WalletProvider>().currentWalletAddress;
     if (wallet == null || wallet.isEmpty) {
       final messenger = ScaffoldMessenger.of(context);
@@ -4494,10 +4532,13 @@ class _MapScreenState extends State<MapScreen>
           marker: selectedMarker,
           events: context.read<EventsProvider>().events,
         );
+        final linkedSubjects =
+            _linkedSubjectCoordinator.resolveCached(selectedMarker);
         return KubusMarkerOverlayHelpers.estimateCardHeight(
           marker: selectedMarker,
           artwork: selectedArtwork,
-          event: linkedEvent,
+          event: linkedSubjects.event ?? linkedEvent,
+          exhibition: linkedSubjects.exhibition,
           maxCardHeight: maxCardHeight,
           isCompactWidth: constraints.maxWidth < 600,
         );
@@ -4615,14 +4656,19 @@ class _MapScreenState extends State<MapScreen>
               .getArtworkById(pageMarker.artworkId ?? '');
 
       final pagePrimaryExhibition = pageMarker.resolvedExhibitionSummary;
-      final pageEvent = KubusMarkerOverlayHelpers.resolveLinkedEvent(
-        marker: pageMarker,
-        events: context.read<EventsProvider>().events,
-      );
+      final linkedSubjects =
+          _linkedSubjectCoordinator.resolveCached(pageMarker);
+      final pageEvent = linkedSubjects.event ??
+          KubusMarkerOverlayHelpers.resolveLinkedEvent(
+            marker: pageMarker,
+            events: context.read<EventsProvider>().events,
+          );
+      final pageExhibition = linkedSubjects.exhibition;
       final presentation = resolveMarkerOverlayPresentation(
         marker: pageMarker,
         artwork: pageArtwork,
         event: pageEvent,
+        exhibition: pageExhibition,
       );
       final exhibitionsFeatureEnabled =
           AppConfig.isFeatureEnabled('exhibitions');
@@ -4646,6 +4692,8 @@ class _MapScreenState extends State<MapScreen>
         context: context,
         marker: pageMarker,
         artwork: pageArtwork,
+        event: pageEvent,
+        exhibition: pageExhibition,
         canPresentExhibition: canPresentExhibition,
         baseColor: pageBaseColor,
         sourceScreen: 'map_marker',
@@ -4654,6 +4702,7 @@ class _MapScreenState extends State<MapScreen>
                 unawaited(_openStreetArtClaimsDialog(pageMarker));
               }
             : null,
+        onEngagementChanged: _handleOverlayEngagementChanged,
       );
 
       void openDetails() {
@@ -4662,6 +4711,7 @@ class _MapScreenState extends State<MapScreen>
             pageMarker,
             artwork: pageArtwork,
             exhibition: pagePrimaryExhibition,
+            hydratedExhibition: pageExhibition,
             event: pageEvent,
           ),
         );
@@ -4672,6 +4722,7 @@ class _MapScreenState extends State<MapScreen>
         marker: pageMarker,
         artwork: pageArtwork,
         event: pageEvent,
+        exhibition: pageExhibition,
         baseColor: pageBaseColor,
         canPresentExhibition: canPresentExhibition,
         distanceText: pageDistanceText,
@@ -4729,6 +4780,14 @@ class _MapScreenState extends State<MapScreen>
   Future<void> _openStreetArtClaimsDialog(ArtMarker marker) async {
     if (!_canOpenStreetArtClaims(marker)) return;
 
+    final l10n = AppLocalizations.of(context)!;
+    final authenticated = await const ContextualAuthGate().ensureAuthenticated(
+      context,
+      actionLabel: l10n.mapMarkerClaimButton.toLowerCase(),
+      returnRoute: '/map',
+    );
+    if (!authenticated || !mounted) return;
+
     await StreetArtClaimsDialog.show(
       context: context,
       marker: marker,
@@ -4749,6 +4808,7 @@ class _MapScreenState extends State<MapScreen>
     ArtMarker marker, {
     Artwork? artwork,
     ExhibitionSummaryDto? exhibition,
+    Exhibition? hydratedExhibition,
     KubusEvent? event,
   }) async {
     final requestId = ++_markerOpenRequestId;
@@ -4762,6 +4822,7 @@ class _MapScreenState extends State<MapScreen>
         marker,
         artwork: artwork,
         exhibition: exhibition,
+        hydratedExhibition: hydratedExhibition,
         event: event,
         requestId: requestId,
       );
@@ -4881,6 +4942,7 @@ class _MapScreenState extends State<MapScreen>
     ArtMarker marker, {
     Artwork? artwork,
     ExhibitionSummaryDto? exhibition,
+    Exhibition? hydratedExhibition,
     KubusEvent? event,
     required int requestId,
   }) async {
@@ -4894,6 +4956,7 @@ class _MapScreenState extends State<MapScreen>
       marker: marker,
       artwork: artwork,
       event: resolvedEvent,
+      exhibition: hydratedExhibition,
     );
     switch (presentation.primaryTarget) {
       case MapMarkerOverlayPrimaryTarget.exhibition:
@@ -4901,6 +4964,7 @@ class _MapScreenState extends State<MapScreen>
           marker,
           exhibition,
           artwork,
+          initialExhibition: hydratedExhibition,
           requestId: requestId,
         );
         return;
@@ -4935,17 +4999,20 @@ class _MapScreenState extends State<MapScreen>
     final eventId = (event?.id ?? marker.subjectId ?? '').trim();
     if (eventId.isEmpty ||
         !AppConfig.isFeatureEnabled('events') ||
-        BackendApiService().eventsApiAvailable == false) {
+        (event == null && BackendApiService().eventsApiAvailable == false)) {
       await _showMarkerInfoFallback(marker, requestId: requestId);
       return;
     }
 
     final eventsProvider = context.read<EventsProvider>();
     final navigator = Navigator.of(context);
+    // No cache-first hop through `eventById`: a list-page entry is missing
+    // detail fields. `fetchEvent` already returns instantly for ids that were
+    // detail-loaded, so this stays cheap without serving list-shaped data.
     final fetched = event ??
         await (() async {
           try {
-            return await eventsProvider.fetchEvent(eventId, force: true);
+            return await eventsProvider.fetchEvent(eventId);
           } catch (_) {
             return null;
           }
@@ -4996,6 +5063,7 @@ class _MapScreenState extends State<MapScreen>
     ArtMarker marker,
     ExhibitionSummaryDto? exhibition,
     Artwork? artwork, {
+    Exhibition? initialExhibition,
     required int requestId,
   }) async {
     final navigator = Navigator.of(context);
@@ -5031,15 +5099,15 @@ class _MapScreenState extends State<MapScreen>
     }
 
     Object? fetchError;
-    final fetched = await (() async {
-      try {
-        return await exhibitionsProvider.fetchExhibition(resolved.id,
-            force: true);
-      } catch (e) {
-        fetchError = e;
-        return null;
-      }
-    })();
+    final fetched = initialExhibition ??
+        await (() async {
+          try {
+            return await exhibitionsProvider.fetchExhibition(resolved.id);
+          } catch (e) {
+            fetchError = e;
+            return null;
+          }
+        })();
 
     if (!_isCurrentMarkerOpenRequest(marker, requestId)) return;
 

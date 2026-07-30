@@ -51,4 +51,14 @@ void main() {
     await GuestSessionService.clearGuestMode(prefs: prefs);
     expect(GuestSessionService.isGuestActiveSync(prefs), isFalse);
   });
+
+  test('activateGuestMode marks a direct public map session as guest-first',
+      () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final prefs = await SharedPreferences.getInstance();
+
+    await GuestSessionService.activateGuestMode(prefs: prefs);
+
+    expect(GuestSessionService.isGuestActiveSync(prefs), isTrue);
+  });
 }
