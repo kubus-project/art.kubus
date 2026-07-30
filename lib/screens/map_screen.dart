@@ -5427,8 +5427,7 @@ class _MapScreenState extends State<MapScreen>
             exhibition: exhibition,
             distanceLabel: distanceText,
             linkedSubjectUnavailable:
-                resolveMarkerOverlayLinkedSubjectKind(marker) !=
-                    MapMarkerOverlayLinkedSubjectKind.none,
+                isMarkerOverlayLinkedSubjectUnavailable(marker),
           ),
         ),
       );

@@ -6058,8 +6058,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         marker: marker,
         distance: _distance,
       ),
-      linkedSubjectUnavailable: resolveMarkerOverlayLinkedSubjectKind(marker) !=
-          MapMarkerOverlayLinkedSubjectKind.none,
+      linkedSubjectUnavailable: isMarkerOverlayLinkedSubjectUnavailable(marker),
     );
 
     return MarkerInfoDetailPanel(

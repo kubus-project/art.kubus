@@ -392,16 +392,31 @@ class KubusMarkerOverlayCard extends StatelessWidget {
           textScale: textScale,
         );
 
+        final cardSurface = buildCardSurface(
+          composition,
+          hasBoundedHeight:
+              !composition.needsViewportScale && resolvedMaxHeight != null,
+          visibleDescription: spec.description,
+        );
+
+        if (composition.needsViewportScale && resolvedMaxWidth != null) {
+          return FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.topCenter,
+            child: SizedBox(
+              width: resolvedMaxWidth,
+              height: composition.contentHeight,
+              child: cardSurface,
+            ),
+          );
+        }
+
         return ConstrainedBox(
           constraints: BoxConstraints(
             maxWidth: resolvedMaxWidth ?? double.infinity,
             maxHeight: resolvedMaxHeight ?? double.infinity,
           ),
-          child: buildCardSurface(
-            composition,
-            hasBoundedHeight: resolvedMaxHeight != null,
-            visibleDescription: spec.description,
-          ),
+          child: cardSurface,
         );
       },
     );

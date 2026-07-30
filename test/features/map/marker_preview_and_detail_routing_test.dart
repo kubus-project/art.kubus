@@ -262,6 +262,15 @@ void main() {
         MapMarkerOverlayPrimaryTarget.markerInfo,
       );
     });
+
+    test('a standalone misc marker is not reported as an unavailable link', () {
+      final marker = _marker(
+        type: ArtMarkerType.other,
+        metadata: const <String, dynamic>{'subjectType': 'misc'},
+      );
+
+      expect(isMarkerOverlayLinkedSubjectUnavailable(marker), isFalse);
+    });
   });
 
   group('the legacy marker-info dialog is gone from both map screens', () {

@@ -196,6 +196,23 @@ MapMarkerOverlayLinkedSubjectKind resolveMarkerOverlayLinkedSubjectKind(
   }
 }
 
+/// Whether a declared canonical subject was unavailable after hydration.
+///
+/// `misc` is a standalone marker kind, not a pointer to a canonical entity.
+bool isMarkerOverlayLinkedSubjectUnavailable(ArtMarker marker) {
+  switch (resolveMarkerOverlayLinkedSubjectKind(marker)) {
+    case MapMarkerOverlayLinkedSubjectKind.misc:
+    case MapMarkerOverlayLinkedSubjectKind.none:
+      return false;
+    case MapMarkerOverlayLinkedSubjectKind.artwork:
+    case MapMarkerOverlayLinkedSubjectKind.event:
+    case MapMarkerOverlayLinkedSubjectKind.exhibition:
+    case MapMarkerOverlayLinkedSubjectKind.institution:
+    case MapMarkerOverlayLinkedSubjectKind.group:
+      return true;
+  }
+}
+
 String? _resolveLinkedSubjectId({
   required ArtMarker marker,
   required Artwork? artwork,

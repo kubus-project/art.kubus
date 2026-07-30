@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:art_kubus/features/map/shared/map_screen_shared_helpers.dart';
 import 'package:art_kubus/features/map/shared/marker_overlay_card_metrics.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
@@ -175,24 +173,16 @@ void main() {
             isCompactWidth: compact,
             textScale: 1.0,
           );
-          // Below the irreducible minimum (header + action rows) there is
-          // nothing left to trim, so the resolver reports that minimum instead
-          // of clipping the close control or the primary CTA away.
-          final floor = MarkerOverlayCardMetrics.minimumCompositionHeight(
-            spec: contentSpec,
-            isCompactWidth: compact,
-            textScale: 1.0,
-          );
           expect(
             composition.estimatedHeight,
-            lessThanOrEqualTo(math.max(available, floor) + 0.001),
+            lessThanOrEqualTo(available + 0.001),
             reason: 'available=$available compact=$compact',
           );
         }
       }
     });
 
-    test('the irreducible minimum keeps the header and action rows', () {
+    test('an irreducible layout scales into the viewport', () {
       final contentSpec = spec(descriptionWords: 120, hasPager: true);
       final composition = MarkerOverlayCardMetrics.resolveComposition(
         spec: contentSpec,
@@ -203,14 +193,9 @@ void main() {
 
       expect(composition.showMedia, isFalse);
       expect(composition.showDescription, isFalse);
-      expect(
-        composition.estimatedHeight,
-        MarkerOverlayCardMetrics.minimumCompositionHeight(
-          spec: contentSpec,
-          isCompactWidth: true,
-          textScale: 1.0,
-        ),
-      );
+      expect(composition.estimatedHeight, 120);
+      expect(composition.contentHeight, greaterThan(120));
+      expect(composition.needsViewportScale, isTrue);
     });
 
     test('a short viewport trims the composition instead of scrolling', () {
@@ -235,6 +220,23 @@ void main() {
         isTrue,
         reason: 'a short viewport must trim media or preview lines',
       );
+    });
+
+    testWidgets('an irreducible card scales into a short viewport',
+        (tester) async {
+      final marker = _eventMarker(description: _words(120));
+
+      await tester.pumpWidget(
+        _host(
+          _card(marker: marker, width: compactWidth, height: 120),
+          width: compactWidth,
+          height: 120,
+        ),
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(FittedBox), findsOneWidget);
+      expect(find.text('More info'), findsOneWidget);
     });
 
     test('a short description produces a short card, not an empty one', () {

@@ -50,6 +50,7 @@ class MarkerOverlayCardComposition {
     required this.descriptionLineHeight,
     required this.showAttribution,
     required this.estimatedHeight,
+    required this.contentHeight,
     required this.compact,
   });
 
@@ -68,12 +69,18 @@ class MarkerOverlayCardComposition {
   /// Total height the card needs for this composition.
   final double estimatedHeight;
 
+  /// Natural height before the viewport-fitting scale fallback is applied.
+  final double contentHeight;
+
   /// True when the card renders in a narrow (phone-width) slot.
   final bool compact;
 
   bool get showMedia => mediaHeight > 0;
 
   bool get showDescription => descriptionMaxLines > 0;
+
+  /// Whether the card must scale its irreducible layout into its reserved slot.
+  bool get needsViewportScale => contentHeight > estimatedHeight;
 
   /// Reserved height of the description block.
   double get descriptionHeight => descriptionMaxLines * descriptionLineHeight;
@@ -378,9 +385,8 @@ class MarkerOverlayCardMetrics {
   /// layout: padding, header, the metadata badges, and the footer's action
   /// rows — no media, no description, no attribution.
   ///
-  /// A slot shorter than this cannot be satisfied by trimming content, so
-  /// [resolveComposition] reports this value rather than clipping the close
-  /// control or the primary CTA out of the card.
+  /// A slot shorter than this needs the resolver's viewport-fitting scale
+  /// fallback; the card never reports a height beyond the available slot.
   static double minimumCompositionHeight({
     required MarkerOverlayCardContentSpec spec,
     required bool isCompactWidth,
@@ -448,25 +454,6 @@ class MarkerOverlayCardMetrics {
       );
     }
 
-    MarkerOverlayCardComposition build({
-      required double mediaHeight,
-      required int lines,
-      required bool withAttribution,
-    }) {
-      return MarkerOverlayCardComposition(
-        mediaHeight: mediaHeight,
-        descriptionMaxLines: lines,
-        descriptionLineHeight: lineHeight,
-        showAttribution: withAttribution && hasAttribution,
-        estimatedHeight: totalFor(
-          mediaHeight: mediaHeight,
-          lines: lines,
-          withAttribution: withAttribution && hasAttribution,
-        ),
-        compact: isCompactWidth,
-      );
-    }
-
     final budget = availableHeight.isFinite
         ? availableHeight
         : totalFor(
@@ -474,6 +461,27 @@ class MarkerOverlayCardMetrics {
             lines: desiredLines,
             withAttribution: true,
           );
+
+    MarkerOverlayCardComposition build({
+      required double mediaHeight,
+      required int lines,
+      required bool withAttribution,
+    }) {
+      final contentHeight = totalFor(
+        mediaHeight: mediaHeight,
+        lines: lines,
+        withAttribution: withAttribution && hasAttribution,
+      );
+      return MarkerOverlayCardComposition(
+        mediaHeight: mediaHeight,
+        descriptionMaxLines: lines,
+        descriptionLineHeight: lineHeight,
+        showAttribution: withAttribution && hasAttribution,
+        estimatedHeight: math.min(contentHeight, budget),
+        contentHeight: contentHeight,
+        compact: isCompactWidth,
+      );
+    }
 
     // Preferred composition: full media, every wanted description line.
     if (totalFor(
@@ -514,8 +522,8 @@ class MarkerOverlayCardMetrics {
     }
 
     // Not even two description lines fit: fall back to media + metadata, then
-    // drop the attribution block, and finally accept the minimum composition
-    // (header + actions) so the primary CTA and close control stay reachable.
+    // drop the attribution block. An irreducible header/action layout scales
+    // into the reserved viewport slot so the primary CTA remains reachable.
     for (final mediaHeight in mediaHeightTiers) {
       if (totalFor(mediaHeight: mediaHeight, lines: 0, withAttribution: true) <=
           budget) {
