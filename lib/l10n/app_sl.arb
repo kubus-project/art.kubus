@@ -81,6 +81,17 @@
   "markerBadgePromoted": "Izpostavljeno",
   "markerBadgeAttendanceRecord": "Zapis prisotnosti",
   "markerDescriptionSemanticLabel": "opis označevalca",
+  "markerInfoDetailKicker": "Informacije o označevalcu",
+  "markerInfoDetailNoDescription": "Ta označevalec še nima opisa.",
+  "markerInfoDetailUnlinkedNotice": "Povezan zapis za ta označevalec ni dosegljiv, zato so spodnji podatki vzeti iz označevalca samega.",
+  "markerInfoDetailUnlinkedTypedNotice": "Povezan zapis ({subjectType}) za ta označevalec ni dosegljiv, zato so spodnji podatki vzeti iz označevalca samega.",
+  "@markerInfoDetailUnlinkedTypedNotice": {
+    "placeholders": {
+      "subjectType": {
+        "type": "String"
+      }
+    }
+  },
   "recentActivityRecognitionRecordedTitle": "Priznanje zabeleženo",
   "recentActivityArchiveObjectUpdateTitle": "Posodobitev arhivskega zapisa",
   "recentActivityRecognitionAmountDescription": "+{amount} KUB8 priznanja",

@@ -1,5 +1,8 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
+import '../../features/map/shared/marker_overlay_card_metrics.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/art_marker.dart';
 import '../../models/artwork.dart';
@@ -68,8 +71,8 @@ class KubusMarkerOverlayCard extends StatelessWidget {
     this.linkedSubjectTypeLabel,
     this.linkedSubjectTitle,
     this.linkedSubjectSubtitle,
-    this.maxPreviewChars = 700,
-    this.maxPreviewWords = 90,
+    this.maxPreviewChars = MarkerOverlayCardMetrics.maxPreviewChars,
+    this.maxPreviewWords = MarkerOverlayCardMetrics.maxPreviewWords,
     this.actions = const <MarkerOverlayActionSpec>[],
     this.stackCount = 1,
     this.stackIndex = 0,
@@ -122,12 +125,25 @@ class KubusMarkerOverlayCard extends StatelessWidget {
   final double? maxWidth;
   final double? maxHeight;
 
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
-    const cardPadding = KubusSpacing.md - KubusSpacing.xs;
+  /// Resolves the vertical composition for this card inside [availableHeight].
+  ///
+  /// Delegates to [MarkerOverlayCardMetrics] so the rendered layout and the map
+  /// overlay's reserved height are always derived from the same model.
+  MarkerOverlayCardComposition resolveComposition({
+    required double availableHeight,
+    required bool isCompactWidth,
+    required double textScale,
+  }) {
+    return MarkerOverlayCardMetrics.resolveComposition(
+      spec: contentSpec(),
+      availableHeight: availableHeight,
+      isCompactWidth: isCompactWidth,
+      textScale: textScale,
+    );
+  }
 
+  /// The height-relevant content this card renders.
+  MarkerOverlayCardContentSpec contentSpec() {
     final rawDescriptionCandidate = (description ??
             (marker.description.isNotEmpty
                 ? marker.description
@@ -136,12 +152,38 @@ class KubusMarkerOverlayCard extends StatelessWidget {
     final rawDescription = rawDescriptionCandidate.isNotEmpty
         ? rawDescriptionCandidate
         : (linkedSubjectSubtitle ?? '').trim();
-    final normalizedDescription = _normalizeDescription(rawDescription);
-    final visibleDescription = _truncateDescription(
-      normalizedDescription,
-      maxWords: maxPreviewWords,
-      maxChars: maxPreviewChars,
+    final linkedTitle = (linkedSubjectTitle ?? '').trim();
+
+    return MarkerOverlayCardContentSpec(
+      description: truncateMarkerOverlayDescription(
+        normalizeMarkerOverlayDescription(rawDescription),
+        maxWords: maxPreviewWords,
+        maxChars: maxPreviewChars,
+      ),
+      badgeCount: _badgeCount(),
+      attributionRows: MarkerAttributionSection.rowCountForMarkerAndArtwork(
+        marker,
+        artwork,
+      ),
+      hasKicker: (linkedSubjectTypeLabel ?? '').trim().isNotEmpty ||
+          canPresentExhibition,
+      hasLinkedTitle:
+          linkedTitle.isNotEmpty && linkedTitle != displayTitle.trim(),
+      hasLinkedSubtitle: (linkedSubjectSubtitle ?? '').trim().isNotEmpty,
+      hasByline: artwork != null,
+      secondaryActionRows: actions.isEmpty ? 0 : 1,
+      hasPager: stackCount > 1,
     );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    const cardPadding = MarkerOverlayCardMetrics.cardPadding;
+
+    final spec = contentSpec();
+    final visibleDescription = spec.description;
 
     final linkedSubjectImageUrl = (subjectImageUrl ?? '').trim();
     final rawImageUrl = linkedSubjectImageUrl.isNotEmpty
@@ -157,16 +199,12 @@ class KubusMarkerOverlayCard extends StatelessWidget {
     final imageVersion = KubusCachedImage.versionTokenFromDate(
       subjectImageUpdatedAt ?? artwork?.updatedAt ?? marker.updatedAt,
     );
-    final dpr =
-        (MediaQuery.maybeOf(context)?.devicePixelRatio ?? 1.0).clamp(1.0, 2.0);
+    final media = MediaQuery.maybeOf(context);
+    final dpr = (media?.devicePixelRatio ?? 1.0).clamp(1.0, 2.0);
     final cacheWidth = (304 * dpr).clamp(128.0, 960.0).round();
-    final hasConstrainedHeight = maxHeight != null && maxHeight!.isFinite;
-    final imageHeight = (hasConstrainedHeight
-            ? KubusSpacing.xl * 4 + KubusSpacing.sm
-            : KubusSpacing.xl * 5)
-        .clamp(132.0, 180.0)
-        .toDouble();
-    final cacheHeight = (imageHeight * dpr).clamp(160.0, 720.0).round();
+    final textScale = media?.textScaler.scale(100) != null
+        ? media!.textScaler.scale(100) / 100
+        : 1.0;
 
     final isPromoted =
         marker.isPromoted || (artwork?.promotion.isPromoted ?? false);
@@ -175,12 +213,21 @@ class KubusMarkerOverlayCard extends StatelessWidget {
 
     final resolvedCardTap = onCardTap ?? onPrimaryAction;
     final resolvedTitleTap = onTitleTap ?? onPrimaryAction;
-    final previewContent = _CardTapArea(
-      onTap: resolvedCardTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+
+    // `Flexible` may only be used when the incoming height is bounded; an
+    // unbounded column with a flex child throws. Callers that place the card in
+    // an unbounded slot get the natural (non-absorbing) composition instead.
+    Widget buildCardSurface(
+      MarkerOverlayCardComposition composition, {
+      required bool hasBoundedHeight,
+    }) {
+      final imageHeight = composition.mediaHeight;
+      final cacheHeight =
+          (math.max(imageHeight, 1.0) * dpr).clamp(96.0, 720.0).round();
+      final showDescription =
+          composition.showDescription && visibleDescription.isNotEmpty;
+      final previewChildren = <Widget>[
+        if (composition.showMedia)
           _buildImage(
             baseColor: baseColor,
             scheme: scheme,
@@ -191,7 +238,9 @@ class KubusMarkerOverlayCard extends StatelessWidget {
             cacheHeight: cacheHeight,
             imageHeight: imageHeight,
           ),
-          const SizedBox(height: KubusSpacing.md),
+        if (spec.badgeCount > 0) ...[
+          if (composition.showMedia)
+            const SizedBox(height: MarkerOverlayCardMetrics.innerGap),
           _buildMetadataTier(
             context: context,
             scheme: scheme,
@@ -202,100 +251,116 @@ class KubusMarkerOverlayCard extends StatelessWidget {
             isPromoted: isPromoted,
             distanceText: distanceText,
           ),
-          if (visibleDescription.isNotEmpty) ...[
-            const SizedBox(height: KubusSpacing.sm),
-            ConstrainedBox(
-              constraints: BoxConstraints(
-                maxHeight: hasConstrainedHeight ? 92 : double.infinity,
-              ),
+        ],
+        if (showDescription) ...[
+          if (composition.showMedia || spec.badgeCount > 0)
+            const SizedBox(height: MarkerOverlayCardMetrics.innerGap),
+          // Flexible, not scrollable: the description block absorbs whatever
+          // slack the reserved height leaves and clips with an ellipsis when the
+          // viewport is tighter than the estimate. Full text stays reachable
+          // through the card's primary action.
+          if (hasBoundedHeight)
+            Flexible(
+              fit: FlexFit.loose,
               child: _buildBody(
                 context: context,
                 scheme: scheme,
                 visibleDescription: visibleDescription,
-                isConstrained: hasConstrainedHeight,
+                maxLines: composition.descriptionMaxLines,
               ),
+            )
+          else
+            _buildBody(
+              context: context,
+              scheme: scheme,
+              visibleDescription: visibleDescription,
+              maxLines: composition.descriptionMaxLines,
             ),
-          ],
+        ],
+        if (composition.showAttribution)
           MarkerAttributionSection.fromMarkerAndArtwork(
             marker,
             artwork,
           ),
-        ],
-      ),
-    );
+      ];
 
-    Widget card = Semantics(
-      key: const ValueKey<String>('marker_overlay_card_surface'),
-      label: displayTitle,
-      container: true,
-      child: Material(
-        color: Colors.transparent,
-        child: buildKubusMapGlassSurface(
-          context: context,
-          kind: KubusMapGlassSurfaceKind.panel,
-          overlayName: 'marker-overlay-card',
-          borderRadius: BorderRadius.circular(KubusRadius.lg),
-          tintBase: scheme.surface,
-          padding: const EdgeInsets.all(cardPadding),
-          border: Border.all(
-            color: baseColor.withValues(alpha: 0.35),
-            width: KubusSizes.hairline,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: baseColor.withValues(alpha: 0.18),
-              blurRadius: 20,
-              offset: const Offset(0, 12),
+      final previewContent = _CardTapArea(
+        onTap: resolvedCardTap,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: previewChildren,
+        ),
+      );
+
+      return Semantics(
+        key: const ValueKey<String>('marker_overlay_card_surface'),
+        label: displayTitle,
+        container: true,
+        child: Material(
+          color: Colors.transparent,
+          child: buildKubusMapGlassSurface(
+            context: context,
+            kind: KubusMapGlassSurfaceKind.panel,
+            overlayName: 'marker-overlay-card',
+            borderRadius: BorderRadius.circular(KubusRadius.lg),
+            tintBase: scheme.surface,
+            padding: const EdgeInsets.all(cardPadding),
+            border: Border.all(
+              color: baseColor.withValues(alpha: 0.35),
+              width: KubusSizes.hairline,
             ),
-          ],
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeader(
-                context: context,
-                l10n: l10n,
-                scheme: scheme,
-                baseColor: baseColor,
-                displayTitle: displayTitle,
-                artwork: artwork,
-                canPresentExhibition: canPresentExhibition,
-                onTitleTap: resolvedTitleTap,
-                linkedSubjectTypeLabel: linkedSubjectTypeLabel,
-                linkedSubjectTitle: linkedSubjectTitle,
-                linkedSubjectSubtitle: linkedSubjectSubtitle,
-              ),
-              const SizedBox(height: KubusSpacing.md),
-              if (hasConstrainedHeight)
-                Flexible(
-                  fit: FlexFit.loose,
-                  child: SingleChildScrollView(
-                    physics: const ClampingScrollPhysics(),
-                    child: previewContent,
-                  ),
-                )
-              else
-                previewContent,
-              const SizedBox(height: KubusSpacing.md),
-              _buildFooter(
-                baseColor: baseColor,
-                actionFg: actionFg,
-                scheme: scheme,
-                stackCount: stackCount,
-                stackIndex: stackIndex,
-                actions: actions,
-                onPrimaryAction: onPrimaryAction,
-                onNextStacked: onNextStacked,
-                onPreviousStacked: onPreviousStacked,
-                onSelectStackIndex: onSelectStackIndex,
-                primaryActionIcon: primaryActionIcon,
-                primaryActionLabel: primaryActionLabel,
+            boxShadow: [
+              BoxShadow(
+                color: baseColor.withValues(alpha: 0.18),
+                blurRadius: 20,
+                offset: const Offset(0, 12),
               ),
             ],
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildHeader(
+                  context: context,
+                  l10n: l10n,
+                  scheme: scheme,
+                  baseColor: baseColor,
+                  displayTitle: displayTitle,
+                  artwork: artwork,
+                  canPresentExhibition: canPresentExhibition,
+                  onTitleTap: resolvedTitleTap,
+                  linkedSubjectTypeLabel: linkedSubjectTypeLabel,
+                  linkedSubjectTitle: linkedSubjectTitle,
+                  linkedSubjectSubtitle: linkedSubjectSubtitle,
+                ),
+                const SizedBox(height: MarkerOverlayCardMetrics.sectionGap),
+                if (previewChildren.isNotEmpty)
+                  if (hasBoundedHeight)
+                    Flexible(fit: FlexFit.loose, child: previewContent)
+                  else
+                    previewContent,
+                const SizedBox(height: MarkerOverlayCardMetrics.sectionGap),
+                _buildFooter(
+                  baseColor: baseColor,
+                  actionFg: actionFg,
+                  scheme: scheme,
+                  stackCount: stackCount,
+                  stackIndex: stackIndex,
+                  actions: actions,
+                  onPrimaryAction: onPrimaryAction,
+                  onNextStacked: onNextStacked,
+                  onPreviousStacked: onPreviousStacked,
+                  onSelectStackIndex: onSelectStackIndex,
+                  primaryActionIcon: primaryActionIcon,
+                  primaryActionLabel: primaryActionLabel,
+                ),
+              ],
+            ),
           ),
         ),
-      ),
-    );
+      );
+    }
 
     Widget wrapped = LayoutBuilder(
       builder: (context, constraints) {
@@ -303,13 +368,23 @@ class KubusMarkerOverlayCard extends StatelessWidget {
             (constraints.maxWidth.isFinite ? constraints.maxWidth : null);
         final double? resolvedMaxHeight = maxHeight ??
             (constraints.maxHeight.isFinite ? constraints.maxHeight : null);
+        final isCompactWidth =
+            MarkerOverlayCardMetrics.isCompactCard(resolvedMaxWidth);
+        final composition = resolveComposition(
+          availableHeight: resolvedMaxHeight ?? double.infinity,
+          isCompactWidth: isCompactWidth,
+          textScale: textScale,
+        );
 
         return ConstrainedBox(
           constraints: BoxConstraints(
             maxWidth: resolvedMaxWidth ?? double.infinity,
             maxHeight: resolvedMaxHeight ?? double.infinity,
           ),
-          child: card,
+          child: buildCardSurface(
+            composition,
+            hasBoundedHeight: resolvedMaxHeight != null,
+          ),
         );
       },
     );

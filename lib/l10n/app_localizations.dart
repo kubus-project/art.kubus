@@ -414,6 +414,30 @@ abstract class AppLocalizations {
   /// **'marker description'**
   String get markerDescriptionSemanticLabel;
 
+  /// No description provided for @markerInfoDetailKicker.
+  ///
+  /// In en, this message translates to:
+  /// **'Marker information'**
+  String get markerInfoDetailKicker;
+
+  /// No description provided for @markerInfoDetailNoDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'This marker has no description yet.'**
+  String get markerInfoDetailNoDescription;
+
+  /// No description provided for @markerInfoDetailUnlinkedNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'The linked entry for this marker is not available, so the details below come from the marker itself.'**
+  String get markerInfoDetailUnlinkedNotice;
+
+  /// No description provided for @markerInfoDetailUnlinkedTypedNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'The linked {subjectType} for this marker is not available, so the details below come from the marker itself.'**
+  String markerInfoDetailUnlinkedTypedNotice(String subjectType);
+
   /// No description provided for @recentActivityRecognitionRecordedTitle.
   ///
   /// In en, this message translates to:

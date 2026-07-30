@@ -198,6 +198,21 @@ class AppLocalizationsSl extends AppLocalizations {
   String get markerDescriptionSemanticLabel => 'opis označevalca';
 
   @override
+  String get markerInfoDetailKicker => 'Informacije o označevalcu';
+
+  @override
+  String get markerInfoDetailNoDescription => 'Ta označevalec še nima opisa.';
+
+  @override
+  String get markerInfoDetailUnlinkedNotice =>
+      'Povezan zapis za ta označevalec ni dosegljiv, zato so spodnji podatki vzeti iz označevalca samega.';
+
+  @override
+  String markerInfoDetailUnlinkedTypedNotice(String subjectType) {
+    return 'Povezan zapis ($subjectType) za ta označevalec ni dosegljiv, zato so spodnji podatki vzeti iz označevalca samega.';
+  }
+
+  @override
   String get recentActivityRecognitionRecordedTitle => 'Priznanje zabeleženo';
 
   @override
