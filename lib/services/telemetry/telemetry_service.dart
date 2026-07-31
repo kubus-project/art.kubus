@@ -845,14 +845,51 @@ class TelemetryService {
     for (final entry in extra.entries) {
       final key = entry.key.toString();
       if (key.isEmpty) continue;
-      if (key == 'email' || key == 'wallet' || key.contains('mnemonic')) {
-        continue;
-      }
+      // Structural, not exact-match: `user_email` and `wallet_address` used to
+      // pass a name-equality check. The backend sanitiser is the authoritative
+      // allowlist; this is defence in depth at the point of capture.
+      if (_looksSensitive(key)) continue;
       base[key] = entry.value;
     }
 
     base.removeWhere((_, v) => v == null);
     return base;
+  }
+
+  /// Nouns that, as a whole key or as a trailing segment, mean the value is
+  /// the sensitive thing itself.
+  ///
+  /// Matched on the whole key or on a `_`-delimited suffix rather than by
+  /// substring: `requires_email_verification` is a boolean flag, not an
+  /// address, and a plain `contains('email')` would have silently dropped it.
+  static const List<String> _sensitiveKeyNouns = <String>[
+    'email',
+    'wallet',
+    'password',
+    'secret',
+    'token',
+    'latitude',
+    'longitude',
+    'address',
+    'phone',
+  ];
+
+  /// Substrings that are never acceptable anywhere in a key.
+  static const List<String> _forbiddenKeyFragments = <String>[
+    'mnemonic',
+    'private_key',
+    'privatekey',
+  ];
+
+  static bool _looksSensitive(String key) {
+    final normalized = key.toLowerCase();
+    for (final fragment in _forbiddenKeyFragments) {
+      if (normalized.contains(fragment)) return true;
+    }
+    for (final noun in _sensitiveKeyNouns) {
+      if (normalized == noun || normalized.endsWith('_$noun')) return true;
+    }
+    return false;
   }
 
   /// Language subtag of the device locale, used until the app locale is known.
@@ -887,6 +924,18 @@ class TelemetryService {
       }
     }
     return platform;
+  }
+
+  /// Starts a new telemetry session immediately.
+  ///
+  /// Called on sign-out: the persisted session id would otherwise keep the
+  /// departing account's events and the next visitor's events on one chain.
+  Future<void> rotateSession() async {
+    _sessionId = TelemetryUuid.v4();
+    _sessionStartUtc = DateTime.now().toUtc();
+    _onceKeys.clear();
+    _syncClientContext();
+    await _persistSession();
   }
 
   void _rotateSessionIfNeeded() {

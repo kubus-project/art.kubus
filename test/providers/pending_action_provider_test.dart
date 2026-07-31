@@ -205,6 +205,49 @@ void main() {
     expect(stored!.targetId, 'artwork-2');
   });
 
+  group('identity binding', () {
+    test('a guest intent may be completed by the account they create',
+        () async {
+      await provider.capture(_saveArtwork());
+      // The visitor signs up; a user id now exists.
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('user_id', 'user-new');
+
+      final restored =
+          await PendingActionProvider(executor: executor).restore();
+
+      expect(restored, isNotNull);
+    });
+
+    test('an intent captured while signed in is pinned to that account',
+        () async {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('user_id', 'user-a');
+      await provider.capture(_saveArtwork());
+      expect(provider.pending!.capturedByUserId, 'user-a');
+
+      // Someone else signs in on the same device.
+      await prefs.setString('user_id', 'user-b');
+      final other = PendingActionProvider(executor: executor);
+      final restored = await other.restore();
+
+      expect(restored, isNull, reason: 'must not cross an identity boundary');
+      expect(other.isAwaitingConfirmation, isFalse);
+      expect(executor.calls, 0);
+      // The orphaned intent is dropped, not left to be re-offered.
+      expect(await const PendingActionService().read(), isNull);
+    });
+
+    test('the same account still gets its own intent back', () async {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('user_id', 'user-a');
+      await provider.capture(_saveArtwork());
+
+      final again = PendingActionProvider(executor: executor);
+      expect(await again.restore(), isNotNull);
+    });
+  });
+
   test('clear drops the intent without reporting a cancellation', () async {
     await provider.capture(_saveArtwork());
 

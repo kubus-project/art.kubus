@@ -113,4 +113,23 @@ class PendingActionService {
       // Ignored.
     }
   }
+
+  /// Removes every exactly-once marker.
+  ///
+  /// Used on sign-out: the markers describe what the departing account already
+  /// did, and they would otherwise accumulate without bound.
+  Future<void> clearCompletionMarkers({SharedPreferences? prefs}) async {
+    try {
+      final p = await _prefs(prefs);
+      final keys = p
+          .getKeys()
+          .where((key) => key.startsWith(completedKeyPrefix))
+          .toList(growable: false);
+      for (final key in keys) {
+        await p.remove(key);
+      }
+    } catch (_) {
+      // Ignored.
+    }
+  }
 }

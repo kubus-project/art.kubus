@@ -59,6 +59,18 @@ class PostAuthRedirectResult {
   final String? error;
 }
 
+/// Account-branch steps a minimal account may postpone.
+///
+/// Deliberately excludes `verifyEmail` (identity), `walletBackupIntro` and
+/// `walletBackup` (fund safety), which are never skipped for growth.
+const Set<String> _deferrableAccountSteps = <String>{
+  'role',
+  'profile',
+  'walletConnect',
+  'daoReview',
+  'accountPermissions',
+};
+
 class AuthRedirectController {
   const AuthRedirectController();
 
@@ -85,15 +97,30 @@ class AuthRedirectController {
     );
 
     // Minimal-account mode: the visitor created this account only to finish a
-    // small action they already started. Role, profile, wallet, DAO and
+    // small action they already started. Role, profile, wallet setup, DAO and
     // permission steps are everything *except* what identity needs, so they
     // become progressive onboarding the visitor can complete later instead of
     // a wall between them and the thing they came to do.
     //
+    // Wallet *backup* is not one of those steps. It protects funds that
+    // already exist, so it is never skipped for growth: a session that still
+    // owes a backup falls through to the normal resume below.
+    //
     // Note: unlike the rest of this method, this branch writes — it clears the
     // pending-onboarding marker so a later cold start does not re-impose the
     // flow we just deliberately skipped.
-    if (minimalAccount) {
+    final owesWalletBackup = requiresWalletBackup && targetWallet.isNotEmpty;
+    if (minimalAccount && !owesWalletBackup) {
+      // Record the skipped steps as *deferred* rather than dropping them, so
+      // "finish setting up your profile" surfaces can still find them. Clearing
+      // the pending marker on its own would lose them permanently.
+      await OnboardingStateService.saveFlowProgress(
+        prefs: prefs,
+        onboardingVersion: AuthOnboardingService.onboardingFlowVersion,
+        completedSteps: const <String>{'account'},
+        deferredSteps: _deferrableAccountSteps,
+        flowScopeKey: flowScopeKey,
+      );
       await OnboardingStateService.clearPendingAuthOnboarding(
         prefs: prefs,
         scopeKey: flowScopeKey,

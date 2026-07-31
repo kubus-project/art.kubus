@@ -118,7 +118,12 @@ class ContextualAuthGate {
       targetType: targetKey,
     ));
 
-    final arguments = <String, Object?>{'redirectRoute': returnRoute};
+    // The same validation the intent gets. Without it an unsafe route that
+    // `_buildIntent` already rejected would still reach the navigator.
+    final safeReturnRoute = PendingActionIntent.isSafeInternalRoute(returnRoute)
+        ? returnRoute
+        : '/main';
+    final arguments = <String, Object?>{'redirectRoute': safeReturnRoute};
     if (returnArguments.isNotEmpty) {
       arguments['redirectArguments'] = Map<String, String>.from(
         returnArguments,

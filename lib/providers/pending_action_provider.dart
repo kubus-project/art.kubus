@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/pending_action_intent.dart';
 import '../providers/artwork_provider.dart';
@@ -58,6 +59,9 @@ class PendingActionProvider extends ChangeNotifier {
     if (!intent.isValid) return;
     final stamped = intent.copyWith(
       sessionId: intent.sessionId ?? _telemetry.currentSessionId,
+      // Pin an intent captured while signed in to that account, so a later
+      // sign-out and sign-in on the same device cannot inherit it.
+      capturedByUserId: intent.capturedByUserId ?? await _currentUserId(),
     );
     final saved = await _service.save(stamped);
     if (!saved) return;
@@ -83,6 +87,17 @@ class PendingActionProvider extends ChangeNotifier {
 
     if (await _service.isCompleted(intent) ||
         _executedKeys.contains(intent.identityKey)) {
+      await _service.clear();
+      _pending = null;
+      _awaitingConfirmation = false;
+      notifyListeners();
+      return null;
+    }
+
+    // An intent captured by a different account must never be offered to this
+    // one — that would let one person's pending action run under another's
+    // identity on a shared device.
+    if (!intent.isClaimableBy(await _currentUserId())) {
       await _service.clear();
       _pending = null;
       _awaitingConfirmation = false;
@@ -199,6 +214,17 @@ class PendingActionProvider extends ChangeNotifier {
     _pending = null;
     _awaitingConfirmation = false;
     notifyListeners();
+  }
+
+  /// The signed-in account, or null for a guest.
+  Future<String?> _currentUserId() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final value = (prefs.getString('user_id') ?? '').trim();
+      return value.isEmpty ? null : value;
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<void> _finish(PendingActionIntent intent) async {

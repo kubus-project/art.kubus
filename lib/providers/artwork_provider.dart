@@ -538,6 +538,11 @@ class ArtworkProvider extends ChangeNotifier {
         );
       }
       return true;
+    } on SavedItemsAuthenticationRequired {
+      // Surface the reason rather than flattening it to a generic failure —
+      // callers (the pending-action executor) distinguish "not allowed" from
+      // "try again", and report different copy for each.
+      rethrow;
     } catch (e) {
       _setError('Failed to update artwork saved state: $e');
       return false;

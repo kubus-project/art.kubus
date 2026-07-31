@@ -65,13 +65,18 @@ class PendingActionIntent {
     this.targetLabel,
     this.markerId,
     this.sessionId,
+    this.capturedByUserId,
     this.returnArguments = const <String, String>{},
   });
 
-  /// How long a captured intent stays replayable. Long enough to survive an
-  /// email verification round trip, short enough that a stale intent never
-  /// surprises a returning user.
-  static const Duration ttl = Duration(hours: 24);
+  /// How long a captured intent stays replayable.
+  ///
+  /// Long enough to survive an email verification round trip, short enough
+  /// that a device left unattended does not later offer a stranger's pending
+  /// Save or Follow to whoever picks it up. An intent captured while signed in
+  /// is additionally pinned to that account (see [capturedByUserId]); a guest
+  /// intent has no account to pin to, so this window is its bound.
+  static const Duration ttl = Duration(hours: 2);
 
   static const int _maxIdLength = 128;
   static const int _maxLabelLength = 120;
@@ -104,6 +109,21 @@ class PendingActionIntent {
   /// authenticated session stay correlatable.
   final String? sessionId;
 
+  /// Account that captured the intent, or null when a guest captured it.
+  ///
+  /// A guest intent is meant to be completed by whichever account the visitor
+  /// then creates. An intent captured *while signed in* belongs to that
+  /// account only, and must not be offered to a different one after a sign-out
+  /// and sign-in on the same device.
+  final String? capturedByUserId;
+
+  /// True when [actorUserId] may act on this intent.
+  bool isClaimableBy(String? actorUserId) {
+    final owner = (capturedByUserId ?? '').trim();
+    if (owner.isEmpty) return true;
+    return owner == (actorUserId ?? '').trim();
+  }
+
   final DateTime createdAtUtc;
 
   bool get isValid => targetId.isNotEmpty && isSafeInternalRoute(returnRoute);
@@ -117,19 +137,57 @@ class PendingActionIntent {
   String get identityKey =>
       '${actionType.storageValue}:${targetType.storageValue}:$targetId';
 
-  /// Rejects anything that could turn into an open redirect: absolute URLs,
-  /// scheme-relative paths, backslash tricks and non-local paths.
+  /// Rejects anything that could turn into an open redirect.
+  ///
+  /// A plain "starts with `/`, no `//`, no `\`" check is not enough. Browsers
+  /// strip TAB/LF/CR from URLs, so `/<TAB>/evil.example` becomes protocol
+  /// relative; and percent-encoding hides both the separators and `..` from a
+  /// literal `contains` check. This therefore rejects control characters
+  /// outright and re-checks the decoded form.
   static bool isSafeInternalRoute(String? route) {
     final value = (route ?? '').trim();
     if (value.isEmpty || value.length > _maxRouteLength) return false;
     if (!value.startsWith('/')) return false;
-    if (value.startsWith('//')) return false;
-    if (value.contains('\\')) return false;
-    if (value.contains('..')) return false;
+
+    // Characters a browser or URL parser may strip or treat as a line break.
+    for (final unit in value.codeUnits) {
+      if (unit < 0x20 || unit == 0x7F || unit == 0x85 || unit == 0xFEFF) {
+        return false;
+      }
+    }
+
+    // Check the raw form and the decoded form, so %2F%2F, %5C and %2e%2e
+    // cannot slip past the literal checks below.
+    String decoded;
+    try {
+      decoded = Uri.decodeFull(value);
+    } catch (_) {
+      return false;
+    }
+
+    for (final candidate in <String>[value, decoded]) {
+      if (candidate.startsWith('//')) return false;
+      if (candidate.contains('\\')) return false;
+      if (candidate.contains('..')) return false;
+      if (!candidate.startsWith('/')) return false;
+    }
+
     final parsed = Uri.tryParse(value);
     if (parsed == null) return false;
     if (parsed.hasScheme || parsed.hasAuthority) return false;
+    // A colon in the first segment is read as a scheme by some parsers.
+    final firstSegment = value.substring(1).split('/').first;
+    if (firstSegment.contains(':')) return false;
     return true;
+  }
+
+  static String _pathOnly(String route) {
+    final queryAt = route.indexOf('?');
+    final fragmentAt = route.indexOf('#');
+    var end = route.length;
+    if (queryAt >= 0) end = queryAt;
+    if (fragmentAt >= 0 && fragmentAt < end) end = fragmentAt;
+    return route.substring(0, end);
   }
 
   static String _clip(String value, int maxLength) {
@@ -155,7 +213,11 @@ class PendingActionIntent {
     return Map<String, String>.unmodifiable(out);
   }
 
-  PendingActionIntent copyWith({String? sessionId}) => PendingActionIntent(
+  PendingActionIntent copyWith({
+    String? sessionId,
+    String? capturedByUserId,
+  }) =>
+      PendingActionIntent(
         actionType: actionType,
         targetType: targetType,
         targetId: targetId,
@@ -165,6 +227,7 @@ class PendingActionIntent {
         sourceScreen: sourceScreen,
         markerId: markerId,
         sessionId: sessionId ?? this.sessionId,
+        capturedByUserId: capturedByUserId ?? this.capturedByUserId,
         createdAtUtc: createdAtUtc,
       );
 
@@ -179,6 +242,8 @@ class PendingActionIntent {
         'source_screen': sourceScreen,
         if (markerId != null && markerId!.isNotEmpty) 'marker_id': markerId,
         if (sessionId != null && sessionId!.isNotEmpty) 'session_id': sessionId,
+        if (capturedByUserId != null && capturedByUserId!.isNotEmpty)
+          'captured_by_user_id': capturedByUserId,
         'created_at': createdAtUtc.toUtc().toIso8601String(),
       };
 
@@ -208,6 +273,8 @@ class PendingActionIntent {
         _clip((json['target_label'] ?? '').toString(), _maxLabelLength);
     final marker = _clip((json['marker_id'] ?? '').toString(), _maxIdLength);
     final session = _clip((json['session_id'] ?? '').toString(), _maxIdLength);
+    final owner =
+        _clip((json['captured_by_user_id'] ?? '').toString(), _maxIdLength);
     final sourceScreen =
         _clip((json['source_screen'] ?? '').toString(), _maxLabelLength);
 
@@ -221,6 +288,7 @@ class PendingActionIntent {
       sourceScreen: sourceScreen.isEmpty ? 'unknown' : sourceScreen,
       markerId: marker.isEmpty ? null : marker,
       sessionId: session.isEmpty ? null : session,
+      capturedByUserId: owner.isEmpty ? null : owner,
       createdAtUtc: createdAt.toUtc(),
     );
   }
@@ -253,7 +321,11 @@ class PendingActionIntent {
   }) {
     final id = _clip(targetId, _maxIdLength);
     if (id.isEmpty) return null;
-    final route = returnRoute.trim();
+    // Some return routes are derived from the browser URL the visitor arrived
+    // on, so their query and fragment are attacker-influenceable. The path is
+    // all that is needed to get back to the entity; persisting the rest would
+    // re-apply a stranger's parameters to the address bar after signup.
+    final route = _pathOnly(returnRoute.trim());
     if (!isSafeInternalRoute(route)) return null;
 
     final label = _clip(targetLabel ?? '', _maxLabelLength);

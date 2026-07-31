@@ -283,6 +283,39 @@ void main() {
     expect(await queue.count(), 0);
   });
 
+  test('sensitive keys are dropped without eating legitimate flags', () async {
+    final (svc, queue) = await makeService();
+
+    await svc.trackEvent(
+      AppTelemetryEventTypes.accountSessionCreated,
+      extra: <String, Object?>{
+        // Dropped: the value *is* the sensitive thing.
+        'email': 'a@b.c',
+        'user_email': 'a@b.c',
+        'wallet_address': 'So1111',
+        'access_token': 'eyJ',
+        'cached_mnemonic': 'word word',
+        // Kept: a boolean about email, not an email.
+        'requires_email_verification': true,
+        'auth_method': 'email',
+      },
+    );
+
+    final event = (await drain(queue)).single;
+    for (final dropped in <String>[
+      'email',
+      'user_email',
+      'wallet_address',
+      'access_token',
+      'cached_mnemonic',
+    ]) {
+      expect(event.metadata.containsKey(dropped), isFalse,
+          reason: '$dropped must never be sent');
+    }
+    expect(event.metadata['requires_email_verification'], isTrue);
+    expect(event.metadata['auth_method'], 'email');
+  });
+
   test('metadata never carries credentials or precise location', () async {
     SharedPreferences.setMockInitialValues(_campaignPrefs);
     final (svc, queue) = await makeService();

@@ -1,3 +1,4 @@
+import 'package:art_kubus/services/auth_onboarding_service.dart';
 import 'package:art_kubus/services/auth_redirect_controller.dart';
 import 'package:art_kubus/services/onboarding_state_service.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -110,6 +111,58 @@ void main() {
       ),
       isFalse,
     );
+  });
+
+  test('minimal account never skips an owed wallet backup', () async {
+    // Growth may postpone role, profile and wallet *setup*. It may not
+    // postpone backing up a wallet that already holds funds.
+    final result = await controller.resolvePostAuthRedirect(
+      prefs: prefs,
+      payload: _newAccountPayload(),
+      hasHydratedProfile: true,
+      requiresWalletBackup: true,
+      walletAddress: 'So11111111111111111111111111111111111111112',
+      userId: 'user-1',
+      redirectRoute: '/a/artwork-1',
+      origin: AuthOrigin.google,
+      minimalAccount: true,
+    );
+
+    expect(result.state, PostAuthRouteState.onboardingRequired);
+    expect(result.onboardingStepId, isNotNull);
+  });
+
+  test('minimal account records the skipped steps as deferred', () async {
+    final scopeKey = OnboardingStateService.buildAuthOnboardingScopeKey(
+      userId: 'user-1',
+    );
+
+    await controller.resolvePostAuthRedirect(
+      prefs: prefs,
+      payload: _newAccountPayload(),
+      hasHydratedProfile: false,
+      requiresWalletBackup: false,
+      userId: 'user-1',
+      redirectRoute: '/a/artwork-1',
+      origin: AuthOrigin.google,
+      minimalAccount: true,
+    );
+
+    final progress = await OnboardingStateService.loadFlowProgress(
+      prefs: prefs,
+      onboardingVersion: AuthOnboardingService.onboardingFlowVersion,
+      flowScopeKey: scopeKey,
+    );
+
+    // Postponed, not silently dropped, so a later "finish your profile"
+    // surface can still find them.
+    expect(progress.deferredSteps, contains('role'));
+    expect(progress.deferredSteps, contains('profile'));
+    expect(progress.deferredSteps, contains('walletConnect'));
+    // Never deferred: identity and fund safety.
+    expect(progress.deferredSteps, isNot(contains('verifyEmail')));
+    expect(progress.deferredSteps, isNot(contains('walletBackup')));
+    expect(progress.deferredSteps, isNot(contains('walletBackupIntro')));
   });
 
   test('minimal account falls back to /main with no return route', () async {

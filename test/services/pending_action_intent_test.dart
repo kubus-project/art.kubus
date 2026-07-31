@@ -57,6 +57,56 @@ void main() {
       );
     });
 
+    test('rejects control characters browsers strip from URLs', () {
+      // A browser removes TAB/LF/CR before parsing, so "/<TAB>/evil.example"
+      // becomes protocol-relative "//evil.example".
+      for (final unit in <int>[0x09, 0x0A, 0x0D, 0x00, 0x1F, 0x7F, 0x85]) {
+        final crafted = '/${String.fromCharCode(unit)}/evil.example';
+        expect(
+          PendingActionIntent.isSafeInternalRoute(crafted),
+          isFalse,
+          reason: 'U+${unit.toRadixString(16)} must be rejected',
+        );
+      }
+      expect(
+        PendingActionIntent.isSafeInternalRoute('/﻿//evil.example'),
+        isFalse,
+      );
+    });
+
+    test('rejects percent-encoded separators and traversal', () {
+      expect(PendingActionIntent.isSafeInternalRoute('/%2F%2Fevil.example'),
+          isFalse);
+      expect(PendingActionIntent.isSafeInternalRoute('/%5C%5Cevil.example'),
+          isFalse);
+      expect(
+          PendingActionIntent.isSafeInternalRoute('/%2e%2e/secret'), isFalse);
+      expect(
+          PendingActionIntent.isSafeInternalRoute('/%2E%2E/secret'), isFalse);
+    });
+
+    test('rejects a colon in the first segment', () {
+      expect(
+        PendingActionIntent.isSafeInternalRoute('/javascript:alert(1)'),
+        isFalse,
+      );
+    });
+
+    test('create strips an attacker-influenced query and fragment', () {
+      final intent = PendingActionIntent.create(
+        actionType: PendingActionType.save,
+        targetType: PendingActionTargetType.artwork,
+        targetId: 'artwork-1',
+        // Public entity routes are derived from the arrival URL, so these are
+        // not ours to trust or to re-apply to the address bar later.
+        returnRoute: '/a/artwork-1?next=https://evil.example#frag',
+        sourceScreen: 'map',
+      );
+
+      expect(intent, isNotNull);
+      expect(intent!.returnRoute, '/a/artwork-1');
+    });
+
     test('create returns null for an unsafe route or empty target', () {
       expect(
         PendingActionIntent.create(
@@ -171,10 +221,18 @@ void main() {
 
   group('expiry', () {
     test('is live inside the TTL', () {
+      // Comfortably inside the window an email verification round trip needs.
       final intent = _intent(
-        createdAt: DateTime.now().toUtc().subtract(const Duration(hours: 2)),
+        createdAt: DateTime.now().toUtc().subtract(const Duration(minutes: 30)),
       );
       expect(intent.isExpired, isFalse);
+    });
+
+    test('the window is short enough to bound an unattended device', () {
+      // A guest intent has no account to pin it to, so the TTL is its only
+      // bound against a stranger picking the device up later.
+      expect(
+          PendingActionIntent.ttl, lessThanOrEqualTo(const Duration(hours: 4)));
     });
 
     test('expires after the TTL', () {

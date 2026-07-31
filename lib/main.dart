@@ -109,6 +109,7 @@ import 'services/share/share_deep_link_parser.dart';
 import 'features/map/navigation/walking_navigation_debug_harness.dart';
 import 'screens/debug/walking_route_render_harness_screen.dart';
 import 'providers/activation_prompt_provider.dart';
+import 'models/pending_action_intent.dart';
 
 class _UnhandledErrorDedupe {
   static const Duration _dedupeWindow = Duration(seconds: 2);
@@ -987,8 +988,12 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
         '/register': (context) {
           final args = ModalRoute.of(context)?.settings.arguments;
           if (args is Map) {
+            // Never hand an unvalidated route to the post-auth redirect.
+            final requested = args['redirectRoute']?.toString();
             return RegisterScreen(
-              redirectRoute: args['redirectRoute']?.toString(),
+              redirectRoute: PendingActionIntent.isSafeInternalRoute(requested)
+                  ? requested
+                  : null,
               redirectArguments: args['redirectArguments'],
             );
           }

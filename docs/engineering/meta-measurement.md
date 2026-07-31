@@ -73,6 +73,21 @@ flutter build web --release \
 The id is not a secret (it is visible in any page that loads the pixel), but it
 is still not committed: it is supplied per environment by the deploy workflow.
 
+## Content Security Policy
+
+**The pixel will not load until the CSP allows it.** `web/.htaccess` currently
+lists no Meta host in `script-src`, so enabling the flags alone results in the
+loader being blocked with no visible error — measurement silently stays at zero.
+
+Before enabling, add **only** `https://connect.facebook.net` to `script-src`
+(and `https://www.facebook.com` to `img-src` if you want the tracking pixel
+fallback). Do not broaden the directive further.
+
+`unsafe-eval` is already present in the policy, so the loader's `eval()` does
+not force any CSP weakening. If a future hardening pass removes `unsafe-eval`,
+rewrite `_installStubAndHelper` in `meta_pixel_bridge_web.dart` using
+`js_interop` instead of `eval` rather than re-adding the directive.
+
 ## Production activation steps
 
 1. Obtain the pixel id from Meta Events Manager for the `app.kubus.site` domain.
@@ -80,10 +95,12 @@ is still not committed: it is supplied per environment by the deploy workflow.
    environment. Per `docs/engineering/branching-and-deployment.md`, composite
    actions cannot read `vars`/`secrets` directly — forward both as explicit
    inputs from the env-bound caller workflow.
-3. Verify the domain in Events Manager and confirm `ViewContent` and
+3. Add `https://connect.facebook.net` to `script-src` in `web/.htaccess` (see
+   above) — without it the pixel never loads.
+4. Verify the domain in Events Manager and confirm `ViewContent` and
    `CompleteRegistration` arrive in the Test Events tab.
-4. Confirm no event fires with analytics disabled in app settings.
-5. If a CAPI sender is added afterwards, wire it to reuse the browser
+5. Confirm no event fires with analytics disabled in app settings.
+6. If a CAPI sender is added afterwards, wire it to reuse the browser
    `eventID` and re-check deduplication in Events Manager.
 
 ## Files
