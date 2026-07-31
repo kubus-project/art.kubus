@@ -239,6 +239,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       context,
       actionLabel: l10n.commonFollow.toLowerCase(),
       returnRoute: '/u/${Uri.encodeComponent(widget.userId)}',
+      actionType: PendingActionType.follow,
+      targetType: PendingActionTargetType.user,
+      targetId: profile.id,
+      targetLabel: profile.name,
+      sourceScreen: 'user_profile',
     );
     if (!authenticated || !mounted) return;
     final messenger = ScaffoldMessenger.of(context);

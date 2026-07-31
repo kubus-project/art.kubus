@@ -2,6 +2,35 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:art_kubus/core/app_initializer_helper.dart';
 
 void main() {
+  group('shouldOpenPublicMapBeforeOnboarding', () {
+    test('opens a signed-out direct map entry before onboarding', () {
+      expect(
+        shouldOpenPublicMapBeforeOnboarding(
+          preferredShellRoute: '/map',
+          hasValidSession: false,
+        ),
+        isTrue,
+      );
+    });
+
+    test('does not override authenticated or non-map startup routing', () {
+      expect(
+        shouldOpenPublicMapBeforeOnboarding(
+          preferredShellRoute: '/map',
+          hasValidSession: true,
+        ),
+        isFalse,
+      );
+      expect(
+        shouldOpenPublicMapBeforeOnboarding(
+          preferredShellRoute: '/community',
+          hasValidSession: false,
+        ),
+        isFalse,
+      );
+    });
+  });
+
   test(
       'pending auth onboarding with verification email -> onboarding:verifyEmail',
       () {

@@ -96,6 +96,7 @@ import '../../features/map/map_layers_manager.dart';
 import '../../features/map/map_overlay_stack.dart';
 import '../../features/map/controller/kubus_map_controller.dart';
 import '../../features/map/controller/kubus_map_marker_creation_coordinator.dart';
+import '../../features/map/controller/map_marker_linked_subject_coordinator.dart';
 import '../../features/map/controller/map_target_coordinator.dart';
 import '../../features/map/engine/kubus_map_marker_sync_engine.dart';
 import '../../features/map/tutorial/map_tutorial_coordinator.dart';
@@ -143,6 +144,7 @@ import '../map_core/map_ui_state_coordinator.dart';
 import '../map_core/map_marker_render_coordinator.dart';
 import '../../providers/task_provider.dart';
 import '../../models/task.dart';
+import '../../widgets/map/kubus_activation_prompt_card.dart';
 
 /// Desktop map screen with Google Maps-style presentation
 /// Features side panel for artwork details and filters
@@ -229,6 +231,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   late final MarkerVisualSyncCoordinator _markerVisualSyncCoordinator;
   late final MapDataCoordinator _mapDataCoordinator;
   late final NearbyArtController _nearbyArtController;
+  late final MapMarkerLinkedSubjectCoordinator _linkedSubjectCoordinator;
   late final MapUiStateCoordinator _mapUiStateCoordinator;
   late final MapMarkerRenderCoordinator _renderCoordinator;
   final KubusMapBackdropHostController _mapBackdropHostController =
@@ -544,6 +547,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
         final marker = state.selectedMarker;
         if (marker != null) {
+          _linkedSubjectCoordinator.selectionChanged(marker);
           // Run selection-only side effects once per selection token.
           if (tokenChanged) {
             _renderCoordinator.startSelectionPopAnimation();
@@ -691,6 +695,24 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     _nearbyArtController = NearbyArtController(
       map: KubusNearbyArtMapDelegate(_kubusMapController),
       distance: _distance,
+    );
+
+    _linkedSubjectCoordinator = MapMarkerLinkedSubjectCoordinator(
+      cachedEvent: (id) => context.read<EventsProvider>().eventById(id),
+      cachedExhibition: (id) =>
+          context.read<ExhibitionsProvider>().exhibitionById(id),
+      isEventDetailHydrated: (id) =>
+          context.read<EventsProvider>().isEventDetailHydrated(id),
+      isExhibitionDetailHydrated: (id) =>
+          context.read<ExhibitionsProvider>().isExhibitionDetailHydrated(id),
+      fetchEvent: (id) => context.read<EventsProvider>().fetchEvent(id),
+      fetchExhibition: (id) =>
+          context.read<ExhibitionsProvider>().fetchExhibition(id),
+      selectedMarkerId: () => _kubusMapController.selectedMarkerId,
+      onSubjectHydrated: () {
+        if (!mounted) return;
+        setState(() {});
+      },
     );
 
     _renderCoordinator = MapMarkerRenderCoordinator(
@@ -2233,6 +2255,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     _mapDataCoordinator.dispose();
     _mapUiStateCoordinator.dispose();
     _mapTargetCoordinator.dispose();
+    _linkedSubjectCoordinator.dispose();
     _kubusMapController.dispose();
     _mapBackdropHostController.dispose();
     WidgetsBinding.instance.removeObserver(this);
@@ -2256,6 +2279,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final themeProvider = Provider.of<ThemeProvider>(context);
     _maybeScheduleThemeResync(themeProvider);
     final animationTheme = context.animationTheme;
+    final selectedEventId = _selectedEvent?.id;
+    final selectedEventExhibitionsCount = context.select<EventsProvider, int>(
+      (provider) => selectedEventId == null
+          ? 0
+          : provider.exhibitionsForEvent(selectedEventId).length,
+    );
     final l10n = AppLocalizations.of(context)!;
     final tutorialBindings = _buildMapTutorialStepBindings(l10n);
     _scheduleMapTutorialConfigure(
@@ -2343,8 +2372,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                       bottom: KubusMapMetrics.desktopContextPanelBottomInset,
                       width: contextPanelWidth,
                       child: MapOverlayBlocker(
-                        child:
-                            _buildLeftPanelChild(themeProvider, animationTheme),
+                        child: _buildLeftPanelChild(
+                          themeProvider,
+                          animationTheme,
+                          selectedEventExhibitionsCount:
+                              selectedEventExhibitionsCount,
+                        ),
                       ),
                     ),
 
@@ -2395,6 +2428,22 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     // MapLibre/OSM corner. This cluster is the last child in the Stack
                     // so the discovery path and controls always render above the map,
                     // side panels, glass chrome and any anchored marker overlay card.
+                    // Engagement prompt, anchored to the left gutter so the
+                    // control toolbar and attribution cluster on the right stay
+                    // clear. Declared before that cluster so the controls
+                    // always render above it.
+                    Positioned(
+                      left: _hasLeftDetailPanel
+                          ? contextPanelWidth +
+                              KubusMapMetrics.desktopChromeInset
+                          : KubusMapMetrics.desktopChromeInset,
+                      bottom:
+                          KubusMapMetrics.desktopChromeInset + KubusSpacing.xxl,
+                      child: const SizedBox(
+                        width: 360,
+                        child: KubusActivationPromptCard(maxWidth: 360),
+                      ),
+                    ),
                     Positioned(
                       left: _hasLeftDetailPanel
                           ? contextPanelWidth +
@@ -2854,8 +2903,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   /// the whole open lifetime and tears it down cleanly on close.
   Widget _buildLeftPanelChild(
     ThemeProvider themeProvider,
-    AppAnimationTheme animationTheme,
-  ) {
+    AppAnimationTheme animationTheme, {
+    required int selectedEventExhibitionsCount,
+  }) {
     final l10n = AppLocalizations.of(context)!;
     final showDetails = _mapUiStateCoordinator.value.contextSurface ==
         MapContextSurface.markerDetails;
@@ -2870,7 +2920,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       return Semantics(
         label: l10n.commonDetails,
         container: true,
-        child: _buildEventDetailPanel(themeProvider, animationTheme),
+        child: _buildEventDetailPanel(
+          themeProvider,
+          animationTheme,
+          exhibitionsCount: selectedEventExhibitionsCount,
+        ),
       );
     }
     if (showDetails && _selectedArtwork != null) {
@@ -3222,6 +3276,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                         context,
                         actionLabel: l10n.commonSave.toLowerCase(),
                         returnRoute: '/a/${Uri.encodeComponent(artwork.id)}',
+                        actionType: PendingActionType.save,
+                        targetType: PendingActionTargetType.artwork,
+                        targetId: artwork.id,
+                        targetLabel: artwork.title,
+                        sourceScreen: 'desktop_map_detail',
                       );
                       if (!authenticated || !context.mounted) return;
                       await artworkProvider.toggleArtworkSaved(artwork.id);
@@ -3241,6 +3300,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                         context,
                         actionLabel: l10n.commonLikes.toLowerCase(),
                         returnRoute: '/a/${Uri.encodeComponent(artwork.id)}',
+                        actionType: PendingActionType.like,
+                        targetType: PendingActionTargetType.artwork,
+                        targetId: artwork.id,
+                        targetLabel: artwork.title,
+                        sourceScreen: 'desktop_map_detail',
                       );
                       if (!authenticated || !context.mounted) return;
                       await artworkProvider.toggleLike(artwork.id);
@@ -3695,7 +3759,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   Widget _buildEventDetailPanel(
-      ThemeProvider themeProvider, AppAnimationTheme animationTheme) {
+    ThemeProvider themeProvider,
+    AppAnimationTheme animationTheme, {
+    required int exhibitionsCount,
+  }) {
     final event = _selectedEvent;
     if (event == null) {
       return const SizedBox.shrink();
@@ -3705,10 +3772,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final l10n = AppLocalizations.of(context)!;
     final eventAccent = AppColorUtils.eventColor;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final exhibitionsCount = context.select<EventsProvider, int>(
-      (provider) => provider.exhibitionsForEvent(event.id).length,
-    );
-
     String? dateRange;
     if (event.startsAt != null || event.endsAt != null) {
       final start =
@@ -5157,6 +5220,13 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     }
   }
 
+  /// Repaints the marker overlay after a save/like toggle so the action icon
+  /// and label reflect the new engagement state immediately.
+  void _handleOverlayEngagementChanged() {
+    if (!mounted) return;
+    setState(() {});
+  }
+
   Widget _buildMarkerOverlayCard(
     ArtMarker marker,
     Artwork? artwork,
@@ -5171,14 +5241,18 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }) {
     final baseColor = _resolveArtMarkerColor(marker, themeProvider);
     final primaryExhibition = marker.resolvedExhibitionSummary;
-    final linkedEvent = KubusMarkerOverlayHelpers.resolveLinkedEvent(
-      marker: marker,
-      events: context.read<EventsProvider>().events,
-    );
+    final linkedSubjects = _linkedSubjectCoordinator.resolveCached(marker);
+    final linkedEvent = linkedSubjects.event ??
+        KubusMarkerOverlayHelpers.resolveLinkedEvent(
+          marker: marker,
+          events: context.read<EventsProvider>().events,
+        );
+    final linkedExhibition = linkedSubjects.exhibition;
     final presentation = resolveMarkerOverlayPresentation(
       marker: marker,
       artwork: artwork,
       event: linkedEvent,
+      exhibition: linkedExhibition,
     );
     final exhibitionsFeatureEnabled = AppConfig.isFeatureEnabled('exhibitions');
     // A stale exhibitionsApiAvailable=false flag must not suppress a marker
@@ -5199,6 +5273,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       context: context,
       marker: marker,
       artwork: artwork,
+      event: linkedEvent,
+      exhibition: linkedExhibition,
       canPresentExhibition: canPresentExhibition,
       baseColor: baseColor,
       sourceScreen: 'desktop_map_marker',
@@ -5207,6 +5283,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               unawaited(_openStreetArtClaimsDialog(marker));
             }
           : null,
+      onEngagementChanged: _handleOverlayEngagementChanged,
     );
 
     void openDetails() {
@@ -5215,6 +5292,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           marker,
           artwork: artwork,
           exhibition: primaryExhibition,
+          hydratedExhibition: linkedExhibition,
           event: linkedEvent,
         ),
       );
@@ -5230,6 +5308,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         marker: marker,
         artwork: artwork,
         event: linkedEvent,
+        exhibition: linkedExhibition,
         baseColor: baseColor,
         canPresentExhibition: canPresentExhibition,
         distanceText: distanceText,
@@ -5309,11 +5388,14 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           marker: selectedMarker,
           events: context.read<EventsProvider>().events,
         );
+        final linkedSubjects =
+            _linkedSubjectCoordinator.resolveCached(selectedMarker);
 
         return KubusMarkerOverlayHelpers.estimateCardHeight(
           marker: selectedMarker,
           artwork: selectedArtwork,
-          event: linkedEvent,
+          event: linkedSubjects.event ?? linkedEvent,
+          exhibition: linkedSubjects.exhibition,
           maxCardHeight: maxHeight,
           isCompactWidth: constraints.maxWidth < 600,
         );
@@ -5444,6 +5526,14 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   Future<void> _openStreetArtClaimsDialog(ArtMarker marker) async {
     if (!_canOpenStreetArtClaims(marker)) return;
 
+    final l10n = AppLocalizations.of(context)!;
+    final authenticated = await const ContextualAuthGate().ensureAuthenticated(
+      context,
+      actionLabel: l10n.mapMarkerClaimButton.toLowerCase(),
+      returnRoute: '/map',
+    );
+    if (!authenticated || !mounted) return;
+
     await StreetArtClaimsDialog.show(
       context: context,
       marker: marker,
@@ -5468,6 +5558,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     ArtMarker marker, {
     Artwork? artwork,
     ExhibitionSummaryDto? exhibition,
+    Exhibition? hydratedExhibition,
     KubusEvent? event,
   }) async {
     final requestId = ++_markerOpenRequestId;
@@ -5482,6 +5573,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         marker,
         artwork: artwork,
         exhibition: exhibition,
+        hydratedExhibition: hydratedExhibition,
         event: event,
         requestId: requestId,
       );
@@ -5523,6 +5615,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     ArtMarker marker, {
     Artwork? artwork,
     ExhibitionSummaryDto? exhibition,
+    Exhibition? hydratedExhibition,
     KubusEvent? event,
     required int requestId,
   }) async {
@@ -5536,6 +5629,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       marker: marker,
       artwork: artwork,
       event: resolvedEvent,
+      exhibition: hydratedExhibition,
     );
     switch (presentation.primaryTarget) {
       case MapMarkerOverlayPrimaryTarget.exhibition:
@@ -5543,6 +5637,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           marker,
           exhibition,
           artwork,
+          initialExhibition: hydratedExhibition,
           requestId: requestId,
         );
         return;
@@ -5577,16 +5672,19 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final eventId = (event?.id ?? marker.subjectId ?? '').trim();
     if (eventId.isEmpty ||
         !AppConfig.isFeatureEnabled('events') ||
-        BackendApiService().eventsApiAvailable == false) {
+        (event == null && BackendApiService().eventsApiAvailable == false)) {
       await _showMarkerInfoFallback(marker, requestId: requestId);
       return;
     }
 
     final eventsProvider = context.read<EventsProvider>();
+    // No cache-first hop through `eventById`: a list-page entry is missing
+    // detail fields. `fetchEvent` already returns instantly for ids that were
+    // detail-loaded, so this stays cheap without serving list-shaped data.
     final fetched = event ??
         await (() async {
           try {
-            return await eventsProvider.fetchEvent(eventId, force: true);
+            return await eventsProvider.fetchEvent(eventId);
           } catch (_) {
             return null;
           }
@@ -5651,6 +5749,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     ArtMarker marker,
     ExhibitionSummaryDto? exhibition,
     Artwork? artwork, {
+    Exhibition? initialExhibition,
     required int requestId,
   }) async {
     final messenger = ScaffoldMessenger.of(context);
@@ -5685,32 +5784,15 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     }
 
     Object? fetchError;
-    final fetched = await (() async {
-      try {
-        final exhibition = await exhibitionsProvider.fetchExhibition(
-          resolved.id,
-          force: true,
-        );
-        if (exhibition != null) {
-          // POAP is optional; a missing badge (404) must not make the
-          // exhibition itself look unavailable.
+    final fetched = initialExhibition ??
+        await (() async {
           try {
-            await exhibitionsProvider.fetchExhibitionPoap(
-              resolved.id,
-              force: true,
-            );
+            return await exhibitionsProvider.fetchExhibition(resolved.id);
           } catch (e) {
-            if (kDebugMode) {
-              debugPrint('DesktopMapScreen: exhibition POAP fetch failed: $e');
-            }
+            fetchError = e;
+            return null;
           }
-        }
-        return exhibition;
-      } catch (e) {
-        fetchError = e;
-        return null;
-      }
-    })();
+        })();
 
     if (!_isCurrentMarkerOpenRequest(marker, requestId)) return;
 
@@ -5734,6 +5816,20 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     }
 
     _presentExhibitionDetails(fetched);
+    // POAP is optional and hydrates into the already-open side panel. A
+    // missing badge must not delay or suppress exhibition details.
+    unawaited(
+      exhibitionsProvider
+          .fetchExhibitionPoap(resolved.id, force: true)
+          .catchError((Object error, StackTrace _) {
+        if (kDebugMode) {
+          debugPrint(
+            'DesktopMapScreen: exhibition POAP fetch failed: $error',
+          );
+        }
+        return null;
+      }),
+    );
   }
 
   Future<void> _claimSelectedExhibitionPoap(String exhibitionId) async {
@@ -5986,6 +6082,14 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   Future<void> _startMarkerCreationFlow({LatLng? position}) async {
+    final l10n = AppLocalizations.of(context)!;
+    final authenticated = await const ContextualAuthGate().ensureAuthenticated(
+      context,
+      actionLabel: l10n.mapCreateMarkerHereTooltip.toLowerCase(),
+      returnRoute: '/map',
+    );
+    if (!authenticated || !mounted) return;
+
     final targetPosition =
         position ?? _pendingMarkerLocation ?? _effectiveCenter;
     _kubusMapController.dismissSelection();
@@ -5993,7 +6097,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         _snapshotMarkerSubjectData();
     if (!mounted) return;
 
-    final l10n = AppLocalizations.of(context)!;
     final wallet = context.read<WalletProvider>().currentWalletAddress;
     if (wallet == null || wallet.isEmpty) {
       final messenger = ScaffoldMessenger.of(context);

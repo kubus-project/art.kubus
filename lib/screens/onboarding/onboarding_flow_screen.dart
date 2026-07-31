@@ -173,10 +173,12 @@ class OnboardingFlowScreen extends StatefulWidget {
     super.key,
     this.forceDesktop = false,
     this.initialStepId,
+    this.completionRoute,
   });
 
   final bool forceDesktop;
   final String? initialStepId;
+  final String? completionRoute;
 
   @override
   State<OnboardingFlowScreen> createState() => _OnboardingFlowScreenState();
@@ -328,6 +330,11 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
 
   bool get _isDesktop =>
       widget.forceDesktop || DesktopBreakpoints.isDesktop(context);
+
+  String get _completionRoute {
+    final route = (widget.completionRoute ?? '').trim();
+    return route.isEmpty ? '/main' : route;
+  }
 
   _OnboardingStep get _currentStep {
     if (_steps.isEmpty) return _OnboardingStep.welcome;
@@ -2766,7 +2773,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           .trackOnboardingComplete(reason: 'step_flow_complete'));
 
       if (!mounted) return;
-      Navigator.of(context).pushReplacementNamed('/main');
+      Navigator.of(context).pushReplacementNamed(_completionRoute);
     } finally {
       if (mounted) {
         setState(() => _isFinishingOnboarding = false);
@@ -2793,7 +2800,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       );
 
       if (!mounted) return;
-      Navigator.of(context).pushReplacementNamed('/main');
+      Navigator.of(context).pushReplacementNamed(_completionRoute);
     } finally {
       if (mounted) {
         setState(() => _isSkippingFlow = false);
@@ -5005,8 +5012,7 @@ class _InlineProfileStepState extends State<_InlineProfileStep> {
                             ? const SizedBox(
                                 width: 14,
                                 height: 14,
-                                child:
-                                    InlineLoading(tileSize: 4),
+                                child: InlineLoading(tileSize: 4),
                               )
                             : const Icon(Icons.photo_camera_outlined),
                         label: Text(_uploadingAvatar
@@ -5525,7 +5531,8 @@ class _PermissionTile extends StatelessWidget {
           ? Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.check_circle, color: KubusColors.successOnDark),
+                const Icon(Icons.check_circle,
+                    color: KubusColors.successOnDark),
                 const SizedBox(width: KubusSpacing.xs),
                 Text(
                   l10n.permissionsGrantedLabel,

@@ -86,6 +86,14 @@ class GuestSessionService {
     return isGuestActiveSync(p);
   }
 
+  /// Marks a direct public discovery entry as guest-first even when it did not
+  /// originate from a campaign URL. This keeps account and coach-mark
+  /// onboarding dormant until the visitor attempts a protected action.
+  static Future<void> activateGuestMode({SharedPreferences? prefs}) async {
+    final p = prefs ?? await SharedPreferences.getInstance();
+    await p.setBool(guestModeKey, true);
+  }
+
   static String? entryIntentSync(SharedPreferences prefs) {
     final fromUrl = (_launchParams()['intent'] ?? '').trim().toLowerCase();
     if (intents.contains(fromUrl)) return fromUrl;

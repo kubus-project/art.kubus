@@ -12,6 +12,11 @@ class EventsProvider extends ChangeNotifier {
 
   final List<KubusEvent> _events = <KubusEvent>[];
   final Map<String, KubusEvent> _byId = <String, KubusEvent>{};
+
+  /// Ids whose cached entry came from a detail endpoint rather than a list
+  /// page. List payloads omit detail-only fields, so callers that need the full
+  /// record must still fetch even though `_byId` already has an entry.
+  final Set<String> _detailHydratedIds = <String>{};
   final Map<String, List<Exhibition>> _exhibitionsByEventId =
       <String, List<Exhibition>>{};
   final Map<String, EventPoapStatus> _poapByEventId =
@@ -32,6 +37,11 @@ class EventsProvider extends ChangeNotifier {
 
   List<KubusEvent> get events => List.unmodifiable(_events);
   KubusEvent? get selectedEvent => _selected;
+  KubusEvent? eventById(String id) => _byId[id.trim()];
+
+  /// Whether [eventById] would return a detail-loaded record for [id].
+  bool isEventDetailHydrated(String id) =>
+      _detailHydratedIds.contains(id.trim());
 
   bool get isListLoading => _isListLoading;
   bool get isDetailLoading => _isDetailLoading;
@@ -91,9 +101,10 @@ class EventsProvider extends ChangeNotifier {
         _byId
           ..clear()
           ..addEntries(next.map((e) => MapEntry(e.id, e)));
+        _detailHydratedIds.clear();
       } else {
         for (final ev in next) {
-          _upsertEvent(ev, notify: false);
+          _upsertEvent(ev, notify: false, detailHydrated: false);
         }
       }
       notifyListeners();
@@ -106,14 +117,18 @@ class EventsProvider extends ChangeNotifier {
   }
 
   Future<KubusEvent?> fetchEvent(String id, {bool force = false}) async {
-    if (!force && _byId.containsKey(id)) return _byId[id];
+    // A list-cache entry is not a substitute for the detail payload: only skip
+    // the request when this id was already loaded from the detail endpoint.
+    if (!force && _detailHydratedIds.contains(id.trim())) {
+      return _byId[id.trim()];
+    }
 
     _setFlag(_Flag.detail, true);
     _error = null;
     try {
       final event = await _api.getEvent(id);
       if (event != null) {
-        _upsertEvent(event, notify: false);
+        _upsertEvent(event, notify: false, detailHydrated: true);
         notifyListeners();
       }
       return event;
@@ -148,7 +163,7 @@ class EventsProvider extends ChangeNotifier {
     try {
       final created = await _api.createEvent(payload);
       if (created != null) {
-        _upsertEvent(created, notify: false);
+        _upsertEvent(created, notify: false, detailHydrated: true);
         _selected = created;
         ProfilePackageMutationTracker.eventChanged(
           created,
@@ -173,7 +188,7 @@ class EventsProvider extends ChangeNotifier {
     try {
       final updated = await _api.updateEvent(id, updates);
       if (updated != null) {
-        _upsertEvent(updated, notify: false);
+        _upsertEvent(updated, notify: false, detailHydrated: true);
         if (_selected?.id == id) _selected = updated;
         ProfilePackageMutationTracker.eventChanged(updated);
         notifyListeners();
@@ -196,6 +211,7 @@ class EventsProvider extends ChangeNotifier {
       final previous = _byId[id];
       _events.removeWhere((e) => e.id == id);
       _byId.remove(id);
+      _detailHydratedIds.remove(id.trim());
       _exhibitionsByEventId.remove(id);
       _poapByEventId.remove(id);
       if (_selected?.id == id) _selected = null;
@@ -350,8 +366,20 @@ class EventsProvider extends ChangeNotifier {
     }
   }
 
-  void _upsertEvent(KubusEvent event, {bool notify = true}) {
+  /// [detailHydrated] records whether [event] carries the detail payload.
+  /// `null` keeps whatever the cached entry was already marked as, for callers
+  /// that patch an existing record in place.
+  void _upsertEvent(
+    KubusEvent event, {
+    bool notify = true,
+    bool? detailHydrated,
+  }) {
     _byId[event.id] = event;
+    if (detailHydrated == true) {
+      _detailHydratedIds.add(event.id.trim());
+    } else if (detailHydrated == false) {
+      _detailHydratedIds.remove(event.id.trim());
+    }
     final idx = _events.indexWhere((e) => e.id == event.id);
     if (idx >= 0) {
       _events[idx] = event;

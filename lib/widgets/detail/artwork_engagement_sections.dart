@@ -920,6 +920,11 @@ class _ArtworkCommentsExpandableCardState
       context,
       actionLabel: l10n.commonComments.toLowerCase(),
       returnRoute: '/a/${Uri.encodeComponent(widget.artwork.id)}',
+      actionType: PendingActionType.comment,
+      targetType: PendingActionTargetType.artwork,
+      targetId: widget.artwork.id,
+      targetLabel: widget.artwork.title,
+      sourceScreen: 'artwork_engagement',
     );
     if (!authenticated || !mounted) return;
 

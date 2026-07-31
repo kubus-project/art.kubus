@@ -7,6 +7,15 @@ class StartupDecision {
   const StartupDecision({required this.route, this.onboardingInitialStepId});
 }
 
+/// Public map entry is intentionally available before authentication or
+/// onboarding. Identity setup is deferred until a protected map action.
+bool shouldOpenPublicMapBeforeOnboarding({
+  required String? preferredShellRoute,
+  required bool hasValidSession,
+}) {
+  return !hasValidSession && (preferredShellRoute ?? '').trim() == '/map';
+}
+
 /// Lightweight decision helper used by tests to reproduce AppInitializer routing
 /// choices for the specific branches we care about in unit tests.
 ///

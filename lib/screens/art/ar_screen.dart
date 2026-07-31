@@ -2345,6 +2345,11 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
       context,
       actionLabel: l10n.commonSave.toLowerCase(),
       returnRoute: '/a/${Uri.encodeComponent(artworkId)}',
+      actionType: PendingActionType.save,
+      targetType: PendingActionTargetType.artwork,
+      targetId: artworkId,
+      targetLabel: (artwork['title'] ?? '').toString(),
+      sourceScreen: 'ar_viewer',
     );
     if (!authenticated || !mounted) return;
 

@@ -64,6 +64,9 @@ class _AppInitializerState extends State<AppInitializer> {
     return ShellRoutes.resolvePreferredShellRoute(widget.preferredShellRoute);
   }
 
+  bool get _isDirectPublicMapEntry =>
+      (widget.preferredShellRoute ?? '').trim() == ShellRoutes.map;
+
   Future<void> _refreshServerVersion(ConfigProvider configProvider) async {
     final fetched = await BackendApiService().fetchServerVersion(
       timeout: const Duration(seconds: 3),
@@ -116,6 +119,39 @@ class _AppInitializerState extends State<AppInitializer> {
     return true;
   }
 
+  Future<bool> _openPreferredPublicMap(
+    NavigatorState navigator, {
+    String initialStepId = 'account',
+  }) async {
+    if (!_isDirectPublicMapEntry) return false;
+    // Mirror the normal direct-map entry: both map screens suppress automatic
+    // coach marks by reading the guest flag, so it has to be persisted before
+    // the map mounts. Awaited, not fired off, to keep that ordering.
+    //
+    // Bounded, because this helper is itself a fallback: a hung preferences
+    // plugin is one of the reasons the watchdog fires, and the same plugin
+    // backs guest mode. On timeout the visitor may see coach marks, which is
+    // far better than never leaving the loading screen.
+    await _safeStep(
+      'activate guest mode for direct map entry',
+      GuestSessionService.activateGuestMode,
+      timeout: const Duration(seconds: 2),
+    );
+    if (!mounted || _didNavigate) return true;
+    try {
+      Provider.of<DeferredOnboardingProvider>(
+        navigator.context,
+        listen: false,
+      ).enableForProtectedAction(
+        initialStepId: initialStepId,
+        completionRoute: ShellRoutes.map,
+      );
+    } catch (_) {}
+    _didNavigate = true;
+    navigator.pushReplacementNamed(ShellRoutes.map);
+    return true;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -126,19 +162,25 @@ class _AppInitializerState extends State<AppInitializer> {
     // Safety net: never stay on AppLoading forever (e.g. due to a plugin hang on web/desktop).
     _startupWatchdog?.cancel();
     _startupWatchdog = Timer(const Duration(seconds: 20), () {
-      if (!mounted || _didNavigate) return;
-      final navigator = appNavigatorKey.currentState;
-      if (navigator == null) return;
-      if (_openPendingPublicTarget(navigator)) return;
-      final isDesktop = DesktopBreakpoints.isDesktop(navigator.context);
-      _didNavigate = true;
-      navigator.pushReplacement(
-        MaterialPageRoute(
-          builder: (_) => OnboardingFlowScreen(forceDesktop: isDesktop),
-          settings: const RouteSettings(name: '/onboarding'),
-        ),
-      );
+      unawaited(_handleStartupWatchdogTimeout());
     });
+  }
+
+  Future<void> _handleStartupWatchdogTimeout() async {
+    if (!mounted || _didNavigate) return;
+    final navigator = appNavigatorKey.currentState;
+    if (navigator == null) return;
+    if (_openPendingPublicTarget(navigator)) return;
+    if (await _openPreferredPublicMap(navigator)) return;
+    if (!mounted || _didNavigate) return;
+    final isDesktop = DesktopBreakpoints.isDesktop(navigator.context);
+    _didNavigate = true;
+    navigator.pushReplacement(
+      MaterialPageRoute(
+        builder: (_) => OnboardingFlowScreen(forceDesktop: isDesktop),
+        settings: const RouteSettings(name: '/onboarding'),
+      ),
+    );
   }
 
   @override
@@ -631,6 +673,47 @@ class _AppInitializerState extends State<AppInitializer> {
         return;
       }
 
+      // `/map` is a public discovery entry. Signed-out visitors must reach the
+      // map before onboarding or sign-in, regardless of first-launch or stale
+      // local-account state. The first identity-required action consumes this
+      // session-scoped deferral through ContextualAuthGate.
+      if (shouldOpenPublicMapBeforeOnboarding(
+        preferredShellRoute: widget.preferredShellRoute,
+        hasValidSession: hasValidSession,
+      )) {
+        final deferredOnboarding = Provider.of<DeferredOnboardingProvider>(
+          context,
+          listen: false,
+        );
+        await GuestSessionService.activateGuestMode(prefs: prefs);
+        if (!mounted) return;
+        final hasPendingVerificationEmail =
+            prefs.getBool('onboarding_pending_email_verification_v1') ?? false;
+        final pendingVerificationEmail =
+            (prefs.getString('onboarding_verification_email_v3') ?? '').trim();
+        // Only arm the onboarding resume when the visitor already started an
+        // account and left it incomplete. A visitor with no account in flight
+        // gets the contextual activation surface on their first protected
+        // action instead — sending them through full onboarding was the reason
+        // ad traffic never converted.
+        final resumeStep = (pendingAuthOnboardingStepId ?? '').trim().isNotEmpty
+            ? pendingAuthOnboardingStepId!.trim()
+            : hasPendingAuthOnboarding &&
+                    hasPendingVerificationEmail &&
+                    pendingVerificationEmail.isNotEmpty
+                ? 'verifyEmail'
+                : null;
+        if (resumeStep != null) {
+          deferredOnboarding.enableForProtectedAction(
+            initialStepId: resumeStep,
+            completionRoute: ShellRoutes.map,
+          );
+        }
+        _didNavigate = true;
+        navigator.pushReplacementNamed(ShellRoutes.map);
+        return;
+      }
+
       if (hasPendingAuthOnboarding) {
         // Use the helper to decide if this is a no-session pending-auth case.
         // The helper returns 'none' for valid-session cases (deferred to resolver below).
@@ -821,6 +904,8 @@ class _AppInitializerState extends State<AppInitializer> {
       AppConfig.debugPrint('AppInitializer: init stack: $st');
       if (!mounted) return;
       if (_openPendingPublicTarget(navigator)) return;
+      if (await _openPreferredPublicMap(navigator)) return;
+      if (!mounted) return;
       final isDesktop = DesktopBreakpoints.isDesktop(context);
       _didNavigate = true;
       navigator.pushReplacement(

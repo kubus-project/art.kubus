@@ -34,6 +34,18 @@ class AppConfig {
   static const bool enableReporting = true;
   static const bool enableSupportTickets = true;
 
+  /// Meta browser pixel. Off by default: no third-party script is added to the
+  /// page unless a deployment both enables this and supplies a pixel id.
+  /// See `docs/engineering/meta-measurement.md`.
+  static const bool enableMetaPixel = bool.fromEnvironment(
+    'META_PIXEL_ENABLED',
+    defaultValue: false,
+  );
+  static const String metaPixelId = String.fromEnvironment(
+    'META_PIXEL_ID',
+    defaultValue: '',
+  );
+
   /// Web3 and Marketplace features
   static const bool enableWeb3 = true;
   static const bool enableMarketplace = true;
@@ -506,6 +518,8 @@ class AppConfig {
         return enableARViewer;
       case 'analytics':
         return enableAnalytics;
+      case 'metaPixel':
+        return enableMetaPixel && metaPixelId.trim().isNotEmpty;
       case 'supportTickets':
         return enableSupportTickets;
       case 'debug':

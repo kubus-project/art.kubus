@@ -65,6 +65,10 @@ abstract class AppLocalizations {
   AppLocalizations(String locale)
       : localeName = _safeCanonicalizedLocale(locale);
 
+  // Hand-applied after every `flutter gen-l10n`: the generator emits a bare
+  // `Intl.canonicalizedLocale(locale)`, which throws on the empty/"undefined"
+  // locale the web shell can hand us before the app locale resolves.
+  // `test/l10n/app_localizations_locale_guard_test.dart` fails without it.
   static String _safeCanonicalizedLocale(String locale) {
     final raw = locale.trim();
     if (raw.isEmpty || raw == 'undefined' || raw == 'null') {
@@ -673,17 +677,221 @@ abstract class AppLocalizations {
   /// **'Continue'**
   String get commonContinue;
 
-  /// No description provided for @contextualAuthTitle.
+  /// No description provided for @activationGateSaveArtworkTitle.
   ///
   /// In en, this message translates to:
-  /// **'Sign-in required for {action}'**
-  String contextualAuthTitle(String action);
+  /// **'Save this artwork to your collection'**
+  String get activationGateSaveArtworkTitle;
 
-  /// No description provided for @contextualAuthBody.
+  /// No description provided for @activationGateSaveEventTitle.
   ///
   /// In en, this message translates to:
-  /// **'You can keep viewing this public content without an account. Sign in to continue with {action}.'**
-  String contextualAuthBody(String action);
+  /// **'Save this event to your collection'**
+  String get activationGateSaveEventTitle;
+
+  /// No description provided for @activationGateSaveExhibitionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add this place to your collection'**
+  String get activationGateSaveExhibitionTitle;
+
+  /// No description provided for @activationGateSavePostTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Save this post to your collection'**
+  String get activationGateSavePostTitle;
+
+  /// No description provided for @activationGateLikeArtworkTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Like this artwork'**
+  String get activationGateLikeArtworkTitle;
+
+  /// No description provided for @activationGateFollowTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow this artist'**
+  String get activationGateFollowTitle;
+
+  /// No description provided for @activationGateCommentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Join this discussion'**
+  String get activationGateCommentTitle;
+
+  /// No description provided for @activationGateContributeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Contribute to the public art map'**
+  String get activationGateContributeTitle;
+
+  /// No description provided for @activationGateGenericTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create a free account to {action}'**
+  String activationGateGenericTitle(String action);
+
+  /// No description provided for @activationGateBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Create a free account to save artworks, follow artists and return to places you want to visit.'**
+  String get activationGateBody;
+
+  /// No description provided for @activationGateKeepBrowsingHint.
+  ///
+  /// In en, this message translates to:
+  /// **'The public map stays open — an account only adds your own collection.'**
+  String get activationGateKeepBrowsingHint;
+
+  /// No description provided for @activationGateContinueWithGoogle.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue with Google'**
+  String get activationGateContinueWithGoogle;
+
+  /// No description provided for @activationGateContinueWithEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue with email'**
+  String get activationGateContinueWithEmail;
+
+  /// No description provided for @activationGateNotNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Not now'**
+  String get activationGateNotNow;
+
+  /// No description provided for @activationGateHaveAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Already have an account? Sign in'**
+  String get activationGateHaveAccount;
+
+  /// No description provided for @activationConfirmHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re all set'**
+  String get activationConfirmHeading;
+
+  /// No description provided for @activationConfirmSaveArtwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Save this artwork?'**
+  String get activationConfirmSaveArtwork;
+
+  /// No description provided for @activationConfirmSaveEvent.
+  ///
+  /// In en, this message translates to:
+  /// **'Save this event?'**
+  String get activationConfirmSaveEvent;
+
+  /// No description provided for @activationConfirmSaveExhibition.
+  ///
+  /// In en, this message translates to:
+  /// **'Save this place?'**
+  String get activationConfirmSaveExhibition;
+
+  /// No description provided for @activationConfirmSavePost.
+  ///
+  /// In en, this message translates to:
+  /// **'Save this post?'**
+  String get activationConfirmSavePost;
+
+  /// No description provided for @activationConfirmLikeArtwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Like this artwork?'**
+  String get activationConfirmLikeArtwork;
+
+  /// No description provided for @activationConfirmFollow.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow this artist?'**
+  String get activationConfirmFollow;
+
+  /// No description provided for @activationConfirmComment.
+  ///
+  /// In en, this message translates to:
+  /// **'Write your comment?'**
+  String get activationConfirmComment;
+
+  /// No description provided for @activationConfirmContribute.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue your contribution?'**
+  String get activationConfirmContribute;
+
+  /// No description provided for @activationConfirmLikeCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Like'**
+  String get activationConfirmLikeCta;
+
+  /// No description provided for @activationConfirmContinueCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get activationConfirmContinueCta;
+
+  /// No description provided for @activationActionSavedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved to your collection'**
+  String get activationActionSavedToast;
+
+  /// No description provided for @activationActionLikedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Liked'**
+  String get activationActionLikedToast;
+
+  /// No description provided for @activationActionFollowedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Following'**
+  String get activationActionFollowedToast;
+
+  /// No description provided for @activationActionTargetUnavailableToast.
+  ///
+  /// In en, this message translates to:
+  /// **'This is no longer available. It may have been removed or made private.'**
+  String get activationActionTargetUnavailableToast;
+
+  /// No description provided for @activationActionUnauthorizedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'You don\'t have permission to do that.'**
+  String get activationActionUnauthorizedToast;
+
+  /// No description provided for @activationActionFailedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'That didn\'t work. Please try again.'**
+  String get activationActionFailedToast;
+
+  /// No description provided for @activationPromptTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Build your own art map'**
+  String get activationPromptTitle;
+
+  /// No description provided for @activationPromptBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Save artworks, follow local artists and return to places you want to visit.'**
+  String get activationPromptBody;
+
+  /// No description provided for @activationPromptCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Create a free account'**
+  String get activationPromptCta;
+
+  /// No description provided for @activationPromptDismiss.
+  ///
+  /// In en, this message translates to:
+  /// **'Dismiss'**
+  String get activationPromptDismiss;
 
   /// No description provided for @commonOr.
   ///

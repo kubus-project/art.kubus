@@ -12,6 +12,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../models/art_marker.dart';
 import '../../../models/artwork.dart';
 import '../../../models/event.dart';
+import '../../../models/exhibition.dart';
 import '../../../models/map_marker_subject.dart';
 import '../../../models/task.dart';
 import '../../../services/backend_api_service.dart';
@@ -703,6 +704,7 @@ class KubusMarkerOverlayHelpers {
     required ArtMarker marker,
     required Artwork? artwork,
     required KubusEvent? event,
+    required Exhibition? exhibition,
     required double maxCardHeight,
     required bool isCompactWidth,
   }) {
@@ -710,6 +712,7 @@ class KubusMarkerOverlayHelpers {
       marker: marker,
       artwork: artwork,
       event: event,
+      exhibition: exhibition,
     );
 
     final normalizedDescription =
@@ -891,6 +894,7 @@ class KubusMarkerOverlayHelpers {
     required ArtMarker marker,
     required Artwork? artwork,
     required KubusEvent? event,
+    required Exhibition? exhibition,
     required Color baseColor,
     required bool canPresentExhibition,
     required String? distanceText,
@@ -910,11 +914,14 @@ class KubusMarkerOverlayHelpers {
       marker: marker,
       artwork: artwork,
       event: event,
+      exhibition: exhibition,
     );
 
     return KubusMarkerOverlayCard(
       marker: marker,
       artwork: artwork,
+      subjectImageUrl: presentation.mediaUrl,
+      subjectImageUpdatedAt: presentation.mediaUpdatedAt,
       baseColor: baseColor,
       displayTitle: presentation.title,
       canPresentExhibition: canPresentExhibition,

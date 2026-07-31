@@ -31,6 +31,7 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../widgets/glass_components.dart';
 import '../../widgets/kubus_snackbar.dart';
 import '../../utils/design_tokens.dart';
+import '../../providers/activation_prompt_provider.dart';
 
 class EventDetailScreen extends StatefulWidget {
   final String eventId;
@@ -55,6 +56,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
       final events = context.read<EventsProvider>();
       unawaited(events.recordEventView(widget.eventId, source: 'event_detail'));
       unawaited(TelemetryService().trackEventViewed(widget.eventId));
+      ActivationPromptProvider.recordEntityViewFor(context);
       unawaited(_load());
     });
   }
