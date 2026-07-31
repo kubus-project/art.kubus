@@ -10,6 +10,10 @@ enum DetailPanelKind {
   artwork,
   exhibition,
   event,
+
+  /// Generic marker information, used when a marker's linked entity is absent,
+  /// orphaned, or unreachable.
+  markerInfo,
 }
 
 enum PanelPresentation {

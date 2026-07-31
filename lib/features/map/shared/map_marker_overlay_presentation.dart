@@ -128,15 +128,20 @@ MapMarkerOverlayPresentation resolveMarkerOverlayPresentation({
       linkedSubjectId: linkedId,
     ),
     mediaUrl: switch (linkedKind) {
-      MapMarkerOverlayLinkedSubjectKind.event => event?.coverUrl,
-      MapMarkerOverlayLinkedSubjectKind.exhibition => exhibition?.coverUrl,
+      // Canonical entity media wins; the marker's own cover keeps the preview
+      // populated while hydration is pending or impossible.
+      MapMarkerOverlayLinkedSubjectKind.event =>
+        _normalizeText(event?.coverUrl) ?? _normalizeText(marker.coverImageUrl),
+      MapMarkerOverlayLinkedSubjectKind.exhibition =>
+        _normalizeText(exhibition?.coverUrl) ??
+            _normalizeText(marker.coverImageUrl),
       _ => null,
     },
     mediaUpdatedAt: switch (linkedKind) {
       MapMarkerOverlayLinkedSubjectKind.event =>
-        event?.updatedAt ?? event?.createdAt,
+        event?.updatedAt ?? event?.createdAt ?? marker.updatedAt,
       MapMarkerOverlayLinkedSubjectKind.exhibition =>
-        exhibition?.updatedAt ?? exhibition?.createdAt,
+        exhibition?.updatedAt ?? exhibition?.createdAt ?? marker.updatedAt,
       _ => null,
     },
   );
@@ -170,7 +175,42 @@ MapMarkerOverlayLinkedSubjectKind resolveMarkerOverlayLinkedSubjectKind(
   if (marker.resolvedExhibitionSummary != null) {
     return MapMarkerOverlayLinkedSubjectKind.exhibition;
   }
-  return MapMarkerOverlayLinkedSubjectKind.none;
+  // A marker may carry only its semantic `markerType` (no subject declaration).
+  // Falling back to it keeps event/exhibition markers on the event/exhibition
+  // presentation instead of collapsing them onto the generic marker path.
+  switch (marker.type) {
+    case ArtMarkerType.exhibition:
+      return MapMarkerOverlayLinkedSubjectKind.exhibition;
+    case ArtMarkerType.event:
+      return MapMarkerOverlayLinkedSubjectKind.event;
+    case ArtMarkerType.institution:
+      return MapMarkerOverlayLinkedSubjectKind.institution;
+    case ArtMarkerType.residency:
+      return MapMarkerOverlayLinkedSubjectKind.group;
+    case ArtMarkerType.artwork:
+    case ArtMarkerType.streetArt:
+    case ArtMarkerType.drop:
+    case ArtMarkerType.experience:
+    case ArtMarkerType.other:
+      return MapMarkerOverlayLinkedSubjectKind.none;
+  }
+}
+
+/// Whether a declared canonical subject was unavailable after hydration.
+///
+/// `misc` is a standalone marker kind, not a pointer to a canonical entity.
+bool isMarkerOverlayLinkedSubjectUnavailable(ArtMarker marker) {
+  switch (resolveMarkerOverlayLinkedSubjectKind(marker)) {
+    case MapMarkerOverlayLinkedSubjectKind.misc:
+    case MapMarkerOverlayLinkedSubjectKind.none:
+      return false;
+    case MapMarkerOverlayLinkedSubjectKind.artwork:
+    case MapMarkerOverlayLinkedSubjectKind.event:
+    case MapMarkerOverlayLinkedSubjectKind.exhibition:
+    case MapMarkerOverlayLinkedSubjectKind.institution:
+    case MapMarkerOverlayLinkedSubjectKind.group:
+      return true;
+  }
 }
 
 String? _resolveLinkedSubjectId({
@@ -226,21 +266,26 @@ String? _resolveLinkedSubjectSubtitle({
   required Exhibition? exhibition,
   required MapMarkerOverlayLinkedSubjectKind kind,
 }) {
-  final metadataSubtitle = _readMetadataString(marker.metadata, const <String>[
-    'subjectSubtitle',
-    'subject_subtitle',
-  ]);
+  final metadataSubtitle = _normalizeText(marker.subjectSubtitle);
+  // Location + schedule the marker itself carries. This is the quick card's
+  // only date/place context when the canonical entity has not been hydrated
+  // yet, or when it is orphaned and can never be hydrated.
+  final markerSubtitle = _buildLocationAndDateSubtitle(
+    locationParts: <String?>[marker.locationName],
+    startsAt: marker.subjectStartsAt,
+    endsAt: marker.subjectEndsAt,
+  );
   switch (kind) {
     case MapMarkerOverlayLinkedSubjectKind.event:
       final eventSubtitle = _buildEventSubtitle(event);
-      return eventSubtitle ?? metadataSubtitle;
+      return eventSubtitle ?? metadataSubtitle ?? markerSubtitle;
     case MapMarkerOverlayLinkedSubjectKind.exhibition:
       final exhibitionSubtitle = _buildExhibitionSubtitle(exhibition);
-      return exhibitionSubtitle ?? metadataSubtitle;
+      return exhibitionSubtitle ?? metadataSubtitle ?? markerSubtitle;
     case MapMarkerOverlayLinkedSubjectKind.institution:
     case MapMarkerOverlayLinkedSubjectKind.group:
     case MapMarkerOverlayLinkedSubjectKind.misc:
-      return metadataSubtitle;
+      return metadataSubtitle ?? markerSubtitle;
     case MapMarkerOverlayLinkedSubjectKind.artwork:
     case MapMarkerOverlayLinkedSubjectKind.none:
       return null;
@@ -354,20 +399,6 @@ String? _formatEventRange(DateTime? startsAt, DateTime? endsAt) {
   }
   if (startsAt != null) return formatDate(startsAt);
   return formatDate(endsAt!);
-}
-
-String? _readMetadataString(Map<String, dynamic>? metadata, List<String> keys) {
-  if (metadata == null) return null;
-  for (final key in keys) {
-    final raw = metadata[key];
-    final normalized = _normalizeText(raw);
-    if (normalized != null) return normalized;
-  }
-  final nested = metadata['metadata'] ?? metadata['meta'];
-  if (nested is Map) {
-    return _readMetadataString(Map<String, dynamic>.from(nested), keys);
-  }
-  return null;
 }
 
 String? _normalizeText(dynamic raw) {
