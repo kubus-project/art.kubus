@@ -156,35 +156,52 @@ class _ContextualActivationSheet extends StatelessWidget {
       ),
     );
 
-    final panel = LiquidGlassPanel(
-      margin: EdgeInsets.zero,
-      showBorder: true,
-      blurSigma: KubusGlassEffects.blurSigmaHeavy,
-      fallbackMinOpacity: KubusGlassEffects.fallbackOpaqueOpacity,
-      borderRadius: const BorderRadius.vertical(
-        top: Radius.circular(KubusRadius.xl),
-      ),
-      padding: EdgeInsets.zero,
-      backgroundColor: scheme.surfaceContainerHighest.withValues(
-        alpha: theme.brightness == Brightness.dark ? 0.86 : 0.94,
-      ),
-      // Small viewports and long Slovenian strings must scroll rather than
-      // overflow, and the sheet must never grow past the visible area.
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxHeight: media.size.height * 0.85),
-        child: SingleChildScrollView(child: content),
-      ),
-    );
-
-    if (isWide) {
-      return Align(
-        alignment: Alignment.bottomCenter,
+    LiquidGlassPanel panel({required BorderRadius radius, required double maxHeight}) {
+      return LiquidGlassPanel(
+        margin: EdgeInsets.zero,
+        showBorder: true,
+        blurSigma: KubusGlassEffects.blurSigmaHeavy,
+        fallbackMinOpacity: KubusGlassEffects.fallbackOpaqueOpacity,
+        borderRadius: radius,
+        padding: EdgeInsets.zero,
+        backgroundColor: scheme.surfaceContainerHighest.withValues(
+          alpha: theme.brightness == Brightness.dark ? 0.86 : 0.94,
+        ),
+        // Small viewports and long Slovenian strings must scroll rather than
+        // overflow, and the surface must never grow past the visible area.
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: KubusSizes.dialogWidthMd),
-          child: SafeArea(top: false, child: panel),
+          constraints: BoxConstraints(maxHeight: maxHeight),
+          child: SingleChildScrollView(child: content),
         ),
       );
     }
-    return SafeArea(top: false, child: panel);
+
+    if (isWide) {
+      // A centred dialog, not a bottom sheet. Bottom-anchoring on a short
+      // desktop viewport pushed the last line flush against the window edge
+      // and cut off the panel's lower corners.
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(KubusSpacing.lg),
+          child: ConstrainedBox(
+            constraints:
+                const BoxConstraints(maxWidth: KubusSizes.dialogWidthMd),
+            child: panel(
+              radius: BorderRadius.circular(KubusRadius.xl),
+              maxHeight: media.size.height - KubusSpacing.xxl,
+            ),
+          ),
+        ),
+      );
+    }
+    return SafeArea(
+      top: false,
+      child: panel(
+        radius: const BorderRadius.vertical(
+          top: Radius.circular(KubusRadius.xl),
+        ),
+        maxHeight: media.size.height * 0.85,
+      ),
+    );
   }
 }
