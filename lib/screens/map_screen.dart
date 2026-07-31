@@ -59,8 +59,6 @@ import '../models/exhibition.dart';
 import '../widgets/map_marker_style_config.dart';
 import '../utils/app_animations.dart';
 import '../utils/artwork_navigation.dart';
-import '../utils/artwork_media_resolver.dart';
-import '../utils/grid_utils.dart';
 import '../utils/design_tokens.dart';
 
 import '../utils/app_color_utils.dart';
