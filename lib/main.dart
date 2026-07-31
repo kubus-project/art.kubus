@@ -1359,6 +1359,7 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
                 // be confirmed on whichever entity the visitor was returned to,
                 // on mobile and desktop alike.
                 child: PendingActionContinuationHost(
+                  navigatorKey: appNavigatorKey,
                   child: child ?? const SizedBox.shrink(),
                 ),
               ),

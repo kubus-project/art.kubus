@@ -47,7 +47,7 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
       unawaited(
           TelemetryService().trackInstitutionViewed(widget.institutionId));
       if (!mounted) return;
-      unawaited(context.read<ActivationPromptProvider>().recordEntityView());
+      ActivationPromptProvider.recordEntityViewFor(context);
     });
   }
 

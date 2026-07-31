@@ -91,7 +91,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
       unawaited(provider.recordExhibitionView(widget.exhibitionId,
           source: 'exhibition_detail'));
       unawaited(TelemetryService().trackExhibitionViewed(widget.exhibitionId));
-      unawaited(context.read<ActivationPromptProvider>().recordEntityView());
+      ActivationPromptProvider.recordEntityViewFor(context);
       unawaited(_load());
     });
   }

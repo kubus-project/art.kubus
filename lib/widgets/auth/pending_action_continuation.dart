@@ -23,9 +23,21 @@ import '../kubus_snackbar.dart';
 /// visitor has to press the confirm button, and the action then runs exactly
 /// once.
 class PendingActionContinuationHost extends StatefulWidget {
-  const PendingActionContinuationHost({super.key, required this.child});
+  const PendingActionContinuationHost({
+    super.key,
+    required this.child,
+    this.navigatorKey,
+  });
 
   final Widget child;
+
+  /// The app's navigator.
+  ///
+  /// This host is mounted in `MaterialApp.builder`, which sits *above* the
+  /// Navigator, so its own context has no Navigator ancestor and cannot open a
+  /// route-based sheet. The key gives us a context below the Navigator without
+  /// having to duplicate this host into every screen.
+  final GlobalKey<NavigatorState>? navigatorKey;
 
   /// Time allowed for the post-auth navigation to settle before the
   /// confirmation is presented, so the sheet opens over the restored entity
@@ -66,10 +78,24 @@ class _PendingActionContinuationHostState
       return;
     }
 
+    final sheetContext = widget.navigatorKey?.currentContext ?? context;
+    if (!sheetContext.mounted || Navigator.maybeOf(sheetContext) == null) {
+      // No navigator to host the sheet (e.g. during a route swap). Leave the
+      // intent pending so the next frame can offer it.
+      _presenting = false;
+      return;
+    }
+
     provider.markConfirmationViewed();
 
+    // Captured before the await so no BuildContext is used across a gap.
+    final l10n = AppLocalizations.of(sheetContext)!;
+    final messenger = ScaffoldMessenger.of(sheetContext);
+    final artworkProvider = context.read<ArtworkProvider>();
+    final savedItemsProvider = context.read<SavedItemsProvider>();
+
     final confirmed = await showPendingActionConfirmationSheet(
-      context,
+      sheetContext,
       intent: intent,
     );
     if (!mounted) {
@@ -85,11 +111,9 @@ class _PendingActionContinuationHostState
       return;
     }
 
-    final l10n = AppLocalizations.of(context)!;
-    final messenger = ScaffoldMessenger.of(context);
     final result = await provider.confirm(
-      artworkProvider: context.read<ArtworkProvider>(),
-      savedItemsProvider: context.read<SavedItemsProvider>(),
+      artworkProvider: artworkProvider,
+      savedItemsProvider: savedItemsProvider,
     );
     _presenting = false;
     if (!mounted) return;

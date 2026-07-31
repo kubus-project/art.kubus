@@ -56,7 +56,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
       final events = context.read<EventsProvider>();
       unawaited(events.recordEventView(widget.eventId, source: 'event_detail'));
       unawaited(TelemetryService().trackEventViewed(widget.eventId));
-      unawaited(context.read<ActivationPromptProvider>().recordEntityView());
+      ActivationPromptProvider.recordEntityViewFor(context);
       unawaited(_load());
     });
   }

@@ -155,7 +155,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
       _loadArtworkDetails();
       context.read<ArtworkProvider>().incrementViewCount(widget.artworkId);
       unawaited(TelemetryService().trackArtworkViewed(widget.artworkId));
-      unawaited(context.read<ActivationPromptProvider>().recordEntityView());
+      ActivationPromptProvider.recordEntityViewFor(context);
       unawaited(MetaConversionAdapter.instance.trackViewContent(
         contentType: 'artwork',
         contentId: widget.artworkId,

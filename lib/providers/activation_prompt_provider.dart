@@ -1,6 +1,7 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/backend_api_service.dart';
@@ -53,6 +54,19 @@ class ActivationPromptProvider extends ChangeNotifier {
   /// True when the prompt should currently be on screen.
   bool get shouldPrompt =>
       _armed && !_resolvedThisSession && !_hasAuthSession();
+
+  /// Records a meaningful entity view from a screen that may be rendered
+  /// outside the app's provider tree (embedded shells, widget tests).
+  ///
+  /// A missing provider means "no prompt here", never a crash: detail screens
+  /// are public content and must render for anyone.
+  static void recordEntityViewFor(BuildContext context) {
+    try {
+      unawaited(context.read<ActivationPromptProvider>().recordEntityView());
+    } catch (_) {
+      // No provider in scope; nothing to count.
+    }
+  }
 
   /// Records a meaningful entity view (artwork, event, exhibition,
   /// institution or a marker overlay opened on the map).
