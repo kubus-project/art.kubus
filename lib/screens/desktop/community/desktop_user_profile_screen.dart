@@ -56,7 +56,6 @@ import 'package:art_kubus/widgets/glass_components.dart';
 import '../../../widgets/community/community_post_card.dart';
 import '../../../widgets/profile/profile_achievements_preview_section.dart';
 import '../../../widgets/public_entity_takeover_ready.dart';
-import '../../../models/pending_action_intent.dart';
 
 const double _kProfileOverlayMaxWidth = 920.0;
 const double _kProfileCoverHeightWithImage = 216.0;

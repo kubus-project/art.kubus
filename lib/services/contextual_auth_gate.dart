@@ -10,6 +10,12 @@ import '../services/telemetry/telemetry_service.dart';
 import '../widgets/auth/contextual_activation_sheet.dart';
 import 'backend_api_service.dart';
 
+// The gate's own parameters are these types, so callers should not need a
+// second import to describe an action. Re-exporting also keeps `part` files
+// (the community screens) working through their parent's import.
+export '../models/pending_action_intent.dart'
+    show PendingActionType, PendingActionTargetType;
+
 /// Gates identity-required actions without blocking public content viewing.
 ///
 /// Public art stays public: this is only reached when a visitor attempts an

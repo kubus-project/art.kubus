@@ -42,7 +42,6 @@ import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/widgets/common/keyboard_inset_padding.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 import '../../utils/share_deep_link_navigation.dart';
-import '../../models/pending_action_intent.dart';
 
 /// AR Screen with seamless Android and iOS support
 /// On web, redirects to download app screen

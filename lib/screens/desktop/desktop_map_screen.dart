@@ -144,7 +144,6 @@ import '../map_core/map_ui_state_coordinator.dart';
 import '../map_core/map_marker_render_coordinator.dart';
 import '../../providers/task_provider.dart';
 import '../../models/task.dart';
-import '../../models/pending_action_intent.dart';
 import '../../widgets/map/kubus_activation_prompt_card.dart';
 
 /// Desktop map screen with Google Maps-style presentation
@@ -2438,8 +2437,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                           ? contextPanelWidth +
                               KubusMapMetrics.desktopChromeInset
                           : KubusMapMetrics.desktopChromeInset,
-                      bottom: KubusMapMetrics.desktopChromeInset +
-                          KubusSpacing.xxl,
+                      bottom:
+                          KubusMapMetrics.desktopChromeInset + KubusSpacing.xxl,
                       child: const SizedBox(
                         width: 360,
                         child: KubusActivationPromptCard(maxWidth: 360),

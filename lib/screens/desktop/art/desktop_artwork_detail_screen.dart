@@ -38,7 +38,6 @@ import '../../../widgets/common/kubus_screen_header.dart';
 import '../../../widgets/common/marker_attribution_section.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import '../../../widgets/map/dialogs/street_art_claims_dialog.dart';
-import '../../../models/pending_action_intent.dart';
 
 class DesktopArtworkDetailScreen extends StatefulWidget {
   final String artworkId;

@@ -1,5 +1,4 @@
 import 'package:art_kubus/l10n/app_localizations.dart';
-import 'package:art_kubus/models/pending_action_intent.dart';
 import 'package:art_kubus/providers/pending_action_provider.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/contextual_auth_gate.dart';

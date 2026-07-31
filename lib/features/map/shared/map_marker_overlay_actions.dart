@@ -8,7 +8,6 @@ import '../../../models/art_marker.dart';
 import '../../../models/artwork.dart';
 import '../../../models/event.dart';
 import '../../../models/exhibition.dart';
-import '../../../models/pending_action_intent.dart';
 import '../../../config/config.dart';
 import '../../../providers/artwork_provider.dart';
 import '../../../providers/saved_items_provider.dart';

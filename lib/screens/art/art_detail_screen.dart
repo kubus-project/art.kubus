@@ -50,7 +50,6 @@ import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../widgets/map/dialogs/street_art_claims_dialog.dart';
-import '../../models/pending_action_intent.dart';
 import '../../providers/activation_prompt_provider.dart';
 import '../../services/meta/meta_conversion_adapter.dart';
 

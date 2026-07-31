@@ -40,7 +40,6 @@ import '../../widgets/empty_state_card.dart';
 import '../../widgets/inline_loading.dart';
 import 'post_detail_screen.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
-import '../../models/pending_action_intent.dart';
 
 class GroupFeedScreen extends StatefulWidget {
   const GroupFeedScreen({

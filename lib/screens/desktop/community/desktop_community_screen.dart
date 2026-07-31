@@ -81,7 +81,6 @@ import '../../web3/achievements/achievements_page.dart';
 import '../../../widgets/community/community_season0_banner.dart';
 import '../../../widgets/common/kubus_screen_header.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
-import '../../../models/pending_action_intent.dart';
 
 part 'desktop_community_screen_parts/desktop_community_screen_p1.dart';
 part 'desktop_community_screen_parts/desktop_community_screen_p2.dart';

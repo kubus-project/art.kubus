@@ -20,7 +20,6 @@ import '../glass_components.dart';
 import '../inline_loading.dart';
 import '../kubus_snackbar.dart';
 import 'detail_shell_components.dart';
-import '../../models/pending_action_intent.dart';
 
 enum ArtworkCommentsLayoutMode {
   fill,

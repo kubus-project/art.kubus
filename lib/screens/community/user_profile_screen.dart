@@ -53,7 +53,6 @@ import '../../widgets/glass_components.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import '../../widgets/profile/profile_achievements_preview_section.dart';
 import '../../widgets/public_entity_takeover_ready.dart';
-import '../../models/pending_action_intent.dart';
 
 class UserProfileScreen extends StatefulWidget {
   final String userId;

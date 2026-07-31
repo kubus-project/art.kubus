@@ -39,7 +39,6 @@ import '../../utils/community_subject_navigation.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../utils/profile_identity_navigation.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
-import '../../models/pending_action_intent.dart';
 
 enum PostDetailInitialAction { edit, delete, report, options }
 

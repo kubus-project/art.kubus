@@ -449,8 +449,8 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
       widget.onError?.call(e);
       // A timeout is a failed attempt like any other: omitting it left
       // attempts != successes + failures in the funnel.
-      unawaited(TelemetryService().trackSignUpFailure(
-          method: 'email', errorClass: 'timeout'));
+      unawaited(TelemetryService()
+          .trackSignUpFailure(method: 'email', errorClass: 'timeout'));
       if (!mounted) return;
       messenger.showKubusSnackBar(
         SnackBar(content: Text(l10n.commonNetworkErrorToast)),

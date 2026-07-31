@@ -156,7 +156,8 @@ class _ContextualActivationSheet extends StatelessWidget {
       ),
     );
 
-    LiquidGlassPanel panel({required BorderRadius radius, required double maxHeight}) {
+    LiquidGlassPanel panel(
+        {required BorderRadius radius, required double maxHeight}) {
       return LiquidGlassPanel(
         margin: EdgeInsets.zero,
         showBorder: true,
