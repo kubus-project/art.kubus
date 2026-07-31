@@ -1,30 +1,5 @@
 part of 'kubus_marker_overlay_card.dart';
 
-String _normalizeDescription(String input) {
-  if (input.isEmpty) return '';
-  return input.replaceAll(RegExp(r'\s+'), ' ').trim();
-}
-
-String _truncateDescription(
-  String input, {
-  required int maxWords,
-  required int maxChars,
-}) {
-  if (input.isEmpty) return '';
-
-  final words = input.split(' ');
-  final cappedByWords =
-      words.length > maxWords ? '${words.take(maxWords).join(' ')}...' : input;
-
-  if (cappedByWords.length <= maxChars) return cappedByWords;
-
-  final safeIndex = cappedByWords.lastIndexOf(' ', maxChars);
-  if (safeIndex <= 0) {
-    return '${cappedByWords.substring(0, maxChars)}...';
-  }
-  return '${cappedByWords.substring(0, safeIndex)}...';
-}
-
 class _CardTapArea extends StatelessWidget {
   const _CardTapArea({
     required this.child,

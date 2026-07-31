@@ -74,18 +74,6 @@ class MapOverlaySizing {
     return math.max(minCardHeight, available).toDouble();
   }
 
-  static double resolveCardHeight({
-    required double estimatedHeight,
-    required double maxCardHeight,
-    required bool isCompactWidth,
-  }) {
-    if (maxCardHeight < minCardHeight) {
-      return math.max(1.0, maxCardHeight).toDouble();
-    }
-    final raw = math.max(estimatedHeight, minCardHeight);
-    return raw.clamp(minCardHeight, maxCardHeight).toDouble();
-  }
-
   static double resolveFixedCardHeight({
     required double maxCardHeight,
     double preferredHeight = fixedCardHeight,

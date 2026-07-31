@@ -81,6 +81,17 @@
   "markerBadgePromoted": "Promoted",
   "markerBadgeAttendanceRecord": "Attendance record",
   "markerDescriptionSemanticLabel": "marker description",
+  "markerInfoDetailKicker": "Marker information",
+  "markerInfoDetailNoDescription": "This marker has no description yet.",
+  "markerInfoDetailUnlinkedNotice": "The linked entry for this marker is not available, so the details below come from the marker itself.",
+  "markerInfoDetailUnlinkedTypedNotice": "The linked {subjectType} for this marker is not available, so the details below come from the marker itself.",
+  "@markerInfoDetailUnlinkedTypedNotice": {
+    "placeholders": {
+      "subjectType": {
+        "type": "String"
+      }
+    }
+  },
   "recentActivityRecognitionRecordedTitle": "Recognition recorded",
   "recentActivityArchiveObjectUpdateTitle": "Archive record update",
   "recentActivityRecognitionAmountDescription": "+{amount} KUB8 recognition",

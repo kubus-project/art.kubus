@@ -195,6 +195,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get markerDescriptionSemanticLabel => 'marker description';
 
   @override
+  String get markerInfoDetailKicker => 'Marker information';
+
+  @override
+  String get markerInfoDetailNoDescription =>
+      'This marker has no description yet.';
+
+  @override
+  String get markerInfoDetailUnlinkedNotice =>
+      'The linked entry for this marker is not available, so the details below come from the marker itself.';
+
+  @override
+  String markerInfoDetailUnlinkedTypedNotice(String subjectType) {
+    return 'The linked $subjectType for this marker is not available, so the details below come from the marker itself.';
+  }
+
+  @override
   String get recentActivityRecognitionRecordedTitle => 'Recognition recorded';
 
   @override

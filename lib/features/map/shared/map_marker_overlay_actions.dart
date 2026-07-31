@@ -16,6 +16,31 @@ import '../../../services/share/share_service.dart';
 import '../../../services/share/share_types.dart';
 import '../../../widgets/common/kubus_marker_overlay_card.dart';
 
+/// Whether [buildMarkerOverlayActions] would produce at least one secondary
+/// action for this marker.
+///
+/// Mirrors the builder's branches exactly so the quick card's height estimator
+/// reserves the footer's action row if and only if the card renders one. Kept
+/// free of [BuildContext] so it is callable from a layout resolver.
+bool markerOverlayHasSecondaryActions({
+  required ArtMarker marker,
+  required Artwork? artwork,
+  required KubusEvent? event,
+  required Exhibition? exhibition,
+  required bool canPresentExhibition,
+  bool canClaimStreetArt = false,
+}) {
+  if (canClaimStreetArt &&
+      AppConfig.isFeatureEnabled('streetArtClaims') &&
+      marker.type == ArtMarkerType.streetArt &&
+      marker.isPublic) {
+    return true;
+  }
+  if (event != null || exhibition != null) return true;
+  if (artwork == null || canPresentExhibition) return false;
+  return true;
+}
+
 List<MarkerOverlayActionSpec> buildMarkerOverlayActions({
   required BuildContext context,
   required ArtMarker marker,

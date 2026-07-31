@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io' as io;
 
+import 'package:art_kubus/features/map/shared/marker_overlay_card_metrics.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/models/art_marker.dart';
 import 'package:art_kubus/models/artwork.dart';
@@ -368,14 +369,19 @@ void main() {
               onPreviousStacked: () {},
               onSelectStackIndex: (_) {},
               maxWidth: 340,
-              maxHeight: 360,
+              // A realistic anchored slot on a phone-height viewport. The card
+              // has a full header, a secondary action row, a stack pager and a
+              // primary CTA, so this is the space the media area competes for.
+              maxHeight: 520,
             ),
           ),
         ),
       );
 
       expect(find.byType(FittedBox), findsNothing);
-      expect(find.byType(SingleChildScrollView), findsOneWidget);
+      // The floating quick card must never scroll internally; the composition
+      // shrinks deliberately instead.
+      expect(find.byType(SingleChildScrollView), findsNothing);
       expect(find.byType(GlassSurface), findsWidgets);
 
       final imageWidget = tester.widget<KubusCachedImage>(
@@ -384,9 +390,13 @@ void main() {
       expect(imageWidget.fit, BoxFit.cover);
       expect(imageWidget.width, double.infinity);
       expect(imageWidget.height, isNotNull);
-      expect(imageWidget.height!, inInclusiveRange(132, 180));
-
-      expect(find.text('More info'), findsOneWidget);
+      expect(
+        imageWidget.height!,
+        inInclusiveRange(
+          MarkerOverlayCardMetrics.mediaHeightMinimum,
+          MarkerOverlayCardMetrics.mediaHeightRegular,
+        ),
+      );
 
       expect(find.text('More info'), findsOneWidget);
     },

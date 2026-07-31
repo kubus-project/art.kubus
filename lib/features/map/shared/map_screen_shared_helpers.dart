@@ -28,7 +28,7 @@ import '../../../widgets/map_marker_style_config.dart';
 import '../../../widgets/map/cards/kubus_discovery_card.dart';
 import '../../../widgets/map/discovery/kubus_discovery_path_card.dart';
 import 'map_marker_overlay_presentation.dart';
-import 'map_overlay_sizing.dart';
+import 'marker_overlay_card_metrics.dart';
 import '../map_layers_manager.dart';
 import '../controller/kubus_map_controller.dart';
 import '../../../screens/map_core/map_ui_state_coordinator.dart';
@@ -700,66 +700,52 @@ class KubusMapDiscoveryCardHelpers {
 class KubusMarkerOverlayHelpers {
   const KubusMarkerOverlayHelpers._();
 
+  /// Reserves the overlay slot for the marker quick card.
+  ///
+  /// Delegates the whole vertical composition to
+  /// [MarkerOverlayCardMetrics.resolveComposition] — the same resolver
+  /// `KubusMarkerOverlayCard` lays itself out with — so the reserved height and
+  /// the rendered content cannot drift apart and the card never needs an
+  /// internal scroll view.
   static double estimateCardHeight({
     required ArtMarker marker,
     required Artwork? artwork,
     required KubusEvent? event,
     required Exhibition? exhibition,
     required double maxCardHeight,
-    required bool isCompactWidth,
+    required double cardWidth,
+    double textScale = 1.0,
+    String? distanceText,
+    bool canPresentExhibition = false,
+    bool hasSecondaryActions = false,
+    int stackCount = 1,
   }) {
-    final presentation = resolveMarkerOverlayPresentation(
+    final isCompactWidth = MarkerOverlayCardMetrics.isCompactCard(cardWidth);
+    final spec = MarkerOverlayCardMetrics.resolveContentSpec(
       marker: marker,
       artwork: artwork,
       event: event,
       exhibition: exhibition,
-    );
-
-    final normalizedDescription =
-        presentation.description.replaceAll(RegExp(r'\s+'), ' ').trim();
-    final words = normalizedDescription.isEmpty
-        ? const <String>[]
-        : normalizedDescription.split(' ');
-    final wordCapped =
-        words.length > 90 ? words.take(90).join(' ') : normalizedDescription;
-    final cappedChars = wordCapped.length.clamp(0, 700);
-    final hasDescription = cappedChars > 0;
-    final hasLinkedContext = presentation.linkedSubject.kind !=
-            MapMarkerOverlayLinkedSubjectKind.none ||
-        (presentation.linkedSubject.title ?? '').trim().isNotEmpty ||
-        (presentation.linkedSubject.subtitle ?? '').trim().isNotEmpty;
-
-    var estimated = isCompactWidth ? 320.0 : 336.0;
-    if (hasDescription) {
-      final approxCharsPerLine = isCompactWidth ? 34.0 : 42.0;
-      final approxLines =
-          math.max(1, (cappedChars / approxCharsPerLine).ceil());
-      final cappedLines = approxLines.clamp(1, isCompactWidth ? 5 : 7);
-      final lineHeightPx = isCompactWidth ? 17.0 : 16.0;
-      final descriptionHeight = cappedLines * lineHeightPx;
-      estimated += descriptionHeight;
-    } else {
-      estimated -= 18.0;
-    }
-
-    if (hasLinkedContext) {
-      estimated += 12.0;
-    }
-
-    if (marker.isPromoted || (artwork?.promotion.isPromoted ?? false)) {
-      estimated += 8.0;
-    }
-
-    // Footer action controls use the shared 44px hit-area token. Account for
-    // that reserved space so constrained mobile cards scroll their body before
-    // compressing action rows.
-    estimated += isCompactWidth ? 24.0 : 10.0;
-
-    return MapOverlaySizing.resolveCardHeight(
-      estimatedHeight: estimated,
-      maxCardHeight: maxCardHeight,
+      distanceText: distanceText,
+      canPresentExhibition: canPresentExhibition,
+      hasSecondaryActions: hasSecondaryActions,
+      stackCount: stackCount,
       isCompactWidth: isCompactWidth,
     );
+    final composition = MarkerOverlayCardMetrics.resolveComposition(
+      spec: spec,
+      availableHeight: maxCardHeight,
+      isCompactWidth: isCompactWidth,
+      textScale: textScale,
+    );
+
+    // The composition already fits inside [maxCardHeight] whenever that is
+    // geometrically possible, and otherwise reports the irreducible minimum
+    // (header + attribution + action rows). It is deliberately not clamped
+    // below that minimum: a shorter slot would overflow the card's own layout
+    // instead of trimming content, which is exactly the failure mode this
+    // hotfix removes.
+    return composition.estimatedHeight;
   }
 
   static String? resolveDistanceText({
@@ -778,6 +764,35 @@ class KubusMarkerOverlayHelpers {
       return '${meters.round()} m';
     }
     return '${(meters / 1000).toStringAsFixed(1)} km';
+  }
+
+  /// Whether the quick card may advertise this marker as an exhibition
+  /// attendance surface.
+  ///
+  /// Shared by both map screens and by the overlay height estimator so the
+  /// attendance badge, the More info label, and the reserved height agree.
+  /// A stale `exhibitionsApiAvailable == false` flag is deliberately ignored:
+  /// the open flow retries the fetch and falls back to the generic marker
+  /// detail surface on a real failure.
+  static bool canPresentExhibitionForMarker({
+    required ArtMarker marker,
+    Artwork? artwork,
+    KubusEvent? event,
+    Exhibition? exhibition,
+  }) {
+    final presentation = resolveMarkerOverlayPresentation(
+      marker: marker,
+      artwork: artwork,
+      event: event,
+      exhibition: exhibition,
+    );
+    if (presentation.primaryTarget !=
+        MapMarkerOverlayPrimaryTarget.exhibition) {
+      return false;
+    }
+    if (!AppConfig.isFeatureEnabled('exhibitions')) return false;
+    final summary = marker.resolvedExhibitionSummary;
+    return summary != null && summary.id.isNotEmpty;
   }
 
   static bool canOpenStreetArtClaims(ArtMarker marker) {
