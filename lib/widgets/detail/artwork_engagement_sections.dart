@@ -916,6 +916,7 @@ class _ArtworkCommentsExpandableCardState
 
     final authenticated = await const ContextualAuthGate().ensureAuthenticated(
       context,
+      actionType: PendingActionType.comment,
       actionLabel: l10n.commonComments.toLowerCase(),
       returnRoute: '/a/${Uri.encodeComponent(widget.artwork.id)}',
       sourceScreen: 'artwork_engagement',
