@@ -25,9 +25,9 @@ class ActivationPromptProvider extends ChangeNotifier {
   ActivationPromptProvider({
     TelemetryService? telemetry,
     bool Function()? hasAuthSession,
-  }) : _telemetry = telemetry ?? TelemetryService(),
-       _hasAuthSession =
-           hasAuthSession ?? (() => BackendApiService().hasAuthSession);
+  })  : _telemetry = telemetry ?? TelemetryService(),
+        _hasAuthSession =
+            hasAuthSession ?? (() => BackendApiService().hasAuthSession);
 
   static const String lastShownPrefsKey =
       'kubus_activation_prompt_last_shown_v1';

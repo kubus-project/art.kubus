@@ -55,9 +55,8 @@ class ContextualAuthGate {
     final telemetry = TelemetryService();
     final actionKey = actionType?.storageValue ?? 'other';
     final targetKey = targetType?.storageValue ?? 'other';
-    final screen = (sourceScreen ?? '').trim().isEmpty
-        ? 'unknown'
-        : sourceScreen!.trim();
+    final screen =
+        (sourceScreen ?? '').trim().isEmpty ? 'unknown' : sourceScreen!.trim();
 
     unawaited(
       telemetry.trackProtectedActionClicked(

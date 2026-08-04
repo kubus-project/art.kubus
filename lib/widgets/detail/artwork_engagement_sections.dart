@@ -495,8 +495,7 @@ class _ArtworkCommentsExpandableCardState
     );
     final currentId = WalletUtils.canonical((profile?.id ?? '').toString());
     final authorKey = WalletUtils.canonical(comment.userId);
-    final canModify =
-        authorKey.isNotEmpty &&
+    final canModify = authorKey.isNotEmpty &&
         (authorKey == currentWallet ||
             (currentId.isNotEmpty && authorKey == currentId));
 
@@ -566,9 +565,8 @@ class _ArtworkCommentsExpandableCardState
                 ),
                 actions: [
                   TextButton(
-                    onPressed: saving
-                        ? null
-                        : () => Navigator.of(dialogContext).pop(),
+                    onPressed:
+                        saving ? null : () => Navigator.of(dialogContext).pop(),
                     child: Text(l10n.commonCancel),
                   ),
                   FilledButton(
@@ -625,32 +623,31 @@ class _ArtworkCommentsExpandableCardState
 
       final messenger = ScaffoldMessenger.of(context);
       _deleteDialogOpenCommentIds.add(comment.id);
-      final confirmed =
-          await showKubusDialog<bool>(
-            context: context,
-            builder: (dialogContext) {
-              return KubusAlertDialog(
-                title: Text(l10n.commentDeleteConfirmTitle),
-                content: Text(l10n.commentDeleteConfirmMessage),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(dialogContext).pop(false),
-                    child: Text(l10n.commonCancel),
-                  ),
-                  FilledButton(
-                    onPressed: () => Navigator.of(dialogContext).pop(true),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: scheme.error,
-                      foregroundColor: scheme.onError,
-                    ),
-                    child: Text(l10n.commonDelete),
-                  ),
-                ],
-              );
-            },
-          ).whenComplete(() {
-            _deleteDialogOpenCommentIds.remove(comment.id);
-          });
+      final confirmed = await showKubusDialog<bool>(
+        context: context,
+        builder: (dialogContext) {
+          return KubusAlertDialog(
+            title: Text(l10n.commentDeleteConfirmTitle),
+            content: Text(l10n.commentDeleteConfirmMessage),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: Text(l10n.commonCancel),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                style: FilledButton.styleFrom(
+                  backgroundColor: scheme.error,
+                  foregroundColor: scheme.onError,
+                ),
+                child: Text(l10n.commonDelete),
+              ),
+            ],
+          );
+        },
+      ).whenComplete(() {
+        _deleteDialogOpenCommentIds.remove(comment.id);
+      });
       if (confirmed != true) return;
       if (_deleteInFlightCommentIds.contains(comment.id)) return;
 
@@ -799,10 +796,10 @@ class _ArtworkCommentsExpandableCardState
                           _commentController.text = '@${comment.userName} ';
                           _commentController.selection =
                               TextSelection.fromPosition(
-                                TextPosition(
-                                  offset: _commentController.text.length,
-                                ),
-                              );
+                            TextPosition(
+                              offset: _commentController.text.length,
+                            ),
+                          );
                           FocusScope.of(
                             context,
                           ).requestFocus(_commentFocusNode);
@@ -973,9 +970,8 @@ class _ArtworkCommentsExpandableCardState
                   .toString()
                   .trim();
               if (msg.isNotEmpty) {
-                backendMessage = msg.length > 140
-                    ? '${msg.substring(0, 140)}\u2026'
-                    : msg;
+                backendMessage =
+                    msg.length > 140 ? '${msg.substring(0, 140)}\u2026' : msg;
               }
             }
           }
@@ -990,7 +986,7 @@ class _ArtworkCommentsExpandableCardState
             authRequired
                 ? l10n.communityCommentAuthRequiredToast
                 : (backendMessage ??
-                      '${l10n.commonSomethingWentWrong} (${e.statusCode})'),
+                    '${l10n.commonSomethingWentWrong} (${e.statusCode})'),
             style: KubusTypography.inter(),
           ),
           action: authRequired
@@ -999,8 +995,7 @@ class _ArtworkCommentsExpandableCardState
                   onPressed: () {
                     navigator.pushNamed(
                       '/sign-in',
-                      arguments:
-                          widget.signInArguments ??
+                      arguments: widget.signInArguments ??
                           {
                             'redirectRoute': '/artwork',
                             'redirectArguments': {
