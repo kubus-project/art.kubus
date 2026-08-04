@@ -37,20 +37,10 @@ class MetaConversionAdapter {
       AppConfig.enableMetaPixel && pixelId.trim().isNotEmpty;
 
   Future<void> ensureInitialized() async {
-    if (_initialized) return;
-    _initialized = true;
-
     if (!isConfigured) return;
     if (!AppConfig.isFeatureEnabled('analytics')) return;
-
-    // Honour the same opt-out that gates first-party telemetry. A visitor who
-    // turned analytics off must not be measured by a third party either.
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      if (!(prefs.getBool('enableAnalytics') ?? true)) return;
-    } catch (_) {
-      return;
-    }
+    if (!await _hasAnalyticsConsent() || _initialized) return;
+    _initialized = true;
 
     try {
       _active = await MetaPixelBridge.load(pixelId.trim());
@@ -91,6 +81,7 @@ class MetaConversionAdapter {
   }
 
   Future<void> _emit(String eventName, Map<String, Object?> parameters) async {
+    if (!await _hasAnalyticsConsent()) return;
     try {
       await MetaPixelBridge.track(
         eventName: eventName,
@@ -100,6 +91,15 @@ class MetaConversionAdapter {
     } catch (e) {
       // Measurement must never break the funnel it is measuring.
       AppConfig.debugPrint('MetaConversionAdapter: $eventName failed: $e');
+    }
+  }
+
+  Future<bool> _hasAnalyticsConsent() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getBool('enableAnalytics') ?? true;
+    } catch (_) {
+      return false;
     }
   }
 }

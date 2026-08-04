@@ -58,11 +58,13 @@ class ContextualAuthGate {
     final screen =
         (sourceScreen ?? '').trim().isEmpty ? 'unknown' : sourceScreen!.trim();
 
-    unawaited(telemetry.trackProtectedActionClicked(
-      actionType: actionKey,
-      targetType: targetKey,
-      sourceScreen: screen,
-    ));
+    unawaited(
+      telemetry.trackProtectedActionClicked(
+        actionType: actionKey,
+        targetType: targetKey,
+        sourceScreen: screen,
+      ),
+    );
 
     // A visitor who already started an account and left it unverified should
     // finish that account rather than be offered a new one.
@@ -87,14 +89,22 @@ class ContextualAuthGate {
         // Outside the app provider tree (tests, isolated widgets): the gate
         // still works, it just cannot offer a continuation afterwards.
       }
+    } else {
+      try {
+        await context.read<PendingActionProvider>().clear();
+      } catch (_) {
+        // The provider is optional outside the application tree.
+      }
     }
     if (!context.mounted) return false;
 
-    unawaited(telemetry.trackAuthGateViewed(
-      actionType: actionKey,
-      targetType: targetKey,
-      sourceScreen: screen,
-    ));
+    unawaited(
+      telemetry.trackAuthGateViewed(
+        actionType: actionKey,
+        targetType: targetKey,
+        sourceScreen: screen,
+      ),
+    );
 
     final choice = await showContextualActivationSheet(
       context,
@@ -105,24 +115,28 @@ class ContextualAuthGate {
     if (!context.mounted) return false;
 
     if (choice == ActivationGateChoice.dismissed) {
-      unawaited(telemetry.trackAuthGateDismissed(
-        actionType: actionKey,
-        targetType: targetKey,
-        sourceScreen: screen,
-      ));
+      unawaited(
+        telemetry.trackAuthGateDismissed(
+          actionType: actionKey,
+          targetType: targetKey,
+          sourceScreen: screen,
+        ),
+      );
       return false;
     }
 
-    unawaited(telemetry.trackAuthMethodSelected(
-      method: switch (choice) {
-        ActivationGateChoice.google => 'google',
-        ActivationGateChoice.email => 'email',
-        ActivationGateChoice.signIn => 'existing_account',
-        ActivationGateChoice.dismissed => 'none',
-      },
-      actionType: actionKey,
-      targetType: targetKey,
-    ));
+    unawaited(
+      telemetry.trackAuthMethodSelected(
+        method: switch (choice) {
+          ActivationGateChoice.google => 'google',
+          ActivationGateChoice.email => 'email',
+          ActivationGateChoice.signIn => 'existing_account',
+          ActivationGateChoice.dismissed => 'none',
+        },
+        actionType: actionKey,
+        targetType: targetKey,
+      ),
+    );
 
     // The same validation the intent gets. Without it an unsafe route that
     // `_buildIntent` already rejected would still reach the navigator.

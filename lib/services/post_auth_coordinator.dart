@@ -114,6 +114,9 @@ class PostAuthCoordinator {
       final accountAuthWithoutWallet = isAccountAuth &&
           expectedWalletFromPayload.isEmpty &&
           (walletAddress ?? '').trim().isEmpty;
+      final isNewAccount = AuthOnboardingService.payloadIndicatesNewAccount(
+        payload,
+      );
 
       setStage(PostAuthStage.preparingSession);
       if (normalizedUserId.isNotEmpty) {
@@ -125,25 +128,30 @@ class PostAuthCoordinator {
       // accepting a registration form — is the point the funnel may call an
       // account "activated".
       if (!modalReauth) {
-        final isNewAccount =
-            AuthOnboardingService.payloadIndicatesNewAccount(payload);
-        unawaited(TelemetryService().trackAccountSessionCreated(
-          method: _authMethodName(origin),
-          isNewAccount: isNewAccount,
-        ));
+        unawaited(
+          TelemetryService().trackAccountSessionCreated(
+            method: _authMethodName(origin),
+            isNewAccount: isNewAccount,
+          ),
+        );
         if (isNewAccount) {
           // Kept for continuity with existing dashboards, but now emitted from
           // exactly one place and only once a session exists — previously it
           // fired from four call sites, twice for wallet, and prematurely for
           // email.
-          unawaited(TelemetryService()
-              .trackSignUpSuccess(method: _authMethodName(origin)));
+          unawaited(
+            TelemetryService().trackSignUpSuccess(
+              method: _authMethodName(origin),
+            ),
+          );
         }
         if (isNewAccount) {
-          unawaited(MetaConversionAdapter.instance.trackCompleteRegistration(
-            method: _authMethodName(origin),
-            userId: normalizedUserId.isEmpty ? null : normalizedUserId,
-          ));
+          unawaited(
+            MetaConversionAdapter.instance.trackCompleteRegistration(
+              method: _authMethodName(origin),
+              userId: normalizedUserId.isEmpty ? null : normalizedUserId,
+            ),
+          );
         }
       }
 
@@ -171,7 +179,8 @@ class PostAuthCoordinator {
             );
           } catch (e) {
             AppConfig.debugPrint(
-                'PostAuthCoordinator: wallet provisioning failed: $e');
+              'PostAuthCoordinator: wallet provisioning failed: $e',
+            );
           }
         }
 
@@ -269,9 +278,9 @@ class PostAuthCoordinator {
               : (walletProvider.currentWalletAddress ?? '').trim());
       if (isAccountAuth) {
         try {
-          await profileProvider
-              .loadAuthenticatedProfile()
-              .timeout(const Duration(seconds: 5));
+          await profileProvider.loadAuthenticatedProfile().timeout(
+                const Duration(seconds: 5),
+              );
           final hydratedWallet =
               (profileProvider.currentUser?.walletAddress ?? '').trim();
           if (hydratedWallet.isNotEmpty) {
@@ -373,7 +382,7 @@ class PostAuthCoordinator {
         heuristicNextStepId: profileProvider.nextStructuredOnboardingStepId,
         persona: profileProvider.userPersona?.storageValue,
         origin: origin,
-        minimalAccount: hasPendingAction,
+        minimalAccount: hasPendingAction && isNewAccount,
       );
 
       setStage(PostAuthStage.openingWorkspace);
@@ -477,7 +486,8 @@ class PostAuthCoordinator {
               .timeout(walletConnectTimeout);
         } catch (e) {
           AppConfig.debugPrint(
-              'PostAuthCoordinator: setReadOnlyWalletIdentity failed: $e');
+            'PostAuthCoordinator: setReadOnlyWalletIdentity failed: $e',
+          );
         }
       }
 
@@ -495,7 +505,8 @@ class PostAuthCoordinator {
           }
         } catch (e) {
           AppConfig.debugPrint(
-              'PostAuthCoordinator: managed reconnect after auth failed: $e');
+            'PostAuthCoordinator: managed reconnect after auth failed: $e',
+          );
         }
       }
 
@@ -552,10 +563,7 @@ class PostAuthCoordinator {
   }) async {
     try {
       await const AppBootstrapService()
-          .warmUp(
-            context: context,
-            walletAddress: walletAddress,
-          )
+          .warmUp(context: context, walletAddress: walletAddress)
           .timeout(const Duration(seconds: 8));
     } catch (e) {
       AppConfig.debugPrint('PostAuthCoordinator: bootstrap warm-up failed: $e');

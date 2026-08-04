@@ -21,10 +21,7 @@ import '../inline_loading.dart';
 import '../kubus_snackbar.dart';
 import 'detail_shell_components.dart';
 
-enum ArtworkCommentsLayoutMode {
-  fill,
-  compact,
-}
+enum ArtworkCommentsLayoutMode { fill, compact }
 
 class ArtworkCommentsPanelController {
   VoidCallback? _openAndScrollToTop;
@@ -87,8 +84,9 @@ class _ArtworkCollaboratorsExpandableCardState
           walletProvider.currentWalletAddress ??
           '',
     );
-    final ownerWallet =
-        WalletUtils.canonical(widget.artwork.walletAddress ?? '');
+    final ownerWallet = WalletUtils.canonical(
+      widget.artwork.walletAddress ?? '',
+    );
     final isOwner = viewerWallet.isNotEmpty && ownerWallet == viewerWallet;
 
     return DetailCard(
@@ -230,7 +228,8 @@ class _ArtworkCommentsExpandableCardState
     if (!force && _loadedArtworkId == artworkId) return;
     _loadedArtworkId = artworkId;
     unawaited(
-        context.read<ArtworkProvider>().loadComments(artworkId, force: force));
+      context.read<ArtworkProvider>().loadComments(artworkId, force: force),
+    );
   }
 
   void _openAndScrollToTop() {
@@ -463,11 +462,7 @@ class _ArtworkCommentsExpandableCardState
     required int depth,
   }) {
     final widgets = <Widget>[
-      _buildCommentTile(
-        comment: comment,
-        provider: provider,
-        depth: depth,
-      ),
+      _buildCommentTile(comment: comment, provider: provider, depth: depth),
       const SizedBox(height: DetailSpacing.md),
     ];
 
@@ -565,7 +560,8 @@ class _ArtworkCommentsExpandableCardState
                   maxLines: null,
                   autofocus: true,
                   decoration: InputDecoration(
-                      hintText: l10n.postDetailWriteCommentHint),
+                    hintText: l10n.postDetailWriteCommentHint,
+                  ),
                 ),
                 actions: [
                   TextButton(
@@ -591,7 +587,8 @@ class _ArtworkCommentsExpandableCardState
                               Navigator.of(dialogContext).pop();
                               messenger.showKubusSnackBar(
                                 SnackBar(
-                                    content: Text(l10n.commentUpdatedToast)),
+                                  content: Text(l10n.commentUpdatedToast),
+                                ),
                               );
                             } catch (_) {
                               if (!mounted) return;
@@ -768,10 +765,8 @@ class _ArtworkCommentsExpandableCardState
                   Row(
                     children: [
                       IconButton(
-                        onPressed: () => _toggleCommentLike(
-                          provider,
-                          comment.id,
-                        ),
+                        onPressed: () =>
+                            _toggleCommentLike(provider, comment.id),
                         icon: Icon(
                           comment.isLikedByCurrentUser
                               ? Icons.favorite
@@ -802,10 +797,12 @@ class _ArtworkCommentsExpandableCardState
                           _commentController.selection =
                               TextSelection.fromPosition(
                             TextPosition(
-                                offset: _commentController.text.length),
+                              offset: _commentController.text.length,
+                            ),
                           );
-                          FocusScope.of(context)
-                              .requestFocus(_commentFocusNode);
+                          FocusScope.of(
+                            context,
+                          ).requestFocus(_commentFocusNode);
                         },
                         child: Text(
                           l10n.commonReply,
@@ -869,8 +866,9 @@ class _ArtworkCommentsExpandableCardState
                 decoration: InputDecoration(
                   hintText: l10n.artworkCommentAddHint,
                   filled: true,
-                  fillColor:
-                      scheme.surfaceContainerHighest.withValues(alpha: 0.35),
+                  fillColor: scheme.surfaceContainerHighest.withValues(
+                    alpha: 0.35,
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(KubusRadius.md),
                   ),
@@ -918,12 +916,9 @@ class _ArtworkCommentsExpandableCardState
 
     final authenticated = await const ContextualAuthGate().ensureAuthenticated(
       context,
+      actionType: PendingActionType.comment,
       actionLabel: l10n.commonComments.toLowerCase(),
       returnRoute: '/a/${Uri.encodeComponent(widget.artwork.id)}',
-      actionType: PendingActionType.comment,
-      targetType: PendingActionTargetType.artwork,
-      targetId: widget.artwork.id,
-      targetLabel: widget.artwork.title,
       sourceScreen: 'artwork_engagement',
     );
     if (!authenticated || !mounted) return;
@@ -954,8 +949,10 @@ class _ArtworkCommentsExpandableCardState
       });
       messenger.showKubusSnackBar(
         SnackBar(
-          content: Text(l10n.artworkCommentAddedToast,
-              style: KubusTypography.inter()),
+          content: Text(
+            l10n.artworkCommentAddedToast,
+            style: KubusTypography.inter(),
+          ),
           backgroundColor: Theme.of(context).colorScheme.primary,
           duration: const Duration(seconds: 2),
         ),
@@ -1003,7 +1000,7 @@ class _ArtworkCommentsExpandableCardState
                           {
                             'redirectRoute': '/artwork',
                             'redirectArguments': {
-                              'artworkId': widget.artwork.id
+                              'artworkId': widget.artwork.id,
                             },
                           },
                     );
@@ -1016,8 +1013,10 @@ class _ArtworkCommentsExpandableCardState
       if (!mounted) return;
       messenger.showKubusSnackBar(
         SnackBar(
-          content: Text(l10n.commonSomethingWentWrong,
-              style: KubusTypography.inter()),
+          content: Text(
+            l10n.commonSomethingWentWrong,
+            style: KubusTypography.inter(),
+          ),
         ),
       );
     }

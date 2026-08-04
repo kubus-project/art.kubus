@@ -189,6 +189,12 @@ class AppConfig {
     'ANALYTICS_APP_ENABLED',
     defaultValue: isProduction,
   );
+
+  /// Deployment-level kill switch for guest activation prompts.
+  static const bool enableActivationPrompt = bool.fromEnvironment(
+    'KUBUS_ENABLE_ACTIVATION_PROMPT',
+    defaultValue: true,
+  );
   static const bool enableCrashReporting = isProduction;
   static const bool enablePerformanceMonitoring = isProduction;
 
@@ -518,6 +524,8 @@ class AppConfig {
         return enableARViewer;
       case 'analytics':
         return enableAnalytics;
+      case 'activationPrompt':
+        return enableActivationPrompt;
       case 'metaPixel':
         return enableMetaPixel && metaPixelId.trim().isNotEmpty;
       case 'supportTickets':
