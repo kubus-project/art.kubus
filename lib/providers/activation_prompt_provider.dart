@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../config/config.dart';
 import '../services/backend_api_service.dart';
 import '../services/telemetry/telemetry_service.dart';
 
@@ -24,9 +25,9 @@ class ActivationPromptProvider extends ChangeNotifier {
   ActivationPromptProvider({
     TelemetryService? telemetry,
     bool Function()? hasAuthSession,
-  })  : _telemetry = telemetry ?? TelemetryService(),
-        _hasAuthSession =
-            hasAuthSession ?? (() => BackendApiService().hasAuthSession);
+  }) : _telemetry = telemetry ?? TelemetryService(),
+       _hasAuthSession =
+           hasAuthSession ?? (() => BackendApiService().hasAuthSession);
 
   static const String lastShownPrefsKey =
       'kubus_activation_prompt_last_shown_v1';
@@ -53,7 +54,10 @@ class ActivationPromptProvider extends ChangeNotifier {
 
   /// True when the prompt should currently be on screen.
   bool get shouldPrompt =>
-      _armed && !_resolvedThisSession && !_hasAuthSession();
+      AppConfig.isFeatureEnabled('activationPrompt') &&
+      _armed &&
+      !_resolvedThisSession &&
+      !_hasAuthSession();
 
   /// Records a meaningful entity view from a screen that may be rendered
   /// outside the app's provider tree (embedded shells, widget tests).
@@ -71,6 +75,7 @@ class ActivationPromptProvider extends ChangeNotifier {
   /// Records a meaningful entity view (artwork, event, exhibition,
   /// institution or a marker overlay opened on the map).
   Future<void> recordEntityView() async {
+    if (!AppConfig.isFeatureEnabled('activationPrompt')) return;
     if (_resolvedThisSession || _hasAuthSession()) return;
 
     _entityViews += 1;

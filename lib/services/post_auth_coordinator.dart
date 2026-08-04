@@ -103,7 +103,8 @@ class PostAuthCoordinator {
       final expectedWalletFromPayload = _expectedWalletFromPayload(data, user);
       final isGoogleAuth =
           origin == AuthOrigin.google || origin == AuthOrigin.googleOnboarding;
-      final isAccountAuth = isGoogleAuth ||
+      final isAccountAuth =
+          isGoogleAuth ||
           origin == AuthOrigin.emailPassword ||
           origin == AuthOrigin.passkey;
       final isGoogleOnboarding = origin == AuthOrigin.googleOnboarding;
@@ -111,9 +112,13 @@ class PostAuthCoordinator {
         payload: payload,
         data: data,
       );
-      final accountAuthWithoutWallet = isAccountAuth &&
+      final accountAuthWithoutWallet =
+          isAccountAuth &&
           expectedWalletFromPayload.isEmpty &&
           (walletAddress ?? '').trim().isEmpty;
+      final isNewAccount = AuthOnboardingService.payloadIndicatesNewAccount(
+        payload,
+      );
 
       setStage(PostAuthStage.preparingSession);
       if (normalizedUserId.isNotEmpty) {
@@ -125,25 +130,30 @@ class PostAuthCoordinator {
       // accepting a registration form — is the point the funnel may call an
       // account "activated".
       if (!modalReauth) {
-        final isNewAccount =
-            AuthOnboardingService.payloadIndicatesNewAccount(payload);
-        unawaited(TelemetryService().trackAccountSessionCreated(
-          method: _authMethodName(origin),
-          isNewAccount: isNewAccount,
-        ));
+        unawaited(
+          TelemetryService().trackAccountSessionCreated(
+            method: _authMethodName(origin),
+            isNewAccount: isNewAccount,
+          ),
+        );
         if (isNewAccount) {
           // Kept for continuity with existing dashboards, but now emitted from
           // exactly one place and only once a session exists — previously it
           // fired from four call sites, twice for wallet, and prematurely for
           // email.
-          unawaited(TelemetryService()
-              .trackSignUpSuccess(method: _authMethodName(origin)));
+          unawaited(
+            TelemetryService().trackSignUpSuccess(
+              method: _authMethodName(origin),
+            ),
+          );
         }
         if (isNewAccount) {
-          unawaited(MetaConversionAdapter.instance.trackCompleteRegistration(
-            method: _authMethodName(origin),
-            userId: normalizedUserId.isEmpty ? null : normalizedUserId,
-          ));
+          unawaited(
+            MetaConversionAdapter.instance.trackCompleteRegistration(
+              method: _authMethodName(origin),
+              userId: normalizedUserId.isEmpty ? null : normalizedUserId,
+            ),
+          );
         }
       }
 
@@ -166,12 +176,14 @@ class PostAuthCoordinator {
             provisionedWallet = await _ensureWalletProvisioned(
               context: context,
               securityGateProvider: securityGateProvider,
-              existingWallet:
-                  normalizedWallet.isEmpty ? expectedWallet : normalizedWallet,
+              existingWallet: normalizedWallet.isEmpty
+                  ? expectedWallet
+                  : normalizedWallet,
             );
           } catch (e) {
             AppConfig.debugPrint(
-                'PostAuthCoordinator: wallet provisioning failed: $e');
+              'PostAuthCoordinator: wallet provisioning failed: $e',
+            );
           }
         }
 
@@ -197,7 +209,8 @@ class PostAuthCoordinator {
           if (!context.mounted) {
             return const PostAuthResult(completed: false);
           }
-          final shouldSyncBackendWallet = isGoogleAuth &&
+          final shouldSyncBackendWallet =
+              isGoogleAuth &&
               expectedWallet.isNotEmpty &&
               resolvedWallet.isNotEmpty &&
               !WalletUtils.equals(expectedWallet, resolvedWallet);
@@ -242,7 +255,8 @@ class PostAuthCoordinator {
         final wallet = normalizedWallet.isNotEmpty
             ? normalizedWallet
             : (walletProvider.currentWalletAddress ?? '').trim();
-        final shouldRequireBackup = requiresWalletBackup ||
+        final shouldRequireBackup =
+            requiresWalletBackup ||
             (AuthOnboardingService.payloadIndicatesNewAccount(payload) &&
                 wallet.isNotEmpty);
         if (shouldRequireBackup &&
@@ -265,13 +279,13 @@ class PostAuthCoordinator {
       var walletForProfile = accountAuthWithoutWallet
           ? ''
           : (normalizedWallet.isNotEmpty
-              ? normalizedWallet
-              : (walletProvider.currentWalletAddress ?? '').trim());
+                ? normalizedWallet
+                : (walletProvider.currentWalletAddress ?? '').trim());
       if (isAccountAuth) {
         try {
-          await profileProvider
-              .loadAuthenticatedProfile()
-              .timeout(const Duration(seconds: 5));
+          await profileProvider.loadAuthenticatedProfile().timeout(
+            const Duration(seconds: 5),
+          );
           final hydratedWallet =
               (profileProvider.currentUser?.walletAddress ?? '').trim();
           if (hydratedWallet.isNotEmpty) {
@@ -305,10 +319,10 @@ class PostAuthCoordinator {
         if (walletForSecurity.isNotEmpty) {
           final securityOk = await const PostAuthSecuritySetupService()
               .ensurePostAuthSecuritySetup(
-            navigator: navigator,
-            walletProvider: walletProvider,
-            securityGateProvider: securityGateProvider,
-          );
+                navigator: navigator,
+                walletProvider: walletProvider,
+                securityGateProvider: securityGateProvider,
+              );
           if (!context.mounted || !securityOk) {
             return const PostAuthResult(
               completed: false,
@@ -351,30 +365,31 @@ class PostAuthCoordinator {
       }
 
       setStage(PostAuthStage.checkingOnboarding);
-      final routeResult =
-          await const AuthRedirectController().resolvePostAuthRedirect(
-        prefs: prefs,
-        payload: payload,
-        hasHydratedProfile: profileProvider.hasHydratedProfile,
-        requiresWalletBackup: requiresWalletBackup,
-        // Account-auth sessions without a wallet always enter the dedicated
-        // WalletSetup step; wallet-origin sessions already have one.
-        requiresWalletSetup: !modalReauth &&
-            (payloadRequiresWalletSetup || isAccountAuth) &&
-            walletForProfile.isEmpty,
-        walletAddress: walletForProfile.isEmpty ? null : walletForProfile,
-        userId: normalizedUserId.isEmpty ? null : normalizedUserId,
-        // A restored intent means the visitor returns to the exact entity that
-        // triggered signup, not to a generic shell.
-        redirectRoute: hasPendingAction
-            ? (pendingActionProvider?.pending?.returnRoute ?? redirectRoute)
-            : redirectRoute,
-        redirectArguments: redirectArguments,
-        heuristicNextStepId: profileProvider.nextStructuredOnboardingStepId,
-        persona: profileProvider.userPersona?.storageValue,
-        origin: origin,
-        minimalAccount: hasPendingAction,
-      );
+      final routeResult = await const AuthRedirectController()
+          .resolvePostAuthRedirect(
+            prefs: prefs,
+            payload: payload,
+            hasHydratedProfile: profileProvider.hasHydratedProfile,
+            requiresWalletBackup: requiresWalletBackup,
+            // Account-auth sessions without a wallet always enter the dedicated
+            // WalletSetup step; wallet-origin sessions already have one.
+            requiresWalletSetup:
+                !modalReauth &&
+                (payloadRequiresWalletSetup || isAccountAuth) &&
+                walletForProfile.isEmpty,
+            walletAddress: walletForProfile.isEmpty ? null : walletForProfile,
+            userId: normalizedUserId.isEmpty ? null : normalizedUserId,
+            // A restored intent means the visitor returns to the exact entity that
+            // triggered signup, not to a generic shell.
+            redirectRoute: hasPendingAction
+                ? (pendingActionProvider?.pending?.returnRoute ?? redirectRoute)
+                : redirectRoute,
+            redirectArguments: redirectArguments,
+            heuristicNextStepId: profileProvider.nextStructuredOnboardingStepId,
+            persona: profileProvider.userPersona?.storageValue,
+            origin: origin,
+            minimalAccount: hasPendingAction && isNewAccount,
+          );
 
       setStage(PostAuthStage.openingWorkspace);
       return PostAuthResult(
@@ -393,12 +408,12 @@ class PostAuthCoordinator {
 
   /// Stable auth-method label for funnel reporting.
   String _authMethodName(AuthOrigin origin) => switch (origin) {
-        AuthOrigin.google || AuthOrigin.googleOnboarding => 'google',
-        AuthOrigin.emailPassword => 'email',
-        AuthOrigin.passkey => 'passkey',
-        AuthOrigin.wallet => 'wallet',
-        AuthOrigin.restoredSession => 'restored_session',
-      };
+    AuthOrigin.google || AuthOrigin.googleOnboarding => 'google',
+    AuthOrigin.emailPassword => 'email',
+    AuthOrigin.passkey => 'passkey',
+    AuthOrigin.wallet => 'wallet',
+    AuthOrigin.restoredSession => 'restored_session',
+  };
 
   Map<String, dynamic>? _mapOrNull(Object? value) {
     if (value is Map<String, dynamic>) return value;
@@ -477,14 +492,15 @@ class PostAuthCoordinator {
               .timeout(walletConnectTimeout);
         } catch (e) {
           AppConfig.debugPrint(
-              'PostAuthCoordinator: setReadOnlyWalletIdentity failed: $e');
+            'PostAuthCoordinator: setReadOnlyWalletIdentity failed: $e',
+          );
         }
       }
 
       if (walletProvider.isReadOnlySession) {
         try {
-          final managedEligible =
-              await walletProvider.isManagedReconnectEligible();
+          final managedEligible = await walletProvider
+              .isManagedReconnectEligible();
           if (managedEligible) {
             await walletProvider
                 .recoverManagedWalletSession(
@@ -495,7 +511,8 @@ class PostAuthCoordinator {
           }
         } catch (e) {
           AppConfig.debugPrint(
-              'PostAuthCoordinator: managed reconnect after auth failed: $e');
+            'PostAuthCoordinator: managed reconnect after auth failed: $e',
+          );
         }
       }
 
@@ -513,12 +530,12 @@ class PostAuthCoordinator {
       try {
         result = await const WalletRecoveryFlowService()
             .recoverSignerForAccountWallet(
-          context: context,
-          walletAddress: targetWallet,
-          walletProvider: walletProvider,
-          securityGateProvider: securityGateProvider,
-          origin: WalletRecoveryOrigin.postAuth,
-        );
+              context: context,
+              walletAddress: targetWallet,
+              walletProvider: walletProvider,
+              securityGateProvider: securityGateProvider,
+              origin: WalletRecoveryOrigin.postAuth,
+            );
       } catch (e) {
         AppConfig.debugPrint(
           'PostAuthCoordinator: wallet recovery flow failed: $e',
@@ -530,8 +547,8 @@ class PostAuthCoordinator {
         );
       }
       if (result.restored) {
-        final restoredWallet =
-            (walletProvider.currentWalletAddress ?? '').trim();
+        final restoredWallet = (walletProvider.currentWalletAddress ?? '')
+            .trim();
         if (walletProvider.hasSigner &&
             WalletUtils.equals(restoredWallet, targetWallet)) {
           return targetWallet;
@@ -552,10 +569,7 @@ class PostAuthCoordinator {
   }) async {
     try {
       await const AppBootstrapService()
-          .warmUp(
-            context: context,
-            walletAddress: walletAddress,
-          )
+          .warmUp(context: context, walletAddress: walletAddress)
           .timeout(const Duration(seconds: 8));
     } catch (e) {
       AppConfig.debugPrint('PostAuthCoordinator: bootstrap warm-up failed: $e');
