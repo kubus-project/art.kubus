@@ -275,6 +275,36 @@ void main() {
     await tester.pumpAndSettle();
   });
 
+  testWidgets('non-replayable comments retain their contextual copy',
+      (tester) async {
+    final pendingActions = PendingActionProvider();
+
+    await tester.pumpWidget(_harness(
+      pendingActions: pendingActions,
+      child: Builder(
+        builder: (context) => TextButton(
+          onPressed: () => const ContextualAuthGate().ensureAuthenticated(
+            context,
+            actionLabel: 'comments',
+            returnRoute: '/a/art-1',
+            actionType: PendingActionType.comment,
+          ),
+          child: const Text('comment'),
+        ),
+      ),
+    ));
+
+    await tester.tap(find.text('comment'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Join this discussion'), findsOneWidget);
+    expect(pendingActions.pending, isNull);
+    expect(await const PendingActionService().read(), isNull);
+
+    await tester.tap(find.text('Not now'));
+    await tester.pumpAndSettle();
+  });
+
   testWidgets('an authenticated visitor is never gated', (tester) async {
     BackendApiService().setAuthTokenForTesting('token');
     addTearDown(() => BackendApiService().setAuthTokenForTesting(null));
