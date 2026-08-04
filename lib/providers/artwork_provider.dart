@@ -27,6 +27,8 @@ class ArtworkProvider extends ChangeNotifier {
   final ArtworkBackendApi _backendApi;
   final Map<String, Future<Artwork>> _inFlightArtworkFetches =
       <String, Future<Artwork>>{};
+  final Map<String, int> _artworkCacheRevisionsById = <String, int>{};
+  int _artworkCacheRevision = 0;
   Future<void>? _inFlightLoadArtworks;
   DateTime? _lastArtworksLoadAt;
   static const Duration _artworksFreshWindow = Duration(seconds: 60);
@@ -196,14 +198,19 @@ class ArtworkProvider extends ChangeNotifier {
   /// Add or update artwork
   void addOrUpdateArtwork(Artwork artwork) {
     final nextArtwork = _mergeSavedBookmarkState(artwork);
+    _upsertArtwork(nextArtwork);
+    _artworkCacheRevisionsById[nextArtwork.id] = ++_artworkCacheRevision;
+    notifyListeners();
+  }
+
+  void _upsertArtwork(Artwork artwork) {
     final index = _artworks.indexWhere((a) => a.id == artwork.id);
     if (index >= 0) {
-      _artworks[index] = nextArtwork;
+      _artworks[index] = artwork;
     } else {
-      _artworks.add(nextArtwork);
+      _artworks.add(artwork);
     }
-    _artworkById[nextArtwork.id] = nextArtwork;
-    notifyListeners();
+    _artworkById[artwork.id] = artwork;
   }
 
   void _invalidateShowcaseForArtwork(Artwork artwork) {
@@ -826,18 +833,37 @@ class ArtworkProvider extends ChangeNotifier {
     _setLoading('load_artworks', true);
 
     try {
+      // A deep link can finish its individual artwork request while this
+      // startup list request is in flight. Keep entries written after the list
+      // began, otherwise the list's fixed first page can erase that detail
+      // record before its screen reads it.
+      final cacheRevisionAtRequestStart = _artworkCacheRevision;
       if (refresh) {
         _walletsWithPrivateArtworks.clear();
         _walletsWithPublicArtworks.clear();
       }
       final artworks = await _backendApi.getArtworks(limit: 100);
       final merged = artworks.map(_mergeSavedBookmarkState).toList();
+      final lateDetailWrites = _artworkById.entries
+          .where(
+            (entry) =>
+                (_artworkCacheRevisionsById[entry.key] ?? 0) >
+                cacheRevisionAtRequestStart,
+          )
+          .map((entry) => _mergeSavedBookmarkState(entry.value))
+          .toList(growable: false);
       _artworks
         ..clear()
         ..addAll(merged);
       _artworkById
         ..clear()
         ..addEntries(merged.map((a) => MapEntry(a.id, a)));
+      for (final artwork in lateDetailWrites) {
+        _upsertArtwork(artwork);
+      }
+      _artworkCacheRevisionsById.removeWhere(
+        (artworkId, _) => !_artworkById.containsKey(artworkId),
+      );
       _comments.clear();
       _lastArtworksLoadAt = DateTime.now();
 
