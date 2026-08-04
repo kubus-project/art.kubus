@@ -27,8 +27,10 @@ class ArtworkProvider extends ChangeNotifier {
   final ArtworkBackendApi _backendApi;
   final Map<String, Future<Artwork>> _inFlightArtworkFetches =
       <String, Future<Artwork>>{};
-  final Map<String, int> _artworkCacheRevisionsById = <String, int>{};
-  int _artworkCacheRevision = 0;
+  // Individual detail requests may return artwork outside the first page used
+  // by the startup list. Keep those records available for the provider's
+  // lifetime instead of treating an omitted first-page row as a deletion.
+  final Set<String> _supplementalArtworkIds = <String>{};
   Future<void>? _inFlightLoadArtworks;
   DateTime? _lastArtworksLoadAt;
   static const Duration _artworksFreshWindow = Duration(seconds: 60);
@@ -56,11 +58,13 @@ class ArtworkProvider extends ChangeNotifier {
 
   /// Ensure artwork exists locally by fetching from backend if needed
   Future<Artwork?> fetchArtworkIfNeeded(String artworkId) async {
-    final existing = getArtworkById(artworkId);
-    if (existing != null) return existing;
-
     final key = artworkId.trim();
     if (key.isEmpty) return null;
+    final existing = getArtworkById(key);
+    if (existing != null) {
+      _supplementalArtworkIds.add(key);
+      return existing;
+    }
     final inflight = _inFlightArtworkFetches[key];
     if (inflight != null) {
       return inflight;
@@ -68,7 +72,7 @@ class ArtworkProvider extends ChangeNotifier {
 
     try {
       final future = _backendApi.getArtwork(key).then((fetched) {
-        addOrUpdateArtwork(fetched);
+        addOrUpdateArtwork(fetched, retainWhenListRefresh: true);
         return fetched;
       });
       _inFlightArtworkFetches[key] = future;
@@ -102,13 +106,8 @@ class ArtworkProvider extends ChangeNotifier {
       for (final artwork in fetched) {
         if (!wanted.contains(artwork.id)) continue;
         final merged = _mergeSavedBookmarkState(artwork);
-        final index = _artworks.indexWhere((a) => a.id == merged.id);
-        if (index >= 0) {
-          _artworks[index] = merged;
-        } else {
-          _artworks.add(merged);
-        }
-        _artworkById[merged.id] = merged;
+        _upsertArtwork(merged);
+        _supplementalArtworkIds.add(merged.id);
         updated = true;
       }
       if (updated) notifyListeners();
@@ -131,7 +130,7 @@ class ArtworkProvider extends ChangeNotifier {
     _setLoading(operation, true);
     try {
       final fetched = await _backendApi.getArtwork(key);
-      addOrUpdateArtwork(fetched);
+      addOrUpdateArtwork(fetched, retainWhenListRefresh: true);
       return fetched;
     } catch (e) {
       if (kDebugMode) {
@@ -196,10 +195,15 @@ class ArtworkProvider extends ChangeNotifier {
   }
 
   /// Add or update artwork
-  void addOrUpdateArtwork(Artwork artwork) {
+  void addOrUpdateArtwork(
+    Artwork artwork, {
+    bool retainWhenListRefresh = false,
+  }) {
     final nextArtwork = _mergeSavedBookmarkState(artwork);
     _upsertArtwork(nextArtwork);
-    _artworkCacheRevisionsById[nextArtwork.id] = ++_artworkCacheRevision;
+    if (retainWhenListRefresh) {
+      _supplementalArtworkIds.add(nextArtwork.id);
+    }
     notifyListeners();
   }
 
@@ -833,24 +837,18 @@ class ArtworkProvider extends ChangeNotifier {
     _setLoading('load_artworks', true);
 
     try {
-      // A deep link can finish its individual artwork request while this
-      // startup list request is in flight. Keep entries written after the list
-      // began, otherwise the list's fixed first page can erase that detail
-      // record before its screen reads it.
-      final cacheRevisionAtRequestStart = _artworkCacheRevision;
       if (refresh) {
         _walletsWithPrivateArtworks.clear();
         _walletsWithPublicArtworks.clear();
       }
       final artworks = await _backendApi.getArtworks(limit: 100);
       final merged = artworks.map(_mergeSavedBookmarkState).toList();
-      final lateDetailWrites = _artworkById.entries
-          .where(
-            (entry) =>
-                (_artworkCacheRevisionsById[entry.key] ?? 0) >
-                cacheRevisionAtRequestStart,
-          )
-          .map((entry) => _mergeSavedBookmarkState(entry.value))
+      final listedArtworkIds = merged.map((artwork) => artwork.id).toSet();
+      final supplementalArtworks = _supplementalArtworkIds
+          .where((artworkId) => !listedArtworkIds.contains(artworkId))
+          .map((artworkId) => _artworkById[artworkId])
+          .whereType<Artwork>()
+          .map(_mergeSavedBookmarkState)
           .toList(growable: false);
       _artworks
         ..clear()
@@ -858,11 +856,11 @@ class ArtworkProvider extends ChangeNotifier {
       _artworkById
         ..clear()
         ..addEntries(merged.map((a) => MapEntry(a.id, a)));
-      for (final artwork in lateDetailWrites) {
+      for (final artwork in supplementalArtworks) {
         _upsertArtwork(artwork);
       }
-      _artworkCacheRevisionsById.removeWhere(
-        (artworkId, _) => !_artworkById.containsKey(artworkId),
+      _supplementalArtworkIds.removeWhere(
+        (artworkId) => !_artworkById.containsKey(artworkId),
       );
       _comments.clear();
       _lastArtworksLoadAt = DateTime.now();

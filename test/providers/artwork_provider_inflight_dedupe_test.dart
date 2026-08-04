@@ -154,6 +154,29 @@ void main() {
       containsAll(<String>['deep-link-artwork', 'homepage-artwork']),
     );
   });
+
+  test('ArtworkProvider retains a deep-link detail fetched before list startup',
+      () async {
+    final api = _FakeArtworkApi()
+      ..completer = Completer<Artwork>()
+      ..artworksCompleter = Completer<List<Artwork>>();
+    final provider = ArtworkProvider(backendApi: api);
+
+    final detailLoad = provider.fetchArtworkIfNeeded('deep-link-artwork');
+    api.completer!.complete(_artwork('deep-link-artwork'));
+    await detailLoad;
+
+    final listLoad = provider.loadArtworks(refresh: true);
+    api.artworksCompleter!.complete(<Artwork>[_artwork('homepage-artwork')]);
+    await listLoad;
+
+    expect(
+        provider.getArtworkById('deep-link-artwork')?.id, 'deep-link-artwork');
+    expect(
+      provider.artworks.map((artwork) => artwork.id),
+      containsAll(<String>['deep-link-artwork', 'homepage-artwork']),
+    );
+  });
 }
 
 Artwork _artwork(String id) {
