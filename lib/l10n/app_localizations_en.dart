@@ -370,14 +370,124 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonContinue => 'Continue';
 
   @override
-  String contextualAuthTitle(String action) {
-    return 'Sign-in required for $action';
+  String get activationGateSaveArtworkTitle =>
+      'Save this artwork to your collection';
+
+  @override
+  String get activationGateSaveEventTitle =>
+      'Save this event to your collection';
+
+  @override
+  String get activationGateSaveExhibitionTitle =>
+      'Add this place to your collection';
+
+  @override
+  String get activationGateSavePostTitle => 'Save this post to your collection';
+
+  @override
+  String get activationGateLikeArtworkTitle => 'Like this artwork';
+
+  @override
+  String get activationGateFollowTitle => 'Follow this artist';
+
+  @override
+  String get activationGateCommentTitle => 'Join this discussion';
+
+  @override
+  String get activationGateContributeTitle =>
+      'Contribute to the public art map';
+
+  @override
+  String activationGateGenericTitle(String action) {
+    return 'Create a free account to $action';
   }
 
   @override
-  String contextualAuthBody(String action) {
-    return 'You can keep viewing this public content without an account. Sign in to continue with $action.';
-  }
+  String get activationGateBody =>
+      'Create a free account to save artworks, follow artists and return to places you want to visit.';
+
+  @override
+  String get activationGateKeepBrowsingHint =>
+      'The public map stays open — an account only adds your own collection.';
+
+  @override
+  String get activationGateContinueWithGoogle => 'Continue with Google';
+
+  @override
+  String get activationGateContinueWithEmail => 'Continue with email';
+
+  @override
+  String get activationGateNotNow => 'Not now';
+
+  @override
+  String get activationGateHaveAccount => 'Already have an account? Sign in';
+
+  @override
+  String get activationConfirmHeading => 'You\'re all set';
+
+  @override
+  String get activationConfirmSaveArtwork => 'Save this artwork?';
+
+  @override
+  String get activationConfirmSaveEvent => 'Save this event?';
+
+  @override
+  String get activationConfirmSaveExhibition => 'Save this place?';
+
+  @override
+  String get activationConfirmSavePost => 'Save this post?';
+
+  @override
+  String get activationConfirmLikeArtwork => 'Like this artwork?';
+
+  @override
+  String get activationConfirmFollow => 'Follow this artist?';
+
+  @override
+  String get activationConfirmComment => 'Write your comment?';
+
+  @override
+  String get activationConfirmContribute => 'Continue your contribution?';
+
+  @override
+  String get activationConfirmLikeCta => 'Like';
+
+  @override
+  String get activationConfirmContinueCta => 'Continue';
+
+  @override
+  String get activationActionSavedToast => 'Saved to your collection';
+
+  @override
+  String get activationActionLikedToast => 'Liked';
+
+  @override
+  String get activationActionFollowedToast => 'Following';
+
+  @override
+  String get activationActionTargetUnavailableToast =>
+      'This is no longer available. It may have been removed or made private.';
+
+  @override
+  String get activationActionUnauthorizedToast =>
+      'You don\'t have permission to do that.';
+
+  @override
+  String get activationActionFailedToast =>
+      'That didn\'t work. Please try again.';
+
+  @override
+  String get activationPromptTitle => 'Build your own art map';
+
+  @override
+  String get activationPromptBody =>
+      'Save artworks, follow local artists and return to places you want to visit.';
+
+  @override
+  String get activationPromptCta => 'Create a free account';
+
+  @override
+  String get activationPromptDismiss => 'Dismiss';
 
   @override
   String get commonOr => 'or';

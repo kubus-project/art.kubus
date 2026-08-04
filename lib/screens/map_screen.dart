@@ -59,7 +59,6 @@ import '../models/exhibition.dart';
 import '../widgets/map_marker_style_config.dart';
 import '../utils/app_animations.dart';
 import '../utils/artwork_navigation.dart';
-import '../utils/grid_utils.dart';
 import '../utils/design_tokens.dart';
 
 import '../utils/app_color_utils.dart';
@@ -93,6 +92,7 @@ import '../features/map/navigation/walking_navigation_map_coordinator.dart';
 import '../features/map/map_layers_manager.dart';
 import '../features/map/map_overlay_stack.dart';
 import '../features/map/controller/kubus_map_controller.dart';
+import '../features/map/controller/kubus_map_marker_creation_coordinator.dart';
 import '../features/map/controller/map_marker_linked_subject_coordinator.dart';
 import '../features/map/controller/map_target_coordinator.dart';
 import '../features/map/engine/kubus_map_marker_sync_engine.dart';
@@ -134,6 +134,7 @@ import 'map_core/marker_visual_sync_coordinator.dart';
 import 'map_core/map_data_coordinator.dart';
 import 'map_core/map_ui_state_coordinator.dart';
 import 'map_core/map_marker_render_coordinator.dart';
+import '../widgets/map/kubus_activation_prompt_card.dart';
 
 enum _MarkerSocketScope { inScope, outOfScope, unknown }
 
@@ -317,6 +318,10 @@ class _MapScreenState extends State<MapScreen>
   // AR Integration
   final ARIntegrationService _arIntegrationService = ARIntegrationService();
   final MapMarkerService _mapMarkerService = MapMarkerService();
+  late final KubusMapMarkerCreationCoordinator _markerCreationCoordinator =
+      KubusMapMarkerCreationCoordinator(
+    mapMarkerService: _mapMarkerService,
+  );
   final PushNotificationService _pushNotificationService =
       PushNotificationService();
   List<ArtMarker> _artMarkers = [];
@@ -3172,218 +3177,46 @@ class _MapScreenState extends State<MapScreen>
 
   Future<bool> _createMarkerAtPosition(
       LatLng position, MapMarkerFormResult form) async {
-    Artwork? createdStreetArtArtwork;
-    var markerPersistenceAttempted = false;
-    try {
-      final l10n = AppLocalizations.of(context)!;
-      final exhibitionsProvider = context.read<ExhibitionsProvider>();
-      final artworkProvider = context.read<ArtworkProvider>();
-      final markerManagementProvider = context.read<MarkerManagementProvider>();
-      final walletAddress = context.read<WalletProvider>().currentWalletAddress;
-      final tileProviders = Provider.of<TileProviders?>(context, listen: false);
-      String? coverImageUrl;
-      if (KubusMapMarkerCreationHelpers.shouldUploadStreetArtCover(
-        markerType: form.markerType,
-        subjectType: form.subjectType,
-        coverImageBytes: form.coverImageBytes,
-      )) {
-        coverImageUrl =
-            await KubusMapMarkerCreationHelpers.uploadStreetArtCover(
-          fileBytes: form.coverImageBytes!,
-          fileName: form.coverImageFileName,
-          fileType: form.coverImageFileType,
-          walletAddress: walletAddress,
-          source: 'map_screen_create_marker',
-          debugLabel: 'MapScreen',
-        );
-        if (coverImageUrl == null) return false;
-      }
-
-      // Snap to the nearest grid cell center at the current zoom level
-      // We use the current camera zoom to determine which grid level is most relevant
-      final double currentZoom = _lastZoom;
-      final requestedPosition = form.positionOverride ?? position;
-      final gridCell =
-          GridUtils.gridCellForZoom(requestedPosition, currentZoom);
-      // Snap to the grid level that is closest to the current zoom
-      // This ensures we snap to the grid lines the user is likely seeing
-      final LatLng snappedPosition = tileProviders?.snapToVisibleGrid(
-            requestedPosition,
-            currentZoom,
-          ) ??
-          gridCell.center;
-
-      final resolvedCategory = form.category.isNotEmpty
-          ? form.category
-          : form.subject?.type.defaultCategory ??
-              form.subjectType.defaultCategory;
-      var linkedArtwork = form.linkedArtwork;
-      if (KubusMapMarkerCreationHelpers.shouldCreateStreetArtArtwork(
-        markerType: form.markerType,
-        subjectType: form.subjectType,
-        linkedArtwork: linkedArtwork,
-      )) {
-        final normalizedWallet = (walletAddress ?? '').trim();
-        final normalizedAuthor = (form.imageAuthor ?? '').trim();
-        final normalizedLicense = (form.imageLicense ?? '').trim();
-        if (coverImageUrl == null || coverImageUrl.isEmpty) {
-          throw StateError(l10n.mapMarkerCreateFailedToast);
-        }
-        if (normalizedWallet.isEmpty) {
-          throw StateError(l10n.mapMarkerCreateWalletRequired);
-        }
-        if (normalizedAuthor.isEmpty) {
-          throw StateError(l10n.mapMarkerDialogImageAuthorRequiredError);
-        }
-        if (normalizedLicense.isEmpty) {
-          throw StateError(l10n.mapMarkerDialogImageLicenseRequiredError);
-        }
-        createdStreetArtArtwork =
-            await KubusMapMarkerCreationHelpers.createStreetArtArtwork(
-          title: form.title,
-          description: form.description,
-          coverImageUrl: coverImageUrl,
-          walletAddress: normalizedWallet,
-          category: resolvedCategory,
-          position: snappedPosition,
-          isPublic: form.isPublic,
-          artistName: form.artistName,
-          imageAuthor: normalizedAuthor,
-          imageLicense: normalizedLicense,
-        );
-        linkedArtwork = createdStreetArtArtwork;
-      }
-      markerPersistenceAttempted = true;
-      final marker = await _mapMarkerService.createMarker(
-        location: snappedPosition,
-        title: form.title,
-        description: form.description,
-        type: form.markerType,
-        category: resolvedCategory,
-        artworkId: linkedArtwork?.id,
-        modelCID: linkedArtwork?.model3DCID,
-        modelURL: linkedArtwork?.model3DURL,
-        isPublic: form.isPublic,
-        metadata: {
-          'snapZoom': currentZoom,
-          'gridAnchor': gridCell.anchorKey,
-          'gridLevel': gridCell.gridLevel,
-          'gridIndices': {
-            'u': gridCell.uIndex,
-            'v': gridCell.vIndex,
-          },
-          'createdFrom': 'map_screen',
-          'subjectType': form.subjectType.name,
-          'subjectLabel': form.subjectType.label,
-          if (form.subject != null) ...{
-            'subjectId': form.subject!.id,
-            'subjectTitle': form.subject!.title,
-            'subjectSubtitle': form.subject!.subtitle,
-          },
-          if (linkedArtwork != null) ...{
-            'linkedArtworkId': linkedArtwork.id,
-            'linkedArtworkTitle': linkedArtwork.title,
-          },
-          if (coverImageUrl != null && coverImageUrl.isNotEmpty)
-            'coverImageUrl': coverImageUrl,
-          // Attribution (shown in the marker info card below the description).
-          if ((form.artistName ?? '').isNotEmpty) 'artistName': form.artistName,
-          if ((form.imageAuthor ?? '').isNotEmpty)
-            'imageAuthor': form.imageAuthor,
-          if ((form.imageLicense ?? '').isNotEmpty)
-            'imageLicense': form.imageLicense,
-          if ((form.imageAuthor ?? '').isNotEmpty ||
-              (form.imageLicense ?? '').isNotEmpty)
-            'coverImageAttribution': [
-              if ((form.imageAuthor ?? '').isNotEmpty) form.imageAuthor,
-              if ((form.imageLicense ?? '').isNotEmpty) form.imageLicense,
-            ].join(' / '),
-          if (form.isCommunity) ...{
-            'isCommunity': true,
-            'community': 'community',
-          },
-          'visibility': form.isPublic ? 'public' : 'private',
-          if (form.subject?.metadata != null) ...form.subject!.metadata!,
-        },
-      );
-
-      if (marker != null) {
-        final persistedStreetArtArtwork = createdStreetArtArtwork;
-        // The marker now owns this artwork relationship. Do not roll the
-        // artwork back if a later, non-persistence UI update fails.
-        createdStreetArtArtwork = null;
-        AppConfig.debugPrint(
-            'MapScreen: marker created and saved: ${marker.id}');
-
-        // Keep the management surface in sync even when markers are created
-        // outside of ManageMarkersScreen.
-        markerManagementProvider.ingestMarker(marker);
-        if (persistedStreetArtArtwork != null) {
-          artworkProvider.addOrUpdateArtwork(persistedStreetArtArtwork);
-        }
-
-        if (form.subjectType == MarkerSubjectType.exhibition) {
-          final exhibitionId = (form.subject?.id ?? '').trim();
-          if (exhibitionId.isNotEmpty) {
-            try {
-              await exhibitionsProvider
-                  .linkExhibitionMarkers(exhibitionId, [marker.id]);
-            } catch (_) {
-              // Non-fatal: endpoint may be disabled or user may not have permissions.
-            }
-
-            final linkedArtworkId = (linkedArtwork?.id ?? '').trim();
-            if (linkedArtworkId.isNotEmpty) {
-              try {
-                await exhibitionsProvider
-                    .linkExhibitionArtworks(exhibitionId, [linkedArtworkId]);
-              } catch (_) {
-                // Non-fatal.
-              }
-            }
-          }
-        }
-
-        if (!mounted) return false;
-        // Update local markers list
-        setState(() {
-          _artMarkers.add(marker);
-        });
-        _applyVisibleMarkers();
-        return true;
-      } else {
-        await KubusMapMarkerCreationHelpers.rollbackStreetArtArtwork(
-          createdStreetArtArtwork,
-          markerPersistenceAttempted: markerPersistenceAttempted,
-        );
-        AppConfig.debugPrint(
-            'MapScreen: failed to create marker (returned null)');
-      }
-
-      return false;
-    } on StateError catch (e) {
-      await KubusMapMarkerCreationHelpers.rollbackStreetArtArtwork(
-        createdStreetArtArtwork,
-        markerPersistenceAttempted: markerPersistenceAttempted,
-      );
-      if (mounted) {
+    final l10n = AppLocalizations.of(context)!;
+    final exhibitionsProvider = context.read<ExhibitionsProvider>();
+    final artworkProvider = context.read<ArtworkProvider>();
+    final markerManagementProvider = context.read<MarkerManagementProvider>();
+    final walletAddress = context.read<WalletProvider>().currentWalletAddress;
+    final tileProviders = Provider.of<TileProviders?>(context, listen: false);
+    final outcome = await _markerCreationCoordinator.createMarker(
+      position: position,
+      currentZoom: _lastZoom,
+      form: form,
+      walletAddress: walletAddress,
+      messages: KubusMapMarkerCreationMessages.fromLocalizations(l10n),
+      ingestMarker: markerManagementProvider.ingestMarker,
+      upsertArtwork: artworkProvider.addOrUpdateArtwork,
+      linkExhibitionMarkers: exhibitionsProvider.linkExhibitionMarkers,
+      linkExhibitionArtworks: exhibitionsProvider.linkExhibitionArtworks,
+      snapToVisibleGrid: tileProviders?.snapToVisibleGrid,
+    );
+    final marker = outcome.marker;
+    if (marker == null) {
+      final error = outcome.error;
+      if (error is StateError && mounted) {
         final messenger = ScaffoldMessenger.of(context);
         messenger.showKubusSnackBar(
-          SnackBar(content: Text(e.message)),
+          SnackBar(content: Text(error.message)),
           tone: KubusSnackBarTone.error,
         );
       }
-      AppConfig.debugPrint('MapScreen: marker creation rejected: $e');
-      return false;
-    } catch (e) {
-      await KubusMapMarkerCreationHelpers.rollbackStreetArtArtwork(
-        createdStreetArtArtwork,
-        markerPersistenceAttempted: markerPersistenceAttempted,
-      );
       AppConfig.debugPrint(
-          'MapScreen: Error creating marker at current location: $e');
+        'MapScreen: marker creation failed${error == null ? '' : ': $error'}',
+      );
       return false;
     }
+
+    if (!mounted) return false;
+    setState(() {
+      _artMarkers.add(marker);
+    });
+    _applyVisibleMarkers();
+    return true;
   }
 
   /// Returns the bounded outcome of the location request.
@@ -4088,6 +3921,18 @@ class _MapScreenState extends State<MapScreen>
                       ),
                     if (!_isWalkingFocusedMode)
                       _buildTopOverlays(theme, themeProvider, taskProvider),
+                    // Engagement prompt. Only in the plain browse state, and
+                    // seated above the Nearby peek and the map attribution
+                    // (attributionBottomMargin already accounts for both), so
+                    // it never covers map chrome or credit.
+                    if (!_isWalkingFocusedMode &&
+                        ui.contextSurface == MapContextSurface.none)
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: attributionBottomMargin + KubusSpacing.md,
+                        child: const KubusActivationPromptCard(),
+                      ),
                     if (ui.contextSurface == MapContextSurface.markerPreview)
                       _buildMarkerOverlay(themeProvider, ui.markerSelection),
                     // Walking navigation owns foreground camera/UI priority.

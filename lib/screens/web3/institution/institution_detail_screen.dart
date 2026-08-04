@@ -14,6 +14,7 @@ import '../../../widgets/empty_state_card.dart';
 import '../../../widgets/glass_components.dart';
 import '../../../widgets/inline_loading.dart';
 import '../../events/event_detail_screen.dart';
+import '../../../providers/activation_prompt_provider.dart';
 
 class InstitutionDetailScreen extends StatefulWidget {
   const InstitutionDetailScreen({
@@ -45,6 +46,8 @@ class _InstitutionDetailScreenState extends State<InstitutionDetailScreen> {
       _loadInstitution();
       unawaited(
           TelemetryService().trackInstitutionViewed(widget.institutionId));
+      if (!mounted) return;
+      ActivationPromptProvider.recordEntityViewFor(context);
     });
   }
 

@@ -27,6 +27,10 @@ class ArtworkProvider extends ChangeNotifier {
   final ArtworkBackendApi _backendApi;
   final Map<String, Future<Artwork>> _inFlightArtworkFetches =
       <String, Future<Artwork>>{};
+  // Individual detail requests may return artwork outside the first page used
+  // by the startup list. Keep those records available for the provider's
+  // lifetime instead of treating an omitted first-page row as a deletion.
+  final Set<String> _supplementalArtworkIds = <String>{};
   Future<void>? _inFlightLoadArtworks;
   DateTime? _lastArtworksLoadAt;
   static const Duration _artworksFreshWindow = Duration(seconds: 60);
@@ -54,11 +58,13 @@ class ArtworkProvider extends ChangeNotifier {
 
   /// Ensure artwork exists locally by fetching from backend if needed
   Future<Artwork?> fetchArtworkIfNeeded(String artworkId) async {
-    final existing = getArtworkById(artworkId);
-    if (existing != null) return existing;
-
     final key = artworkId.trim();
     if (key.isEmpty) return null;
+    final existing = getArtworkById(key);
+    if (existing != null) {
+      _supplementalArtworkIds.add(key);
+      return existing;
+    }
     final inflight = _inFlightArtworkFetches[key];
     if (inflight != null) {
       return inflight;
@@ -66,7 +72,7 @@ class ArtworkProvider extends ChangeNotifier {
 
     try {
       final future = _backendApi.getArtwork(key).then((fetched) {
-        addOrUpdateArtwork(fetched);
+        addOrUpdateArtwork(fetched, retainWhenListRefresh: true);
         return fetched;
       });
       _inFlightArtworkFetches[key] = future;
@@ -100,13 +106,8 @@ class ArtworkProvider extends ChangeNotifier {
       for (final artwork in fetched) {
         if (!wanted.contains(artwork.id)) continue;
         final merged = _mergeSavedBookmarkState(artwork);
-        final index = _artworks.indexWhere((a) => a.id == merged.id);
-        if (index >= 0) {
-          _artworks[index] = merged;
-        } else {
-          _artworks.add(merged);
-        }
-        _artworkById[merged.id] = merged;
+        _upsertArtwork(merged);
+        _supplementalArtworkIds.add(merged.id);
         updated = true;
       }
       if (updated) notifyListeners();
@@ -129,7 +130,7 @@ class ArtworkProvider extends ChangeNotifier {
     _setLoading(operation, true);
     try {
       final fetched = await _backendApi.getArtwork(key);
-      addOrUpdateArtwork(fetched);
+      addOrUpdateArtwork(fetched, retainWhenListRefresh: true);
       return fetched;
     } catch (e) {
       if (kDebugMode) {
@@ -194,16 +195,26 @@ class ArtworkProvider extends ChangeNotifier {
   }
 
   /// Add or update artwork
-  void addOrUpdateArtwork(Artwork artwork) {
+  void addOrUpdateArtwork(
+    Artwork artwork, {
+    bool retainWhenListRefresh = false,
+  }) {
     final nextArtwork = _mergeSavedBookmarkState(artwork);
+    _upsertArtwork(nextArtwork);
+    if (retainWhenListRefresh) {
+      _supplementalArtworkIds.add(nextArtwork.id);
+    }
+    notifyListeners();
+  }
+
+  void _upsertArtwork(Artwork artwork) {
     final index = _artworks.indexWhere((a) => a.id == artwork.id);
     if (index >= 0) {
-      _artworks[index] = nextArtwork;
+      _artworks[index] = artwork;
     } else {
-      _artworks.add(nextArtwork);
+      _artworks.add(artwork);
     }
-    _artworkById[nextArtwork.id] = nextArtwork;
-    notifyListeners();
+    _artworkById[artwork.id] = artwork;
   }
 
   void _invalidateShowcaseForArtwork(Artwork artwork) {
@@ -427,50 +438,64 @@ class ArtworkProvider extends ChangeNotifier {
 
   /// Like/Unlike artwork
   Future<void> toggleLike(String artworkId) async {
-    _setLoading('like_$artworkId', true);
+    final artwork = getArtworkById(artworkId);
+    if (artwork == null) return;
+    await setLiked(artworkId, !artwork.isLikedByCurrentUser);
+  }
+
+  /// Drives the like state to [liked] and reports whether it now holds.
+  ///
+  /// Idempotent by design: a replayed action (for example one a visitor
+  /// confirmed after signing up) must never flip a like the user already has.
+  Future<bool> setLiked(String artworkId, bool liked) async {
+    final id = artworkId.trim();
+    if (id.isEmpty) return false;
+
+    final artwork = getArtworkById(id);
+    if (artwork == null) return false;
+    if (artwork.isLikedByCurrentUser == liked) return true;
+
+    _setLoading('like_$id', true);
+    final original = artwork;
     try {
-      final artwork = getArtworkById(artworkId);
-      if (artwork != null) {
-        final wasLiked = artwork.isLikedByCurrentUser;
-        final original = artwork;
-        final updatedArtwork = artwork.copyWith(
-          isLikedByCurrentUser: !artwork.isLikedByCurrentUser,
-          likesCount: artwork.isLikedByCurrentUser
-              ? artwork.likesCount - 1
-              : artwork.likesCount + 1,
+      addOrUpdateArtwork(
+        artwork.copyWith(
+          isLikedByCurrentUser: liked,
+          likesCount: liked ? artwork.likesCount + 1 : artwork.likesCount - 1,
+        ),
+      );
+
+      if (liked) {
+        UserActionLogger.logArtworkLike(
+          artworkId: artwork.id,
+          artworkTitle: artwork.title,
+          artistName: artwork.artist,
         );
-        addOrUpdateArtwork(updatedArtwork);
-
-        if (!wasLiked) {
-          UserActionLogger.logArtworkLike(
-            artworkId: artwork.id,
-            artworkTitle: artwork.title,
-            artistName: artwork.artist,
-          );
-        }
-
-        // Sync with backend and reconcile count.
-        try {
-          final updatedCount = (!wasLiked)
-              ? await _backendApi.likeArtwork(artworkId)
-              : await _backendApi.unlikeArtwork(artworkId);
-
-          if (updatedCount != null) {
-            final latest = getArtworkById(artworkId);
-            if (latest != null) {
-              addOrUpdateArtwork(latest.copyWith(likesCount: updatedCount));
-            }
-          }
-        } catch (e) {
-          // Rollback optimistic state on failure.
-          addOrUpdateArtwork(original);
-          rethrow;
-        }
       }
+
+      // Sync with backend and reconcile count.
+      try {
+        final updatedCount = liked
+            ? await _backendApi.likeArtwork(id)
+            : await _backendApi.unlikeArtwork(id);
+
+        if (updatedCount != null) {
+          final latest = getArtworkById(id);
+          if (latest != null) {
+            addOrUpdateArtwork(latest.copyWith(likesCount: updatedCount));
+          }
+        }
+      } catch (e) {
+        // Rollback optimistic state on failure.
+        addOrUpdateArtwork(original);
+        rethrow;
+      }
+      return true;
     } catch (e) {
-      _setError('Failed to toggle like: $e');
+      _setError('Failed to update like: $e');
+      return false;
     } finally {
-      _setLoading('like_$artworkId', false);
+      _setLoading('like_$id', false);
     }
   }
 
@@ -478,40 +503,60 @@ class ArtworkProvider extends ChangeNotifier {
   Future<void> toggleArtworkSaved(String artworkId) async {
     final id = artworkId.trim();
     if (id.isEmpty) return;
+    final previousSaved = _savedItemsProvider?.isArtworkSaved(id) ?? false;
+    await setArtworkSavedState(id, !previousSaved);
+  }
+
+  /// Drives the bookmark state to [saved] and reports whether it now holds.
+  ///
+  /// Idempotent for the same reason as [setLiked]: confirming a pending save
+  /// must not un-save an artwork the visitor saved in the meantime.
+  Future<bool> setArtworkSavedState(String artworkId, bool saved) async {
+    final id = artworkId.trim();
+    if (id.isEmpty) return false;
+
+    final savedProvider = _savedItemsProvider;
+    if (savedProvider != null && savedProvider.isArtworkSaved(id) == saved) {
+      return true;
+    }
 
     _setLoading('save_$id', true);
-    final savedProvider = _savedItemsProvider;
     final artwork = getArtworkById(id);
-    final previousSaved = savedProvider?.isArtworkSaved(id) ?? false;
-    final nextSaved = !previousSaved;
     final nextTimestamp = DateTime.now();
 
     try {
       if (savedProvider != null) {
         await savedProvider.setArtworkSaved(
           id,
-          nextSaved,
-          timestamp: nextSaved ? nextTimestamp : null,
+          saved,
+          timestamp: saved ? nextTimestamp : null,
         );
       }
 
       if (artwork != null) {
         addOrUpdateArtwork(
           artwork.copyWith(
-            isFavoriteByCurrentUser: nextSaved,
+            isFavoriteByCurrentUser: saved,
           ),
         );
       }
 
-      if (nextSaved) {
+      if (saved) {
         UserActionLogger.logArtworkSave(
           artworkId: id,
           artworkTitle: artwork?.title ?? id,
           artistName: artwork?.artist,
         );
       }
+      return true;
+    } on SavedItemsAuthenticationRequired {
+      // Surface the reason rather than flattening it to a generic failure —
+      // callers (the pending-action executor) distinguish "not allowed" from
+      // "try again", and report different copy for each.
+      rethrow;
     } catch (e) {
-      _setError('Failed to toggle artwork saved: $e');
+      _setError('Failed to update artwork saved state: $e');
+      return false;
     } finally {
       _setLoading('save_$id', false);
     }
@@ -798,12 +843,25 @@ class ArtworkProvider extends ChangeNotifier {
       }
       final artworks = await _backendApi.getArtworks(limit: 100);
       final merged = artworks.map(_mergeSavedBookmarkState).toList();
+      final listedArtworkIds = merged.map((artwork) => artwork.id).toSet();
+      final supplementalArtworks = _supplementalArtworkIds
+          .where((artworkId) => !listedArtworkIds.contains(artworkId))
+          .map((artworkId) => _artworkById[artworkId])
+          .whereType<Artwork>()
+          .map(_mergeSavedBookmarkState)
+          .toList(growable: false);
       _artworks
         ..clear()
         ..addAll(merged);
       _artworkById
         ..clear()
         ..addEntries(merged.map((a) => MapEntry(a.id, a)));
+      for (final artwork in supplementalArtworks) {
+        _upsertArtwork(artwork);
+      }
+      _supplementalArtworkIds.removeWhere(
+        (artworkId) => !_artworkById.containsKey(artworkId),
+      );
       _comments.clear();
       _lastArtworksLoadAt = DateTime.now();
 

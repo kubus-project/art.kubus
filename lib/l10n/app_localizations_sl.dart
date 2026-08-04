@@ -374,14 +374,121 @@ class AppLocalizationsSl extends AppLocalizations {
   String get commonContinue => 'Nadaljuj';
 
   @override
-  String contextualAuthTitle(String action) {
-    return 'Za dejanje »$action« je potrebna prijava';
+  String get activationGateSaveArtworkTitle =>
+      'Shrani to umetnino v svojo zbirko';
+
+  @override
+  String get activationGateSaveEventTitle => 'Shrani ta dogodek v svojo zbirko';
+
+  @override
+  String get activationGateSaveExhibitionTitle =>
+      'Dodaj ta kraj v svojo zbirko';
+
+  @override
+  String get activationGateSavePostTitle => 'Shrani to objavo v svojo zbirko';
+
+  @override
+  String get activationGateLikeArtworkTitle => 'Všečkaj to umetnino';
+
+  @override
+  String get activationGateFollowTitle => 'Spremljaj tega umetnika';
+
+  @override
+  String get activationGateCommentTitle => 'Pridruži se pogovoru';
+
+  @override
+  String get activationGateContributeTitle =>
+      'Prispevaj k javnemu zemljevidu umetnosti';
+
+  @override
+  String activationGateGenericTitle(String action) {
+    return 'Ustvari brezplačen račun za dejanje »$action«';
   }
 
   @override
-  String contextualAuthBody(String action) {
-    return 'To javno vsebino si lahko ogleduješ brez računa. Prijavi se za nadaljevanje z dejanjem »$action«.';
-  }
+  String get activationGateBody =>
+      'Ustvari brezplačen račun, da shraniš umetnine, spremljaš umetnike in se vrneš na kraje, ki jih želiš obiskati.';
+
+  @override
+  String get activationGateKeepBrowsingHint =>
+      'Javni zemljevid ostaja odprt — račun doda le tvojo lastno zbirko.';
+
+  @override
+  String get activationGateContinueWithGoogle => 'Nadaljuj z Google';
+
+  @override
+  String get activationGateContinueWithEmail => 'Nadaljuj z e-pošto';
+
+  @override
+  String get activationGateNotNow => 'Ne zdaj';
+
+  @override
+  String get activationGateHaveAccount => 'Že imaš račun? Prijavi se';
+
+  @override
+  String get activationConfirmHeading => 'Vse je pripravljeno';
+
+  @override
+  String get activationConfirmSaveArtwork => 'Želiš shraniti to umetnino?';
+
+  @override
+  String get activationConfirmSaveEvent => 'Želiš shraniti ta dogodek?';
+
+  @override
+  String get activationConfirmSaveExhibition => 'Želiš shraniti ta kraj?';
+
+  @override
+  String get activationConfirmSavePost => 'Želiš shraniti to objavo?';
+
+  @override
+  String get activationConfirmLikeArtwork => 'Želiš všečkati to umetnino?';
+
+  @override
+  String get activationConfirmFollow => 'Želiš spremljati tega umetnika?';
+
+  @override
+  String get activationConfirmComment => 'Želiš napisati komentar?';
+
+  @override
+  String get activationConfirmContribute => 'Želiš nadaljevati svoj prispevek?';
+
+  @override
+  String get activationConfirmLikeCta => 'Všeček';
+
+  @override
+  String get activationConfirmContinueCta => 'Nadaljuj';
+
+  @override
+  String get activationActionSavedToast => 'Shranjeno v tvojo zbirko';
+
+  @override
+  String get activationActionLikedToast => 'Všečkano';
+
+  @override
+  String get activationActionFollowedToast => 'Spremljaš';
+
+  @override
+  String get activationActionTargetUnavailableToast =>
+      'To ni več na voljo. Morda je bilo odstranjeno ali skrito.';
+
+  @override
+  String get activationActionUnauthorizedToast => 'Za to nimaš dovoljenja.';
+
+  @override
+  String get activationActionFailedToast => 'To ni uspelo. Poskusi znova.';
+
+  @override
+  String get activationPromptTitle => 'Zgradi svoj zemljevid umetnosti';
+
+  @override
+  String get activationPromptBody =>
+      'Shrani umetnine, spremljaj lokalne umetnike in se vrni na kraje, ki jih želiš obiskati.';
+
+  @override
+  String get activationPromptCta => 'Ustvari brezplačen račun';
+
+  @override
+  String get activationPromptDismiss => 'Opusti';
 
   @override
   String get commonOr => 'ali';

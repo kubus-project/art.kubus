@@ -10,6 +10,7 @@ import 'package:latlong2/latlong.dart';
 class _FakeArtworkApi implements ArtworkBackendApi {
   int getArtworkCalls = 0;
   Completer<Artwork>? completer;
+  Completer<List<Artwork>>? artworksCompleter;
 
   @override
   Future<Artwork> getArtwork(String artworkId) {
@@ -29,18 +30,24 @@ class _FakeArtworkApi implements ArtworkBackendApi {
     String? walletAddress,
     bool includePrivateForWallet = false,
     List<String>? ids,
-  }) =>
+  }) {
+    final c = artworksCompleter;
+    if (c != null) return c.future;
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Artwork?> updateArtwork(
+          String artworkId, Map<String, dynamic> updates) =>
       throw UnimplementedError();
 
   @override
-  Future<Artwork?> updateArtwork(String artworkId, Map<String, dynamic> updates) =>
+  Future<Artwork?> publishArtwork(String artworkId) =>
       throw UnimplementedError();
 
   @override
-  Future<Artwork?> publishArtwork(String artworkId) => throw UnimplementedError();
-
-  @override
-  Future<Artwork?> unpublishArtwork(String artworkId) => throw UnimplementedError();
+  Future<Artwork?> unpublishArtwork(String artworkId) =>
+      throw UnimplementedError();
 
   @override
   Future<int?> likeArtwork(String artworkId) => throw UnimplementedError();
@@ -49,10 +56,12 @@ class _FakeArtworkApi implements ArtworkBackendApi {
   Future<int?> unlikeArtwork(String artworkId) => throw UnimplementedError();
 
   @override
-  Future<int?> discoverArtworkWithCount(String artworkId) => throw UnimplementedError();
+  Future<int?> discoverArtworkWithCount(String artworkId) =>
+      throw UnimplementedError();
 
   @override
-  Future<int?> recordArtworkView(String artworkId) => throw UnimplementedError();
+  Future<int?> recordArtworkView(String artworkId) =>
+      throw UnimplementedError();
 
   @override
   Future<List<ArtworkComment>> getArtworkComments({
@@ -71,11 +80,13 @@ class _FakeArtworkApi implements ArtworkBackendApi {
       throw UnimplementedError();
 
   @override
-  Future<ArtworkComment> editArtworkComment({required String commentId, required String content}) =>
+  Future<ArtworkComment> editArtworkComment(
+          {required String commentId, required String content}) =>
       throw UnimplementedError();
 
   @override
-  Future<int?> deleteArtworkComment(String commentId) => throw UnimplementedError();
+  Future<int?> deleteArtworkComment(String commentId) =>
+      throw UnimplementedError();
 
   @override
   Future<int?> likeComment(String commentId) => throw UnimplementedError();
@@ -85,7 +96,9 @@ class _FakeArtworkApi implements ArtworkBackendApi {
 }
 
 void main() {
-  test('ArtworkProvider.fetchArtworkIfNeeded dedupes in-flight getArtwork calls', () async {
+  test(
+      'ArtworkProvider.fetchArtworkIfNeeded dedupes in-flight getArtwork calls',
+      () async {
     final api = _FakeArtworkApi()..completer = Completer<Artwork>();
     final provider = ArtworkProvider(backendApi: api);
 
@@ -115,4 +128,65 @@ void main() {
     expect(f3?.id, 'a1');
     expect(api.getArtworkCalls, 1);
   });
+
+  test('ArtworkProvider retains a deep-link detail fetched during list startup',
+      () async {
+    final api = _FakeArtworkApi()
+      ..completer = Completer<Artwork>()
+      ..artworksCompleter = Completer<List<Artwork>>();
+    final provider = ArtworkProvider(backendApi: api);
+
+    final listLoad = provider.loadArtworks(refresh: true);
+    final detailLoad = provider.fetchArtworkIfNeeded('deep-link-artwork');
+
+    api.completer!.complete(_artwork('deep-link-artwork'));
+    await detailLoad;
+    expect(
+        provider.getArtworkById('deep-link-artwork')?.id, 'deep-link-artwork');
+
+    api.artworksCompleter!.complete(<Artwork>[_artwork('homepage-artwork')]);
+    await listLoad;
+
+    expect(
+        provider.getArtworkById('deep-link-artwork')?.id, 'deep-link-artwork');
+    expect(
+      provider.artworks.map((artwork) => artwork.id),
+      containsAll(<String>['deep-link-artwork', 'homepage-artwork']),
+    );
+  });
+
+  test('ArtworkProvider retains a deep-link detail fetched before list startup',
+      () async {
+    final api = _FakeArtworkApi()
+      ..completer = Completer<Artwork>()
+      ..artworksCompleter = Completer<List<Artwork>>();
+    final provider = ArtworkProvider(backendApi: api);
+
+    final detailLoad = provider.fetchArtworkIfNeeded('deep-link-artwork');
+    api.completer!.complete(_artwork('deep-link-artwork'));
+    await detailLoad;
+
+    final listLoad = provider.loadArtworks(refresh: true);
+    api.artworksCompleter!.complete(<Artwork>[_artwork('homepage-artwork')]);
+    await listLoad;
+
+    expect(
+        provider.getArtworkById('deep-link-artwork')?.id, 'deep-link-artwork');
+    expect(
+      provider.artworks.map((artwork) => artwork.id),
+      containsAll(<String>['deep-link-artwork', 'homepage-artwork']),
+    );
+  });
+}
+
+Artwork _artwork(String id) {
+  return Artwork(
+    id: id,
+    title: 'Test $id',
+    artist: 'Artist',
+    description: 'Desc',
+    position: const LatLng(0, 0),
+    rewards: 0,
+    createdAt: DateTime.utc(2025, 1, 1),
+  );
 }

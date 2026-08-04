@@ -1145,12 +1145,24 @@ class _SignInScreenState extends State<SignInScreen> {
       widget.onSwitchToRegister!.call();
       return;
     }
-    Navigator.of(context).pushNamed('/register');
+    // Carry the redirect across: creating an account is the likelier branch for
+    // a guest who arrived here from a contextual activation prompt, and without
+    // this the route that triggered the prompt is lost.
+    Navigator.of(context).pushNamed(
+      '/register',
+      arguments: <String, Object?>{
+        if ((widget.redirectRoute ?? '').trim().isNotEmpty)
+          'redirectRoute': widget.redirectRoute,
+        if (widget.redirectArguments != null)
+          'redirectArguments': widget.redirectArguments,
+      },
+    );
   }
 
   void _continueAsGuest() {
-    unawaited(TelemetryService().trackSignInAttempt(method: 'guest'));
-    unawaited(TelemetryService().trackSignInSuccess(method: 'guest'));
+    // Continuing as a guest is not an authentication. Reporting it as a
+    // sign-in success made unauthenticated sessions indistinguishable from
+    // real ones in the funnel.
     Navigator.of(context).pushReplacementNamed(
       signInCancellationRoute(widget.redirectRoute),
       arguments: widget.redirectArguments,

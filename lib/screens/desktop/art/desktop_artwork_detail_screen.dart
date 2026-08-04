@@ -83,6 +83,11 @@ class _DesktopArtworkDetailScreenState
       context,
       actionLabel: l10n.artworkDetailLike.toLowerCase(),
       returnRoute: _publicReturnRoute(context),
+      actionType: PendingActionType.like,
+      targetType: PendingActionTargetType.artwork,
+      targetId: artwork.id,
+      targetLabel: artwork.title,
+      sourceScreen: 'desktop_artwork_detail',
     );
     if (!authenticated || !mounted) return;
     await provider.toggleLike(artwork.id);
@@ -94,6 +99,11 @@ class _DesktopArtworkDetailScreenState
       context,
       actionLabel: l10n.commonSave.toLowerCase(),
       returnRoute: _publicReturnRoute(context),
+      actionType: PendingActionType.save,
+      targetType: PendingActionTargetType.artwork,
+      targetId: artwork.id,
+      targetLabel: artwork.title,
+      sourceScreen: 'desktop_artwork_detail',
     );
     if (!authenticated || !mounted) return;
     await provider.toggleArtworkSaved(artwork.id);

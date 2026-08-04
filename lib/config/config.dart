@@ -34,6 +34,18 @@ class AppConfig {
   static const bool enableReporting = true;
   static const bool enableSupportTickets = true;
 
+  /// Meta browser pixel. Off by default: no third-party script is added to the
+  /// page unless a deployment both enables this and supplies a pixel id.
+  /// See `docs/engineering/meta-measurement.md`.
+  static const bool enableMetaPixel = bool.fromEnvironment(
+    'META_PIXEL_ENABLED',
+    defaultValue: false,
+  );
+  static const String metaPixelId = String.fromEnvironment(
+    'META_PIXEL_ID',
+    defaultValue: '',
+  );
+
   /// Web3 and Marketplace features
   static const bool enableWeb3 = true;
   static const bool enableMarketplace = true;
@@ -176,6 +188,12 @@ class AppConfig {
   static const bool enableAnalytics = bool.fromEnvironment(
     'ANALYTICS_APP_ENABLED',
     defaultValue: isProduction,
+  );
+
+  /// Deployment-level kill switch for guest activation prompts.
+  static const bool enableActivationPrompt = bool.fromEnvironment(
+    'KUBUS_ENABLE_ACTIVATION_PROMPT',
+    defaultValue: true,
   );
   static const bool enableCrashReporting = isProduction;
   static const bool enablePerformanceMonitoring = isProduction;
@@ -506,6 +524,10 @@ class AppConfig {
         return enableARViewer;
       case 'analytics':
         return enableAnalytics;
+      case 'activationPrompt':
+        return enableActivationPrompt;
+      case 'metaPixel':
+        return enableMetaPixel && metaPixelId.trim().isNotEmpty;
       case 'supportTickets':
         return enableSupportTickets;
       case 'debug':
@@ -603,15 +625,15 @@ class AppInfo {
   static const String appName = 'art.kubus';
   static const String version = String.fromEnvironment(
     'KUBUS_APP_VERSION',
-    defaultValue: '0.7.2',
+    defaultValue: '0.7.3',
   );
   static const int buildNumber = int.fromEnvironment(
     'KUBUS_BUILD_NUMBER',
-    defaultValue: 26072901,
+    defaultValue: 26080401,
   );
   static const String buildDate = String.fromEnvironment(
     'KUBUS_BUILD_DATE',
-    defaultValue: '2026-07-29',
+    defaultValue: '2026-08-04',
   );
 
   /// Get full version string

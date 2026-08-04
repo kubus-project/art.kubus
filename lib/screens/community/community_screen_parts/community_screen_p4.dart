@@ -846,6 +846,10 @@ extension _CommunityScreenStatePart4 on _CommunityScreenState {
       context,
       actionLabel: l10n.commonSave.toLowerCase(),
       returnRoute: '/p/${Uri.encodeComponent(post.id)}',
+      actionType: PendingActionType.save,
+      targetType: PendingActionTargetType.post,
+      targetId: post.id,
+      sourceScreen: 'community_feed',
     );
     if (!authenticated || !mounted) return;
     try {
