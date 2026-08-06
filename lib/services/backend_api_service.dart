@@ -8142,27 +8142,47 @@ class BackendApiService
   /// POST /api/exhibitions
   Future<Exhibition?> createExhibition(Map<String, dynamic> payload) async {
     _throwIfIpfsFallbackUnavailable('Exhibition publishing');
+    const path = '/api/exhibitions';
     try {
       await _ensureAuthBeforeRequest();
-      final uri = Uri.parse('$baseUrl/api/exhibitions');
+      final uri = Uri.parse('$baseUrl$path');
       final response =
           await _post(uri, headers: _getHeaders(), body: jsonEncode(payload));
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final exhibitionRaw = _extractSuccessfulEntityMap(
-          response,
-          preferredKeys: const <String>['exhibition'],
-        );
-        if (exhibitionRaw != null) {
-          return Exhibition.fromJson(exhibitionRaw);
-        }
-        return null;
+      if (_isSuccessStatus(response.statusCode)) {
+        final exhibition = _parseIdentifiedExhibition(response);
+        if (exhibition != null) return exhibition;
       }
-      throw Exception(
-          'Failed to create exhibition: ${response.statusCode} ${response.body}');
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.createExhibition failed: $e');
-      rethrow;
+      throw BackendApiRequestException(
+        statusCode: response.statusCode,
+        path: path,
+        body: response.body,
+      );
+    } catch (error, stackTrace) {
+      _throwTypedMutationFailure(
+        error: error,
+        stackTrace: stackTrace,
+        operation: 'BackendApiService.createExhibition',
+        path: path,
+      );
     }
+  }
+
+  /// Parse an exhibition from a successful mutation response.
+  ///
+  /// Returns `null` when the envelope is unexpected *or* when it decodes to an
+  /// exhibition without a usable id. `_extractSuccessfulEntityMap` falls back to
+  /// the whole decoded body when no preferred key matches, so a bare
+  /// `{"success": true}` would otherwise yield an `Exhibition` with an empty id
+  /// and be reported to callers as a completed mutation.
+  Exhibition? _parseIdentifiedExhibition(http.Response response) {
+    final raw = _extractSuccessfulEntityMap(
+      response,
+      preferredKeys: const <String>['exhibition'],
+    );
+    if (raw == null) return null;
+    final exhibition = Exhibition.fromJson(raw);
+    if (exhibition.id.trim().isEmpty) return null;
+    return exhibition;
   }
 
   /// Update exhibition
@@ -8170,9 +8190,10 @@ class BackendApiService
   Future<Exhibition?> updateExhibition(
       String id, Map<String, dynamic> updates) async {
     _throwIfIpfsFallbackUnavailable('Exhibition editing');
+    final path = '/api/exhibitions/$id';
     try {
       await _ensureAuthBeforeRequest();
-      final uri = Uri.parse('$baseUrl/api/exhibitions/$id');
+      final uri = Uri.parse('$baseUrl$path');
       if (kDebugMode && AppConfig.enableNetworkLogging) {
         final cover = updates['coverUrl'] ??
             updates['cover_url'] ??
@@ -8192,27 +8213,32 @@ class BackendApiService
           headers: _getHeaders(),
           body: jsonEncode(updates),
           isIdempotent: true);
-      if (response.statusCode == 200) {
-        final exhibitionRaw = _extractSuccessfulEntityMap(
-          response,
-          preferredKeys: const <String>['exhibition'],
-        );
-        if (exhibitionRaw != null) {
-          return Exhibition.fromJson(exhibitionRaw);
-        }
+      if (_isSuccessStatus(response.statusCode)) {
+        final exhibition = _parseIdentifiedExhibition(response);
+        if (exhibition != null) return exhibition;
+        // A successful update with an unexpected envelope is still a success,
+        // so re-read the canonical record before deciding it failed.
         try {
-          return await getExhibition(id);
+          final reread = await getExhibition(id);
+          if (reread != null && reread.id.trim().isNotEmpty) return reread;
         } catch (_) {
-          // A successful update should still behave like success even if the
-          // backend returned a slightly unexpected response envelope.
+          // Fall through to the typed failure below: the caller must not be
+          // told the update landed when neither the response nor the re-read
+          // could confirm it.
         }
-        return null;
       }
-      throw Exception(
-          'Failed to update exhibition: ${response.statusCode} ${response.body}');
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.updateExhibition failed: $e');
-      rethrow;
+      throw BackendApiRequestException(
+        statusCode: response.statusCode,
+        path: path,
+        body: response.body,
+      );
+    } catch (error, stackTrace) {
+      _throwTypedMutationFailure(
+        error: error,
+        stackTrace: stackTrace,
+        operation: 'BackendApiService.updateExhibition',
+        path: path,
+      );
     }
   }
 
