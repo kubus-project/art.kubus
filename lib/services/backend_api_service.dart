@@ -8216,16 +8216,14 @@ class BackendApiService
       if (_isSuccessStatus(response.statusCode)) {
         final exhibition = _parseIdentifiedExhibition(response);
         if (exhibition != null) return exhibition;
-        // A successful update with an unexpected envelope is still a success,
-        // so re-read the canonical record before deciding it failed.
-        try {
-          final reread = await getExhibition(id);
-          if (reread != null && reread.id.trim().isNotEmpty) return reread;
-        } catch (_) {
-          // Fall through to the typed failure below: the caller must not be
-          // told the update landed when neither the response nor the re-read
-          // could confirm it.
-        }
+        // Deliberately no re-read fallback here. `getExhibition` is a public
+        // read: it is unauthenticated and falls back to the public snapshot
+        // dataset, so it can return a stale or pre-update record. Treating
+        // that as confirmation would report "Saved" for an update that never
+        // landed, which is the exact failure this contract exists to remove.
+        // The backend returns the updated exhibition on every success
+        // (`exhibitionsService.updateExhibition` -> `ok({ exhibition })`), so
+        // an unparseable 2xx is genuinely unconfirmed.
       }
       throw BackendApiRequestException(
         statusCode: response.statusCode,

@@ -199,61 +199,48 @@ void main() {
       );
     });
 
-    test('re-reads the exhibition when the update envelope is unexpected',
-        () async {
+    test('throws on an unparseable 2xx instead of re-reading', () async {
+      // `getExhibition` is an unauthenticated public read with a snapshot
+      // fallback, so it can return a stale or pre-update record. It must never
+      // be used to confirm that a write landed.
       var getCalls = 0;
       BackendApiService().setHttpClient(
         MockClient((request) async {
           if (request.method == 'PUT') {
             return _jsonResponse(<String, Object?>{'success': true}, 200);
           }
-          expect(request.method, 'GET');
-          expect(request.url.path, _updatePath);
           getCalls += 1;
           return _jsonResponse(
             <String, Object?>{
               'success': true,
-              'data': _exhibitionJson()..['status'] = 'published',
+              'data': _exhibitionJson()..['status'] = 'draft',
             },
             200,
           );
         }),
       );
 
-      final exhibition = await BackendApiService().updateExhibition(
-        _exhibitionId,
-        <String, dynamic>{'status': 'published'},
-      );
-
-      expect(getCalls, 1);
-      expect(exhibition, isA<Exhibition>());
-      expect(exhibition!.id, _exhibitionId);
-      expect(exhibition.status, 'published');
-    });
-
-    test('throws when the update envelope is unexpected and the re-read fails',
-        () async {
-      await expectUpdateThrows(
-        handler: (request) async {
-          if (request.method == 'PUT') {
-            return _jsonResponse(<String, Object?>{'success': true}, 200);
-          }
-          return _jsonResponse(
-            <String, Object?>{'success': false, 'error': 'gone'},
-            404,
-          );
-        },
-        matcher: isA<BackendApiRequestException>()
+      await expectLater(
+        BackendApiService().updateExhibition(
+          _exhibitionId,
+          <String, dynamic>{'status': 'published'},
+        ),
+        throwsA(isA<BackendApiRequestException>()
             .having((error) => error.statusCode, 'statusCode', 200)
-            .having((error) => error.path, 'path', _updatePath),
+            .having((error) => error.path, 'path', _updatePath)),
       );
+      expect(getCalls, 0);
     });
 
-    test('throws when the re-read also returns an id-less exhibition',
-        () async {
+    test('throws when a 2xx body carries an empty exhibition id', () async {
       await expectUpdateThrows(
-        handler: (request) async =>
-            _jsonResponse(<String, Object?>{'success': true}, 200),
+        handler: (request) async => _jsonResponse(
+          <String, Object?>{
+            'success': true,
+            'data': <String, Object?>{'id': '  ', 'title': 'Ghost'},
+          },
+          200,
+        ),
         matcher: isA<BackendApiRequestException>()
             .having((error) => error.statusCode, 'statusCode', 200)
             .having((error) => error.path, 'path', _updatePath),
