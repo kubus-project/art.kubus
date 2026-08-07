@@ -132,6 +132,42 @@ void main() {
       expect(GuestSessionService.entryRouteSync(prefs), '/register');
     });
 
+    test('a bare platform route does not claim the snapshot', () async {
+      // Mobile cold start hands `_generateInitialRoutes` a bare '/' before any
+      // deep link is delivered. Freezing that would lock out the deep link
+      // arriving moments later as `initialUri`, so only a URL carrying
+      // parameters may take the snapshot — the condition guarding the call
+      // site in main.dart.
+      final bare = Uri.parse('https://app.kubus.site/');
+      if (bare.queryParameters.isNotEmpty) {
+        GuestSessionService.snapshotLaunchUrl(override: bare);
+      }
+      GuestSessionService.snapshotLaunchUrl(override: _directRegisterEntry);
+      final prefs = await SharedPreferences.getInstance();
+
+      await GuestSessionService.captureFromLaunchUrl(prefs: prefs);
+
+      expect(GuestSessionService.entryUtmSync(prefs)['utm_campaign'],
+          'open_call_en_aug_2026');
+      expect(GuestSessionService.entryRouteSync(prefs), '/register');
+    });
+
+    test('a mobile deep link captures attribution with no web launch URL',
+        () async {
+      // On Android/iOS `main()` has no launch URL to freeze, and a `/register`
+      // deep link never builds AppInitializer — so attribution has to survive
+      // on the platform initial route alone.
+      GuestSessionService.snapshotLaunchUrl(override: _directRegisterEntry);
+      final prefs = await SharedPreferences.getInstance();
+
+      await GuestSessionService.captureFromLaunchUrl(prefs: prefs);
+
+      final utm = GuestSessionService.entryUtmSync(prefs);
+      expect(utm['utm_source'], 'meta');
+      expect(utm['utm_content'], 'carousel_card_4_add_your_art');
+      expect(GuestSessionService.entryRouteSync(prefs), '/register');
+    });
+
     test('the persisted entry route wins over a later snapshot', () async {
       SharedPreferences.setMockInitialValues(<String, Object>{
         GuestSessionService.entryRouteKey: '/register',

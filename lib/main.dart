@@ -1227,6 +1227,21 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
     final normalized = initialRoute.trim().isEmpty ? '/' : initialRoute.trim();
     final uri = Uri.tryParse(normalized) ?? Uri(path: normalized);
 
+    // Mobile cold start. `main()` has no launch URL to freeze on Android/iOS,
+    // and a deep link to `/register?utm_*` resolves straight to its screen
+    // without ever building `AppInitializer` — so this is the only point
+    // common to every cold entry where the platform's initial route is still
+    // visible before dispatch. On web the snapshot is already frozen by
+    // `main()` and this is a no-op, which is what keeps attribution
+    // first-touch.
+    //
+    // Only a URL that actually carries parameters is frozen: a bare platform
+    // route must not claim the snapshot, or a deep link delivered moments
+    // later as `initialUri` would be locked out by the first-touch guard.
+    if (uri.queryParameters.isNotEmpty) {
+      GuestSessionService.snapshotLaunchUrl(override: uri);
+    }
+
     // Direct shell URLs still need AppInitializer so auth/session restoration,
     // provider hydration, and warm-up run before the shell renders.
     if (ShellRoutes.shouldWrapInitialUri(uri)) {
