@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, visibleForTesting;
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Captures guest-first entry + campaign attribution from the launch URL, e.g.
@@ -16,6 +16,7 @@ class GuestSessionService {
 
   static const String guestModeKey = 'kubus_guest_mode_v1';
   static const String intentKey = 'kubus_entry_intent_v1';
+  static const String entryRouteKey = 'kubus_entry_route_v1';
   static const String _utmPrefix = 'kubus_entry_utm_';
 
   static const List<String> utmKeys = <String>[
@@ -29,7 +30,70 @@ class GuestSessionService {
   /// Recognised landing intents from the marketing funnel.
   static const Set<String> intents = <String>{'discover', 'join', 'contribute'};
 
+  /// Launch URL frozen at startup.
+  ///
+  /// `Uri.base` on web tracks the *live* browser location, so it stops carrying
+  /// the campaign query string as soon as the router navigates away from the
+  /// landing route. Reading it lazily therefore made attribution a race against
+  /// the first navigation — one that a direct `/register?utm_*` entry lost,
+  /// because that route resolves straight to the screen without ever building
+  /// `AppInitializer` (the only caller of [captureFromLaunchUrl]).
+  ///
+  /// [snapshotLaunchUrl] freezes the launch URL once, synchronously, before
+  /// `runApp`. Every later read is served from the snapshot, so attribution no
+  /// longer depends on when it happens to be read.
+  static Map<String, String>? _launchSnapshot;
+  static String? _entryRouteSnapshot;
+
+  /// Freeze the launch URL. Called first thing in `main()`, before `runApp` and
+  /// before any `await`, so no navigation can have rewritten the URL yet.
+  ///
+  /// Safe to call repeatedly: only the first call wins, so a later call cannot
+  /// overwrite first-touch attribution with a post-navigation URL.
+  static void snapshotLaunchUrl({Uri? override}) {
+    if (_launchSnapshot != null) return;
+    try {
+      final uri = override ?? (kIsWeb ? Uri.base : null);
+      // On mobile there is no launch URL at `main()` time — the deep link
+      // arrives later as an `initialUri`. Leave the snapshot unset so that
+      // call can still supply it, instead of freezing an empty one.
+      if (uri == null) return;
+      _launchSnapshot = Map<String, String>.unmodifiable(uri.queryParameters);
+      _entryRouteSnapshot = normalizeEntryRoute(uri.path);
+    } catch (_) {
+      // Leave unset; `_launchParams` falls back to reading `Uri.base`.
+    }
+  }
+
+  /// Reset the frozen launch URL. Tests only.
+  @visibleForTesting
+  static void resetLaunchSnapshotForTest() {
+    _launchSnapshot = null;
+    _entryRouteSnapshot = null;
+  }
+
+  /// The route the visitor landed on, without query or fragment.
+  ///
+  /// Only the path is kept: it answers "did this campaign land on /register or
+  /// /map?" without storing arbitrary query values. UTMs are already captured
+  /// as explicit structured fields, so nothing is lost by dropping the rest.
+  static String? normalizeEntryRoute(String? rawPath) {
+    final path = (rawPath ?? '').trim();
+    if (path.isEmpty) return '/';
+    final withoutQuery = path.split('?').first.split('#').first;
+    if (withoutQuery.isEmpty) return '/';
+    final prefixed =
+        withoutQuery.startsWith('/') ? withoutQuery : '/$withoutQuery';
+    // Collapse a trailing slash so `/register/` and `/register` are one row.
+    final collapsed = prefixed.length > 1 && prefixed.endsWith('/')
+        ? prefixed.substring(0, prefixed.length - 1)
+        : prefixed;
+    return _clip(collapsed, 120);
+  }
+
   static Map<String, String> _launchParams() {
+    final snapshot = _launchSnapshot;
+    if (snapshot != null) return snapshot;
     if (!kIsWeb) return const <String, String>{};
     try {
       return Uri.base.queryParameters;
@@ -69,6 +133,23 @@ class GuestSessionService {
         await p.setString('$_utmPrefix$key', _clip(value, 200));
       }
     }
+
+    // First-touch landing route. Written once so a later in-app navigation
+    // cannot overwrite where the campaign actually landed.
+    final entryRoute = _entryRouteSnapshot;
+    if (entryRoute != null &&
+        entryRoute.isNotEmpty &&
+        (p.getString(entryRouteKey) ?? '').isEmpty) {
+      await p.setString(entryRouteKey, entryRoute);
+    }
+  }
+
+  /// Landing route for this visitor, preferring the persisted first-touch value.
+  static String? entryRouteSync(SharedPreferences prefs) {
+    final stored = (prefs.getString(entryRouteKey) ?? '').trim();
+    if (stored.isNotEmpty) return stored;
+    final snapshot = (_entryRouteSnapshot ?? '').trim();
+    return snapshot.isEmpty ? null : snapshot;
   }
 
   /// Whether the current session should be treated as a guest (skips the
