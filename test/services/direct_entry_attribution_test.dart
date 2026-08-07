@@ -195,12 +195,13 @@ void main() {
     });
 
     test('collapses a trailing slash', () {
-      expect(GuestSessionService.normalizeEntryRoute('/register/'), '/register');
+      expect(
+          GuestSessionService.normalizeEntryRoute('/register/'), '/register');
     });
 
     test('drops the query string', () {
-      expect(
-          GuestSessionService.normalizeEntryRoute('/register?x=1'), '/register');
+      expect(GuestSessionService.normalizeEntryRoute('/register?x=1'),
+          '/register');
     });
 
     test('maps an empty path to the root', () {
@@ -213,7 +214,8 @@ void main() {
   });
 
   group('TelemetryService route attribution', () {
-    Future<(TelemetryService, InMemoryTelemetryEventQueue)> makeService() async {
+    Future<(TelemetryService, InMemoryTelemetryEventQueue)>
+        makeService() async {
       final queue = InMemoryTelemetryEventQueue();
       final svc = TelemetryService.createForTest(
         queue: queue,
