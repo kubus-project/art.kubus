@@ -315,8 +315,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       _mapUiStateCoordinator.value.contextSurface ==
       MapContextSurface.discovery;
   bool get _isNearbyPanelOpen =>
-      _mapUiStateCoordinator.value.contextSurface == MapContextSurface.nearby &&
-      _rightSidebarContent == _RightSidebarContent.nearby;
+      _rightSidebarContent == _RightSidebarContent.nearby &&
+      mapContextKeepsNearbyRailMounted(_mapUiStateCoordinator.value);
+
   bool get _isCreateMarkerPanelOpen =>
       _mapUiStateCoordinator.value.contextSurface ==
           MapContextSurface.createMarker &&
@@ -551,14 +552,21 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         if (tokenChanged) {
           _perf.recordSetState('markerSelection');
           _mapSearchController.dismissOverlay();
+          // The nearby rail is not part of the marker context: it owns the
+          // right gutter and survives a marker tap, keeping both its list
+          // scroll offset and the anchor its distances are measured from.
+          final keepNearbyRail =
+              _rightSidebarContent == _RightSidebarContent.nearby;
           _safeSetState(() {
             _selectedArtwork = null;
             _selectedExhibition = null;
             _selectedEvent = null;
             _selectedMarkerInfo = null;
             _pendingMarkerLocation = null;
-            _rightSidebarContent = null;
-            _nearbySidebarAnchor = null;
+            if (!keepNearbyRail) {
+              _rightSidebarContent = null;
+              _nearbySidebarAnchor = null;
+            }
           });
         }
 
@@ -1462,6 +1470,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       if (!_mapUiStateCoordinator.restoreSuspendedSurface()) {
         _mapUiStateCoordinator.closeSurface(MapContextSurface.nearby);
       }
+    } else if (_mapUiStateCoordinator.value.suspendedSurface ==
+        MapContextSurface.nearby) {
+      // The rail is visible while a marker card suspends it; closing it here
+      // must also drop the restore point so it does not spring back when the
+      // marker card is dismissed.
+      _mapUiStateCoordinator.clearSuspendedSurface();
     }
     _safeSetState(() {
       _rightSidebarContent = null;
@@ -1484,8 +1498,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       case MapContextSurface.nearby:
         _closeNearbyArtPanel();
       case MapContextSurface.markerPreview:
-        _mapUiStateCoordinator.dismissToMap();
+        // Back undoes the marker tap, so drop the selection and hand control
+        // back to whatever the tap suspended (typically the nearby rail)
+        // instead of wiping every surface with `dismissToMap`.
         _kubusMapController.dismissSelection();
+        _mapUiStateCoordinator.dismissMarkerSelection();
+        _mapUiStateCoordinator.restoreSuspendedSurface();
       case MapContextSurface.markerDetails:
         _mapUiStateCoordinator.backFromMarkerDetails();
         _safeSetState(() {

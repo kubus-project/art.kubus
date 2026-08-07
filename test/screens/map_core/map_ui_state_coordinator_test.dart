@@ -23,6 +23,76 @@ void main() {
     }
   });
 
+  group('desktop nearby rail mounting', () {
+    test('stays mounted while a marker tap only suspends it', () {
+      final coordinator = MapUiStateCoordinator();
+      addTearDown(coordinator.dispose);
+      coordinator.openSurface(MapContextSurface.nearby);
+      expect(mapContextKeepsNearbyRailMounted(coordinator.value), isTrue);
+
+      _selectMarker(coordinator);
+
+      expect(coordinator.value.contextSurface, MapContextSurface.markerPreview);
+      expect(
+        mapContextKeepsNearbyRailMounted(coordinator.value),
+        isTrue,
+        reason: 'the rail owns the right gutter and must survive a marker tap',
+      );
+
+      // ...and through opening full details for that marker, too.
+      coordinator.openMarkerDetails();
+      expect(mapContextKeepsNearbyRailMounted(coordinator.value), isTrue);
+    });
+
+    test('survives the full marker -> details -> back -> back journey', () {
+      final coordinator = MapUiStateCoordinator();
+      addTearDown(coordinator.dispose);
+      coordinator.openSurface(MapContextSurface.nearby);
+      _selectMarker(coordinator);
+      coordinator.openMarkerDetails();
+
+      // Details -> preview is a step *within* the marker card, not a return to
+      // the map, so the browse suspension must survive it.
+      coordinator.backFromMarkerDetails();
+      expect(coordinator.value.contextSurface, MapContextSurface.markerPreview);
+      expect(coordinator.value.suspendedSurface, MapContextSurface.nearby);
+      expect(
+        mapContextKeepsNearbyRailMounted(coordinator.value),
+        isTrue,
+        reason: 'the rail must not blink out on the way back from details',
+      );
+
+      // ...and the next Back still restores it.
+      coordinator.dismissMarkerSelection();
+      expect(coordinator.restoreSuspendedSurface(), isTrue);
+      expect(coordinator.value.contextSurface, MapContextSurface.nearby);
+    });
+
+    test('unmounts once nearby is neither dominant nor suspended', () {
+      final coordinator = MapUiStateCoordinator();
+      addTearDown(coordinator.dispose);
+      expect(mapContextKeepsNearbyRailMounted(coordinator.value), isFalse);
+
+      coordinator.openSurface(MapContextSurface.nearby);
+      _selectMarker(coordinator);
+      coordinator.clearSuspendedSurface();
+      expect(mapContextKeepsNearbyRailMounted(coordinator.value), isFalse);
+
+      coordinator.dismissToMap();
+      expect(mapContextKeepsNearbyRailMounted(coordinator.value), isFalse);
+    });
+
+    test('an unrelated surface never mounts the rail', () {
+      final coordinator = MapUiStateCoordinator();
+      addTearDown(coordinator.dispose);
+      coordinator.openSurface(MapContextSurface.filters);
+      _selectMarker(coordinator);
+
+      expect(coordinator.value.suspendedSurface, MapContextSurface.filters);
+      expect(mapContextKeepsNearbyRailMounted(coordinator.value), isFalse);
+    });
+  });
+
   group('MapUiStateCoordinator dominant surfaces', () {
     test('starts with no active or suspended surface', () {
       final coordinator = MapUiStateCoordinator();
@@ -278,11 +348,98 @@ void main() {
         coordinator.value.contextSurface,
         MapContextSurface.markerPreview,
       );
-      expect(coordinator.value.suspendedSurface, isNull);
+      // The results list the user picked from is the restore point, not the
+      // marker preview it had itself suspended.
+      expect(
+        coordinator.value.suspendedSurface,
+        MapContextSurface.searchResults,
+      );
       expect(
         coordinator.value.markerSelection.selectedMarkerId,
         _secondMarker.id,
       );
+    });
+
+    test('a marker tap suspends the browse surface instead of discarding it',
+        () {
+      for (final browseSurface in <MapContextSurface>[
+        MapContextSurface.nearby,
+        MapContextSurface.filters,
+        MapContextSurface.discovery,
+        MapContextSurface.searchResults,
+      ]) {
+        final coordinator = MapUiStateCoordinator();
+        addTearDown(coordinator.dispose);
+        coordinator.openSurface(browseSurface);
+        expect(coordinator.value.suspendedSurface, isNull);
+
+        _selectMarker(coordinator);
+
+        expect(
+          coordinator.value.contextSurface,
+          MapContextSurface.markerPreview,
+          reason: '$browseSurface should yield the card to the marker tap',
+        );
+        expect(
+          coordinator.value.suspendedSurface,
+          browseSurface,
+          reason: '$browseSurface must remain resumable after a marker tap',
+        );
+
+        // Dismissing the card hands control straight back to the browse
+        // surface, so the user is not dropped onto a bare map.
+        coordinator.dismissMarkerSelection();
+        expect(coordinator.restoreSuspendedSurface(), isTrue);
+        expect(coordinator.value.contextSurface, browseSurface);
+        expect(coordinator.value.suspendedSurface, isNull);
+      }
+    });
+
+    test('paging within a stack keeps the original browse restore point', () {
+      final coordinator = MapUiStateCoordinator();
+      addTearDown(coordinator.dispose);
+      coordinator.openSurface(MapContextSurface.nearby);
+      _selectMarker(coordinator);
+      expect(coordinator.value.suspendedSurface, MapContextSurface.nearby);
+
+      _selectMarker(coordinator, marker: _secondMarker, selectionToken: 2);
+
+      expect(coordinator.value.contextSurface, MapContextSurface.markerPreview);
+      expect(coordinator.value.suspendedSurface, MapContextSurface.nearby);
+    });
+
+    test('the restore point is never the marker surface being shown', () {
+      final coordinator = MapUiStateCoordinator();
+      addTearDown(coordinator.dispose);
+      _selectMarker(coordinator);
+      coordinator.openMarkerDetails();
+      expect(
+        coordinator.value.suspendedSurface,
+        MapContextSurface.markerPreview,
+      );
+
+      _selectMarker(coordinator, marker: _secondMarker, selectionToken: 2);
+
+      expect(coordinator.value.contextSurface, MapContextSurface.markerPreview);
+      expect(
+        coordinator.value.suspendedSurface,
+        isNull,
+        reason: 'restoring the card we are already showing is not a resume',
+      );
+    });
+
+    test('clearSuspendedSurface drops the restore point only', () {
+      final coordinator = MapUiStateCoordinator();
+      addTearDown(coordinator.dispose);
+      coordinator.openSurface(MapContextSurface.nearby);
+      _selectMarker(coordinator);
+      expect(coordinator.value.suspendedSurface, MapContextSurface.nearby);
+
+      coordinator.clearSuspendedSurface();
+
+      expect(coordinator.value.contextSurface, MapContextSurface.markerPreview);
+      expect(coordinator.value.suspendedSurface, isNull);
+      expect(coordinator.restoreSuspendedSurface(), isFalse);
     });
 
     test('create marker clears and ignores normal marker selection', () {
