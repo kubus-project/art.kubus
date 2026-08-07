@@ -221,11 +221,13 @@ class MarkerManagementProvider extends ChangeNotifier {
       if (expected.isNotEmpty && marker.category != expected) return false;
     }
 
-    if (updates.containsKey('isPublic') && marker.isPublic != (updates['isPublic'] == true)) {
+    if (updates.containsKey('isPublic') &&
+        marker.isPublic != (updates['isPublic'] == true)) {
       return false;
     }
 
-    if (updates.containsKey('isActive') && marker.isActive != (updates['isActive'] == true)) {
+    if (updates.containsKey('isActive') &&
+        marker.isActive != (updates['isActive'] == true)) {
       return false;
     }
 
@@ -236,22 +238,30 @@ class MarkerManagementProvider extends ChangeNotifier {
 
     if (updates.containsKey('activationRadius')) {
       final raw = updates['activationRadius'];
-      final expected = raw is num
-          ? raw.toDouble()
-          : double.tryParse(raw?.toString() ?? '');
-      if (expected != null && (marker.activationRadius - expected).abs() > 0.0001) {
+      final expected =
+          raw is num ? raw.toDouble() : double.tryParse(raw?.toString() ?? '');
+      if (expected != null &&
+          (marker.activationRadius - expected).abs() > 0.0001) {
         return false;
       }
     }
 
-    final latRaw = updates['latitude'] ?? updates['lat'] ?? updates['position']?['lat'];
-    final lngRaw = updates['longitude'] ?? updates['lng'] ?? updates['position']?['lng'];
-    final expectedLat = latRaw is num ? latRaw.toDouble() : double.tryParse(latRaw?.toString() ?? '');
-    final expectedLng = lngRaw is num ? lngRaw.toDouble() : double.tryParse(lngRaw?.toString() ?? '');
-    if (expectedLat != null && (marker.position.latitude - expectedLat).abs() > 0.000001) {
+    final latRaw =
+        updates['latitude'] ?? updates['lat'] ?? updates['position']?['lat'];
+    final lngRaw =
+        updates['longitude'] ?? updates['lng'] ?? updates['position']?['lng'];
+    final expectedLat = latRaw is num
+        ? latRaw.toDouble()
+        : double.tryParse(latRaw?.toString() ?? '');
+    final expectedLng = lngRaw is num
+        ? lngRaw.toDouble()
+        : double.tryParse(lngRaw?.toString() ?? '');
+    if (expectedLat != null &&
+        (marker.position.latitude - expectedLat).abs() > 0.000001) {
       return false;
     }
-    if (expectedLng != null && (marker.position.longitude - expectedLng).abs() > 0.000001) {
+    if (expectedLng != null &&
+        (marker.position.longitude - expectedLng).abs() > 0.000001) {
       return false;
     }
 
@@ -500,7 +510,8 @@ class MarkerManagementProvider extends ChangeNotifier {
         );
       } catch (e) {
         if (kDebugMode) {
-          debugPrint('MarkerManagementProvider: street-art achievement tracking failed: $e');
+          debugPrint(
+              'MarkerManagementProvider: street-art achievement tracking failed: $e');
         }
       }
     });
