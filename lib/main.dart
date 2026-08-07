@@ -88,6 +88,7 @@ import 'screens/desktop/web3/desktop_connect_wallet_screen.dart';
 import 'screens/web3/wallet/connectwallet_screen.dart';
 import 'screens/web3/promotions/promotion_checkout_return_screen.dart';
 // user_service initialization moved to profile and wallet flows.
+import 'services/guest_session_service.dart';
 import 'services/push_notification_service.dart';
 import 'services/notification_handler.dart';
 import 'services/solana_wallet_service.dart';
@@ -233,6 +234,16 @@ const bool _enableWebSemantics = bool.fromEnvironment(
 );
 
 void main() {
+  // Freeze the launch URL before anything else can navigate.
+  //
+  // `Uri.base` follows the live browser location on web, so the campaign query
+  // string survives only until the first route change. A direct ad landing on
+  // `/register?utm_*` resolves straight to the screen without ever building
+  // `AppInitializer`, so nothing used to persist its attribution at all. Taking
+  // the snapshot synchronously here — before `runApp` and before any `await` —
+  // makes capture independent of routing and of when it is read.
+  GuestSessionService.snapshotLaunchUrl();
+
   // We'll initialize the bindings inside the runZonedGuarded callback so the
   // WidgetsBinding is created in the same zone as the rest of the app and
   // prevents 'Zone mismatch' warnings when the zone-global error handler
@@ -1240,7 +1251,29 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _initNotificationRouting();
-    unawaited(TelemetryService().ensureInitialized());
+    unawaited(_bootstrapEntryAttribution());
+  }
+
+  /// Persist campaign attribution and open the funnel, on every entry route.
+  ///
+  /// Runs here rather than in `AppInitializer` because a direct ad landing on
+  /// `/register` resolves straight to its screen and never builds
+  /// `AppInitializer` at all — so its attribution was previously never written
+  /// to storage and was lost on the first reload. `snapshotLaunchUrl` has
+  /// already frozen the launch URL in `main()`, so the values are the landing
+  /// ones no matter how much navigation has happened by now.
+  Future<void> _bootstrapEntryAttribution() async {
+    try {
+      await GuestSessionService.captureFromLaunchUrl();
+    } catch (_) {
+      // Attribution must never block startup.
+    }
+    final telemetry = TelemetryService();
+    await telemetry.ensureInitialized();
+    // The capture above may have landed after the attribution snapshot was
+    // taken during initialisation, so re-read it before the first event.
+    await telemetry.refreshEntryAttribution();
+    unawaited(telemetry.trackAppEntry());
   }
 
   void _initNotificationRouting() {

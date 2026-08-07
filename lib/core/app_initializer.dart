@@ -246,6 +246,13 @@ class _AppInitializerState extends State<AppInitializer> {
       // through widget.initialUri, so fall back to Uri.base, which reflects the
       // browser location at cold start.
       final entryUri = widget.initialUri ?? (kIsWeb ? Uri.base : null);
+      // Mobile has no launch URL when `main()` takes its snapshot — a deep link
+      // only materialises here as `initialUri`. Offer it now; the call is a
+      // no-op when the snapshot was already frozen on web, so first-touch
+      // attribution can never be overwritten by a later navigation.
+      if (entryUri != null) {
+        GuestSessionService.snapshotLaunchUrl(override: entryUri);
+      }
       final entryLocale = LocaleProvider.localeCodeFromUri(entryUri);
       await _safeStep<void>('locale.initialize',
           () => localeProvider.initialize(overrideLanguageCode: entryLocale),
@@ -686,6 +693,9 @@ class _AppInitializerState extends State<AppInitializer> {
           listen: false,
         );
         await GuestSessionService.activateGuestMode(prefs: prefs);
+        // Entry attribution is snapshotted once at telemetry init, so the guest
+        // flag set here would otherwise be missing from every later event.
+        unawaited(TelemetryService().refreshEntryAttribution(prefs: prefs));
         if (!mounted) return;
         final hasPendingVerificationEmail =
             prefs.getBool('onboarding_pending_email_verification_v1') ?? false;
