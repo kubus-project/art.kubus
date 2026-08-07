@@ -88,11 +88,12 @@ The goal is to reduce security risk, architectural drift, brittle state flow, UI
 **Recommended model:** GPT-5.5 xhigh  
 **Validation required:** Route tests with `wallet_bootstrap`, email, Google, and wallet-signed tokens proving only intended auth levels can mutate wallet-owned state.  
 **Dependencies or blockers:** Should follow [CRIT-02] and [CRIT-03].  
-**Status:** Partially completed  
+**Status:** Completed  
+**Status correction (2026-08-06):** This entry read `Partially completed` with a follow-up claiming the messaging matrix was still outstanding. That is stale - [CRIT-04B] below completed it. Verified against current code: `backend/src/routes/messages.js:98-101` defines the multipart wallet-signed gate, `:529-535` applies it to message sends, `:1354-1360` requires wallet-signed authority for conversation avatars, and the eleven account-level operations are deliberate. `backend/src/middleware/auth.js:126-156` implements `requireWalletSignedToken`.  
 **Completion notes:** Added wallet-signed middleware enforcement to wallet-owned profile create/update, profile deletion, avatar upload, and generic upload/multiple upload writes. Added route coverage proving account-linked tokens are rejected before upload storage while wallet-signed tokens can proceed. Second pass added wallet-signed enforcement for marker create/update/delete and marker claim submit/review routes.
 **Validation run:** `npx jest --runInBand uploadWalletSignedAuth.test.js uploadRouteDeprecation.test.js avatarProfileUploadRoutes.test.js profilesMediaPersistence.test.js profilesRoleFlags.test.js` passed (34 tests); second pass `npx jest --runInBand artMarkersWriteAssurance.test.js artMarkersCreateIdempotency.test.js artMarkersUpdatePersistence.test.js artMarkersClaimsAuth.test.js markerOwnership.test.js` passed (25 tests); `npm run lint` passed in `backend/`.
 **Screenshots:** Not applicable; no UI change.  
-**Follow-up:** Messaging authorization still needs a route-by-route assurance matrix; deferred below rather than enforced blindly.
+**Follow-up:** None. The route-by-route messaging assurance matrix is complete; see [CRIT-04B].
 
 ### [CRIT-05] Admin moderation updates bypass public sync
 
@@ -106,11 +107,12 @@ The goal is to reduce security risk, architectural drift, brittle state flow, UI
 **Recommended model:** GPT-5.5 xhigh  
 **Validation required:** Backend tests proving each admin moderation mutation calls the expected public sync hook when sync is enabled and remains safe when sync is off.  
 **Dependencies or blockers:** Requires mapping each moderated entity to the correct public sync service method.  
-**Status:** Partially completed  
+**Status:** Completed  
+**Status correction (2026-08-06):** This entry read `Partially completed` with a follow-up claiming event moderation still lacked a publication hook. That is stale - [CRIT-05B] below completed it. Verified against current code: `backend/src/routes/adminModeration.js:132-149` handles the event branch through `publicSnapshotService.requestPublish`, `:151-166` maps the remaining public entities, `:518` invokes the hook post-commit, and `backend/src/services/publicSnapshotService.js:429-448` implements `requestPublish` with publisher gating and coalescing.  
 **Completion notes:** Admin moderation `updateWithAudit()` now runs best-effort post-commit public sync for supported public entities: users/profiles, community posts, comments via parent post, artworks, collections, art markers, AR markers, and exhibitions. Added route-level tests covering each supported mapping and the failure-is-best-effort path.  
 **Validation run:** `npx jest --runInBand adminModerationPublicSync.test.js adminModerationReportsTicketsRoutes.test.js adminModerationMediaFields.test.js` passed (30 tests); `npm run lint` passed in `backend/`.  
 **Screenshots:** Not applicable; no UI change.  
-**Follow-up:** Event status moderation still lacks a matching `publicSyncService` event hook or explicit snapshot refresh API; deferred below rather than wiring an unvalidated publication contract.
+**Follow-up:** None. Event moderation publishes through `publicSnapshotService.requestPublish`; see [CRIT-05B].
 
 ### [CRIT-06] Static upload validation can publish active or spoofed content
 
@@ -434,7 +436,9 @@ The goal is to reduce security risk, architectural drift, brittle state flow, UI
 **Status:** Partially completed
 **Completion notes:** `SharedShowcaseCard` now owns button semantics, default semantic labels, keyboard activation through Enter/Space `ActivateIntent`, and visible hover/focus styling for tappable showcase cards. Mobile self-profile saved/showcase cards and public-profile showcase cards now pass their existing navigation callbacks into the shared card instead of wrapping it in raw `GestureDetector`s; desktop profile surfaces already used the shared `onTap` path. The same validation pass fixed adjacent profile UX debt discovered by tests: likes-sheet layout now respects the modal route height cap, likes rows do not trigger fallback avatar network fetches, social repost identity data preserves explicit user ids separately from wallet seeds, hyphenated usernames remain stable, and avatar shimmer tickers run only while actually loading.
 **Validation run:** `flutter test test/widgets/detail/shared_showcase_card_test.dart` passed; `flutter test test/widgets/profile_identity_summary_test.dart` passed after the adjacent likes-sheet/identity fixes; `flutter test test/widgets/detail/shared_showcase_card_test.dart test/widgets/profile_public_package_loading_test.dart test/widgets/profile_identity_summary_test.dart test/widgets/profile_achievements_badges_sections_test.dart` passed (26 tests); scoped `flutter analyze --no-fatal-infos` on touched files passed; `npm run guard:architecture` passed; `npm run verify:all` passed with the known nonfatal `lib/screens/map_screen.dart:5298` `axisAlignment` info.
-**Screenshots:** Baseline: `output/playwright/desloppify-polish02-before-desktop-root.png`, `output/playwright/desloppify-polish02-before-mobile-root.png`; after: `output/playwright/desloppify-polish02-after-desktop-root.png`, `output/playwright/desloppify-polish02-after-mobile-root.png`. These are root-route smoke screenshots because local auth/profile seed data was not available for a live profile route; widget/profile tests validate the card behavior directly.
+**Screenshots:** **Evidence claim retracted 2026-08-06.** The four cited `.png` files do not exist in the repository and are not covered by `.gitignore` (only `/output/playwright/artifacts/` is ignored). `git ls-files output/playwright` returns only `.mjs`/`.json` harness files. The card behaviour is genuinely covered by `test/widgets/detail/shared_showcase_card_test.dart`; the screenshot requirement remains **unmet**.
+
+**Evidence rule (corrected 2026-08-06):** the defect here was an unverifiable claim, not an untracked path. Do **not** infer from this that UI evidence must be committed - the QA harness deliberately writes screenshots to the ignored `output/playwright/artifacts/`, and `scripts/docs_doctor.mjs` `checkArtifactHygiene()` *fails the build* if anything under that directory is tracked. Evidence is acceptable when it is **verifiable**: either a CI-uploaded artifact referenced by its workflow run or PR link (the normal path, see `.github/workflows/web-artifact.yml`), or a file committed outside `output/playwright/artifacts/`. What is not acceptable is citing a bare local path, as these four entries did - all four were under `output/playwright/` directly, so they were never ignored and simply do not exist.
 **Follow-up:** Gallery thumbnails, detail media cards, and any remaining non-showcase repeated card families still need adoption with route-specific focus screenshots.
 
 ### [POLISH-03] Onboarding topbar icon is pointer-only
@@ -485,10 +489,11 @@ The goal is to reduce security risk, architectural drift, brittle state flow, UI
 **Recommended model:** GPT-5.5 high  
 **Validation required:** Light/dark screenshots for affected screens and color-role unit tests where applicable.  
 **Dependencies or blockers:** UI screenshots required.  
-**Status:** Deferred  
-**Reason:** Color-role cleanup spans onboarding, desktop home, profile chips, and artwork archive/status UI. It needs product/design confirmation for approved purple/social-color exceptions plus light/dark screenshots.  
-**Safest next action:** Create a color-role matrix for the cited screens, approve exceptions centrally, then update one screen family per isolated pass.  
-**Validation needed later:** Light/dark screenshots for each affected screen and targeted color-role helper tests.
+**Status:** Deferred - rescoped 2026-08-06  
+**Premise correction (2026-08-06):** The title and Location line are stale. Measured on `dev`: `Colors.purple` and `Colors.deepPurple` have **zero** occurrences in `lib/`. All 110 `Color(0x...)` literals sit inside the nine allow-listed central token files and are already enforced at zero by the `kubus_no_raw_color` lint ratchet (`tool/kubus_lint_ratchet.json`). Profile social chips already route through `KubusBrandColors`, and the cited "artwork archive status UI" has no hardcoded status colors at all.  
+**Actual remaining surface:** named `Colors.*` constants, which the existing ratchet regex cannot see because it matches only `Color(0x...)` instance creations. Measured: `Colors.white` 249, `Colors.black` 61, `Colors.red` 21, `Colors.green` 13, `Colors.grey` 12, `Colors.blue` 8, `Colors.cyan` 6, `Colors.amber` 5, `Colors.orange` 5, `Colors.yellow` 1. About 44 are status colors already covered by existing `KubusColorRoles` fields, so no new roles are needed; about 70 are `Colors.white` foregrounds on accent fills that should use the existing `AppColorUtils.onColor()` resolver - a genuine contrast defect with pale accents such as Amber Gold `#B8860B`; about 81 are the onboarding fixed-dark on-scrim ladder, which is legitimate in substance but ad hoc in form.  
+**Safest next action:** Extend the lint ratchet with a named-`Colors.*` rule grandfathered at today's count so the work ratchets instead of regressing, then convert one screen family per pass starting with status colors.  
+**Validation needed later:** Light/dark screenshots per screen family, plus a contrast test asserting at least 4.5:1 for every accent in `ThemeProvider.availableAccentColors`.
 
 ### [POLISH-06] Loading and empty states are not announced consistently
 
@@ -524,7 +529,7 @@ The goal is to reduce security risk, architectural drift, brittle state flow, UI
 **Completion notes:** Added `AK-GUARD-008` to `scripts/architecture_guard.mjs` to enforce the current unqualified `debugPrint` debt ceiling. Second pass removed the no-value `NotificationProvider` constructor log, removed noisy avatar/profile payload logs, centralized selected glass/wallet/profile-package/Solana logs behind `AppConfig.debugPrint`, suppressed routine glass diagnostics under Flutter test bindings, and lowered the direct `debugPrint` budget from `814` to `790`. Third pass removed backend API achievement fetch-start chatter, removed normal profile payload key dumps, replaced full profile-save payload logging with a field-name-only message, centralized selected backend API diagnostics, and lowered the budget to `778`.
 **Validation run:** `node --check scripts/architecture_guard.mjs`, `npm run guard:architecture`, and `npm run verify:architecture` passed in the first pass. Second pass `npm run guard:architecture` passed at `790/790`, scoped `flutter analyze --no-fatal-infos` on touched logging files passed, and `npm run verify:all` passed with the known nonfatal `lib/screens/map_screen.dart:5298` `axisAlignment` info. Third pass `npm run guard:architecture` passed at `778/778`, scoped `flutter analyze --no-fatal-infos lib/services/backend_api_service.dart lib/services/backend_api_service_profile_helpers.dart` passed, and `npm run verify:all` passed with the same known analyzer info.
 **Screenshots:** Not applicable.  
-**Follow-up:** The actual conversion of remaining direct logs remains deferred to isolated domain passes. Current verify output still includes centralized debug output from wallet/Solana test fallbacks, profile-package telemetry, debug-token issuance, and secure-storage timeouts; lower `directDebugPrintBudget` after each cleanup.
+**Follow-up (measured 2026-08-06):** `directDebugPrintBudget` is `778` at `scripts/architecture_guard.mjs:36` but the actual count is `775`, so the ratchet carries three units of unearned slack and should be lowered to the measured value. Current distribution: `lib/providers` 306, `lib/screens` 225, `lib/services` 156, `lib/core` 27, `lib/widgets` 23, `lib/community` 18. Note that `lib/providers/profile_provider.dart` accounts for 53 of those through a **file-local guarded `debugPrint` shim** (`:121-132`) that the guard regex cannot distinguish from an unguarded call - renaming it reclaims 53 counts with zero behaviour change. The actual conversion of remaining direct logs remains deferred to isolated domain passes. Current verify output still includes centralized debug output from wallet/Solana test fallbacks, profile-package telemetry, debug-token issuance, and secure-storage timeouts; lower `directDebugPrintBudget` after each cleanup.
 
 ## Harness engineering alignment
 
@@ -1317,3 +1322,95 @@ unexpected request failures; both screenshots were visually inspected.
 - GitHub CLI `gh` remains unavailable on this host, so the required authenticated
   publish workflow, remote CI, and external staging soak have not run. No remote
   refs, deployments, or `master` branches were changed by this validation.
+
+## 2026-08-06 technical-backlog audit
+
+Baseline: `origin/dev` at `375d1e8c`, backend gitlink `f7411d2b`.
+`npm run verify:branch-reconciliation` reported release ancestry reconciled
+(0 behind / 2 ahead of `origin/master`).
+
+### Corrected baseline facts
+
+Several claims repeated throughout this document were re-measured and are
+wrong:
+
+- **The `map_screen.dart` `axisAlignment` analyzer info no longer exists.**
+  `flutter analyze --fatal-infos --fatal-warnings` reports `No issues found!`,
+  and `axisAlignment` has zero matches anywhere in `lib/`. Every entry above
+  that describes it as a known nonfatal analyzer info is stale; the
+  [HARNESS-02] follow-up asking to "clean the `map_screen.dart` `axisAlignment`
+  info if CI-strict `flutter analyze` should become the default local gate" is
+  already satisfied.
+- **The full Flutter suite is green:** 2017 passed, 3 skipped, 0 failed. The
+  three skips are deliberate opt-in gates (`KUBUS_RUN_VISUAL_QA=1` for the two
+  visual matrices, `KUBUS_EXPORT_MARKERS=1` for the marker SVG export).
+- **`directDebugPrintBudget` is `778` but the measured count is `775`.**
+- **`verify:architecture` is now just `guard:architecture`.** The five
+  deterministic web-QA contract tests moved to `verify:workflow-contract` ->
+  `qa:web:test`. Entries above claiming "`verify:architecture` passed ... plus
+  all five web-QA contract tests" no longer describe the command.
+- **Backend lint and Jest failures observed locally are environment, not
+  repository defects.** They trace to a stale `backend/node_modules` predating
+  the committed lockfile by several major versions. Verified on a clean
+  worktree at the exact gitlinked commit with `npm ci`: `npm run lint` exits 0
+  and the full Jest matrix passes.
+- **`AK-GUARD-008` is the only guard rule with no seeded pass/fail fixture**,
+  so the mechanism protecting the largest tracked debt number is itself
+  untested.
+
+### Newly discovered findings
+
+| ID | Area | Priority | Status |
+| --- | --- | --- | --- |
+| [NEW-01] | Unauthenticated SSRF via `POST /api/storage/test-gateway` | P0 | Implemented in open backend PR #24 |
+| [NEW-02] | AR marker upload stores caller-controlled extension; authorization after body buffering | P0 | Implemented in open backend PR #24 |
+| [NEW-03] | Dart `String.isEmpty`/`isNotEmpty` in JS disabled profile denormalization | P1 | Implemented in open backend PR #25 |
+| [NEW-04] | Same Dart-ism persisted an empty marker type instead of `other` | P2 | Implemented in open backend PR #25 |
+| [NEW-05] | `ArtMarkerListDiff.upsertById` returned a fixed-length list; marker create throws after any deep-link merge | P0 | Implemented in open PR #128 |
+| [NEW-06] | Unauthenticated collaborator roster disclosure (`GET /api/collab/:type/:id/members`) | P1 | Open - not yet implemented |
+| [NEW-07] | Cross-conversation reaction/reactor disclosure on `DELETE .../reactions` | P1 | Open - not yet implemented |
+| [NEW-08] | Socket room never evicted when a member leaves a conversation | P1 | Open - not yet implemented |
+| [NEW-09] | `POST /api/messages` non-transactional; reports members never inserted | P1 | Open - not yet implemented |
+| [NEW-10] | Account deletion leaves posts/collections published in the OrbitDB mirror | P1 | Open - not yet implemented |
+| [NEW-11] | Conversation rename/avatar allowed for any member, including DMs (spoofing) | P2 | Open - not yet implemented |
+| [NEW-12] | 8 backend analytics tests pass vacuously when `DATABASE_URL` is unset | P3 | Open - not yet implemented |
+
+[NEW-06] through [NEW-12] were verified by reading current code but are not
+yet implemented; each needs its own bounded PR.
+
+### [MED-11] status update
+
+Not merely deferred - **regressed**. `lib/screens/map_screen.dart` grew
+5,589 -> 6,039 lines and `lib/screens/desktop/desktop_map_screen.dart`
+5,885 -> 6,248 since this document was written: +813 lines combined. About
+1,130 lines per screen are duplicated or near-duplicated logic across the two
+screens, which the root `AGENTS.md` technical-debt policy says MUST be
+extracted. Nothing mechanically prevents this: `AK-GUARD-005` only forbids
+direct MapLibre layer mutation, not screen-owned timers, subscriptions, or
+controllers. A lifecycle-field ratchet seeded at today's count would stop
+further drift immediately and is implementable without any extraction work.
+
+### [MED-10] status update
+
+The previous entry understated existing progress and overstated what remains.
+44 `BackendApiService` methods already throw `BackendApiRequestException`
+(52 throw sites) - unchanged since this document was written, so the two
+slices recorded above were not the only typed methods. 56 methods still
+return `null`/`[]`/`{success:false}` on failure. The exhibition mutation slice
+is implemented in open PR #127.
+
+### Validation performed for this audit
+
+- `npm run backend:status`, `npm run guard:architecture` (3603 file checks,
+  775/778), `npm run docs:doctor`, `npm run qa:web:test` (27/27),
+  `npm run verify:ci` (41/41): all passed.
+- `flutter analyze --fatal-infos --fatal-warnings`: `No issues found!`
+- Full Flutter suite: 2017 passed / 3 skipped / 0 failed.
+- Full backend Jest on a clean `npm ci` worktree at the gitlinked commit: all
+  suites passed; `npm run lint` exited 0.
+- The failing `Deploy development web` run on the current `dev` head is an
+  external infrastructure blocker, not a repository defect: the
+  `Wait for SSH deployment endpoint` step exhausted six attempts against the
+  configured host and failed closed with "SSH deployment endpoint remained
+  unreachable; no remote files were changed." Every later step was skipped, so
+  no remote mutation occurred.
