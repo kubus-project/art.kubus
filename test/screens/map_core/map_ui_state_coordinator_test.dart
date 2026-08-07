@@ -44,6 +44,30 @@ void main() {
       expect(mapContextKeepsNearbyRailMounted(coordinator.value), isTrue);
     });
 
+    test('survives the full marker -> details -> back -> back journey', () {
+      final coordinator = MapUiStateCoordinator();
+      addTearDown(coordinator.dispose);
+      coordinator.openSurface(MapContextSurface.nearby);
+      _selectMarker(coordinator);
+      coordinator.openMarkerDetails();
+
+      // Details -> preview is a step *within* the marker card, not a return to
+      // the map, so the browse suspension must survive it.
+      coordinator.backFromMarkerDetails();
+      expect(coordinator.value.contextSurface, MapContextSurface.markerPreview);
+      expect(coordinator.value.suspendedSurface, MapContextSurface.nearby);
+      expect(
+        mapContextKeepsNearbyRailMounted(coordinator.value),
+        isTrue,
+        reason: 'the rail must not blink out on the way back from details',
+      );
+
+      // ...and the next Back still restores it.
+      coordinator.dismissMarkerSelection();
+      expect(coordinator.restoreSuspendedSurface(), isTrue);
+      expect(coordinator.value.contextSurface, MapContextSurface.nearby);
+    });
+
     test('unmounts once nearby is neither dominant nor suspended', () {
       final coordinator = MapUiStateCoordinator();
       addTearDown(coordinator.dispose);

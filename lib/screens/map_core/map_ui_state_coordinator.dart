@@ -162,12 +162,9 @@ class MapUiStateCoordinator {
       final outgoingIsResumable = outgoing.canBeSuspended &&
           !outgoing.requiresMarkerSelection &&
           _canPresent(outgoing, nextSelection);
-      final retainedBrowseSurface =
-          suspendedSurface != null && !suspendedSurface.requiresMarkerSelection
-              ? suspendedSurface
-              : null;
-      nextSuspendedSurface =
-          outgoingIsResumable ? outgoing : retainedBrowseSurface;
+      nextSuspendedSurface = outgoingIsResumable
+          ? outgoing
+          : _browseSurfaceOrNull(suspendedSurface);
     } else {
       nextSuspendedSurface = suspendedSurface;
     }
@@ -343,7 +340,22 @@ class MapUiStateCoordinator {
       dismissToMap();
       return;
     }
-    _setSurface(MapContextSurface.markerPreview, suspendedSurface: null);
+    // Details -> preview is a step *within* the marker card, not a return to
+    // the map, so a browse surface suspended by the original marker tap has to
+    // survive it: otherwise the desktop nearby rail blinks out here and the
+    // next Back has nothing left to restore. A suspended marker surface is
+    // still dropped -- it would resolve to the preview we are moving to.
+    _setSurface(
+      MapContextSurface.markerPreview,
+      suspendedSurface: _browseSurfaceOrNull(value.suspendedSurface),
+    );
+  }
+
+  /// The surface, unless it is a marker surface (which is never a useful thing
+  /// to resume: it duplicates or resolves to the card already on screen).
+  MapContextSurface? _browseSurfaceOrNull(MapContextSurface? surface) {
+    if (surface == null || surface.requiresMarkerSelection) return null;
+    return surface;
   }
 
   /// Implements Close from details by clearing all map context and selection.
