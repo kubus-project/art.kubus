@@ -1,8 +1,15 @@
 # Meta measurement (activation funnel)
 
-Meta ad traffic lands on `https://app.kubus.site/map`. This document describes
-the feature-flagged Meta browser pixel integration added for the guest →
-account activation funnel, and exactly what is needed to turn it on.
+This document describes the feature-flagged Meta browser pixel integration for
+the guest → account activation funnel, and exactly what is needed to turn it
+on.
+
+> **Meta ad traffic no longer lands only on `/map`.** Paid campaigns now also
+> link straight to `https://app.kubus.site/register`, which is a different
+> acquisition path with its own funnel. First-party attribution for both — the
+> UTM taxonomy, the two funnels, and how to inspect a campaign in admin — is
+> documented in `backend/docs/CAMPAIGN_ATTRIBUTION.md`. That pipeline is
+> independent of this pixel and works whether or not the pixel is ever enabled.
 
 The integration ships **disabled**. With no pixel id configured, no third-party
 script is added to the page, no request reaches Meta, and the adapter is an
