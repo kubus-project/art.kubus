@@ -321,6 +321,7 @@ class MarkerManagementProvider extends ChangeNotifier {
             if ((marker.metadata?['clientNonce'] ?? '').toString() ==
                 clientNonce) {
               _mapMarkerService.notifyMarkerUpserted(marker);
+              _noteContributionPublished();
               return marker;
             }
           }
@@ -333,11 +334,7 @@ class MarkerManagementProvider extends ChangeNotifier {
       ];
       _mapMarkerService.notifyMarkerUpserted(created);
       _trackStreetArtAchievements(created);
-      // Publishing a marker is the platform's meaningful contribution, and it
-      // is what "activated" means for paid acquisition reporting. The event
-      // type already existed but had no call site, so activation was
-      // unmeasurable.
-      unawaited(TelemetryService().trackContributionSubmitted(kind: 'marker'));
+      _noteContributionPublished();
       notifyListeners();
       return created;
     } catch (e) {
@@ -353,6 +350,7 @@ class MarkerManagementProvider extends ChangeNotifier {
                 clientNonce) {
               _mapMarkerService.notifyMarkerUpserted(marker);
               _trackStreetArtAchievements(marker);
+              _noteContributionPublished();
               return marker;
             }
           }
@@ -363,6 +361,21 @@ class MarkerManagementProvider extends ChangeNotifier {
       notifyListeners();
       return null;
     }
+  }
+
+  /// Record that a marker was published.
+  ///
+  /// Publishing a marker is the platform's meaningful contribution, and it is
+  /// what "activated" means for paid acquisition reporting. The event type
+  /// already existed but had no call site, so activation was unmeasurable.
+  ///
+  /// Called from every path that returns a published marker, including the two
+  /// nonce-recovery branches. Those recover submissions where the request timed
+  /// out or returned null *after* the backend committed — precisely the slow
+  /// ones, which would otherwise be the submissions missing from activation
+  /// reporting.
+  void _noteContributionPublished() {
+    unawaited(TelemetryService().trackContributionSubmitted(kind: 'marker'));
   }
 
   Future<ArtMarker?> updateMarker(
