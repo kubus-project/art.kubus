@@ -37,6 +37,18 @@ enum MapContextSurface {
 bool mapContextAllowsDiscoveryChrome(MapContextSurface surface) =>
     surface == MapContextSurface.none || surface == MapContextSurface.discovery;
 
+/// Whether the desktop nearby-art rail should stay mounted for [state].
+///
+/// Nearby art is a persistent right rail on desktop rather than a surface a
+/// marker tap replaces: it owns the right gutter while the marker preview is
+/// anchored over the map and marker details use the left panel, so the three
+/// never collide. Staying mounted while a marker surface merely *suspends* it
+/// is also what preserves the list's scroll offset, so opening a marker does
+/// not send the user back to the top of the list.
+bool mapContextKeepsNearbyRailMounted(MapUiStateSnapshot state) =>
+    state.contextSurface == MapContextSurface.nearby ||
+    state.suspendedSurface == MapContextSurface.nearby;
+
 /// Defines whether a surface permanently replaces the current context or
 /// temporarily suspends it for one explicit restore operation.
 enum MapSurfaceTransitionIntent {
@@ -136,13 +148,33 @@ class MapUiStateCoordinator {
       value.suspendedSurface,
       nextSelection,
     );
+    final MapContextSurface? nextSuspendedSurface;
+    if (nextSurface == MapContextSurface.markerPreview && isNewSelection) {
+      // Tapping a marker must not discard the browse context the user came
+      // from (nearby art, filters, discovery, search). Suspend it, exactly as
+      // an explicit `suspendCurrent` transition would, so dismissing the marker
+      // card returns them to where they were instead of a bare map.
+      //
+      // The restore point is always a *browse* surface: a marker surface would
+      // either duplicate the card we are about to show or resolve to the same
+      // selection, so it is never a useful thing to come back to.
+      final outgoing = value.contextSurface;
+      final outgoingIsResumable = outgoing.canBeSuspended &&
+          !outgoing.requiresMarkerSelection &&
+          _canPresent(outgoing, nextSelection);
+      final retainedBrowseSurface =
+          suspendedSurface != null && !suspendedSurface.requiresMarkerSelection
+              ? suspendedSurface
+              : null;
+      nextSuspendedSurface =
+          outgoingIsResumable ? outgoing : retainedBrowseSurface;
+    } else {
+      nextSuspendedSurface = suspendedSurface;
+    }
     final next = value.copyWith(
       markerSelection: nextSelection,
       contextSurface: nextSurface,
-      suspendedSurface:
-          nextSurface == MapContextSurface.markerPreview && isNewSelection
-              ? null
-              : suspendedSurface,
+      suspendedSurface: nextSuspendedSurface,
     );
     _publish(next);
   }
@@ -286,6 +318,15 @@ class MapUiStateCoordinator {
     }
     _setSurface(suspended, suspendedSurface: null);
     return true;
+  }
+
+  /// Drops the resumable surface without disturbing the dominant one.
+  ///
+  /// Used when the user explicitly closes a surface that is currently only
+  /// suspended, so it does not spring back on the next restore.
+  void clearSuspendedSurface() {
+    if (value.suspendedSurface == null) return;
+    _publish(value.copyWith(suspendedSurface: null));
   }
 
   bool openMarkerDetails() {
