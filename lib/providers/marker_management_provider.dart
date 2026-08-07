@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -5,6 +7,7 @@ import '../models/art_marker.dart';
 import '../services/backend_api_service.dart';
 import '../services/achievement_service.dart';
 import '../services/map_marker_service.dart';
+import '../services/telemetry/telemetry_service.dart';
 import '../services/telemetry/telemetry_uuid.dart';
 
 class MarkerManagementProvider extends ChangeNotifier {
@@ -330,6 +333,11 @@ class MarkerManagementProvider extends ChangeNotifier {
       ];
       _mapMarkerService.notifyMarkerUpserted(created);
       _trackStreetArtAchievements(created);
+      // Publishing a marker is the platform's meaningful contribution, and it
+      // is what "activated" means for paid acquisition reporting. The event
+      // type already existed but had no call site, so activation was
+      // unmeasurable.
+      unawaited(TelemetryService().trackContributionSubmitted(kind: 'marker'));
       notifyListeners();
       return created;
     } catch (e) {
