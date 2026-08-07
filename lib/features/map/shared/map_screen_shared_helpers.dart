@@ -24,6 +24,7 @@ import '../../../utils/kubus_map_tokens.dart';
 import '../../../utils/maplibre_style_utils.dart';
 import '../../../utils/wallet_utils.dart';
 import '../../../widgets/common/kubus_marker_overlay_card.dart';
+import '../../../widgets/common/marker_attribution_section.dart';
 import '../../../widgets/map_marker_style_config.dart';
 import '../../../widgets/map/cards/kubus_discovery_card.dart';
 import '../../../widgets/map/discovery/kubus_discovery_path_card.dart';
@@ -707,6 +708,7 @@ class KubusMarkerOverlayHelpers {
     required Exhibition? exhibition,
     required double maxCardHeight,
     required bool isCompactWidth,
+    int stackCount = 1,
   }) {
     final presentation = resolveMarkerOverlayPresentation(
       marker: marker,
@@ -721,39 +723,89 @@ class KubusMarkerOverlayHelpers {
         ? const <String>[]
         : normalizedDescription.split(' ');
     final wordCapped =
-        words.length > 90 ? words.take(90).join(' ') : normalizedDescription;
-    final cappedChars = wordCapped.length.clamp(0, 700);
+        words.length > 140 ? words.take(140).join(' ') : normalizedDescription;
+    final cappedChars = wordCapped.length.clamp(0, 1000);
     final hasDescription = cappedChars > 0;
-    final hasLinkedContext = presentation.linkedSubject.kind !=
-            MapMarkerOverlayLinkedSubjectKind.none ||
-        (presentation.linkedSubject.title ?? '').trim().isNotEmpty ||
-        (presentation.linkedSubject.subtitle ?? '').trim().isNotEmpty;
+    final linkedTypeVisible = presentation.linkedSubject.kind !=
+        MapMarkerOverlayLinkedSubjectKind.none;
+    final linkedTitle = (presentation.linkedSubject.title ?? '').trim();
+    final linkedSubtitle = (presentation.linkedSubject.subtitle ?? '').trim();
+    final showLinkedTitle =
+        linkedTitle.isNotEmpty && linkedTitle != presentation.title.trim();
 
-    var estimated = isCompactWidth ? 320.0 : 336.0;
+    final titleCharsPerLine = isCompactWidth ? 27.0 : 34.0;
+    final titleLines = math
+        .max(1, (presentation.title.length / titleCharsPerLine).ceil())
+        .clamp(1, 2);
+    var headerHeight = math.max(44.0, titleLines * 28.0);
+    if (linkedTypeVisible) headerHeight += 16.0;
+    if (showLinkedTitle) headerHeight += 20.0;
+    if (linkedSubtitle.isNotEmpty) {
+      final subtitleLines = math
+          .max(
+            1,
+            (linkedSubtitle.length / (isCompactWidth ? 39.0 : 48.0)).ceil(),
+          )
+          .clamp(1, 2);
+      headerHeight += subtitleLines * 16.0 + 4.0;
+    }
+    if (artwork != null) headerHeight += 22.0;
+
+    final badgeCount = <bool>[
+      true, // distance/category commonly supplies at least one metadata badge
+      marker.isPromoted || (artwork?.promotion.isPromoted ?? false),
+      (artwork?.category ?? '').trim().isNotEmpty &&
+          (artwork?.category ?? '').trim() != 'General',
+      (marker.metadata?['subjectCategory'] ??
+                  marker.metadata?['subject_category'])
+              ?.toString()
+              .trim()
+              .isNotEmpty ==
+          true,
+    ].where((visible) => visible).length;
+    final badgesPerLine = isCompactWidth ? 2 : 3;
+    final badgeRows = math.max(1, (badgeCount / badgesPerLine).ceil());
+    final metadataHeight = badgeRows * 24.0 + (badgeRows - 1) * 4.0;
+
+    // Card padding + header + header/media gap + full media + media/metadata
+    // gap + metadata. The previous estimate ignored most of these real
+    // sections, forcing the preview into a tiny internal scroll viewport.
+    var estimated = 24.0 +
+        headerHeight +
+        12.0 +
+        KubusMarkerOverlayCard.previewImageHeightFor(maxCardHeight) +
+        12.0 +
+        metadataHeight;
+
     if (hasDescription) {
       final approxCharsPerLine = isCompactWidth ? 34.0 : 42.0;
       final approxLines =
           math.max(1, (cappedChars / approxCharsPerLine).ceil());
-      final cappedLines = approxLines.clamp(1, isCompactWidth ? 5 : 7);
-      final lineHeightPx = isCompactWidth ? 17.0 : 16.0;
-      final descriptionHeight = cappedLines * lineHeightPx;
-      estimated += descriptionHeight;
-    } else {
-      estimated -= 18.0;
+      final cappedLines = approxLines.clamp(
+        1,
+        KubusMarkerOverlayCard.descriptionLineBudgetFor(maxCardHeight),
+      );
+      estimated += 8.0 + cappedLines * 20.0;
     }
 
-    if (hasLinkedContext) {
-      estimated += 12.0;
+    final attributionRows =
+        MarkerAttributionSection.visibleRowCountFromMarkerAndArtwork(
+      marker,
+      artwork,
+    );
+    if (attributionRows > 0) {
+      // Divider/gaps plus enough room for three-line photo/source credits.
+      estimated += 17.0 + attributionRows * 48.0;
     }
 
-    if (marker.isPromoted || (artwork?.promotion.isPromoted ?? false)) {
-      estimated += 8.0;
-    }
-
-    // Footer action controls use the shared 44px hit-area token. Account for
-    // that reserved space so constrained mobile cards scroll their body before
-    // compressing action rows.
-    estimated += isCompactWidth ? 24.0 : 10.0;
+    final canClaim = AppConfig.isFeatureEnabled('streetArtClaims') &&
+        marker.type == ArtMarkerType.streetArt &&
+        marker.isPublic;
+    final hasSecondaryActions =
+        canClaim || artwork != null || event != null || exhibition != null;
+    estimated += 12.0 + 44.0;
+    if (hasSecondaryActions) estimated += 52.0;
+    if (stackCount > 1) estimated += 52.0;
 
     return MapOverlaySizing.resolveCardHeight(
       estimatedHeight: estimated,

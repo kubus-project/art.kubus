@@ -4709,6 +4709,9 @@ class _MapScreenState extends State<MapScreen>
           exhibition: linkedSubjects.exhibition,
           maxCardHeight: maxCardHeight,
           isCompactWidth: constraints.maxWidth < 600,
+          stackCount: selection.stackedMarkers.isEmpty
+              ? 1
+              : selection.stackedMarkers.length,
         );
       },
       fallbackAnchorResolver: (constraints) {

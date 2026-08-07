@@ -82,9 +82,8 @@ extension _KubusMarkerOverlayCardBodyParts on KubusMarkerOverlayCard {
     required BuildContext context,
     required ColorScheme scheme,
     required String visibleDescription,
-    required bool isConstrained,
+    required int maxDescriptionLines,
   }) {
-    final maxDescriptionLines = isConstrained ? 5 : 7;
     if (visibleDescription.isEmpty) return const SizedBox.shrink();
 
     return Semantics(

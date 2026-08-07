@@ -63,24 +63,19 @@ class MarkerAttributionSection extends StatelessWidget {
     Artwork? artwork, {
     Key? key,
   }) {
-    final usesArtworkCover =
-        ArtworkMediaResolver.resolveCover(artwork: artwork) != null;
-    final imageAuthor =
-        usesArtworkCover ? artwork?.imageAuthor : marker?.imageAuthor;
-    final imageLicense =
-        usesArtworkCover ? artwork?.imageLicense : marker?.imageLicense;
-    final imageAttribution =
-        usesArtworkCover ? artwork?.imageAttribution : marker?.imageAttribution;
+    final values = _resolveMarkerAndArtworkValues(marker, artwork);
     final hasStructuredPhotoCredit =
-        _clean(imageAuthor) != null && _clean(imageLicense) != null;
+        _clean(values.imageAuthor) != null &&
+            _clean(values.imageLicense) != null;
     return MarkerAttributionSection(
       key: key,
       // Linked-artwork surfaces already render the artwork creator byline.
-      artist: artwork == null ? marker?.artistName : null,
-      imageAttribution: hasStructuredPhotoCredit ? null : imageAttribution,
-      imageAuthor: imageAuthor,
-      imageLicense: imageLicense,
-      sourceAttribution: marker?.sourceAttribution,
+      artist: values.artist,
+      imageAttribution:
+          hasStructuredPhotoCredit ? null : values.imageAttribution,
+      imageAuthor: values.imageAuthor,
+      imageLicense: values.imageLicense,
+      sourceAttribution: values.sourceAttribution,
     );
   }
 
@@ -93,6 +88,52 @@ class MarkerAttributionSection extends StatelessWidget {
   static String? _clean(String? value) {
     final v = (value ?? '').trim();
     return v.isEmpty ? null : v;
+  }
+
+  /// Number of attribution rows the shared marker quick card will render.
+  ///
+  /// The marker-card height planner uses this exact resolver so photo,
+  /// licence, artist, and source rows receive space before the card is laid
+  /// out. Keeping the estimate beside the rendering precedence prevents the
+  /// image/description area from collapsing into an internal scrollbar.
+  static int visibleRowCountFromMarkerAndArtwork(
+    ArtMarker? marker,
+    Artwork? artwork,
+  ) {
+    final values = _resolveMarkerAndArtworkValues(marker, artwork);
+    var count = 0;
+    final artist = _clean(values.artist);
+    if (artist != null &&
+        !RegExp(r'^unknown$', caseSensitive: false).hasMatch(artist)) {
+      count += 1;
+    }
+    final photoLine = _clean(values.imageAttribution) ??
+        <String?>[
+          _clean(values.imageAuthor),
+          _clean(values.imageLicense),
+        ].whereType<String>().join(' / ');
+    if (photoLine.isNotEmpty) count += 1;
+    if (_clean(values.sourceAttribution) != null) count += 1;
+    return count;
+  }
+
+  static _MarkerAttributionValues _resolveMarkerAndArtworkValues(
+    ArtMarker? marker,
+    Artwork? artwork,
+  ) {
+    final usesArtworkCover =
+        ArtworkMediaResolver.resolveCover(artwork: artwork) != null;
+    return _MarkerAttributionValues(
+      artist: artwork == null ? marker?.artistName : null,
+      imageAttribution: usesArtworkCover
+          ? artwork?.imageAttribution
+          : marker?.imageAttribution,
+      imageAuthor:
+          usesArtworkCover ? artwork?.imageAuthor : marker?.imageAuthor,
+      imageLicense:
+          usesArtworkCover ? artwork?.imageLicense : marker?.imageLicense,
+      sourceAttribution: marker?.sourceAttribution,
+    );
   }
 
   @override
@@ -122,7 +163,7 @@ class MarkerAttributionSection extends StatelessWidget {
               Expanded(
                 child: Text(
                   '$label: $value',
-                  maxLines: 2,
+                  maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                   style: KubusTypography.outfit(
                     fontSize: 12,
@@ -169,4 +210,20 @@ class MarkerAttributionSection extends StatelessWidget {
       ],
     );
   }
+}
+
+class _MarkerAttributionValues {
+  const _MarkerAttributionValues({
+    required this.artist,
+    required this.imageAttribution,
+    required this.imageAuthor,
+    required this.imageLicense,
+    required this.sourceAttribution,
+  });
+
+  final String? artist;
+  final String? imageAttribution;
+  final String? imageAuthor;
+  final String? imageLicense;
+  final String? sourceAttribution;
 }

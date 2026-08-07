@@ -68,8 +68,8 @@ class KubusMarkerOverlayCard extends StatelessWidget {
     this.linkedSubjectTypeLabel,
     this.linkedSubjectTitle,
     this.linkedSubjectSubtitle,
-    this.maxPreviewChars = 700,
-    this.maxPreviewWords = 90,
+    this.maxPreviewChars = 1000,
+    this.maxPreviewWords = 140,
     this.actions = const <MarkerOverlayActionSpec>[],
     this.stackCount = 1,
     this.stackIndex = 0,
@@ -122,6 +122,33 @@ class KubusMarkerOverlayCard extends StatelessWidget {
   final double? maxWidth;
   final double? maxHeight;
 
+  static const double expandedPreviewImageHeight = 180;
+  static const double compactPreviewImageHeight = 132;
+  static const int expandedDescriptionMaxLines = 10;
+
+  /// Keeps normal map cards generous while retaining a safe, non-scrollable
+  /// fallback for unusually short landscape or embedded viewports.
+  static double previewImageHeightFor(double? availableHeight) {
+    if (availableHeight == null || !availableHeight.isFinite) {
+      return expandedPreviewImageHeight;
+    }
+    return availableHeight >= 520
+        ? expandedPreviewImageHeight
+        : compactPreviewImageHeight;
+  }
+
+  /// Description budget shared with the map-card height estimator.
+  static int descriptionLineBudgetFor(double? availableHeight) {
+    if (availableHeight == null || !availableHeight.isFinite) {
+      return expandedDescriptionMaxLines;
+    }
+    if (availableHeight >= 760) return expandedDescriptionMaxLines;
+    if (availableHeight >= 680) return 8;
+    if (availableHeight >= 600) return 6;
+    if (availableHeight >= 520) return 4;
+    return 2;
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -161,11 +188,8 @@ class KubusMarkerOverlayCard extends StatelessWidget {
         (MediaQuery.maybeOf(context)?.devicePixelRatio ?? 1.0).clamp(1.0, 2.0);
     final cacheWidth = (304 * dpr).clamp(128.0, 960.0).round();
     final hasConstrainedHeight = maxHeight != null && maxHeight!.isFinite;
-    final imageHeight = (hasConstrainedHeight
-            ? KubusSpacing.xl * 4 + KubusSpacing.sm
-            : KubusSpacing.xl * 5)
-        .clamp(132.0, 180.0)
-        .toDouble();
+    final imageHeight = previewImageHeightFor(maxHeight);
+    final descriptionMaxLines = descriptionLineBudgetFor(maxHeight);
     final cacheHeight = (imageHeight * dpr).clamp(160.0, 720.0).round();
 
     final isPromoted =
@@ -204,16 +228,11 @@ class KubusMarkerOverlayCard extends StatelessWidget {
           ),
           if (visibleDescription.isNotEmpty) ...[
             const SizedBox(height: KubusSpacing.sm),
-            ConstrainedBox(
-              constraints: BoxConstraints(
-                maxHeight: hasConstrainedHeight ? 92 : double.infinity,
-              ),
-              child: _buildBody(
-                context: context,
-                scheme: scheme,
-                visibleDescription: visibleDescription,
-                isConstrained: hasConstrainedHeight,
-              ),
+            _buildBody(
+              context: context,
+              scheme: scheme,
+              visibleDescription: visibleDescription,
+              maxDescriptionLines: descriptionMaxLines,
             ),
           ],
           MarkerAttributionSection.fromMarkerAndArtwork(
@@ -266,16 +285,8 @@ class KubusMarkerOverlayCard extends StatelessWidget {
                 linkedSubjectSubtitle: linkedSubjectSubtitle,
               ),
               const SizedBox(height: KubusSpacing.md),
-              if (hasConstrainedHeight)
-                Flexible(
-                  fit: FlexFit.loose,
-                  child: SingleChildScrollView(
-                    physics: const ClampingScrollPhysics(),
-                    child: previewContent,
-                  ),
-                )
-              else
-                previewContent,
+              previewContent,
+              if (hasConstrainedHeight) const Spacer(),
               const SizedBox(height: KubusSpacing.md),
               _buildFooter(
                 baseColor: baseColor,

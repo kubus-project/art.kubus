@@ -5367,6 +5367,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           exhibition: linkedSubjects.exhibition,
           maxCardHeight: maxHeight,
           isCompactWidth: constraints.maxWidth < 600,
+          stackCount: selection.stackedMarkers.isEmpty
+              ? 1
+              : selection.stackedMarkers.length,
         );
       },
       markerOffset: (() {
