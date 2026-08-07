@@ -1057,8 +1057,8 @@ class _MapScreenState extends State<MapScreen>
         _closeTemporarySurface(MapContextSurface.nearby);
         unawaited(_collapseNearbySheetForSurfaceTransition());
       case MapContextSurface.markerPreview:
-        // Back undoes the marker tap: clear the selection so the Nearby sheet
-        // returns to the extent it was at, rather than wiping all map context.
+        // Back undoes the marker tap, which is exactly what dismissing the
+        // card does — including handing control back to the suspended surface.
         _dismissSelectedMarker();
       case MapContextSurface.markerDetails:
         _mapUiStateCoordinator.backFromMarkerDetails();
@@ -2885,7 +2885,24 @@ class _MapScreenState extends State<MapScreen>
   }
 
   void _dismissSelectedMarker() {
+    // Closing the marker card hands control back to whatever the marker tap
+    // suspended (filters, discovery, search results), matching desktop —
+    // otherwise that surface is stranded: it never reopens, and the stale
+    // restore point later fires on an unrelated transition, popping the panel
+    // open when the user collapses the Nearby sheet.
+    //
+    // Nearby itself is the exception: its surface follows the sheet extent, so
+    // restoring it here while the sheet is still collapsed would be undone by
+    // the next extent notification. The sheet animation re-opens it instead
+    // (see [_restoreNearbySheetAfterMarkerDismissal]) — but only when an
+    // extent was recorded, so without one we still restore it generically.
+    final suspended = _mapUiStateCoordinator.value.suspendedSurface;
+    final nearbyReopensWithSheet = suspended == MapContextSurface.nearby &&
+        _nearbySheetExtentBeforeMarker != null;
     _kubusMapController.dismissSelection();
+    if (suspended != null && !nearbyReopensWithSheet) {
+      _mapUiStateCoordinator.restoreSuspendedSurface();
+    }
   }
 
   void _syncMarkerStackPager(int selectionToken) {
