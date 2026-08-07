@@ -381,6 +381,11 @@ class _MapScreenState extends State<MapScreen>
   // Prevent intermediate extent notifications from reopening Nearby while a
   // dominant surface is deliberately collapsing the sheet.
   bool _suppressNearbySurfaceSync = false;
+  // Extent the Nearby sheet had when a marker card forced it closed. The card
+  // is bottom-anchored so the sheet genuinely has to yield, but dismissing the
+  // card must return the user to the list where they left it instead of a
+  // collapsed peek they have to re-expand and re-scroll.
+  double? _nearbySheetExtentBeforeMarker;
   // Only block map gestures in the sheet area when the sheet is expanded.
   // The default collapsed extent should not disable map interactions.
   bool _isSheetBlocking = false;
@@ -685,6 +690,12 @@ class _MapScreenState extends State<MapScreen>
         if (marker != null &&
             _mapUiStateCoordinator.value.contextSurface ==
                 MapContextSurface.markerPreview) {
+          // Capture before collapsing; once collapsed the guard is false, so
+          // repeat notifications for the same card cannot overwrite it.
+          if (_nearbySheetExtentNotifier.value >
+              _nearbySheetBlockingOnThreshold) {
+            _nearbySheetExtentBeforeMarker = _nearbySheetExtentNotifier.value;
+          }
           unawaited(_collapseNearbySheetForSurfaceTransition());
         }
 
@@ -717,6 +728,7 @@ class _MapScreenState extends State<MapScreen>
           // Selection dismissed.
           _syncMarkerStackPager(state.selectionToken);
           _renderCoordinator.requestStyleUpdate(force: true);
+          unawaited(_restoreNearbySheetAfterMarkerDismissal());
         }
         _mapTargetCoordinator.selectionChanged(
           state.selectedMarkerId,
@@ -1022,6 +1034,9 @@ class _MapScreenState extends State<MapScreen>
     if (_mapSearchController.state.isOverlayVisible) {
       _mapSearchController.dismissOverlay();
     }
+    // Tapping the map background asks for a clean map, so forget the remembered
+    // Nearby extent rather than springing the sheet back open.
+    _nearbySheetExtentBeforeMarker = null;
     _mapUiStateCoordinator.dismissToMap(
       nextSelectionToken: _kubusMapController.selectionState.selectionToken,
     );
@@ -1042,7 +1057,9 @@ class _MapScreenState extends State<MapScreen>
         _closeTemporarySurface(MapContextSurface.nearby);
         unawaited(_collapseNearbySheetForSurfaceTransition());
       case MapContextSurface.markerPreview:
-        _dismissMapContext();
+        // Back undoes the marker tap: clear the selection so the Nearby sheet
+        // returns to the extent it was at, rather than wiping all map context.
+        _dismissSelectedMarker();
       case MapContextSurface.markerDetails:
         _mapUiStateCoordinator.backFromMarkerDetails();
       case MapContextSurface.discovery:
@@ -1052,6 +1069,41 @@ class _MapScreenState extends State<MapScreen>
         return false;
     }
     return true;
+  }
+
+  /// Re-opens the Nearby sheet at the extent a marker card took it away from.
+  ///
+  /// No-op unless a marker card actually collapsed an expanded sheet. Extent
+  /// notifications from the animation drive the usual sync, so the `nearby`
+  /// surface re-opens through [_handleSheetExtentNotification] on the way up.
+  Future<void> _restoreNearbySheetAfterMarkerDismissal() async {
+    final target = _nearbySheetExtentBeforeMarker;
+    _nearbySheetExtentBeforeMarker = null;
+    if (target == null || !mounted || !_sheetController.isAttached) return;
+    if (_mapUiStateCoordinator.value.contextSurface != MapContextSurface.none) {
+      return;
+    }
+    if (_mapUiStateCoordinator.value.suspendedSurface ==
+        MapContextSurface.nearby) {
+      // The sheet animation re-opens `nearby` as the dominant surface via the
+      // extent notification; leaving the stale restore point behind would make
+      // collapsing the sheet again a no-op.
+      _mapUiStateCoordinator.clearSuspendedSurface();
+    }
+    try {
+      final motion = KubusMapMotion.fromMediaQuery(
+        animationTheme: context.animationTheme,
+        mediaQuery: MediaQuery.of(context),
+      ).panelEnter;
+      await _sheetController.animateTo(
+        target,
+        duration: motion.duration,
+        curve: motion.curve,
+      );
+    } catch (_) {
+      // The sheet can detach during route changes; its next mount starts at the
+      // compact extent, so no recovery mutation is needed.
+    }
   }
 
   Future<void> _collapseNearbySheetForSurfaceTransition() async {
