@@ -298,6 +298,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
         with: { submodules: false }
+      - name: Verify canonical web route manifest is synchronized
+        run: node scripts/qa/sync_web_interactive_routes.mjs --check
       - name: Serve web source under version-pinned Apache
         shell: bash
         run: |

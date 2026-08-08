@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "description": "Canonical browser-refreshable Flutter route surface. Public SEO entity routes are intentionally excluded and remain owned by seo-proxy.php.",
+  "routes": [
+    { "path": "/", "group": "root", "classification": "interactive", "testUrl": "/" },
+    { "path": "/en", "group": "locale-root", "classification": "interactive", "testUrl": "/en" },
+    { "path": "/sl", "group": "locale-root", "classification": "interactive", "testUrl": "/sl" },
+    { "path": "/app", "group": "app-prefix", "classification": "interactive", "testUrl": "/app" },
+    { "path": "/app/*", "group": "app-prefix", "classification": "interactive", "testUrl": "/app/map" },
+
+    { "path": "/main", "group": "finite", "classification": "interactive", "testUrl": "/main" },
+    { "path": "/map", "group": "finite", "classification": "interactive", "testUrl": "/map?mode=guest&intent=discover&utm_source=meta&utm_medium=paid_social&utm_campaign=map_discovery_test&utm_content=creative_1" },
+    { "path": "/community", "group": "finite", "classification": "interactive", "testUrl": "/community" },
+    { "path": "/onboarding", "group": "finite", "classification": "interactive", "testUrl": "/onboarding" },
+    { "path": "/onboarding/alpha-notice", "group": "finite", "classification": "interactive", "testUrl": "/onboarding/alpha-notice" },
+    { "path": "/post-auth-loading", "group": "finite", "classification": "interactive", "testUrl": "/post-auth-loading" },
+
+    { "path": "/home", "group": "finite", "classification": "alias", "testUrl": "/home" },
+    { "path": "/explore", "group": "finite", "classification": "alias", "testUrl": "/explore" },
+    { "path": "/wallet", "group": "finite", "classification": "alias", "testUrl": "/wallet" },
+    { "path": "/settings", "group": "finite", "classification": "alias", "testUrl": "/settings" },
+    { "path": "/marketplace", "group": "finite", "classification": "alias", "testUrl": "/marketplace" },
+
+    { "path": "/ar", "group": "finite", "classification": "interactive", "testUrl": "/ar" },
+    { "path": "/artwork", "group": "finite", "classification": "interactive", "testUrl": "/artwork?id=contract-artwork" },
+    { "path": "/exhibition", "group": "finite", "classification": "interactive", "testUrl": "/exhibition?id=contract-exhibition" },
+    { "path": "/connect-wallet", "group": "finite", "classification": "interactive", "testUrl": "/connect-wallet" },
+    { "path": "/wallet_connect", "group": "finite", "classification": "alias", "testUrl": "/wallet_connect" },
+    { "path": "/connect_wallet", "group": "finite", "classification": "alias", "testUrl": "/connect_wallet" },
+    { "path": "/import-wallet", "group": "finite", "classification": "interactive", "testUrl": "/import-wallet" },
+    { "path": "/wallet/availability-node", "group": "finite", "classification": "interactive", "testUrl": "/wallet/availability-node" },
+    { "path": "/settings/availability-node", "group": "finite", "classification": "interactive", "testUrl": "/settings/availability-node" },
+
+    { "path": "/sign-in", "group": "finite", "classification": "interactive", "testUrl": "/sign-in" },
+    { "path": "/register", "group": "finite", "classification": "interactive", "testUrl": "/register?utm_source=meta&utm_medium=paid_social&utm_campaign=open_call_en_aug_2026&utm_content=carousel_card_4_add_your_art" },
+    { "path": "/secure-account", "group": "finite", "classification": "interactive", "testUrl": "/secure-account" },
+    { "path": "/verify-email", "group": "finite", "classification": "interactive", "testUrl": "/verify-email?token=contract-token&email=qa%40kubus.site" },
+    { "path": "/verify-email/success", "group": "finite", "classification": "interactive", "testUrl": "/verify-email/success?email=qa%40kubus.site" },
+    { "path": "/forgot-password", "group": "finite", "classification": "interactive", "testUrl": "/forgot-password" },
+    { "path": "/reset-password", "group": "finite", "classification": "interactive", "testUrl": "/reset-password?token=contract-token" },
+    { "path": "/promotions", "group": "finite", "classification": "interactive", "testUrl": "/promotions?status=success&session_id=cs_test_contract" },
+    { "path": "/web3", "group": "finite", "classification": "interactive", "testUrl": "/web3" }
+  ]
+}
