@@ -52,9 +52,9 @@ class TelemetryService {
 
   final Set<String> _onceKeys = <String>{};
 
-  // Campaign attribution captured at guest-first entry (?mode=guest&utm_*),
-  // attached to every event so acquisition analytics can tie ad clicks to app
-  // usage and signups.
+  // First-touch campaign attribution is independent of guest mode and is
+  // attached to every event so both direct registration and map discovery can
+  // be tied to later account and contribution milestones.
   Map<String, Object?> _entryAttribution = const <String, Object?>{};
 
   static final RegExp _uuidRegex = RegExp(

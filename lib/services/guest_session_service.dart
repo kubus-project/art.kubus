@@ -1,13 +1,13 @@
 import 'package:flutter/foundation.dart' show kIsWeb, visibleForTesting;
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Captures guest-first entry + campaign attribution from the launch URL, e.g.
-/// `app.kubus.site/?mode=guest&intent=discover&utm_source=art.kubus.site&...`.
+/// Captures campaign attribution from the launch URL and, independently,
+/// guest-first discovery state when `mode=guest` or a supported intent exists.
 ///
-/// Cold traffic from the marketing site lands here. We persist a lightweight
-/// guest flag so the startup router can send these visitors straight to the
-/// map/discovery shell instead of the account/wallet/tutorial onboarding flow,
-/// and we keep the UTM + intent values for analytics attribution.
+/// Discovery traffic gets a lightweight guest flag so startup can open the map
+/// without account onboarding. Direct acquisition traffic such as
+/// `/register?utm_*` keeps the same structured UTM attribution without becoming
+/// a guest session or being redirected to the map.
 ///
 /// All methods are defensive and never throw — attribution must never block app
 /// startup.
@@ -18,6 +18,19 @@ class GuestSessionService {
   static const String intentKey = 'kubus_entry_intent_v1';
   static const String entryRouteKey = 'kubus_entry_route_v1';
   static const String _utmPrefix = 'kubus_entry_utm_';
+
+  /// Low-cardinality campaign landing dimensions accepted by telemetry.
+  ///
+  /// This intentionally is not the complete Flutter route table: entity ids,
+  /// auth tokens and arbitrary paths must never become analytics dimensions.
+  /// Historical root/main acquisition links remain reportable alongside the
+  /// current discovery-map and direct-registration strategies.
+  static const Set<String> campaignEntryRoutes = <String>{
+    '/',
+    '/main',
+    '/map',
+    '/register',
+  };
 
   static const List<String> utmKeys = <String>[
     'utm_source',
@@ -88,7 +101,7 @@ class GuestSessionService {
     final collapsed = prefixed.length > 1 && prefixed.endsWith('/')
         ? prefixed.substring(0, prefixed.length - 1)
         : prefixed;
-    return _clip(collapsed, 120);
+    return campaignEntryRoutes.contains(collapsed) ? collapsed : null;
   }
 
   static Map<String, String> _launchParams() {
@@ -105,8 +118,8 @@ class GuestSessionService {
   static String _clip(String value, int maxLen) =>
       value.length > maxLen ? value.substring(0, maxLen) : value;
 
-  /// Parse the launch URL and persist guest mode + intent + UTM. Safe to call
-  /// repeatedly; only writes when values are present.
+  /// Parse the launch URL and persist guest mode, intent, UTMs and entry route.
+  /// Safe to call repeatedly; only writes when values are present.
   static Future<void> captureFromLaunchUrl({SharedPreferences? prefs}) async {
     final params = _launchParams();
     if (params.isEmpty) return;

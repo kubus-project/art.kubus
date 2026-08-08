@@ -77,6 +77,17 @@ smoke_curl --fail --silent --show-error --retry 5 --retry-delay 3 --retry-all-er
   "$origin/app" --output "$work_dir/app.html"
 grep -Eq 'flutter_bootstrap\.js|main\.dart\.js' "$work_dir/app.html" || die "/app compatibility entry does not serve Flutter"
 
+# These two finite routes guard the acquisition regressions with the highest
+# deployment impact. CI exhaustively checks every manifest route under Apache;
+# production keeps this representative probe intentionally small.
+for route in onboarding register; do
+  smoke_curl --fail --silent --show-error --retry 5 --retry-delay 3 \
+    --header 'Cache-Control: no-cache' "$origin/$route" \
+    --output "$work_dir/$route.html"
+  grep -Eq 'flutter_bootstrap\.js|main\.dart\.js' "$work_dir/$route.html" \
+    || die "/$route does not serve the Flutter application"
+done
+
 # /en and /sl are now localized Flutter entries. Flutter is REQUIRED here; its
 # presence is no longer a failure signal. Deep localized public-entity routes
 # keep their server-rendered semantic HTML and are asserted by

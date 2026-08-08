@@ -118,8 +118,9 @@ class MarkerManagementProvider extends ChangeNotifier {
       _error = null;
       notifyListeners();
       try {
-        final results =
-            await _api.getMyArtMarkers().timeout(const Duration(seconds: 20));
+        final results = await _api.getMyArtMarkers().timeout(
+              const Duration(seconds: 20),
+            );
         _markers = results;
         _lastFetch = DateTime.now();
       } catch (e) {
@@ -142,7 +143,9 @@ class MarkerManagementProvider extends ChangeNotifier {
   }
 
   ArtMarker _applyUpdatesToMarker(
-      ArtMarker base, Map<String, dynamic> updates) {
+    ArtMarker base,
+    Map<String, dynamic> updates,
+  ) {
     String? name;
     String? description;
     String? category;
@@ -184,7 +187,7 @@ class MarkerManagementProvider extends ChangeNotifier {
             updates['metadata'] is Map<String, dynamic>
         ? <String, dynamic>{
             ...(base.metadata ?? const {}),
-            ...(updates['metadata'] as Map<String, dynamic>)
+            ...(updates['metadata'] as Map<String, dynamic>),
           }
         : base.metadata;
 
@@ -293,7 +296,9 @@ class MarkerManagementProvider extends ChangeNotifier {
 
       meta['clientNonce'] = clientNonce;
       meta.putIfAbsent(
-          'clientCreatedAtMs', () => DateTime.now().millisecondsSinceEpoch);
+        'clientCreatedAtMs',
+        () => DateTime.now().millisecondsSinceEpoch,
+      );
       normalizedPayload['metadata'] = meta;
     } catch (_) {
       // Best-effort; keep original payload and disable nonce recovery.
@@ -320,6 +325,7 @@ class MarkerManagementProvider extends ChangeNotifier {
     Map<String, dynamic> normalizedPayload,
     String? clientNonce,
   ) async {
+    unawaited(TelemetryService().trackContributionStarted(kind: 'marker'));
     try {
       final created = await _api
           .createArtMarkerRecord(normalizedPayload)
@@ -340,7 +346,7 @@ class MarkerManagementProvider extends ChangeNotifier {
       }
       _markers = <ArtMarker>[
         created,
-        ..._markers.where((m) => m.id != created.id)
+        ..._markers.where((m) => m.id != created.id),
       ];
       _mapMarkerService.notifyMarkerUpserted(created);
       _trackStreetArtAchievements(created);
@@ -389,7 +395,9 @@ class MarkerManagementProvider extends ChangeNotifier {
   }
 
   Future<ArtMarker?> updateMarker(
-      String markerId, Map<String, dynamic> updates) async {
+    String markerId,
+    Map<String, dynamic> updates,
+  ) async {
     final id = markerId.trim();
     if (id.isEmpty) return null;
     final index = _markers.indexWhere((m) => m.id == id);
@@ -479,8 +487,9 @@ class MarkerManagementProvider extends ChangeNotifier {
           .timeout(const Duration(seconds: 20));
       if (!ok) {
         _markers = before;
-        _mapMarkerService
-            .notifyMarkerUpserted(before.firstWhere((m) => m.id == id));
+        _mapMarkerService.notifyMarkerUpserted(
+          before.firstWhere((m) => m.id == id),
+        );
         notifyListeners();
         return false;
       }
@@ -491,8 +500,9 @@ class MarkerManagementProvider extends ChangeNotifier {
       _error = e.toString();
       _markers = before;
       try {
-        _mapMarkerService
-            .notifyMarkerUpserted(before.firstWhere((m) => m.id == id));
+        _mapMarkerService.notifyMarkerUpserted(
+          before.firstWhere((m) => m.id == id),
+        );
       } catch (_) {}
       notifyListeners();
       return false;
@@ -511,7 +521,8 @@ class MarkerManagementProvider extends ChangeNotifier {
       } catch (e) {
         if (kDebugMode) {
           debugPrint(
-              'MarkerManagementProvider: street-art achievement tracking failed: $e');
+            'MarkerManagementProvider: street-art achievement tracking failed: $e',
+          );
         }
       }
     });
