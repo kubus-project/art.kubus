@@ -140,6 +140,9 @@ class GuestSessionService {
       await p.setString(intentKey, intent);
     }
 
+    final hasLaunchAttribution = utmKeys.any(
+      (key) => (params[key] ?? '').trim().isNotEmpty,
+    );
     for (final key in utmKeys) {
       final value = (params[key] ?? '').trim();
       if (value.isNotEmpty) {
@@ -147,12 +150,14 @@ class GuestSessionService {
       }
     }
 
-    // First-touch landing route. Written once so a later in-app navigation
-    // cannot overwrite where the campaign actually landed.
+    // Keep the route and structured campaign fields as one attribution touch.
+    // A later campaign URL is allowed to replace the stored UTM values, so its
+    // landing route must replace the old route too. A navigation without UTMs
+    // remains unable to overwrite the original landing surface.
     final entryRoute = _entryRouteSnapshot;
     if (entryRoute != null &&
         entryRoute.isNotEmpty &&
-        (p.getString(entryRouteKey) ?? '').isEmpty) {
+        (hasLaunchAttribution || (p.getString(entryRouteKey) ?? '').isEmpty)) {
       await p.setString(entryRouteKey, entryRoute);
     }
   }

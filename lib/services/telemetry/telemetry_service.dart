@@ -28,6 +28,7 @@ class TelemetryService {
   final TelemetrySender _sender;
 
   bool _initialized = false;
+  Future<void>? _initializationFuture;
   bool _analyticsPreferenceEnabled = true;
   bool _enabled = false;
   bool? _enabledByBuildFlagOverride;
@@ -91,8 +92,23 @@ class TelemetryService {
 
   Future<void> ensureInitialized() async {
     if (_initialized) return;
-    _initialized = true;
 
+    final inFlight = _initializationFuture;
+    if (inFlight != null) {
+      await inFlight;
+      return;
+    }
+
+    final initialization = _initialize();
+    _initializationFuture = initialization;
+    try {
+      await initialization;
+    } finally {
+      if (!_initialized) _initializationFuture = null;
+    }
+  }
+
+  Future<void> _initialize() async {
     _sessionId = TelemetryUuid.v4();
     _sessionStartUtc = DateTime.now().toUtc();
 
@@ -114,6 +130,7 @@ class TelemetryService {
     KubusClientContext.instance.setEnabled(_enabled);
 
     await _queue.init();
+    _initialized = true;
 
     if (_enabled) {
       _syncClientContext();

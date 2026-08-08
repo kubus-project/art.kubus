@@ -81,7 +81,7 @@ grep -Eq 'flutter_bootstrap\.js|main\.dart\.js' "$work_dir/app.html" || die "/ap
 # deployment impact. CI exhaustively checks every manifest route under Apache;
 # production keeps this representative probe intentionally small.
 for route in onboarding register; do
-  smoke_curl --fail --silent --show-error --retry 5 --retry-delay 3 \
+  smoke_curl --fail --silent --show-error --retry 5 --retry-delay 3 --retry-all-errors \
     --header 'Cache-Control: no-cache' "$origin/$route" \
     --output "$work_dir/$route.html"
   grep -Eq 'flutter_bootstrap\.js|main\.dart\.js' "$work_dir/$route.html" \

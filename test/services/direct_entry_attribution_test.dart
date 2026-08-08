@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:art_kubus/services/guest_session_service.dart';
 import 'package:art_kubus/core/shell_routes.dart';
 import 'package:art_kubus/services/telemetry/kubus_client_context.dart';
@@ -13,6 +15,15 @@ class _NoopSender implements TelemetrySender {
   @override
   Future<TelemetrySendResult> sendBatch(List<AppTelemetryEvent> events) async =>
       TelemetrySendResult.ok();
+}
+
+class _BlockingQueue extends InMemoryTelemetryEventQueue {
+  final Completer<void> _ready = Completer<void>();
+
+  @override
+  Future<void> init() => _ready.future;
+
+  void release() => _ready.complete();
 }
 
 /// A direct ad landing: straight on `/register`, no `mode=guest`, no `intent`.
@@ -210,6 +221,29 @@ void main() {
       expect(GuestSessionService.entryRouteSync(prefs), '/register');
     });
 
+    test('a later attributed campaign replaces the route with its UTMs',
+        () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        GuestSessionService.entryRouteKey: '/map',
+        'kubus_entry_utm_utm_campaign': 'old_map_campaign',
+      });
+      GuestSessionService.snapshotLaunchUrl(
+        override: Uri.parse(
+          'https://app.kubus.site/register'
+          '?utm_source=meta&utm_campaign=new_register_campaign',
+        ),
+      );
+      final prefs = await SharedPreferences.getInstance();
+
+      await GuestSessionService.captureFromLaunchUrl(prefs: prefs);
+
+      expect(GuestSessionService.entryRouteSync(prefs), '/register');
+      expect(
+        GuestSessionService.entryUtmSync(prefs)['utm_campaign'],
+        'new_register_campaign',
+      );
+    });
+
     test(
       'entryRouteSync falls back to the snapshot with nothing persisted',
       () async {
@@ -277,6 +311,32 @@ void main() {
           settings: RouteSettings(name: name),
           builder: (_) => const SizedBox.shrink(),
         );
+
+    test('concurrent initialization callers await the same completion',
+        () async {
+      final queue = _BlockingQueue();
+      final svc = TelemetryService.createForTest(
+        queue: queue,
+        sender: _NoopSender(),
+      );
+      var secondCompleted = false;
+
+      final first = svc.ensureInitialized();
+      final second = svc.ensureInitialized().then((_) {
+        secondCompleted = true;
+      });
+      await pumpEventQueue();
+
+      expect(secondCompleted, isFalse);
+      expect(svc.currentSessionId, isNull);
+
+      queue.release();
+      await Future.wait(<Future<void>>[first, second]);
+
+      expect(secondCompleted, isTrue);
+      expect(svc.currentSessionId, isNotNull);
+      svc.setAnalyticsPreferenceEnabled(false);
+    });
 
     test('a campaign route name reports the path without its query', () async {
       final (svc, queue) = await makeService();
