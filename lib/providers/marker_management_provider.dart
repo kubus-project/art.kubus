@@ -325,7 +325,7 @@ class MarkerManagementProvider extends ChangeNotifier {
     Map<String, dynamic> normalizedPayload,
     String? clientNonce,
   ) async {
-    unawaited(TelemetryService().trackContributionStarted(kind: 'marker'));
+    _noteContributionStarted();
     try {
       final created = await _api
           .createArtMarkerRecord(normalizedPayload)
@@ -390,8 +390,20 @@ class MarkerManagementProvider extends ChangeNotifier {
   /// out or returned null *after* the backend committed — precisely the slow
   /// ones, which would otherwise be the submissions missing from activation
   /// reporting.
+  void _noteContributionStarted() {
+    unawaited(
+      TelemetryService()
+          .trackContributionStarted(kind: 'marker')
+          .catchError((_) {}),
+    );
+  }
+
   void _noteContributionPublished() {
-    unawaited(TelemetryService().trackContributionSubmitted(kind: 'marker'));
+    unawaited(
+      TelemetryService()
+          .trackContributionSubmitted(kind: 'marker')
+          .catchError((_) {}),
+    );
   }
 
   Future<ArtMarker?> updateMarker(
