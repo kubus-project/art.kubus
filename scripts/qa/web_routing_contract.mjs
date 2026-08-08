@@ -19,7 +19,16 @@
 //
 // Usage: KUBUS_BASE=http://localhost:8081 node scripts/qa/web_routing_contract.mjs
 
+import { readFile } from 'node:fs/promises';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 const BASE = (process.env.KUBUS_BASE ?? 'http://localhost:8081').replace(/\/+$/, '');
+const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
+const routeManifest = JSON.parse(await readFile(
+  resolve(repoRoot, 'web', 'web_interactive_routes.json'),
+  'utf8',
+));
 // index.html (the Flutter shell) opens with the HTML doctype; seo-proxy.php opens
 // with `<?php`. These two markers, not the presence of "flutter_bootstrap.js"
 // (which the gateway's own source references), are what reliably distinguish the
@@ -58,15 +67,23 @@ async function expectStatus(path, expected) {
   record(`${path}`, status === expected, `${status} (expected ${expected})`);
 }
 
+async function expectRedirect(path, expectedStatus, expectedLocation) {
+  const res = await fetch(`${BASE}${path}`, { redirect: 'manual' });
+  const rawLocation = res.headers.get('location');
+  const location = rawLocation === null ? null : new URL(rawLocation, `${BASE}/`).pathname;
+  const ok = res.status === expectedStatus && location === expectedLocation;
+  record(`${path} redirects canonically`, ok, `${res.status} ${location ?? '<no location>'} (expected ${expectedStatus} ${expectedLocation})`);
+}
+
 console.log(`web/.htaccess routing contract against ${BASE}\n`);
 
-// --- Direct application entry ------------------------------------------------
-// Root and the bare locale roots boot the Flutter application directly; there is
-// no 308 to /en and no generic server-rendered homepage.
-await expectAppShell('/');
-await expectAppShell('/en');
-await expectAppShell('/sl');
-await expectAppShell('/app');
+// --- Complete canonical interactive route surface ---------------------------
+// The same manifest generates Apache's finite allowlist. Iterating it here
+// proves the complete contract through real mod_rewrite rather than merely
+// comparing regex strings.
+for (const route of routeManifest.routes) {
+  await expectAppShell(route.testUrl);
+}
 
 // Locale/tracking query parameters enter the app rather than redirecting: the
 // launch locale is resolved inside the app and the query survives untouched.
@@ -76,20 +93,28 @@ await expectAppShell('/?locale=en');
 await expectAppShell('/?utm_source=test');
 await expectAppShell('/?lang=sl&utm_source=test');
 
-// --- Finite interactive route surface ---------------------------------------
-await expectAppShell('/main');
-await expectAppShell('/map');
-
 // --- Deeper localized public routes stay server-rendered --------------------
 // These are owned by the SEO renderer (seo-proxy.php); they must not degrade
 // into the app shell. The renderer decides eligibility and real 404s at runtime.
 await expectGatewayHandoff('/en/artworks/contract-probe');
 await expectGatewayHandoff('/sl/umetnine/contract-probe');
 
+// Compact and long-form entity aliases remain renderer-owned. The PHP-less CI
+// container proves the handoff target; production contract tests prove the
+// renderer's canonical redirect and semantic response.
+await expectGatewayHandoff('/a/contract-probe');
+await expectGatewayHandoff('/artworks/contract-probe');
+
+// The oldest marker query alias remains a one-hop locale-aware redirect.
+await expectRedirect('/map?marker=contract-probe', 308, '/en/map/contract-probe');
+
 // --- Honest failure behaviour -----------------------------------------------
 // Unknown paths are real 404s, never an indexable Flutter shell.
 await expectStatus('/__unknown-routing-probe', 404);
 await expectStatus('/does/not/exist', 404);
+await expectGatewayHandoff('/en/__unknown-routing-probe');
+await expectGatewayHandoff('/sl/__unknown-routing-probe');
+await expectStatus('/missing-runtime.js.map', 404);
 
 const failed = results.filter((r) => !r.ok);
 console.log(`\n${results.length - failed.length}/${results.length} checks passed.`);

@@ -58,6 +58,17 @@ class AppTelemetryEventTypes {
   static const String signUpFailure = 'signup_failure';
   static const String arSessionStart = 'ar_session_start';
 
+  /// First-touch app entry, once per session, for EVERY visitor.
+  ///
+  /// [guestAppLoaded] only fires for guest-first entries (`?mode=guest` or a
+  /// recognised intent), which left campaigns that link straight to `/register`
+  /// with no top-of-funnel event at all — their activation rate was divided by
+  /// a denominator that structurally excluded them. This event is the funnel
+  /// entry for direct acquisition and carries `entry_route` so a campaign's
+  /// landing surface is reportable. [guestAppLoaded] stays exactly as-is, as
+  /// the guest-scoped subset, so the map-first funnel is unaffected.
+  static const String appEntry = 'app_entry';
+
   // Guest-first funnel: cold visitors arriving from the marketing site via
   // ?mode=guest. These let acquisition analytics tie ad clicks -> guest app
   // usage -> (optional) signup.
@@ -121,6 +132,7 @@ class AppTelemetryEventTypes {
   static const Set<String> allowed = {
     screenView,
     screenDuration,
+    appEntry,
     onboardingEnter,
     onboardingComplete,
     signInView,
