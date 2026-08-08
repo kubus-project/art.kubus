@@ -57,6 +57,11 @@ class GuestSessionService {
   /// longer depends on when it happens to be read.
   static Map<String, String>? _launchSnapshot;
   static String? _entryRouteSnapshot;
+  static Future<void>? _captureFuture;
+
+  /// Whether a platform launch URL has been frozen for this process.
+  /// Mobile receives this only when initial-route dispatch supplies it.
+  static bool get hasLaunchSnapshot => _launchSnapshot != null;
 
   /// Freeze the launch URL. Called first thing in `main()`, before `runApp` and
   /// before any `await`, so no navigation can have rewritten the URL yet.
@@ -83,6 +88,7 @@ class GuestSessionService {
   static void resetLaunchSnapshotForTest() {
     _launchSnapshot = null;
     _entryRouteSnapshot = null;
+    _captureFuture = null;
   }
 
   /// The route the visitor landed on, without query or fragment.
@@ -120,10 +126,20 @@ class GuestSessionService {
 
   /// Parse the launch URL and persist guest mode, intent, UTMs and entry route.
   /// Safe to call repeatedly; only writes when values are present.
-  static Future<void> captureFromLaunchUrl({SharedPreferences? prefs}) async {
+  static Future<void> captureFromLaunchUrl({SharedPreferences? prefs}) {
     final params = _launchParams();
-    if (params.isEmpty) return;
+    if (params.isEmpty) return Future<void>.value();
+    return _captureFuture ??= _captureFromParams(params, prefs: prefs);
+  }
 
+  /// Lets telemetry wait for capture started by initial-route dispatch.
+  static Future<void> waitForLaunchAttributionCapture() =>
+      _captureFuture ?? Future<void>.value();
+
+  static Future<void> _captureFromParams(
+    Map<String, String> params, {
+    SharedPreferences? prefs,
+  }) async {
     final p = prefs ?? await SharedPreferences.getInstance();
 
     final mode = (params['mode'] ?? '').trim().toLowerCase();
@@ -143,6 +159,15 @@ class GuestSessionService {
     final hasLaunchAttribution = utmKeys.any(
       (key) => (params[key] ?? '').trim().isNotEmpty,
     );
+    if (hasLaunchAttribution) {
+      // A replacement touch must not retain an optional creative/term from the
+      // prior campaign, which would produce mixed structured attribution.
+      for (final key in utmKeys) {
+        if ((params[key] ?? '').trim().isEmpty) {
+          await p.remove('$_utmPrefix$key');
+        }
+      }
+    }
     for (final key in utmKeys) {
       final value = (params[key] ?? '').trim();
       if (value.isNotEmpty) {

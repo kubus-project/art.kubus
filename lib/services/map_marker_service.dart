@@ -10,6 +10,7 @@ import 'backend_api_service.dart';
 import 'achievement_service.dart';
 import 'storage_config.dart';
 import 'socket_service.dart';
+import 'telemetry/telemetry_service.dart';
 import 'telemetry/telemetry_uuid.dart';
 
 @immutable
@@ -519,6 +520,7 @@ class MapMarkerService {
     String? modelCID,
     String? modelURL,
   }) async {
+    _noteContributionStarted();
     String? clientNonce;
     try {
       final normalizedArtworkId = artworkId?.trim() ?? '';
@@ -607,6 +609,7 @@ class MapMarkerService {
         _cachedMarkers.add(created);
         notifyMarkerUpserted(created);
         unawaited(_trackStreetArtAchievements(created));
+        _noteContributionPublished();
         return created;
       }
 
@@ -619,6 +622,7 @@ class MapMarkerService {
             _cachedMarkers.add(marker);
             notifyMarkerUpserted(marker);
             unawaited(_trackStreetArtAchievements(marker));
+            _noteContributionPublished();
             _log(
                 'MapMarkerService: recovered created marker via nonce ${marker.id}');
             return marker;
@@ -639,6 +643,7 @@ class MapMarkerService {
               _cachedMarkers.add(marker);
               notifyMarkerUpserted(marker);
               unawaited(_trackStreetArtAchievements(marker));
+              _noteContributionPublished();
               _log(
                   'MapMarkerService: recovered created marker after error ${marker.id}');
               return marker;
@@ -650,6 +655,22 @@ class MapMarkerService {
       }
     }
     return null;
+  }
+
+  void _noteContributionStarted() {
+    unawaited(
+      TelemetryService()
+          .trackContributionStarted(kind: 'marker')
+          .catchError((_) {}),
+    );
+  }
+
+  void _noteContributionPublished() {
+    unawaited(
+      TelemetryService()
+          .trackContributionSubmitted(kind: 'marker')
+          .catchError((_) {}),
+    );
   }
 
   /// Map markers are metadata containers on the map; AR uploads are handled by

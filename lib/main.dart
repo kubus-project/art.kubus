@@ -1240,6 +1240,7 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
     // later as `initialUri` would be locked out by the first-touch guard.
     if (uri.queryParameters.isNotEmpty) {
       GuestSessionService.snapshotLaunchUrl(override: uri);
+      _startEntryAttributionBootstrap();
     }
 
     // Direct shell URLs still need AppInitializer so auth/session restoration,
@@ -1266,7 +1267,16 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _initNotificationRouting();
-    unawaited(_bootstrapEntryAttribution());
+    _startEntryAttributionBootstrap();
+  }
+
+  Future<void>? _entryAttributionBootstrap;
+
+  void _startEntryAttributionBootstrap() {
+    // Android/iOS receive their campaign URL during initial-route dispatch.
+    // Do not initialise telemetry from the earlier empty mobile launch.
+    if (!GuestSessionService.hasLaunchSnapshot) return;
+    _entryAttributionBootstrap ??= _bootstrapEntryAttribution();
   }
 
   /// Persist campaign attribution and open the funnel, on every entry route.

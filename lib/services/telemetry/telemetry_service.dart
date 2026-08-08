@@ -113,6 +113,9 @@ class TelemetryService {
     _sessionStartUtc = DateTime.now().toUtc();
 
     try {
+      // Initial-route dispatch may already be persisting a mobile deep link.
+      // Wait before snapshotting metadata so initial route events share it.
+      await GuestSessionService.waitForLaunchAttributionCapture();
       final prefs = await SharedPreferences.getInstance();
       _analyticsPreferenceEnabled = prefs.getBool('enableAnalytics') ?? true;
       _actorUserId = _normalizeUuid(prefs.getString('user_id'));

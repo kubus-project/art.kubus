@@ -244,6 +244,33 @@ void main() {
       );
     });
 
+    test('a replacement touch clears omitted optional UTM values', () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        GuestSessionService.entryRouteKey: '/map',
+        'kubus_entry_utm_utm_campaign': 'old_map_campaign',
+        'kubus_entry_utm_utm_content': 'old_creative',
+        'kubus_entry_utm_utm_term': 'old_term',
+      });
+      GuestSessionService.snapshotLaunchUrl(
+        override: Uri.parse(
+          'https://app.kubus.site/register'
+          '?utm_source=meta&utm_campaign=new_register_campaign',
+        ),
+      );
+      final prefs = await SharedPreferences.getInstance();
+
+      await GuestSessionService.captureFromLaunchUrl(prefs: prefs);
+
+      expect(GuestSessionService.entryRouteSync(prefs), '/register');
+      expect(
+        GuestSessionService.entryUtmSync(prefs),
+        <String, String>{
+          'utm_source': 'meta',
+          'utm_campaign': 'new_register_campaign',
+        },
+      );
+    });
+
     test(
       'entryRouteSync falls back to the snapshot with nothing persisted',
       () async {
