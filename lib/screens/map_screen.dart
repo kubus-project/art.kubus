@@ -375,6 +375,29 @@ class _MapScreenState extends State<MapScreen>
       };
   final DraggableScrollableController _sheetController =
       DraggableScrollableController();
+
+  /// Stable identity for the Nearby Art sheet inside the map [Stack].
+  ///
+  /// The map stack mounts and unmounts sibling chrome (primary controls, the
+  /// activation prompt, the gesture blocker) as the context surface changes.
+  /// Those siblings sit both *before* and *after* the sheet, so a surface
+  /// transition stops Flutter's leading and trailing child scans on either
+  /// side of it and the sheet lands in the unkeyed middle, where children are
+  /// deactivated and re-inflated instead of updated.
+  ///
+  /// Re-inflating the sheet re-runs `initState`, which attaches
+  /// [_sheetController] to a second scroll controller while the outgoing state
+  /// is still attached. The outgoing state's `dispose` then runs at
+  /// `BuildOwner.finalizeTree` and detaches the controller outright, leaving a
+  /// mounted sheet holding a detached controller. The next rebuild that reaches
+  /// the sheet calls `DraggableScrollableSheet._replaceExtent`, whose
+  /// `widget.controller?._onExtentReplaced(...)` dereferences
+  /// `_attachedController!` and throws "Null check operator used on a null
+  /// value" (Flutter 3.44.2 draggable_scrollable_sheet.dart:220).
+  ///
+  /// Keying the sheet keeps its element across those transitions, so the
+  /// controller stays attached to exactly one sheet for its whole lifetime.
+  static const Key _nearbySheetKey = ValueKey<String>('map.nearbyArtSheet');
   final ValueNotifier<double> _nearbySheetExtentNotifier =
       ValueNotifier<double>(_nearbySheetMin);
   bool _isSheetInteracting = false;
@@ -5964,6 +5987,10 @@ class _MapScreenState extends State<MapScreen>
     bool isLoading,
   ) {
     final sheet = Align(
+      // Keeps this subtree's element across context-surface transitions so the
+      // sheet is never re-inflated underneath _sheetController. See
+      // [_nearbySheetKey].
+      key: _nearbySheetKey,
       alignment: Alignment.bottomCenter,
       child: Padding(
         // Nearby remains a peek above the persistent mobile navigation rather

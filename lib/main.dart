@@ -95,6 +95,7 @@ import 'services/solana_wallet_service.dart';
 import 'services/socket_service.dart';
 import 'services/backend_api_service.dart';
 import 'services/diagnostics/diagnostics_client.dart';
+import 'services/diagnostics/flutter_error_context.dart';
 import 'services/public_action_outbox_service.dart';
 import 'services/public_fallback_service.dart';
 import 'services/telemetry/telemetry_route_observer.dart';
@@ -129,7 +130,12 @@ class _UnhandledErrorDedupe {
   // ignore: unused_field
   static String? firstSource;
 
-  static void handle(Object error, StackTrace stack, {required String source}) {
+  static void handle(
+    Object error,
+    StackTrace stack, {
+    required String source,
+    FlutterErrorDetails? details,
+  }) {
     _captureFirst(error, stack, source);
     final signature = _signatureFor(error, stack, source);
     final now = DateTime.now();
@@ -172,6 +178,7 @@ class _UnhandledErrorDedupe {
       severity: source == 'PlatformDispatcher' || source == 'Zone'
           ? 'fatal'
           : 'error',
+      metadata: buildFlutterErrorContext(error, details),
     ));
   }
 
@@ -266,6 +273,7 @@ void main() {
         details.exception,
         details.stack ?? StackTrace.current,
         source: 'ErrorWidget',
+        details: details,
       );
     } catch (_) {
       // Never crash the fallback builder.
@@ -329,7 +337,7 @@ void main() {
           try {
             final stack = details.stack ?? StackTrace.current;
             _UnhandledErrorDedupe.handle(details.exception, stack,
-                source: 'FlutterError');
+                source: 'FlutterError', details: details);
             Zone.current.handleUncaughtError(details.exception, stack);
           } catch (e, st) {
             debugPrint('Failed to forward FlutterError to zone: $e\n$st');
