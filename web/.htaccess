@@ -145,12 +145,16 @@
   # PR #49.
   RewriteRule ^$ index.html [L]
 
-  # Preserve the existing finite Flutter route surface. Authentication,
+  # Preserve the finite Flutter route surface. Authentication, onboarding,
   # settings, checkout and wallet pages stay interactive but are never exposed
-  # as public SEO documents.
+  # as public SEO documents. The rule is generated from the canonical manifest;
+  # CI executes every manifest entry against real Apache.
+  # BEGIN GENERATED WEB INTERACTIVE ROUTES
+  # Generated from web/web_interactive_routes.json. Do not edit this rule by hand.
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d
-  RewriteRule ^(?:main|map|community|home|explore|ar|artwork|exhibition|connect-wallet|wallet_connect|connect_wallet|import-wallet|sign-in|register|secure-account|verify-email(?:/success)?|forgot-password|reset-password|promotions|web3|wallet(?:/availability-node)?|settings(?:/availability-node)?|marketplace)/?$ index.html [L]
+  RewriteRule ^(?:ar|artwork|community|connect_wallet|connect-wallet|exhibition|explore|forgot-password|home|import-wallet|main|map|marketplace|onboarding|onboarding/alpha-notice|post-auth-loading|promotions|register|reset-password|secure-account|settings|settings/availability-node|sign-in|verify-email|verify-email/success|wallet|wallet_connect|wallet/availability-node|web3)/?$ index.html [L]
+  # END GENERATED WEB INTERACTIVE ROUTES
 
   # Unknown paths are real 404s, not indexable Flutter-shell soft 404s.
   RewriteCond %{REQUEST_FILENAME} !-f
