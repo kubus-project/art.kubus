@@ -432,6 +432,19 @@ void main() {
       },
     );
 
+    test('app_entry is emitted for a bare launch without attribution',
+        () async {
+      final (svc, queue) = await makeService();
+
+      await svc.trackAppEntry();
+
+      final entries = (await queue.peekBatch(200))
+          .where((event) => event.eventType == 'app_entry')
+          .toList(growable: false);
+      expect(entries, hasLength(1));
+      expect(entries.single.metadata.containsKey('entry_route'), isFalse);
+    });
+
     test(
       'direct registration and activation stages retain first-touch attribution',
       () async {

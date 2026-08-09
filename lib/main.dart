@@ -1281,9 +1281,10 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
   Future<void>? _entryAttributionBootstrap;
 
   void _startEntryAttributionBootstrap() {
-    // Android/iOS receive their campaign URL during initial-route dispatch.
-    // Do not initialise telemetry from the earlier empty mobile launch.
-    if (!GuestSessionService.hasLaunchSnapshot) return;
+    // A bare mobile launch has no launch snapshot, but it still represents an
+    // app entry. Starting telemetry here keeps `app_entry` as a denominator
+    // for every visitor while a later deep link can still claim first-touch
+    // attribution during initial-route dispatch.
     _entryAttributionBootstrap ??= _bootstrapEntryAttribution();
   }
 
