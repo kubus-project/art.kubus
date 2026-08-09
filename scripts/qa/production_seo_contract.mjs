@@ -139,6 +139,8 @@ async function main() {
     ['bare /en boots the app', '/en'],
     ['bare /sl boots the app', '/sl'],
     ['/app compatibility entry boots the app', '/app'],
+    ['/onboarding refresh boots the app', '/onboarding'],
+    ['direct registration campaign boots the app', '/register?utm_source=meta&utm_medium=paid_social&utm_campaign=contract&utm_content=creative_1'],
     ['?lang=sl enters the app (no redirect)', '/?lang=sl'],
     ['?lang=en enters the app (no redirect)', '/?lang=en'],
     ['?locale=sl enters the app (no redirect)', '/?locale=sl'],

@@ -88,12 +88,14 @@ import 'screens/desktop/web3/desktop_connect_wallet_screen.dart';
 import 'screens/web3/wallet/connectwallet_screen.dart';
 import 'screens/web3/promotions/promotion_checkout_return_screen.dart';
 // user_service initialization moved to profile and wallet flows.
+import 'services/guest_session_service.dart';
 import 'services/push_notification_service.dart';
 import 'services/notification_handler.dart';
 import 'services/solana_wallet_service.dart';
 import 'services/socket_service.dart';
 import 'services/backend_api_service.dart';
 import 'services/diagnostics/diagnostics_client.dart';
+import 'services/diagnostics/flutter_error_context.dart';
 import 'services/public_action_outbox_service.dart';
 import 'services/public_fallback_service.dart';
 import 'services/telemetry/telemetry_route_observer.dart';
@@ -128,7 +130,12 @@ class _UnhandledErrorDedupe {
   // ignore: unused_field
   static String? firstSource;
 
-  static void handle(Object error, StackTrace stack, {required String source}) {
+  static void handle(
+    Object error,
+    StackTrace stack, {
+    required String source,
+    FlutterErrorDetails? details,
+  }) {
     _captureFirst(error, stack, source);
     final signature = _signatureFor(error, stack, source);
     final now = DateTime.now();
@@ -171,6 +178,7 @@ class _UnhandledErrorDedupe {
       severity: source == 'PlatformDispatcher' || source == 'Zone'
           ? 'fatal'
           : 'error',
+      metadata: buildFlutterErrorContext(error, details),
     ));
   }
 
@@ -233,6 +241,16 @@ const bool _enableWebSemantics = bool.fromEnvironment(
 );
 
 void main() {
+  // Freeze the launch URL before anything else can navigate.
+  //
+  // `Uri.base` follows the live browser location on web, so the campaign query
+  // string survives only until the first route change. A direct ad landing on
+  // `/register?utm_*` resolves straight to the screen without ever building
+  // `AppInitializer`, so nothing used to persist its attribution at all. Taking
+  // the snapshot synchronously here — before `runApp` and before any `await` —
+  // makes capture independent of routing and of when it is read.
+  GuestSessionService.snapshotLaunchUrl();
+
   // We'll initialize the bindings inside the runZonedGuarded callback so the
   // WidgetsBinding is created in the same zone as the rest of the app and
   // prevents 'Zone mismatch' warnings when the zone-global error handler
@@ -255,6 +273,7 @@ void main() {
         details.exception,
         details.stack ?? StackTrace.current,
         source: 'ErrorWidget',
+        details: details,
       );
     } catch (_) {
       // Never crash the fallback builder.
@@ -318,7 +337,7 @@ void main() {
           try {
             final stack = details.stack ?? StackTrace.current;
             _UnhandledErrorDedupe.handle(details.exception, stack,
-                source: 'FlutterError');
+                source: 'FlutterError', details: details);
             Zone.current.handleUncaughtError(details.exception, stack);
           } catch (e, st) {
             debugPrint('Failed to forward FlutterError to zone: $e\n$st');
@@ -1216,6 +1235,22 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
     final normalized = initialRoute.trim().isEmpty ? '/' : initialRoute.trim();
     final uri = Uri.tryParse(normalized) ?? Uri(path: normalized);
 
+    // Mobile cold start. `main()` has no launch URL to freeze on Android/iOS,
+    // and a deep link to `/register?utm_*` resolves straight to its screen
+    // without ever building `AppInitializer` — so this is the only point
+    // common to every cold entry where the platform's initial route is still
+    // visible before dispatch. On web the snapshot is already frozen by
+    // `main()` and this is a no-op, which is what keeps attribution
+    // first-touch.
+    //
+    // Only a URL that actually carries parameters is frozen: a bare platform
+    // route must not claim the snapshot, or a deep link delivered moments
+    // later as `initialUri` would be locked out by the first-touch guard.
+    if (uri.queryParameters.isNotEmpty) {
+      GuestSessionService.snapshotLaunchUrl(override: uri);
+      _startEntryAttributionBootstrap();
+    }
+
     // Direct shell URLs still need AppInitializer so auth/session restoration,
     // provider hydration, and warm-up run before the shell renders.
     if (ShellRoutes.shouldWrapInitialUri(uri)) {
@@ -1240,7 +1275,39 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _initNotificationRouting();
-    unawaited(TelemetryService().ensureInitialized());
+    _startEntryAttributionBootstrap();
+  }
+
+  Future<void>? _entryAttributionBootstrap;
+
+  void _startEntryAttributionBootstrap() {
+    // A bare mobile launch has no launch snapshot, but it still represents an
+    // app entry. Starting telemetry here keeps `app_entry` as a denominator
+    // for every visitor while a later deep link can still claim first-touch
+    // attribution during initial-route dispatch.
+    _entryAttributionBootstrap ??= _bootstrapEntryAttribution();
+  }
+
+  /// Persist campaign attribution and open the funnel, on every entry route.
+  ///
+  /// Runs here rather than in `AppInitializer` because a direct ad landing on
+  /// `/register` resolves straight to its screen and never builds
+  /// `AppInitializer` at all — so its attribution was previously never written
+  /// to storage and was lost on the first reload. `snapshotLaunchUrl` has
+  /// already frozen the launch URL in `main()`, so the values are the landing
+  /// ones no matter how much navigation has happened by now.
+  Future<void> _bootstrapEntryAttribution() async {
+    try {
+      await GuestSessionService.captureFromLaunchUrl();
+    } catch (_) {
+      // Attribution must never block startup.
+    }
+    final telemetry = TelemetryService();
+    await telemetry.ensureInitialized();
+    // The capture above may have landed after the attribution snapshot was
+    // taken during initialisation, so re-read it before the first event.
+    await telemetry.refreshEntryAttribution();
+    unawaited(telemetry.trackAppEntry());
   }
 
   void _initNotificationRouting() {

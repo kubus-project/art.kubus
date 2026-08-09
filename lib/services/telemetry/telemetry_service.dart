@@ -28,6 +28,7 @@ class TelemetryService {
   final TelemetrySender _sender;
 
   bool _initialized = false;
+  Future<void>? _initializationFuture;
   bool _analyticsPreferenceEnabled = true;
   bool _enabled = false;
   bool? _enabledByBuildFlagOverride;
@@ -52,9 +53,9 @@ class TelemetryService {
 
   final Set<String> _onceKeys = <String>{};
 
-  // Campaign attribution captured at guest-first entry (?mode=guest&utm_*),
-  // attached to every event so acquisition analytics can tie ad clicks to app
-  // usage and signups.
+  // First-touch campaign attribution is independent of guest mode and is
+  // attached to every event so both direct registration and map discovery can
+  // be tied to later account and contribution milestones.
   Map<String, Object?> _entryAttribution = const <String, Object?>{};
 
   static final RegExp _uuidRegex = RegExp(
@@ -91,12 +92,30 @@ class TelemetryService {
 
   Future<void> ensureInitialized() async {
     if (_initialized) return;
-    _initialized = true;
 
+    final inFlight = _initializationFuture;
+    if (inFlight != null) {
+      await inFlight;
+      return;
+    }
+
+    final initialization = _initialize();
+    _initializationFuture = initialization;
+    try {
+      await initialization;
+    } finally {
+      if (!_initialized) _initializationFuture = null;
+    }
+  }
+
+  Future<void> _initialize() async {
     _sessionId = TelemetryUuid.v4();
     _sessionStartUtc = DateTime.now().toUtc();
 
     try {
+      // Initial-route dispatch may already be persisting a mobile deep link.
+      // Wait before snapshotting metadata so initial route events share it.
+      await GuestSessionService.waitForLaunchAttributionCapture();
       final prefs = await SharedPreferences.getInstance();
       _analyticsPreferenceEnabled = prefs.getBool('enableAnalytics') ?? true;
       _actorUserId = _normalizeUuid(prefs.getString('user_id'));
@@ -114,6 +133,7 @@ class TelemetryService {
     KubusClientContext.instance.setEnabled(_enabled);
 
     await _queue.init();
+    _initialized = true;
 
     if (_enabled) {
       _syncClientContext();
@@ -156,7 +176,18 @@ class TelemetryService {
     await ensureInitialized();
     if (!_enabled) return;
 
-    final routeName = (route.settings.name ?? '').trim();
+    final rawRouteName = (route.settings.name ?? '').trim();
+
+    // Match on the PATH, not the raw route name.
+    //
+    // A campaign landing arrives as `/register?utm_source=meta&...`, and the
+    // raw name is what `onGenerateInitialRoutes` passes through verbatim. Exact
+    // comparisons like `name == '/register'` therefore failed for precisely the
+    // entries we most need to measure, so `signup_view` never fired for a
+    // direct ad landing. Stripping the query also keeps `screen_name` /
+    // `screen_route` low-cardinality — otherwise every distinct utm_* triple
+    // minted a new screen value and blew up the grouping dimensions.
+    final routeName = _routePathOf(rawRouteName);
     final screenRoute = routeName.isNotEmpty ? routeName : null;
 
     final screenName = _screenNameForRouteName(routeName) ??
@@ -674,6 +705,11 @@ class TelemetryService {
       });
       final intent = GuestSessionService.entryIntentSync(prefs);
       if (intent != null) attribution['entry_intent'] = intent;
+      // Landing surface for this visitor — path only, never the query string.
+      // Answers "did this campaign land on /register or /map?" without storing
+      // arbitrary parameter values.
+      final entryRoute = GuestSessionService.entryRouteSync(prefs);
+      if (entryRoute != null) attribution['entry_route'] = entryRoute;
       if (GuestSessionService.isGuestActiveSync(prefs)) {
         attribution['guest'] = true;
       }
@@ -681,6 +717,30 @@ class TelemetryService {
     } catch (_) {
       return const <String, Object?>{};
     }
+  }
+
+  /// Re-read entry attribution after it may have changed.
+  ///
+  /// `_entryAttribution` is snapshotted once during [ensureInitialized], so a
+  /// capture or `activateGuestMode` that lands afterwards would otherwise be
+  /// invisible to every later event in the process.
+  Future<void> refreshEntryAttribution({SharedPreferences? prefs}) async {
+    if (!_initialized) return;
+    try {
+      final p = prefs ?? await SharedPreferences.getInstance();
+      _entryAttribution = _loadEntryAttribution(p);
+    } catch (_) {
+      // Attribution refresh must never break the app.
+    }
+  }
+
+  /// First-touch app entry for every visitor, once per session.
+  ///
+  /// This is the denominator for direct-acquisition campaigns, which never
+  /// emit [AppTelemetryEventTypes.guestAppLoaded] because they land straight on
+  /// `/register` rather than through the guest map.
+  Future<void> trackAppEntry() async {
+    await _trackOncePerSession(AppTelemetryEventTypes.appEntry);
   }
 
   Future<void> trackEvent(String eventType,
@@ -1010,6 +1070,22 @@ class TelemetryService {
       screenRoute: _screenRoute,
       flowStage: _flowStage,
     );
+  }
+
+  /// Path portion of a route name, without query or fragment.
+  ///
+  /// Named routes are usually bare (`/register`), but a web deep link arrives
+  /// with the launch query attached (`/register?utm_source=meta`). Everything
+  /// downstream — screen naming, the signup/sign-in/onboarding predicates and
+  /// the reported `screen_route` — wants the path alone.
+  static String _routePathOf(String routeName) {
+    final name = routeName.trim();
+    if (name.isEmpty) return '';
+    final path = Uri.tryParse(name)?.path;
+    if (path == null || path.isEmpty) {
+      return name.split('?').first.split('#').first;
+    }
+    return path;
   }
 
   String? _screenNameForRouteName(String routeName) {
