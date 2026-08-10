@@ -368,7 +368,7 @@ void main() {
 
   group('TelemetryService route attribution', () {
     Future<(TelemetryService, InMemoryTelemetryEventQueue)>
-    makeService() async {
+        makeService() async {
       final queue = InMemoryTelemetryEventQueue();
       final svc = TelemetryService.createForTest(
         queue: queue,
@@ -380,9 +380,9 @@ void main() {
     }
 
     PageRoute<void> routeNamed(String name) => MaterialPageRoute<void>(
-      settings: RouteSettings(name: name),
-      builder: (_) => const SizedBox.shrink(),
-    );
+          settings: RouteSettings(name: name),
+          builder: (_) => const SizedBox.shrink(),
+        );
 
     test(
       'concurrent initialization callers await the same completion',
@@ -463,7 +463,8 @@ void main() {
 
         final entries = (await queue.peekBatch(
           200,
-        )).where((e) => e.eventType == 'app_entry');
+        ))
+            .where((e) => e.eventType == 'app_entry');
         expect(entries, hasLength(1));
         final entry = entries.single;
         expect(entry.metadata['entry_route'], '/register');
