@@ -16703,6 +16703,12 @@ abstract class AppLocalizations {
   /// **'Voting power successfully delegated to {delegateName}'**
   String daoDelegationSuccessToast(Object delegateName);
 
+  /// No description provided for @daoDelegationFailedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to save the delegation. Try again.'**
+  String get daoDelegationFailedToast;
+
   /// No description provided for @daoViewDelegationDetailsAction.
   ///
   /// In en, this message translates to:
