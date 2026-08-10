@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart' show kIsWeb, visibleForTesting;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -58,10 +60,27 @@ class GuestSessionService {
   static Map<String, String>? _launchSnapshot;
   static String? _entryRouteSnapshot;
   static Future<void>? _captureFuture;
+  static Completer<void>? _platformInitialLinkCompleter;
 
   /// Whether a platform launch URL has been frozen for this process.
   /// Mobile receives this only when initial-route dispatch supplies it.
   static bool get hasLaunchSnapshot => _launchSnapshot != null;
+
+  /// Register the Android/iOS initial-link probe before the widget tree starts.
+  /// Attribution telemetry can then wait for the asynchronous app-links result
+  /// without delaying UI startup or prematurely recording a bare entry.
+  static void expectPlatformInitialLinkResolution() {
+    if (kIsWeb) return;
+    _platformInitialLinkCompleter ??= Completer<void>();
+  }
+
+  static Future<void> waitForPlatformInitialLinkResolution() =>
+      _platformInitialLinkCompleter?.future ?? Future<void>.value();
+
+  static void completePlatformInitialLinkResolution() {
+    final completer = _platformInitialLinkCompleter;
+    if (completer != null && !completer.isCompleted) completer.complete();
+  }
 
   /// Freeze the launch URL. Called first thing in `main()`, before `runApp` and
   /// before any `await`, so no navigation can have rewritten the URL yet.
@@ -89,6 +108,7 @@ class GuestSessionService {
     _launchSnapshot = null;
     _entryRouteSnapshot = null;
     _captureFuture = null;
+    _platformInitialLinkCompleter = null;
   }
 
   /// The route the visitor landed on, without query or fragment.
