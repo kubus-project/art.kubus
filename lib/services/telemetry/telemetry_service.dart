@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../config/config.dart';
 import '../guest_session_service.dart';
+import 'contribution_type.dart';
 import 'kubus_client_context.dart';
 import 'telemetry_config.dart';
 import 'telemetry_event.dart';
@@ -119,6 +120,9 @@ class TelemetryService {
       final prefs = await SharedPreferences.getInstance();
       _analyticsPreferenceEnabled = prefs.getBool('enableAnalytics') ?? true;
       _actorUserId = _normalizeUuid(prefs.getString('user_id'));
+      // Age out an acquisition touch that has passed its window before reading
+      // it, so an old campaign cannot attach itself to this session's events.
+      await GuestSessionService.pruneExpiredAttribution(prefs: prefs);
       _entryAttribution = _loadEntryAttribution(prefs);
       _restoreSession(prefs);
     } catch (_) {
@@ -409,20 +413,71 @@ class TelemetryService {
     );
   }
 
-  Future<void> trackContributionStarted({String? kind}) async {
+  /// A durable contribution attempt has actually begun.
+  ///
+  /// "Begun" means the submission operation is running — not that a creator
+  /// screen opened, a draft was made or a field was typed into. Those are not
+  /// attempts and counting them would make the started -> submitted ratio
+  /// describe UI curiosity rather than publishing.
+  Future<void> trackContributionStarted(
+      {required ContributionType type}) async {
     await trackEvent(
       AppTelemetryEventTypes.contributionStarted,
-      extra: {if (kind != null) 'kind': kind},
+      extra: _contributionDimensions(type),
     );
   }
 
-  Future<void> trackContributionSubmitted({String? kind}) async {
+  /// A durable contribution now exists, confirmed by the backend.
+  ///
+  /// Never called on validation failure, a failed API call, media upload alone,
+  /// or an update to something that already existed.
+  Future<void> trackContributionSubmitted({
+    required ContributionType type,
+  }) async {
     await trackEvent(
       AppTelemetryEventTypes.contributionSubmitted,
-      extra: {if (kind != null) 'kind': kind},
+      extra: _contributionDimensions(type),
     );
   }
 
+  /// Emits everything a confirmed contribution owes analytics, in one call.
+  ///
+  /// The four creation paths otherwise each repeated the same sequence —
+  /// submitted event, first-contribution milestone, canonical type, swallow
+  /// telemetry errors — and three of them would have had to grow it from
+  /// scratch. Divergence there is invisible: the funnel simply under-reports
+  /// whichever path forgot a step.
+  ///
+  /// Returns normally on any telemetry failure. Callers invoke this *after*
+  /// their product transaction has succeeded, so there is nothing left for an
+  /// exception here to protect.
+  Future<void> trackSuccessfulContribution(ContributionType type) async {
+    try {
+      await trackContributionSubmitted(type: type);
+      await trackFirstEngagement(
+        milestone: PendingActionMilestone.contribution,
+        targetType: type.wireValue,
+      );
+    } catch (_) {
+      // Observability is not transaction logic.
+    }
+  }
+
+  /// `contribution_type` is the canonical key. `kind` is still sent with the
+  /// same value so a backend that predates the enum keeps recording these
+  /// events exactly as it does today — during a rollout the app can be ahead of
+  /// the API, and an activation must not depend on which shipped first.
+  Map<String, Object?> _contributionDimensions(ContributionType type) => {
+        'contribution_type': type.wireValue,
+        'kind': type.wireValue,
+      };
+
+  /// Reserved for a genuine one-time public artist-identity creation or claim.
+  ///
+  /// Intentionally has no call site: artist standing in this product is derived
+  /// from profile fields and DAO review, so there is no moment to fire it at.
+  /// See `docs/analytics/campaign-activation-contract.md`.
+  @visibleForTesting
   Future<void> trackArtistProfileCreated({bool claimed = false}) async {
     await trackEvent(
       AppTelemetryEventTypes.artistProfileCreated,
@@ -642,8 +697,38 @@ class TelemetryService {
     );
   }
 
-  /// Emits the "first meaningful engagement" milestone for this install.
-  /// Persisted so it fires once per account, not once per session.
+  /// The v1 install-wide first-engagement key.
+  ///
+  /// Retained only to be read, never written. It claimed to fire once per
+  /// account but was scoped to the installation, so the second account to use a
+  /// device was permanently unable to record its first contribution — on a
+  /// shared browser that is every account after the first.
+  @visibleForTesting
+  static String legacyFirstEngagementKey(PendingActionMilestone milestone) =>
+      'app_telemetry_first_${milestone.name}_v1';
+
+  /// Account-scoped first-engagement key.
+  ///
+  /// Keyed by the canonical `user_id` UUID the service already normalises —
+  /// never email, display name or wallet address, none of which belong in
+  /// analytics storage keys, and the last of which is not even stable per
+  /// account.
+  ///
+  /// An unauthenticated contribution has no account to scope to. That flow does
+  /// not currently exist — every creation path requires a session — but if one
+  /// appears it falls back to the session id, which is honest about being
+  /// session-scoped instead of pretending install state is account state.
+  @visibleForTesting
+  String firstEngagementKey(PendingActionMilestone milestone) {
+    final actor = (_actorUserId ?? '').trim();
+    final scope = actor.isNotEmpty ? 'user_$actor' : 'session_$_sessionId';
+    return 'app_telemetry_first_${milestone.name}_${scope}_v2';
+  }
+
+  /// Emits the "first meaningful engagement" milestone for an account.
+  ///
+  /// Persisted per account, so a second artwork by the same artist does not
+  /// fire it again and a different account on the same device still can.
   Future<void> trackFirstEngagement({
     required PendingActionMilestone milestone,
     required String targetType,
@@ -659,10 +744,22 @@ class TelemetryService {
         AppTelemetryEventTypes.firstContributionCompleted,
     };
 
-    final prefsKey = 'app_telemetry_first_${milestone.name}_v1';
+    final prefsKey = firstEngagementKey(milestone);
     try {
       final prefs = await SharedPreferences.getInstance();
       if (prefs.getBool(prefsKey) ?? false) return;
+
+      // The v1 flag suppresses only the account that is plausibly the one that
+      // set it — the first account seen on this install after the upgrade. It
+      // is claimed at that point so it can never suppress a second account, and
+      // so the account that already fired the milestone does not fire it twice.
+      final legacyKey = legacyFirstEngagementKey(milestone);
+      if (prefs.getBool(legacyKey) ?? false) {
+        await prefs.remove(legacyKey);
+        await prefs.setBool(prefsKey, true);
+        return;
+      }
+
       await prefs.setBool(prefsKey, true);
     } catch (_) {
       // Storage unavailable: fall through and emit at most once per session.

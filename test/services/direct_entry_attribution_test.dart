@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:art_kubus/services/guest_session_service.dart';
 import 'package:art_kubus/core/shell_routes.dart';
 import 'package:art_kubus/providers/platform_deep_link_listener_provider.dart';
+import 'package:art_kubus/services/telemetry/contribution_type.dart';
 import 'package:art_kubus/services/telemetry/kubus_client_context.dart';
 import 'package:art_kubus/services/telemetry/telemetry_event.dart';
 import 'package:art_kubus/services/telemetry/telemetry_event_queue.dart';
@@ -211,45 +212,48 @@ void main() {
     );
 
     test(
-        'late mobile initial-route attribution survives an early empty capture',
-        () async {
-      final prefs = await SharedPreferences.getInstance();
+      'late mobile initial-route attribution survives an early empty capture',
+      () async {
+        final prefs = await SharedPreferences.getInstance();
 
-      // initState can run before Android/iOS dispatches its initial route.
-      await GuestSessionService.captureFromLaunchUrl(prefs: prefs);
-      GuestSessionService.snapshotLaunchUrl(override: _directRegisterEntry);
-      await GuestSessionService.captureFromLaunchUrl(prefs: prefs);
+        // initState can run before Android/iOS dispatches its initial route.
+        await GuestSessionService.captureFromLaunchUrl(prefs: prefs);
+        GuestSessionService.snapshotLaunchUrl(override: _directRegisterEntry);
+        await GuestSessionService.captureFromLaunchUrl(prefs: prefs);
 
-      expect(
-        GuestSessionService.entryUtmSync(prefs)['utm_campaign'],
-        'open_call_en_aug_2026',
-      );
-      expect(GuestSessionService.entryRouteSync(prefs), '/register');
-    });
+        expect(
+          GuestSessionService.entryUtmSync(prefs)['utm_campaign'],
+          'open_call_en_aug_2026',
+        );
+        expect(GuestSessionService.entryRouteSync(prefs), '/register');
+      },
+    );
 
-    test('platform initial-link probe captures before attribution is released',
-        () async {
-      GuestSessionService.expectPlatformInitialLinkResolution();
-      var released = false;
-      final wait = GuestSessionService.waitForPlatformInitialLinkResolution()
-          .then((_) => released = true);
-      await Future<void>.delayed(Duration.zero);
-      expect(released, isFalse);
+    test(
+      'platform initial-link probe captures before attribution is released',
+      () async {
+        GuestSessionService.expectPlatformInitialLinkResolution();
+        var released = false;
+        final wait = GuestSessionService.waitForPlatformInitialLinkResolution()
+            .then((_) => released = true);
+        await Future<void>.delayed(Duration.zero);
+        expect(released, isFalse);
 
-      final listener = PlatformDeepLinkListenerProvider();
-      await listener.handleInitialLinkForTesting(_directRegisterEntry);
-      GuestSessionService.completePlatformInitialLinkResolution();
-      await wait;
+        final listener = PlatformDeepLinkListenerProvider();
+        await listener.handleInitialLinkForTesting(_directRegisterEntry);
+        GuestSessionService.completePlatformInitialLinkResolution();
+        await wait;
 
-      final prefs = await SharedPreferences.getInstance();
-      expect(released, isTrue);
-      expect(
-        GuestSessionService.entryUtmSync(prefs)['utm_campaign'],
-        'open_call_en_aug_2026',
-      );
-      expect(GuestSessionService.entryRouteSync(prefs), '/register');
-      listener.dispose();
-    });
+        final prefs = await SharedPreferences.getInstance();
+        expect(released, isTrue);
+        expect(
+          GuestSessionService.entryUtmSync(prefs)['utm_campaign'],
+          'open_call_en_aug_2026',
+        );
+        expect(GuestSessionService.entryRouteSync(prefs), '/register');
+        listener.dispose();
+      },
+    );
 
     test('the persisted entry route wins over a later snapshot', () async {
       SharedPreferences.setMockInitialValues(<String, Object>{
@@ -263,28 +267,30 @@ void main() {
       expect(GuestSessionService.entryRouteSync(prefs), '/register');
     });
 
-    test('a later attributed campaign replaces the route with its UTMs',
-        () async {
-      SharedPreferences.setMockInitialValues(<String, Object>{
-        GuestSessionService.entryRouteKey: '/map',
-        'kubus_entry_utm_utm_campaign': 'old_map_campaign',
-      });
-      GuestSessionService.snapshotLaunchUrl(
-        override: Uri.parse(
-          'https://app.kubus.site/register'
-          '?utm_source=meta&utm_campaign=new_register_campaign',
-        ),
-      );
-      final prefs = await SharedPreferences.getInstance();
+    test(
+      'a later attributed campaign replaces the route with its UTMs',
+      () async {
+        SharedPreferences.setMockInitialValues(<String, Object>{
+          GuestSessionService.entryRouteKey: '/map',
+          'kubus_entry_utm_utm_campaign': 'old_map_campaign',
+        });
+        GuestSessionService.snapshotLaunchUrl(
+          override: Uri.parse(
+            'https://app.kubus.site/register'
+            '?utm_source=meta&utm_campaign=new_register_campaign',
+          ),
+        );
+        final prefs = await SharedPreferences.getInstance();
 
-      await GuestSessionService.captureFromLaunchUrl(prefs: prefs);
+        await GuestSessionService.captureFromLaunchUrl(prefs: prefs);
 
-      expect(GuestSessionService.entryRouteSync(prefs), '/register');
-      expect(
-        GuestSessionService.entryUtmSync(prefs)['utm_campaign'],
-        'new_register_campaign',
-      );
-    });
+        expect(GuestSessionService.entryRouteSync(prefs), '/register');
+        expect(
+          GuestSessionService.entryUtmSync(prefs)['utm_campaign'],
+          'new_register_campaign',
+        );
+      },
+    );
 
     test('a replacement touch clears omitted optional UTM values', () async {
       SharedPreferences.setMockInitialValues(<String, Object>{
@@ -304,13 +310,10 @@ void main() {
       await GuestSessionService.captureFromLaunchUrl(prefs: prefs);
 
       expect(GuestSessionService.entryRouteSync(prefs), '/register');
-      expect(
-        GuestSessionService.entryUtmSync(prefs),
-        <String, String>{
-          'utm_source': 'meta',
-          'utm_campaign': 'new_register_campaign',
-        },
-      );
+      expect(GuestSessionService.entryUtmSync(prefs), <String, String>{
+        'utm_source': 'meta',
+        'utm_campaign': 'new_register_campaign',
+      });
     });
 
     test(
@@ -365,7 +368,7 @@ void main() {
 
   group('TelemetryService route attribution', () {
     Future<(TelemetryService, InMemoryTelemetryEventQueue)>
-        makeService() async {
+    makeService() async {
       final queue = InMemoryTelemetryEventQueue();
       final svc = TelemetryService.createForTest(
         queue: queue,
@@ -377,35 +380,37 @@ void main() {
     }
 
     PageRoute<void> routeNamed(String name) => MaterialPageRoute<void>(
-          settings: RouteSettings(name: name),
-          builder: (_) => const SizedBox.shrink(),
+      settings: RouteSettings(name: name),
+      builder: (_) => const SizedBox.shrink(),
+    );
+
+    test(
+      'concurrent initialization callers await the same completion',
+      () async {
+        final queue = _BlockingQueue();
+        final svc = TelemetryService.createForTest(
+          queue: queue,
+          sender: _NoopSender(),
         );
+        var secondCompleted = false;
 
-    test('concurrent initialization callers await the same completion',
-        () async {
-      final queue = _BlockingQueue();
-      final svc = TelemetryService.createForTest(
-        queue: queue,
-        sender: _NoopSender(),
-      );
-      var secondCompleted = false;
+        final first = svc.ensureInitialized();
+        final second = svc.ensureInitialized().then((_) {
+          secondCompleted = true;
+        });
+        await pumpEventQueue();
 
-      final first = svc.ensureInitialized();
-      final second = svc.ensureInitialized().then((_) {
-        secondCompleted = true;
-      });
-      await pumpEventQueue();
+        expect(secondCompleted, isFalse);
+        expect(svc.currentSessionId, isNull);
 
-      expect(secondCompleted, isFalse);
-      expect(svc.currentSessionId, isNull);
+        queue.release();
+        await Future.wait(<Future<void>>[first, second]);
 
-      queue.release();
-      await Future.wait(<Future<void>>[first, second]);
-
-      expect(secondCompleted, isTrue);
-      expect(svc.currentSessionId, isNotNull);
-      svc.setAnalyticsPreferenceEnabled(false);
-    });
+        expect(secondCompleted, isTrue);
+        expect(svc.currentSessionId, isNotNull);
+        svc.setAnalyticsPreferenceEnabled(false);
+      },
+    );
 
     test('a campaign route name reports the path without its query', () async {
       final (svc, queue) = await makeService();
@@ -458,8 +463,7 @@ void main() {
 
         final entries = (await queue.peekBatch(
           200,
-        ))
-            .where((e) => e.eventType == 'app_entry');
+        )).where((e) => e.eventType == 'app_entry');
         expect(entries, hasLength(1));
         final entry = entries.single;
         expect(entry.metadata['entry_route'], '/register');
@@ -474,18 +478,20 @@ void main() {
       },
     );
 
-    test('app_entry is emitted for a bare launch without attribution',
-        () async {
-      final (svc, queue) = await makeService();
+    test(
+      'app_entry is emitted for a bare launch without attribution',
+      () async {
+        final (svc, queue) = await makeService();
 
-      await svc.trackAppEntry();
+        await svc.trackAppEntry();
 
-      final entries = (await queue.peekBatch(200))
-          .where((event) => event.eventType == 'app_entry')
-          .toList(growable: false);
-      expect(entries, hasLength(1));
-      expect(entries.single.metadata.containsKey('entry_route'), isFalse);
-    });
+        final entries = (await queue.peekBatch(200))
+            .where((event) => event.eventType == 'app_entry')
+            .toList(growable: false);
+        expect(entries, hasLength(1));
+        expect(entries.single.metadata.containsKey('entry_route'), isFalse);
+      },
+    );
 
     test(
       'direct registration and activation stages retain first-touch attribution',
@@ -508,8 +514,8 @@ void main() {
           isNewAccount: true,
         );
         await svc.trackOnboardingComplete(reason: 'step_flow_complete');
-        await svc.trackContributionStarted(kind: 'marker');
-        await svc.trackContributionSubmitted(kind: 'marker');
+        await svc.trackContributionStarted(type: ContributionType.marker);
+        await svc.trackContributionSubmitted(type: ContributionType.marker);
 
         final events = await queue.peekBatch(200);
         const expectedStages = <String>{
