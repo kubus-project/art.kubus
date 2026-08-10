@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../config/config.dart';
 import '../../../models/collectible.dart';
+import '../../../features/web3/wallet_edition_inventory.dart';
 import '../../../providers/collectibles_provider.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../providers/wallet_provider.dart';
@@ -45,11 +46,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
   late AnimationController _animationController;
   late TabController _tabController;
 
-  final List<String> _tabs = ['assets', 'activity', 'nfts', 'staking'];
-  List<Map<String, dynamic>> _nfts = [];
-  bool _isLoadingNfts = false;
-  String? _nftError;
-  bool _attemptedNftLoad = false;
+  final List<String> _tabs = ['assets', 'activity', 'owned-editions'];
 
   @override
   void initState() {
@@ -196,6 +193,22 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                 ),
               ),
 
+            if (!isLarge)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    DetailSpacing.xxl,
+                    0,
+                    DetailSpacing.xxl,
+                    DetailSpacing.xl,
+                  ),
+                  child: WalletCustodyStatusPanel(
+                    authority: walletProvider.authority,
+                    compact: true,
+                  ),
+                ),
+              ),
+
             // Tabs
             SliverToBoxAdapter(
               child: _buildTabs(themeProvider),
@@ -208,8 +221,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                 children: [
                   _buildAssetsTab(themeProvider),
                   _buildActivityTab(themeProvider),
-                  _buildNFTsTab(themeProvider),
-                  _buildStakingTab(themeProvider),
+                  _buildOwnedEditionsTab(themeProvider),
                 ],
               ),
             ),
@@ -305,7 +317,8 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
             }
             Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (_) => const DesktopConnectWalletScreen(initialStep: 3),
+                builder: (_) =>
+                    const DesktopConnectWalletScreen(initialStep: 3),
               ),
             );
           },
@@ -463,11 +476,6 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                       icon: canTransact ? Icons.lock_open : Icons.visibility,
                       color: statusColor,
                     ),
-                    _buildWalletStatusChip(
-                      label: network,
-                      icon: Icons.wifi_tethering,
-                      color: themeProvider.accentColor,
-                    ),
                     _buildCopyAddressChip(walletAddress),
                   ],
                 ),
@@ -495,7 +503,6 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
             .firstOrNull
             ?.balance ??
         0.0;
-    final walletAddress = (walletProvider.currentWalletAddress ?? '').trim();
 
     return DesktopCard(
       padding: EdgeInsets.zero,
@@ -539,41 +546,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                     ),
                   ],
                 ),
-                Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: walletAddress.isEmpty
-                        ? null
-                        : () => _copyWalletAddress(walletAddress),
-                    borderRadius: BorderRadius.circular(KubusRadius.sm),
-                    child: Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: KubusSpacing.md,
-                        vertical: KubusSpacing.sm,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.14),
-                        borderRadius: BorderRadius.circular(KubusRadius.sm),
-                        border: KubusBorders.onDark(),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            _truncateAddress(walletAddress),
-                            style: KubusTypography.inter(
-                              fontSize: KubusChromeMetrics.navMetaLabel,
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(width: KubusSpacing.sm),
-                          const Icon(Icons.copy, size: 14, color: Colors.white),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
+                const SizedBox.shrink(),
               ],
             ),
             const SizedBox(height: KubusSpacing.sm + KubusSpacing.xxs),
@@ -615,50 +588,6 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                   label: 'SOL',
                   value: solBalance.toStringAsFixed(3),
                   icon: Icons.currency_bitcoin,
-                ),
-                _buildBalanceStatChip(
-                  label: 'Network',
-                  value: walletProvider.currentSolanaNetwork,
-                  icon: Icons.wifi_tethering,
-                ),
-              ],
-            ),
-            SizedBox(height: DetailSpacing.lg),
-            Wrap(
-              spacing: DetailSpacing.sm,
-              runSpacing: DetailSpacing.sm,
-              children: [
-                TextButton.icon(
-                  onPressed: _openReceiveScreen,
-                  icon: const Icon(Icons.arrow_downward_rounded),
-                  label: Text(l10n.walletHomeReceiveAction),
-                  style: TextButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    backgroundColor: Colors.white.withValues(alpha: 0.12),
-                    padding: EdgeInsets.symmetric(
-                      horizontal: KubusSpacing.lg,
-                      vertical: KubusSpacing.md,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(KubusRadius.md),
-                    ),
-                  ),
-                ),
-                TextButton.icon(
-                  onPressed: walletProvider.refreshData,
-                  icon: const Icon(Icons.refresh),
-                  label: Text(l10n.commonRefresh),
-                  style: TextButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    backgroundColor: Colors.white.withValues(alpha: 0.08),
-                    padding: EdgeInsets.symmetric(
-                      horizontal: KubusSpacing.lg,
-                      vertical: KubusSpacing.md,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(KubusRadius.md),
-                    ),
-                  ),
                 ),
               ],
             ),
@@ -728,7 +657,6 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
       l10n.walletHomeDesktopTabAssets,
       l10n.walletHomeDesktopTabActivity,
       l10n.walletHomeDesktopTabNfts,
-      l10n.walletHomeDesktopTabStaking,
     ];
     return Padding(
       padding: EdgeInsets.fromLTRB(
@@ -1007,22 +935,14 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                   ),
                 ),
               ),
-              SizedBox(height: DetailSpacing.xxl),
-              _buildSecuritySectionCard(walletProvider),
             ],
           );
         }
 
         return ListView.builder(
           padding: EdgeInsets.all(DetailSpacing.xxl),
-          itemCount: tokens.length + 1,
+          itemCount: tokens.length,
           itemBuilder: (context, index) {
-            if (index == tokens.length) {
-              return Padding(
-                padding: EdgeInsets.only(top: DetailSpacing.xxl),
-                child: _buildSecuritySectionCard(walletProvider),
-              );
-            }
             return _buildTokenRow(tokens[index], themeProvider);
           },
         );
@@ -1035,7 +955,6 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
 
     return DesktopCard(
       margin: EdgeInsets.only(bottom: DetailSpacing.md),
-      onTap: () {},
       child: Row(
         children: [
           Container(
@@ -1111,93 +1030,6 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
     );
   }
 
-  Future<void> _loadNftsIfNeeded() async {
-    if (_attemptedNftLoad) return;
-    _attemptedNftLoad = true;
-    await _loadNfts();
-  }
-
-  Future<void> _loadNfts() async {
-    final l10n = AppLocalizations.of(context)!;
-
-    setState(() {
-      _isLoadingNfts = true;
-      _nftError = null;
-    });
-    try {
-      final walletProvider =
-          Provider.of<WalletProvider>(context, listen: false);
-      final walletAddress = (walletProvider.currentWalletAddress ?? '').trim();
-      if (walletAddress.isEmpty) {
-        setState(() {
-          _nftError = l10n.walletHomeConnectWalletToFetchCollectibles;
-          _isLoadingNfts = false;
-        });
-        return;
-      }
-
-      final collectiblesProvider =
-          Provider.of<CollectiblesProvider>(context, listen: false);
-      if (!collectiblesProvider.isLoading &&
-          collectiblesProvider.allSeries.isEmpty &&
-          collectiblesProvider.allCollectibles.isEmpty) {
-        await collectiblesProvider.initialize();
-      }
-
-      if (walletAddress.isNotEmpty) {
-        await collectiblesProvider.refreshWalletCollectibleIndex(walletAddress);
-      }
-
-      final seriesById = <String, CollectibleSeries>{
-        for (final series in collectiblesProvider.allSeries) series.id: series,
-      };
-
-      final owned = collectiblesProvider
-          .getCollectiblesByOwner(walletAddress)
-          .where((collectible) {
-        final series = seriesById[collectible.seriesId];
-        return series?.type == CollectibleType.nft;
-      }).toList();
-
-      final items = owned.map((collectible) {
-        final series = seriesById[collectible.seriesId];
-        final rawImage = series?.imageUrl ?? series?.animationUrl;
-        final resolvedImage = rawImage == null
-            ? null
-            : (MediaUrlResolver.resolve(rawImage) ?? rawImage);
-        return <String, dynamic>{
-          'id': collectible.id,
-          'tokenId': collectible.tokenId,
-          'token_id': collectible.tokenId,
-          'status': collectible.status.name,
-          'transactionHash': collectible.transactionHash,
-          'transaction_hash': collectible.transactionHash,
-          'name': series?.name ?? l10n.walletHomeCollectibleFallbackTitle,
-          'title': series?.name ?? l10n.walletHomeCollectibleFallbackTitle,
-          'imageUrl': resolvedImage,
-          'image': resolvedImage,
-          'creator': series?.creatorAddress,
-          'artist': series?.creatorAddress,
-          'rarity': series?.rarity.name,
-        };
-      }).toList();
-
-      if (mounted) {
-        setState(() {
-          _nfts = items;
-          _isLoadingNfts = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _nftError = e.toString();
-          _isLoadingNfts = false;
-        });
-      }
-    }
-  }
-
   Widget _buildActivityTab(ThemeProvider themeProvider) {
     return Consumer<WalletProvider>(
       builder: (context, walletProvider, _) {
@@ -1236,48 +1068,69 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
     );
   }
 
-  Widget _buildNFTsTab(ThemeProvider themeProvider) {
-    final l10n = AppLocalizations.of(context)!;
-    _loadNftsIfNeeded();
-    if (_isLoadingNfts) {
-      return Center(
-        child: InlineLoading(tileSize: 4, color: themeProvider.accentColor),
-      );
-    }
+  Widget _buildOwnedEditionsTab(ThemeProvider themeProvider) {
+    return Consumer2<CollectiblesProvider, WalletProvider>(
+      key: const Key('desktop-wallet-owned-editions-tab'),
+      builder: (context, collectiblesProvider, walletProvider, _) {
+        final l10n = AppLocalizations.of(context)!;
+        if (collectiblesProvider.isLoading) {
+          return Center(
+            child: InlineLoading(
+              tileSize: 4,
+              color: themeProvider.accentColor,
+            ),
+          );
+        }
+        if (collectiblesProvider.error != null) {
+          return Center(
+            child: Padding(
+              padding: EdgeInsets.all(DetailSpacing.xl),
+              child: EmptyStateCard(
+                icon: Icons.error_outline,
+                title: l10n.walletHomeNftLoadFailedTitle,
+                description: collectiblesProvider.error!,
+              ),
+            ),
+          );
+        }
 
-    if (_nftError != null) {
-      return Center(
-        child: Padding(
-          padding: EdgeInsets.all(DetailSpacing.xl),
-          child: EmptyStateCard(
-            icon: Icons.error_outline,
-            title: l10n.walletHomeNftLoadFailedTitle,
-            description: _nftError!,
-            showAction: true,
-            actionLabel: l10n.commonRetry,
-            onAction: _loadNfts,
-          ),
-        ),
-      );
-    }
+        final seriesById = <String, CollectibleSeries>{
+          for (final series in collectiblesProvider.allSeries)
+            series.id: series,
+        };
+        final ownedEditions = WalletEditionInventory.resolve(
+          collectiblesProvider: collectiblesProvider,
+          walletAddress: walletProvider.currentWalletAddress ?? '',
+        );
+        if (ownedEditions.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: EdgeInsets.all(DetailSpacing.xl),
+              child: EmptyStateCard(
+                icon: Icons.auto_awesome_motion,
+                title: l10n.marketplaceEmptyCollectionTitle,
+                description: l10n.walletHomeNoCollectiblesDescription,
+              ),
+            ),
+          );
+        }
 
-    if (_nfts.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: EdgeInsets.all(DetailSpacing.xl),
-          child: EmptyStateCard(
-            icon: Icons.auto_awesome_motion,
-            title: l10n.marketplaceEmptyCollectionTitle,
-            description: l10n.walletHomeNoCollectiblesDescription,
-            showAction: true,
-            actionLabel: l10n.commonRefresh,
-            onAction: _loadNfts,
-          ),
-        ),
-      );
-    }
+        return _buildOwnedEditionsGrid(
+          ownedEditions,
+          seriesById,
+          l10n,
+        );
+      },
+    );
+  }
 
+  Widget _buildOwnedEditionsGrid(
+    List<Collectible> ownedEditions,
+    Map<String, CollectibleSeries> seriesById,
+    AppLocalizations l10n,
+  ) {
     return GridView.builder(
+      key: const Key('desktop-wallet-owned-editions-grid'),
       padding: EdgeInsets.all(DetailSpacing.xl),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 3,
@@ -1285,16 +1138,16 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
         mainAxisSpacing: DetailSpacing.lg,
         childAspectRatio: 0.85,
       ),
-      itemCount: _nfts.length,
+      itemCount: ownedEditions.length,
       itemBuilder: (context, index) {
-        final nft = _nfts[index];
-        final title = (nft['name'] ??
-                nft['title'] ??
-                l10n.walletHomeArchiveObjectFallbackTitle)
-            .toString();
-        final imageUrl =
-            (nft['image'] ?? nft['imageUrl'] ?? nft['preview'])?.toString();
-        final creator = (nft['creator'] ?? nft['artist'] ?? '').toString();
+        final collectible = ownedEditions[index];
+        final series = seriesById[collectible.seriesId];
+        final title = series?.name ?? l10n.walletHomeCollectibleFallbackTitle;
+        final rawImage = series?.imageUrl ?? series?.animationUrl;
+        final imageUrl = rawImage == null
+            ? null
+            : (MediaUrlResolver.resolve(rawImage) ?? rawImage);
+        final creator = series?.creatorAddress ?? '';
         return DesktopCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1343,102 +1196,6 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
     );
   }
 
-  Widget _buildStakingTab(ThemeProvider themeProvider) {
-    return Consumer<WalletProvider>(
-      builder: (context, walletProvider, _) {
-        final l10n = AppLocalizations.of(context)!;
-        final rewardBalance =
-            walletProvider.achievementTokenTotal.toStringAsFixed(2);
-        final swapEnabled = AppConfig.isFeatureEnabled('tokenSwap');
-        return ListView(
-          padding: EdgeInsets.all(DetailSpacing.xl),
-          children: [
-            DesktopCard(
-              child: Row(
-                children: [
-                  Container(
-                    width: 56,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      color: themeProvider.accentColor.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(DetailRadius.md),
-                    ),
-                    child: Icon(
-                      Icons.savings,
-                      color: themeProvider.accentColor,
-                    ),
-                  ),
-                  SizedBox(width: DetailSpacing.lg),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          l10n.walletHomeRewardsTitle,
-                          style: DetailTypography.cardTitle(context),
-                        ),
-                        SizedBox(height: DetailSpacing.xs),
-                        Text(
-                          l10n.walletHomeRewardsDescription(rewardBalance),
-                          style: DetailTypography.caption(context),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (swapEnabled)
-                    TextButton(
-                      onPressed: _openSwapScreen,
-                      child: Text(
-                        l10n.walletHomeSwapAction,
-                        style: DetailTypography.label(context).copyWith(
-                          color: themeProvider.accentColor,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            SizedBox(height: DetailSpacing.lg),
-            DesktopCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    l10n.walletHomeStakeTitle,
-                    style: DetailTypography.cardTitle(context),
-                  ),
-                  SizedBox(height: DetailSpacing.sm),
-                  Text(
-                    l10n.walletHomeStakeDescription,
-                    style: DetailTypography.body(context),
-                  ),
-                  SizedBox(height: DetailSpacing.lg),
-                  Row(
-                    children: [
-                      if (swapEnabled)
-                        ElevatedButton.icon(
-                          onPressed: walletProvider.canTransact
-                              ? _openSwapScreen
-                              : null,
-                          icon: const Icon(Icons.safety_check),
-                          label: Text(l10n.walletHomeStakeAction),
-                        ),
-                      SizedBox(width: DetailSpacing.md),
-                      OutlinedButton(
-                        onPressed: walletProvider.refreshData,
-                        child: Text(l10n.walletHomeRefreshRatesAction),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   Widget _buildRightPanel(ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
     final walletProvider = Provider.of<WalletProvider>(context);
@@ -1447,6 +1204,13 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
     return ListView(
       padding: EdgeInsets.all(DetailSpacing.lg),
       children: [
+        Text(
+          l10n.walletHomeQuickActionsTitle,
+          style: DetailTypography.sectionTitle(context),
+        ),
+        SizedBox(height: DetailSpacing.md),
+        _buildQuickActionsRow(themeProvider, walletProvider),
+        SizedBox(height: DetailSpacing.lg),
         WalletCustodyStatusPanel(
           authority: walletProvider.authority,
           compact: true,
@@ -1506,38 +1270,6 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
               margin: EdgeInsets.only(bottom: DetailSpacing.md),
             );
           }),
-      ],
-    );
-  }
-
-  Widget _buildSecuritySectionCard(WalletProvider walletProvider) {
-    final l10n = AppLocalizations.of(context)!;
-    final authority = walletProvider.authority;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          l10n.walletHomeSecurityTitle,
-          style: DetailTypography.sectionTitle(context),
-        ),
-        SizedBox(height: DetailSpacing.lg),
-        DesktopCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                l10n.walletHomeSecuritySubtitle,
-                style: DetailTypography.caption(context),
-              ),
-              SizedBox(height: DetailSpacing.lg),
-              WalletCustodyStatusPanel(
-                authority: authority,
-                compact: true,
-              ),
-            ],
-          ),
-        ),
       ],
     );
   }

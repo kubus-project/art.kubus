@@ -2657,7 +2657,7 @@
   "walletHomeActionSend": "Pošlji",
   "walletHomeActionReceive": "Prejmi",
   "walletHomeActionSwap": "Zamenjaj",
-  "walletHomeActionNfts": "Artefakti",
+  "walletHomeActionNfts": "Digitalne izdaje",
   "walletHomeYourTokensTitle": "Tvoji žetoni",
   "walletHomeQuickActionsTitle": "Dejanja denarnice",
   "walletHomeQuickActionsSubtitle": "Pošlji, prejmi, zamenjaj ali odpri digitalne izdaje.",
@@ -2675,7 +2675,7 @@
   "walletHomeDesktopRecentActivityTitle": "Nedavna dejavnost",
   "walletHomeDesktopTabAssets": "Sredstva",
   "walletHomeDesktopTabActivity": "Dejavnost",
-  "walletHomeDesktopTabNfts": "Artefakti",
+  "walletHomeDesktopTabNfts": "Izdaje v lasti",
   "walletHomeDesktopTabStaking": "Zastavljanje",
   "walletHomeNftLoadFailedTitle": "Digitalnih izdaj ni bilo mogoče naložiti",
   "walletHomeNoCollectiblesDescription": "Digitalne izdaje se prikažejo tukaj, ko so povezane s to denarnico.",
@@ -3767,6 +3767,7 @@
       "delegateName": {}
     }
   },
+  "daoDelegationFailedToast": "Delegacije ni bilo mogoče shraniti. Poskusi znova.",
   "daoViewDelegationDetailsAction": "Ogled podrobnosti",
   "daoDelegationActiveTitle": "Delegiranje je aktivno",
   "daoDelegationDetailDelegateLabel": "Delegat",

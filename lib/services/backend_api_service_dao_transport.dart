@@ -289,6 +289,25 @@ Future<List<Map<String, dynamic>>> _backendApiGetDAOReviews(
   }
 }
 
+Future<bool> _backendApiGetDAOReviewModerationAuthority(
+  BackendApiService service,
+) async {
+  try {
+    final uri = Uri.parse('${service.baseUrl}/api/dao/reviews/authority');
+    final response = await service._get(uri, headers: service._getHeaders());
+    if (response.statusCode != 200 || response.body.isEmpty) return false;
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map<String, dynamic>) return false;
+    final data = decoded['data'];
+    return data is Map<String, dynamic> && data['canModerate'] == true;
+  } catch (e) {
+    AppConfig.debugPrint(
+      'BackendApiService.getDAOReviewModerationAuthority failed: $e',
+    );
+    return false;
+  }
+}
+
 Future<Map<String, dynamic>?> _backendApiGetDAOReview(
   BackendApiService service, {
   required String idOrWallet,

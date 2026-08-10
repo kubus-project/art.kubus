@@ -23,6 +23,11 @@ class ArtMarkerListDiff {
 
   /// Applies a partial marker response without removing markers that were not
   /// part of that response.
+  ///
+  /// The result must stay growable. Both map screens assign it straight to
+  /// their `_artMarkers` field and then mutate that field in place when a
+  /// marker is created or deleted, so a fixed-length result turns the next
+  /// create into an `UnsupportedError` thrown inside `setState`.
   static List<ArtMarker> upsertById({
     required List<ArtMarker> current,
     required Iterable<ArtMarker> updates,
@@ -33,6 +38,6 @@ class ArtMarkerListDiff {
     for (final marker in updates) {
       byId[marker.id] = marker;
     }
-    return byId.values.toList(growable: false);
+    return byId.values.toList();
   }
 }

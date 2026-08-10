@@ -26,8 +26,9 @@ import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/widgets/common/kubus_labs_adornment.dart';
 import 'package:art_kubus/widgets/common/kubus_stat_card.dart';
 import '../../../widgets/topbar_icon.dart';
+import '../../../features/web3/web3_capabilities.dart';
 
-class GovernanceHub extends StatefulWidget {
+class GovernanceHub extends StatelessWidget {
   final ValueNotifier<int>? selectedIndexNotifier;
   final bool embedded;
 
@@ -38,10 +39,31 @@ class GovernanceHub extends StatefulWidget {
   });
 
   @override
-  State<GovernanceHub> createState() => _GovernanceHubState();
+  Widget build(BuildContext context) {
+    return GovernanceWorkspace(
+      selectedIndexNotifier: selectedIndexNotifier,
+      embedded: embedded,
+    );
+  }
 }
 
-class _GovernanceHubState extends State<GovernanceHub>
+class GovernanceWorkspace extends StatefulWidget {
+  const GovernanceWorkspace({
+    super.key,
+    this.selectedIndexNotifier,
+    this.embedded = false,
+    this.desktopLayout = false,
+  });
+
+  final ValueNotifier<int>? selectedIndexNotifier;
+  final bool embedded;
+  final bool desktopLayout;
+
+  @override
+  State<GovernanceWorkspace> createState() => _GovernanceWorkspaceState();
+}
+
+class _GovernanceWorkspaceState extends State<GovernanceWorkspace>
     with TickerProviderStateMixin {
   static const String _categoryPlatformUpdate = 'platform_update';
   static const String _categoryNewFeature = 'new_feature';
@@ -74,6 +96,36 @@ class _GovernanceHubState extends State<GovernanceHub>
 
   KubusColorRoles get _roles => KubusColorRoles.of(context);
   Color get _daoAccent => _roles.web3DaoAccent;
+
+  Web3Capabilities _capabilities({
+    bool proposalAllowsVoting = true,
+    bool listen = true,
+  }) {
+    final profileProvider = listen
+        ? context.watch<ProfileProvider>()
+        : context.read<ProfileProvider>();
+    final walletProvider = listen
+        ? context.watch<WalletProvider>()
+        : context.read<WalletProvider>();
+    final daoProvider =
+        listen ? context.watch<DAOProvider>() : context.read<DAOProvider>();
+    return Web3CapabilityResolver.resolve(
+      Web3CapabilityContext.fromProviders(
+        profileProvider: profileProvider,
+        walletProvider: walletProvider,
+        proposalAllowsVoting: proposalAllowsVoting,
+        daoReviewAuthority: daoProvider.canModerateReviews,
+      ),
+    );
+  }
+
+  List<int> _visibleSections(Web3Capabilities capabilities) => <int>[
+        0,
+        if (capabilities.canViewOwnGovernanceHistory) 1,
+        if (capabilities.canCreateProposal) 2,
+        3,
+        if (capabilities.hasAccount) 4,
+      ];
 
   @override
   void initState() {
@@ -159,6 +211,23 @@ class _GovernanceHubState extends State<GovernanceHub>
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final capabilities = _capabilities();
+    if (!capabilities.canViewGovernance) {
+      return Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Center(
+          child: EmptyStateCard(
+            icon: Icons.how_to_vote_outlined,
+            title: l10n.commonDisabled,
+            description: l10n.exhibitionListDisabledSubtitle,
+          ),
+        ),
+      );
+    }
+    final visibleSections = _visibleSections(capabilities);
+    final selectedIndex = visibleSections.contains(_selectedIndex)
+        ? _selectedIndex
+        : visibleSections.first;
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: widget.embedded
@@ -213,46 +282,119 @@ class _GovernanceHubState extends State<GovernanceHub>
             ),
       body: FadeTransition(
         opacity: _fadeAnimation,
-        child: NestedScrollView(
-          headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
-            return [
-              SliverToBoxAdapter(
-                child: Column(
-                  children: [
-                    _buildGovernanceHeader(),
-                    _buildNavigationTabs(),
-                  ],
-                ),
+        child: widget.desktopLayout
+            ? Column(
+                children: [
+                  _buildGovernanceHeader(),
+                  _buildNavigationTabs(capabilities, selectedIndex),
+                  if (capabilities.hasAccount && !capabilities.canTransact)
+                    _buildParticipationState(capabilities),
+                  Expanded(
+                    child: _buildSelectedTabBody(
+                      capabilities,
+                      selectedIndex,
+                    ),
+                  ),
+                ],
+              )
+            : NestedScrollView(
+                headerSliverBuilder:
+                    (BuildContext context, bool innerBoxIsScrolled) {
+                  return [
+                    SliverToBoxAdapter(
+                      child: Column(
+                        children: [
+                          _buildGovernanceHeader(),
+                          _buildNavigationTabs(capabilities, selectedIndex),
+                          if (capabilities.hasAccount &&
+                              !capabilities.canTransact)
+                            _buildParticipationState(capabilities),
+                        ],
+                      ),
+                    ),
+                  ];
+                },
+                body: _buildSelectedTabBody(capabilities, selectedIndex),
               ),
-            ];
-          },
-          body: _buildSelectedTabBody(),
-        ),
       ),
     );
   }
 
-  Widget _buildSelectedTabBody() {
-    switch (_selectedIndex) {
+  Widget _buildSelectedTabBody(
+    Web3Capabilities capabilities,
+    int selectedIndex,
+  ) {
+    switch (selectedIndex) {
       case 0:
         return _buildActiveProposals();
       case 1:
         return _buildVotingHistory();
       case 2:
-        return _buildCreateProposal();
+        return capabilities.canCreateProposal
+            ? _buildCreateProposal()
+            : _buildParticipationState(capabilities);
       case 3:
         return _buildTreasury();
       case 4:
-        return _buildDelegation();
+        return _buildDelegation(capabilities);
       default:
         return _buildActiveProposals();
     }
+  }
+
+  Widget _buildParticipationState(Web3Capabilities capabilities) {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    final authority = context.watch<WalletProvider>().authority;
+    final message = !capabilities.hasWalletIdentity
+        ? l10n.walletActionAccountShellNeedsWalletToast
+        : authority.canRestoreFromEncryptedBackup
+            ? l10n.walletActionEncryptedBackupRestoreToast
+            : l10n.walletActionReadOnlyReconnectToast;
+    final actionLabel = !capabilities.hasWalletIdentity
+        ? l10n.authConnectWalletButton
+        : l10n.walletHomeRestoreWalletAction;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        KubusSpacing.md,
+        KubusSpacing.sm,
+        KubusSpacing.md,
+        0,
+      ),
+      child: LiquidGlassPanel(
+        padding: const EdgeInsets.all(KubusSpacing.md),
+        borderRadius: BorderRadius.circular(KubusRadius.md),
+        child: Row(
+          children: [
+            Icon(Icons.lock_outline, color: _daoAccent),
+            const SizedBox(width: KubusSpacing.md),
+            Expanded(
+              child: Text(
+                message,
+                style: KubusTextStyles.sectionSubtitle.copyWith(
+                  color: scheme.onSurface.withValues(alpha: 0.78),
+                ),
+              ),
+            ),
+            const SizedBox(width: KubusSpacing.md),
+            TextButton(
+              onPressed: () => Navigator.of(context).pushNamed(
+                capabilities.hasWalletIdentity ? '/wallet' : '/connect-wallet',
+              ),
+              child: Text(actionLabel),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildGovernanceHeader() {
     return Consumer2<DAOProvider, Web3Provider>(
       builder: (context, daoProvider, web3Provider, child) {
         final l10n = AppLocalizations.of(context)!;
+        final capabilities = _capabilities();
         final kub8Balance = web3Provider.kub8Balance;
         final votingPower = '${kub8Balance.toStringAsFixed(2)} KUB8';
         final activeProposals =
@@ -366,14 +508,16 @@ class _GovernanceHubState extends State<GovernanceHub>
                   const SizedBox(height: 16),
                   Row(
                     children: [
-                      Expanded(
-                        child: _buildStatCard(
-                          l10n.daoHubStatYourVotingPowerLabel,
-                          votingPower,
-                          Icons.how_to_vote_outlined,
+                      if (capabilities.hasAccount) ...[
+                        Expanded(
+                          child: _buildStatCard(
+                            l10n.daoHubStatYourVotingPowerLabel,
+                            votingPower,
+                            Icons.how_to_vote_outlined,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
+                        const SizedBox(width: 8),
+                      ],
                       Expanded(
                         child: _buildStatCard(
                           l10n.daoHubStatActiveProposalsLabel,
@@ -432,7 +576,10 @@ class _GovernanceHubState extends State<GovernanceHub>
     );
   }
 
-  Widget _buildNavigationTabs() {
+  Widget _buildNavigationTabs(
+    Web3Capabilities capabilities,
+    int selectedIndex,
+  ) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final panelStyle = KubusGlassStyle.resolve(
@@ -467,44 +614,53 @@ class _GovernanceHubState extends State<GovernanceHub>
                 l10n.daoHubTabActiveProposals,
                 Icons.how_to_vote,
                 0,
+                selectedIndex,
               ),
             ),
-            Expanded(
-              child: _buildTabButton(
-                l10n.daoHubTabVotingHistory,
-                Icons.history,
-                1,
+            if (capabilities.canViewOwnGovernanceHistory)
+              Expanded(
+                child: _buildTabButton(
+                  l10n.daoHubTabVotingHistory,
+                  Icons.history,
+                  1,
+                  selectedIndex,
+                ),
               ),
-            ),
-            Expanded(
-              child: _buildTabButton(
-                l10n.daoHubTabCreateProposal,
-                Icons.add_circle_outline,
-                2,
+            if (capabilities.canCreateProposal)
+              Expanded(
+                child: _buildTabButton(
+                  l10n.daoHubTabCreateProposal,
+                  Icons.add_circle_outline,
+                  2,
+                  selectedIndex,
+                ),
               ),
-            ),
             Expanded(
               child: _buildTabButton(
                 l10n.daoHubTabTreasury,
                 Icons.account_balance,
                 3,
+                selectedIndex,
               ),
             ),
-            Expanded(
-              child: _buildTabButton(
-                l10n.daoHubTabDelegation,
-                Icons.people,
-                4,
+            if (capabilities.hasAccount)
+              Expanded(
+                child: _buildTabButton(
+                  l10n.daoHubTabDelegation,
+                  Icons.people,
+                  4,
+                  selectedIndex,
+                ),
               ),
-            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildTabButton(String label, IconData icon, int index) {
-    final isSelected = _selectedIndex == index;
+  Widget _buildTabButton(
+      String label, IconData icon, int index, int selectedIndex) {
+    final isSelected = selectedIndex == index;
     final isHovered = _hoveredTabIndex == index;
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
@@ -659,7 +815,10 @@ class _GovernanceHubState extends State<GovernanceHub>
                 _daoReviewStatusLabel(review.status, l10n),
               );
     final isPending = normalizedStatus == 'pending';
-    final canModerate = moderationEnabled && !isOwnSubmission && isPending;
+    final canModerate = _capabilities().canModerateDao &&
+        moderationEnabled &&
+        !isOwnSubmission &&
+        isPending;
     final isActionInFlight = _daoActionState.reviewActionId == review.id;
 
     return Container(
@@ -803,7 +962,9 @@ class _GovernanceHubState extends State<GovernanceHub>
                                   ? SizedBox(
                                       width: 16,
                                       height: 16,
-                                      child: InlineLoading(tileSize: 4, color: colorScheme.onPrimary),
+                                      child: InlineLoading(
+                                          tileSize: 4,
+                                          color: colorScheme.onPrimary),
                                     )
                                   : Text(
                                       l10n.daoModerationApproveLabel,
@@ -837,7 +998,9 @@ class _GovernanceHubState extends State<GovernanceHub>
                                   ? SizedBox(
                                       width: 16,
                                       height: 16,
-                                      child: InlineLoading(tileSize: 4, color: colorScheme.error),
+                                      child: InlineLoading(
+                                          tileSize: 4,
+                                          color: colorScheme.error),
                                     )
                                   : Text(
                                       l10n.daoModerationRejectLabel,
@@ -934,6 +1097,17 @@ class _GovernanceHubState extends State<GovernanceHub>
       wallet: web3Provider.walletAddress,
     );
 
+    if (!_capabilities(listen: false).canModerateDao) {
+      messenger.showKubusSnackBar(
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context)!.daoModerationDisabledToast,
+          ),
+        ),
+      );
+      return;
+    }
+
     if (!AppConfig.isFeatureEnabled('daoReviewDecisions')) {
       messenger.showKubusSnackBar(
         SnackBar(
@@ -1021,7 +1195,8 @@ class _GovernanceHubState extends State<GovernanceHub>
             ? l10n.daoReviewDetailsVotingDisabledForSubmission
             : l10n.daoReviewDetailsVotingManagedByDao;
     final isPending = review.status.toLowerCase() == 'pending';
-    final canModerate = AppConfig.isFeatureEnabled('daoReviewDecisions') &&
+    final canModerate = _capabilities(listen: false).canModerateDao &&
+        AppConfig.isFeatureEnabled('daoReviewDecisions') &&
         !isOwnSubmission &&
         isPending;
     final isActionInFlight = _daoActionState.reviewActionId == review.id;
@@ -1121,6 +1296,9 @@ class _GovernanceHubState extends State<GovernanceHub>
     final l10n = AppLocalizations.of(context)!;
     final quorumText =
         proposal.hasQuorum ? l10n.daoQuorumReached : l10n.daoQuorumPending;
+    final capabilities = _capabilities(
+      proposalAllowsVoting: proposal.isActive,
+    );
 
     return Container(
       margin: const EdgeInsets.only(bottom: KubusSpacing.sm + KubusSpacing.xxs),
@@ -1155,15 +1333,6 @@ class _GovernanceHubState extends State<GovernanceHub>
                 ),
               ),
               const Spacer(),
-              Text(
-                proposal.timeLeft,
-                style: KubusTextStyles.navMetaLabel.copyWith(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.7),
-                ),
-              ),
             ],
           ),
           const SizedBox(height: KubusSpacing.md),
@@ -1207,9 +1376,13 @@ class _GovernanceHubState extends State<GovernanceHub>
                     width: 180,
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(6),
-                      child: KubusMeterBar(progress: supportPct / 100, height: 6, color: color, trackColor: Theme.of(context)
-                            .colorScheme
-                            .surfaceContainerHighest),
+                      child: KubusMeterBar(
+                          progress: supportPct / 100,
+                          height: 6,
+                          color: color,
+                          trackColor: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest),
                     ),
                   ),
                   const SizedBox(height: 6),
@@ -1253,35 +1426,37 @@ class _GovernanceHubState extends State<GovernanceHub>
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _buildVoteButton(
-                  proposal: proposal,
-                  isYes: true,
-                  backgroundColor: color,
-                  foregroundColor: Theme.of(context).colorScheme.onSurface,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildVoteButton(
-                  proposal: proposal,
-                  isYes: false,
-                  backgroundColor:
-                      Theme.of(context).colorScheme.surfaceContainerHighest,
-                  foregroundColor: Theme.of(context).colorScheme.onSurface,
-                  side: BorderSide(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.3),
+          if (capabilities.canVote) ...[
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildVoteButton(
+                    proposal: proposal,
+                    isYes: true,
+                    backgroundColor: color,
+                    foregroundColor: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
-              ),
-            ],
-          ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildVoteButton(
+                    proposal: proposal,
+                    isYes: false,
+                    backgroundColor:
+                        Theme.of(context).colorScheme.surfaceContainerHighest,
+                    foregroundColor: Theme.of(context).colorScheme.onSurface,
+                    side: BorderSide(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.3),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -1322,7 +1497,12 @@ class _GovernanceHubState extends State<GovernanceHub>
         final scheme = Theme.of(context).colorScheme;
         final roles = KubusColorRoles.of(context);
         // Get actual votes from provider - use user's votes if available
-        final userVotes = daoProvider.votes.take(10).toList();
+        final viewerWallet =
+            context.watch<WalletProvider>().currentWalletAddress ?? '';
+        final userVotes = daoProvider.votes
+            .where((vote) => WalletUtils.equals(vote.voter, viewerWallet))
+            .take(10)
+            .toList();
 
         // Convert to display format
         final votingHistory = userVotes.map((vote) {
@@ -1534,7 +1714,10 @@ class _GovernanceHubState extends State<GovernanceHub>
                     ? SizedBox(
                         width: 20,
                         height: 20,
-                        child: InlineLoading(tileSize: 4, color: scheme.onPrimary,),
+                        child: InlineLoading(
+                          tileSize: 4,
+                          color: scheme.onPrimary,
+                        ),
                       )
                     : Text(
                         l10n.daoCreateProposalSubmitButtonLabel,
@@ -2195,14 +2378,16 @@ class _GovernanceHubState extends State<GovernanceHub>
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
-                const Spacer(),
-                TextButton(
-                  onPressed: () => _setSelectedIndex(2),
-                  child: Text(
-                    l10n.daoCreateProposalButton,
-                    style: TextStyle(color: _daoAccent),
+                if (_capabilities().canCreateProposal) ...[
+                  const Spacer(),
+                  TextButton(
+                    onPressed: () => _setSelectedIndex(2),
+                    child: Text(
+                      l10n.daoCreateProposalButton,
+                      style: TextStyle(color: _daoAccent),
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
             const SizedBox(height: 16),
@@ -2214,7 +2399,7 @@ class _GovernanceHubState extends State<GovernanceHub>
     );
   }
 
-  Widget _buildDelegation() {
+  Widget _buildDelegation(Web3Capabilities capabilities) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     return Container(
@@ -2238,96 +2423,22 @@ class _GovernanceHubState extends State<GovernanceHub>
               ),
             ),
             const SizedBox(height: 24),
-            _buildCurrentDelegation(),
-            const SizedBox(height: 24),
-            _buildTopDelegates(),
-            const SizedBox(height: 24),
-            _buildDelegationActions(),
+            if (!capabilities.canDelegate) ...[
+              _buildParticipationState(capabilities),
+              const SizedBox(height: KubusSpacing.lg),
+            ],
+            _buildTopDelegates(capabilities),
+            if (capabilities.canDelegate) ...[
+              const SizedBox(height: KubusSpacing.lg),
+              _buildDelegationActions(),
+            ],
           ],
         ),
       ),
     );
   }
 
-  Widget _buildCurrentDelegation() {
-    final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.all(KubusChromeMetrics.cardPadding),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(KubusRadius.lg),
-        border: Border.all(color: scheme.outline.withValues(alpha: 0.25)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.person, color: _daoAccent, size: 24),
-              const SizedBox(width: 12),
-              Text(
-                l10n.daoDelegationCurrentStatusTitle,
-                style: KubusTextStyles.sectionTitle.copyWith(
-                  color: scheme.onSurface,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _buildDelegationInfo(
-                  l10n.daoDelegationDetailVotingPowerLabel,
-                  '${Provider.of<Web3Provider>(context, listen: false).kub8Balance.toStringAsFixed(2)} KUB8',
-                ),
-              ),
-              Expanded(
-                child: _buildDelegationInfo(
-                  l10n.daoDelegationDetailDelegateLabel,
-                  l10n.daoDelegationSelfLabel,
-                ),
-              ),
-              Expanded(
-                child: _buildDelegationInfo(
-                  l10n.daoDelegationDelegatorsLabel,
-                  Provider.of<DAOProvider>(context, listen: false)
-                      .delegates
-                      .length
-                      .toString(),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDelegationInfo(String label, String value) {
-    final scheme = Theme.of(context).colorScheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: KubusTextStyles.navMetaLabel.copyWith(
-            color: scheme.onSurface.withValues(alpha: 0.65),
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: KubusTextStyles.sectionTitle.copyWith(
-            color: scheme.onSurface,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTopDelegates() {
+  Widget _buildTopDelegates(Web3Capabilities capabilities) {
     return Consumer<DAOProvider>(
       builder: (context, daoProvider, child) {
         final l10n = AppLocalizations.of(context)!;
@@ -2354,7 +2465,9 @@ class _GovernanceHubState extends State<GovernanceHub>
               )
             else
               ...delegates.map((delegate) => GestureDetector(
-                    onTap: () => _delegateVote(delegate.name),
+                    onTap: capabilities.canDelegate
+                        ? () => _delegateVote(delegate)
+                        : null,
                     child: Container(
                       margin: const EdgeInsets.only(bottom: KubusSpacing.md),
                       padding: const EdgeInsets.all(KubusSpacing.lg),
@@ -2434,14 +2547,15 @@ class _GovernanceHubState extends State<GovernanceHub>
                                 ),
                               ),
                               const SizedBox(height: KubusSpacing.xs),
-                              Text(
-                                l10n.daoTapToDelegateHint,
-                                style: KubusTextStyles.compactBadge.copyWith(
-                                  color:
-                                      scheme.onSurface.withValues(alpha: 0.6),
-                                  fontStyle: FontStyle.italic,
+                              if (capabilities.canDelegate)
+                                Text(
+                                  l10n.daoTapToDelegateHint,
+                                  style: KubusTextStyles.compactBadge.copyWith(
+                                    color:
+                                        scheme.onSurface.withValues(alpha: 0.6),
+                                    fontStyle: FontStyle.italic,
+                                  ),
                                 ),
-                              ),
                             ],
                           ),
                         ],
@@ -2474,7 +2588,6 @@ class _GovernanceHubState extends State<GovernanceHub>
           ),
         ),
         const SizedBox(height: 16),
-        // Delegate to Others Button
         SizedBox(
           width: double.infinity,
           child: ElevatedButton.icon(
@@ -2490,46 +2603,6 @@ class _GovernanceHubState extends State<GovernanceHub>
               ),
             ),
           ),
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: _selfDelegate,
-                icon: Icon(Icons.person_outline, size: 18),
-                label: Text(l10n.daoSelfDelegateButton),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor:
-                      Theme.of(context).colorScheme.surfaceContainerHighest,
-                  foregroundColor: Colors.white,
-                  side: KubusBorders.hairlineSide(context),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(KubusRadius.md),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: _revokeDelegation,
-                icon: Icon(Icons.cancel_outlined, size: 18),
-                label: Text(l10n.daoRevokeButton),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor:
-                      Theme.of(context).colorScheme.surfaceContainerHighest,
-                  foregroundColor: Colors.white,
-                  side: KubusBorders.hairlineSide(context),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(KubusRadius.md),
-                  ),
-                ),
-              ),
-            ),
-          ],
         ),
       ],
     );
@@ -2601,7 +2674,7 @@ class _GovernanceHubState extends State<GovernanceHub>
                             child: ElevatedButton(
                               onPressed: () {
                                 Navigator.of(context).pop();
-                                _delegateVote(delegate.name);
+                                _delegateVote(delegate);
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: scheme.surfaceContainerHighest,
@@ -2693,7 +2766,7 @@ class _GovernanceHubState extends State<GovernanceHub>
     );
   }
 
-  void _delegateVote(String delegateName) {
+  void _delegateVote(Delegate delegate) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final votingPowerDisplay =
@@ -2712,7 +2785,7 @@ class _GovernanceHubState extends State<GovernanceHub>
           children: [
             Text(
               l10n.daoDelegateVotingPowerDialogBody(
-                  votingPowerDisplay, delegateName),
+                  votingPowerDisplay, delegate.name),
               style: KubusTextStyles.detailBody.copyWith(
                 color: scheme.onSurface.withValues(alpha: 0.7),
               ),
@@ -2763,7 +2836,7 @@ class _GovernanceHubState extends State<GovernanceHub>
           TextButton(
             onPressed: () {
               Navigator.of(context).pop();
-              _completeDelegation(delegateName);
+              _completeDelegation(delegate);
             },
             child: Text(l10n.daoConfirmDelegationButton,
                 style: TextStyle(color: scheme.primary)),
@@ -2773,148 +2846,51 @@ class _GovernanceHubState extends State<GovernanceHub>
     );
   }
 
-  void _completeDelegation(String delegateName) {
+  Future<void> _completeDelegation(Delegate delegate) async {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
-    // Here you would typically call a smart contract or API
-    // For now, we'll simulate the delegation
+    final profileProvider = context.read<ProfileProvider>();
 
-    ScaffoldMessenger.of(context).showKubusSnackBar(
-      SnackBar(
-        content: Text(l10n.daoDelegationSuccessToast(delegateName)),
-        backgroundColor: scheme.primary,
-        action: SnackBarAction(
-          label: l10n.daoViewDelegationDetailsAction,
-          textColor: scheme.onPrimary,
-          onPressed: () {
-            // Show delegation details
-            _showDelegationDetails(delegateName);
-          },
-        ),
-      ),
-    );
-
-    // Update the delegation status in the UI
-    setState(() {
-      // You would update your delegation state here
-    });
-  }
-
-  void _showDelegationDetails(String delegateName) {
-    final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
-    showModalBottomSheet(
+    if (!_capabilities(listen: false).canDelegate) {
+      return;
+    }
+    final walletProvider = context.read<WalletProvider>();
+    final canProceed = await WalletActionGuard.ensureSignerAccess(
       context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(KubusSpacing.lg),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.vertical(
-            top: Radius.circular(KubusRadius.xl),
-          ),
+      profileProvider: profileProvider,
+      walletProvider: walletProvider,
+    );
+    if (!mounted || !canProceed) return;
+
+    try {
+      final result = await context.read<DAOProvider>().delegateVotingPower(
+        delegateId: delegate.id,
+        metadata: <String, dynamic>{
+          'delegateWallet': delegate.address,
+        },
+      );
+      if (!mounted) return;
+      if (result == null) {
+        throw StateError('Delegation was not persisted');
+      }
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+        SnackBar(
+          content: Text(l10n.daoDelegationSuccessToast(delegate.name)),
+          backgroundColor: scheme.primary,
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.check_circle, color: scheme.primary, size: 24),
-                const SizedBox(width: KubusSpacing.md),
-                Text(
-                  l10n.daoDelegationActiveTitle,
-                  style: KubusTextStyles.detailSectionTitle.copyWith(
-                    color: scheme.onSurface,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: KubusSpacing.lg),
-            _buildDetailRow(
-                l10n.daoDelegationDetailDelegateLabel, delegateName),
-            _buildDetailRow(
-              l10n.daoDelegationDetailVotingPowerLabel,
-              '${Provider.of<Web3Provider>(context, listen: false).kub8Balance.toStringAsFixed(2)} KUB8',
-            ),
-            _buildDetailRow(l10n.daoDelegationDetailStatusLabel,
-                l10n.daoDelegationStatusActive),
-            _buildDetailRow(l10n.daoDelegationDetailStartedLabel,
-                l10n.daoDelegationStartedJustNow),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  _revokeDelegation();
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor:
-                      Theme.of(context).colorScheme.surfaceContainerHighest,
-                  foregroundColor: Colors.white,
-                  side: KubusBorders.hairlineSide(context),
-                  padding:
-                      const EdgeInsets.symmetric(vertical: KubusSpacing.md),
-                ),
-                child: Text(
-                  l10n.daoRevokeDelegationButton,
-                  style: KubusTextStyles.navLabel,
-                ),
-              ),
-            ),
-          ],
+      );
+    } catch (error) {
+      if (kDebugMode) {
+        debugPrint('GovernanceHub: unable to delegate voting power: $error');
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+        SnackBar(
+          content: Text(l10n.daoDelegationFailedToast),
+          backgroundColor: scheme.error,
         ),
-      ),
-    );
-  }
-
-  Widget _buildDetailRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: KubusSpacing.xs),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: KubusTextStyles.navLabel.copyWith(
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.6),
-            ),
-          ),
-          Text(
-            value,
-            style: KubusTextStyles.navLabel.copyWith(
-              fontWeight: FontWeight.w600,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _revokeDelegation() {
-    final scheme = Theme.of(context).colorScheme;
-    ScaffoldMessenger.of(context).showKubusSnackBar(
-      SnackBar(
-        content: Text(AppLocalizations.of(context)!.daoDelegationRevokedToast),
-        backgroundColor: scheme.tertiary,
-      ),
-    );
-  }
-
-  void _selfDelegate() {
-    final scheme = Theme.of(context).colorScheme;
-    ScaffoldMessenger.of(context).showKubusSnackBar(
-      SnackBar(
-        content:
-            Text(AppLocalizations.of(context)!.daoSelfDelegationEnabledToast),
-        backgroundColor: scheme.tertiary,
-      ),
-    );
+      );
+    }
   }
 
   Future<void> _submitProposalVote(String proposalId, bool isYes) async {
@@ -2925,6 +2901,14 @@ class _GovernanceHubState extends State<GovernanceHub>
     final profileProvider = context.read<ProfileProvider>();
     final messenger = ScaffoldMessenger.of(context);
     final scheme = Theme.of(context).colorScheme;
+
+    final proposal = daoProvider.getProposalById(proposalId);
+    if (!_capabilities(
+      proposalAllowsVoting: proposal?.isActive ?? false,
+      listen: false,
+    ).canVote) {
+      return;
+    }
 
     final canProceed = await WalletActionGuard.ensureSignerAccess(
       context: context,

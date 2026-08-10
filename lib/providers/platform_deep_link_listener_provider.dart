@@ -11,6 +11,7 @@ import '../services/share/share_deep_link_parser.dart';
 import '../utils/share_deep_link_navigation.dart';
 import '../screens/desktop/desktop_shell_registry.dart';
 import '../services/external_wallet_signer_service.dart';
+import '../services/guest_session_service.dart';
 import 'auth_deep_link_provider.dart';
 import 'deep_link_provider.dart';
 import 'wallet_provider.dart';
@@ -69,14 +70,25 @@ class PlatformDeepLinkListenerProvider extends ChangeNotifier {
   Future<void> _seedInitialLink() async {
     try {
       final uri = await _appLinks.getInitialLink();
-      if (uri == null) return;
-      _handleUri(uri, allowImmediateNavigation: false);
+      await _handleInitialLink(uri);
     } catch (e) {
       if (kDebugMode) {
         debugPrint(
             'PlatformDeepLinkListenerProvider: getInitialLink failed: $e');
       }
+    } finally {
+      GuestSessionService.completePlatformInitialLinkResolution();
     }
+  }
+
+  @visibleForTesting
+  Future<void> handleInitialLinkForTesting(Uri? uri) => _handleInitialLink(uri);
+
+  Future<void> _handleInitialLink(Uri? uri) async {
+    if (uri == null) return;
+    GuestSessionService.snapshotLaunchUrl(override: uri);
+    await GuestSessionService.captureFromLaunchUrl();
+    _handleUri(uri, allowImmediateNavigation: false);
   }
 
   void _handleUri(Uri uri, {bool allowImmediateNavigation = true}) {

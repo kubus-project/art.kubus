@@ -250,6 +250,7 @@ void main() {
   // the snapshot synchronously here — before `runApp` and before any `await` —
   // makes capture independent of routing and of when it is read.
   GuestSessionService.snapshotLaunchUrl();
+  GuestSessionService.expectPlatformInitialLinkResolution();
 
   // We'll initialize the bindings inside the runZonedGuarded callback so the
   // WidgetsBinding is created in the same zone as the rest of the app and
@@ -1275,16 +1276,33 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _initNotificationRouting();
-    _startEntryAttributionBootstrap();
+    // Android/iOS supply the launch URI during initial-route dispatch, after
+    // initState. Waiting until the first frame for a bare launch gives that
+    // dispatch a chance to freeze an attributed URI before this future is
+    // cached, while still recording app_entry for ordinary `/` launches.
+    if (GuestSessionService.hasLaunchSnapshot) {
+      _startEntryAttributionBootstrap();
+    } else {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _startEntryAttributionBootstrap();
+      });
+    }
   }
 
   Future<void>? _entryAttributionBootstrap;
 
   void _startEntryAttributionBootstrap() {
-    // Android/iOS receive their campaign URL during initial-route dispatch.
-    // Do not initialise telemetry from the earlier empty mobile launch.
-    if (!GuestSessionService.hasLaunchSnapshot) return;
-    _entryAttributionBootstrap ??= _bootstrapEntryAttribution();
+    // A bare launch still represents an app entry. The post-frame fallback in
+    // initState keeps it in the denominator without racing the initial-route
+    // callback that supplies attributed Android/iOS deep links.
+    if (_entryAttributionBootstrap != null) {
+      // A mobile initial URI can be delivered after the bare-launch fallback
+      // has already run. Capture and refresh again without emitting a second
+      // app_entry event; GuestSessionService keeps this first-touch safe.
+      unawaited(_refreshEntryAttribution());
+      return;
+    }
+    _entryAttributionBootstrap = _bootstrapEntryAttribution();
   }
 
   /// Persist campaign attribution and open the funnel, on every entry route.
@@ -1296,6 +1314,12 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
   /// already frozen the launch URL in `main()`, so the values are the landing
   /// ones no matter how much navigation has happened by now.
   Future<void> _bootstrapEntryAttribution() async {
+    await _refreshEntryAttribution();
+    unawaited(TelemetryService().trackAppEntry());
+  }
+
+  Future<void> _refreshEntryAttribution() async {
+    await GuestSessionService.waitForPlatformInitialLinkResolution();
     try {
       await GuestSessionService.captureFromLaunchUrl();
     } catch (_) {
@@ -1306,7 +1330,6 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
     // The capture above may have landed after the attribution snapshot was
     // taken during initialisation, so re-read it before the first event.
     await telemetry.refreshEntryAttribution();
-    unawaited(telemetry.trackAppEntry());
   }
 
   void _initNotificationRouting() {

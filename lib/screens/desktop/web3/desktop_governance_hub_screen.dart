@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
-import '../../../providers/themeprovider.dart';
 import '../../../providers/dao_provider.dart';
 import '../../../providers/web3provider.dart';
+import '../../../providers/profile_provider.dart';
+import '../../../providers/wallet_provider.dart';
+import '../../../features/web3/web3_capabilities.dart';
 import '../../../models/dao.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/design_tokens.dart';
@@ -15,9 +17,7 @@ import '../desktop_shell.dart';
 import '../../web3/dao/governance_hub.dart';
 import '../../web3/dao/dao_analytics.dart';
 
-/// Desktop Governance Hub screen with split-panel layout
-/// Left: Mobile governance hub view
-/// Right: Quick actions, DAO stats, and voting power
+/// Native desktop governance workspace with a contextual right rail.
 class DesktopGovernanceHubScreen extends StatefulWidget {
   const DesktopGovernanceHubScreen({super.key});
 
@@ -50,10 +50,15 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
     final animationTheme = context.animationTheme;
     final screenWidth = MediaQuery.of(context).size.width;
     final isLarge = screenWidth >= 1200;
+    final capabilities = Web3CapabilityResolver.resolve(
+      Web3CapabilityContext.fromProviders(
+        profileProvider: context.watch<ProfileProvider>(),
+        walletProvider: context.watch<WalletProvider>(),
+      ),
+    );
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -68,7 +73,6 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Left: Mobile governance hub view (wrapped)
                 Expanded(
                   flex: isLarge ? 2 : 3,
                   child: Container(
@@ -82,18 +86,17 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
                         ),
                       ),
                     ),
-                    child: GovernanceHub(
+                    child: GovernanceWorkspace(
                       selectedIndexNotifier: _hubSelectedIndex,
                       embedded: true,
+                      desktopLayout: true,
                     ),
                   ),
                 ),
-
-                // Right: Quick actions, DAO stats, and voting info
                 if (isLarge)
                   SizedBox(
                     width: 380,
-                    child: _buildRightPanel(themeProvider),
+                    child: _buildRightPanel(capabilities),
                   ),
               ],
             ),
@@ -103,7 +106,7 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
     );
   }
 
-  Widget _buildRightPanel(ThemeProvider themeProvider) {
+  Widget _buildRightPanel(Web3Capabilities capabilities) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
@@ -153,9 +156,10 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
               ),
               const SizedBox(height: sectionGap),
 
-              // Voting power card
-              _buildVotingPowerCard(themeProvider),
-              const SizedBox(height: blockGap),
+              if (capabilities.canViewOwnGovernanceHistory) ...[
+                _buildVotingPowerCard(),
+                const SizedBox(height: blockGap),
+              ],
 
               // Quick actions
               KubusHeaderText(
@@ -163,7 +167,7 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
                 kind: KubusHeaderKind.section,
               ),
               const SizedBox(height: sectionHeaderGap),
-              if (currentSection != 2)
+              if (capabilities.canCreateProposal && currentSection != 2)
                 KubusActionSidebarTile(
                   title: l10n.desktopGovernanceQuickActionCreateProposalTitle,
                   subtitle:
@@ -172,7 +176,7 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
                   semantic: KubusActionSemantic.create,
                   onTap: () => _hubSelectedIndex.value = 2,
                 ),
-              if (currentSection != 0)
+              if (capabilities.canVote && currentSection != 0)
                 KubusActionSidebarTile(
                   title: l10n.desktopGovernanceQuickActionVoteTitle,
                   subtitle: l10n.desktopGovernanceQuickActionVoteSubtitle,
@@ -196,22 +200,13 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
               ),
               const SizedBox(height: sectionGap),
 
-              // DAO Stats
-              KubusHeaderText(
-                title: l10n.desktopGovernanceSidebarStatisticsTitle,
-                kind: KubusHeaderKind.section,
-              ),
-              const SizedBox(height: sectionHeaderGap),
-              _buildDAOStatsGrid(themeProvider),
-              const SizedBox(height: sectionGap),
-
               // Recent governance activity
               KubusHeaderText(
                 title: l10n.desktopGovernanceSidebarRecentActivityTitle,
                 kind: KubusHeaderKind.section,
               ),
               const SizedBox(height: sectionHeaderGap),
-              _buildRecentActivity(themeProvider),
+              _buildRecentActivity(),
             ],
           ),
         ),
@@ -235,7 +230,7 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
     }
   }
 
-  Widget _buildVotingPowerCard(ThemeProvider themeProvider) {
+  Widget _buildVotingPowerCard() {
     return Consumer<Web3Provider>(
       builder: (context, web3Provider, _) {
         final l10n = AppLocalizations.of(context)!;
@@ -353,77 +348,7 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
     );
   }
 
-  Widget _buildDAOStatsGrid(ThemeProvider themeProvider) {
-    return Consumer<DAOProvider>(
-      builder: (context, daoProvider, _) {
-        final l10n = AppLocalizations.of(context)!;
-        final proposals = daoProvider.proposals;
-        final activeProposals =
-            proposals.where((p) => p.status == ProposalStatus.active).length;
-        final totalMembers = daoProvider.delegates.length;
-
-        return Column(
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: _buildStatCard(
-                    l10n.daoHubTabActiveProposals,
-                    proposals.length.toString(),
-                    Icons.description_outlined,
-                    Theme.of(context).colorScheme.primary,
-                  ),
-                ),
-                const SizedBox(width: KubusSpacing.sm),
-                Expanded(
-                  child: _buildStatCard(
-                    l10n.daoHubStatActiveProposalsLabel,
-                    activeProposals.toString(),
-                    Icons.pending_actions_outlined,
-                    KubusColorRoles.of(context).statTeal,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: KubusSpacing.sm),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildStatCard(
-                    l10n.daoHubStatTotalDelegatesLabel,
-                    totalMembers.toString(),
-                    Icons.people_outline,
-                    KubusColorRoles.of(context).statCoral,
-                  ),
-                ),
-                const SizedBox(width: KubusSpacing.sm),
-                Expanded(
-                  child: _buildStatCard(
-                    l10n.daoHubTabTreasury,
-                    '${(daoProvider.treasuryOnChainBalance ?? 0).toStringAsFixed(2)} KUB8',
-                    Icons.account_balance_outlined,
-                    KubusColorRoles.of(context).positiveAction,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildStatCard(
-      String label, String value, IconData icon, Color color) {
-    return KubusSidebarStatCard(
-      title: label,
-      value: value,
-      icon: icon,
-      accent: color,
-    );
-  }
-
-  Widget _buildRecentActivity(ThemeProvider themeProvider) {
+  Widget _buildRecentActivity() {
     return Consumer<DAOProvider>(
       builder: (context, daoProvider, _) {
         final l10n = AppLocalizations.of(context)!;
@@ -516,17 +441,6 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
                                 ),
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: KubusSpacing.xxs),
-                              Text(
-                                proposal.status.name,
-                                style:
-                                    KubusTextStyles.actionTileSubtitle.copyWith(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurface
-                                      .withValues(alpha: 0.6),
-                                ),
                               ),
                             ],
                           ),
