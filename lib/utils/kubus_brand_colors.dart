@@ -24,4 +24,15 @@ class KubusBrandColors {
 
   /// Instagram brand pink (social link chips).
   static const Color instagramPink = Color(0xFFE4405F);
+
+  // --- Crypto asset identity ---
+  // Asset marks are brand identity, not themed UI: a token keeps the same
+  // colors in light and dark so it stays recognizable. Referenced by
+  // `KubusTokenIdentity`; never use these as generic accents.
+
+  /// Solana mark gradient start (https://solana.com/branding).
+  static const Color solanaPurple = Color(0xFF9945FF);
+
+  /// Solana mark gradient end.
+  static const Color solanaGreen = Color(0xFF14F195);
 }

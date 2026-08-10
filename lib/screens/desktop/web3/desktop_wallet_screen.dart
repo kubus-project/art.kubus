@@ -27,6 +27,7 @@ import '../../../widgets/common/kubus_screen_header.dart';
 import '../../../widgets/wallet_custody_status_panel.dart';
 import '../../../widgets/wallet_transaction_card.dart';
 import '../../../widgets/attestation_badge_panel.dart';
+import '../../../widgets/wallet/kubus_token_identity.dart';
 import '../../../widgets/wallet/kubus_wallet_shell.dart';
 import '../../../widgets/wallet/wallet_action_controller.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
@@ -286,7 +287,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
           ),
           style: ElevatedButton.styleFrom(
             backgroundColor: themeProvider.accentColor,
-            foregroundColor: Colors.white,
+            foregroundColor: KubusColors.textPrimaryDark,
             padding: EdgeInsets.symmetric(vertical: KubusSpacing.md),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(KubusRadius.md),
@@ -469,12 +470,15 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                   spacing: DetailSpacing.sm,
                   runSpacing: DetailSpacing.sm,
                   children: [
-                    _buildWalletStatusChip(
+                    KubusWalletMetaPill(
                       label: canTransact
                           ? l10n.walletSessionSignerReady
                           : l10n.walletSessionSignerMissing,
-                      icon: canTransact ? Icons.lock_open : Icons.visibility,
-                      color: statusColor,
+                      icon: canTransact
+                          ? Icons.lock_open_rounded
+                          : Icons.visibility_outlined,
+                      tintColor: statusColor,
+                      emphasized: true,
                     ),
                     _buildCopyAddressChip(walletAddress),
                   ],
@@ -504,90 +508,100 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
             ?.balance ??
         0.0;
 
+    final scheme = Theme.of(context).colorScheme;
+    final accent = roles.statAmber;
+
+    // The hero used to be a flood-filled amber slab with white-on-amber text,
+    // which shouted over everything else on the page. It now reads as part of
+    // the same surface family: an accent wash that fades into the card, an
+    // accent hairline, and theme text — the size of the figure carries the
+    // emphasis instead of the color.
     return DesktopCard(
       padding: EdgeInsets.zero,
       child: Container(
-        padding: EdgeInsets.all(DetailSpacing.xl),
+        padding: EdgeInsets.all(KubusSpacing.lg),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              roles.statAmber,
-              roles.statAmber.withValues(alpha: 0.84),
-              Theme.of(context).colorScheme.surface,
+              accent.withValues(alpha: 0.24),
+              accent.withValues(alpha: 0.08),
+              scheme.surface.withValues(alpha: 0.0),
             ],
-            stops: const [0.0, 0.58, 1.0],
+            stops: const [0.0, 0.45, 1.0],
           ),
           borderRadius: BorderRadius.circular(DetailRadius.xl),
+          border: KubusBorders.accentTint(accent),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l10n.walletHomeTotalBalanceLabel,
-                      style: KubusTextStyles.sectionSubtitle.copyWith(
-                        color: Colors.white.withValues(alpha: 0.82),
-                      ),
-                    ),
-                    SizedBox(height: DetailSpacing.xs),
-                    Text(
-                      l10n.walletHomeDesktopSurfaceLabel,
-                      style: DetailTypography.caption(context).copyWith(
-                        color: Colors.white.withValues(alpha: 0.68),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox.shrink(),
-              ],
+            Text(
+              l10n.walletHomeTotalBalanceLabel,
+              style: KubusTextStyles.statLabel.copyWith(
+                color: scheme.onSurface.withValues(alpha: 0.72),
+              ),
             ),
-            const SizedBox(height: KubusSpacing.sm + KubusSpacing.xxs),
+            const SizedBox(height: KubusSpacing.xxs),
+            Text(
+              l10n.walletHomeDesktopSurfaceLabel,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: KubusTextStyles.detailCaption.copyWith(
+                color: scheme.onSurface.withValues(alpha: 0.56),
+              ),
+            ),
+            const SizedBox(height: KubusSpacing.md),
             Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Text(
-                  solBalance.toStringAsFixed(4),
-                  style: KubusTypography.inter(
-                    fontSize: 34,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                const KubusTokenAvatar(
+                  symbol: KubusTokenIdentity.solSymbol,
+                  size: KubusTokenAvatarSize.lg,
+                  filled: true,
+                ),
+                const SizedBox(width: KubusSpacing.md),
+                Flexible(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          solBalance.toStringAsFixed(4),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: KubusTextStyles.heroMetric.copyWith(
+                            color: scheme.onSurface,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: KubusSpacing.sm),
+                      Text(
+                        KubusTokenIdentity.solSymbol,
+                        style: KubusTextStyles.sectionTitle.copyWith(
+                          color: scheme.onSurface.withValues(alpha: 0.66),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                SizedBox(width: DetailSpacing.sm),
-                Padding(
-                  padding: EdgeInsets.only(bottom: DetailSpacing.xs),
-                  child: Text(
-                    'SOL',
-                    style: KubusTextStyles.sectionTitle.copyWith(
-                      fontSize: 16,
-                      color: Colors.white.withValues(alpha: 0.8),
-                    ),
-                  ),
-                ),
               ],
             ),
-            SizedBox(height: DetailSpacing.lg),
+            const SizedBox(height: KubusSpacing.lg),
             Wrap(
-              spacing: DetailSpacing.sm,
-              runSpacing: DetailSpacing.sm,
+              spacing: KubusSpacing.sm,
+              runSpacing: KubusSpacing.sm,
               children: [
-                _buildBalanceStatChip(
-                  label: 'KUB8',
+                KubusTokenBadge(
+                  symbol: KubusTokenIdentity.kub8Symbol,
                   value: kub8Balance.toStringAsFixed(2),
-                  icon: Icons.bolt,
                 ),
-                _buildBalanceStatChip(
-                  label: 'SOL',
+                KubusTokenBadge(
+                  symbol: KubusTokenIdentity.solSymbol,
                   value: solBalance.toStringAsFixed(3),
-                  icon: Icons.currency_bitcoin,
                 ),
               ],
             ),
@@ -640,7 +654,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                   width: resolvedTileWidth,
                   child: KubusWalletActionCard.fromConfig(
                     config: config,
-                    minHeight: 96,
+                    minHeight: KubusSizes.walletActionCardMinHeightCompact,
                     density: KubusWalletDensity.compact,
                   ),
                 ),
@@ -666,7 +680,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
         DetailSpacing.sm,
       ),
       child: DesktopCard(
-        padding: EdgeInsets.all(DetailSpacing.sm),
+        padding: const EdgeInsets.all(KubusSpacing.xs),
         child: TabBar(
           controller: _tabController,
           isScrollable: true,
@@ -680,12 +694,14 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
           unselectedLabelStyle: KubusTextStyles.navLabel,
           indicator: BoxDecoration(
             color: themeProvider.accentColor.withValues(alpha: 0.14),
-            borderRadius: BorderRadius.circular(KubusRadius.md),
+            borderRadius: BorderRadius.circular(KubusRadius.sm),
           ),
           indicatorSize: TabBarIndicatorSize.tab,
           dividerColor: Colors.transparent,
-          labelPadding: EdgeInsets.symmetric(
-            horizontal: KubusSpacing.lg,
+          splashBorderRadius: BorderRadius.circular(KubusRadius.sm),
+          padding: EdgeInsets.zero,
+          labelPadding: const EdgeInsets.symmetric(
+            horizontal: KubusSpacing.md,
             vertical: KubusSpacing.sm,
           ),
           tabs: tabLabels.map((tab) => Tab(text: tab)).toList(),
@@ -783,119 +799,15 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
     );
   }
 
-  Widget _buildWalletStatusChip({
-    required String label,
-    required IconData icon,
-    required Color color,
-  }) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: KubusSpacing.md,
-        vertical: KubusSpacing.sm,
-      ),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(KubusRadius.md),
-        border: Border.all(color: color.withValues(alpha: 0.18)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16, color: color),
-          const SizedBox(width: KubusSpacing.xs),
-          Text(
-            label,
-            style: KubusTextStyles.navMetaLabel.copyWith(
-              color: scheme.onSurface,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildCopyAddressChip(String address) {
-    final scheme = Theme.of(context).colorScheme;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () => _copyWalletAddress(address),
-        borderRadius: BorderRadius.circular(KubusRadius.md),
-        child: Container(
-          padding: EdgeInsets.symmetric(
-            horizontal: KubusSpacing.md,
-            vertical: KubusSpacing.sm,
-          ),
-          decoration: BoxDecoration(
-            color: scheme.surfaceContainerHighest.withValues(alpha: 0.44),
-            borderRadius: BorderRadius.circular(KubusRadius.md),
-            border: Border.all(
-              color: scheme.outline.withValues(alpha: 0.18),
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.copy, size: 16, color: scheme.onSurface),
-              const SizedBox(width: KubusSpacing.xs),
-              Text(
-                _truncateAddress(address),
-                style: KubusTextStyles.navMetaLabel.copyWith(
-                  color: scheme.onSurface,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+    return KubusWalletMetaPill(
+      label: _truncateAddress(address),
+      icon: Icons.copy_rounded,
+      tintColor: Theme.of(context).colorScheme.outline,
+      onTap: () => _copyWalletAddress(address),
     );
   }
 
-  Widget _buildBalanceStatChip({
-    required String label,
-    required String value,
-    required IconData icon,
-  }) {
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: KubusSpacing.md,
-        vertical: KubusSpacing.sm,
-      ),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(KubusRadius.md),
-        border: KubusBorders.onDark(),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16, color: Colors.white),
-          const SizedBox(width: KubusSpacing.sm),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: KubusTextStyles.navMetaLabel.copyWith(
-                  color: Colors.white.withValues(alpha: 0.72),
-                ),
-              ),
-              Text(
-                value,
-                style: KubusTextStyles.navLabel.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildAssetsTab(ThemeProvider themeProvider) {
     return Consumer<WalletProvider>(
@@ -943,87 +855,96 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
           padding: EdgeInsets.all(DetailSpacing.xxl),
           itemCount: tokens.length,
           itemBuilder: (context, index) {
-            return _buildTokenRow(tokens[index], themeProvider);
+            return _buildTokenRow(tokens[index]);
           },
         );
       },
     );
   }
 
-  Widget _buildTokenRow(Token token, ThemeProvider themeProvider) {
+  /// Asset row: identity mark, name over ticker, balance over fiat value, and
+  /// a change badge. Every column has one job and a fixed alignment, so a list
+  /// of assets scans down cleanly instead of reading as generic list tiles.
+  Widget _buildTokenRow(Token token) {
     final isPositive = token.changePercentage >= 0;
+    final roles = KubusColorRoles.of(context);
+    final scheme = Theme.of(context).colorScheme;
+    final changeColor =
+        isPositive ? roles.positiveAction : roles.negativeAction;
 
     return DesktopCard(
-      margin: EdgeInsets.only(bottom: DetailSpacing.md),
+      margin: EdgeInsets.only(bottom: KubusSpacing.sm),
       child: Row(
         children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              color: themeProvider.accentColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(DetailRadius.md),
-            ),
-            child: Center(
-              child: Text(
-                token.symbol.substring(0, 1).toUpperCase(),
-                style: DetailTypography.cardTitle(context).copyWith(
-                  color: themeProvider.accentColor,
-                ),
-              ),
-            ),
+          KubusTokenAvatar(
+            symbol: token.symbol,
+            size: KubusTokenAvatarSize.md,
           ),
-          SizedBox(width: DetailSpacing.lg),
+          const SizedBox(width: KubusSpacing.md),
           Expanded(
+            flex: 3,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   token.name,
-                  style: DetailTypography.cardTitle(context),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: KubusTextStyles.detailCardTitle.copyWith(
+                    color: scheme.onSurface,
+                  ),
                 ),
-                SizedBox(height: DetailSpacing.xs),
+                const SizedBox(height: KubusSpacing.xxs),
                 Text(
                   token.symbol.toUpperCase(),
-                  style: DetailTypography.caption(context),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: KubusTextStyles.detailCaption.copyWith(
+                    color: scheme.onSurface.withValues(alpha: 0.62),
+                    letterSpacing: 0.4,
+                  ),
                 ),
               ],
             ),
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                token.formattedBalance,
-                style: DetailTypography.cardTitle(context),
-              ),
-              SizedBox(height: DetailSpacing.xs),
-              Text(
-                token.formattedValue,
-                style: DetailTypography.caption(context),
-              ),
-            ],
+          const SizedBox(width: KubusSpacing.md),
+          Expanded(
+            flex: 2,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  token.formattedBalance,
+                  maxLines: 1,
+                  softWrap: false,
+                  overflow: TextOverflow.ellipsis,
+                  style: KubusTextStyles.detailCardTitle.copyWith(
+                    color: scheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: KubusSpacing.xxs),
+                Text(
+                  token.formattedValue,
+                  maxLines: 1,
+                  softWrap: false,
+                  overflow: TextOverflow.ellipsis,
+                  style: KubusTextStyles.detailCaption.copyWith(
+                    color: scheme.onSurface.withValues(alpha: 0.62),
+                  ),
+                ),
+              ],
+            ),
           ),
-          SizedBox(width: DetailSpacing.lg),
-          Container(
-            padding: EdgeInsets.symmetric(
-                horizontal: DetailSpacing.md, vertical: DetailSpacing.sm),
-            decoration: BoxDecoration(
-              color: (isPositive
-                      ? KubusColorRoles.of(context).positiveAction
-                      : KubusColorRoles.of(context).negativeAction)
-                  .withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(DetailRadius.sm),
-            ),
-            child: Text(
-              token.formattedChange,
-              style: KubusTextStyles.navMetaLabel.copyWith(
-                fontWeight: FontWeight.w600,
-                color: isPositive
-                    ? KubusColorRoles.of(context).positiveAction
-                    : KubusColorRoles.of(context).negativeAction,
-              ),
-            ),
+          const SizedBox(width: KubusSpacing.md),
+          KubusWalletMetaPill(
+            label: token.formattedChange,
+            icon: isPositive
+                ? Icons.trending_up_rounded
+                : Icons.trending_down_rounded,
+            tintColor: changeColor,
+            tone: KubusWalletPillTone.accent,
+            emphasized: true,
+            dense: true,
           ),
         ],
       ),
@@ -1267,7 +1188,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
             return WalletTransactionCard(
               transaction: tx,
               compact: true,
-              margin: EdgeInsets.only(bottom: DetailSpacing.md),
+              margin: const EdgeInsets.only(bottom: KubusSpacing.sm),
             );
           }),
       ],

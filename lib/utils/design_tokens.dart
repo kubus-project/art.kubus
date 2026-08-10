@@ -159,6 +159,47 @@ class KubusSizes {
   /// Hairline borders used on glass surfaces.
   static const double hairline = 1.0;
 
+  // --- Token identity (wallet asset marks) ---
+
+  /// Token mark used as a corner badge on another icon.
+  static const double tokenAvatarXs = 18.0;
+
+  /// Token avatar in dense rows, chips, and transaction meta.
+  static const double tokenAvatarSm = 32.0;
+
+  /// Token avatar in asset list rows (default).
+  static const double tokenAvatarMd = 40.0;
+
+  /// Token avatar in balance heroes.
+  static const double tokenAvatarLg = 48.0;
+
+  /// Glyph size inside a token avatar, as a share of the avatar box.
+  static const double tokenGlyphRatio = 0.5;
+
+  // --- Wallet chrome ---
+
+  /// Minimum height for status/meta chips so short labels never collapse
+  /// into a cramped box.
+  static const double chipMinHeight = 26.0;
+
+  /// Icon size inside status/meta chips.
+  static const double chipIcon = 14.0;
+
+  /// Icon container in wallet action cards and transaction badges.
+  static const double walletActionIconBox = 40.0;
+
+  /// Icon size inside [walletActionIconBox].
+  static const double walletActionIcon = 20.0;
+
+  /// Minimum height for a compact wallet action card (desktop rails/grids).
+  static const double walletActionCardMinHeightCompact = 104.0;
+
+  /// Minimum height for a touch-density wallet action card.
+  static const double walletActionCardMinHeight = 144.0;
+
+  /// Max width for a monospace hash/address value before it middle-truncates.
+  static const double addressValueMaxWidth = 220.0;
+
   /// Common max widths for modal/dialog content.
   static const double dialogWidthMd = 420.0;
   static const double dialogWidthLg = 520.0;
@@ -197,6 +238,10 @@ class KubusChromeMetrics {
   static const double statLabel = 13.0;
   static const double statChange = 12.0;
   static const double heroTitle = 24.0;
+
+  /// Headline figure in a balance/metric hero — one step above [heroTitle]
+  /// so a wallet total reads as the page's primary number.
+  static const double heroMetricValue = 34.0;
   static const double heroSubtitle = 14.0;
   static const double heroIconBox = 56.0;
   static const double heroIcon = 28.0;
@@ -494,6 +539,14 @@ class KubusTextStyles {
         fontSize: KubusChromeMetrics.heroSubtitle,
         fontWeight: FontWeight.w500,
         height: 1.45,
+      );
+
+  /// Headline figure for balance/metric heroes.
+  static TextStyle get heroMetric =>
+      KubusTypography.textTheme.displaySmall!.copyWith(
+        fontSize: KubusChromeMetrics.heroMetricValue,
+        fontWeight: FontWeight.w700,
+        height: 1.1,
       );
 
   static TextStyle get statValue =>

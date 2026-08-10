@@ -1,5 +1,7 @@
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/models/wallet.dart';
+import 'package:art_kubus/utils/design_tokens.dart';
+import 'package:art_kubus/widgets/wallet/kubus_token_identity.dart';
 import 'package:art_kubus/widgets/wallet_transaction_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -146,5 +148,97 @@ void main() {
 
     expect(find.text('Team fee'), findsOneWidget);
     expect(find.text('Failed'), findsOneWidget);
+  });
+
+  testWidgets('compact card lays out on a narrow phone without overflowing',
+      (tester) async {
+    tester.view.physicalSize = const Size(360, 780);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    final tx = _buildTransaction(
+      signature: 'sig-narrow-layout',
+      type: TransactionType.receive,
+      status: TransactionStatus.finalized,
+      direction: WalletTransactionDirection.incoming,
+      finality: WalletTransactionFinality.finalized,
+      confirmationCount: 32,
+      token: 'KUB8',
+      amount: 1234.5678,
+    );
+
+    await tester.pumpWidget(
+      _wrap(WalletTransactionCard(transaction: tx, compact: true)),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+
+    // "Received" must render as one unbroken line — the old layout squeezed
+    // the title into the same Wrap as the status chips and split the word.
+    final title = tester.widget<Text>(find.text('Received'));
+    expect(title.maxLines, 1);
+    expect(title.softWrap, isFalse);
+
+    // The confirmation chip keeps its own line and its own intrinsic width.
+    final chip = tester.widget<Text>(find.text('32 confirmations'));
+    expect(chip.maxLines, 1);
+    expect(chip.softWrap, isFalse);
+    expect(
+      tester.getSize(find.text('32 confirmations')).height,
+      lessThan(KubusSizes.chipMinHeight),
+    );
+
+    // Amount stays on one line next to the title.
+    expect(find.text('+1234.5678 KUB8'), findsOneWidget);
+  });
+
+  testWidgets('transaction badge carries the asset mark', (tester) async {
+    final tx = _buildTransaction(
+      signature: 'sig-token-mark',
+      type: TransactionType.send,
+      status: TransactionStatus.confirmed,
+      direction: WalletTransactionDirection.outgoing,
+      token: 'SOL',
+    );
+
+    await tester.pumpWidget(_wrap(WalletTransactionCard(transaction: tx)));
+
+    expect(find.byType(KubusTokenAvatar), findsOneWidget);
+    expect(
+      tester.widget<KubusTokenAvatar>(find.byType(KubusTokenAvatar)).symbol,
+      'SOL',
+    );
+  });
+
+  testWidgets('expanded signature row shows a truncated monospace value',
+      (tester) async {
+    const longSignature =
+        '5x7Qk2mNqL9vTbYcWd3RfHgJ4pZaSeD6uVnB8oXiC1tMgKrEyPwQ2';
+    final tx = _buildTransaction(
+      signature: longSignature,
+      type: TransactionType.send,
+      status: TransactionStatus.confirmed,
+      direction: WalletTransactionDirection.outgoing,
+    );
+
+    await tester.pumpWidget(
+      _wrap(
+        WalletTransactionCard(transaction: tx, initiallyExpanded: true),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    // Head and tail survive; the middle collapses so a hash cannot wrap into
+    // a ragged three-line block.
+    expect(find.text(longSignature), findsNothing);
+    expect(
+      find.text(
+        '${longSignature.substring(0, 8)}…'
+        '${longSignature.substring(longSignature.length - 8)}',
+      ),
+      findsOneWidget,
+    );
   });
 }
