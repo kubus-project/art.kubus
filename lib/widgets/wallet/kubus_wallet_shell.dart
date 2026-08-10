@@ -215,6 +215,19 @@ class KubusWalletSectionCard extends StatelessWidget {
   }
 }
 
+/// How a [KubusWalletMetaPill] colors its label.
+///
+/// - [neutral] keeps the label in `onSurface` and uses the tint only as a
+///   backdrop — for metadata (address, timestamp, network).
+/// - [accent] puts the label in the tint color itself — for status that has
+///   to be readable as a state at a glance (finalized, failed, pending).
+enum KubusWalletPillTone { neutral, accent }
+
+/// The canonical wallet chip.
+///
+/// Every wallet status/meta pill routes through here so padding, height,
+/// radius, and truncation stay identical across surfaces. Labels never wrap:
+/// a chip that has to break a word is the wrong chip.
 class KubusWalletMetaPill extends StatelessWidget {
   const KubusWalletMetaPill({
     super.key,
@@ -222,22 +235,57 @@ class KubusWalletMetaPill extends StatelessWidget {
     this.icon,
     this.tintColor,
     this.emphasized = false,
+    this.tone = KubusWalletPillTone.neutral,
+    this.dense = false,
+    this.onTap,
+    this.maxLabelWidth,
   });
 
   final String label;
   final IconData? icon;
   final Color? tintColor;
   final bool emphasized;
+  final KubusWalletPillTone tone;
+
+  /// Tighter horizontal padding for chips packed into a card header row.
+  final bool dense;
+
+  final VoidCallback? onTap;
+
+  /// Clamps very long labels (addresses, signatures) so one chip cannot push
+  /// the rest of a row off screen.
+  final double? maxLabelWidth;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final baseColor = tintColor ?? scheme.primary;
+    final labelColor = tone == KubusWalletPillTone.accent
+        ? baseColor
+        : scheme.onSurface.withValues(alpha: 0.82);
 
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: KubusSpacing.md,
-        vertical: KubusSpacing.sm,
+    Widget labelText = Text(
+      label,
+      maxLines: 1,
+      softWrap: false,
+      overflow: TextOverflow.ellipsis,
+      style: KubusTextStyles.detailCaption.copyWith(
+        color: labelColor,
+        fontWeight: FontWeight.w600,
+      ),
+    );
+    if (maxLabelWidth != null) {
+      labelText = ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: maxLabelWidth!),
+        child: labelText,
+      );
+    }
+
+    final pill = Container(
+      constraints: const BoxConstraints(minHeight: KubusSizes.chipMinHeight),
+      padding: EdgeInsets.symmetric(
+        horizontal: dense ? KubusSpacing.sm : KubusSpacing.md,
+        vertical: KubusSpacing.xs,
       ),
       decoration: BoxDecoration(
         color: baseColor.withValues(alpha: emphasized ? 0.16 : 0.08),
@@ -250,19 +298,21 @@ class KubusWalletMetaPill extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
           if (icon != null) ...<Widget>[
-            Icon(icon, size: 14, color: baseColor),
+            Icon(icon, size: KubusSizes.chipIcon, color: baseColor),
             const SizedBox(width: KubusSpacing.xs),
           ],
-          Flexible(
-            child: Text(
-              label,
-              style: KubusTextStyles.detailCaption.copyWith(
-                color: scheme.onSurface.withValues(alpha: 0.82),
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
+          Flexible(child: labelText),
         ],
+      ),
+    );
+
+    if (onTap == null) return pill;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(KubusRadius.xl),
+        child: pill,
       ),
     );
   }
@@ -286,14 +336,14 @@ class KubusWalletActionCard extends StatelessWidget {
     this.enabled = true,
     this.loading = false,
     this.disabledReason,
-    this.minHeight = 144,
+    this.minHeight = KubusSizes.walletActionCardMinHeight,
     this.density = KubusWalletDensity.regular,
   });
 
   factory KubusWalletActionCard.fromConfig({
     Key? key,
     required WalletActionConfig config,
-    double minHeight = 144,
+    double minHeight = KubusSizes.walletActionCardMinHeight,
     KubusWalletDensity density = KubusWalletDensity.regular,
   }) {
     return KubusWalletActionCard(
@@ -329,13 +379,17 @@ class KubusWalletActionCard extends StatelessWidget {
         enabled ? color : scheme.onSurface.withValues(alpha: 0.34);
     final isCompact = density == KubusWalletDensity.compact;
 
-    final double iconBox =
-        isCompact ? 40 : KubusChromeMetrics.heroIconBox;
-    final double iconSize = isCompact ? 20 : KubusChromeMetrics.heroIcon;
+    // One layout for every action card: icon box pinned to the top, the
+    // title/subtitle block pinned to the bottom. Cards in a rail then line up
+    // on both edges no matter how long each subtitle runs.
+    final double iconBox = isCompact
+        ? KubusSizes.walletActionIconBox
+        : KubusChromeMetrics.heroIconBox;
+    final double iconSize =
+        isCompact ? KubusSizes.walletActionIcon : KubusChromeMetrics.heroIcon;
     final EdgeInsets cardPadding = EdgeInsets.all(
       isCompact ? KubusSpacing.md : KubusSpacing.lg,
     );
-    final double iconGap = isCompact ? KubusSpacing.sm : KubusSpacing.xl;
 
     return LiquidGlassCard(
       padding: EdgeInsets.zero,
@@ -360,20 +414,21 @@ class KubusWalletActionCard extends StatelessWidget {
           padding: cardPadding,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: <Widget>[
               Container(
                 width: iconBox,
                 height: iconBox,
                 decoration: BoxDecoration(
                   color: effectiveColor.withValues(alpha: enabled ? 0.18 : 0.1),
-                  borderRadius: BorderRadius.circular(KubusRadius.lg),
+                  borderRadius: BorderRadius.circular(KubusRadius.md),
                 ),
                 child: loading
                     ? SizedBox(
                         width: iconSize,
                         height: iconSize,
-                        child: InlineLoading(tileSize: 4, color: effectiveColor),
+                        child:
+                            InlineLoading(tileSize: 4, color: effectiveColor),
                       )
                     : Icon(
                         icon,
@@ -381,32 +436,36 @@ class KubusWalletActionCard extends StatelessWidget {
                         size: iconSize,
                       ),
               ),
-              SizedBox(height: iconGap),
-              Text(
-                title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: KubusTextStyles.detailCardTitle.copyWith(
-                  color: enabled
-                      ? scheme.onSurface
-                      : scheme.onSurface.withValues(alpha: 0.55),
-                  fontWeight: FontWeight.w700,
-                  fontSize: isCompact ? 14 : null,
-                ),
-              ),
-              const SizedBox(height: KubusSpacing.xs),
-              Text(
-                !enabled && (disabledReason ?? '').trim().isNotEmpty
-                    ? disabledReason!.trim()
-                    : subtitle,
-                maxLines: isCompact ? 2 : 3,
-                overflow: TextOverflow.ellipsis,
-                style: KubusTextStyles.detailBody.copyWith(
-                  color: enabled
-                      ? scheme.onSurface.withValues(alpha: 0.68)
-                      : scheme.onSurface.withValues(alpha: 0.48),
-                  fontSize: isCompact ? 12 : null,
-                ),
+              const SizedBox(height: KubusSpacing.md),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: KubusTextStyles.detailCardTitle.copyWith(
+                      color: enabled
+                          ? scheme.onSurface
+                          : scheme.onSurface.withValues(alpha: 0.55),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: KubusSpacing.xxs),
+                  Text(
+                    !enabled && (disabledReason ?? '').trim().isNotEmpty
+                        ? disabledReason!.trim()
+                        : subtitle,
+                    maxLines: isCompact ? 2 : 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: KubusTextStyles.detailCaption.copyWith(
+                      color: enabled
+                          ? scheme.onSurface.withValues(alpha: 0.68)
+                          : scheme.onSurface.withValues(alpha: 0.48),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
