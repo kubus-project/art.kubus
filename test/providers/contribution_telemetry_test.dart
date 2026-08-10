@@ -302,6 +302,23 @@ void main() {
       ]);
     });
 
+    test('an event envelope without an identity is not activation', () async {
+      BackendApiService().setHttpClient(MockClient((request) async {
+        if (request.url.path == '/api/events' && request.method == 'POST') {
+          return _json(<String, Object?>{'success': true}, 201);
+        }
+        return http.Response('unexpected ${request.url.path}', 500);
+      }));
+
+      final provider = EventsProvider(telemetry: telemetry);
+      final created = await provider.createEvent(<String, dynamic>{
+        'title': 'Unidentified event',
+      });
+
+      expect(created, isNull);
+      expect(await contributions(), <String>['contribution_started:event']);
+    });
+
     test('updateEvent is not a new contribution', () async {
       BackendApiService().setHttpClient(MockClient((request) async {
         return _json(<String, Object?>{

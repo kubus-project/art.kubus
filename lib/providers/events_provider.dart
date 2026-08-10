@@ -177,7 +177,10 @@ class EventsProvider extends ChangeNotifier {
     _noteContributionStarted();
     try {
       final created = await _api.createEvent(payload);
-      if (created != null) {
+      // A successful envelope without an event identity is not a confirmed
+      // durable creation. In particular, it must not advance campaign
+      // activation while an API rollout or malformed response is investigated.
+      if (created != null && created.id.trim().isNotEmpty) {
         _upsertEvent(created, notify: false, detailHydrated: true);
         _selected = created;
         ProfilePackageMutationTracker.eventChanged(
@@ -187,7 +190,7 @@ class EventsProvider extends ChangeNotifier {
         _noteContributionPublished();
         notifyListeners();
       }
-      return created;
+      return created?.id.trim().isNotEmpty == true ? created : null;
     } catch (e) {
       _error = e.toString();
       notifyListeners();
