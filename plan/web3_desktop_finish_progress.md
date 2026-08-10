@@ -11,7 +11,7 @@
 
 ## Architecture decisions
 
-- `Web3CapabilityResolver` is the single UI capability source. It derives from hydrated profile state, `WalletAuthoritySnapshot`, account role, feature flags, signer readiness, and entity ownership/listing state.
+- `Web3CapabilityResolver` is the single UI capability source. It derives from hydrated profile state, `WalletAuthoritySnapshot`, server-derived DAO review authority, account role, feature flags, signer readiness, and entity ownership/listing state.
 - Widgets hide unavailable privileged actions; `WalletActionGuard`, provider checks, signed envelopes, and backend authorization remain mandatory mutation boundaries.
 - `GovernanceWorkspace` is reusable mobile/desktop composition. Desktop no longer embeds the mobile hub beside a second rail.
 - Digital Editions use `CollectiblesProvider.marketplaceEntries`; Wallet inventory uses `WalletEditionInventory` over the same provider-owned records.
@@ -36,6 +36,7 @@
 ## Backend
 
 - `kubus-project/art.kubus-backend` PR #30 merged as `96f35ba1a64f1daa99aa2e8c67e9d6cb19171550`; it restricts DAO review decisions to authenticated admin/moderator roles or an explicit reviewer allowlist.
+- Backend PR #31 merged as `55063312632e21bf8e8e723bb1d349ea32b7c7a0`; it exposes the current principal's read-only moderation capability from the same server-side role/allowlist resolver used by the signed decision mutation.
 - Existing proposal, vote, delegation, and review submission routes were verified to require authenticated wallet-signed envelopes bound to the authenticated wallet.
 - No backend treasury mutation route exists.
 
@@ -44,7 +45,12 @@
 - `npm run verify:toolchain` — passed.
 - `npm run guard:architecture` — passed.
 - Focused Flutter analyze for capability, governance, marketplace, and wallet files — passed.
-- Capability, desktop governance, Digital Editions parity/controls, wallet action, Owned Editions, and locale-guard tests — 20 passed.
-- Backend DAO review route tests — 8 passed.
+- Capability, desktop governance, Digital Editions parity/controls, wallet action, Owned Editions, and locale-guard tests — passed, including voting-phase and allowlisted-reviewer regressions.
+- Backend DAO review route tests — 9 passed.
 - Backend lint — passed.
-- Remaining repository-wide CI, web QA, responsive visual QA, staging, and release evidence will be appended after completion.
+- Full Flutter analyze — passed.
+- Full Flutter test suite — 2,100 passed, 3 skipped.
+- Release web build and browser smoke — passed locally and in PR CI.
+- Repository CI contracts — 41 passed.
+- Web QA — 27 passed.
+- Exact-SHA staging and release evidence will be appended after deployment.

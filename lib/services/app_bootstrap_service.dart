@@ -133,6 +133,12 @@ class AppBootstrapService {
       p1.add(_runTask('web3_provider',
           () => web3Provider.initialize(attemptRestore: true)));
       if (resolvedWallet != null && resolvedWallet.isNotEmpty) {
+        p1.add(_runTask(
+          'wallet_collectible_index',
+          () => collectiblesProvider.refreshWalletCollectibleIndex(
+            resolvedWallet,
+          ),
+        ));
         p1.add(_runTask('wallet_refresh', () => walletProvider.refreshData()));
         p1.add(_runTask('profile_refresh', () async {
           await profileProvider.loadProfile(resolvedWallet);

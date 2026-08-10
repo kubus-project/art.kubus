@@ -31,13 +31,16 @@ class _TestWalletProvider extends WalletProvider {
 }
 
 class _TestDaoProvider extends DAOProvider {
-  _TestDaoProvider()
-      : proposal = Proposal(
+  _TestDaoProvider({
+    ProposalStatus proposalStatus = ProposalStatus.active,
+    bool canModerateReviews = false,
+  })  : _canModerateReviews = canModerateReviews,
+        proposal = Proposal(
           id: 'proposal-1',
           title: 'Public governance proposal',
           description: 'Proposal body',
           type: ProposalType.governance,
-          status: ProposalStatus.active,
+          status: proposalStatus,
           proposer: 'wallet-proposer',
           createdAt: DateTime.utc(2026, 8, 1),
           votingEndDate: DateTime.utc(2026, 9, 1),
@@ -54,6 +57,10 @@ class _TestDaoProvider extends DAOProvider {
 
   final Proposal proposal;
   final DAOReview review;
+  final bool _canModerateReviews;
+
+  @override
+  bool get canModerateReviews => _canModerateReviews;
 
   @override
   List<Proposal> get proposals => <Proposal>[proposal];
@@ -130,6 +137,7 @@ Future<void> _pumpGovernance(
   WidgetTester tester, {
   required ProfileProvider profile,
   required _TestWalletProvider wallet,
+  _TestDaoProvider? dao,
 }) async {
   SharedPreferences.setMockInitialValues(<String, Object>{
     'DAO Governance_onboarding_completed': true,
@@ -146,7 +154,9 @@ Future<void> _pumpGovernance(
         ChangeNotifierProvider<ProfileProvider>.value(value: profile),
         ChangeNotifierProvider<WalletProvider>.value(value: wallet),
         ChangeNotifierProvider<Web3Provider>.value(value: web3),
-        ChangeNotifierProvider<DAOProvider>(create: (_) => _TestDaoProvider()),
+        ChangeNotifierProvider<DAOProvider>.value(
+          value: dao ?? _TestDaoProvider(),
+        ),
       ],
       child: MaterialApp(
         locale: const Locale('en'),
@@ -238,6 +248,44 @@ void main() {
       ),
     );
     await _pumpGovernance(tester, profile: profile, wallet: wallet);
+
+    final context = tester.element(find.byType(DesktopGovernanceHubScreen));
+    final l10n = AppLocalizations.of(context)!;
+    expect(find.text(l10n.daoModerationApproveLabel), findsOneWidget);
+    expect(find.text(l10n.daoModerationRejectLabel), findsOneWidget);
+  });
+
+  testWidgets('voting-phase proposals retain signer-ready voting actions',
+      (tester) async {
+    final profile = ProfileProvider()..setCurrentUser(_profile());
+    final wallet = _TestWalletProvider(
+      _authority(account: true, wallet: 'wallet-member', signer: true),
+    );
+    await _pumpGovernance(
+      tester,
+      profile: profile,
+      wallet: wallet,
+      dao: _TestDaoProvider(proposalStatus: ProposalStatus.voting),
+    );
+
+    final context = tester.element(find.byType(DesktopGovernanceHubScreen));
+    final l10n = AppLocalizations.of(context)!;
+    expect(find.text(l10n.daoVoteYesButton), findsOneWidget);
+    expect(find.text(l10n.daoVoteNoButton), findsOneWidget);
+  });
+
+  testWidgets('server-derived reviewer authority enables moderation controls',
+      (tester) async {
+    final profile = ProfileProvider()..setCurrentUser(_profile());
+    final wallet = _TestWalletProvider(
+      _authority(account: true, wallet: 'wallet-member', signer: true),
+    );
+    await _pumpGovernance(
+      tester,
+      profile: profile,
+      wallet: wallet,
+      dao: _TestDaoProvider(canModerateReviews: true),
+    );
 
     final context = tester.element(find.byType(DesktopGovernanceHubScreen));
     final l10n = AppLocalizations.of(context)!;

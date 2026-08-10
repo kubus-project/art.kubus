@@ -107,11 +107,14 @@ class _GovernanceWorkspaceState extends State<GovernanceWorkspace>
     final walletProvider = listen
         ? context.watch<WalletProvider>()
         : context.read<WalletProvider>();
+    final daoProvider =
+        listen ? context.watch<DAOProvider>() : context.read<DAOProvider>();
     return Web3CapabilityResolver.resolve(
       Web3CapabilityContext.fromProviders(
         profileProvider: profileProvider,
         walletProvider: walletProvider,
         proposalAllowsVoting: proposalAllowsVoting,
+        daoReviewAuthority: daoProvider.canModerateReviews,
       ),
     );
   }
@@ -209,6 +212,18 @@ class _GovernanceWorkspaceState extends State<GovernanceWorkspace>
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final capabilities = _capabilities();
+    if (!capabilities.canViewGovernance) {
+      return Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Center(
+          child: EmptyStateCard(
+            icon: Icons.how_to_vote_outlined,
+            title: l10n.commonDisabled,
+            description: l10n.exhibitionListDisabledSubtitle,
+          ),
+        ),
+      );
+    }
     final visibleSections = _visibleSections(capabilities);
     final selectedIndex = visibleSections.contains(_selectedIndex)
         ? _selectedIndex
@@ -1282,7 +1297,7 @@ class _GovernanceWorkspaceState extends State<GovernanceWorkspace>
     final quorumText =
         proposal.hasQuorum ? l10n.daoQuorumReached : l10n.daoQuorumPending;
     final capabilities = _capabilities(
-      proposalAllowsVoting: proposal.status == ProposalStatus.active,
+      proposalAllowsVoting: proposal.isActive,
     );
 
     return Container(
@@ -2889,7 +2904,7 @@ class _GovernanceWorkspaceState extends State<GovernanceWorkspace>
 
     final proposal = daoProvider.getProposalById(proposalId);
     if (!_capabilities(
-      proposalAllowsVoting: proposal?.status == ProposalStatus.active,
+      proposalAllowsVoting: proposal?.isActive ?? false,
       listen: false,
     ).canVote) {
       return;

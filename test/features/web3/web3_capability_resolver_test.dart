@@ -51,6 +51,8 @@ Web3CapabilityContext contextFor({
   String? entityOwnerAddress,
   bool acquisitionSupported = false,
   bool mintingSupported = false,
+  bool daoReviewAuthority = false,
+  bool treasuryMutationSupported = false,
 }) {
   return Web3CapabilityContext(
     authority: walletAuthority ?? authority(),
@@ -64,6 +66,8 @@ Web3CapabilityContext contextFor({
     editionCreationEnabled: editionCreationEnabled,
     daoModerationEnabled: daoModerationEnabled,
     daoTreasuryMutationEnabled: true,
+    daoReviewAuthority: daoReviewAuthority,
+    treasuryMutationSupported: treasuryMutationSupported,
     entityOwnerAddress: entityOwnerAddress,
     entityIsListed: entityIsListed,
     acquisitionSupported: acquisitionSupported,
@@ -184,6 +188,18 @@ void main() {
     expect(ordinary.canModerateDao, isFalse);
     expect(moderator.canModerateDao, isTrue);
     expect(disabled.canModerateDao, isFalse);
+  });
+
+  test('server-derived reviewer authority enables allowlisted moderators', () {
+    final capabilities = Web3CapabilityResolver.resolve(
+      contextFor(
+        daoReviewAuthority: true,
+        treasuryMutationSupported: true,
+      ),
+    );
+
+    expect(capabilities.canModerateDao, isTrue);
+    expect(capabilities.canMutateTreasury, isFalse);
   });
 
   test('feature-disabled surfaces expose no capabilities', () {

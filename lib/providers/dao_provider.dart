@@ -19,6 +19,7 @@ class DAOProvider extends ChangeNotifier {
   List<DAOReview> _reviews = [];
   bool _isLoading = false;
   double? _treasuryOnChainBalance;
+  bool _canModerateReviews = false;
   WalletProvider? _walletProvider;
 
   DAOProvider({
@@ -75,6 +76,7 @@ class DAOProvider extends ChangeNotifier {
   }
 
   bool get isLoading => _isLoading;
+  bool get canModerateReviews => _canModerateReviews;
 
   double? get treasuryOnChainBalance {
     _scheduleInitialLoad();
@@ -98,7 +100,9 @@ class DAOProvider extends ChangeNotifier {
   Future<void> _loadFromBackend() async {
     try {
       final api = BackendApiService();
-      try { await api.ensureAuthLoaded(); } catch (_) {}
+      try {
+        await api.ensureAuthLoaded();
+      } catch (_) {}
 
       final proposalsJson = await api.getDAOProposals();
       _proposals = proposalsJson.map((e) => Proposal.fromJson(e)).toList();
@@ -114,6 +118,7 @@ class DAOProvider extends ChangeNotifier {
       await _refreshOnChainTreasuryBalance();
 
       try {
+        _canModerateReviews = await api.getDAOReviewModerationAuthority();
         final reviewsJson = await api.getDAOReviews();
         final parsedReviews = <DAOReview>[];
         for (final reviewJson in reviewsJson) {
@@ -125,6 +130,7 @@ class DAOProvider extends ChangeNotifier {
         }
         _reviews = parsedReviews;
       } catch (e) {
+        _canModerateReviews = false;
         debugPrint('DAOProvider: unable to load reviews (soft-fail): $e');
       }
     } catch (e) {
@@ -134,6 +140,7 @@ class DAOProvider extends ChangeNotifier {
       _delegates = [];
       _transactions = [];
       _reviews = [];
+      _canModerateReviews = false;
       _treasuryOnChainBalance = null;
     }
   }
@@ -142,8 +149,9 @@ class DAOProvider extends ChangeNotifier {
   Future<void> refreshData({bool force = false}) async {
     _loadRequested = true;
     if (_isLoading) return;
-    final bool hasData =
-        _delegates.isNotEmpty || _proposals.isNotEmpty || _transactions.isNotEmpty;
+    final bool hasData = _delegates.isNotEmpty ||
+        _proposals.isNotEmpty ||
+        _transactions.isNotEmpty;
     if (!force && hasData) return;
     await _loadData();
   }
@@ -182,7 +190,8 @@ class DAOProvider extends ChangeNotifier {
     return parsed.toString();
   }
 
-  Future<void> _ensureBackendSessionForAction(DAOSignedEnvelope envelope) async {
+  Future<void> _ensureBackendSessionForAction(
+      DAOSignedEnvelope envelope) async {
     final walletProvider = _walletProvider;
     if (walletProvider == null) {
       throw StateError('A wallet provider is required for DAO actions.');
@@ -235,7 +244,6 @@ class DAOProvider extends ChangeNotifier {
       return null;
     }
   }
-
 
   Future<Proposal?> createProposal({
     required String title,
@@ -334,7 +342,8 @@ class DAOProvider extends ChangeNotifier {
             r.id == review.id);
         _reviews.insert(0, review);
         // Pull a fresh copy from backend to ensure persisted state (and any reviewer updates)
-        final refreshed = await loadReviewForWallet(walletAddress, forceRefresh: true);
+        final refreshed =
+            await loadReviewForWallet(walletAddress, forceRefresh: true);
         notifyListeners();
         return refreshed ?? review;
       }
@@ -423,7 +432,8 @@ class DAOProvider extends ChangeNotifier {
     }
   }
 
-  Future<DAOReview?> loadReviewForWallet(String walletAddress, {bool forceRefresh = false}) async {
+  Future<DAOReview?> loadReviewForWallet(String walletAddress,
+      {bool forceRefresh = false}) async {
     final normalized = walletAddress.trim();
     if (normalized.isEmpty) return null;
     if (!forceRefresh) {
@@ -437,7 +447,8 @@ class DAOProvider extends ChangeNotifier {
         final review = DAOReview.fromJson(payload);
         _reviews.removeWhere((r) =>
             r.id == review.id ||
-            r.walletAddress.trim().toLowerCase() == review.walletAddress.trim().toLowerCase());
+            r.walletAddress.trim().toLowerCase() ==
+                review.walletAddress.trim().toLowerCase());
         _reviews.insert(0, review);
         notifyListeners();
         return review;
@@ -481,7 +492,8 @@ class DAOProvider extends ChangeNotifier {
         final proposalPayload = payload['proposal'];
 
         final vote = Vote.fromJson(votePayload as Map<String, dynamic>);
-        _votes.removeWhere((v) => v.proposalId == proposalId && v.voter == vote.voter);
+        _votes.removeWhere(
+            (v) => v.proposalId == proposalId && v.voter == vote.voter);
         _votes.add(vote);
 
         if (proposalPayload is Map<String, dynamic>) {
@@ -570,9 +582,8 @@ class DAOProvider extends ChangeNotifier {
     final totalVotes = _votes.length;
     final totalDelegates = _delegates.length;
     final treasuryTransactions = getTransactionsByType('treasury');
-    final totalTreasuryAmount = treasuryTransactions.fold<double>(
-      0, (sum, tx) => sum + tx.amount
-    );
+    final totalTreasuryAmount =
+        treasuryTransactions.fold<double>(0, (sum, tx) => sum + tx.amount);
     final treasuryTotal = _treasuryOnChainBalance ?? totalTreasuryAmount;
 
     return {

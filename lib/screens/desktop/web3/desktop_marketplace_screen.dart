@@ -615,16 +615,19 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen> {
     if (!mounted || !canProceed) return;
 
     try {
-      await context.read<CollectiblesProvider>().listCollectibleForSale(
-            collectibleId: collectible.id,
-            price: price,
-          );
+      final collectiblesProvider = context.read<CollectiblesProvider>();
+      await collectiblesProvider.listCollectibleForSale(
+        collectibleId: collectible.id,
+        price: price,
+      );
+      collectiblesProvider.clearError();
       if (!mounted) return;
       messenger.showSnackBar(
         SnackBar(content: Text(l10n.marketplaceListForSaleSuccessToast)),
       );
     } catch (_) {
       if (!mounted) return;
+      context.read<CollectiblesProvider>().clearError();
       messenger.showSnackBar(
         SnackBar(content: Text(l10n.marketplaceListForSaleFailedToast)),
       );
@@ -644,15 +647,18 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen> {
     if (!mounted || !canProceed) return;
 
     try {
-      await context.read<CollectiblesProvider>().removeCollectibleFromSale(
-            collectibleId: collectible.id,
-          );
+      final collectiblesProvider = context.read<CollectiblesProvider>();
+      await collectiblesProvider.removeCollectibleFromSale(
+        collectibleId: collectible.id,
+      );
+      collectiblesProvider.clearError();
       if (!mounted) return;
       messenger.showSnackBar(
         SnackBar(content: Text(l10n.marketplaceRemoveFromSaleSuccessToast)),
       );
     } catch (_) {
       if (!mounted) return;
+      context.read<CollectiblesProvider>().clearError();
       messenger.showSnackBar(
         SnackBar(content: Text(l10n.marketplaceRemoveFromSaleFailedToast)),
       );

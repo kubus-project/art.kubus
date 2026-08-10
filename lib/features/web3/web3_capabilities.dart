@@ -16,6 +16,7 @@ class Web3CapabilityContext {
     required this.editionCreationEnabled,
     required this.daoModerationEnabled,
     required this.daoTreasuryMutationEnabled,
+    this.daoReviewAuthority = false,
     this.entityOwnerAddress,
     this.entityIsListed = false,
     this.proposalAllowsVoting = true,
@@ -35,6 +36,7 @@ class Web3CapabilityContext {
     bool mintingSupported = false,
     bool listingSupported = true,
     bool treasuryMutationSupported = false,
+    bool daoReviewAuthority = false,
   }) {
     return Web3CapabilityContext(
       authority: walletProvider.authority,
@@ -49,6 +51,7 @@ class Web3CapabilityContext {
       daoModerationEnabled: AppConfig.isFeatureEnabled('daoReviewDecisions'),
       daoTreasuryMutationEnabled:
           AppConfig.isFeatureEnabled('daoOnchainTreasury'),
+      daoReviewAuthority: daoReviewAuthority,
       entityOwnerAddress: entityOwnerAddress,
       entityIsListed: entityIsListed,
       proposalAllowsVoting: proposalAllowsVoting,
@@ -70,6 +73,7 @@ class Web3CapabilityContext {
   final bool editionCreationEnabled;
   final bool daoModerationEnabled;
   final bool daoTreasuryMutationEnabled;
+  final bool daoReviewAuthority;
   final String? entityOwnerAddress;
   final bool entityIsListed;
   final bool proposalAllowsVoting;
@@ -137,7 +141,9 @@ class Web3CapabilityResolver {
     final signerReady = authority.canTransact;
     final canTransact = hasAccount && hasWalletIdentity && signerReady;
     final accountRole = authority.accountRole.trim().toLowerCase();
-    final isDaoModerator = accountRole == 'admin' || accountRole == 'moderator';
+    final hasDaoModeratorRole =
+        accountRole == 'admin' || accountRole == 'moderator';
+    final canReviewDao = hasDaoModeratorRole || context.daoReviewAuthority;
     final isEditionCreator =
         context.profileIsArtist || context.profileIsInstitution;
     final ownsEntity = hasWalletIdentity &&
@@ -167,11 +173,11 @@ class Web3CapabilityResolver {
       canDelegate: canParticipateInGovernance,
       canModerateDao: canParticipateInGovernance &&
           context.daoModerationEnabled &&
-          isDaoModerator,
+          canReviewDao,
       canMutateTreasury: canParticipateInGovernance &&
           context.daoTreasuryMutationEnabled &&
           context.treasuryMutationSupported &&
-          isDaoModerator,
+          hasDaoModeratorRole,
       canViewDigitalEditions: canViewDigitalEditions,
       canCreateEdition: canViewDigitalEditions &&
           canTransact &&
