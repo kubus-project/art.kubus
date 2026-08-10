@@ -7,6 +7,7 @@ import '../models/art_marker.dart';
 import '../services/backend_api_service.dart';
 import '../services/achievement_service.dart';
 import '../services/map_marker_service.dart';
+import '../services/telemetry/contribution_type.dart';
 import '../services/telemetry/telemetry_service.dart';
 import '../services/telemetry/telemetry_uuid.dart';
 
@@ -14,11 +15,14 @@ class MarkerManagementProvider extends ChangeNotifier {
   MarkerManagementProvider({
     MarkerBackendApi? api,
     MapMarkerService? mapMarkerService,
+    TelemetryService? telemetry,
   })  : _api = api ?? BackendApiService(),
-        _mapMarkerService = mapMarkerService ?? MapMarkerService();
+        _mapMarkerService = mapMarkerService ?? MapMarkerService(),
+        _telemetry = telemetry ?? TelemetryService();
 
   final MarkerBackendApi _api;
   final MapMarkerService _mapMarkerService;
+  final TelemetryService _telemetry;
 
   String? _boundWallet;
   bool _initialized = false;
@@ -390,18 +394,30 @@ class MarkerManagementProvider extends ChangeNotifier {
   /// out or returned null *after* the backend committed — precisely the slow
   /// ones, which would otherwise be the submissions missing from activation
   /// reporting.
+  ///
+  /// This provider owns its own telemetry because it is a real production entry
+  /// point in its own right: `marker_editor_view` calls it directly and it
+  /// talks to `BackendApiService` itself rather than delegating to
+  /// [MapMarkerService]. The map screens use the other path. Since neither
+  /// wraps the other, one submission can only ever traverse one of them, so
+  /// both instrumenting themselves produces one event per marker rather than
+  /// two.
+  ///
+  /// The recovery branches are guarded per submission by [_createInFlightByNonce]
+  /// and are mutually exclusive with the direct-success branch, so a recovered
+  /// creation emits exactly one submitted event, never zero and never two.
   void _noteContributionStarted() {
     unawaited(
-      TelemetryService()
-          .trackContributionStarted(kind: 'marker')
+      _telemetry
+          .trackContributionStarted(type: ContributionType.marker)
           .catchError((_) {}),
     );
   }
 
   void _noteContributionPublished() {
     unawaited(
-      TelemetryService()
-          .trackContributionSubmitted(kind: 'marker')
+      _telemetry
+          .trackSuccessfulContribution(ContributionType.marker)
           .catchError((_) {}),
     );
   }

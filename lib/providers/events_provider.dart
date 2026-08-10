@@ -1,14 +1,21 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../models/event.dart';
 import '../models/exhibition.dart';
 import '../services/backend_api_service.dart';
 import '../services/profile_package_mutation_tracker.dart';
+import '../services/telemetry/contribution_type.dart';
+import '../services/telemetry/telemetry_service.dart';
 
 class EventsProvider extends ChangeNotifier {
   final BackendApiService _api;
+  final TelemetryService _telemetry;
 
-  EventsProvider({BackendApiService? api}) : _api = api ?? BackendApiService();
+  EventsProvider({BackendApiService? api, TelemetryService? telemetry})
+      : _api = api ?? BackendApiService(),
+        _telemetry = telemetry ?? TelemetryService();
 
   final List<KubusEvent> _events = <KubusEvent>[];
   final Map<String, KubusEvent> _byId = <String, KubusEvent>{};
@@ -157,9 +164,17 @@ class EventsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Creates an event. This is the domain success boundary for the contribution
+  /// funnel, instrumented here rather than in `EventCreator` so every caller is
+  /// measured and the UI keeps no telemetry knowledge.
+  ///
+  /// Exhibition links and POAP synchronisation run after this returns and are
+  /// explicitly not required for the event to count as created — an event with
+  /// a failed POAP sync is still an event the member published.
   Future<KubusEvent?> createEvent(Map<String, dynamic> payload) async {
     _setFlag(_Flag.mutating, true);
     _error = null;
+    _noteContributionStarted();
     try {
       final created = await _api.createEvent(payload);
       if (created != null) {
@@ -169,6 +184,7 @@ class EventsProvider extends ChangeNotifier {
           created,
           kind: ProfilePackageMutationKind.eventCreated,
         );
+        _noteContributionPublished();
         notifyListeners();
       }
       return created;
@@ -181,6 +197,27 @@ class EventsProvider extends ChangeNotifier {
     }
   }
 
+  /// Telemetry is fire-and-forget so an unavailable queue or sender can never
+  /// fail an event the backend already created.
+  void _noteContributionStarted() {
+    unawaited(
+      _telemetry
+          .trackContributionStarted(type: ContributionType.event)
+          .catchError((_) {}),
+    );
+  }
+
+  void _noteContributionPublished() {
+    unawaited(
+      _telemetry
+          .trackSuccessfulContribution(ContributionType.event)
+          .catchError((_) {}),
+    );
+  }
+
+  /// Editing an existing event is not a new contribution, so it emits nothing:
+  /// activation counts things brought into existence, and a member who renames
+  /// last month's opening has not activated again.
   Future<KubusEvent?> updateEvent(
       String id, Map<String, dynamic> updates) async {
     _setFlag(_Flag.mutating, true);
