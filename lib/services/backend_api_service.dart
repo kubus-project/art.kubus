@@ -7621,6 +7621,11 @@ class BackendApiService
         offset: offset,
       );
 
+  /// Return server-derived DAO review decision authority for the current
+  /// authenticated principal, including explicit reviewer allowlists.
+  Future<bool> getDAOReviewModerationAuthority() =>
+      _backendApiGetDAOReviewModerationAuthority(this);
+
   /// Get a single DAO review by id or wallet address
   /// GET /api/dao/reviews/:id
   @override

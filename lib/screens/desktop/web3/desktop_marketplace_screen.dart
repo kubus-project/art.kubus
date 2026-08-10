@@ -1,29 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:art_kubus/l10n/app_localizations.dart';
+
+import '../../../features/web3/web3_capabilities.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../models/collectible.dart';
 import '../../../providers/collectibles_provider.dart';
 import '../../../providers/profile_provider.dart';
-import '../../../providers/themeprovider.dart';
-import '../../../providers/web3provider.dart';
 import '../../../providers/wallet_provider.dart';
-import '../../../utils/app_animations.dart';
+import '../../../utils/design_tokens.dart';
 import '../../../utils/kubus_labs_feature.dart';
 import '../../../utils/marketplace_value_formatter.dart';
 import '../../../utils/wallet_action_guard.dart';
-import '../../../utils/kubus_color_roles.dart';
-import '../../../utils/design_tokens.dart';
+import '../../../utils/wallet_utils.dart';
 import '../../../widgets/artwork_creator_byline.dart';
+import '../../../widgets/common/kubus_cached_image.dart';
 import '../../../widgets/common/kubus_labs_adornment.dart';
-import '../../../widgets/common/kubus_screen_header.dart';
-import '../../../widgets/detail/detail_shell_components.dart';
+import '../../../widgets/empty_state_card.dart';
 import '../../../widgets/glass_components.dart';
-import '../components/desktop_widgets.dart';
-import '../../art/ar_screen.dart';
-import 'desktop_wallet_screen.dart';
+import '../../../widgets/inline_loading.dart';
+import '../desktop_shell.dart';
 
-/// Desktop digital editions screen with archive object grid
-/// Features advanced filtering, sorting, and collection browsing
+enum _EditionSort { newest, title, listedFirst, supply }
+
+enum _EditionView { grid, list }
+
 class DesktopMarketplaceScreen extends StatefulWidget {
   const DesktopMarketplaceScreen({super.key});
 
@@ -32,101 +32,259 @@ class DesktopMarketplaceScreen extends StatefulWidget {
       _DesktopMarketplaceScreenState();
 }
 
-class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
-    with TickerProviderStateMixin {
-  late AnimationController _animationController;
-  late TabController _tabController;
-  late ScrollController _scrollController;
-
-  final List<String> _tabs = [
-    'All artifacts',
-    'Art',
-    'Photography',
-    'Music',
-    'Virtual Worlds'
-  ];
-  String _selectedSort = 'recent';
-  String _selectedView = 'grid';
-  bool _showFilters = false;
-  RangeValues _priceRange = const RangeValues(0, 100);
-
-  @override
-  void initState() {
-    super.initState();
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 600),
-      vsync: this,
-    );
-    _tabController = TabController(length: _tabs.length, vsync: this);
-    _tabController.addListener(_handleTabChanged);
-    _scrollController = ScrollController();
-    _animationController.forward();
-  }
+class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  String _query = '';
+  bool _listedOnly = false;
+  bool _arOnly = false;
+  bool _ownedOnly = false;
+  _EditionSort _sort = _EditionSort.newest;
+  _EditionView _view = _EditionView.grid;
 
   @override
   void dispose() {
-    _animationController.dispose();
-    _tabController.removeListener(_handleTabChanged);
-    _tabController.dispose();
-    _scrollController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
-  void _handleTabChanged() {
-    if (!mounted || _tabController.indexIsChanging) return;
-    setState(() {});
+  Web3Capabilities _capabilities({
+    String? ownerAddress,
+    bool isListed = false,
+    bool listen = true,
+  }) {
+    final profile = listen
+        ? context.watch<ProfileProvider>()
+        : context.read<ProfileProvider>();
+    final wallet = listen
+        ? context.watch<WalletProvider>()
+        : context.read<WalletProvider>();
+    return Web3CapabilityResolver.resolve(
+      Web3CapabilityContext.fromProviders(
+        profileProvider: profile,
+        walletProvider: wallet,
+        entityOwnerAddress: ownerAddress,
+        entityIsListed: isListed,
+        acquisitionSupported: false,
+        mintingSupported: false,
+      ),
+    );
+  }
+
+  void _resetFilters() {
+    _searchController.clear();
+    setState(() {
+      _query = '';
+      _listedOnly = false;
+      _arOnly = false;
+      _ownedOnly = false;
+      _sort = _EditionSort.newest;
+    });
+  }
+
+  List<MarketplaceArtworkEntry> _visibleEntries(
+    CollectiblesProvider provider,
+    String walletAddress,
+  ) {
+    final normalizedQuery = _query.trim().toLowerCase();
+    final entries = provider.marketplaceEntries.where((entry) {
+      if (_listedOnly && !entry.isListed) return false;
+      if (_arOnly && !entry.requiresArInteraction) return false;
+      if (_ownedOnly &&
+          !entry.collectibles.any(
+            (item) => WalletUtils.equals(item.ownerAddress, walletAddress),
+          )) {
+        return false;
+      }
+      if (normalizedQuery.isEmpty) return true;
+      final searchable = <String>[
+        entry.title,
+        entry.artistName,
+        entry.artwork.category,
+        entry.artwork.description,
+      ].join(' ').toLowerCase();
+      return searchable.contains(normalizedQuery);
+    }).toList(growable: false);
+
+    final sorted = entries.toList();
+    switch (_sort) {
+      case _EditionSort.newest:
+        sorted.sort((a, b) => b.sortTimestamp.compareTo(a.sortTimestamp));
+      case _EditionSort.title:
+        sorted.sort(
+          (a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()),
+        );
+      case _EditionSort.listedFirst:
+        sorted.sort((a, b) {
+          final listed = (b.isListed ? 1 : 0).compareTo(a.isListed ? 1 : 0);
+          return listed != 0
+              ? listed
+              : b.sortTimestamp.compareTo(a.sortTimestamp);
+        });
+      case _EditionSort.supply:
+        sorted.sort((a, b) {
+          final aRemaining = (a.totalSupply ?? 0) - (a.mintedCount ?? 0);
+          final bRemaining = (b.totalSupply ?? 0) - (b.mintedCount ?? 0);
+          return aRemaining.compareTo(bRemaining);
+        });
+    }
+    return sorted;
   }
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final animationTheme = context.animationTheme;
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isLarge = screenWidth >= 1200;
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    final capabilities = _capabilities();
+    final walletAddress =
+        context.watch<WalletProvider>().currentWalletAddress ?? '';
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: Row(
+      body: Column(
         children: [
-          // Filters sidebar
-          AnimatedContainer(
-            duration: animationTheme.medium,
-            width: _showFilters ? 280 : 0,
-            child: _showFilters
-                ? _buildFiltersSidebar(themeProvider)
-                : const SizedBox.shrink(),
-          ),
-
-          // Main content
-          Expanded(
-            child: AnimatedBuilder(
-              animation: _animationController,
-              builder: (context, child) {
-                return FadeTransition(
-                  opacity: CurvedAnimation(
-                    parent: _animationController,
-                    curve: animationTheme.fadeCurve,
-                  ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              KubusSpacing.xl,
+              KubusSpacing.lg,
+              KubusSpacing.xl,
+              KubusSpacing.md,
+            ),
+            child: Row(
+              children: [
+                Expanded(
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Header
-                      _buildHeader(themeProvider),
-
-                      // Category tabs
-                      _buildCategoryTabs(themeProvider),
-
-                      // Stats banner
-                      _buildStatsBanner(themeProvider),
-
-                      // Toolbar
-                      _buildToolbar(themeProvider),
-
-                      // Digital artifact grid
-                      Expanded(
-                        child: _buildNFTGrid(themeProvider, isLarge),
+                      Wrap(
+                        spacing: KubusSpacing.sm,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Text(
+                            l10n.navigationScreenMarketplace,
+                            style: KubusTextStyles.screenTitle.copyWith(
+                              color: scheme.onSurface,
+                            ),
+                          ),
+                          const KubusLabsAdornment.inlinePill(
+                            feature: KubusLabsFeature.marketplace,
+                            emphasized: true,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: KubusSpacing.xs),
+                      Text(
+                        l10n.marketplaceFeaturedCollectionsSubtitle,
+                        style: KubusTextStyles.screenSubtitle.copyWith(
+                          color: scheme.onSurface.withValues(alpha: 0.68),
+                        ),
                       ),
                     ],
                   ),
+                ),
+                if (capabilities.canCreateEdition)
+                  FilledButton.icon(
+                    onPressed: () => DesktopShellScope.of(context)
+                        ?.navigateToRoute('/artist-studio'),
+                    icon: const Icon(Icons.add),
+                    label: Text(l10n.commonCreate),
+                  ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.xl),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final compact = constraints.maxWidth < 980;
+                final search = TextField(
+                  key: const Key('desktop-editions-search'),
+                  controller: _searchController,
+                  onChanged: (value) => setState(() => _query = value),
+                  decoration: InputDecoration(
+                    prefixIcon: const Icon(Icons.search),
+                    hintText:
+                        '${l10n.commonSearch} ${l10n.navigationScreenMarketplace}',
+                    suffixIcon: _query.isEmpty
+                        ? null
+                        : IconButton(
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() => _query = '');
+                            },
+                            icon: const Icon(Icons.close),
+                            tooltip: l10n.commonClear,
+                          ),
+                  ),
+                );
+                final controls = _buildControls(l10n, capabilities);
+                if (compact) {
+                  return Column(
+                    children: [
+                      search,
+                      const SizedBox(height: KubusSpacing.sm),
+                      Align(alignment: Alignment.centerLeft, child: controls),
+                    ],
+                  );
+                }
+                return Row(
+                  children: [
+                    Expanded(child: search),
+                    const SizedBox(width: KubusSpacing.md),
+                    controls,
+                  ],
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: KubusSpacing.md),
+          Expanded(
+            child: Consumer<CollectiblesProvider>(
+              builder: (context, provider, _) {
+                if (provider.isLoading) {
+                  return const Center(child: InlineLoading());
+                }
+                if (provider.error != null) {
+                  return Center(
+                    child: EmptyStateCard(
+                      icon: Icons.error_outline,
+                      title: l10n.commonActionFailedToast,
+                      description: provider.error!,
+                    ),
+                  );
+                }
+
+                final entries = _visibleEntries(provider, walletAddress);
+                if (entries.isEmpty) {
+                  return Center(
+                    child: EmptyStateCard(
+                      icon: Icons.collections_outlined,
+                      title: l10n.commonNoResultsFound,
+                      description: l10n.marketplaceNoMintedNftsDescription,
+                    ),
+                  );
+                }
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: KubusSpacing.xl,
+                      ),
+                      child: Text(
+                        '${entries.length} ${l10n.navigationScreenMarketplace}',
+                        style: KubusTextStyles.sectionSubtitle.copyWith(
+                          color: scheme.onSurface.withValues(alpha: 0.65),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: KubusSpacing.sm),
+                    Expanded(
+                      child: _view == _EditionView.grid
+                          ? _buildGrid(entries)
+                          : _buildList(entries),
+                    ),
+                  ],
                 );
               },
             ),
@@ -136,1165 +294,533 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
     );
   }
 
-  Widget _buildHeader(ThemeProvider themeProvider) {
-    final l10n = AppLocalizations.of(context)!;
-    return Container(
-      padding: const EdgeInsets.all(KubusSpacing.lg + KubusSpacing.xs),
-      child: Row(
-        children: [
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Digital Editions',
-                style: KubusTextStyles.screenTitle.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-              ),
-              const SizedBox(width: KubusSpacing.sm),
-              const KubusLabsAdornment.inlinePill(
-                feature: KubusLabsFeature.marketplace,
-                emphasized: true,
-              ),
-            ],
-          ),
-          const Spacer(),
-          SizedBox(
-            width: 400,
-            child: DesktopSearchBar(
-              hintText: 'Search artifacts, collections, artists...',
-              onSubmitted: (value) {},
-            ),
-          ),
-          const SizedBox(width: KubusSpacing.lg),
-          Consumer<Web3Provider>(
-            builder: (context, web3Provider, _) {
-              final walletProvider = Provider.of<WalletProvider?>(
-                context,
-                listen: false,
-              );
-              final profileProvider = Provider.of<ProfileProvider?>(
-                context,
-                listen: false,
-              );
-
-              final canCreate = web3Provider.canTransact;
-              final hasWalletIdentity = walletProvider?.hasWalletIdentity ??
-                  web3Provider.walletAddress.trim().isNotEmpty;
-
-              return ElevatedButton.icon(
-                onPressed: () async {
-                  if (canCreate) {
-                    // Create digital artifact
-                    return;
-                  }
-
-                  if (walletProvider == null || profileProvider == null) {
-                    if (!context.mounted) return;
-                    Navigator.of(context).pushNamed('/connect-wallet');
-                    return;
-                  }
-
-                  await WalletActionGuard.ensureSignerAccess(
-                    context: context,
-                    profileProvider: profileProvider,
-                    walletProvider: walletProvider,
-                  );
-                },
-                icon: Icon(
-                  canCreate
-                      ? Icons.add
-                      : hasWalletIdentity
-                          ? Icons.refresh
-                          : Icons.account_balance_wallet,
-                  size: KubusHeaderMetrics.actionIcon,
-                ),
-                label: Text(
-                  canCreate
-                      ? l10n.commonCreate
-                      : hasWalletIdentity
-                          ? l10n.commonReconnect
-                          : l10n.authConnectWalletButton,
-                  style: KubusTextStyles.detailButton,
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: themeProvider.accentColor,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: KubusSpacing.lg + KubusSpacing.xs,
-                    vertical: KubusSpacing.md,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(DetailRadius.md),
-                  ),
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCategoryTabs(ThemeProvider themeProvider) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: KubusSpacing.lg + KubusSpacing.xs,
-      ),
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(
-            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
-          ),
-        ),
-      ),
-      child: TabBar(
-        controller: _tabController,
-        isScrollable: true,
-        tabAlignment: TabAlignment.start,
-        labelColor: themeProvider.accentColor,
-        unselectedLabelColor:
-            Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-        labelStyle: KubusTextStyles.detailLabel.copyWith(
-          color: themeProvider.accentColor,
-        ),
-        unselectedLabelStyle: KubusTextStyles.detailBody.copyWith(
-          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-        ),
-        indicatorColor: themeProvider.accentColor,
-        indicatorWeight: 3,
-        dividerColor: Colors.transparent,
-        tabs: _tabs.map((tab) => Tab(text: tab)).toList(),
-      ),
-    );
-  }
-
-  Widget _buildStatsBanner(ThemeProvider themeProvider) {
-    return Container(
-      margin: const EdgeInsets.all(KubusSpacing.lg + KubusSpacing.xs),
-      padding: const EdgeInsets.all(KubusSpacing.lg + KubusSpacing.xs),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            themeProvider.accentColor,
-            themeProvider.accentColor.withValues(alpha: 0.8),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(DetailRadius.xl),
-      ),
-      child: Consumer<CollectiblesProvider>(
-        builder: (context, collectiblesProvider, _) {
-          final entries = _resolveVisibleEntries(collectiblesProvider);
-          final totalArtworks = entries.length;
-          final arEnabled =
-              entries.where((entry) => entry.requiresArInteraction).length;
-
-          return Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildStatItem('Total Artworks', totalArtworks.toString(),
-                  Icons.collections),
-              _buildVerticalDivider(),
-              _buildStatItem(
-                  'AR Ready', arEnabled.toString(), Icons.view_in_ar),
-              _buildVerticalDivider(),
-              _buildStatItem(
-                  'Available', totalArtworks.toString(), Icons.storefront),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildStatItem(String label, String value, IconData icon) {
-    return Column(
-      children: [
-        Icon(
-          icon,
-          color: Colors.white.withValues(alpha: 0.7),
-          size: KubusChromeMetrics.heroIcon,
-        ),
-        const SizedBox(height: KubusSpacing.sm),
-        Text(
-          value,
-          style: KubusTextStyles.heroTitle.copyWith(color: Colors.white),
-        ),
-        const SizedBox(height: KubusSpacing.xs),
-        Text(
-          label,
-          style: KubusTextStyles.heroSubtitle.copyWith(
-            color: Colors.white.withValues(alpha: 0.8),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildVerticalDivider() {
-    return Container(
-      height: 60,
-      width: 1,
-      color: Colors.white.withValues(alpha: 0.2),
-    );
-  }
-
-  Widget _buildToolbar(ThemeProvider themeProvider) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: KubusSpacing.lg + KubusSpacing.xs,
-        vertical: KubusSpacing.md,
-      ),
-      child: Row(
-        children: [
-          // Filter button
-          OutlinedButton.icon(
-            onPressed: () {
-              setState(() => _showFilters = !_showFilters);
-            },
-            icon: Icon(
-              _showFilters ? Icons.filter_list_off : Icons.filter_list,
-              size: KubusHeaderMetrics.actionIcon,
-            ),
-            label: Text(
-              _showFilters ? 'Hide Filters' : 'Filters',
-              style: KubusTextStyles.detailButton,
-            ),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Theme.of(context).colorScheme.onSurface,
-              side: BorderSide(
-                color: Theme.of(context)
-                    .colorScheme
-                    .outline
-                    .withValues(alpha: 0.3),
-              ),
-              padding: const EdgeInsets.symmetric(
-                horizontal: KubusSpacing.lg,
-                vertical: KubusSpacing.md,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(DetailRadius.sm + 2),
-              ),
-            ),
-          ),
-          const SizedBox(width: KubusSpacing.lg),
-
-          // Results count
-          Consumer<CollectiblesProvider>(
-            builder: (context, collectiblesProvider, _) {
-              return Text(
-                '${_resolveVisibleEntries(collectiblesProvider).length} items',
-                style: KubusTextStyles.sectionSubtitle.copyWith(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.7),
-                ),
-              );
-            },
-          ),
-          const Spacer(),
-
-          // Sort dropdown
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.md),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primaryContainer,
-              borderRadius: BorderRadius.circular(DetailRadius.sm + 2),
-              border: Border.all(
-                color: Theme.of(context)
-                    .colorScheme
-                    .outline
-                    .withValues(alpha: 0.2),
-              ),
-            ),
-            child: DropdownButton<String>(
-              value: _selectedSort,
-              underline: const SizedBox.shrink(),
-              icon: const Icon(Icons.keyboard_arrow_down),
-              items: const [
-                DropdownMenuItem(
-                    value: 'recent', child: Text('Recently Listed')),
-                DropdownMenuItem(
-                    value: 'price_low', child: Text('Price: Low to High')),
-                DropdownMenuItem(
-                    value: 'price_high', child: Text('Price: High to Low')),
-                DropdownMenuItem(value: 'popular', child: Text('Most Popular')),
-                DropdownMenuItem(value: 'ending', child: Text('Ending Soon')),
-              ],
-              onChanged: (value) {
-                if (value != null) {
-                  setState(() => _selectedSort = value);
-                }
-              },
-            ),
-          ),
-          const SizedBox(width: KubusSpacing.md),
-
-          // View toggle
-          Container(
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primaryContainer,
-              borderRadius: BorderRadius.circular(DetailRadius.sm + 2),
-            ),
-            child: Row(
-              children: [
-                _buildViewToggle('grid', Icons.grid_view, themeProvider),
-                _buildViewToggle('list', Icons.view_list, themeProvider),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildViewToggle(
-      String view, IconData icon, ThemeProvider themeProvider) {
-    final isActive = _selectedView == view;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () {
-          setState(() => _selectedView = view);
-        },
-        borderRadius: BorderRadius.circular(DetailRadius.sm),
-        child: Container(
-          padding: const EdgeInsets.all(KubusSpacing.md),
-          decoration: BoxDecoration(
-            color: isActive ? themeProvider.accentColor : Colors.transparent,
-            borderRadius: BorderRadius.circular(DetailRadius.sm),
-          ),
-          child: Icon(
-            icon,
-            size: KubusHeaderMetrics.actionIcon,
-            color: isActive
-                ? Colors.white
-                : Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.6),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFiltersSidebar(ThemeProvider themeProvider) {
-    final glassStyle = KubusGlassStyle.resolve(
-      context,
-      surfaceType: KubusGlassSurfaceType.sidebarBackground,
-    );
-    return Container(
-      decoration: BoxDecoration(
-        border: Border(
-          right: BorderSide(
-            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
-          ),
-        ),
-      ),
-      child: LiquidGlassPanel(
-        padding: EdgeInsets.zero,
-        margin: EdgeInsets.zero,
-        borderRadius: BorderRadius.zero,
-        showBorder: false,
-        backgroundColor: glassStyle.tintColor,
-        blurSigma: glassStyle.blurSigma,
-        fallbackMinOpacity: glassStyle.fallbackMinOpacity,
-        child: ListView(
-          padding: const EdgeInsets.all(KubusSpacing.lg + KubusSpacing.xs),
-          children: [
-            KubusSectionHeader(
-              title: 'Filters',
-              action: TextButton(
-                onPressed: () {
-                  // Reset filters
-                },
-                child: Text(
-                  'Reset',
-                  style: KubusTextStyles.detailButton.copyWith(
-                    color: themeProvider.accentColor,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: KubusSpacing.lg + KubusSpacing.xs),
-
-            // Status
-            _buildFilterSection('Status', [
-              _buildCheckboxFilter('Buy Now', true, themeProvider),
-              _buildCheckboxFilter('On Auction', false, themeProvider),
-              _buildCheckboxFilter('New', false, themeProvider),
-              _buildCheckboxFilter('Has Offers', false, themeProvider),
-            ]),
-            const SizedBox(height: KubusSpacing.lg + KubusSpacing.xs),
-
-            // Price range
-            Text(
-              'Price Range (KUB8)',
-              style: KubusTextStyles.detailLabel.copyWith(
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.6),
-              ),
-            ),
-            const SizedBox(height: KubusSpacing.md),
-            RangeSlider(
-              values: _priceRange,
-              min: 0,
-              max: 100,
-              divisions: 20,
-              activeColor: themeProvider.accentColor,
-              onChanged: (values) {
-                setState(() => _priceRange = values);
-              },
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  '${_priceRange.start.toInt()} KUB8',
-                  style: KubusTextStyles.detailCaption.copyWith(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.7),
-                  ),
-                ),
-                Text(
-                  '${_priceRange.end.toInt()} KUB8',
-                  style: KubusTextStyles.detailCaption.copyWith(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.7),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: KubusSpacing.lg + KubusSpacing.xs),
-
-            // Blockchain
-            _buildFilterSection('Blockchain', [
-              _buildCheckboxFilter('Solana', true, themeProvider),
-              _buildCheckboxFilter('Ethereum', false, themeProvider),
-              _buildCheckboxFilter('Polygon', false, themeProvider),
-            ]),
-            const SizedBox(height: KubusSpacing.lg + KubusSpacing.xs),
-
-            // AR Features
-            _buildFilterSection('Features', [
-              _buildCheckboxFilter('AR Enabled', false, themeProvider),
-              _buildCheckboxFilter('3D Model', false, themeProvider),
-              _buildCheckboxFilter('Unlockable', false, themeProvider),
-            ]),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFilterSection(String title, List<Widget> children) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: KubusTextStyles.detailLabel.copyWith(
-            color:
-                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-          ),
-        ),
-        const SizedBox(height: KubusSpacing.md),
-        ...children,
-      ],
-    );
-  }
-
-  Widget _buildCheckboxFilter(
-      String label, bool checked, ThemeProvider themeProvider) {
-    return Container(
-      margin: EdgeInsets.only(bottom: DetailSpacing.sm),
-      child: Row(
-        children: [
-          SizedBox(
-            width: KubusHeaderMetrics.actionHitArea - 24,
-            height: KubusHeaderMetrics.actionHitArea - 24,
-            child: Checkbox(
-              value: checked,
-              onChanged: (value) {},
-              activeColor: themeProvider.accentColor,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(4),
-              ),
-            ),
-          ),
-          const SizedBox(width: KubusSpacing.md),
-          Text(
-            label,
-            style: KubusTextStyles.detailBody.copyWith(
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.85),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  List<MarketplaceArtworkEntry> _resolveVisibleEntries(
-    CollectiblesProvider collectiblesProvider,
+  Widget _buildControls(
+    AppLocalizations l10n,
+    Web3Capabilities capabilities,
   ) {
-    final selectedTab = _tabs[_tabController.index].toLowerCase();
-    final entries = collectiblesProvider.marketplaceEntries.where((entry) {
-      if (selectedTab == 'all nfts') return true;
-      final haystack = <String>[
-        entry.title,
-        entry.artwork.category,
-        entry.artwork.description,
-      ].join(' ').toLowerCase();
-      switch (selectedTab) {
-        case 'art':
-          return true;
-        case 'photography':
-          return haystack.contains('photo');
-        case 'music':
-          return haystack.contains('music') || haystack.contains('audio');
-        case 'virtual worlds':
-          return haystack.contains('virtual') ||
-              haystack.contains('3d') ||
-              haystack.contains('world');
-        default:
-          return true;
-      }
-    }).where((entry) {
-      final amount = entry.displayValue?.amount;
-      if (amount == null) {
-        return _priceRange.start <= 0;
-      }
-      return amount >= _priceRange.start && amount <= _priceRange.end;
-    }).toList();
-
-    int compareByAmount(MarketplaceArtworkEntry a, MarketplaceArtworkEntry b) {
-      final aAmount = a.displayValue?.amount;
-      final bAmount = b.displayValue?.amount;
-      if (aAmount == null && bAmount == null) return 0;
-      if (aAmount == null) return 1;
-      if (bAmount == null) return -1;
-      return aAmount.compareTo(bAmount);
-    }
-
-    switch (_selectedSort) {
-      case 'price_low':
-        entries.sort(compareByAmount);
-        break;
-      case 'price_high':
-        entries.sort((a, b) => compareByAmount(b, a));
-        break;
-      case 'popular':
-        entries.sort(
-          (a, b) => b.artwork.likesCount.compareTo(a.artwork.likesCount),
-        );
-        break;
-      case 'ending':
-        entries.sort((a, b) {
-          final aRemaining = (a.totalSupply ?? 0) - (a.mintedCount ?? 0);
-          final bRemaining = (b.totalSupply ?? 0) - (b.mintedCount ?? 0);
-          return aRemaining.compareTo(bRemaining);
-        });
-        break;
-      case 'recent':
-      default:
-        entries.sort((a, b) => b.sortTimestamp.compareTo(a.sortTimestamp));
-        break;
-    }
-
-    return entries;
+    return Wrap(
+      spacing: KubusSpacing.sm,
+      runSpacing: KubusSpacing.sm,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        FilterChip(
+          key: const Key('desktop-editions-listed-filter'),
+          selected: _listedOnly,
+          onSelected: (value) => setState(() => _listedOnly = value),
+          label: Text(l10n.commonForSale),
+        ),
+        FilterChip(
+          key: const Key('desktop-editions-ar-filter'),
+          selected: _arOnly,
+          onSelected: (value) => setState(() => _arOnly = value),
+          label: Text(l10n.marketplaceArBadgeLabel),
+        ),
+        if (capabilities.hasWalletIdentity)
+          FilterChip(
+            key: const Key('desktop-editions-owned-filter'),
+            selected: _ownedOnly,
+            onSelected: (value) => setState(() => _ownedOnly = value),
+            label: Text(l10n.marketplaceOwnedLabel),
+          ),
+        TextButton(
+          key: const Key('desktop-editions-reset'),
+          onPressed: _resetFilters,
+          child: Text(l10n.commonClear),
+        ),
+        DropdownButton<_EditionSort>(
+          key: const Key('desktop-editions-sort'),
+          value: _sort,
+          onChanged: (value) {
+            if (value != null) setState(() => _sort = value);
+          },
+          items: [
+            DropdownMenuItem(
+              value: _EditionSort.newest,
+              child: Text(l10n.mapSortNewest),
+            ),
+            DropdownMenuItem(
+              value: _EditionSort.title,
+              child: Text(l10n.commonTitle),
+            ),
+            DropdownMenuItem(
+              value: _EditionSort.listedFirst,
+              child: Text(l10n.commonForSale),
+            ),
+            DropdownMenuItem(
+              value: _EditionSort.supply,
+              child: Text(l10n.marketplaceTotalSupplyLabel),
+            ),
+          ],
+        ),
+        SegmentedButton<_EditionView>(
+          key: const Key('desktop-editions-view-toggle'),
+          segments: [
+            ButtonSegment(
+              value: _EditionView.grid,
+              icon: const Icon(Icons.grid_view),
+              tooltip: l10n.commonView,
+            ),
+            ButtonSegment(
+              value: _EditionView.list,
+              icon: const Icon(Icons.view_list),
+              tooltip: l10n.commonView,
+            ),
+          ],
+          selected: <_EditionView>{_view},
+          showSelectedIcon: false,
+          onSelectionChanged: (selection) {
+            setState(() => _view = selection.first);
+          },
+        ),
+      ],
+    );
   }
 
-  Widget _buildNFTGrid(ThemeProvider themeProvider, bool isLarge) {
-    return Consumer<CollectiblesProvider>(
-      builder: (context, collectiblesProvider, _) {
-        final entries = _resolveVisibleEntries(collectiblesProvider);
+  Widget _buildGrid(List<MarketplaceArtworkEntry> entries) {
+    return GridView.builder(
+      key: const Key('desktop-editions-grid'),
+      padding: const EdgeInsets.fromLTRB(
+        KubusSpacing.xl,
+        0,
+        KubusSpacing.xl,
+        KubusSpacing.xl,
+      ),
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 340,
+        mainAxisExtent: 390,
+        crossAxisSpacing: KubusSpacing.md,
+        mainAxisSpacing: KubusSpacing.md,
+      ),
+      itemCount: entries.length,
+      itemBuilder: (context, index) => _EditionCard(
+        entry: entries[index],
+        onOpen: () => _showDetails(entries[index]),
+      ),
+    );
+  }
 
-        if (entries.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.collections,
-                  size: KubusChromeMetrics.heroIconBox + KubusSpacing.lg,
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.25),
-                ),
-                const SizedBox(height: KubusSpacing.lg),
-                Text(
-                  'No digital editions found',
-                  style: KubusTextStyles.detailCardTitle.copyWith(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.5),
-                  ),
-                ),
-                const SizedBox(height: KubusSpacing.sm),
-                Text(
-                  'Try adjusting your filters',
-                  style: KubusTextStyles.detailCaption.copyWith(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.7),
-                  ),
-                ),
-              ],
-            ),
-          );
-        }
-
-        return GridView.builder(
-          controller: _scrollController,
-          padding: const EdgeInsets.all(KubusSpacing.lg + KubusSpacing.xs),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: isLarge ? 4 : 3,
-            crossAxisSpacing: DetailSpacing.lg + DetailSpacing.xs,
-            mainAxisSpacing: DetailSpacing.lg + DetailSpacing.xs,
-            childAspectRatio: 0.75,
-          ),
-          itemCount: entries.length,
-          itemBuilder: (context, index) {
-            return _buildNFTCard(entries[index], themeProvider);
-          },
+  Widget _buildList(List<MarketplaceArtworkEntry> entries) {
+    return ListView.separated(
+      key: const Key('desktop-editions-list'),
+      padding: const EdgeInsets.fromLTRB(
+        KubusSpacing.xl,
+        0,
+        KubusSpacing.xl,
+        KubusSpacing.xl,
+      ),
+      itemCount: entries.length,
+      separatorBuilder: (_, __) => const SizedBox(height: KubusSpacing.sm),
+      itemBuilder: (context, index) {
+        final entry = entries[index];
+        return _EditionListRow(
+          entry: entry,
+          onOpen: () => _showDetails(entry),
         );
       },
     );
   }
 
-  Widget _buildNFTCard(
-      MarketplaceArtworkEntry entry, ThemeProvider themeProvider) {
-    final artwork = entry.artwork;
-    final marketplaceAccent = KubusColorRoles.of(context).web3MarketplaceAccent;
-    return DesktopCard(
-      padding: EdgeInsets.zero,
-      onTap: () {
-        _showNFTDetail(entry, themeProvider);
-      },
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Image
-          Expanded(
-            flex: 3,
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    marketplaceAccent.withValues(alpha: 0.4),
-                    marketplaceAccent.withValues(alpha: 0.1),
-                  ],
-                ),
-                borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(DetailRadius.lg)),
-              ),
-              child: Stack(
-                children: [
-                  if (entry.coverUrl != null)
-                    ClipRRect(
-                      borderRadius: BorderRadius.vertical(
-                          top: Radius.circular(DetailRadius.lg)),
-                      child: Image.network(
-                        entry.coverUrl!,
-                        width: double.infinity,
-                        height: double.infinity,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const Center(
-                          child: Icon(
-                            Icons.image,
-                            size: KubusChromeMetrics.heroIcon,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    )
-                  else
-                    const Center(
-                      child: Icon(
-                        Icons.image,
-                        size: KubusChromeMetrics.heroIcon,
-                        color: Colors.white,
-                      ),
-                    ),
-                  // AR badge
-                  if (entry.requiresArInteraction)
-                    Positioned(
-                      top: DetailSpacing.md,
-                      right: DetailSpacing.md,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: KubusSpacing.sm,
-                          vertical: KubusSpacing.xs,
-                        ),
-                        decoration: BoxDecoration(
-                          color: KubusColorRoles.of(context).statTeal,
-                          borderRadius: BorderRadius.circular(DetailRadius.xs),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.view_in_ar,
-                              size: KubusSizes.trailingChevron,
-                              color: Colors.white,
-                            ),
-                            const SizedBox(width: KubusSpacing.xs),
-                            Text(
-                              'AR',
-                              style: KubusTextStyles.compactBadge.copyWith(
-                                color: Colors.white,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  // Favorite button
-                  Positioned(
-                    top: DetailSpacing.md,
-                    left: DetailSpacing.md,
-                    child: Container(
-                      padding: const EdgeInsets.all(KubusSpacing.sm),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.3),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        artwork.isLikedByCurrentUser
-                            ? Icons.favorite
-                            : Icons.favorite_border,
-                        size: KubusSizes.trailingChevron,
-                        color: artwork.isLikedByCurrentUser
-                            ? Colors.red
-                            : Colors.white,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+  Collectible? _ownedCollectible(MarketplaceArtworkEntry entry) {
+    final wallet = context.read<WalletProvider>().currentWalletAddress ?? '';
+    for (final item in entry.collectibles) {
+      if (WalletUtils.equals(item.ownerAddress, wallet)) return item;
+    }
+    return null;
+  }
 
-          // Info
-          Expanded(
-            flex: 2,
-            child: Padding(
-              padding: EdgeInsets.all(DetailSpacing.lg),
+  Future<void> _showDetails(MarketplaceArtworkEntry entry) async {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    final owned = _ownedCollectible(entry);
+    final capabilities = _capabilities(
+      ownerAddress: owned?.ownerAddress,
+      isListed: owned?.isForSale ?? false,
+      listen: false,
+    );
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => Dialog(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 760, maxHeight: 760),
+          child: LiquidGlassPanel(
+            padding: const EdgeInsets.all(KubusSpacing.lg),
+            child: SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    entry.title,
-                    style: DetailTypography.cardTitle(context),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: KubusSpacing.xs),
-                  ArtworkCreatorByline(
-                    artwork: artwork,
-                    style: KubusTextStyles.detailCaption.copyWith(
-                      color: marketplaceAccent,
-                    ),
-                    maxLines: 1,
-                  ),
-                  const Spacer(),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            entry.displayValue?.label ?? 'Status',
-                            style: KubusTextStyles.detailLabel.copyWith(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withValues(alpha: 0.6),
-                            ),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(KubusRadius.md),
+                        child: SizedBox(
+                          width: 220,
+                          height: 220,
+                          child: KubusCachedImage(
+                            imageUrl: entry.coverUrl,
+                            semanticLabel: entry.title,
                           ),
-                          Text(
-                            MarketplaceValueFormatter.formatDisplayValue(
-                              entry.displayValue,
-                            ),
-                            style: DetailTypography.cardTitle(context),
-                          ),
-                        ],
+                        ),
                       ),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.favorite,
-                            size: KubusSizes.trailingChevron,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.4),
-                          ),
-                          const SizedBox(width: KubusSpacing.xs),
-                          Text(
-                            '${artwork.likesCount}',
-                            style: KubusTextStyles.detailCaption.copyWith(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withValues(alpha: 0.7),
+                      const SizedBox(width: KubusSpacing.lg),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              entry.title,
+                              style: KubusTextStyles.screenTitle.copyWith(
+                                color: scheme.onSurface,
+                              ),
                             ),
-                          ),
-                        ],
+                            const SizedBox(height: KubusSpacing.xs),
+                            ArtworkCreatorByline(artwork: entry.artwork),
+                            const SizedBox(height: KubusSpacing.md),
+                            _detailLine(
+                              l10n.marketplaceTotalSupplyLabel,
+                              entry.totalSupply?.toString() ??
+                                  l10n.commonNotAvailableShort,
+                            ),
+                            _detailLine(
+                              l10n.marketplaceMintedLabel,
+                              entry.mintedCount?.toString() ??
+                                  l10n.commonNotAvailableShort,
+                            ),
+                            _detailLine(
+                              l10n.commonStatus,
+                              entry.isListed
+                                  ? l10n.commonForSale
+                                  : l10n.marketplaceValueNotListedLabel,
+                            ),
+                            if (entry.requiresArInteraction)
+                              _detailLine(
+                                l10n.marketplaceArBadgeLabel,
+                                l10n.commonEnabled,
+                              ),
+                          ],
+                        ),
                       ),
+                    ],
+                  ),
+                  if (entry.artwork.description.trim().isNotEmpty) ...[
+                    const SizedBox(height: KubusSpacing.lg),
+                    Text(
+                      entry.artwork.description,
+                      style: KubusTextStyles.detailBody.copyWith(
+                        color: scheme.onSurface.withValues(alpha: 0.78),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: KubusSpacing.lg),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.of(dialogContext).pop(),
+                        child: Text(l10n.commonClose),
+                      ),
+                      if (owned != null && capabilities.canListEdition) ...[
+                        const SizedBox(width: KubusSpacing.sm),
+                        FilledButton(
+                          onPressed: () {
+                            Navigator.of(dialogContext).pop();
+                            _listEdition(entry, owned);
+                          },
+                          child: Text(l10n.marketplaceListNftForSaleTitle),
+                        ),
+                      ],
+                      if (owned != null && capabilities.canUnlistEdition) ...[
+                        const SizedBox(width: KubusSpacing.sm),
+                        FilledButton.tonal(
+                          onPressed: () {
+                            Navigator.of(dialogContext).pop();
+                            _unlistEdition(owned);
+                          },
+                          child: Text(l10n.marketplaceRemoveFromSaleTitle),
+                        ),
+                      ],
                     ],
                   ),
                 ],
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _detailLine(String label, String value) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: KubusSpacing.xs),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: KubusTextStyles.detailCaption.copyWith(
+                color: scheme.onSurface.withValues(alpha: 0.62),
+              ),
+            ),
+          ),
+          Text(value, style: KubusTextStyles.detailLabel),
         ],
       ),
     );
   }
 
-  void _showNFTDetail(
-      MarketplaceArtworkEntry entry, ThemeProvider themeProvider) {
-    final artwork = entry.artwork;
-    final dialogGlassStyle = KubusGlassStyle.resolve(
-      context,
-      surfaceType: KubusGlassSurfaceType.panelBackground,
-    );
-    showKubusDialog<void>(
+  Future<void> _listEdition(
+    MarketplaceArtworkEntry entry,
+    Collectible collectible,
+  ) async {
+    final l10n = AppLocalizations.of(context)!;
+    final priceController = TextEditingController();
+    final price = await showDialog<String>(
       context: context,
-      builder: (dialogContext) {
-        return Dialog(
-          backgroundColor: Colors.transparent,
-          child: LiquidGlassPanel(
-            padding: EdgeInsets.zero,
-            margin: EdgeInsets.zero,
-            borderRadius: BorderRadius.circular(DetailRadius.xl),
-            blurSigma: dialogGlassStyle.blurSigma,
-            backgroundColor: dialogGlassStyle.tintColor,
-            fallbackMinOpacity: dialogGlassStyle.fallbackMinOpacity,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 640),
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.marketplaceListNftForSaleTitle),
+        content: TextField(
+          controller: priceController,
+          autofocus: true,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration:
+              InputDecoration(labelText: l10n.marketplacePriceKub8Label),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(l10n.commonCancel),
+          ),
+          FilledButton(
+            onPressed: () =>
+                Navigator.of(dialogContext).pop(priceController.text.trim()),
+            child: Text(l10n.commonSave),
+          ),
+        ],
+      ),
+    );
+    priceController.dispose();
+    if (price == null || price.isEmpty || !mounted) return;
+
+    final wallet = context.read<WalletProvider>();
+    final profile = context.read<ProfileProvider>();
+    final messenger = ScaffoldMessenger.of(context);
+    final canProceed = await WalletActionGuard.ensureSignerAccess(
+      context: context,
+      profileProvider: profile,
+      walletProvider: wallet,
+    );
+    if (!mounted || !canProceed) return;
+
+    try {
+      final collectiblesProvider = context.read<CollectiblesProvider>();
+      await collectiblesProvider.listCollectibleForSale(
+        collectibleId: collectible.id,
+        price: price,
+      );
+      collectiblesProvider.clearError();
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.marketplaceListForSaleSuccessToast)),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      context.read<CollectiblesProvider>().clearError();
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.marketplaceListForSaleFailedToast)),
+      );
+    }
+  }
+
+  Future<void> _unlistEdition(Collectible collectible) async {
+    final l10n = AppLocalizations.of(context)!;
+    final wallet = context.read<WalletProvider>();
+    final profile = context.read<ProfileProvider>();
+    final messenger = ScaffoldMessenger.of(context);
+    final canProceed = await WalletActionGuard.ensureSignerAccess(
+      context: context,
+      profileProvider: profile,
+      walletProvider: wallet,
+    );
+    if (!mounted || !canProceed) return;
+
+    try {
+      final collectiblesProvider = context.read<CollectiblesProvider>();
+      await collectiblesProvider.removeCollectibleFromSale(
+        collectibleId: collectible.id,
+      );
+      collectiblesProvider.clearError();
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.marketplaceRemoveFromSaleSuccessToast)),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      context.read<CollectiblesProvider>().clearError();
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.marketplaceRemoveFromSaleFailedToast)),
+      );
+    }
+  }
+}
+
+class _EditionCard extends StatelessWidget {
+  const _EditionCard({required this.entry, required this.onOpen});
+
+  final MarketplaceArtworkEntry entry;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    return Semantics(
+      button: true,
+      label: l10n.marketplaceOpenSeriesDetailsSemantic(entry.title),
+      child: LiquidGlassCard(
+        onTap: onOpen,
+        padding: EdgeInsets.zero,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(KubusRadius.md),
+              ),
               child: SizedBox(
-                width: 860,
-                child: Row(
+                height: 230,
+                width: double.infinity,
+                child: KubusCachedImage(
+                  imageUrl: entry.coverUrl,
+                  semanticLabel: entry.title,
+                ),
+              ),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(KubusSpacing.md),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Image side
-                    Expanded(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              themeProvider.accentColor.withValues(alpha: 0.4),
-                              themeProvider.accentColor.withValues(alpha: 0.1),
-                            ],
-                          ),
-                          borderRadius: BorderRadius.horizontal(
-                              left: Radius.circular(DetailRadius.xl)),
-                        ),
-                        child: Stack(
-                          children: [
-                            if (entry.coverUrl != null)
-                              ClipRRect(
-                                borderRadius: BorderRadius.horizontal(
-                                    left: Radius.circular(DetailRadius.xl)),
-                                child: Image.network(
-                                  entry.coverUrl!,
-                                  width: double.infinity,
-                                  height: double.infinity,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => const Center(
-                                    child: Icon(
-                                      Icons.image,
-                                      size: KubusChromeMetrics.heroIconBox +
-                                          KubusSpacing.xl,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ),
-                              )
-                            else
-                              const Center(
-                                child: Icon(
-                                  Icons.image,
-                                  size: KubusChromeMetrics.heroIconBox +
-                                      KubusSpacing.xl,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            if (entry.requiresArInteraction)
-                              Positioned(
-                                bottom: DetailSpacing.lg + DetailSpacing.xs,
-                                left: DetailSpacing.lg + DetailSpacing.xs,
-                                right: DetailSpacing.lg + DetailSpacing.xs,
-                                child: ElevatedButton.icon(
-                                  onPressed: () {
-                                    Navigator.of(dialogContext).push(
-                                      MaterialPageRoute(
-                                        builder: (context) => const ARScreen(),
-                                      ),
-                                    );
-                                  },
-                                  icon: const Icon(
-                                    Icons.view_in_ar,
-                                    size: KubusHeaderMetrics.actionIcon,
-                                  ),
-                                  label: Text(
-                                    'View in AR',
-                                    style: KubusTextStyles.detailButton,
-                                  ),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.white,
-                                    foregroundColor: themeProvider.accentColor,
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: KubusSpacing.lg,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(
-                                          DetailRadius.md),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
+                    Text(
+                      entry.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: KubusTextStyles.detailCardTitle.copyWith(
+                        color: scheme.onSurface,
                       ),
                     ),
-
-                    // Info side
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.all(KubusSpacing.xxl),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    entry.title,
-                                    style: DetailTypography.screenTitle(
-                                        dialogContext),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                IconButton(
-                                  onPressed: () =>
-                                      Navigator.of(dialogContext).pop(),
-                                  icon: const Icon(Icons.close),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: KubusSpacing.sm),
-                            Text(
-                              'by ${entry.artistName}',
-                              style: KubusTextStyles.detailBody.copyWith(
-                                color: themeProvider.accentColor,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            const SizedBox(
-                                height: KubusSpacing.lg + KubusSpacing.xs),
-                            if (artwork.description.isNotEmpty)
-                              Expanded(
-                                child: SingleChildScrollView(
-                                  child: Text(
-                                    artwork.description,
-                                    style: KubusTextStyles.detailBody.copyWith(
-                                      height: 1.7,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            const SizedBox(
-                                height: KubusSpacing.lg + KubusSpacing.xs),
-
-                            // Price
-                            Container(
-                              padding: const EdgeInsets.all(
-                                KubusSpacing.lg + KubusSpacing.xs,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Theme.of(dialogContext)
-                                    .colorScheme
-                                    .primaryContainer,
-                                borderRadius:
-                                    BorderRadius.circular(DetailRadius.lg),
-                              ),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        entry.displayValue?.label ??
-                                            'Current status',
-                                        style: KubusTextStyles.detailLabel
-                                            .copyWith(
-                                          color: Theme.of(dialogContext)
-                                              .colorScheme
-                                              .onSurface
-                                              .withValues(alpha: 0.6),
-                                        ),
-                                      ),
-                                      const SizedBox(height: KubusSpacing.xs),
-                                      Text(
-                                        MarketplaceValueFormatter
-                                            .formatDisplayValue(
-                                          entry.displayValue,
-                                        ),
-                                        style:
-                                            KubusTextStyles.heroTitle.copyWith(
-                                          color: Theme.of(dialogContext)
-                                              .colorScheme
-                                              .onSurface,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  Column(
-                                    children: [
-                                      Row(
-                                        children: [
-                                          Icon(
-                                            Icons.favorite,
-                                            size: KubusSizes.trailingChevron,
-                                            color: Colors.red
-                                                .withValues(alpha: 0.7),
-                                          ),
-                                          const SizedBox(
-                                              width: KubusSpacing.xs),
-                                          Text(
-                                            '${artwork.likesCount}',
-                                            style:
-                                                KubusTextStyles.detailCaption,
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: KubusSpacing.xs),
-                                      Row(
-                                        children: [
-                                          Icon(
-                                            Icons.visibility,
-                                            size: KubusSizes.trailingChevron,
-                                            color: Theme.of(dialogContext)
-                                                .colorScheme
-                                                .onSurface
-                                                .withValues(alpha: 0.5),
-                                          ),
-                                          const SizedBox(
-                                              width: KubusSpacing.xs),
-                                          Text(
-                                            '${artwork.viewsCount}',
-                                            style:
-                                                KubusTextStyles.detailCaption,
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(
-                                height: KubusSpacing.lg + KubusSpacing.xs),
-
-                            // Actions
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: ElevatedButton(
-                                    onPressed: () {
-                                      Navigator.of(dialogContext).push(
-                                        MaterialPageRoute(
-                                          builder: (context) =>
-                                              const DesktopWalletScreen(),
-                                        ),
-                                      );
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor:
-                                          themeProvider.accentColor,
-                                      foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: KubusSpacing.lg,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(
-                                            DetailRadius.md),
-                                      ),
-                                    ),
-                                    child: Text(
-                                      'Buy Now',
-                                      style: KubusTextStyles.detailButton,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: KubusSpacing.md),
-                                OutlinedButton(
-                                  onPressed: () {
-                                    Navigator.of(dialogContext).push(
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            const DesktopWalletScreen(),
-                                      ),
-                                    );
-                                  },
-                                  style: OutlinedButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: KubusSpacing.lg,
-                                      horizontal:
-                                          KubusSpacing.lg + KubusSpacing.xs,
-                                    ),
-                                    side: BorderSide(
-                                        color: themeProvider.accentColor),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(
-                                          DetailRadius.md),
-                                    ),
-                                  ),
-                                  child: Text(
-                                    'Make Offer',
-                                    style: KubusTextStyles.detailButton,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
+                    const SizedBox(height: KubusSpacing.xs),
+                    ArtworkCreatorByline(
+                      artwork: entry.artwork,
+                      linkToProfile: false,
                     ),
+                    const Spacer(),
+                    _EditionMetadata(entry: entry),
                   ],
                 ),
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EditionListRow extends StatelessWidget {
+  const _EditionListRow({required this.entry, required this.onOpen});
+
+  final MarketplaceArtworkEntry entry;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    return Semantics(
+      button: true,
+      label: l10n.marketplaceOpenSeriesDetailsSemantic(entry.title),
+      child: LiquidGlassCard(
+        onTap: onOpen,
+        padding: const EdgeInsets.all(KubusSpacing.md),
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(KubusRadius.sm),
+              child: SizedBox(
+                width: 104,
+                height: 104,
+                child: KubusCachedImage(
+                  imageUrl: entry.coverUrl,
+                  semanticLabel: entry.title,
+                ),
+              ),
+            ),
+            const SizedBox(width: KubusSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    entry.title,
+                    style: KubusTextStyles.sectionTitle.copyWith(
+                      color: scheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: KubusSpacing.xs),
+                  ArtworkCreatorByline(
+                    artwork: entry.artwork,
+                    linkToProfile: false,
+                  ),
+                ],
+              ),
+            ),
+            _EditionMetadata(entry: entry),
+            const SizedBox(width: KubusSpacing.md),
+            Icon(Icons.chevron_right, color: scheme.onSurface),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EditionMetadata extends StatelessWidget {
+  const _EditionMetadata({required this.entry});
+
+  final MarketplaceArtworkEntry entry;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    final value = MarketplaceValueFormatter.formatDisplayValue(
+      entry.displayValue,
+      fallback: l10n.marketplaceValueNotListedLabel,
+    );
+    return Wrap(
+      spacing: KubusSpacing.sm,
+      runSpacing: KubusSpacing.xs,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        if (entry.isListed)
+          Chip(
+            visualDensity: VisualDensity.compact,
+            label: Text(l10n.commonForSale),
           ),
-        );
-      },
+        if (entry.requiresArInteraction)
+          Chip(
+            visualDensity: VisualDensity.compact,
+            label: Text(l10n.marketplaceArBadgeLabel),
+          ),
+        Text(
+          value,
+          style: KubusTextStyles.detailLabel.copyWith(color: scheme.onSurface),
+        ),
+      ],
     );
   }
 }

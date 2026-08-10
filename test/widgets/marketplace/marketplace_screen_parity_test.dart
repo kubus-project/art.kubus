@@ -4,6 +4,7 @@ import 'package:art_kubus/models/collectible.dart';
 import 'package:art_kubus/providers/artwork_provider.dart';
 import 'package:art_kubus/providers/collectibles_provider.dart';
 import 'package:art_kubus/providers/navigation_provider.dart';
+import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/themeprovider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/providers/web3provider.dart';
@@ -26,6 +27,20 @@ Artwork _marketplaceArtwork() {
     rewards: 2,
     createdAt: DateTime.utc(2025, 1, 1),
     category: 'Photography',
+  );
+}
+
+Artwork _arArtwork() {
+  return Artwork(
+    id: 'art-market-2',
+    title: 'Sculpture Artwork',
+    artist: 'Artist Two',
+    description: 'AR sculpture for filter checks.',
+    imageUrl: '/uploads/art-market-2-cover.png',
+    position: const LatLng(46.1, 14.1),
+    rewards: 1,
+    createdAt: DateTime.utc(2025, 2, 1),
+    category: 'Sculpture',
   );
 }
 
@@ -57,6 +72,24 @@ Future<CollectiblesProvider> _seedCollectibles(
     price: '55',
   );
 
+  artworkProvider.addOrUpdateArtwork(_arArtwork());
+  final arSeries = await collectiblesProvider.createNFTSeries(
+    artworkId: 'art-market-2',
+    name: 'Sculpture Series',
+    description: 'AR series for marketplace controls.',
+    creatorAddress: 'wallet-market-2',
+    totalSupply: 5,
+    rarity: CollectibleRarity.epic,
+    mintPrice: 20,
+    imageUrl: '/uploads/series-market-2.png',
+    requiresARInteraction: true,
+  );
+  await collectiblesProvider.mintCollectible(
+    seriesId: arSeries.id,
+    ownerAddress: 'wallet-owner-2',
+    transactionHash: 'tx-market-2',
+  );
+
   return collectiblesProvider;
 }
 
@@ -77,6 +110,9 @@ Widget _buildApp({
       ChangeNotifierProvider.value(value: navigationProvider),
       ChangeNotifierProvider.value(value: web3Provider),
       ChangeNotifierProvider.value(value: walletProvider),
+      ChangeNotifierProvider<ProfileProvider>(
+        create: (_) => ProfileProvider(),
+      ),
     ],
     child: MaterialApp(
       locale: const Locale('en'),
@@ -175,5 +211,73 @@ void main() {
       ),
       isTrue,
     );
+  });
+
+  testWidgets('desktop search filters reset sort and view controls are real',
+      (tester) async {
+    final artworkProvider = ArtworkProvider();
+    final collectiblesProvider = await _seedCollectibles(artworkProvider);
+    final themeProvider = ThemeProvider();
+    final navigationProvider = NavigationProvider();
+    final web3Provider = Web3Provider();
+
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.binding.setSurfaceSize(const Size(1600, 1000));
+    await tester.pumpWidget(
+      _buildApp(
+        home: const DesktopMarketplaceScreen(),
+        artworkProvider: artworkProvider,
+        collectiblesProvider: collectiblesProvider,
+        themeProvider: themeProvider,
+        navigationProvider: navigationProvider,
+        web3Provider: web3Provider,
+      ),
+    );
+    await _pumpFrames(tester);
+
+    expect(find.text('Marketplace Series'), findsOneWidget);
+    expect(find.text('Sculpture Series'), findsOneWidget);
+    expect(find.text('Buy Now'), findsNothing);
+    expect(find.text('Make Offer'), findsNothing);
+
+    await tester.enterText(
+      find.byKey(const Key('desktop-editions-search')),
+      'Sculpture',
+    );
+    await tester.pump();
+    expect(find.text('Marketplace Series'), findsNothing);
+    expect(find.text('Sculpture Series'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('desktop-editions-reset')));
+    await tester.pump();
+    expect(find.text('Marketplace Series'), findsOneWidget);
+    expect(find.text('Sculpture Series'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('desktop-editions-listed-filter')));
+    await tester.pump();
+    expect(find.text('Marketplace Series'), findsOneWidget);
+    expect(find.text('Sculpture Series'), findsNothing);
+
+    await tester.tap(find.byKey(const Key('desktop-editions-reset')));
+    await tester.tap(find.byKey(const Key('desktop-editions-ar-filter')));
+    await tester.pump();
+    expect(find.text('Marketplace Series'), findsNothing);
+    expect(find.text('Sculpture Series'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('desktop-editions-reset')));
+    await tester.tap(find.byKey(const Key('desktop-editions-sort')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Title').last);
+    await tester.pumpAndSettle();
+    expect(
+      tester.getTopLeft(find.text('Marketplace Series')).dx,
+      lessThan(tester.getTopLeft(find.text('Sculpture Series')).dx),
+    );
+
+    await tester.tap(find.byIcon(Icons.view_list));
+    await tester.pump();
+    expect(find.byKey(const Key('desktop-editions-list')), findsOneWidget);
+    expect(find.byKey(const Key('desktop-editions-grid')), findsNothing);
   });
 }

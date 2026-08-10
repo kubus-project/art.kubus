@@ -67,6 +67,7 @@ class WalletAuthoritySnapshot {
     required this.accountSignedIn,
     required this.signInMethod,
     required this.accountEmail,
+    this.accountRole = 'user',
     required this.walletAddress,
     required this.hasLocalSigner,
     required this.hasExternalSigner,
@@ -84,6 +85,7 @@ class WalletAuthoritySnapshot {
   final bool accountSignedIn;
   final AuthSignInMethod signInMethod;
   final String? accountEmail;
+  final String accountRole;
   final String? walletAddress;
   final bool hasLocalSigner;
   final bool hasExternalSigner;
@@ -790,6 +792,11 @@ class WalletProvider extends ChangeNotifier {
         !canSign &&
         _encryptedWalletBackupStatusKnown &&
         !hasBackup;
+    final accountRole =
+        (_apiService.getCurrentAuthTokenClaims()?['role'] ?? 'user')
+            .toString()
+            .trim()
+            .toLowerCase();
 
     final WalletAuthorityState state;
     if (canSign && localReady) {
@@ -818,6 +825,7 @@ class WalletProvider extends ChangeNotifier {
       accountSignedIn: accountSignedIn,
       signInMethod: _accountSignInMethod,
       accountEmail: _accountEmail,
+      accountRole: accountRole.isEmpty ? 'user' : accountRole,
       walletAddress: _currentWalletAddress,
       hasLocalSigner: localReady,
       hasExternalSigner: externalReady,

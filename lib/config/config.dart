@@ -54,6 +54,7 @@ class AppConfig {
   static const bool enableExhibitions = true;
   static const bool enableCollections = true;
   static const bool enableInstitutions = true;
+  static const bool enableDAO = true;
   static const bool enableDaoOnchainTreasury = true;
   static const bool enableDaoReviewDecisions = true;
   static const bool enableWalletConnect = true;
@@ -480,6 +481,8 @@ class AppConfig {
         return enableMessaging;
       case 'web3':
         return enableWeb3;
+      case 'dao':
+        return enableDAO;
       case 'daoOnchainTreasury':
         return enableDaoOnchainTreasury;
       case 'daoReviewDecisions':
