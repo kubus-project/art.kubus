@@ -35,7 +35,7 @@
 
 ## Backend
 
-- `kubus-project/art.kubus-backend` PR #30 restricts DAO review decisions to authenticated admin/moderator roles or an explicit reviewer allowlist.
+- `kubus-project/art.kubus-backend` PR #30 merged as `96f35ba1a64f1daa99aa2e8c67e9d6cb19171550`; it restricts DAO review decisions to authenticated admin/moderator roles or an explicit reviewer allowlist.
 - Existing proposal, vote, delegation, and review submission routes were verified to require authenticated wallet-signed envelopes bound to the authenticated wallet.
 - No backend treasury mutation route exists.
 
