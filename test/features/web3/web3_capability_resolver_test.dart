@@ -114,6 +114,21 @@ void main() {
     expect(capabilities.canCreateEdition, isFalse);
   });
 
+  test('account shell without a wallet-keyed profile is not a guest', () {
+    final capabilities = Web3CapabilityResolver.resolve(
+      contextFor(
+        walletAuthority: authority(walletAddress: null, signerReady: false),
+        profileHydrated: false,
+        profileSignedIn: false,
+      ),
+    );
+
+    expect(capabilities.needsAccount, isFalse);
+    expect(capabilities.hasAccount, isTrue);
+    expect(capabilities.hasWalletIdentity, isFalse);
+    expect(capabilities.canTransact, isFalse);
+  });
+
   test('wallet identity without signer is read-only', () {
     final capabilities = Web3CapabilityResolver.resolve(
       contextFor(walletAuthority: authority(signerReady: false)),
@@ -229,7 +244,7 @@ void main() {
       contextFor(profileHydrated: false, profileSignedIn: true),
     );
 
-    expect(capabilities.hasAccount, isFalse);
+    expect(capabilities.hasAccount, isTrue);
     expect(capabilities.canTransact, isFalse);
     expect(capabilities.canCreateProposal, isFalse);
   });

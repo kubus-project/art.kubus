@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:art_kubus/services/guest_session_service.dart';
 import 'package:art_kubus/core/shell_routes.dart';
+import 'package:art_kubus/providers/platform_deep_link_listener_provider.dart';
 import 'package:art_kubus/services/telemetry/kubus_client_context.dart';
 import 'package:art_kubus/services/telemetry/telemetry_event.dart';
 import 'package:art_kubus/services/telemetry/telemetry_event_queue.dart';
@@ -208,6 +209,47 @@ void main() {
         expect(GuestSessionService.entryRouteSync(prefs), '/register');
       },
     );
+
+    test(
+        'late mobile initial-route attribution survives an early empty capture',
+        () async {
+      final prefs = await SharedPreferences.getInstance();
+
+      // initState can run before Android/iOS dispatches its initial route.
+      await GuestSessionService.captureFromLaunchUrl(prefs: prefs);
+      GuestSessionService.snapshotLaunchUrl(override: _directRegisterEntry);
+      await GuestSessionService.captureFromLaunchUrl(prefs: prefs);
+
+      expect(
+        GuestSessionService.entryUtmSync(prefs)['utm_campaign'],
+        'open_call_en_aug_2026',
+      );
+      expect(GuestSessionService.entryRouteSync(prefs), '/register');
+    });
+
+    test('platform initial-link probe captures before attribution is released',
+        () async {
+      GuestSessionService.expectPlatformInitialLinkResolution();
+      var released = false;
+      final wait = GuestSessionService.waitForPlatformInitialLinkResolution()
+          .then((_) => released = true);
+      await Future<void>.delayed(Duration.zero);
+      expect(released, isFalse);
+
+      final listener = PlatformDeepLinkListenerProvider();
+      await listener.handleInitialLinkForTesting(_directRegisterEntry);
+      GuestSessionService.completePlatformInitialLinkResolution();
+      await wait;
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(released, isTrue);
+      expect(
+        GuestSessionService.entryUtmSync(prefs)['utm_campaign'],
+        'open_call_en_aug_2026',
+      );
+      expect(GuestSessionService.entryRouteSync(prefs), '/register');
+      listener.dispose();
+    });
 
     test('the persisted entry route wins over a later snapshot', () async {
       SharedPreferences.setMockInitialValues(<String, Object>{

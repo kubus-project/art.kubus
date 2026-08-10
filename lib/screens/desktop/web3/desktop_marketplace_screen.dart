@@ -420,23 +420,17 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen> {
     );
   }
 
-  Collectible? _ownedCollectible(MarketplaceArtworkEntry entry) {
+  List<Collectible> _ownedCollectibles(MarketplaceArtworkEntry entry) {
     final wallet = context.read<WalletProvider>().currentWalletAddress ?? '';
-    for (final item in entry.collectibles) {
-      if (WalletUtils.equals(item.ownerAddress, wallet)) return item;
-    }
-    return null;
+    return entry.collectibles
+        .where((item) => WalletUtils.equals(item.ownerAddress, wallet))
+        .toList(growable: false);
   }
 
   Future<void> _showDetails(MarketplaceArtworkEntry entry) async {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
-    final owned = _ownedCollectible(entry);
-    final capabilities = _capabilities(
-      ownerAddress: owned?.ownerAddress,
-      isListed: owned?.isForSale ?? false,
-      listen: false,
-    );
+    final ownedCollectibles = _ownedCollectibles(entry);
 
     await showDialog<void>(
       context: context,
@@ -512,6 +506,20 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen> {
                       ),
                     ),
                   ],
+                  if (ownedCollectibles.isNotEmpty) ...[
+                    const SizedBox(height: KubusSpacing.lg),
+                    const Divider(),
+                    const SizedBox(height: KubusSpacing.sm),
+                    Text(
+                      l10n.marketplaceOwnedCollectionTitle,
+                      style: KubusTextStyles.sectionTitle.copyWith(
+                        color: scheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: KubusSpacing.sm),
+                    for (final collectible in ownedCollectibles)
+                      _buildOwnedEditionRow(entry, collectible),
+                  ],
                   const SizedBox(height: KubusSpacing.lg),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
@@ -520,26 +528,6 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen> {
                         onPressed: () => Navigator.of(dialogContext).pop(),
                         child: Text(l10n.commonClose),
                       ),
-                      if (owned != null && capabilities.canListEdition) ...[
-                        const SizedBox(width: KubusSpacing.sm),
-                        FilledButton(
-                          onPressed: () {
-                            Navigator.of(dialogContext).pop();
-                            _listEdition(entry, owned);
-                          },
-                          child: Text(l10n.marketplaceListNftForSaleTitle),
-                        ),
-                      ],
-                      if (owned != null && capabilities.canUnlistEdition) ...[
-                        const SizedBox(width: KubusSpacing.sm),
-                        FilledButton.tonal(
-                          onPressed: () {
-                            Navigator.of(dialogContext).pop();
-                            _unlistEdition(owned);
-                          },
-                          child: Text(l10n.marketplaceRemoveFromSaleTitle),
-                        ),
-                      ],
                     ],
                   ),
                 ],
@@ -547,6 +535,63 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildOwnedEditionRow(
+    MarketplaceArtworkEntry entry,
+    Collectible collectible,
+  ) {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    final capabilities = _capabilities(
+      ownerAddress: collectible.ownerAddress,
+      isListed: collectible.isForSale,
+      listen: false,
+    );
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: KubusSpacing.sm),
+      child: Wrap(
+        spacing: KubusSpacing.sm,
+        runSpacing: KubusSpacing.sm,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 120),
+            child: Text(
+              l10n.marketplaceTokenNumberLabel(collectible.tokenId),
+              style: KubusTextStyles.detailLabel.copyWith(
+                color: scheme.onSurface,
+              ),
+            ),
+          ),
+          Chip(
+            visualDensity: VisualDensity.compact,
+            label: Text(
+              collectible.isForSale
+                  ? l10n.commonForSale
+                  : l10n.marketplaceValueNotListedLabel,
+            ),
+          ),
+          if (capabilities.canListEdition)
+            FilledButton(
+              onPressed: () {
+                Navigator.of(context, rootNavigator: true).pop();
+                _listEdition(entry, collectible);
+              },
+              child: Text(l10n.marketplaceListNftForSaleTitle),
+            ),
+          if (capabilities.canUnlistEdition)
+            FilledButton.tonal(
+              onPressed: () {
+                Navigator.of(context, rootNavigator: true).pop();
+                _unlistEdition(collectible);
+              },
+              child: Text(l10n.marketplaceRemoveFromSaleTitle),
+            ),
+        ],
       ),
     );
   }

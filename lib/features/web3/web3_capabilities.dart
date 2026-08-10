@@ -134,12 +134,20 @@ class Web3CapabilityResolver {
 
   static Web3Capabilities resolve(Web3CapabilityContext context) {
     final authority = context.authority;
-    final hasAccount = context.profileHydrated &&
-        context.profileSignedIn &&
-        authority.hasAccountSession;
+    // The backend session is the account authority. A wallet-less account does
+    // not necessarily hydrate a wallet-keyed profile, so profile state cannot
+    // be used to decide whether the account itself exists.
+    final hasAccount = authority.hasAccountSession;
+    // Mutations continue to fail closed until the authenticated profile has
+    // hydrated. Profile roles and personas must never flash stale privileges.
+    final profileReadyForPrivileges =
+        context.profileHydrated && context.profileSignedIn;
     final hasWalletIdentity = authority.hasWalletIdentity;
     final signerReady = authority.canTransact;
-    final canTransact = hasAccount && hasWalletIdentity && signerReady;
+    final canTransact = hasAccount &&
+        profileReadyForPrivileges &&
+        hasWalletIdentity &&
+        signerReady;
     final accountRole = authority.accountRole.trim().toLowerCase();
     final hasDaoModeratorRole =
         accountRole == 'admin' || accountRole == 'moderator';

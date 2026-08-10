@@ -71,6 +71,11 @@ Future<CollectiblesProvider> _seedCollectibles(
     collectibleId: collectible.id,
     price: '55',
   );
+  await collectiblesProvider.mintCollectible(
+    seriesId: series.id,
+    ownerAddress: 'wallet-owner-1',
+    transactionHash: 'tx-market-2',
+  );
 
   artworkProvider.addOrUpdateArtwork(_arArtwork());
   final arSeries = await collectiblesProvider.createNFTSeries(
@@ -100,8 +105,10 @@ Widget _buildApp({
   required ThemeProvider themeProvider,
   required NavigationProvider navigationProvider,
   required Web3Provider web3Provider,
+  WalletProvider? walletProvider,
 }) {
-  final walletProvider = WalletProvider(deferInit: true);
+  final resolvedWalletProvider =
+      walletProvider ?? WalletProvider(deferInit: true);
   return MultiProvider(
     providers: [
       ChangeNotifierProvider.value(value: artworkProvider),
@@ -109,7 +116,7 @@ Widget _buildApp({
       ChangeNotifierProvider.value(value: themeProvider),
       ChangeNotifierProvider.value(value: navigationProvider),
       ChangeNotifierProvider.value(value: web3Provider),
-      ChangeNotifierProvider.value(value: walletProvider),
+      ChangeNotifierProvider.value(value: resolvedWalletProvider),
       ChangeNotifierProvider<ProfileProvider>(
         create: (_) => ProfileProvider(),
       ),
@@ -279,5 +286,42 @@ void main() {
     await tester.pump();
     expect(find.byKey(const Key('desktop-editions-list')), findsOneWidget);
     expect(find.byKey(const Key('desktop-editions-grid')), findsNothing);
+  });
+
+  testWidgets('desktop details enumerate every edition token owned by wallet',
+      (tester) async {
+    final artworkProvider = ArtworkProvider();
+    final collectiblesProvider = await _seedCollectibles(artworkProvider);
+    final walletProvider = WalletProvider(deferInit: true)
+      ..setCurrentWalletAddressForTesting('wallet-owner-1');
+
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.binding.setSurfaceSize(const Size(1200, 900));
+    await tester.pumpWidget(
+      _buildApp(
+        home: const DesktopMarketplaceScreen(),
+        artworkProvider: artworkProvider,
+        collectiblesProvider: collectiblesProvider,
+        themeProvider: ThemeProvider(),
+        navigationProvider: NavigationProvider(),
+        web3Provider: Web3Provider(),
+        walletProvider: walletProvider,
+      ),
+    );
+    await _pumpFrames(tester);
+
+    await tester.tap(find.text('Marketplace Series'));
+    await tester.pumpAndSettle();
+
+    final owned = collectiblesProvider
+        .getCollectiblesByOwner('wallet-owner-1')
+        .where(
+            (item) => item.seriesId == collectiblesProvider.allSeries.first.id)
+        .toList(growable: false);
+    expect(owned, hasLength(2));
+    for (final collectible in owned) {
+      expect(find.text('Token #${collectible.tokenId}'), findsOneWidget);
+    }
   });
 }

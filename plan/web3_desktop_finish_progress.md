@@ -56,4 +56,6 @@
 - Web QA — 27 passed.
 - Implementation PR #139 merged to `dev` as `932eaee74ee2b838b68799f5009d25d49bd125c7`.
 - Development deployment run `31416945051` promoted that exact SHA. Immutable artifact checksum/revision checks, protected Basic Auth, localized routing, staging noindex policy, and authenticated browser smoke passed.
+- Release-preparation PR #140 merged as `cfe46a8eafcc7525ffabaf2aa019a99c2b9cfd7d`; staging run `31418999142` promoted that exact versioned candidate after its automatic rollback and successful retry of a transient Basic Auth policy check.
+- Release review regressions cover late mobile attribution capture, wallet-less account-shell classification, and per-token management for multiple owned editions.
 - Production, tag, mobile release, and branch-reconciliation evidence will be appended after release.
