@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
@@ -7,6 +8,8 @@ import '../config/config.dart';
 import '../models/artwork.dart';
 import '../services/backend_api_service.dart';
 import '../services/profile_package_mutation_tracker.dart';
+import '../services/telemetry/contribution_type.dart';
+import '../services/telemetry/telemetry_service.dart';
 
 class ArtworkDraftGalleryItem {
   final Uint8List bytes;
@@ -121,8 +124,11 @@ class ArtworkDraftsProvider extends ChangeNotifier {
   final Map<String, Map<String, dynamic>> _feeCache = {};
   final Map<String, DateTime> _feeCacheUpdatedAt = {};
 
-  ArtworkDraftsProvider({BackendApiService? api})
-      : _api = api ?? BackendApiService();
+  final TelemetryService _telemetry;
+
+  ArtworkDraftsProvider({BackendApiService? api, TelemetryService? telemetry})
+      : _api = api ?? BackendApiService(),
+        _telemetry = telemetry ?? TelemetryService();
 
   String createDraft() {
     final now = DateTime.now().microsecondsSinceEpoch;
@@ -448,6 +454,12 @@ class ArtworkDraftsProvider extends ChangeNotifier {
     draft.uploadProgress = 0;
     notifyListeners();
 
+    // The publish operation itself is starting. Opening the creator, creating
+    // the draft and editing its fields all happen before this line and are
+    // deliberately not attempts — counting them would make the
+    // started -> submitted ratio measure browsing rather than publishing.
+    _noteContributionStarted();
+
     try {
       final coverBytes = draft.coverBytes;
       if (coverBytes == null) {
@@ -661,6 +673,12 @@ class ArtworkDraftsProvider extends ChangeNotifier {
         kind: ProfilePackageMutationKind.artworkCreated,
       );
 
+      // A durable artwork now exists. This is the activation boundary for an
+      // artist arriving from an open-call campaign: reaching it requires no map
+      // marker, and everything before it — uploaded cover, uploaded gallery,
+      // validated fields — is not activation on its own.
+      _noteContributionPublished();
+
       draft.uploadProgress = 1;
       notifyListeners();
 
@@ -679,5 +697,25 @@ class ArtworkDraftsProvider extends ChangeNotifier {
       draft.isSubmitting = false;
       notifyListeners();
     }
+  }
+
+  /// Telemetry is observability, never part of the publish transaction: it is
+  /// fired and forgotten so a failed queue write, an unavailable
+  /// SharedPreferences or a dead sender cannot turn a published artwork into a
+  /// failed one.
+  void _noteContributionStarted() {
+    unawaited(
+      _telemetry
+          .trackContributionStarted(type: ContributionType.artwork)
+          .catchError((_) {}),
+    );
+  }
+
+  void _noteContributionPublished() {
+    unawaited(
+      _telemetry
+          .trackSuccessfulContribution(ContributionType.artwork)
+          .catchError((_) {}),
+    );
   }
 }
