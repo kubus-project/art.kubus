@@ -8,6 +8,7 @@
 library;
 
 import 'package:art_kubus/services/guest_session_service.dart';
+import 'package:art_kubus/services/telemetry/contribution_type.dart';
 import 'package:art_kubus/services/telemetry/kubus_client_context.dart';
 import 'package:art_kubus/services/telemetry/telemetry_event.dart';
 import 'package:art_kubus/services/telemetry/telemetry_event_queue.dart';
@@ -184,6 +185,47 @@ void main() {
       expect(event.metadata.containsKey('utm_campaign'), isFalse);
       expect(event.metadata.containsKey('entry_route'), isFalse);
     }
+  });
+
+  test('a long-lived process stops attributing once the window passes',
+      () async {
+    // The case a startup-only prune cannot cover: a web tab left open, or a
+    // mobile process resumed from suspension, never re-runs initialization. The
+    // cached attribution has to age by itself, or a contribution made on day
+    // nine is still credited to a campaign that expired on day seven.
+    final prefs = await _capture(_campaign(path: '/register'));
+
+    final queue = InMemoryTelemetryEventQueue();
+    final svc = TelemetryService.createForTest(
+      queue: queue,
+      sender: _NoopSender(),
+    );
+    addTearDown(() => svc.setAnalyticsPreferenceEnabled(false));
+    await svc.ensureInitialized();
+
+    await svc.trackAppEntry();
+    final before = (await queue.peekBatch(50)).last;
+    expect(before.metadata['utm_campaign'], 'open_call_en_aug_2026');
+
+    // Time passes inside the same process — no restart, no re-initialization.
+    await prefs.setInt(
+      GuestSessionService.attributionCapturedAtKey,
+      DateTime.now()
+          .toUtc()
+          .subtract(const Duration(days: 9))
+          .millisecondsSinceEpoch,
+    );
+    await svc.refreshEntryAttribution(prefs: prefs);
+    GuestSessionService.resetLaunchSnapshotForTest();
+
+    await svc.trackContributionSubmitted(type: ContributionType.artwork);
+    await pumpEventQueue();
+
+    final after = (await queue.peekBatch(50))
+        .where((e) => e.eventType == 'contribution_submitted')
+        .single;
+    expect(after.metadata.containsKey('utm_campaign'), isFalse);
+    expect(after.metadata.containsKey('entry_route'), isFalse);
   });
 
   test('ordinary navigation does not refresh the window', () async {
