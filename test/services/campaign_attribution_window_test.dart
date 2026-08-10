@@ -60,20 +60,24 @@ void main() {
     KubusClientContext.instance.setEnabled(false);
   });
 
-  test('a fresh campaign stores UTMs, entry route and a capture timestamp',
-      () async {
-    final prefs = await _capture(_campaign(path: '/register', term: 'artists'));
+  test(
+    'a fresh campaign stores UTMs, entry route and a capture timestamp',
+    () async {
+      final prefs = await _capture(
+        _campaign(path: '/register', term: 'artists'),
+      );
 
-    expect(GuestSessionService.entryUtmSync(prefs), <String, String>{
-      'utm_source': 'meta',
-      'utm_medium': 'paid_social',
-      'utm_campaign': 'open_call_en_aug_2026',
-      'utm_content': 'carousel_card_4_add_your_art',
-      'utm_term': 'artists',
-    });
-    expect(GuestSessionService.entryRouteSync(prefs), '/register');
-    expect(GuestSessionService.storedAttributionCapturedAt(prefs), isNotNull);
-  });
+      expect(GuestSessionService.entryUtmSync(prefs), <String, String>{
+        'utm_source': 'meta',
+        'utm_medium': 'paid_social',
+        'utm_campaign': 'open_call_en_aug_2026',
+        'utm_content': 'carousel_card_4_add_your_art',
+        'utm_term': 'artists',
+      });
+      expect(GuestSessionService.entryRouteSync(prefs), '/register');
+      expect(GuestSessionService.storedAttributionCapturedAt(prefs), isNotNull);
+    },
+  );
 
   test('the locale app roots preserve entry_route', () async {
     // The drift this whole contract exists for: `/en` and `/sl` carried valid
@@ -186,6 +190,36 @@ void main() {
     }
   });
 
+  test(
+    'a long-lived telemetry process drops attribution after expiry',
+    () async {
+      final prefs = await _capture(_campaign(path: '/register'));
+      final queue = InMemoryTelemetryEventQueue();
+      final svc = TelemetryService.createForTest(
+        queue: queue,
+        sender: _NoopSender(),
+      );
+      addTearDown(() => svc.setAnalyticsPreferenceEnabled(false));
+      await svc.ensureInitialized();
+      await svc.trackAppEntry();
+
+      final expiredAt = DateTime.now().toUtc().subtract(
+            const Duration(days: 8),
+          );
+      await prefs.setInt(
+        GuestSessionService.attributionCapturedAtKey,
+        expiredAt.millisecondsSinceEpoch,
+      );
+      GuestSessionService.setLaunchSnapshotCapturedAtForTest(expiredAt);
+
+      await svc.trackRouteOpened('/register');
+      final events = await queue.peekBatch(50);
+      final latest = events.last;
+      expect(latest.metadata.containsKey('utm_campaign'), isFalse);
+      expect(latest.metadata.containsKey('entry_route'), isFalse);
+    },
+  );
+
   test('ordinary navigation does not refresh the window', () async {
     final prefs = await _capture(_campaign(path: '/register'));
     final capturedAt = GuestSessionService.storedAttributionCapturedAt(prefs);
@@ -204,8 +238,9 @@ void main() {
     await GuestSessionService.captureFromLaunchUrl(prefs: prefs);
 
     expect(
-      GuestSessionService.storedAttributionCapturedAt(prefs)
-          ?.millisecondsSinceEpoch,
+      GuestSessionService.storedAttributionCapturedAt(
+        prefs,
+      )?.millisecondsSinceEpoch,
       agedMs,
       reason: 'only a campaign touch may reset the clock',
     );
@@ -253,19 +288,21 @@ void main() {
     );
   });
 
-  test('a device clock moved backwards does not expire a live campaign',
-      () async {
-    final prefs = await _capture(_campaign(path: '/register'));
-    await prefs.setInt(
-      GuestSessionService.attributionCapturedAtKey,
-      DateTime.now()
-          .toUtc()
-          .add(const Duration(days: 3))
-          .millisecondsSinceEpoch,
-    );
+  test(
+    'a device clock moved backwards does not expire a live campaign',
+    () async {
+      final prefs = await _capture(_campaign(path: '/register'));
+      await prefs.setInt(
+        GuestSessionService.attributionCapturedAtKey,
+        DateTime.now()
+            .toUtc()
+            .add(const Duration(days: 3))
+            .millisecondsSinceEpoch,
+      );
 
-    expect(GuestSessionService.isStoredAttributionFreshSync(prefs), isTrue);
-  });
+      expect(GuestSessionService.isStoredAttributionFreshSync(prefs), isTrue);
+    },
+  );
 
   test('the guest map funnel keeps working independently', () async {
     final prefs = await _capture(

@@ -86,9 +86,10 @@ class TelemetryService {
     return svc;
   }
 
-  TelemetryService._test(
-      {required TelemetryEventQueue queue, required TelemetrySender sender})
-      : _queue = queue,
+  TelemetryService._test({
+    required TelemetryEventQueue queue,
+    required TelemetrySender sender,
+  })  : _queue = queue,
         _sender = sender;
 
   Future<void> ensureInitialized() async {
@@ -201,16 +202,16 @@ class TelemetryService {
     setActiveScreen(screenName: screenName, screenRoute: screenRoute);
   }
 
-  void setActiveScreen({
-    required String screenName,
-    String? screenRoute,
-  }) {
-    unawaited(_setActiveScreenAsync(
-        screenName: screenName, screenRoute: screenRoute));
+  void setActiveScreen({required String screenName, String? screenRoute}) {
+    unawaited(
+      _setActiveScreenAsync(screenName: screenName, screenRoute: screenRoute),
+    );
   }
 
-  Future<void> _setActiveScreenAsync(
-      {required String screenName, String? screenRoute}) async {
+  Future<void> _setActiveScreenAsync({
+    required String screenName,
+    String? screenRoute,
+  }) async {
     await ensureInitialized();
     if (!_enabled) return;
 
@@ -255,35 +256,28 @@ class TelemetryService {
     if (!_enabled) return;
     await _trackOncePerSession(
       AppTelemetryEventTypes.onboardingComplete,
-      extra: {
-        'success': true,
-        'onboarding_reason': _clampText(reason, 64),
-      },
+      extra: {'success': true, 'onboarding_reason': _clampText(reason, 64)},
     );
   }
 
   Future<void> trackSignInAttempt({required String method}) async {
     await trackEvent(
       AppTelemetryEventTypes.signInAttempt,
-      extra: {
-        'method': _clampText(method, 32),
-        'success': false,
-      },
+      extra: {'method': _clampText(method, 32), 'success': false},
     );
   }
 
   Future<void> trackSignInSuccess({required String method}) async {
     await trackEvent(
       AppTelemetryEventTypes.signInSuccess,
-      extra: {
-        'method': _clampText(method, 32),
-        'success': true,
-      },
+      extra: {'method': _clampText(method, 32), 'success': true},
     );
   }
 
-  Future<void> trackSignInFailure(
-      {required String method, required String errorClass}) async {
+  Future<void> trackSignInFailure({
+    required String method,
+    required String errorClass,
+  }) async {
     await trackEvent(
       AppTelemetryEventTypes.signInFailure,
       extra: {
@@ -297,25 +291,21 @@ class TelemetryService {
   Future<void> trackSignUpAttempt({required String method}) async {
     await trackEvent(
       AppTelemetryEventTypes.signUpAttempt,
-      extra: {
-        'method': _clampText(method, 32),
-        'success': false,
-      },
+      extra: {'method': _clampText(method, 32), 'success': false},
     );
   }
 
   Future<void> trackSignUpSuccess({required String method}) async {
     await trackEvent(
       AppTelemetryEventTypes.signUpSuccess,
-      extra: {
-        'method': _clampText(method, 32),
-        'success': true,
-      },
+      extra: {'method': _clampText(method, 32), 'success': true},
     );
   }
 
-  Future<void> trackSignUpFailure(
-      {required String method, required String errorClass}) async {
+  Future<void> trackSignUpFailure({
+    required String method,
+    required String errorClass,
+  }) async {
     await trackEvent(
       AppTelemetryEventTypes.signUpFailure,
       extra: {
@@ -352,8 +342,10 @@ class TelemetryService {
     await trackEvent(AppTelemetryEventTypes.nearbyDiscoveryUsed);
   }
 
-  Future<void> trackArtworkViewed(String artworkId,
-      {String? institutionId}) async {
+  Future<void> trackArtworkViewed(
+    String artworkId, {
+    String? institutionId,
+  }) async {
     await trackEvent(
       AppTelemetryEventTypes.artworkViewed,
       extra: {
@@ -401,8 +393,11 @@ class TelemetryService {
     );
   }
 
-  Future<void> trackQrOpened(
-      {String? campaign, String? targetType, String? targetId}) async {
+  Future<void> trackQrOpened({
+    String? campaign,
+    String? targetType,
+    String? targetId,
+  }) async {
     await trackEvent(
       AppTelemetryEventTypes.qrOpened,
       extra: {
@@ -419,8 +414,9 @@ class TelemetryService {
   /// screen opened, a draft was made or a field was typed into. Those are not
   /// attempts and counting them would make the started -> submitted ratio
   /// describe UI curiosity rather than publishing.
-  Future<void> trackContributionStarted(
-      {required ContributionType type}) async {
+  Future<void> trackContributionStarted({
+    required ContributionType type,
+  }) async {
     await trackEvent(
       AppTelemetryEventTypes.contributionStarted,
       extra: _contributionDimensions(type),
@@ -492,8 +488,10 @@ class TelemetryService {
     );
   }
 
-  Future<void> trackExhibitionViewed(String exhibitionId,
-      {String? institutionId}) async {
+  Future<void> trackExhibitionViewed(
+    String exhibitionId, {
+    String? institutionId,
+  }) async {
     await trackEvent(
       AppTelemetryEventTypes.exhibitionViewed,
       extra: {
@@ -840,14 +838,17 @@ class TelemetryService {
     await _trackOncePerSession(AppTelemetryEventTypes.appEntry);
   }
 
-  Future<void> trackEvent(String eventType,
-      {Map<String, Object?> extra = const {}}) async {
+  Future<void> trackEvent(
+    String eventType, {
+    Map<String, Object?> extra = const {},
+  }) async {
     await ensureInitialized();
     if (!_enabled) return;
     final normalizedEventType = eventType.trim();
     if (!AppTelemetryEventTypes.allowed.contains(normalizedEventType)) return;
 
     _rotateSessionIfNeeded();
+    await _refreshEntryAttributionForEmission();
 
     final metadata = _buildMetadata(extra: extra);
     final payload = AppTelemetryEvent(
@@ -925,10 +926,10 @@ class TelemetryService {
     final durationMs = now.difference(enteredAt).inMilliseconds;
     if (durationMs <= 0) return;
 
+    await _refreshEntryAttributionForEmission();
+
     final metadata = _buildMetadata(
-      extra: {
-        'duration_ms': durationMs,
-      },
+      extra: {'duration_ms': durationMs},
       screenOverride: _screenName,
       screenRouteOverride: _screenRoute,
     );
@@ -945,8 +946,10 @@ class TelemetryService {
     await _queue.enqueue(event);
   }
 
-  Future<void> _trackOncePerSession(String eventType,
-      {Map<String, Object?> extra = const {}}) async {
+  Future<void> _trackOncePerSession(
+    String eventType, {
+    Map<String, Object?> extra = const {},
+  }) async {
     await ensureInitialized();
     if (!_enabled) return;
     _rotateSessionIfNeeded();
@@ -1011,6 +1014,21 @@ class TelemetryService {
 
     base.removeWhere((_, v) => v == null);
     return base;
+  }
+
+  /// A process can outlive the attribution window (a background mobile app or
+  /// an open web tab). Re-read the expiry-aware source immediately before an
+  /// emission so the cached initialization snapshot cannot keep attaching a
+  /// stale campaign after seven days.
+  Future<void> _refreshEntryAttributionForEmission() async {
+    if (_entryAttribution.isEmpty) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await GuestSessionService.pruneExpiredAttribution(prefs: prefs);
+      _entryAttribution = _loadEntryAttribution(prefs);
+    } catch (_) {
+      // Telemetry must remain non-blocking if attribution storage is absent.
+    }
   }
 
   /// Nouns that, as a whole key or as a trailing segment, mean the value is

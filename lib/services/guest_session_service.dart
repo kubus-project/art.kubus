@@ -107,6 +107,7 @@ class GuestSessionService {
   /// longer depends on when it happens to be read.
   static Map<String, String>? _launchSnapshot;
   static String? _entryRouteSnapshot;
+  static DateTime? _launchSnapshotCapturedAt;
   static Future<void>? _captureFuture;
   static Completer<void>? _platformInitialLinkCompleter;
 
@@ -145,6 +146,7 @@ class GuestSessionService {
       if (uri == null) return;
       _launchSnapshot = Map<String, String>.unmodifiable(uri.queryParameters);
       _entryRouteSnapshot = normalizeEntryRoute(uri.path);
+      _launchSnapshotCapturedAt = DateTime.now().toUtc();
     } catch (_) {
       // Leave unset; `_launchParams` falls back to reading `Uri.base`.
     }
@@ -155,6 +157,7 @@ class GuestSessionService {
   static void resetLaunchSnapshotForTest() {
     _launchSnapshot = null;
     _entryRouteSnapshot = null;
+    _launchSnapshotCapturedAt = null;
     _captureFuture = null;
     _platformInitialLinkCompleter = null;
   }
@@ -187,6 +190,34 @@ class GuestSessionService {
     } catch (_) {
       return const <String, String>{};
     }
+  }
+
+  static bool _isLaunchSnapshotAttributionFresh({DateTime? now}) {
+    if (_launchSnapshot == null && _entryRouteSnapshot == null) return false;
+    final capturedAt = _launchSnapshotCapturedAt;
+    if (capturedAt == null) return true;
+    final elapsed = (now ?? DateTime.now().toUtc()).difference(capturedAt);
+    if (elapsed.isNegative) return true;
+    return elapsed <= attributionWindow;
+  }
+
+  static Map<String, String> _attributionLaunchParams() {
+    if (_launchSnapshot != null) {
+      return _isLaunchSnapshotAttributionFresh()
+          ? _launchSnapshot!
+          : const <String, String>{};
+    }
+    if (!kIsWeb) return const <String, String>{};
+    try {
+      return Uri.base.queryParameters;
+    } catch (_) {
+      return const <String, String>{};
+    }
+  }
+
+  @visibleForTesting
+  static void setLaunchSnapshotCapturedAtForTest(DateTime? value) {
+    _launchSnapshotCapturedAt = value?.toUtc();
   }
 
   static String _clip(String value, int maxLen) =>
@@ -354,14 +385,15 @@ class GuestSessionService {
 
   /// Landing route for this visitor, preferring the persisted first-touch value.
   ///
-  /// The stored route belongs to the stored campaign touch and expires with it;
-  /// the live launch snapshot is by definition this session's landing, so it is
-  /// never subject to the window.
+  /// The stored route belongs to the stored campaign touch and expires with it.
+  /// A frozen launch snapshot uses the same window, because an open web tab or
+  /// suspended process can outlive the original acquisition touch.
   static String? entryRouteSync(SharedPreferences prefs) {
     if (isStoredAttributionFreshSync(prefs)) {
       final stored = (prefs.getString(entryRouteKey) ?? '').trim();
       if (stored.isNotEmpty) return stored;
     }
+    if (!_isLaunchSnapshotAttributionFresh()) return null;
     final snapshot = (_entryRouteSnapshot ?? '').trim();
     return snapshot.isEmpty ? null : snapshot;
   }
@@ -390,7 +422,8 @@ class GuestSessionService {
   }
 
   static String? entryIntentSync(SharedPreferences prefs) {
-    final fromUrl = (_launchParams()['intent'] ?? '').trim().toLowerCase();
+    final fromUrl =
+        (_attributionLaunchParams()['intent'] ?? '').trim().toLowerCase();
     if (intents.contains(fromUrl)) return fromUrl;
     if (!isStoredAttributionFreshSync(prefs)) return null;
     final stored = (prefs.getString(intentKey) ?? '').trim();
@@ -398,7 +431,7 @@ class GuestSessionService {
   }
 
   static Map<String, String> entryUtmSync(SharedPreferences prefs) {
-    final params = _launchParams();
+    final params = _attributionLaunchParams();
     final storedIsFresh = isStoredAttributionFreshSync(prefs);
     final out = <String, String>{};
     for (final key in utmKeys) {
