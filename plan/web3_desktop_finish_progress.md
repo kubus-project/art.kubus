@@ -23,7 +23,8 @@
 - [x] Phase B — DAO gating, shared workspace, native desktop composition, direct-route and transition tests.
 - [x] Phase C — desktop Digital Editions search, filters, reset, sort, grid/list renderers, details, and genuine list/unlist actions.
 - [x] Phase D — one wallet action model, three-tab information architecture, Owned Editions, duplicate removal, and lifecycle-safe provider consumption.
-- [ ] Phase E — full integration verification, visual QA, staging, and release workflow.
+- [x] Phase E — full integration verification, exact-artifact browser QA, and staging.
+- [ ] Release workflow — 0.7.4 metadata, production promotion, tag, mobile release, and reconciliation.
 
 ## Removed unsupported functionality
 
@@ -53,4 +54,6 @@
 - Release web build and browser smoke — passed locally and in PR CI.
 - Repository CI contracts — 41 passed.
 - Web QA — 27 passed.
-- Exact-SHA staging and release evidence will be appended after deployment.
+- Implementation PR #139 merged to `dev` as `932eaee74ee2b838b68799f5009d25d49bd125c7`.
+- Development deployment run `31416945051` promoted that exact SHA. Immutable artifact checksum/revision checks, protected Basic Auth, localized routing, staging noindex policy, and authenticated browser smoke passed.
+- Production, tag, mobile release, and branch-reconciliation evidence will be appended after release.
