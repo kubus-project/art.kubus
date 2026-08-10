@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:art_kubus/services/guest_session_service.dart';
 import 'package:art_kubus/core/shell_routes.dart';
+import 'package:art_kubus/services/telemetry/contribution_type.dart';
 import 'package:art_kubus/services/telemetry/kubus_client_context.dart';
 import 'package:art_kubus/services/telemetry/telemetry_event.dart';
 import 'package:art_kubus/services/telemetry/telemetry_event_queue.dart';
@@ -466,8 +467,8 @@ void main() {
           isNewAccount: true,
         );
         await svc.trackOnboardingComplete(reason: 'step_flow_complete');
-        await svc.trackContributionStarted(kind: 'marker');
-        await svc.trackContributionSubmitted(kind: 'marker');
+        await svc.trackContributionStarted(type: ContributionType.marker);
+        await svc.trackContributionSubmitted(type: ContributionType.marker);
 
         final events = await queue.peekBatch(200);
         const expectedStages = <String>{

@@ -19,17 +19,65 @@ class GuestSessionService {
   static const String entryRouteKey = 'kubus_entry_route_v1';
   static const String _utmPrefix = 'kubus_entry_utm_';
 
+  /// When the stored attribution touch happened, as epoch milliseconds UTC.
+  ///
+  /// Written by the same capture that writes the UTMs and the entry route, so
+  /// the whole touch ages as one unit.
+  static const String attributionCapturedAtKey =
+      'kubus_entry_attribution_at_v1';
+
+  /// How long an acquisition touch keeps attributing later activity.
+  ///
+  /// Without a bound, attribution lived in SharedPreferences until another
+  /// campaign replaced it, so a campaign that ran once could still be credited
+  /// with a contribution months later — and for a low-volume campaign set,
+  /// most installs never see a second touch to displace the first.
+  ///
+  /// Seven days covers the slowest path this product actually has: ad click →
+  /// email registration → verification (the mail can sit unread overnight) →
+  /// onboarding → first artwork, which the creator flow makes a multi-session
+  /// task because it needs finished images. It is not long enough to become
+  /// lifetime attribution.
+  static const Duration attributionWindow = Duration(days: 7);
+
+  /// App-home landing surfaces: the same shell in different guises.
+  ///
+  /// `/en` and `/sl` are the locale-prefixed roots. Neither this normaliser nor
+  /// the backend's collapses a locale prefix, so they are stored verbatim and
+  /// have to be listed — while they were missing, a campaign landing on
+  /// `https://app.kubus.site/en?utm_*` kept valid UTMs but lost its
+  /// `entry_route`, and the backend's direct-acquisition cohort requires that
+  /// route. Those clicks were attributable but never activatable.
+  static const Set<String> appHomeEntryRoutes = <String>{
+    '/',
+    '/en',
+    '/sl',
+    '/main',
+  };
+
+  /// Landing surfaces that mean account intent, and therefore direct
+  /// acquisition: `/register` explicitly, app home implicitly.
+  static const Set<String> directAcquisitionEntryRoutes = <String>{
+    '/register',
+    ...appHomeEntryRoutes,
+  };
+
+  /// The guest discovery surface.
+  static const String discoveryEntryRoute = '/map';
+
   /// Low-cardinality campaign landing dimensions accepted by telemetry.
   ///
   /// This intentionally is not the complete Flutter route table: entity ids,
   /// auth tokens and arbitrary paths must never become analytics dimensions.
-  /// Historical root/main acquisition links remain reportable alongside the
-  /// current discovery-map and direct-registration strategies.
+  /// `/onboarding` is deliberately absent — it is an authenticated
+  /// continuation, not an advertising destination.
+  ///
+  /// Mirrors `backend/src/config/campaignEntryRoutes.js`; a route missing from
+  /// either side is dropped, so `test/services/campaign_contract_test.dart`
+  /// asserts the two agree.
   static const Set<String> campaignEntryRoutes = <String>{
-    '/',
-    '/main',
-    '/map',
-    '/register',
+    ...directAcquisitionEntryRoutes,
+    discoveryEntryRoute,
   };
 
   static const List<String> utmKeys = <String>[
@@ -167,12 +215,28 @@ class GuestSessionService {
           await p.remove('$_utmPrefix$key');
         }
       }
+    } else {
+      // No new touch to replace the stored one, so an expired touch is simply
+      // gone. Doing this before the reads below keeps storage and the
+      // expiry-aware getters telling the same story.
+      await pruneExpiredAttribution(prefs: p);
     }
     for (final key in utmKeys) {
       final value = (params[key] ?? '').trim();
       if (value.isNotEmpty) {
         await p.setString('$_utmPrefix$key', _clip(value, 200));
       }
+    }
+
+    // Stamp the touch so it can age out. Only a real campaign touch resets the
+    // clock: ordinary in-app navigation never reaches here (capture reads the
+    // frozen launch URL, not the live one), and a launch without UTMs must not
+    // extend the previous campaign's window.
+    if (hasLaunchAttribution) {
+      await p.setInt(
+        attributionCapturedAtKey,
+        DateTime.now().toUtc().millisecondsSinceEpoch,
+      );
     }
 
     // Keep the route and structured campaign fields as one attribution touch.
@@ -187,10 +251,97 @@ class GuestSessionService {
     }
   }
 
+  /// When the stored acquisition touch was captured, if it was stamped.
+  static DateTime? storedAttributionCapturedAt(SharedPreferences prefs) {
+    try {
+      final ms = prefs.getInt(attributionCapturedAtKey);
+      if (ms == null || ms <= 0) return null;
+      return DateTime.fromMillisecondsSinceEpoch(ms, isUtc: true);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Whether persisted attribution is still inside [attributionWindow].
+  ///
+  /// An unstamped touch reads as fresh: it is either a legacy install that
+  /// predates the stamp or one written before [pruneExpiredAttribution] ran
+  /// this launch, and dropping it on sight would silently discard live
+  /// attribution on upgrade. Prune adopts it instead, which bounds it to one
+  /// window from that point.
+  ///
+  /// A capture timestamp in the future means the device clock moved backwards,
+  /// not that the touch is stale, so it also reads as fresh.
+  static bool isStoredAttributionFreshSync(
+    SharedPreferences prefs, {
+    DateTime? now,
+  }) {
+    final capturedAt = storedAttributionCapturedAt(prefs);
+    if (capturedAt == null) return true;
+    final elapsed = (now ?? DateTime.now().toUtc()).difference(capturedAt);
+    if (elapsed.isNegative) return true;
+    return elapsed <= attributionWindow;
+  }
+
+  static bool _hasStoredAttribution(SharedPreferences prefs) {
+    for (final key in utmKeys) {
+      if ((prefs.getString('$_utmPrefix$key') ?? '').isNotEmpty) return true;
+    }
+    if ((prefs.getString(entryRouteKey) ?? '').isNotEmpty) return true;
+    if ((prefs.getString(intentKey) ?? '').isNotEmpty) return true;
+    return false;
+  }
+
+  /// Drops an acquisition touch that has aged past [attributionWindow], and
+  /// stamps an unstamped one so it can age at all.
+  ///
+  /// Deliberately does not touch [guestModeKey]: guest mode is a UI mode that
+  /// outlives any single campaign, not attribution.
+  static Future<void> pruneExpiredAttribution({
+    SharedPreferences? prefs,
+    DateTime? now,
+  }) async {
+    try {
+      final p = prefs ?? await SharedPreferences.getInstance();
+      if (!_hasStoredAttribution(p)) return;
+      if (storedAttributionCapturedAt(p) == null) {
+        await p.setInt(
+          attributionCapturedAtKey,
+          (now ?? DateTime.now().toUtc()).millisecondsSinceEpoch,
+        );
+        return;
+      }
+      if (isStoredAttributionFreshSync(p, now: now)) return;
+      await clearAcquisitionAttribution(prefs: p);
+    } catch (_) {
+      // Attribution hygiene must never block startup.
+    }
+  }
+
+  /// Removes the whole stored acquisition touch as one unit, so no field can
+  /// outlive the campaign it belonged to.
+  static Future<void> clearAcquisitionAttribution({
+    SharedPreferences? prefs,
+  }) async {
+    final p = prefs ?? await SharedPreferences.getInstance();
+    for (final key in utmKeys) {
+      await p.remove('$_utmPrefix$key');
+    }
+    await p.remove(entryRouteKey);
+    await p.remove(intentKey);
+    await p.remove(attributionCapturedAtKey);
+  }
+
   /// Landing route for this visitor, preferring the persisted first-touch value.
+  ///
+  /// The stored route belongs to the stored campaign touch and expires with it;
+  /// the live launch snapshot is by definition this session's landing, so it is
+  /// never subject to the window.
   static String? entryRouteSync(SharedPreferences prefs) {
-    final stored = (prefs.getString(entryRouteKey) ?? '').trim();
-    if (stored.isNotEmpty) return stored;
+    if (isStoredAttributionFreshSync(prefs)) {
+      final stored = (prefs.getString(entryRouteKey) ?? '').trim();
+      if (stored.isNotEmpty) return stored;
+    }
     final snapshot = (_entryRouteSnapshot ?? '').trim();
     return snapshot.isEmpty ? null : snapshot;
   }
@@ -221,20 +372,26 @@ class GuestSessionService {
   static String? entryIntentSync(SharedPreferences prefs) {
     final fromUrl = (_launchParams()['intent'] ?? '').trim().toLowerCase();
     if (intents.contains(fromUrl)) return fromUrl;
+    if (!isStoredAttributionFreshSync(prefs)) return null;
     final stored = (prefs.getString(intentKey) ?? '').trim();
     return stored.isEmpty ? null : stored;
   }
 
   static Map<String, String> entryUtmSync(SharedPreferences prefs) {
     final params = _launchParams();
+    final storedIsFresh = isStoredAttributionFreshSync(prefs);
     final out = <String, String>{};
     for (final key in utmKeys) {
       // Prefer the persisted first-touch value; fall back to the live launch
       // URL so attribution is available even before captureFromLaunchUrl runs.
-      final stored = prefs.getString('$_utmPrefix$key');
-      if (stored != null && stored.isNotEmpty) {
-        out[key] = stored;
-        continue;
+      // An expired touch is skipped entirely rather than field by field, so a
+      // stale campaign can never blend into a live one.
+      if (storedIsFresh) {
+        final stored = prefs.getString('$_utmPrefix$key');
+        if (stored != null && stored.isNotEmpty) {
+          out[key] = stored;
+          continue;
+        }
       }
       final live = (params[key] ?? '').trim();
       if (live.isNotEmpty) out[key] = _clip(live, 200);
