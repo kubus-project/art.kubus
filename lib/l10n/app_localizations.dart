@@ -62,7 +62,17 @@ import 'app_localizations_sl.dart';
 /// be consistent with the languages listed in the AppLocalizations.supportedLocales
 /// property.
 abstract class AppLocalizations {
-  AppLocalizations(String locale) : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+  AppLocalizations(String locale)
+      : localeName = _safeCanonicalizedLocale(locale);
+
+  // Hand-applied after every `flutter gen-l10n`: the generator emits a bare
+  // `Intl.canonicalizedLocale(locale)`, which does not guard the temporary
+  // empty/"undefined" locale the web shell can provide during startup.
+  static String _safeCanonicalizedLocale(String locale) {
+    final raw = locale.trim();
+    if (raw.isEmpty || raw == 'undefined' || raw == 'null') return 'sl';
+    return intl.Intl.canonicalizedLocale(raw);
+  }
 
   final String localeName;
 
@@ -70,7 +80,8 @@ abstract class AppLocalizations {
     return Localizations.of<AppLocalizations>(context, AppLocalizations);
   }
 
-  static const LocalizationsDelegate<AppLocalizations> delegate = _AppLocalizationsDelegate();
+  static const LocalizationsDelegate<AppLocalizations> delegate =
+      _AppLocalizationsDelegate();
 
   /// A list of this localizations delegate along with the default localizations
   /// delegates.
@@ -82,7 +93,8 @@ abstract class AppLocalizations {
   /// Additional delegates can be added by appending to this list in
   /// MaterialApp. This list does not have to be used at all if a custom list
   /// of delegates is preferred or required.
-  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates = <LocalizationsDelegate<dynamic>>[
+  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
+      <LocalizationsDelegate<dynamic>>[
     delegate,
     GlobalMaterialLocalizations.delegate,
     GlobalCupertinoLocalizations.delegate,
@@ -327,7 +339,8 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Archive records for {artworkTitle} by {artistName}'**
-  String archiveObjectSeriesDefaultDescription(Object artworkTitle, Object artistName);
+  String archiveObjectSeriesDefaultDescription(
+      Object artworkTitle, Object artistName);
 
   /// No description provided for @archiveObjectSeriesCreateFailed.
   ///
@@ -375,7 +388,8 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Achievement unlocked\n{title}{extra}\n+{amount} {currency} recognition'**
-  String communityAchievementUnlockedToast(Object title, Object extra, Object amount, Object currency);
+  String communityAchievementUnlockedToast(
+      Object title, Object extra, Object amount, Object currency);
 
   /// No description provided for @communityViewAchievementsAction.
   ///
@@ -453,7 +467,8 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Archive record {status} for {title}'**
-  String recentActivityArchiveObjectStatusDescription(Object status, Object title);
+  String recentActivityArchiveObjectStatusDescription(
+      Object status, Object title);
 
   /// No description provided for @recentActivityFallbackArtworkTitle.
   ///
@@ -4599,7 +4614,8 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Account: {accountStatus} · Wallet: {walletStatus} · Access: {signerStatus}'**
-  String walletSessionStatusSummary(Object accountStatus, Object walletStatus, Object signerStatus);
+  String walletSessionStatusSummary(
+      Object accountStatus, Object walletStatus, Object signerStatus);
 
   /// No description provided for @walletActionSignInRequiredToast.
   ///
@@ -12711,7 +12727,8 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{token} · {amount} · {date}'**
-  String receiveTokenSidebarTransferSubtitle(Object token, Object amount, Object date);
+  String receiveTokenSidebarTransferSubtitle(
+      Object token, Object amount, Object date);
 
   /// No description provided for @sendTokenTitle.
   ///
@@ -12807,7 +12824,8 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{token} · {amount} · {date}'**
-  String sendTokenSidebarRecipientSubtitle(Object token, Object amount, Object date);
+  String sendTokenSidebarRecipientSubtitle(
+      Object token, Object amount, Object date);
 
   /// No description provided for @sendTokenSidebarSummaryTitle.
   ///
@@ -12981,7 +12999,8 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{amount} {token} submitted. Tx: {signature}'**
-  String sendTokenSendSuccessWithSignatureToast(Object amount, Object token, Object signature);
+  String sendTokenSendSuccessWithSignatureToast(
+      Object amount, Object token, Object signature);
 
   /// No description provided for @sendTokenSendFailedToast.
   ///
@@ -16065,7 +16084,8 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Open details for {title}, token {tokenId}'**
-  String marketplaceOpenCollectibleDetailsSemantic(Object title, Object tokenId);
+  String marketplaceOpenCollectibleDetailsSemantic(
+      Object title, Object tokenId);
 
   /// No description provided for @marketplaceShareTooltip.
   ///
@@ -16875,7 +16895,8 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Are you sure you want to delegate your {votingPower} voting power to {delegateName}?'**
-  String daoDelegateVotingPowerDialogBody(Object votingPower, Object delegateName);
+  String daoDelegateVotingPowerDialogBody(
+      Object votingPower, Object delegateName);
 
   /// No description provided for @daoDelegationBenefitsTitle.
   ///
@@ -20301,7 +20322,8 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Swap submitted: {fromToken} ? {toToken}. Tx: {signature}'**
-  String walletSwapSubmittedToastWithSignature(Object fromToken, Object toToken, Object signature);
+  String walletSwapSubmittedToastWithSignature(
+      Object fromToken, Object toToken, Object signature);
 
   /// No description provided for @walletTransactionConfirmationsLabel.
   ///
@@ -23715,7 +23737,8 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Activity was recorded on {activeBuckets} of {totalBuckets} buckets.'**
-  String analyticsRecommendationConsistencyDescription(Object activeBuckets, Object totalBuckets);
+  String analyticsRecommendationConsistencyDescription(
+      Object activeBuckets, Object totalBuckets);
 
   /// No description provided for @analyticsRecommendationReverseDecline.
   ///
@@ -24039,7 +24062,8 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{totalVotes} votes · {supportPct}% support'**
-  String daoProposalVotesSupportSummaryLabel(Object totalVotes, Object supportPct);
+  String daoProposalVotesSupportSummaryLabel(
+      Object totalVotes, Object supportPct);
 
   /// No description provided for @commonSearchHint.
   ///
@@ -26385,7 +26409,8 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{activeBuckets} of {totalBuckets} intervals recorded {metric}.'**
-  String analyticsInsightActivePatternDescription(Object activeBuckets, Object totalBuckets, Object metric);
+  String analyticsInsightActivePatternDescription(
+      Object activeBuckets, Object totalBuckets, Object metric);
 
   /// No description provided for @analyticsInsightPeakTitle.
   ///
@@ -26537,248 +26562,50 @@ abstract class AppLocalizations {
   /// **'Secure'**
   String get authSecureAccountBannerCta;
 
-  /// No description provided for @spatialProcessTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Process spatial capture'**
   String get spatialProcessTitle;
-
-  /// No description provided for @spatialProcessLocalTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'This kubus Node'**
   String get spatialProcessLocalTitle;
-
-  /// No description provided for @spatialProcessLocalPrivacy.
-  ///
-  /// In en, this message translates to:
-  /// **'Source capture stays on hardware you control.'**
   String get spatialProcessLocalPrivacy;
-
-  /// No description provided for @spatialProcessNetworkTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Kubus network'**
   String get spatialProcessNetworkTitle;
-
-  /// No description provided for @spatialProcessNetworkAvailable.
-  ///
-  /// In en, this message translates to:
-  /// **'{count} compatible nodes available'**
   String spatialProcessNetworkAvailable(int count);
-
-  /// No description provided for @spatialProcessNetworkPrivacy.
-  ///
-  /// In en, this message translates to:
-  /// **'The capture is encrypted in transit and processed temporarily by the selected provider node.'**
   String get spatialProcessNetworkPrivacy;
-
-  /// No description provided for @spatialProcessMaximumPrivacy.
-  ///
-  /// In en, this message translates to:
-  /// **'For maximum privacy, process locally.'**
   String get spatialProcessMaximumPrivacy;
-
-  /// No description provided for @spatialProcessNoLocalGpu.
-  ///
-  /// In en, this message translates to:
-  /// **'No compatible local GPU was found.'**
   String get spatialProcessNoLocalGpu;
-
-  /// No description provided for @spatialProcessKeepLocal.
-  ///
-  /// In en, this message translates to:
-  /// **'Keep capture locally'**
   String get spatialProcessKeepLocal;
-
-  /// No description provided for @spatialProcessStart.
-  ///
-  /// In en, this message translates to:
-  /// **'Start processing'**
   String get spatialProcessStart;
-
-  /// No description provided for @spatialProcessAutoSelect.
-  ///
-  /// In en, this message translates to:
-  /// **'Auto-select best node'**
   String get spatialProcessAutoSelect;
-
-  /// No description provided for @spatialProcessAdvanced.
-  ///
-  /// In en, this message translates to:
-  /// **'Choose a node'**
   String get spatialProcessAdvanced;
-
-  /// No description provided for @spatialProcessReady.
-  ///
-  /// In en, this message translates to:
-  /// **'Ready'**
   String get spatialProcessReady;
-
-  /// No description provided for @spatialProcessJobsAhead.
-  ///
-  /// In en, this message translates to:
-  /// **'{count} jobs ahead'**
   String spatialProcessJobsAhead(int count);
-
-  /// No description provided for @spatialProcessSuccessRate.
-  ///
-  /// In en, this message translates to:
-  /// **'{rate}% successful jobs'**
   String spatialProcessSuccessRate(Object rate);
-
-  /// No description provided for @spatialRemotePrivacyTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Use a Kubus network GPU?'**
   String get spatialRemotePrivacyTitle;
-
-  /// No description provided for @spatialRemotePrivacyBody.
-  ///
-  /// In en, this message translates to:
-  /// **'The capture is encrypted in transit and sent to the selected compute node. That node temporarily decrypts the source data to process the job. The source capture is not published to the public archive.'**
   String get spatialRemotePrivacyBody;
-
-  /// No description provided for @spatialRemotePrivacyConfirm.
-  ///
-  /// In en, this message translates to:
-  /// **'Continue with network GPU'**
   String get spatialRemotePrivacyConfirm;
-
-  /// No description provided for @spatialResultReviewTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Spatial result is ready'**
   String get spatialResultReviewTitle;
-
-  /// No description provided for @spatialResultReviewBody.
-  ///
-  /// In en, this message translates to:
-  /// **'Review the private result before publishing. Keeping it private acknowledges the completed compute job without adding it to the public archive.'**
   String get spatialResultReviewBody;
-
-  /// No description provided for @spatialResultKeepPrivate.
-  ///
-  /// In en, this message translates to:
-  /// **'Keep private'**
   String get spatialResultKeepPrivate;
-
-  /// No description provided for @spatialResultReject.
-  ///
-  /// In en, this message translates to:
-  /// **'Reject result'**
   String get spatialResultReject;
-
-  /// No description provided for @spatialResultPublish.
-  ///
-  /// In en, this message translates to:
-  /// **'Publish spatial archive'**
   String get spatialResultPublish;
-
-  /// No description provided for @kubusNodeCompute.
-  ///
-  /// In en, this message translates to:
-  /// **'Compute'**
   String get kubusNodeCompute;
-
-  /// No description provided for @kubusNodeComputeTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Compute network'**
   String get kubusNodeComputeTitle;
-
-  /// No description provided for @kubusNodeComputeBody.
-  ///
-  /// In en, this message translates to:
-  /// **'Offering your GPU is optional. Local jobs keep priority and archive contribution remains required.'**
   String get kubusNodeComputeBody;
-
-  /// No description provided for @kubusNodeOfferGpu.
-  ///
-  /// In en, this message translates to:
-  /// **'Offer GPU to Kubus network'**
   String get kubusNodeOfferGpu;
-
-  /// No description provided for @kubusNodeOfferGpuBody.
-  ///
-  /// In en, this message translates to:
-  /// **'Accept new compatible spatial jobs from other art.kubus users.'**
   String get kubusNodeOfferGpuBody;
-
-  /// No description provided for @kubusNodePauseRemoteJobs.
-  ///
-  /// In en, this message translates to:
-  /// **'Pause accepting new remote jobs'**
   String get kubusNodePauseRemoteJobs;
-
-  /// No description provided for @kubusNodeMaxRemoteJobs.
-  ///
-  /// In en, this message translates to:
-  /// **'Maximum concurrent remote jobs'**
   String get kubusNodeMaxRemoteJobs;
-
-  /// No description provided for @kubusNodeArchiveContribution.
-  ///
-  /// In en, this message translates to:
-  /// **'Archive contribution'**
   String get kubusNodeArchiveContribution;
-
-  /// No description provided for @kubusNodeComputeContribution.
-  ///
-  /// In en, this message translates to:
-  /// **'Compute contribution'**
   String get kubusNodeComputeContribution;
-
-  /// No description provided for @kubusNodePendingTotal.
-  ///
-  /// In en, this message translates to:
-  /// **'Pending total'**
   String get kubusNodePendingTotal;
-
-  /// No description provided for @kubusNodeSettlementPending.
-  ///
-  /// In en, this message translates to:
-  /// **'Rewards are currently recorded by the network. Settlement is not yet active.'**
   String get kubusNodeSettlementPending;
-
-  /// No description provided for @kubusNodeVerifiedArchiveCopy.
-  ///
-  /// In en, this message translates to:
-  /// **'KUB8 contribution records are calculated from verified public archive availability, healthy participation and successful retrieval.'**
   String get kubusNodeVerifiedArchiveCopy;
-
-  /// No description provided for @kubusNodeVerifiedComputeCopy.
-  ///
-  /// In en, this message translates to:
-  /// **'When you choose to offer spare GPU capacity, successfully completed and verified network compute jobs can contribute to your KUB8 reward record.'**
   String get kubusNodeVerifiedComputeCopy;
-
-  /// No description provided for @kubusNodeParticipationContributing.
-  ///
-  /// In en, this message translates to:
-  /// **'Contributing'**
   String get kubusNodeParticipationContributing;
-
-  /// No description provided for @kubusNodeParticipationDegraded.
-  ///
-  /// In en, this message translates to:
-  /// **'Degraded — existing jobs may finish'**
   String get kubusNodeParticipationDegraded;
-
-  /// No description provided for @kubusNodeParticipationLocked.
-  ///
-  /// In en, this message translates to:
-  /// **'Locked — archive participation required'**
   String get kubusNodeParticipationLocked;
-
-  /// No description provided for @kubusNodeRemoteJobsCompleted.
-  ///
-  /// In en, this message translates to:
-  /// **'Remote jobs completed'**
   String get kubusNodeRemoteJobsCompleted;
 }
 
-class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
+class _AppLocalizationsDelegate
+    extends LocalizationsDelegate<AppLocalizations> {
   const _AppLocalizationsDelegate();
 
   @override
@@ -26787,25 +26614,25 @@ class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> 
   }
 
   @override
-  bool isSupported(Locale locale) => <String>['en', 'sl'].contains(locale.languageCode);
+  bool isSupported(Locale locale) =>
+      <String>['en', 'sl'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
 }
 
 AppLocalizations lookupAppLocalizations(Locale locale) {
-
-
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
-    case 'en': return AppLocalizationsEn();
-    case 'sl': return AppLocalizationsSl();
+    case 'en':
+      return AppLocalizationsEn();
+    case 'sl':
+      return AppLocalizationsSl();
   }
 
   throw FlutterError(
-    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
-    'an issue with the localizations generation tool. Please file an issue '
-    'on GitHub with a reproducible sample app and the gen-l10n configuration '
-    'that was used.'
-  );
+      'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+      'an issue with the localizations generation tool. Please file an issue '
+      'on GitHub with a reproducible sample app and the gen-l10n configuration '
+      'that was used.');
 }
