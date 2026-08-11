@@ -357,8 +357,7 @@ class KubusTokenBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final visual = KubusTokenIdentity.resolve(context, symbol);
-    final onSurface =
-        onDark ? KubusColors.textPrimaryDark : scheme.onSurface;
+    final onSurface = onDark ? KubusColors.textPrimaryDark : scheme.onSurface;
 
     return Container(
       constraints: const BoxConstraints(minHeight: KubusSizes.chipMinHeight),

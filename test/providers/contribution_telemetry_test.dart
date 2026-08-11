@@ -302,6 +302,23 @@ void main() {
       ]);
     });
 
+    test('an event envelope without an identity is not activation', () async {
+      BackendApiService().setHttpClient(MockClient((request) async {
+        if (request.url.path == '/api/events' && request.method == 'POST') {
+          return _json(<String, Object?>{'success': true}, 201);
+        }
+        return http.Response('unexpected ${request.url.path}', 500);
+      }));
+
+      final provider = EventsProvider(telemetry: telemetry);
+      final created = await provider.createEvent(<String, dynamic>{
+        'title': 'Unidentified event',
+      });
+
+      expect(created, isNull);
+      expect(await contributions(), <String>['contribution_started:event']);
+    });
+
     test('updateEvent is not a new contribution', () async {
       BackendApiService().setHttpClient(MockClient((request) async {
         return _json(<String, Object?>{
@@ -528,7 +545,8 @@ void main() {
       );
     });
 
-    test('a legacy v1 flag suppresses at most one account', () async {
+    test('a legacy install-scoped flag does not suppress account milestones',
+        () async {
       SharedPreferences.setMockInitialValues(<String, Object>{
         'app_telemetry_first_contribution_v1': true,
       });
@@ -554,8 +572,9 @@ void main() {
           .toList(growable: false);
       expect(
         milestones.map((e) => e.actorUserId).toList(),
-        <String>[second],
-        reason: 'the flag claims the first account only, never all of them',
+        <String>[first, second],
+        reason:
+            'an unscoped legacy flag cannot be safely assigned to either account',
       );
     });
   });

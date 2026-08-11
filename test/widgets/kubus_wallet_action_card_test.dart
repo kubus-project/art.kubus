@@ -23,19 +23,16 @@ Widget _card({
 }
 
 void main() {
-  testWidgets('action cards in a rail share one height regardless of copy',
-      (tester) async {
+  testWidgets('action cards in a rail share one height regardless of copy', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
           body: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              _card(
-                title: 'Send',
-                subtitle: 'Move tokens',
-                color: Colors.red,
-              ),
+              _card(title: 'Send', subtitle: 'Move tokens', color: Colors.red),
               _card(
                 title: 'Secure wallet',
                 subtitle:
@@ -75,9 +72,7 @@ void main() {
       ),
     );
 
-    final title = tester.widget<Text>(
-      find.text('Connect an external wallet'),
-    );
+    final title = tester.widget<Text>(find.text('Connect an external wallet'));
     expect(title.maxLines, 1);
     expect(title.overflow, TextOverflow.ellipsis);
     expect(tester.takeException(), isNull);

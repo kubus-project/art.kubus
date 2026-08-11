@@ -2704,7 +2704,7 @@
   "walletHomeActionSend": "Send",
   "walletHomeActionReceive": "Receive",
   "walletHomeActionSwap": "Swap",
-  "walletHomeActionNfts": "Artifacts",
+  "walletHomeActionNfts": "Digital Editions",
   "walletHomeQuickActionsTitle": "Wallet actions",
   "walletHomeQuickActionsSubtitle": "Send, receive, swap, or open digital editions from one place when wallet tools are enabled.",
   "walletHomeSendAction": "Send",
@@ -2778,7 +2778,7 @@
   "walletHomeDesktopRecentActivityTitle": "Recent activity",
   "walletHomeDesktopTabAssets": "Assets",
   "walletHomeDesktopTabActivity": "Activity",
-  "walletHomeDesktopTabNfts": "Artifacts",
+  "walletHomeDesktopTabNfts": "Owned Editions",
   "walletHomeDesktopTabStaking": "Staking",
   "walletHomeNftLoadFailedTitle": "Could not load digital editions",
   "walletHomeNoCollectiblesDescription": "Digital editions will appear here when they are linked to this wallet.",
@@ -3916,6 +3916,7 @@
       "delegateName": {}
     }
   },
+  "daoDelegationFailedToast": "Unable to save the delegation. Try again.",
   "daoViewDelegationDetailsAction": "View Details",
   "daoDelegationActiveTitle": "Delegation Active",
   "daoDelegationDetailDelegateLabel": "Delegate",

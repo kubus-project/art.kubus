@@ -6792,7 +6792,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get walletHomeActionSwap => 'Zamenjaj';
 
   @override
-  String get walletHomeActionNfts => 'Artefakti';
+  String get walletHomeActionNfts => 'Digitalne izdaje';
 
   @override
   String get walletHomeQuickActionsTitle => 'Dejanja denarnice';
@@ -7008,7 +7008,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get walletHomeDesktopTabActivity => 'Dejavnost';
 
   @override
-  String get walletHomeDesktopTabNfts => 'Artefakti';
+  String get walletHomeDesktopTabNfts => 'Izdaje v lasti';
 
   @override
   String get walletHomeDesktopTabStaking => 'Zastavljanje';
@@ -9651,6 +9651,10 @@ class AppLocalizationsSl extends AppLocalizations {
   String daoDelegationSuccessToast(Object delegateName) {
     return 'Glasovalna moč je uspešno delegirana delegatu $delegateName';
   }
+
+  @override
+  String get daoDelegationFailedToast =>
+      'Delegacije ni bilo mogoÄe shraniti. Poskusi znova.';
 
   @override
   String get daoViewDelegationDetailsAction => 'Ogled podrobnosti';

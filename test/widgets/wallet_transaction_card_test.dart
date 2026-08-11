@@ -52,8 +52,9 @@ WalletTransaction _buildTransaction({
 }
 
 void main() {
-  testWidgets('does not show unknown finality chip when finality is unknown',
-      (tester) async {
+  testWidgets('does not show unknown finality chip when finality is unknown', (
+    tester,
+  ) async {
     final tx = _buildTransaction(
       signature: 'sig-unknown-finality',
       type: TransactionType.send,
@@ -80,37 +81,39 @@ void main() {
   });
 
   testWidgets(
-      'swap card uses swapTo fallback when incoming asset change is missing',
-      (tester) async {
-    final tx = _buildTransaction(
-      signature: 'sig-swap-fallback',
-      type: TransactionType.swap,
-      status: TransactionStatus.pending,
-      direction: WalletTransactionDirection.swap,
-      token: 'SOL',
-      amount: 1.25,
-      swapToToken: 'USDC',
-      swapToAmount: 12.5,
-      assetChanges: const <WalletTransactionAssetChange>[
-        WalletTransactionAssetChange(
-          symbol: 'SOL',
-          mint: 'native',
-          amount: -1.25,
-          isPrimary: true,
-          direction: WalletTransactionDirection.outgoing,
-          assetKind: WalletTransactionAssetKind.native,
-        ),
-      ],
-    );
+    'swap card uses swapTo fallback when incoming asset change is missing',
+    (tester) async {
+      final tx = _buildTransaction(
+        signature: 'sig-swap-fallback',
+        type: TransactionType.swap,
+        status: TransactionStatus.pending,
+        direction: WalletTransactionDirection.swap,
+        token: 'SOL',
+        amount: 1.25,
+        swapToToken: 'USDC',
+        swapToAmount: 12.5,
+        assetChanges: const <WalletTransactionAssetChange>[
+          WalletTransactionAssetChange(
+            symbol: 'SOL',
+            mint: 'native',
+            amount: -1.25,
+            isPrimary: true,
+            direction: WalletTransactionDirection.outgoing,
+            assetKind: WalletTransactionAssetKind.native,
+          ),
+        ],
+      );
 
-    await tester.pumpWidget(_wrap(WalletTransactionCard(transaction: tx)));
+      await tester.pumpWidget(_wrap(WalletTransactionCard(transaction: tx)));
 
-    expect(find.text('-1.2500 SOL'), findsOneWidget);
-    expect(find.text('+12.5000 USDC'), findsOneWidget);
-  });
+      expect(find.text('-1.2500 SOL'), findsOneWidget);
+      expect(find.text('+12.5000 USDC'), findsOneWidget);
+    },
+  );
 
-  testWidgets('related transaction row shows related status chip',
-      (tester) async {
+  testWidgets('related transaction row shows related status chip', (
+    tester,
+  ) async {
     final tx = _buildTransaction(
       signature: 'sig-related-status',
       type: TransactionType.send,
@@ -138,20 +141,16 @@ void main() {
     );
 
     await tester.pumpWidget(
-      _wrap(
-        WalletTransactionCard(
-          transaction: tx,
-          initiallyExpanded: true,
-        ),
-      ),
+      _wrap(WalletTransactionCard(transaction: tx, initiallyExpanded: true)),
     );
 
     expect(find.text('Team fee'), findsOneWidget);
     expect(find.text('Failed'), findsOneWidget);
   });
 
-  testWidgets('compact card lays out on a narrow phone without overflowing',
-      (tester) async {
+  testWidgets('compact card lays out on a narrow phone without overflowing', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(360, 780);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
@@ -211,8 +210,25 @@ void main() {
     );
   });
 
-  testWidgets('expanded signature row shows a truncated monospace value',
-      (tester) async {
+  testWidgets('stake transaction uses the teal wallet role', (tester) async {
+    final tx = _buildTransaction(
+      signature: 'sig-stake-role',
+      type: TransactionType.stake,
+      status: TransactionStatus.confirmed,
+      direction: WalletTransactionDirection.self,
+    );
+
+    await tester.pumpWidget(_wrap(WalletTransactionCard(transaction: tx)));
+
+    final stakeIcon = tester.widget<Icon>(
+      find.byIcon(Icons.lock_outline_rounded),
+    );
+    expect(stakeIcon.color, KubusColors.accentTealDark);
+  });
+
+  testWidgets('expanded signature row shows a truncated monospace value', (
+    tester,
+  ) async {
     const longSignature =
         '5x7Qk2mNqL9vTbYcWd3RfHgJ4pZaSeD6uVnB8oXiC1tMgKrEyPwQ2';
     final tx = _buildTransaction(
@@ -223,9 +239,7 @@ void main() {
     );
 
     await tester.pumpWidget(
-      _wrap(
-        WalletTransactionCard(transaction: tx, initiallyExpanded: true),
-      ),
+      _wrap(WalletTransactionCard(transaction: tx, initiallyExpanded: true)),
     );
     await tester.pumpAndSettle();
 

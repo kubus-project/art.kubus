@@ -6740,7 +6740,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletHomeActionSwap => 'Swap';
 
   @override
-  String get walletHomeActionNfts => 'Artifacts';
+  String get walletHomeActionNfts => 'Digital Editions';
 
   @override
   String get walletHomeQuickActionsTitle => 'Wallet actions';
@@ -6955,7 +6955,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletHomeDesktopTabActivity => 'Activity';
 
   @override
-  String get walletHomeDesktopTabNfts => 'Artifacts';
+  String get walletHomeDesktopTabNfts => 'Owned Editions';
 
   @override
   String get walletHomeDesktopTabStaking => 'Staking';
@@ -9574,6 +9574,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String daoDelegationSuccessToast(Object delegateName) {
     return 'Voting power successfully delegated to $delegateName';
   }
+
+  @override
+  String get daoDelegationFailedToast =>
+      'Unable to save the delegation. Try again.';
 
   @override
   String get daoViewDelegationDetailsAction => 'View Details';

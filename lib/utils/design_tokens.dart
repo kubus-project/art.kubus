@@ -328,16 +328,26 @@ class KubusTypography {
     // ThemeData text colors (fixes dark-mode regressions where GoogleFonts
     // defaults to light theme colors).
     return GoogleFonts.interTextTheme(const TextTheme()).copyWith(
-      displayLarge:
-          GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 32),
-      displayMedium:
-          GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 28),
-      displaySmall:
-          GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 24),
-      headlineMedium:
-          GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 20),
-      headlineSmall:
-          GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 18),
+      displayLarge: GoogleFonts.inter(
+        fontWeight: FontWeight.bold,
+        fontSize: 32,
+      ),
+      displayMedium: GoogleFonts.inter(
+        fontWeight: FontWeight.bold,
+        fontSize: 28,
+      ),
+      displaySmall: GoogleFonts.inter(
+        fontWeight: FontWeight.bold,
+        fontSize: 24,
+      ),
+      headlineMedium: GoogleFonts.inter(
+        fontWeight: FontWeight.w700,
+        fontSize: 20,
+      ),
+      headlineSmall: GoogleFonts.inter(
+        fontWeight: FontWeight.w600,
+        fontSize: 18,
+      ),
       titleLarge: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 18),
       titleMedium: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 16),
       bodyLarge: GoogleFonts.inter(fontWeight: FontWeight.w400, fontSize: 16),
@@ -609,30 +619,20 @@ class KubusTextStyles {
   static TextStyle get detailSectionTitle =>
       sectionTitle.copyWith(fontWeight: FontWeight.w700);
 
-  static TextStyle get detailCardTitle =>
-      KubusTypography.textTheme.bodyMedium!.copyWith(
-        fontSize: 15,
-        fontWeight: FontWeight.w600,
-      );
+  static TextStyle get detailCardTitle => KubusTypography.textTheme.bodyMedium!
+      .copyWith(fontSize: 15, fontWeight: FontWeight.w600);
 
-  static TextStyle get detailBody =>
-      KubusTypography.textTheme.bodyMedium!.copyWith(
-        height: 1.5,
-        fontWeight: FontWeight.w400,
-      );
+  static TextStyle get detailBody => KubusTypography.textTheme.bodyMedium!
+      .copyWith(height: 1.5, fontWeight: FontWeight.w400);
 
   static TextStyle get detailCaption =>
       screenSubtitle.copyWith(fontSize: 13, fontWeight: FontWeight.w400);
 
-  static TextStyle get detailLabel =>
-      KubusTypography.textTheme.labelMedium!.copyWith(
-        fontWeight: FontWeight.w500,
-      );
+  static TextStyle get detailLabel => KubusTypography.textTheme.labelMedium!
+      .copyWith(fontWeight: FontWeight.w500);
 
-  static TextStyle get detailButton =>
-      KubusTypography.textTheme.labelLarge!.copyWith(
-        fontWeight: FontWeight.w600,
-      );
+  static TextStyle get detailButton => KubusTypography.textTheme.labelLarge!
+      .copyWith(fontWeight: FontWeight.w600);
 }
 
 class KubusGradients {
@@ -697,10 +697,7 @@ class KubusGradients {
   );
 
   static const LinearGradient authDark = LinearGradient(
-    colors: [
-      Color(0xFF05070A),
-      Color(0xFF102A43),
-    ],
+    colors: [Color(0xFF05070A), Color(0xFF102A43)],
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
   );
@@ -709,7 +706,8 @@ class KubusGradients {
     colors: [
       Color(0xFFFFFFFF),
       Color(
-          0xFFE6F0FF), // Subtle blue-white wash (prevents flat whitinstancee look)
+        0xFFE6F0FF,
+      ), // Subtle blue-white wash (prevents flat whitinstancee look)
     ],
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
@@ -717,9 +715,7 @@ class KubusGradients {
 
   static BoxDecoration scaffoldDecoration(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return BoxDecoration(
-      gradient: isDark ? darkBackground : lightBackground,
-    );
+    return BoxDecoration(gradient: isDark ? darkBackground : lightBackground);
   }
 
   // --- Animated Gradient Color Stops ---
@@ -754,11 +750,7 @@ class KubusGradients {
 
   /// Shimmer overlay gradient for glass effects
   static const LinearGradient glassShimmer = LinearGradient(
-    colors: [
-      Color(0x00FFFFFF),
-      Color(0x15FFFFFF),
-      Color(0x00FFFFFF),
-    ],
+    colors: [Color(0x00FFFFFF), Color(0x15FFFFFF), Color(0x00FFFFFF)],
     stops: [0.0, 0.5, 1.0],
     begin: Alignment(-1.5, -1.5),
     end: Alignment(1.5, 1.5),
@@ -848,8 +840,9 @@ class KubusBorders {
 
   static BorderSide focusSide(BuildContext context, {Color? accent}) =>
       BorderSide(
-        color: (accent ?? Theme.of(context).colorScheme.primary)
-            .withValues(alpha: 0.70),
+        color: (accent ?? Theme.of(context).colorScheme.primary).withValues(
+          alpha: 0.70,
+        ),
         width: emphasisWidth,
       );
 
@@ -858,8 +851,9 @@ class KubusBorders {
 
   static BorderSide activeSide(BuildContext context, {Color? accent}) =>
       BorderSide(
-        color: (accent ?? Theme.of(context).colorScheme.primary)
-            .withValues(alpha: 0.85),
+        color: (accent ?? Theme.of(context).colorScheme.primary).withValues(
+          alpha: 0.85,
+        ),
         width: emphasisWidth,
       );
 

@@ -427,14 +427,12 @@ class KubusWalletActionCard extends StatelessWidget {
                     ? SizedBox(
                         width: iconSize,
                         height: iconSize,
-                        child:
-                            InlineLoading(tileSize: 4, color: effectiveColor),
+                        child: InlineLoading(
+                          tileSize: 4,
+                          color: effectiveColor,
+                        ),
                       )
-                    : Icon(
-                        icon,
-                        color: effectiveColor,
-                        size: iconSize,
-                      ),
+                    : Icon(icon, color: effectiveColor, size: iconSize),
               ),
               const SizedBox(height: KubusSpacing.md),
               Column(
@@ -476,10 +474,7 @@ class KubusWalletActionCard extends StatelessWidget {
 }
 
 class KubusWalletStatsStrip extends StatelessWidget {
-  const KubusWalletStatsStrip({
-    super.key,
-    required this.items,
-  });
+  const KubusWalletStatsStrip({super.key, required this.items});
 
   final List<KubusWalletStatsStripItem> items;
 
@@ -523,14 +518,10 @@ class KubusWalletStatsStrip extends StatelessWidget {
 
         return Column(
           children: <Widget>[
-            Row(
-              children: children.take(2).toList(),
-            ),
+            Row(children: children.take(2).toList()),
             if (items.length > 2) ...<Widget>[
               const SizedBox(height: KubusSpacing.md),
-              Row(
-                children: children.skip(2).toList(),
-              ),
+              Row(children: children.skip(2).toList()),
             ],
           ],
         );
@@ -552,10 +543,7 @@ class KubusWalletStatsStripItem {
 }
 
 class _KubusWalletStatTile extends StatelessWidget {
-  const _KubusWalletStatTile({
-    required this.item,
-    required this.accent,
-  });
+  const _KubusWalletStatTile({required this.item, required this.accent});
 
   final KubusWalletStatsStripItem item;
   final Color accent;
@@ -569,9 +557,7 @@ class _KubusWalletStatTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: accent.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(KubusRadius.md),
-        border: Border.all(
-          color: accent.withValues(alpha: 0.18),
-        ),
+        border: Border.all(color: accent.withValues(alpha: 0.18)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

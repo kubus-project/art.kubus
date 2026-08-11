@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart' show kIsWeb, visibleForTesting;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -105,11 +107,29 @@ class GuestSessionService {
   /// longer depends on when it happens to be read.
   static Map<String, String>? _launchSnapshot;
   static String? _entryRouteSnapshot;
+  static DateTime? _launchSnapshotCapturedAt;
   static Future<void>? _captureFuture;
+  static Completer<void>? _platformInitialLinkCompleter;
 
   /// Whether a platform launch URL has been frozen for this process.
   /// Mobile receives this only when initial-route dispatch supplies it.
   static bool get hasLaunchSnapshot => _launchSnapshot != null;
+
+  /// Register the Android/iOS initial-link probe before the widget tree starts.
+  /// Attribution telemetry can then wait for the asynchronous app-links result
+  /// without delaying UI startup or prematurely recording a bare entry.
+  static void expectPlatformInitialLinkResolution() {
+    if (kIsWeb) return;
+    _platformInitialLinkCompleter ??= Completer<void>();
+  }
+
+  static Future<void> waitForPlatformInitialLinkResolution() =>
+      _platformInitialLinkCompleter?.future ?? Future<void>.value();
+
+  static void completePlatformInitialLinkResolution() {
+    final completer = _platformInitialLinkCompleter;
+    if (completer != null && !completer.isCompleted) completer.complete();
+  }
 
   /// Freeze the launch URL. Called first thing in `main()`, before `runApp` and
   /// before any `await`, so no navigation can have rewritten the URL yet.
@@ -126,6 +146,7 @@ class GuestSessionService {
       if (uri == null) return;
       _launchSnapshot = Map<String, String>.unmodifiable(uri.queryParameters);
       _entryRouteSnapshot = normalizeEntryRoute(uri.path);
+      _launchSnapshotCapturedAt = DateTime.now().toUtc();
     } catch (_) {
       // Leave unset; `_launchParams` falls back to reading `Uri.base`.
     }
@@ -136,7 +157,9 @@ class GuestSessionService {
   static void resetLaunchSnapshotForTest() {
     _launchSnapshot = null;
     _entryRouteSnapshot = null;
+    _launchSnapshotCapturedAt = null;
     _captureFuture = null;
+    _platformInitialLinkCompleter = null;
   }
 
   /// The route the visitor landed on, without query or fragment.
@@ -167,6 +190,34 @@ class GuestSessionService {
     } catch (_) {
       return const <String, String>{};
     }
+  }
+
+  static bool _isLaunchSnapshotAttributionFresh({DateTime? now}) {
+    if (_launchSnapshot == null && _entryRouteSnapshot == null) return false;
+    final capturedAt = _launchSnapshotCapturedAt;
+    if (capturedAt == null) return true;
+    final elapsed = (now ?? DateTime.now().toUtc()).difference(capturedAt);
+    if (elapsed.isNegative) return true;
+    return elapsed <= attributionWindow;
+  }
+
+  static Map<String, String> _attributionLaunchParams() {
+    if (_launchSnapshot != null) {
+      return _isLaunchSnapshotAttributionFresh()
+          ? _launchSnapshot!
+          : const <String, String>{};
+    }
+    if (!kIsWeb) return const <String, String>{};
+    try {
+      return Uri.base.queryParameters;
+    } catch (_) {
+      return const <String, String>{};
+    }
+  }
+
+  @visibleForTesting
+  static void setLaunchSnapshotCapturedAtForTest(DateTime? value) {
+    _launchSnapshotCapturedAt = value?.toUtc();
   }
 
   static String _clip(String value, int maxLen) =>
@@ -262,13 +313,7 @@ class GuestSessionService {
     }
   }
 
-  /// Whether a touch captured at [capturedAt] is still inside
-  /// [attributionWindow].
-  ///
-  /// The single definition of "still attributing", so a caller holding an
-  /// in-memory copy of the attribution ages it by exactly the same rule as one
-  /// reading storage. A long-lived web tab is the case that makes this matter:
-  /// it can cross the boundary without ever re-reading SharedPreferences.
+  /// Whether persisted attribution is still inside [attributionWindow].
   ///
   /// An unstamped touch reads as fresh: it is either a legacy install that
   /// predates the stamp or one written before [pruneExpiredAttribution] ran
@@ -278,19 +323,16 @@ class GuestSessionService {
   ///
   /// A capture timestamp in the future means the device clock moved backwards,
   /// not that the touch is stale, so it also reads as fresh.
-  static bool isAttributionTouchFresh(DateTime? capturedAt, {DateTime? now}) {
+  static bool isStoredAttributionFreshSync(
+    SharedPreferences prefs, {
+    DateTime? now,
+  }) {
+    final capturedAt = storedAttributionCapturedAt(prefs);
     if (capturedAt == null) return true;
     final elapsed = (now ?? DateTime.now().toUtc()).difference(capturedAt);
     if (elapsed.isNegative) return true;
     return elapsed <= attributionWindow;
   }
-
-  /// Whether persisted attribution is still inside [attributionWindow].
-  static bool isStoredAttributionFreshSync(
-    SharedPreferences prefs, {
-    DateTime? now,
-  }) =>
-      isAttributionTouchFresh(storedAttributionCapturedAt(prefs), now: now);
 
   static bool _hasStoredAttribution(SharedPreferences prefs) {
     for (final key in utmKeys) {
@@ -343,14 +385,15 @@ class GuestSessionService {
 
   /// Landing route for this visitor, preferring the persisted first-touch value.
   ///
-  /// The stored route belongs to the stored campaign touch and expires with it;
-  /// the live launch snapshot is by definition this session's landing, so it is
-  /// never subject to the window.
+  /// The stored route belongs to the stored campaign touch and expires with it.
+  /// A frozen launch snapshot uses the same window, because an open web tab or
+  /// suspended process can outlive the original acquisition touch.
   static String? entryRouteSync(SharedPreferences prefs) {
     if (isStoredAttributionFreshSync(prefs)) {
       final stored = (prefs.getString(entryRouteKey) ?? '').trim();
       if (stored.isNotEmpty) return stored;
     }
+    if (!_isLaunchSnapshotAttributionFresh()) return null;
     final snapshot = (_entryRouteSnapshot ?? '').trim();
     return snapshot.isEmpty ? null : snapshot;
   }
@@ -379,7 +422,8 @@ class GuestSessionService {
   }
 
   static String? entryIntentSync(SharedPreferences prefs) {
-    final fromUrl = (_launchParams()['intent'] ?? '').trim().toLowerCase();
+    final fromUrl =
+        (_attributionLaunchParams()['intent'] ?? '').trim().toLowerCase();
     if (intents.contains(fromUrl)) return fromUrl;
     if (!isStoredAttributionFreshSync(prefs)) return null;
     final stored = (prefs.getString(intentKey) ?? '').trim();
@@ -387,7 +431,7 @@ class GuestSessionService {
   }
 
   static Map<String, String> entryUtmSync(SharedPreferences prefs) {
-    final params = _launchParams();
+    final params = _attributionLaunchParams();
     final storedIsFresh = isStoredAttributionFreshSync(prefs);
     final out = <String, String>{};
     for (final key in utmKeys) {

@@ -19,8 +19,9 @@ Future<void> _pumpProbe(WidgetTester tester) async {
 
 void main() {
   group('KubusTokenIdentity', () {
-    testWidgets('KUB8 and SOL carry distinct fixed brand identities',
-        (tester) async {
+    testWidgets('KUB8 and SOL carry distinct fixed brand identities', (
+      tester,
+    ) async {
       await _pumpProbe(tester);
 
       final kub8 = _resolve(tester, 'kub8');
@@ -37,8 +38,9 @@ void main() {
       expect(kub8.accent, isNot(sol.accent));
     });
 
-    testWidgets('unknown symbols get a stable accent and initials glyph',
-        (tester) async {
+    testWidgets('unknown symbols get a stable accent and initials glyph', (
+      tester,
+    ) async {
       await _pumpProbe(tester);
 
       final first = _resolve(tester, 'USDC');
@@ -57,14 +59,8 @@ void main() {
           const Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              KubusTokenAvatar(
-                symbol: 'KUB8',
-                size: KubusTokenAvatarSize.sm,
-              ),
-              KubusTokenAvatar(
-                symbol: 'SOL',
-                size: KubusTokenAvatarSize.lg,
-              ),
+              KubusTokenAvatar(symbol: 'KUB8', size: KubusTokenAvatarSize.sm),
+              KubusTokenAvatar(symbol: 'SOL', size: KubusTokenAvatarSize.lg),
             ],
           ),
         ),

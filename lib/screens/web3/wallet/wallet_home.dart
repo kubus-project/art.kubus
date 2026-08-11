@@ -43,8 +43,10 @@ class _WalletHomeState extends State<WalletHome> {
     super.initState();
     // Track this screen visit for quick actions
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<NavigationProvider>(context, listen: false)
-          .trackScreenVisit('wallet');
+      Provider.of<NavigationProvider>(
+        context,
+        listen: false,
+      ).trackScreenVisit('wallet');
     });
   }
 
@@ -94,10 +96,9 @@ class _WalletHomeState extends State<WalletHome> {
                   Text(
                     l10n.walletHomeLoadingLabel,
                     style: TextStyle(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.7),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.7),
                       fontSize: 16,
                     ),
                   ),
@@ -126,8 +127,10 @@ class _WalletHomeState extends State<WalletHome> {
               ),
               actions: [
                 IconButton(
-                  icon: Icon(Icons.settings,
-                      color: Theme.of(context).colorScheme.onSurface),
+                  icon: Icon(
+                    Icons.settings,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
                   onPressed: _showWalletSettings,
                 ),
               ],
@@ -135,7 +138,9 @@ class _WalletHomeState extends State<WalletHome> {
             body: Center(
               child: Padding(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 16.0, vertical: 24.0),
+                  horizontal: 16.0,
+                  vertical: 24.0,
+                ),
                 child: SizedBox(
                   width: double.infinity,
                   child: EmptyStateCard(
@@ -151,16 +156,20 @@ class _WalletHomeState extends State<WalletHome> {
                         ? l10n.walletHomeRestoreWalletAction
                         : l10n.authConnectWalletButton,
                     onAction: () {
-                      final walletProvider =
-                          Provider.of<WalletProvider>(context, listen: false);
+                      final walletProvider = Provider.of<WalletProvider>(
+                        context,
+                        listen: false,
+                      );
                       if (!walletProvider.hasWalletIdentity) {
                         Navigator.pushReplacementNamed(
-                            context, '/connect-wallet');
+                          context,
+                          '/connect-wallet',
+                        );
                       } else {
                         ScaffoldMessenger.of(context).showKubusSnackBar(
                           SnackBar(
-                              content:
-                                  Text(l10n.walletHomeAlreadyConnectedToast)),
+                            content: Text(l10n.walletHomeAlreadyConnectedToast),
+                          ),
                         );
                       }
                     },
@@ -194,8 +203,10 @@ class _WalletHomeState extends State<WalletHome> {
                 ),
                 actions: [
                   IconButton(
-                    icon: Icon(Icons.settings,
-                        color: Theme.of(context).colorScheme.onSurface),
+                    icon: Icon(
+                      Icons.settings,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
                     onPressed: _showWalletSettings,
                   ),
                 ],
@@ -271,14 +282,9 @@ class _WalletHomeState extends State<WalletHome> {
                       ],
                     )
                   else ...<Widget>[
-                    _buildTokensCard(
-                      tokens: tokens,
-                      isCompact: isCompact,
-                    ),
+                    _buildTokensCard(tokens: tokens, isCompact: isCompact),
                     const SizedBox(height: KubusSpacing.lg),
-                    _buildRecentTransactionsCard(
-                      isSmallScreen: isCompact,
-                    ),
+                    _buildRecentTransactionsCard(isSmallScreen: isCompact),
                   ],
                   const SizedBox(height: KubusSpacing.lg),
                   _buildSecurityZone(
@@ -287,10 +293,7 @@ class _WalletHomeState extends State<WalletHome> {
                   ),
                 ],
                 sideChildren: <Widget>[
-                  WalletCustodyStatusPanel(
-                    authority: authority,
-                    compact: true,
-                  ),
+                  WalletCustodyStatusPanel(authority: authority, compact: true),
                   const SizedBox(height: KubusSpacing.lg),
                   KubusWalletSectionCard(
                     title: l10n.walletHomeDesktopSurfaceLabel,
@@ -374,8 +377,9 @@ class _WalletHomeState extends State<WalletHome> {
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(KubusRadius.md),
-        border:
-            Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.2)),
+        border: Border.all(
+          color: theme.colorScheme.outline.withValues(alpha: 0.2),
+        ),
         color: theme.colorScheme.surfaceContainerHighest,
       ),
       child: Image.network(
@@ -392,7 +396,11 @@ class _WalletHomeState extends State<WalletHome> {
             child: SizedBox(
               width: 18,
               height: 18,
-              child: InlineLoading(tileSize: 4, progress: progress, color: theme.colorScheme.primary),
+              child: InlineLoading(
+                tileSize: 4,
+                progress: progress,
+                color: theme.colorScheme.primary,
+              ),
             ),
           );
         },
@@ -414,15 +422,17 @@ class _WalletHomeState extends State<WalletHome> {
   // Helper methods to get specific token balances
   double _getKub8Balance() {
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-    final kub8Tokens = walletProvider.tokens
-        .where((token) => token.symbol.toUpperCase() == 'KUB8');
+    final kub8Tokens = walletProvider.tokens.where(
+      (token) => token.symbol.toUpperCase() == 'KUB8',
+    );
     return kub8Tokens.isNotEmpty ? kub8Tokens.first.balance : 0.0;
   }
 
   double _getSolBalance() {
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-    final solTokens = walletProvider.tokens
-        .where((token) => token.symbol.toUpperCase() == 'SOL');
+    final solTokens = walletProvider.tokens.where(
+      (token) => token.symbol.toUpperCase() == 'SOL',
+    );
     return solTokens.isNotEmpty ? solTokens.first.balance : 0.0;
   }
 
@@ -523,8 +533,9 @@ class _WalletHomeState extends State<WalletHome> {
                             ),
                           ),
                           Padding(
-                            padding:
-                                const EdgeInsets.only(bottom: KubusSpacing.sm),
+                            padding: const EdgeInsets.only(
+                              bottom: KubusSpacing.sm,
+                            ),
                             child: Text(
                               'KUB8',
                               style: KubusTextStyles.detailCardTitle.copyWith(
@@ -714,8 +725,9 @@ class _WalletHomeState extends State<WalletHome> {
                                   overflow: TextOverflow.ellipsis,
                                   style:
                                       KubusTextStyles.detailCardTitle.copyWith(
-                                    color:
-                                        Theme.of(context).colorScheme.onSurface,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurface,
                                   ),
                                 ),
                                 const SizedBox(height: KubusSpacing.xxs),
@@ -747,8 +759,9 @@ class _WalletHomeState extends State<WalletHome> {
                                   overflow: TextOverflow.ellipsis,
                                   style:
                                       KubusTextStyles.detailCardTitle.copyWith(
-                                    color:
-                                        Theme.of(context).colorScheme.onSurface,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurface,
                                   ),
                                 ),
                                 const SizedBox(height: KubusSpacing.xxs),
@@ -853,10 +866,9 @@ class _WalletHomeState extends State<WalletHome> {
           Text(
             l10n.walletSecurityBackendBackupClarifier,
             style: KubusTextStyles.detailBody.copyWith(
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.72),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.72),
             ),
           ),
         ],
@@ -895,15 +907,15 @@ class _WalletHomeState extends State<WalletHome> {
   }
 
   void _openReceiveScreen() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (context) => const ReceiveTokenScreen()),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (context) => const ReceiveTokenScreen()));
   }
 
   void _openNftGallery() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (context) => const NFTGallery()),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (context) => const NFTGallery()));
   }
 
   void _openSendScreen(WalletProvider walletProvider, bool canTransact) {
@@ -911,9 +923,9 @@ class _WalletHomeState extends State<WalletHome> {
       _handleReadOnlyReconnect(walletProvider);
       return;
     }
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (context) => const SendTokenScreen()),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (context) => const SendTokenScreen()));
   }
 
   void _openSwapScreen(WalletProvider walletProvider, bool canTransact) {
@@ -921,15 +933,15 @@ class _WalletHomeState extends State<WalletHome> {
       _handleReadOnlyReconnect(walletProvider);
       return;
     }
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (context) => const TokenSwap()),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (context) => const TokenSwap()));
   }
 
   void _showWalletSettings() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (context) => const SettingsScreen()),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (context) => const SettingsScreen()));
   }
 
   void _showTransactionHistorySheet() {
@@ -942,8 +954,9 @@ class _WalletHomeState extends State<WalletHome> {
       isScrollControlled: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius:
-            BorderRadius.vertical(top: Radius.circular(KubusRadius.xl)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(KubusRadius.xl),
+        ),
       ),
       builder: (context) {
         return SafeArea(

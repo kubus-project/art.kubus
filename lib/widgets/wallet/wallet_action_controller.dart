@@ -6,11 +6,7 @@ import '../../providers/wallet_provider.dart';
 import '../../utils/kubus_color_roles.dart';
 import 'kubus_wallet_shell.dart';
 
-enum WalletActionSurface {
-  walletHome,
-  desktopWallet,
-  secureWallet,
-}
+enum WalletActionSurface { walletHome, desktopWallet, secureWallet }
 
 class WalletActionController {
   const WalletActionController._();
