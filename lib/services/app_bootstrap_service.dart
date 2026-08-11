@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../config/config.dart';
 import '../providers/app_mode_provider.dart';
+import '../providers/availability_operator_provider.dart';
 import '../providers/artwork_provider.dart';
 import '../providers/cache_provider.dart';
 import '../providers/collectibles_provider.dart';
@@ -61,6 +62,8 @@ class AppBootstrapService {
     final presenceProvider = context.read<PresenceProvider>();
     final markerManagementProvider = context.read<MarkerManagementProvider>();
     final kubusNodeProvider = context.read<KubusNodeProvider>();
+    final availabilityOperatorProvider =
+        context.read<AvailabilityOperatorProvider>();
 
     await _runTask('wallet_init', walletProvider.initialize);
     await _runTask('app_mode', appModeProvider.initialize);
@@ -92,6 +95,15 @@ class AppBootstrapService {
       _runTask('presence', presenceProvider.initialize),
       if (AppConfig.isFeatureEnabled('availabilityNodes'))
         _runTask('kubus_node', kubusNodeProvider.initialize),
+      if (AppConfig.isFeatureEnabled('availabilityNodes') &&
+          hasAuth &&
+          (resolvedWallet ?? '').trim().isNotEmpty)
+        _runTask(
+          'availability_operator',
+          () => availabilityOperatorProvider.loadTokens(
+            walletAddress: resolvedWallet!.trim(),
+          ),
+        ),
       _runTask(
         'tasks',
         () => hasAuth

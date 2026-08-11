@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 enum KubusNodeConnectionState {
   unpaired,
   connecting,
@@ -19,6 +21,43 @@ class KubusNodePairingPayload {
   final String secret;
   final String? fingerprint;
   final String? label;
+
+  /// Reads a scanned or pasted pairing code.
+  ///
+  /// The node's GUI encodes its QR as `kubus-node://pair?e=…&s=…&k=…`, which is
+  /// what a camera returns. The JSON form is still accepted because it is what
+  /// the node's pairing endpoint returns verbatim, and an operator who copies
+  /// that response by hand should not be told it is invalid.
+  factory KubusNodePairingPayload.parse(String raw) {
+    final text = raw.trim();
+    if (text.isEmpty) throw const FormatException('Empty pairing code');
+    if (text.startsWith('kubus-node://')) {
+      final uri = Uri.tryParse(text);
+      if (uri == null) throw const FormatException('Invalid pairing code');
+      final endpoint = Uri.tryParse(uri.queryParameters['e'] ?? '');
+      final sessionId = (uri.queryParameters['s'] ?? '').trim();
+      final secret = (uri.queryParameters['k'] ?? '').trim();
+      if (endpoint == null ||
+          !endpoint.hasScheme ||
+          !endpoint.hasAuthority ||
+          sessionId.isEmpty ||
+          secret.isEmpty) {
+        throw const FormatException('Invalid pairing code');
+      }
+      return KubusNodePairingPayload(
+        endpoint: endpoint,
+        sessionId: sessionId,
+        secret: secret,
+        fingerprint: uri.queryParameters['f'],
+        label: uri.queryParameters['l'],
+      );
+    }
+    final decoded = jsonDecode(text);
+    if (decoded is! Map<String, dynamic>) {
+      throw const FormatException('Invalid pairing code');
+    }
+    return KubusNodePairingPayload.fromJson(decoded);
+  }
 
   factory KubusNodePairingPayload.fromJson(Map<String, dynamic> json) {
     final node = json['node'] is Map<String, dynamic>
@@ -112,9 +151,15 @@ class KubusComputeCandidate {
 
   int get totalVramBytes =>
       int.tryParse((gpu['totalVramBytes'] ?? 0).toString()) ?? 0;
-  int get jobsAhead => int.tryParse((queue['queuedJobs'] ?? 0).toString()) ?? 0;
+  int get jobsAhead =>
+      int.tryParse((queue['queued'] ?? queue['queuedJobs'] ?? 0).toString()) ??
+      0;
   double get successRate =>
-      double.tryParse((reliability['successRate'] ?? 0).toString()) ?? 0;
+      double.tryParse(
+        (reliability['successfulJobRate'] ?? reliability['successRate'] ?? 0)
+            .toString(),
+      ) ??
+      0;
 
   factory KubusComputeCandidate.fromJson(Map<String, dynamic> json) =>
       KubusComputeCandidate(
@@ -302,4 +347,87 @@ class SpatialContent {
           : const {},
     );
   }
+}
+
+class ArtworkSpatialCapture {
+  const ArtworkSpatialCapture({
+    required this.id,
+    required this.artworkId,
+    required this.capturedAt,
+    required this.publishedAt,
+    required this.version,
+    required this.variants,
+    required this.isCurrent,
+    this.capturedBy,
+    this.canonicalManifestCid,
+    this.canonicalRecordCid,
+  });
+
+  final String id;
+  final String artworkId;
+  final DateTime capturedAt;
+  final DateTime publishedAt;
+  final int version;
+  final List<SpatialVariant> variants;
+  final bool isCurrent;
+  final String? capturedBy;
+  final String? canonicalManifestCid;
+  final String? canonicalRecordCid;
+
+  SpatialContent get content => SpatialContent(
+        id: id,
+        type: 'gaussianSplat',
+        artworkId: artworkId,
+        captureId: id,
+        capturedAt: capturedAt,
+        variants: variants,
+      );
+
+  factory ArtworkSpatialCapture.fromJson(Map<String, dynamic> json) {
+    final capturedAt = DateTime.tryParse((json['capturedAt'] ?? '').toString());
+    final publishedAt =
+        DateTime.tryParse((json['publishedAt'] ?? '').toString());
+    return ArtworkSpatialCapture(
+      id: (json['id'] ?? '').toString(),
+      artworkId: (json['artworkId'] ?? '').toString(),
+      capturedAt: capturedAt ??
+          publishedAt ??
+          DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+      publishedAt: publishedAt ??
+          capturedAt ??
+          DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+      version: int.tryParse((json['version'] ?? 0).toString()) ?? 0,
+      variants: (json['variants'] as List<dynamic>? ?? const [])
+          .whereType<Map>()
+          .map((value) =>
+              SpatialVariant.fromJson(Map<String, dynamic>.from(value)))
+          .where((variant) => variant.role != 'spatial_manifest')
+          .toList(growable: false),
+      isCurrent: json['isCurrent'] == true,
+      capturedBy: (json['capturedBy'] ?? '').toString().trim().isEmpty
+          ? null
+          : json['capturedBy'].toString(),
+      canonicalManifestCid: json['canonicalManifestCid']?.toString(),
+      canonicalRecordCid: json['canonicalRecordCid']?.toString(),
+    );
+  }
+}
+
+class ArtworkSpatialHistory {
+  const ArtworkSpatialHistory({required this.history});
+
+  final List<ArtworkSpatialCapture> history;
+  ArtworkSpatialCapture? get current =>
+      history.where((capture) => capture.isCurrent).firstOrNull ??
+      history.firstOrNull;
+
+  factory ArtworkSpatialHistory.fromJson(Map<String, dynamic> json) =>
+      ArtworkSpatialHistory(
+        history: (json['history'] as List<dynamic>? ?? const [])
+            .whereType<Map>()
+            .map((value) => ArtworkSpatialCapture.fromJson(
+                  Map<String, dynamic>.from(value),
+                ))
+            .toList(growable: false),
+      );
 }

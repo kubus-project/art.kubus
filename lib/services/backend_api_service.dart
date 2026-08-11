@@ -11,6 +11,7 @@ import '../models/art_marker.dart';
 import '../models/promotion.dart';
 import '../models/artwork.dart';
 import '../models/artwork_comment.dart';
+import '../models/kubus_node_models.dart';
 import '../models/community_group.dart';
 import '../models/event.dart';
 import '../models/exhibition.dart';
