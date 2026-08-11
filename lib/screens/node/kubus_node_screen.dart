@@ -37,14 +37,6 @@ class _KubusNodeScreenState extends State<KubusNodeScreen> {
 
   AppLocalizations get _l10n => AppLocalizations.of(context)!;
 
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      unawaited(context.read<KubusNodeProvider>().initialize());
-    });
-  }
-
   Future<void> _refresh() async {
     if (_refreshing) return;
     setState(() => _refreshing = true);
@@ -135,6 +127,13 @@ class _KubusNodeScreenState extends State<KubusNodeScreen> {
                 onPressed: _openPairing,
                 icon: const Icon(Icons.qr_code_scanner_rounded),
                 label: Text(_l10n.kubusNodeEntryConnectCta),
+              ),
+              const SizedBox(height: KubusSpacing.sm),
+              TextButton.icon(
+                onPressed: () => Navigator.of(context)
+                    .pushNamed('/settings/availability-node/advanced'),
+                icon: const Icon(Icons.tune_rounded),
+                label: Text(_l10n.kubusNodeAdvancedOperatorSetup),
               ),
               const SizedBox(height: KubusSpacing.lg),
               Text(

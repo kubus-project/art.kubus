@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../models/kubus_node_models.dart';
 import '../../services/kubus_node_service.dart';
 
@@ -14,9 +15,13 @@ Widget buildSpatialViewer({
           .where((item) => item.role == 'spatial_mobile')
           .firstOrNull ??
       content.variants
+          .where((item) => item.role == 'spatial_preview')
+          .firstOrNull ??
+      content.variants
           .where((item) => item.role == 'spatial_archive')
           .firstOrNull;
   final scheme = Theme.of(context).colorScheme;
+  final l10n = AppLocalizations.of(context)!;
   return ColoredBox(
     color: scheme.surfaceContainerHighest,
     child: Center(
@@ -27,11 +32,11 @@ Widget buildSpatialViewer({
           children: [
             const Icon(Icons.view_in_ar_outlined, size: 48),
             const SizedBox(height: 12),
-            Text('Explore spatial archive',
+            Text(l10n.spatialArchiveTitle,
                 style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 8),
             Text(
-              'Open the public archive in a compatible viewer. Local LAN nodes are not contacted from a secure web page.',
+              l10n.spatialViewerWebSafety,
               textAlign: TextAlign.center,
               style: TextStyle(color: scheme.onSurfaceVariant),
             ),
@@ -47,7 +52,11 @@ Widget buildSpatialViewer({
                   }
                 },
                 icon: const Icon(Icons.open_in_new),
-                label: const Text('View in 3D'),
+                label: Text(
+                  variant.role == 'spatial_archive'
+                      ? l10n.spatialLoadArchiveQuality
+                      : l10n.spatialViewIn3d,
+                ),
               ),
             ],
           ],

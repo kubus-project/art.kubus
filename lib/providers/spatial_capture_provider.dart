@@ -30,6 +30,9 @@ class SpatialCaptureProvider extends ChangeNotifier {
   String? _error;
   String? _spatialId;
   Map<String, dynamic>? _remoteResult;
+  String? _remoteJobState;
+  String? _localJobState;
+  double _localJobProgress = 0;
   int _operationGeneration = 0;
 
   SpatialCaptureState get state => _state;
@@ -44,6 +47,9 @@ class SpatialCaptureProvider extends ChangeNotifier {
   String? get artworkId => _artworkId;
   String? get markerId => _markerId;
   Map<String, dynamic>? get remoteResult => _remoteResult;
+  String? get remoteJobState => _remoteJobState;
+  String? get localJobState => _localJobState;
+  double get localJobProgress => _localJobProgress;
   @visibleForTesting
   int get operationGeneration => _operationGeneration;
   int get estimatedInputBytes => _frames.fold<int>(0, (total, frame) {
@@ -80,6 +86,9 @@ class SpatialCaptureProvider extends ChangeNotifier {
     _error = null;
     _spatialId = null;
     _remoteResult = null;
+    _remoteJobState = null;
+    _localJobState = null;
+    _localJobProgress = 0;
     _state = SpatialCaptureState.capturing;
     notifyListeners();
   }
@@ -178,6 +187,8 @@ class SpatialCaptureProvider extends ChangeNotifier {
       throw StateError('No compatible local GPU worker is available.');
     }
     _state = SpatialCaptureState.processing;
+    _localJobState = 'queued';
+    _localJobProgress = 0;
     final generation = _operationGeneration;
     _error = null;
     notifyListeners();
@@ -208,6 +219,7 @@ class SpatialCaptureProvider extends ChangeNotifier {
       throw StateError('Transfer a spatial capture before processing it.');
     }
     _state = SpatialCaptureState.transferring;
+    _remoteJobState = 'REQUESTED';
     final generation = _operationGeneration;
     _error = null;
     notifyListeners();
@@ -285,6 +297,7 @@ class SpatialCaptureProvider extends ChangeNotifier {
       if (generation != _operationGeneration || _jobId != jobId) return;
       final job = await node.refreshRemoteJob(jobId);
       if (generation != _operationGeneration || _jobId != jobId) return;
+      _remoteJobState = job.state;
       switch (job.state) {
         case 'REQUESTED':
         case 'MATCHED':
@@ -300,6 +313,7 @@ class SpatialCaptureProvider extends ChangeNotifier {
         case 'VERIFIED':
         case 'COMPLETED':
           _state = SpatialCaptureState.verifying;
+          _remoteJobState = 'RECEIVING';
           notifyListeners();
           final result = await node.retrieveRemoteResult(jobId);
           if (generation != _operationGeneration || _jobId != jobId) return;
@@ -334,6 +348,8 @@ class SpatialCaptureProvider extends ChangeNotifier {
       if (generation != _operationGeneration || _jobId != jobId) return;
       final job = await node.service.getJob(jobId);
       if (generation != _operationGeneration || _jobId != jobId) return;
+      _localJobState = job.state;
+      _localJobProgress = job.progress;
       switch (job.state) {
         case 'completed':
           _spatialId = (job.output?['id'] ?? '').toString();
@@ -362,6 +378,23 @@ class SpatialCaptureProvider extends ChangeNotifier {
     _error = null;
     _remoteResult = null;
     _spatialId = null;
+    _remoteJobState = null;
+    _localJobState = null;
+    _localJobProgress = 0;
+    notifyListeners();
+  }
+
+  void prepareRetry() {
+    if ((_captureId ?? '').isEmpty) return;
+    _operationGeneration++;
+    _jobId = null;
+    _error = null;
+    _remoteResult = null;
+    _spatialId = null;
+    _remoteJobState = null;
+    _localJobState = null;
+    _localJobProgress = 0;
+    _state = SpatialCaptureState.awaitingProcessingChoice;
     notifyListeners();
   }
 }

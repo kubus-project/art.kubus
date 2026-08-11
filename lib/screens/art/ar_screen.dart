@@ -68,7 +68,80 @@ class _SpatialProcessingSelection {
   final KubusComputeCandidate? provider;
 }
 
-enum _SpatialResultAction { keepPrivate, publish, reject }
+class _SpatialProcessingProgressDialog extends StatelessWidget {
+  const _SpatialProcessingProgressDialog({required this.remote});
+
+  final bool remote;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final capture = context.watch<SpatialCaptureProvider>();
+    final stages = remote
+        ? NodeStatePresentation.remoteStages(l10n)
+        : NodeStatePresentation.localStages(l10n);
+    final progress = remote
+        ? NodeStatePresentation.remoteJob(
+            l10n,
+            capture.remoteJobState ?? 'REQUESTED',
+          )
+        : NodeStatePresentation.localJob(
+            l10n,
+            capture.localJobState ?? 'queued',
+            capture.localJobProgress,
+          );
+    return AlertDialog(
+      title: Text(
+        stages[progress.stageIndex.clamp(0, stages.length - 1).toInt()],
+      ),
+      content: SizedBox(
+        width: 520,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            InlineLoading(
+              height: 8,
+              progress: progress.determinate ? progress.fraction : null,
+              animate: !progress.determinate,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(height: KubusSpacing.md),
+            Text(progress.body),
+            const SizedBox(height: KubusSpacing.sm),
+            Text(
+              l10n.spatialProgressLeaveHint,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: KubusSpacing.md),
+            Wrap(
+              spacing: KubusSpacing.sm,
+              runSpacing: KubusSpacing.xs,
+              children: [
+                for (var index = 0; index < stages.length; index++)
+                  Chip(
+                    avatar: Icon(
+                      index < progress.stageIndex
+                          ? Icons.check_circle_rounded
+                          : index == progress.stageIndex
+                              ? Icons.radio_button_checked_rounded
+                              : Icons.radio_button_unchecked_rounded,
+                      size: 16,
+                    ),
+                    label: Text(stages[index]),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+enum _SpatialResultAction { keepUnpublished, publish, reject }
+
+enum _SpatialFailureAction { tryAnother, processLocally, keepForLater }
 
 /// One place a capture can be processed, presented as a committed choice.
 ///
@@ -890,12 +963,12 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Your source capture stays local.',
-                          style: TextStyle(fontWeight: FontWeight.w600),
+                        Text(
+                          l10n.kubusNodePrivacyBody,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
                         ),
                         const SizedBox(height: KubusSpacing.xs),
-                        Text(capture.guidance),
+                        Text(_captureGuidance(l10n, capture.frameCount)),
                         const SizedBox(height: KubusSpacing.sm),
                         InlineLoading(
                           height: 8,
@@ -906,7 +979,12 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                         ),
                         const SizedBox(height: KubusSpacing.xs),
                         Text(
-                          '${capture.frameCount} tracked views${capture.depthObserved ? ' · depth available' : ' · RGB and pose'}',
+                          l10n.spatialCaptureTrackedViews(
+                            capture.frameCount,
+                            capture.depthObserved
+                                ? l10n.spatialCaptureDepthAvailable
+                                : l10n.spatialCaptureRgbPose,
+                          ),
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                       ],
@@ -1260,7 +1338,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
             OutlinedButton.icon(
               onPressed: _finishSpatialCapture,
               icon: const Icon(Icons.check_circle_outline),
-              label: const Text('Finish capture'),
+              label: Text(AppLocalizations.of(context)!.spatialCaptureFinish),
             ),
           ],
         ],
@@ -1270,6 +1348,15 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
 
   Widget _buildActionButton(ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
+    final capture = context.watch<SpatialCaptureProvider>();
+    final spatialBusy = _currentMode == 'create' &&
+        const {
+          SpatialCaptureState.transferring,
+          SpatialCaptureState.awaitingProcessingChoice,
+          SpatialCaptureState.queued,
+          SpatialCaptureState.processing,
+          SpatialCaptureState.verifying,
+        }.contains(capture.state);
     String buttonText = '';
     IconData buttonIcon = Icons.check;
 
@@ -1295,7 +1382,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
     const buttonTextColor = Colors.white;
 
     return ElevatedButton.icon(
-      onPressed: _handleAction,
+      onPressed: spatialBusy ? null : _handleAction,
       icon: Icon(buttonIcon, color: buttonTextColor),
       label: Text(
         buttonText,
@@ -1316,6 +1403,13 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
         shadowColor: AppColorUtils.cyanAccent.withValues(alpha: 0.4),
       ),
     );
+  }
+
+  String _captureGuidance(AppLocalizations l10n, int frameCount) {
+    if (frameCount < 8) return l10n.spatialCaptureGuideStart;
+    if (frameCount < 20) return l10n.spatialCaptureGuideOverlap;
+    if (frameCount < 36) return l10n.spatialCaptureGuideDetails;
+    return l10n.spatialCaptureGuideReady;
   }
 
   // Event handlers
@@ -1443,24 +1537,121 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
     }
     try {
       await capture.finish(node);
-      if (!mounted) return;
-      final selection = await _chooseSpatialProcessing(capture, node);
-      if (!mounted || selection == null) return;
-      if (!selection.local && !await _confirmRemoteComputePrivacy()) return;
-      if (selection.local) {
-        await capture.processLocally(node);
-      } else {
-        await capture.processOnNetwork(node, selection.provider!);
-      }
-      if (!mounted) return;
-      await _reviewSpatialResult(capture, node, remote: !selection.local);
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(content: Text('Capture transfer failed: $error')),
         tone: KubusSnackBarTone.error,
       );
+      return;
     }
+    if (!mounted) return;
+    var selection = await _chooseSpatialProcessing(capture, node);
+    while (mounted && selection != null) {
+      if (!selection.local && !await _confirmRemoteComputePrivacy()) return;
+      final remote = !selection.local;
+      try {
+        final operation = selection.local
+            ? capture.processLocally(node)
+            : capture.processOnNetwork(node, selection.provider!);
+        await _showSpatialProcessingProgress(capture, operation,
+            remote: remote);
+        await operation;
+        if (!mounted) return;
+        await _reviewSpatialResult(capture, node, remote: remote);
+        return;
+      } catch (_) {
+        if (!mounted) return;
+        final action = await _showSpatialProcessingFailure(
+          capture,
+          localAvailable:
+              node.snapshot?.capabilityAvailable('spatial.reconstruction') ==
+                  true,
+          remote: remote,
+        );
+        if (!mounted ||
+            action == null ||
+            action == _SpatialFailureAction.keepForLater) {
+          return;
+        }
+        capture.prepareRetry();
+        if (action == _SpatialFailureAction.processLocally) {
+          selection = const _SpatialProcessingSelection(local: true);
+        } else {
+          selection = await _chooseSpatialProcessing(capture, node);
+        }
+      }
+    }
+  }
+
+  Future<void> _showSpatialProcessingProgress(
+    SpatialCaptureProvider capture,
+    Future<void> operation, {
+    required bool remote,
+  }) async {
+    var open = true;
+    final dialogShown = Completer<void>();
+    unawaited(
+      operation.then<void>(
+        (_) async {
+          await dialogShown.future;
+          if (mounted && open) {
+            await Navigator.of(context, rootNavigator: true).maybePop();
+          }
+        },
+        onError: (_, __) async {
+          await dialogShown.future;
+          if (mounted && open) {
+            await Navigator.of(context, rootNavigator: true).maybePop();
+          }
+        },
+      ),
+    );
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (_) {
+        if (!dialogShown.isCompleted) dialogShown.complete();
+        return _SpatialProcessingProgressDialog(remote: remote);
+      },
+    );
+    open = false;
+  }
+
+  Future<_SpatialFailureAction?> _showSpatialProcessingFailure(
+    SpatialCaptureProvider capture, {
+    required bool remote,
+    required bool localAvailable,
+  }) {
+    final l10n = AppLocalizations.of(context)!;
+    return showDialog<_SpatialFailureAction>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.spatialFailedTitle),
+        content: Text(
+          remote ? l10n.spatialFailedRemoteBody : l10n.spatialFailedLocalBody,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext)
+                .pop(_SpatialFailureAction.keepForLater),
+            child: Text(l10n.spatialFailedKeepForLater),
+          ),
+          if (remote && localAvailable)
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext)
+                  .pop(_SpatialFailureAction.processLocally),
+              child: Text(l10n.spatialFailedProcessLocally),
+            ),
+          if (remote)
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext)
+                  .pop(_SpatialFailureAction.tryAnother),
+              child: Text(l10n.spatialFailedTryAnother),
+            ),
+        ],
+      ),
+    );
   }
 
   Future<_SpatialProcessingSelection?> _chooseSpatialProcessing(
@@ -1698,7 +1889,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
               ),
             TextButton(
               onPressed: () => Navigator.of(dialogContext)
-                  .pop(_SpatialResultAction.keepPrivate),
+                  .pop(_SpatialResultAction.keepUnpublished),
               child: Text(l10n.spatialResultKeepPrivate),
             ),
             FilledButton(

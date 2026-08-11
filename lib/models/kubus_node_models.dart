@@ -151,9 +151,15 @@ class KubusComputeCandidate {
 
   int get totalVramBytes =>
       int.tryParse((gpu['totalVramBytes'] ?? 0).toString()) ?? 0;
-  int get jobsAhead => int.tryParse((queue['queuedJobs'] ?? 0).toString()) ?? 0;
+  int get jobsAhead =>
+      int.tryParse((queue['queued'] ?? queue['queuedJobs'] ?? 0).toString()) ??
+      0;
   double get successRate =>
-      double.tryParse((reliability['successRate'] ?? 0).toString()) ?? 0;
+      double.tryParse(
+        (reliability['successfulJobRate'] ?? reliability['successRate'] ?? 0)
+            .toString(),
+      ) ??
+      0;
 
   factory KubusComputeCandidate.fromJson(Map<String, dynamic> json) =>
       KubusComputeCandidate(
@@ -341,4 +347,87 @@ class SpatialContent {
           : const {},
     );
   }
+}
+
+class ArtworkSpatialCapture {
+  const ArtworkSpatialCapture({
+    required this.id,
+    required this.artworkId,
+    required this.capturedAt,
+    required this.publishedAt,
+    required this.version,
+    required this.variants,
+    required this.isCurrent,
+    this.capturedBy,
+    this.canonicalManifestCid,
+    this.canonicalRecordCid,
+  });
+
+  final String id;
+  final String artworkId;
+  final DateTime capturedAt;
+  final DateTime publishedAt;
+  final int version;
+  final List<SpatialVariant> variants;
+  final bool isCurrent;
+  final String? capturedBy;
+  final String? canonicalManifestCid;
+  final String? canonicalRecordCid;
+
+  SpatialContent get content => SpatialContent(
+        id: id,
+        type: 'gaussianSplat',
+        artworkId: artworkId,
+        captureId: id,
+        capturedAt: capturedAt,
+        variants: variants,
+      );
+
+  factory ArtworkSpatialCapture.fromJson(Map<String, dynamic> json) {
+    final capturedAt = DateTime.tryParse((json['capturedAt'] ?? '').toString());
+    final publishedAt =
+        DateTime.tryParse((json['publishedAt'] ?? '').toString());
+    return ArtworkSpatialCapture(
+      id: (json['id'] ?? '').toString(),
+      artworkId: (json['artworkId'] ?? '').toString(),
+      capturedAt: capturedAt ??
+          publishedAt ??
+          DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+      publishedAt: publishedAt ??
+          capturedAt ??
+          DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+      version: int.tryParse((json['version'] ?? 0).toString()) ?? 0,
+      variants: (json['variants'] as List<dynamic>? ?? const [])
+          .whereType<Map>()
+          .map((value) =>
+              SpatialVariant.fromJson(Map<String, dynamic>.from(value)))
+          .where((variant) => variant.role != 'spatial_manifest')
+          .toList(growable: false),
+      isCurrent: json['isCurrent'] == true,
+      capturedBy: (json['capturedBy'] ?? '').toString().trim().isEmpty
+          ? null
+          : json['capturedBy'].toString(),
+      canonicalManifestCid: json['canonicalManifestCid']?.toString(),
+      canonicalRecordCid: json['canonicalRecordCid']?.toString(),
+    );
+  }
+}
+
+class ArtworkSpatialHistory {
+  const ArtworkSpatialHistory({required this.history});
+
+  final List<ArtworkSpatialCapture> history;
+  ArtworkSpatialCapture? get current =>
+      history.where((capture) => capture.isCurrent).firstOrNull ??
+      history.firstOrNull;
+
+  factory ArtworkSpatialHistory.fromJson(Map<String, dynamic> json) =>
+      ArtworkSpatialHistory(
+        history: (json['history'] as List<dynamic>? ?? const [])
+            .whereType<Map>()
+            .map((value) => ArtworkSpatialCapture.fromJson(
+                  Map<String, dynamic>.from(value),
+                ))
+            .toList(growable: false),
+      );
 }

@@ -222,6 +222,7 @@ class NodeStatePresentation {
       'INPUT_READY': 3,
       'RUNNING': 4,
       'OUTPUT_READY': 5,
+      'RECEIVING': 6,
       'VERIFYING': 7,
       'VERIFIED': 7,
       'COMPLETED': 8,
