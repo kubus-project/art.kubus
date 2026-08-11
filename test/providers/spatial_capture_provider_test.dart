@@ -22,7 +22,20 @@ void main() {
     expect(provider.frameCount, 10);
     expect(provider.coverage, 0.25);
     expect(provider.depthObserved, isTrue);
+    expect(provider.estimatedInputBytes, 32);
     expect(provider.guidance, contains('overlap'));
+  });
+
+  test('processing choice and review states are distinct', () {
+    expect(
+      SpatialCaptureState.values,
+      containsAll([
+        SpatialCaptureState.awaitingProcessingChoice,
+        SpatialCaptureState.queued,
+        SpatialCaptureState.verifying,
+        SpatialCaptureState.reviewReady,
+      ]),
+    );
   });
 
   test('capture rejects samples without an RGB frame', () {

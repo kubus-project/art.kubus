@@ -2,15 +2,20 @@ import 'dart:convert';
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 
+import '../models/kubus_node_models.dart';
 import 'kubus_node_provider.dart';
 
 enum SpatialCaptureState {
   idle,
   capturing,
   transferring,
+  awaitingProcessingChoice,
+  queued,
   processing,
+  verifying,
+  reviewReady,
   complete,
-  error
+  error,
 }
 
 class SpatialCaptureProvider extends ChangeNotifier {
@@ -23,6 +28,8 @@ class SpatialCaptureProvider extends ChangeNotifier {
   String? _captureId;
   String? _jobId;
   String? _error;
+  String? _spatialId;
+  Map<String, dynamic>? _remoteResult;
 
   SpatialCaptureState get state => _state;
   int get frameCount => _frames.length;
@@ -32,6 +39,16 @@ class SpatialCaptureProvider extends ChangeNotifier {
   String? get captureId => _captureId;
   String? get jobId => _jobId;
   String? get error => _error;
+  String? get spatialId => _spatialId;
+  String? get artworkId => _artworkId;
+  String? get markerId => _markerId;
+  Map<String, dynamic>? get remoteResult => _remoteResult;
+  int get estimatedInputBytes => _frames.fold<int>(0, (total, frame) {
+        var bytes = (frame['rgb'] as Uint8List?)?.length ?? 0;
+        bytes += (frame['depth'] as Uint8List?)?.length ?? 0;
+        bytes += (frame['depthConfidence'] as Uint8List?)?.length ?? 0;
+        return total + bytes;
+      });
 
   String get guidance {
     if (_frames.length < 8) return 'Move slowly around the artwork.';
@@ -44,8 +61,11 @@ class SpatialCaptureProvider extends ChangeNotifier {
     return 'Coverage is ready. You can finish or add a few more angles.';
   }
 
-  void begin(
-      {required String artworkId, String? markerId, String? capturedBy}) {
+  void begin({
+    required String artworkId,
+    String? markerId,
+    String? capturedBy,
+  }) {
     _frames.clear();
     _artworkId = artworkId;
     _markerId = markerId;
@@ -54,6 +74,8 @@ class SpatialCaptureProvider extends ChangeNotifier {
     _captureId = null;
     _jobId = null;
     _error = null;
+    _spatialId = null;
+    _remoteResult = null;
     _state = SpatialCaptureState.capturing;
     notifyListeners();
   }
@@ -72,7 +94,8 @@ class SpatialCaptureProvider extends ChangeNotifier {
   Future<void> finish(KubusNodeProvider node) async {
     if (_frames.length < 8) {
       throw StateError(
-          'Capture at least 8 overlapping views before finishing.');
+        'Capture at least 8 overlapping views before finishing.',
+      );
     }
     _state = SpatialCaptureState.transferring;
     _error = null;
@@ -109,8 +132,9 @@ class SpatialCaptureProvider extends ChangeNotifier {
         'path': 'transforms.json',
         'mimeType': 'application/json',
         'contentBase64': base64Encode(
-          utf8.encode(jsonEncode(
-              {'schema': 'kubus.capture.frames/1', 'frames': samples})),
+          utf8.encode(
+            jsonEncode({'schema': 'kubus.capture.frames/1', 'frames': samples}),
+          ),
         ),
       });
       final record = await node.service.createCapture({
@@ -131,19 +155,7 @@ class SpatialCaptureProvider extends ChangeNotifier {
       if (_captureId == null || _captureId!.isEmpty) {
         throw StateError('The node did not return a capture ID.');
       }
-      if (node.snapshot?.capabilityAvailable('spatial.reconstruction') ==
-          true) {
-        _state = SpatialCaptureState.processing;
-        final job = await node.startReconstruction(
-          captureId: _captureId!,
-          artworkId: _artworkId!,
-          markerId: _markerId,
-        );
-        _jobId = job.id;
-        await _observeJob(node, job.id);
-      } else {
-        _state = SpatialCaptureState.complete;
-      }
+      _state = SpatialCaptureState.awaitingProcessingChoice;
       notifyListeners();
     } catch (error) {
       _state = SpatialCaptureState.error;
@@ -153,12 +165,151 @@ class SpatialCaptureProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> processLocally(KubusNodeProvider node) async {
+    if (_state != SpatialCaptureState.awaitingProcessingChoice ||
+        (_captureId ?? '').isEmpty) {
+      throw StateError('Transfer a spatial capture before processing it.');
+    }
+    if (node.snapshot?.capabilityAvailable('spatial.reconstruction') != true) {
+      throw StateError('No compatible local GPU worker is available.');
+    }
+    _state = SpatialCaptureState.processing;
+    _error = null;
+    notifyListeners();
+    try {
+      final job = await node.startReconstruction(
+        captureId: _captureId!,
+        artworkId: _artworkId!,
+        markerId: _markerId,
+      );
+      _jobId = job.id;
+      await _observeJob(node, job.id);
+    } catch (error) {
+      _state = SpatialCaptureState.error;
+      _error = error.toString();
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  Future<void> processOnNetwork(
+    KubusNodeProvider node,
+    KubusComputeCandidate provider,
+  ) async {
+    if (_state != SpatialCaptureState.awaitingProcessingChoice ||
+        (_captureId ?? '').isEmpty) {
+      throw StateError('Transfer a spatial capture before processing it.');
+    }
+    _state = SpatialCaptureState.transferring;
+    _error = null;
+    notifyListeners();
+    try {
+      final job = await node.startRemoteReconstruction(
+        captureId: _captureId!,
+        provider: provider,
+        requirements: {
+          'frameCount': _frames.length,
+          'inputBytes': estimatedInputBytes,
+          'sourceMegapixels': _estimateSourceMegapixels(),
+          'reconstructionTier': 'standard',
+          'iterationTier': 'standard',
+          'outputTier': 'mobile_archive',
+        },
+      );
+      _jobId = job.id;
+      await _observeRemoteJob(node, job.id);
+    } catch (error) {
+      _state = SpatialCaptureState.error;
+      _error = error.toString();
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  Future<void> approveRemoteResult(KubusNodeProvider node) async {
+    if (_state != SpatialCaptureState.reviewReady || (_jobId ?? '').isEmpty) {
+      throw StateError('No network result is ready for review.');
+    }
+    await node.acknowledgeRemoteResult(_jobId!, accepted: true);
+    _state = SpatialCaptureState.complete;
+    notifyListeners();
+  }
+
+  Future<void> rejectRemoteResult(
+    KubusNodeProvider node, {
+    String reason = 'requester_rejected_result',
+  }) async {
+    if ((_jobId ?? '').isEmpty) return;
+    await node.acknowledgeRemoteResult(
+      _jobId!,
+      accepted: false,
+      reason: reason,
+    );
+    _state = SpatialCaptureState.complete;
+    notifyListeners();
+  }
+
+  double _estimateSourceMegapixels() {
+    final dimensions = _frames.isEmpty ? null : _frames.first['imageSize'];
+    if (dimensions is Map) {
+      final width = double.tryParse((dimensions['width'] ?? 0).toString()) ?? 0;
+      final height =
+          double.tryParse((dimensions['height'] ?? 0).toString()) ?? 0;
+      if (width > 0 && height > 0) {
+        return width * height * _frames.length / 1000000;
+      }
+    }
+    return _frames.length * 2;
+  }
+
+  Future<void> _observeRemoteJob(KubusNodeProvider node, String jobId) async {
+    final deadline = DateTime.now().add(const Duration(hours: 2));
+    while (DateTime.now().isBefore(deadline)) {
+      final job = await node.refreshRemoteJob(jobId);
+      switch (job.state) {
+        case 'REQUESTED':
+        case 'MATCHED':
+        case 'ACCEPTED':
+        case 'INPUT_READY':
+          _state = SpatialCaptureState.queued;
+          break;
+        case 'RUNNING':
+          _state = SpatialCaptureState.processing;
+          break;
+        case 'OUTPUT_READY':
+        case 'VERIFYING':
+        case 'VERIFIED':
+        case 'COMPLETED':
+          _state = SpatialCaptureState.verifying;
+          notifyListeners();
+          _remoteResult = await node.retrieveRemoteResult(jobId);
+          _spatialId = (_remoteResult?['id'] ?? '').toString();
+          _state = SpatialCaptureState.reviewReady;
+          notifyListeners();
+          return;
+        case 'DECLINED':
+        case 'EXPIRED':
+        case 'FAILED':
+        case 'CANCELLED':
+        case 'DISPUTED':
+          throw StateError(
+            job.failure?['reason']?.toString() ??
+                'Network processing ${job.state.toLowerCase()}.',
+          );
+      }
+      notifyListeners();
+      await Future<void>.delayed(const Duration(seconds: 3));
+    }
+    throw TimeoutException('Network processing did not finish in 2 hours.');
+  }
+
   Future<void> _observeJob(KubusNodeProvider node, String jobId) async {
     final deadline = DateTime.now().add(const Duration(minutes: 45));
     while (DateTime.now().isBefore(deadline)) {
       final job = await node.service.getJob(jobId);
       switch (job.state) {
         case 'completed':
+          _spatialId = (job.output?['id'] ?? '').toString();
           await node.refresh();
           _state = SpatialCaptureState.complete;
           notifyListeners();
@@ -180,6 +331,8 @@ class SpatialCaptureProvider extends ChangeNotifier {
     _frames.clear();
     _state = SpatialCaptureState.idle;
     _error = null;
+    _remoteResult = null;
+    _spatialId = null;
     notifyListeners();
   }
 }

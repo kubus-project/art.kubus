@@ -78,6 +78,123 @@ class KubusNodeSnapshot {
             .toString(),
       ) ??
       0;
+  Map<String, dynamic> get participation =>
+      status['participation'] is Map<String, dynamic>
+          ? status['participation'] as Map<String, dynamic>
+          : const {};
+  String get participationState =>
+      (participation['state'] ?? 'UNCONFIGURED').toString();
+  bool get participationLeaseEligible => participation['leaseEligible'] == true;
+}
+
+class KubusComputeCandidate {
+  const KubusComputeCandidate({
+    required this.nodeId,
+    required this.label,
+    required this.encryptionPublicKey,
+    required this.signingPublicKey,
+    required this.gpu,
+    required this.worker,
+    required this.reliability,
+    required this.queue,
+    required this.rankScore,
+  });
+
+  final String nodeId;
+  final String label;
+  final String encryptionPublicKey;
+  final String signingPublicKey;
+  final Map<String, dynamic> gpu;
+  final Map<String, dynamic> worker;
+  final Map<String, dynamic> reliability;
+  final Map<String, dynamic> queue;
+  final double rankScore;
+
+  int get totalVramBytes =>
+      int.tryParse((gpu['totalVramBytes'] ?? 0).toString()) ?? 0;
+  int get jobsAhead => int.tryParse((queue['queuedJobs'] ?? 0).toString()) ?? 0;
+  double get successRate =>
+      double.tryParse((reliability['successRate'] ?? 0).toString()) ?? 0;
+
+  factory KubusComputeCandidate.fromJson(Map<String, dynamic> json) =>
+      KubusComputeCandidate(
+        nodeId: (json['nodeId'] ?? '').toString(),
+        label: (json['label'] ?? 'kubus Node').toString(),
+        encryptionPublicKey: (json['encryptionPublicKey'] ?? '').toString(),
+        signingPublicKey: (json['signingPublicKey'] ?? '').toString(),
+        gpu: json['gpu'] is Map<String, dynamic>
+            ? json['gpu'] as Map<String, dynamic>
+            : const {},
+        worker: json['worker'] is Map<String, dynamic>
+            ? json['worker'] as Map<String, dynamic>
+            : const {},
+        reliability: json['reliability'] is Map<String, dynamic>
+            ? json['reliability'] as Map<String, dynamic>
+            : const {},
+        queue: json['queue'] is Map<String, dynamic>
+            ? json['queue'] as Map<String, dynamic>
+            : const {},
+        rankScore: double.tryParse((json['rankScore'] ?? 0).toString()) ?? 0,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'nodeId': nodeId,
+        'label': label,
+        'encryptionPublicKey': encryptionPublicKey,
+        'signingPublicKey': signingPublicKey,
+        'gpu': gpu,
+        'worker': worker,
+        'reliability': reliability,
+        'queue': queue,
+        'rankScore': rankScore,
+      };
+}
+
+class KubusRemoteComputeJob {
+  const KubusRemoteComputeJob({
+    required this.id,
+    required this.state,
+    required this.type,
+    required this.protocolVersion,
+    this.providerNodeId,
+    this.outputManifestCid,
+    this.outputCids = const [],
+    this.failure,
+  });
+
+  final String id;
+  final String state;
+  final String type;
+  final String protocolVersion;
+  final String? providerNodeId;
+  final String? outputManifestCid;
+  final List<String> outputCids;
+  final Map<String, dynamic>? failure;
+
+  bool get isTerminal => const {
+        'COMPLETED',
+        'DECLINED',
+        'EXPIRED',
+        'FAILED',
+        'CANCELLED',
+        'DISPUTED',
+      }.contains(state);
+
+  factory KubusRemoteComputeJob.fromJson(Map<String, dynamic> json) =>
+      KubusRemoteComputeJob(
+        id: (json['id'] ?? '').toString(),
+        state: (json['state'] ?? '').toString(),
+        type: (json['type'] ?? '').toString(),
+        protocolVersion: (json['protocolVersion'] ?? '').toString(),
+        providerNodeId: json['providerNodeId']?.toString(),
+        outputManifestCid: json['outputManifestCid']?.toString(),
+        outputCids: (json['outputCids'] as List<dynamic>? ?? const [])
+            .map((value) => value.toString())
+            .toList(growable: false),
+        failure: json['failure'] is Map<String, dynamic>
+            ? json['failure'] as Map<String, dynamic>
+            : null,
+      );
 }
 
 class KubusNodeJob {
