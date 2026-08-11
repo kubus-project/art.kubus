@@ -1,0 +1,86 @@
+import 'dart:convert';
+
+import 'package:art_kubus/models/kubus_node_models.dart';
+import 'package:art_kubus/services/kubus_node_service.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+
+class _MemoryCredentialStore implements KubusNodeCredentialStore {
+  final values = <String, String>{};
+  @override
+  Future<void> delete(String key) async => values.remove(key);
+  @override
+  Future<String?> read(String key) async => values[key];
+  @override
+  Future<void> write(String key, String value) async => values[key] = value;
+}
+
+KubusNodePairingPayload get _payload => KubusNodePairingPayload(
+      endpoint: Uri.parse('http://192.168.1.8:8787'),
+      sessionId: 'session-1',
+      secret: 'one-time-secret',
+      fingerprint: 'sha256:node',
+    );
+
+void main() {
+  test('pairs with a scoped credential and sends it only as a bearer header',
+      () async {
+    final requests = <http.Request>[];
+    final store = _MemoryCredentialStore();
+    final service = KubusNodeService(
+      credentialStore: store,
+      isWeb: false,
+      client: MockClient((request) async {
+        requests.add(request);
+        if (request.url.path.endsWith('/pairing/exchange')) {
+          return http.Response(
+            jsonEncode({'token': 'kubus_local_scoped-token'}),
+            201,
+          );
+        }
+        return http.Response(jsonEncode({'status': 'online'}), 200);
+      }),
+    );
+
+    await service.pair(_payload);
+    await service.fetchNetwork();
+
+    expect(service.isPaired, isTrue);
+    expect(requests.last.headers['Authorization'],
+        'Bearer kubus_local_scoped-token');
+    expect(requests.last.url.toString(), isNot(contains('kubus_local_')));
+    expect(store.values.values, contains('kubus_local_scoped-token'));
+  });
+
+  test('native CID resolution prefers paired node before public fallbacks',
+      () async {
+    final service = KubusNodeService(
+      credentialStore: _MemoryCredentialStore(),
+      isWeb: false,
+      client: MockClient((request) async => http.Response(
+            jsonEncode({'token': 'kubus_local_scoped-token'}),
+            201,
+          )),
+    );
+    await service.pair(_payload);
+
+    final candidates = await service.resolveContentCandidates(
+      'ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3xfdnyh5j3zvw2j4q7x5j6qka',
+    );
+
+    expect(candidates.first.source, 'kubus_node');
+    expect(candidates[1].source, 'ipfs_gateway');
+    expect(candidates.last.source, 'legacy_backend');
+  });
+
+  test('secure web mode rejects insecure LAN pairing', () async {
+    final service = KubusNodeService(
+      credentialStore: _MemoryCredentialStore(),
+      isWeb: true,
+      client: MockClient((_) async => http.Response('{}', 500)),
+    );
+
+    await expectLater(service.pair(_payload), throwsStateError);
+  });
+}

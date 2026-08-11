@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import '../../widgets/inline_loading.dart';
@@ -6,6 +7,8 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../providers/availability_operator_provider.dart';
+import '../../providers/kubus_node_provider.dart';
+import '../../models/kubus_node_models.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../l10n/app_localizations.dart';
@@ -17,12 +20,7 @@ class AvailabilityNodeOperatorScreen extends StatelessWidget {
   const AvailabilityNodeOperatorScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return ChangeNotifierProvider<AvailabilityOperatorProvider>(
-      create: (_) => AvailabilityOperatorProvider(),
-      child: const _AvailabilityNodeOperatorBody(),
-    );
-  }
+  Widget build(BuildContext context) => const _AvailabilityNodeOperatorBody();
 }
 
 class _AvailabilityNodeOperatorBody extends StatefulWidget {
@@ -36,7 +34,9 @@ class _AvailabilityNodeOperatorBody extends StatefulWidget {
 class _AvailabilityNodeOperatorBodyState
     extends State<_AvailabilityNodeOperatorBody> {
   final TextEditingController _labelController = TextEditingController();
+  final TextEditingController _pairingController = TextEditingController();
   int _expiresInDays = 90;
+  int _section = 0;
   String? _loadedWallet;
   bool _initializedDefaultLabel = false;
 
@@ -45,6 +45,7 @@ class _AvailabilityNodeOperatorBodyState
   @override
   void dispose() {
     _labelController.dispose();
+    _pairingController.dispose();
     super.dispose();
   }
 
@@ -94,8 +95,8 @@ class _AvailabilityNodeOperatorBodyState
   Future<void> _createToken() async {
     final wallet = _resolveWallet();
     if (wallet.isEmpty) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(l10n.availabilityNodeConnectWalletToast)));
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.availabilityNodeConnectWalletToast)));
       return;
     }
 
@@ -112,11 +113,12 @@ class _AvailabilityNodeOperatorBodyState
     }
 
     try {
-      final created = await context.read<AvailabilityOperatorProvider>().createToken(
-            label: _labelController.text,
-            walletAddress: wallet,
-            expiresInDays: _expiresInDays,
-          );
+      final created =
+          await context.read<AvailabilityOperatorProvider>().createToken(
+                label: _labelController.text,
+                walletAddress: wallet,
+                expiresInDays: _expiresInDays,
+              );
       if (!mounted) return;
       await showDialog<void>(
         context: context,
@@ -179,7 +181,8 @@ class _AvailabilityNodeOperatorBodyState
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${l10n.availabilityNodeCreateFailedToast}: $e')),
+        SnackBar(
+            content: Text('${l10n.availabilityNodeCreateFailedToast}: $e')),
       );
     }
   }
@@ -210,109 +213,181 @@ class _AvailabilityNodeOperatorBodyState
         );
   }
 
+  Future<void> _pairLocalNode() async {
+    try {
+      final decoded = jsonDecode(_pairingController.text.trim());
+      if (decoded is! Map<String, dynamic>) {
+        throw const FormatException('Invalid pairing payload');
+      }
+      await context.read<KubusNodeProvider>().pair(
+            KubusNodePairingPayload.fromJson(decoded),
+          );
+      if (!mounted) return;
+      _pairingController.clear();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.kubusNodePairedToast)),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${l10n.kubusNodePairFailed}: $error')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final wallet = _resolveWallet(listen: true);
     final scheme = Theme.of(context).colorScheme;
+    final localNode = context.watch<KubusNodeProvider>();
+    final operator = context.watch<AvailabilityOperatorProvider>();
+    final sections = <String>[
+      l10n.kubusNodeOverview,
+      l10n.kubusNodeArchive,
+      l10n.kubusNodeSpatial,
+      l10n.kubusNodeRewards,
+      l10n.kubusNodeSecuritySetup,
+    ];
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.availabilityNodeTitle)),
-      body: Consumer<AvailabilityOperatorProvider>(
-        builder: (context, provider, _) {
-          return ListView(
-            padding: const EdgeInsets.all(KubusSpacing.lg),
-            children: [
-              _InfoPanel(wallet: wallet),
-              const SizedBox(height: KubusSpacing.lg),
-              _NodeStatusPanel(status: provider.nodeStatus),
-              const SizedBox(height: KubusSpacing.lg),
-              GlassSurface(
-                child: Padding(
-                  padding: const EdgeInsets.all(KubusSpacing.md),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(l10n.availabilityNodeCreateTitle,
-                          style: Theme.of(context).textTheme.titleLarge),
-                      const SizedBox(height: KubusSpacing.sm),
-                      TextField(
-                        controller: _labelController,
-                        decoration: InputDecoration(labelText: l10n.availabilityNodeLabel),
-                      ),
-                      const SizedBox(height: KubusSpacing.sm),
-                      DropdownButtonFormField<int>(
-                        initialValue: _expiresInDays,
-                        decoration: InputDecoration(labelText: l10n.availabilityNodeExpiry),
-                        items: const [30, 90, 180, 365]
-                            .map((days) => DropdownMenuItem<int>(
-                                  value: days,
-                                  child: Text(
-                                    l10n.availabilityNodeExpiryDaysOption(days),
+      body: ListView(
+        padding: EdgeInsets.symmetric(
+          horizontal: MediaQuery.sizeOf(context).width > 900
+              ? KubusSpacing.xxl
+              : KubusSpacing.lg,
+          vertical: KubusSpacing.lg,
+        ),
+        children: [
+          const _InfoPanel(),
+          const SizedBox(height: KubusSpacing.lg),
+          _LocalNodePanel(provider: localNode),
+          const SizedBox(height: KubusSpacing.md),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: SegmentedButton<int>(
+              segments: [
+                for (var index = 0; index < sections.length; index++)
+                  ButtonSegment(value: index, label: Text(sections[index])),
+              ],
+              selected: {_section},
+              showSelectedIcon: false,
+              onSelectionChanged: (selection) =>
+                  setState(() => _section = selection.first),
+            ),
+          ),
+          const SizedBox(height: KubusSpacing.lg),
+          if (_section == 0) _NodeStatusPanel(status: operator.nodeStatus),
+          if (_section == 1)
+            _ArchivePanel(
+              local: localNode.snapshot,
+              network: operator.nodeStatus,
+            ),
+          if (_section == 2) _SpatialPanel(provider: localNode),
+          if (_section == 3) _RewardsPanel(status: operator.nodeStatus),
+          if (_section == 4) ...[
+            _PairingPanel(
+              controller: _pairingController,
+              provider: localNode,
+              onPair: _pairLocalNode,
+            ),
+            const SizedBox(height: KubusSpacing.lg),
+            ExpansionTile(
+              title: Text(l10n.kubusNodeAdvancedOperatorSetup),
+              subtitle: Text(l10n.kubusNodeAdvancedOperatorSetupBody),
+              childrenPadding: const EdgeInsets.only(top: KubusSpacing.sm),
+              children: [
+                GlassSurface(
+                  child: Padding(
+                    padding: const EdgeInsets.all(KubusSpacing.md),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(l10n.availabilityNodeCreateTitle,
+                            style: Theme.of(context).textTheme.titleLarge),
+                        const SizedBox(height: KubusSpacing.sm),
+                        TextField(
+                          controller: _labelController,
+                          decoration: InputDecoration(
+                              labelText: l10n.availabilityNodeLabel),
+                        ),
+                        const SizedBox(height: KubusSpacing.sm),
+                        DropdownButtonFormField<int>(
+                          initialValue: _expiresInDays,
+                          decoration: InputDecoration(
+                              labelText: l10n.availabilityNodeExpiry),
+                          items: const [30, 90, 180, 365]
+                              .map((days) => DropdownMenuItem<int>(
+                                    value: days,
+                                    child: Text(
+                                      l10n.availabilityNodeExpiryDaysOption(
+                                          days),
+                                    ),
+                                  ))
+                              .toList(growable: false),
+                          onChanged: operator.isLoading
+                              ? null
+                              : (value) => setState(
+                                    () => _expiresInDays = value ?? 90,
                                   ),
-                                ))
-                            .toList(growable: false),
-                        onChanged: provider.isLoading
-                            ? null
-                            : (value) => setState(
-                                  () => _expiresInDays = value ?? 90,
-                                ),
-                      ),
-                      const SizedBox(height: KubusSpacing.md),
-                      FilledButton.icon(
-                        onPressed: provider.isLoading ? null : _createToken,
-                        icon: provider.isLoading
-                            ? const SizedBox.square(
-                                dimension: 18,
-                                child:
-                                    InlineLoading(tileSize: 4),
-                              )
-                            : const Icon(Icons.vpn_key_outlined),
-                        label: Text(l10n.commonCreate),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: KubusSpacing.lg),
-              Text(l10n.availabilityNodeExistingTokensTitle,
-                  style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: KubusSpacing.sm),
-              if (provider.tokens.isEmpty)
-                Text(
-                  l10n.availabilityNodeEmptyState,
-                  style: TextStyle(color: scheme.onSurfaceVariant),
-                )
-              else
-                ...provider.tokens.map(
-                  (token) => Card(
-                    child: ListTile(
-                      leading: Icon(
-                        token.status == 'active'
-                            ? Icons.check_circle_outline
-                            : Icons.block,
-                        color: token.status == 'active'
-                            ? AppColorUtils.greenAccent
-                            : scheme.error,
-                      ),
-                      title: Text(token.label.isEmpty ? token.tokenPrefix : token.label),
-                      subtitle: Text(
-                        _buildTokenSubtitle(token),
-                      ),
-                      trailing: token.status == 'active'
-                          ? IconButton(
-                              tooltip: l10n.commonDelete,
-                              onPressed: provider.isLoading
-                                  ? null
-                                  : () => unawaited(_revokeToken(token)),
-                              icon: const Icon(Icons.delete_outline),
-                            )
-                          : null,
+                        ),
+                        const SizedBox(height: KubusSpacing.md),
+                        FilledButton.icon(
+                          onPressed: operator.isLoading ? null : _createToken,
+                          icon: operator.isLoading
+                              ? const SizedBox.square(
+                                  dimension: 18,
+                                  child: InlineLoading(tileSize: 4),
+                                )
+                              : const Icon(Icons.vpn_key_outlined),
+                          label: Text(l10n.commonCreate),
+                        ),
+                      ],
                     ),
                   ),
                 ),
-            ],
-          );
-        },
+                const SizedBox(height: KubusSpacing.lg),
+                Text(l10n.availabilityNodeExistingTokensTitle,
+                    style: Theme.of(context).textTheme.titleLarge),
+                const SizedBox(height: KubusSpacing.sm),
+                if (operator.tokens.isEmpty)
+                  Text(
+                    l10n.availabilityNodeEmptyState,
+                    style: TextStyle(color: scheme.onSurfaceVariant),
+                  )
+                else
+                  ...operator.tokens.map(
+                    (token) => Card(
+                      child: ListTile(
+                        leading: Icon(
+                          token.status == 'active'
+                              ? Icons.check_circle_outline
+                              : Icons.block,
+                          color: token.status == 'active'
+                              ? AppColorUtils.greenAccent
+                              : scheme.error,
+                        ),
+                        title: Text(token.label.isEmpty
+                            ? token.tokenPrefix
+                            : token.label),
+                        subtitle: Text(
+                          _buildTokenSubtitle(token),
+                        ),
+                        trailing: token.status == 'active'
+                            ? IconButton(
+                                tooltip: l10n.commonDelete,
+                                onPressed: operator.isLoading
+                                    ? null
+                                    : () => unawaited(_revokeToken(token)),
+                                icon: const Icon(Icons.delete_outline),
+                              )
+                            : null,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -338,9 +413,7 @@ class _AvailabilityNodeOperatorBodyState
 }
 
 class _InfoPanel extends StatelessWidget {
-  const _InfoPanel({required this.wallet});
-
-  final String wallet;
+  const _InfoPanel();
 
   @override
   Widget build(BuildContext context) {
@@ -351,27 +424,287 @@ class _InfoPanel extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(l10n.availabilityNodeWhatIsTitle,
-                style: Theme.of(context).textTheme.headlineSmall),
+            Text(l10n.kubusNodeHeroTitle,
+                style: Theme.of(context).textTheme.headlineMedium),
             const SizedBox(height: KubusSpacing.sm),
-            Text(l10n.availabilityNodeIntro),
+            Text(l10n.kubusNodeHeroBody),
             const SizedBox(height: KubusSpacing.md),
-            Text('${l10n.availabilityNodeWalletLabel}: ${wallet.isEmpty ? '-' : wallet}'),
-            const SizedBox(height: KubusSpacing.sm),
-            Text(l10n.availabilityNodeSecurityNote),
-            if (wallet.isEmpty) ...[
-              const SizedBox(height: KubusSpacing.md),
-              OutlinedButton.icon(
-                onPressed: () => Navigator.of(context).pushNamed('/connect-wallet'),
-                icon: const Icon(Icons.account_balance_wallet_outlined),
-                label: Text(l10n.authConnectWalletButton),
-              ),
-            ],
+            Row(
+              children: [
+                Icon(Icons.shield_outlined,
+                    color: Theme.of(context).colorScheme.primary),
+                const SizedBox(width: KubusSpacing.sm),
+                Expanded(child: Text(l10n.kubusNodePrivacyBody)),
+              ],
+            ),
           ],
         ),
       ),
     );
   }
+}
+
+class _LocalNodePanel extends StatelessWidget {
+  const _LocalNodePanel({required this.provider});
+  final KubusNodeProvider provider;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final snapshot = provider.snapshot;
+    final paired = provider.isPaired;
+    final online = provider.state == KubusNodeConnectionState.paired;
+    final scheme = Theme.of(context).colorScheme;
+    return GlassSurface(
+      child: Padding(
+        padding: const EdgeInsets.all(KubusSpacing.md),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: (online ? AppColorUtils.greenAccent : scheme.outline)
+                    .withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(KubusRadius.md),
+              ),
+              child: Icon(
+                Icons.dns_outlined,
+                color: online ? AppColorUtils.greenAccent : scheme.outline,
+              ),
+            ),
+            const SizedBox(width: KubusSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    snapshot?.info['label']?.toString() ??
+                        (paired
+                            ? l10n.kubusNodeUnavailable
+                            : l10n.kubusNodeNotPaired),
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  Text(
+                    online
+                        ? l10n.kubusNodeOnline
+                        : provider.error ?? l10n.kubusNodeOffline,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: scheme.onSurfaceVariant),
+                  ),
+                ],
+              ),
+            ),
+            if (paired)
+              IconButton(
+                tooltip: l10n.commonRefresh,
+                onPressed: provider.refresh,
+                icon: const Icon(Icons.refresh),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ArchivePanel extends StatelessWidget {
+  const _ArchivePanel({required this.local, required this.network});
+  final KubusNodeSnapshot? local;
+  final AvailabilityNodeStatusSnapshot? network;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return _SectionPanel(
+      title: l10n.kubusNodeArchiveTitle,
+      body: l10n.kubusNodeArchiveBody,
+      icon: Icons.inventory_2_outlined,
+      metrics: [
+        _MetricData(l10n.kubusNodeBytesStored,
+            _formatBytes(_asInt(local?.storage['publicReplicaBytes']))),
+        _MetricData(l10n.kubusNodeRecords,
+            '${network?.publicCidsPinned ?? _asInt(local?.network['publicPinSetCount'])}'),
+        _MetricData(
+          l10n.availabilityNodePublicCoverageLabel,
+          '${((network?.publicArchiveCoverage ?? 0) * 100).toStringAsFixed(1)}%',
+        ),
+        _MetricData(
+          l10n.kubusNodeRetrievalHealth,
+          network?.status ?? local?.status['status']?.toString() ?? '—',
+        ),
+      ],
+    );
+  }
+}
+
+class _SpatialPanel extends StatelessWidget {
+  const _SpatialPanel({required this.provider});
+  final KubusNodeProvider provider;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final snapshot = provider.snapshot;
+    final available =
+        snapshot?.capabilityAvailable('spatial.reconstruction') == true;
+    final gpu = snapshot?.capabilityAvailable('compute.gpu') == true;
+    return _SectionPanel(
+      title: l10n.kubusNodeSpatialTitle,
+      body: l10n.kubusNodeSpatialBody,
+      icon: Icons.view_in_ar_outlined,
+      metrics: [
+        _MetricData(l10n.kubusNodeWorker,
+            available ? l10n.kubusNodeAvailable : l10n.kubusNodeUnavailable),
+        _MetricData(l10n.kubusNodeGpu,
+            gpu ? l10n.kubusNodeAvailable : l10n.kubusNodeUnavailable),
+        _MetricData(l10n.kubusNodeRunningJobs, '${snapshot?.runningJobs ?? 0}'),
+        _MetricData(l10n.kubusNodeLocalCaptures,
+            '${_asInt(snapshot?.status['captures'])}'),
+      ],
+      footer: Text(l10n.kubusNodePrivacyBody),
+    );
+  }
+}
+
+class _RewardsPanel extends StatelessWidget {
+  const _RewardsPanel({required this.status});
+  final AvailabilityNodeStatusSnapshot? status;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return _SectionPanel(
+      title: l10n.kubusNodeRewardsTitle,
+      body: l10n.kubusNodeRewardsBody,
+      icon: Icons.verified_outlined,
+      metrics: [
+        _MetricData(l10n.availabilityNodeContributionScoreLabel,
+            status?.estimatedContributionScore.toStringAsFixed(0) ?? '—'),
+        _MetricData(l10n.availabilityNodePendingKub8Label,
+            status?.pendingKub8.toStringAsFixed(2) ?? '—'),
+        _MetricData(l10n.kubusNodeSettledKub8,
+            status?.settledKub8.toStringAsFixed(2) ?? '—'),
+      ],
+      footer: Text(l10n.kubusNodePendingBody),
+    );
+  }
+}
+
+class _PairingPanel extends StatelessWidget {
+  const _PairingPanel({
+    required this.controller,
+    required this.provider,
+    required this.onPair,
+  });
+  final TextEditingController controller;
+  final KubusNodeProvider provider;
+  final Future<void> Function() onPair;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return _SectionPanel(
+      title: l10n.kubusNodePairTitle,
+      body: l10n.kubusNodePairBody,
+      icon: Icons.phonelink_lock_outlined,
+      footer: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TextField(
+            controller: controller,
+            minLines: 2,
+            maxLines: 5,
+            autocorrect: false,
+            decoration: InputDecoration(
+              labelText: l10n.kubusNodePairingPayload,
+              hintText: '{"sessionId":"…","secret":"…","node":{…}}',
+            ),
+          ),
+          const SizedBox(height: KubusSpacing.sm),
+          FilledButton.icon(
+            onPressed: provider.state == KubusNodeConnectionState.connecting
+                ? null
+                : onPair,
+            icon: const Icon(Icons.link),
+            label: Text(l10n.kubusNodePairAction),
+          ),
+          if (provider.isPaired)
+            TextButton(
+              onPressed: provider.unpair,
+              child: Text(l10n.kubusNodeUnpairAction),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MetricData {
+  const _MetricData(this.label, this.value);
+  final String label;
+  final String value;
+}
+
+class _SectionPanel extends StatelessWidget {
+  const _SectionPanel({
+    required this.title,
+    required this.body,
+    required this.icon,
+    this.metrics = const [],
+    this.footer,
+  });
+  final String title;
+  final String body;
+  final IconData icon;
+  final List<_MetricData> metrics;
+  final Widget? footer;
+
+  @override
+  Widget build(BuildContext context) => GlassSurface(
+        child: Padding(
+          padding: const EdgeInsets.all(KubusSpacing.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, color: Theme.of(context).colorScheme.primary),
+              const SizedBox(height: KubusSpacing.sm),
+              Text(title, style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: KubusSpacing.xs),
+              Text(body,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  )),
+              if (metrics.isNotEmpty) ...[
+                const SizedBox(height: KubusSpacing.md),
+                Wrap(
+                  spacing: KubusSpacing.sm,
+                  runSpacing: KubusSpacing.sm,
+                  children: [
+                    for (final metric in metrics)
+                      _MetricChip(label: metric.label, value: metric.value),
+                  ],
+                ),
+              ],
+              if (footer != null) ...[
+                const SizedBox(height: KubusSpacing.md),
+                footer!,
+              ],
+            ],
+          ),
+        ),
+      );
+}
+
+int _asInt(Object? value) => int.tryParse('${value ?? 0}') ?? 0;
+String _formatBytes(int bytes) {
+  if (bytes < 1024) return '$bytes B';
+  if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+  if (bytes < 1024 * 1024 * 1024) {
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+  }
+  return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
 }
 
 class _NodeStatusPanel extends StatelessWidget {
@@ -422,7 +755,8 @@ class _NodeStatusPanel extends StatelessWidget {
               const SizedBox(height: KubusSpacing.sm),
               OutlinedButton.icon(
                 onPressed: () => Clipboard.setData(
-                  const ClipboardData(text: 'http://my.node.kubus.site:8787/gui'),
+                  const ClipboardData(
+                      text: 'http://my.node.kubus.site:8787/gui'),
                 ),
                 icon: const Icon(Icons.copy),
                 label: Text(l10n.availabilityNodeCopyGuiUrlButton),
@@ -442,7 +776,8 @@ class _NodeStatusPanel extends StatelessWidget {
                   ),
                   _MetricChip(
                     label: l10n.availabilityNodeContributionScoreLabel,
-                    value: status!.estimatedContributionScore.toStringAsFixed(0),
+                    value:
+                        status!.estimatedContributionScore.toStringAsFixed(0),
                   ),
                   _MetricChip(
                     label: l10n.availabilityNodePendingKub8Label,
@@ -473,7 +808,8 @@ class _NodeStatusPanel extends StatelessWidget {
                   IconButton(
                     tooltip: l10n.availabilityNodeCopyGuiUrlButton,
                     onPressed: () => Clipboard.setData(
-                      const ClipboardData(text: 'http://my.node.kubus.site:8787/gui'),
+                      const ClipboardData(
+                          text: 'http://my.node.kubus.site:8787/gui'),
                     ),
                     icon: const Icon(Icons.copy),
                   ),

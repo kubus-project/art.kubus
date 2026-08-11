@@ -36,6 +36,7 @@ import android.view.PixelCopy
 import android.os.HandlerThread
 import android.content.ContextWrapper
 import java.io.FileOutputStream
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
 import java.time.LocalDateTime
@@ -209,6 +210,7 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
                 takeScreenshot(call, result)
 
             }
+            "captureSpatialFrame" -> captureSpatialFrame(result)
             "loadMesh" -> {
                 val map = call.arguments as HashMap<String, Any>
                 val textureBytes = map["textureBytes"] as ByteArray
@@ -348,6 +350,78 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
             e.printStackTrace()
         }
         result.success(null)
+    }
+
+    private fun captureSpatialFrame(result: MethodChannel.Result) {
+        val view = arSceneView
+        val frame = view?.arFrame
+        if (view == null || frame == null || frame.camera.trackingState != TrackingState.TRACKING) {
+            result.error("tracking_unavailable", "ARCore tracking is not ready", null)
+            return
+        }
+        val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
+        val handlerThread = HandlerThread("SpatialFrameCopier")
+        handlerThread.start()
+        PixelCopy.request(view, bitmap, { copyResult ->
+            try {
+                if (copyResult != PixelCopy.SUCCESS) {
+                    result.error("frame_copy_failed", "Could not copy the AR frame", copyResult)
+                    return@request
+                }
+                val camera = frame.camera
+                val pose = camera.pose
+                val intrinsics = camera.imageIntrinsics
+                val dimensions = intrinsics.imageDimensions
+                val focalLength = intrinsics.focalLength
+                val principalPoint = intrinsics.principalPoint
+                val rgb = ByteArrayOutputStream().use { stream ->
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 92, stream)
+                    stream.toByteArray()
+                }
+                val payload = hashMapOf<String, Any>(
+                    "rgb" to rgb,
+                    "timestampNanos" to frame.timestamp,
+                    "poseTranslation" to pose.translation.toList(),
+                    "poseRotation" to pose.rotationQuaternion.toList(),
+                    "intrinsics" to hashMapOf(
+                        "width" to dimensions[0],
+                        "height" to dimensions[1],
+                        "fx" to focalLength[0],
+                        "fy" to focalLength[1],
+                        "cx" to principalPoint[0],
+                        "cy" to principalPoint[1]
+                    ),
+                    "depthAvailable" to false
+                )
+                try {
+                    frame.acquireDepthImage().use { depth ->
+                        val plane = depth.planes[0]
+                        val bytes = ByteArray(plane.buffer.remaining())
+                        plane.buffer.get(bytes)
+                        payload["depth"] = bytes
+                        payload["depthWidth"] = depth.width
+                        payload["depthHeight"] = depth.height
+                        payload["depthRowStride"] = plane.rowStride
+                        payload["depthPixelStride"] = plane.pixelStride
+                        payload["depthAvailable"] = true
+                    }
+                    frame.acquireRawDepthConfidenceImage().use { confidence ->
+                        val plane = confidence.planes[0]
+                        val bytes = ByteArray(plane.buffer.remaining())
+                        plane.buffer.get(bytes)
+                        payload["depthConfidence"] = bytes
+                    }
+                } catch (_: Exception) {
+                    // Depth is optional and absence is explicitly represented.
+                }
+                result.success(payload)
+            } catch (error: Throwable) {
+                result.error("capture_failed", error.localizedMessage, null)
+            } finally {
+                bitmap.recycle()
+                handlerThread.quitSafely()
+            }
+        }, Handler(handlerThread.looper))
     }
 
     @Throws(IOException::class)
@@ -548,6 +622,9 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
                     }
                     config.updateMode = Config.UpdateMode.LATEST_CAMERA_IMAGE
                     config.focusMode = Config.FocusMode.AUTO;
+                    if (session.isDepthModeSupported(Config.DepthMode.AUTOMATIC)) {
+                        config.depthMode = Config.DepthMode.AUTOMATIC
+                    }
                     session.configure(config)
                     arSceneView?.setupSession(session)
                 }
