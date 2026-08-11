@@ -11,6 +11,7 @@ import '../../utils/app_animations.dart';
 import '../../widgets/app_loading.dart';
 import '../../utils/app_color_utils.dart';
 import '../../utils/design_tokens.dart';
+import '../../utils/node_state_presentation.dart';
 import 'package:provider/provider.dart';
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
@@ -68,6 +69,74 @@ class _SpatialProcessingSelection {
 }
 
 enum _SpatialResultAction { keepPrivate, publish, reject }
+
+/// One place a capture can be processed, presented as a committed choice.
+///
+/// The card states what happens to the source material before it offers the
+/// action, because that — not speed — is what the decision turns on.
+class _ProcessingDestination extends StatelessWidget {
+  const _ProcessingDestination({
+    required this.title,
+    required this.body,
+    required this.actionLabel,
+    required this.primary,
+    required this.onPressed,
+    this.detail,
+  });
+
+  final String title;
+  final String? detail;
+  final String body;
+  final String actionLabel;
+  final bool primary;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final enabled = onPressed != null;
+
+    return Container(
+      padding: const EdgeInsets.all(KubusSpacing.md),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(KubusRadius.md),
+        border: Border.all(
+          color: primary && enabled ? scheme.primary : scheme.outlineVariant,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: theme.textTheme.titleSmall
+                ?.copyWith(fontWeight: FontWeight.w600),
+          ),
+          if (detail != null) ...[
+            const SizedBox(height: KubusSpacing.xxs),
+            Text(
+              detail!,
+              style: theme.textTheme.bodyMedium
+                  ?.copyWith(color: scheme.onSurfaceVariant),
+            ),
+          ],
+          const SizedBox(height: KubusSpacing.sm),
+          Text(body, style: theme.textTheme.bodyMedium),
+          const SizedBox(height: KubusSpacing.md),
+          SizedBox(
+            width: double.infinity,
+            child: primary
+                ? FilledButton(onPressed: onPressed, child: Text(actionLabel))
+                : OutlinedButton(
+                    onPressed: onPressed, child: Text(actionLabel)),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
   late AnimationController _animationController;
@@ -1410,9 +1479,14 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
       candidates = const [];
     }
     if (!mounted) return null;
-    var useLocal = localAvailable;
+    // Where the capture is processed is a decision about privacy, not a
+    // preference to be toggled: each destination is its own committed action,
+    // so nobody picks a radio button and then hunts for a confirm button.
     var selectedIndex = 0;
-    var advanced = false;
+    var manualSelection = false;
+    final gpuLabel =
+        NodeStatePresentation.gpuLabel(node.snapshot?.worker ?? const {});
+
     return showModalBottomSheet<_SpatialProcessingSelection>(
       context: context,
       isScrollControlled: true,
@@ -1430,44 +1504,60 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(l10n.spatialProcessTitle,
-                    style: Theme.of(sheetContext).textTheme.headlineSmall),
-                const SizedBox(height: KubusSpacing.md),
-                if (!localAvailable)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: KubusSpacing.sm),
-                    child: Text(l10n.spatialProcessNoLocalGpu),
-                  ),
-                if (localAvailable)
-                  _processingOption(
-                    context: sheetContext,
-                    selected: useLocal,
-                    icon: Icons.computer,
-                    title: l10n.spatialProcessLocalTitle,
-                    subtitle: l10n.spatialProcessLocalPrivacy,
-                    onTap: () => setSheetState(() => useLocal = true),
-                  ),
-                _processingOption(
-                  context: sheetContext,
-                  selected: !useLocal,
-                  enabled: candidates.isNotEmpty,
-                  icon: Icons.hub_outlined,
-                  title: l10n.spatialProcessNetworkTitle,
-                  subtitle: candidates.isEmpty
-                      ? l10n.spatialProcessNetworkAvailable(0)
-                      : '${l10n.spatialProcessNetworkAvailable(candidates.length)}\n${l10n.spatialProcessNetworkPrivacy}',
-                  onTap: () => setSheetState(() => useLocal = false),
+                Text(
+                  localAvailable
+                      ? l10n.spatialProcessTitle
+                      : l10n.spatialProcessNoLocalGpu,
+                  style: Theme.of(sheetContext).textTheme.headlineSmall,
                 ),
-                if (!useLocal && candidates.isNotEmpty) ...[
-                  TextButton.icon(
-                    onPressed: () => setSheetState(() => advanced = !advanced),
-                    icon: Icon(
-                        advanced ? Icons.expand_less : Icons.tune_outlined),
-                    label: Text(advanced
+                const SizedBox(height: KubusSpacing.lg),
+
+                // Local is the privacy-preserving default and leads.
+                if (localAvailable)
+                  _ProcessingDestination(
+                    title: l10n.spatialProcessLocalTitle,
+                    detail: gpuLabel,
+                    body: l10n.spatialProcessLocalPrivacy,
+                    actionLabel: l10n.spatialProcessLocallyAction,
+                    primary: true,
+                    onPressed: () => Navigator.of(sheetContext).pop(
+                      const _SpatialProcessingSelection(local: true),
+                    ),
+                  ),
+                if (localAvailable) const SizedBox(height: KubusSpacing.md),
+
+                _ProcessingDestination(
+                  title: l10n.spatialProcessNetworkTitle,
+                  detail: candidates.isEmpty
+                      ? null
+                      : l10n.spatialProcessNetworkAvailable(candidates.length),
+                  body: candidates.isEmpty
+                      ? l10n.kubusNodeEmptyProvidersBody
+                      : l10n.spatialProcessNetworkPrivacy,
+                  actionLabel: l10n.spatialProcessNetworkAction,
+                  // With no local GPU this is the only way forward, so it
+                  // becomes the primary action rather than a dead end.
+                  primary: !localAvailable,
+                  onPressed: candidates.isEmpty
+                      ? null
+                      : () => Navigator.of(sheetContext).pop(
+                            _SpatialProcessingSelection(
+                              local: false,
+                              provider: candidates[selectedIndex],
+                            ),
+                          ),
+                ),
+
+                if (candidates.length > 1) ...[
+                  const SizedBox(height: KubusSpacing.sm),
+                  TextButton(
+                    onPressed: () =>
+                        setSheetState(() => manualSelection = !manualSelection),
+                    child: Text(manualSelection
                         ? l10n.spatialProcessAutoSelect
                         : l10n.spatialProcessAdvanced),
                   ),
-                  if (advanced)
+                  if (manualSelection)
                     for (var index = 0; index < candidates.length; index++)
                       _computeCandidateTile(
                         sheetContext,
@@ -1476,23 +1566,13 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                         onTap: () => setSheetState(() => selectedIndex = index),
                       ),
                 ],
-                const SizedBox(height: KubusSpacing.sm),
-                Text(l10n.spatialProcessMaximumPrivacy,
-                    style: Theme.of(sheetContext).textTheme.bodySmall),
-                const SizedBox(height: KubusSpacing.lg),
-                FilledButton(
-                  onPressed: (useLocal && localAvailable) ||
-                          (!useLocal && candidates.isNotEmpty)
-                      ? () => Navigator.of(sheetContext).pop(
-                            _SpatialProcessingSelection(
-                              local: useLocal,
-                              provider:
-                                  useLocal ? null : candidates[selectedIndex],
-                            ),
-                          )
-                      : null,
-                  child: Text(l10n.spatialProcessStart),
+
+                const SizedBox(height: KubusSpacing.md),
+                Text(
+                  l10n.spatialProcessMaximumPrivacy,
+                  style: Theme.of(sheetContext).textTheme.bodySmall,
                 ),
+                const SizedBox(height: KubusSpacing.sm),
                 TextButton(
                   onPressed: () => Navigator.of(sheetContext).pop(),
                   child: Text(l10n.spatialProcessKeepLocal),
@@ -1505,28 +1585,6 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _processingOption({
-    required BuildContext context,
-    required bool selected,
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-    bool enabled = true,
-  }) =>
-      Card(
-        child: ListTile(
-          enabled: enabled,
-          onTap: enabled ? onTap : null,
-          leading: Icon(icon),
-          title: Text(title),
-          subtitle: Text(subtitle),
-          trailing: Icon(selected
-              ? Icons.radio_button_checked
-              : Icons.radio_button_unchecked),
-        ),
-      );
-
   Widget _computeCandidateTile(
     BuildContext context,
     KubusComputeCandidate candidate, {
@@ -1535,9 +1593,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
   }) {
     final l10n = AppLocalizations.of(context)!;
     final model = (candidate.gpu['model'] ?? 'GPU').toString();
-    final vramGb = candidate.totalVramBytes <= 0
+    final vram = candidate.totalVramBytes <= 0
         ? null
-        : (candidate.totalVramBytes / (1024 * 1024 * 1024)).round();
+        : NodeStatePresentation.formatBytes(candidate.totalVramBytes);
     final queue = candidate.jobsAhead == 0
         ? l10n.spatialProcessReady
         : l10n.spatialProcessJobsAhead(candidate.jobsAhead);
@@ -1548,11 +1606,18 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
           );
     return ListTile(
       onTap: onTap,
-      leading: Icon(
-          selected ? Icons.radio_button_checked : Icons.radio_button_unchecked),
+      selected: selected,
+      contentPadding: EdgeInsets.zero,
+      trailing: selected
+          ? Icon(Icons.check_rounded,
+              color: Theme.of(context).colorScheme.primary)
+          : null,
       title: Text(candidate.label),
       subtitle: Text(
-        '$model${vramGb == null ? '' : ' · $vramGb GB'}\n$queue${success == null ? '' : ' · $success'}',
+        [
+          '$model${vram == null ? '' : ' · $vram'}',
+          [queue, if (success != null) success].join(' · '),
+        ].join('\n'),
       ),
       isThreeLine: true,
     );

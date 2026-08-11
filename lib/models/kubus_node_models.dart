@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 enum KubusNodeConnectionState {
   unpaired,
   connecting,
@@ -19,6 +21,43 @@ class KubusNodePairingPayload {
   final String secret;
   final String? fingerprint;
   final String? label;
+
+  /// Reads a scanned or pasted pairing code.
+  ///
+  /// The node's GUI encodes its QR as `kubus-node://pair?e=…&s=…&k=…`, which is
+  /// what a camera returns. The JSON form is still accepted because it is what
+  /// the node's pairing endpoint returns verbatim, and an operator who copies
+  /// that response by hand should not be told it is invalid.
+  factory KubusNodePairingPayload.parse(String raw) {
+    final text = raw.trim();
+    if (text.isEmpty) throw const FormatException('Empty pairing code');
+    if (text.startsWith('kubus-node://')) {
+      final uri = Uri.tryParse(text);
+      if (uri == null) throw const FormatException('Invalid pairing code');
+      final endpoint = Uri.tryParse(uri.queryParameters['e'] ?? '');
+      final sessionId = (uri.queryParameters['s'] ?? '').trim();
+      final secret = (uri.queryParameters['k'] ?? '').trim();
+      if (endpoint == null ||
+          !endpoint.hasScheme ||
+          !endpoint.hasAuthority ||
+          sessionId.isEmpty ||
+          secret.isEmpty) {
+        throw const FormatException('Invalid pairing code');
+      }
+      return KubusNodePairingPayload(
+        endpoint: endpoint,
+        sessionId: sessionId,
+        secret: secret,
+        fingerprint: uri.queryParameters['f'],
+        label: uri.queryParameters['l'],
+      );
+    }
+    final decoded = jsonDecode(text);
+    if (decoded is! Map<String, dynamic>) {
+      throw const FormatException('Invalid pairing code');
+    }
+    return KubusNodePairingPayload.fromJson(decoded);
+  }
 
   factory KubusNodePairingPayload.fromJson(Map<String, dynamic> json) {
     final node = json['node'] is Map<String, dynamic>
