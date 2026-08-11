@@ -814,7 +814,8 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                           height: 8,
                           progress: capture.coverage,
                           color: Theme.of(context).colorScheme.primary,
-                          animate: capture.isCapturing,
+                          animate:
+                              capture.state == SpatialCaptureState.capturing,
                         ),
                         const SizedBox(height: KubusSpacing.xs),
                         Text(
