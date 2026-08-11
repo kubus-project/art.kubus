@@ -1,4 +1,3 @@
-
 import 'package:arcore_flutter_plugin/src/arcore_augmented_image.dart';
 import 'package:arcore_flutter_plugin/src/arcore_rotating_node.dart';
 import 'package:arcore_flutter_plugin/src/utils/vector_utils.dart';
@@ -149,6 +148,19 @@ class ArCoreController {
 
   Future<dynamic> getTrackingState() async {
     return _channel.invokeMethod('getTrackingState');
+  }
+
+  /// Captures an RGB frame with the matching ARCore camera pose and
+  /// intrinsics. Depth and confidence planes are included only when the
+  /// current device/session provides them.
+  Future<Map<String, dynamic>> captureSpatialFrame() async {
+    final result = await _channel.invokeMapMethod<String, dynamic>(
+      'captureSpatialFrame',
+    );
+    if (result == null) {
+      throw StateError('ARCore did not return a spatial frame');
+    }
+    return result;
   }
 
   Future addArCoreNodeToAugmentedImage(ArCoreNode node, int index,

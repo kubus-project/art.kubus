@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; img-src data: blob:; connect-src http://127.0.0.1:* https: blob:; worker-src blob:">
+  <style>
+    html,body,canvas{width:100%;height:100%;margin:0;overflow:hidden;background:#101415}canvas{display:block;touch-action:none}#status{position:fixed;inset:auto 20px 24px;padding:10px 14px;border-radius:12px;background:#182022;color:#fff;font:14px system-ui;text-align:center}
+  </style>
+</head>
+<body>
+  <canvas aria-label="Interactive spatial archive"></canvas>
+  <div id="status">Loading spatial archive…</div>
+  <script src="viewer.bundle.js"></script>
+</body>
+</html>
