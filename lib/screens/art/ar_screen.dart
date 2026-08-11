@@ -1303,6 +1303,14 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
 
   Future<void> _captureSpatialFrame() async {
     final capture = context.read<SpatialCaptureProvider>();
+    if (capture.state == SpatialCaptureState.reviewReady) {
+      await _reviewSpatialResult(
+        capture,
+        context.read<KubusNodeProvider>(),
+        remote: capture.remoteResult != null,
+      );
+      return;
+    }
     if (capture.state != SpatialCaptureState.capturing) {
       final profile = context.read<ProfileProvider>().currentUser;
       final wallet = _resolveCurrentWalletAddress();
@@ -1594,43 +1602,47 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
     final l10n = AppLocalizations.of(context)!;
     final action = await showDialog<_SpatialResultAction>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(l10n.spatialResultReviewTitle),
-        content: SizedBox(
-          width: 640,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SizedBox(
-                height: 360,
-                child: SpatialViewer(
-                  content: content,
-                  nodeService: node.service,
+      barrierDismissible: false,
+      builder: (dialogContext) => PopScope(
+        canPop: false,
+        child: AlertDialog(
+          title: Text(l10n.spatialResultReviewTitle),
+          content: SizedBox(
+            width: 640,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  height: 360,
+                  child: SpatialViewer(
+                    content: content,
+                    nodeService: node.service,
+                  ),
                 ),
-              ),
-              const SizedBox(height: KubusSpacing.sm),
-              Text(l10n.spatialResultReviewBody),
-            ],
-          ),
-        ),
-        actions: [
-          if (remote)
-            TextButton(
-              onPressed: () =>
-                  Navigator.of(dialogContext).pop(_SpatialResultAction.reject),
-              child: Text(l10n.spatialResultReject),
+                const SizedBox(height: KubusSpacing.sm),
+                Text(l10n.spatialResultReviewBody),
+              ],
             ),
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext)
-                .pop(_SpatialResultAction.keepPrivate),
-            child: Text(l10n.spatialResultKeepPrivate),
           ),
-          FilledButton(
-            onPressed: () =>
-                Navigator.of(dialogContext).pop(_SpatialResultAction.publish),
-            child: Text(l10n.spatialResultPublish),
-          ),
-        ],
+          actions: [
+            if (remote)
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext)
+                    .pop(_SpatialResultAction.reject),
+                child: Text(l10n.spatialResultReject),
+              ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext)
+                  .pop(_SpatialResultAction.keepPrivate),
+              child: Text(l10n.spatialResultKeepPrivate),
+            ),
+            FilledButton(
+              onPressed: () =>
+                  Navigator.of(dialogContext).pop(_SpatialResultAction.publish),
+              child: Text(l10n.spatialResultPublish),
+            ),
+          ],
+        ),
       ),
     );
     if (action == null || !mounted) return;
@@ -1638,7 +1650,6 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
       await capture.rejectRemoteResult(node);
       return;
     }
-    if (remote) await capture.approveRemoteResult(node);
     if (action == _SpatialResultAction.publish) {
       await node.requestPublication(
         spatialId: spatialId,
@@ -1646,6 +1657,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
         markerId: capture.markerId,
       );
     }
+    if (remote) await capture.approveRemoteResult(node);
   }
 
   void _startScanning() {

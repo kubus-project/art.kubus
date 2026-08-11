@@ -45,4 +45,15 @@ void main() {
       throwsFormatException,
     );
   });
+
+  test('starting or resetting a capture invalidates active polling', () {
+    final provider = SpatialCaptureProvider();
+    final initial = provider.operationGeneration;
+
+    provider.begin(artworkId: 'art-1');
+    expect(provider.operationGeneration, initial + 1);
+
+    provider.reset();
+    expect(provider.operationGeneration, initial + 2);
+  });
 }

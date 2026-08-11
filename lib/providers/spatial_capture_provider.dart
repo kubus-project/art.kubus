@@ -30,6 +30,7 @@ class SpatialCaptureProvider extends ChangeNotifier {
   String? _error;
   String? _spatialId;
   Map<String, dynamic>? _remoteResult;
+  int _operationGeneration = 0;
 
   SpatialCaptureState get state => _state;
   int get frameCount => _frames.length;
@@ -43,6 +44,8 @@ class SpatialCaptureProvider extends ChangeNotifier {
   String? get artworkId => _artworkId;
   String? get markerId => _markerId;
   Map<String, dynamic>? get remoteResult => _remoteResult;
+  @visibleForTesting
+  int get operationGeneration => _operationGeneration;
   int get estimatedInputBytes => _frames.fold<int>(0, (total, frame) {
         var bytes = (frame['rgb'] as Uint8List?)?.length ?? 0;
         bytes += (frame['depth'] as Uint8List?)?.length ?? 0;
@@ -66,6 +69,7 @@ class SpatialCaptureProvider extends ChangeNotifier {
     String? markerId,
     String? capturedBy,
   }) {
+    _operationGeneration++;
     _frames.clear();
     _artworkId = artworkId;
     _markerId = markerId;
@@ -174,6 +178,7 @@ class SpatialCaptureProvider extends ChangeNotifier {
       throw StateError('No compatible local GPU worker is available.');
     }
     _state = SpatialCaptureState.processing;
+    final generation = _operationGeneration;
     _error = null;
     notifyListeners();
     try {
@@ -182,9 +187,11 @@ class SpatialCaptureProvider extends ChangeNotifier {
         artworkId: _artworkId!,
         markerId: _markerId,
       );
+      if (generation != _operationGeneration) return;
       _jobId = job.id;
-      await _observeJob(node, job.id);
+      await _observeJob(node, job.id, generation);
     } catch (error) {
+      if (generation != _operationGeneration) return;
       _state = SpatialCaptureState.error;
       _error = error.toString();
       notifyListeners();
@@ -201,6 +208,7 @@ class SpatialCaptureProvider extends ChangeNotifier {
       throw StateError('Transfer a spatial capture before processing it.');
     }
     _state = SpatialCaptureState.transferring;
+    final generation = _operationGeneration;
     _error = null;
     notifyListeners();
     try {
@@ -216,9 +224,14 @@ class SpatialCaptureProvider extends ChangeNotifier {
           'outputTier': 'mobile_archive',
         },
       );
+      if (generation != _operationGeneration) {
+        await node.cancelRemoteJob(job.id);
+        return;
+      }
       _jobId = job.id;
-      await _observeRemoteJob(node, job.id);
+      await _observeRemoteJob(node, job.id, generation);
     } catch (error) {
+      if (generation != _operationGeneration) return;
       _state = SpatialCaptureState.error;
       _error = error.toString();
       notifyListeners();
@@ -262,10 +275,16 @@ class SpatialCaptureProvider extends ChangeNotifier {
     return _frames.length * 2;
   }
 
-  Future<void> _observeRemoteJob(KubusNodeProvider node, String jobId) async {
+  Future<void> _observeRemoteJob(
+    KubusNodeProvider node,
+    String jobId,
+    int generation,
+  ) async {
     final deadline = DateTime.now().add(const Duration(hours: 2));
     while (DateTime.now().isBefore(deadline)) {
+      if (generation != _operationGeneration || _jobId != jobId) return;
       final job = await node.refreshRemoteJob(jobId);
+      if (generation != _operationGeneration || _jobId != jobId) return;
       switch (job.state) {
         case 'REQUESTED':
         case 'MATCHED':
@@ -282,7 +301,9 @@ class SpatialCaptureProvider extends ChangeNotifier {
         case 'COMPLETED':
           _state = SpatialCaptureState.verifying;
           notifyListeners();
-          _remoteResult = await node.retrieveRemoteResult(jobId);
+          final result = await node.retrieveRemoteResult(jobId);
+          if (generation != _operationGeneration || _jobId != jobId) return;
+          _remoteResult = result;
           _spatialId = (_remoteResult?['id'] ?? '').toString();
           _state = SpatialCaptureState.reviewReady;
           notifyListeners();
@@ -303,14 +324,21 @@ class SpatialCaptureProvider extends ChangeNotifier {
     throw TimeoutException('Network processing did not finish in 2 hours.');
   }
 
-  Future<void> _observeJob(KubusNodeProvider node, String jobId) async {
+  Future<void> _observeJob(
+    KubusNodeProvider node,
+    String jobId,
+    int generation,
+  ) async {
     final deadline = DateTime.now().add(const Duration(minutes: 45));
     while (DateTime.now().isBefore(deadline)) {
+      if (generation != _operationGeneration || _jobId != jobId) return;
       final job = await node.service.getJob(jobId);
+      if (generation != _operationGeneration || _jobId != jobId) return;
       switch (job.state) {
         case 'completed':
           _spatialId = (job.output?['id'] ?? '').toString();
           await node.refresh();
+          if (generation != _operationGeneration || _jobId != jobId) return;
           _state = SpatialCaptureState.complete;
           notifyListeners();
           return;
@@ -328,6 +356,7 @@ class SpatialCaptureProvider extends ChangeNotifier {
   }
 
   void reset() {
+    _operationGeneration++;
     _frames.clear();
     _state = SpatialCaptureState.idle;
     _error = null;

@@ -22,6 +22,9 @@ class KubusNodeProvider extends ChangeNotifier {
   List<KubusComputeCandidate> get computeCandidates => _computeCandidates;
   KubusRemoteComputeJob? get remoteJob => _remoteJob;
   Map<String, dynamic> get computeSettings => _computeSettings;
+  bool get computeSettingsAvailable =>
+      _computeSettings.isNotEmpty &&
+      _snapshot?.capabilityAvailable('compute.remoteJobs') == true;
   String? get error => _error;
   bool get isPaired => service.isPaired;
 
@@ -164,7 +167,25 @@ class KubusNodeProvider extends ChangeNotifier {
   }
 
   Future<void> updateComputeSettings(Map<String, dynamic> settings) async {
-    _computeSettings = await service.updateComputeSettings(settings);
+    if (!computeSettingsAvailable) {
+      throw StateError('Remote compute settings are unavailable on this node.');
+    }
+    try {
+      _computeSettings = await service.updateComputeSettings(settings);
+      _error = null;
+      notifyListeners();
+    } catch (error) {
+      _error = error.toString();
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  Future<void> cancelRemoteJob(String id) async {
+    _remoteJob = await service.cancelRemoteComputeJob(
+      id,
+      _backendAuthorization(),
+    );
     notifyListeners();
   }
 

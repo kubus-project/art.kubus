@@ -615,10 +615,25 @@ class _ComputePanel extends StatelessWidget {
 
   final KubusNodeProvider provider;
 
+  Future<void> _update(
+    BuildContext context,
+    Map<String, dynamic> settings,
+  ) async {
+    try {
+      await provider.updateComputeSettings(settings);
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString())),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final settings = provider.computeSettings;
+    final settingsAvailable = provider.computeSettingsAvailable;
     final enabled = settings['enabled'] == true;
     final paused = settings['paused'] == true;
     final maxConcurrency =
@@ -644,10 +659,8 @@ class _ComputePanel extends StatelessWidget {
           SwitchListTile.adaptive(
             contentPadding: EdgeInsets.zero,
             value: enabled,
-            onChanged: provider.isPaired
-                ? (value) => unawaited(
-                      provider.updateComputeSettings({'enabled': value}),
-                    )
+            onChanged: settingsAvailable
+                ? (value) => unawaited(_update(context, {'enabled': value}))
                 : null,
             title: Text(l10n.kubusNodeOfferGpu),
             subtitle: Text(l10n.kubusNodeOfferGpuBody),
@@ -655,10 +668,8 @@ class _ComputePanel extends StatelessWidget {
           SwitchListTile.adaptive(
             contentPadding: EdgeInsets.zero,
             value: paused,
-            onChanged: enabled
-                ? (value) => unawaited(
-                      provider.updateComputeSettings({'paused': value}),
-                    )
+            onChanged: settingsAvailable && enabled
+                ? (value) => unawaited(_update(context, {'paused': value}))
                 : null,
             title: Text(l10n.kubusNodePauseRemoteJobs),
           ),
@@ -673,11 +684,12 @@ class _ComputePanel extends StatelessWidget {
                       child: Text('$value'),
                     ))
                 .toList(growable: false),
-            onChanged: enabled
+            onChanged: settingsAvailable && enabled
                 ? (value) {
                     if (value != null) {
-                      unawaited(provider
-                          .updateComputeSettings({'maxConcurrency': value}));
+                      unawaited(
+                        _update(context, {'maxConcurrency': value}),
+                      );
                     }
                   }
                 : null,
