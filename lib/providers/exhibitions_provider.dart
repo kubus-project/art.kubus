@@ -1,14 +1,20 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../models/event.dart';
 import '../models/exhibition.dart';
 import '../services/backend_api_service.dart';
+import '../services/telemetry/contribution_type.dart';
+import '../services/telemetry/telemetry_service.dart';
 
 class ExhibitionsProvider extends ChangeNotifier {
   final BackendApiService _api;
+  final TelemetryService _telemetry;
 
-  ExhibitionsProvider({BackendApiService? api})
-      : _api = api ?? BackendApiService();
+  ExhibitionsProvider({BackendApiService? api, TelemetryService? telemetry})
+      : _api = api ?? BackendApiService(),
+        _telemetry = telemetry ?? TelemetryService();
 
   final List<Exhibition> _exhibitions = <Exhibition>[];
   final List<Exhibition> _myExhibitions = <Exhibition>[];
@@ -180,14 +186,23 @@ class ExhibitionsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Creates an exhibition. Instrumented here, at the domain success boundary,
+  /// so an institutional member's activation is measured once wherever the
+  /// creation was triggered from.
+  ///
+  /// Cover upload, artwork/event/marker linking and POAP updates are separate
+  /// operations that happen around this one; none of them creates an
+  /// exhibition, so none of them emits a contribution.
   Future<Exhibition?> createExhibition(Map<String, dynamic> payload) async {
     _setFlag(_Flag.mutating, true);
     _error = null;
+    _noteContributionStarted();
     try {
       final created = await _api.createExhibition(payload);
       if (created != null) {
         _upsert(created, notify: false, detailHydrated: true);
         _selected = created;
+        _noteContributionPublished();
         notifyListeners();
       }
       return created;
@@ -200,6 +215,26 @@ class ExhibitionsProvider extends ChangeNotifier {
     }
   }
 
+  /// Telemetry is fire-and-forget so an unavailable queue or sender can never
+  /// fail an exhibition the backend already created.
+  void _noteContributionStarted() {
+    unawaited(
+      _telemetry
+          .trackContributionStarted(type: ContributionType.exhibition)
+          .catchError((_) {}),
+    );
+  }
+
+  void _noteContributionPublished() {
+    unawaited(
+      _telemetry
+          .trackSuccessfulContribution(ContributionType.exhibition)
+          .catchError((_) {}),
+    );
+  }
+
+  /// Editing an existing exhibition is not a new contribution, so it emits
+  /// nothing.
   Future<Exhibition?> updateExhibition(
       String id, Map<String, dynamic> updates) async {
     _setFlag(_Flag.mutating, true);
