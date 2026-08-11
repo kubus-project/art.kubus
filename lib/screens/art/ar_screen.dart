@@ -4,6 +4,7 @@ import 'package:art_kubus/models/event.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../../config/config.dart';
 import '../../widgets/inline_loading.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../utils/app_animations.dart';
@@ -134,6 +135,13 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
       'icon': Icons.create,
     },
   ];
+
+  Iterable<Map<String, dynamic>> get _availableArModes =>
+      AppConfig.isFeatureEnabled('availabilityNodes')
+          ? _arModes
+          : _arModes.where(
+              (mode) => mode['id'] == 'scan' || mode['id'] == 'place',
+            );
 
   String _modeName(AppLocalizations l10n, String modeId) {
     switch (modeId) {
@@ -316,7 +324,8 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
 
     setState(() {
       _selectedArtwork = artwork;
-      _currentMode = 'view';
+      _currentMode =
+          AppConfig.isFeatureEnabled('availabilityNodes') ? 'view' : 'place';
     });
 
     if (kDebugMode) {
@@ -500,7 +509,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: _arModes.map((mode) {
+                    children: _availableArModes.map((mode) {
                       final modeId = mode['id'] as String;
                       final modeIcon = mode['icon'] as IconData;
                       final isSelected = modeId == _currentMode;
@@ -1248,6 +1257,10 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
   }
 
   void _changeMode(String modeId) {
+    if (!AppConfig.isFeatureEnabled('availabilityNodes') &&
+        (modeId == 'view' || modeId == 'create')) {
+      return;
+    }
     setState(() {
       _currentMode = modeId;
       // Clear scanner controller when leaving scan mode
@@ -1259,6 +1272,10 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
   }
 
   void _handleAction() {
+    if (!AppConfig.isFeatureEnabled('availabilityNodes') &&
+        (_currentMode == 'view' || _currentMode == 'create')) {
+      return;
+    }
     switch (_currentMode) {
       case 'scan':
         _startScanning();

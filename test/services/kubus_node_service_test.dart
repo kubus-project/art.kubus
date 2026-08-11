@@ -71,7 +71,7 @@ void main() {
 
     expect(candidates.first.source, 'kubus_node');
     expect(candidates[1].source, 'ipfs_gateway');
-    expect(candidates.last.source, 'legacy_backend');
+    expect(candidates.last.source, 'legacy_static_upload');
   });
 
   test('secure web mode rejects insecure LAN pairing', () async {

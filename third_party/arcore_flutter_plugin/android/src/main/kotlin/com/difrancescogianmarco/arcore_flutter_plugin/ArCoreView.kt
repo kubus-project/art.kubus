@@ -4,11 +4,16 @@ import android.app.Activity
 import android.app.Application
 import android.content.Context
 import android.graphics.BitmapFactory
+import android.graphics.ImageFormat
+import android.graphics.Rect
+import android.graphics.YuvImage
+import android.media.Image
 import android.os.Bundle
 import android.os.Handler
 import android.util.Log
 import android.view.GestureDetector
 import android.view.MotionEvent
+import android.view.PixelCopy
 import android.view.View
 import android.widget.Toast
 import com.difrancescogianmarco.arcore_flutter_plugin.flutter_models.FlutterArCoreHitTestResult
@@ -32,7 +37,6 @@ import io.flutter.plugin.platform.PlatformView
 
 import android.graphics.Bitmap
 import android.os.Environment
-import android.view.PixelCopy
 import android.os.HandlerThread
 import android.content.ContextWrapper
 import java.io.FileOutputStream
@@ -359,28 +363,29 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
             result.error("tracking_unavailable", "ARCore tracking is not ready", null)
             return
         }
-        val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
         val handlerThread = HandlerThread("SpatialFrameCopier")
         handlerThread.start()
-        PixelCopy.request(view, bitmap, { copyResult ->
+        Handler(handlerThread.looper).post {
             try {
-                if (copyResult != PixelCopy.SUCCESS) {
-                    result.error("frame_copy_failed", "Could not copy the AR frame", copyResult)
-                    return@request
-                }
                 val camera = frame.camera
                 val pose = camera.pose
                 val intrinsics = camera.imageIntrinsics
                 val dimensions = intrinsics.imageDimensions
                 val focalLength = intrinsics.focalLength
                 val principalPoint = intrinsics.principalPoint
-                val rgb = ByteArrayOutputStream().use { stream ->
-                    bitmap.compress(Bitmap.CompressFormat.JPEG, 92, stream)
-                    stream.toByteArray()
+                var cameraTimestamp = frame.timestamp
+                val rgb = frame.acquireCameraImage().use { image ->
+                    cameraTimestamp = image.timestamp
+                    val nv21 = yuv420888ToNv21(image)
+                    ByteArrayOutputStream().use { stream ->
+                        YuvImage(nv21, ImageFormat.NV21, image.width, image.height, null)
+                            .compressToJpeg(Rect(0, 0, image.width, image.height), 92, stream)
+                        stream.toByteArray()
+                    }
                 }
                 val payload = hashMapOf<String, Any>(
                     "rgb" to rgb,
-                    "timestampNanos" to frame.timestamp,
+                    "timestampNanos" to cameraTimestamp,
                     "poseTranslation" to pose.translation.toList(),
                     "poseRotation" to pose.rotationQuaternion.toList(),
                     "intrinsics" to hashMapOf(
@@ -418,10 +423,41 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
             } catch (error: Throwable) {
                 result.error("capture_failed", error.localizedMessage, null)
             } finally {
-                bitmap.recycle()
                 handlerThread.quitSafely()
             }
-        }, Handler(handlerThread.looper))
+        }
+    }
+
+    private fun yuv420888ToNv21(image: Image): ByteArray {
+        val width = image.width
+        val height = image.height
+        val output = ByteArray(width * height * 3 / 2)
+        val yPlane = image.planes[0]
+        val yBuffer = yPlane.buffer.duplicate()
+        var outputIndex = 0
+        for (row in 0 until height) {
+            for (column in 0 until width) {
+                output[outputIndex++] = yBuffer.get(
+                    row * yPlane.rowStride + column * yPlane.pixelStride
+                )
+            }
+        }
+
+        val uPlane = image.planes[1]
+        val vPlane = image.planes[2]
+        val uBuffer = uPlane.buffer.duplicate()
+        val vBuffer = vPlane.buffer.duplicate()
+        for (row in 0 until height / 2) {
+            for (column in 0 until width / 2) {
+                output[outputIndex++] = vBuffer.get(
+                    row * vPlane.rowStride + column * vPlane.pixelStride
+                )
+                output[outputIndex++] = uBuffer.get(
+                    row * uPlane.rowStride + column * uPlane.pixelStride
+                )
+            }
+        }
+        return output
     }
 
     @Throws(IOException::class)

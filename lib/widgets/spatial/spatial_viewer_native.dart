@@ -49,10 +49,11 @@ class _NativeSpatialViewerState extends State<_NativeSpatialViewer> {
   Future<void> _initialize() async {
     try {
       final variants = widget.content.variants;
-      final variant = variants
+      final supported = variants.where(_isSplatVariant);
+      final variant = supported
               .where((item) => item.role == 'spatial_mobile')
               .firstOrNull ??
-          variants.where((item) => item.role == 'spatial_archive').firstOrNull;
+          supported.where((item) => item.role == 'spatial_archive').firstOrNull;
       if (variant == null) {
         throw StateError('No viewable spatial variant is available.');
       }
@@ -95,6 +96,17 @@ class _NativeSpatialViewerState extends State<_NativeSpatialViewer> {
 
   static String _jsString(String value) =>
       "'${value.replaceAll(r'\', r'\\').replaceAll("'", r"\'")}'";
+
+  static bool _isSplatVariant(SpatialVariant variant) {
+    final format = variant.format.toLowerCase();
+    final mimeType = variant.mimeType.toLowerCase();
+    return const {'splat', 'ply', 'spz', 'ksplat', 'sog'}.any(
+      (supported) =>
+          format == supported ||
+          format.endsWith('.$supported') ||
+          mimeType.contains(supported),
+    );
+  }
 
   @override
   void dispose() {

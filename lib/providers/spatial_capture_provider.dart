@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import 'kubus_node_provider.dart';
@@ -139,6 +140,7 @@ class SpatialCaptureProvider extends ChangeNotifier {
           markerId: _markerId,
         );
         _jobId = job.id;
+        await _observeJob(node, job.id);
       } else {
         _state = SpatialCaptureState.complete;
       }
@@ -149,6 +151,29 @@ class SpatialCaptureProvider extends ChangeNotifier {
       notifyListeners();
       rethrow;
     }
+  }
+
+  Future<void> _observeJob(KubusNodeProvider node, String jobId) async {
+    final deadline = DateTime.now().add(const Duration(minutes: 45));
+    while (DateTime.now().isBefore(deadline)) {
+      final job = await node.service.getJob(jobId);
+      switch (job.state) {
+        case 'completed':
+          await node.refresh();
+          _state = SpatialCaptureState.complete;
+          notifyListeners();
+          return;
+        case 'failed':
+        case 'cancelled':
+          throw StateError(
+            job.error?['message']?.toString() ??
+                'Spatial processing ${job.state}.',
+          );
+      }
+      notifyListeners();
+      await Future<void>.delayed(const Duration(seconds: 2));
+    }
+    throw TimeoutException('Spatial processing did not finish in 45 minutes.');
   }
 
   void reset() {

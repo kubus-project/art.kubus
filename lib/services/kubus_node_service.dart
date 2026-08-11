@@ -211,8 +211,8 @@ class KubusNodeService {
     if (backend.isNotEmpty) {
       candidates.add(
         KubusContentCandidate(
-          uri: Uri.parse('$backend/api/upload/${Uri.encodeComponent(cid)}'),
-          source: 'legacy_backend',
+          uri: Uri.parse('$backend/uploads/${Uri.encodeComponent(cid)}'),
+          source: 'legacy_static_upload',
         ),
       );
     }
