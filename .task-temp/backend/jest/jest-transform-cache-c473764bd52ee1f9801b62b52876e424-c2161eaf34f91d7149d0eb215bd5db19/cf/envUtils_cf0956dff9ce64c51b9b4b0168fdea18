@@ -1,0 +1,36 @@
+fc53ad6e50b012ae30d31d0d26c994da
+/**
+ * Parse a positive integer from an environment variable value.
+ * Returns `fallback` if the value is not a finite positive integer.
+ *
+ * @param {string|undefined} value - Raw env var value
+ * @param {number} fallback - Default to use when value is invalid
+ * @returns {number}
+ */
+const parsePositiveInt = (value, fallback) => {
+  const parsed = parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+};
+
+/**
+ * Parse a boolean from an environment variable value.
+ * Accepts "true", "1", "yes", "y", "on" as truthy and
+ * "false", "0", "no", "n", "off" as falsy (case-insensitive).
+ * Returns `defaultValue` for unset or unrecognised values.
+ *
+ * @param {string|undefined|null} value - Raw env var value
+ * @param {boolean} [defaultValue=false]
+ * @returns {boolean}
+ */
+const boolEnv = (value, defaultValue = false) => {
+  if (value === undefined || value === null) return defaultValue;
+  const normalized = value.toString().trim().toLowerCase();
+  if (['true', '1', 'yes', 'y', 'on'].includes(normalized)) return true;
+  if (['false', '0', 'no', 'n', 'off'].includes(normalized)) return false;
+  return defaultValue;
+};
+module.exports = {
+  parsePositiveInt,
+  boolEnv
+};
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJuYW1lcyI6WyJwYXJzZVBvc2l0aXZlSW50IiwidmFsdWUiLCJmYWxsYmFjayIsInBhcnNlZCIsInBhcnNlSW50IiwiTnVtYmVyIiwiaXNGaW5pdGUiLCJib29sRW52IiwiZGVmYXVsdFZhbHVlIiwidW5kZWZpbmVkIiwibm9ybWFsaXplZCIsInRvU3RyaW5nIiwidHJpbSIsInRvTG93ZXJDYXNlIiwiaW5jbHVkZXMiLCJtb2R1bGUiLCJleHBvcnRzIl0sInNvdXJjZXMiOlsiZW52VXRpbHMuanMiXSwic291cmNlc0NvbnRlbnQiOlsiLyoqXHJcbiAqIFBhcnNlIGEgcG9zaXRpdmUgaW50ZWdlciBmcm9tIGFuIGVudmlyb25tZW50IHZhcmlhYmxlIHZhbHVlLlxyXG4gKiBSZXR1cm5zIGBmYWxsYmFja2AgaWYgdGhlIHZhbHVlIGlzIG5vdCBhIGZpbml0ZSBwb3NpdGl2ZSBpbnRlZ2VyLlxyXG4gKlxyXG4gKiBAcGFyYW0ge3N0cmluZ3x1bmRlZmluZWR9IHZhbHVlIC0gUmF3IGVudiB2YXIgdmFsdWVcclxuICogQHBhcmFtIHtudW1iZXJ9IGZhbGxiYWNrIC0gRGVmYXVsdCB0byB1c2Ugd2hlbiB2YWx1ZSBpcyBpbnZhbGlkXHJcbiAqIEByZXR1cm5zIHtudW1iZXJ9XHJcbiAqL1xyXG5jb25zdCBwYXJzZVBvc2l0aXZlSW50ID0gKHZhbHVlLCBmYWxsYmFjaykgPT4ge1xyXG4gIGNvbnN0IHBhcnNlZCA9IHBhcnNlSW50KHZhbHVlLCAxMCk7XHJcbiAgcmV0dXJuIE51bWJlci5pc0Zpbml0ZShwYXJzZWQpICYmIHBhcnNlZCA+IDAgPyBwYXJzZWQgOiBmYWxsYmFjaztcclxufTtcclxuXHJcbi8qKlxyXG4gKiBQYXJzZSBhIGJvb2xlYW4gZnJvbSBhbiBlbnZpcm9ubWVudCB2YXJpYWJsZSB2YWx1ZS5cclxuICogQWNjZXB0cyBcInRydWVcIiwgXCIxXCIsIFwieWVzXCIsIFwieVwiLCBcIm9uXCIgYXMgdHJ1dGh5IGFuZFxyXG4gKiBcImZhbHNlXCIsIFwiMFwiLCBcIm5vXCIsIFwiblwiLCBcIm9mZlwiIGFzIGZhbHN5IChjYXNlLWluc2Vuc2l0aXZlKS5cclxuICogUmV0dXJucyBgZGVmYXVsdFZhbHVlYCBmb3IgdW5zZXQgb3IgdW5yZWNvZ25pc2VkIHZhbHVlcy5cclxuICpcclxuICogQHBhcmFtIHtzdHJpbmd8dW5kZWZpbmVkfG51bGx9IHZhbHVlIC0gUmF3IGVudiB2YXIgdmFsdWVcclxuICogQHBhcmFtIHtib29sZWFufSBbZGVmYXVsdFZhbHVlPWZhbHNlXVxyXG4gKiBAcmV0dXJucyB7Ym9vbGVhbn1cclxuICovXHJcbmNvbnN0IGJvb2xFbnYgPSAodmFsdWUsIGRlZmF1bHRWYWx1ZSA9IGZhbHNlKSA9PiB7XHJcbiAgaWYgKHZhbHVlID09PSB1bmRlZmluZWQgfHwgdmFsdWUgPT09IG51bGwpIHJldHVybiBkZWZhdWx0VmFsdWU7XHJcbiAgY29uc3Qgbm9ybWFsaXplZCA9IHZhbHVlLnRvU3RyaW5nKCkudHJpbSgpLnRvTG93ZXJDYXNlKCk7XHJcbiAgaWYgKFsndHJ1ZScsICcxJywgJ3llcycsICd5JywgJ29uJ10uaW5jbHVkZXMobm9ybWFsaXplZCkpIHJldHVybiB0cnVlO1xyXG4gIGlmIChbJ2ZhbHNlJywgJzAnLCAnbm8nLCAnbicsICdvZmYnXS5pbmNsdWRlcyhub3JtYWxpemVkKSkgcmV0dXJuIGZhbHNlO1xyXG4gIHJldHVybiBkZWZhdWx0VmFsdWU7XHJcbn07XHJcblxyXG5tb2R1bGUuZXhwb3J0cyA9IHsgcGFyc2VQb3NpdGl2ZUludCwgYm9vbEVudiB9O1xyXG4iXSwibWFwcGluZ3MiOiJBQUFBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQSxNQUFNQSxnQkFBZ0IsR0FBR0EsQ0FBQ0MsS0FBSyxFQUFFQyxRQUFRLEtBQUs7RUFDNUMsTUFBTUMsTUFBTSxHQUFHQyxRQUFRLENBQUNILEtBQUssRUFBRSxFQUFFLENBQUM7RUFDbEMsT0FBT0ksTUFBTSxDQUFDQyxRQUFRLENBQUNILE1BQU0sQ0FBQyxJQUFJQSxNQUFNLEdBQUcsQ0FBQyxHQUFHQSxNQUFNLEdBQUdELFFBQVE7QUFDbEUsQ0FBQzs7QUFFRDtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBLE1BQU1LLE9BQU8sR0FBR0EsQ0FBQ04sS0FBSyxFQUFFTyxZQUFZLEdBQUcsS0FBSyxLQUFLO0VBQy9DLElBQUlQLEtBQUssS0FBS1EsU0FBUyxJQUFJUixLQUFLLEtBQUssSUFBSSxFQUFFLE9BQU9PLFlBQVk7RUFDOUQsTUFBTUUsVUFBVSxHQUFHVCxLQUFLLENBQUNVLFFBQVEsQ0FBQyxDQUFDLENBQUNDLElBQUksQ0FBQyxDQUFDLENBQUNDLFdBQVcsQ0FBQyxDQUFDO0VBQ3hELElBQUksQ0FBQyxNQUFNLEVBQUUsR0FBRyxFQUFFLEtBQUssRUFBRSxHQUFHLEVBQUUsSUFBSSxDQUFDLENBQUNDLFFBQVEsQ0FBQ0osVUFBVSxDQUFDLEVBQUUsT0FBTyxJQUFJO0VBQ3JFLElBQUksQ0FBQyxPQUFPLEVBQUUsR0FBRyxFQUFFLElBQUksRUFBRSxHQUFHLEVBQUUsS0FBSyxDQUFDLENBQUNJLFFBQVEsQ0FBQ0osVUFBVSxDQUFDLEVBQUUsT0FBTyxLQUFLO0VBQ3ZFLE9BQU9GLFlBQVk7QUFDckIsQ0FBQztBQUVETyxNQUFNLENBQUNDLE9BQU8sR0FBRztFQUFFaEIsZ0JBQWdCO0VBQUVPO0FBQVEsQ0FBQyIsImlnbm9yZUxpc3QiOltdfQ==

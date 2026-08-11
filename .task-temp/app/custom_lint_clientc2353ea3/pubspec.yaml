@@ -1,0 +1,11 @@
+name: custom_lint_client
+description: A client for custom_lint
+version: 0.0.1
+publish_to: 'none'
+
+environment:
+  sdk: ">=3.6.0 <4.0.0"
+
+dependencies:
+  kubus_lints:
+    path: "g:/WorkingDATA/art.kubus/art.kubus/task_worktrees/app/packages/kubus_lints"
