@@ -174,6 +174,102 @@ class KubusNodeService {
   Future<Map<String, dynamic>> getSpatial(String id) =>
       _get('/local/v1/spatial/${Uri.encodeComponent(id)}');
 
+  Future<List<KubusComputeCandidate>> findComputeCandidates({
+    required String backendAuthorization,
+    required int inputBytes,
+    int minimumVramBytes = 0,
+    String type = 'spatial.reconstruct',
+  }) async {
+    final data = await _post('/local/v1/compute/candidates', {
+      'backendAuthorization': backendAuthorization,
+      'type': type,
+      'inputBytes': inputBytes,
+      'minimumVramBytes': minimumVramBytes,
+    });
+    return (data['nodes'] as List<dynamic>? ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .map(KubusComputeCandidate.fromJson)
+        .toList(growable: false);
+  }
+
+  Future<KubusRemoteComputeJob> createRemoteComputeJob({
+    required String backendAuthorization,
+    required String captureId,
+    required KubusComputeCandidate provider,
+    required Map<String, dynamic> requirements,
+  }) async =>
+      KubusRemoteComputeJob.fromJson(
+        await _post(
+            '/local/v1/compute/jobs',
+            {
+              'backendAuthorization': backendAuthorization,
+              'captureId': captureId,
+              'provider': provider.toJson(),
+              'requirements': requirements,
+              'type': 'spatial.reconstruct',
+            },
+            timeout: const Duration(minutes: 10)),
+      );
+
+  Future<KubusRemoteComputeJob> getRemoteComputeJob(
+    String id,
+    String backendAuthorization,
+  ) async =>
+      KubusRemoteComputeJob.fromJson(
+        await _post(
+            '/local/v1/compute/jobs/${Uri.encodeComponent(id)}/status', {
+          'backendAuthorization': backendAuthorization,
+        }),
+      );
+
+  Future<Map<String, dynamic>> retrieveRemoteComputeResult(
+    String id,
+    String backendAuthorization,
+  ) =>
+      _post(
+        '/local/v1/compute/jobs/${Uri.encodeComponent(id)}/retrieve',
+        {'backendAuthorization': backendAuthorization},
+        timeout: const Duration(minutes: 10),
+      );
+
+  Future<KubusRemoteComputeJob> acknowledgeRemoteComputeResult({
+    required String id,
+    required String backendAuthorization,
+    required bool accepted,
+    String? reason,
+  }) async =>
+      KubusRemoteComputeJob.fromJson(
+        await _post(
+          '/local/v1/compute/jobs/${Uri.encodeComponent(id)}/acknowledge',
+          {
+            'backendAuthorization': backendAuthorization,
+            'accepted': accepted,
+            if (reason != null) 'reason': reason,
+          },
+        ),
+      );
+
+  Future<KubusRemoteComputeJob> cancelRemoteComputeJob(
+    String id,
+    String backendAuthorization,
+  ) async =>
+      KubusRemoteComputeJob.fromJson(
+        await _post(
+            '/local/v1/compute/jobs/${Uri.encodeComponent(id)}/cancel', {
+          'backendAuthorization': backendAuthorization,
+        }),
+      );
+
+  Future<Map<String, dynamic>> getComputeSettings() =>
+      _get('/local/v1/compute/settings');
+
+  Future<Map<String, dynamic>> updateComputeSettings(
+    Map<String, dynamic> settings,
+  ) async =>
+      _decode(
+        await _request('PUT', '/local/v1/compute/settings', body: settings),
+      );
+
   Future<List<KubusContentCandidate>> resolveContentCandidates(
     String raw,
   ) async {

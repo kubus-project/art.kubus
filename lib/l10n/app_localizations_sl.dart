@@ -15417,4 +15417,101 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get authSecureAccountBannerCta => 'Zavaruj';
+
+  @override
+  String get spatialProcessTitle => 'Obdelaj prostorski zajem';
+  @override
+  String get spatialProcessLocalTitle => 'To vozlišče kubus Node';
+  @override
+  String get spatialProcessLocalPrivacy =>
+      'Izvorni zajem ostane na strojni opremi, ki jo nadzoruješ.';
+  @override
+  String get spatialProcessNetworkTitle => 'Omrežje Kubus';
+  @override
+  String spatialProcessNetworkAvailable(int count) =>
+      'Na voljo je $count združljivih vozlišč';
+  @override
+  String get spatialProcessNetworkPrivacy =>
+      'Zajem se šifrirano prenese in začasno obdela na izbranem ponudnikovem vozlišču.';
+  @override
+  String get spatialProcessMaximumPrivacy =>
+      'Za največ zasebnosti izberi lokalno obdelavo.';
+  @override
+  String get spatialProcessNoLocalGpu => 'Združljiv lokalni GPU ni bil zaznan.';
+  @override
+  String get spatialProcessKeepLocal => 'Ohrani zajem lokalno';
+  @override
+  String get spatialProcessStart => 'Začni obdelavo';
+  @override
+  String get spatialProcessAutoSelect => 'Samodejno izberi najboljše vozlišče';
+  @override
+  String get spatialProcessAdvanced => 'Izberi vozlišče';
+  @override
+  String get spatialProcessReady => 'Pripravljeno';
+  @override
+  String spatialProcessJobsAhead(int count) => 'Pred tabo je $count nalog';
+  @override
+  String spatialProcessSuccessRate(Object rate) =>
+      '$rate % uspešno zaključenih nalog';
+  @override
+  String get spatialRemotePrivacyTitle =>
+      'Želiš uporabiti GPU v omrežju Kubus?';
+  @override
+  String get spatialRemotePrivacyBody =>
+      'Zajem se šifrirano prenese na izbrano računsko vozlišče, kjer se izvorni podatki začasno dešifrirajo za izvedbo obdelave. Izvorni zajem se ne objavi v javnem arhivu.';
+  @override
+  String get spatialRemotePrivacyConfirm => 'Nadaljuj z omrežnim GPU-jem';
+  @override
+  String get spatialResultReviewTitle => 'Prostorski rezultat je pripravljen';
+  @override
+  String get spatialResultReviewBody =>
+      'Pred objavo preglej zasebni rezultat. Če ga ohraniš zasebnega, potrdiš zaključeno računsko nalogo, ne da bi ga dodal v javni arhiv.';
+  @override
+  String get spatialResultKeepPrivate => 'Ohrani zasebno';
+  @override
+  String get spatialResultReject => 'Zavrni rezultat';
+  @override
+  String get spatialResultPublish => 'Objavi prostorski arhiv';
+  @override
+  String get kubusNodeCompute => 'Računsko omrežje';
+  @override
+  String get kubusNodeComputeTitle => 'Računsko omrežje';
+  @override
+  String get kubusNodeComputeBody =>
+      'Deljenje GPU-ja je prostovoljno. Lokalne naloge imajo prednost, prispevek k arhivu pa ostaja obvezen.';
+  @override
+  String get kubusNodeOfferGpu => 'Ponudi GPU omrežju Kubus';
+  @override
+  String get kubusNodeOfferGpuBody =>
+      'Sprejemaj nove združljive prostorske naloge drugih uporabnikov art.kubus.';
+  @override
+  String get kubusNodePauseRemoteJobs =>
+      'Začasno ustavi sprejem novih oddaljenih nalog';
+  @override
+  String get kubusNodeMaxRemoteJobs => 'Največ sočasnih oddaljenih nalog';
+  @override
+  String get kubusNodeArchiveContribution => 'Prispevek k arhivu';
+  @override
+  String get kubusNodeComputeContribution => 'Računski prispevek';
+  @override
+  String get kubusNodePendingTotal => 'Skupaj v čakanju';
+  @override
+  String get kubusNodeSettlementPending =>
+      'Omrežje nagrade trenutno le beleži. Poravnava še ni aktivna.';
+  @override
+  String get kubusNodeVerifiedArchiveCopy =>
+      'Zapisi o prispevku KUB8 se izračunajo iz preverjene razpoložljivosti javnega arhiva, zdravega sodelovanja in uspešnega pridobivanja vsebin.';
+  @override
+  String get kubusNodeVerifiedComputeCopy =>
+      'Če prostovoljno ponudiš prosto zmogljivost GPU-ja, se uspešno zaključene in preverjene omrežne računske naloge lahko upoštevajo v tvojem zapisu nagrad KUB8.';
+  @override
+  String get kubusNodeParticipationContributing => 'Prispeva';
+  @override
+  String get kubusNodeParticipationDegraded =>
+      'Omejeno — tekoče naloge se lahko zaključijo';
+  @override
+  String get kubusNodeParticipationLocked =>
+      'Zaklenjeno — potrebno je sodelovanje v arhivu';
+  @override
+  String get kubusNodeRemoteJobsCompleted => 'Zaključene oddaljene naloge';
 }

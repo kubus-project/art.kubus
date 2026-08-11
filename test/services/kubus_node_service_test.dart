@@ -83,4 +83,88 @@ void main() {
 
     await expectLater(service.pair(_payload), throwsStateError);
   });
+
+  test('network compute discovery forwards auth only inside paired JSON',
+      () async {
+    final requests = <http.Request>[];
+    final service = KubusNodeService(
+      credentialStore: _MemoryCredentialStore(),
+      isWeb: false,
+      client: MockClient((request) async {
+        requests.add(request);
+        if (request.url.path.endsWith('/pairing/exchange')) {
+          return http.Response(
+            jsonEncode({'token': 'kubus_local_scoped-token'}),
+            201,
+          );
+        }
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'data': {
+              'nodes': [
+                {
+                  'nodeId': 'provider-1',
+                  'label': 'studio-node-47',
+                  'encryptionPublicKey': 'x25519-public',
+                  'signingPublicKey': 'ed25519-public',
+                  'gpu': {'model': 'RTX 4090', 'totalVramBytes': 25769803776},
+                  'queue': {'queuedJobs': 0},
+                  'reliability': {'successRate': 0.994},
+                  'worker': {'version': '1.1.5'},
+                }
+              ],
+            },
+          }),
+          200,
+        );
+      }),
+    );
+    await service.pair(_payload);
+
+    final nodes = await service.findComputeCandidates(
+      backendAuthorization: 'Bearer signed-in-user-token',
+      inputBytes: 4096,
+    );
+
+    expect(nodes.single.label, 'studio-node-47');
+    expect(nodes.single.jobsAhead, 0);
+    expect(requests.last.url.toString(), isNot(contains('signed-in-user')));
+    expect(requests.last.headers['Authorization'],
+        'Bearer kubus_local_scoped-token');
+    expect(jsonDecode(requests.last.body)['backendAuthorization'],
+        'Bearer signed-in-user-token');
+  });
+
+  test('provider settings use scoped PUT on the local API', () async {
+    final requests = <http.Request>[];
+    final service = KubusNodeService(
+      credentialStore: _MemoryCredentialStore(),
+      isWeb: false,
+      client: MockClient((request) async {
+        requests.add(request);
+        if (request.url.path.endsWith('/pairing/exchange')) {
+          return http.Response(
+            jsonEncode({'token': 'kubus_local_scoped-token'}),
+            201,
+          );
+        }
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'data': {'enabled': true, 'paused': false, 'maxConcurrency': 2},
+          }),
+          200,
+        );
+      }),
+    );
+    await service.pair(_payload);
+
+    final settings = await service
+        .updateComputeSettings({'enabled': true, 'maxConcurrency': 2});
+
+    expect(settings['enabled'], isTrue);
+    expect(requests.last.method, 'PUT');
+    expect(requests.last.url.path, '/local/v1/compute/settings');
+  });
 }

@@ -26561,6 +26561,47 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Secure'**
   String get authSecureAccountBannerCta;
+
+  String get spatialProcessTitle;
+  String get spatialProcessLocalTitle;
+  String get spatialProcessLocalPrivacy;
+  String get spatialProcessNetworkTitle;
+  String spatialProcessNetworkAvailable(int count);
+  String get spatialProcessNetworkPrivacy;
+  String get spatialProcessMaximumPrivacy;
+  String get spatialProcessNoLocalGpu;
+  String get spatialProcessKeepLocal;
+  String get spatialProcessStart;
+  String get spatialProcessAutoSelect;
+  String get spatialProcessAdvanced;
+  String get spatialProcessReady;
+  String spatialProcessJobsAhead(int count);
+  String spatialProcessSuccessRate(Object rate);
+  String get spatialRemotePrivacyTitle;
+  String get spatialRemotePrivacyBody;
+  String get spatialRemotePrivacyConfirm;
+  String get spatialResultReviewTitle;
+  String get spatialResultReviewBody;
+  String get spatialResultKeepPrivate;
+  String get spatialResultReject;
+  String get spatialResultPublish;
+  String get kubusNodeCompute;
+  String get kubusNodeComputeTitle;
+  String get kubusNodeComputeBody;
+  String get kubusNodeOfferGpu;
+  String get kubusNodeOfferGpuBody;
+  String get kubusNodePauseRemoteJobs;
+  String get kubusNodeMaxRemoteJobs;
+  String get kubusNodeArchiveContribution;
+  String get kubusNodeComputeContribution;
+  String get kubusNodePendingTotal;
+  String get kubusNodeSettlementPending;
+  String get kubusNodeVerifiedArchiveCopy;
+  String get kubusNodeVerifiedComputeCopy;
+  String get kubusNodeParticipationContributing;
+  String get kubusNodeParticipationDegraded;
+  String get kubusNodeParticipationLocked;
+  String get kubusNodeRemoteJobsCompleted;
 }
 
 class _AppLocalizationsDelegate

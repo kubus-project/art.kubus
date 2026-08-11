@@ -15267,4 +15267,98 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get authSecureAccountBannerCta => 'Secure';
+
+  @override
+  String get spatialProcessTitle => 'Process spatial capture';
+  @override
+  String get spatialProcessLocalTitle => 'This kubus Node';
+  @override
+  String get spatialProcessLocalPrivacy =>
+      'Source capture stays on hardware you control.';
+  @override
+  String get spatialProcessNetworkTitle => 'Kubus network';
+  @override
+  String spatialProcessNetworkAvailable(int count) =>
+      '$count compatible nodes available';
+  @override
+  String get spatialProcessNetworkPrivacy =>
+      'The capture is encrypted in transit and processed temporarily by the selected provider node.';
+  @override
+  String get spatialProcessMaximumPrivacy =>
+      'For maximum privacy, process locally.';
+  @override
+  String get spatialProcessNoLocalGpu => 'No compatible local GPU was found.';
+  @override
+  String get spatialProcessKeepLocal => 'Keep capture locally';
+  @override
+  String get spatialProcessStart => 'Start processing';
+  @override
+  String get spatialProcessAutoSelect => 'Auto-select best node';
+  @override
+  String get spatialProcessAdvanced => 'Choose a node';
+  @override
+  String get spatialProcessReady => 'Ready';
+  @override
+  String spatialProcessJobsAhead(int count) => '$count jobs ahead';
+  @override
+  String spatialProcessSuccessRate(Object rate) => '$rate% successful jobs';
+  @override
+  String get spatialRemotePrivacyTitle => 'Use a Kubus network GPU?';
+  @override
+  String get spatialRemotePrivacyBody =>
+      'The capture is encrypted in transit and sent to the selected compute node. That node temporarily decrypts the source data to process the job. The source capture is not published to the public archive.';
+  @override
+  String get spatialRemotePrivacyConfirm => 'Continue with network GPU';
+  @override
+  String get spatialResultReviewTitle => 'Spatial result is ready';
+  @override
+  String get spatialResultReviewBody =>
+      'Review the private result before publishing. Keeping it private acknowledges the completed compute job without adding it to the public archive.';
+  @override
+  String get spatialResultKeepPrivate => 'Keep private';
+  @override
+  String get spatialResultReject => 'Reject result';
+  @override
+  String get spatialResultPublish => 'Publish spatial archive';
+  @override
+  String get kubusNodeCompute => 'Compute';
+  @override
+  String get kubusNodeComputeTitle => 'Compute network';
+  @override
+  String get kubusNodeComputeBody =>
+      'Offering your GPU is optional. Local jobs keep priority and archive contribution remains required.';
+  @override
+  String get kubusNodeOfferGpu => 'Offer GPU to Kubus network';
+  @override
+  String get kubusNodeOfferGpuBody =>
+      'Accept new compatible spatial jobs from other art.kubus users.';
+  @override
+  String get kubusNodePauseRemoteJobs => 'Pause accepting new remote jobs';
+  @override
+  String get kubusNodeMaxRemoteJobs => 'Maximum concurrent remote jobs';
+  @override
+  String get kubusNodeArchiveContribution => 'Archive contribution';
+  @override
+  String get kubusNodeComputeContribution => 'Compute contribution';
+  @override
+  String get kubusNodePendingTotal => 'Pending total';
+  @override
+  String get kubusNodeSettlementPending =>
+      'Rewards are currently recorded by the network. Settlement is not yet active.';
+  @override
+  String get kubusNodeVerifiedArchiveCopy =>
+      'KUB8 contribution records are calculated from verified public archive availability, healthy participation and successful retrieval.';
+  @override
+  String get kubusNodeVerifiedComputeCopy =>
+      'When you choose to offer spare GPU capacity, successfully completed and verified network compute jobs can contribute to your KUB8 reward record.';
+  @override
+  String get kubusNodeParticipationContributing => 'Contributing';
+  @override
+  String get kubusNodeParticipationDegraded =>
+      'Degraded — existing jobs may finish';
+  @override
+  String get kubusNodeParticipationLocked =>
+      'Locked — archive participation required';
+  @override
+  String get kubusNodeRemoteJobsCompleted => 'Remote jobs completed';
 }

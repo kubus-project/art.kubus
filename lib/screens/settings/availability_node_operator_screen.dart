@@ -244,6 +244,7 @@ class _AvailabilityNodeOperatorBodyState
       l10n.kubusNodeOverview,
       l10n.kubusNodeArchive,
       l10n.kubusNodeSpatial,
+      l10n.kubusNodeCompute,
       l10n.kubusNodeRewards,
       l10n.kubusNodeSecuritySetup,
     ];
@@ -283,8 +284,9 @@ class _AvailabilityNodeOperatorBodyState
               network: operator.nodeStatus,
             ),
           if (_section == 2) _SpatialPanel(provider: localNode),
-          if (_section == 3) _RewardsPanel(status: operator.nodeStatus),
-          if (_section == 4) ...[
+          if (_section == 3) _ComputePanel(provider: localNode),
+          if (_section == 4) _RewardsPanel(status: operator.nodeStatus),
+          if (_section == 5) ...[
             _PairingPanel(
               controller: _pairingController,
               provider: localNode,
@@ -455,6 +457,13 @@ class _LocalNodePanel extends StatelessWidget {
     final paired = provider.isPaired;
     final online = provider.state == KubusNodeConnectionState.paired;
     final scheme = Theme.of(context).colorScheme;
+    final participation = snapshot?.participationState ?? 'UNCONFIGURED';
+    final participationLabel = switch (participation) {
+      'CONTRIBUTING' => l10n.kubusNodeParticipationContributing,
+      'DEGRADED' => l10n.kubusNodeParticipationDegraded,
+      'LOCKED' => l10n.kubusNodeParticipationLocked,
+      _ => online ? l10n.kubusNodeOnline : l10n.kubusNodeOffline,
+    };
     return GlassSurface(
       child: Padding(
         padding: const EdgeInsets.all(KubusSpacing.md),
@@ -487,8 +496,8 @@ class _LocalNodePanel extends StatelessWidget {
                   ),
                   Text(
                     online
-                        ? l10n.kubusNodeOnline
-                        : provider.error ?? l10n.kubusNodeOffline,
+                        ? participationLabel
+                        : provider.error ?? participationLabel,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(color: scheme.onSurfaceVariant),
@@ -580,14 +589,113 @@ class _RewardsPanel extends StatelessWidget {
       body: l10n.kubusNodeRewardsBody,
       icon: Icons.verified_outlined,
       metrics: [
-        _MetricData(l10n.availabilityNodeContributionScoreLabel,
-            status?.estimatedContributionScore.toStringAsFixed(0) ?? '—'),
-        _MetricData(l10n.availabilityNodePendingKub8Label,
+        _MetricData(l10n.kubusNodeArchiveContribution,
+            status?.archivePendingKub8.toStringAsFixed(2) ?? '—'),
+        _MetricData(l10n.kubusNodeComputeContribution,
+            status?.computePendingKub8.toStringAsFixed(2) ?? '—'),
+        _MetricData(l10n.kubusNodePendingTotal,
             status?.pendingKub8.toStringAsFixed(2) ?? '—'),
-        _MetricData(l10n.kubusNodeSettledKub8,
-            status?.settledKub8.toStringAsFixed(2) ?? '—'),
       ],
-      footer: Text(l10n.kubusNodePendingBody),
+      footer: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l10n.kubusNodeVerifiedArchiveCopy),
+          const SizedBox(height: KubusSpacing.sm),
+          Text(l10n.kubusNodeVerifiedComputeCopy),
+          const SizedBox(height: KubusSpacing.sm),
+          Text(l10n.kubusNodeSettlementPending),
+        ],
+      ),
+    );
+  }
+}
+
+class _ComputePanel extends StatelessWidget {
+  const _ComputePanel({required this.provider});
+
+  final KubusNodeProvider provider;
+
+  Future<void> _update(
+    BuildContext context,
+    Map<String, dynamic> settings,
+  ) async {
+    try {
+      await provider.updateComputeSettings(settings);
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString())),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final settings = provider.computeSettings;
+    final settingsAvailable = provider.computeSettingsAvailable;
+    final enabled = settings['enabled'] == true;
+    final paused = settings['paused'] == true;
+    final maxConcurrency =
+        int.tryParse((settings['maxConcurrency'] ?? 1).toString()) ?? 1;
+    final concurrencyOptions = <int>{1, 2, 3, 4, 8, maxConcurrency}.toList()
+      ..sort();
+    return _SectionPanel(
+      title: l10n.kubusNodeComputeTitle,
+      body: l10n.kubusNodeComputeBody,
+      icon: Icons.memory_outlined,
+      metrics: [
+        _MetricData(
+          l10n.kubusNodeRunningJobs,
+          '${provider.snapshot?.runningJobs ?? 0}',
+        ),
+        _MetricData(
+          l10n.kubusNodeRemoteJobsCompleted,
+          '${provider.snapshot?.status['remoteJobsCompleted'] ?? 0}',
+        ),
+      ],
+      footer: Column(
+        children: [
+          SwitchListTile.adaptive(
+            contentPadding: EdgeInsets.zero,
+            value: enabled,
+            onChanged: settingsAvailable
+                ? (value) => unawaited(_update(context, {'enabled': value}))
+                : null,
+            title: Text(l10n.kubusNodeOfferGpu),
+            subtitle: Text(l10n.kubusNodeOfferGpuBody),
+          ),
+          SwitchListTile.adaptive(
+            contentPadding: EdgeInsets.zero,
+            value: paused,
+            onChanged: settingsAvailable && enabled
+                ? (value) => unawaited(_update(context, {'paused': value}))
+                : null,
+            title: Text(l10n.kubusNodePauseRemoteJobs),
+          ),
+          DropdownButtonFormField<int>(
+            initialValue: maxConcurrency,
+            decoration: InputDecoration(
+              labelText: l10n.kubusNodeMaxRemoteJobs,
+            ),
+            items: concurrencyOptions
+                .map((value) => DropdownMenuItem(
+                      value: value,
+                      child: Text('$value'),
+                    ))
+                .toList(growable: false),
+            onChanged: settingsAvailable && enabled
+                ? (value) {
+                    if (value != null) {
+                      unawaited(
+                        _update(context, {'maxConcurrency': value}),
+                      );
+                    }
+                  }
+                : null,
+          ),
+        ],
+      ),
     );
   }
 }
