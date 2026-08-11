@@ -4,11 +4,16 @@ import android.app.Activity
 import android.app.Application
 import android.content.Context
 import android.graphics.BitmapFactory
+import android.graphics.ImageFormat
+import android.graphics.Rect
+import android.graphics.YuvImage
+import android.media.Image
 import android.os.Bundle
 import android.os.Handler
 import android.util.Log
 import android.view.GestureDetector
 import android.view.MotionEvent
+import android.view.PixelCopy
 import android.view.View
 import android.widget.Toast
 import com.difrancescogianmarco.arcore_flutter_plugin.flutter_models.FlutterArCoreHitTestResult
@@ -32,10 +37,10 @@ import io.flutter.plugin.platform.PlatformView
 
 import android.graphics.Bitmap
 import android.os.Environment
-import android.view.PixelCopy
 import android.os.HandlerThread
 import android.content.ContextWrapper
 import java.io.FileOutputStream
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
 import java.time.LocalDateTime
@@ -209,6 +214,7 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
                 takeScreenshot(call, result)
 
             }
+            "captureSpatialFrame" -> captureSpatialFrame(result)
             "loadMesh" -> {
                 val map = call.arguments as HashMap<String, Any>
                 val textureBytes = map["textureBytes"] as ByteArray
@@ -348,6 +354,110 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
             e.printStackTrace()
         }
         result.success(null)
+    }
+
+    private fun captureSpatialFrame(result: MethodChannel.Result) {
+        val view = arSceneView
+        val frame = view?.arFrame
+        if (view == null || frame == null || frame.camera.trackingState != TrackingState.TRACKING) {
+            result.error("tracking_unavailable", "ARCore tracking is not ready", null)
+            return
+        }
+        val handlerThread = HandlerThread("SpatialFrameCopier")
+        handlerThread.start()
+        Handler(handlerThread.looper).post {
+            try {
+                val camera = frame.camera
+                val pose = camera.pose
+                val intrinsics = camera.imageIntrinsics
+                val dimensions = intrinsics.imageDimensions
+                val focalLength = intrinsics.focalLength
+                val principalPoint = intrinsics.principalPoint
+                var cameraTimestamp = frame.timestamp
+                val rgb = frame.acquireCameraImage().use { image ->
+                    cameraTimestamp = image.timestamp
+                    val nv21 = yuv420888ToNv21(image)
+                    ByteArrayOutputStream().use { stream ->
+                        YuvImage(nv21, ImageFormat.NV21, image.width, image.height, null)
+                            .compressToJpeg(Rect(0, 0, image.width, image.height), 92, stream)
+                        stream.toByteArray()
+                    }
+                }
+                val payload = hashMapOf<String, Any>(
+                    "rgb" to rgb,
+                    "timestampNanos" to cameraTimestamp,
+                    "poseTranslation" to pose.translation.toList(),
+                    "poseRotation" to pose.rotationQuaternion.toList(),
+                    "intrinsics" to hashMapOf(
+                        "width" to dimensions[0],
+                        "height" to dimensions[1],
+                        "fx" to focalLength[0],
+                        "fy" to focalLength[1],
+                        "cx" to principalPoint[0],
+                        "cy" to principalPoint[1]
+                    ),
+                    "depthAvailable" to false
+                )
+                try {
+                    frame.acquireDepthImage().use { depth ->
+                        val plane = depth.planes[0]
+                        val bytes = ByteArray(plane.buffer.remaining())
+                        plane.buffer.get(bytes)
+                        payload["depth"] = bytes
+                        payload["depthWidth"] = depth.width
+                        payload["depthHeight"] = depth.height
+                        payload["depthRowStride"] = plane.rowStride
+                        payload["depthPixelStride"] = plane.pixelStride
+                        payload["depthAvailable"] = true
+                    }
+                    frame.acquireRawDepthConfidenceImage().use { confidence ->
+                        val plane = confidence.planes[0]
+                        val bytes = ByteArray(plane.buffer.remaining())
+                        plane.buffer.get(bytes)
+                        payload["depthConfidence"] = bytes
+                    }
+                } catch (_: Exception) {
+                    // Depth is optional and absence is explicitly represented.
+                }
+                result.success(payload)
+            } catch (error: Throwable) {
+                result.error("capture_failed", error.localizedMessage, null)
+            } finally {
+                handlerThread.quitSafely()
+            }
+        }
+    }
+
+    private fun yuv420888ToNv21(image: Image): ByteArray {
+        val width = image.width
+        val height = image.height
+        val output = ByteArray(width * height * 3 / 2)
+        val yPlane = image.planes[0]
+        val yBuffer = yPlane.buffer.duplicate()
+        var outputIndex = 0
+        for (row in 0 until height) {
+            for (column in 0 until width) {
+                output[outputIndex++] = yBuffer.get(
+                    row * yPlane.rowStride + column * yPlane.pixelStride
+                )
+            }
+        }
+
+        val uPlane = image.planes[1]
+        val vPlane = image.planes[2]
+        val uBuffer = uPlane.buffer.duplicate()
+        val vBuffer = vPlane.buffer.duplicate()
+        for (row in 0 until height / 2) {
+            for (column in 0 until width / 2) {
+                output[outputIndex++] = vBuffer.get(
+                    row * vPlane.rowStride + column * vPlane.pixelStride
+                )
+                output[outputIndex++] = uBuffer.get(
+                    row * uPlane.rowStride + column * uPlane.pixelStride
+                )
+            }
+        }
+        return output
     }
 
     @Throws(IOException::class)
@@ -548,6 +658,9 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
                     }
                     config.updateMode = Config.UpdateMode.LATEST_CAMERA_IMAGE
                     config.focusMode = Config.FocusMode.AUTO;
+                    if (session.isDepthModeSupported(Config.DepthMode.AUTOMATIC)) {
+                        config.depthMode = Config.DepthMode.AUTOMATIC
+                    }
                     session.configure(config)
                     arSceneView?.setupSession(session)
                 }

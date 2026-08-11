@@ -85,6 +85,13 @@ class AvailabilityNodeStatusSnapshot {
     this.uptimeTodayHours = 0,
     this.publicArchiveCoverage = 0,
     this.estimatedContributionScore = 0,
+    this.publicReplicaBytes = 0,
+    this.privateSpatialBytes = 0,
+    this.jobsRunning = 0,
+    this.jobsQueued = 0,
+    this.workerHealth,
+    this.nodeVersion,
+    this.verificationStatus,
   });
 
   final String status;
@@ -102,6 +109,13 @@ class AvailabilityNodeStatusSnapshot {
   final double pendingKub8;
   final double settledKub8;
   final int noRewardEpochs;
+  final int publicReplicaBytes;
+  final int privateSpatialBytes;
+  final int jobsRunning;
+  final int jobsQueued;
+  final String? workerHealth;
+  final String? nodeVersion;
+  final String? verificationStatus;
 
   factory AvailabilityNodeStatusSnapshot.fromJson({
     required Map<String, dynamic> statusJson,
@@ -125,31 +139,47 @@ class AvailabilityNodeStatusSnapshot {
             ? rewardsJson['summary'] as Map<String, dynamic>
             : <String, dynamic>{});
     final healthyMinutes = _num(archive['healthyMinutes']);
-    final tracked = _int(metadata['desiredCidCount'] ?? metadata['publicPinSetCount'] ?? heartbeat['trackedCidCount']);
-    final pinned = _int(metadata['pinnedPublicCidCount'] ?? heartbeat['pinnedCidCount']);
+    final tracked = _int(metadata['desiredCidCount'] ??
+        metadata['publicPinSetCount'] ??
+        heartbeat['trackedCidCount']);
+    final pinned =
+        _int(metadata['pinnedPublicCidCount'] ?? heartbeat['pinnedCidCount']);
     return AvailabilityNodeStatusSnapshot(
       status: (statusJson['status'] ?? 'offline').toString(),
-      nodeId: (node['id'] ?? '').toString().isEmpty ? null : node['id'].toString(),
+      nodeId:
+          (node['id'] ?? '').toString().isEmpty ? null : node['id'].toString(),
       nodeLabel: (node['label'] ?? node['nodeKey'] ?? '').toString(),
       peerId: (heartbeat['peerId'] ?? '').toString().isEmpty
           ? null
           : heartbeat['peerId'].toString(),
-      lastHeartbeatAt: DateTime.tryParse((heartbeat['receivedAt'] ?? '').toString()),
+      lastHeartbeatAt:
+          DateTime.tryParse((heartbeat['receivedAt'] ?? '').toString()),
       publicCidsPinned: pinned,
       publicCidsTracked: tracked,
       rewardableCidsPinned: _int(metadata['pinnedRewardableCidCount']),
       rewardableCidsTracked: _int(metadata['rewardableCidCount']),
       uptimeTodayHours: healthyMinutes > 0 ? healthyMinutes / 60 : 0,
-      publicArchiveCoverage: tracked > 0 ? pinned / tracked : _num(archive['coverageScore']),
+      publicArchiveCoverage:
+          tracked > 0 ? pinned / tracked : _num(archive['coverageScore']),
       estimatedContributionScore: _num(archive['effectivePoints']),
       pendingKub8: _num(summary['pendingKub8']),
       settledKub8: _num(summary['settledKub8']),
       noRewardEpochs: _int(summary['noRewardEpochs']),
+      publicReplicaBytes: _int(metadata['publicReplicaBytes']),
+      privateSpatialBytes: _int(metadata['localPrivateSpatialBytes']),
+      jobsRunning: _int(metadata['jobsRunning']),
+      jobsQueued: _int(metadata['jobsQueued']),
+      workerHealth: metadata['spatialWorkerHealth']?.toString(),
+      nodeVersion: metadata['nodeVersion']?.toString(),
+      verificationStatus:
+          (archive['verificationStatus'] ?? metadata['verificationStatus'])
+              ?.toString(),
     );
   }
 
   static int _int(Object? value) => int.tryParse((value ?? '').toString()) ?? 0;
-  static double _num(Object? value) => double.tryParse((value ?? '').toString()) ?? 0;
+  static double _num(Object? value) =>
+      double.tryParse((value ?? '').toString()) ?? 0;
 }
 
 class AvailabilityOperatorProvider extends ChangeNotifier {
@@ -237,12 +267,13 @@ class AvailabilityOperatorProvider extends ChangeNotifier {
     required String token,
     required String walletAddress,
   }) {
-    final apiBaseUrl = AppConfig.baseApiUrl.trim().replaceAll(RegExp(r'/+$'), '');
+    final apiBaseUrl =
+        AppConfig.baseApiUrl.trim().replaceAll(RegExp(r'/+$'), '');
     return [
       'KUBUS_API_BASE_URL=$apiBaseUrl',
       'KUBUS_OPERATOR_TOKEN=$token',
       'KUBUS_OPERATOR_WALLET=$walletAddress',
-      'KUBUS_NODE_LABEL=kubus-availability-node-1',
+      'KUBUS_NODE_LABEL=kubus-node-1',
       'KUBUS_NODE_ENDPOINT_URL=http://127.0.0.1:8080',
       'IPFS_RPC_URL=http://kubo:5001',
       'IPFS_GATEWAY_URL=http://127.0.0.1:8080',
@@ -253,7 +284,12 @@ class AvailabilityOperatorProvider extends ChangeNotifier {
       'COMMITMENT_INTERVAL_MS=900000',
       'STATUS_INTERVAL_MS=120000',
       'MAX_PINNED_CIDS=100',
+      'MAX_PINNED_BYTES=10737418240',
       'CID_CLASS_FILTERS=hot,warm',
+      'LOCAL_API_ENABLED=true',
+      'LOCAL_API_ALLOW_LAN=true',
+      'LOCAL_API_HOST=0.0.0.0',
+      'LOCAL_API_PORT=8787',
       'NODE_ENV=production',
     ].join('\n');
   }
@@ -289,7 +325,9 @@ class AvailabilityOperatorProvider extends ChangeNotifier {
     final statusJson = dashboard?['nodeStatus'] is Map<String, dynamic>
         ? dashboard!['nodeStatus'] as Map<String, dynamic>
         : null;
-    if (statusJson == null || statusJson['node'] == null || statusJson['status'] == 'none') {
+    if (statusJson == null ||
+        statusJson['node'] == null ||
+        statusJson['status'] == 'none') {
       _nodeStatus = null;
       return;
     }

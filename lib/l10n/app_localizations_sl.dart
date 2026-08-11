@@ -5043,20 +5043,20 @@ class AppLocalizationsSl extends AppLocalizations {
       'Funkcije razširjene resničnosti (AR) zahtevajo zmogljivosti na napravi. Prenesi aplikacijo art.kubus, da si ogledaš digitalne umetnine v fizičnem prostoru s kamero telefona.';
 
   @override
-  String get arModeScanName => 'Skeniraj';
+  String get arModeScanName => 'Odkrij';
 
   @override
   String get arModePlaceName => 'Postavi';
 
   @override
-  String get arModeViewName => 'Ogled';
+  String get arModeViewName => 'Arhiv';
 
   @override
-  String get arModeCreateName => 'Ustvari';
+  String get arModeCreateName => 'Zajem';
 
   @override
   String get arModeScanDescription =>
-      'Skeniraj AR označevalce za odkrivanje umetnin v okolici.';
+      'Prepoznaj in odkrij fizične umetnine v bližini.';
 
   @override
   String get arModePlaceDescription =>
@@ -5064,11 +5064,11 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get arModeViewDescription =>
-      'Oglej si postavljene umetnine in se vrni k njim.';
+      'Razišči obstoječi prostorski ali 3D-arhiv.';
 
   @override
   String get arModeCreateDescription =>
-      'Ustvarjaj in preizkušaj AR postavitve.';
+      'Prostorsko dokumentiraj fizično umetnino na svoji napravi.';
 
   @override
   String arMarkerNearbyToast(Object name) {
@@ -5117,16 +5117,16 @@ class AppLocalizationsSl extends AppLocalizations {
       'Umetnine ni bilo mogoče postaviti. Poskusi znova.';
 
   @override
-  String get arActionScan => 'Skeniraj umetnino';
+  String get arActionScan => 'Odkrij umetnino';
 
   @override
   String get arActionPlace => 'Postavi umetnino sem';
 
   @override
-  String get arActionView => 'Ogled podrobnosti';
+  String get arActionView => 'Razišči prostorski arhiv';
 
   @override
-  String get arActionCreate => 'Ustvari AR umetnino';
+  String get arActionCreate => 'Zajemi sleden pogled';
 
   @override
   String get arArtworkPlacedToast => 'Umetnina je postavljena!';
@@ -6831,18 +6831,138 @@ class AppLocalizationsSl extends AppLocalizations {
   String get walletHomeSecureWalletAction => 'Zaščiti denarnico';
 
   @override
-  String get availabilityNodeTitle => 'Vozlišče razpoložljivosti';
+  String get availabilityNodeTitle => 'kubus Node';
 
   @override
   String get availabilityNodeNavTitle => 'kubus vozlišče';
 
   @override
   String get availabilityNodeNavSubtitle =>
-      'Ustvari in upravljaj operatorske tokene za svoje vozlišče.';
+      'Javni arhiv, lokalna obdelava in preverjen prispevek.';
 
   @override
   String get availabilityNodeSubtitle =>
-      'Ustvari in upravljaj omejene operatorske žetone za vozlišče.';
+      'Poganjaj del omrežja art.kubus na svoji opremi.';
+
+  @override
+  String get kubusNodeHeroTitle =>
+      'Poganjaj del omrežja art.kubus na svoji opremi.';
+
+  @override
+  String get kubusNodeHeroBody =>
+      'kubus Node ohranja javne kulturne zapise dostopne, streže arhivske datoteke prek omrežja in lahko prostorske zajeme obdela lokalno. Zasebne izvorne datoteke ostanejo na tvoji opremi, dokler jih ne objaviš.';
+
+  @override
+  String get kubusNodePrivacyBody =>
+      'Izvorni zajem ostane lokalen. V javno omrežje se doda le prostorski arhiv, ki ga izbereš za objavo.';
+
+  @override
+  String get kubusNodeOverview => 'Pregled';
+
+  @override
+  String get kubusNodeArchive => 'Arhiv';
+
+  @override
+  String get kubusNodeSpatial => 'Prostor';
+
+  @override
+  String get kubusNodeRewards => 'Prispevki';
+
+  @override
+  String get kubusNodeSecuritySetup => 'Varnost / Nastavitve';
+
+  @override
+  String get kubusNodeOnline => 'Povezano';
+
+  @override
+  String get kubusNodeOffline => 'Brez povezave';
+
+  @override
+  String get kubusNodeNotPaired => 'Lokalno vozlišče kubus Node ni povezano';
+
+  @override
+  String get kubusNodeUnavailable => 'Vozlišče ni dosegljivo';
+
+  @override
+  String get kubusNodeAvailable => 'Na voljo';
+
+  @override
+  String get kubusNodeArchiveTitle => 'Ohrani javno umetnost dostopno';
+
+  @override
+  String get kubusNodeArchiveBody =>
+      'Hrani preverjene zapise javnega arhiva in drugim pomaga do njih med raziskovanjem art.kubus.';
+
+  @override
+  String get kubusNodeBytesStored => 'Shranjeni javni bajti';
+
+  @override
+  String get kubusNodeRecords => 'Zapisi / CID-i';
+
+  @override
+  String get kubusNodeRetrievalHealth => 'Uspešnost pridobivanja';
+
+  @override
+  String get kubusNodeSpatialTitle => 'Lokalno obdela prostorske arhive';
+
+  @override
+  String get kubusNodeSpatialBody =>
+      'Zajem pretvori v optimiziran prostorski zapis brez nalaganja izvornega gradiva na strežnik za obdelavo.';
+
+  @override
+  String get kubusNodeWorker => 'Prostorski procesor';
+
+  @override
+  String get kubusNodeGpu => 'Zmogljivost GPU';
+
+  @override
+  String get kubusNodeRunningJobs => 'Aktivna opravila';
+
+  @override
+  String get kubusNodeLocalCaptures => 'Lokalni zajemi';
+
+  @override
+  String get kubusNodeRewardsTitle => 'Preverjen prispevek';
+
+  @override
+  String get kubusNodeRewardsBody =>
+      'Zapisi prispevkov KUB8 temeljijo na preverjeni dostopnosti arhiva, času delovanja in uspešnem pridobivanju — ne zgolj na zagnani programski opremi.';
+
+  @override
+  String get kubusNodeSettledKub8 => 'Poravnani KUB8';
+
+  @override
+  String get kubusNodePendingBody =>
+      'Izračunano iz preverjene dostopnosti arhiva. Poravnava še ni aktivna.';
+
+  @override
+  String get kubusNodePairTitle => 'Poveži to napravo';
+
+  @override
+  String get kubusNodePairBody =>
+      'V lokalnem vmesniku kubus Node ustvari enkratno sejo in sem prilepi vsebino kode QR. Aplikacija prejme le omejeno lokalno poverilnico.';
+
+  @override
+  String get kubusNodePairingPayload => 'Podatki za povezavo';
+
+  @override
+  String get kubusNodePairAction => 'Poveži kubus Node';
+
+  @override
+  String get kubusNodeUnpairAction => 'Pozabi povezano vozlišče';
+
+  @override
+  String get kubusNodePairedToast => 'kubus Node je povezan';
+
+  @override
+  String get kubusNodePairFailed => 'Povezava ni uspela';
+
+  @override
+  String get kubusNodeAdvancedOperatorSetup => 'Napredne nastavitve operaterja';
+
+  @override
+  String get kubusNodeAdvancedOperatorSetupBody =>
+      'Izbirna omrežna identiteta, operatorski žeton in nastavitve okolja.';
 
   @override
   String get availabilityNodeWhatIsTitle => 'Kaj to naredi';
@@ -9654,7 +9774,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get daoDelegationFailedToast =>
-      'Delegacije ni bilo mogoÄe shraniti. Poskusi znova.';
+      'Delegacije ni bilo mogoče shraniti. Poskusi znova.';
 
   @override
   String get daoViewDelegationDetailsAction => 'Ogled podrobnosti';

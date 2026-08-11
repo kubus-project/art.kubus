@@ -5005,20 +5005,20 @@ class AppLocalizationsEn extends AppLocalizations {
       'Augmented Reality (AR) features require native device capabilities. Download the art.kubus app to view digital artworks in your physical space using your phone\'s camera.';
 
   @override
-  String get arModeScanName => 'Scan';
+  String get arModeScanName => 'Discover';
 
   @override
   String get arModePlaceName => 'Place';
 
   @override
-  String get arModeViewName => 'View';
+  String get arModeViewName => 'Archive';
 
   @override
-  String get arModeCreateName => 'Create';
+  String get arModeCreateName => 'Capture';
 
   @override
   String get arModeScanDescription =>
-      'Scan AR markers to discover artworks around you.';
+      'Identify and discover nearby physical art.';
 
   @override
   String get arModePlaceDescription =>
@@ -5026,11 +5026,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get arModeViewDescription =>
-      'View your placed artworks and revisit them.';
+      'Explore an existing spatial or 3D archive.';
 
   @override
   String get arModeCreateDescription =>
-      'Create and experiment with AR placements.';
+      'Document a physical artwork spatially on your device.';
 
   @override
   String arMarkerNearbyToast(Object name) {
@@ -5078,16 +5078,16 @@ class AppLocalizationsEn extends AppLocalizations {
       'Failed to place artwork. Please try again.';
 
   @override
-  String get arActionScan => 'Scan for artwork';
+  String get arActionScan => 'Discover artwork';
 
   @override
   String get arActionPlace => 'Place artwork here';
 
   @override
-  String get arActionView => 'View details';
+  String get arActionView => 'Explore spatial archive';
 
   @override
-  String get arActionCreate => 'Create AR artwork';
+  String get arActionCreate => 'Capture tracked view';
 
   @override
   String get arArtworkPlacedToast => 'Artwork placed successfully!';
@@ -6779,18 +6779,138 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletHomeSecureWalletAction => 'Secure wallet';
 
   @override
-  String get availabilityNodeTitle => 'Availability Node';
+  String get availabilityNodeTitle => 'kubus Node';
 
   @override
-  String get availabilityNodeNavTitle => 'Availability Node';
+  String get availabilityNodeNavTitle => 'kubus Node';
 
   @override
   String get availabilityNodeNavSubtitle =>
-      'Create and manage scoped node operator tokens.';
+      'Public archive, local processing and verified contribution.';
 
   @override
   String get availabilityNodeSubtitle =>
-      'Create and manage scoped node operator tokens.';
+      'Run part of the art.kubus network on hardware you control.';
+
+  @override
+  String get kubusNodeHeroTitle =>
+      'Run part of the art.kubus network on hardware you control.';
+
+  @override
+  String get kubusNodeHeroBody =>
+      'kubus Node keeps public cultural records available, serves archive files through the network and can process spatial captures locally. Private source files stay on your hardware unless you choose to publish them.';
+
+  @override
+  String get kubusNodePrivacyBody =>
+      'Your source capture stays local. Only the spatial archive you choose to publish is added to the public network.';
+
+  @override
+  String get kubusNodeOverview => 'Overview';
+
+  @override
+  String get kubusNodeArchive => 'Archive';
+
+  @override
+  String get kubusNodeSpatial => 'Spatial';
+
+  @override
+  String get kubusNodeRewards => 'Rewards';
+
+  @override
+  String get kubusNodeSecuritySetup => 'Security / Setup';
+
+  @override
+  String get kubusNodeOnline => 'Online';
+
+  @override
+  String get kubusNodeOffline => 'Offline';
+
+  @override
+  String get kubusNodeNotPaired => 'No local kubus Node paired';
+
+  @override
+  String get kubusNodeUnavailable => 'Node unavailable';
+
+  @override
+  String get kubusNodeAvailable => 'Available';
+
+  @override
+  String get kubusNodeArchiveTitle => 'Keep public art available';
+
+  @override
+  String get kubusNodeArchiveBody =>
+      'Store verified public archive records and help other people retrieve them when they explore art.kubus.';
+
+  @override
+  String get kubusNodeBytesStored => 'Public bytes stored';
+
+  @override
+  String get kubusNodeRecords => 'Records / CIDs';
+
+  @override
+  String get kubusNodeRetrievalHealth => 'Retrieval health';
+
+  @override
+  String get kubusNodeSpatialTitle => 'Process spatial archives locally';
+
+  @override
+  String get kubusNodeSpatialBody =>
+      'Turn a capture into an optimized spatial record without uploading the source material to a processing server.';
+
+  @override
+  String get kubusNodeWorker => 'Spatial worker';
+
+  @override
+  String get kubusNodeGpu => 'GPU capability';
+
+  @override
+  String get kubusNodeRunningJobs => 'Running jobs';
+
+  @override
+  String get kubusNodeLocalCaptures => 'Local captures';
+
+  @override
+  String get kubusNodeRewardsTitle => 'Verified contribution';
+
+  @override
+  String get kubusNodeRewardsBody =>
+      'KUB8 contribution records are calculated from verified archive availability, uptime and successful retrieval — not simply from running the software.';
+
+  @override
+  String get kubusNodeSettledKub8 => 'Settled KUB8';
+
+  @override
+  String get kubusNodePendingBody =>
+      'Calculated from verified archive availability. Settlement is not yet active.';
+
+  @override
+  String get kubusNodePairTitle => 'Pair this device';
+
+  @override
+  String get kubusNodePairBody =>
+      'Create a one-time pairing session in your local kubus Node interface, then paste its QR payload here. The app receives only a scoped local credential.';
+
+  @override
+  String get kubusNodePairingPayload => 'Pairing payload';
+
+  @override
+  String get kubusNodePairAction => 'Pair kubus Node';
+
+  @override
+  String get kubusNodeUnpairAction => 'Forget paired node';
+
+  @override
+  String get kubusNodePairedToast => 'kubus Node paired';
+
+  @override
+  String get kubusNodePairFailed => 'Pairing failed';
+
+  @override
+  String get kubusNodeAdvancedOperatorSetup => 'Advanced operator setup';
+
+  @override
+  String get kubusNodeAdvancedOperatorSetupBody =>
+      'Optional network identity, operator token and environment configuration.';
 
   @override
   String get availabilityNodeWhatIsTitle => 'What this does';

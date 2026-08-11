@@ -66,14 +66,11 @@ abstract class AppLocalizations {
       : localeName = _safeCanonicalizedLocale(locale);
 
   // Hand-applied after every `flutter gen-l10n`: the generator emits a bare
-  // `Intl.canonicalizedLocale(locale)`, which throws on the empty/"undefined"
-  // locale the web shell can hand us before the app locale resolves.
-  // `test/l10n/app_localizations_locale_guard_test.dart` fails without it.
+  // `Intl.canonicalizedLocale(locale)`, which does not guard the temporary
+  // empty/"undefined" locale the web shell can provide during startup.
   static String _safeCanonicalizedLocale(String locale) {
     final raw = locale.trim();
-    if (raw.isEmpty || raw == 'undefined' || raw == 'null') {
-      return 'sl';
-    }
+    if (raw.isEmpty || raw == 'undefined' || raw == 'null') return 'sl';
     return intl.Intl.canonicalizedLocale(raw);
   }
 
@@ -8937,7 +8934,7 @@ abstract class AppLocalizations {
   /// No description provided for @arModeScanName.
   ///
   /// In en, this message translates to:
-  /// **'Scan'**
+  /// **'Discover'**
   String get arModeScanName;
 
   /// No description provided for @arModePlaceName.
@@ -8949,19 +8946,19 @@ abstract class AppLocalizations {
   /// No description provided for @arModeViewName.
   ///
   /// In en, this message translates to:
-  /// **'View'**
+  /// **'Archive'**
   String get arModeViewName;
 
   /// No description provided for @arModeCreateName.
   ///
   /// In en, this message translates to:
-  /// **'Create'**
+  /// **'Capture'**
   String get arModeCreateName;
 
   /// No description provided for @arModeScanDescription.
   ///
   /// In en, this message translates to:
-  /// **'Scan AR markers to discover artworks around you.'**
+  /// **'Identify and discover nearby physical art.'**
   String get arModeScanDescription;
 
   /// No description provided for @arModePlaceDescription.
@@ -8973,13 +8970,13 @@ abstract class AppLocalizations {
   /// No description provided for @arModeViewDescription.
   ///
   /// In en, this message translates to:
-  /// **'View your placed artworks and revisit them.'**
+  /// **'Explore an existing spatial or 3D archive.'**
   String get arModeViewDescription;
 
   /// No description provided for @arModeCreateDescription.
   ///
   /// In en, this message translates to:
-  /// **'Create and experiment with AR placements.'**
+  /// **'Document a physical artwork spatially on your device.'**
   String get arModeCreateDescription;
 
   /// No description provided for @arMarkerNearbyToast.
@@ -9057,7 +9054,7 @@ abstract class AppLocalizations {
   /// No description provided for @arActionScan.
   ///
   /// In en, this message translates to:
-  /// **'Scan for artwork'**
+  /// **'Discover artwork'**
   String get arActionScan;
 
   /// No description provided for @arActionPlace.
@@ -9069,13 +9066,13 @@ abstract class AppLocalizations {
   /// No description provided for @arActionView.
   ///
   /// In en, this message translates to:
-  /// **'View details'**
+  /// **'Explore spatial archive'**
   String get arActionView;
 
   /// No description provided for @arActionCreate.
   ///
   /// In en, this message translates to:
-  /// **'Create AR artwork'**
+  /// **'Capture tracked view'**
   String get arActionCreate;
 
   /// No description provided for @arArtworkPlacedToast.
@@ -11823,7 +11820,7 @@ abstract class AppLocalizations {
   /// No description provided for @walletHomeActionNfts.
   ///
   /// In en, this message translates to:
-  /// **'Artifacts'**
+  /// **'Digital Editions'**
   String get walletHomeActionNfts;
 
   /// No description provided for @walletHomeQuickActionsTitle.
@@ -11895,26 +11892,248 @@ abstract class AppLocalizations {
   /// No description provided for @availabilityNodeTitle.
   ///
   /// In en, this message translates to:
-  /// **'Availability Node'**
+  /// **'kubus Node'**
   String get availabilityNodeTitle;
 
   /// No description provided for @availabilityNodeNavTitle.
   ///
   /// In en, this message translates to:
-  /// **'Availability Node'**
+  /// **'kubus Node'**
   String get availabilityNodeNavTitle;
 
   /// No description provided for @availabilityNodeNavSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Create and manage scoped node operator tokens.'**
+  /// **'Public archive, local processing and verified contribution.'**
   String get availabilityNodeNavSubtitle;
 
   /// No description provided for @availabilityNodeSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Create and manage scoped node operator tokens.'**
+  /// **'Run part of the art.kubus network on hardware you control.'**
   String get availabilityNodeSubtitle;
+
+  /// No description provided for @kubusNodeHeroTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Run part of the art.kubus network on hardware you control.'**
+  String get kubusNodeHeroTitle;
+
+  /// No description provided for @kubusNodeHeroBody.
+  ///
+  /// In en, this message translates to:
+  /// **'kubus Node keeps public cultural records available, serves archive files through the network and can process spatial captures locally. Private source files stay on your hardware unless you choose to publish them.'**
+  String get kubusNodeHeroBody;
+
+  /// No description provided for @kubusNodePrivacyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your source capture stays local. Only the spatial archive you choose to publish is added to the public network.'**
+  String get kubusNodePrivacyBody;
+
+  /// No description provided for @kubusNodeOverview.
+  ///
+  /// In en, this message translates to:
+  /// **'Overview'**
+  String get kubusNodeOverview;
+
+  /// No description provided for @kubusNodeArchive.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive'**
+  String get kubusNodeArchive;
+
+  /// No description provided for @kubusNodeSpatial.
+  ///
+  /// In en, this message translates to:
+  /// **'Spatial'**
+  String get kubusNodeSpatial;
+
+  /// No description provided for @kubusNodeRewards.
+  ///
+  /// In en, this message translates to:
+  /// **'Rewards'**
+  String get kubusNodeRewards;
+
+  /// No description provided for @kubusNodeSecuritySetup.
+  ///
+  /// In en, this message translates to:
+  /// **'Security / Setup'**
+  String get kubusNodeSecuritySetup;
+
+  /// No description provided for @kubusNodeOnline.
+  ///
+  /// In en, this message translates to:
+  /// **'Online'**
+  String get kubusNodeOnline;
+
+  /// No description provided for @kubusNodeOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline'**
+  String get kubusNodeOffline;
+
+  /// No description provided for @kubusNodeNotPaired.
+  ///
+  /// In en, this message translates to:
+  /// **'No local kubus Node paired'**
+  String get kubusNodeNotPaired;
+
+  /// No description provided for @kubusNodeUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Node unavailable'**
+  String get kubusNodeUnavailable;
+
+  /// No description provided for @kubusNodeAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Available'**
+  String get kubusNodeAvailable;
+
+  /// No description provided for @kubusNodeArchiveTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep public art available'**
+  String get kubusNodeArchiveTitle;
+
+  /// No description provided for @kubusNodeArchiveBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Store verified public archive records and help other people retrieve them when they explore art.kubus.'**
+  String get kubusNodeArchiveBody;
+
+  /// No description provided for @kubusNodeBytesStored.
+  ///
+  /// In en, this message translates to:
+  /// **'Public bytes stored'**
+  String get kubusNodeBytesStored;
+
+  /// No description provided for @kubusNodeRecords.
+  ///
+  /// In en, this message translates to:
+  /// **'Records / CIDs'**
+  String get kubusNodeRecords;
+
+  /// No description provided for @kubusNodeRetrievalHealth.
+  ///
+  /// In en, this message translates to:
+  /// **'Retrieval health'**
+  String get kubusNodeRetrievalHealth;
+
+  /// No description provided for @kubusNodeSpatialTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Process spatial archives locally'**
+  String get kubusNodeSpatialTitle;
+
+  /// No description provided for @kubusNodeSpatialBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn a capture into an optimized spatial record without uploading the source material to a processing server.'**
+  String get kubusNodeSpatialBody;
+
+  /// No description provided for @kubusNodeWorker.
+  ///
+  /// In en, this message translates to:
+  /// **'Spatial worker'**
+  String get kubusNodeWorker;
+
+  /// No description provided for @kubusNodeGpu.
+  ///
+  /// In en, this message translates to:
+  /// **'GPU capability'**
+  String get kubusNodeGpu;
+
+  /// No description provided for @kubusNodeRunningJobs.
+  ///
+  /// In en, this message translates to:
+  /// **'Running jobs'**
+  String get kubusNodeRunningJobs;
+
+  /// No description provided for @kubusNodeLocalCaptures.
+  ///
+  /// In en, this message translates to:
+  /// **'Local captures'**
+  String get kubusNodeLocalCaptures;
+
+  /// No description provided for @kubusNodeRewardsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Verified contribution'**
+  String get kubusNodeRewardsTitle;
+
+  /// No description provided for @kubusNodeRewardsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'KUB8 contribution records are calculated from verified archive availability, uptime and successful retrieval — not simply from running the software.'**
+  String get kubusNodeRewardsBody;
+
+  /// No description provided for @kubusNodeSettledKub8.
+  ///
+  /// In en, this message translates to:
+  /// **'Settled KUB8'**
+  String get kubusNodeSettledKub8;
+
+  /// No description provided for @kubusNodePendingBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Calculated from verified archive availability. Settlement is not yet active.'**
+  String get kubusNodePendingBody;
+
+  /// No description provided for @kubusNodePairTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pair this device'**
+  String get kubusNodePairTitle;
+
+  /// No description provided for @kubusNodePairBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Create a one-time pairing session in your local kubus Node interface, then paste its QR payload here. The app receives only a scoped local credential.'**
+  String get kubusNodePairBody;
+
+  /// No description provided for @kubusNodePairingPayload.
+  ///
+  /// In en, this message translates to:
+  /// **'Pairing payload'**
+  String get kubusNodePairingPayload;
+
+  /// No description provided for @kubusNodePairAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Pair kubus Node'**
+  String get kubusNodePairAction;
+
+  /// No description provided for @kubusNodeUnpairAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Forget paired node'**
+  String get kubusNodeUnpairAction;
+
+  /// No description provided for @kubusNodePairedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'kubus Node paired'**
+  String get kubusNodePairedToast;
+
+  /// No description provided for @kubusNodePairFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Pairing failed'**
+  String get kubusNodePairFailed;
+
+  /// No description provided for @kubusNodeAdvancedOperatorSetup.
+  ///
+  /// In en, this message translates to:
+  /// **'Advanced operator setup'**
+  String get kubusNodeAdvancedOperatorSetup;
+
+  /// No description provided for @kubusNodeAdvancedOperatorSetupBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional network identity, operator token and environment configuration.'**
+  String get kubusNodeAdvancedOperatorSetupBody;
 
   /// No description provided for @availabilityNodeWhatIsTitle.
   ///
@@ -12207,7 +12426,7 @@ abstract class AppLocalizations {
   /// No description provided for @walletHomeDesktopTabNfts.
   ///
   /// In en, this message translates to:
-  /// **'Artifacts'**
+  /// **'Owned Editions'**
   String get walletHomeDesktopTabNfts;
 
   /// No description provided for @walletHomeDesktopTabStaking.
