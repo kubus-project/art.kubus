@@ -24,6 +24,7 @@ import '../../../widgets/attestation_badge_panel.dart';
 import '../../../utils/app_color_utils.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../widgets/kubus_action_sidebar.dart';
+import '../../../widgets/wallet/kubus_token_identity.dart';
 import '../../../widgets/wallet/kubus_wallet_shell.dart';
 import '../../../widgets/wallet/wallet_action_controller.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
@@ -356,18 +357,23 @@ class _WalletHomeState extends State<WalletHome> {
 
   Widget _buildTokenAvatar(Token token) {
     final theme = Theme.of(context);
-    final fallback = _buildTokenFallbackAvatar(token);
+    final fallback = KubusTokenAvatar(symbol: token.symbol);
 
-    if (!_isValidLogoUrl(token.logoUrl)) {
+    // KUB8 and SOL have canonical marks — never let a remote logo override the
+    // house identity. Everything else may carry its own logo.
+    final symbol = token.symbol.trim().toUpperCase();
+    final hasCanonicalMark = symbol == KubusTokenIdentity.kub8Symbol ||
+        symbol == KubusTokenIdentity.solSymbol;
+    if (hasCanonicalMark || !_isValidLogoUrl(token.logoUrl)) {
       return fallback;
     }
 
     return Container(
-      width: 40,
-      height: 40,
+      width: KubusSizes.tokenAvatarMd,
+      height: KubusSizes.tokenAvatarMd,
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(KubusRadius.xl),
+        borderRadius: BorderRadius.circular(KubusRadius.md),
         border:
             Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.2)),
         color: theme.colorScheme.surfaceContainerHighest,
@@ -392,37 +398,6 @@ class _WalletHomeState extends State<WalletHome> {
         },
       ),
     );
-  }
-
-  Widget _buildTokenFallbackAvatar(Token token) {
-    return Container(
-      width: 40,
-      height: 40,
-      decoration: BoxDecoration(
-        color: _getTokenColor(token.symbol),
-        borderRadius: BorderRadius.circular(KubusRadius.xl),
-      ),
-      child: Center(
-        child: Text(
-          _getTokenInitial(token),
-          style: KubusTypography.inter(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-        ),
-      ),
-    );
-  }
-
-  String _getTokenInitial(Token token) {
-    if (token.symbol.isNotEmpty) {
-      return token.symbol.substring(0, 1).toUpperCase();
-    }
-    if (token.name.isNotEmpty) {
-      return token.name.substring(0, 1).toUpperCase();
-    }
-    return '?';
   }
 
   bool _isValidLogoUrl(String? url) {
@@ -454,25 +429,6 @@ class _WalletHomeState extends State<WalletHome> {
   String _shortenAddress(String address) {
     if (address.length <= 10) return address;
     return '${address.substring(0, 6)}...${address.substring(address.length - 4)}';
-  }
-
-  Color _getTokenColor(String symbol) {
-    final scheme = Theme.of(context).colorScheme;
-    final base = scheme.primary;
-    switch (symbol.toUpperCase()) {
-      case 'KUB8':
-        return base;
-      case 'ETH':
-        return AppColorUtils.shiftLightness(base, 0.12);
-      case 'BTC':
-        return AppColorUtils.shiftLightness(base, 0.20);
-      case 'SOL':
-        return base;
-      case 'MATIC':
-        return AppColorUtils.shiftLightness(base, -0.10);
-      default:
-        return scheme.onSurface.withValues(alpha: 0.6);
-    }
   }
 
   Widget _buildRecentTransactions({bool isSmallScreen = false}) {
@@ -748,11 +704,14 @@ class _WalletHomeState extends State<WalletHome> {
                           _buildTokenAvatar(token),
                           const SizedBox(width: KubusSpacing.md),
                           Expanded(
+                            flex: 3,
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: <Widget>[
                                 Text(
                                   token.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                   style:
                                       KubusTextStyles.detailCardTitle.copyWith(
                                     color:
@@ -761,38 +720,52 @@ class _WalletHomeState extends State<WalletHome> {
                                 ),
                                 const SizedBox(height: KubusSpacing.xxs),
                                 Text(
-                                  token.symbol,
+                                  token.symbol.toUpperCase(),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                   style: KubusTextStyles.detailCaption.copyWith(
                                     color: Theme.of(context)
                                         .colorScheme
                                         .onSurface
-                                        .withValues(alpha: 0.68),
+                                        .withValues(alpha: 0.62),
+                                    letterSpacing: 0.4,
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: <Widget>[
-                              Text(
-                                token.balance.toStringAsFixed(4),
-                                style: KubusTextStyles.detailCardTitle.copyWith(
-                                  color:
-                                      Theme.of(context).colorScheme.onSurface,
+                          const SizedBox(width: KubusSpacing.md),
+                          Expanded(
+                            flex: 2,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: <Widget>[
+                                Text(
+                                  token.balance.toStringAsFixed(4),
+                                  maxLines: 1,
+                                  softWrap: false,
+                                  overflow: TextOverflow.ellipsis,
+                                  style:
+                                      KubusTextStyles.detailCardTitle.copyWith(
+                                    color:
+                                        Theme.of(context).colorScheme.onSurface,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: KubusSpacing.xxs),
-                              Text(
-                                '\$${token.value.toStringAsFixed(2)}',
-                                style: KubusTextStyles.detailCaption.copyWith(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurface
-                                      .withValues(alpha: 0.68),
+                                const SizedBox(height: KubusSpacing.xxs),
+                                Text(
+                                  '\$${token.value.toStringAsFixed(2)}',
+                                  maxLines: 1,
+                                  softWrap: false,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: KubusTextStyles.detailCaption.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.62),
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ],
                       ),

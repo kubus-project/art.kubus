@@ -162,6 +162,9 @@ class WalletActionController {
   }) {
     final canTransact = authority.canTransact;
     final hasWallet = authority.hasWalletIdentity;
+    // Semantic accents: value leaving the wallet is warm/negative, value
+    // arriving is positive, moving value between assets is neutral-cool, and
+    // protection is the caution tone.
     return <WalletActionConfig>[
       WalletActionConfig(
         type: WalletActionType.send,
@@ -180,7 +183,7 @@ class WalletActionController {
         title: l10n.walletHomeReceiveAction,
         subtitle: l10n.walletHomeDesktopReceiveSubtitle,
         icon: Icons.arrow_downward_rounded,
-        color: roles.statBlue,
+        color: roles.positiveAction,
         run: onReceive,
         enabled: authority.hasWalletIdentity,
         disabledReason: l10n.walletHomeSignedOutTitle,
@@ -193,7 +196,7 @@ class WalletActionController {
               ? l10n.walletHomeDesktopSwapSubtitle
               : l10n.walletSessionSignerMissing,
           icon: Icons.swap_horiz_rounded,
-          color: roles.positiveAction,
+          color: roles.statBlue,
           run: onSwap,
           enabled: hasWallet,
           disabledReason: l10n.walletHomeSignedOutTitle,

@@ -59,6 +59,15 @@ class TelemetryService {
   // be tied to later account and contribution milestones.
   Map<String, Object?> _entryAttribution = const <String, Object?>{};
 
+  /// When the cached [_entryAttribution] touch was captured, so it can age out
+  /// inside a process that never restarts.
+  ///
+  /// Pruning at initialization alone is not enough: a web tab left open, or a
+  /// mobile process resumed from suspension, can cross the window while
+  /// `_entryAttribution` sits cached here, and every later event would keep
+  /// copying an expired campaign into its metadata.
+  DateTime? _entryAttributionCapturedAt;
+
   static final RegExp _uuidRegex = RegExp(
     r'^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
     caseSensitive: false,
@@ -796,6 +805,10 @@ class TelemetryService {
 
   Map<String, Object?> _loadEntryAttribution(SharedPreferences prefs) {
     try {
+      // Captured alongside the values so the cached copy can age by the same
+      // rule as the stored one, without re-reading storage per event.
+      _entryAttributionCapturedAt =
+          GuestSessionService.storedAttributionCapturedAt(prefs);
       final attribution = <String, Object?>{};
       GuestSessionService.entryUtmSync(prefs).forEach((key, value) {
         attribution[key] = value;
@@ -812,8 +825,35 @@ class TelemetryService {
       }
       return attribution;
     } catch (_) {
+      _entryAttributionCapturedAt = null;
       return const <String, Object?>{};
     }
+  }
+
+  /// Campaign dimensions for the event being built, or none once the touch has
+  /// aged out.
+  ///
+  /// Enforced per event rather than only at startup. A web tab left open across
+  /// the window boundary, or a mobile process resumed from suspension, never
+  /// re-runs initialization — so without this check a contribution made on day
+  /// nine would still be credited to a campaign that expired on day seven.
+  ///
+  /// Expiry is applied in memory first and storage is pruned in the background,
+  /// so the event currently being built is already clean even if the prune
+  /// fails.
+  Map<String, Object?> _liveEntryAttribution() {
+    if (_entryAttribution.isEmpty) return _entryAttribution;
+    if (GuestSessionService.isAttributionTouchFresh(
+      _entryAttributionCapturedAt,
+    )) {
+      return _entryAttribution;
+    }
+    _entryAttribution = const <String, Object?>{};
+    _entryAttributionCapturedAt = null;
+    unawaited(
+      GuestSessionService.pruneExpiredAttribution().catchError((_) {}),
+    );
+    return _entryAttribution;
   }
 
   /// Re-read entry attribution after it may have changed.
@@ -996,8 +1036,10 @@ class TelemetryService {
     };
 
     // Campaign attribution (utm_*, entry_intent, guest) from the marketing
-    // funnel. Added before `extra` so explicit per-event values still win.
-    base.addAll(_entryAttribution);
+    // funnel. Read through the freshness gate so a long-lived process stops
+    // attributing at the window boundary. Added before `extra` so explicit
+    // per-event values still win.
+    base.addAll(_liveEntryAttribution());
 
     for (final entry in extra.entries) {
       final key = entry.key.toString();

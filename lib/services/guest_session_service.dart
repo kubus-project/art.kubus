@@ -262,7 +262,13 @@ class GuestSessionService {
     }
   }
 
-  /// Whether persisted attribution is still inside [attributionWindow].
+  /// Whether a touch captured at [capturedAt] is still inside
+  /// [attributionWindow].
+  ///
+  /// The single definition of "still attributing", so a caller holding an
+  /// in-memory copy of the attribution ages it by exactly the same rule as one
+  /// reading storage. A long-lived web tab is the case that makes this matter:
+  /// it can cross the boundary without ever re-reading SharedPreferences.
   ///
   /// An unstamped touch reads as fresh: it is either a legacy install that
   /// predates the stamp or one written before [pruneExpiredAttribution] ran
@@ -272,16 +278,19 @@ class GuestSessionService {
   ///
   /// A capture timestamp in the future means the device clock moved backwards,
   /// not that the touch is stale, so it also reads as fresh.
-  static bool isStoredAttributionFreshSync(
-    SharedPreferences prefs, {
-    DateTime? now,
-  }) {
-    final capturedAt = storedAttributionCapturedAt(prefs);
+  static bool isAttributionTouchFresh(DateTime? capturedAt, {DateTime? now}) {
     if (capturedAt == null) return true;
     final elapsed = (now ?? DateTime.now().toUtc()).difference(capturedAt);
     if (elapsed.isNegative) return true;
     return elapsed <= attributionWindow;
   }
+
+  /// Whether persisted attribution is still inside [attributionWindow].
+  static bool isStoredAttributionFreshSync(
+    SharedPreferences prefs, {
+    DateTime? now,
+  }) =>
+      isAttributionTouchFresh(storedAttributionCapturedAt(prefs), now: now);
 
   static bool _hasStoredAttribution(SharedPreferences prefs) {
     for (final key in utmKeys) {
