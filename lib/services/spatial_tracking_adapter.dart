@@ -19,7 +19,7 @@ abstract class SpatialTrackingAdapter {
   Future<Map<String, dynamic>> captureFrame();
   String get platformDescription;
   bool get isReady;
-  ValueListenable<ArCoreTrackingState> get trackingState;
+  ValueListenable<bool> get isTracking;
   void dispose();
 }
 
@@ -65,8 +65,7 @@ class PlatformSpatialTrackingAdapter implements SpatialTrackingAdapter {
   bool get isReady => _manager.isControllerReady;
 
   @override
-  ValueListenable<ArCoreTrackingState> get trackingState =>
-      _manager.trackingState;
+  ValueListenable<bool> get isTracking => _manager.isTracking;
 
   @override
   String get platformDescription => _manager.platformInfo;

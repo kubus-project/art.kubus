@@ -1427,7 +1427,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
       return;
     }
     setState(() {
-      if (modeId != 'create') _captureSampler?.cancel();
+      if (modeId != 'create') {
+        _captureSampler?.cancel();
+      }
       _currentMode = modeId;
       // Clear scanner controller when leaving scan mode
       if (modeId != 'scan') {
@@ -1519,7 +1521,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
         _captureRequestInFlight ||
         capture.state != SpatialCaptureState.capturing ||
         !_spatialTracking.isReady ||
-        !_spatialTracking.trackingState.value.isTracking) return;
+        !_spatialTracking.isTracking.value) {
+      return;
+    }
     _captureRequestInFlight = true;
     try {
       final frame = await _spatialTracking.captureFrame();

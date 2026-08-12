@@ -18,9 +18,7 @@ class ARManager {
 
   bool _isInitialized = false;
   ArCoreController? _arCoreController;
-  final ValueNotifier<ArCoreTrackingState> trackingState = ValueNotifier(
-    const ArCoreTrackingState(state: 'STOPPED'),
-  );
+  final ValueNotifier<bool> isTracking = ValueNotifier(false);
   ARKitController? _arKitController;
   final List<Map<String, dynamic>> _placedNodes = [];
 
@@ -49,7 +47,8 @@ class ARManager {
   /// Set ARCore controller (Android only)
   void setArCoreController(ArCoreController controller) {
     _arCoreController = controller;
-    controller.onTrackingStateChanged = (state) => trackingState.value = state;
+    controller.onTrackingStateChanged =
+        (state) => isTracking.value = state.isTracking;
     if (kDebugMode) debugPrint('ARManager: ARCore controller set');
   }
 
@@ -378,7 +377,7 @@ class ARManager {
     _arKitController?.dispose();
     _placedNodes.clear();
     _arCoreController = null;
-    trackingState.value = const ArCoreTrackingState(state: 'STOPPED');
+    isTracking.value = false;
     _arKitController = null;
     _isInitialized = false;
     if (kDebugMode) debugPrint('ARManager: Disposed');
