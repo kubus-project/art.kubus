@@ -628,15 +628,15 @@ class AppInfo {
   static const String appName = 'art.kubus';
   static const String version = String.fromEnvironment(
     'KUBUS_APP_VERSION',
-    defaultValue: '0.7.5',
+    defaultValue: '0.8.0',
   );
   static const int buildNumber = int.fromEnvironment(
     'KUBUS_BUILD_NUMBER',
-    defaultValue: 26081002,
+    defaultValue: 26081201,
   );
   static const String buildDate = String.fromEnvironment(
     'KUBUS_BUILD_DATE',
-    defaultValue: '2026-08-10',
+    defaultValue: '2026-08-12',
   );
 
   /// Get full version string
