@@ -4218,10 +4218,15 @@ class BackendApiService
               decoded['artMarker'] ??
               decoded;
           if (marker is Map<String, dynamic>) {
-            return _artMarkerFromBackendJson(marker);
+            final parsed = _artMarkerFromBackendJson(marker);
+            if (parsed.id.trim().isNotEmpty) return parsed;
           }
         }
-        return null;
+        throw BackendApiRequestException(
+          statusCode: response.statusCode,
+          path: uri.path,
+          body: response.body,
+        );
       }
 
       throw BackendApiRequestException(

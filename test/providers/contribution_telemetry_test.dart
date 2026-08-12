@@ -545,7 +545,7 @@ void main() {
       );
     });
 
-    test('a legacy v1 flag suppresses at most one account', () async {
+    test('a legacy install flag cannot suppress any account milestone', () async {
       SharedPreferences.setMockInitialValues(<String, Object>{
         'app_telemetry_first_contribution_v1': true,
       });
@@ -571,8 +571,8 @@ void main() {
           .toList(growable: false);
       expect(
         milestones.map((e) => e.actorUserId).toList(),
-        <String>[second],
-        reason: 'the flag claims the first account only, never all of them',
+        <String>[first, second],
+        reason: 'an ownerless install flag cannot be assigned to either user',
       );
     });
   });
