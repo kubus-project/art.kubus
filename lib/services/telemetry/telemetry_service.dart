@@ -22,8 +22,8 @@ class TelemetryService {
   factory TelemetryService() => _instance;
 
   TelemetryService._internal()
-    : _queue = SharedPreferencesTelemetryEventQueue(),
-      _sender = BackendTelemetrySender();
+      : _queue = SharedPreferencesTelemetryEventQueue(),
+        _sender = BackendTelemetrySender();
 
   final TelemetryEventQueue _queue;
   final TelemetrySender _sender;
@@ -89,8 +89,8 @@ class TelemetryService {
   TelemetryService._test({
     required TelemetryEventQueue queue,
     required TelemetrySender sender,
-  }) : _queue = queue,
-       _sender = sender;
+  })  : _queue = queue,
+        _sender = sender;
 
   Future<void> ensureInitialized() async {
     if (_initialized) return;
@@ -132,8 +132,7 @@ class TelemetryService {
       _entryAttribution = const <String, Object?>{};
     }
 
-    _enabled =
-        (_enabledByBuildFlagOverride ??
+    _enabled = (_enabledByBuildFlagOverride ??
             AppTelemetryConfig.enabledByBuildFlag) &&
         _analyticsPreferenceEnabled;
     KubusClientContext.instance.setEnabled(_enabled);
@@ -149,8 +148,7 @@ class TelemetryService {
 
   void setAnalyticsPreferenceEnabled(bool enabled) {
     _analyticsPreferenceEnabled = enabled;
-    _enabled =
-        (_enabledByBuildFlagOverride ??
+    _enabled = (_enabledByBuildFlagOverride ??
             AppTelemetryConfig.enabledByBuildFlag) &&
         _analyticsPreferenceEnabled;
     KubusClientContext.instance.setEnabled(_enabled);
@@ -197,8 +195,7 @@ class TelemetryService {
     final routeName = _routePathOf(rawRouteName);
     final screenRoute = routeName.isNotEmpty ? routeName : null;
 
-    final screenName =
-        _screenNameForRouteName(routeName) ??
+    final screenName = _screenNameForRouteName(routeName) ??
         screenRoute ??
         route.runtimeType.toString();
 
@@ -220,9 +217,8 @@ class TelemetryService {
 
     _rotateSessionIfNeeded();
 
-    final normalizedName = screenName.trim().isEmpty
-        ? 'unknown'
-        : screenName.trim();
+    final normalizedName =
+        screenName.trim().isEmpty ? 'unknown' : screenName.trim();
     final normalizedRoute = (screenRoute ?? '').trim();
     final routeOrNull = normalizedRoute.isEmpty ? null : normalizedRoute;
 
@@ -468,9 +464,9 @@ class TelemetryService {
   /// events exactly as it does today — during a rollout the app can be ahead of
   /// the API, and an activation must not depend on which shipped first.
   Map<String, Object?> _contributionDimensions(ContributionType type) => {
-    'contribution_type': type.wireValue,
-    'kind': type.wireValue,
-  };
+        'contribution_type': type.wireValue,
+        'kind': type.wireValue,
+      };
 
   /// Reserved for a genuine one-time public artist-identity creation or claim.
   ///
@@ -699,6 +695,16 @@ class TelemetryService {
     );
   }
 
+  /// The v1 install-wide first-engagement key.
+  ///
+  /// Retained only to be read, never written. It claimed to fire once per
+  /// account but was scoped to the installation, so the second account to use a
+  /// device was permanently unable to record its first contribution — on a
+  /// shared browser that is every account after the first.
+  @visibleForTesting
+  static String legacyFirstEngagementKey(PendingActionMilestone milestone) =>
+      'app_telemetry_first_${milestone.name}_v1';
+
   /// Account-scoped first-engagement key.
   ///
   /// Keyed by the canonical `user_id` UUID the service already normalises —
@@ -740,6 +746,17 @@ class TelemetryService {
     try {
       final prefs = await SharedPreferences.getInstance();
       if (prefs.getBool(prefsKey) ?? false) return;
+
+      // The v1 flag suppresses only the account that is plausibly the one that
+      // set it — the first account seen on this install after the upgrade. It
+      // is claimed at that point so it can never suppress a second account, and
+      // so the account that already fired the milestone does not fire it twice.
+      final legacyKey = legacyFirstEngagementKey(milestone);
+      if (prefs.getBool(legacyKey) ?? false) {
+        await prefs.remove(legacyKey);
+        await prefs.setBool(prefsKey, true);
+        return;
+      }
 
       await prefs.setBool(prefsKey, true);
     } catch (_) {

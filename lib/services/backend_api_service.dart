@@ -121,20 +121,20 @@ Never _throwTypedMutationFailure({
   final requestError = switch (error) {
     BackendApiRequestException() => error,
     TimeoutException() => BackendApiRequestException(
-      statusCode: 504,
-      path: path,
-      body: error.message,
-    ),
+        statusCode: 504,
+        path: path,
+        body: error.message,
+      ),
     http.ClientException() => BackendApiRequestException(
-      statusCode: 0,
-      path: path,
-      body: error.message,
-    ),
+        statusCode: 0,
+        path: path,
+        body: error.message,
+      ),
     _ => BackendApiRequestException(
-      statusCode: 0,
-      path: path,
-      body: error.toString(),
-    ),
+        statusCode: 0,
+        path: path,
+        body: error.toString(),
+      ),
   };
   AppConfig.debugPrint(
     '$operation failed: status=${requestError.statusCode} '
@@ -405,16 +405,15 @@ class BackendApiService
     final resolvedClaims = claims ?? getCurrentAuthTokenClaims();
     if (resolvedClaims == null) return AuthSignInMethod.unknown;
 
-    final provider =
-        (resolvedClaims['authProvider'] ??
-                resolvedClaims['auth_provider'] ??
-                resolvedClaims['provider'] ??
-                resolvedClaims['signInMethod'] ??
-                resolvedClaims['signin_method'] ??
-                '')
-            .toString()
-            .trim()
-            .toLowerCase();
+    final provider = (resolvedClaims['authProvider'] ??
+            resolvedClaims['auth_provider'] ??
+            resolvedClaims['provider'] ??
+            resolvedClaims['signInMethod'] ??
+            resolvedClaims['signin_method'] ??
+            '')
+        .toString()
+        .trim()
+        .toLowerCase();
     if (provider.contains('google')) {
       return AuthSignInMethod.google;
     }
@@ -428,13 +427,12 @@ class BackendApiService
       return AuthSignInMethod.passkey;
     }
 
-    final email =
-        (resolvedClaims['email'] ??
-                resolvedClaims['emailAddress'] ??
-                resolvedClaims['email_address'] ??
-                '')
-            .toString()
-            .trim();
+    final email = (resolvedClaims['email'] ??
+            resolvedClaims['emailAddress'] ??
+            resolvedClaims['email_address'] ??
+            '')
+        .toString()
+        .trim();
     if (email.isNotEmpty) return AuthSignInMethod.email;
 
     final wallet = getCurrentAuthWalletAddress();
@@ -576,8 +574,7 @@ class BackendApiService
       if (response.body.isNotEmpty) {
         final parsed = jsonDecode(response.body);
         if (parsed is Map<String, dynamic>) {
-          final fromBody =
-              parsed['windowMs'] ??
+          final fromBody = parsed['windowMs'] ??
               parsed['window_ms'] ??
               parsed['retryAfterMs'] ??
               parsed['retry_after_ms'];
@@ -615,8 +612,7 @@ class BackendApiService
     final output = <String, dynamic>{};
     input.forEach((key, value) {
       final lower = key.toLowerCase();
-      final secret =
-          lower.contains('authorization') ||
+      final secret = lower.contains('authorization') ||
           lower.contains('cookie') ||
           lower.contains('token') ||
           lower.contains('password') ||
@@ -812,15 +808,14 @@ class BackendApiService
     //   walletAddress (used by explicit sign-in/connect flows).
     final preferredCanonical = (_preferredWalletCanonical ?? '').trim();
     final requestedCanonical = WalletUtils.canonical(walletAddress);
-    final canHonorRequested =
-        requestedCanonical.isNotEmpty &&
+    final canHonorRequested = requestedCanonical.isNotEmpty &&
         (preferredCanonical.isEmpty ||
             requestedCanonical == preferredCanonical);
     final desiredCanonical = canHonorRequested
         ? requestedCanonical
         : (preferredCanonical.isNotEmpty
-              ? preferredCanonical
-              : requestedCanonical);
+            ? preferredCanonical
+            : requestedCanonical);
 
     if (preferredCanonical.isNotEmpty &&
         requestedCanonical.isNotEmpty &&
@@ -1261,8 +1256,7 @@ class BackendApiService
     // Minimal, scoped HTTP tracing for debugging auth/403 issues on web.
     // Guarded by AppConfig.enableNetworkLogging and only logs marker endpoints
     // to avoid noisy console output.
-    final shouldTrace =
-        AppConfig.enableNetworkLogging &&
+    final shouldTrace = AppConfig.enableNetworkLogging &&
         kDebugMode &&
         (uri.path.startsWith('/api/art-markers') ||
             uri.path.contains('/api/art-markers/'));
@@ -1288,9 +1282,8 @@ class BackendApiService
     try {
       switch (method.toUpperCase()) {
         case 'GET':
-          response = await _client
-              .get(uri, headers: resolvedHeaders)
-              .timeout(timeout);
+          response =
+              await _client.get(uri, headers: resolvedHeaders).timeout(timeout);
           break;
         case 'HEAD':
           response = await _client
@@ -1378,8 +1371,7 @@ class BackendApiService
       );
     }
 
-    final responseRequestId =
-        response.headers['x-request-id'] ??
+    final responseRequestId = response.headers['x-request-id'] ??
         response.headers['x-kubus-request-id'];
     if ((responseRequestId ?? '').trim().isNotEmpty) {
       _lastRequestId = responseRequestId!.trim();
@@ -1391,8 +1383,7 @@ class BackendApiService
     );
 
     final coordinator = _authCoordinator;
-    final isAuthFailure =
-        includeAuth &&
+    final isAuthFailure = includeAuth &&
         coordinator != null &&
         AppConfig.isFeatureEnabled('rePromptLoginOnExpiry') &&
         _isAuthFailureStatus(
@@ -1768,8 +1759,7 @@ class BackendApiService
     }
 
     final coordinator = _authCoordinator;
-    final isAuthFailure =
-        includeAuth &&
+    final isAuthFailure = includeAuth &&
         coordinator != null &&
         AppConfig.isFeatureEnabled('rePromptLoginOnExpiry') &&
         _isAuthFailureStatus(
@@ -2146,9 +2136,8 @@ class BackendApiService
           : 'Node is not writable and the configured preferred write base URL points to the same backend.',
       'code': 'NODE_NOT_WRITABLE',
       'attemptedUrl': attemptedUri.toString(),
-      'preferredWriteBaseUrl': preferredWriteBaseUrl.isEmpty
-          ? null
-          : preferredWriteBaseUrl,
+      'preferredWriteBaseUrl':
+          preferredWriteBaseUrl.isEmpty ? null : preferredWriteBaseUrl,
       'upstream': _decodeResponseJsonObject(response) ?? response.body,
     });
     return BackendApiRequestException(
@@ -2507,19 +2496,20 @@ class BackendApiService
     Object? body,
     Encoding? encoding,
     bool isIdempotent = false,
-  }) => _backendApiSendQueueablePublicAction(
-    this,
-    method: method,
-    path: path,
-    actionType: actionType,
-    entityType: entityType,
-    entityId: entityId,
-    walletAddress: walletAddress,
-    payload: payload,
-    body: body,
-    encoding: encoding,
-    isIdempotent: isIdempotent,
-  );
+  }) =>
+      _backendApiSendQueueablePublicAction(
+        this,
+        method: method,
+        path: path,
+        actionType: actionType,
+        entityType: entityType,
+        entityId: entityId,
+        walletAddress: walletAddress,
+        payload: payload,
+        body: body,
+        encoding: encoding,
+        isIdempotent: isIdempotent,
+      );
 
   /// Normalize search suggestion payloads from various backend shapes into a
   /// stable list of maps with keys: `label`, `subtitle`, `id`, `type`, `lat`, `lng`.
@@ -2596,11 +2586,12 @@ class BackendApiService
   Future<Map<String, dynamic>> registerWallet({
     required String walletAddress,
     String? username,
-  }) => _backendApiRegisterWallet(
-    this,
-    walletAddress: walletAddress,
-    username: username,
-  );
+  }) =>
+      _backendApiRegisterWallet(
+        this,
+        walletAddress: walletAddress,
+        username: username,
+      );
 
   /// Login with wallet signature
   /// POST /api/auth/login
@@ -2608,12 +2599,13 @@ class BackendApiService
     required String walletAddress,
     required String signature,
     required String message,
-  }) => _backendApiLoginWithWallet(
-    this,
-    walletAddress: walletAddress,
-    signature: signature,
-    message: message,
-  );
+  }) =>
+      _backendApiLoginWithWallet(
+        this,
+        walletAddress: walletAddress,
+        signature: signature,
+        message: message,
+      );
 
   /// Register with email + password.
   ///
@@ -2627,15 +2619,16 @@ class BackendApiService
     String? displayName,
     String? walletAddress,
     bool includeAuth = false,
-  }) => _backendApiRegisterWithEmail(
-    this,
-    email: email,
-    password: password,
-    username: username,
-    displayName: displayName,
-    walletAddress: walletAddress,
-    includeAuth: includeAuth,
-  );
+  }) =>
+      _backendApiRegisterWithEmail(
+        this,
+        email: email,
+        password: password,
+        username: username,
+        displayName: displayName,
+        walletAddress: walletAddress,
+        includeAuth: includeAuth,
+      );
 
   /// Login with email + password.
   ///
@@ -2645,25 +2638,28 @@ class BackendApiService
   Future<Map<String, dynamic>> loginWithEmail({
     required String email,
     required String password,
-  }) => _backendApiLoginWithEmail(this, email: email, password: password);
+  }) =>
+      _backendApiLoginWithEmail(this, email: email, password: password);
 
   Future<Map<String, dynamic>> getPasskeyLoginOptions({String? email}) =>
       _backendApiGetPasskeyLoginOptions(this, email: email);
 
   Future<Map<String, dynamic>> verifyPasskeyLogin({
     required Map<String, dynamic> responsePayload,
-  }) => _backendApiVerifyPasskeyLogin(this, responsePayload: responsePayload);
+  }) =>
+      _backendApiVerifyPasskeyLogin(this, responsePayload: responsePayload);
 
   /// Account passkey (sign-in) registration options.
   /// POST /api/auth/passkey/register/options (authenticated)
   Future<Map<String, dynamic>> getAccountPasskeyRegisterOptions({
     String? deviceLabel,
     String? purpose,
-  }) => _backendApiGetAccountPasskeyRegisterOptions(
-    this,
-    deviceLabel: deviceLabel,
-    purpose: purpose,
-  );
+  }) =>
+      _backendApiGetAccountPasskeyRegisterOptions(
+        this,
+        deviceLabel: deviceLabel,
+        purpose: purpose,
+      );
 
   /// Verify and store an account passkey (sign-in) credential.
   /// POST /api/auth/passkey/register/verify (authenticated)
@@ -2672,13 +2668,14 @@ class BackendApiService
     String? deviceLabel,
     String? purpose,
     bool prfSupported = false,
-  }) => _backendApiVerifyAccountPasskeyRegister(
-    this,
-    responsePayload: responsePayload,
-    deviceLabel: deviceLabel,
-    purpose: purpose,
-    prfSupported: prfSupported,
-  );
+  }) =>
+      _backendApiVerifyAccountPasskeyRegister(
+        this,
+        responsePayload: responsePayload,
+        deviceLabel: deviceLabel,
+        purpose: purpose,
+        prfSupported: prfSupported,
+      );
 
   /// List account passkeys + account-sign-in readiness.
   /// GET /api/auth/passkey/credentials (authenticated)
@@ -2689,32 +2686,37 @@ class BackendApiService
   /// DELETE /api/auth/passkey/:id (authenticated)
   Future<Map<String, dynamic>> revokeAccountPasskey({
     required String passkeyId,
-  }) => _backendApiRevokeAccountPasskey(this, passkeyId: passkeyId);
+  }) =>
+      _backendApiRevokeAccountPasskey(this, passkeyId: passkeyId);
 
   /// Resend email verification link
   /// POST /api/auth/resend-verification { email }
   Future<Map<String, dynamic>> _resendEmailVerificationRequest({
     required String email,
     required bool includeAuth,
-  }) => _backendApiResendEmailVerificationRequest(
-    this,
-    email: email,
-    includeAuth: includeAuth,
-  );
+  }) =>
+      _backendApiResendEmailVerificationRequest(
+        this,
+        email: email,
+        includeAuth: includeAuth,
+      );
 
   Future<Map<String, dynamic>> resendEmailVerification({
     required String email,
-  }) => _resendEmailVerificationRequest(email: email, includeAuth: false);
+  }) =>
+      _resendEmailVerificationRequest(email: email, includeAuth: false);
 
   Future<Map<String, dynamic>> resendEmailVerificationForCurrentAccount({
     String? email,
-  }) => _resendEmailVerificationRequest(email: email ?? '', includeAuth: true);
+  }) =>
+      _resendEmailVerificationRequest(email: email ?? '', includeAuth: true);
 
   /// Check whether an email has been verified.
   /// GET /api/auth/email-status?email=...
   Future<Map<String, dynamic>> getEmailVerificationStatus({
     required String email,
-  }) => _backendApiGetEmailVerificationStatus(this, email: email);
+  }) =>
+      _backendApiGetEmailVerificationStatus(this, email: email);
 
   /// Return email/password credential status for the authenticated account.
   /// GET /api/auth/account-security-status
@@ -2728,7 +2730,8 @@ class BackendApiService
   /// POST /api/auth/account-security/password { password }
   Future<Map<String, dynamic>> addPasswordToCurrentAccount({
     required String password,
-  }) => _backendApiAddPasswordToCurrentAccount(this, password: password);
+  }) =>
+      _backendApiAddPasswordToCurrentAccount(this, password: password);
 
   /// Verify email
   /// POST /api/auth/verify-email { token }
@@ -2745,7 +2748,8 @@ class BackendApiService
   Future<Map<String, dynamic>> resetPassword({
     required String token,
     required String newPassword,
-  }) => _backendApiResetPassword(this, token: token, newPassword: newPassword);
+  }) =>
+      _backendApiResetPassword(this, token: token, newPassword: newPassword);
 
   /// Login with Google idToken (verified server-side).
   ///
@@ -2760,16 +2764,17 @@ class BackendApiService
     String? walletAddress,
     String? displayName,
     String origin = 'signin',
-  }) => _backendApiLoginWithGoogle(
-    this,
-    idToken: idToken,
-    code: code,
-    email: email,
-    username: username,
-    walletAddress: walletAddress,
-    displayName: displayName,
-    origin: origin,
-  );
+  }) =>
+      _backendApiLoginWithGoogle(
+        this,
+        idToken: idToken,
+        code: code,
+        email: email,
+        username: username,
+        walletAddress: walletAddress,
+        displayName: displayName,
+        origin: origin,
+      );
 
   /// Binds [walletAddress] to the authenticated account.
   ///
@@ -2781,19 +2786,22 @@ class BackendApiService
   Future<Map<String, dynamic>> bindAuthenticatedWallet(
     String walletAddress, {
     String? signature,
-  }) => _backendApiBindAuthenticatedWallet(
-    this,
-    walletAddress,
-    signature: signature,
-  );
+  }) =>
+      _backendApiBindAuthenticatedWallet(
+        this,
+        walletAddress,
+        signature: signature,
+      );
 
   Future<EncryptedWalletBackupDefinition?> getEncryptedWalletBackup({
     String? walletAddress,
-  }) => _backendApiGetEncryptedWalletBackup(this, walletAddress: walletAddress);
+  }) =>
+      _backendApiGetEncryptedWalletBackup(this, walletAddress: walletAddress);
 
   Future<EncryptedWalletBackupDefinition> putEncryptedWalletBackup(
     EncryptedWalletBackupDefinition definition,
-  ) => _backendApiPutEncryptedWalletBackup(this, definition);
+  ) =>
+      _backendApiPutEncryptedWalletBackup(this, definition);
 
   Future<void> deleteEncryptedWalletBackup({String? walletAddress}) =>
       _backendApiDeleteEncryptedWalletBackup(
@@ -2804,11 +2812,12 @@ class BackendApiService
   Future<Map<String, dynamic>> getWalletBackupPasskeyRegistrationOptions({
     required String walletAddress,
     String? nickname,
-  }) => _backendApiGetWalletBackupPasskeyRegistrationOptions(
-    this,
-    walletAddress: walletAddress,
-    nickname: nickname,
-  );
+  }) =>
+      _backendApiGetWalletBackupPasskeyRegistrationOptions(
+        this,
+        walletAddress: walletAddress,
+        nickname: nickname,
+      );
 
   Future<Map<String, dynamic>> verifyWalletBackupPasskeyRegistration({
     required String walletAddress,
@@ -2819,31 +2828,34 @@ class BackendApiService
     String? prfSalt,
     String? wrappingAlgorithm,
     bool prfSupported = false,
-  }) => _backendApiVerifyWalletBackupPasskeyRegistration(
-    this,
-    walletAddress: walletAddress,
-    responsePayload: responsePayload,
-    nickname: nickname,
-    encryptedWrappedRecoveryKey: encryptedWrappedRecoveryKey,
-    encryptedWrappedRecoveryKeyNonce: encryptedWrappedRecoveryKeyNonce,
-    prfSalt: prfSalt,
-    wrappingAlgorithm: wrappingAlgorithm,
-    prfSupported: prfSupported,
-  );
+  }) =>
+      _backendApiVerifyWalletBackupPasskeyRegistration(
+        this,
+        walletAddress: walletAddress,
+        responsePayload: responsePayload,
+        nickname: nickname,
+        encryptedWrappedRecoveryKey: encryptedWrappedRecoveryKey,
+        encryptedWrappedRecoveryKeyNonce: encryptedWrappedRecoveryKeyNonce,
+        prfSalt: prfSalt,
+        wrappingAlgorithm: wrappingAlgorithm,
+        prfSupported: prfSupported,
+      );
 
   Future<Map<String, dynamic>> getWalletBackupPasskeyAuthOptions({
     required String walletAddress,
-  }) => _backendApiGetWalletBackupPasskeyAuthOptions(
-    this,
-    walletAddress: walletAddress,
-  );
+  }) =>
+      _backendApiGetWalletBackupPasskeyAuthOptions(
+        this,
+        walletAddress: walletAddress,
+      );
 
   Future<Map<String, dynamic>> getWalletBackupPasskeyRecoveryStatus({
     String? walletAddress,
-  }) => _backendApiGetWalletBackupPasskeyRecoveryStatus(
-    this,
-    walletAddress: walletAddress,
-  );
+  }) =>
+      _backendApiGetWalletBackupPasskeyRecoveryStatus(
+        this,
+        walletAddress: walletAddress,
+      );
 
   Future<List<WalletBackupPasskeyDefinition>> getWalletRecoveryPasskeys({
     String? walletAddress,
@@ -2853,45 +2865,50 @@ class BackendApiService
   Future<Map<String, dynamic>> revokeWalletRecoveryPasskey({
     required String id,
     String? walletAddress,
-  }) => _backendApiRevokeWalletRecoveryPasskey(
-    this,
-    id: id,
-    walletAddress: walletAddress,
-  );
+  }) =>
+      _backendApiRevokeWalletRecoveryPasskey(
+        this,
+        id: id,
+        walletAddress: walletAddress,
+      );
 
   Future<Map<String, dynamic>> getWalletBackupPasskeyRecoverOptions({
     required String walletAddress,
-  }) => _backendApiGetWalletBackupPasskeyRecoverOptions(
-    this,
-    walletAddress: walletAddress,
-  );
+  }) =>
+      _backendApiGetWalletBackupPasskeyRecoverOptions(
+        this,
+        walletAddress: walletAddress,
+      );
 
   Future<Map<String, dynamic>> verifyWalletBackupPasskeyRecover({
     required String walletAddress,
     required Map<String, dynamic> responsePayload,
-  }) => _backendApiVerifyWalletBackupPasskeyRecover(
-    this,
-    walletAddress: walletAddress,
-    responsePayload: responsePayload,
-  );
+  }) =>
+      _backendApiVerifyWalletBackupPasskeyRecover(
+        this,
+        walletAddress: walletAddress,
+        responsePayload: responsePayload,
+      );
 
   Future<Map<String, dynamic>> verifyWalletBackupPasskeyAuth({
     required String walletAddress,
     required Map<String, dynamic> responsePayload,
-  }) => _backendApiVerifyWalletBackupPasskeyAuth(
-    this,
-    walletAddress: walletAddress,
-    responsePayload: responsePayload,
-  );
+  }) =>
+      _backendApiVerifyWalletBackupPasskeyAuth(
+        this,
+        walletAddress: walletAddress,
+        responsePayload: responsePayload,
+      );
 
   Future<void> emitWalletBackupEvent({
     required String walletAddress,
     required String eventType,
-  }) => _backendApiEmitWalletBackupEvent(
-    this,
-    walletAddress: walletAddress,
-    eventType: eventType,
-  );
+  }) =>
+      _backendApiEmitWalletBackupEvent(
+        this,
+        walletAddress: walletAddress,
+        eventType: eventType,
+      );
 
   /// Get authenticated user's email preferences
   /// GET /api/profiles/me/preferences
@@ -2979,13 +2996,13 @@ class BackendApiService
         : const <dynamic>[];
     final items = rawItems is List
         ? rawItems
-              .whereType<Map>()
-              .map(
-                (entry) =>
-                    SavedItemRecord.fromJson(Map<String, dynamic>.from(entry)),
-              )
-              .where((record) => record.id.isNotEmpty)
-              .toList(growable: false)
+            .whereType<Map>()
+            .map(
+              (entry) =>
+                  SavedItemRecord.fromJson(Map<String, dynamic>.from(entry)),
+            )
+            .where((record) => record.id.isNotEmpty)
+            .toList(growable: false)
         : const <SavedItemRecord>[];
     return SavedItemsPage(
       items: items,
@@ -3008,9 +3025,8 @@ class BackendApiService
       );
     }
     final decoded = jsonDecode(response.body);
-    final payload = decoded is Map
-        ? (decoded['item'] ?? decoded['data'])
-        : null;
+    final payload =
+        decoded is Map ? (decoded['item'] ?? decoded['data']) : null;
     return payload is Map
         ? SavedItemRecord.fromJson(Map<String, dynamic>.from(payload))
         : item;
@@ -3078,9 +3094,8 @@ class BackendApiService
   String? getCurrentAuthEmail() {
     final claims = getCurrentAuthTokenClaims();
     if (claims == null) return null;
-    final email = (claims['email'] ?? claims['emailAddress'] ?? '')
-        .toString()
-        .trim();
+    final email =
+        (claims['email'] ?? claims['emailAddress'] ?? '').toString().trim();
     return email.isEmpty ? null : email.toLowerCase();
   }
 
@@ -3089,13 +3104,12 @@ class BackendApiService
   String? getCurrentAuthWalletAddress() {
     final claims = getCurrentAuthTokenClaims();
     if (claims == null) return null;
-    final wallet =
-        (claims['walletAddress'] ??
-                claims['wallet_address'] ??
-                claims['wallet'] ??
-                '')
-            .toString()
-            .trim();
+    final wallet = (claims['walletAddress'] ??
+            claims['wallet_address'] ??
+            claims['wallet'] ??
+            '')
+        .toString()
+        .trim();
     return wallet.isEmpty ? null : wallet;
   }
 
@@ -3130,12 +3144,13 @@ class BackendApiService
     String conversationId, {
     int page = 1,
     int limit = 50,
-  }) => _backendApiFetchMessagesImpl(
-    this,
-    conversationId,
-    page: page,
-    limit: limit,
-  );
+  }) =>
+      _backendApiFetchMessagesImpl(
+        this,
+        conversationId,
+        page: page,
+        limit: limit,
+      );
 
   /// Send a message to a conversation (JSON)
   /// POST /api/messages/:conversationId/messages { message, data, replyToId }
@@ -3144,19 +3159,21 @@ class BackendApiService
     String message, {
     Map<String, dynamic>? data,
     String? replyToId,
-  }) => _backendApiSendMessageImpl(
-    this,
-    conversationId,
-    message,
-    data: data,
-    replyToId: replyToId,
-  );
+  }) =>
+      _backendApiSendMessageImpl(
+        this,
+        conversationId,
+        message,
+        data: data,
+        replyToId: replyToId,
+      );
 
   /// Fetch conversation members
   /// GET /api/messages/:conversationId/members
   Future<Map<String, dynamic>> fetchConversationMembers(
     String conversationId,
-  ) => _backendApiFetchConversationMembersImpl(this, conversationId);
+  ) =>
+      _backendApiFetchConversationMembersImpl(this, conversationId);
 
   /// Upload a message attachment by posting multipart to the messages endpoint
   Future<Map<String, dynamic>> uploadMessageAttachment(
@@ -3167,16 +3184,17 @@ class BackendApiService
     bool compress = true,
     UploadCompressionPolicy? compressionPolicy,
     void Function(UploadCompressionProgress progress)? onCompressionProgress,
-  }) => _backendApiUploadMessageAttachmentImpl(
-    this,
-    conversationId,
-    bytes,
-    filename,
-    contentType,
-    compress: compress,
-    compressionPolicy: compressionPolicy,
-    onCompressionProgress: onCompressionProgress,
-  );
+  }) =>
+      _backendApiUploadMessageAttachmentImpl(
+        this,
+        conversationId,
+        bytes,
+        filename,
+        contentType,
+        compress: compress,
+        compressionPolicy: compressionPolicy,
+        onCompressionProgress: onCompressionProgress,
+      );
 
   /// Create a conversation
   /// POST /api/messages { title, members }
@@ -3184,12 +3202,13 @@ class BackendApiService
     String? title,
     bool isGroup = false,
     List<String>? members,
-  }) => _backendApiCreateConversationImpl(
-    this,
-    title: title,
-    isGroup: isGroup,
-    members: members,
-  );
+  }) =>
+      _backendApiCreateConversationImpl(
+        this,
+        title: title,
+        isGroup: isGroup,
+        members: members,
+      );
 
   /// Upload conversation avatar (attempt common endpoints)
   Future<Map<String, dynamic>> uploadConversationAvatar(
@@ -3200,16 +3219,17 @@ class BackendApiService
     bool compress = true,
     UploadCompressionPolicy? compressionPolicy,
     void Function(UploadCompressionProgress progress)? onCompressionProgress,
-  }) => _backendApiUploadConversationAvatarImpl(
-    this,
-    conversationId,
-    bytes,
-    filename,
-    contentType,
-    compress: compress,
-    compressionPolicy: compressionPolicy,
-    onCompressionProgress: onCompressionProgress,
-  );
+  }) =>
+      _backendApiUploadConversationAvatarImpl(
+        this,
+        conversationId,
+        bytes,
+        filename,
+        contentType,
+        compress: compress,
+        compressionPolicy: compressionPolicy,
+        onCompressionProgress: onCompressionProgress,
+      );
 
   /// Add a member to conversation
   Future<Map<String, dynamic>> addConversationMember(
@@ -3222,21 +3242,23 @@ class BackendApiService
   Future<Map<String, dynamic>> removeConversationMember(
     String conversationId,
     String walletOrUsername,
-  ) => _backendApiRemoveConversationMemberImpl(
-    this,
-    conversationId,
-    walletOrUsername,
-  );
+  ) =>
+      _backendApiRemoveConversationMemberImpl(
+        this,
+        conversationId,
+        walletOrUsername,
+      );
 
   /// Transfer conversation ownership (best-effort)
   Future<Map<String, dynamic>> transferConversationOwner(
     String conversationId,
     String newOwnerWallet,
-  ) => _backendApiTransferConversationOwnerImpl(
-    this,
-    conversationId,
-    newOwnerWallet,
-  );
+  ) =>
+      _backendApiTransferConversationOwnerImpl(
+        this,
+        conversationId,
+        newOwnerWallet,
+      );
 
   /// Mark conversation as read
   Future<Map<String, dynamic>> markConversationRead(String conversationId) =>
@@ -3246,12 +3268,14 @@ class BackendApiService
   Future<Map<String, dynamic>> markMessageRead(
     String conversationId,
     String messageId,
-  ) => _backendApiMarkMessageReadImpl(this, conversationId, messageId);
+  ) =>
+      _backendApiMarkMessageReadImpl(this, conversationId, messageId);
 
   Future<Map<String, dynamic>> renameConversation(
     String conversationId,
     String newTitle,
-  ) => _backendApiRenameConversationImpl(this, conversationId, newTitle);
+  ) =>
+      _backendApiRenameConversationImpl(this, conversationId, newTitle);
 
   Future<Map<String, dynamic>> deleteConversation(String conversationId) =>
       _backendApiDeleteConversationImpl(this, conversationId);
@@ -3262,7 +3286,8 @@ class BackendApiService
   Future<Map<String, dynamic>> updateProfile(
     String walletAddress,
     Map<String, dynamic> updates,
-  ) => _backendApiUpdateProfileImpl(this, walletAddress, updates);
+  ) =>
+      _backendApiUpdateProfileImpl(this, walletAddress, updates);
 
   // ==================== Profile/Artists API (New) ====================
 
@@ -3276,7 +3301,8 @@ class BackendApiService
   /// GET /api/profiles/:walletAddress/collectibles
   Future<Map<String, dynamic>> getWalletCollectibleIndex(
     String walletAddress,
-  ) => _backendApiGetWalletCollectibleIndex(this, walletAddress);
+  ) =>
+      _backendApiGetWalletCollectibleIndex(this, walletAddress);
 
   /// Fetch multiple profiles in a single batch call
   /// POST /api/profiles/batch { wallets: [wallet1,wallet2] }
@@ -3294,12 +3320,13 @@ class BackendApiService
     required String type,
     required String id,
     String? walletAddress,
-  }) => _backendApiRecordPresenceVisitImpl(
-    this,
-    type: type,
-    id: id,
-    walletAddress: walletAddress,
-  );
+  }) =>
+      _backendApiRecordPresenceVisitImpl(
+        this,
+        type: type,
+        id: id,
+        walletAddress: walletAddress,
+      );
 
   /// Keep the authenticated user's presence lastSeen timestamp fresh.
   /// POST /api/presence/ping
@@ -3322,12 +3349,13 @@ class BackendApiService
     bool? verified,
     int limit = 50,
     int offset = 0,
-  }) => _backendApiListArtistsImpl(
-    this,
-    verified: verified,
-    limit: limit,
-    offset: offset,
-  );
+  }) =>
+      _backendApiListArtistsImpl(
+        this,
+        verified: verified,
+        limit: limit,
+        offset: offset,
+      );
 
   // ===========================================================================
   // PROMOTION RATE CARDS (New Dynamic Pricing System)
@@ -3415,15 +3443,15 @@ class BackendApiService
   }) async {
     try {
       await _ensureAuthBeforeRequest();
-      final uri = Uri.parse('$baseUrl/api/app/promotion-alternative-dates')
-          .replace(
-            queryParameters: <String, String>{
-              'rateCardId': rateCardId,
-              'slotIndex': slotIndex.toString(),
-              'startDate': startDate.toIso8601String(),
-              'durationDays': durationDays.toString(),
-            },
-          );
+      final uri =
+          Uri.parse('$baseUrl/api/app/promotion-alternative-dates').replace(
+        queryParameters: <String, String>{
+          'rateCardId': rateCardId,
+          'slotIndex': slotIndex.toString(),
+          'startDate': startDate.toIso8601String(),
+          'durationDays': durationDays.toString(),
+        },
+      );
       final dynamic data = await _fetchJson(
         uri,
         includeAuth: true,
@@ -3734,9 +3762,8 @@ class BackendApiService
           final contentType = headResponse.headers['content-type'] ?? '';
           if (contentType.toLowerCase().startsWith('image/')) return true;
           final contentLength = headResponse.headers['content-length'];
-          final parsedLength = contentLength == null
-              ? null
-              : int.tryParse(contentLength);
+          final parsedLength =
+              contentLength == null ? null : int.tryParse(contentLength);
           if (parsedLength != null && parsedLength > 0) return true;
         }
       } catch (_) {
@@ -3905,9 +3932,8 @@ class BackendApiService
           );
           final dynamic maybeList =
               data['data'] ?? data['markers'] ?? data['artMarkers'];
-          final List<dynamic> markerList = maybeList is List
-              ? maybeList
-              : const <dynamic>[];
+          final List<dynamic> markerList =
+              maybeList is List ? maybeList : const <dynamic>[];
           return markerList
               .map(
                 (json) =>
@@ -3921,20 +3947,18 @@ class BackendApiService
           var markers = (await _loadSnapshotDatasetMaps('markers'))
               .map(_artMarkerFromBackendJson)
               .where((marker) {
-                final isPublic =
-                    _tryBoolValue(marker.metadata?['isPublic']) ??
-                    marker.isPublic;
-                if (!isPublic) {
-                  return false;
-                }
-                final distanceKm = distance.as(
-                  LengthUnit.Kilometer,
-                  center,
-                  marker.position,
-                );
-                return distanceKm <= radiusKm;
-              })
-              .toList(growable: false);
+            final isPublic =
+                _tryBoolValue(marker.metadata?['isPublic']) ?? marker.isPublic;
+            if (!isPublic) {
+              return false;
+            }
+            final distanceKm = distance.as(
+              LengthUnit.Kilometer,
+              center,
+              marker.position,
+            );
+            return distanceKm <= radiusKm;
+          }).toList(growable: false);
           if (limit != null && markers.length > limit) {
             markers = markers.sublist(0, limit);
           }
@@ -3981,9 +4005,8 @@ class BackendApiService
           );
           final dynamic maybeList =
               data['data'] ?? data['markers'] ?? data['artMarkers'];
-          final List<dynamic> markerList = maybeList is List
-              ? maybeList
-              : const <dynamic>[];
+          final List<dynamic> markerList =
+              maybeList is List ? maybeList : const <dynamic>[];
 
           return markerList
               .map(
@@ -4149,15 +4172,13 @@ class BackendApiService
       );
 
       if (response.statusCode == 200) {
-        final decoded = response.body.isNotEmpty
-            ? jsonDecode(response.body)
-            : null;
+        final decoded =
+            response.body.isNotEmpty ? jsonDecode(response.body) : null;
         final dynamic payload = decoded is Map<String, dynamic>
             ? (decoded['data'] ?? decoded['markers'] ?? decoded)
             : decoded;
-        final List<dynamic> markerList = payload is List
-            ? payload
-            : const <dynamic>[];
+        final List<dynamic> markerList =
+            payload is List ? payload : const <dynamic>[];
         return markerList
             .whereType<Map<String, dynamic>>()
             .map(_artMarkerFromBackendJson)
@@ -4188,26 +4209,19 @@ class BackendApiService
         timeout: const Duration(seconds: 15),
       );
 
-      final decoded = response.body.isNotEmpty
-          ? jsonDecode(response.body)
-          : null;
+      final decoded =
+          response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (response.statusCode == 201 || response.statusCode == 200) {
         if (decoded is Map<String, dynamic>) {
-          final marker =
-              decoded['data'] ??
+          final marker = decoded['data'] ??
               decoded['marker'] ??
               decoded['artMarker'] ??
               decoded;
           if (marker is Map<String, dynamic>) {
-            final parsed = _artMarkerFromBackendJson(marker);
-            if (parsed.id.trim().isNotEmpty) return parsed;
+            return _artMarkerFromBackendJson(marker);
           }
         }
-        throw BackendApiRequestException(
-          statusCode: response.statusCode,
-          path: uri.path,
-          body: response.body,
-        );
+        return null;
       }
 
       throw BackendApiRequestException(
@@ -4260,12 +4274,10 @@ class BackendApiService
         return false;
       }
 
-      final latRaw =
-          requested['latitude'] ??
+      final latRaw = requested['latitude'] ??
           requested['lat'] ??
           requested['position']?['lat'];
-      final lngRaw =
-          requested['longitude'] ??
+      final lngRaw = requested['longitude'] ??
           requested['lng'] ??
           requested['position']?['lng'];
       final expectedLat = latRaw is num
@@ -4321,8 +4333,7 @@ class BackendApiService
                   .toString()
                   .trim()
                   .isNotEmpty;
-              final hasCoords =
-                  map.containsKey('latitude') ||
+              final hasCoords = map.containsKey('latitude') ||
                   map.containsKey('lat') ||
                   map['position'] is Map;
               return hasId && (hasNameOrTitle || hasCoords);
@@ -4585,9 +4596,8 @@ class BackendApiService
 
       if (response.statusCode == 201) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final payload =
-            (data['data'] ?? data['marker'] ?? data['artMarker'])
-                as Map<String, dynamic>;
+        final payload = (data['data'] ?? data['marker'] ?? data['artMarker'])
+            as Map<String, dynamic>;
         return _artMarkerFromBackendJson(payload);
       } else {
         throw Exception('Failed to create marker: ${response.statusCode}');
@@ -4625,10 +4635,10 @@ class BackendApiService
       ).replace(queryParameters: <String, String>{'markerId': markerId.trim()});
       final response = await _get(uri, headers: _getHeaders());
       if (response.statusCode == 404 || response.statusCode == 400) {
-        final fallbackUri = Uri.parse('$baseUrl/api/attendance/challenge')
-            .replace(
-              queryParameters: <String, String>{'markerId': markerId.trim()},
-            );
+        final fallbackUri =
+            Uri.parse('$baseUrl/api/attendance/challenge').replace(
+          queryParameters: <String, String>{'markerId': markerId.trim()},
+        );
         final fallback = await _get(fallbackUri, headers: _getHeaders());
         if (fallback.statusCode == 200) {
           return jsonDecode(fallback.body) as Map<String, dynamic>;
@@ -4950,9 +4960,8 @@ class BackendApiService
           );
           final dynamic listCandidate =
               data['artworks'] ?? data['data'] ?? data['items'];
-          final List<dynamic> artworks = listCandidate is List
-              ? listCandidate
-              : <dynamic>[];
+          final List<dynamic> artworks =
+              listCandidate is List ? listCandidate : <dynamic>[];
           return artworks
               .map(
                 (json) =>
@@ -4969,52 +4978,47 @@ class BackendApiService
 
           final snapshots = await _loadSnapshotDatasetMaps('artworks');
           final idFilter = requestedIds.toSet();
-          var filtered = snapshots
-              .where((entry) {
-                if (idFilter.isNotEmpty &&
-                    !idFilter.contains((entry['id'] ?? '').toString().trim())) {
-                  return false;
-                }
-                if (category != null &&
-                    entry['category']?.toString().trim().toLowerCase() !=
-                        category.trim().toLowerCase()) {
-                  return false;
-                }
+          var filtered = snapshots.where((entry) {
+            if (idFilter.isNotEmpty &&
+                !idFilter.contains((entry['id'] ?? '').toString().trim())) {
+              return false;
+            }
+            if (category != null &&
+                entry['category']?.toString().trim().toLowerCase() !=
+                    category.trim().toLowerCase()) {
+              return false;
+            }
 
-                if (arEnabled != null) {
-                  final snapshotArEnabled =
-                      _tryBoolValue(
-                        entry['arEnabled'] ?? entry['is_ar_enabled'],
-                      ) ??
-                      false;
-                  if (snapshotArEnabled != arEnabled) {
-                    return false;
-                  }
-                }
+            if (arEnabled != null) {
+              final snapshotArEnabled = _tryBoolValue(
+                    entry['arEnabled'] ?? entry['is_ar_enabled'],
+                  ) ??
+                  false;
+              if (snapshotArEnabled != arEnabled) {
+                return false;
+              }
+            }
 
-                if (hasWalletFilter) {
-                  final candidateWallet = WalletUtils.canonical(
-                    entry['walletAddress'] ??
-                        entry['wallet_address'] ??
-                        entry['wallet'],
-                  );
-                  if (candidateWallet != WalletUtils.canonical(walletAddress)) {
-                    return false;
-                  }
-                }
+            if (hasWalletFilter) {
+              final candidateWallet = WalletUtils.canonical(
+                entry['walletAddress'] ??
+                    entry['wallet_address'] ??
+                    entry['wallet'],
+              );
+              if (candidateWallet != WalletUtils.canonical(walletAddress)) {
+                return false;
+              }
+            }
 
-                return _tryBoolValue(entry['isPublic'] ?? entry['is_public']) ??
-                    true;
-              })
-              .toList(growable: false);
+            return _tryBoolValue(entry['isPublic'] ?? entry['is_public']) ??
+                true;
+          }).toList(growable: false);
 
           final effectiveLimit = idFilter.isNotEmpty ? idFilter.length : limit;
-          final start = ((page - 1) * effectiveLimit)
-              .clamp(0, filtered.length)
-              .toInt();
-          final end = (start + effectiveLimit)
-              .clamp(0, filtered.length)
-              .toInt();
+          final start =
+              ((page - 1) * effectiveLimit).clamp(0, filtered.length).toInt();
+          final end =
+              (start + effectiveLimit).clamp(0, filtered.length).toInt();
           filtered = filtered.sublist(start, end);
 
           return filtered
@@ -5111,9 +5115,8 @@ class BackendApiService
       await _ensureAuthWithStoredWallet();
       final uri = Uri.parse('$baseUrl/api/artworks/$artworkId/publish');
       final response = await _post(uri, headers: _getHeaders());
-      final decoded = response.body.isNotEmpty
-          ? jsonDecode(response.body)
-          : null;
+      final decoded =
+          response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (response.statusCode == 200) {
         if (decoded is Map<String, dynamic>) {
           final payload = decoded['data'] ?? decoded['artwork'] ?? decoded;
@@ -5146,9 +5149,8 @@ class BackendApiService
       await _ensureAuthWithStoredWallet();
       final uri = Uri.parse('$baseUrl/api/artworks/$artworkId/unpublish');
       final response = await _post(uri, headers: _getHeaders());
-      final decoded = response.body.isNotEmpty
-          ? jsonDecode(response.body)
-          : null;
+      final decoded =
+          response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (response.statusCode == 200) {
         if (decoded is Map<String, dynamic>) {
           final payload = decoded['data'] ?? decoded['artwork'] ?? decoded;
@@ -5181,9 +5183,8 @@ class BackendApiService
       final uri = Uri.parse('$baseUrl/api/artworks/$artworkId');
       final response = await _delete(uri, headers: _getHeaders());
       if (response.statusCode == 200 || response.statusCode == 204) return true;
-      final decoded = response.body.isNotEmpty
-          ? jsonDecode(response.body)
-          : null;
+      final decoded =
+          response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (decoded is Map<String, dynamic> && decoded['success'] == true) {
         return true;
       }
@@ -5215,9 +5216,8 @@ class BackendApiService
       );
       final response = await _get(uri, headers: _getHeaders());
       if (response.statusCode != 200) return null;
-      final decoded = response.body.isNotEmpty
-          ? jsonDecode(response.body)
-          : null;
+      final decoded =
+          response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (decoded is Map<String, dynamic> && decoded['success'] == true) {
         final data = decoded['data'];
         if (data is Map<String, dynamic>) {
@@ -5246,9 +5246,8 @@ class BackendApiService
       final uri = Uri.parse('$baseUrl/api/ar/$id/content');
       final response = await _get(uri, headers: _getHeaders());
       if (response.statusCode != 200) return null;
-      final decoded = response.body.isNotEmpty
-          ? jsonDecode(response.body)
-          : null;
+      final decoded =
+          response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (decoded is Map<String, dynamic> && decoded['success'] == true) {
         final data = decoded['data'];
         if (data is Map<String, dynamic>) return data;
@@ -5289,9 +5288,8 @@ class BackendApiService
         isIdempotent: !regenerate,
       );
       if (response.statusCode != 200) return null;
-      final decoded = response.body.isNotEmpty
-          ? jsonDecode(response.body)
-          : null;
+      final decoded =
+          response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (decoded is Map<String, dynamic> && decoded['success'] == true) {
         final data = decoded['data'];
         if (data is Map<String, dynamic>) return data;
@@ -5335,9 +5333,8 @@ class BackendApiService
 
       final response = await _sendMultipart(buildRequest, includeAuth: true);
       if (response.statusCode != 200) return null;
-      final decoded = response.body.isNotEmpty
-          ? jsonDecode(response.body)
-          : null;
+      final decoded =
+          response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (decoded is Map<String, dynamic> && decoded['success'] == true) {
         final data = decoded['data'];
         if (data is Map<String, dynamic>) return data;
@@ -5374,9 +5371,8 @@ class BackendApiService
         isIdempotent: true,
       );
       if (response.statusCode != 200) return null;
-      final decoded = response.body.isNotEmpty
-          ? jsonDecode(response.body)
-          : null;
+      final decoded =
+          response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (decoded is Map<String, dynamic> && decoded['success'] == true) {
         final data = decoded['data'];
         if (data is Map<String, dynamic>) return data;
@@ -5686,12 +5682,12 @@ class BackendApiService
     String? source,
   }) async {
     try {
-      final uri = Uri.parse('$baseUrl/api/exhibitions/$exhibitionId/view')
-          .replace(
-            queryParameters: (source != null && source.trim().isNotEmpty)
-                ? <String, String>{'source': source.trim()}
-                : null,
-          );
+      final uri =
+          Uri.parse('$baseUrl/api/exhibitions/$exhibitionId/view').replace(
+        queryParameters: (source != null && source.trim().isNotEmpty)
+            ? <String, String>{'source': source.trim()}
+            : null,
+      );
 
       final response = await _post(
         uri,
@@ -5908,9 +5904,8 @@ class BackendApiService
             normalizedSort == 'popularity' ||
             normalizedSort == 'popular' ||
             normalizedSort == 'recent') {
-          queryParams['sort'] = normalizedSort == 'popular'
-              ? 'popularity'
-              : normalizedSort;
+          queryParams['sort'] =
+              normalizedSort == 'popular' ? 'popularity' : normalizedSort;
         }
       }
 
@@ -5940,35 +5935,31 @@ class BackendApiService
           }
 
           final snapshots = await _loadSnapshotDatasetMaps('communityFeed');
-          var posts = snapshots
-              .map(_communityPostFromBackendJson)
-              .where((post) {
-                if (arOnly == true &&
-                    post.category.toLowerCase() != 'art' &&
-                    post.artwork == null) {
-                  return false;
-                }
-                if (authorWallet != null &&
-                    authorWallet.trim().isNotEmpty &&
-                    WalletUtils.canonical(post.authorWallet) !=
-                        WalletUtils.canonical(authorWallet)) {
-                  return false;
-                }
-                if (tag != null && tag.trim().isNotEmpty) {
-                  final normalizedTag = tag
-                      .replaceFirst(RegExp(r'^#+'), '')
-                      .trim()
-                      .toLowerCase();
-                  if (normalizedTag.isEmpty) {
-                    return true;
-                  }
-                  return post.tags
-                      .map((entry) => entry.toLowerCase())
-                      .contains(normalizedTag);
-                }
+          var posts =
+              snapshots.map(_communityPostFromBackendJson).where((post) {
+            if (arOnly == true &&
+                post.category.toLowerCase() != 'art' &&
+                post.artwork == null) {
+              return false;
+            }
+            if (authorWallet != null &&
+                authorWallet.trim().isNotEmpty &&
+                WalletUtils.canonical(post.authorWallet) !=
+                    WalletUtils.canonical(authorWallet)) {
+              return false;
+            }
+            if (tag != null && tag.trim().isNotEmpty) {
+              final normalizedTag =
+                  tag.replaceFirst(RegExp(r'^#+'), '').trim().toLowerCase();
+              if (normalizedTag.isEmpty) {
                 return true;
-              })
-              .toList(growable: false);
+              }
+              return post.tags
+                  .map((entry) => entry.toLowerCase())
+                  .contains(normalizedTag);
+            }
+            return true;
+          }).toList(growable: false);
 
           final normalizedSort = (sort ?? '').trim().toLowerCase();
           if (normalizedSort == 'hybrid' ||
@@ -6214,8 +6205,8 @@ class BackendApiService
             mediaUrls: aggregatedMedia.isNotEmpty
                 ? aggregatedMedia
                 : (decoratedPost.imageUrl != null
-                      ? <String>[decoratedPost.imageUrl!]
-                      : null),
+                    ? <String>[decoratedPost.imageUrl!]
+                    : null),
           );
         } catch (e) {
           AppConfig.debugPrint('UserActionLogger.logPostCreated failed: $e');
@@ -6247,8 +6238,7 @@ class BackendApiService
         await _ensureAuthWithStoredWallet();
       } catch (_) {}
 
-      final shouldIncludeSubject =
-          includeSubject ||
+      final shouldIncludeSubject = includeSubject ||
           subjectType != null ||
           subjectId != null ||
           artworkId != null;
@@ -6683,10 +6673,10 @@ class BackendApiService
           final created = _communityPostFromBackendJson(payload);
           final achievementResult =
               decoded is Map<String, dynamic> && decoded['achievements'] is Map
-              ? achievements_model.AchievementEventResult.fromJson(
-                  decoded['achievements'] as Map<String, dynamic>,
-                )
-              : null;
+                  ? achievements_model.AchievementEventResult.fromJson(
+                      decoded['achievements'] as Map<String, dynamic>,
+                    )
+                  : null;
           final decoratedPost = achievementResult == null
               ? created
               : created.copyWith(achievementResult: achievementResult);
@@ -6697,8 +6687,8 @@ class BackendApiService
               mediaUrls: aggregatedMedia.isNotEmpty
                   ? aggregatedMedia
                   : (decoratedPost.imageUrl != null
-                        ? <String>[decoratedPost.imageUrl!]
-                        : null),
+                      ? <String>[decoratedPost.imageUrl!]
+                      : null),
             );
           } catch (e) {
             AppConfig.debugPrint(
@@ -6960,8 +6950,7 @@ class BackendApiService
       if (response.statusCode == 201) {
         final parsed = jsonDecode(response.body);
         if (parsed is Map<String, dynamic>) {
-          final commentJson =
-              parsed['comment'] ??
+          final commentJson = parsed['comment'] ??
               parsed['data'] ??
               parsed['result'] ??
               parsed['payload'];
@@ -7007,8 +6996,7 @@ class BackendApiService
       if (response.statusCode == 200) {
         final parsed = jsonDecode(response.body);
         if (parsed is Map<String, dynamic>) {
-          final commentJson =
-              parsed['comment'] ??
+          final commentJson = parsed['comment'] ??
               parsed['data'] ??
               parsed['result'] ??
               parsed['payload'];
@@ -7060,8 +7048,7 @@ class BackendApiService
       if (response.statusCode == 200) {
         final parsed = jsonDecode(response.body);
         if (parsed is Map<String, dynamic>) {
-          final raw =
-              parsed['comments'] ??
+          final raw = parsed['comments'] ??
               parsed['data'] ??
               parsed['result'] ??
               parsed['payload'] ??
@@ -7159,13 +7146,13 @@ class BackendApiService
     int offset = 0,
   }) async {
     try {
-      final uri = Uri.parse('$baseUrl/api/community/posts/$postId/likes')
-          .replace(
-            queryParameters: {
-              'limit': limit.toString(),
-              'offset': offset.toString(),
-            },
-          );
+      final uri =
+          Uri.parse('$baseUrl/api/community/posts/$postId/likes').replace(
+        queryParameters: {
+          'limit': limit.toString(),
+          'offset': offset.toString(),
+        },
+      );
 
       final response = await _get(
         uri,
@@ -7197,13 +7184,13 @@ class BackendApiService
     int offset = 0,
   }) async {
     try {
-      final uri = Uri.parse('$baseUrl/api/community/comments/$commentId/likes')
-          .replace(
-            queryParameters: {
-              'limit': limit.toString(),
-              'offset': offset.toString(),
-            },
-          );
+      final uri =
+          Uri.parse('$baseUrl/api/community/comments/$commentId/likes').replace(
+        queryParameters: {
+          'limit': limit.toString(),
+          'offset': offset.toString(),
+        },
+      );
 
       final response = await _get(
         uri,
@@ -7349,8 +7336,7 @@ class BackendApiService
       if (response.statusCode == 200) {
         final payload = jsonDecode(response.body);
         if (payload is Map<String, dynamic>) {
-          final raw =
-              payload['data'] ??
+          final raw = payload['data'] ??
               payload['followers'] ??
               payload['result'] ??
               payload['payload'] ??
@@ -7399,8 +7385,7 @@ class BackendApiService
       if (response.statusCode == 200) {
         final payload = jsonDecode(response.body);
         if (payload is Map<String, dynamic>) {
-          final raw =
-              payload['data'] ??
+          final raw = payload['data'] ??
               payload['following'] ??
               payload['result'] ??
               payload['payload'] ??
@@ -7513,9 +7498,8 @@ class BackendApiService
         return <String, dynamic>{};
       }
 
-      final body = response.body.isNotEmpty
-          ? response.body
-          : 'No response body';
+      final body =
+          response.body.isNotEmpty ? response.body : 'No response body';
       throw Exception(
         'Failed to submit report (${response.statusCode}): $body',
       );
@@ -7560,9 +7544,8 @@ class BackendApiService
         return <String, dynamic>{};
       }
 
-      final body = response.body.isNotEmpty
-          ? response.body
-          : 'No response body';
+      final body =
+          response.body.isNotEmpty ? response.body : 'No response body';
       throw Exception(
         'Failed to create support ticket (${response.statusCode}): $body',
       );
@@ -7717,18 +7700,20 @@ class BackendApiService
     int limit = 50,
     int offset = 0,
     String? status,
-  }) => _backendApiGetDAOProposals(
-    this,
-    limit: limit,
-    offset: offset,
-    status: status,
-  );
+  }) =>
+      _backendApiGetDAOProposals(
+        this,
+        limit: limit,
+        offset: offset,
+        status: status,
+      );
 
   /// Create a DAO proposal
   /// POST /api/dao/proposals
   Future<Map<String, dynamic>?> createDAOProposal({
     required Map<String, dynamic> envelope,
-  }) => _backendApiCreateDAOProposal(this, envelope: envelope);
+  }) =>
+      _backendApiCreateDAOProposal(this, envelope: envelope);
 
   /// List votes for a proposal or all votes
   /// GET /api/dao/proposals/:id/votes or /api/dao/votes
@@ -7736,23 +7721,25 @@ class BackendApiService
     String? proposalId,
     int limit = 100,
     int offset = 0,
-  }) => _backendApiGetDAOVotes(
-    this,
-    proposalId: proposalId,
-    limit: limit,
-    offset: offset,
-  );
+  }) =>
+      _backendApiGetDAOVotes(
+        this,
+        proposalId: proposalId,
+        limit: limit,
+        offset: offset,
+      );
 
   /// Submit a DAO vote
   /// POST /api/dao/proposals/:id/votes
   Future<Map<String, dynamic>?> submitDAOVote({
     required String proposalId,
     required Map<String, dynamic> envelope,
-  }) => _backendApiSubmitDAOVote(
-    this,
-    proposalId: proposalId,
-    envelope: envelope,
-  );
+  }) =>
+      _backendApiSubmitDAOVote(
+        this,
+        proposalId: proposalId,
+        envelope: envelope,
+      );
 
   /// List DAO delegates
   /// GET /api/dao/delegates
@@ -7764,11 +7751,12 @@ class BackendApiService
   Future<Map<String, dynamic>?> delegateVotingPower({
     required String delegateId,
     required Map<String, dynamic> envelope,
-  }) => _backendApiDelegateVotingPower(
-    this,
-    delegateId: delegateId,
-    envelope: envelope,
-  );
+  }) =>
+      _backendApiDelegateVotingPower(
+        this,
+        delegateId: delegateId,
+        envelope: envelope,
+      );
 
   /// List DAO treasury/governance transactions
   /// GET /api/dao/transactions
@@ -7779,14 +7767,16 @@ class BackendApiService
   /// POST /api/dao/reviews
   Future<Map<String, dynamic>?> submitDAOReview({
     required Map<String, dynamic> envelope,
-  }) => _backendApiSubmitDAOReview(this, envelope: envelope);
+  }) =>
+      _backendApiSubmitDAOReview(this, envelope: envelope);
 
   /// List DAO reviews
   /// GET /api/dao/reviews
   Future<List<Map<String, dynamic>>> getDAOReviews({
     int limit = 50,
     int offset = 0,
-  }) => _backendApiGetDAOReviews(this, limit: limit, offset: offset);
+  }) =>
+      _backendApiGetDAOReviews(this, limit: limit, offset: offset);
 
   /// Return server-derived DAO review decision authority for the current
   /// authenticated principal, including explicit reviewer allowlists.
@@ -7804,11 +7794,12 @@ class BackendApiService
   Future<Map<String, dynamic>?> decideDAOReview({
     required String idOrWallet,
     required Map<String, dynamic> envelope,
-  }) => _backendApiDecideDAOReview(
-    this,
-    idOrWallet: idOrWallet,
-    envelope: envelope,
-  );
+  }) =>
+      _backendApiDecideDAOReview(
+        this,
+        idOrWallet: idOrWallet,
+        envelope: envelope,
+      );
 
   // ==================== Institution & Events (Provisional) ====================
 
@@ -7919,16 +7910,13 @@ class BackendApiService
             if (decoded is Map<String, dynamic>) {
               final dynamic data = decoded['data'] ?? decoded;
               if (data is Map<String, dynamic>) {
-                final list =
-                    (data['events'] ??
-                            data['items'] ??
-                            data['results'] ??
-                            const [])
-                        as dynamic;
+                final list = (data['events'] ??
+                    data['items'] ??
+                    data['results'] ??
+                    const []) as dynamic;
                 if (list is List) return List<Map<String, dynamic>>.from(list);
               }
-              final list =
-                  decoded['events'] ??
+              final list = decoded['events'] ??
                   (decoded['data'] is List ? decoded['data'] : null);
               if (list is List) return List<Map<String, dynamic>>.from(list);
             }
@@ -7975,18 +7963,15 @@ class BackendApiService
               if (decoded is Map<String, dynamic>) {
                 final dynamic data = decoded['data'] ?? decoded;
                 if (data is Map<String, dynamic>) {
-                  final list =
-                      (data['events'] ??
-                              data['items'] ??
-                              data['results'] ??
-                              const [])
-                          as dynamic;
+                  final list = (data['events'] ??
+                      data['items'] ??
+                      data['results'] ??
+                      const []) as dynamic;
                   if (list is List) {
                     return List<Map<String, dynamic>>.from(list);
                   }
                 }
-                final list =
-                    decoded['events'] ??
+                final list = decoded['events'] ??
                     (decoded['data'] is List ? decoded['data'] : null);
                 if (list is List) {
                   return List<Map<String, dynamic>>.from(list);
@@ -8003,38 +7988,36 @@ class BackendApiService
         },
         snapshotRead: () async {
           var events = await _loadSnapshotDatasetMaps('events');
-          events = events
-              .where((entry) {
-                if (hostUserId != null &&
-                    hostUserId.trim().isNotEmpty &&
-                    (entry['hostUserId'] ?? entry['host_user_id'] ?? '')
-                            .toString()
-                            .trim() !=
-                        hostUserId.trim()) {
-                  return false;
-                }
+          events = events.where((entry) {
+            if (hostUserId != null &&
+                hostUserId.trim().isNotEmpty &&
+                (entry['hostUserId'] ?? entry['host_user_id'] ?? '')
+                        .toString()
+                        .trim() !=
+                    hostUserId.trim()) {
+              return false;
+            }
 
-                if (upcoming == true) {
-                  final startsAt = DateTime.tryParse(
-                    (entry['startsAt'] ?? entry['starts_at'] ?? '').toString(),
-                  );
-                  if (startsAt != null && startsAt.isBefore(DateTime.now())) {
-                    return false;
-                  }
-                }
+            if (upcoming == true) {
+              final startsAt = DateTime.tryParse(
+                (entry['startsAt'] ?? entry['starts_at'] ?? '').toString(),
+              );
+              if (startsAt != null && startsAt.isBefore(DateTime.now())) {
+                return false;
+              }
+            }
 
-                if (institutionId != null &&
-                    institutionId.trim().isNotEmpty &&
-                    (entry['institutionId'] ?? entry['institution_id'] ?? '')
-                            .toString()
-                            .trim() !=
-                        institutionId.trim()) {
-                  return false;
-                }
+            if (institutionId != null &&
+                institutionId.trim().isNotEmpty &&
+                (entry['institutionId'] ?? entry['institution_id'] ?? '')
+                        .toString()
+                        .trim() !=
+                    institutionId.trim()) {
+              return false;
+            }
 
-                return true;
-              })
-              .toList(growable: false);
+            return true;
+          }).toList(growable: false);
 
           final start = offset.clamp(0, events.length).toInt();
           final end = (start + limit).clamp(0, events.length).toInt();
@@ -8172,9 +8155,8 @@ class BackendApiService
         isIdempotent: true,
       );
       if (response.statusCode == 200 || response.statusCode == 204) return true;
-      final decoded = response.body.isNotEmpty
-          ? jsonDecode(response.body)
-          : null;
+      final decoded =
+          response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (decoded is Map<String, dynamic> && decoded['success'] == true) {
         return true;
       }
@@ -8274,14 +8256,13 @@ class BackendApiService
           var exhibitions = (await _loadSnapshotDatasetMaps('exhibitions'))
               .map(Exhibition.fromJson)
               .where((entry) {
-                if (eventId != null &&
-                    eventId.trim().isNotEmpty &&
-                    (entry.eventId ?? '').trim() != eventId.trim()) {
-                  return false;
-                }
-                return true;
-              })
-              .toList(growable: false);
+            if (eventId != null &&
+                eventId.trim().isNotEmpty &&
+                (entry.eventId ?? '').trim() != eventId.trim()) {
+              return false;
+            }
+            return true;
+          }).toList(growable: false);
 
           final start = offset.clamp(0, exhibitions.length).toInt();
           final end = (start + limit).clamp(0, exhibitions.length).toInt();
@@ -8393,8 +8374,7 @@ class BackendApiService
       await _ensureAuthBeforeRequest();
       final uri = Uri.parse('$baseUrl$path');
       if (kDebugMode && AppConfig.enableNetworkLogging) {
-        final cover =
-            updates['coverUrl'] ??
+        final cover = updates['coverUrl'] ??
             updates['cover_url'] ??
             updates['coverImageUrl'] ??
             updates['cover_image_url'];
@@ -8451,9 +8431,8 @@ class BackendApiService
         isIdempotent: true,
       );
       if (response.statusCode == 200 || response.statusCode == 204) return true;
-      final decoded = response.body.isNotEmpty
-          ? jsonDecode(response.body)
-          : null;
+      final decoded =
+          response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (decoded is Map<String, dynamic> && decoded['success'] == true) {
         return true;
       }
@@ -8614,9 +8593,8 @@ class BackendApiService
             'proofSource': proofSource!.trim(),
         }),
       );
-      final decoded = response.body.isNotEmpty
-          ? jsonDecode(response.body)
-          : null;
+      final decoded =
+          response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (_isSuccessStatus(response.statusCode)) {
         if (decoded is Map<String, dynamic>) {
           final payload = decoded['data'] ?? decoded;
@@ -8836,9 +8814,8 @@ class BackendApiService
             'proofSource': proofSource!.trim(),
         }),
       );
-      final decoded = response.body.isNotEmpty
-          ? jsonDecode(response.body)
-          : null;
+      final decoded =
+          response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (_isSuccessStatus(response.statusCode)) {
         if (decoded is Map<String, dynamic>) {
           final payload = decoded['data'] ?? decoded;
@@ -9395,8 +9372,8 @@ class BackendApiService
       final snapshotWalletFilter = requestedWallet.isNotEmpty
           ? requestedWallet
           : (isImplicitSelfRequest
-                ? (_preferredWalletCanonical ?? _authWalletCanonical ?? '')
-                : '');
+              ? (_preferredWalletCanonical ?? _authWalletCanonical ?? '')
+              : '');
 
       if (isImplicitSelfRequest) {
         await ensureAuthLoaded();
@@ -9444,22 +9421,19 @@ class BackendApiService
             final canonicalRequested = WalletUtils.canonical(
               snapshotWalletFilter,
             );
-            collections = collections
-                .where((entry) {
-                  final candidate = WalletUtils.canonical(
-                    entry['walletAddress'] ??
-                        entry['wallet_address'] ??
-                        entry['ownerWalletAddress'] ??
-                        entry['owner_wallet_address'],
-                  );
-                  return candidate == canonicalRequested;
-                })
-                .toList(growable: false);
+            collections = collections.where((entry) {
+              final candidate = WalletUtils.canonical(
+                entry['walletAddress'] ??
+                    entry['wallet_address'] ??
+                    entry['ownerWalletAddress'] ??
+                    entry['owner_wallet_address'],
+              );
+              return candidate == canonicalRequested;
+            }).toList(growable: false);
           }
 
-          final start = ((page - 1) * limit)
-              .clamp(0, collections.length)
-              .toInt();
+          final start =
+              ((page - 1) * limit).clamp(0, collections.length).toInt();
           final end = (start + limit).clamp(0, collections.length).toInt();
           return collections.sublist(start, end);
         },
@@ -9530,8 +9504,7 @@ class BackendApiService
       );
 
       if (response.statusCode == 201 || response.statusCode == 200) {
-        final payload =
-            _extractSuccessfulEntityMap(
+        final payload = _extractSuccessfulEntityMap(
               response,
               preferredKeys: const <String>['collection'],
             ) ??
@@ -9584,8 +9557,7 @@ class BackendApiService
       );
 
       if (response.statusCode == 200) {
-        final payload =
-            _extractSuccessfulEntityMap(
+        final payload = _extractSuccessfulEntityMap(
               response,
               preferredKeys: const <String>['collection'],
             ) ??
@@ -10138,8 +10110,7 @@ ArtMarker _artMarkerFromBackendJson(Map<String, dynamic> json) {
           metaArtwork['artwork_id'],
     );
   }
-  final allowSubjectIdAsArtworkId =
-      subjectId != null &&
+  final allowSubjectIdAsArtworkId = subjectId != null &&
       subjectId.isNotEmpty &&
       ((subjectType != null && subjectType.contains('artwork')) ||
           ((subjectType == null || subjectType.isEmpty) &&
@@ -10173,21 +10144,18 @@ ArtMarker _artMarkerFromBackendJson(Map<String, dynamic> json) {
     'tags': json['tags'],
     'category':
         json['category'] ?? json['markerType'] ?? json['type'] ?? 'General',
-    'createdAt':
-        json['createdAt'] ??
+    'createdAt': json['createdAt'] ??
         json['created_at'] ??
         DateTime.now().toIso8601String(),
     'updatedAt': json['updatedAt'] ?? json['updated_at'],
-    'createdBy':
-        json['createdBy'] ??
+    'createdBy': json['createdBy'] ??
         json['created_by'] ??
         json['ownerWalletAddress'] ??
         json['owner_wallet_address'] ??
         mergedMeta?['ownerWalletAddress'] ??
         mergedMeta?['owner_wallet_address'] ??
         'system',
-    'ownerWalletAddress':
-        json['ownerWalletAddress'] ??
+    'ownerWalletAddress': json['ownerWalletAddress'] ??
         json['owner_wallet_address'] ??
         mergedMeta?['ownerWalletAddress'] ??
         mergedMeta?['owner_wallet_address'],
@@ -10338,8 +10306,8 @@ Artwork parseArtworkFromBackendJson(Map<String, dynamic> json) {
     if (raw is Map) {
       return convert(
         raw.cast<dynamic, dynamic>().map(
-          (key, value) => MapEntry(key.toString(), value),
-        ),
+              (key, value) => MapEntry(key.toString(), value),
+            ),
       );
     }
     return null;
@@ -10464,8 +10432,8 @@ Artwork parseArtworkFromBackendJson(Map<String, dynamic> json) {
   final nftJson = json['nft'] is Map<String, dynamic>
       ? (json['nft'] as Map<String, dynamic>)
       : (json['nft'] is Map
-            ? Map<String, dynamic>.from(json['nft'] as Map)
-            : null);
+          ? Map<String, dynamic>.from(json['nft'] as Map)
+          : null);
 
   final arAsset =
       (json['arAsset'] ?? json['ar_asset']) as Map<String, dynamic>?;
@@ -10497,38 +10465,33 @@ Artwork parseArtworkFromBackendJson(Map<String, dynamic> json) {
   final locationLng = locationJson != null
       ? doubleVal(locationJson['lng'] ?? locationJson['longitude'])
       : null;
-  final hasLocation =
-      (latCandidate != null && lngCandidate != null) ||
+  final hasLocation = (latCandidate != null && lngCandidate != null) ||
       (locationLat != null && locationLng != null);
   double lat = latCandidate ?? locationLat ?? 0.0;
   double lng = lngCandidate ?? locationLng ?? 0.0;
 
-  final likesCount =
-      intVal(json['likesCount']) ??
+  final likesCount = intVal(json['likesCount']) ??
       intVal(json['likes']) ??
       intVal(json['likes_count']) ??
       intVal(stats?['likes']) ??
       intVal(stats?['likesCount']) ??
       0;
 
-  final commentsCount =
-      intVal(json['commentsCount']) ??
+  final commentsCount = intVal(json['commentsCount']) ??
       intVal(json['comments']) ??
       intVal(json['comments_count']) ??
       intVal(stats?['comments']) ??
       intVal(stats?['commentsCount']) ??
       0;
 
-  final viewsCount =
-      intVal(json['viewsCount']) ??
+  final viewsCount = intVal(json['viewsCount']) ??
       intVal(json['viewCount']) ??
       intVal(json['views']) ??
       intVal(stats?['views']) ??
       intVal(stats?['viewCount']) ??
       0;
 
-  final discoveryCount =
-      intVal(json['discoveryCount']) ??
+  final discoveryCount = intVal(json['discoveryCount']) ??
       intVal(json['discoveries']) ??
       intVal(stats?['discoveries']) ??
       0;
@@ -10557,8 +10520,7 @@ Artwork parseArtworkFromBackendJson(Map<String, dynamic> json) {
     metadata['image_cid'],
     json['cid'],
   ]);
-  final normalizedImageUrl =
-      MediaUrlResolver.resolveDisplayUrl(rawImage) ??
+  final normalizedImageUrl = MediaUrlResolver.resolveDisplayUrl(rawImage) ??
       MediaUrlResolver.resolveDisplayUrl(imageCid) ??
       StorageConfig.resolveUrl(imageCid);
   final arScale = doubleVal(
@@ -10658,8 +10620,8 @@ Artwork parseArtworkFromBackendJson(Map<String, dynamic> json) {
   final poapJson = json['poap'] is Map<String, dynamic>
       ? (json['poap'] as Map<String, dynamic>)
       : (json['poap'] is Map
-            ? Map<String, dynamic>.from(json['poap'] as Map)
-            : null);
+          ? Map<String, dynamic>.from(json['poap'] as Map)
+          : null);
   final poapModeRaw = pickString([
     json['poapMode'],
     json['poap_mode'],
@@ -10667,8 +10629,7 @@ Artwork parseArtworkFromBackendJson(Map<String, dynamic> json) {
     poapJson?['poapMode'],
   ]);
   final poapMode = ArtworkPoapModeApi.fromApiValue(poapModeRaw);
-  final poapEnabled =
-      boolVal(
+  final poapEnabled = boolVal(
         poapJson?['enabled'] ?? json['poapEnabled'] ?? json['poap_enabled'],
       ) ??
       (poapMode != ArtworkPoapMode.none);
@@ -10757,8 +10718,7 @@ Artwork parseArtworkFromBackendJson(Map<String, dynamic> json) {
   );
   final isFavoriteByCurrentUser =
       boolVal(json['isFavoriteByCurrentUser'] ?? json['isFavorited']) ?? false;
-  final discoveredFlag =
-      boolVal(
+  final discoveredFlag = boolVal(
         json['isDiscovered'] ?? json['discovered'] ?? json['is_discovered'],
       ) ??
       false;
@@ -10769,9 +10729,9 @@ Artwork parseArtworkFromBackendJson(Map<String, dynamic> json) {
   );
   if (statusRaw != null) {
     final normalized = statusRaw.toLowerCase().trim().replaceAll(
-      RegExp(r'[^a-z]'),
-      '',
-    );
+          RegExp(r'[^a-z]'),
+          '',
+        );
 
     if (normalized == 'favorite' || normalized == 'favourite') {
       status = ArtworkStatus.favorite;
@@ -10814,8 +10774,7 @@ Artwork parseArtworkFromBackendJson(Map<String, dynamic> json) {
     category: stringVal(json['category'] ?? json['collection'], 'General'),
     model3DURL: modelUrl,
     model3DCID: modelCid,
-    arEnabled:
-        boolVal(json['arEnabled']) ??
+    arEnabled: boolVal(json['arEnabled']) ??
         boolVal(json['isAREnabled']) ??
         boolVal(json['isArEnabled']) ??
         boolVal(json['is_ar_enabled']) ??
