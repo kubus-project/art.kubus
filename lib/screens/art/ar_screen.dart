@@ -1374,7 +1374,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
           ? null
           : _currentMode == 'create' &&
                   capture.state == SpatialCaptureState.capturing
-              ? _finishSpatialCapture
+              ? (capture.frameCount >= 8 ? _finishSpatialCapture : null)
               : _handleAction,
       icon: Icon(buttonIcon, color: buttonTextColor),
       label: Text(

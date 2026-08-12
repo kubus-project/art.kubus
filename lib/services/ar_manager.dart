@@ -55,6 +55,8 @@ class ARManager {
   /// Set ARKit controller (iOS only).
   void setArKitController(ARKitController controller) {
     _arKitController = controller;
+    controller.onCameraDidChangeTrackingState =
+        (state, reason) => isTracking.value = state == ARTrackingState.normal;
     if (kDebugMode) debugPrint('ARManager: ARKit controller set');
   }
 
