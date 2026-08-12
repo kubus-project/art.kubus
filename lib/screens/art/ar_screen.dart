@@ -1532,8 +1532,12 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
       // ARCore legitimately has brief image gaps even while tracking. A later
       // sampler tick retries; only surface non-transient failures.
       if (error.toString().contains('frame_not_yet_available') ||
-          error.toString().contains('tracking_unavailable')) return;
-      if (!mounted) return;
+          error.toString().contains('tracking_unavailable')) {
+        return;
+      }
+      if (!mounted) {
+        return;
+      }
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(content: Text('Could not capture a tracked frame: $error')),
         tone: KubusSnackBarTone.warning,
