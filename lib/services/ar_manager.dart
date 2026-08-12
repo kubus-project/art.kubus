@@ -18,6 +18,8 @@ class ARManager {
 
   bool _isInitialized = false;
   ArCoreController? _arCoreController;
+  final ValueNotifier<ArCoreTrackingState> trackingState =
+      ValueNotifier(const ArCoreTrackingState(state: 'STOPPED'));
   ARKitController? _arKitController;
   final List<Map<String, dynamic>> _placedNodes = [];
 
@@ -46,6 +48,7 @@ class ARManager {
   /// Set ARCore controller (Android only)
   void setArCoreController(ArCoreController controller) {
     _arCoreController = controller;
+    controller.onTrackingStateChanged = (state) => trackingState.value = state;
     if (kDebugMode) debugPrint('ARManager: ARCore controller set');
   }
 
@@ -355,6 +358,7 @@ class ARManager {
           onARViewCreated();
         },
         enableTapRecognizer: enableTapRecognizer,
+        enableUpdateListener: true,
       );
     } else if (Platform.isIOS) {
       return ARKitSceneView(
@@ -380,6 +384,7 @@ class ARManager {
     _arKitController?.dispose();
     _placedNodes.clear();
     _arCoreController = null;
+    trackingState.value = const ArCoreTrackingState(state: 'STOPPED');
     _arKitController = null;
     _isInitialized = false;
     if (kDebugMode) debugPrint('ARManager: Disposed');

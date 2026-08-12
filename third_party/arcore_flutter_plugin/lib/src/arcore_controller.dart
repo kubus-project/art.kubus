@@ -12,10 +12,18 @@ typedef StringResultHandler = void Function(String text);
 typedef UnsupportedHandler = void Function(String text);
 typedef ArCoreHitResultHandler = void Function(List<ArCoreHitTestResult> hits);
 typedef ArCorePlaneHandler = void Function(ArCorePlane plane);
+typedef ArCoreTrackingStateHandler = void Function(ArCoreTrackingState state);
 typedef ArCoreAugmentedImageTrackingHandler = void Function(
     ArCoreAugmentedImage);
 
 const UTILS_CHANNEL_NAME = 'arcore_flutter_plugin/utils';
+
+class ArCoreTrackingState {
+  const ArCoreTrackingState({required this.state, this.failureReason});
+  final String state;
+  final String? failureReason;
+  bool get isTracking => state == 'TRACKING';
+}
 
 class ArCoreController {
   static Future<bool> checkArCoreAvailability() async {
@@ -56,6 +64,7 @@ class ArCoreController {
   ArCoreHitResultHandler? onPlaneTap;
   ArCorePlaneHandler? onPlaneDetected;
   String trackingState = '';
+  ArCoreTrackingStateHandler? onTrackingStateChanged;
   ArCoreAugmentedImageTrackingHandler? onTrackingImage;
 
   Future<void> init() async {
@@ -109,6 +118,14 @@ class ArCoreController {
         if (debug ?? true) {
           debugPrint('Latest tracking state received is: $trackingState');
         }
+        break;
+      case 'onTrackingStateChanged':
+        final args = Map<dynamic, dynamic>.from(call.arguments as Map);
+        trackingState = args['state']?.toString() ?? 'STOPPED';
+        onTrackingStateChanged?.call(ArCoreTrackingState(
+          state: trackingState,
+          failureReason: args['failureReason']?.toString(),
+        ));
         break;
       case 'onTrackingImage':
         if (debug ?? true) {

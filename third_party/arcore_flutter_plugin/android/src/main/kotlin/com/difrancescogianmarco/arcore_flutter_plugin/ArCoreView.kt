@@ -23,6 +23,7 @@ import com.difrancescogianmarco.arcore_flutter_plugin.models.RotatingNode
 import com.difrancescogianmarco.arcore_flutter_plugin.utils.ArCoreUtils
 import com.google.ar.core.*
 import com.google.ar.core.exceptions.CameraNotAvailableException
+import com.google.ar.core.exceptions.NotYetAvailableException
 import com.google.ar.core.exceptions.UnavailableException
 import com.google.ar.core.exceptions.UnavailableUserDeclinedInstallationException
 import com.google.ar.sceneform.*
@@ -58,6 +59,8 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
     private val RC_PERMISSIONS = 0x123
     private var sceneUpdateListener: Scene.OnUpdateListener
     private var faceSceneUpdateListener: Scene.OnUpdateListener
+    private var lastCameraTrackingState: TrackingState? = null
+    private var lastTrackingFailureReason: TrackingFailureReason? = null
 
     //AUGMENTEDFACE
     private var faceRegionsRenderable: ModelRenderable? = null
@@ -85,7 +88,17 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
 
             val frame = arSceneView?.arFrame ?: return@OnUpdateListener
 
-            if (frame.camera.trackingState != TrackingState.TRACKING) {
+            val camera = frame.camera
+            if (camera.trackingState != lastCameraTrackingState || camera.trackingFailureReason != lastTrackingFailureReason) {
+                lastCameraTrackingState = camera.trackingState
+                lastTrackingFailureReason = camera.trackingFailureReason
+                methodChannel.invokeMethod("onTrackingStateChanged", hashMapOf(
+                    "state" to camera.trackingState.toString(),
+                    "failureReason" to camera.trackingFailureReason.toString()
+                ))
+            }
+
+            if (camera.trackingState != TrackingState.TRACKING) {
                 return@OnUpdateListener
             }
 
@@ -363,10 +376,9 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
             result.error("tracking_unavailable", "ARCore tracking is not ready", null)
             return
         }
-        val handlerThread = HandlerThread("SpatialFrameCopier")
-        handlerThread.start()
-        Handler(handlerThread.looper).post {
-            try {
+        // ARCore Frame objects expire with the render callback. Acquire and copy
+        // all frame data synchronously; never retain a Frame on a worker thread.
+        try {
                 val camera = frame.camera
                 val pose = camera.pose
                 val intrinsics = camera.imageIntrinsics
@@ -399,7 +411,7 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
                     "depthAvailable" to false
                 )
                 try {
-                    frame.acquireDepthImage().use { depth ->
+                    frame.acquireDepthImage16Bits().use { depth ->
                         val plane = depth.planes[0]
                         val bytes = ByteArray(plane.buffer.remaining())
                         plane.buffer.get(bytes)
@@ -416,15 +428,16 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
                         plane.buffer.get(bytes)
                         payload["depthConfidence"] = bytes
                     }
+                } catch (_: NotYetAvailableException) {
+                    // Depth is an optional enhancement and may lag valid RGB.
                 } catch (_: Exception) {
                     // Depth is optional and absence is explicitly represented.
                 }
                 result.success(payload)
-            } catch (error: Throwable) {
+        } catch (_: NotYetAvailableException) {
+            result.error("frame_not_yet_available", "Camera image is temporarily unavailable", null)
+        } catch (error: Throwable) {
                 result.error("capture_failed", error.localizedMessage, null)
-            } finally {
-                handlerThread.quitSafely()
-            }
         }
     }
 

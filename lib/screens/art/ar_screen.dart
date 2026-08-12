@@ -222,6 +222,8 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
       const GeolocatorWalkingLocationService();
 
   bool _isARReady = false;
+  Timer? _captureSampler;
+  bool _captureRequestInFlight = false;
   bool _isLoading = true;
   final bool _showControls = true;
   String _currentMode = 'scan'; // discover, place, archive, capture UI intents
@@ -550,6 +552,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
 
   @override
   void dispose() {
+    _captureSampler?.cancel();
     _animationController.dispose();
     for (final proxy in _arAssetProxies) {
       unawaited(proxy.close());
@@ -1374,15 +1377,20 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
         buttonIcon = Icons.info_outline;
         break;
       case 'create':
-        buttonText = l10n.arActionCreate;
-        buttonIcon = Icons.create;
+        final active = capture.state == SpatialCaptureState.capturing;
+        buttonText = active ? l10n.spatialCaptureFinish : l10n.arActionCreate;
+        buttonIcon = active ? Icons.check_circle_outline : Icons.center_focus_strong;
         break;
     }
 
     const buttonTextColor = Colors.white;
 
     return ElevatedButton.icon(
-      onPressed: spatialBusy ? null : _handleAction,
+      onPressed: spatialBusy
+          ? null
+          : _currentMode == 'create' && capture.state == SpatialCaptureState.capturing
+              ? _finishSpatialCapture
+              : _handleAction,
       icon: Icon(buttonIcon, color: buttonTextColor),
       label: Text(
         buttonText,
@@ -1434,6 +1442,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
       return;
     }
     setState(() {
+      if (modeId != 'create') _captureSampler?.cancel();
       _currentMode = modeId;
       // Clear scanner controller when leaving scan mode
       if (modeId != 'scan') {
@@ -1505,16 +1514,41 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
         markerId: selected.arMarkerId,
         capturedBy: wallet.isEmpty ? profile.id : wallet,
       );
+      _startSpatialSampling();
+      return;
     }
+    await _captureSpatialSample();
+  }
+
+  void _startSpatialSampling() {
+    _captureSampler?.cancel();
+    _captureSampler = Timer.periodic(const Duration(milliseconds: 650), (_) {
+      unawaited(_captureSpatialSample());
+    });
+  }
+
+  Future<void> _captureSpatialSample() async {
+    final capture = context.read<SpatialCaptureProvider>();
+    if (!mounted || _captureRequestInFlight ||
+        capture.state != SpatialCaptureState.capturing ||
+        !_spatialTracking.isReady ||
+        !_spatialTracking.trackingState.value.isTracking) return;
+    _captureRequestInFlight = true;
     try {
       final frame = await _spatialTracking.captureFrame();
       capture.addTrackedFrame(frame);
     } catch (error) {
+      // ARCore legitimately has brief image gaps even while tracking. A later
+      // sampler tick retries; only surface non-transient failures.
+      if (error.toString().contains('frame_not_yet_available') ||
+          error.toString().contains('tracking_unavailable')) return;
       if (!mounted) return;
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(content: Text('Could not capture a tracked frame: $error')),
         tone: KubusSnackBarTone.warning,
       );
+    } finally {
+      _captureRequestInFlight = false;
     }
   }
 
@@ -1522,6 +1556,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
       (context.read<WalletProvider>().currentWalletAddress ?? '').trim();
 
   Future<void> _finishSpatialCapture() async {
+    _captureSampler?.cancel();
     final capture = context.read<SpatialCaptureProvider>();
     final node = context.read<KubusNodeProvider>();
     if (!node.isPaired) {
