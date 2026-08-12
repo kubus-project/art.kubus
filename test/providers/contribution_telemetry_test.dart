@@ -545,7 +545,8 @@ void main() {
       );
     });
 
-    test('a legacy install flag cannot suppress any account milestone', () async {
+    test('a legacy install flag cannot suppress any account milestone',
+        () async {
       SharedPreferences.setMockInitialValues(<String, Object>{
         'app_telemetry_first_contribution_v1': true,
       });
