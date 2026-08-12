@@ -13,8 +13,8 @@ typedef UnsupportedHandler = void Function(String text);
 typedef ArCoreHitResultHandler = void Function(List<ArCoreHitTestResult> hits);
 typedef ArCorePlaneHandler = void Function(ArCorePlane plane);
 typedef ArCoreTrackingStateHandler = void Function(ArCoreTrackingState state);
-typedef ArCoreAugmentedImageTrackingHandler =
-    void Function(ArCoreAugmentedImage);
+typedef ArCoreAugmentedImageTrackingHandler = void Function(
+    ArCoreAugmentedImage);
 
 const UTILS_CHANNEL_NAME = 'arcore_flutter_plugin/utils';
 

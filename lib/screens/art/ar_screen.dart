@@ -124,8 +124,8 @@ class _SpatialProcessingProgressDialog extends StatelessWidget {
                       index < progress.stageIndex
                           ? Icons.check_circle_rounded
                           : index == progress.stageIndex
-                          ? Icons.radio_button_checked_rounded
-                          : Icons.radio_button_unchecked_rounded,
+                              ? Icons.radio_button_checked_rounded
+                              : Icons.radio_button_unchecked_rounded,
                       size: 16,
                     ),
                     label: Text(stages[index]),
@@ -283,8 +283,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
 
   Iterable<Map<String, dynamic>> get _availableArModes =>
       AppConfig.isFeatureEnabled('availabilityNodes')
-      ? _arModes
-      : _arModes.where((mode) => mode['id'] == 'scan' || mode['id'] == 'place');
+          ? _arModes
+          : _arModes
+              .where((mode) => mode['id'] == 'scan' || mode['id'] == 'place');
 
   String _modeName(AppLocalizations l10n, String modeId) {
     switch (modeId) {
@@ -469,9 +470,8 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
 
     setState(() {
       _selectedArtwork = artwork;
-      _currentMode = AppConfig.isFeatureEnabled('availabilityNodes')
-          ? 'view'
-          : 'place';
+      _currentMode =
+          AppConfig.isFeatureEnabled('availabilityNodes') ? 'view' : 'place';
     });
 
     if (kDebugMode) {
@@ -501,22 +501,20 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
         handoffToken.isNotEmpty &&
         existingProof.isEmpty) {
       try {
-        final payload = await context
-            .read<ExhibitionsProvider>()
-            .createScanClaimProof(
-              exhibitionId: target.id,
-              markerId: markerId,
-              proofSource: proofSource,
-              handoffToken: handoffToken,
-            );
+        final payload =
+            await context.read<ExhibitionsProvider>().createScanClaimProof(
+                  exhibitionId: target.id,
+                  markerId: markerId,
+                  proofSource: proofSource,
+                  handoffToken: handoffToken,
+                );
         if (!mounted) return;
-        final token =
-            (payload?['claimProofToken'] ??
-                    payload?['scanProofToken'] ??
-                    payload?['claim_proof_token'] ??
-                    payload?['scan_proof_token'])
-                ?.toString()
-                .trim();
+        final token = (payload?['claimProofToken'] ??
+                payload?['scanProofToken'] ??
+                payload?['claim_proof_token'] ??
+                payload?['scan_proof_token'])
+            ?.toString()
+            .trim();
         if (token == null || token.isEmpty) {
           messenger.showKubusSnackBar(
             SnackBar(content: Text(l10n.scanProofExpiredToast)),
@@ -608,8 +606,8 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                       },
                     )
                   : _currentMode == 'view'
-                  ? _buildViewMode(themeProvider)
-                  : _buildModePreview(themeProvider),
+                      ? _buildViewMode(themeProvider)
+                      : _buildModePreview(themeProvider),
 
             // Loading overlay
             if (_isLoading) _buildLoadingOverlay(),
@@ -689,8 +687,10 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                                   modeIcon,
                                   color: isSelected
                                       ? AppColorUtils.cyanAccent
-                                      : Theme.of(context).colorScheme.onSurface
-                                            .withValues(alpha: 0.6),
+                                      : Theme.of(context)
+                                          .colorScheme
+                                          .onSurface
+                                          .withValues(alpha: 0.6),
                                   size: KubusHeaderMetrics.actionIcon,
                                 ),
                                 const SizedBox(height: KubusSpacing.xs),
@@ -700,9 +700,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                                     color: isSelected
                                         ? AppColorUtils.cyanAccent
                                         : Theme.of(context)
-                                              .colorScheme
-                                              .onSurface
-                                              .withValues(alpha: 0.6),
+                                            .colorScheme
+                                            .onSurface
+                                            .withValues(alpha: 0.6),
                                     fontSize: KubusChromeMetrics.navMetaLabel,
                                     fontWeight: isSelected
                                         ? FontWeight.w600
@@ -1045,25 +1045,22 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
   Widget _buildSpatialArchive() {
     final node = context.watch<KubusNodeProvider>();
     final selectedArtworkId = _selectedArtwork?['id']?.toString();
-    final histories =
-        node.jobs
-            .where(
-              (job) =>
-                  job.state == 'completed' && job.output?['manifest'] is Map,
-            )
-            .where((job) {
-              final manifest = job.output!['manifest'] as Map;
-              return selectedArtworkId == null ||
-                  manifest['artworkId']?.toString() == selectedArtworkId;
-            })
-            .toList(growable: false)
-          ..sort((a, b) {
-            final aDate =
-                (a.output!['manifest'] as Map)['capturedAt']?.toString() ?? '';
-            final bDate =
-                (b.output!['manifest'] as Map)['capturedAt']?.toString() ?? '';
-            return bDate.compareTo(aDate);
-          });
+    final histories = node.jobs
+        .where(
+      (job) => job.state == 'completed' && job.output?['manifest'] is Map,
+    )
+        .where((job) {
+      final manifest = job.output!['manifest'] as Map;
+      return selectedArtworkId == null ||
+          manifest['artworkId']?.toString() == selectedArtworkId;
+    }).toList(growable: false)
+      ..sort((a, b) {
+        final aDate =
+            (a.output!['manifest'] as Map)['capturedAt']?.toString() ?? '';
+        final bDate =
+            (b.output!['manifest'] as Map)['capturedAt']?.toString() ?? '';
+        return bDate.compareTo(aDate);
+      });
     if (histories.isEmpty) {
       return ColoredBox(
         color: Theme.of(context).colorScheme.surface,
@@ -1092,7 +1089,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
     }
     final selected =
         histories.where((job) => job.id == _selectedSpatialId).firstOrNull ??
-        histories.first;
+            histories.first;
     final manifest = SpatialContent.fromJson(
       Map<String, dynamic>.from(selected.output!['manifest'] as Map),
     );
@@ -1187,9 +1184,8 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
         : Theme.of(context).colorScheme.surface.withValues(alpha: 0.95);
 
     final currentModeId = _currentMode;
-    final currentModeIcon =
-        _arModes.firstWhere((mode) => mode['id'] == currentModeId)['icon']
-            as IconData;
+    final currentModeIcon = _arModes
+        .firstWhere((mode) => mode['id'] == currentModeId)['icon'] as IconData;
 
     return Container(
       padding: const EdgeInsets.all(KubusSpacing.md),
@@ -1339,8 +1335,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
   Widget _buildActionButton(ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
     final capture = context.watch<SpatialCaptureProvider>();
-    final spatialBusy =
-        _currentMode == 'create' &&
+    final spatialBusy = _currentMode == 'create' &&
         const {
           SpatialCaptureState.transferring,
           SpatialCaptureState.awaitingProcessingChoice,
@@ -1367,9 +1362,8 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
       case 'create':
         final active = capture.state == SpatialCaptureState.capturing;
         buttonText = active ? l10n.spatialCaptureFinish : l10n.arActionCreate;
-        buttonIcon = active
-            ? Icons.check_circle_outline
-            : Icons.center_focus_strong;
+        buttonIcon =
+            active ? Icons.check_circle_outline : Icons.center_focus_strong;
         break;
     }
 
@@ -1379,9 +1373,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
       onPressed: spatialBusy
           ? null
           : _currentMode == 'create' &&
-                capture.state == SpatialCaptureState.capturing
-          ? _finishSpatialCapture
-          : _handleAction,
+                  capture.state == SpatialCaptureState.capturing
+              ? _finishSpatialCapture
+              : _handleAction,
       icon: Icon(buttonIcon, color: buttonTextColor),
       label: Text(
         buttonText,
@@ -1481,7 +1475,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
       final selectedId = _selectedArtwork?['id']?.toString();
       final selected =
           artworks.where((artwork) => artwork.id == selectedId).firstOrNull ??
-          artworks.firstOrNull;
+              artworks.firstOrNull;
       if (selected == null) {
         throw StateError(
           'Choose an artwork before starting a spatial capture.',
@@ -1525,8 +1519,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
         _captureRequestInFlight ||
         capture.state != SpatialCaptureState.capturing ||
         !_spatialTracking.isReady ||
-        !_spatialTracking.trackingState.value.isTracking)
-      return;
+        !_spatialTracking.trackingState.value.isTracking) return;
     _captureRequestInFlight = true;
     try {
       final frame = await _spatialTracking.captureFrame();
@@ -1535,8 +1528,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
       // ARCore legitimately has brief image gaps even while tracking. A later
       // sampler tick retries; only surface non-transient failures.
       if (error.toString().contains('frame_not_yet_available') ||
-          error.toString().contains('tracking_unavailable'))
-        return;
+          error.toString().contains('tracking_unavailable')) return;
       if (!mounted) return;
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(content: Text('Could not capture a tracked frame: $error')),
@@ -1599,7 +1591,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
           capture,
           localAvailable:
               node.snapshot?.capabilityAvailable('spatial.reconstruction') ==
-              true,
+                  true,
           remote: remote,
         );
         if (!mounted ||
@@ -1769,11 +1761,11 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                   onPressed: candidates.isEmpty
                       ? null
                       : () => Navigator.of(sheetContext).pop(
-                          _SpatialProcessingSelection(
-                            local: false,
-                            provider: candidates[selectedIndex],
+                            _SpatialProcessingSelection(
+                              local: false,
+                              provider: candidates[selectedIndex],
+                            ),
                           ),
-                        ),
                 ),
 
                 if (candidates.length > 1) ...[
@@ -1861,8 +1853,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
     if (preferences.getBool(key) == true) return true;
     if (!mounted) return false;
     final l10n = AppLocalizations.of(context)!;
-    final confirmed =
-        await showDialog<bool>(
+    final confirmed = await showDialog<bool>(
           context: context,
           builder: (dialogContext) => AlertDialog(
             title: Text(l10n.spatialRemotePrivacyTitle),
@@ -2237,9 +2228,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
     MarkerSubjectType selectedSubjectType = MarkerSubjectType.artwork;
     MarkerSubjectOption? selectedSubject =
         subjectSelectionRequired(selectedSubjectType) &&
-            (subjectOptionsByType[selectedSubjectType] ?? []).isNotEmpty
-        ? subjectOptionsByType[selectedSubjectType]!.first
-        : null;
+                (subjectOptionsByType[selectedSubjectType] ?? []).isNotEmpty
+            ? subjectOptionsByType[selectedSubjectType]!.first
+            : null;
 
     final titleController = TextEditingController(
       text: selectedSubject?.title ?? '',
@@ -2372,9 +2363,8 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
           return;
         }
 
-        final walletAddress = context
-            .read<WalletProvider>()
-            .currentWalletAddress;
+        final walletAddress =
+            context.read<WalletProvider>().currentWalletAddress;
 
         final marker = await _arMarkerService.createMarkerForArtwork(
           artwork: selectedArtwork,
@@ -2409,8 +2399,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
         final resolvedUrl = marker.getContentURL() ?? marker.modelURL;
 
         setState(() {
-          final artistName =
-              selectedSubject?.metadata?['artist']?.toString() ??
+          final artistName = selectedSubject?.metadata?['artist']?.toString() ??
               selectedSubject?.title ??
               l10n.commonUnknown;
           final newArtwork = {
@@ -2546,38 +2535,37 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                                 ),
                               ),
                             ),
-                            items:
-                                (subjectOptionsByType[selectedSubjectType] ??
-                                        [])
-                                    .map(
-                                      (option) => DropdownMenuItem(
-                                        value: option,
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              option.title,
-                                              style: KubusTypography.inter(
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                            ),
-                                            if (option.subtitle.isNotEmpty)
-                                              Text(
-                                                option.subtitle,
-                                                style: KubusTypography.inter(
-                                                  fontSize: 12,
-                                                  color: Theme.of(context)
-                                                      .colorScheme
-                                                      .onSurface
-                                                      .withValues(alpha: 0.7),
-                                                ),
-                                              ),
-                                          ],
+                            items: (subjectOptionsByType[selectedSubjectType] ??
+                                    [])
+                                .map(
+                                  (option) => DropdownMenuItem(
+                                    value: option,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          option.title,
+                                          style: KubusTypography.inter(
+                                            fontWeight: FontWeight.w600,
+                                          ),
                                         ),
-                                      ),
-                                    )
-                                    .toList(),
+                                        if (option.subtitle.isNotEmpty)
+                                          Text(
+                                            option.subtitle,
+                                            style: KubusTypography.inter(
+                                              fontSize: 12,
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .onSurface
+                                                  .withValues(alpha: 0.7),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                )
+                                .toList(),
                             onChanged: isSubmitting
                                 ? null
                                 : (value) {
@@ -2587,10 +2575,10 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                                       titleController.text = value.title;
                                       descriptionController.text =
                                           value.subtitle.isNotEmpty
-                                          ? value.subtitle
-                                          : l10n.arCreateDefaultDescription(
-                                              value.title,
-                                            );
+                                              ? value.subtitle
+                                              : l10n.arCreateDefaultDescription(
+                                                  value.title,
+                                                );
                                     });
                                   },
                           )
@@ -2747,10 +2735,10 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                                   onPressed: isSubmitting
                                       ? null
                                       : () => setModalState(() {
-                                          selectedModelBytes = null;
-                                          selectedModelName = null;
-                                          selectedModelSize = null;
-                                        }),
+                                            selectedModelBytes = null;
+                                            selectedModelName = null;
+                                            selectedModelSize = null;
+                                          }),
                                   icon: const Icon(Icons.close),
                                 ),
                               ],
@@ -2787,8 +2775,8 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                           onChanged: isSubmitting
                               ? null
                               : (value) => setModalState(() {
-                                  selectedScale = value;
-                                }),
+                                    selectedScale = value;
+                                  }),
                         ),
                         SwitchListTile(
                           title: Text(l10n.arCreatePublicMarkerTitle),
@@ -2797,7 +2785,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                           onChanged: isSubmitting
                               ? null
                               : (value) =>
-                                    setModalState(() => isPublic = value),
+                                  setModalState(() => isPublic = value),
                         ),
                         const SizedBox(height: KubusSpacing.sm),
                         Container(
@@ -3157,9 +3145,8 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
 
   // Social interaction handlers
   Future<void> _handleShare(Map<String, dynamic> artwork) async {
-    final artworkId = (artwork['artworkId'] ?? artwork['id'])
-        ?.toString()
-        .trim();
+    final artworkId =
+        (artwork['artworkId'] ?? artwork['id'])?.toString().trim();
     if (artworkId == null || artworkId.isEmpty) return;
 
     await ShareService().showShareSheet(
@@ -3232,9 +3219,8 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
             Text(isLiked ? l10n.arLikeAddedToast : l10n.arLikeRemovedToast),
           ],
         ),
-        backgroundColor: isLiked
-            ? scheme.primary
-            : scheme.surfaceContainerHighest,
+        backgroundColor:
+            isLiked ? scheme.primary : scheme.surfaceContainerHighest,
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 2),
       ),
@@ -3303,9 +3289,8 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
             Text(isSaved ? l10n.arSaveAddedToast : l10n.arSaveRemovedToast),
           ],
         ),
-        backgroundColor: isSaved
-            ? scheme.primary
-            : scheme.surfaceContainerHighest,
+        backgroundColor:
+            isSaved ? scheme.primary : scheme.surfaceContainerHighest,
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 2),
         action: isSaved

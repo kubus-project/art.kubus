@@ -25,7 +25,7 @@ abstract class SpatialTrackingAdapter {
 
 class PlatformSpatialTrackingAdapter implements SpatialTrackingAdapter {
   PlatformSpatialTrackingAdapter({ARManager? manager})
-    : _manager = manager ?? ARManager();
+      : _manager = manager ?? ARManager();
 
   final ARManager _manager;
 
@@ -37,11 +37,12 @@ class PlatformSpatialTrackingAdapter implements SpatialTrackingAdapter {
     required ValueChanged<Object?> onReady,
     bool enableTapRecognizer = true,
     bool enablePlaneDetection = true,
-  }) => _manager.createARView(
-    onARViewCreated: onReady,
-    enableTapRecognizer: enableTapRecognizer,
-    enablePlaneDetection: enablePlaneDetection,
-  );
+  }) =>
+      _manager.createARView(
+        onARViewCreated: onReady,
+        enableTapRecognizer: enableTapRecognizer,
+        enablePlaneDetection: enablePlaneDetection,
+      );
 
   @override
   Future<void> addModel({
@@ -49,12 +50,13 @@ class PlatformSpatialTrackingAdapter implements SpatialTrackingAdapter {
     required vector.Vector3 position,
     vector.Vector3? scale,
     String? name,
-  }) => _manager.addModel(
-    modelPath: modelPath,
-    position: position,
-    scale: scale,
-    name: name,
-  );
+  }) =>
+      _manager.addModel(
+        modelPath: modelPath,
+        position: position,
+        scale: scale,
+        name: name,
+      );
 
   @override
   Future<Map<String, dynamic>> captureFrame() => _manager.captureSpatialFrame();
