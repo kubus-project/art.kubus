@@ -10,6 +10,7 @@ import android.graphics.YuvImage
 import android.media.Image
 import android.os.Bundle
 import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.view.GestureDetector
 import android.view.MotionEvent
@@ -46,6 +47,8 @@ import java.io.File
 import java.io.IOException
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 
 class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMessenger, id: Int, private val isAugmentedFaces: Boolean, private val debug: Boolean) : PlatformView, MethodChannel.MethodCallHandler {
     private val methodChannel: MethodChannel = MethodChannel(messenger, "arcore_flutter_plugin_$id")
@@ -56,6 +59,8 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
     private val TAG: String = ArCoreView::class.java.name
     private var arSceneView: ArSceneView? = null
     private val gestureDetector: GestureDetector
+    private val spatialCaptureExecutor: ExecutorService = Executors.newSingleThreadExecutor()
+    private val mainHandler = Handler(Looper.getMainLooper())
     private val RC_PERMISSIONS = 0x123
     private var sceneUpdateListener: Scene.OnUpdateListener
     private var faceSceneUpdateListener: Scene.OnUpdateListener
@@ -369,6 +374,15 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
         result.success(null)
     }
 
+    private class CopiedPlane(val bytes: ByteArray, val rowStride: Int, val pixelStride: Int)
+
+    private fun copyPlane(plane: Image.Plane): CopiedPlane {
+        val buffer = plane.buffer.duplicate()
+        val bytes = ByteArray(buffer.remaining())
+        buffer.get(bytes)
+        return CopiedPlane(bytes, plane.rowStride, plane.pixelStride)
+    }
+
     private fun captureSpatialFrame(result: MethodChannel.Result) {
         val view = arSceneView
         val frame = view?.arFrame
@@ -376,8 +390,10 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
             result.error("tracking_unavailable", "ARCore tracking is not ready", null)
             return
         }
-        // ARCore Frame objects expire with the render callback. Acquire and copy
-        // all frame data synchronously; never retain a Frame on a worker thread.
+        // ARCore Frame/Image objects expire with the render callback, so every plane is
+        // copied to a plain byte array synchronously here. The expensive YUV->NV21
+        // rearrangement and JPEG compression run afterwards on a worker thread; only the
+        // already-copied bytes are touched there, never the expired Frame/Image.
         try {
                 val camera = frame.camera
                 val pose = camera.pose
@@ -386,54 +402,79 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
                 val focalLength = intrinsics.focalLength
                 val principalPoint = intrinsics.principalPoint
                 var cameraTimestamp = frame.timestamp
-                val rgb = frame.acquireCameraImage().use { image ->
+
+                var imageWidth = 0
+                var imageHeight = 0
+                lateinit var yPlane: CopiedPlane
+                lateinit var uPlane: CopiedPlane
+                lateinit var vPlane: CopiedPlane
+                frame.acquireCameraImage().use { image ->
                     cameraTimestamp = image.timestamp
-                    val nv21 = yuv420888ToNv21(image)
-                    ByteArrayOutputStream().use { stream ->
-                        YuvImage(nv21, ImageFormat.NV21, image.width, image.height, null)
-                            .compressToJpeg(Rect(0, 0, image.width, image.height), 92, stream)
-                        stream.toByteArray()
-                    }
+                    imageWidth = image.width
+                    imageHeight = image.height
+                    yPlane = copyPlane(image.planes[0])
+                    uPlane = copyPlane(image.planes[1])
+                    vPlane = copyPlane(image.planes[2])
                 }
-                val payload = hashMapOf<String, Any>(
-                    "rgb" to rgb,
-                    "timestampNanos" to cameraTimestamp,
-                    "poseTranslation" to pose.translation.toList(),
-                    "poseRotation" to pose.rotationQuaternion.toList(),
-                    "intrinsics" to hashMapOf(
-                        "width" to dimensions[0],
-                        "height" to dimensions[1],
-                        "fx" to focalLength[0],
-                        "fy" to focalLength[1],
-                        "cx" to principalPoint[0],
-                        "cy" to principalPoint[1]
-                    ),
-                    "depthAvailable" to false
-                )
+
+                var depthPlane: CopiedPlane? = null
+                var depthWidth = 0
+                var depthHeight = 0
+                var confidenceBytes: ByteArray? = null
                 try {
-                    frame.acquireDepthImage16Bits().use { depth ->
-                        val plane = depth.planes[0]
-                        val bytes = ByteArray(plane.buffer.remaining())
-                        plane.buffer.get(bytes)
-                        payload["depth"] = bytes
-                        payload["depthWidth"] = depth.width
-                        payload["depthHeight"] = depth.height
-                        payload["depthRowStride"] = plane.rowStride
-                        payload["depthPixelStride"] = plane.pixelStride
-                        payload["depthAvailable"] = true
+                    frame.acquireDepthImage().use { depth ->
+                        depthPlane = copyPlane(depth.planes[0])
+                        depthWidth = depth.width
+                        depthHeight = depth.height
                     }
                     frame.acquireRawDepthConfidenceImage().use { confidence ->
-                        val plane = confidence.planes[0]
-                        val bytes = ByteArray(plane.buffer.remaining())
-                        plane.buffer.get(bytes)
-                        payload["depthConfidence"] = bytes
+                        confidenceBytes = copyPlane(confidence.planes[0]).bytes
                     }
                 } catch (_: NotYetAvailableException) {
                     // Depth is an optional enhancement and may lag valid RGB.
                 } catch (_: Exception) {
                     // Depth is optional and absence is explicitly represented.
                 }
-                result.success(payload)
+
+                spatialCaptureExecutor.execute {
+                    try {
+                        val nv21 = yuv420888ToNv21(imageWidth, imageHeight, yPlane, uPlane, vPlane)
+                        val rgb = ByteArrayOutputStream().use { stream ->
+                            YuvImage(nv21, ImageFormat.NV21, imageWidth, imageHeight, null)
+                                .compressToJpeg(Rect(0, 0, imageWidth, imageHeight), 92, stream)
+                            stream.toByteArray()
+                        }
+                        val payload = hashMapOf<String, Any>(
+                            "rgb" to rgb,
+                            "timestampNanos" to cameraTimestamp,
+                            "poseTranslation" to pose.translation.toList(),
+                            "poseRotation" to pose.rotationQuaternion.toList(),
+                            "intrinsics" to hashMapOf(
+                                "width" to dimensions[0],
+                                "height" to dimensions[1],
+                                "fx" to focalLength[0],
+                                "fy" to focalLength[1],
+                                "cx" to principalPoint[0],
+                                "cy" to principalPoint[1]
+                            ),
+                            "depthAvailable" to false
+                        )
+                        val depth = depthPlane
+                        if (depth != null) {
+                            payload["depth"] = depth.bytes
+                            payload["depthWidth"] = depthWidth
+                            payload["depthHeight"] = depthHeight
+                            payload["depthRowStride"] = depth.rowStride
+                            payload["depthPixelStride"] = depth.pixelStride
+                            payload["depthAvailable"] = true
+                        }
+                        confidenceBytes?.let { payload["depthConfidence"] = it }
+
+                        mainHandler.post { result.success(payload) }
+                    } catch (error: Throwable) {
+                        mainHandler.post { result.error("capture_failed", error.localizedMessage, null) }
+                    }
+                }
         } catch (_: NotYetAvailableException) {
             result.error("frame_not_yet_available", "Camera image is temporarily unavailable", null)
         } catch (error: Throwable) {
@@ -441,33 +482,25 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
         }
     }
 
-    private fun yuv420888ToNv21(image: Image): ByteArray {
-        val width = image.width
-        val height = image.height
+    private fun yuv420888ToNv21(
+        width: Int,
+        height: Int,
+        yPlane: CopiedPlane,
+        uPlane: CopiedPlane,
+        vPlane: CopiedPlane
+    ): ByteArray {
         val output = ByteArray(width * height * 3 / 2)
-        val yPlane = image.planes[0]
-        val yBuffer = yPlane.buffer.duplicate()
         var outputIndex = 0
         for (row in 0 until height) {
             for (column in 0 until width) {
-                output[outputIndex++] = yBuffer.get(
-                    row * yPlane.rowStride + column * yPlane.pixelStride
-                )
+                output[outputIndex++] = yPlane.bytes[row * yPlane.rowStride + column * yPlane.pixelStride]
             }
         }
 
-        val uPlane = image.planes[1]
-        val vPlane = image.planes[2]
-        val uBuffer = uPlane.buffer.duplicate()
-        val vBuffer = vPlane.buffer.duplicate()
         for (row in 0 until height / 2) {
             for (column in 0 until width / 2) {
-                output[outputIndex++] = vBuffer.get(
-                    row * vPlane.rowStride + column * vPlane.pixelStride
-                )
-                output[outputIndex++] = uBuffer.get(
-                    row * uPlane.rowStride + column * uPlane.pixelStride
-                )
+                output[outputIndex++] = vPlane.bytes[row * vPlane.rowStride + column * vPlane.pixelStride]
+                output[outputIndex++] = uPlane.bytes[row * uPlane.rowStride + column * uPlane.pixelStride]
             }
         }
         return output
@@ -637,6 +670,7 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
     }
 
     override fun dispose() {
+        spatialCaptureExecutor.shutdown()
         if (arSceneView != null) {
             onPause()
             onDestroy()
