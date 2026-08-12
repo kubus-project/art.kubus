@@ -18,8 +18,9 @@ class ARManager {
 
   bool _isInitialized = false;
   ArCoreController? _arCoreController;
-  final ValueNotifier<ArCoreTrackingState> trackingState =
-      ValueNotifier(const ArCoreTrackingState(state: 'STOPPED'));
+  final ValueNotifier<ArCoreTrackingState> trackingState = ValueNotifier(
+    const ArCoreTrackingState(state: 'STOPPED'),
+  );
   ARKitController? _arKitController;
   final List<Map<String, dynamic>> _placedNodes = [];
 
@@ -67,10 +68,18 @@ class ARManager {
   }) {
     if (Platform.isAndroid && _arCoreController != null) {
       _addArCoreSphere(
-          position: position, radius: radius, color: color, name: name);
+        position: position,
+        radius: radius,
+        color: color,
+        name: name,
+      );
     } else if (Platform.isIOS && _arKitController != null) {
       _addArKitSphere(
-          position: position, radius: radius, color: color, name: name);
+        position: position,
+        radius: radius,
+        color: color,
+        name: name,
+      );
     }
   }
 
@@ -134,18 +143,13 @@ class ARManager {
       color: color ?? Colors.blue,
       reflectance: 1.0,
     );
-    final sphere = ArCoreSphere(
-      materials: [material],
-      radius: radius,
-    );
-    final node = ArCoreNode(
-      shape: sphere,
-      position: position,
-      name: name,
-    );
+    final sphere = ArCoreSphere(materials: [material], radius: radius);
+    final node = ArCoreNode(shape: sphere, position: position, name: name);
     _arCoreController!.addArCoreNode(node);
     _trackNode(
-        name ?? 'sphere_${DateTime.now().millisecondsSinceEpoch}', 'sphere');
+      name ?? 'sphere_${DateTime.now().millisecondsSinceEpoch}',
+      'sphere',
+    );
   }
 
   void _addArCoreCube({
@@ -154,19 +158,9 @@ class ARManager {
     Color? color,
     String? name,
   }) {
-    final material = ArCoreMaterial(
-      color: color ?? Colors.red,
-      metallic: 1.0,
-    );
-    final cube = ArCoreCube(
-      materials: [material],
-      size: size,
-    );
-    final node = ArCoreNode(
-      shape: cube,
-      position: position,
-      name: name,
-    );
+    final material = ArCoreMaterial(color: color ?? Colors.red, metallic: 1.0);
+    final cube = ArCoreCube(materials: [material], size: size);
+    final node = ArCoreNode(shape: cube, position: position, name: name);
     _arCoreController!.addArCoreNode(node);
     _trackNode(name ?? 'cube_${DateTime.now().millisecondsSinceEpoch}', 'cube');
   }
@@ -185,7 +179,9 @@ class ARManager {
     );
     _arCoreController!.addArCoreNodeWithAnchor(node);
     _trackNode(
-        name ?? 'model_${DateTime.now().millisecondsSinceEpoch}', 'model');
+      name ?? 'model_${DateTime.now().millisecondsSinceEpoch}',
+      'model',
+    );
   }
 
   // iOS ARKit specific methods.
@@ -198,10 +194,7 @@ class ARManager {
     final material = ARKitMaterial(
       diffuse: ARKitMaterialProperty.color(color ?? Colors.blue),
     );
-    final sphere = ARKitSphere(
-      radius: radius,
-      materials: [material],
-    );
+    final sphere = ARKitSphere(radius: radius, materials: [material]);
     final node = ARKitNode(
       geometry: sphere,
       position: vector.Vector3(position.x, position.y, position.z),
@@ -209,7 +202,9 @@ class ARManager {
     );
     _arKitController!.add(node);
     _trackNode(
-        name ?? 'sphere_${DateTime.now().millisecondsSinceEpoch}', 'sphere');
+      name ?? 'sphere_${DateTime.now().millisecondsSinceEpoch}',
+      'sphere',
+    );
   }
 
   void _addArKitCube({
@@ -245,16 +240,14 @@ class ARManager {
     final node = ARKitReferenceNode(
       url: modelPath,
       position: vector.Vector3(position.x, position.y, position.z),
-      scale: vector.Vector3(
-        scale?.x ?? 1.0,
-        scale?.y ?? 1.0,
-        scale?.z ?? 1.0,
-      ),
+      scale: vector.Vector3(scale?.x ?? 1.0, scale?.y ?? 1.0, scale?.z ?? 1.0),
       name: name,
     );
     _arKitController!.add(node);
     _trackNode(
-        name ?? 'model_${DateTime.now().millisecondsSinceEpoch}', 'model');
+      name ?? 'model_${DateTime.now().millisecondsSinceEpoch}',
+      'model',
+    );
     if (kDebugMode) {
       debugPrint('ARManager: ARKit reference model added from $modelPath');
     }
@@ -289,8 +282,9 @@ class ARManager {
             snapshot != null && snapshot.keys.any((key) => key != 'image'),
       };
       if (snapshot != null) {
-        for (final entry
-            in snapshot.entries.where((entry) => entry.key != 'image')) {
+        for (final entry in snapshot.entries.where(
+          (entry) => entry.key != 'image',
+        )) {
           payload[entry.key] = entry.value;
         }
       }

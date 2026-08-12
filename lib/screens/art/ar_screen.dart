@@ -124,8 +124,8 @@ class _SpatialProcessingProgressDialog extends StatelessWidget {
                       index < progress.stageIndex
                           ? Icons.check_circle_rounded
                           : index == progress.stageIndex
-                              ? Icons.radio_button_checked_rounded
-                              : Icons.radio_button_unchecked_rounded,
+                          ? Icons.radio_button_checked_rounded
+                          : Icons.radio_button_unchecked_rounded,
                       size: 16,
                     ),
                     label: Text(stages[index]),
@@ -184,15 +184,17 @@ class _ProcessingDestination extends StatelessWidget {
         children: [
           Text(
             title,
-            style: theme.textTheme.titleSmall
-                ?.copyWith(fontWeight: FontWeight.w600),
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
           ),
           if (detail != null) ...[
             const SizedBox(height: KubusSpacing.xxs),
             Text(
               detail!,
-              style: theme.textTheme.bodyMedium
-                  ?.copyWith(color: scheme.onSurfaceVariant),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: scheme.onSurfaceVariant,
+              ),
             ),
           ],
           const SizedBox(height: KubusSpacing.sm),
@@ -203,7 +205,9 @@ class _ProcessingDestination extends StatelessWidget {
             child: primary
                 ? FilledButton(onPressed: onPressed, child: Text(actionLabel))
                 : OutlinedButton(
-                    onPressed: onPressed, child: Text(actionLabel)),
+                    onPressed: onPressed,
+                    child: Text(actionLabel),
+                  ),
           ),
         ],
       ),
@@ -271,30 +275,16 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
       .toList(growable: false);
 
   final List<Map<String, dynamic>> _arModes = [
-    {
-      'id': 'scan',
-      'icon': Icons.qr_code_scanner,
-    },
-    {
-      'id': 'place',
-      'icon': Icons.add_location,
-    },
-    {
-      'id': 'view',
-      'icon': Icons.visibility,
-    },
-    {
-      'id': 'create',
-      'icon': Icons.create,
-    },
+    {'id': 'scan', 'icon': Icons.qr_code_scanner},
+    {'id': 'place', 'icon': Icons.add_location},
+    {'id': 'view', 'icon': Icons.visibility},
+    {'id': 'create', 'icon': Icons.create},
   ];
 
   Iterable<Map<String, dynamic>> get _availableArModes =>
       AppConfig.isFeatureEnabled('availabilityNodes')
-          ? _arModes
-          : _arModes.where(
-              (mode) => mode['id'] == 'scan' || mode['id'] == 'place',
-            );
+      ? _arModes
+      : _arModes.where((mode) => mode['id'] == 'scan' || mode['id'] == 'place');
 
   String _modeName(AppLocalizations l10n, String modeId) {
     switch (modeId) {
@@ -379,8 +369,10 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
     setState(() => _isLoading = true);
 
     try {
-      final platformProvider =
-          Provider.of<PlatformProvider>(context, listen: false);
+      final platformProvider = Provider.of<PlatformProvider>(
+        context,
+        listen: false,
+      );
 
       if (!platformProvider.supportsARFeatures) {
         if (mounted) {
@@ -477,8 +469,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
 
     setState(() {
       _selectedArtwork = artwork;
-      _currentMode =
-          AppConfig.isFeatureEnabled('availabilityNodes') ? 'view' : 'place';
+      _currentMode = AppConfig.isFeatureEnabled('availabilityNodes')
+          ? 'view'
+          : 'place';
     });
 
     if (kDebugMode) {
@@ -508,20 +501,22 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
         handoffToken.isNotEmpty &&
         existingProof.isEmpty) {
       try {
-        final payload =
-            await context.read<ExhibitionsProvider>().createScanClaimProof(
-                  exhibitionId: target.id,
-                  markerId: markerId,
-                  proofSource: proofSource,
-                  handoffToken: handoffToken,
-                );
+        final payload = await context
+            .read<ExhibitionsProvider>()
+            .createScanClaimProof(
+              exhibitionId: target.id,
+              markerId: markerId,
+              proofSource: proofSource,
+              handoffToken: handoffToken,
+            );
         if (!mounted) return;
-        final token = (payload?['claimProofToken'] ??
-                payload?['scanProofToken'] ??
-                payload?['claim_proof_token'] ??
-                payload?['scan_proof_token'])
-            ?.toString()
-            .trim();
+        final token =
+            (payload?['claimProofToken'] ??
+                    payload?['scanProofToken'] ??
+                    payload?['claim_proof_token'] ??
+                    payload?['scan_proof_token'])
+                ?.toString()
+                .trim();
         if (token == null || token.isEmpty) {
           messenger.showKubusSnackBar(
             SnackBar(content: Text(l10n.scanProofExpiredToast)),
@@ -590,9 +585,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                   ? ARMarkerScanner(
                       onDeepLinkFound: (target) {
                         if (!mounted) return;
-                        unawaited(
-                          _openScannedDeepLink(target),
-                        );
+                        unawaited(_openScannedDeepLink(target));
                       },
                       onArtworkFound: (artworkData) async {
                         setState(() {
@@ -615,8 +608,8 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                       },
                     )
                   : _currentMode == 'view'
-                      ? _buildViewMode(themeProvider)
-                      : _buildModePreview(themeProvider),
+                  ? _buildViewMode(themeProvider)
+                  : _buildModePreview(themeProvider),
 
             // Loading overlay
             if (_isLoading) _buildLoadingOverlay(),
@@ -651,10 +644,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                     vertical: KubusSpacing.sm,
                   ),
                   decoration: BoxDecoration(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .surface
-                        .withValues(alpha: 0.95),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.surface.withValues(alpha: 0.95),
                     borderRadius: BorderRadius.circular(KubusRadius.lg),
                     border: Border.all(
                       color: AppColorUtils.cyanAccent.withValues(alpha: 0.3),
@@ -676,11 +668,13 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                             ),
                             decoration: BoxDecoration(
                               color: isSelected
-                                  ? AppColorUtils.cyanAccent
-                                      .withValues(alpha: 0.2)
+                                  ? AppColorUtils.cyanAccent.withValues(
+                                      alpha: 0.2,
+                                    )
                                   : Colors.transparent,
-                              borderRadius:
-                                  BorderRadius.circular(KubusRadius.md),
+                              borderRadius: BorderRadius.circular(
+                                KubusRadius.md,
+                              ),
                               border: Border.all(
                                 color: isSelected
                                     ? AppColorUtils.cyanAccent
@@ -695,10 +689,8 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                                   modeIcon,
                                   color: isSelected
                                       ? AppColorUtils.cyanAccent
-                                      : Theme.of(context)
-                                          .colorScheme
-                                          .onSurface
-                                          .withValues(alpha: 0.6),
+                                      : Theme.of(context).colorScheme.onSurface
+                                            .withValues(alpha: 0.6),
                                   size: KubusHeaderMetrics.actionIcon,
                                 ),
                                 const SizedBox(height: KubusSpacing.xs),
@@ -708,9 +700,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                                     color: isSelected
                                         ? AppColorUtils.cyanAccent
                                         : Theme.of(context)
-                                            .colorScheme
-                                            .onSurface
-                                            .withValues(alpha: 0.6),
+                                              .colorScheme
+                                              .onSurface
+                                              .withValues(alpha: 0.6),
                                     fontSize: KubusChromeMetrics.navMetaLabel,
                                     fontWeight: isSelected
                                         ? FontWeight.w600
@@ -754,10 +746,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
             Text(
               _isARReady ? l10n.arReadyStatus : l10n.arSettingUpStatus,
               style: KubusTypography.inter(
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.7),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.7),
                 fontSize: 14,
               ),
             ),
@@ -797,10 +788,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                       l10n.arNoArtworksYetDescription,
                       style: KubusTypography.inter(
                         fontSize: 16,
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.7),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.7),
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -810,11 +800,11 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
             )
           : ListView.builder(
               padding: const EdgeInsets.only(
-                  left: 16,
-                  right: 16,
-                  top: 80,
-                  bottom:
-                      120), // Top padding for app bar, bottom for mode selector
+                left: 16,
+                right: 16,
+                top: 80,
+                bottom: 120,
+              ), // Top padding for app bar, bottom for mode selector
               itemCount: _placedObjects.length,
               itemBuilder: (context, index) {
                 final artwork = _placedObjects[index];
@@ -835,9 +825,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                     ),
                     title: Text(
                       artwork['title'] ?? l10n.commonUnknown,
-                      style: KubusTypography.inter(
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: KubusTypography.inter(fontWeight: FontWeight.w600),
                     ),
                     subtitle: Text(
                       artwork['artist'] ?? l10n.commonUnknown,
@@ -1004,17 +992,14 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
     return Container(
       color: Colors.black,
       padding: const EdgeInsets.only(
-          top: 80,
-          bottom: 140), // Top padding for app bar, bottom for mode selector
+        top: 80,
+        bottom: 140,
+      ), // Top padding for app bar, bottom for mode selector
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              modeIcon,
-              color: AppColorUtils.cyanAccent,
-              size: 64,
-            ),
+            Icon(modeIcon, color: AppColorUtils.cyanAccent, size: 64),
             const SizedBox(height: 16),
             Text(
               l10n.arModePreviewTitle(_modeName(l10n, modeId)),
@@ -1060,22 +1045,25 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
   Widget _buildSpatialArchive() {
     final node = context.watch<KubusNodeProvider>();
     final selectedArtworkId = _selectedArtwork?['id']?.toString();
-    final histories = node.jobs
-        .where(
-      (job) => job.state == 'completed' && job.output?['manifest'] is Map,
-    )
-        .where((job) {
-      final manifest = job.output!['manifest'] as Map;
-      return selectedArtworkId == null ||
-          manifest['artworkId']?.toString() == selectedArtworkId;
-    }).toList(growable: false)
-      ..sort((a, b) {
-        final aDate =
-            (a.output!['manifest'] as Map)['capturedAt']?.toString() ?? '';
-        final bDate =
-            (b.output!['manifest'] as Map)['capturedAt']?.toString() ?? '';
-        return bDate.compareTo(aDate);
-      });
+    final histories =
+        node.jobs
+            .where(
+              (job) =>
+                  job.state == 'completed' && job.output?['manifest'] is Map,
+            )
+            .where((job) {
+              final manifest = job.output!['manifest'] as Map;
+              return selectedArtworkId == null ||
+                  manifest['artworkId']?.toString() == selectedArtworkId;
+            })
+            .toList(growable: false)
+          ..sort((a, b) {
+            final aDate =
+                (a.output!['manifest'] as Map)['capturedAt']?.toString() ?? '';
+            final bDate =
+                (b.output!['manifest'] as Map)['capturedAt']?.toString() ?? '';
+            return bDate.compareTo(aDate);
+          });
     if (histories.isEmpty) {
       return ColoredBox(
         color: Theme.of(context).colorScheme.surface,
@@ -1104,7 +1092,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
     }
     final selected =
         histories.where((job) => job.id == _selectedSpatialId).firstOrNull ??
-            histories.first;
+        histories.first;
     final manifest = SpatialContent.fromJson(
       Map<String, dynamic>.from(selected.output!['manifest'] as Map),
     );
@@ -1170,7 +1158,8 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
 
       if (kDebugMode) {
         debugPrint(
-            'ARScreen: Placed AR artwork: ${_selectedArtwork!['title']}');
+          'ARScreen: Placed AR artwork: ${_selectedArtwork!['title']}',
+        );
       }
 
       // Note: Discovery tracking would require converting Map to Artwork object
@@ -1198,9 +1187,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
         : Theme.of(context).colorScheme.surface.withValues(alpha: 0.95);
 
     final currentModeId = _currentMode;
-    final currentModeIcon = _arModes.firstWhere(
-      (mode) => mode['id'] == currentModeId,
-    )['icon'] as IconData;
+    final currentModeIcon =
+        _arModes.firstWhere((mode) => mode['id'] == currentModeId)['icon']
+            as IconData;
 
     return Container(
       padding: const EdgeInsets.all(KubusSpacing.md),
@@ -1208,10 +1197,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [
-            overlayColor,
-            overlayColor.withValues(alpha: 0.0),
-          ],
+          colors: [overlayColor, overlayColor.withValues(alpha: 0.0)],
         ),
       ),
       child: Row(
@@ -1296,8 +1282,11 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
             ),
             child: IconButton(
               padding: EdgeInsets.zero,
-              icon: Icon(Icons.settings,
-                  color: Theme.of(context).colorScheme.onSurface, size: 20),
+              icon: Icon(
+                Icons.settings,
+                color: Theme.of(context).colorScheme.onSurface,
+                size: 20,
+              ),
               onPressed: _showARSettings,
             ),
           ),
@@ -1314,18 +1303,16 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
 
     return Container(
       padding: const EdgeInsets.only(
-          left: 24,
-          right: 24,
-          bottom: 100 + KubusLayout.mainBottomNavBarHeight,
-          top: 24), // Extra bottom padding for mode selector
+        left: 24,
+        right: 24,
+        bottom: 100 + KubusLayout.mainBottomNavBarHeight,
+        top: 24,
+      ), // Extra bottom padding for mode selector
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.bottomCenter,
           end: Alignment.topCenter,
-          colors: [
-            overlayColor,
-            overlayColor.withValues(alpha: 0.0),
-          ],
+          colors: [overlayColor, overlayColor.withValues(alpha: 0.0)],
         ),
       ),
       child: Column(
@@ -1352,7 +1339,8 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
   Widget _buildActionButton(ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
     final capture = context.watch<SpatialCaptureProvider>();
-    final spatialBusy = _currentMode == 'create' &&
+    final spatialBusy =
+        _currentMode == 'create' &&
         const {
           SpatialCaptureState.transferring,
           SpatialCaptureState.awaitingProcessingChoice,
@@ -1379,7 +1367,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
       case 'create':
         final active = capture.state == SpatialCaptureState.capturing;
         buttonText = active ? l10n.spatialCaptureFinish : l10n.arActionCreate;
-        buttonIcon = active ? Icons.check_circle_outline : Icons.center_focus_strong;
+        buttonIcon = active
+            ? Icons.check_circle_outline
+            : Icons.center_focus_strong;
         break;
     }
 
@@ -1388,9 +1378,10 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
     return ElevatedButton.icon(
       onPressed: spatialBusy
           ? null
-          : _currentMode == 'create' && capture.state == SpatialCaptureState.capturing
-              ? _finishSpatialCapture
-              : _handleAction,
+          : _currentMode == 'create' &&
+                capture.state == SpatialCaptureState.capturing
+          ? _finishSpatialCapture
+          : _handleAction,
       icon: Icon(buttonIcon, color: buttonTextColor),
       label: Text(
         buttonText,
@@ -1490,10 +1481,11 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
       final selectedId = _selectedArtwork?['id']?.toString();
       final selected =
           artworks.where((artwork) => artwork.id == selectedId).firstOrNull ??
-              artworks.firstOrNull;
+          artworks.firstOrNull;
       if (selected == null) {
         throw StateError(
-            'Choose an artwork before starting a spatial capture.');
+          'Choose an artwork before starting a spatial capture.',
+        );
       }
       final ownsArtwork = wallet.isNotEmpty && selected.walletAddress == wallet;
       if (profile == null ||
@@ -1529,10 +1521,12 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
 
   Future<void> _captureSpatialSample() async {
     final capture = context.read<SpatialCaptureProvider>();
-    if (!mounted || _captureRequestInFlight ||
+    if (!mounted ||
+        _captureRequestInFlight ||
         capture.state != SpatialCaptureState.capturing ||
         !_spatialTracking.isReady ||
-        !_spatialTracking.trackingState.value.isTracking) return;
+        !_spatialTracking.trackingState.value.isTracking)
+      return;
     _captureRequestInFlight = true;
     try {
       final frame = await _spatialTracking.captureFrame();
@@ -1541,7 +1535,8 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
       // ARCore legitimately has brief image gaps even while tracking. A later
       // sampler tick retries; only surface non-transient failures.
       if (error.toString().contains('frame_not_yet_available') ||
-          error.toString().contains('tracking_unavailable')) return;
+          error.toString().contains('tracking_unavailable'))
+        return;
       if (!mounted) return;
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(content: Text('Could not capture a tracked frame: $error')),
@@ -1589,8 +1584,11 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
         final operation = selection.local
             ? capture.processLocally(node)
             : capture.processOnNetwork(node, selection.provider!);
-        await _showSpatialProcessingProgress(capture, operation,
-            remote: remote);
+        await _showSpatialProcessingProgress(
+          capture,
+          operation,
+          remote: remote,
+        );
         await operation;
         if (!mounted) return;
         await _reviewSpatialResult(capture, node, remote: remote);
@@ -1601,7 +1599,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
           capture,
           localAvailable:
               node.snapshot?.capabilityAvailable('spatial.reconstruction') ==
-                  true,
+              true,
           remote: remote,
         );
         if (!mounted ||
@@ -1668,20 +1666,23 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(dialogContext)
-                .pop(_SpatialFailureAction.keepForLater),
+            onPressed: () => Navigator.of(
+              dialogContext,
+            ).pop(_SpatialFailureAction.keepForLater),
             child: Text(l10n.spatialFailedKeepForLater),
           ),
           if (remote && localAvailable)
             TextButton(
-              onPressed: () => Navigator.of(dialogContext)
-                  .pop(_SpatialFailureAction.processLocally),
+              onPressed: () => Navigator.of(
+                dialogContext,
+              ).pop(_SpatialFailureAction.processLocally),
               child: Text(l10n.spatialFailedProcessLocally),
             ),
           if (remote)
             FilledButton(
-              onPressed: () => Navigator.of(dialogContext)
-                  .pop(_SpatialFailureAction.tryAnother),
+              onPressed: () => Navigator.of(
+                dialogContext,
+              ).pop(_SpatialFailureAction.tryAnother),
               child: Text(l10n.spatialFailedTryAnother),
             ),
         ],
@@ -1710,8 +1711,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
     // so nobody picks a radio button and then hunts for a confirm button.
     var selectedIndex = 0;
     var manualSelection = false;
-    final gpuLabel =
-        NodeStatePresentation.gpuLabel(node.snapshot?.worker ?? const {});
+    final gpuLabel = NodeStatePresentation.gpuLabel(
+      node.snapshot?.worker ?? const {},
+    );
 
     return showModalBottomSheet<_SpatialProcessingSelection>(
       context: context,
@@ -1746,9 +1748,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                     body: l10n.spatialProcessLocalPrivacy,
                     actionLabel: l10n.spatialProcessLocallyAction,
                     primary: true,
-                    onPressed: () => Navigator.of(sheetContext).pop(
-                      const _SpatialProcessingSelection(local: true),
-                    ),
+                    onPressed: () => Navigator.of(
+                      sheetContext,
+                    ).pop(const _SpatialProcessingSelection(local: true)),
                   ),
                 if (localAvailable) const SizedBox(height: KubusSpacing.md),
 
@@ -1767,11 +1769,11 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                   onPressed: candidates.isEmpty
                       ? null
                       : () => Navigator.of(sheetContext).pop(
-                            _SpatialProcessingSelection(
-                              local: false,
-                              provider: candidates[selectedIndex],
-                            ),
+                          _SpatialProcessingSelection(
+                            local: false,
+                            provider: candidates[selectedIndex],
                           ),
+                        ),
                 ),
 
                 if (candidates.length > 1) ...[
@@ -1779,9 +1781,11 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                   TextButton(
                     onPressed: () =>
                         setSheetState(() => manualSelection = !manualSelection),
-                    child: Text(manualSelection
-                        ? l10n.spatialProcessAutoSelect
-                        : l10n.spatialProcessAdvanced),
+                    child: Text(
+                      manualSelection
+                          ? l10n.spatialProcessAutoSelect
+                          : l10n.spatialProcessAdvanced,
+                    ),
                   ),
                   if (manualSelection)
                     for (var index = 0; index < candidates.length; index++)
@@ -1835,8 +1839,10 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
       selected: selected,
       contentPadding: EdgeInsets.zero,
       trailing: selected
-          ? Icon(Icons.check_rounded,
-              color: Theme.of(context).colorScheme.primary)
+          ? Icon(
+              Icons.check_rounded,
+              color: Theme.of(context).colorScheme.primary,
+            )
           : null,
       title: Text(candidate.label),
       subtitle: Text(
@@ -1855,7 +1861,8 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
     if (preferences.getBool(key) == true) return true;
     if (!mounted) return false;
     final l10n = AppLocalizations.of(context)!;
-    final confirmed = await showDialog<bool>(
+    final confirmed =
+        await showDialog<bool>(
           context: context,
           builder: (dialogContext) => AlertDialog(
             title: Text(l10n.spatialRemotePrivacyTitle),
@@ -1918,13 +1925,15 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
           actions: [
             if (remote)
               TextButton(
-                onPressed: () => Navigator.of(dialogContext)
-                    .pop(_SpatialResultAction.reject),
+                onPressed: () => Navigator.of(
+                  dialogContext,
+                ).pop(_SpatialResultAction.reject),
                 child: Text(l10n.spatialResultReject),
               ),
             TextButton(
-              onPressed: () => Navigator.of(dialogContext)
-                  .pop(_SpatialResultAction.keepUnpublished),
+              onPressed: () => Navigator.of(
+                dialogContext,
+              ).pop(_SpatialResultAction.keepUnpublished),
               child: Text(l10n.spatialResultKeepPrivate),
             ),
             FilledButton(
@@ -1976,10 +1985,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.3),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -2008,20 +2016,28 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                           width: 50,
                           height: 50,
                           decoration: BoxDecoration(
-                            color:
-                                Theme.of(context).colorScheme.primaryContainer,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.primaryContainer,
                             borderRadius: BorderRadius.circular(KubusRadius.sm),
                           ),
-                          child: Icon(Icons.view_in_ar,
-                              color: Theme.of(context).colorScheme.primary),
+                          child: Icon(
+                            Icons.view_in_ar,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
                         ),
-                        title: Text(artwork['title'],
-                            style: KubusTypography.inter(
-                                fontWeight: FontWeight.w600)),
+                        title: Text(
+                          artwork['title'],
+                          style: KubusTypography.inter(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                         subtitle: Text(
-                            l10n.commonByArtist(artwork['artist']?.toString() ??
-                                l10n.commonUnknown),
-                            style: KubusTypography.inter(fontSize: 12)),
+                          l10n.commonByArtist(
+                            artwork['artist']?.toString() ?? l10n.commonUnknown,
+                          ),
+                          style: KubusTypography.inter(fontSize: 12),
+                        ),
                         trailing: Icon(Icons.arrow_forward_ios, size: 16),
                         onTap: () {
                           setState(() {
@@ -2140,16 +2156,21 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                     return Card(
                       margin: const EdgeInsets.only(bottom: 12),
                       child: ListTile(
-                        leading: Icon(Icons.view_in_ar,
-                            color: Theme.of(context).colorScheme.primary),
+                        leading: Icon(
+                          Icons.view_in_ar,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
                         title: Text(obj['title']),
                         subtitle: Text(
                           l10n.commonByArtist(
-                              obj['artist']?.toString() ?? l10n.commonUnknown),
+                            obj['artist']?.toString() ?? l10n.commonUnknown,
+                          ),
                         ),
                         trailing: IconButton(
-                          icon: Icon(Icons.delete,
-                              color: Theme.of(context).colorScheme.error),
+                          icon: Icon(
+                            Icons.delete,
+                            color: Theme.of(context).colorScheme.error,
+                          ),
                           onPressed: () {
                             setState(() {
                               _placedObjects.removeAt(index);
@@ -2157,7 +2178,8 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                             Navigator.pop(context);
                             ScaffoldMessenger.of(context).showKubusSnackBar(
                               SnackBar(
-                                  content: Text(l10n.arArtworkRemovedToast)),
+                                content: Text(l10n.arArtworkRemovedToast),
+                              ),
                             );
                           },
                         ),
@@ -2215,19 +2237,21 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
     MarkerSubjectType selectedSubjectType = MarkerSubjectType.artwork;
     MarkerSubjectOption? selectedSubject =
         subjectSelectionRequired(selectedSubjectType) &&
-                (subjectOptionsByType[selectedSubjectType] ?? []).isNotEmpty
-            ? subjectOptionsByType[selectedSubjectType]!.first
-            : null;
+            (subjectOptionsByType[selectedSubjectType] ?? []).isNotEmpty
+        ? subjectOptionsByType[selectedSubjectType]!.first
+        : null;
 
-    final titleController =
-        TextEditingController(text: selectedSubject?.title ?? '');
+    final titleController = TextEditingController(
+      text: selectedSubject?.title ?? '',
+    );
     final descriptionController = TextEditingController(
       text: selectedSubject != null && selectedSubject.subtitle.isNotEmpty
           ? selectedSubject.subtitle
           : '',
     );
-    final categoryController =
-        TextEditingController(text: selectedSubjectType.defaultCategory);
+    final categoryController = TextEditingController(
+      text: selectedSubjectType.defaultCategory,
+    );
     final formKey = GlobalKey<FormState>();
 
     Uint8List? selectedModelBytes;
@@ -2348,8 +2372,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
           return;
         }
 
-        final walletAddress =
-            context.read<WalletProvider>().currentWalletAddress;
+        final walletAddress = context
+            .read<WalletProvider>()
+            .currentWalletAddress;
 
         final marker = await _arMarkerService.createMarkerForArtwork(
           artwork: selectedArtwork,
@@ -2384,7 +2409,8 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
         final resolvedUrl = marker.getContentURL() ?? marker.modelURL;
 
         setState(() {
-          final artistName = selectedSubject?.metadata?['artist']?.toString() ??
+          final artistName =
+              selectedSubject?.metadata?['artist']?.toString() ??
               selectedSubject?.title ??
               l10n.commonUnknown;
           final newArtwork = {
@@ -2447,8 +2473,10 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.create,
-                                color: Theme.of(context).colorScheme.primary),
+                            Icon(
+                              Icons.create,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
                             const SizedBox(width: KubusSpacing.sm),
                             Expanded(
                               child: Text(
@@ -2456,8 +2484,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                                 style: KubusTypography.inter(
                                   fontSize: 22,
                                   fontWeight: FontWeight.w700,
-                                  color:
-                                      Theme.of(context).colorScheme.onSurface,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface,
                                 ),
                               ),
                             ),
@@ -2474,10 +2503,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                           l10n.arCreateUploadSubtitle,
                           style: KubusTypography.inter(
                             fontSize: 13,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.7),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withValues(alpha: 0.7),
                           ),
                         ),
                         const SizedBox(height: KubusSpacing.lg),
@@ -2486,15 +2514,18 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                           decoration: InputDecoration(
                             labelText: l10n.arCreateSubjectTypeLabel,
                             border: OutlineInputBorder(
-                                borderRadius:
-                                    BorderRadius.circular(KubusRadius.md)),
+                              borderRadius: BorderRadius.circular(
+                                KubusRadius.md,
+                              ),
+                            ),
                           ),
                           items: allowedSubjectTypes
                               .map(
                                 (type) => DropdownMenuItem(
                                   value: type,
                                   child: Text(
-                                      '${type.label} (${l10n.commonRequired})'),
+                                    '${type.label} (${l10n.commonRequired})',
+                                  ),
                                 ),
                               )
                               .toList(),
@@ -2507,39 +2538,46 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                             initialValue: selectedSubject,
                             decoration: InputDecoration(
                               labelText: l10n.arCreateSubjectLabel(
-                                  selectedSubjectType.label),
+                                selectedSubjectType.label,
+                              ),
                               border: OutlineInputBorder(
-                                  borderRadius:
-                                      BorderRadius.circular(KubusRadius.md)),
+                                borderRadius: BorderRadius.circular(
+                                  KubusRadius.md,
+                                ),
+                              ),
                             ),
-                            items: (subjectOptionsByType[selectedSubjectType] ??
-                                    [])
-                                .map(
-                                  (option) => DropdownMenuItem(
-                                    value: option,
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(option.title,
-                                            style: KubusTypography.inter(
-                                                fontWeight: FontWeight.w600)),
-                                        if (option.subtitle.isNotEmpty)
-                                          Text(
-                                            option.subtitle,
-                                            style: KubusTypography.inter(
-                                              fontSize: 12,
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .onSurface
-                                                  .withValues(alpha: 0.7),
+                            items:
+                                (subjectOptionsByType[selectedSubjectType] ??
+                                        [])
+                                    .map(
+                                      (option) => DropdownMenuItem(
+                                        value: option,
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              option.title,
+                                              style: KubusTypography.inter(
+                                                fontWeight: FontWeight.w600,
+                                              ),
                                             ),
-                                          ),
-                                      ],
-                                    ),
-                                  ),
-                                )
-                                .toList(),
+                                            if (option.subtitle.isNotEmpty)
+                                              Text(
+                                                option.subtitle,
+                                                style: KubusTypography.inter(
+                                                  fontSize: 12,
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .onSurface
+                                                      .withValues(alpha: 0.7),
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                      ),
+                                    )
+                                    .toList(),
                             onChanged: isSubmitting
                                 ? null
                                 : (value) {
@@ -2549,9 +2587,10 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                                       titleController.text = value.title;
                                       descriptionController.text =
                                           value.subtitle.isNotEmpty
-                                              ? value.subtitle
-                                              : l10n.arCreateDefaultDescription(
-                                                  value.title);
+                                          ? value.subtitle
+                                          : l10n.arCreateDefaultDescription(
+                                              value.title,
+                                            );
                                     });
                                   },
                           )
@@ -2564,8 +2603,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                                   .colorScheme
                                   .surfaceContainerHighest
                                   .withValues(alpha: 0.5),
-                              borderRadius:
-                                  BorderRadius.circular(KubusRadius.md),
+                              borderRadius: BorderRadius.circular(
+                                KubusRadius.md,
+                              ),
                             ),
                             child: Text(
                               l10n.arCreateNoSubjectsAvailable(
@@ -2581,8 +2621,10 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                           decoration: InputDecoration(
                             labelText: l10n.arCreateMarkerTitleLabel,
                             border: OutlineInputBorder(
-                                borderRadius:
-                                    BorderRadius.circular(KubusRadius.md)),
+                              borderRadius: BorderRadius.circular(
+                                KubusRadius.md,
+                              ),
+                            ),
                           ),
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
@@ -2602,8 +2644,10 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                           decoration: InputDecoration(
                             labelText: l10n.arCreateDescriptionLabel,
                             border: OutlineInputBorder(
-                                borderRadius:
-                                    BorderRadius.circular(KubusRadius.md)),
+                              borderRadius: BorderRadius.circular(
+                                KubusRadius.md,
+                              ),
+                            ),
                           ),
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
@@ -2622,8 +2666,10 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                           decoration: InputDecoration(
                             labelText: l10n.arCreateCategoryLabel,
                             border: OutlineInputBorder(
-                                borderRadius:
-                                    BorderRadius.circular(KubusRadius.md)),
+                              borderRadius: BorderRadius.circular(
+                                KubusRadius.md,
+                              ),
+                            ),
                           ),
                         ),
                         const SizedBox(height: KubusSpacing.md),
@@ -2645,15 +2691,18 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                                   height: 18,
                                   width: 18,
                                   child: InlineLoading(
-                                      tileSize: 4,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .primary),
+                                    tileSize: 4,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.primary,
+                                  ),
                                 )
                               : const Icon(Icons.upload_file),
-                          label: Text(selectedModelName == null
-                              ? l10n.arCreateSelectModelButton
-                              : l10n.arCreateReplaceModelButton),
+                          label: Text(
+                            selectedModelName == null
+                                ? l10n.arCreateSelectModelButton
+                                : l10n.arCreateReplaceModelButton,
+                          ),
                         ),
                         if (selectedModelName != null) ...[
                           const SizedBox(height: KubusSpacing.sm),
@@ -2665,8 +2714,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                                   .colorScheme
                                   .primaryContainer
                                   .withValues(alpha: 0.4),
-                              borderRadius:
-                                  BorderRadius.circular(KubusRadius.md),
+                              borderRadius: BorderRadius.circular(
+                                KubusRadius.md,
+                              ),
                             ),
                             child: Row(
                               children: [
@@ -2680,13 +2730,15 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                                       Text(
                                         selectedModelName!,
                                         style: KubusTypography.inter(
-                                            fontWeight: FontWeight.w600),
+                                          fontWeight: FontWeight.w600,
+                                        ),
                                       ),
                                       if (selectedModelSize != null)
                                         Text(
                                           formatFileSize(selectedModelSize!),
                                           style: KubusTypography.inter(
-                                              fontSize: 12),
+                                            fontSize: 12,
+                                          ),
                                         ),
                                     ],
                                   ),
@@ -2695,10 +2747,10 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                                   onPressed: isSubmitting
                                       ? null
                                       : () => setModalState(() {
-                                            selectedModelBytes = null;
-                                            selectedModelName = null;
-                                            selectedModelSize = null;
-                                          }),
+                                          selectedModelBytes = null;
+                                          selectedModelName = null;
+                                          selectedModelSize = null;
+                                        }),
                                   icon: const Icon(Icons.close),
                                 ),
                               ],
@@ -2735,8 +2787,8 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                           onChanged: isSubmitting
                               ? null
                               : (value) => setModalState(() {
-                                    selectedScale = value;
-                                  }),
+                                  selectedScale = value;
+                                }),
                         ),
                         SwitchListTile(
                           title: Text(l10n.arCreatePublicMarkerTitle),
@@ -2745,7 +2797,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                           onChanged: isSubmitting
                               ? null
                               : (value) =>
-                                  setModalState(() => isPublic = value),
+                                    setModalState(() => isPublic = value),
                         ),
                         const SizedBox(height: KubusSpacing.sm),
                         Container(
@@ -2760,8 +2812,10 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                           ),
                           child: Row(
                             children: [
-                              Icon(Icons.my_location,
-                                  color: Theme.of(context).colorScheme.primary),
+                              Icon(
+                                Icons.my_location,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Text(
@@ -2781,13 +2835,16 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                                 : () => submit(setModalState),
                             style: ElevatedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 16),
-                              backgroundColor:
-                                  Theme.of(context).colorScheme.primary,
-                              foregroundColor:
-                                  Theme.of(context).colorScheme.onPrimary,
+                              backgroundColor: Theme.of(
+                                context,
+                              ).colorScheme.primary,
+                              foregroundColor: Theme.of(
+                                context,
+                              ).colorScheme.onPrimary,
                               shape: RoundedRectangleBorder(
-                                borderRadius:
-                                    BorderRadius.circular(KubusRadius.md),
+                                borderRadius: BorderRadius.circular(
+                                  KubusRadius.md,
+                                ),
                               ),
                             ),
                             icon: isSubmitting
@@ -2795,10 +2852,11 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                                     height: 18,
                                     width: 18,
                                     child: InlineLoading(
-                                        tileSize: 4,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onPrimary),
+                                      tileSize: 4,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onPrimary,
+                                    ),
                                   )
                                 : const Icon(Icons.upload),
                             label: Text(
@@ -2806,7 +2864,8 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                                   ? l10n.arCreateUploadingLabel
                                   : l10n.arCreateUploadAndCreateButton,
                               style: KubusTypography.inter(
-                                  fontWeight: FontWeight.w600),
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ),
@@ -2901,10 +2960,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                     l10n.commonByArtist(artist),
                     style: KubusTypography.inter(
                       fontSize: 16,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.7),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.7),
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -2947,7 +3005,8 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                         onTap: () {
                           _handleLike(artwork);
                           setModalState(
-                              () {}); // Update modal state immediately
+                            () {},
+                          ); // Update modal state immediately
                         },
                         isActive: _likedArtworks.contains(artwork['id']),
                         activeColor: Theme.of(context).colorScheme.error,
@@ -2963,7 +3022,8 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                         onTap: () {
                           _handleSave(artwork);
                           setModalState(
-                              () {}); // Update modal state immediately
+                            () {},
+                          ); // Update modal state immediately
                         },
                         isActive: _savedArtworks.contains(artwork['id']),
                         activeColor: Theme.of(context).colorScheme.primary,
@@ -2991,10 +3051,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
               style: KubusTypography.inter(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.6),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
           ),
@@ -3069,10 +3128,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                 icon,
                 color: isActive
                     ? color
-                    : Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.7),
+                    : Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.7),
                 size: 18,
               ),
             ),
@@ -3085,10 +3143,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                 fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
                 color: isActive
                     ? color
-                    : Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.7),
+                    : Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
               child: Text(label),
             ),
@@ -3100,8 +3157,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
 
   // Social interaction handlers
   Future<void> _handleShare(Map<String, dynamic> artwork) async {
-    final artworkId =
-        (artwork['artworkId'] ?? artwork['id'])?.toString().trim();
+    final artworkId = (artwork['artworkId'] ?? artwork['id'])
+        ?.toString()
+        .trim();
     if (artworkId == null || artworkId.isEmpty) return;
 
     await ShareService().showShareSheet(
@@ -3126,8 +3184,10 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
         _likedArtworks.add(artwork['id']);
       }
     });
-    final walletAddress = Provider.of<WalletProvider>(context, listen: false)
-        .currentWalletAddress;
+    final walletAddress = Provider.of<WalletProvider>(
+      context,
+      listen: false,
+    ).currentWalletAddress;
 
     final isNowLiked = _likedArtworks.contains(artwork['id']);
     if (isNowLiked) {
@@ -3141,15 +3201,12 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
     // Track like in community interactions
     final post = CommunityPost(
       id: artwork['id'],
-      authorIdentityData: ProfileIdentityData.fromIdentityPayload(
-        {
-          'author': {
-            'id': artwork['artworkId'] ?? artwork['id'],
-            'displayName': artwork['artist'],
-          },
+      authorIdentityData: ProfileIdentityData.fromIdentityPayload({
+        'author': {
+          'id': artwork['artworkId'] ?? artwork['id'],
+          'displayName': artwork['artist'],
         },
-        fallbackLabel: l10n.commonUnknown,
-      ),
+      }, fallbackLabel: l10n.commonUnknown),
       content: artwork['title'],
       timestamp: _parseArtworkTimestamp(artwork['timestamp']),
       isLiked: _likedArtworks.contains(artwork['id']),
@@ -3172,13 +3229,12 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
               color: isLiked ? scheme.onPrimary : scheme.onSurface,
             ),
             const SizedBox(width: 8),
-            Text(
-              isLiked ? l10n.arLikeAddedToast : l10n.arLikeRemovedToast,
-            ),
+            Text(isLiked ? l10n.arLikeAddedToast : l10n.arLikeRemovedToast),
           ],
         ),
-        backgroundColor:
-            isLiked ? scheme.primary : scheme.surfaceContainerHighest,
+        backgroundColor: isLiked
+            ? scheme.primary
+            : scheme.surfaceContainerHighest,
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 2),
       ),
@@ -3204,8 +3260,10 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
     if (!authenticated || !mounted) return;
 
     // Update SavedItemsProvider
-    final savedItemsProvider =
-        Provider.of<SavedItemsProvider>(context, listen: false);
+    final savedItemsProvider = Provider.of<SavedItemsProvider>(
+      context,
+      listen: false,
+    );
     await savedItemsProvider.toggleArtworkSaved(artworkId);
     if (!mounted) return;
     setState(() {
@@ -3242,13 +3300,12 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
               color: isSaved ? scheme.onPrimary : scheme.onSurface,
             ),
             const SizedBox(width: 8),
-            Text(
-              isSaved ? l10n.arSaveAddedToast : l10n.arSaveRemovedToast,
-            ),
+            Text(isSaved ? l10n.arSaveAddedToast : l10n.arSaveRemovedToast),
           ],
         ),
-        backgroundColor:
-            isSaved ? scheme.primary : scheme.surfaceContainerHighest,
+        backgroundColor: isSaved
+            ? scheme.primary
+            : scheme.surfaceContainerHighest,
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 2),
         action: isSaved
@@ -3327,15 +3384,20 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                     ),
                     const SizedBox(height: 12),
                     ListTile(
-                      leading: Icon(Icons.flash_on,
-                          color: Theme.of(context).colorScheme.primary),
-                      title: Text(l10n.arFlashControlTitle,
-                          style: KubusTypography.inter(fontSize: 14)),
+                      leading: Icon(
+                        Icons.flash_on,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      title: Text(
+                        l10n.arFlashControlTitle,
+                        style: KubusTypography.inter(fontSize: 14),
+                      ),
                       subtitle: Text(
-                          _flashEnabled
-                              ? l10n.commonCurrentlyOn
-                              : l10n.commonCurrentlyOff,
-                          style: KubusTypography.inter(fontSize: 12)),
+                        _flashEnabled
+                            ? l10n.commonCurrentlyOn
+                            : l10n.commonCurrentlyOff,
+                        style: KubusTypography.inter(fontSize: 12),
+                      ),
                       trailing: Switch(
                         value: _flashEnabled,
                         onChanged: (value) async {
@@ -3344,7 +3406,8 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                               await _scannerController.toggleTorch();
                               if (!context.mounted || !mounted) return;
                               setModalState(
-                                  () => _flashEnabled = !_flashEnabled);
+                                () => _flashEnabled = !_flashEnabled,
+                              );
                               setState(() => _flashEnabled = !_flashEnabled);
                             } catch (e) {
                               if (kDebugMode) {
@@ -3362,12 +3425,18 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                       ),
                     ),
                     ListTile(
-                      leading: Icon(Icons.qr_code_scanner,
-                          color: Theme.of(context).colorScheme.primary),
-                      title: Text(l10n.arScannerOverlayTitle,
-                          style: KubusTypography.inter(fontSize: 14)),
-                      subtitle: Text(l10n.arScannerOverlaySubtitle,
-                          style: KubusTypography.inter(fontSize: 12)),
+                      leading: Icon(
+                        Icons.qr_code_scanner,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      title: Text(
+                        l10n.arScannerOverlayTitle,
+                        style: KubusTypography.inter(fontSize: 14),
+                      ),
+                      subtitle: Text(
+                        l10n.arScannerOverlaySubtitle,
+                        style: KubusTypography.inter(fontSize: 12),
+                      ),
                       onTap: () {
                         Navigator.pop(context);
                         messenger.showKubusSnackBar(
@@ -3391,10 +3460,14 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                   ),
                   const SizedBox(height: 12),
                   SwitchListTile(
-                    title: Text(l10n.arShowFeaturePointsTitle,
-                        style: KubusTypography.inter(fontSize: 14)),
-                    subtitle: Text(l10n.arShowFeaturePointsSubtitle,
-                        style: KubusTypography.inter(fontSize: 12)),
+                    title: Text(
+                      l10n.arShowFeaturePointsTitle,
+                      style: KubusTypography.inter(fontSize: 14),
+                    ),
+                    subtitle: Text(
+                      l10n.arShowFeaturePointsSubtitle,
+                      style: KubusTypography.inter(fontSize: 12),
+                    ),
                     value: _showFeaturePoints,
                     onChanged: (value) {
                       setModalState(() => _showFeaturePoints = value);
@@ -3402,10 +3475,14 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                     },
                   ),
                   SwitchListTile(
-                    title: Text(l10n.arShowPlanesTitle,
-                        style: KubusTypography.inter(fontSize: 14)),
-                    subtitle: Text(l10n.arShowPlanesSubtitle,
-                        style: KubusTypography.inter(fontSize: 12)),
+                    title: Text(
+                      l10n.arShowPlanesTitle,
+                      style: KubusTypography.inter(fontSize: 14),
+                    ),
+                    subtitle: Text(
+                      l10n.arShowPlanesSubtitle,
+                      style: KubusTypography.inter(fontSize: 12),
+                    ),
                     value: _showPlanes,
                     onChanged: (value) {
                       setModalState(() => _showPlanes = value);
@@ -3413,10 +3490,14 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                     },
                   ),
                   SwitchListTile(
-                    title: Text(l10n.arAutoDetectSurfacesTitle,
-                        style: KubusTypography.inter(fontSize: 14)),
-                    subtitle: Text(l10n.arAutoDetectSurfacesSubtitle,
-                        style: KubusTypography.inter(fontSize: 12)),
+                    title: Text(
+                      l10n.arAutoDetectSurfacesTitle,
+                      style: KubusTypography.inter(fontSize: 14),
+                    ),
+                    subtitle: Text(
+                      l10n.arAutoDetectSurfacesSubtitle,
+                      style: KubusTypography.inter(fontSize: 12),
+                    ),
                     value: _autoDetectSurfaces,
                     onChanged: (value) {
                       setModalState(() => _autoDetectSurfaces = value);
@@ -3424,10 +3505,14 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                     },
                   ),
                   SwitchListTile(
-                    title: Text(l10n.arDebugInfoTitle,
-                        style: KubusTypography.inter(fontSize: 14)),
-                    subtitle: Text(l10n.arDebugInfoSubtitle,
-                        style: KubusTypography.inter(fontSize: 12)),
+                    title: Text(
+                      l10n.arDebugInfoTitle,
+                      style: KubusTypography.inter(fontSize: 14),
+                    ),
+                    subtitle: Text(
+                      l10n.arDebugInfoSubtitle,
+                      style: KubusTypography.inter(fontSize: 12),
+                    ),
                     value: _showDebugInfo,
                     onChanged: (value) {
                       setModalState(() => _showDebugInfo = value);
@@ -3481,10 +3566,14 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                   ),
                   ListTile(
                     leading: const Icon(Icons.delete_sweep),
-                    title: Text(l10n.arClearAllArtworksTitle,
-                        style: KubusTypography.inter(fontSize: 14)),
-                    subtitle: Text(l10n.arClearAllArtworksSubtitle,
-                        style: KubusTypography.inter(fontSize: 12)),
+                    title: Text(
+                      l10n.arClearAllArtworksTitle,
+                      style: KubusTypography.inter(fontSize: 14),
+                    ),
+                    subtitle: Text(
+                      l10n.arClearAllArtworksSubtitle,
+                      style: KubusTypography.inter(fontSize: 12),
+                    ),
                     onTap: () {
                       setState(() => _placedObjects.clear());
                       Navigator.pop(context);
@@ -3495,10 +3584,14 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                   ),
                   ListTile(
                     leading: const Icon(Icons.refresh),
-                    title: Text(l10n.arResetSessionTitle,
-                        style: KubusTypography.inter(fontSize: 14)),
-                    subtitle: Text(l10n.arResetSessionSubtitle,
-                        style: KubusTypography.inter(fontSize: 12)),
+                    title: Text(
+                      l10n.arResetSessionTitle,
+                      style: KubusTypography.inter(fontSize: 14),
+                    ),
+                    subtitle: Text(
+                      l10n.arResetSessionSubtitle,
+                      style: KubusTypography.inter(fontSize: 12),
+                    ),
                     onTap: () {
                       Navigator.pop(context);
                       _initializeAR();
@@ -3532,9 +3625,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
           ),
           content: Text(
             l10n.arNotSupportedMessage,
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
           ),
           actions: [
             TextButton(
@@ -3543,9 +3634,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
               },
               child: Text(
                 l10n.commonOk,
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.primary,
-                ),
+                style: TextStyle(color: Theme.of(context).colorScheme.primary),
               ),
             ),
           ],
@@ -3570,9 +3659,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
           ),
           content: Text(
             l10n.arInitializationFailedMessage,
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
           ),
           actions: [
             TextButton(
@@ -3582,9 +3669,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
               },
               child: Text(
                 l10n.commonCancel,
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.outline,
-                ),
+                style: TextStyle(color: Theme.of(context).colorScheme.outline),
               ),
             ),
             TextButton(
@@ -3594,9 +3679,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
               },
               child: Text(
                 l10n.commonRetry,
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.primary,
-                ),
+                style: TextStyle(color: Theme.of(context).colorScheme.primary),
               ),
             ),
           ],
