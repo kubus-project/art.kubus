@@ -6850,7 +6850,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get kubusNodeHeroBody =>
-      'kubus Node ohranja javne kulturne zapise dostopne, streže arhivske datoteke prek omrežja in lahko prostorske zajeme obdela lokalno. Zasebne izvorne datoteke ostanejo na tvoji opremi, dokler jih ne objaviš.';
+      'kubus Node ohranja javne kulturne zapise dostopne, streže arhivske datoteke prek omrežja in lahko prostorske zajeme obdela lokalno. Zasebne izvorne datoteke ostanejo na tvoji opremi; objavijo se le izbrane obdelane različice.';
 
   @override
   String get kubusNodePrivacyBody =>
@@ -6863,10 +6863,10 @@ class AppLocalizationsSl extends AppLocalizations {
   String get kubusNodeArchive => 'Arhiv';
 
   @override
-  String get kubusNodeSpatial => 'Prostor';
+  String get kubusNodeSpatial => 'Prostorsko';
 
   @override
-  String get kubusNodeRewards => 'Prispevki';
+  String get kubusNodeRewards => 'Prispevek';
 
   @override
   String get kubusNodeSecuritySetup => 'Varnost / Nastavitve';
@@ -6894,10 +6894,10 @@ class AppLocalizationsSl extends AppLocalizations {
       'Hrani preverjene zapise javnega arhiva in drugim pomaga do njih med raziskovanjem art.kubus.';
 
   @override
-  String get kubusNodeBytesStored => 'Shranjeni javni bajti';
+  String get kubusNodeBytesStored => 'Shranjeno';
 
   @override
-  String get kubusNodeRecords => 'Zapisi / CID-i';
+  String get kubusNodeRecords => 'Javni zapisi';
 
   @override
   String get kubusNodeRetrievalHealth => 'Uspešnost pridobivanja';
@@ -6940,7 +6940,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get kubusNodePairBody =>
-      'V lokalnem vmesniku kubus Node ustvari enkratno sejo in sem prilepi vsebino kode QR. Aplikacija prejme le omejeno lokalno poverilnico.';
+      'V vmesniku kubus Node odpri Naprave in skeniraj prikazano kodo. Ta naprava prejme le omejeno lokalno poverilnico.';
 
   @override
   String get kubusNodePairingPayload => 'Podatki za povezavo';
@@ -6956,6 +6956,287 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get kubusNodePairFailed => 'Povezava ni uspela';
+
+  @override
+  String get kubusNodeStateContributing => 'Prispeva';
+
+  @override
+  String get kubusNodeStateContributingBody =>
+      'Sodelovanje v arhivu je aktivno.';
+
+  @override
+  String get kubusNodeStateJoining => 'Priključevanje omrežju';
+
+  @override
+  String get kubusNodeStateJoiningBody =>
+      'kubus Node usklajuje in preverja svoj prispevek k javnemu arhivu.';
+
+  @override
+  String get kubusNodeStateDegraded => 'Povezava je prekinjena';
+
+  @override
+  String get kubusNodeStateDegradedBody =>
+      'Predhodno preverjeno vozlišče je v začasnem obdobju dopuščanja. Če sodelovanje v arhivu ni pravočasno obnovljeno, se obdelava zaklene.';
+
+  @override
+  String get kubusNodeStateLocked => 'Potrebno je sodelovanje v omrežju';
+
+  @override
+  String get kubusNodeStateLockedBody =>
+      'Prostorska obdelava postane na voljo, ko to vozlišče kubus Node dejavno prispeva k javnemu arhivu.';
+
+  @override
+  String get kubusNodeStateUnconfigured => 'Potrebna je nastavitev';
+
+  @override
+  String get kubusNodeStateUnconfiguredBody =>
+      'Za začetek poveži to vozlišče s svojim operaterskim računom art.kubus.';
+
+  @override
+  String get kubusNodeStateOffline => 'Vozlišče ni dosegljivo';
+
+  @override
+  String get kubusNodeStateOfflineBody =>
+      'Aplikacija trenutno ne more doseči tega vozlišča kubus Node. Povezava ostane shranjena in se samodejno vzpostavi znova.';
+
+  @override
+  String get kubusNodeReciprocity =>
+      'kubus Node ti omogoča lokalno prostorsko obdelavo, tvoje vozlišče pa v zameno prispeva prostor in dostopnost skupnemu javnemu arhivu.';
+
+  @override
+  String get kubusNodeCheckStatusAction => 'Preveri stanje vozlišča';
+
+  @override
+  String get kubusNodeWorkerReady => 'Pripravljeno';
+
+  @override
+  String get kubusNodeWorkerReadyBody =>
+      'Rekonstrukcija Gaussian splatting je na voljo.';
+
+  @override
+  String get kubusNodeWorkerNoGpu => 'Ni na voljo';
+
+  @override
+  String get kubusNodeWorkerNoGpuBody => 'Združljiv GPU NVIDIA ni bil zaznan.';
+
+  @override
+  String get kubusNodeWorkerDown => 'Prostorski procesor ni odziven';
+
+  @override
+  String get kubusNodeWorkerDownBody =>
+      'GPU je zaznan, a se prostorski procesor ne odziva.';
+
+  @override
+  String get kubusNodeEntryTitle => 'kubus Node';
+
+  @override
+  String get kubusNodeEntrySubtitle =>
+      'Poganjaj del omrežja art.kubus na svoji opremi.';
+
+  @override
+  String get kubusNodeEntryFeatureArchive => 'Ohranjaj javni arhiv dostopen';
+
+  @override
+  String get kubusNodeEntryFeatureSpatial =>
+      'Prostorske zajeme obdelaj lokalno';
+
+  @override
+  String get kubusNodeEntryFeatureNetwork =>
+      'Po potrebi uporabi zmogljivost GPU v omrežju';
+
+  @override
+  String get kubusNodeEntryFeatureContribution =>
+      'Prejmi preverjene zapise prispevka KUB8';
+
+  @override
+  String get kubusNodeEntryConnectCta => 'Poveži ali nastavi kubus Node';
+
+  @override
+  String get kubusNodeEntryOpenCta => 'Odpri kubus Node';
+
+  @override
+  String get kubusNodeEntryAttention => 'Vozlišče potrebuje pozornost';
+
+  @override
+  String get kubusNodeScanTitle => 'Skeniraj kodo za povezavo';
+
+  @override
+  String get kubusNodeScanBody =>
+      'V vmesniku kubus Node odpri Naprave in skeniraj prikazano kodo.';
+
+  @override
+  String get kubusNodeScanManualAction => 'Vnesi kodo ročno';
+
+  @override
+  String get kubusNodeScanPermission =>
+      'Za skeniranje kode je potreben dostop do kamere.';
+
+  @override
+  String get kubusNodeScanInvalid => 'To ni koda za povezavo s kubus Node.';
+
+  @override
+  String get kubusNodeConfirmTitle => 'Se želiš povezati s tem vozliščem?';
+
+  @override
+  String get kubusNodeConfirmBody =>
+      'Ta naprava bo lahko uporabljala vozlišče za prostorsko obdelavo. Povezavo lahko kadar koli prekineš na vozlišču.';
+
+  @override
+  String get kubusNodeConfirmAction => 'Poveži';
+
+  @override
+  String get kubusNodeConnectedTitle => 'Povezano';
+
+  @override
+  String kubusNodeConnectedBody(Object label) {
+    return 'Ta naprava lahko zdaj uporablja $label za prostorsko obdelavo.';
+  }
+
+  @override
+  String get kubusNodeFingerprintLabel => 'Prstni odtis';
+
+  @override
+  String get kubusNodeEmptyCapturesTitle => 'Prostorskih zajemov še ni';
+
+  @override
+  String get kubusNodeEmptyCapturesBody =>
+      'Prostorsko dokumentiraj umetnino in ustvari njen prvi 3D arhiv.';
+
+  @override
+  String get kubusNodeEmptyContributionTitle => 'Preverjenega prispevka še ni';
+
+  @override
+  String get kubusNodeEmptyContributionBody =>
+      'Prispevek se pokaže, ko omrežje preveri dostopnost arhiva ali zaključene računske naloge.';
+
+  @override
+  String get kubusNodeEmptyProvidersTitle =>
+      'Trenutno ni na voljo nobenega združljivega GPU v omrežju';
+
+  @override
+  String get kubusNodeEmptyProvidersBody =>
+      'Zajem ohrani lokalno ali ga obdelaj pozneje.';
+
+  @override
+  String get kubusNodeNoNodeTitle => 'Nobeno vozlišče kubus Node ni povezano';
+
+  @override
+  String get kubusNodeStoredLabel => 'Shranjeno';
+
+  @override
+  String get kubusNodeCoverageLabel => 'Pokritost';
+
+  @override
+  String get kubusNodePublicRecordsLabel => 'Javni zapisi';
+
+  @override
+  String get kubusNodeContribution => 'Prispevek';
+
+  @override
+  String get kubusNodeHowCalculated => 'Kako se izračuna prispevek';
+
+  @override
+  String get kubusNodeAdvancedDetails => 'Tehnične podrobnosti';
+
+  @override
+  String get kubusNodeCopiedToast => 'Kopirano';
+
+  @override
+  String get spatialStagePreparing => 'Pripravljanje';
+
+  @override
+  String get spatialStageProcessingLocally => 'Lokalna obdelava';
+
+  @override
+  String get spatialStageOptimising => 'Optimiranje';
+
+  @override
+  String get spatialStageCreatingPreview => 'Ustvarjanje predogleda';
+
+  @override
+  String get spatialStageComplete => 'Končano';
+
+  @override
+  String get spatialStageEncrypting => 'Šifriranje';
+
+  @override
+  String get spatialStageSending => 'Pošiljanje na vozlišče';
+
+  @override
+  String get spatialStageWaitingForGpu => 'Čakanje na GPU';
+
+  @override
+  String get spatialStageProcessing => 'Obdelava';
+
+  @override
+  String get spatialStagePreparingArchive =>
+      'Pripravljanje prostorskega arhiva';
+
+  @override
+  String get spatialStageReceiving => 'Prejemanje rezultata';
+
+  @override
+  String get spatialStageVerifying => 'Preverjanje';
+
+  @override
+  String get spatialProgressLocalBody =>
+      'Obdelava poteka na tvojem vozlišču kubus Node.';
+
+  @override
+  String get spatialProgressRemoteBody => 'Obdelava poteka v omrežju Kubus.';
+
+  @override
+  String get spatialProgressLeaveHint =>
+      'Ta zaslon lahko zapustiš. Obdelava se nadaljuje na tvojem vozlišču kubus Node.';
+
+  @override
+  String get spatialFailedTitle => 'Obdelava je bila prekinjena';
+
+  @override
+  String get spatialFailedRemoteBody =>
+      'Ponudnikovo vozlišče je postalo nedosegljivo, preden se je rekonstrukcija zaključila. Tvoj izvorni zajem je še vedno na voljo.';
+
+  @override
+  String get spatialFailedLocalBody =>
+      'Obdelava se ni zaključila. Tvoj izvorni zajem je še vedno na voljo na vozlišču kubus Node.';
+
+  @override
+  String get spatialFailedTryAnother => 'Poskusi z drugim vozliščem';
+
+  @override
+  String get spatialFailedProcessLocally => 'Obdelaj lokalno';
+
+  @override
+  String get spatialFailedKeepForLater => 'Shrani za pozneje';
+
+  @override
+  String get spatialErrorParticipation => 'Potrebno je sodelovanje v omrežju';
+
+  @override
+  String get spatialErrorNoProvider =>
+      'Trenutno ni na voljo nobenega združljivega GPU v omrežju.';
+
+  @override
+  String get spatialErrorExpired =>
+      'Zahteva za obdelavo je potekla, preden jo je katero od vozlišč sprejelo.';
+
+  @override
+  String get spatialErrorRetrieval =>
+      'Obdelovalno vozlišče ni moglo prevzeti šifriranega zajema.';
+
+  @override
+  String get spatialErrorSignIn =>
+      'Za obdelavo v omrežju se prijavi v art.kubus.';
+
+  @override
+  String get spatialErrorGeneric =>
+      'Pri obdelavi tega zajema je prišlo do napake.';
+
+  @override
+  String get spatialProcessLocallyAction => 'Obdelaj lokalno';
+
+  @override
+  String get spatialProcessNetworkAction => 'Uporabi GPU v omrežju';
 
   @override
   String get kubusNodeAdvancedOperatorSetup => 'Napredne nastavitve operaterja';
@@ -15417,4 +15698,234 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get authSecureAccountBannerCta => 'Zavaruj';
+
+  @override
+  String get spatialProcessTitle => 'Obdelaj prostorski zajem';
+
+  @override
+  String get spatialProcessLocalTitle => 'To vozlišče kubus Node';
+
+  @override
+  String get spatialProcessLocalPrivacy =>
+      'Izvorni zajem ostane na strojni opremi, ki jo nadzoruješ.';
+
+  @override
+  String get spatialProcessNetworkTitle => 'Omrežje Kubus';
+
+  @override
+  String spatialProcessNetworkAvailable(int count) {
+    return 'Na voljo je $count združljivih vozlišč';
+  }
+
+  @override
+  String get spatialProcessNetworkPrivacy =>
+      'Zajem se šifrirano prenese in začasno obdela na izbranem ponudnikovem vozlišču.';
+
+  @override
+  String get spatialProcessMaximumPrivacy =>
+      'Za največ zasebnosti izberi lokalno obdelavo.';
+
+  @override
+  String get spatialProcessNoLocalGpu => 'Združljiv lokalni GPU ni bil zaznan.';
+
+  @override
+  String get spatialProcessKeepLocal => 'Ohrani zajem lokalno';
+
+  @override
+  String get spatialProcessStart => 'Začni obdelavo';
+
+  @override
+  String get spatialProcessAutoSelect => 'Samodejno izberi najboljše vozlišče';
+
+  @override
+  String get spatialProcessAdvanced => 'Izberi vozlišče';
+
+  @override
+  String get spatialProcessReady => 'Pripravljeno';
+
+  @override
+  String spatialProcessJobsAhead(int count) {
+    return 'Pred tabo je $count nalog';
+  }
+
+  @override
+  String spatialProcessSuccessRate(Object rate) {
+    return '$rate % uspešno zaključenih nalog';
+  }
+
+  @override
+  String get spatialRemotePrivacyTitle =>
+      'Želiš uporabiti GPU v omrežju Kubus?';
+
+  @override
+  String get spatialRemotePrivacyBody =>
+      'Zajem se šifrirano prenese na izbrano računsko vozlišče, kjer se izvorni podatki začasno dešifrirajo za izvedbo obdelave. Izvorni zajem se ne objavi v javnem arhivu.';
+
+  @override
+  String get spatialRemotePrivacyConfirm => 'Nadaljuj z omrežnim GPU-jem';
+
+  @override
+  String get spatialResultReviewTitle => 'Prostorski rezultat je pripravljen';
+
+  @override
+  String get spatialResultReviewBody =>
+      'Pred objavo preglej neobjavljeni rezultat. Z objavo izbrane prostorske različice dodaš v javni arhiv art.kubus, kjer jih sodelujoča vozlišča ohranjajo na voljo. Izvorni zajem ostane lokalno na tvojem vozlišču kubus Node. Če rezultat ostane neobjavljen, potrdiš zaključeno računsko nalogo, ne da bi ga dodal v javni arhiv; njegov CID v Kubo je nenaveden, ne pa kriptografsko zaseben, če ga izve druga oseba.';
+
+  @override
+  String get spatialResultKeepPrivate => 'Ohrani neobjavljeno';
+
+  @override
+  String get spatialResultReject => 'Zavrni rezultat';
+
+  @override
+  String get spatialResultPublish => 'Objavi prostorski arhiv';
+
+  @override
+  String get kubusNodeCompute => 'Računsko omrežje';
+
+  @override
+  String get kubusNodeComputeTitle => 'Računsko omrežje';
+
+  @override
+  String get kubusNodeComputeBody =>
+      'Deljenje GPU-ja je prostovoljno. Lokalne naloge imajo prednost, prispevek k arhivu pa ostaja obvezen.';
+
+  @override
+  String get kubusNodeOfferGpu => 'Ponudi GPU omrežju Kubus';
+
+  @override
+  String get kubusNodeOfferGpuBody =>
+      'Sprejemaj nove združljive prostorske naloge drugih uporabnikov art.kubus.';
+
+  @override
+  String get kubusNodePauseRemoteJobs =>
+      'Začasno ustavi sprejem novih oddaljenih nalog';
+
+  @override
+  String get kubusNodeMaxRemoteJobs => 'Največ sočasnih oddaljenih nalog';
+
+  @override
+  String get kubusNodeArchiveContribution => 'Prispevek k arhivu';
+
+  @override
+  String get kubusNodeComputeContribution => 'Računski prispevek';
+
+  @override
+  String get kubusNodePendingTotal => 'Skupaj v čakanju';
+
+  @override
+  String get kubusNodeSettlementPending =>
+      'Omrežje nagrade trenutno le beleži. Poravnava še ni aktivna.';
+
+  @override
+  String get kubusNodeVerifiedArchiveCopy =>
+      'Zapisi o prispevku KUB8 se izračunajo iz preverjene razpoložljivosti javnega arhiva, zdravega sodelovanja in uspešnega pridobivanja vsebin.';
+
+  @override
+  String get kubusNodeVerifiedComputeCopy =>
+      'Če prostovoljno ponudiš prosto zmogljivost GPU-ja, se uspešno zaključene in preverjene omrežne računske naloge lahko upoštevajo v tvojem zapisu nagrad KUB8.';
+
+  @override
+  String get kubusNodeParticipationContributing => 'Prispeva';
+
+  @override
+  String get kubusNodeParticipationDegraded => 'Povezava je prekinjena';
+
+  @override
+  String get kubusNodeParticipationLocked =>
+      'Potrebno je sodelovanje v omrežju';
+
+  @override
+  String get kubusNodeRemoteJobsCompleted => 'Zaključene oddaljene naloge';
+
+  @override
+  String get spatialArchiveTitle => 'Prostorski arhiv';
+
+  @override
+  String get spatialViewIn3d => 'Prikaži v 3D';
+
+  @override
+  String spatialCaptureCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count prostorskih zajemov',
+      two: '2 prostorska zajema',
+      one: '1 prostorski zajem',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String spatialCapturedOn(String date) {
+    return 'Zajeto $date';
+  }
+
+  @override
+  String get spatialHistoryTitle => 'Prostorska zgodovina';
+
+  @override
+  String get spatialLoadArchiveQuality => 'Naloži arhivsko kakovost';
+
+  @override
+  String get spatialQualityMobile => 'Optimizirano';
+
+  @override
+  String get spatialQualityPreview => 'Predogled';
+
+  @override
+  String get spatialQualityArchive => 'Arhivsko';
+
+  @override
+  String get spatialViewerReset => 'Ponastavi pogled';
+
+  @override
+  String get spatialViewerFullscreen => 'Celozaslonsko';
+
+  @override
+  String get spatialViewerRetry => 'Poskusi znova';
+
+  @override
+  String get spatialViewerUnavailable =>
+      'Ta prostorski arhiv trenutno ni na voljo.';
+
+  @override
+  String get spatialViewerFallback => 'Poskušam drugo pot do arhiva …';
+
+  @override
+  String get spatialViewerWebSafety =>
+      'Odpri javni arhiv v združljivem pregledovalniku. Varna spletna stran ne vzpostavlja povezave z vozlišči v lokalnem omrežju.';
+
+  @override
+  String get spatialCaptureFinish => 'Zaključi zajem';
+
+  @override
+  String get spatialCaptureGuideStart =>
+      'Počasi se premikaj okoli umetniškega dela.';
+
+  @override
+  String get spatialCaptureGuideOverlap =>
+      'Umetniško delo naj ostane v kadru, posnetki pa naj se prekrivajo.';
+
+  @override
+  String get spatialCaptureGuideDetails =>
+      'Zajemi še stranice in podrobnosti, ki jih nisi pokril.';
+
+  @override
+  String get spatialCaptureGuideReady =>
+      'Pokritost je zadostna. Zajem lahko zaključiš ali dodaš še nekaj kotov.';
+
+  @override
+  String get spatialCaptureDepthAvailable => 'globina je na voljo';
+
+  @override
+  String get spatialCaptureRgbPose => 'RGB in položaj kamere';
+
+  @override
+  String spatialCaptureTrackedViews(int count, String detail) {
+    return '$count sledenih pogledov · $detail';
+  }
+
+  @override
+  String get mapSpatialAvailable => 'Prostorski arhiv je na voljo';
 }

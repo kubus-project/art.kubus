@@ -38,6 +38,7 @@ import '../../../widgets/common/kubus_screen_header.dart';
 import '../../../widgets/common/marker_attribution_section.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import '../../../widgets/map/dialogs/street_art_claims_dialog.dart';
+import '../../../widgets/spatial/artwork_spatial_archive_section.dart';
 
 class DesktopArtworkDetailScreen extends StatefulWidget {
   final String artworkId;
@@ -419,6 +420,10 @@ class _DesktopArtworkDetailScreenState
         _buildAttendanceConfirmSection(
             artwork: artwork, isSignedIn: isSignedIn),
         _buildArSetupSection(artwork),
+        Padding(
+          padding: const EdgeInsets.only(top: DetailSpacing.cardGap),
+          child: ArtworkSpatialArchiveSection(artwork: artwork),
+        ),
         _buildDescription(artwork),
         _buildPoapInfoCard(artwork),
       ],

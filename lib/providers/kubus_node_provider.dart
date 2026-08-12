@@ -11,11 +11,20 @@ class KubusNodeProvider extends ChangeNotifier {
   KubusNodeConnectionState _state = KubusNodeConnectionState.unpaired;
   KubusNodeSnapshot? _snapshot;
   List<KubusNodeJob> _jobs = const [];
+  List<KubusComputeCandidate> _computeCandidates = const [];
+  KubusRemoteComputeJob? _remoteJob;
+  Map<String, dynamic> _computeSettings = const {};
   String? _error;
   bool _initialized = false;
   KubusNodeConnectionState get state => _state;
   KubusNodeSnapshot? get snapshot => _snapshot;
   List<KubusNodeJob> get jobs => _jobs;
+  List<KubusComputeCandidate> get computeCandidates => _computeCandidates;
+  KubusRemoteComputeJob? get remoteJob => _remoteJob;
+  Map<String, dynamic> get computeSettings => _computeSettings;
+  bool get computeSettingsAvailable =>
+      _computeSettings.isNotEmpty &&
+      _snapshot?.capabilityAvailable('compute.remoteJobs') == true;
   String? get error => _error;
   bool get isPaired => service.isPaired;
 
@@ -66,6 +75,11 @@ class KubusNodeProvider extends ChangeNotifier {
     try {
       _snapshot = await service.fetchSnapshot();
       _jobs = await service.listJobs();
+      try {
+        _computeSettings = await service.getComputeSettings();
+      } catch (_) {
+        _computeSettings = const {};
+      }
       _state = KubusNodeConnectionState.paired;
       _error = null;
     } catch (error) {
@@ -92,10 +106,96 @@ class KubusNodeProvider extends ChangeNotifier {
     return job;
   }
 
+  String _backendAuthorization() {
+    final token = (BackendApiService().getAuthToken() ?? '').trim();
+    if (token.isEmpty) {
+      throw StateError('Sign in to art.kubus before using network compute.');
+    }
+    return 'Bearer $token';
+  }
+
+  Future<List<KubusComputeCandidate>> loadComputeCandidates({
+    required int inputBytes,
+    int minimumVramBytes = 0,
+  }) async {
+    _computeCandidates = await service.findComputeCandidates(
+      backendAuthorization: _backendAuthorization(),
+      inputBytes: inputBytes,
+      minimumVramBytes: minimumVramBytes,
+    );
+    notifyListeners();
+    return _computeCandidates;
+  }
+
+  Future<KubusRemoteComputeJob> startRemoteReconstruction({
+    required String captureId,
+    required KubusComputeCandidate provider,
+    required Map<String, dynamic> requirements,
+  }) async {
+    _remoteJob = await service.createRemoteComputeJob(
+      backendAuthorization: _backendAuthorization(),
+      captureId: captureId,
+      provider: provider,
+      requirements: requirements,
+    );
+    notifyListeners();
+    return _remoteJob!;
+  }
+
+  Future<KubusRemoteComputeJob> refreshRemoteJob(String id) async {
+    _remoteJob = await service.getRemoteComputeJob(id, _backendAuthorization());
+    notifyListeners();
+    return _remoteJob!;
+  }
+
+  Future<Map<String, dynamic>> retrieveRemoteResult(String id) =>
+      service.retrieveRemoteComputeResult(id, _backendAuthorization());
+
+  Future<KubusRemoteComputeJob> acknowledgeRemoteResult(
+    String id, {
+    required bool accepted,
+    String? reason,
+  }) async {
+    _remoteJob = await service.acknowledgeRemoteComputeResult(
+      id: id,
+      backendAuthorization: _backendAuthorization(),
+      accepted: accepted,
+      reason: reason,
+    );
+    notifyListeners();
+    return _remoteJob!;
+  }
+
+  Future<void> updateComputeSettings(Map<String, dynamic> settings) async {
+    if (!computeSettingsAvailable) {
+      throw StateError('Remote compute settings are unavailable on this node.');
+    }
+    try {
+      _computeSettings = await service.updateComputeSettings(settings);
+      _error = null;
+      notifyListeners();
+    } catch (error) {
+      _error = error.toString();
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  Future<void> cancelRemoteJob(String id) async {
+    _remoteJob = await service.cancelRemoteComputeJob(
+      id,
+      _backendAuthorization(),
+    );
+    notifyListeners();
+  }
+
   Future<void> unpair() async {
     await service.unpair();
     _snapshot = null;
     _jobs = const [];
+    _computeCandidates = const [];
+    _remoteJob = null;
+    _computeSettings = const {};
     _state = KubusNodeConnectionState.unpaired;
     _error = null;
     notifyListeners();

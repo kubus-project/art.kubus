@@ -22,7 +22,20 @@ void main() {
     expect(provider.frameCount, 10);
     expect(provider.coverage, 0.25);
     expect(provider.depthObserved, isTrue);
+    expect(provider.estimatedInputBytes, 32);
     expect(provider.guidance, contains('overlap'));
+  });
+
+  test('processing choice and review states are distinct', () {
+    expect(
+      SpatialCaptureState.values,
+      containsAll([
+        SpatialCaptureState.awaitingProcessingChoice,
+        SpatialCaptureState.queued,
+        SpatialCaptureState.verifying,
+        SpatialCaptureState.reviewReady,
+      ]),
+    );
   });
 
   test('capture rejects samples without an RGB frame', () {
@@ -31,5 +44,16 @@ void main() {
       () => provider.addTrackedFrame({'depthAvailable': false}),
       throwsFormatException,
     );
+  });
+
+  test('starting or resetting a capture invalidates active polling', () {
+    final provider = SpatialCaptureProvider();
+    final initial = provider.operationGeneration;
+
+    provider.begin(artworkId: 'art-1');
+    expect(provider.operationGeneration, initial + 1);
+
+    provider.reset();
+    expect(provider.operationGeneration, initial + 2);
   });
 }

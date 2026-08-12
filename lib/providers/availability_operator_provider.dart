@@ -74,6 +74,8 @@ class AvailabilityNodeStatusSnapshot {
     required this.pendingKub8,
     required this.settledKub8,
     required this.noRewardEpochs,
+    this.archivePendingKub8 = 0,
+    this.computePendingKub8 = 0,
     this.nodeId,
     this.nodeLabel,
     this.peerId,
@@ -109,6 +111,8 @@ class AvailabilityNodeStatusSnapshot {
   final double pendingKub8;
   final double settledKub8;
   final int noRewardEpochs;
+  final double archivePendingKub8;
+  final double computePendingKub8;
   final int publicReplicaBytes;
   final int privateSpatialBytes;
   final int jobsRunning;
@@ -138,6 +142,15 @@ class AvailabilityNodeStatusSnapshot {
         : (rewardsJson['summary'] is Map<String, dynamic>
             ? rewardsJson['summary'] as Map<String, dynamic>
             : <String, dynamic>{});
+    final contributions = statusJson['contributions'] is Map<String, dynamic>
+        ? statusJson['contributions'] as Map<String, dynamic>
+        : <String, dynamic>{};
+    final archiveContribution = contributions['archive'] is Map<String, dynamic>
+        ? contributions['archive'] as Map<String, dynamic>
+        : summary;
+    final computeContribution = contributions['compute'] is Map<String, dynamic>
+        ? contributions['compute'] as Map<String, dynamic>
+        : const <String, dynamic>{};
     final healthyMinutes = _num(archive['healthyMinutes']);
     final tracked = _int(metadata['desiredCidCount'] ??
         metadata['publicPinSetCount'] ??
@@ -165,6 +178,8 @@ class AvailabilityNodeStatusSnapshot {
       pendingKub8: _num(summary['pendingKub8']),
       settledKub8: _num(summary['settledKub8']),
       noRewardEpochs: _int(summary['noRewardEpochs']),
+      archivePendingKub8: _num(archiveContribution['pendingKub8']),
+      computePendingKub8: _num(computeContribution['pendingKub8']),
       publicReplicaBytes: _int(metadata['publicReplicaBytes']),
       privateSpatialBytes: _int(metadata['localPrivateSpatialBytes']),
       jobsRunning: _int(metadata['jobsRunning']),

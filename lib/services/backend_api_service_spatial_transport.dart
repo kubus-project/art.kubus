@@ -1,6 +1,28 @@
 part of 'backend_api_service.dart';
 
 extension BackendApiServiceSpatialTransport on BackendApiService {
+  Future<ArtworkSpatialHistory> getArtworkSpatialHistory(
+    String artworkId,
+  ) async {
+    final response = await _get(
+      Uri.parse(
+          '$baseUrl/api/artworks/${Uri.encodeComponent(artworkId)}/spatial'),
+      headers: _getHeaders(),
+    );
+    if (!_isSuccessStatus(response.statusCode)) {
+      throw BackendApiRequestException(
+        statusCode: response.statusCode,
+        path: '/api/artworks/$artworkId/spatial',
+        body: response.body,
+      );
+    }
+    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+    final data = decoded['data'] is Map
+        ? Map<String, dynamic>.from(decoded['data'] as Map)
+        : decoded;
+    return ArtworkSpatialHistory.fromJson(data);
+  }
+
   Future<Map<String, dynamic>> publishExistingSpatialCid({
     required Map<String, dynamic> spatial,
     required String artworkId,

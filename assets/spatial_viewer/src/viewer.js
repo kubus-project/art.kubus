@@ -58,6 +58,12 @@ canvas.addEventListener("wheel", (event) => {
   distance = Math.max(0.4, Math.min(15, distance * Math.exp(event.deltaY * 0.001)));
 }, { passive: false });
 
+window.resetSpatialView = () => {
+  yaw = 0;
+  pitch = 0;
+  distance = 3;
+};
+
 window.loadSpatial = async (url) => {
   status.textContent = "Loading spatial archive…";
   status.hidden = false;
