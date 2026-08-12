@@ -155,4 +155,35 @@ void main() {
       expect(requestCount, 0);
     },
   );
+
+  test(
+    'createArtMarkerRecord rejects a successful body without marker id',
+    () async {
+      BackendApiService().setAuthTokenForTesting('token');
+      BackendApiService().setHttpClient(
+        MockClient((request) async {
+          expect(request.method, 'POST');
+          expect(request.url.path, '/api/art-markers');
+          return http.Response(
+            jsonEncode(<String, Object?>{'success': true}),
+            201,
+            headers: const <String, String>{'content-type': 'application/json'},
+          );
+        }),
+      );
+
+      await expectLater(
+        BackendApiService().createArtMarkerRecord(<String, dynamic>{
+          'name': 'Malformed marker',
+          'latitude': 46.05,
+          'longitude': 14.5,
+        }),
+        throwsA(
+          isA<BackendApiRequestException>()
+              .having((error) => error.statusCode, 'statusCode', 201)
+              .having((error) => error.path, 'path', '/api/art-markers'),
+        ),
+      );
+    },
+  );
 }
