@@ -7,7 +7,11 @@ environment:
   # Upper bound widened from <3.0.0: pub already applies the Dart 3
   # "<3.0.0 means <4.0.0" leniency during resolution, but custom_lint's
   # workspace environment merge does not, and fails on the raw constraint.
-  sdk: '>=2.14.0 <4.0.0'
+  #
+  # Lower bound tracks the app: this is a vendored fork that is only ever
+  # built as part of art.kubus, and the AR lifecycle code uses `unawaited`
+  # (2.15) and `Error.throwWithStackTrace` (2.16).
+  sdk: '>=3.6.0 <4.0.0'
   flutter: '>=2.0.0'
 
 dependencies:

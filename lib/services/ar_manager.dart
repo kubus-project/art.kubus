@@ -320,10 +320,14 @@ class ARManager {
   /// Check if AR is initialized
   bool get isInitialized => _isInitialized;
 
-  /// Check if controller is ready
+  /// Whether the platform AR session is genuinely usable.
+  ///
+  /// On Android a controller reference is not sufficient: the native ARCore
+  /// session initializes asynchronously and the controller can already be
+  /// torn down, so readiness comes from the controller's own lifecycle.
   bool get isControllerReady {
     if (Platform.isAndroid) {
-      return _arCoreController != null;
+      return _arCoreController?.isReady ?? false;
     } else if (Platform.isIOS) {
       return _arKitController != null;
     }
@@ -373,15 +377,30 @@ class ARManager {
     );
   }
 
-  /// Dispose resources
-  void dispose() {
-    _arCoreController?.dispose();
-    _arKitController?.dispose();
-    _placedNodes.clear();
+  /// Dispose resources.
+  ///
+  /// Awaitable so a caller handing the camera to another owner can wait for
+  /// the native session to actually release it. Never throws, so callers that
+  /// cannot await (a `State.dispose()`, for instance) can safely drop the
+  /// future without leaving an unobserved rejection behind.
+  Future<void> dispose() async {
+    final arCore = _arCoreController;
+    final arKit = _arKitController;
+    // Drop the references before awaiting so nothing observes a
+    // half-torn-down session as ready.
     _arCoreController = null;
-    isTracking.value = false;
     _arKitController = null;
+    _placedNodes.clear();
+    isTracking.value = false;
     _isInitialized = false;
+
+    try {
+      arKit?.dispose();
+    } catch (error) {
+      if (kDebugMode) debugPrint('ARManager: ARKit dispose failed: $error');
+    }
+    // ArCoreController.dispose() is idempotent and absorbs its own failures.
+    await arCore?.dispose();
     if (kDebugMode) debugPrint('ARManager: Disposed');
   }
 }
