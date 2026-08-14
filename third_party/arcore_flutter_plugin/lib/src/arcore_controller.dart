@@ -49,6 +49,27 @@ enum ArCoreControllerLifecycle {
   disposed,
 }
 
+/// A recoverable ARCore session problem reported by the platform.
+///
+/// Carries a stable code so the app can show localized guidance and an action
+/// instead of a raw platform message.
+@immutable
+class ArCoreSessionError {
+  const ArCoreSessionError({required this.code, required this.message});
+
+  /// One of: `camera_unavailable`, `arcore_install_required`,
+  /// `arcore_update_required`, `app_update_required`,
+  /// `arcore_unsupported_device`, `arcore_install_declined`,
+  /// `arcore_session_unavailable`.
+  final String code;
+  final String message;
+
+  @override
+  String toString() => 'ArCoreSessionError($code): $message';
+}
+
+typedef ArCoreSessionErrorHandler = void Function(ArCoreSessionError error);
+
 /// Thrown when the native ARCore session cannot be initialized.
 ///
 /// Typed so callers can map to recoverable user guidance rather than
@@ -129,6 +150,9 @@ class ArCoreController {
   String trackingState = '';
   ArCoreTrackingStateHandler? onTrackingStateChanged;
   ArCoreAugmentedImageTrackingHandler? onTrackingImage;
+
+  /// Recoverable session problems: camera contention, ARCore install/update.
+  ArCoreSessionErrorHandler? onSessionError;
 
   ArCoreControllerLifecycle _lifecycle = ArCoreControllerLifecycle.created;
   Future<void>? _initialization;
@@ -249,6 +273,15 @@ class ArCoreController {
           ArCoreTrackingState(
             state: trackingState,
             failureReason: args['failureReason']?.toString(),
+          ),
+        );
+        break;
+      case 'onSessionError':
+        final args = Map<dynamic, dynamic>.from(call.arguments as Map);
+        onSessionError?.call(
+          ArCoreSessionError(
+            code: args['code']?.toString() ?? 'arcore_session_unavailable',
+            message: args['message']?.toString() ?? '',
           ),
         );
         break;
@@ -429,6 +462,7 @@ class ArCoreController {
     onPlaneTap = null;
     onNodeTap = null;
     onTrackingImage = null;
+    onSessionError = null;
     onError = null;
 
     try {

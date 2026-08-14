@@ -15928,4 +15928,49 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get mapSpatialAvailable => 'Prostorski arhiv je na voljo';
+
+  @override
+  String get arErrorCameraUnavailable =>
+      'Kamera trenutno ni na voljo. Poskusite znova.';
+
+  @override
+  String get arErrorArcoreInstallRequired =>
+      'AR potrebuje Google Play storitve za AR. Namestite jih za nadaljevanje.';
+
+  @override
+  String get arErrorArcoreUpdateRequired =>
+      'Google Play storitve za AR je treba posodobiti za nadaljevanje.';
+
+  @override
+  String get arErrorAppUpdateRequired =>
+      'Za uporabo AR je treba posodobiti aplikacijo.';
+
+  @override
+  String get arErrorArcoreUnsupportedDevice => 'Ta naprava ne podpira AR.';
+
+  @override
+  String get arErrorArcoreInstallDeclined =>
+      'AR potrebuje Google Play storitve za AR. Namestite jih in poskusite znova.';
+
+  @override
+  String get arErrorSessionUnavailable =>
+      'AR trenutno ni na voljo. Poskusite znova.';
+
+  @override
+  String get arTrackingInitializing =>
+      'AR se še umerja. Telefon premikajte počasi.';
+
+  @override
+  String get arTrackingInsufficientLight =>
+      'Več svetlobe bo AR pomagalo razumeti prostor.';
+
+  @override
+  String get arTrackingExcessiveMotion => 'Telefon premikajte počasneje.';
+
+  @override
+  String get arTrackingInsufficientFeatures =>
+      'Kamero usmerite v območje z več vidnimi podrobnostmi.';
+
+  @override
+  String get arTrackingBadState => 'AR se obnavlja.';
 }

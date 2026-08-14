@@ -16,7 +16,6 @@ import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.PixelCopy
 import android.view.View
-import android.widget.Toast
 import com.difrancescogianmarco.arcore_flutter_plugin.flutter_models.FlutterArCoreHitTestResult
 import com.difrancescogianmarco.arcore_flutter_plugin.flutter_models.FlutterArCoreNode
 import com.difrancescogianmarco.arcore_flutter_plugin.flutter_models.FlutterArCorePose
@@ -49,6 +48,7 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.RejectedExecutionException
 
 class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMessenger, id: Int, private val isAugmentedFaces: Boolean, private val debug: Boolean) : PlatformView, MethodChannel.MethodCallHandler {
     private val methodChannel: MethodChannel = MethodChannel(messenger, "arcore_flutter_plugin_$id")
@@ -66,6 +66,58 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
     private var faceSceneUpdateListener: Scene.OnUpdateListener
     private var lastCameraTrackingState: TrackingState? = null
     private var lastTrackingFailureReason: TrackingFailureReason? = null
+
+    /**
+     * Set once teardown begins. Guards every asynchronous path so a capture,
+     * scene update, or lifecycle callback that lands after dispose() cannot
+     * touch a destroyed session or a detached channel.
+     */
+    @Volatile
+    private var isDisposed: Boolean = false
+
+    /**
+     * Reports a typed, recoverable AR session error to Flutter.
+     *
+     * Recoverable session problems are product states, not crashes: Flutter
+     * maps the code to localized guidance and offers a retry.
+     */
+    /**
+     * Completes a pending [MethodChannel.Result] on the main thread.
+     *
+     * Skips delivery once teardown has begun: replying through a channel whose
+     * view is gone throws, and the Dart side has already abandoned the call.
+     */
+    private fun completeOnMain(block: () -> Unit) {
+        mainHandler.post {
+            if (isDisposed) {
+                return@post
+            }
+            try {
+                block()
+            } catch (e: Exception) {
+                debugLog("result delivery failed: ${e.localizedMessage}")
+            }
+        }
+    }
+
+    private fun reportSessionError(code: String, message: String) {
+        if (isDisposed) {
+            return
+        }
+        mainHandler.post {
+            if (isDisposed) {
+                return@post
+            }
+            try {
+                methodChannel.invokeMethod(
+                        "onSessionError",
+                        hashMapOf("code" to code, "message" to message)
+                )
+            } catch (e: Exception) {
+                debugLog("reportSessionError failed: ${e.localizedMessage}")
+            }
+        }
+    }
 
     //AUGMENTEDFACE
     private var faceRegionsRenderable: ModelRenderable? = null
@@ -436,7 +488,11 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
                     // Depth is optional and absence is explicitly represented.
                 }
 
-                spatialCaptureExecutor.execute {
+                // A dispose() racing an in-flight capture rejects the task. The
+                // pending Dart future must still be completed, or the sampler
+                // waits on it forever.
+                try {
+                    spatialCaptureExecutor.execute {
                     try {
                         val nv21 = yuv420888ToNv21(imageWidth, imageHeight, yPlane, uPlane, vPlane)
                         val rgb = ByteArrayOutputStream().use { stream ->
@@ -470,9 +526,20 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
                         }
                         confidenceBytes?.let { payload["depthConfidence"] = it }
 
-                        mainHandler.post { result.success(payload) }
+                        completeOnMain { result.success(payload) }
                     } catch (error: Throwable) {
-                        mainHandler.post { result.error("capture_failed", error.localizedMessage, null) }
+                        completeOnMain {
+                            result.error("capture_failed", error.localizedMessage, null)
+                        }
+                    }
+                    }
+                } catch (_: RejectedExecutionException) {
+                    completeOnMain {
+                        result.error(
+                                "capture_cancelled",
+                                "The AR session is shutting down.",
+                                null
+                        )
                     }
                 }
         } catch (_: NotYetAvailableException) {
@@ -669,8 +736,42 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
         return arSceneView as View
     }
 
+    /**
+     * Tears the platform view down. Idempotent: Flutter can call dispose()
+     * while a capture is still in flight, and the host may dispose the view
+     * again during activity teardown.
+     */
     override fun dispose() {
+        if (isDisposed) {
+            return
+        }
+        isDisposed = true
+
+        // Unregister exactly once. Registering on every platform-view creation
+        // without ever unregistering leaked one callbacks instance per AR mode
+        // transition, and each leaked instance kept driving onPause/onResume on
+        // a view that no longer existed.
+        if (this::activityLifecycleCallbacks.isInitialized) {
+            try {
+                activity.application
+                        .unregisterActivityLifecycleCallbacks(activityLifecycleCallbacks)
+            } catch (e: Exception) {
+                debugLog("unregisterActivityLifecycleCallbacks failed: ${e.localizedMessage}")
+            }
+        }
+
+        // Stop accepting new work before tearing the scene down, so a queued
+        // capture cannot touch a destroyed session.
         spatialCaptureExecutor.shutdown()
+
+        // Detach the channel so late native callbacks cannot reach a Flutter
+        // engine that has already released this view.
+        try {
+            methodChannel.setMethodCallHandler(null)
+        } catch (e: Exception) {
+            debugLog("setMethodCallHandler(null) failed: ${e.localizedMessage}")
+        }
+
         if (arSceneView != null) {
             onPause()
             onDestroy()
@@ -712,12 +813,19 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
                     arSceneView?.setupSession(session)
                 }
             } catch (ex: UnavailableUserDeclinedInstallationException) {
-                // Display an appropriate message to the user zand return gracefully.
-                Toast.makeText(activity, "TODO: handle exception " + ex.localizedMessage, Toast.LENGTH_LONG)
-                        .show();
+                // The user declined the ARCore install. Report a typed,
+                // recoverable state so Flutter can offer a localized retry
+                // instead of a raw platform Toast.
+                reportSessionError(
+                        "arcore_install_declined",
+                        "ARCore installation was declined."
+                )
                 return
             } catch (e: UnavailableException) {
-                ArCoreUtils.handleSessionException(activity, e)
+                reportSessionError(
+                        ArCoreUtils.availabilityCodeFor(e),
+                        e.localizedMessage ?: "ARCore is unavailable."
+                )
                 return
             }
         }
@@ -725,8 +833,14 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
         try {
             arSceneView?.resume()
         } catch (ex: CameraNotAvailableException) {
-            ArCoreUtils.displayError(activity, "Unable to get camera", ex)
-            activity.finish()
+            // The camera being briefly unavailable - another owner still
+            // holding it, or a transition in progress - is recoverable. Closing
+            // the whole Flutter activity over it destroyed unrelated app state
+            // and looked like a crash.
+            reportSessionError(
+                    "camera_unavailable",
+                    "The camera is currently unavailable."
+            )
             return
         }
 
