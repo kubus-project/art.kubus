@@ -24,6 +24,7 @@ import '../../models/kubus_node_models.dart';
 import '../../providers/artwork_provider.dart';
 import '../../providers/kubus_node_provider.dart';
 import '../../providers/spatial_capture_provider.dart';
+import '../../services/spatial_capture_policy.dart';
 import '../../providers/dao_provider.dart';
 import '../../providers/institution_provider.dart';
 import '../../providers/exhibitions_provider.dart';
@@ -227,7 +228,6 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
 
   bool _isARReady = false;
   Timer? _captureSampler;
-  bool _captureRequestInFlight = false;
   bool _isLoading = true;
   final bool _showControls = true;
   String _currentMode = 'scan'; // discover, place, archive, capture UI intents
@@ -1426,10 +1426,14 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
         (modeId == 'view' || modeId == 'create')) {
       return;
     }
+    if (modeId != 'create') {
+      // Pause the provider alongside the sampler. Cancelling the timer alone
+      // left the capture in `capturing` with nothing driving it, so returning
+      // to this mode showed a disabled Finish button and a session that could
+      // never make progress again.
+      _pauseSpatialCapture(SpatialCapturePauseReason.modeChanged);
+    }
     setState(() {
-      if (modeId != 'create') {
-        _captureSampler?.cancel();
-      }
       _currentMode = modeId;
       // Clear scanner controller when leaving scan mode
       if (modeId != 'scan') {
@@ -1497,7 +1501,14 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
         );
         return;
       }
-      capture.begin(
+      // A paused capture is resumed rather than restarted, so returning to
+      // this mode never discards work already on disk.
+      if (capture.state == SpatialCaptureState.paused) {
+        capture.resume();
+        _startSpatialSampling();
+        return;
+      }
+      await capture.begin(
         artworkId: selected.id,
         markerId: selected.arMarkerId,
         capturedBy: wallet.isEmpty ? profile.id : wallet,
@@ -1510,24 +1521,68 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
 
   void _startSpatialSampling() {
     _captureSampler?.cancel();
-    _captureSampler = Timer.periodic(const Duration(milliseconds: 650), (_) {
-      unawaited(_captureSpatialSample());
-    });
+    // The cadence is only the tick rate. Whether a tick actually captures is
+    // decided by the capture policy, which also weighs tracking, pose delta,
+    // writer capacity and the session limits.
+    _captureSampler = Timer.periodic(
+      context.read<SpatialCaptureProvider>().policy.minSampleInterval,
+      (_) => unawaited(_captureSpatialSample()),
+    );
+  }
+
+  /// Stops the sampler without touching capture state.
+  void _stopSpatialSampling() {
+    _captureSampler?.cancel();
+    _captureSampler = null;
+  }
+
+  /// Suspends an active capture and its sampler together.
+  ///
+  /// Leaving the capture mode used to cancel the sampler while the provider
+  /// stayed in `capturing`, so returning showed a disabled Finish button with
+  /// nothing driving it — a permanently stuck session.
+  void _pauseSpatialCapture(SpatialCapturePauseReason reason) {
+    _stopSpatialSampling();
+    final capture = context.read<SpatialCaptureProvider>();
+    if (capture.state == SpatialCaptureState.capturing) {
+      capture.pause(reason);
+    }
   }
 
   Future<void> _captureSpatialSample() async {
+    if (!mounted) return;
     final capture = context.read<SpatialCaptureProvider>();
-    if (!mounted ||
-        _captureRequestInFlight ||
-        capture.state != SpatialCaptureState.capturing ||
-        !_spatialTracking.isReady ||
-        !_spatialTracking.isTracking.value) {
+
+    // A limit reached on the previous tick pauses the capture; stop ticking.
+    if (capture.state != SpatialCaptureState.capturing) {
+      _stopSpatialSampling();
       return;
     }
-    _captureRequestInFlight = true;
+
+    final isTracking =
+        _spatialTracking.isReady && _spatialTracking.isTracking.value;
+
+    // Tracking loss pauses rather than fails, and the sampler keeps ticking so
+    // capture resumes on its own once tracking returns.
+    if (!isTracking) {
+      if (capture.lastSampleOutcome != SpatialSampleOutcome.notTracking) {
+        capture.evaluateCandidate(isTracking: false);
+      }
+      return;
+    }
+
+    // Cheap pre-check: never ask the platform for a frame the policy would
+    // reject anyway.
+    if (capture.evaluateCandidate(isTracking: true) ==
+        SpatialSampleOutcome.requestInFlight) {
+      return;
+    }
+
+    capture.markRequestInFlight();
     try {
       final frame = await _spatialTracking.captureFrame();
-      capture.addTrackedFrame(frame);
+      if (!mounted) return;
+      await capture.offerFrame(frame, isTracking: true);
     } catch (error) {
       // ARCore legitimately has brief image gaps even while tracking. A later
       // sampler tick retries; only surface non-transient failures.
@@ -1543,7 +1598,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
         tone: KubusSnackBarTone.warning,
       );
     } finally {
-      _captureRequestInFlight = false;
+      capture.clearRequestInFlight();
     }
   }
 
