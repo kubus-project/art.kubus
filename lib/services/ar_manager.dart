@@ -44,11 +44,36 @@ class ARManager {
     }
   }
 
+  /// Called when the user taps a tracked surface, with the hit-tested pose.
+  ///
+  /// The native side already runs a real ARCore hit test and filters to points
+  /// inside a tracked plane polygon; without this hook the result was
+  /// discarded and placement fell back to a fixed offset in front of the
+  /// camera.
+  void Function(List<ArCoreHitTestResult> hits)? onPlaneTap;
+
+  /// Called the first time a usable surface is detected.
+  void Function()? onSurfaceDetected;
+
+  /// Called for recoverable AR session problems (camera contention, ARCore
+  /// install or update required).
+  void Function(ArCoreSessionError error)? onSessionError;
+
+  /// Latest tracking failure reason reported by ARCore, if any.
+  final ValueNotifier<String?> trackingFailureReason =
+      ValueNotifier<String?>(null);
+
   /// Set ARCore controller (Android only)
   void setArCoreController(ArCoreController controller) {
     _arCoreController = controller;
-    controller.onTrackingStateChanged =
-        (state) => isTracking.value = state.isTracking;
+    controller.onTrackingStateChanged = (state) {
+      isTracking.value = state.isTracking;
+      trackingFailureReason.value =
+          state.isTracking ? null : state.failureReason;
+    };
+    controller.onPlaneTap = (hits) => onPlaneTap?.call(hits);
+    controller.onPlaneDetected = (_) => onSurfaceDetected?.call();
+    controller.onSessionError = (error) => onSessionError?.call(error);
     if (kDebugMode) debugPrint('ARManager: ARCore controller set');
   }
 
@@ -357,7 +382,10 @@ class ARManager {
           onARViewCreated();
         },
         enableTapRecognizer: enableTapRecognizer,
+        // Required for onPlaneDetected: without the update listener the
+        // session never reports that a surface is available.
         enableUpdateListener: true,
+        enablePlaneRenderer: enablePlaneDetection,
       );
     } else if (Platform.isIOS) {
       return ARKitSceneView(

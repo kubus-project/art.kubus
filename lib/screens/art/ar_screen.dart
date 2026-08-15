@@ -25,6 +25,7 @@ import '../../providers/artwork_provider.dart';
 import '../../providers/kubus_node_provider.dart';
 import '../../providers/spatial_capture_provider.dart';
 import '../../services/spatial_capture_policy.dart';
+import '../../services/ar_placement_controller.dart';
 import '../../providers/dao_provider.dart';
 import '../../providers/institution_provider.dart';
 import '../../providers/exhibitions_provider.dart';
@@ -222,6 +223,10 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
   final SpatialTrackingAdapter _spatialTracking =
       PlatformSpatialTrackingAdapter();
   final ARIntegrationService _arIntegrationService = ARIntegrationService();
+
+  /// Place Artwork workflow: selection, surface search, preview, adjust,
+  /// confirm. Selecting an artwork never places it.
+  final ArPlacementController _placement = ArPlacementController();
   final ARMarkerService _arMarkerService = ARMarkerService();
   final WalkingLocationApi _locationService =
       const GeolocatorWalkingLocationService();
@@ -343,6 +348,32 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
       duration: AppAnimationTheme.defaults.long,
       vsync: this,
     );
+    // Placement is driven by real hit tests and surface detection, not by the
+    // AR view becoming ready.
+    _spatialTracking.onSurfaceTap = _onSurfaceTap;
+    _spatialTracking.onSurfaceDetected =
+        () => _placement.setSurfaceAvailable(true);
+    _spatialTracking.isTracking.addListener(_onTrackingChanged);
+    _placement.addListener(_onPlacementChanged);
+  }
+
+  void _onTrackingChanged() {
+    _placement.setTracking(_spatialTracking.isTracking.value);
+    final capture = context.read<SpatialCaptureProvider>();
+    // Tracking loss pauses capture instead of failing it; the sampler resumes
+    // on its own once tracking returns.
+    if (!_spatialTracking.isTracking.value &&
+        capture.state == SpatialCaptureState.capturing) {
+      capture.pause(SpatialCapturePauseReason.trackingLost);
+    } else if (_spatialTracking.isTracking.value &&
+        capture.pauseReason == SpatialCapturePauseReason.trackingLost) {
+      capture.resume();
+      _startSpatialSampling();
+    }
+  }
+
+  void _onPlacementChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
@@ -547,6 +578,13 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
   void dispose() {
     _captureSampler?.cancel();
     _animationController.dispose();
+    // Detach before tearing the session down so a late native callback cannot
+    // reach a disposed State.
+    _spatialTracking.isTracking.removeListener(_onTrackingChanged);
+    _spatialTracking.onSurfaceTap = null;
+    _spatialTracking.onSurfaceDetected = null;
+    _placement.removeListener(_onPlacementChanged);
+    _placement.dispose();
     for (final proxy in _arAssetProxies) {
       unawaited(proxy.close());
     }
@@ -837,19 +875,21 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                         color: AppColorUtils.cyanAccent,
                       ),
                       onPressed: () async {
-                        // Launch AR viewer for this artwork using ARManager
+                        // Arm this artwork for placement rather than dropping
+                        // it at a fixed offset. The user picks the surface.
                         final messenger = ScaffoldMessenger.of(context);
                         final scheme = Theme.of(context).colorScheme;
                         final l10n = AppLocalizations.of(context)!;
                         try {
-                          // Add model to AR scene
-                          await _spatialTracking.addModel(
-                            modelPath: await _resolveArAsset(
-                              (artwork['modelURL'] ?? '').toString(),
-                            ),
-                            position: vector.Vector3(0, 0, -1.5),
-                            scale: vector.Vector3.all(1.0),
-                            name: artwork['id'],
+                          setState(() {
+                            _selectedArtwork = artwork;
+                            _currentMode = 'place';
+                          });
+                          _placement.selectArtwork(
+                            artworkId: artwork['id'].toString(),
+                            modelPath:
+                                (artwork['modelURL'] ?? artwork['model'] ?? '')
+                                    .toString(),
                           );
 
                           if (!mounted) return;
@@ -900,9 +940,17 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
               if (kDebugMode) {
                 debugPrint('ARScreen: AR View created successfully');
               }
-              // Automatically place selected artwork if in place mode
+              // The AR view becoming ready must never confirm a placement. It
+              // only means the session can start looking for a surface; the
+              // user still chooses where the artwork goes.
               if (_currentMode == 'place' && _selectedArtwork != null) {
-                _placeSelectedArtwork();
+                _placement.selectArtwork(
+                  artworkId: _selectedArtwork!['id'].toString(),
+                  modelPath: (_selectedArtwork!['modelURL'] ??
+                          _selectedArtwork!['model'] ??
+                          '')
+                      .toString(),
+                );
               }
             },
           ),
@@ -1143,13 +1191,16 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
     final scheme = Theme.of(context).colorScheme;
 
     try {
-      // Place model in front of camera
+      // Anchor at the pose the user actually chose. A placement with no
+      // hit-tested transform is not renderable, so there is nothing to add.
+      final transform = _placement.transform;
+      if (transform == null) return;
       await _spatialTracking.addModel(
         modelPath: await _resolveArAsset(
           (_selectedArtwork!['modelURL'] ?? '').toString(),
         ),
-        position: vector.Vector3(0, 0, -1.5), // 1.5 meters in front
-        scale: vector.Vector3.all(1.0),
+        position: transform.position,
+        scale: vector.Vector3.all(transform.scale),
         name: _selectedArtwork!['id'],
       );
 
@@ -1453,7 +1504,13 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
         _startScanning();
         break;
       case 'place':
-        _placeArtwork();
+        // One contextual primary action: arm an artwork, then confirm the
+        // previewed placement once the user has chosen a surface.
+        if (_placement.canConfirm) {
+          unawaited(_confirmPlacement());
+        } else {
+          _placeArtwork();
+        }
         break;
       case 'view':
         _viewArtworkDetails();
@@ -2145,24 +2202,58 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
     }
 
     final selected = _selectedArtwork!;
+    // Selecting is not placing. The artwork is armed here; it is anchored only
+    // when the user taps a surface the ARCore hit test accepts, which
+    // _onPlaneTap turns into a real pose.
+    _placement.selectArtwork(
+      artworkId: selected['id'].toString(),
+      modelPath: (selected['modelURL'] ?? selected['model'] ?? '').toString(),
+    );
+  }
+
+  /// Commits the previewed placement into the scene.
+  Future<void> _confirmPlacement() async {
+    final transform = _placement.transform;
+    final artworkId = _placement.artworkId;
+    if (transform == null || artworkId == null) return;
+    if (!_placement.canConfirm) return;
+
+    // Render the model at the pose the user chose before recording it.
+    await _placeSelectedArtwork();
+    if (!mounted) return;
+
+    final selected = _selectedArtwork;
     final placedObject = {
       'id': 'placed_${DateTime.now().millisecondsSinceEpoch}',
-      'artworkId': selected['id'],
-      'title': selected['title'],
-      'artist': selected['artist'],
-      'model': selected['model'] ?? selected['modelURL'],
-      'modelURL': selected['modelURL'],
-      'scale': ((selected['scale'] as double?) ?? 1.0) * _modelScale,
-      'position': {'x': 0.0, 'y': 0.0, 'z': -1.5},
-      'rotation': {'x': 0.0, 'y': 0.0, 'z': 0.0},
+      'artworkId': artworkId,
+      'title': selected?['title'],
+      'artist': selected?['artist'],
+      'model': selected?['model'] ?? selected?['modelURL'],
+      'modelURL': selected?['modelURL'],
+      'scale': ((selected?['scale'] as double?) ?? 1.0) * transform.scale,
+      'position': {
+        'x': transform.position.x,
+        'y': transform.position.y,
+        'z': transform.position.z,
+      },
+      'rotation': {'x': 0.0, 'y': transform.rotationRadians, 'z': 0.0},
       'timestamp': DateTime.now().toIso8601String(),
     };
 
+    _placement.confirm();
     setState(() {
       _placedObjects.add(placedObject);
     });
 
     _onObjectPlaced(placedObject['id'] as String);
+  }
+
+  /// Applies a hit test from a tap on a tracked surface.
+  void _onSurfaceTap(List<vector.Vector3> hits) {
+    if (hits.isEmpty) return;
+    // The adapter delivers accepted hits nearest first.
+    final placed = _placement.applyHitTest(hits.first);
+    if (placed && mounted) setState(() {});
   }
 
   void _viewArtworkDetails() {

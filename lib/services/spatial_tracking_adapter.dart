@@ -21,6 +21,20 @@ abstract class SpatialTrackingAdapter {
   String get platformDescription;
   bool get isReady;
   ValueListenable<bool> get isTracking;
+
+  /// Why tracking is currently degraded, or `null` while tracking is healthy.
+  ///
+  /// Platform-neutral reason strings so the UI can show one localized
+  /// explanation regardless of ARCore or ARKit underneath.
+  ValueListenable<String?> get trackingFailureReason;
+
+  /// Hit-tested world positions from a tap on a tracked surface, nearest
+  /// first. Empty when the tap missed every tracked surface.
+  set onSurfaceTap(void Function(List<vector.Vector3> hits)? handler);
+
+  /// Fired when the session first has a usable surface.
+  set onSurfaceDetected(void Function()? handler);
+
   void dispose();
 }
 
@@ -67,6 +81,31 @@ class PlatformSpatialTrackingAdapter implements SpatialTrackingAdapter {
 
   @override
   ValueListenable<bool> get isTracking => _manager.isTracking;
+
+  @override
+  ValueListenable<String?> get trackingFailureReason =>
+      _manager.trackingFailureReason;
+
+  @override
+  set onSurfaceTap(void Function(List<vector.Vector3> hits)? handler) {
+    if (handler == null) {
+      _manager.onPlaneTap = null;
+      return;
+    }
+    _manager.onPlaneTap = (hits) {
+      // Nearest first: the native side has already discarded anything outside
+      // a tracked plane polygon.
+      final sorted = hits.toList()
+        ..sort((a, b) => a.distance.compareTo(b.distance));
+      handler(
+          sorted.map((hit) => hit.pose.translation).toList(growable: false));
+    };
+  }
+
+  @override
+  set onSurfaceDetected(void Function()? handler) {
+    _manager.onSurfaceDetected = handler;
+  }
 
   @override
   String get platformDescription => _manager.platformInfo;
