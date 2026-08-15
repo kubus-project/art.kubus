@@ -28,6 +28,7 @@ import '../../providers/spatial_capture_provider.dart';
 import '../../services/spatial_capture_policy.dart';
 import '../../services/ar_placement_controller.dart';
 import '../../services/ar_error_messages.dart';
+import '../../services/camera_ownership_coordinator.dart';
 import '../../providers/dao_provider.dart';
 import '../../providers/institution_provider.dart';
 import '../../providers/exhibitions_provider.dart';
@@ -229,6 +230,28 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
   /// Place Artwork workflow: selection, surface search, preview, adjust,
   /// confirm. Selecting an artwork never places it.
   final ArPlacementController _placement = ArPlacementController();
+
+  /// Explicit camera ownership. The scanner and ARCore cannot both hold the
+  /// camera, and widget disposal alone does not sequence the handoff.
+  late final CameraOwnershipCoordinator _camera = CameraOwnershipCoordinator(
+    releaseScanner: () async {
+      // Stop the scanner and drop its controller before AR opens the camera.
+      final controller = _scannerController;
+      _scannerController = null;
+      _flashEnabled = false;
+      if (controller == null) return;
+      try {
+        await controller.stop();
+      } catch (error) {
+        if (kDebugMode) debugPrint('ARScreen: scanner stop failed: $error');
+      }
+    },
+    releaseAr: () async {
+      _stopSpatialSampling();
+      _placement.reset();
+      await _spatialTracking.disposeSession();
+    },
+  );
   final ARMarkerService _arMarkerService = ARMarkerService();
   final WalkingLocationApi _locationService =
       const GeolocatorWalkingLocationService();
@@ -587,6 +610,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
     _spatialTracking.onSurfaceDetected = null;
     _placement.removeListener(_onPlacementChanged);
     _placement.dispose();
+    _camera.dispose();
     for (final proxy in _arAssetProxies) {
       unawaited(proxy.close());
     }
@@ -1588,6 +1612,11 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
     );
   }
 
+  /// Which camera owner a mode needs. Place, Spatial and Archive all run on
+  /// the AR session, so switching between them must not recreate it.
+  CameraOwner _ownerForMode(String modeId) =>
+      modeId == 'scan' ? CameraOwner.scanner : CameraOwner.ar;
+
   void _changeMode(String modeId) {
     if (!AppConfig.isFeatureEnabled('availabilityNodes') &&
         (modeId == 'view' || modeId == 'create')) {
@@ -1602,12 +1631,10 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
     }
     setState(() {
       _currentMode = modeId;
-      // Clear scanner controller when leaving scan mode
-      if (modeId != 'scan') {
-        _scannerController = null;
-        _flashEnabled = false;
-      }
     });
+    // Hand the camera over explicitly. A request for the owner that already
+    // holds it is a no-op, so Place <-> Spatial keeps one ARCore session.
+    unawaited(_camera.requestOwner(_ownerForMode(modeId)));
   }
 
   void _handleAction() {

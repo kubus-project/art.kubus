@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:vector_math/vector_math_64.dart' as vector;
@@ -34,6 +36,12 @@ abstract class SpatialTrackingAdapter {
 
   /// Fired when the session first has a usable surface.
   set onSurfaceDetected(void Function()? handler);
+
+  /// Tears the AR session down and waits for the camera to be released.
+  ///
+  /// Awaitable so another camera owner can be started only once this one has
+  /// actually let go.
+  Future<void> disposeSession();
 
   void dispose();
 }
@@ -111,5 +119,8 @@ class PlatformSpatialTrackingAdapter implements SpatialTrackingAdapter {
   String get platformDescription => _manager.platformInfo;
 
   @override
-  void dispose() => _manager.dispose();
+  Future<void> disposeSession() => _manager.dispose();
+
+  @override
+  void dispose() => unawaited(_manager.dispose());
 }
