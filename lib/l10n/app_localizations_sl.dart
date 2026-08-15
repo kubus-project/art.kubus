@@ -15973,4 +15973,22 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get arTrackingBadState => 'AR se obnavlja.';
+
+  @override
+  String get arPlacementSelectArtwork => 'Izberite umetnino za postavitev.';
+
+  @override
+  String get arPlacementFindingSurface =>
+      'Telefon premikajte počasi, da najdete površino.';
+
+  @override
+  String get arPlacementTapToPlace =>
+      'Tapnite površino za postavitev umetnine.';
+
+  @override
+  String get arPlacementAdjustOrConfirm =>
+      'Povlecite za premik, zavrtite za prilagoditev, nato potrdite.';
+
+  @override
+  String get arPlacementRotate => 'Zavrti';
 }

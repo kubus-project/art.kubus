@@ -27515,6 +27515,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'AR is recovering.'**
   String get arTrackingBadState;
+
+  /// No description provided for @arPlacementSelectArtwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose an artwork to place.'**
+  String get arPlacementSelectArtwork;
+
+  /// No description provided for @arPlacementFindingSurface.
+  ///
+  /// In en, this message translates to:
+  /// **'Move your phone slowly to find a surface.'**
+  String get arPlacementFindingSurface;
+
+  /// No description provided for @arPlacementTapToPlace.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap a surface to place the artwork.'**
+  String get arPlacementTapToPlace;
+
+  /// No description provided for @arPlacementAdjustOrConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Drag to move, rotate to adjust, then confirm.'**
+  String get arPlacementAdjustOrConfirm;
+
+  /// No description provided for @arPlacementRotate.
+  ///
+  /// In en, this message translates to:
+  /// **'Rotate'**
+  String get arPlacementRotate;
 }
 
 class _AppLocalizationsDelegate

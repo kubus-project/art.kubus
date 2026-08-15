@@ -6362,5 +6362,10 @@
   "arTrackingInsufficientLight": "More light will help AR understand the space.",
   "arTrackingExcessiveMotion": "Move your phone more slowly.",
   "arTrackingInsufficientFeatures": "Point the camera toward an area with more visible detail.",
-  "arTrackingBadState": "AR is recovering."
+  "arTrackingBadState": "AR is recovering.",
+  "arPlacementSelectArtwork": "Choose an artwork to place.",
+  "arPlacementFindingSurface": "Move your phone slowly to find a surface.",
+  "arPlacementTapToPlace": "Tap a surface to place the artwork.",
+  "arPlacementAdjustOrConfirm": "Drag to move, rotate to adjust, then confirm.",
+  "arPlacementRotate": "Rotate"
 }

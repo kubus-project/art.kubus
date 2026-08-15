@@ -6342,5 +6342,10 @@
   "arTrackingInsufficientLight": "Več svetlobe bo AR pomagalo razumeti prostor.",
   "arTrackingExcessiveMotion": "Telefon premikajte počasneje.",
   "arTrackingInsufficientFeatures": "Kamero usmerite v območje z več vidnimi podrobnostmi.",
-  "arTrackingBadState": "AR se obnavlja."
+  "arTrackingBadState": "AR se obnavlja.",
+  "arPlacementSelectArtwork": "Izberite umetnino za postavitev.",
+  "arPlacementFindingSurface": "Telefon premikajte počasi, da najdete površino.",
+  "arPlacementTapToPlace": "Tapnite površino za postavitev umetnine.",
+  "arPlacementAdjustOrConfirm": "Povlecite za premik, zavrtite za prilagoditev, nato potrdite.",
+  "arPlacementRotate": "Zavrti"
 }

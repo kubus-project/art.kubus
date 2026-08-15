@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:art_kubus/models/event.dart';
 import 'package:file_picker/file_picker.dart';
@@ -26,6 +27,7 @@ import '../../providers/kubus_node_provider.dart';
 import '../../providers/spatial_capture_provider.dart';
 import '../../services/spatial_capture_policy.dart';
 import '../../services/ar_placement_controller.dart';
+import '../../services/ar_error_messages.dart';
 import '../../providers/dao_provider.dart';
 import '../../providers/institution_provider.dart';
 import '../../providers/exhibitions_provider.dart';
@@ -613,149 +615,73 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
       backgroundColor: Colors.transparent,
       body: SafeArea(
         bottom: false,
-        child: Stack(
+        child: Column(
           children: [
-            // Main AR View - QR Scanner for 'scan' mode, camera view for others
-            if (_isARReady)
-              _currentMode == 'scan'
-                  ? ARMarkerScanner(
-                      onDeepLinkFound: (target) {
-                        if (!mounted) return;
-                        unawaited(_openScannedDeepLink(target));
-                      },
-                      onArtworkFound: (artworkData) async {
-                        setState(() {
-                          // Store scanned artwork
-                          _placedObjects.add({
-                            'id':
-                                artworkData['id'] ?? DateTime.now().toString(),
-                            'title': artworkData['title'] ?? l10n.commonUnknown,
-                            'artist':
-                                artworkData['artist'] ?? l10n.commonUnknown,
-                            'modelUrl': artworkData['modelUrl'],
-                            'timestamp': DateTime.now().millisecondsSinceEpoch,
-                          });
-                        });
-                      },
-                      onControllerReady: (controller) {
-                        setState(() {
-                          _scannerController = controller;
-                        });
-                      },
-                    )
-                  : _currentMode == 'view'
-                      ? _buildViewMode(themeProvider)
-                      : _buildModePreview(themeProvider),
+            // Compact status header. Part of the layout, not an overlay, so it
+            // can never sit on top of the camera content or the controls.
+            if (_isARReady) _buildTopBar(themeProvider),
 
-            // Loading overlay
-            if (_isLoading) _buildLoadingOverlay(),
-
-            // Top bar with mode and settings (for all modes)
-            if (_isARReady)
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                child: _buildTopBar(themeProvider),
-              ),
-
-            // Bottom controls overlay (only for non-scan modes)
-            if (_isARReady && _showControls && _currentMode != 'scan')
-              Positioned(
-                bottom: 0,
-                left: 0,
-                right: 0,
-                child: _buildBottomControls(themeProvider),
-              ),
-
-            // Mode selector overlay for all modes (positioned at bottom)
-            if (_isARReady)
-              Positioned(
-                bottom: KubusSpacing.lg + KubusLayout.mainBottomNavBarHeight,
-                left: KubusSpacing.lg,
-                right: KubusSpacing.lg,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: KubusSpacing.sm,
-                    vertical: KubusSpacing.sm,
+            // The camera is the dominant surface. Contextual guidance is
+            // bounded inside this region and cannot reach the controls below.
+            Expanded(
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: _isARReady
+                        ? (_currentMode == 'scan'
+                            ? ARMarkerScanner(
+                                onDeepLinkFound: (target) {
+                                  if (!mounted) return;
+                                  unawaited(_openScannedDeepLink(target));
+                                },
+                                onArtworkFound: (artworkData) async {
+                                  setState(() {
+                                    _placedObjects.add({
+                                      'id': artworkData['id'] ??
+                                          DateTime.now().toString(),
+                                      'title': artworkData['title'] ??
+                                          l10n.commonUnknown,
+                                      'artist': artworkData['artist'] ??
+                                          l10n.commonUnknown,
+                                      'modelUrl': artworkData['modelUrl'],
+                                      'timestamp':
+                                          DateTime.now().millisecondsSinceEpoch,
+                                    });
+                                  });
+                                },
+                                onControllerReady: (controller) {
+                                  setState(() {
+                                    _scannerController = controller;
+                                  });
+                                },
+                              )
+                            : _currentMode == 'view'
+                                ? _buildViewMode(themeProvider)
+                                : _buildModePreview(themeProvider))
+                        : const SizedBox.shrink(),
                   ),
-                  decoration: BoxDecoration(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.surface.withValues(alpha: 0.95),
-                    borderRadius: BorderRadius.circular(KubusRadius.lg),
-                    border: Border.all(
-                      color: AppColorUtils.cyanAccent.withValues(alpha: 0.3),
-                      width: 1,
+
+                  if (_isLoading)
+                    Positioned.fill(child: _buildLoadingOverlay()),
+
+                  // One contextual guidance area, anchored to the bottom of the
+                  // canvas so it scrolls with the camera region rather than
+                  // floating over the primary action.
+                  if (_isARReady && !_isLoading)
+                    Positioned(
+                      left: KubusSpacing.lg,
+                      right: KubusSpacing.lg,
+                      bottom: KubusSpacing.md,
+                      child: _buildContextualGuidance(),
                     ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: _availableArModes.map((mode) {
-                      final modeId = mode['id'] as String;
-                      final modeIcon = mode['icon'] as IconData;
-                      final isSelected = modeId == _currentMode;
-                      return Expanded(
-                        child: GestureDetector(
-                          onTap: () => _changeMode(modeId),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              vertical: KubusSpacing.md,
-                            ),
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? AppColorUtils.cyanAccent.withValues(
-                                      alpha: 0.2,
-                                    )
-                                  : Colors.transparent,
-                              borderRadius: BorderRadius.circular(
-                                KubusRadius.md,
-                              ),
-                              border: Border.all(
-                                color: isSelected
-                                    ? AppColorUtils.cyanAccent
-                                    : Colors.transparent,
-                                width: 2,
-                              ),
-                            ),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  modeIcon,
-                                  color: isSelected
-                                      ? AppColorUtils.cyanAccent
-                                      : Theme.of(context)
-                                          .colorScheme
-                                          .onSurface
-                                          .withValues(alpha: 0.6),
-                                  size: KubusHeaderMetrics.actionIcon,
-                                ),
-                                const SizedBox(height: KubusSpacing.xs),
-                                Text(
-                                  _modeName(l10n, modeId),
-                                  style: KubusTypography.inter(
-                                    color: isSelected
-                                        ? AppColorUtils.cyanAccent
-                                        : Theme.of(context)
-                                            .colorScheme
-                                            .onSurface
-                                            .withValues(alpha: 0.6),
-                                    fontSize: KubusChromeMetrics.navMetaLabel,
-                                    fontWeight: isSelected
-                                        ? FontWeight.w600
-                                        : FontWeight.normal,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
+                ],
               ),
+            ),
+
+            // Controls region: contextual action above a restrained mode dock,
+            // laid out in flow so they cannot overlap each other.
+            if (_isARReady && _showControls)
+              _buildControlsRegion(themeProvider, l10n),
           ],
         ),
       ),
@@ -1342,45 +1268,235 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildBottomControls(ThemeProvider themeProvider) {
-    final isDark = themeProvider.isDarkMode;
-    final overlayColor = isDark
-        ? Theme.of(context).colorScheme.surface.withValues(alpha: 0.8)
-        : Theme.of(context).colorScheme.surface.withValues(alpha: 0.95);
+  /// Controls region: contextual actions above the mode dock.
+  ///
+  /// Laid out in flow rather than stacked with absolute offsets, so the action
+  /// and the dock cannot overlap at any screen size or text scale.
+  Widget _buildControlsRegion(
+      ThemeProvider themeProvider, AppLocalizations l10n) {
+    final capture = context.watch<SpatialCaptureProvider>();
+    final scheme = Theme.of(context).colorScheme;
 
     return Container(
-      padding: const EdgeInsets.only(
-        left: 24,
-        right: 24,
-        bottom: 100 + KubusLayout.mainBottomNavBarHeight,
-        top: 24,
-      ), // Extra bottom padding for mode selector
+      padding: EdgeInsets.only(
+        left: KubusSpacing.lg,
+        right: KubusSpacing.lg,
+        top: KubusSpacing.md,
+        // Only the system/app navigation inset. The old
+        // `bottom: 100 + navBarHeight` existed purely to dodge the mode dock,
+        // which is now a sibling rather than a floating overlay.
+        bottom: KubusSpacing.md + KubusLayout.mainBottomNavBarHeight,
+      ),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.bottomCenter,
           end: Alignment.topCenter,
-          colors: [overlayColor, overlayColor.withValues(alpha: 0.0)],
+          colors: [
+            scheme.surface
+                .withValues(alpha: themeProvider.isDarkMode ? 0.92 : 0.97),
+            scheme.surface.withValues(alpha: 0.0),
+          ],
         ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Action button based on mode (mode selector removed - now unified at bottom)
-          _buildActionButton(themeProvider),
-          if (_currentMode == 'create' &&
-              context.watch<SpatialCaptureProvider>().state ==
-                  SpatialCaptureState.capturing &&
-              context.watch<SpatialCaptureProvider>().frameCount >= 8) ...[
-            const SizedBox(height: KubusSpacing.sm),
-            OutlinedButton.icon(
-              onPressed: _finishSpatialCapture,
-              icon: const Icon(Icons.check_circle_outline),
-              label: Text(AppLocalizations.of(context)!.spatialCaptureFinish),
-            ),
+          if (_currentMode != 'scan') ...[
+            _buildActionButton(themeProvider),
+            // Secondary actions are contextual: a capture that can finish, or
+            // a placement waiting to be adjusted or discarded.
+            ..._buildSecondaryActions(capture, l10n),
+            const SizedBox(height: KubusSpacing.md),
           ],
+          _buildModeDock(l10n),
         ],
       ),
     );
+  }
+
+  List<Widget> _buildSecondaryActions(
+    SpatialCaptureProvider capture,
+    AppLocalizations l10n,
+  ) {
+    if (_currentMode == 'create') {
+      // Finish readiness comes from capture quality, not a raw frame count.
+      if (!capture.canFinish) return const [];
+      return [
+        const SizedBox(height: KubusSpacing.sm),
+        OutlinedButton.icon(
+          onPressed: _finishSpatialCapture,
+          icon: const Icon(Icons.check_circle_outline),
+          label: Text(l10n.spatialCaptureFinish),
+        ),
+      ];
+    }
+    if (_currentMode == 'place' && _placement.hasPlacement) {
+      return [
+        const SizedBox(height: KubusSpacing.sm),
+        // Wrap, not Row: at large text scales two icon buttons side by side
+        // overflow the available width on a 360dp screen.
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: KubusSpacing.md,
+          runSpacing: KubusSpacing.xs,
+          children: [
+            TextButton.icon(
+              onPressed: _placement.cancelPlacement,
+              icon: const Icon(Icons.close),
+              label: Text(l10n.commonCancel),
+            ),
+            TextButton.icon(
+              onPressed: _placement.canAdjust
+                  ? () => _placement.rotateBy(math.pi / 8)
+                  : null,
+              icon: const Icon(Icons.rotate_right),
+              label: Text(l10n.arPlacementRotate),
+            ),
+          ],
+        ),
+      ];
+    }
+    return const [];
+  }
+
+  /// Restrained mode dock. A sibling of the primary action, never an overlay.
+  Widget _buildModeDock(AppLocalizations l10n) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: KubusSpacing.sm,
+        vertical: KubusSpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        color: scheme.surface.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
+        border: Border.all(
+          color: AppColorUtils.cyanAccent.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Row(
+        children: _availableArModes.map((mode) {
+          final modeId = mode['id'] as String;
+          final isSelected = modeId == _currentMode;
+          final tint = isSelected
+              ? AppColorUtils.cyanAccent
+              : scheme.onSurface.withValues(alpha: 0.6);
+          return Expanded(
+            child: GestureDetector(
+              onTap: () => _changeMode(modeId),
+              behavior: HitTestBehavior.opaque,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  vertical: KubusSpacing.sm,
+                ),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? AppColorUtils.cyanAccent.withValues(alpha: 0.2)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(KubusRadius.md),
+                  border: Border.all(
+                    color: isSelected
+                        ? AppColorUtils.cyanAccent
+                        : Colors.transparent,
+                    width: 2,
+                  ),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      mode['icon'] as IconData,
+                      color: tint,
+                      size: KubusHeaderMetrics.actionIcon,
+                    ),
+                    const SizedBox(height: KubusSpacing.xs),
+                    // Labels shrink rather than overflow at large text scales.
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        _modeName(l10n, modeId),
+                        maxLines: 1,
+                        style: KubusTypography.inter(
+                          color: tint,
+                          fontSize: KubusChromeMetrics.navMetaLabel,
+                          fontWeight:
+                              isSelected ? FontWeight.w600 : FontWeight.normal,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  /// The single contextual guidance line for the current mode.
+  ///
+  /// One bounded area replaces the stacked glass cards and repeated mode
+  /// headings that used to compete with the controls for the same space.
+  Widget _buildContextualGuidance() {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    final message = _contextualGuidanceMessage(l10n);
+    if (message == null) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: KubusSpacing.md,
+        vertical: KubusSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: scheme.surface.withValues(alpha: 0.86),
+        borderRadius: BorderRadius.circular(KubusRadius.md),
+      ),
+      child: Text(
+        message,
+        textAlign: TextAlign.center,
+        maxLines: 3,
+        overflow: TextOverflow.ellipsis,
+        style: KubusTypography.inter(
+          color: scheme.onSurface,
+          fontSize: KubusChromeMetrics.navMetaLabel,
+        ),
+      ),
+    );
+  }
+
+  String? _contextualGuidanceMessage(AppLocalizations l10n) {
+    // A real tracking problem always wins: it explains why nothing is
+    // happening and what to do about it.
+    final failure = ArErrorMessages.forTrackingFailure(
+      l10n,
+      _spatialTracking.trackingFailureReason.value,
+    );
+    if (failure != null) return failure;
+
+    switch (_currentMode) {
+      case 'place':
+        switch (_placement.state) {
+          case ArPlacementState.none:
+            return l10n.arPlacementSelectArtwork;
+          case ArPlacementState.selected:
+          case ArPlacementState.searchingSurface:
+            return l10n.arPlacementFindingSurface;
+          case ArPlacementState.previewing:
+            return l10n.arPlacementTapToPlace;
+          case ArPlacementState.placed:
+          case ArPlacementState.adjusting:
+            return l10n.arPlacementAdjustOrConfirm;
+          case ArPlacementState.confirmed:
+          case ArPlacementState.error:
+            return null;
+        }
+      case 'create':
+        return context.watch<SpatialCaptureProvider>().guidance;
+      default:
+        return null;
+    }
   }
 
   Widget _buildActionButton(ThemeProvider themeProvider) {

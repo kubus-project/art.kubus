@@ -15815,4 +15815,21 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get arTrackingBadState => 'AR is recovering.';
+
+  @override
+  String get arPlacementSelectArtwork => 'Choose an artwork to place.';
+
+  @override
+  String get arPlacementFindingSurface =>
+      'Move your phone slowly to find a surface.';
+
+  @override
+  String get arPlacementTapToPlace => 'Tap a surface to place the artwork.';
+
+  @override
+  String get arPlacementAdjustOrConfirm =>
+      'Drag to move, rotate to adjust, then confirm.';
+
+  @override
+  String get arPlacementRotate => 'Rotate';
 }
