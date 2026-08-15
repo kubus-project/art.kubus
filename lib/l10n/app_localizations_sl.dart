@@ -15991,4 +15991,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get arPlacementRotate => 'Zavrti';
+
+  @override
+  String get arCaptureFrameFailed => 'Zajem sličice ni uspel. Poskusite znova.';
 }

@@ -6367,5 +6367,6 @@
   "arPlacementFindingSurface": "Move your phone slowly to find a surface.",
   "arPlacementTapToPlace": "Tap a surface to place the artwork.",
   "arPlacementAdjustOrConfirm": "Drag to move, rotate to adjust, then confirm.",
-  "arPlacementRotate": "Rotate"
+  "arPlacementRotate": "Rotate",
+  "arCaptureFrameFailed": "Could not capture a frame. Try again."
 }

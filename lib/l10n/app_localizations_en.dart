@@ -15832,4 +15832,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get arPlacementRotate => 'Rotate';
+
+  @override
+  String get arCaptureFrameFailed => 'Could not capture a frame. Try again.';
 }

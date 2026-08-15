@@ -6347,5 +6347,6 @@
   "arPlacementFindingSurface": "Telefon premikajte počasi, da najdete površino.",
   "arPlacementTapToPlace": "Tapnite površino za postavitev umetnine.",
   "arPlacementAdjustOrConfirm": "Povlecite za premik, zavrtite za prilagoditev, nato potrdite.",
-  "arPlacementRotate": "Zavrti"
+  "arPlacementRotate": "Zavrti",
+  "arCaptureFrameFailed": "Zajem sličice ni uspel. Poskusite znova."
 }

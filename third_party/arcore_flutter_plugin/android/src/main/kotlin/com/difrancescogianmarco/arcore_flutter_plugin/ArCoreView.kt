@@ -474,6 +474,13 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
                 var depthHeight = 0
                 var confidenceBytes: ByteArray? = null
                 try {
+                    // acquireDepthImage() is deprecated in favour of
+                    // acquireDepthImage16Bits(), but that API arrived in ARCore
+                    // 1.31 and this module pins com.google.ar:core:1.26.0
+                    // alongside the archived Sceneform 1.17.1. Moving to the
+                    // 16-bit API requires an ARCore upgrade that Sceneform
+                    // constrains, so it stays on the deprecated call until that
+                    // dependency work happens.
                     frame.acquireDepthImage().use { depth ->
                         depthPlane = copyPlane(depth.planes[0])
                         depthWidth = depth.width

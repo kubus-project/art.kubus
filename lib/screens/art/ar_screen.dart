@@ -25,10 +25,10 @@ import '../../models/kubus_node_models.dart';
 import '../../providers/artwork_provider.dart';
 import '../../providers/kubus_node_provider.dart';
 import '../../providers/spatial_capture_provider.dart';
-import '../../services/spatial_capture_policy.dart';
 import '../../services/ar_placement_controller.dart';
 import '../../services/ar_error_messages.dart';
 import '../../services/camera_ownership_coordinator.dart';
+import '../../services/spatial_capture_session.dart';
 import '../../providers/dao_provider.dart';
 import '../../providers/institution_provider.dart';
 import '../../providers/exhibitions_provider.dart';
@@ -220,7 +220,8 @@ class _ProcessingDestination extends StatelessWidget {
   }
 }
 
-class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
+class _ARScreenState extends State<ARScreen>
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   late AnimationController _animationController;
 
   final SpatialTrackingAdapter _spatialTracking =
@@ -257,7 +258,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
       const GeolocatorWalkingLocationService();
 
   bool _isARReady = false;
-  Timer? _captureSampler;
+  SpatialCaptureSession? _captureSession;
   bool _isLoading = true;
   final bool _showControls = true;
   String _currentMode = 'scan'; // discover, place, archive, capture UI intents
@@ -380,6 +381,29 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
         () => _placement.setSurfaceAvailable(true);
     _spatialTracking.isTracking.addListener(_onTrackingChanged);
     _placement.addListener(_onPlacementChanged);
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (!mounted) return;
+    switch (state) {
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.paused:
+      case AppLifecycleState.hidden:
+      case AppLifecycleState.detached:
+        // Backgrounding suspends sampling and releases the camera. The capture
+        // and its files are preserved so the user can resume where they left
+        // off.
+        _pauseSpatialCapture(SpatialCapturePauseReason.appBackgrounded);
+        unawaited(_camera.releaseAll());
+      case AppLifecycleState.resumed:
+        // Re-acquire whatever the current mode needs. Tracking has to be
+        // reacquired before capture can continue, which the sampler's gate
+        // already enforces.
+        unawaited(_camera.requestOwner(_ownerForMode(_currentMode)));
+    }
   }
 
   void _onTrackingChanged() {
@@ -601,13 +625,14 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
 
   @override
   void dispose() {
-    _captureSampler?.cancel();
+    _captureSession?.dispose();
     _animationController.dispose();
     // Detach before tearing the session down so a late native callback cannot
     // reach a disposed State.
     _spatialTracking.isTracking.removeListener(_onTrackingChanged);
     _spatialTracking.onSurfaceTap = null;
     _spatialTracking.onSurfaceDetected = null;
+    WidgetsBinding.instance.removeObserver(this);
     _placement.removeListener(_onPlacementChanged);
     _placement.dispose();
     _camera.dispose();
@@ -1716,25 +1741,25 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
       _startSpatialSampling();
       return;
     }
-    await _captureSpatialSample();
+    // Already capturing: take one sample now rather than waiting for the tick.
+    await _ensureCaptureSession().tick();
   }
 
-  void _startSpatialSampling() {
-    _captureSampler?.cancel();
-    // The cadence is only the tick rate. Whether a tick actually captures is
-    // decided by the capture policy, which also weighs tracking, pose delta,
-    // writer capacity and the session limits.
-    _captureSampler = Timer.periodic(
-      context.read<SpatialCaptureProvider>().policy.minSampleInterval,
-      (_) => unawaited(_captureSpatialSample()),
+  /// Lazily builds the sampling engine bound to this screen's providers.
+  SpatialCaptureSession _ensureCaptureSession() {
+    return _captureSession ??= SpatialCaptureSession(
+      provider: context.read<SpatialCaptureProvider>(),
+      isTracking: () =>
+          _spatialTracking.isReady && _spatialTracking.isTracking.value,
+      captureFrame: _spatialTracking.captureFrame,
+      onCaptureError: _reportCaptureError,
     );
   }
 
+  void _startSpatialSampling() => _ensureCaptureSession().start();
+
   /// Stops the sampler without touching capture state.
-  void _stopSpatialSampling() {
-    _captureSampler?.cancel();
-    _captureSampler = null;
-  }
+  void _stopSpatialSampling() => _captureSession?.stop();
 
   /// Suspends an active capture and its sampler together.
   ///
@@ -1742,71 +1767,33 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
   /// stayed in `capturing`, so returning showed a disabled Finish button with
   /// nothing driving it — a permanently stuck session.
   void _pauseSpatialCapture(SpatialCapturePauseReason reason) {
-    _stopSpatialSampling();
+    final session = _captureSession;
+    if (session != null) {
+      session.pause(reason);
+      return;
+    }
     final capture = context.read<SpatialCaptureProvider>();
     if (capture.state == SpatialCaptureState.capturing) {
       capture.pause(reason);
     }
   }
 
-  Future<void> _captureSpatialSample() async {
+  /// Surfaces only genuinely unexpected capture failures. Routine frame misses
+  /// are absorbed by the session and never reach here.
+  void _reportCaptureError(Object error) {
     if (!mounted) return;
-    final capture = context.read<SpatialCaptureProvider>();
-
-    // A limit reached on the previous tick pauses the capture; stop ticking.
-    if (capture.state != SpatialCaptureState.capturing) {
-      _stopSpatialSampling();
-      return;
-    }
-
-    final isTracking =
-        _spatialTracking.isReady && _spatialTracking.isTracking.value;
-
-    // Tracking loss pauses rather than fails, and the sampler keeps ticking so
-    // capture resumes on its own once tracking returns.
-    if (!isTracking) {
-      if (capture.lastSampleOutcome != SpatialSampleOutcome.notTracking) {
-        capture.evaluateCandidate(isTracking: false);
-      }
-      return;
-    }
-
-    // Cheap pre-check: never ask the platform for a frame the policy would
-    // reject anyway.
-    if (capture.evaluateCandidate(isTracking: true) ==
-        SpatialSampleOutcome.requestInFlight) {
-      return;
-    }
-
-    capture.markRequestInFlight();
-    try {
-      final frame = await _spatialTracking.captureFrame();
-      if (!mounted) return;
-      await capture.offerFrame(frame, isTracking: true);
-    } catch (error) {
-      // ARCore legitimately has brief image gaps even while tracking. A later
-      // sampler tick retries; only surface non-transient failures.
-      if (error.toString().contains('frame_not_yet_available') ||
-          error.toString().contains('tracking_unavailable')) {
-        return;
-      }
-      if (!mounted) {
-        return;
-      }
-      ScaffoldMessenger.of(context).showKubusSnackBar(
-        SnackBar(content: Text('Could not capture a tracked frame: $error')),
-        tone: KubusSnackBarTone.warning,
-      );
-    } finally {
-      capture.clearRequestInFlight();
-    }
+    ScaffoldMessenger.of(context).showKubusSnackBar(
+      SnackBar(
+          content: Text(AppLocalizations.of(context)!.arCaptureFrameFailed)),
+      tone: KubusSnackBarTone.warning,
+    );
   }
 
   String _resolveCurrentWalletAddress() =>
       (context.read<WalletProvider>().currentWalletAddress ?? '').trim();
 
   Future<void> _finishSpatialCapture() async {
-    _captureSampler?.cancel();
+    _captureSession?.stop();
     final capture = context.read<SpatialCaptureProvider>();
     final node = context.read<KubusNodeProvider>();
     if (!node.isPaired) {

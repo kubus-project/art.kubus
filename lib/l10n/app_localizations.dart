@@ -27545,6 +27545,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Rotate'**
   String get arPlacementRotate;
+
+  /// No description provided for @arCaptureFrameFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not capture a frame. Try again.'**
+  String get arCaptureFrameFailed;
 }
 
 class _AppLocalizationsDelegate

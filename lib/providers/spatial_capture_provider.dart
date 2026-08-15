@@ -232,8 +232,16 @@ class SpatialCaptureProvider extends ChangeNotifier {
       throw const FormatException('A tracked RGB frame is required.');
     }
     final pose = SpatialPose.tryFromFramePayload(frame);
-    final outcome =
-        evaluateCandidate(isTracking: isTracking, candidatePose: pose);
+    // The in-flight guard exists to stop a *second* platform request starting
+    // while one is outstanding. This frame is already in hand, so applying the
+    // guard here would reject the very sample it was protecting.
+    final outcome = _gate.evaluate(
+      isCapturing: _state == SpatialCaptureState.capturing,
+      isTracking: isTracking,
+      hasRequestInFlight: false,
+      progress: _progressSnapshot(),
+      candidatePose: pose,
+    );
     _lastOutcome = outcome;
 
     if (outcome != SpatialSampleOutcome.accepted) {
