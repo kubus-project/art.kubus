@@ -152,13 +152,11 @@ class ArCoreUtils {
          * rather than surfaced as an untranslated platform Toast.
          */
         fun availabilityCodeFor(sessionException: UnavailableException): String {
-            return when (sessionException) {
-                is UnavailableArcoreNotInstalledException -> "arcore_install_required"
-                is UnavailableApkTooOldException -> "arcore_update_required"
-                is UnavailableSdkTooOldException -> "app_update_required"
-                is UnavailableDeviceNotCompatibleException -> "arcore_unsupported_device"
-                else -> "arcore_session_unavailable"
-            }
+            // Delegates to ArCoreSessionMapping so the mapping itself is unit
+            // testable on the JVM without the ARCore runtime.
+            return com.difrancescogianmarco.arcore_flutter_plugin
+                    .ArCoreSessionMapping
+                    .availabilityCode(sessionException.javaClass.simpleName)
         }
 
         fun handleSessionException(

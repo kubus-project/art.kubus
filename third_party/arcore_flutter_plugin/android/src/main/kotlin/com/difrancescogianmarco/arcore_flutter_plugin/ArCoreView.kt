@@ -146,7 +146,12 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
             val frame = arSceneView?.arFrame ?: return@OnUpdateListener
 
             val camera = frame.camera
-            if (camera.trackingState != lastCameraTrackingState || camera.trackingFailureReason != lastTrackingFailureReason) {
+            if (ArCoreSessionMapping.shouldEmitTrackingChange(
+                            lastCameraTrackingState?.toString(),
+                            lastTrackingFailureReason?.toString(),
+                            camera.trackingState.toString(),
+                            camera.trackingFailureReason.toString()
+                    )) {
                 lastCameraTrackingState = camera.trackingState
                 lastTrackingFailureReason = camera.trackingFailureReason
                 methodChannel.invokeMethod("onTrackingStateChanged", hashMapOf(
@@ -824,7 +829,7 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
                 // recoverable state so Flutter can offer a localized retry
                 // instead of a raw platform Toast.
                 reportSessionError(
-                        "arcore_install_declined",
+                        ArCoreSessionMapping.CODE_INSTALL_DECLINED,
                         "ARCore installation was declined."
                 )
                 return
@@ -845,7 +850,7 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
             // the whole Flutter activity over it destroyed unrelated app state
             // and looked like a crash.
             reportSessionError(
-                    "camera_unavailable",
+                    ArCoreSessionMapping.CODE_CAMERA_UNAVAILABLE,
                     "The camera is currently unavailable."
             )
             return
