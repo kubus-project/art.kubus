@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:developer' as dev;
 import 'dart:isolate';
 import 'package:art_kubus/screens/events/event_detail_screen.dart';
 import 'package:art_kubus/screens/events/exhibition_detail_screen.dart';
@@ -98,8 +97,7 @@ import 'services/notification_handler.dart';
 import 'services/solana_wallet_service.dart';
 import 'services/socket_service.dart';
 import 'services/backend_api_service.dart';
-import 'services/diagnostics/diagnostics_client.dart';
-import 'services/diagnostics/flutter_error_context.dart';
+import 'services/diagnostics/unhandled_error_reporter.dart';
 import 'services/public_action_outbox_service.dart';
 import 'services/public_fallback_service.dart';
 import 'services/telemetry/telemetry_route_observer.dart';
@@ -117,127 +115,38 @@ import 'screens/debug/walking_route_render_harness_screen.dart';
 import 'providers/activation_prompt_provider.dart';
 import 'models/pending_action_intent.dart';
 
-class _UnhandledErrorDedupe {
-  static const Duration _dedupeWindow = Duration(seconds: 2);
-  static const bool _logInRelease = bool.fromEnvironment(
-    'ERROR_STACK_LOG',
-    defaultValue: false,
-  );
-  static String? _lastSignature;
-  static DateTime? _lastLoggedAt;
-  static int _suppressedCount = 0;
-  static bool _capturedFirst = false;
-  static DateTime? _lastUiSurfaceAt;
-  // Stored for debugging / external stack mapping tools.
-  // ignore: unused_field
-  static Object? firstError;
-  // ignore: unused_field
-  static StackTrace? firstStack;
-  // ignore: unused_field
-  static String? firstSource;
+/// Global unhandled-error router.
+///
+/// Each global error domain reports here exactly once. Notably
+/// `FlutterError.onError` no longer re-dispatches into the guarded zone:
+/// doing so turned every framework or plugin error into a second, spurious
+/// `Zone` event at `fatal` severity, so ordinary recoverable AR errors
+/// surfaced to the user as "Unhandled Zone error".
+final UnhandledErrorReporter _unhandledErrors = UnhandledErrorReporter(
+  debugSurface: _surfaceUnhandledErrorInDebugUi,
+);
 
-  static void handle(
-    Object error,
-    StackTrace stack, {
-    required String source,
-    FlutterErrorDetails? details,
-  }) {
-    _captureFirst(error, stack, source);
-    final signature = _signatureFor(error, stack, source);
-    final now = DateTime.now();
-    final lastAt = _lastLoggedAt;
-
-    if (_lastSignature == signature &&
-        lastAt != null &&
-        now.difference(lastAt) < _dedupeWindow) {
-      _suppressedCount += 1;
-      return;
-    }
-
-    if (_suppressedCount > 0 && kDebugMode) {
-      debugPrint('main.dart: suppressed $_suppressedCount duplicate error(s)');
-    }
-
-    _suppressedCount = 0;
-    _lastSignature = signature;
-    _lastLoggedAt = now;
-
-    if (kDebugMode || _logInRelease) {
-      debugPrint(
-        'main.dart: Unhandled error ($source) ${error.runtimeType}: $error',
-      );
-      debugPrint('main.dart: stack: $stack');
-    } else {
-      // Keep a minimal breadcrumb in release so errors are never fully silent.
-      dev.log(
-        'Unhandled error ($source) ${error.runtimeType}',
-        name: 'main.dart',
-        error: error,
-        stackTrace: stack,
-      );
-    }
-
-    _surfaceDebugUi(error: error, source: source);
-    unawaited(
-      DiagnosticsClient.instance.captureError(
-        error,
-        stack,
-        source: source,
-        severity: source == 'PlatformDispatcher' || source == 'Zone'
-            ? 'fatal'
-            : 'error',
-        metadata: buildFlutterErrorContext(error, details),
+void _surfaceUnhandledErrorInDebugUi(UnhandledErrorReport report) {
+  if (!kDebugMode) return;
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    final context = appNavigatorKey.currentContext;
+    if (context == null) return;
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    if (messenger == null) return;
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 4),
+        content: Text(
+          'Unhandled ${report.source.wireName} error: '
+          '${report.error.runtimeType}',
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
       ),
     );
-  }
-
-  static void _captureFirst(Object error, StackTrace stack, String source) {
-    if (_capturedFirst) return;
-    _capturedFirst = true;
-    firstError = error;
-    firstStack = stack;
-    firstSource = source;
-    if (kDebugMode || _logInRelease) {
-      debugPrint(
-        'main.dart: First unhandled error captured ($source) ${error.runtimeType}: $error',
-      );
-      debugPrint('main.dart: First error stack: $stack');
-    }
-  }
-
-  static String _signatureFor(Object error, StackTrace stack, String source) {
-    final stackLine = stack.toString().split('\n').first.trim();
-    return '$source|${error.runtimeType}|$error|$stackLine';
-  }
-
-  static void _surfaceDebugUi({required Object error, required String source}) {
-    if (!kDebugMode) return;
-    final now = DateTime.now();
-    final last = _lastUiSurfaceAt;
-    if (last != null && now.difference(last) < const Duration(seconds: 4)) {
-      return;
-    }
-    _lastUiSurfaceAt = now;
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final context = appNavigatorKey.currentContext;
-      if (context == null) return;
-      final messenger = ScaffoldMessenger.maybeOf(context);
-      if (messenger == null) return;
-      messenger.hideCurrentSnackBar();
-      messenger.showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 4),
-          content: Text(
-            'Unhandled $source error: ${error.runtimeType}',
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      );
-    });
-  }
+  });
 }
 
 SemanticsHandle? _webSemanticsHandle;
@@ -279,10 +188,10 @@ void main() {
     // Keep message minimal and safe for web debugging
     final message = 'An unexpected error occurred';
     try {
-      _UnhandledErrorDedupe.handle(
+      _unhandledErrors.report(
         details.exception,
         details.stack ?? StackTrace.current,
-        source: 'ErrorWidget',
+        source: UnhandledErrorSource.errorWidget,
         details: details,
       );
     } catch (_) {
@@ -345,24 +254,26 @@ void main() {
             debugPrint('FlutterError.presentError failed: $e');
           }
           try {
-            final stack = details.stack ?? StackTrace.current;
-            _UnhandledErrorDedupe.handle(
+            // Report in the FlutterError domain only. Forwarding to
+            // Zone.current.handleUncaughtError() here would re-enter the
+            // runZonedGuarded handler below and report the same incident a
+            // second time as a fatal 'Zone' error.
+            _unhandledErrors.report(
               details.exception,
-              stack,
-              source: 'FlutterError',
+              details.stack ?? StackTrace.current,
+              source: UnhandledErrorSource.flutterError,
               details: details,
             );
-            Zone.current.handleUncaughtError(details.exception, stack);
           } catch (e, st) {
-            debugPrint('Failed to forward FlutterError to zone: $e\n$st');
+            debugPrint('main.dart: failed to report FlutterError: $e\n$st');
           }
         };
 
         PlatformDispatcher.instance.onError = (Object error, StackTrace stack) {
-          _UnhandledErrorDedupe.handle(
+          _unhandledErrors.report(
             error,
             stack,
-            source: 'PlatformDispatcher',
+            source: UnhandledErrorSource.platformDispatcher,
           );
           return true;
         };
@@ -382,15 +293,19 @@ void main() {
                   final StackTrace st = StackTrace.fromString(
                     pair[1].toString(),
                   );
-                  _UnhandledErrorDedupe.handle(err, st, source: 'Isolate');
+                  _unhandledErrors.report(
+                    err,
+                    st,
+                    source: UnhandledErrorSource.isolate,
+                  );
                   return;
                 }
                 final Object err =
                     pair is Object ? pair : Exception(pair.toString());
-                _UnhandledErrorDedupe.handle(
+                _unhandledErrors.report(
                   err,
                   StackTrace.current,
-                  source: 'Isolate',
+                  source: UnhandledErrorSource.isolate,
                 );
               } catch (_) {
                 // Ignore listener failures.
@@ -413,8 +328,13 @@ void main() {
     },
     (error, stack) {
       try {
-        _UnhandledErrorDedupe.handle(error, stack, source: 'Zone');
-        // Optionally report to analytics/logging service here.
+        // Reached only by errors that genuinely escaped the guarded zone,
+        // e.g. an unobserved Future from a fire-and-forget platform call.
+        _unhandledErrors.report(
+          error,
+          stack,
+          source: UnhandledErrorSource.zone,
+        );
       } catch (e) {
         debugPrint('Error while handling zone error: $e');
       }

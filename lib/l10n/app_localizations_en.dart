@@ -15770,4 +15770,69 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mapSpatialAvailable => 'Spatial archive available';
+
+  @override
+  String get arErrorCameraUnavailable =>
+      'The camera is currently unavailable. Try again.';
+
+  @override
+  String get arErrorArcoreInstallRequired =>
+      'AR needs Google Play Services for AR. Install it to continue.';
+
+  @override
+  String get arErrorArcoreUpdateRequired =>
+      'Google Play Services for AR needs an update to continue.';
+
+  @override
+  String get arErrorAppUpdateRequired => 'This app needs an update to use AR.';
+
+  @override
+  String get arErrorArcoreUnsupportedDevice =>
+      'This device does not support AR.';
+
+  @override
+  String get arErrorArcoreInstallDeclined =>
+      'AR needs Google Play Services for AR. You can install it and try again.';
+
+  @override
+  String get arErrorSessionUnavailable =>
+      'AR is unavailable right now. Try again.';
+
+  @override
+  String get arTrackingInitializing =>
+      'AR is still locating itself. Move your phone slowly.';
+
+  @override
+  String get arTrackingInsufficientLight =>
+      'More light will help AR understand the space.';
+
+  @override
+  String get arTrackingExcessiveMotion => 'Move your phone more slowly.';
+
+  @override
+  String get arTrackingInsufficientFeatures =>
+      'Point the camera toward an area with more visible detail.';
+
+  @override
+  String get arTrackingBadState => 'AR is recovering.';
+
+  @override
+  String get arPlacementSelectArtwork => 'Choose an artwork to place.';
+
+  @override
+  String get arPlacementFindingSurface =>
+      'Move your phone slowly to find a surface.';
+
+  @override
+  String get arPlacementTapToPlace => 'Tap a surface to place the artwork.';
+
+  @override
+  String get arPlacementAdjustOrConfirm =>
+      'Drag to move, rotate to adjust, then confirm.';
+
+  @override
+  String get arPlacementRotate => 'Rotate';
+
+  @override
+  String get arCaptureFrameFailed => 'Could not capture a frame. Try again.';
 }

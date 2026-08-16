@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:arcore_flutter_plugin/src/arcore_android_view.dart';
 import 'package:arcore_flutter_plugin/src/arcore_controller.dart';
 import 'package:flutter/foundation.dart';
@@ -56,19 +58,65 @@ class _ArCoreViewState extends State<ArCoreView> with WidgetsBindingObserver {
     );
   }
 
-  void _onPlatformViewCreated(int id) {
-    widget.onArCoreViewCreated(ArCoreController(
+  /// Identifies the current platform view. A controller whose generation no
+  /// longer matches belongs to a view that has already been replaced, so its
+  /// late initialization result must be discarded rather than published.
+  int _generation = 0;
+  ArCoreController? _controller;
+
+  Future<void> _onPlatformViewCreated(int id) async {
+    final generation = ++_generation;
+    final controller = ArCoreController(
       id: id,
       enableTapRecognizer: widget.enableTapRecognizer,
       enableUpdateListener: widget.enableUpdateListener,
       enablePlaneRenderer: widget.enablePlaneRenderer,
+      debug: widget.debug,
 //      onUnsupported: widget.onArCoreUnsupported,
-    ));
+    );
+    _controller = controller;
+
+    try {
+      await controller.initialize();
+    } catch (error) {
+      if (widget.debug) {
+        debugPrint('ArCoreView: initialization failed: $error');
+      }
+      await controller.dispose();
+      if (_controller == controller) _controller = null;
+      return;
+    }
+
+    // The view was disposed or replaced while native init was in flight.
+    if (!mounted || generation != _generation) {
+      await controller.dispose();
+      if (_controller == controller) _controller = null;
+      return;
+    }
+
+    // Only now is the session genuinely usable. This runs detached from the
+    // platform-view callback, so a throwing listener must not escape into the
+    // root zone.
+    try {
+      widget.onArCoreViewCreated(controller);
+    } catch (error, stack) {
+      if (widget.debug) {
+        debugPrint('ArCoreView: onArCoreViewCreated threw: $error\n$stack');
+      }
+    }
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _generation++;
+    final controller = _controller;
+    _controller = null;
+    if (controller != null) {
+      // dispose() never throws and is idempotent, so this cannot leave an
+      // unobserved rejection behind.
+      unawaited(controller.dispose());
+    }
     super.dispose();
   }
 }

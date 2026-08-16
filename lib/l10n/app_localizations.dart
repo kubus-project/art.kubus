@@ -27443,6 +27443,114 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Spatial archive available'**
   String get mapSpatialAvailable;
+
+  /// No description provided for @arErrorCameraUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The camera is currently unavailable. Try again.'**
+  String get arErrorCameraUnavailable;
+
+  /// No description provided for @arErrorArcoreInstallRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'AR needs Google Play Services for AR. Install it to continue.'**
+  String get arErrorArcoreInstallRequired;
+
+  /// No description provided for @arErrorArcoreUpdateRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Google Play Services for AR needs an update to continue.'**
+  String get arErrorArcoreUpdateRequired;
+
+  /// No description provided for @arErrorAppUpdateRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'This app needs an update to use AR.'**
+  String get arErrorAppUpdateRequired;
+
+  /// No description provided for @arErrorArcoreUnsupportedDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'This device does not support AR.'**
+  String get arErrorArcoreUnsupportedDevice;
+
+  /// No description provided for @arErrorArcoreInstallDeclined.
+  ///
+  /// In en, this message translates to:
+  /// **'AR needs Google Play Services for AR. You can install it and try again.'**
+  String get arErrorArcoreInstallDeclined;
+
+  /// No description provided for @arErrorSessionUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'AR is unavailable right now. Try again.'**
+  String get arErrorSessionUnavailable;
+
+  /// No description provided for @arTrackingInitializing.
+  ///
+  /// In en, this message translates to:
+  /// **'AR is still locating itself. Move your phone slowly.'**
+  String get arTrackingInitializing;
+
+  /// No description provided for @arTrackingInsufficientLight.
+  ///
+  /// In en, this message translates to:
+  /// **'More light will help AR understand the space.'**
+  String get arTrackingInsufficientLight;
+
+  /// No description provided for @arTrackingExcessiveMotion.
+  ///
+  /// In en, this message translates to:
+  /// **'Move your phone more slowly.'**
+  String get arTrackingExcessiveMotion;
+
+  /// No description provided for @arTrackingInsufficientFeatures.
+  ///
+  /// In en, this message translates to:
+  /// **'Point the camera toward an area with more visible detail.'**
+  String get arTrackingInsufficientFeatures;
+
+  /// No description provided for @arTrackingBadState.
+  ///
+  /// In en, this message translates to:
+  /// **'AR is recovering.'**
+  String get arTrackingBadState;
+
+  /// No description provided for @arPlacementSelectArtwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose an artwork to place.'**
+  String get arPlacementSelectArtwork;
+
+  /// No description provided for @arPlacementFindingSurface.
+  ///
+  /// In en, this message translates to:
+  /// **'Move your phone slowly to find a surface.'**
+  String get arPlacementFindingSurface;
+
+  /// No description provided for @arPlacementTapToPlace.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap a surface to place the artwork.'**
+  String get arPlacementTapToPlace;
+
+  /// No description provided for @arPlacementAdjustOrConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Drag to move, rotate to adjust, then confirm.'**
+  String get arPlacementAdjustOrConfirm;
+
+  /// No description provided for @arPlacementRotate.
+  ///
+  /// In en, this message translates to:
+  /// **'Rotate'**
+  String get arPlacementRotate;
+
+  /// No description provided for @arCaptureFrameFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not capture a frame. Try again.'**
+  String get arCaptureFrameFailed;
 }
 
 class _AppLocalizationsDelegate

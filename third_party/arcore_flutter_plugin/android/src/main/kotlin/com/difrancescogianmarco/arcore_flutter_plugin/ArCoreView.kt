@@ -10,12 +10,12 @@ import android.graphics.YuvImage
 import android.media.Image
 import android.os.Bundle
 import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.PixelCopy
 import android.view.View
-import android.widget.Toast
 import com.difrancescogianmarco.arcore_flutter_plugin.flutter_models.FlutterArCoreHitTestResult
 import com.difrancescogianmarco.arcore_flutter_plugin.flutter_models.FlutterArCoreNode
 import com.difrancescogianmarco.arcore_flutter_plugin.flutter_models.FlutterArCorePose
@@ -23,6 +23,7 @@ import com.difrancescogianmarco.arcore_flutter_plugin.models.RotatingNode
 import com.difrancescogianmarco.arcore_flutter_plugin.utils.ArCoreUtils
 import com.google.ar.core.*
 import com.google.ar.core.exceptions.CameraNotAvailableException
+import com.google.ar.core.exceptions.NotYetAvailableException
 import com.google.ar.core.exceptions.UnavailableException
 import com.google.ar.core.exceptions.UnavailableUserDeclinedInstallationException
 import com.google.ar.sceneform.*
@@ -45,6 +46,9 @@ import java.io.File
 import java.io.IOException
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.RejectedExecutionException
 
 class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMessenger, id: Int, private val isAugmentedFaces: Boolean, private val debug: Boolean) : PlatformView, MethodChannel.MethodCallHandler {
     private val methodChannel: MethodChannel = MethodChannel(messenger, "arcore_flutter_plugin_$id")
@@ -55,9 +59,65 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
     private val TAG: String = ArCoreView::class.java.name
     private var arSceneView: ArSceneView? = null
     private val gestureDetector: GestureDetector
+    private val spatialCaptureExecutor: ExecutorService = Executors.newSingleThreadExecutor()
+    private val mainHandler = Handler(Looper.getMainLooper())
     private val RC_PERMISSIONS = 0x123
     private var sceneUpdateListener: Scene.OnUpdateListener
     private var faceSceneUpdateListener: Scene.OnUpdateListener
+    private var lastCameraTrackingState: TrackingState? = null
+    private var lastTrackingFailureReason: TrackingFailureReason? = null
+
+    /**
+     * Set once teardown begins. Guards every asynchronous path so a capture,
+     * scene update, or lifecycle callback that lands after dispose() cannot
+     * touch a destroyed session or a detached channel.
+     */
+    @Volatile
+    private var isDisposed: Boolean = false
+
+    /**
+     * Reports a typed, recoverable AR session error to Flutter.
+     *
+     * Recoverable session problems are product states, not crashes: Flutter
+     * maps the code to localized guidance and offers a retry.
+     */
+    /**
+     * Completes a pending [MethodChannel.Result] on the main thread.
+     *
+     * Skips delivery once teardown has begun: replying through a channel whose
+     * view is gone throws, and the Dart side has already abandoned the call.
+     */
+    private fun completeOnMain(block: () -> Unit) {
+        mainHandler.post {
+            if (isDisposed) {
+                return@post
+            }
+            try {
+                block()
+            } catch (e: Exception) {
+                debugLog("result delivery failed: ${e.localizedMessage}")
+            }
+        }
+    }
+
+    private fun reportSessionError(code: String, message: String) {
+        if (isDisposed) {
+            return
+        }
+        mainHandler.post {
+            if (isDisposed) {
+                return@post
+            }
+            try {
+                methodChannel.invokeMethod(
+                        "onSessionError",
+                        hashMapOf("code" to code, "message" to message)
+                )
+            } catch (e: Exception) {
+                debugLog("reportSessionError failed: ${e.localizedMessage}")
+            }
+        }
+    }
 
     //AUGMENTEDFACE
     private var faceRegionsRenderable: ModelRenderable? = null
@@ -85,7 +145,22 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
 
             val frame = arSceneView?.arFrame ?: return@OnUpdateListener
 
-            if (frame.camera.trackingState != TrackingState.TRACKING) {
+            val camera = frame.camera
+            if (ArCoreSessionMapping.shouldEmitTrackingChange(
+                            lastCameraTrackingState?.toString(),
+                            lastTrackingFailureReason?.toString(),
+                            camera.trackingState.toString(),
+                            camera.trackingFailureReason.toString()
+                    )) {
+                lastCameraTrackingState = camera.trackingState
+                lastTrackingFailureReason = camera.trackingFailureReason
+                methodChannel.invokeMethod("onTrackingStateChanged", hashMapOf(
+                    "state" to camera.trackingState.toString(),
+                    "failureReason" to camera.trackingFailureReason.toString()
+                ))
+            }
+
+            if (camera.trackingState != TrackingState.TRACKING) {
                 return@OnUpdateListener
             }
 
@@ -356,6 +431,15 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
         result.success(null)
     }
 
+    private class CopiedPlane(val bytes: ByteArray, val rowStride: Int, val pixelStride: Int)
+
+    private fun copyPlane(plane: Image.Plane): CopiedPlane {
+        val buffer = plane.buffer.duplicate()
+        val bytes = ByteArray(buffer.remaining())
+        buffer.get(bytes)
+        return CopiedPlane(bytes, plane.rowStride, plane.pixelStride)
+    }
+
     private fun captureSpatialFrame(result: MethodChannel.Result) {
         val view = arSceneView
         val frame = view?.arFrame
@@ -363,10 +447,11 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
             result.error("tracking_unavailable", "ARCore tracking is not ready", null)
             return
         }
-        val handlerThread = HandlerThread("SpatialFrameCopier")
-        handlerThread.start()
-        Handler(handlerThread.looper).post {
-            try {
+        // ARCore Frame/Image objects expire with the render callback, so every plane is
+        // copied to a plain byte array synchronously here. The expensive YUV->NV21
+        // rearrangement and JPEG compression run afterwards on a worker thread; only the
+        // already-copied bytes are touched there, never the expired Frame/Image.
+        try {
                 val camera = frame.camera
                 val pose = camera.pose
                 val intrinsics = camera.imageIntrinsics
@@ -374,87 +459,127 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
                 val focalLength = intrinsics.focalLength
                 val principalPoint = intrinsics.principalPoint
                 var cameraTimestamp = frame.timestamp
-                val rgb = frame.acquireCameraImage().use { image ->
+
+                var imageWidth = 0
+                var imageHeight = 0
+                lateinit var yPlane: CopiedPlane
+                lateinit var uPlane: CopiedPlane
+                lateinit var vPlane: CopiedPlane
+                frame.acquireCameraImage().use { image ->
                     cameraTimestamp = image.timestamp
-                    val nv21 = yuv420888ToNv21(image)
-                    ByteArrayOutputStream().use { stream ->
-                        YuvImage(nv21, ImageFormat.NV21, image.width, image.height, null)
-                            .compressToJpeg(Rect(0, 0, image.width, image.height), 92, stream)
-                        stream.toByteArray()
-                    }
+                    imageWidth = image.width
+                    imageHeight = image.height
+                    yPlane = copyPlane(image.planes[0])
+                    uPlane = copyPlane(image.planes[1])
+                    vPlane = copyPlane(image.planes[2])
                 }
-                val payload = hashMapOf<String, Any>(
-                    "rgb" to rgb,
-                    "timestampNanos" to cameraTimestamp,
-                    "poseTranslation" to pose.translation.toList(),
-                    "poseRotation" to pose.rotationQuaternion.toList(),
-                    "intrinsics" to hashMapOf(
-                        "width" to dimensions[0],
-                        "height" to dimensions[1],
-                        "fx" to focalLength[0],
-                        "fy" to focalLength[1],
-                        "cx" to principalPoint[0],
-                        "cy" to principalPoint[1]
-                    ),
-                    "depthAvailable" to false
-                )
+
+                var depthPlane: CopiedPlane? = null
+                var depthWidth = 0
+                var depthHeight = 0
+                var confidenceBytes: ByteArray? = null
                 try {
+                    // acquireDepthImage() is deprecated in favour of
+                    // acquireDepthImage16Bits(), but that API arrived in ARCore
+                    // 1.31 and this module pins com.google.ar:core:1.26.0
+                    // alongside the archived Sceneform 1.17.1. Moving to the
+                    // 16-bit API requires an ARCore upgrade that Sceneform
+                    // constrains, so it stays on the deprecated call until that
+                    // dependency work happens.
                     frame.acquireDepthImage().use { depth ->
-                        val plane = depth.planes[0]
-                        val bytes = ByteArray(plane.buffer.remaining())
-                        plane.buffer.get(bytes)
-                        payload["depth"] = bytes
-                        payload["depthWidth"] = depth.width
-                        payload["depthHeight"] = depth.height
-                        payload["depthRowStride"] = plane.rowStride
-                        payload["depthPixelStride"] = plane.pixelStride
-                        payload["depthAvailable"] = true
+                        depthPlane = copyPlane(depth.planes[0])
+                        depthWidth = depth.width
+                        depthHeight = depth.height
                     }
                     frame.acquireRawDepthConfidenceImage().use { confidence ->
-                        val plane = confidence.planes[0]
-                        val bytes = ByteArray(plane.buffer.remaining())
-                        plane.buffer.get(bytes)
-                        payload["depthConfidence"] = bytes
+                        confidenceBytes = copyPlane(confidence.planes[0]).bytes
                     }
+                } catch (_: NotYetAvailableException) {
+                    // Depth is an optional enhancement and may lag valid RGB.
                 } catch (_: Exception) {
                     // Depth is optional and absence is explicitly represented.
                 }
-                result.success(payload)
-            } catch (error: Throwable) {
+
+                // A dispose() racing an in-flight capture rejects the task. The
+                // pending Dart future must still be completed, or the sampler
+                // waits on it forever.
+                try {
+                    spatialCaptureExecutor.execute {
+                    try {
+                        val nv21 = yuv420888ToNv21(imageWidth, imageHeight, yPlane, uPlane, vPlane)
+                        val rgb = ByteArrayOutputStream().use { stream ->
+                            YuvImage(nv21, ImageFormat.NV21, imageWidth, imageHeight, null)
+                                .compressToJpeg(Rect(0, 0, imageWidth, imageHeight), 92, stream)
+                            stream.toByteArray()
+                        }
+                        val payload = hashMapOf<String, Any>(
+                            "rgb" to rgb,
+                            "timestampNanos" to cameraTimestamp,
+                            "poseTranslation" to pose.translation.toList(),
+                            "poseRotation" to pose.rotationQuaternion.toList(),
+                            "intrinsics" to hashMapOf(
+                                "width" to dimensions[0],
+                                "height" to dimensions[1],
+                                "fx" to focalLength[0],
+                                "fy" to focalLength[1],
+                                "cx" to principalPoint[0],
+                                "cy" to principalPoint[1]
+                            ),
+                            "depthAvailable" to false
+                        )
+                        val depth = depthPlane
+                        if (depth != null) {
+                            payload["depth"] = depth.bytes
+                            payload["depthWidth"] = depthWidth
+                            payload["depthHeight"] = depthHeight
+                            payload["depthRowStride"] = depth.rowStride
+                            payload["depthPixelStride"] = depth.pixelStride
+                            payload["depthAvailable"] = true
+                        }
+                        confidenceBytes?.let { payload["depthConfidence"] = it }
+
+                        completeOnMain { result.success(payload) }
+                    } catch (error: Throwable) {
+                        completeOnMain {
+                            result.error("capture_failed", error.localizedMessage, null)
+                        }
+                    }
+                    }
+                } catch (_: RejectedExecutionException) {
+                    completeOnMain {
+                        result.error(
+                                "capture_cancelled",
+                                "The AR session is shutting down.",
+                                null
+                        )
+                    }
+                }
+        } catch (_: NotYetAvailableException) {
+            result.error("frame_not_yet_available", "Camera image is temporarily unavailable", null)
+        } catch (error: Throwable) {
                 result.error("capture_failed", error.localizedMessage, null)
-            } finally {
-                handlerThread.quitSafely()
-            }
         }
     }
 
-    private fun yuv420888ToNv21(image: Image): ByteArray {
-        val width = image.width
-        val height = image.height
+    private fun yuv420888ToNv21(
+        width: Int,
+        height: Int,
+        yPlane: CopiedPlane,
+        uPlane: CopiedPlane,
+        vPlane: CopiedPlane
+    ): ByteArray {
         val output = ByteArray(width * height * 3 / 2)
-        val yPlane = image.planes[0]
-        val yBuffer = yPlane.buffer.duplicate()
         var outputIndex = 0
         for (row in 0 until height) {
             for (column in 0 until width) {
-                output[outputIndex++] = yBuffer.get(
-                    row * yPlane.rowStride + column * yPlane.pixelStride
-                )
+                output[outputIndex++] = yPlane.bytes[row * yPlane.rowStride + column * yPlane.pixelStride]
             }
         }
 
-        val uPlane = image.planes[1]
-        val vPlane = image.planes[2]
-        val uBuffer = uPlane.buffer.duplicate()
-        val vBuffer = vPlane.buffer.duplicate()
         for (row in 0 until height / 2) {
             for (column in 0 until width / 2) {
-                output[outputIndex++] = vBuffer.get(
-                    row * vPlane.rowStride + column * vPlane.pixelStride
-                )
-                output[outputIndex++] = uBuffer.get(
-                    row * uPlane.rowStride + column * uPlane.pixelStride
-                )
+                output[outputIndex++] = vPlane.bytes[row * vPlane.rowStride + column * vPlane.pixelStride]
+                output[outputIndex++] = uPlane.bytes[row * uPlane.rowStride + column * uPlane.pixelStride]
             }
         }
         return output
@@ -623,7 +748,42 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
         return arSceneView as View
     }
 
+    /**
+     * Tears the platform view down. Idempotent: Flutter can call dispose()
+     * while a capture is still in flight, and the host may dispose the view
+     * again during activity teardown.
+     */
     override fun dispose() {
+        if (isDisposed) {
+            return
+        }
+        isDisposed = true
+
+        // Unregister exactly once. Registering on every platform-view creation
+        // without ever unregistering leaked one callbacks instance per AR mode
+        // transition, and each leaked instance kept driving onPause/onResume on
+        // a view that no longer existed.
+        if (this::activityLifecycleCallbacks.isInitialized) {
+            try {
+                activity.application
+                        .unregisterActivityLifecycleCallbacks(activityLifecycleCallbacks)
+            } catch (e: Exception) {
+                debugLog("unregisterActivityLifecycleCallbacks failed: ${e.localizedMessage}")
+            }
+        }
+
+        // Stop accepting new work before tearing the scene down, so a queued
+        // capture cannot touch a destroyed session.
+        spatialCaptureExecutor.shutdown()
+
+        // Detach the channel so late native callbacks cannot reach a Flutter
+        // engine that has already released this view.
+        try {
+            methodChannel.setMethodCallHandler(null)
+        } catch (e: Exception) {
+            debugLog("setMethodCallHandler(null) failed: ${e.localizedMessage}")
+        }
+
         if (arSceneView != null) {
             onPause()
             onDestroy()
@@ -665,12 +825,19 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
                     arSceneView?.setupSession(session)
                 }
             } catch (ex: UnavailableUserDeclinedInstallationException) {
-                // Display an appropriate message to the user zand return gracefully.
-                Toast.makeText(activity, "TODO: handle exception " + ex.localizedMessage, Toast.LENGTH_LONG)
-                        .show();
+                // The user declined the ARCore install. Report a typed,
+                // recoverable state so Flutter can offer a localized retry
+                // instead of a raw platform Toast.
+                reportSessionError(
+                        ArCoreSessionMapping.CODE_INSTALL_DECLINED,
+                        "ARCore installation was declined."
+                )
                 return
             } catch (e: UnavailableException) {
-                ArCoreUtils.handleSessionException(activity, e)
+                reportSessionError(
+                        ArCoreUtils.availabilityCodeFor(e),
+                        e.localizedMessage ?: "ARCore is unavailable."
+                )
                 return
             }
         }
@@ -678,8 +845,14 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
         try {
             arSceneView?.resume()
         } catch (ex: CameraNotAvailableException) {
-            ArCoreUtils.displayError(activity, "Unable to get camera", ex)
-            activity.finish()
+            // The camera being briefly unavailable - another owner still
+            // holding it, or a transition in progress - is recoverable. Closing
+            // the whole Flutter activity over it destroyed unrelated app state
+            // and looked like a crash.
+            reportSessionError(
+                    ArCoreSessionMapping.CODE_CAMERA_UNAVAILABLE,
+                    "The camera is currently unavailable."
+            )
             return
         }
 

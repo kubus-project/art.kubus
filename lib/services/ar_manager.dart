@@ -18,6 +18,7 @@ class ARManager {
 
   bool _isInitialized = false;
   ArCoreController? _arCoreController;
+  final ValueNotifier<bool> isTracking = ValueNotifier(false);
   ARKitController? _arKitController;
   final List<Map<String, dynamic>> _placedNodes = [];
 
@@ -43,15 +44,44 @@ class ARManager {
     }
   }
 
+  /// Called when the user taps a tracked surface, with the hit-tested pose.
+  ///
+  /// The native side already runs a real ARCore hit test and filters to points
+  /// inside a tracked plane polygon; without this hook the result was
+  /// discarded and placement fell back to a fixed offset in front of the
+  /// camera.
+  void Function(List<ArCoreHitTestResult> hits)? onPlaneTap;
+
+  /// Called the first time a usable surface is detected.
+  void Function()? onSurfaceDetected;
+
+  /// Called for recoverable AR session problems (camera contention, ARCore
+  /// install or update required).
+  void Function(ArCoreSessionError error)? onSessionError;
+
+  /// Latest tracking failure reason reported by ARCore, if any.
+  final ValueNotifier<String?> trackingFailureReason =
+      ValueNotifier<String?>(null);
+
   /// Set ARCore controller (Android only)
   void setArCoreController(ArCoreController controller) {
     _arCoreController = controller;
+    controller.onTrackingStateChanged = (state) {
+      isTracking.value = state.isTracking;
+      trackingFailureReason.value =
+          state.isTracking ? null : state.failureReason;
+    };
+    controller.onPlaneTap = (hits) => onPlaneTap?.call(hits);
+    controller.onPlaneDetected = (_) => onSurfaceDetected?.call();
+    controller.onSessionError = (error) => onSessionError?.call(error);
     if (kDebugMode) debugPrint('ARManager: ARCore controller set');
   }
 
   /// Set ARKit controller (iOS only).
   void setArKitController(ARKitController controller) {
     _arKitController = controller;
+    controller.onCameraDidChangeTrackingState =
+        (state, reason) => isTracking.value = state == ARTrackingState.normal;
     if (kDebugMode) debugPrint('ARManager: ARKit controller set');
   }
 
@@ -64,10 +94,18 @@ class ARManager {
   }) {
     if (Platform.isAndroid && _arCoreController != null) {
       _addArCoreSphere(
-          position: position, radius: radius, color: color, name: name);
+        position: position,
+        radius: radius,
+        color: color,
+        name: name,
+      );
     } else if (Platform.isIOS && _arKitController != null) {
       _addArKitSphere(
-          position: position, radius: radius, color: color, name: name);
+        position: position,
+        radius: radius,
+        color: color,
+        name: name,
+      );
     }
   }
 
@@ -131,18 +169,13 @@ class ARManager {
       color: color ?? Colors.blue,
       reflectance: 1.0,
     );
-    final sphere = ArCoreSphere(
-      materials: [material],
-      radius: radius,
-    );
-    final node = ArCoreNode(
-      shape: sphere,
-      position: position,
-      name: name,
-    );
+    final sphere = ArCoreSphere(materials: [material], radius: radius);
+    final node = ArCoreNode(shape: sphere, position: position, name: name);
     _arCoreController!.addArCoreNode(node);
     _trackNode(
-        name ?? 'sphere_${DateTime.now().millisecondsSinceEpoch}', 'sphere');
+      name ?? 'sphere_${DateTime.now().millisecondsSinceEpoch}',
+      'sphere',
+    );
   }
 
   void _addArCoreCube({
@@ -151,19 +184,9 @@ class ARManager {
     Color? color,
     String? name,
   }) {
-    final material = ArCoreMaterial(
-      color: color ?? Colors.red,
-      metallic: 1.0,
-    );
-    final cube = ArCoreCube(
-      materials: [material],
-      size: size,
-    );
-    final node = ArCoreNode(
-      shape: cube,
-      position: position,
-      name: name,
-    );
+    final material = ArCoreMaterial(color: color ?? Colors.red, metallic: 1.0);
+    final cube = ArCoreCube(materials: [material], size: size);
+    final node = ArCoreNode(shape: cube, position: position, name: name);
     _arCoreController!.addArCoreNode(node);
     _trackNode(name ?? 'cube_${DateTime.now().millisecondsSinceEpoch}', 'cube');
   }
@@ -182,7 +205,9 @@ class ARManager {
     );
     _arCoreController!.addArCoreNodeWithAnchor(node);
     _trackNode(
-        name ?? 'model_${DateTime.now().millisecondsSinceEpoch}', 'model');
+      name ?? 'model_${DateTime.now().millisecondsSinceEpoch}',
+      'model',
+    );
   }
 
   // iOS ARKit specific methods.
@@ -195,10 +220,7 @@ class ARManager {
     final material = ARKitMaterial(
       diffuse: ARKitMaterialProperty.color(color ?? Colors.blue),
     );
-    final sphere = ARKitSphere(
-      radius: radius,
-      materials: [material],
-    );
+    final sphere = ARKitSphere(radius: radius, materials: [material]);
     final node = ARKitNode(
       geometry: sphere,
       position: vector.Vector3(position.x, position.y, position.z),
@@ -206,7 +228,9 @@ class ARManager {
     );
     _arKitController!.add(node);
     _trackNode(
-        name ?? 'sphere_${DateTime.now().millisecondsSinceEpoch}', 'sphere');
+      name ?? 'sphere_${DateTime.now().millisecondsSinceEpoch}',
+      'sphere',
+    );
   }
 
   void _addArKitCube({
@@ -242,16 +266,14 @@ class ARManager {
     final node = ARKitReferenceNode(
       url: modelPath,
       position: vector.Vector3(position.x, position.y, position.z),
-      scale: vector.Vector3(
-        scale?.x ?? 1.0,
-        scale?.y ?? 1.0,
-        scale?.z ?? 1.0,
-      ),
+      scale: vector.Vector3(scale?.x ?? 1.0, scale?.y ?? 1.0, scale?.z ?? 1.0),
       name: name,
     );
     _arKitController!.add(node);
     _trackNode(
-        name ?? 'model_${DateTime.now().millisecondsSinceEpoch}', 'model');
+      name ?? 'model_${DateTime.now().millisecondsSinceEpoch}',
+      'model',
+    );
     if (kDebugMode) {
       debugPrint('ARManager: ARKit reference model added from $modelPath');
     }
@@ -286,8 +308,9 @@ class ARManager {
             snapshot != null && snapshot.keys.any((key) => key != 'image'),
       };
       if (snapshot != null) {
-        for (final entry
-            in snapshot.entries.where((entry) => entry.key != 'image')) {
+        for (final entry in snapshot.entries.where(
+          (entry) => entry.key != 'image',
+        )) {
           payload[entry.key] = entry.value;
         }
       }
@@ -322,10 +345,14 @@ class ARManager {
   /// Check if AR is initialized
   bool get isInitialized => _isInitialized;
 
-  /// Check if controller is ready
+  /// Whether the platform AR session is genuinely usable.
+  ///
+  /// On Android a controller reference is not sufficient: the native ARCore
+  /// session initializes asynchronously and the controller can already be
+  /// torn down, so readiness comes from the controller's own lifecycle.
   bool get isControllerReady {
     if (Platform.isAndroid) {
-      return _arCoreController != null;
+      return _arCoreController?.isReady ?? false;
     } else if (Platform.isIOS) {
       return _arKitController != null;
     }
@@ -355,6 +382,10 @@ class ARManager {
           onARViewCreated();
         },
         enableTapRecognizer: enableTapRecognizer,
+        // Required for onPlaneDetected: without the update listener the
+        // session never reports that a surface is available.
+        enableUpdateListener: true,
+        enablePlaneRenderer: enablePlaneDetection,
       );
     } else if (Platform.isIOS) {
       return ARKitSceneView(
@@ -374,14 +405,30 @@ class ARManager {
     );
   }
 
-  /// Dispose resources
-  void dispose() {
-    _arCoreController?.dispose();
-    _arKitController?.dispose();
-    _placedNodes.clear();
+  /// Dispose resources.
+  ///
+  /// Awaitable so a caller handing the camera to another owner can wait for
+  /// the native session to actually release it. Never throws, so callers that
+  /// cannot await (a `State.dispose()`, for instance) can safely drop the
+  /// future without leaving an unobserved rejection behind.
+  Future<void> dispose() async {
+    final arCore = _arCoreController;
+    final arKit = _arKitController;
+    // Drop the references before awaiting so nothing observes a
+    // half-torn-down session as ready.
     _arCoreController = null;
     _arKitController = null;
+    _placedNodes.clear();
+    isTracking.value = false;
     _isInitialized = false;
+
+    try {
+      arKit?.dispose();
+    } catch (error) {
+      if (kDebugMode) debugPrint('ARManager: ARKit dispose failed: $error');
+    }
+    // ArCoreController.dispose() is idempotent and absorbs its own failures.
+    await arCore?.dispose();
     if (kDebugMode) debugPrint('ARManager: Disposed');
   }
 }
