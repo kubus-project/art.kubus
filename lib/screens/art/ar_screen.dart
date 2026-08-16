@@ -28,6 +28,7 @@ import '../../providers/spatial_capture_provider.dart';
 import '../../services/ar_placement_controller.dart';
 import '../../services/ar_error_messages.dart';
 import '../../services/camera_ownership_coordinator.dart';
+import '../../services/camera_permission_coordinator.dart';
 import '../../services/spatial_capture_session.dart';
 import '../../providers/dao_provider.dart';
 import '../../providers/institution_provider.dart';
@@ -232,6 +233,11 @@ class _ARScreenState extends State<ARScreen>
   /// confirm. Selecting an artwork never places it.
   final ArPlacementController _placement = ArPlacementController();
 
+  /// Single owner of the camera permission request, so the scanner and the AR
+  /// session cannot both prompt for it.
+  final CameraPermissionCoordinator _cameraPermission =
+      CameraPermissionCoordinator();
+
   /// Explicit camera ownership. The scanner and ARCore cannot both hold the
   /// camera, and widget disposal alone does not sequence the handoff.
   late final CameraOwnershipCoordinator _camera = CameraOwnershipCoordinator(
@@ -399,10 +405,12 @@ class _ARScreenState extends State<ARScreen>
         _pauseSpatialCapture(SpatialCapturePauseReason.appBackgrounded);
         unawaited(_camera.releaseAll());
       case AppLifecycleState.resumed:
-        // Re-acquire whatever the current mode needs. Tracking has to be
-        // reacquired before capture can continue, which the sampler's gate
-        // already enforces.
-        unawaited(_camera.requestOwner(_ownerForMode(_currentMode)));
+        // Re-check permission first: the user may have granted it in system
+        // settings while the app was backgrounded. Tracking still has to be
+        // reacquired, which the sampler's gate already enforces.
+        unawaited(_cameraPermission
+            .refresh()
+            .then((_) => _acquireCameraFor(_currentMode)));
     }
   }
 
@@ -1659,7 +1667,21 @@ class _ARScreenState extends State<ARScreen>
     });
     // Hand the camera over explicitly. A request for the owner that already
     // holds it is a no-op, so Place <-> Spatial keeps one ARCore session.
-    unawaited(_camera.requestOwner(_ownerForMode(modeId)));
+    unawaited(_acquireCameraFor(modeId));
+  }
+
+  /// Acquires the camera for [modeId], but never before permission is granted.
+  Future<void> _acquireCameraFor(String modeId) async {
+    final permission = await _cameraPermission.ensureGranted();
+    if (!mounted) return;
+    if (!permission.isGranted) {
+      // Never start ARCore or the scanner without permission: the platform
+      // would fail opaquely and look like a broken camera.
+      await _camera.releaseAll();
+      if (mounted) setState(() {});
+      return;
+    }
+    await _camera.requestOwner(_ownerForMode(modeId));
   }
 
   void _handleAction() {
