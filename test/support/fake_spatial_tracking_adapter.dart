@@ -21,6 +21,37 @@ enum FakeArSessionState {
   disposed,
 }
 
+/// One node in the fake AR scene, with the transform the app last applied.
+@immutable
+class FakeArNode {
+  const FakeArNode({
+    required this.name,
+    required this.modelPath,
+    required this.position,
+    required this.scale,
+    required this.yawRadians,
+  });
+
+  final String name;
+  final String modelPath;
+  final vector.Vector3 position;
+  final double scale;
+  final double yawRadians;
+
+  FakeArNode copyWith({
+    vector.Vector3? position,
+    double? scale,
+    double? yawRadians,
+  }) =>
+      FakeArNode(
+        name: name,
+        modelPath: modelPath,
+        position: position ?? this.position,
+        scale: scale ?? this.scale,
+        yawRadians: yawRadians ?? this.yawRadians,
+      );
+}
+
 /// A controllable stand-in for a real AR session.
 ///
 /// Lets tests drive tracking acquisition, tracking loss, camera contention,
@@ -128,17 +159,59 @@ class FakeSpatialTrackingAdapter implements SpatialTrackingAdapter {
     return const SizedBox.shrink();
   }
 
+  /// Nodes currently in the fake scene, with the transform last applied.
+  ///
+  /// Lets a test assert that rotation and scale actually reached the platform
+  /// rather than only living in Dart state.
+  final Map<String, FakeArNode> nodes = <String, FakeArNode>{};
+
   @override
   Future<void> addModel({
     required String modelPath,
     required vector.Vector3 position,
     vector.Vector3? scale,
+    double yawRadians = 0,
     String? name,
   }) async {
     if (_disposed) {
       throw StateError('addModel after dispose');
     }
+    final resolved = name ?? 'node_${nodes.length}';
+    nodes[resolved] = FakeArNode(
+      name: resolved,
+      modelPath: modelPath,
+      position: position,
+      scale: scale?.x ?? 1.0,
+      yawRadians: yawRadians,
+    );
     calls.add('addModel:$name@${position.x},${position.y},${position.z}');
+  }
+
+  @override
+  Future<bool> updateNodeTransform({
+    required String name,
+    vector.Vector3? position,
+    double? yawRadians,
+    double? scale,
+  }) async {
+    if (_disposed) {
+      throw StateError('updateNodeTransform after dispose');
+    }
+    final node = nodes[name];
+    if (node == null) return false;
+    nodes[name] = node.copyWith(
+      position: position,
+      yawRadians: yawRadians,
+      scale: scale,
+    );
+    calls.add('updateNodeTransform:$name');
+    return true;
+  }
+
+  @override
+  Future<void> removeNode(String name) async {
+    nodes.remove(name);
+    calls.add('removeNode:$name');
   }
 
   @override

@@ -20,8 +20,18 @@ void main() {
     if (await root.exists()) await root.delete(recursive: true);
   });
 
-  Future<SpatialCaptureStore> openStore([String id = 'cap-1']) =>
-      SpatialCaptureStore.create(captureId: id, root: root);
+  Future<SpatialCaptureStore> openStore([
+    String id = 'cap-1',
+    DateTime? startedAt,
+  ]) =>
+      SpatialCaptureStore.create(
+        captureId: id,
+        artworkId: 'art-1',
+        markerId: 'marker-1',
+        capturedBy: 'user-1',
+        startedAt: startedAt ?? DateTime.utc(2026, 1, 1),
+        root: root,
+      );
 
   group('incremental writes', () {
     test('an accepted sample is written to disk under the documented layout',
@@ -121,12 +131,7 @@ void main() {
       final store = await openStore();
       await store.writeSample(rgb: bytes(8), depth: bytes(8));
 
-      await store.writeManifest(
-        artworkId: 'art-1',
-        markerId: 'marker-1',
-        capturedBy: 'user-1',
-        startedAt: DateTime.utc(2026, 1, 1),
-      );
+      await store.writeManifest();
 
       final manifest = jsonDecode(
         await File(p.join(store.directory.path, 'metadata.json'))
@@ -181,12 +186,10 @@ void main() {
 
   group('restart recovery', () {
     test('an interrupted capture is discoverable after restart', () async {
-      final store = await openStore('cap-interrupted');
+      final store =
+          await openStore('cap-interrupted', DateTime.utc(2026, 5, 1));
       await store.writeSample(rgb: bytes(8));
-      await store.writeManifest(
-        artworkId: 'art-1',
-        startedAt: DateTime.utc(2026, 5, 1),
-      );
+      await store.writeManifest();
 
       final found = await SpatialCaptureStore.findInterrupted(root: root);
 
@@ -196,19 +199,19 @@ void main() {
       expect(found.single.transferred, isFalse);
     });
 
-    test('a capture without a manifest is ignored', () async {
-      await openStore('cap-no-manifest');
+    test('a directory with no manifest at all is ignored', () async {
+      // Not something the store produces any more — it records a capture on
+      // creation — but foreign debris in the capture root must not be treated
+      // as recoverable work.
+      await Directory(p.join(root.path, 'not-a-capture')).create();
 
       expect(await SpatialCaptureStore.findInterrupted(root: root), isEmpty);
     });
 
     test('markTransferred flips the recovery flag', () async {
-      final store = await openStore('cap-sent');
+      final store = await openStore('cap-sent', DateTime.utc(2026, 5, 1));
       await store.writeSample(rgb: bytes(8));
-      await store.writeManifest(
-        artworkId: 'art-1',
-        startedAt: DateTime.utc(2026, 5, 1),
-      );
+      await store.writeManifest();
 
       await store.markTransferred();
 
@@ -218,20 +221,38 @@ void main() {
   });
 
   group('cleanup', () {
-    Future<void> seed(String id, DateTime startedAt,
-        {required bool transferred}) async {
-      final store = await SpatialCaptureStore.create(captureId: id, root: root);
-      await store.writeSample(rgb: bytes(8));
-      await store.writeManifest(artworkId: 'art-1', startedAt: startedAt);
+    Future<SpatialCaptureStore> seed(
+      String id,
+      DateTime startedAt, {
+      required bool transferred,
+      int samples = 1,
+    }) async {
+      final store = await openStore(id, startedAt);
+      for (var i = 0; i < samples; i++) {
+        await store.writeSample(rgb: bytes(8));
+      }
+      await store.writeManifest();
       if (transferred) await store.markTransferred();
+      return store;
     }
 
-    test('a delivered capture is cleaned up', () async {
+    test('a delivered capture is cleaned up once retention has passed',
+        () async {
       await seed('sent', DateTime.utc(2026, 8, 1), transferred: true);
+
+      // Still inside the window: the node has it, but the local staging copy
+      // is kept for a while in case the user comes back to it.
+      expect(
+        await SpatialCaptureStore.cleanUp(
+          root: root,
+          now: DateTime.utc(2026, 8, 2),
+        ),
+        isZero,
+      );
 
       final removed = await SpatialCaptureStore.cleanUp(
         root: root,
-        now: DateTime.utc(2026, 8, 2),
+        now: DateTime.utc(2026, 9, 1),
       );
 
       expect(removed, 1);
@@ -252,16 +273,26 @@ void main() {
           await SpatialCaptureStore.findInterrupted(root: root), hasLength(1));
     });
 
-    test('an abandoned capture past retention is reclaimed', () async {
-      await seed('stale', DateTime.utc(2026, 1, 1), transferred: false);
+    test(
+      'an old undelivered capture is still preserved',
+      () async {
+        // The previous implementation deleted this while its own comment
+        // promised the opposite. The policy is now one thing: work that never
+        // reached a node is not reclaimable by age.
+        await seed('stale', DateTime.utc(2026, 1, 1), transferred: false);
 
-      final removed = await SpatialCaptureStore.cleanUp(
-        root: root,
-        retention: const Duration(days: 7),
-        now: DateTime.utc(2026, 8, 2),
-      );
+        final removed = await SpatialCaptureStore.cleanUp(
+          root: root,
+          retention: const Duration(days: 7),
+          now: DateTime.utc(2026, 8, 2),
+        );
 
-      expect(removed, 1);
-    });
+        expect(removed, isZero);
+        expect(
+          await SpatialCaptureStore.findInterrupted(root: root),
+          hasLength(1),
+        );
+      },
+    );
   });
 }

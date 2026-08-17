@@ -21,6 +21,7 @@ import com.difrancescogianmarco.arcore_flutter_plugin.flutter_models.FlutterArCo
 import com.difrancescogianmarco.arcore_flutter_plugin.flutter_models.FlutterArCorePose
 import com.difrancescogianmarco.arcore_flutter_plugin.models.RotatingNode
 import com.difrancescogianmarco.arcore_flutter_plugin.utils.ArCoreUtils
+import com.difrancescogianmarco.arcore_flutter_plugin.utils.DecodableUtils
 import com.google.ar.core.*
 import com.google.ar.core.exceptions.CameraNotAvailableException
 import com.google.ar.core.exceptions.NotYetAvailableException
@@ -269,6 +270,10 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
                 debugLog(" removeARCoreNode")
                 val map = call.arguments as HashMap<String, Any>
                 removeNode(map["nodeName"] as String, result)
+            }
+            "updateNodeTransform" -> {
+                debugLog(" updateNodeTransform")
+                updateNodeTransform(call, result)
             }
             "positionChanged" -> {
                 debugLog(" positionChanged")
@@ -719,6 +724,83 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
         result.success(null)
     }
 
+    /**
+     * Applies a new local transform to a node that is already in the scene.
+     *
+     * A placement preview is adjusted continuously — pinch to scale, drag to
+     * rotate, tap to reposition — and removing and re-adding the node for every
+     * change reloads its renderable and makes the artwork blink. Mutating the
+     * live node keeps the preview stable and matches what the user is doing.
+     *
+     * An AnchorNode owns its world pose through its anchor, so position is
+     * applied to the anchor's child content where one exists and to the node
+     * itself otherwise. Omitted components are left untouched.
+     */
+    fun updateNodeTransform(call: MethodCall, result: MethodChannel.Result) {
+        val name = call.argument<String>("name")
+        val node = arSceneView?.scene?.findByName(name)
+        if (node == null) {
+            debugLog("updateNodeTransform: no node named $name")
+            result.success(false)
+            return
+        }
+
+        // Transforms are applied below the anchor, never to the AnchorNode
+        // itself: Sceneform rewrites an AnchorNode's world pose from its ARCore
+        // anchor on every frame, so assigning localPosition or localRotation
+        // there is overwritten immediately and the preview snaps back while the
+        // call still reports success.
+        val target = contentNodeFor(node)
+
+        DecodableUtils.parseVector3(call.argument<HashMap<String, Double>>("position"))?.let {
+            target.localPosition = it
+        }
+        DecodableUtils.parseQuaternion(call.argument<HashMap<String, Double>>("rotation"))?.let {
+            target.localRotation = it
+        }
+        DecodableUtils.parseVector3(call.argument<HashMap<String, Double>>("scale"))?.let {
+            target.localScale = it
+        }
+        result.success(true)
+    }
+
+    /** Suffix identifying the content child created beneath an AnchorNode. */
+    private val contentNodeSuffix = "#content"
+
+    /**
+     * Returns the node that placement transforms should act on.
+     *
+     * For a plain node that is the node itself. For an AnchorNode the content
+     * is migrated to a child on first use, because the anchor drives the
+     * parent's world pose and any local transform on it is discarded.
+     */
+    private fun contentNodeFor(node: Node): Node {
+        if (node !is AnchorNode) return node
+        val childName = "${node.name}$contentNodeSuffix"
+        node.children.firstOrNull { it.name == childName }?.let { return it }
+
+        val content = Node()
+        content.name = childName
+        content.renderable = node.renderable
+        node.renderable = null
+        content.setParent(node)
+        debugLog("updateNodeTransform: migrated ${node.name} content to $childName")
+        return content
+    }
+
+    /**
+     * Returns the node currently carrying the renderable.
+     *
+     * Read-only counterpart to [contentNodeFor]: it finds content that has
+     * already been migrated beneath an anchor without creating a child as a
+     * side effect.
+     */
+    private fun renderableHolderFor(node: Node): Node {
+        if (node !is AnchorNode) return node
+        if (node.renderable != null) return node
+        return node.children.firstOrNull { it.renderable != null } ?: node
+    }
+
     fun updateRotation(call: MethodCall, result: MethodChannel.Result) {
         val name = call.argument<String>("name")
         val node = arSceneView?.scene?.findByName(name) as RotatingNode
@@ -735,7 +817,10 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
     fun updateMaterials(call: MethodCall, result: MethodChannel.Result) {
         val name = call.argument<String>("name")
         val materials = call.argument<ArrayList<HashMap<String, *>>>("materials")!!
-        val node = arSceneView?.scene?.findByName(name)
+        // Follow the renderable: once a placement has been transformed its
+        // content lives on a child beneath the anchor, so looking only at the
+        // named node would silently stop updating materials.
+        val node = arSceneView?.scene?.findByName(name)?.let { renderableHolderFor(it) }
         val oldMaterial = node?.renderable?.material?.makeCopy()
         if (oldMaterial != null) {
             val material = MaterialCustomFactory.updateMaterial(oldMaterial, materials[0])

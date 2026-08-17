@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:vector_math/vector_math_64.dart' as vector;
 import 'dart:io';
+import 'dart:math' as math;
 
 // Platform-specific imports
 import 'package:arcore_flutter_plugin/arcore_flutter_plugin.dart';
@@ -21,6 +22,15 @@ class ARManager {
   final ValueNotifier<bool> isTracking = ValueNotifier(false);
   ARKitController? _arKitController;
   final List<Map<String, dynamic>> _placedNodes = [];
+
+  /// ARKit nodes this manager added, by name.
+  ///
+  /// ARKit exposes a node's composed transform but not the yaw and scale that
+  /// produced it, so the inputs are kept alongside the node to recompose the
+  /// matrix when the placement preview is adjusted.
+  final Map<String, ARKitNode> _arKitNodes = {};
+  final Map<String, double> _arKitNodeYaw = {};
+  final Map<String, double> _arKitNodeScale = {};
 
   /// Initialize AR manager
   Future<bool> initialize() async {
@@ -85,15 +95,19 @@ class ARManager {
     if (kDebugMode) debugPrint('ARManager: ARKit controller set');
   }
 
-  /// Add a sphere to the AR scene
-  void addSphere({
+  /// Add a sphere to the AR scene.
+  ///
+  /// Awaitable so the platform call's Future is observed. Dropping it left an
+  /// unhandled rejection whenever the native side rejected the node, which
+  /// escaped to the root zone as an "Unhandled Zone error".
+  Future<void> addSphere({
     required vector.Vector3 position,
     required double radius,
     Color? color,
     String? name,
-  }) {
+  }) async {
     if (Platform.isAndroid && _arCoreController != null) {
-      _addArCoreSphere(
+      await _addArCoreSphere(
         position: position,
         radius: radius,
         color: color,
@@ -109,25 +123,36 @@ class ARManager {
     }
   }
 
-  /// Add a cube to the AR scene
-  void addCube({
+  /// Add a cube to the AR scene. Awaitable for the same reason as [addSphere].
+  Future<void> addCube({
     required vector.Vector3 position,
     required vector.Vector3 size,
     Color? color,
     String? name,
-  }) {
+  }) async {
     if (Platform.isAndroid && _arCoreController != null) {
-      _addArCoreCube(position: position, size: size, color: color, name: name);
+      await _addArCoreCube(
+        position: position,
+        size: size,
+        color: color,
+        name: name,
+      );
     } else if (Platform.isIOS && _arKitController != null) {
       _addArKitCube(position: position, size: size, color: color, name: name);
     }
   }
 
-  /// Add a GLTF/GLB model to the AR scene
+  /// Add a GLTF/GLB model to the AR scene.
+  ///
+  /// [yawRadians] rotates the model about the world up axis. Artworks stay
+  /// upright, so yaw is the only rotation the placement UI offers — but it has
+  /// to reach the platform node, or the Rotate control changes nothing the user
+  /// can see.
   Future<void> addModel({
     required String modelPath,
     required vector.Vector3 position,
     vector.Vector3? scale,
+    double yawRadians = 0,
     String? name,
   }) async {
     if (Platform.isAndroid && _arCoreController != null) {
@@ -135,6 +160,7 @@ class ARManager {
         modelPath: modelPath,
         position: position,
         scale: scale,
+        yawRadians: yawRadians,
         name: name,
       );
     } else if (Platform.isIOS && _arKitController != null) {
@@ -142,52 +168,118 @@ class ARManager {
         modelPath: modelPath,
         position: position,
         scale: scale,
+        yawRadians: yawRadians,
         name: name,
       );
     }
   }
 
-  /// Remove a node by name
-  void removeNode(String name) {
+  /// Applies a new transform to a node already in the scene.
+  ///
+  /// Used by the placement preview so scale, rotation and reposition are
+  /// visible immediately instead of only being applied when the placement is
+  /// confirmed. Returns false when no node by that name exists.
+  Future<bool> updateNodeTransform({
+    required String name,
+    vector.Vector3? position,
+    double? yawRadians,
+    double? scale,
+  }) async {
+    if (Platform.isAndroid) {
+      final controller = _arCoreController;
+      if (controller == null || !controller.isReady) return false;
+      return controller.updateNodeTransform(
+        nodeName: name,
+        position: position,
+        rotation: yawRadians == null ? null : _yawQuaternion(yawRadians),
+        scale: scale == null ? null : vector.Vector3.all(scale),
+      );
+    }
+    if (Platform.isIOS) {
+      final node = _arKitNodes[name];
+      if (node == null) return false;
+      final current = node.transform;
+      final nextPosition = position ?? current.getTranslation();
+      final nextScale = scale ?? _arKitNodeScale[name] ?? 1.0;
+      final nextYaw = yawRadians ?? _arKitNodeYaw[name] ?? 0.0;
+      _arKitNodeScale[name] = nextScale;
+      _arKitNodeYaw[name] = nextYaw;
+      node.transformNotifier.value = _composeTransform(
+        position: nextPosition,
+        yawRadians: nextYaw,
+        scale: nextScale,
+      );
+      return true;
+    }
+    return false;
+  }
+
+  /// Yaw about the world up axis as an `[x, y, z, w]` quaternion, the rotation
+  /// representation both ARCore poses and Sceneform nodes use.
+  static vector.Vector4 _yawQuaternion(double yawRadians) {
+    final half = yawRadians / 2;
+    return vector.Vector4(0, math.sin(half), 0, math.cos(half));
+  }
+
+  static vector.Matrix4 _composeTransform({
+    required vector.Vector3 position,
+    required double yawRadians,
+    required double scale,
+  }) {
+    return vector.Matrix4.compose(
+      position,
+      vector.Quaternion.axisAngle(vector.Vector3(0, 1, 0), yawRadians),
+      vector.Vector3.all(scale),
+    );
+  }
+
+  /// Remove a node by name.
+  ///
+  /// Awaitable so a caller replacing a preview with the confirmed node can wait
+  /// for the old one to leave the scene, rather than leaving both behind.
+  Future<void> removeNode(String name) async {
     if (Platform.isAndroid && _arCoreController != null) {
-      _arCoreController!.removeNode(nodeName: name);
+      await _arCoreController!.removeNode(nodeName: name);
     } else if (Platform.isIOS && _arKitController != null) {
       _arKitController!.remove(name);
     }
+    _arKitNodes.remove(name);
+    _arKitNodeYaw.remove(name);
+    _arKitNodeScale.remove(name);
     _placedNodes.removeWhere((node) => node['name'] == name);
     if (kDebugMode) debugPrint('ARManager: Removed node: $name');
   }
 
   // Android ARCore specific methods
-  void _addArCoreSphere({
+  Future<void> _addArCoreSphere({
     required vector.Vector3 position,
     required double radius,
     Color? color,
     String? name,
-  }) {
+  }) async {
     final material = ArCoreMaterial(
       color: color ?? Colors.blue,
       reflectance: 1.0,
     );
     final sphere = ArCoreSphere(materials: [material], radius: radius);
     final node = ArCoreNode(shape: sphere, position: position, name: name);
-    _arCoreController!.addArCoreNode(node);
+    await _arCoreController!.addArCoreNode(node);
     _trackNode(
       name ?? 'sphere_${DateTime.now().millisecondsSinceEpoch}',
       'sphere',
     );
   }
 
-  void _addArCoreCube({
+  Future<void> _addArCoreCube({
     required vector.Vector3 position,
     required vector.Vector3 size,
     Color? color,
     String? name,
-  }) {
+  }) async {
     final material = ArCoreMaterial(color: color ?? Colors.red, metallic: 1.0);
     final cube = ArCoreCube(materials: [material], size: size);
     final node = ArCoreNode(shape: cube, position: position, name: name);
-    _arCoreController!.addArCoreNode(node);
+    await _arCoreController!.addArCoreNode(node);
     _trackNode(name ?? 'cube_${DateTime.now().millisecondsSinceEpoch}', 'cube');
   }
 
@@ -195,6 +287,7 @@ class ARManager {
     required String modelPath,
     required vector.Vector3 position,
     vector.Vector3? scale,
+    double yawRadians = 0,
     String? name,
   }) async {
     final node = ArCoreReferenceNode(
@@ -202,8 +295,9 @@ class ARManager {
       objectUrl: modelPath,
       position: position,
       scale: scale ?? vector.Vector3.all(1.0),
+      rotation: _yawQuaternion(yawRadians),
     );
-    _arCoreController!.addArCoreNodeWithAnchor(node);
+    await _arCoreController!.addArCoreNodeWithAnchor(node);
     _trackNode(
       name ?? 'model_${DateTime.now().millisecondsSinceEpoch}',
       'model',
@@ -261,19 +355,27 @@ class ARManager {
     required String modelPath,
     required vector.Vector3 position,
     vector.Vector3? scale,
+    double yawRadians = 0,
     String? name,
   }) async {
+    final resolvedName =
+        name ?? 'model_${DateTime.now().millisecondsSinceEpoch}';
     final node = ARKitReferenceNode(
       url: modelPath,
       position: vector.Vector3(position.x, position.y, position.z),
       scale: vector.Vector3(scale?.x ?? 1.0, scale?.y ?? 1.0, scale?.z ?? 1.0),
-      name: name,
+      // ARKitReferenceNode exposes orientation as Euler angles; artworks stay
+      // upright, so only yaw is set.
+      eulerAngles: vector.Vector3(0, yawRadians, 0),
+      name: resolvedName,
     );
     _arKitController!.add(node);
-    _trackNode(
-      name ?? 'model_${DateTime.now().millisecondsSinceEpoch}',
-      'model',
-    );
+    // Kept so a later transform update can recompose the node's matrix; ARKit
+    // exposes the transform, not the yaw and scale that produced it.
+    _arKitNodes[resolvedName] = node;
+    _arKitNodeYaw[resolvedName] = yawRadians;
+    _arKitNodeScale[resolvedName] = scale?.x ?? 1.0;
+    _trackNode(resolvedName, 'model');
     if (kDebugMode) {
       debugPrint('ARManager: ARKit reference model added from $modelPath');
     }
@@ -419,6 +521,9 @@ class ARManager {
     _arCoreController = null;
     _arKitController = null;
     _placedNodes.clear();
+    _arKitNodes.clear();
+    _arKitNodeYaw.clear();
+    _arKitNodeScale.clear();
     isTracking.value = false;
     _isInitialized = false;
 

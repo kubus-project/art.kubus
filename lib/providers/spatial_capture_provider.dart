@@ -1,13 +1,14 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 
 import '../models/kubus_node_models.dart';
+import '../services/kubus_node_service.dart';
 import '../services/spatial_capture_policy.dart';
 import '../services/spatial_capture_store.dart';
 import 'kubus_node_provider.dart';
+import '../config/config.dart';
 
 enum SpatialCaptureState {
   idle,
@@ -36,6 +37,76 @@ enum SpatialCapturePauseReason {
   limitReached,
 }
 
+/// What the capture surface should be telling the user, as structured state.
+///
+/// The provider deliberately returns a case rather than a sentence: user-facing
+/// copy is localized in the widget layer, so capture guidance exists in every
+/// supported language instead of only English.
+enum SpatialCaptureGuidance {
+  /// Nothing is being captured yet.
+  idle,
+
+  /// Paused because AR lost track of the space.
+  trackingLost,
+
+  /// Paused at a capture ceiling.
+  limitReached,
+
+  /// Paused for a reason the user can simply undo.
+  paused,
+
+  /// Capturing, with too little coverage to be useful yet.
+  coverageLow,
+  coverageFair,
+  coverageGood,
+
+  /// Enough coverage and diversity to finish.
+  coverageReady,
+}
+
+/// Stage of a streaming transfer to the paired node.
+enum SpatialTransferPhase { idle, preparing, uploading, committing, complete }
+
+/// Honest progress of a streaming capture transfer.
+///
+/// Every field is measured, never interpolated: the file counts come from the
+/// upload loop and the byte totals from the files actually on disk.
+@immutable
+class SpatialTransferProgress {
+  const SpatialTransferProgress({
+    this.phase = SpatialTransferPhase.idle,
+    this.uploadedFiles = 0,
+    this.totalFiles = 0,
+    this.uploadedBytes = 0,
+    this.totalBytes = 0,
+  });
+
+  final SpatialTransferPhase phase;
+  final int uploadedFiles;
+  final int totalFiles;
+  final int uploadedBytes;
+  final int totalBytes;
+
+  bool get isActive =>
+      phase != SpatialTransferPhase.idle &&
+      phase != SpatialTransferPhase.complete;
+
+  /// Fraction of bytes delivered, or `null` while the total is not yet known.
+  double? get fraction {
+    if (totalBytes <= 0) return null;
+    return (uploadedBytes / totalBytes).clamp(0.0, 1.0);
+  }
+}
+
+/// A capture cannot be finished because it does not yet cover enough of the
+/// subject. Typed so the UI shows coverage guidance rather than an error.
+class SpatialCaptureNotReadyException implements Exception {
+  const SpatialCaptureNotReadyException();
+
+  @override
+  String toString() => 'SpatialCaptureNotReadyException';
+}
+
 class SpatialCaptureProvider extends ChangeNotifier {
   SpatialCaptureProvider({
     SpatialCapturePolicy policy = const SpatialCapturePolicy(),
@@ -59,6 +130,7 @@ class SpatialCaptureProvider extends ChangeNotifier {
   SpatialSampleOutcome? _lastOutcome;
   SpatialCapturePauseReason? _pauseReason;
   int _skippedSamples = 0;
+  SpatialTransferProgress _transfer = const SpatialTransferProgress();
 
   String? _artworkId;
   String? _markerId;
@@ -91,6 +163,9 @@ class SpatialCaptureProvider extends ChangeNotifier {
   int get viewpointCount => _coverage.viewpointCount;
   double get baselineMeters => _coverage.baselineMeters;
 
+  /// Measured progress of the streaming transfer to the paired node.
+  SpatialTransferProgress get transfer => _transfer;
+
   /// Samples the policy declined, for diagnostics.
   int get skippedSamples => _skippedSamples;
   SpatialSampleOutcome? get lastSampleOutcome => _lastOutcome;
@@ -98,6 +173,10 @@ class SpatialCaptureProvider extends ChangeNotifier {
   bool get depthObserved => _store?.depthObserved ?? false;
   bool get isCapturing => _state == SpatialCaptureState.capturing;
   bool get isPaused => _state == SpatialCaptureState.paused;
+
+  /// Who the capture belongs to, used to scope restart recovery to the
+  /// signed-in account.
+  String? get capturedBy => _capturedBy;
 
   /// Whether the capture has enough volume *and* viewpoint diversity to make a
   /// usable reconstruction.
@@ -119,30 +198,36 @@ class SpatialCaptureProvider extends ChangeNotifier {
   @visibleForTesting
   int get operationGeneration => _operationGeneration;
 
-  String get guidance {
+  /// Structured guidance for the current capture state.
+  ///
+  /// Returns a case, not a sentence. The AR screen maps it through
+  /// [AppLocalizations], so every guidance path exists in EN and SL.
+  SpatialCaptureGuidance get guidance {
     if (_state == SpatialCaptureState.paused) {
       switch (_pauseReason) {
         case SpatialCapturePauseReason.trackingLost:
-          return 'AR lost track of the space. Move your phone slowly to '
-              'continue.';
+          return SpatialCaptureGuidance.trackingLost;
         case SpatialCapturePauseReason.limitReached:
-          return 'Capture is full. Finish to process what you have.';
+          return SpatialCaptureGuidance.limitReached;
         case SpatialCapturePauseReason.modeChanged:
         case SpatialCapturePauseReason.appBackgrounded:
         case SpatialCapturePauseReason.user:
         case null:
-          return 'Capture is paused. Resume when you are ready.';
+          return SpatialCaptureGuidance.paused;
       }
+    }
+    if (_state != SpatialCaptureState.capturing) {
+      return SpatialCaptureGuidance.idle;
     }
     switch (_coverage.grade) {
       case SpatialCoverageGrade.low:
-        return 'Move slowly around the artwork.';
+        return SpatialCaptureGuidance.coverageLow;
       case SpatialCoverageGrade.fair:
-        return 'Keep the artwork in view and maintain overlap.';
+        return SpatialCaptureGuidance.coverageFair;
       case SpatialCoverageGrade.good:
-        return 'Capture the sides and details you have not covered.';
+        return SpatialCaptureGuidance.coverageGood;
       case SpatialCoverageGrade.ready:
-        return 'Coverage is ready. You can finish or add a few more angles.';
+        return SpatialCaptureGuidance.coverageReady;
     }
   }
 
@@ -155,16 +240,22 @@ class SpatialCaptureProvider extends ChangeNotifier {
     _operationGeneration++;
     await _store?.discard();
     _coverage.reset();
-    final captureId =
-        'capture-${DateTime.now().toUtc().microsecondsSinceEpoch}';
+    final startedAt = DateTime.now().toUtc();
+    final captureId = 'capture-${startedAt.microsecondsSinceEpoch}';
+    // The store records the capture on disk immediately, so a process killed
+    // during capture still leaves a directory recovery can find and offer back.
     _store = await SpatialCaptureStore.create(
       captureId: captureId,
+      artworkId: artworkId,
+      markerId: markerId,
+      capturedBy: capturedBy,
+      startedAt: startedAt,
       root: _storageRoot,
     );
+    _startedAt = startedAt;
     _artworkId = artworkId;
     _markerId = markerId;
     _capturedBy = capturedBy;
-    _startedAt = DateTime.now().toUtc();
     _lastAcceptedPose = null;
     _lastAcceptedAt = null;
     _requestInFlight = false;
@@ -181,6 +272,81 @@ class SpatialCaptureProvider extends ChangeNotifier {
     _localJobProgress = 0;
     _state = SpatialCaptureState.capturing;
     notifyListeners();
+  }
+
+  /// Capture directories left behind by an interrupted session.
+  ///
+  /// Only captures belonging to [capturedBy] are offered, so one account's
+  /// work is never handed to whoever signs in next on a shared device.
+  Future<List<InterruptedSpatialCapture>> findRecoverable({
+    required String capturedBy,
+  }) async {
+    if (capturedBy.trim().isEmpty) {
+      return const <InterruptedSpatialCapture>[];
+    }
+    final captures =
+        await SpatialCaptureStore.findInterrupted(root: _storageRoot);
+    return captures
+        .where((capture) =>
+            capture.hasRecoverableWork && capture.capturedBy == capturedBy)
+        .toList(growable: false);
+  }
+
+  /// Adopts an interrupted capture so the user can keep working on it.
+  ///
+  /// The capture returns as `paused`, never as `capturing`: sampling only
+  /// restarts once the screen has AR tracking again.
+  Future<bool> resumeInterrupted(InterruptedSpatialCapture capture) async {
+    final store = await SpatialCaptureStore.open(capture.directory);
+    if (store == null || store.sampleCount == 0) return false;
+
+    _operationGeneration++;
+    await _store?.discard();
+    _store = store;
+    _coverage.reset();
+    // Rebuild coverage from the poses already on disk, so a resumed capture
+    // reports the diversity it actually has rather than starting from zero.
+    for (final sample in store.samples) {
+      final pose = SpatialPose.tryFromFramePayload(sample.metadata);
+      if (pose != null) _coverage.addAccepted(pose);
+    }
+    _artworkId = store.artworkId;
+    _markerId = store.markerId;
+    _capturedBy = store.capturedBy;
+    _startedAt = store.startedAt;
+    _lastAcceptedPose = null;
+    _lastAcceptedAt = null;
+    _requestInFlight = false;
+    _lastOutcome = null;
+    _skippedSamples = 0;
+    _captureId = null;
+    _jobId = null;
+    _error = null;
+    _spatialId = null;
+    _remoteResult = null;
+    _remoteJobState = null;
+    _localJobState = null;
+    _localJobProgress = 0;
+    _transfer = const SpatialTransferProgress();
+    _state = SpatialCaptureState.paused;
+    _pauseReason = SpatialCapturePauseReason.user;
+    notifyListeners();
+    return true;
+  }
+
+  /// Deletes an interrupted capture the user chose not to keep.
+  Future<void> discardInterrupted(InterruptedSpatialCapture capture) async {
+    if (_store?.directory.path == capture.directory.path) {
+      await discard();
+      return;
+    }
+    try {
+      await capture.directory.delete(recursive: true);
+    } catch (error) {
+      if (kDebugMode) {
+        AppConfig.debugPrint('SpatialCaptureProvider: discard failed: $error');
+      }
+    }
   }
 
   /// Whether the sampler should ask the platform for another frame right now.
@@ -316,105 +482,206 @@ class SpatialCaptureProvider extends ChangeNotifier {
     _skippedSamples = 0;
     _state = SpatialCaptureState.idle;
     _error = null;
+    _transfer = const SpatialTransferProgress();
     notifyListeners();
   }
 
+  /// Streams the capture to the paired node and finalizes it there.
+  ///
+  /// Files travel as raw bytes into a node-side draft, one at a time, straight
+  /// off disk. Nothing assembles the capture into a single in-memory document:
+  /// the previous base64 package inflated the payload by a third and required
+  /// both ends to hold every frame at once, which a continuous mobile capture
+  /// cannot afford.
+  ///
+  /// An interrupted transfer resumes against the same draft, so a retry
+  /// re-sends only what is missing and never creates a second durable record.
   Future<void> finish(KubusNodeProvider node) async {
     final store = _store;
     if (store == null || !_coverage.isReadyToFinish) {
-      throw StateError('Capture a few more angles before finishing.');
+      throw const SpatialCaptureNotReadyException();
     }
     _state = SpatialCaptureState.transferring;
     _error = null;
+    _transfer = const SpatialTransferProgress(
+      phase: SpatialTransferPhase.preparing,
+    );
     notifyListeners();
     try {
-      await store.writeManifest(
-        artworkId: _artworkId!,
-        markerId: _markerId,
-        capturedBy: _capturedBy,
-        startedAt: _startedAt ?? DateTime.now().toUtc(),
-      );
+      await _streamToNode(node, store);
+      _state = SpatialCaptureState.awaitingProcessingChoice;
+      notifyListeners();
+    } catch (error) {
+      // The capture stays on disk so the transfer can be retried.
+      _state = SpatialCaptureState.error;
+      _error = _describe(error);
+      _transfer = const SpatialTransferProgress();
+      notifyListeners();
+      rethrow;
+    }
+  }
 
-      // Read back from disk one file at a time. The raw bytes are released as
-      // soon as each entry is encoded, so the capture is never held twice.
-      final files = <Map<String, dynamic>>[];
-      final samples = <Map<String, dynamic>>[];
-      for (final sample in store.samples) {
-        files.add(await _encodeFile(store, sample.rgbPath, 'image/jpeg'));
-        final depthPath = sample.depthPath;
-        if (depthPath != null) {
-          files.add(
-            await _encodeFile(store, depthPath, 'application/octet-stream'),
-          );
-        }
-        final confidencePath = sample.confidencePath;
-        if (confidencePath != null) {
-          files.add(
-            await _encodeFile(
-              store,
-              confidencePath,
-              'application/octet-stream',
-            ),
-          );
-        }
-        samples.add(sample.toJson());
+  /// Resumes a transfer that failed, without recapturing anything.
+  Future<void> retryTransfer(KubusNodeProvider node) async {
+    if (_state != SpatialCaptureState.error) return;
+    final store = _store;
+    if (store == null) return;
+    _state = SpatialCaptureState.transferring;
+    _error = null;
+    _transfer = const SpatialTransferProgress(
+      phase: SpatialTransferPhase.preparing,
+    );
+    notifyListeners();
+    try {
+      await _streamToNode(node, store);
+      _state = SpatialCaptureState.awaitingProcessingChoice;
+      notifyListeners();
+    } catch (error) {
+      _state = SpatialCaptureState.error;
+      _error = _describe(error);
+      _transfer = const SpatialTransferProgress();
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  Future<void> _streamToNode(
+    KubusNodeProvider node,
+    SpatialCaptureStore store,
+  ) async {
+    // Persist the canonical frame index before anything leaves the device, so
+    // an interrupted transfer still has a complete local record.
+    await store.writeManifest(
+      extra: <String, dynamic>{
+        'viewpointCount': _coverage.viewpointCount,
+        'baselineMeters': _coverage.baselineMeters,
+      },
+    );
+
+    final entries = store.uploadEntries;
+    var totalBytes = 0;
+    for (final entry in entries) {
+      final file = store.fileAt(entry.path);
+      if (await file.exists()) totalBytes += await file.length();
+    }
+
+    // Resume against an existing draft when one survived, so the retry sends
+    // only the files that never landed.
+    var draftId = store.draftId;
+    var alreadyUploaded = const <String>{};
+    if (draftId != null) {
+      try {
+        final progress = await node.service.getCaptureDraft(draftId);
+        alreadyUploaded = progress.files.toSet();
+      } on KubusNodeRequestException catch (error) {
+        // Only a draft the node no longer knows about is worth abandoning.
+        // Drafts live in memory there, so a node restart drops them.
+        if (error.code != 'capture_draft_not_found') rethrow;
+        draftId = null;
+        await store.recordDraftId(null);
+      } on KubusNodeUnsupportedException {
+        // The draft routes are gone entirely: report it rather than silently
+        // re-uploading against an endpoint that does not exist.
+        rethrow;
       }
-      files.add({
-        'path': 'transforms.json',
-        'mimeType': 'application/json',
-        'contentBase64': base64Encode(
-          utf8.encode(
-            jsonEncode({'schema': 'kubus.capture.frames/1', 'frames': samples}),
-          ),
-        ),
-      });
+      // Any other failure — a dropped connection, a timeout — propagates, so
+      // the next retry resumes against this same draft instead of discarding
+      // everything already delivered.
+    }
 
-      final record = await node.service.createCapture({
+    if (draftId == null) {
+      final draft = await node.service.beginCaptureDraft(<String, dynamic>{
         'schema': 'kubus.capture/1',
-        'artworkId': _artworkId,
-        if (_markerId != null) 'markerId': _markerId,
-        'capturedAt': (_startedAt ?? DateTime.now().toUtc()).toIso8601String(),
-        'metadata': {
-          'capturedBy': _capturedBy,
+        'artworkId': store.artworkId,
+        if (store.markerId != null) 'markerId': store.markerId,
+        'capturedAt': store.startedAt.toIso8601String(),
+        'metadata': <String, dynamic>{
+          'capturedBy': store.capturedBy,
           'frameCount': store.sampleCount,
           'depthAvailable': store.depthObserved,
           'viewpointCount': _coverage.viewpointCount,
           'baselineMeters': _coverage.baselineMeters,
           'source': 'art.kubus-mobile-tracking',
           'private': true,
+          // Idempotency key. A commit whose response is lost is
+          // indistinguishable from a failure here, so without this a retry
+          // would upload a fresh draft and create a second durable capture.
+          // The node returns the already-committed record instead.
+          'localCaptureId': store.captureId,
         },
-        'files': files,
       });
-      _captureId = record['id']?.toString();
-      if (_captureId == null || _captureId!.isEmpty) {
-        throw StateError('The node did not return a capture ID.');
-      }
-      // Delivered: restart recovery stops offering it, and cleanup may reclaim
-      // the directory.
-      await store.markTransferred();
-      _state = SpatialCaptureState.awaitingProcessingChoice;
-      notifyListeners();
-    } catch (error) {
-      // The capture stays on disk so the transfer can be retried.
-      _state = SpatialCaptureState.error;
-      _error = error.toString();
-      notifyListeners();
-      rethrow;
+      draftId = draft.id;
+      // Record before the first byte moves: a crash mid-upload must leave a
+      // draft the next attempt can find instead of orphaning it on the node.
+      await store.recordDraftId(draftId);
     }
+
+    var uploadedFiles = 0;
+    var uploadedBytes = 0;
+    _transfer = SpatialTransferProgress(
+      phase: SpatialTransferPhase.uploading,
+      totalFiles: entries.length,
+      totalBytes: totalBytes,
+    );
+    notifyListeners();
+
+    for (final entry in entries) {
+      final file = store.fileAt(entry.path);
+      if (!await file.exists()) continue;
+      final length = await file.length();
+      if (!alreadyUploaded.contains(entry.path)) {
+        await node.service.uploadCaptureDraftFile(
+          draftId: draftId,
+          path: entry.path,
+          file: file,
+          mimeType: entry.mimeType,
+        );
+      }
+      uploadedFiles++;
+      uploadedBytes += length;
+      _transfer = SpatialTransferProgress(
+        phase: SpatialTransferPhase.uploading,
+        uploadedFiles: uploadedFiles,
+        totalFiles: entries.length,
+        uploadedBytes: uploadedBytes,
+        totalBytes: totalBytes,
+      );
+      notifyListeners();
+    }
+
+    _transfer = SpatialTransferProgress(
+      phase: SpatialTransferPhase.committing,
+      uploadedFiles: uploadedFiles,
+      totalFiles: entries.length,
+      uploadedBytes: uploadedBytes,
+      totalBytes: totalBytes,
+    );
+    notifyListeners();
+
+    final record = await node.service.commitCaptureDraft(draftId);
+    final captureId = record['id']?.toString();
+    if (captureId == null || captureId.isEmpty) {
+      throw const KubusNodeRequestException(
+        statusCode: 200,
+        code: 'capture_id_missing',
+      );
+    }
+    _captureId = captureId;
+    // Delivered: restart recovery stops offering it, and cleanup may reclaim
+    // the directory.
+    await store.markTransferred();
+    _transfer = SpatialTransferProgress(
+      phase: SpatialTransferPhase.complete,
+      uploadedFiles: uploadedFiles,
+      totalFiles: entries.length,
+      uploadedBytes: uploadedBytes,
+      totalBytes: totalBytes,
+    );
   }
 
-  Future<Map<String, dynamic>> _encodeFile(
-    SpatialCaptureStore store,
-    String relativePath,
-    String mimeType,
-  ) async {
-    final bytes = await store.fileAt(relativePath).readAsBytes();
-    return {
-      'path': relativePath,
-      'mimeType': mimeType,
-      'contentBase64': base64Encode(bytes),
-    };
-  }
+  /// Diagnostic text for logs and the debug surface. Never shown to the user:
+  /// the UI maps [state] and the typed exception to localized copy.
+  static String _describe(Object error) => error.toString();
 
   Future<void> processLocally(KubusNodeProvider node) async {
     if (_state != SpatialCaptureState.awaitingProcessingChoice ||
@@ -639,6 +906,7 @@ class SpatialCaptureProvider extends ChangeNotifier {
     _remoteJobState = null;
     _localJobState = null;
     _localJobProgress = 0;
+    _transfer = const SpatialTransferProgress();
     notifyListeners();
   }
 

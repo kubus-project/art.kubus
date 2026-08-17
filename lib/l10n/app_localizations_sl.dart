@@ -15993,5 +15993,128 @@ class AppLocalizationsSl extends AppLocalizations {
   String get arPlacementRotate => 'Zavrti';
 
   @override
+  String get spatialCaptureGuideIdle =>
+      'Telefon usmerite v umetnino za začetek.';
+
+  @override
+  String get spatialCaptureGuidePaused =>
+      'Zajem je zaustavljen. Nadaljujte, ko ste pripravljeni.';
+
+  @override
+  String get spatialCaptureGuideTrackingLost =>
+      'AR je izgubil sled prostora. Telefon premikajte počasi za nadaljevanje.';
+
+  @override
+  String get spatialCaptureGuideFull =>
+      'Zajem je poln. Zaključite za obdelavo zajetega.';
+
+  @override
+  String get spatialCaptureResume => 'Nadaljuj zajem';
+
+  @override
+  String get spatialCaptureStart => 'Začni zajem';
+
+  @override
+  String get spatialCaptureContributorOnly =>
+      'Prostorski zajem je na voljo potrjenim sodelujočim, umetnikom in institucijam.';
+
+  @override
+  String get spatialCaptureChooseArtwork =>
+      'Pred začetkom prostorskega zajema izberite umetnino.';
+
+  @override
+  String get spatialCaptureNotReadyToast =>
+      'Pred zaključkom zajemite še nekaj kotov.';
+
+  @override
+  String get spatialCaptureNodeRequired =>
+      'Izvorni zajem ostane na tej napravi. Povežite kubus Node s prostorsko zmogljivostjo za prenos in lokalno obdelavo.';
+
+  @override
+  String get spatialCaptureNodeOutdated =>
+      'Ta kubus Node ne more prejeti pretočnega zajema. Posodobite vozlišče in poskusite znova.';
+
+  @override
+  String get spatialCaptureTransferFailed =>
+      'Zajema ni bilo mogoče prenesti. Še vedno je na tej napravi, zato lahko poskusite znova.';
+
+  @override
+  String get spatialCaptureRetryTransfer => 'Ponovi prenos';
+
+  @override
+  String get spatialTransferPreparing => 'Pripravljam zajem …';
+
+  @override
+  String get spatialTransferCommitting => 'Zaključujem na vašem vozlišču …';
+
+  @override
+  String spatialTransferUploading(int done, int total) {
+    return 'Nalagam $done od $total datotek';
+  }
+
+  @override
+  String get spatialArchiveEmptyTitle => 'Prostorski arhiv';
+
+  @override
+  String get spatialArchiveEmptyBody =>
+      'Objavljeni in lokalno obdelani prostorski zapisi se bodo sčasoma pojavili tukaj.';
+
+  @override
+  String get spatialArchiveRecord => 'Prostorski zapis';
+
+  @override
+  String get spatialRecoveryTitle => 'Nedokončan zajem';
+
+  @override
+  String spatialRecoveryBody(int count) {
+    return '$count sledenih pogledov iz prekinjenega zajema je še vedno na tej napravi.';
+  }
+
+  @override
+  String get spatialRecoveryResume => 'Nadaljuj zajem';
+
+  @override
+  String get spatialRecoveryDiscard => 'Zavrzi zajem';
+
+  @override
+  String get spatialRecoveryKeep => 'Shrani za pozneje';
+
+  @override
+  String get arPlacementScaleUp => 'Večje';
+
+  @override
+  String get arPlacementScaleDown => 'Manjše';
+
+  @override
+  String get arPlacementReposition => 'Premakni';
+
+  @override
+  String get arPlacementConfirm => 'Potrdi postavitev';
+
+  @override
+  String get arPlacementRepositionHint =>
+      'Tapnite drugo površino za premik umetnine.';
+
+  @override
+  String get arPlacementAdjustHint =>
+      'Uščipnite za spremembo velikosti, povlecite za vrtenje, nato potrdite.';
+
+  @override
+  String get arPlacementTrackingLost =>
+      'AR je izgubil sled prostora. Postavitev je ohranjena – premikajte se počasi za nadaljevanje.';
+
+  @override
+  String get arPlacementPreviewFailed =>
+      'Predogleda umetnine ni bilo mogoče prikazati. Poskusite znova izbrati površino.';
+
+  @override
+  String get arCameraSwitching => 'Preklapljam kamero …';
+  @override
+  String get spatialCaptureDiscardAndRestart => 'Zavrzi in začni znova';
+
+  @override
+  String get spatialCaptureGuideFullUnusable =>
+      'Zajem je dosegel omejitev, preden je zajel dovolj umetnine. Začnite znova in se več premikajte okoli nje.';
+  @override
   String get arCaptureFrameFailed => 'Zajem sličice ni uspel. Poskusite znova.';
 }
