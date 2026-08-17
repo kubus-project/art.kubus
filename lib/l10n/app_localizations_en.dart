@@ -15834,5 +15834,128 @@ class AppLocalizationsEn extends AppLocalizations {
   String get arPlacementRotate => 'Rotate';
 
   @override
+  String get spatialCaptureGuideIdle =>
+      'Point your phone at the artwork to begin.';
+
+  @override
+  String get spatialCaptureGuidePaused =>
+      'Capture is paused. Resume when you are ready.';
+
+  @override
+  String get spatialCaptureGuideTrackingLost =>
+      'AR lost track of the space. Move your phone slowly to continue.';
+
+  @override
+  String get spatialCaptureGuideFull =>
+      'Capture is full. Finish to process what you have.';
+
+  @override
+  String get spatialCaptureResume => 'Resume capture';
+
+  @override
+  String get spatialCaptureStart => 'Start capture';
+
+  @override
+  String get spatialCaptureContributorOnly =>
+      'Spatial capture is available to approved contributors, artists and institutions.';
+
+  @override
+  String get spatialCaptureChooseArtwork =>
+      'Choose an artwork before starting a spatial capture.';
+
+  @override
+  String get spatialCaptureNotReadyToast =>
+      'Capture a few more angles before finishing.';
+
+  @override
+  String get spatialCaptureNodeRequired =>
+      'Your source capture stays on this device. Pair a spatial-capable kubus Node to transfer and process it locally.';
+
+  @override
+  String get spatialCaptureNodeOutdated =>
+      'This kubus Node cannot receive a streamed capture. Update the node and try again.';
+
+  @override
+  String get spatialCaptureTransferFailed =>
+      'The capture could not be transferred. It is still on this device, so you can try again.';
+
+  @override
+  String get spatialCaptureRetryTransfer => 'Retry transfer';
+
+  @override
+  String get spatialTransferPreparing => 'Preparing capture…';
+
+  @override
+  String get spatialTransferCommitting => 'Finalising on your node…';
+
+  @override
+  String spatialTransferUploading(int done, int total) {
+    return 'Uploading $done of $total files';
+  }
+
+  @override
+  String get spatialArchiveEmptyTitle => 'Spatial archive';
+
+  @override
+  String get spatialArchiveEmptyBody =>
+      'Published and locally processed spatial records will appear here over time.';
+
+  @override
+  String get spatialArchiveRecord => 'Spatial record';
+
+  @override
+  String get spatialRecoveryTitle => 'Unfinished capture';
+
+  @override
+  String spatialRecoveryBody(int count) {
+    return '$count tracked views from an interrupted capture are still on this device.';
+  }
+
+  @override
+  String get spatialRecoveryResume => 'Resume capture';
+
+  @override
+  String get spatialRecoveryDiscard => 'Discard capture';
+
+  @override
+  String get spatialRecoveryKeep => 'Keep for later';
+
+  @override
+  String get arPlacementScaleUp => 'Larger';
+
+  @override
+  String get arPlacementScaleDown => 'Smaller';
+
+  @override
+  String get arPlacementReposition => 'Move';
+
+  @override
+  String get arPlacementConfirm => 'Confirm placement';
+
+  @override
+  String get arPlacementRepositionHint =>
+      'Tap another surface to move the artwork.';
+
+  @override
+  String get arPlacementAdjustHint =>
+      'Pinch to resize, drag to rotate, then confirm.';
+
+  @override
+  String get arPlacementTrackingLost =>
+      'AR lost track of the space. Your placement is kept — move slowly to continue.';
+
+  @override
+  String get arPlacementPreviewFailed =>
+      'The artwork preview could not be shown. Try choosing the surface again.';
+
+  @override
+  String get arCameraSwitching => 'Switching camera…';
+  @override
+  String get spatialCaptureDiscardAndRestart => 'Discard and start over';
+
+  @override
+  String get spatialCaptureGuideFullUnusable =>
+      'Capture reached its limit before covering enough of the artwork. Start over and move around it more.';
+  @override
   String get arCaptureFrameFailed => 'Could not capture a frame. Try again.';
 }

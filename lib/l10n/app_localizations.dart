@@ -27550,6 +27550,215 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Could not capture a frame. Try again.'**
+  /// No description provided for @spatialCaptureGuideIdle.
+  ///
+  /// In en, this message translates to:
+  /// **'Point your phone at the artwork to begin.'**
+  String get spatialCaptureGuideIdle;
+
+  /// No description provided for @spatialCaptureGuidePaused.
+  ///
+  /// In en, this message translates to:
+  /// **'Capture is paused. Resume when you are ready.'**
+  String get spatialCaptureGuidePaused;
+
+  /// No description provided for @spatialCaptureGuideTrackingLost.
+  ///
+  /// In en, this message translates to:
+  /// **'AR lost track of the space. Move your phone slowly to continue.'**
+  String get spatialCaptureGuideTrackingLost;
+
+  /// No description provided for @spatialCaptureGuideFull.
+  ///
+  /// In en, this message translates to:
+  /// **'Capture is full. Finish to process what you have.'**
+  String get spatialCaptureGuideFull;
+
+  /// No description provided for @spatialCaptureResume.
+  ///
+  /// In en, this message translates to:
+  /// **'Resume capture'**
+  String get spatialCaptureResume;
+
+  /// No description provided for @spatialCaptureStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Start capture'**
+  String get spatialCaptureStart;
+
+  /// No description provided for @spatialCaptureContributorOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Spatial capture is available to approved contributors, artists and institutions.'**
+  String get spatialCaptureContributorOnly;
+
+  /// No description provided for @spatialCaptureChooseArtwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose an artwork before starting a spatial capture.'**
+  String get spatialCaptureChooseArtwork;
+
+  /// No description provided for @spatialCaptureNotReadyToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Capture a few more angles before finishing.'**
+  String get spatialCaptureNotReadyToast;
+
+  /// No description provided for @spatialCaptureNodeRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Your source capture stays on this device. Pair a spatial-capable kubus Node to transfer and process it locally.'**
+  String get spatialCaptureNodeRequired;
+
+  /// No description provided for @spatialCaptureNodeOutdated.
+  ///
+  /// In en, this message translates to:
+  /// **'This kubus Node cannot receive a streamed capture. Update the node and try again.'**
+  String get spatialCaptureNodeOutdated;
+
+  /// No description provided for @spatialCaptureTransferFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The capture could not be transferred. It is still on this device, so you can try again.'**
+  String get spatialCaptureTransferFailed;
+
+  /// No description provided for @spatialCaptureRetryTransfer.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry transfer'**
+  String get spatialCaptureRetryTransfer;
+
+  /// No description provided for @spatialTransferPreparing.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing capture…'**
+  String get spatialTransferPreparing;
+
+  /// No description provided for @spatialTransferCommitting.
+  ///
+  /// In en, this message translates to:
+  /// **'Finalising on your node…'**
+  String get spatialTransferCommitting;
+
+  /// No description provided for @spatialTransferUploading.
+  ///
+  /// In en, this message translates to:
+  /// **'Uploading $done of $total files'**
+  String spatialTransferUploading(int done, int total);
+
+  /// No description provided for @spatialArchiveEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Spatial archive'**
+  String get spatialArchiveEmptyTitle;
+
+  /// No description provided for @spatialArchiveEmptyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Published and locally processed spatial records will appear here over time.'**
+  String get spatialArchiveEmptyBody;
+
+  /// No description provided for @spatialArchiveRecord.
+  ///
+  /// In en, this message translates to:
+  /// **'Spatial record'**
+  String get spatialArchiveRecord;
+
+  /// No description provided for @spatialRecoveryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Unfinished capture'**
+  String get spatialRecoveryTitle;
+
+  /// No description provided for @spatialRecoveryBody.
+  ///
+  /// In en, this message translates to:
+  /// **'$count tracked views from an interrupted capture are still on this device.'**
+  String spatialRecoveryBody(int count);
+
+  /// No description provided for @spatialRecoveryResume.
+  ///
+  /// In en, this message translates to:
+  /// **'Resume capture'**
+  String get spatialRecoveryResume;
+
+  /// No description provided for @spatialRecoveryDiscard.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard capture'**
+  String get spatialRecoveryDiscard;
+
+  /// No description provided for @spatialRecoveryKeep.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep for later'**
+  String get spatialRecoveryKeep;
+
+  /// No description provided for @arPlacementScaleUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Larger'**
+  String get arPlacementScaleUp;
+
+  /// No description provided for @arPlacementScaleDown.
+  ///
+  /// In en, this message translates to:
+  /// **'Smaller'**
+  String get arPlacementScaleDown;
+
+  /// No description provided for @arPlacementReposition.
+  ///
+  /// In en, this message translates to:
+  /// **'Move'**
+  String get arPlacementReposition;
+
+  /// No description provided for @arPlacementConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm placement'**
+  String get arPlacementConfirm;
+
+  /// No description provided for @arPlacementRepositionHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap another surface to move the artwork.'**
+  String get arPlacementRepositionHint;
+
+  /// No description provided for @arPlacementAdjustHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Pinch to resize, drag to rotate, then confirm.'**
+  String get arPlacementAdjustHint;
+
+  /// No description provided for @arPlacementTrackingLost.
+  ///
+  /// In en, this message translates to:
+  /// **'AR lost track of the space. Your placement is kept — move slowly to continue.'**
+  String get arPlacementTrackingLost;
+
+  /// No description provided for @arPlacementPreviewFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The artwork preview could not be shown. Try choosing the surface again.'**
+  String get arPlacementPreviewFailed;
+
+  /// No description provided for @arCameraSwitching.
+  ///
+  /// In en, this message translates to:
+  /// **'Switching camera…'**
+  String get arCameraSwitching;
+
+  /// No description provided for @spatialCaptureDiscardAndRestart.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard and start over'**
+  String get spatialCaptureDiscardAndRestart;
+
+  /// No description provided for @spatialCaptureGuideFullUnusable.
+  ///
+  /// In en, this message translates to:
+  /// **'Capture reached its limit before covering enough of the artwork. Start over and move around it more.'**
+  String get spatialCaptureGuideFullUnusable;
   String get arCaptureFrameFailed;
 }
 

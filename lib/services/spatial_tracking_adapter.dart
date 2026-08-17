@@ -17,8 +17,25 @@ abstract class SpatialTrackingAdapter {
     required String modelPath,
     required vector.Vector3 position,
     vector.Vector3? scale,
+    double yawRadians = 0,
     String? name,
   });
+
+  /// Moves, rotates or scales a node already in the scene.
+  ///
+  /// Returns false when no such node exists. Adjusting the placement preview
+  /// goes through here so scale and rotation are visible while the user is
+  /// still choosing, not only once the placement is confirmed.
+  Future<bool> updateNodeTransform({
+    required String name,
+    vector.Vector3? position,
+    double? yawRadians,
+    double? scale,
+  });
+
+  /// Removes a node, so a cancelled preview leaves nothing behind.
+  Future<void> removeNode(String name);
+
   Future<Map<String, dynamic>> captureFrame();
   String get platformDescription;
   bool get isReady;
@@ -72,14 +89,33 @@ class PlatformSpatialTrackingAdapter implements SpatialTrackingAdapter {
     required String modelPath,
     required vector.Vector3 position,
     vector.Vector3? scale,
+    double yawRadians = 0,
     String? name,
   }) =>
       _manager.addModel(
         modelPath: modelPath,
         position: position,
         scale: scale,
+        yawRadians: yawRadians,
         name: name,
       );
+
+  @override
+  Future<bool> updateNodeTransform({
+    required String name,
+    vector.Vector3? position,
+    double? yawRadians,
+    double? scale,
+  }) =>
+      _manager.updateNodeTransform(
+        name: name,
+        position: position,
+        yawRadians: yawRadians,
+        scale: scale,
+      );
+
+  @override
+  Future<void> removeNode(String name) => _manager.removeNode(name);
 
   @override
   Future<Map<String, dynamic>> captureFrame() => _manager.captureSpatialFrame();

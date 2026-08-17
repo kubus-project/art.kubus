@@ -160,7 +160,9 @@ void main() {
       expect(provider.frameCount, 5);
       expect(provider.state, SpatialCaptureState.paused);
       expect(provider.pauseReason, SpatialCapturePauseReason.limitReached);
-      expect(provider.guidance, contains('full'));
+      // Structured, not a sentence: the provider reports the case and the AR
+      // screen localizes it, so this guidance exists in EN and SL alike.
+      expect(provider.guidance, SpatialCaptureGuidance.limitReached);
     });
 
     test('reaching the byte ceiling pauses and preserves the capture',

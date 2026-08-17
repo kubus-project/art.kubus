@@ -21,6 +21,7 @@ import com.difrancescogianmarco.arcore_flutter_plugin.flutter_models.FlutterArCo
 import com.difrancescogianmarco.arcore_flutter_plugin.flutter_models.FlutterArCorePose
 import com.difrancescogianmarco.arcore_flutter_plugin.models.RotatingNode
 import com.difrancescogianmarco.arcore_flutter_plugin.utils.ArCoreUtils
+import com.difrancescogianmarco.arcore_flutter_plugin.utils.DecodableUtils
 import com.google.ar.core.*
 import com.google.ar.core.exceptions.CameraNotAvailableException
 import com.google.ar.core.exceptions.NotYetAvailableException
@@ -269,6 +270,10 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
                 debugLog(" removeARCoreNode")
                 val map = call.arguments as HashMap<String, Any>
                 removeNode(map["nodeName"] as String, result)
+            }
+            "updateNodeTransform" -> {
+                debugLog(" updateNodeTransform")
+                updateNodeTransform(call, result)
             }
             "positionChanged" -> {
                 debugLog(" positionChanged")
@@ -717,6 +722,39 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
         }
 
         result.success(null)
+    }
+
+    /**
+     * Applies a new local transform to a node that is already in the scene.
+     *
+     * A placement preview is adjusted continuously — pinch to scale, drag to
+     * rotate, tap to reposition — and removing and re-adding the node for every
+     * change reloads its renderable and makes the artwork blink. Mutating the
+     * live node keeps the preview stable and matches what the user is doing.
+     *
+     * An AnchorNode owns its world pose through its anchor, so position is
+     * applied to the anchor's child content where one exists and to the node
+     * itself otherwise. Omitted components are left untouched.
+     */
+    fun updateNodeTransform(call: MethodCall, result: MethodChannel.Result) {
+        val name = call.argument<String>("name")
+        val node = arSceneView?.scene?.findByName(name)
+        if (node == null) {
+            debugLog("updateNodeTransform: no node named $name")
+            result.success(false)
+            return
+        }
+
+        DecodableUtils.parseVector3(call.argument<HashMap<String, Double>>("position"))?.let {
+            node.localPosition = it
+        }
+        DecodableUtils.parseQuaternion(call.argument<HashMap<String, Double>>("rotation"))?.let {
+            node.localRotation = it
+        }
+        DecodableUtils.parseVector3(call.argument<HashMap<String, Double>>("scale"))?.let {
+            node.localScale = it
+        }
+        result.success(true)
     }
 
     fun updateRotation(call: MethodCall, result: MethodChannel.Result) {

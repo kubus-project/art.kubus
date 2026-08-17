@@ -25,10 +25,15 @@ import '../../models/kubus_node_models.dart';
 import '../../providers/artwork_provider.dart';
 import '../../providers/kubus_node_provider.dart';
 import '../../providers/spatial_capture_provider.dart';
+import '../../services/ar_camera_orchestrator.dart';
 import '../../services/ar_placement_controller.dart';
+import '../../services/ar_placement_preview.dart';
 import '../../services/ar_error_messages.dart';
+import 'ar_chrome.dart';
 import '../../services/camera_ownership_coordinator.dart';
 import '../../services/camera_permission_coordinator.dart';
+import '../../services/kubus_node_service.dart';
+import '../../services/spatial_capture_store.dart';
 import '../../services/spatial_capture_session.dart';
 import '../../providers/dao_provider.dart';
 import '../../providers/institution_provider.dart';
@@ -137,6 +142,41 @@ class _SpatialProcessingProgressDialog extends StatelessWidget {
                     label: Text(stages[index]),
                   ),
               ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Shown while the camera is being handed from one owner to the other.
+///
+/// Neither platform view is mounted during a handoff, so this stands in for
+/// the fraction of a second between the outgoing owner releasing the device and
+/// the incoming one taking it.
+class _CameraHandoffSurface extends StatelessWidget {
+  const _CameraHandoffSurface({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: Colors.black,
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const AppLoading(),
+            const SizedBox(height: KubusSpacing.md),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: KubusTypography.inter(
+                color: Colors.white70,
+                fontSize: 14,
+              ),
             ),
           ],
         ),
@@ -255,7 +295,12 @@ class _ARScreenState extends State<ARScreen>
     },
     releaseAr: () async {
       _stopSpatialSampling();
+      await _placementPreview?.clear();
       _placement.reset();
+      // Drop the cached platform view so a later AR acquisition builds a fresh
+      // one. Reusing a widget whose native session has been torn down would
+      // show a dead surface.
+      _arCameraView = null;
       await _spatialTracking.disposeSession();
     },
   );
@@ -263,11 +308,36 @@ class _ARScreenState extends State<ARScreen>
   final WalkingLocationApi _locationService =
       const GeolocatorWalkingLocationService();
 
+  /// Owns mode selection and the camera handoff between the scanner and AR.
+  late final ArCameraOrchestrator _cameraOrchestrator = ArCameraOrchestrator(
+    camera: _camera,
+    permission: _cameraPermission,
+  );
+
   bool _isARReady = false;
   SpatialCaptureSession? _captureSession;
   bool _isLoading = true;
   final bool _showControls = true;
-  String _currentMode = 'scan'; // discover, place, archive, capture UI intents
+
+  /// The mode whose chrome is currently rendered. Only advances once the
+  /// camera handoff for it has completed.
+  String get _currentMode => _cameraOrchestrator.currentMode;
+
+  /// The AR platform view, kept across mode changes so Place <-> Spatial does
+  /// not remount it and recreate the session underneath.
+  Widget? _arCameraView;
+
+  /// Keeps the scene's preview node in step with the placement being composed.
+  ArPlacementPreview? _placementPreview;
+
+  /// Scale and rotation at the start of the current direct-manipulation
+  /// gesture, so deltas apply against a stable base.
+  double _gestureBaseScale = 1;
+  double _gestureBaseRotation = 0;
+
+  /// Set while a recovery prompt is on screen, so it is offered once.
+  bool _recoveryChecked = false;
+
   LatLng? _currentLocation;
 
   // AR Settings
@@ -356,6 +426,7 @@ class _ARScreenState extends State<ARScreen>
     return DateTime.now();
   }
 
+  /// Longer description of a mode, used by the AR settings sheet.
   String _modeDescription(AppLocalizations l10n, String modeId) {
     switch (modeId) {
       case 'scan':
@@ -386,8 +457,31 @@ class _ARScreenState extends State<ARScreen>
     _spatialTracking.onSurfaceDetected =
         () => _placement.setSurfaceAvailable(true);
     _spatialTracking.isTracking.addListener(_onTrackingChanged);
+    _spatialTracking.trackingFailureReason.addListener(_onPlacementChanged);
     _placement.addListener(_onPlacementChanged);
+    // Camera ownership drives which platform view is mounted, so the screen
+    // has to rebuild whenever it changes or a handoff starts.
+    _cameraOrchestrator.addListener(_onCameraChanged);
+    _placementPreview = ArPlacementPreview(
+      tracking: _spatialTracking,
+      resolveModel: _resolveArAsset,
+      onError: _onPreviewError,
+    );
     WidgetsBinding.instance.addObserver(this);
+  }
+
+  void _onCameraChanged() {
+    if (mounted) setState(() {});
+  }
+
+  void _onPreviewError(Object error) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showKubusSnackBar(
+      SnackBar(
+        content: Text(AppLocalizations.of(context)!.arPlacementPreviewFailed),
+      ),
+      tone: KubusSnackBarTone.warning,
+    );
   }
 
   @override
@@ -403,14 +497,17 @@ class _ARScreenState extends State<ARScreen>
         // and its files are preserved so the user can resume where they left
         // off.
         _pauseSpatialCapture(SpatialCapturePauseReason.appBackgrounded);
-        unawaited(_camera.releaseAll());
+        unawaited(_cameraOrchestrator.releaseAll());
       case AppLifecycleState.resumed:
         // Re-check permission first: the user may have granted it in system
-        // settings while the app was backgrounded. Tracking still has to be
-        // reacquired, which the sampler's gate already enforces.
-        unawaited(_cameraPermission
-            .refresh()
-            .then((_) => _acquireCameraFor(_currentMode)));
+        // settings while the app was backgrounded. The orchestrator then
+        // re-acquires whichever mode was active, and tracking is reacquired by
+        // the sampler's own gate.
+        unawaited(
+          _cameraPermission
+              .refresh()
+              .then((_) => _cameraOrchestrator.reacquire()),
+        );
     }
   }
 
@@ -430,8 +527,56 @@ class _ARScreenState extends State<ARScreen>
   }
 
   void _onPlacementChanged() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    setState(() {});
+    // Mirror the placement into the scene. A transform the user cannot see is
+    // not a preview, and adjustment controls that change nothing visible are
+    // not controls.
+    unawaited(_placementPreview?.sync(_placement) ?? Future<void>.value());
   }
+
+  /// Arms the Place workflow for the currently selected artwork.
+  ///
+  /// Selecting an artwork never places it: this only lets the controller start
+  /// looking for a surface.
+  void _armPlacementForSelection() {
+    if (_currentMode != 'place') return;
+    final artwork = _selectedArtwork;
+    if (artwork == null) return;
+    _placement.selectArtwork(
+      artworkId: artwork['id'].toString(),
+      modelPath: (artwork['modelURL'] ?? artwork['model'] ?? '').toString(),
+    );
+  }
+
+  void _onAdjustStart(ScaleStartDetails details) {
+    final transform = _placement.transform;
+    if (transform == null) return;
+    _gestureBaseScale = transform.scale;
+    _gestureBaseRotation = transform.rotationRadians;
+    _placement.beginAdjusting();
+  }
+
+  void _onAdjustUpdate(ScaleUpdateDetails details) {
+    final transform = _placement.transform;
+    if (transform == null) return;
+    // Pinch scales; a two-finger twist rotates. Both are applied relative to
+    // the values captured when the gesture began, so a single gesture cannot
+    // compound its own output.
+    if (details.scale != 1.0) {
+      final target = (_gestureBaseScale * details.scale)
+          .clamp(_placement.minScale, _placement.maxScale);
+      if (transform.scale != 0) {
+        _placement.scaleBy(target / transform.scale);
+      }
+    }
+    if (details.rotation != 0) {
+      final target = _gestureBaseRotation + details.rotation;
+      _placement.rotateBy(target - transform.rotationRadians);
+    }
+  }
+
+  void _onAdjustEnd(ScaleEndDetails details) => _placement.endAdjusting();
 
   @override
   void didChangeDependencies() {
@@ -523,6 +668,13 @@ class _ARScreenState extends State<ARScreen>
       });
       _syncSavedArtworkStateFromProvider();
       _animationController.forward();
+      // Register the initial camera owner through the same mechanism as every
+      // later switch. The scanner used to mount straight from the mode while
+      // the coordinator still believed nobody held the camera, so the very
+      // first handoff released an owner it did not know about.
+      await _acquireCameraFor(_currentMode);
+      if (!mounted) return;
+      await _offerInterruptedCaptureRecovery();
     } catch (e) {
       if (kDebugMode) {
         debugPrint('ARScreen: AR initialization error: $e');
@@ -556,11 +708,10 @@ class _ARScreenState extends State<ARScreen>
     final artwork = artworks.where((a) => a['id'] == artworkId).firstOrNull;
     if (artwork == null) return;
 
-    setState(() {
-      _selectedArtwork = artwork;
-      _currentMode =
-          AppConfig.isFeatureEnabled('availabilityNodes') ? 'view' : 'place';
-    });
+    setState(() => _selectedArtwork = artwork);
+    _changeMode(
+      AppConfig.isFeatureEnabled('availabilityNodes') ? 'view' : 'place',
+    );
 
     if (kDebugMode) {
       debugPrint('ARScreen: Launching AR for artwork: ${artwork['title']}');
@@ -638,11 +789,15 @@ class _ARScreenState extends State<ARScreen>
     // Detach before tearing the session down so a late native callback cannot
     // reach a disposed State.
     _spatialTracking.isTracking.removeListener(_onTrackingChanged);
+    _spatialTracking.trackingFailureReason.removeListener(_onPlacementChanged);
     _spatialTracking.onSurfaceTap = null;
     _spatialTracking.onSurfaceDetected = null;
     WidgetsBinding.instance.removeObserver(this);
     _placement.removeListener(_onPlacementChanged);
     _placement.dispose();
+    _placementPreview?.dispose();
+    _cameraOrchestrator.removeListener(_onCameraChanged);
+    _cameraOrchestrator.dispose();
     _camera.dispose();
     for (final proxy in _arAssetProxies) {
       unawaited(proxy.close());
@@ -670,78 +825,140 @@ class _ARScreenState extends State<ARScreen>
       // Keep AR chrome transparent so the root gradient can still paint.
       // (The AR view itself remains opaque and renders its own content.)
       backgroundColor: Colors.transparent,
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            // Compact status header. Part of the layout, not an overlay, so it
-            // can never sit on top of the camera content or the controls.
-            if (_isARReady) _buildTopBar(themeProvider),
-
-            // The camera is the dominant surface. Contextual guidance is
-            // bounded inside this region and cannot reach the controls below.
-            Expanded(
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: _isARReady
-                        ? (_currentMode == 'scan'
-                            ? ARMarkerScanner(
-                                onDeepLinkFound: (target) {
-                                  if (!mounted) return;
-                                  unawaited(_openScannedDeepLink(target));
-                                },
-                                onArtworkFound: (artworkData) async {
-                                  setState(() {
-                                    _placedObjects.add({
-                                      'id': artworkData['id'] ??
-                                          DateTime.now().toString(),
-                                      'title': artworkData['title'] ??
-                                          l10n.commonUnknown,
-                                      'artist': artworkData['artist'] ??
-                                          l10n.commonUnknown,
-                                      'modelUrl': artworkData['modelUrl'],
-                                      'timestamp':
-                                          DateTime.now().millisecondsSinceEpoch,
-                                    });
-                                  });
-                                },
-                                onControllerReady: (controller) {
-                                  setState(() {
-                                    _scannerController = controller;
-                                  });
-                                },
-                              )
-                            : _currentMode == 'view'
-                                ? _buildViewMode(themeProvider)
-                                : _buildModePreview(themeProvider))
-                        : const SizedBox.shrink(),
-                  ),
-
-                  if (_isLoading)
-                    Positioned.fill(child: _buildLoadingOverlay()),
-
-                  // One contextual guidance area, anchored to the bottom of the
-                  // canvas so it scrolls with the camera region rather than
-                  // floating over the primary action.
-                  if (_isARReady && !_isLoading)
-                    Positioned(
-                      left: KubusSpacing.lg,
-                      right: KubusSpacing.lg,
-                      bottom: KubusSpacing.md,
-                      child: _buildContextualGuidance(),
-                    ),
-                ],
-              ),
-            ),
-
-            // Controls region: contextual action above a restrained mode dock,
-            // laid out in flow so they cannot overlap each other.
-            if (_isARReady && _showControls)
-              _buildControlsRegion(themeProvider, l10n),
-          ],
-        ),
+      body: ArScreenChrome(
+        header: _isARReady
+            ? ArStatusHeader(
+                modeLabel: _modeName(l10n, _currentMode),
+                modeIcon: _iconForMode(_currentMode),
+                isDark: themeProvider.isDarkMode,
+                onOpenSettings: _showARSettings,
+                flashEnabled: _flashEnabled,
+                onToggleFlash: _currentMode == 'scan' &&
+                        _scannerController != null &&
+                        _cameraOrchestrator.surface == ArCameraSurface.scanner
+                    ? _toggleFlash
+                    : null,
+              )
+            : null,
+        cameraSurface: _isARReady ? _buildCameraSurface(l10n) : _emptyCanvas(),
+        overlay: _isLoading ? _buildLoadingOverlay() : null,
+        guidance: _isARReady && !_isLoading ? _buildGuidance(l10n) : null,
+        controls: _isARReady && _showControls
+            ? ArControlsRegion(
+                modes: _modeOptions(l10n),
+                selectedModeId: _currentMode,
+                onSelectMode: _changeMode,
+                isDark: themeProvider.isDarkMode,
+                primaryAction: _primaryAction(l10n),
+                secondaryActions: _secondaryActions(l10n),
+              )
+            : const SizedBox.shrink(),
       ),
+    );
+  }
+
+  Widget _emptyCanvas() => const ColoredBox(color: Colors.black);
+
+  IconData _iconForMode(String modeId) =>
+      _arModes.firstWhere((mode) => mode['id'] == modeId)['icon'] as IconData;
+
+  List<ArModeOption> _modeOptions(AppLocalizations l10n) => _availableArModes
+      .map(
+        (mode) => ArModeOption(
+          id: mode['id'] as String,
+          icon: mode['icon'] as IconData,
+          label: _modeName(l10n, mode['id'] as String),
+        ),
+      )
+      .toList(growable: false);
+
+  Future<void> _toggleFlash() async {
+    final controller = _scannerController;
+    if (controller == null) return;
+    try {
+      await controller.toggleTorch();
+      if (!mounted) return;
+      setState(() => _flashEnabled = !_flashEnabled);
+    } catch (_) {
+      // Torch is not available on every camera; silently leaving the control
+      // in its previous state is the honest outcome.
+    }
+  }
+
+  /// The camera surface for whoever actually holds the camera.
+  ///
+  /// Driven by [ArCameraOrchestrator.surface], not by the selected mode.
+  /// Keying it off the mode let the incoming camera widget mount while the
+  /// outgoing owner was still releasing the device, which is exactly the
+  /// contention the ownership sequencing exists to prevent.
+  Widget _buildCameraSurface(AppLocalizations l10n) {
+    switch (_cameraOrchestrator.surface) {
+      case ArCameraSurface.none:
+        // Neither camera is mounted during a handoff. This is the invariant:
+        // the new platform view appears only once the old owner has let go.
+        return _cameraOrchestrator.isTransitioning
+            ? _CameraHandoffSurface(label: l10n.arCameraSwitching)
+            : _emptyCanvas();
+      case ArCameraSurface.scanner:
+        return ARMarkerScanner(
+          key: const ValueKey('ar-scanner-surface'),
+          onDeepLinkFound: (target) {
+            if (!mounted) return;
+            unawaited(_openScannedDeepLink(target));
+          },
+          onArtworkFound: (artworkData) async {
+            if (!mounted) return;
+            setState(() {
+              _placedObjects.add({
+                'id': artworkData['id'] ?? DateTime.now().toString(),
+                'title': artworkData['title'] ?? l10n.commonUnknown,
+                'artist': artworkData['artist'] ?? l10n.commonUnknown,
+                'modelUrl': artworkData['modelUrl'],
+                'timestamp': DateTime.now().millisecondsSinceEpoch,
+              });
+            });
+          },
+          onControllerReady: (controller) {
+            if (!mounted) return;
+            setState(() => _scannerController = controller);
+          },
+        );
+      case ArCameraSurface.ar:
+        // Archive playback is a viewer, not a camera surface, but it lives on
+        // the AR owner so switching to it does not tear the session down.
+        if (_currentMode == 'view') return _buildSpatialArchive();
+        return _buildArCameraSurface();
+    }
+  }
+
+  /// The ARCore/ARKit view, built once and reused.
+  ///
+  /// Cached so switching between Place and Spatial rebuilds only the chrome.
+  /// A fresh widget instance each time would remount the platform view and
+  /// silently recreate the AR session the coordinator just kept alive.
+  Widget _buildArCameraSurface() {
+    final view = _arCameraView ??= _spatialTracking.buildTrackedView(
+      onReady: (_) {
+        if (kDebugMode) {
+          debugPrint('ARScreen: AR view created successfully');
+        }
+        // The AR view becoming ready must never confirm a placement. It only
+        // means the session can start looking for a surface; the user still
+        // chooses where the artwork goes.
+        _armPlacementForSelection();
+      },
+    );
+
+    // Direct manipulation of the previewed artwork. Pinch scales it, a
+    // horizontal drag rotates it — both applied to the live preview node, so
+    // the controls are not merely domain methods with no visible effect.
+    return GestureDetector(
+      key: const ValueKey('ar-camera-surface'),
+      behavior: HitTestBehavior.translucent,
+      onScaleStart: _placement.canAdjust ? _onAdjustStart : null,
+      onScaleUpdate: _placement.canAdjust ? _onAdjustUpdate : null,
+      onScaleEnd: _placement.canAdjust ? _onAdjustEnd : null,
+      child: view,
     );
   }
 
@@ -779,285 +996,6 @@ class _ARScreenState extends State<ARScreen>
     );
   }
 
-  Widget _buildViewMode(ThemeProvider themeProvider) {
-    final l10n = AppLocalizations.of(context)!;
-    return Container(
-      color: Colors.transparent,
-      child: _placedObjects.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.visibility_off,
-                    size: 64,
-                    color: AppColorUtils.cyanAccent.withValues(alpha: 0.5),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    l10n.arNoArtworksYetTitle,
-                    style: KubusTypography.inter(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 40),
-                    child: Text(
-                      l10n.arNoArtworksYetDescription,
-                      style: KubusTypography.inter(
-                        fontSize: 16,
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withValues(alpha: 0.7),
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ],
-              ),
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.only(
-                left: 16,
-                right: 16,
-                top: 80,
-                bottom: 120,
-              ), // Top padding for app bar, bottom for mode selector
-              itemCount: _placedObjects.length,
-              itemBuilder: (context, index) {
-                final artwork = _placedObjects[index];
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: ListTile(
-                    leading: Container(
-                      width: 50,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        color: AppColorUtils.cyanAccent.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(KubusRadius.sm),
-                      ),
-                      child: Icon(
-                        Icons.view_in_ar,
-                        color: AppColorUtils.cyanAccent,
-                      ),
-                    ),
-                    title: Text(
-                      artwork['title'] ?? l10n.commonUnknown,
-                      style: KubusTypography.inter(fontWeight: FontWeight.w600),
-                    ),
-                    subtitle: Text(
-                      artwork['artist'] ?? l10n.commonUnknown,
-                      style: KubusTypography.inter(),
-                    ),
-                    trailing: IconButton(
-                      icon: Icon(
-                        Icons.open_in_new,
-                        color: AppColorUtils.cyanAccent,
-                      ),
-                      onPressed: () async {
-                        // Arm this artwork for placement rather than dropping
-                        // it at a fixed offset. The user picks the surface.
-                        final messenger = ScaffoldMessenger.of(context);
-                        final scheme = Theme.of(context).colorScheme;
-                        final l10n = AppLocalizations.of(context)!;
-                        try {
-                          setState(() {
-                            _selectedArtwork = artwork;
-                            _currentMode = 'place';
-                          });
-                          _placement.selectArtwork(
-                            artworkId: artwork['id'].toString(),
-                            modelPath:
-                                (artwork['modelURL'] ?? artwork['model'] ?? '')
-                                    .toString(),
-                          );
-
-                          if (!mounted) return;
-                          messenger.showKubusSnackBar(
-                            SnackBar(
-                              content: Text(l10n.arModelLoadedToast),
-                              backgroundColor: scheme.primary,
-                            ),
-                          );
-                        } catch (e) {
-                          if (kDebugMode) {
-                            debugPrint('ARScreen: Failed to load AR model: $e');
-                          }
-                          if (!mounted) return;
-                          messenger.showKubusSnackBar(
-                            SnackBar(
-                              content: Text(l10n.arModelLoadFailedToast),
-                              backgroundColor: scheme.error,
-                            ),
-                          );
-                        }
-                      },
-                    ),
-                  ),
-                );
-              },
-            ),
-    );
-  }
-
-  Widget _buildModePreview(ThemeProvider themeProvider) {
-    final l10n = AppLocalizations.of(context)!;
-    final mode = _arModes.firstWhere((mode) => mode['id'] == _currentMode);
-    final modeId = mode['id'] as String;
-    final modeIcon = mode['icon'] as IconData;
-
-    if (_currentMode == 'view') {
-      return _buildSpatialArchive();
-    }
-
-    // For place and create modes, show AR camera view
-    if (_currentMode == 'place' || _currentMode == 'create') {
-      return Stack(
-        children: [
-          // AR camera view from ARManager
-          _spatialTracking.buildTrackedView(
-            onReady: (controller) {
-              if (kDebugMode) {
-                debugPrint('ARScreen: AR View created successfully');
-              }
-              // The AR view becoming ready must never confirm a placement. It
-              // only means the session can start looking for a surface; the
-              // user still chooses where the artwork goes.
-              if (_currentMode == 'place' && _selectedArtwork != null) {
-                _placement.selectArtwork(
-                  artworkId: _selectedArtwork!['id'].toString(),
-                  modelPath: (_selectedArtwork!['modelURL'] ??
-                          _selectedArtwork!['model'] ??
-                          '')
-                      .toString(),
-                );
-              }
-            },
-          ),
-          // Instruction overlay for place mode
-          if (_currentMode == 'place' && _selectedArtwork != null)
-            Positioned(
-              top: 100,
-              left: 20,
-              right: 20,
-              child: Container(
-                padding: const EdgeInsets.all(KubusSpacing.md),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.7),
-                  borderRadius: BorderRadius.circular(KubusRadius.md),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      l10n.arPlacingTitle('${_selectedArtwork!['title']}'),
-                      style: KubusTypography.inter(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      l10n.arPlacingInstruction,
-                      style: KubusTypography.inter(
-                        color: Colors.white70,
-                        fontSize: 14,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          if (_currentMode == 'create')
-            Positioned(
-              top: 100,
-              left: 20,
-              right: 20,
-              child: Consumer<SpatialCaptureProvider>(
-                builder: (context, capture, _) => GlassSurface(
-                  child: Padding(
-                    padding: const EdgeInsets.all(KubusSpacing.md),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          l10n.kubusNodePrivacyBody,
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        const SizedBox(height: KubusSpacing.xs),
-                        Text(_captureGuidance(l10n, capture.frameCount)),
-                        const SizedBox(height: KubusSpacing.sm),
-                        InlineLoading(
-                          height: 8,
-                          progress: capture.coverage,
-                          color: Theme.of(context).colorScheme.primary,
-                          animate:
-                              capture.state == SpatialCaptureState.capturing,
-                        ),
-                        const SizedBox(height: KubusSpacing.xs),
-                        Text(
-                          l10n.spatialCaptureTrackedViews(
-                            capture.frameCount,
-                            capture.depthObserved
-                                ? l10n.spatialCaptureDepthAvailable
-                                : l10n.spatialCaptureRgbPose,
-                          ),
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-        ],
-      );
-    }
-
-    // For view mode, show placeholder (will be replaced with actual AR view when artwork selected)
-    return Container(
-      color: Colors.black,
-      padding: const EdgeInsets.only(
-        top: 80,
-        bottom: 140,
-      ), // Top padding for app bar, bottom for mode selector
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(modeIcon, color: AppColorUtils.cyanAccent, size: 64),
-            const SizedBox(height: 16),
-            Text(
-              l10n.arModePreviewTitle(_modeName(l10n, modeId)),
-              style: KubusTypography.inter(
-                color: Colors.white,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 40),
-              child: Text(
-                _modeDescription(l10n, modeId),
-                style: KubusTypography.inter(
-                  color: Colors.white70,
-                  fontSize: 16,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   // Helper method to place selected artwork in AR
   Future<String> _resolveArAsset(String raw) async {
     if (raw.trim().isEmpty) {
@@ -1074,6 +1012,7 @@ class _ARScreenState extends State<ARScreen>
   }
 
   Widget _buildSpatialArchive() {
+    final l10n = AppLocalizations.of(context)!;
     final node = context.watch<KubusNodeProvider>();
     final selectedArtworkId = _selectedArtwork?['id']?.toString();
     final histories = node.jobs
@@ -1104,12 +1043,12 @@ class _ARScreenState extends State<ARScreen>
                 const Icon(Icons.view_in_ar_outlined, size: 52),
                 const SizedBox(height: KubusSpacing.md),
                 Text(
-                  'Explore spatial archive',
+                  l10n.spatialArchiveEmptyTitle,
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 const SizedBox(height: KubusSpacing.sm),
-                const Text(
-                  'Published and locally processed spatial records will appear here over time.',
+                Text(
+                  l10n.spatialArchiveEmptyBody,
                   textAlign: TextAlign.center,
                 ),
               ],
@@ -1151,7 +1090,7 @@ class _ARScreenState extends State<ARScreen>
                     selected: job.id == selected.id,
                     label: Text(
                       capturedAt == null
-                          ? 'Spatial record'
+                          ? l10n.spatialArchiveRecord
                           : '${capturedAt.month}/${capturedAt.year}',
                     ),
                     onSelected: (_) =>
@@ -1166,6 +1105,12 @@ class _ARScreenState extends State<ARScreen>
     );
   }
 
+  /// Commits the previewed placement into the scene.
+  ///
+  /// The preview node already sits at the chosen pose with the chosen rotation
+  /// and scale, so confirming promotes it rather than adding a second node —
+  /// which is what left the scene with an orphan preview underneath the placed
+  /// artwork.
   Future<void> _placeSelectedArtwork() async {
     if (_selectedArtwork == null) return;
 
@@ -1178,13 +1123,26 @@ class _ARScreenState extends State<ARScreen>
       // hit-tested transform is not renderable, so there is nothing to add.
       final transform = _placement.transform;
       if (transform == null) return;
+
+      final previewName = await _placementPreview?.commit();
+      if (previewName != null) {
+        // Promote the preview: it is already at the confirmed transform.
+        if (kDebugMode) {
+          debugPrint('ARScreen: committed placement preview $previewName');
+        }
+        return;
+      }
+
+      // No preview survived (the session was recreated, for instance): build
+      // the node from the confirmed transform, rotation included.
       await _spatialTracking.addModel(
         modelPath: await _resolveArAsset(
           (_selectedArtwork!['modelURL'] ?? '').toString(),
         ),
         position: transform.position,
         scale: vector.Vector3.all(transform.scale),
-        name: _selectedArtwork!['id'],
+        yawRadians: transform.rotationRadians,
+        name: _selectedArtwork!['id'].toString(),
       );
 
       if (kDebugMode) {
@@ -1192,9 +1150,6 @@ class _ARScreenState extends State<ARScreen>
           'ARScreen: Placed AR artwork: ${_selectedArtwork!['title']}',
         );
       }
-
-      // Note: Discovery tracking would require converting Map to Artwork object
-      // This can be implemented when backend integration is complete
     } catch (e) {
       if (mounted) {
         if (kDebugMode) {
@@ -1210,320 +1165,155 @@ class _ARScreenState extends State<ARScreen>
     }
   }
 
-  Widget _buildTopBar(ThemeProvider themeProvider) {
-    final l10n = AppLocalizations.of(context)!;
-    final isDark = themeProvider.isDarkMode;
-    final overlayColor = isDark
-        ? Theme.of(context).colorScheme.surface.withValues(alpha: 0.8)
-        : Theme.of(context).colorScheme.surface.withValues(alpha: 0.95);
-
-    final currentModeId = _currentMode;
-    final currentModeIcon = _arModes
-        .firstWhere((mode) => mode['id'] == currentModeId)['icon'] as IconData;
-
-    return Container(
-      padding: const EdgeInsets.all(KubusSpacing.md),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [overlayColor, overlayColor.withValues(alpha: 0.0)],
-        ),
-      ),
-      child: Row(
-        children: [
-          // Mode indicator (back button removed during AR camera view)
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: KubusSpacing.md,
-                vertical: KubusSpacing.sm,
-              ),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primaryContainer,
-                borderRadius: BorderRadius.circular(KubusRadius.xl),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    currentModeIcon,
-                    color: AppColorUtils.cyanAccent,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    _modeName(l10n, currentModeId),
-                    style: KubusTypography.inter(
-                      color: Theme.of(context).colorScheme.onSurface,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const Spacer(),
-          // Flash button (only in scan mode)
-          if (_currentMode == 'scan' && _scannerController != null) ...[
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: _flashEnabled
-                    ? AppColorUtils.amberAccent.withValues(alpha: 0.2)
-                    : Theme.of(context).colorScheme.primaryContainer,
-                borderRadius: BorderRadius.circular(KubusRadius.xl),
-                border: _flashEnabled
-                    ? Border.all(color: AppColorUtils.amberAccent, width: 1.5)
-                    : null,
-              ),
-              child: IconButton(
-                padding: EdgeInsets.zero,
-                icon: Icon(
-                  _flashEnabled ? Icons.flash_on : Icons.flash_off,
-                  color: _flashEnabled
-                      ? AppColorUtils.amberAccent
-                      : Theme.of(context).colorScheme.onSurface,
-                  size: KubusHeaderMetrics.actionIcon,
-                ),
-                onPressed: () async {
-                  try {
-                    await _scannerController.toggleTorch();
-                    setState(() {
-                      _flashEnabled = !_flashEnabled;
-                    });
-                  } catch (e) {
-                    // Flash not available
-                  }
-                },
-              ),
-            ),
-            const SizedBox(width: KubusSpacing.sm),
-          ],
-          // Settings button
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primaryContainer,
-              borderRadius: BorderRadius.circular(KubusRadius.xl),
-            ),
-            child: IconButton(
-              padding: EdgeInsets.zero,
-              icon: Icon(
-                Icons.settings,
-                color: Theme.of(context).colorScheme.onSurface,
-                size: 20,
-              ),
-              onPressed: _showARSettings,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Controls region: contextual actions above the mode dock.
+  /// The contextual actions for the current mode.
   ///
-  /// Laid out in flow rather than stacked with absolute offsets, so the action
-  /// and the dock cannot overlap at any screen size or text scale.
-  Widget _buildControlsRegion(
-      ThemeProvider themeProvider, AppLocalizations l10n) {
-    final capture = context.watch<SpatialCaptureProvider>();
-    final scheme = Theme.of(context).colorScheme;
-
-    return Container(
-      padding: EdgeInsets.only(
-        left: KubusSpacing.lg,
-        right: KubusSpacing.lg,
-        top: KubusSpacing.md,
-        // Only the system/app navigation inset. The old
-        // `bottom: 100 + navBarHeight` existed purely to dodge the mode dock,
-        // which is now a sibling rather than a floating overlay.
-        bottom: KubusSpacing.md + KubusLayout.mainBottomNavBarHeight,
-      ),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.bottomCenter,
-          end: Alignment.topCenter,
-          colors: [
-            scheme.surface
-                .withValues(alpha: themeProvider.isDarkMode ? 0.92 : 0.97),
-            scheme.surface.withValues(alpha: 0.0),
-          ],
-        ),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (_currentMode != 'scan') ...[
-            _buildActionButton(themeProvider),
-            // Secondary actions are contextual: a capture that can finish, or
-            // a placement waiting to be adjusted or discarded.
-            ..._buildSecondaryActions(capture, l10n),
-            const SizedBox(height: KubusSpacing.md),
-          ],
-          _buildModeDock(l10n),
-        ],
-      ),
-    );
-  }
-
-  List<Widget> _buildSecondaryActions(
-    SpatialCaptureProvider capture,
-    AppLocalizations l10n,
-  ) {
+  /// Finish eligibility is never derived here: it comes from
+  /// [SpatialCaptureProvider.canFinish], the one authority on whether a capture
+  /// covers enough of the subject to reconstruct. Deriving it independently
+  /// from a frame count produced a Finish button that stopped the sampler and
+  /// was then rejected by the provider, stranding the capture.
+  List<ArSecondaryAction> _secondaryActions(AppLocalizations l10n) {
     if (_currentMode == 'create') {
-      // Finish readiness comes from capture quality, not a raw frame count.
+      final capture = context.watch<SpatialCaptureProvider>();
+      if (capture.state == SpatialCaptureState.error) {
+        return [
+          ArSecondaryAction(
+            label: l10n.spatialCaptureRetryTransfer,
+            icon: Icons.refresh,
+            onPressed: _retrySpatialTransfer,
+          ),
+        ];
+      }
       if (!capture.canFinish) return const [];
       return [
-        const SizedBox(height: KubusSpacing.sm),
-        OutlinedButton.icon(
+        ArSecondaryAction(
+          label: l10n.spatialCaptureFinish,
+          icon: Icons.check_circle_outline,
           onPressed: _finishSpatialCapture,
-          icon: const Icon(Icons.check_circle_outline),
-          label: Text(l10n.spatialCaptureFinish),
         ),
       ];
     }
     if (_currentMode == 'place' && _placement.hasPlacement) {
+      final canAdjust = _placement.canAdjust;
       return [
-        const SizedBox(height: KubusSpacing.sm),
-        // Wrap, not Row: at large text scales two icon buttons side by side
-        // overflow the available width on a 360dp screen.
-        Wrap(
-          alignment: WrapAlignment.center,
-          spacing: KubusSpacing.md,
-          runSpacing: KubusSpacing.xs,
-          children: [
-            TextButton.icon(
-              onPressed: _placement.cancelPlacement,
-              icon: const Icon(Icons.close),
-              label: Text(l10n.commonCancel),
-            ),
-            TextButton.icon(
-              onPressed: _placement.canAdjust
-                  ? () => _placement.rotateBy(math.pi / 8)
-                  : null,
-              icon: const Icon(Icons.rotate_right),
-              label: Text(l10n.arPlacementRotate),
-            ),
-          ],
+        ArSecondaryAction(
+          label: l10n.commonCancel,
+          icon: Icons.close,
+          onPressed: _cancelPlacement,
+        ),
+        ArSecondaryAction(
+          label: l10n.arPlacementRotate,
+          icon: Icons.rotate_right,
+          onPressed: canAdjust ? () => _placement.rotateBy(math.pi / 8) : null,
+        ),
+        ArSecondaryAction(
+          label: l10n.arPlacementScaleUp,
+          icon: Icons.zoom_in,
+          onPressed: canAdjust ? () => _placement.scaleBy(1.1) : null,
+        ),
+        ArSecondaryAction(
+          label: l10n.arPlacementScaleDown,
+          icon: Icons.zoom_out,
+          onPressed: canAdjust ? () => _placement.scaleBy(1 / 1.1) : null,
         ),
       ];
     }
     return const [];
   }
 
-  /// Restrained mode dock. A sibling of the primary action, never an overlay.
-  Widget _buildModeDock(AppLocalizations l10n) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: KubusSpacing.sm,
-        vertical: KubusSpacing.xs,
-      ),
-      decoration: BoxDecoration(
-        color: scheme.surface.withValues(alpha: 0.95),
-        borderRadius: BorderRadius.circular(KubusRadius.lg),
-        border: Border.all(
-          color: AppColorUtils.cyanAccent.withValues(alpha: 0.3),
-        ),
-      ),
-      child: Row(
-        children: _availableArModes.map((mode) {
-          final modeId = mode['id'] as String;
-          final isSelected = modeId == _currentMode;
-          final tint = isSelected
-              ? AppColorUtils.cyanAccent
-              : scheme.onSurface.withValues(alpha: 0.6);
-          return Expanded(
-            child: GestureDetector(
-              onTap: () => _changeMode(modeId),
-              behavior: HitTestBehavior.opaque,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  vertical: KubusSpacing.sm,
-                ),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? AppColorUtils.cyanAccent.withValues(alpha: 0.2)
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(KubusRadius.md),
-                  border: Border.all(
-                    color: isSelected
-                        ? AppColorUtils.cyanAccent
-                        : Colors.transparent,
-                    width: 2,
-                  ),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      mode['icon'] as IconData,
-                      color: tint,
-                      size: KubusHeaderMetrics.actionIcon,
-                    ),
-                    const SizedBox(height: KubusSpacing.xs),
-                    // Labels shrink rather than overflow at large text scales.
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        _modeName(l10n, modeId),
-                        maxLines: 1,
-                        style: KubusTypography.inter(
-                          color: tint,
-                          fontSize: KubusChromeMetrics.navMetaLabel,
-                          fontWeight:
-                              isSelected ? FontWeight.w600 : FontWeight.normal,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        }).toList(),
-      ),
+  /// Whether a capture is stuck: it hit a ceiling but never covered enough of
+  /// the subject to be worth reconstructing.
+  ///
+  /// Resuming would stop again on the next tick and finishing is refused, so
+  /// this state needs its own way out rather than two disabled buttons.
+  bool _isUnusableAtLimit(SpatialCaptureProvider capture) =>
+      capture.state == SpatialCaptureState.paused &&
+      capture.pauseReason == SpatialCapturePauseReason.limitReached &&
+      !capture.canFinish;
+
+  /// Throws away a capture that reached its ceiling without usable coverage and
+  /// starts a fresh one.
+  Future<void> _discardAndRestartCapture() async {
+    final capture = context.read<SpatialCaptureProvider>();
+    _stopSpatialSampling();
+    await capture.discard();
+    if (!mounted) return;
+    await _captureSpatialFrame();
+  }
+
+  /// Discards the preview and returns to choosing a surface.
+  void _cancelPlacement() {
+    _placement.cancelPlacement();
+    unawaited(_placementPreview?.clear() ?? Future<void>.value());
+  }
+
+  /// The single contextual guidance surface for the current mode.
+  ///
+  /// One bounded card carries the guidance line, the capture readout and any
+  /// transfer progress. It replaces the stacked glass cards and the
+  /// `Positioned(top: 100)` instruction panels that used to run in parallel
+  /// with it, each unaware of the other.
+  ArContextualGuidance _buildGuidance(AppLocalizations l10n) {
+    final capture = context.watch<SpatialCaptureProvider>();
+    ArCaptureReadout? readout;
+    ArTransferReadout? transfer;
+
+    if (_currentMode == 'create') {
+      if (capture.state == SpatialCaptureState.capturing ||
+          capture.state == SpatialCaptureState.paused) {
+        readout = ArCaptureReadout(
+          // Viewpoint diversity, not a frame-count ratio. Frame count stays
+          // visible as context, but it is not what completeness means.
+          coverage: capture.coverage,
+          animate: capture.state == SpatialCaptureState.capturing,
+          detail: l10n.spatialCaptureTrackedViews(
+            capture.frameCount,
+            capture.depthObserved
+                ? l10n.spatialCaptureDepthAvailable
+                : l10n.spatialCaptureRgbPose,
+          ),
+        );
+      }
+      transfer = _transferReadout(l10n, capture);
+    }
+
+    return ArContextualGuidance(
+      message: _contextualGuidanceMessage(l10n),
+      capture: readout,
+      transfer: transfer,
     );
   }
 
-  /// The single contextual guidance line for the current mode.
-  ///
-  /// One bounded area replaces the stacked glass cards and repeated mode
-  /// headings that used to compete with the controls for the same space.
-  Widget _buildContextualGuidance() {
-    final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
-    final message = _contextualGuidanceMessage(l10n);
-    if (message == null) return const SizedBox.shrink();
-
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: KubusSpacing.md,
-        vertical: KubusSpacing.sm,
-      ),
-      decoration: BoxDecoration(
-        color: scheme.surface.withValues(alpha: 0.86),
-        borderRadius: BorderRadius.circular(KubusRadius.md),
-      ),
-      child: Text(
-        message,
-        textAlign: TextAlign.center,
-        maxLines: 3,
-        overflow: TextOverflow.ellipsis,
-        style: KubusTypography.inter(
-          color: scheme.onSurface,
-          fontSize: KubusChromeMetrics.navMetaLabel,
-        ),
-      ),
-    );
+  /// Measured transfer progress, or null when nothing is being transferred.
+  ArTransferReadout? _transferReadout(
+    AppLocalizations l10n,
+    SpatialCaptureProvider capture,
+  ) {
+    final progress = capture.transfer;
+    if (!progress.isActive) return null;
+    switch (progress.phase) {
+      case SpatialTransferPhase.preparing:
+        return ArTransferReadout(label: l10n.spatialTransferPreparing);
+      case SpatialTransferPhase.uploading:
+        return ArTransferReadout(
+          label: l10n.spatialTransferUploading(
+            progress.uploadedFiles,
+            progress.totalFiles,
+          ),
+          fraction: progress.fraction,
+        );
+      case SpatialTransferPhase.committing:
+        return ArTransferReadout(label: l10n.spatialTransferCommitting);
+      case SpatialTransferPhase.idle:
+      case SpatialTransferPhase.complete:
+        return null;
+    }
   }
 
   String? _contextualGuidanceMessage(AppLocalizations l10n) {
+    // A camera handoff explains itself; nothing else is meaningful mid-switch.
+    if (_cameraOrchestrator.isTransitioning) return l10n.arCameraSwitching;
+
     // A real tracking problem always wins: it explains why nothing is
     // happening and what to do about it.
     final failure = ArErrorMessages.forTrackingFailure(
@@ -1534,6 +1324,11 @@ class _ARScreenState extends State<ARScreen>
 
     switch (_currentMode) {
       case 'place':
+        // A placement survives tracking loss; say so rather than letting the
+        // controls simply go dead with no explanation.
+        if (_placement.isRecoveringTracking) {
+          return l10n.arPlacementTrackingLost;
+        }
         switch (_placement.state) {
           case ArPlacementState.none:
             return l10n.arPlacementSelectArtwork;
@@ -1544,89 +1339,122 @@ class _ARScreenState extends State<ARScreen>
             return l10n.arPlacementTapToPlace;
           case ArPlacementState.placed:
           case ArPlacementState.adjusting:
-            return l10n.arPlacementAdjustOrConfirm;
+            return l10n.arPlacementAdjustHint;
           case ArPlacementState.confirmed:
           case ArPlacementState.error:
             return null;
         }
       case 'create':
-        return context.watch<SpatialCaptureProvider>().guidance;
+        return _captureGuidanceMessage(
+          l10n,
+          context.watch<SpatialCaptureProvider>().guidance,
+        );
       default:
-        return null;
+        // Modes with no live state of their own still say what they are for,
+        // so the guidance surface is never a blank card.
+        return _modeDescription(l10n, _currentMode);
     }
   }
 
-  Widget _buildActionButton(ThemeProvider themeProvider) {
-    final l10n = AppLocalizations.of(context)!;
+  /// Maps the provider's structured guidance to localized copy.
+  ///
+  /// The provider deliberately returns a case rather than a sentence, so every
+  /// capture guidance path exists in EN and SL instead of only English.
+  String? _captureGuidanceMessage(
+    AppLocalizations l10n,
+    SpatialCaptureGuidance guidance,
+  ) {
+    switch (guidance) {
+      case SpatialCaptureGuidance.idle:
+        return l10n.spatialCaptureGuideIdle;
+      case SpatialCaptureGuidance.trackingLost:
+        return l10n.spatialCaptureGuideTrackingLost;
+      case SpatialCaptureGuidance.limitReached:
+        // Reaching the ceiling means something different depending on whether
+        // the capture is usable, so the guidance says which it is.
+        return context.watch<SpatialCaptureProvider>().canFinish
+            ? l10n.spatialCaptureGuideFull
+            : l10n.spatialCaptureGuideFullUnusable;
+      case SpatialCaptureGuidance.paused:
+        return l10n.spatialCaptureGuidePaused;
+      case SpatialCaptureGuidance.coverageLow:
+        return l10n.spatialCaptureGuideStart;
+      case SpatialCaptureGuidance.coverageFair:
+        return l10n.spatialCaptureGuideOverlap;
+      case SpatialCaptureGuidance.coverageGood:
+        return l10n.spatialCaptureGuideDetails;
+      case SpatialCaptureGuidance.coverageReady:
+        return l10n.spatialCaptureGuideReady;
+    }
+  }
+
+  /// The one primary action for the current mode.
+  ///
+  /// While a capture is running, this is Finish — and it is enabled strictly by
+  /// [SpatialCaptureProvider.canFinish]. The old `frameCount >= 8` gate let the
+  /// user press Finish on a capture the provider would then reject, after the
+  /// handler had already stopped the sampler: the capture was left running with
+  /// nothing driving it and no way forward.
+  ArPrimaryAction? _primaryAction(AppLocalizations l10n) {
+    if (_currentMode == 'scan') return null;
     final capture = context.watch<SpatialCaptureProvider>();
-    final spatialBusy = _currentMode == 'create' &&
-        const {
+
+    switch (_currentMode) {
+      case 'place':
+        final canConfirm = _placement.canConfirm;
+        return ArPrimaryAction(
+          label: canConfirm ? l10n.arPlacementConfirm : l10n.arActionPlace,
+          icon: canConfirm ? Icons.check : Icons.add_location,
+          onPressed: _cameraOrchestrator.isTransitioning ? null : _handleAction,
+        );
+      case 'view':
+        return ArPrimaryAction(
+          label: l10n.arActionView,
+          icon: Icons.info_outline,
+          onPressed: _cameraOrchestrator.isTransitioning ? null : _handleAction,
+        );
+      case 'create':
+        final busy = const {
           SpatialCaptureState.transferring,
           SpatialCaptureState.awaitingProcessingChoice,
           SpatialCaptureState.queued,
           SpatialCaptureState.processing,
           SpatialCaptureState.verifying,
         }.contains(capture.state);
-    String buttonText = '';
-    IconData buttonIcon = Icons.check;
-
-    switch (_currentMode) {
-      case 'scan':
-        buttonText = l10n.arActionScan;
-        buttonIcon = Icons.qr_code_scanner;
-        break;
-      case 'place':
-        buttonText = l10n.arActionPlace;
-        buttonIcon = Icons.add_location;
-        break;
-      case 'view':
-        buttonText = l10n.arActionView;
-        buttonIcon = Icons.info_outline;
-        break;
-      case 'create':
-        final active = capture.state == SpatialCaptureState.capturing;
-        buttonText = active ? l10n.spatialCaptureFinish : l10n.arActionCreate;
-        buttonIcon =
-            active ? Icons.check_circle_outline : Icons.center_focus_strong;
-        break;
-    }
-
-    const buttonTextColor = Colors.white;
-
-    return ElevatedButton.icon(
-      onPressed: spatialBusy
-          ? null
-          : _currentMode == 'create' &&
-                  capture.state == SpatialCaptureState.capturing
-              ? (capture.frameCount >= 8 ? _finishSpatialCapture : null)
+        if (capture.state == SpatialCaptureState.capturing) {
+          return ArPrimaryAction(
+            label: l10n.spatialCaptureFinish,
+            icon: Icons.check_circle_outline,
+            onPressed: capture.canFinish ? _finishSpatialCapture : null,
+          );
+        }
+        if (capture.state == SpatialCaptureState.paused) {
+          // A capture stopped at a ceiling without usable coverage cannot be
+          // resumed — sampling would stop again immediately — and cannot be
+          // finished. Offering Resume there is a dead end, so the way out is
+          // the primary action instead.
+          if (_isUnusableAtLimit(capture)) {
+            return ArPrimaryAction(
+              label: l10n.spatialCaptureDiscardAndRestart,
+              icon: Icons.restart_alt,
+              onPressed: busy ? null : _discardAndRestartCapture,
+            );
+          }
+          return ArPrimaryAction(
+            label: l10n.spatialCaptureResume,
+            icon: Icons.play_arrow,
+            onPressed: busy ? null : _handleAction,
+          );
+        }
+        return ArPrimaryAction(
+          label: l10n.spatialCaptureStart,
+          icon: Icons.center_focus_strong,
+          onPressed: busy || _cameraOrchestrator.isTransitioning
+              ? null
               : _handleAction,
-      icon: Icon(buttonIcon, color: buttonTextColor),
-      label: Text(
-        buttonText,
-        style: KubusTypography.inter(
-          fontSize: 16,
-          fontWeight: FontWeight.w600,
-          color: buttonTextColor,
-        ),
-      ),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: AppColorUtils.cyanAccent,
-        foregroundColor: buttonTextColor,
-        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(KubusRadius.md),
-        ),
-        elevation: 8,
-        shadowColor: AppColorUtils.cyanAccent.withValues(alpha: 0.4),
-      ),
-    );
-  }
-
-  String _captureGuidance(AppLocalizations l10n, int frameCount) {
-    if (frameCount < 8) return l10n.spatialCaptureGuideStart;
-    if (frameCount < 20) return l10n.spatialCaptureGuideOverlap;
-    if (frameCount < 36) return l10n.spatialCaptureGuideDetails;
-    return l10n.spatialCaptureGuideReady;
+        );
+    }
+    return null;
   }
 
   // Event handlers
@@ -1645,16 +1473,19 @@ class _ARScreenState extends State<ARScreen>
     );
   }
 
-  /// Which camera owner a mode needs. Place, Spatial and Archive all run on
-  /// the AR session, so switching between them must not recreate it.
-  CameraOwner _ownerForMode(String modeId) =>
-      modeId == 'scan' ? CameraOwner.scanner : CameraOwner.ar;
-
+  /// Switches modes, sequencing the camera handoff before the chrome follows.
+  ///
+  /// The requested mode and the rendered mode are separate on purpose. The
+  /// screen used to set `_currentMode` first and only then ask for the camera,
+  /// so the incoming platform view could mount while the outgoing owner was
+  /// still releasing the device — the exact contention the coordinator exists
+  /// to prevent. Now the chrome advances only once the handoff has completed.
   void _changeMode(String modeId) {
     if (!AppConfig.isFeatureEnabled('availabilityNodes') &&
         (modeId == 'view' || modeId == 'create')) {
       return;
     }
+    if (modeId == _cameraOrchestrator.requestedMode) return;
     if (modeId != 'create') {
       // Pause the provider alongside the sampler. Cancelling the timer alone
       // left the capture in `capturing` with nothing driving it, so returning
@@ -1662,26 +1493,17 @@ class _ARScreenState extends State<ARScreen>
       // never make progress again.
       _pauseSpatialCapture(SpatialCapturePauseReason.modeChanged);
     }
-    setState(() {
-      _currentMode = modeId;
-    });
-    // Hand the camera over explicitly. A request for the owner that already
-    // holds it is a no-op, so Place <-> Spatial keeps one ARCore session.
     unawaited(_acquireCameraFor(modeId));
   }
 
   /// Acquires the camera for [modeId], but never before permission is granted.
+  ///
+  /// Requests are serialized by the coordinator, so rapid mode toggling queues
+  /// handoffs rather than interleaving them.
   Future<void> _acquireCameraFor(String modeId) async {
-    final permission = await _cameraPermission.ensureGranted();
+    await _cameraOrchestrator.requestMode(modeId);
     if (!mounted) return;
-    if (!permission.isGranted) {
-      // Never start ARCore or the scanner without permission: the platform
-      // would fail opaquely and look like a broken camera.
-      await _camera.releaseAll();
-      if (mounted) setState(() {});
-      return;
-    }
-    await _camera.requestOwner(_ownerForMode(modeId));
+    if (modeId == 'place') _armPlacementForSelection();
   }
 
   void _handleAction() {
@@ -1729,21 +1551,22 @@ class _ARScreenState extends State<ARScreen>
       final selected =
           artworks.where((artwork) => artwork.id == selectedId).firstOrNull ??
               artworks.firstOrNull;
+      if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
       if (selected == null) {
-        throw StateError(
-          'Choose an artwork before starting a spatial capture.',
+        // A missing artwork is an ordinary precondition, not a crash: tell the
+        // user what to do instead of throwing a StateError at them.
+        ScaffoldMessenger.of(context).showKubusSnackBar(
+          SnackBar(content: Text(l10n.spatialCaptureChooseArtwork)),
+          tone: KubusSnackBarTone.warning,
         );
+        return;
       }
       final ownsArtwork = wallet.isNotEmpty && selected.walletAddress == wallet;
       if (profile == null ||
           (!profile.isArtist && !profile.isInstitution && !ownsArtwork)) {
-        if (!mounted) return;
         ScaffoldMessenger.of(context).showKubusSnackBar(
-          const SnackBar(
-            content: Text(
-              'Spatial capture is available to approved contributors, artists and institutions.',
-            ),
-          ),
+          SnackBar(content: Text(l10n.spatialCaptureContributorOnly)),
           tone: KubusSnackBarTone.warning,
         );
         return;
@@ -1814,32 +1637,160 @@ class _ARScreenState extends State<ARScreen>
   String _resolveCurrentWalletAddress() =>
       (context.read<WalletProvider>().currentWalletAddress ?? '').trim();
 
-  Future<void> _finishSpatialCapture() async {
-    _captureSession?.stop();
+  /// Reports a failed transfer in product language.
+  ///
+  /// The capture is still on disk either way, so the message says so rather
+  /// than surfacing a `PlatformException` or a raw node response.
+  void _reportTransferFailure(Object error) {
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
+    final message = error is KubusNodeUnsupportedException
+        ? l10n.spatialCaptureNodeOutdated
+        : l10n.spatialCaptureTransferFailed;
+    if (kDebugMode) {
+      debugPrint('ARScreen: capture transfer failed: $error');
+    }
+    ScaffoldMessenger.of(context).showKubusSnackBar(
+      SnackBar(content: Text(message)),
+      tone: KubusSnackBarTone.error,
+    );
+  }
+
+  /// Resumes a transfer that failed, re-sending only what never landed.
+  Future<void> _retrySpatialTransfer() async {
     final capture = context.read<SpatialCaptureProvider>();
     final node = context.read<KubusNodeProvider>();
     if (!node.isPaired) {
       ScaffoldMessenger.of(context).showKubusSnackBar(
-        const SnackBar(
-          content: Text(
-            'Your source capture stays on this device. Pair a spatial-capable kubus Node to transfer and process it locally.',
-          ),
+        SnackBar(
+          content:
+              Text(AppLocalizations.of(context)!.spatialCaptureNodeRequired),
         ),
         tone: KubusSnackBarTone.neutral,
       );
       return;
     }
     try {
-      await capture.finish(node);
+      await capture.retryTransfer(node);
     } catch (error) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showKubusSnackBar(
-        SnackBar(content: Text('Capture transfer failed: $error')),
-        tone: KubusSnackBarTone.error,
-      );
+      _reportTransferFailure(error);
       return;
     }
     if (!mounted) return;
+    await _continueAfterTransfer(capture, node);
+  }
+
+  /// Offers back a capture an earlier session left behind.
+  ///
+  /// Only captures belonging to the signed-in account are offered, so one
+  /// user's work is never handed to whoever opens AR next on a shared device.
+  Future<void> _offerInterruptedCaptureRecovery() async {
+    if (_recoveryChecked) return;
+    _recoveryChecked = true;
+    if (!AppConfig.isFeatureEnabled('availabilityNodes')) return;
+
+    final capture = context.read<SpatialCaptureProvider>();
+    final wallet = _resolveCurrentWalletAddress();
+    final profile = context.read<ProfileProvider>().currentUser;
+    final owner = wallet.isNotEmpty ? wallet : (profile?.id ?? '');
+    if (owner.isEmpty) return;
+
+    final List<InterruptedSpatialCapture> recoverable;
+    try {
+      recoverable = await capture.findRecoverable(capturedBy: owner);
+    } catch (error) {
+      if (kDebugMode) {
+        debugPrint('ARScreen: recovery scan failed: $error');
+      }
+      return;
+    }
+    if (!mounted || recoverable.isEmpty) return;
+
+    final candidate = recoverable.first;
+    final l10n = AppLocalizations.of(context)!;
+    final resume = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.spatialRecoveryTitle),
+        content: Text(l10n.spatialRecoveryBody(candidate.sampleCount)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(null),
+            child: Text(l10n.spatialRecoveryKeep),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l10n.spatialRecoveryDiscard),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(l10n.spatialRecoveryResume),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || resume == null) return;
+
+    if (!resume) {
+      await capture.discardInterrupted(candidate);
+      return;
+    }
+    final adopted = await capture.resumeInterrupted(candidate);
+    if (!mounted || !adopted) return;
+    // The capture comes back paused; entering capture mode resumes sampling
+    // once AR is tracking again.
+    _changeMode('create');
+  }
+
+  /// Finishes the capture and streams it to the paired node.
+  ///
+  /// Nothing here stops sampling before the capture has been accepted. The old
+  /// order — stop the sampler, then call `finish()` — left a rejected capture
+  /// still in `capturing` with no sampler running and a Finish button the
+  /// provider would keep refusing: a capture that could neither progress nor
+  /// complete. Every early return below leaves the capture active and
+  /// resumable.
+  Future<void> _finishSpatialCapture() async {
+    final capture = context.read<SpatialCaptureProvider>();
+    final node = context.read<KubusNodeProvider>();
+    final l10n = AppLocalizations.of(context)!;
+
+    // Guard before touching the sampler. `canFinish` is the same authority the
+    // button is gated on, re-checked here because state can move between the
+    // build and the tap.
+    if (!capture.canFinish) {
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+        SnackBar(content: Text(l10n.spatialCaptureNotReadyToast)),
+        tone: KubusSnackBarTone.warning,
+      );
+      return;
+    }
+    if (!node.isPaired) {
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+        SnackBar(content: Text(l10n.spatialCaptureNodeRequired)),
+        tone: KubusSnackBarTone.neutral,
+      );
+      return;
+    }
+
+    // Only now: the capture is going to be handed over, so sampling stops.
+    _stopSpatialSampling();
+    try {
+      await capture.finish(node);
+    } catch (error) {
+      if (!mounted) return;
+      _reportTransferFailure(error);
+      return;
+    }
+    if (!mounted) return;
+    await _continueAfterTransfer(capture, node);
+  }
+
+  /// Runs the processing choice and review flow for a delivered capture.
+  Future<void> _continueAfterTransfer(
+    SpatialCaptureProvider capture,
+    KubusNodeProvider node,
+  ) async {
     var selection = await _chooseSpatialProcessing(capture, node);
     while (mounted && selection != null) {
       if (!selection.local && !await _confirmRemoteComputePrivacy()) return;
@@ -2303,10 +2254,10 @@ class _ARScreenState extends State<ARScreen>
                         ),
                         trailing: Icon(Icons.arrow_forward_ios, size: 16),
                         onTap: () {
-                          setState(() {
-                            _selectedArtwork = artwork;
-                            _currentMode = 'place';
-                          });
+                          setState(() => _selectedArtwork = artwork);
+                          // Through the handoff, so the AR session is actually
+                          // in hand before Place renders.
+                          _changeMode('place');
                           Navigator.pop(context);
 
                           // Show snackbar after navigation completes and context is still mounted
@@ -2720,8 +2671,8 @@ class _ARScreenState extends State<ARScreen>
           };
           _selectedArtwork = newArtwork;
           _placedObjects.add(newArtwork);
-          _currentMode = 'place';
         });
+        _changeMode('place');
 
         messenger.showKubusSnackBar(
           SnackBar(

@@ -5,6 +5,7 @@ import 'package:arcore_flutter_plugin/src/arcore_rotating_node.dart';
 import 'package:arcore_flutter_plugin/src/utils/vector_utils.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+import 'package:vector_math/vector_math_64.dart';
 
 import 'arcore_hit_test_result.dart';
 import 'arcore_node.dart';
@@ -369,6 +370,44 @@ class ArCoreController {
   Future<void> removeNode({@required String? nodeName}) {
     assert(nodeName != null);
     return _channel.invokeMethod('removeARCoreNode', {'nodeName': nodeName});
+  }
+
+  /// Moves, rotates and scales an existing node in place.
+  ///
+  /// Adding a node was previously the only way to give it a transform, so an
+  /// adjustable placement preview had to be removed and re-added — which
+  /// reloads the renderable and makes the artwork blink on every nudge. This
+  /// updates the live node instead, so scale, rotation and reposition are
+  /// visible immediately.
+  ///
+  /// Returns false when the scene has no node by that name.
+  Future<bool> updateNodeTransform({
+    required String nodeName,
+    Vector3? position,
+    Vector4? rotation,
+    Vector3? scale,
+  }) async {
+    if (isDisposed) return false;
+    try {
+      final result = await _channel.invokeMethod<bool>('updateNodeTransform', {
+        'name': nodeName,
+        if (position != null) 'position': convertVector3ToMap(position),
+        if (rotation != null) 'rotation': convertVector4ToMap(rotation),
+        if (scale != null) 'scale': convertVector3ToMap(scale),
+      });
+      return result ?? false;
+    } on MissingPluginException {
+      // The platform view went away mid-gesture. Reporting "no such node" lets
+      // the caller rebuild rather than surfacing a teardown race to the user.
+      return false;
+    } on PlatformException catch (error) {
+      if (debug ?? true) {
+        debugPrint(
+          'ArCoreController($id): updateNodeTransform failed: ${error.code}',
+        );
+      }
+      return false;
+    }
   }
 
   Map<String, dynamic>? _addParentNodeNameToParams(

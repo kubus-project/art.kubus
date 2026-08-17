@@ -51,7 +51,26 @@ class ArCoreFaceController {
     });
   }
 
-  void dispose() {
-    _channel.invokeMethod<void>('dispose');
+  /// Tears down the native face session.
+  ///
+  /// Never throws. The previous form dropped the platform call's Future
+  /// unobserved, so a teardown failure — routine once the platform view has
+  /// gone away — escaped to the root zone and surfaced as an unhandled Zone
+  /// error with nothing to do with the user's action.
+  Future<void> dispose() async {
+    try {
+      await _channel.invokeMethod<void>('dispose');
+    } on MissingPluginException {
+      // The platform view is already gone; nothing left to talk to.
+    } on PlatformException catch (error) {
+      if (debug) {
+        debugPrint('ArCoreFaceController: dispose failed: ${error.code}');
+      }
+    }
+    try {
+      _channel.setMethodCallHandler(null);
+    } catch (_) {
+      // Detaching a channel that is already gone is not an error.
+    }
   }
 }

@@ -276,6 +276,38 @@ class KubusNodeJob {
       );
 }
 
+/// An in-flight streaming capture upload on the paired node.
+///
+/// The node holds drafts in memory, so a draft is a transfer in progress
+/// rather than durable state: it is only meaningful until it is committed or
+/// the node restarts.
+class KubusCaptureDraft {
+  const KubusCaptureDraft({
+    required this.id,
+    required this.fileCount,
+    required this.sizeBytes,
+    this.files = const <String>[],
+  });
+
+  final String id;
+  final int fileCount;
+  final int sizeBytes;
+
+  /// Paths already uploaded. Populated by the progress endpoint, so a resumed
+  /// transfer can skip what already landed.
+  final List<String> files;
+
+  factory KubusCaptureDraft.fromJson(Map<String, dynamic> json) =>
+      KubusCaptureDraft(
+        id: (json['id'] ?? '').toString(),
+        fileCount: int.tryParse((json['fileCount'] ?? 0).toString()) ?? 0,
+        sizeBytes: int.tryParse((json['sizeBytes'] ?? 0).toString()) ?? 0,
+        files: (json['files'] as List<dynamic>? ?? const [])
+            .map((entry) => entry.toString())
+            .toList(growable: false),
+      );
+}
+
 class SpatialVariant {
   const SpatialVariant({
     required this.role,

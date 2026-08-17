@@ -1,10 +1,64 @@
 import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 
 import '../models/kubus_node_models.dart';
 import 'storage_config.dart';
+
+/// A request the paired node rejected, carrying its stable error code.
+///
+/// Typed so the UI can map an expected failure to localized product language
+/// instead of showing a raw HTTP body.
+class KubusNodeRequestException implements Exception {
+  const KubusNodeRequestException({
+    required this.statusCode,
+    required this.code,
+  });
+
+  final int statusCode;
+
+  /// The node's machine-readable error code, or `node_request_failed`.
+  final String code;
+
+  @override
+  String toString() => 'KubusNodeRequestException($statusCode): $code';
+}
+
+/// The paired node does not implement a route this app version requires.
+///
+/// Distinct from an ordinary failure: the remedy is updating the node, not
+/// retrying.
+class KubusNodeUnsupportedException implements Exception {
+  const KubusNodeUnsupportedException(this.route);
+
+  final String route;
+
+  @override
+  String toString() => 'KubusNodeUnsupportedException($route)';
+}
+
+/// A PUT whose body is read from disk as it is sent.
+///
+/// Keeps a capture file out of Dart memory: the bytes flow from the file
+/// straight into the socket.
+class _StreamedFileRequest extends http.BaseRequest {
+  _StreamedFileRequest(super.method, super.url, this._file, this._length);
+
+  final File _file;
+  final int _length;
+
+  @override
+  int? get contentLength => _length;
+
+  @override
+  http.ByteStream finalize() {
+    super.finalize();
+    return http.ByteStream(_file.openRead());
+  }
+}
 
 abstract class KubusNodeCredentialStore {
   Future<String?> read(String key);
@@ -138,18 +192,86 @@ class KubusNodeService {
   Future<Map<String, dynamic>> fetchStorage() => _get('/local/v1/storage');
   Future<Map<String, dynamic>> fetchNetwork() => _get('/local/v1/network');
 
-  Future<Map<String, dynamic>> createCapture(
-    Map<String, dynamic> capturePackage,
-  ) =>
-      _post(
-        '/local/v1/captures',
-        capturePackage,
-        timeout: const Duration(minutes: 10),
-      );
   Future<Map<String, dynamic>> getCapture(String id) =>
       _get('/local/v1/captures/${Uri.encodeComponent(id)}');
   Future<void> deleteCapture(String id) async {
     await _request('DELETE', '/local/v1/captures/${Uri.encodeComponent(id)}');
+  }
+
+  // --- Streaming capture transfer -------------------------------------------
+  //
+  // Spatial captures are streamed into a node-side draft one file at a time.
+  // The older whole-package JSON endpoint required base64-encoding the entire
+  // capture into a single document, which inflated it by a third on the wire
+  // and forced both sides to hold every frame at once — unusable for a
+  // continuous mobile capture.
+
+  /// Opens a draft the capture's files are streamed into.
+  ///
+  /// Throws [KubusNodeUnsupportedException] when the paired node predates the
+  /// streaming API, so the caller can ask the user to update it rather than
+  /// surfacing a bare 404.
+  Future<KubusCaptureDraft> beginCaptureDraft(
+    Map<String, dynamic> metadata,
+  ) async =>
+      KubusCaptureDraft.fromJson(
+        await _post('/local/v1/captures/drafts', metadata),
+      );
+
+  /// Streams one file into a draft straight off disk.
+  ///
+  /// The body is a [Stream], so a frame is never materialized in Dart memory
+  /// as a whole capture — only the HTTP client's own buffer is in play.
+  /// Re-uploading a path overwrites it, so a retry converges rather than
+  /// duplicating.
+  Future<KubusCaptureDraft> uploadCaptureDraftFile({
+    required String draftId,
+    required String path,
+    required File file,
+    required String mimeType,
+    Duration timeout = const Duration(minutes: 5),
+  }) async {
+    if (!isPaired) throw StateError('No kubus Node is paired.');
+    final length = await file.length();
+    final request = _StreamedFileRequest(
+      'PUT',
+      _resolve(
+        _endpoint!,
+        '/local/v1/captures/drafts/${Uri.encodeComponent(draftId)}/files',
+      ).replace(queryParameters: <String, String>{'path': path}),
+      file,
+      length,
+    );
+    request.headers.addAll({
+      'Accept': 'application/json',
+      'Authorization': 'Bearer $_credential',
+      'Content-Type': mimeType,
+    });
+    final streamed = await _client.send(request).timeout(timeout);
+    return KubusCaptureDraft.fromJson(
+      _decode(await http.Response.fromStream(streamed)),
+    );
+  }
+
+  /// Draft progress, so an interrupted transfer resumes instead of restarting.
+  Future<KubusCaptureDraft> getCaptureDraft(String draftId) async =>
+      KubusCaptureDraft.fromJson(
+        await _get('/local/v1/captures/drafts/${Uri.encodeComponent(draftId)}'),
+      );
+
+  /// Finalizes a draft into a durable capture record.
+  Future<Map<String, dynamic>> commitCaptureDraft(String draftId) => _post(
+        '/local/v1/captures/drafts/${Uri.encodeComponent(draftId)}/commit',
+        const {},
+        timeout: const Duration(minutes: 5),
+      );
+
+  /// Abandons a draft and everything already uploaded into it.
+  Future<void> discardCaptureDraft(String draftId) async {
+    await _request(
+      'DELETE',
+      '/local/v1/captures/drafts/${Uri.encodeComponent(draftId)}',
+    );
   }
 
   Future<KubusNodeJob> createJob({
@@ -364,13 +486,35 @@ class KubusNodeService {
   }
 
   static Map<String, dynamic> _decode(http.Response response) {
-    final body = jsonDecode(response.body.isEmpty ? '{}' : response.body);
+    final Object? body;
+    try {
+      body = jsonDecode(response.body.isEmpty ? '{}' : response.body);
+    } on FormatException {
+      throw KubusNodeRequestException(
+        statusCode: response.statusCode,
+        code: 'node_response_invalid',
+      );
+    }
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw StateError(
-        body is Map
-            ? (body['error'] ?? body['message'] ?? 'Node request failed')
-                .toString()
-            : 'Node request failed',
+      final code = body is Map
+          ? (body['error'] ?? body['code'] ?? 'node_request_failed').toString()
+          : 'node_request_failed';
+      // A node that has never heard of a route is a version mismatch, not a
+      // transient failure: the client asks the user to update it.
+      if (response.statusCode == 404 &&
+          const {
+            'local_route_not_found',
+            'not_found',
+            'route_not_found',
+            'node_request_failed',
+          }.contains(code)) {
+        throw KubusNodeUnsupportedException(
+          response.request?.url.path ?? 'unknown',
+        );
+      }
+      throw KubusNodeRequestException(
+        statusCode: response.statusCode,
+        code: code,
       );
     }
     if (body is Map<String, dynamic> &&
