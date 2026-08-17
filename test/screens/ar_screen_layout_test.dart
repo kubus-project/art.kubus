@@ -274,7 +274,10 @@ void main() {
       controller.selectArtwork(artworkId: 'a', modelPath: 'm.glb');
       controller.setTracking(true);
       controller.setSurfaceAvailable(true);
-      controller.applyHitTest(vector.Vector3(1, 0, -1));
+      controller.applyHitTest(ArPlacementAnchorPose(
+        position: vector.Vector3(1, 0, -1),
+        rotation: vector.Vector4(0, 0, 0, 1),
+      ));
 
       expect(controller.state, ArPlacementState.placed);
       expect(controller.hasPlacement, isTrue);

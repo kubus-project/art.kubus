@@ -35,31 +35,61 @@ enum ArPlacementState {
   error,
 }
 
-/// Position, yaw and scale of a previewed or placed artwork.
+/// The tracked, world-space pose of an artwork anchor.
+///
+/// This is deliberately separate from the artwork's local controls. ARCore
+/// owns this pose after the anchor is created; pinch and rotate must never
+/// write either component to the content child beneath that anchor.
 @immutable
-class ArPlacementTransform {
-  const ArPlacementTransform({
+class ArPlacementAnchorPose {
+  const ArPlacementAnchorPose({
     required this.position,
-    this.rotationRadians = 0,
-    this.scale = 1.0,
+    required this.rotation,
   });
 
   final Vector3 position;
 
-  /// Yaw about the world up axis. Artworks stay upright, so pitch and roll
-  /// are not user-adjustable.
-  final double rotationRadians;
-  final double scale;
+  /// ARCore/Sceneform quaternion in `[x, y, z, w]` order.
+  final Vector4 rotation;
+
+  ArPlacementAnchorPose copyWith({
+    Vector3? position,
+    Vector4? rotation,
+  }) =>
+      ArPlacementAnchorPose(
+        position: position ?? this.position,
+        rotation: rotation ?? this.rotation,
+      );
+}
+
+/// World anchor plus the artwork's local transform beneath it.
+///
+/// The final Android orientation is `anchor.rotation × localYaw`; the content
+/// local position is always zero for normal placement. Keeping the two spaces
+/// explicit prevents a world hit position from being applied twice.
+@immutable
+class ArPlacementTransform {
+  const ArPlacementTransform({
+    required this.anchor,
+    this.localYawRadians = 0,
+    this.localScale = 1.0,
+  });
+
+  final ArPlacementAnchorPose anchor;
+
+  /// User adjustment about the content node's local up axis.
+  final double localYawRadians;
+  final double localScale;
 
   ArPlacementTransform copyWith({
-    Vector3? position,
-    double? rotationRadians,
-    double? scale,
+    ArPlacementAnchorPose? anchor,
+    double? localYawRadians,
+    double? localScale,
   }) {
     return ArPlacementTransform(
-      position: position ?? this.position,
-      rotationRadians: rotationRadians ?? this.rotationRadians,
-      scale: scale ?? this.scale,
+      anchor: anchor ?? this.anchor,
+      localYawRadians: localYawRadians ?? this.localYawRadians,
+      localScale: localScale ?? this.localScale,
     );
   }
 }
@@ -171,22 +201,26 @@ class ArPlacementController extends ChangeNotifier {
   ///
   /// Returns false when the hit is rejected, so the caller can leave the
   /// existing placement untouched instead of moving it somewhere invalid.
-  bool applyHitTest(Vector3? position, {double? rotationRadians}) {
+  bool applyHitTest(ArPlacementAnchorPose? anchor) {
     if (!acceptsHitTest) return false;
-    if (position == null) return false;
-    if (!position.x.isFinite || !position.y.isFinite || !position.z.isFinite) {
+    if (anchor == null) return false;
+    if (!anchor.position.x.isFinite ||
+        !anchor.position.y.isFinite ||
+        !anchor.position.z.isFinite ||
+        !anchor.rotation.x.isFinite ||
+        !anchor.rotation.y.isFinite ||
+        !anchor.rotation.z.isFinite ||
+        !anchor.rotation.w.isFinite) {
       return false;
     }
 
     final existing = _transform;
     _transform = existing == null
         ? ArPlacementTransform(
-            position: position,
-            rotationRadians: rotationRadians ?? 0,
+            anchor: anchor,
           )
         : existing.copyWith(
-            position: position,
-            rotationRadians: rotationRadians ?? existing.rotationRadians,
+            anchor: anchor,
           );
     _state = ArPlacementState.placed;
     _errorCode = null;
@@ -211,9 +245,9 @@ class ArPlacementController extends ChangeNotifier {
   void rotateBy(double deltaRadians) {
     final current = _transform;
     if (current == null || !canAdjust) return;
-    var next = (current.rotationRadians + deltaRadians) % (2 * math.pi);
+    var next = (current.localYawRadians + deltaRadians) % (2 * math.pi);
     if (next < 0) next += 2 * math.pi;
-    _transform = current.copyWith(rotationRadians: next);
+    _transform = current.copyWith(localYawRadians: next);
     notifyListeners();
   }
 
@@ -222,15 +256,15 @@ class ArPlacementController extends ChangeNotifier {
     if (current == null || !canAdjust) return;
     if (!factor.isFinite || factor <= 0) return;
     _transform = current.copyWith(
-      scale: (current.scale * factor).clamp(minScale, maxScale),
+      localScale: (current.localScale * factor).clamp(minScale, maxScale),
     );
     notifyListeners();
   }
 
   /// Moves an existing placement to a new hit-tested pose.
-  bool repositionTo(Vector3 position) {
+  bool repositionTo(ArPlacementAnchorPose anchor) {
     if (!canAdjust) return false;
-    return applyHitTest(position);
+    return applyHitTest(anchor);
   }
 
   /// Commits the placement.

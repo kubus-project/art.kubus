@@ -9,6 +9,15 @@ void main() {
 
   setUp(() => controller = ArPlacementController());
 
+  ArPlacementAnchorPose pose(
+    Vector3 position, [
+    Vector4? rotation,
+  ]) =>
+      ArPlacementAnchorPose(
+        position: position,
+        rotation: rotation ?? Vector4(0, 0, 0, 1),
+      );
+
   /// Selected, tracking, and a surface found: ready for a tap.
   void reachPreviewing() {
     controller.selectArtwork(artworkId: 'art-1', modelPath: 'model.glb');
@@ -18,7 +27,7 @@ void main() {
 
   void reachPlaced() {
     reachPreviewing();
-    controller.applyHitTest(Vector3(1, 0, -2));
+    controller.applyHitTest(pose(Vector3(1, 0, -2)));
   }
 
   group('selection is not placement', () {
@@ -83,30 +92,31 @@ void main() {
     test('a valid hit anchors the artwork', () {
       reachPreviewing();
 
-      final applied = controller.applyHitTest(Vector3(1, 0, -2));
+      final applied = controller.applyHitTest(pose(Vector3(1, 0, -2)));
 
       expect(applied, isTrue);
       expect(controller.state, ArPlacementState.placed);
-      expect(controller.transform!.position.x, 1);
-      expect(controller.transform!.position.z, -2);
+      expect(controller.transform!.anchor.position.x, 1);
+      expect(controller.transform!.anchor.position.z, -2);
       expect(controller.hasPlacement, isTrue);
     });
 
     test('a missed hit test leaves the placement untouched', () {
       reachPlaced();
-      final before = controller.transform!.position.clone();
+      final before = controller.transform!.anchor.position.clone();
 
       final applied = controller.applyHitTest(null);
 
       expect(applied, isFalse);
-      expect(controller.transform!.position, before);
+      expect(controller.transform!.anchor.position, before);
     });
 
     test('a non-finite pose is rejected', () {
       reachPreviewing();
 
-      expect(controller.applyHitTest(Vector3(double.nan, 0, 0)), isFalse);
-      expect(controller.applyHitTest(Vector3(0, double.infinity, 0)), isFalse);
+      expect(controller.applyHitTest(pose(Vector3(double.nan, 0, 0))), isFalse);
+      expect(controller.applyHitTest(pose(Vector3(0, double.infinity, 0))),
+          isFalse);
       expect(controller.hasPlacement, isFalse);
     });
 
@@ -114,15 +124,16 @@ void main() {
       controller.selectArtwork(artworkId: 'art-1', modelPath: 'm.glb');
 
       expect(controller.acceptsHitTest, isFalse);
-      expect(controller.applyHitTest(Vector3(1, 0, -1)), isFalse);
+      expect(controller.applyHitTest(pose(Vector3(1, 0, -1))), isFalse);
     });
 
-    test('hit rotation is applied when the surface provides one', () {
+    test('hit rotation stays on the anchor, separate from user yaw', () {
       reachPreviewing();
 
-      controller.applyHitTest(Vector3.zero(), rotationRadians: 1.2);
+      controller.applyHitTest(pose(Vector3.zero(), Vector4(0, 0.2, 0, 0.98)));
 
-      expect(controller.transform!.rotationRadians, closeTo(1.2, 1e-9));
+      expect(controller.transform!.anchor.rotation.y, closeTo(0.2, 1e-9));
+      expect(controller.transform!.localYawRadians, 0);
     });
   });
 
@@ -133,7 +144,7 @@ void main() {
       controller.beginAdjusting();
       controller.rotateBy(2 * math.pi + 0.5);
 
-      expect(controller.transform!.rotationRadians, closeTo(0.5, 1e-6));
+      expect(controller.transform!.localYawRadians, closeTo(0.5, 1e-6));
     });
 
     test('negative rotation stays positive', () {
@@ -142,7 +153,7 @@ void main() {
 
       controller.rotateBy(-0.5);
 
-      expect(controller.transform!.rotationRadians,
+      expect(controller.transform!.localYawRadians,
           closeTo(2 * math.pi - 0.5, 1e-6));
     });
 
@@ -151,32 +162,32 @@ void main() {
       controller.beginAdjusting();
 
       controller.scaleBy(100);
-      expect(controller.transform!.scale, controller.maxScale);
+      expect(controller.transform!.localScale, controller.maxScale);
 
       controller.scaleBy(0.0001);
-      expect(controller.transform!.scale, controller.minScale);
+      expect(controller.transform!.localScale, controller.minScale);
     });
 
     test('a nonsensical scale factor is ignored', () {
       reachPlaced();
       controller.beginAdjusting();
-      final before = controller.transform!.scale;
+      final before = controller.transform!.localScale;
 
       controller.scaleBy(0);
       controller.scaleBy(-2);
       controller.scaleBy(double.nan);
 
-      expect(controller.transform!.scale, before);
+      expect(controller.transform!.localScale, before);
     });
 
     test('reposition moves an existing placement', () {
       reachPlaced();
       controller.beginAdjusting();
 
-      final moved = controller.repositionTo(Vector3(5, 0, -5));
+      final moved = controller.repositionTo(pose(Vector3(5, 0, -5)));
 
       expect(moved, isTrue);
-      expect(controller.transform!.position.x, 5);
+      expect(controller.transform!.anchor.position.x, 5);
     });
 
     test('ending a gesture returns to placed', () {
@@ -232,12 +243,12 @@ void main() {
   group('tracking loss', () {
     test('a placed anchor survives tracking loss', () {
       reachPlaced();
-      final before = controller.transform!.position.clone();
+      final before = controller.transform!.anchor.position.clone();
 
       controller.setTracking(false);
 
       expect(controller.hasPlacement, isTrue);
-      expect(controller.transform!.position, before,
+      expect(controller.transform!.anchor.position, before,
           reason: 'the anchor is preserved, not discarded');
       expect(controller.isRecoveringTracking, isTrue);
     });
@@ -252,8 +263,8 @@ void main() {
       controller.rotateBy(1);
       controller.scaleBy(2);
 
-      expect(controller.transform!.rotationRadians, 0);
-      expect(controller.transform!.scale, 1.0);
+      expect(controller.transform!.localYawRadians, 0);
+      expect(controller.transform!.localScale, 1.0);
     });
 
     test('adjustment resumes when tracking returns', () {
@@ -266,7 +277,7 @@ void main() {
 
       controller.beginAdjusting();
       controller.rotateBy(0.4);
-      expect(controller.transform!.rotationRadians, closeTo(0.4, 1e-9));
+      expect(controller.transform!.localYawRadians, closeTo(0.4, 1e-9));
     });
 
     test('an unanchored preview falls back to selected on tracking loss', () {
@@ -310,7 +321,7 @@ void main() {
     controller.selectArtwork(artworkId: 'a', modelPath: 'm');
     controller.setTracking(true);
     controller.setSurfaceAvailable(true);
-    controller.applyHitTest(Vector3(1, 0, 0));
+    controller.applyHitTest(pose(Vector3(1, 0, 0)));
     controller.beginAdjusting();
     controller.rotateBy(0.2);
     controller.endAdjusting();

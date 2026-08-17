@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:art_kubus/providers/spatial_capture_provider.dart';
 import 'package:art_kubus/services/ar_placement_controller.dart';
+import 'package:art_kubus/services/ar_placement_preview.dart';
 import 'package:art_kubus/services/camera_ownership_coordinator.dart';
 import 'package:art_kubus/services/spatial_capture_policy.dart';
 import 'package:art_kubus/services/spatial_capture_session.dart';
@@ -187,7 +188,12 @@ void main() {
       ar.completeInitialization();
 
       await ar.disposeSession();
-      ar.tapSurface([vector.Vector3.zero()]);
+      ar.tapSurface([
+        ArPlacementAnchorPose(
+          position: vector.Vector3.zero(),
+          rotation: vector.Vector4(0, 0, 0, 1),
+        )
+      ]);
 
       expect(taps, isZero);
     });
@@ -205,10 +211,66 @@ void main() {
 
       ar.onSurfaceDetected = () => placement.setSurfaceAvailable(true);
       ar.detectSurface();
-      ar.tapSurface([vector.Vector3(1, 0, -2)]);
+      ar.tapSurface([
+        ArPlacementAnchorPose(
+          position: vector.Vector3(1, 0, -2),
+          rotation: vector.Vector4(0, 0, 0, 1),
+        )
+      ]);
 
       expect(placement.state, ArPlacementState.placed);
-      expect(placement.transform!.position.x, 1);
+      expect(placement.transform!.anchor.position.x, 1);
+    });
+
+    test('place workflow keeps content local while replacing the anchor',
+        () async {
+      final placement = ArPlacementController();
+      final preview = ArPlacementPreview(
+        tracking: ar,
+        resolveModel: (raw) async => 'file:///resolved/$raw',
+      );
+      addTearDown(preview.dispose);
+      ar.onSurfaceTap = (hits) => placement.applyHitTest(hits.first);
+      ar.onSurfaceDetected = () => placement.setSurfaceAvailable(true);
+      ar
+        ..completeInitialization()
+        ..acquireTracking();
+      placement
+        ..selectArtwork(artworkId: 'art-1', modelPath: 'm.glb')
+        ..setTracking(true);
+      ar.detectSurface();
+      ar.tapSurface([
+        ArPlacementAnchorPose(
+          position: vector.Vector3(1, 0, -2),
+          rotation: vector.Vector4(0, 0.2, 0, 0.98),
+        ),
+      ]);
+      await preview.sync(placement);
+
+      placement
+        ..scaleBy(1.5)
+        ..rotateBy(0.4);
+      await preview.sync(placement);
+      ar.tapSurface([
+        ArPlacementAnchorPose(
+          position: vector.Vector3(3, 0.5, -4),
+          rotation: vector.Vector4(0, 0, 0, 1),
+        ),
+      ]);
+      await preview.sync(placement);
+
+      final node = ar.nodes.values.single;
+      expect(node.position, vector.Vector3(3, 0.5, -4));
+      expect(node.scale, 1.5);
+      expect(node.yawRadians, 0.4);
+      expect(
+        ar.calls,
+        contains('updateAnchoredNode:${ArPlacementPreview.nodeNameFor('art-1')}'
+            '(anchor:true,yaw:false,scale:false)'),
+      );
+      placement.confirm();
+      await preview.commit();
+      expect(ar.nodes, hasLength(1), reason: 'confirm promotes the preview');
     });
 
     test('a tap before tracking is ignored', () async {
@@ -216,7 +278,12 @@ void main() {
       ar.onSurfaceTap = (hits) => placement.applyHitTest(hits.first);
       placement.selectArtwork(artworkId: 'art-1', modelPath: 'm.glb');
 
-      ar.tapSurface([vector.Vector3(1, 0, -2)]);
+      ar.tapSurface([
+        ArPlacementAnchorPose(
+          position: vector.Vector3(1, 0, -2),
+          rotation: vector.Vector4(0, 0, 0, 1),
+        )
+      ]);
 
       expect(placement.hasPlacement, isFalse);
     });

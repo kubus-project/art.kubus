@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:vector_math/vector_math_64.dart' as vector;
 
 import 'ar_manager.dart';
+import 'ar_placement_controller.dart';
 
 abstract class SpatialTrackingAdapter {
   Future<bool> initialize();
@@ -21,16 +22,27 @@ abstract class SpatialTrackingAdapter {
     String? name,
   });
 
-  /// Moves, rotates or scales a node already in the scene.
+  /// Creates a stable anchor/content hierarchy for an adjustable placement.
   ///
-  /// Returns false when no such node exists. Adjusting the placement preview
-  /// goes through here so scale and rotation are visible while the user is
-  /// still choosing, not only once the placement is confirmed.
-  Future<bool> updateNodeTransform({
+  /// [anchor] is world space. [localYawRadians] and [localScale] apply only
+  /// to the content child. No world position is ever a content transform.
+  Future<void> addAnchoredModel({
+    required String modelPath,
+    required ArPlacementAnchorPose anchor,
+    required double localYawRadians,
+    required double localScale,
     required String name,
-    vector.Vector3? position,
-    double? yawRadians,
-    double? scale,
+  });
+
+  /// Replaces the anchor pose and/or adjusts its content child in place.
+  ///
+  /// Returns false when no anchored node exists. Repositioning supplies an
+  /// [anchor]; gestures supply only local values.
+  Future<bool> updateAnchoredNode({
+    required String name,
+    ArPlacementAnchorPose? anchor,
+    double? localYawRadians,
+    double? localScale,
   });
 
   /// Removes a node, so a cancelled preview leaves nothing behind.
@@ -47,9 +59,9 @@ abstract class SpatialTrackingAdapter {
   /// explanation regardless of ARCore or ARKit underneath.
   ValueListenable<String?> get trackingFailureReason;
 
-  /// Hit-tested world positions from a tap on a tracked surface, nearest
+  /// Hit-tested world poses from a tap on a tracked surface, nearest
   /// first. Empty when the tap missed every tracked surface.
-  set onSurfaceTap(void Function(List<vector.Vector3> hits)? handler);
+  set onSurfaceTap(void Function(List<ArPlacementAnchorPose> hits)? handler);
 
   /// Fired when the session first has a usable surface.
   set onSurfaceDetected(void Function()? handler);
@@ -101,17 +113,33 @@ class PlatformSpatialTrackingAdapter implements SpatialTrackingAdapter {
       );
 
   @override
-  Future<bool> updateNodeTransform({
+  Future<void> addAnchoredModel({
+    required String modelPath,
+    required ArPlacementAnchorPose anchor,
+    required double localYawRadians,
+    required double localScale,
     required String name,
-    vector.Vector3? position,
-    double? yawRadians,
-    double? scale,
   }) =>
-      _manager.updateNodeTransform(
+      _manager.addAnchoredModel(
+        modelPath: modelPath,
+        anchor: anchor,
+        localYawRadians: localYawRadians,
+        localScale: localScale,
         name: name,
-        position: position,
-        yawRadians: yawRadians,
-        scale: scale,
+      );
+
+  @override
+  Future<bool> updateAnchoredNode({
+    required String name,
+    ArPlacementAnchorPose? anchor,
+    double? localYawRadians,
+    double? localScale,
+  }) =>
+      _manager.updateAnchoredNode(
+        name: name,
+        anchor: anchor,
+        localYawRadians: localYawRadians,
+        localScale: localScale,
       );
 
   @override
@@ -131,7 +159,7 @@ class PlatformSpatialTrackingAdapter implements SpatialTrackingAdapter {
       _manager.trackingFailureReason;
 
   @override
-  set onSurfaceTap(void Function(List<vector.Vector3> hits)? handler) {
+  set onSurfaceTap(void Function(List<ArPlacementAnchorPose> hits)? handler) {
     if (handler == null) {
       _manager.onPlaneTap = null;
       return;
@@ -141,8 +169,14 @@ class PlatformSpatialTrackingAdapter implements SpatialTrackingAdapter {
       // a tracked plane polygon.
       final sorted = hits.toList()
         ..sort((a, b) => a.distance.compareTo(b.distance));
-      handler(
-          sorted.map((hit) => hit.pose.translation).toList(growable: false));
+      handler(sorted
+          .map(
+            (hit) => ArPlacementAnchorPose(
+              position: hit.pose.translation,
+              rotation: hit.pose.rotation,
+            ),
+          )
+          .toList(growable: false));
     };
   }
 

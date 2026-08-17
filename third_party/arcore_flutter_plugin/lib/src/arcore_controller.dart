@@ -355,8 +355,12 @@ class ArCoreController {
   Future<void> addArCoreNodeWithAnchor(
     ArCoreNode node, {
     String? parentNodeName,
+    double localYawRadians = 0,
+    double localScale = 1,
   }) {
-    final params = _addParentNodeNameToParams(node.toMap(), parentNodeName);
+    final params = _addParentNodeNameToParams(node.toMap(), parentNodeName)!
+      ..['localYawRadians'] = localYawRadians
+      ..['localScale'] = localScale;
     if (debug ?? true) {
       debugPrint(params.toString());
     }
@@ -372,7 +376,7 @@ class ArCoreController {
     return _channel.invokeMethod('removeARCoreNode', {'nodeName': nodeName});
   }
 
-  /// Moves, rotates and scales an existing node in place.
+  /// Updates an anchored placement without mixing coordinate spaces.
   ///
   /// Adding a node was previously the only way to give it a transform, so an
   /// adjustable placement preview had to be removed and re-added — which
@@ -381,19 +385,26 @@ class ArCoreController {
   /// visible immediately.
   ///
   /// Returns false when the scene has no node by that name.
-  Future<bool> updateNodeTransform({
+  /// Anchor fields are world-space ARCore poses. Content fields are local to
+  /// the stable child beneath that anchor, so user yaw and scale cannot move
+  /// the model through a world/local coordinate mix-up.
+  Future<bool> updateAnchoredNode({
     required String nodeName,
-    Vector3? position,
-    Vector4? rotation,
-    Vector3? scale,
+    Vector3? anchorPosition,
+    Vector4? anchorRotation,
+    double? localYawRadians,
+    double? localScale,
   }) async {
     if (isDisposed) return false;
     try {
-      final result = await _channel.invokeMethod<bool>('updateNodeTransform', {
+      final result = await _channel.invokeMethod<bool>('updateAnchoredNode', {
         'name': nodeName,
-        if (position != null) 'position': convertVector3ToMap(position),
-        if (rotation != null) 'rotation': convertVector4ToMap(rotation),
-        if (scale != null) 'scale': convertVector3ToMap(scale),
+        if (anchorPosition != null)
+          'anchorPosition': convertVector3ToMap(anchorPosition),
+        if (anchorRotation != null)
+          'anchorRotation': convertVector4ToMap(anchorRotation),
+        if (localYawRadians != null) 'localYawRadians': localYawRadians,
+        if (localScale != null) 'localScale': localScale,
       });
       return result ?? false;
     } on MissingPluginException {
@@ -403,7 +414,7 @@ class ArCoreController {
     } on PlatformException catch (error) {
       if (debug ?? true) {
         debugPrint(
-          'ArCoreController($id): updateNodeTransform failed: ${error.code}',
+          'ArCoreController($id): updateAnchoredNode failed: ${error.code}',
         );
       }
       return false;
