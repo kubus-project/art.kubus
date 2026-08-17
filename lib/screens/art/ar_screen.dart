@@ -926,8 +926,30 @@ class _ARScreenState extends State<ARScreen>
       case ArCameraSurface.ar:
         // Archive playback is a viewer, not a camera surface, but it lives on
         // the AR owner so switching to it does not tear the session down.
-        if (_currentMode == 'view') return _buildSpatialArchive();
-        return _buildArCameraSurface();
+        //
+        // The AR view must stay mounted underneath it. Returning the archive
+        // alone removes the platform view from the tree, and Flutter disposes
+        // the native view with it — while the orchestrator still reports
+        // CameraOwner.ar, so the same-owner transition back to Place or
+        // Capture skips releaseAr and re-renders the cached widget over a dead
+        // session. Keeping it mounted behind an opaque archive preserves the
+        // session without showing the camera.
+        //
+        // The Stack is unconditional and the AR view is always child 0. A
+        // structure that swapped between a bare child and a Stack child would
+        // move the platform view in the element tree, and Flutter would
+        // dispose and recreate it — the same dead session by a subtler route.
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            _buildArCameraSurface(),
+            if (_currentMode == 'view')
+              ColoredBox(
+                color: Theme.of(context).colorScheme.surface,
+                child: _buildSpatialArchive(),
+              ),
+          ],
+        );
     }
   }
 

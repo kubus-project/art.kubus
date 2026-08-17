@@ -603,6 +603,11 @@ class SpatialCaptureProvider extends ChangeNotifier {
           'baselineMeters': _coverage.baselineMeters,
           'source': 'art.kubus-mobile-tracking',
           'private': true,
+          // Idempotency key. A commit whose response is lost is
+          // indistinguishable from a failure here, so without this a retry
+          // would upload a fresh draft and create a second durable capture.
+          // The node returns the already-committed record instead.
+          'localCaptureId': store.captureId,
         },
       });
       draftId = draft.id;
