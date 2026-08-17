@@ -8,6 +8,8 @@ import 'dart:math' as math;
 import 'package:arcore_flutter_plugin/arcore_flutter_plugin.dart';
 import 'package:arkit_plugin/arkit_plugin.dart';
 
+import 'ar_placement_controller.dart';
+
 /// Unified AR Manager providing cross-platform AR functionality
 /// Uses arcore_flutter_plugin for Android
 /// Uses the maintained ARKit plugin on iOS. Spatial capture exposes only the
@@ -174,34 +176,67 @@ class ARManager {
     }
   }
 
-  /// Applies a new transform to a node already in the scene.
+  /// Creates an adjustable placement with a world anchor and local content.
   ///
-  /// Used by the placement preview so scale, rotation and reposition are
-  /// visible immediately instead of only being applied when the placement is
-  /// confirmed. Returns false when no node by that name exists.
-  Future<bool> updateNodeTransform({
+  /// Android keeps the hit-test orientation on the ARCore anchor and applies
+  /// the user's yaw and scale to a child content node. iOS deliberately keeps
+  /// artwork upright: its ARKit reference node uses the anchor position plus
+  /// local yaw/scale, rather than inheriting plane pitch and roll.
+  Future<void> addAnchoredModel({
+    required String modelPath,
+    required ArPlacementAnchorPose anchor,
+    required double localYawRadians,
+    required double localScale,
     required String name,
-    vector.Vector3? position,
-    double? yawRadians,
-    double? scale,
+  }) async {
+    if (Platform.isAndroid && _arCoreController != null) {
+      await _addArCoreAnchoredModel(
+        modelPath: modelPath,
+        anchor: anchor,
+        localYawRadians: localYawRadians,
+        localScale: localScale,
+        name: name,
+      );
+    } else if (Platform.isIOS && _arKitController != null) {
+      await _addArKitModel(
+        modelPath: modelPath,
+        position: anchor.position,
+        scale: vector.Vector3.all(localScale),
+        yawRadians: localYawRadians,
+        name: name,
+      );
+    }
+  }
+
+  /// Replaces an anchor pose and/or adjusts content below that anchor.
+  ///
+  /// Returns false when no node by that name exists. On Android anchor pose
+  /// and content transforms use separate native fields; this is intentionally
+  /// not the old ambiguous node-transform operation.
+  Future<bool> updateAnchoredNode({
+    required String name,
+    ArPlacementAnchorPose? anchor,
+    double? localYawRadians,
+    double? localScale,
   }) async {
     if (Platform.isAndroid) {
       final controller = _arCoreController;
       if (controller == null || !controller.isReady) return false;
-      return controller.updateNodeTransform(
+      return controller.updateAnchoredNode(
         nodeName: name,
-        position: position,
-        rotation: yawRadians == null ? null : _yawQuaternion(yawRadians),
-        scale: scale == null ? null : vector.Vector3.all(scale),
+        anchorPosition: anchor?.position,
+        anchorRotation: anchor?.rotation,
+        localYawRadians: localYawRadians,
+        localScale: localScale,
       );
     }
     if (Platform.isIOS) {
       final node = _arKitNodes[name];
       if (node == null) return false;
       final current = node.transform;
-      final nextPosition = position ?? current.getTranslation();
-      final nextScale = scale ?? _arKitNodeScale[name] ?? 1.0;
-      final nextYaw = yawRadians ?? _arKitNodeYaw[name] ?? 0.0;
+      final nextPosition = anchor?.position ?? current.getTranslation();
+      final nextScale = localScale ?? _arKitNodeScale[name] ?? 1.0;
+      final nextYaw = localYawRadians ?? _arKitNodeYaw[name] ?? 0.0;
       _arKitNodeScale[name] = nextScale;
       _arKitNodeYaw[name] = nextYaw;
       node.transformNotifier.value = _composeTransform(
@@ -302,6 +337,29 @@ class ARManager {
       name ?? 'model_${DateTime.now().millisecondsSinceEpoch}',
       'model',
     );
+  }
+
+  Future<void> _addArCoreAnchoredModel({
+    required String modelPath,
+    required ArPlacementAnchorPose anchor,
+    required double localYawRadians,
+    required double localScale,
+    required String name,
+  }) async {
+    final node = ArCoreReferenceNode(
+      name: name,
+      objectUrl: modelPath,
+      // These fields exclusively define the ARCore anchor pose. The native
+      // implementation creates a separate content child for local controls.
+      position: anchor.position,
+      rotation: anchor.rotation,
+    );
+    await _arCoreController!.addArCoreNodeWithAnchor(
+      node,
+      localYawRadians: localYawRadians,
+      localScale: localScale,
+    );
+    _trackNode(name, 'model');
   }
 
   // iOS ARKit specific methods.

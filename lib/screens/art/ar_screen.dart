@@ -18,7 +18,6 @@ import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
 import '../../services/share/share_deep_link_parser.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:vector_math/vector_math_64.dart' as vector;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/map_marker_subject.dart';
 import '../../models/kubus_node_models.dart';
@@ -552,8 +551,8 @@ class _ARScreenState extends State<ARScreen>
   void _onAdjustStart(ScaleStartDetails details) {
     final transform = _placement.transform;
     if (transform == null) return;
-    _gestureBaseScale = transform.scale;
-    _gestureBaseRotation = transform.rotationRadians;
+    _gestureBaseScale = transform.localScale;
+    _gestureBaseRotation = transform.localYawRadians;
     _placement.beginAdjusting();
   }
 
@@ -566,13 +565,13 @@ class _ARScreenState extends State<ARScreen>
     if (details.scale != 1.0) {
       final target = (_gestureBaseScale * details.scale)
           .clamp(_placement.minScale, _placement.maxScale);
-      if (transform.scale != 0) {
-        _placement.scaleBy(target / transform.scale);
+      if (transform.localScale != 0) {
+        _placement.scaleBy(target / transform.localScale);
       }
     }
     if (details.rotation != 0) {
       final target = _gestureBaseRotation + details.rotation;
-      _placement.rotateBy(target - transform.rotationRadians);
+      _placement.rotateBy(target - transform.localYawRadians);
     }
   }
 
@@ -1157,13 +1156,13 @@ class _ARScreenState extends State<ARScreen>
 
       // No preview survived (the session was recreated, for instance): build
       // the node from the confirmed transform, rotation included.
-      await _spatialTracking.addModel(
+      await _spatialTracking.addAnchoredModel(
         modelPath: await _resolveArAsset(
           (_selectedArtwork!['modelURL'] ?? '').toString(),
         ),
-        position: transform.position,
-        scale: vector.Vector3.all(transform.scale),
-        yawRadians: transform.rotationRadians,
+        anchor: transform.anchor,
+        localYawRadians: transform.localYawRadians,
+        localScale: transform.localScale,
         name: _selectedArtwork!['id'].toString(),
       );
 
@@ -2355,13 +2354,18 @@ class _ARScreenState extends State<ARScreen>
       'artist': selected?['artist'],
       'model': selected?['model'] ?? selected?['modelURL'],
       'modelURL': selected?['modelURL'],
-      'scale': ((selected?['scale'] as double?) ?? 1.0) * transform.scale,
+      'scale': ((selected?['scale'] as double?) ?? 1.0) * transform.localScale,
       'position': {
-        'x': transform.position.x,
-        'y': transform.position.y,
-        'z': transform.position.z,
+        'x': transform.anchor.position.x,
+        'y': transform.anchor.position.y,
+        'z': transform.anchor.position.z,
       },
-      'rotation': {'x': 0.0, 'y': transform.rotationRadians, 'z': 0.0},
+      'rotation': {
+        'x': transform.anchor.rotation.x,
+        'y': transform.localYawRadians,
+        'z': transform.anchor.rotation.z,
+        'w': transform.anchor.rotation.w,
+      },
       'timestamp': DateTime.now().toIso8601String(),
     };
 
@@ -2374,7 +2378,7 @@ class _ARScreenState extends State<ARScreen>
   }
 
   /// Applies a hit test from a tap on a tracked surface.
-  void _onSurfaceTap(List<vector.Vector3> hits) {
+  void _onSurfaceTap(List<ArPlacementAnchorPose> hits) {
     if (hits.isEmpty) return;
     // The adapter delivers accepted hits nearest first.
     final placed = _placement.applyHitTest(hits.first);

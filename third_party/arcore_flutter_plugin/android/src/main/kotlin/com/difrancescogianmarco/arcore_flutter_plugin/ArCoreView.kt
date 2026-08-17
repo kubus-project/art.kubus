@@ -264,16 +264,16 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
                 debugLog(" addArCoreNode")
                 val map = call.arguments as HashMap<String, Any>
                 val flutterNode = FlutterArCoreNode(map)
-                addNodeWithAnchor(flutterNode, result)
+                addNodeWithAnchor(flutterNode, map, result)
             }
             "removeARCoreNode" -> {
                 debugLog(" removeARCoreNode")
                 val map = call.arguments as HashMap<String, Any>
                 removeNode(map["nodeName"] as String, result)
             }
-            "updateNodeTransform" -> {
-                debugLog(" updateNodeTransform")
-                updateNodeTransform(call, result)
+            "updateAnchoredNode" -> {
+                debugLog(" updateAnchoredNode")
+                updateAnchoredNode(call, result)
             }
             "positionChanged" -> {
                 debugLog(" positionChanged")
@@ -624,7 +624,10 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
                             debugLog(" onNodeTap " + hitTestResult.node?.name)
                             debugLog(hitTestResult.node?.localPosition.toString())
                             debugLog(hitTestResult.node?.worldPosition.toString())
-                            methodChannel.invokeMethod("onNodeTap", hitTestResult.node?.name)
+                            methodChannel.invokeMethod(
+                                "onNodeTap",
+                                publicNodeNameForTap(hitTestResult.node),
+                            )
                             return@setOnTouchListener true
                         }
                         val handled = event?.let { gestureDetector.onTouchEvent(it) } ?: false
@@ -647,7 +650,11 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
         result.success(null)
     }
 
-    fun addNodeWithAnchor(flutterArCoreNode: FlutterArCoreNode, result: MethodChannel.Result) {
+    fun addNodeWithAnchor(
+        flutterArCoreNode: FlutterArCoreNode,
+        parameters: HashMap<String, Any>,
+        result: MethodChannel.Result,
+    ) {
 
         if (arSceneView == null) {
             return
@@ -658,11 +665,38 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
                 result.error("Make Renderable Error", t.localizedMessage, null)
                 return@makeRenderable
             }
-            val myAnchor = arSceneView?.session?.createAnchor(Pose(flutterArCoreNode.getPosition(), flutterArCoreNode.getRotation()))
+            val transform = AnchoredPlacementTransforms.initial(
+                flutterArCoreNode.getPosition(),
+                flutterArCoreNode.getRotation(),
+                (parameters["localYawRadians"] as? Number)?.toDouble() ?: 0.0,
+                (parameters["localScale"] as? Number)?.toDouble() ?: 1.0,
+            )
+            val myAnchor = arSceneView?.session?.createAnchor(
+                Pose(transform.anchorTranslation, transform.anchorRotation),
+            )
             if (myAnchor != null) {
                 val anchorNode = AnchorNode(myAnchor)
                 anchorNode.name = flutterArCoreNode.name
-                anchorNode.renderable = renderable
+                val content = Node()
+                content.name = "${anchorNode.name}$contentNodeSuffix"
+                content.renderable = renderable
+                content.localPosition = com.google.ar.sceneform.math.Vector3(
+                    transform.contentTranslation[0],
+                    transform.contentTranslation[1],
+                    transform.contentTranslation[2],
+                )
+                content.localRotation = com.google.ar.sceneform.math.Quaternion(
+                    transform.contentRotation[0],
+                    transform.contentRotation[1],
+                    transform.contentRotation[2],
+                    transform.contentRotation[3],
+                )
+                content.localScale = com.google.ar.sceneform.math.Vector3(
+                    transform.contentScale[0],
+                    transform.contentScale[1],
+                    transform.contentScale[2],
+                )
+                content.setParent(anchorNode)
 
                 debugLog("addNodeWithAnchor inserted ${anchorNode.name}")
                 attachNodeToParent(anchorNode, flutterArCoreNode.parentNodeName)
@@ -717,7 +751,10 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
     fun removeNode(name: String, result: MethodChannel.Result) {
         val node = arSceneView?.scene?.findByName(name)
         if (node != null) {
-            arSceneView?.scene?.removeChild(node);
+            if (node is AnchorNode) {
+                node.anchor?.detach()
+            }
+            node.setParent(null)
             debugLog("removed ${node.name}")
         }
 
@@ -725,81 +762,126 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
     }
 
     /**
-     * Applies a new local transform to a node that is already in the scene.
+     * Updates a stable anchored placement without mixing world and local space.
      *
      * A placement preview is adjusted continuously — pinch to scale, drag to
      * rotate, tap to reposition — and removing and re-adding the node for every
      * change reloads its renderable and makes the artwork blink. Mutating the
      * live node keeps the preview stable and matches what the user is doing.
      *
-     * An AnchorNode owns its world pose through its anchor, so position is
-     * applied to the anchor's child content where one exists and to the node
-     * itself otherwise. Omitted components are left untouched.
+     * A supplied anchor pose replaces the immutable ARCore anchor. Local yaw
+     * and scale apply only to the content child. Omitted components are left
+     * untouched.
      */
-    fun updateNodeTransform(call: MethodCall, result: MethodChannel.Result) {
+    fun updateAnchoredNode(call: MethodCall, result: MethodChannel.Result) {
         val name = call.argument<String>("name")
-        val node = arSceneView?.scene?.findByName(name)
-        if (node == null) {
-            debugLog("updateNodeTransform: no node named $name")
+        var anchorNode = findAnchorNode(name)
+        if (anchorNode == null) {
+            debugLog("updateAnchoredNode: no anchor named $name")
             result.success(false)
             return
         }
 
-        // Transforms are applied below the anchor, never to the AnchorNode
-        // itself: Sceneform rewrites an AnchorNode's world pose from its ARCore
-        // anchor on every frame, so assigning localPosition or localRotation
-        // there is overwritten immediately and the preview snaps back while the
-        // call still reports success.
-        val target = contentNodeFor(node)
+        val anchorPosition = DecodableUtils.parseVector3(
+            call.argument<HashMap<String, Double>>("anchorPosition"),
+        )
+        val anchorRotation = DecodableUtils.parseQuaternion(
+            call.argument<HashMap<String, Double>>("anchorRotation"),
+        )
+        if ((anchorPosition == null) != (anchorRotation == null)) {
+            result.error("invalid_anchor_pose", "Anchor position and rotation must be supplied together", null)
+            return
+        }
+        if (anchorPosition != null && anchorRotation != null) {
+            anchorNode = replaceAnchorPose(
+                anchorNode,
+                floatArrayOf(anchorPosition.x, anchorPosition.y, anchorPosition.z),
+                floatArrayOf(anchorRotation.x, anchorRotation.y, anchorRotation.z, anchorRotation.w),
+            )
+            if (anchorNode == null) {
+                result.success(false)
+                return
+            }
+        }
 
-        DecodableUtils.parseVector3(call.argument<HashMap<String, Double>>("position"))?.let {
-            target.localPosition = it
+        val localYaw = call.argument<Number>("localYawRadians")?.toDouble()
+        val localScale = call.argument<Number>("localScale")?.toDouble()
+        if ((localYaw != null && !localYaw.isFinite()) ||
+            (localScale != null && (!localScale.isFinite() || localScale <= 0.0))) {
+            result.error("invalid_content_transform", "Content yaw and scale must be finite; scale must be positive", null)
+            return
         }
-        DecodableUtils.parseQuaternion(call.argument<HashMap<String, Double>>("rotation"))?.let {
-            target.localRotation = it
+        val content = findContentNode(anchorNode)
+        if (content == null) {
+            result.success(false)
+            return
         }
-        DecodableUtils.parseVector3(call.argument<HashMap<String, Double>>("scale"))?.let {
-            target.localScale = it
-        }
+        val current = AnchoredPlacementTransform(
+            floatArrayOf(), floatArrayOf(), floatArrayOf(0f, 0f, 0f),
+            floatArrayOf(content.localRotation.x, content.localRotation.y, content.localRotation.z, content.localRotation.w),
+            floatArrayOf(content.localScale.x, content.localScale.y, content.localScale.z),
+        )
+        val next = AnchoredPlacementTransforms.withContent(current, localYaw, localScale)
+        content.localPosition = com.google.ar.sceneform.math.Vector3(
+            next.contentTranslation[0], next.contentTranslation[1], next.contentTranslation[2],
+        )
+        content.localRotation = com.google.ar.sceneform.math.Quaternion(
+            next.contentRotation[0], next.contentRotation[1], next.contentRotation[2], next.contentRotation[3],
+        )
+        content.localScale = com.google.ar.sceneform.math.Vector3(
+            next.contentScale[0], next.contentScale[1], next.contentScale[2],
+        )
         result.success(true)
     }
 
     /** Suffix identifying the content child created beneath an AnchorNode. */
     private val contentNodeSuffix = "#content"
 
-    /**
-     * Returns the node that placement transforms should act on.
-     *
-     * For a plain node that is the node itself. For an AnchorNode the content
-     * is migrated to a child on first use, because the anchor drives the
-     * parent's world pose and any local transform on it is discarded.
-     */
-    private fun contentNodeFor(node: Node): Node {
-        if (node !is AnchorNode) return node
-        val childName = "${node.name}$contentNodeSuffix"
-        node.children.firstOrNull { it.name == childName }?.let { return it }
+    private fun findAnchorNode(name: String?): AnchorNode? =
+        name?.let { arSceneView?.scene?.findByName(it) as? AnchorNode }
 
-        val content = Node()
-        content.name = childName
-        content.renderable = node.renderable
-        node.renderable = null
-        content.setParent(node)
-        debugLog("updateNodeTransform: migrated ${node.name} content to $childName")
-        return content
+    private fun findContentNode(anchor: AnchorNode): Node? =
+        anchor.children.firstOrNull { it.name == "${anchor.name}$contentNodeSuffix" }
+
+    /**
+     * Keeps Flutter's node-tap contract independent of the internal content
+     * child used by anchored placement previews.
+     */
+    private fun publicNodeNameForTap(node: Node?): String? {
+        var current = node
+        while (current != null) {
+            if (current is AnchorNode) {
+                return current.name
+            }
+            current = current.parent
+        }
+        return node?.name
+    }
+
+    /** Replaces an immutable ARCore anchor while retaining its content node. */
+    private fun replaceAnchorPose(
+        anchorNode: AnchorNode,
+        translation: FloatArray,
+        rotation: FloatArray,
+    ): AnchorNode? {
+        val content = findContentNode(anchorNode) ?: return null
+        val replacementAnchor = arSceneView?.session?.createAnchor(Pose(translation, rotation)) ?: return null
+        val parent = anchorNode.parent
+        content.setParent(null)
+        anchorNode.setParent(null)
+        anchorNode.anchor?.detach()
+        return AnchorNode(replacementAnchor).also { replacement ->
+            replacement.name = anchorNode.name
+            replacement.setParent(parent)
+            content.setParent(replacement)
+        }
     }
 
     /**
      * Returns the node currently carrying the renderable.
-     *
-     * Read-only counterpart to [contentNodeFor]: it finds content that has
-     * already been migrated beneath an anchor without creating a child as a
-     * side effect.
      */
-    private fun renderableHolderFor(node: Node): Node {
-        if (node !is AnchorNode) return node
-        if (node.renderable != null) return node
-        return node.children.firstOrNull { it.renderable != null } ?: node
-    }
+    private fun renderableHolderFor(node: Node): Node =
+        (node as? AnchorNode)?.let(::findContentNode) ?: node
 
     fun updateRotation(call: MethodCall, result: MethodChannel.Result) {
         val name = call.argument<String>("name")

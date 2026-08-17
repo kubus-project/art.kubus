@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:art_kubus/services/spatial_tracking_adapter.dart';
+import 'package:art_kubus/services/ar_placement_controller.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter/services.dart';
@@ -27,28 +28,33 @@ class FakeArNode {
   const FakeArNode({
     required this.name,
     required this.modelPath,
-    required this.position,
-    required this.scale,
-    required this.yawRadians,
+    required this.anchor,
+    required this.localScale,
+    required this.localYawRadians,
   });
 
   final String name;
   final String modelPath;
-  final vector.Vector3 position;
-  final double scale;
-  final double yawRadians;
+  final ArPlacementAnchorPose anchor;
+  final double localScale;
+  final double localYawRadians;
+
+  vector.Vector3 get position => anchor.position;
+  vector.Vector4 get anchorRotation => anchor.rotation;
+  double get scale => localScale;
+  double get yawRadians => localYawRadians;
 
   FakeArNode copyWith({
-    vector.Vector3? position,
-    double? scale,
-    double? yawRadians,
+    ArPlacementAnchorPose? anchor,
+    double? localScale,
+    double? localYawRadians,
   }) =>
       FakeArNode(
         name: name,
         modelPath: modelPath,
-        position: position ?? this.position,
-        scale: scale ?? this.scale,
-        yawRadians: yawRadians ?? this.yawRadians,
+        anchor: anchor ?? this.anchor,
+        localScale: localScale ?? this.localScale,
+        localYawRadians: localYawRadians ?? this.localYawRadians,
       );
 }
 
@@ -67,7 +73,7 @@ class FakeSpatialTrackingAdapter implements SpatialTrackingAdapter {
   final ValueNotifier<bool> _isTracking = ValueNotifier<bool>(false);
   final ValueNotifier<String?> _failureReason = ValueNotifier<String?>(null);
 
-  void Function(List<vector.Vector3> hits)? _onSurfaceTap;
+  void Function(List<ArPlacementAnchorPose> hits)? _onSurfaceTap;
   void Function()? _onSurfaceDetected;
 
   /// Frames handed out by [captureFrame], in order.
@@ -114,7 +120,7 @@ class FakeSpatialTrackingAdapter implements SpatialTrackingAdapter {
   }
 
   /// Delivers a hit test result to whoever is listening.
-  void tapSurface(List<vector.Vector3> hits) {
+  void tapSurface(List<ArPlacementAnchorPose> hits) {
     _onSurfaceTap?.call(hits);
   }
 
@@ -180,31 +186,56 @@ class FakeSpatialTrackingAdapter implements SpatialTrackingAdapter {
     nodes[resolved] = FakeArNode(
       name: resolved,
       modelPath: modelPath,
-      position: position,
-      scale: scale?.x ?? 1.0,
-      yawRadians: yawRadians,
+      anchor: ArPlacementAnchorPose(
+        position: position,
+        rotation: vector.Vector4(0, 0, 0, 1),
+      ),
+      localScale: scale?.x ?? 1.0,
+      localYawRadians: yawRadians,
     );
     calls.add('addModel:$name@${position.x},${position.y},${position.z}');
   }
 
   @override
-  Future<bool> updateNodeTransform({
+  Future<void> addAnchoredModel({
+    required String modelPath,
+    required ArPlacementAnchorPose anchor,
+    required double localYawRadians,
+    required double localScale,
     required String name,
-    vector.Vector3? position,
-    double? yawRadians,
-    double? scale,
+  }) async {
+    if (_disposed) throw StateError('addAnchoredModel after dispose');
+    nodes[name] = FakeArNode(
+      name: name,
+      modelPath: modelPath,
+      anchor: anchor,
+      localScale: localScale,
+      localYawRadians: localYawRadians,
+    );
+    calls.add(
+        'addAnchoredModel:$name@${anchor.position.x},${anchor.position.y},${anchor.position.z}');
+  }
+
+  @override
+  Future<bool> updateAnchoredNode({
+    required String name,
+    ArPlacementAnchorPose? anchor,
+    double? localYawRadians,
+    double? localScale,
   }) async {
     if (_disposed) {
-      throw StateError('updateNodeTransform after dispose');
+      throw StateError('updateAnchoredNode after dispose');
     }
     final node = nodes[name];
     if (node == null) return false;
     nodes[name] = node.copyWith(
-      position: position,
-      yawRadians: yawRadians,
-      scale: scale,
+      anchor: anchor,
+      localYawRadians: localYawRadians,
+      localScale: localScale,
     );
-    calls.add('updateNodeTransform:$name');
+    calls.add(
+      'updateAnchoredNode:$name(anchor:${anchor != null},yaw:${localYawRadians != null},scale:${localScale != null})',
+    );
     return true;
   }
 
@@ -256,7 +287,7 @@ class FakeSpatialTrackingAdapter implements SpatialTrackingAdapter {
   ValueListenable<String?> get trackingFailureReason => _failureReason;
 
   @override
-  set onSurfaceTap(void Function(List<vector.Vector3> hits)? handler) {
+  set onSurfaceTap(void Function(List<ArPlacementAnchorPose> hits)? handler) {
     _onSurfaceTap = handler;
   }
 

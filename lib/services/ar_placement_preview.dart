@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'package:vector_math/vector_math_64.dart' as vector;
 
 import 'ar_placement_controller.dart';
 import 'spatial_tracking_adapter.dart';
@@ -35,6 +34,11 @@ class ArPlacementPreview {
   /// Resolved model URI, cached so repositioning does not re-resolve content.
   String? _resolvedModelPath;
   String? _resolvedFromRaw;
+
+  /// Last transform known to be applied to the native hierarchy. This lets
+  /// gestures update only their local component; scale/rotation must not even
+  /// request a replacement ARCore anchor.
+  ArPlacementTransform? _appliedTransform;
 
   /// Serializes scene mutations. Two overlapping syncs could otherwise add a
   /// second node while the first is still resolving its model.
@@ -93,11 +97,11 @@ class ArPlacementPreview {
       if (_disposed) return;
       final name = nodeNameFor(artworkId);
       try {
-        await _tracking.addModel(
+        await _tracking.addAnchoredModel(
           modelPath: modelPath,
-          position: transform.position,
-          scale: vector.Vector3.all(transform.scale),
-          yawRadians: transform.rotationRadians,
+          anchor: transform.anchor,
+          localYawRadians: transform.localYawRadians,
+          localScale: transform.localScale,
           name: name,
         );
       } catch (error) {
@@ -106,21 +110,37 @@ class ArPlacementPreview {
       }
       _nodeName = name;
       _nodeArtworkId = artworkId;
+      _appliedTransform = transform;
       return;
     }
 
+    final previous = _appliedTransform;
     try {
-      final updated = await _tracking.updateNodeTransform(
+      final updated = await _tracking.updateAnchoredNode(
         name: _nodeName!,
-        position: transform.position,
-        yawRadians: transform.rotationRadians,
-        scale: transform.scale,
+        anchor:
+            previous == null || !_sameAnchor(previous.anchor, transform.anchor)
+                ? transform.anchor
+                : null,
+        localYawRadians: previous == null ||
+                previous.localYawRadians != transform.localYawRadians
+            ? transform.localYawRadians
+            : null,
+        localScale:
+            previous == null || previous.localScale != transform.localScale
+                ? transform.localScale
+                : null,
       );
       if (!updated) {
         // The session dropped the node underneath us (a re-created scene, for
-        // instance). Forget it so the next sync rebuilds it.
+        // instance). Rebuild from the stored anchor pose and local transform;
+        // the anchor world position is never reused as a child-local offset.
         _nodeName = null;
         _nodeArtworkId = null;
+        _appliedTransform = null;
+        await _sync(placement);
+      } else {
+        _appliedTransform = transform;
       }
     } catch (error) {
       _onError?.call(error);
@@ -149,6 +169,7 @@ class ArPlacementPreview {
     final name = _nodeName;
     _nodeName = null;
     _nodeArtworkId = null;
+    _appliedTransform = null;
     if (name == null) return;
     try {
       await _tracking.removeNode(name);
@@ -169,6 +190,18 @@ class ArPlacementPreview {
     _resolvedModelPath = resolved;
     return resolved;
   }
+
+  static bool _sameAnchor(
+    ArPlacementAnchorPose first,
+    ArPlacementAnchorPose second,
+  ) =>
+      first.position.x == second.position.x &&
+      first.position.y == second.position.y &&
+      first.position.z == second.position.z &&
+      first.rotation.x == second.rotation.x &&
+      first.rotation.y == second.rotation.y &&
+      first.rotation.z == second.rotation.z &&
+      first.rotation.w == second.rotation.w;
 
   Future<T> _enqueue<T>(Future<T> Function() action) {
     final next = _queue.then((_) => action());

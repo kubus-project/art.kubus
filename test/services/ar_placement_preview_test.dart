@@ -32,12 +32,21 @@ void main() {
     placement.dispose();
   });
 
+  ArPlacementAnchorPose pose(
+    vector.Vector3 position, [
+    vector.Vector4? rotation,
+  ]) =>
+      ArPlacementAnchorPose(
+        position: position,
+        rotation: rotation ?? vector.Vector4(0, 0, 0, 1),
+      );
+
   /// Brings the controller to a previewed placement at [position].
   Future<void> place(vector.Vector3 position) async {
     placement.selectArtwork(artworkId: 'art-1', modelPath: 'model.glb');
     placement.setTracking(true);
     placement.setSurfaceAvailable(true);
-    placement.applyHitTest(position);
+    placement.applyHitTest(pose(position));
     await preview.sync(placement);
   }
 
@@ -82,7 +91,7 @@ void main() {
       placement.rotateBy(math.pi / 2);
       await preview.sync(placement);
 
-      expect(placement.transform!.rotationRadians, closeTo(math.pi / 2, 1e-9));
+      expect(placement.transform!.localYawRadians, closeTo(math.pi / 2, 1e-9));
       expect(
         tracking.nodes.values.single.yawRadians,
         closeTo(math.pi / 2, 1e-9),
@@ -90,8 +99,9 @@ void main() {
       );
       expect(
           tracking.calls,
-          contains('updateNodeTransform:'
-              '${ArPlacementPreview.nodeNameFor('art-1')}'));
+          contains('updateAnchoredNode:'
+              '${ArPlacementPreview.nodeNameFor('art-1')}'
+              '(anchor:false,yaw:true,scale:false)'));
     });
 
     test('scale is applied to the scene node', () async {
@@ -101,8 +111,14 @@ void main() {
       placement.scaleBy(2.0);
       await preview.sync(placement);
 
-      expect(placement.transform!.scale, closeTo(2.0, 1e-9));
+      expect(placement.transform!.localScale, closeTo(2.0, 1e-9));
       expect(tracking.nodes.values.single.scale, closeTo(2.0, 1e-9));
+      expect(
+        tracking.calls.last,
+        'updateAnchoredNode:${ArPlacementPreview.nodeNameFor('art-1')}'
+        '(anchor:false,yaw:false,scale:true)',
+        reason: 'pinch changes only content scale; it never replaces anchor P',
+      );
     });
 
     test('scale stays inside the controller bounds all the way to the node',
@@ -112,7 +128,7 @@ void main() {
       placement.scaleBy(100);
       await preview.sync(placement);
 
-      expect(placement.transform!.scale, placement.maxScale);
+      expect(placement.transform!.localScale, placement.maxScale);
       expect(tracking.nodes.values.single.scale, placement.maxScale);
     });
 
@@ -121,7 +137,7 @@ void main() {
       await place(vector.Vector3(0, 0, -1));
       final nodeName = tracking.nodes.keys.single;
 
-      final moved = placement.repositionTo(vector.Vector3(3, 0.5, -4));
+      final moved = placement.repositionTo(pose(vector.Vector3(3, 0.5, -4)));
       await preview.sync(placement);
 
       expect(moved, isTrue);
@@ -132,6 +148,11 @@ void main() {
       expect(node.position.x, 3);
       expect(node.position.y, 0.5);
       expect(node.position.z, -4);
+      expect(
+        tracking.calls.last,
+        'updateAnchoredNode:$nodeName(anchor:true,yaw:false,scale:false)',
+        reason: 'reposition explicitly replaces the anchor, not a child offset',
+      );
     });
 
     test('rotation and scale survive a reposition', () async {
@@ -140,13 +161,27 @@ void main() {
       placement.scaleBy(1.5);
       await preview.sync(placement);
 
-      placement.repositionTo(vector.Vector3(2, 0, -2));
+      placement.repositionTo(pose(vector.Vector3(2, 0, -2)));
       await preview.sync(placement);
 
       final node = tracking.nodes.values.single;
       expect(node.yawRadians, closeTo(math.pi / 4, 1e-9));
       expect(node.scale, closeTo(1.5, 1e-9));
       expect(node.position.x, 2);
+    });
+
+    test('the doubled-translation regression cannot be reintroduced', () async {
+      await place(vector.Vector3(1, 0, -2));
+      placement.scaleBy(2);
+      await preview.sync(placement);
+      placement.rotateBy(math.pi / 3);
+      await preview.sync(placement);
+
+      final node = tracking.nodes.values.single;
+      expect(node.position, vector.Vector3(1, 0, -2));
+      expect(node.scale, 2);
+      expect(node.yawRadians, closeTo(math.pi / 3, 1e-9));
+      expect(node.position, isNot(vector.Vector3(2, 0, -4)));
     });
   });
 
@@ -179,7 +214,7 @@ void main() {
       await place(vector.Vector3(0, 0, -1));
 
       placement.selectArtwork(artworkId: 'art-2', modelPath: 'other.glb');
-      placement.applyHitTest(vector.Vector3(1, 0, -1));
+      placement.applyHitTest(pose(vector.Vector3(1, 0, -1)));
       await preview.sync(placement);
 
       expect(tracking.nodes, hasLength(1));
@@ -280,5 +315,21 @@ void main() {
       expect(tracking.nodes, isEmpty);
       expect(preview.hasPreview, isFalse);
     });
+  });
+
+  test('a missing native node is rebuilt from anchor and local transform',
+      () async {
+    await place(vector.Vector3(1, 0, -2));
+    placement.scaleBy(1.5);
+    placement.rotateBy(math.pi / 4);
+    await preview.sync(placement);
+    tracking.nodes.clear();
+
+    await preview.sync(placement);
+
+    final rebuilt = tracking.nodes.values.single;
+    expect(rebuilt.position, vector.Vector3(1, 0, -2));
+    expect(rebuilt.scale, 1.5);
+    expect(rebuilt.yawRadians, closeTo(math.pi / 4, 1e-9));
   });
 }
