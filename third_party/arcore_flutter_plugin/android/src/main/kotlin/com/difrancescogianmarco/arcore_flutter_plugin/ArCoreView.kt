@@ -624,7 +624,10 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
                             debugLog(" onNodeTap " + hitTestResult.node?.name)
                             debugLog(hitTestResult.node?.localPosition.toString())
                             debugLog(hitTestResult.node?.worldPosition.toString())
-                            methodChannel.invokeMethod("onNodeTap", hitTestResult.node?.name)
+                            methodChannel.invokeMethod(
+                                "onNodeTap",
+                                publicNodeNameForTap(hitTestResult.node),
+                            )
                             return@setOnTouchListener true
                         }
                         val handled = event?.let { gestureDetector.onTouchEvent(it) } ?: false
@@ -759,16 +762,16 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
     }
 
     /**
-     * Applies a new local transform to a node that is already in the scene.
+     * Updates a stable anchored placement without mixing world and local space.
      *
      * A placement preview is adjusted continuously — pinch to scale, drag to
      * rotate, tap to reposition — and removing and re-adding the node for every
      * change reloads its renderable and makes the artwork blink. Mutating the
      * live node keeps the preview stable and matches what the user is doing.
      *
-     * An AnchorNode owns its world pose through its anchor, so position is
-     * applied to the anchor's child content where one exists and to the node
-     * itself otherwise. Omitted components are left untouched.
+     * A supplied anchor pose replaces the immutable ARCore anchor. Local yaw
+     * and scale apply only to the content child. Omitted components are left
+     * untouched.
      */
     fun updateAnchoredNode(call: MethodCall, result: MethodChannel.Result) {
         val name = call.argument<String>("name")
@@ -839,6 +842,21 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
 
     private fun findContentNode(anchor: AnchorNode): Node? =
         anchor.children.firstOrNull { it.name == "${anchor.name}$contentNodeSuffix" }
+
+    /**
+     * Keeps Flutter's node-tap contract independent of the internal content
+     * child used by anchored placement previews.
+     */
+    private fun publicNodeNameForTap(node: Node?): String? {
+        var current = node
+        while (current != null) {
+            if (current is AnchorNode) {
+                return current.name
+            }
+            current = current.parent
+        }
+        return node?.name
+    }
 
     /** Replaces an immutable ARCore anchor while retaining its content node. */
     private fun replaceAnchorPose(
