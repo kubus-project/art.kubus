@@ -135,6 +135,38 @@ void main() {
       expect(leftovers, isEmpty);
     });
 
+    test('manifest extras survive later writes', () async {
+      final store = await openCapture();
+      await store.writeSample(rgb: bytes());
+      await store.writeManifest(
+        extra: const <String, dynamic>{'viewpointCount': 11},
+      );
+
+      // Recording a draft id and marking the capture delivered each rewrite
+      // the manifest; neither may drop fields an earlier write established.
+      await store.recordDraftId('draft-7');
+      await store.markTransferred();
+
+      final manifest = jsonDecode(
+        await File(p.join(store.directory.path, 'metadata.json'))
+            .readAsString(),
+      ) as Map<String, dynamic>;
+      expect((manifest['metadata'] as Map)['viewpointCount'], 11);
+      expect(manifest['transferred'], isTrue);
+    });
+
+    test('a recorded draft id survives for transfer resume', () async {
+      final store = await openCapture();
+      await store.writeSample(rgb: bytes());
+      await store.recordDraftId('draft-42');
+
+      final found = await SpatialCaptureStore.findInterrupted(root: root);
+      expect(found.single.draftId, 'draft-42');
+
+      final reopened = await SpatialCaptureStore.open(store.directory);
+      expect(reopened!.draftId, 'draft-42');
+    });
+
     test('marking transferred keeps the rest of the manifest intact', () async {
       final store = await openCapture();
       await store.writeSample(rgb: bytes());

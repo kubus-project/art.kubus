@@ -174,6 +174,10 @@ class SpatialCaptureStore {
   SpatialCaptureDirectoryState _state = SpatialCaptureDirectoryState.capturing;
   String? _draftId;
 
+  /// Extra manifest fields supplied by the caller, retained so a later write
+  /// (recording a draft id, marking the capture delivered) does not drop them.
+  Map<String, dynamic> _manifestExtra = const <String, dynamic>{};
+
   /// Serializes manifest and index writes so two concurrent updates cannot
   /// interleave a read-modify-write of the same file.
   Future<void> _metadataQueue = Future<void>.value();
@@ -251,7 +255,8 @@ class SpatialCaptureStore {
           jsonDecode(await manifestFile.readAsString()) as Map<String, dynamic>;
     } catch (error) {
       if (kDebugMode) {
-        AppConfig.debugPrint('SpatialCaptureStore: unreadable manifest: $error');
+        AppConfig.debugPrint(
+            'SpatialCaptureStore: unreadable manifest: $error');
       }
       return null;
     }
@@ -357,9 +362,12 @@ class SpatialCaptureStore {
     _state = transferred
         ? SpatialCaptureDirectoryState.transferred
         : SpatialCaptureDirectoryState.captured;
+    if (extra.isNotEmpty) {
+      _manifestExtra = <String, dynamic>{..._manifestExtra, ...extra};
+    }
     await _enqueueMetadata(() async {
       await _writeAtomic(_framesFile, utf8.encode(jsonEncode(framesDocument)));
-      await _writeManifestUnsafe(extra: extra);
+      await _writeManifestUnsafe();
     });
   }
 
@@ -442,10 +450,7 @@ class SpatialCaptureStore {
     return entries;
   }
 
-  Map<String, dynamic> _manifestDocument({
-    Map<String, dynamic> extra = const <String, dynamic>{},
-  }) =>
-      <String, dynamic>{
+  Map<String, dynamic> _manifestDocument() => <String, dynamic>{
         'schema': 'kubus.capture/1',
         'captureId': captureId,
         'artworkId': _artworkId,
@@ -461,19 +466,17 @@ class SpatialCaptureStore {
           'byteSize': _bytesWritten,
           'source': 'art.kubus-mobile-tracking',
           'private': true,
-          ...extra,
+          ..._manifestExtra,
         },
       };
 
   Future<void> _persistManifest() => _enqueueMetadata(_writeManifestUnsafe);
 
-  Future<void> _writeManifestUnsafe({
-    Map<String, dynamic> extra = const <String, dynamic>{},
-  }) async {
+  Future<void> _writeManifestUnsafe() async {
     if (_discarded) return;
     await _writeAtomic(
       _manifestFile,
-      utf8.encode(jsonEncode(_manifestDocument(extra: extra))),
+      utf8.encode(jsonEncode(_manifestDocument())),
     );
   }
 
@@ -485,7 +488,8 @@ class SpatialCaptureStore {
     // not poison every later one.
     _metadataQueue = next.catchError((Object error) {
       if (kDebugMode) {
-        AppConfig.debugPrint('SpatialCaptureStore: metadata write failed: $error');
+        AppConfig.debugPrint(
+            'SpatialCaptureStore: metadata write failed: $error');
       }
     });
     return next;
@@ -521,7 +525,8 @@ class SpatialCaptureStore {
       contents = await file.readAsString();
     } catch (error) {
       if (kDebugMode) {
-        AppConfig.debugPrint('SpatialCaptureStore: unreadable sample index: $error');
+        AppConfig.debugPrint(
+            'SpatialCaptureStore: unreadable sample index: $error');
       }
       return;
     }
@@ -600,7 +605,8 @@ class SpatialCaptureStore {
         ));
       } catch (error) {
         if (kDebugMode) {
-          AppConfig.debugPrint('SpatialCaptureStore: unreadable manifest: $error');
+          AppConfig.debugPrint(
+              'SpatialCaptureStore: unreadable manifest: $error');
         }
       }
     }

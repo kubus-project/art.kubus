@@ -362,6 +362,26 @@ void main() {
     expect(node.drafts.values.single.length, provider.frameCount + 1);
   });
 
+  test('a forgotten draft is replaced rather than resumed', () async {
+    final provider = await readyCapture();
+    final nodeProvider = await pairedNode();
+
+    node.failUploadsBefore = 3;
+    await expectLater(provider.finish(nodeProvider), throwsA(anything));
+
+    // A node restart drops in-memory drafts and leaves the directory behind.
+    node.drafts.clear();
+
+    node.failUploadsBefore = 0;
+    await provider.retryTransfer(nodeProvider);
+
+    expect(provider.state, SpatialCaptureState.awaitingProcessingChoice);
+    expect(node.committed, hasLength(1),
+        reason: 'still exactly one durable capture record');
+    expect(node.drafts.values.single.length, provider.frameCount + 1,
+        reason: 'the replacement draft received the whole capture');
+  });
+
   test('a node without the streaming API reports a typed incompatibility',
       () async {
     await node.stop();

@@ -203,6 +203,32 @@ void main() {
         reason: 'the previewed node becomes the placed node; nothing blinks',
       );
     });
+
+    test(
+      'confirming after a commit does not rebuild a second node',
+      () async {
+        // The screen commits the preview and then marks the placement
+        // confirmed, which notifies listeners and syncs again. Without a guard
+        // that second sync sees "no preview node but a transform exists" and
+        // adds another node with the same name, on top of the placed artwork.
+        await place(vector.Vector3(0, 0, -1));
+        await preview.commit();
+        final addsBeforeConfirm =
+            tracking.calls.where((c) => c.startsWith('addModel:')).length;
+
+        placement.confirm();
+        await preview.sync(placement);
+
+        expect(placement.state, ArPlacementState.confirmed);
+        expect(
+          tracking.calls.where((c) => c.startsWith('addModel:')).length,
+          addsBeforeConfirm,
+          reason: 'a confirmed placement is owned by the scene, not the '
+              'preview, so no second node is created',
+        );
+        expect(preview.hasPreview, isFalse);
+      },
+    );
   });
 
   group('tracking loss', () {

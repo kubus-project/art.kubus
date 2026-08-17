@@ -573,12 +573,20 @@ class SpatialCaptureProvider extends ChangeNotifier {
       try {
         final progress = await node.service.getCaptureDraft(draftId);
         alreadyUploaded = progress.files.toSet();
-      } catch (_) {
-        // The node forgot the draft (a restart drops them). Start a new one
-        // rather than committing a half-delivered capture.
+      } on KubusNodeRequestException catch (error) {
+        // Only a draft the node no longer knows about is worth abandoning.
+        // Drafts live in memory there, so a node restart drops them.
+        if (error.code != 'capture_draft_not_found') rethrow;
         draftId = null;
         await store.recordDraftId(null);
+      } on KubusNodeUnsupportedException {
+        // The draft routes are gone entirely: report it rather than silently
+        // re-uploading against an endpoint that does not exist.
+        rethrow;
       }
+      // Any other failure — a dropped connection, a timeout — propagates, so
+      // the next retry resumes against this same draft instead of discarding
+      // everything already delivered.
     }
 
     if (draftId == null) {

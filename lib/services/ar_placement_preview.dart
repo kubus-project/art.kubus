@@ -64,6 +64,11 @@ class ArPlacementPreview {
     final artworkId = placement.artworkId;
     final transform = placement.transform;
 
+    // A confirmed placement is no longer a preview: the node has been handed to
+    // the scene by commit(). Rebuilding one here would add a second node under
+    // the same name, on top of the placed artwork.
+    if (placement.state == ArPlacementState.confirmed) return;
+
     // Nothing to show: no artwork, or an artwork with no chosen pose yet.
     if (artworkId == null || transform == null) {
       await _removeNode();
