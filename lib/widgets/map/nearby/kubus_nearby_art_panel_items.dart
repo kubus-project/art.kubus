@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../inline_loading.dart';
 
 import '../../../models/artwork.dart';
@@ -10,6 +11,24 @@ import '../../../utils/media_url_resolver.dart';
 import '../../artwork_creator_byline.dart';
 import '../../common/kubus_cached_image.dart';
 import '../kubus_map_glass_surface.dart';
+
+class _SpatialArchiveBadge extends StatelessWidget {
+  const _SpatialArchiveBadge(
+      {required this.accentColor, required this.iconColor});
+
+  final Color accentColor;
+  final Color iconColor;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: accentColor,
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Icon(Icons.threed_rotation_rounded, size: 15, color: iconColor),
+      );
+}
 
 class KubusNearbyArtArtworkListItem extends StatelessWidget {
   const KubusNearbyArtArtworkListItem({
@@ -57,21 +76,15 @@ class KubusNearbyArtArtworkListItem extends StatelessWidget {
                   borderRadius: 10,
                   iconSize: 24,
                 ),
-                if (artwork.arMarkerId != null &&
-                    artwork.arMarkerId!.isNotEmpty)
+                if (artwork.spatialCaptureCount > 0)
                   Positioned(
                     top: 6,
                     right: 6,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: accentColor,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Icon(
-                        Icons.view_in_ar,
-                        size: KubusHeaderMetrics.sectionSubtitle - 1,
-                        color: textOnAccent,
+                    child: Semantics(
+                      label: AppLocalizations.of(context)!.mapSpatialAvailable,
+                      child: _SpatialArchiveBadge(
+                        accentColor: accentColor,
+                        iconColor: textOnAccent,
                       ),
                     ),
                   ),
@@ -192,21 +205,13 @@ class KubusNearbyArtArtworkGridItem extends StatelessWidget {
                 borderRadius: 12,
                 iconSize: 28,
               ),
-              if (artwork.arMarkerId != null && artwork.arMarkerId!.isNotEmpty)
+              if (artwork.spatialCaptureCount > 0)
                 Positioned(
                   top: 8,
                   right: 8,
-                  child: Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: accentColor,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(
-                      Icons.view_in_ar,
-                      size: 14,
-                      color: textOnAccent,
-                    ),
+                  child: _SpatialArchiveBadge(
+                    accentColor: accentColor,
+                    iconColor: textOnAccent,
                   ),
                 ),
             ],

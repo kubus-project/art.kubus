@@ -1,13 +1,18 @@
+<<<<<<< HEAD
+=======
+import 'dart:async';
+
+>>>>>>> 85d6c20c14088b31a709479f8f7ce2f729cbe27a
 import 'package:flutter/foundation.dart' show kIsWeb, visibleForTesting;
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Captures guest-first entry + campaign attribution from the launch URL, e.g.
-/// `app.kubus.site/?mode=guest&intent=discover&utm_source=art.kubus.site&...`.
+/// Captures campaign attribution from the launch URL and, independently,
+/// guest-first discovery state when `mode=guest` or a supported intent exists.
 ///
-/// Cold traffic from the marketing site lands here. We persist a lightweight
-/// guest flag so the startup router can send these visitors straight to the
-/// map/discovery shell instead of the account/wallet/tutorial onboarding flow,
-/// and we keep the UTM + intent values for analytics attribution.
+/// Discovery traffic gets a lightweight guest flag so startup can open the map
+/// without account onboarding. Direct acquisition traffic such as
+/// `/register?utm_*` keeps the same structured UTM attribution without becoming
+/// a guest session or being redirected to the map.
 ///
 /// All methods are defensive and never throw — attribution must never block app
 /// startup.
@@ -18,6 +23,19 @@ class GuestSessionService {
   static const String intentKey = 'kubus_entry_intent_v1';
   static const String entryRouteKey = 'kubus_entry_route_v1';
   static const String _utmPrefix = 'kubus_entry_utm_';
+
+  /// Low-cardinality campaign landing dimensions accepted by telemetry.
+  ///
+  /// This intentionally is not the complete Flutter route table: entity ids,
+  /// auth tokens and arbitrary paths must never become analytics dimensions.
+  /// Historical root/main acquisition links remain reportable alongside the
+  /// current discovery-map and direct-registration strategies.
+  static const Set<String> campaignEntryRoutes = <String>{
+    '/',
+    '/main',
+    '/map',
+    '/register',
+  };
 
   static const List<String> utmKeys = <String>[
     'utm_source',
@@ -44,6 +62,31 @@ class GuestSessionService {
   /// longer depends on when it happens to be read.
   static Map<String, String>? _launchSnapshot;
   static String? _entryRouteSnapshot;
+<<<<<<< HEAD
+=======
+  static Future<void>? _captureFuture;
+  static Completer<void>? _platformInitialLinkCompleter;
+
+  /// Whether a platform launch URL has been frozen for this process.
+  /// Mobile receives this only when initial-route dispatch supplies it.
+  static bool get hasLaunchSnapshot => _launchSnapshot != null;
+
+  /// Register the Android/iOS initial-link probe before the widget tree starts.
+  /// Attribution telemetry can then wait for the asynchronous app-links result
+  /// without delaying UI startup or prematurely recording a bare entry.
+  static void expectPlatformInitialLinkResolution() {
+    if (kIsWeb) return;
+    _platformInitialLinkCompleter ??= Completer<void>();
+  }
+
+  static Future<void> waitForPlatformInitialLinkResolution() =>
+      _platformInitialLinkCompleter?.future ?? Future<void>.value();
+
+  static void completePlatformInitialLinkResolution() {
+    final completer = _platformInitialLinkCompleter;
+    if (completer != null && !completer.isCompleted) completer.complete();
+  }
+>>>>>>> 85d6c20c14088b31a709479f8f7ce2f729cbe27a
 
   /// Freeze the launch URL. Called first thing in `main()`, before `runApp` and
   /// before any `await`, so no navigation can have rewritten the URL yet.
@@ -70,6 +113,11 @@ class GuestSessionService {
   static void resetLaunchSnapshotForTest() {
     _launchSnapshot = null;
     _entryRouteSnapshot = null;
+<<<<<<< HEAD
+=======
+    _captureFuture = null;
+    _platformInitialLinkCompleter = null;
+>>>>>>> 85d6c20c14088b31a709479f8f7ce2f729cbe27a
   }
 
   /// The route the visitor landed on, without query or fragment.
@@ -88,7 +136,11 @@ class GuestSessionService {
     final collapsed = prefixed.length > 1 && prefixed.endsWith('/')
         ? prefixed.substring(0, prefixed.length - 1)
         : prefixed;
+<<<<<<< HEAD
     return _clip(collapsed, 120);
+=======
+    return campaignEntryRoutes.contains(collapsed) ? collapsed : null;
+>>>>>>> 85d6c20c14088b31a709479f8f7ce2f729cbe27a
   }
 
   static Map<String, String> _launchParams() {
@@ -105,12 +157,22 @@ class GuestSessionService {
   static String _clip(String value, int maxLen) =>
       value.length > maxLen ? value.substring(0, maxLen) : value;
 
-  /// Parse the launch URL and persist guest mode + intent + UTM. Safe to call
-  /// repeatedly; only writes when values are present.
-  static Future<void> captureFromLaunchUrl({SharedPreferences? prefs}) async {
+  /// Parse the launch URL and persist guest mode, intent, UTMs and entry route.
+  /// Safe to call repeatedly; only writes when values are present.
+  static Future<void> captureFromLaunchUrl({SharedPreferences? prefs}) {
     final params = _launchParams();
-    if (params.isEmpty) return;
+    if (params.isEmpty) return Future<void>.value();
+    return _captureFuture ??= _captureFromParams(params, prefs: prefs);
+  }
 
+  /// Lets telemetry wait for capture started by initial-route dispatch.
+  static Future<void> waitForLaunchAttributionCapture() =>
+      _captureFuture ?? Future<void>.value();
+
+  static Future<void> _captureFromParams(
+    Map<String, String> params, {
+    SharedPreferences? prefs,
+  }) async {
     final p = prefs ?? await SharedPreferences.getInstance();
 
     final mode = (params['mode'] ?? '').trim().toLowerCase();
@@ -127,6 +189,18 @@ class GuestSessionService {
       await p.setString(intentKey, intent);
     }
 
+    final hasLaunchAttribution = utmKeys.any(
+      (key) => (params[key] ?? '').trim().isNotEmpty,
+    );
+    if (hasLaunchAttribution) {
+      // A replacement touch must not retain an optional creative/term from the
+      // prior campaign, which would produce mixed structured attribution.
+      for (final key in utmKeys) {
+        if ((params[key] ?? '').trim().isEmpty) {
+          await p.remove('$_utmPrefix$key');
+        }
+      }
+    }
     for (final key in utmKeys) {
       final value = (params[key] ?? '').trim();
       if (value.isNotEmpty) {
@@ -134,12 +208,23 @@ class GuestSessionService {
       }
     }
 
+<<<<<<< HEAD
     // First-touch landing route. Written once so a later in-app navigation
     // cannot overwrite where the campaign actually landed.
     final entryRoute = _entryRouteSnapshot;
     if (entryRoute != null &&
         entryRoute.isNotEmpty &&
         (p.getString(entryRouteKey) ?? '').isEmpty) {
+=======
+    // Keep the route and structured campaign fields as one attribution touch.
+    // A later campaign URL is allowed to replace the stored UTM values, so its
+    // landing route must replace the old route too. A navigation without UTMs
+    // remains unable to overwrite the original landing surface.
+    final entryRoute = _entryRouteSnapshot;
+    if (entryRoute != null &&
+        entryRoute.isNotEmpty &&
+        (hasLaunchAttribution || (p.getString(entryRouteKey) ?? '').isEmpty)) {
+>>>>>>> 85d6c20c14088b31a709479f8f7ce2f729cbe27a
       await p.setString(entryRouteKey, entryRoute);
     }
   }

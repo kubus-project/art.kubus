@@ -28,6 +28,7 @@ class TelemetryService {
   final TelemetrySender _sender;
 
   bool _initialized = false;
+  Future<void>? _initializationFuture;
   bool _analyticsPreferenceEnabled = true;
   bool _enabled = false;
   bool? _enabledByBuildFlagOverride;
@@ -52,9 +53,9 @@ class TelemetryService {
 
   final Set<String> _onceKeys = <String>{};
 
-  // Campaign attribution captured at guest-first entry (?mode=guest&utm_*),
-  // attached to every event so acquisition analytics can tie ad clicks to app
-  // usage and signups.
+  // First-touch campaign attribution is independent of guest mode and is
+  // attached to every event so both direct registration and map discovery can
+  // be tied to later account and contribution milestones.
   Map<String, Object?> _entryAttribution = const <String, Object?>{};
 
   static final RegExp _uuidRegex = RegExp(
@@ -91,12 +92,30 @@ class TelemetryService {
 
   Future<void> ensureInitialized() async {
     if (_initialized) return;
-    _initialized = true;
 
+    final inFlight = _initializationFuture;
+    if (inFlight != null) {
+      await inFlight;
+      return;
+    }
+
+    final initialization = _initialize();
+    _initializationFuture = initialization;
+    try {
+      await initialization;
+    } finally {
+      if (!_initialized) _initializationFuture = null;
+    }
+  }
+
+  Future<void> _initialize() async {
     _sessionId = TelemetryUuid.v4();
     _sessionStartUtc = DateTime.now().toUtc();
 
     try {
+      // Initial-route dispatch may already be persisting a mobile deep link.
+      // Wait before snapshotting metadata so initial route events share it.
+      await GuestSessionService.waitForLaunchAttributionCapture();
       final prefs = await SharedPreferences.getInstance();
       _analyticsPreferenceEnabled = prefs.getBool('enableAnalytics') ?? true;
       _actorUserId = _normalizeUuid(prefs.getString('user_id'));
@@ -114,6 +133,7 @@ class TelemetryService {
     KubusClientContext.instance.setEnabled(_enabled);
 
     await _queue.init();
+    _initialized = true;
 
     if (_enabled) {
       _syncClientContext();

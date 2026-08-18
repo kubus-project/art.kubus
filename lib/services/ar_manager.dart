@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:vector_math/vector_math_64.dart' as vector;
 import 'dart:io';
 
 // Platform-specific imports
 import 'package:arcore_flutter_plugin/arcore_flutter_plugin.dart';
-// ARKit temporarily disabled due to vector_math 2.1.4 incompatibility
-// import 'package:arkit_plugin/arkit_plugin.dart';
+import 'package:arkit_plugin/arkit_plugin.dart';
 
 /// Unified AR Manager providing cross-platform AR functionality
 /// Uses arcore_flutter_plugin for Android
-/// iOS ARKit support temporarily disabled pending package update
+/// Uses the maintained ARKit plugin on iOS. Spatial capture exposes only the
+/// sensors actually returned by each platform/device.
 class ARManager {
   static final ARManager _instance = ARManager._internal();
   factory ARManager() => _instance;
@@ -17,7 +18,7 @@ class ARManager {
 
   bool _isInitialized = false;
   ArCoreController? _arCoreController;
-  // ARKitController? _arKitController; // Disabled
+  ARKitController? _arKitController;
   final List<Map<String, dynamic>> _placedNodes = [];
 
   /// Initialize AR manager
@@ -27,15 +28,17 @@ class ARManager {
     try {
       // Check platform support
       if (!Platform.isAndroid && !Platform.isIOS) {
-        debugPrint('ARManager: Platform not supported');
+        if (kDebugMode) debugPrint('ARManager: Platform not supported');
         return false;
       }
 
       _isInitialized = true;
-      debugPrint('ARManager: Initialized successfully for $platformInfo');
+      if (kDebugMode) {
+        debugPrint('ARManager: Initialized successfully for $platformInfo');
+      }
       return true;
     } catch (e) {
-      debugPrint('ARManager: Initialization error: $e');
+      if (kDebugMode) debugPrint('ARManager: Initialization error: $e');
       return false;
     }
   }
@@ -43,13 +46,13 @@ class ARManager {
   /// Set ARCore controller (Android only)
   void setArCoreController(ArCoreController controller) {
     _arCoreController = controller;
-    debugPrint('ARManager: ARCore controller set');
+    if (kDebugMode) debugPrint('ARManager: ARCore controller set');
   }
 
-  /// Set ARKit controller (iOS only) - Currently disabled
-  void setArKitController(dynamic controller) {
-    // _arKitController = controller;
-    debugPrint('ARManager: ARKit currently disabled - iOS AR not available');
+  /// Set ARKit controller (iOS only).
+  void setArKitController(ARKitController controller) {
+    _arKitController = controller;
+    if (kDebugMode) debugPrint('ARManager: ARKit controller set');
   }
 
   /// Add a sphere to the AR scene
@@ -60,10 +63,11 @@ class ARManager {
     String? name,
   }) {
     if (Platform.isAndroid && _arCoreController != null) {
-      _addArCoreSphere(position: position, radius: radius, color: color, name: name);
-    } else if (Platform.isIOS) {
-      debugPrint('ARManager: iOS AR (ARKit) currently disabled');
-      // _addArKitSphere(position: position, radius: radius, color: color, name: name);
+      _addArCoreSphere(
+          position: position, radius: radius, color: color, name: name);
+    } else if (Platform.isIOS && _arKitController != null) {
+      _addArKitSphere(
+          position: position, radius: radius, color: color, name: name);
     }
   }
 
@@ -76,9 +80,8 @@ class ARManager {
   }) {
     if (Platform.isAndroid && _arCoreController != null) {
       _addArCoreCube(position: position, size: size, color: color, name: name);
-    } else if (Platform.isIOS) {
-      debugPrint('ARManager: iOS AR (ARKit) currently disabled');
-      // _addArKitCube(position: position, size: size, color: color, name: name);
+    } else if (Platform.isIOS && _arKitController != null) {
+      _addArKitCube(position: position, size: size, color: color, name: name);
     }
   }
 
@@ -96,9 +99,13 @@ class ARManager {
         scale: scale,
         name: name,
       );
-    } else if (Platform.isIOS) {
-      debugPrint('ARManager: iOS AR (ARKit) currently disabled');
-      // await _addArKitModel(...);
+    } else if (Platform.isIOS && _arKitController != null) {
+      await _addArKitModel(
+        modelPath: modelPath,
+        position: position,
+        scale: scale,
+        name: name,
+      );
     }
   }
 
@@ -106,12 +113,11 @@ class ARManager {
   void removeNode(String name) {
     if (Platform.isAndroid && _arCoreController != null) {
       _arCoreController!.removeNode(nodeName: name);
-    } else if (Platform.isIOS) {
-      debugPrint('ARManager: iOS AR (ARKit) currently disabled');
-      // _arKitController!.remove(name);
+    } else if (Platform.isIOS && _arKitController != null) {
+      _arKitController!.remove(name);
     }
     _placedNodes.removeWhere((node) => node['name'] == name);
-    debugPrint('ARManager: Removed node: $name');
+    if (kDebugMode) debugPrint('ARManager: Removed node: $name');
   }
 
   // Android ARCore specific methods
@@ -135,7 +141,8 @@ class ARManager {
       name: name,
     );
     _arCoreController!.addArCoreNode(node);
-    _trackNode(name ?? 'sphere_${DateTime.now().millisecondsSinceEpoch}', 'sphere');
+    _trackNode(
+        name ?? 'sphere_${DateTime.now().millisecondsSinceEpoch}', 'sphere');
   }
 
   void _addArCoreCube({
@@ -174,11 +181,11 @@ class ARManager {
       scale: scale ?? vector.Vector3.all(1.0),
     );
     _arCoreController!.addArCoreNodeWithAnchor(node);
-    _trackNode(name ?? 'model_${DateTime.now().millisecondsSinceEpoch}', 'model');
+    _trackNode(
+        name ?? 'model_${DateTime.now().millisecondsSinceEpoch}', 'model');
   }
 
-  // iOS ARKit specific methods - DISABLED (arkit_plugin incompatible with vector_math 2.1.4)
-  /*
+  // iOS ARKit specific methods.
   void _addArKitSphere({
     required vector.Vector3 position,
     required double radius,
@@ -198,7 +205,8 @@ class ARManager {
       name: name,
     );
     _arKitController!.add(node);
-    _trackNode(name ?? 'sphere_${DateTime.now().millisecondsSinceEpoch}', 'sphere');
+    _trackNode(
+        name ?? 'sphere_${DateTime.now().millisecondsSinceEpoch}', 'sphere');
   }
 
   void _addArKitCube({
@@ -231,10 +239,8 @@ class ARManager {
     vector.Vector3? scale,
     String? name,
   }) async {
-    // ARKit uses USDZ format for models
-    // For GLTF/GLB files, you'll need to convert them to USDZ
-    // Or use ARKitReferenceNode with local assets
-    final node = ARKitNode(
+    final node = ARKitReferenceNode(
+      url: modelPath,
       position: vector.Vector3(position.x, position.y, position.z),
       scale: vector.Vector3(
         scale?.x ?? 1.0,
@@ -244,10 +250,51 @@ class ARManager {
       name: name,
     );
     _arKitController!.add(node);
-    _trackNode(name ?? 'model_${DateTime.now().millisecondsSinceEpoch}', 'model');
-    debugPrint('ARManager: Note - ARKit requires USDZ format for 3D models');
+    _trackNode(
+        name ?? 'model_${DateTime.now().millisecondsSinceEpoch}', 'model');
+    if (kDebugMode) {
+      debugPrint('ARManager: ARKit reference model added from $modelPath');
+    }
   }
-  */
+
+  /// Capture one tracked spatial sample. Android returns RGB, pose,
+  /// intrinsics, and optional depth/confidence. iOS returns the same metadata
+  /// available through ARKit and includes depth only on supported hardware.
+  Future<Map<String, dynamic>> captureSpatialFrame() async {
+    if (Platform.isAndroid && _arCoreController != null) {
+      return _arCoreController!.captureSpatialFrame();
+    }
+    if (Platform.isIOS && _arKitController != null) {
+      final snapshot = await _arKitController!.snapshotWithDepthData();
+      final image = snapshot?['image'];
+      final rgb = image is MemoryImage
+          ? image.bytes
+          : (await _arKitController!.snapshot() as MemoryImage).bytes;
+      final intrinsics = await _arKitController!.getCameraIntrinsics();
+      final resolution = await _arKitController!.getCameraImageResolution();
+      final transform = await _arKitController!.pointOfViewTransform();
+      final payload = <String, dynamic>{
+        'rgb': Uint8List.fromList(rgb),
+        'timestampNanos': DateTime.now().microsecondsSinceEpoch * 1000,
+        'poseMatrix': transform?.storage.toList(growable: false),
+        'intrinsics': {
+          'width': resolution.width.round(),
+          'height': resolution.height.round(),
+          'matrix': intrinsics.storage.toList(growable: false),
+        },
+        'depthAvailable':
+            snapshot != null && snapshot.keys.any((key) => key != 'image'),
+      };
+      if (snapshot != null) {
+        for (final entry
+            in snapshot.entries.where((entry) => entry.key != 'image')) {
+          payload[entry.key] = entry.value;
+        }
+      }
+      return payload;
+    }
+    throw StateError('Spatial tracking is not ready on this device.');
+  }
 
   void _trackNode(String name, String type) {
     _placedNodes.add({
@@ -255,7 +302,7 @@ class ARManager {
       'type': type,
       'timestamp': DateTime.now().millisecondsSinceEpoch,
     });
-    debugPrint('ARManager: Added $type node: $name');
+    if (kDebugMode) debugPrint('ARManager: Added $type node: $name');
   }
 
   /// Get list of placed nodes
@@ -269,7 +316,7 @@ class ARManager {
   /// Clear all placed nodes
   void clearPlacedNodes() {
     _placedNodes.clear();
-    debugPrint('ARManager: Cleared all placed nodes');
+    if (kDebugMode) debugPrint('ARManager: Cleared all placed nodes');
   }
 
   /// Check if AR is initialized
@@ -280,7 +327,7 @@ class ARManager {
     if (Platform.isAndroid) {
       return _arCoreController != null;
     } else if (Platform.isIOS) {
-      return false; // ARKit currently disabled
+      return _arKitController != null;
     }
     return false;
   }
@@ -290,7 +337,7 @@ class ARManager {
     if (Platform.isAndroid) {
       return 'Android (ARCore)';
     } else if (Platform.isIOS) {
-      return 'iOS (ARKit - currently disabled)';
+      return 'iOS (ARKit)';
     }
     return 'Unsupported Platform';
   }
@@ -310,27 +357,16 @@ class ARManager {
         enableTapRecognizer: enableTapRecognizer,
       );
     } else if (Platform.isIOS) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.warning_amber, size: 64, color: Colors.orange),
-            SizedBox(height: 16),
-            Text(
-              'iOS AR Currently Unavailable',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 8),
-            Padding(
-              padding: EdgeInsets.all(24),
-              child: Text(
-                'ARKit support is temporarily disabled due to package compatibility issues. '
-                'Please use an Android device for AR features.',
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ],
-        ),
+      return ARKitSceneView(
+        onARKitViewCreated: (controller) {
+          setArKitController(controller);
+          onARViewCreated(controller);
+        },
+        configuration: ARKitConfiguration.worldTracking,
+        planeDetection: enablePlaneDetection
+            ? ARPlaneDetection.horizontalAndVertical
+            : ARPlaneDetection.none,
+        enableTapRecognizer: enableTapRecognizer,
       );
     }
     return Center(
@@ -341,11 +377,11 @@ class ARManager {
   /// Dispose resources
   void dispose() {
     _arCoreController?.dispose();
-    // _arKitController?.dispose(); // Disabled
+    _arKitController?.dispose();
     _placedNodes.clear();
     _arCoreController = null;
-    // _arKitController = null; // Disabled
+    _arKitController = null;
     _isInitialized = false;
-    debugPrint('ARManager: Disposed');
+    if (kDebugMode) debugPrint('ARManager: Disposed');
   }
 }

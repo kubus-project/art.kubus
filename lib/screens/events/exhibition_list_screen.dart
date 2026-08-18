@@ -334,60 +334,63 @@ class _ExhibitionListScreenState extends State<ExhibitionListScreen>
     final scheme = Theme.of(context).colorScheme;
     final themeProvider = Provider.of<ThemeProvider>(context);
 
-    return Column(
-      children: [
-        // Header with create button (always show when canCreate)
-        if (widget.canCreate) _buildCreateHeader(scheme, themeProvider),
+    return Material(
+      color: Colors.transparent,
+      child: Column(
+        children: [
+          // Header with create button (always show when canCreate)
+          if (widget.canCreate) _buildCreateHeader(scheme, themeProvider),
 
-        // Tab bar
-        Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: BoxDecoration(
-            color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
-            borderRadius: BorderRadius.circular(KubusRadius.md),
-          ),
-          child: TabBar(
-            controller: _tabController,
-            indicator: BoxDecoration(
-              color: themeProvider.accentColor,
-              borderRadius: BorderRadius.circular(10),
+          // Tab bar
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(KubusRadius.md),
             ),
-            indicatorSize: TabBarIndicatorSize.tab,
-            labelColor: Colors.white,
-            unselectedLabelColor: scheme.onSurface.withValues(alpha: 0.7),
-            labelStyle: KubusTypography.inter(
-                fontWeight: FontWeight.w600, fontSize: 13),
-            unselectedLabelStyle: KubusTypography.inter(
-                fontWeight: FontWeight.w500, fontSize: 13),
-            dividerColor: Colors.transparent,
-            tabs: [
-              Tab(text: l10n.exhibitionListMyExhibitionsTab),
-              Tab(text: l10n.exhibitionListCollaboratingTab),
-            ],
+            child: TabBar(
+              controller: _tabController,
+              indicator: BoxDecoration(
+                color: themeProvider.accentColor,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              indicatorSize: TabBarIndicatorSize.tab,
+              labelColor: Colors.white,
+              unselectedLabelColor: scheme.onSurface.withValues(alpha: 0.7),
+              labelStyle: KubusTypography.inter(
+                  fontWeight: FontWeight.w600, fontSize: 13),
+              unselectedLabelStyle: KubusTypography.inter(
+                  fontWeight: FontWeight.w500, fontSize: 13),
+              dividerColor: Colors.transparent,
+              tabs: [
+                Tab(text: l10n.exhibitionListMyExhibitionsTab),
+                Tab(text: l10n.exhibitionListCollaboratingTab),
+              ],
+            ),
           ),
-        ),
 
-        // Tab content
-        Expanded(
-          child: TabBarView(
-            controller: _tabController,
-            children: [
-              _MyExhibitionsTab(
-                onTap: _openExhibition,
-                onOptions: _showExhibitionOptions,
-                onRefresh: _refresh,
-                canCreate: widget.canCreate,
-                onCreate: _createExhibition,
-              ),
-              _CollaboratingTab(
-                onTap: _openExhibition,
-                onOptions: _showExhibitionOptions,
-                onRefresh: _refresh,
-              ),
-            ],
+          // Tab content
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _MyExhibitionsTab(
+                  onTap: _openExhibition,
+                  onOptions: _showExhibitionOptions,
+                  onRefresh: _refresh,
+                  canCreate: widget.canCreate,
+                  onCreate: _createExhibition,
+                ),
+                _CollaboratingTab(
+                  onTap: _openExhibition,
+                  onOptions: _showExhibitionOptions,
+                  onRefresh: _refresh,
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -501,7 +504,8 @@ class _MyExhibitionsTab extends StatelessWidget {
         .toList(growable: false);
 
     if (provider.isMyExhibitionsLoading && myExhibitions.isEmpty) {
-      return Center(child: InlineLoading(width: 40, height: 40, color: scheme.primary));
+      return Center(
+          child: InlineLoading(width: 40, height: 40, color: scheme.primary));
     }
 
     if (myExhibitions.isEmpty) {
@@ -563,7 +567,8 @@ class _CollaboratingTab extends StatelessWidget {
         .toList(growable: false);
 
     if (provider.isMyExhibitionsLoading && collaborating.isEmpty) {
-      return Center(child: InlineLoading(width: 40, height: 40, color: scheme.primary));
+      return Center(
+          child: InlineLoading(width: 40, height: 40, color: scheme.primary));
     }
 
     if (collaborating.isEmpty) {

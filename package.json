@@ -1,6 +1,6 @@
 {
   "name": "art-kubus-workspace",
-  "version": "0.7.3",
+  "version": "0.8.0",
   "private": true,
   "packageManager": "npm@11.7.0",
   "engines": {
@@ -39,6 +39,8 @@
     "qa:web:install": "npm --prefix scripts/qa ci",
     "qa:web:test": "npm --prefix scripts/qa test",
     "qa:web:service-worker": "node ./scripts/qa/check_flutter_service_worker.mjs",
+    "qa:web:routes:sync": "node ./scripts/qa/sync_web_interactive_routes.mjs",
+    "qa:web:routes:check": "node ./scripts/qa/sync_web_interactive_routes.mjs --check",
     "sync:version": "node ./scripts/sync_versions.js",
     "sync:versions": "npm run sync:version",
     "sync:all-versions": "node ./scripts/sync_all_versions.mjs",

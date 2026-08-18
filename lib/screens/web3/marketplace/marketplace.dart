@@ -15,6 +15,7 @@ import '../../../providers/profile_provider.dart';
 import '../../../providers/wallet_provider.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../providers/navigation_provider.dart';
+import '../../../features/web3/web3_capabilities.dart';
 import '../../../models/collectible.dart';
 import '../../../widgets/empty_state_card.dart';
 import '../../../utils/marketplace_value_formatter.dart';
@@ -24,8 +25,6 @@ import '../../../utils/app_color_utils.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/kubus_labs_feature.dart';
 import '../../../utils/design_tokens.dart';
-import '../../../utils/home/home_quick_action_executor.dart';
-import '../../../utils/home/home_quick_action_models.dart';
 import '../../../services/share/share_service.dart';
 import '../../../services/share/share_types.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
@@ -610,18 +609,19 @@ class _MarketplaceState extends State<Marketplace>
   }
 
   Widget _buildMyListings() {
-    return Consumer3<CollectiblesProvider, Web3Provider, ThemeProvider>(
-      builder:
-          (context, collectiblesProvider, web3Provider, themeProvider, child) {
+    return Consumer2<CollectiblesProvider, ThemeProvider>(
+      builder: (context, collectiblesProvider, themeProvider, child) {
         final l10n = AppLocalizations.of(context)!;
         final profileProvider = context.watch<ProfileProvider>();
         final walletProvider = context.watch<WalletProvider>();
-        final access = WalletSessionAccessSnapshot.fromProviders(
-          profileProvider: profileProvider,
-          walletProvider: walletProvider,
+        final capabilities = Web3CapabilityResolver.resolve(
+          Web3CapabilityContext.fromProviders(
+            profileProvider: profileProvider,
+            walletProvider: walletProvider,
+          ),
         );
         // Show user's collectibles using real wallet address
-        final walletAddress = web3Provider.walletAddress;
+        final walletAddress = walletProvider.authority.walletAddress ?? '';
         final myCollectibles = walletAddress.isNotEmpty
             ? collectiblesProvider.getCollectiblesByOwner(walletAddress)
             : <dynamic>[];
@@ -633,7 +633,7 @@ class _MarketplaceState extends State<Marketplace>
             : <dynamic>[];
 
         // Check if wallet is connected
-        if (!access.hasWalletIdentity) {
+        if (!capabilities.hasWalletIdentity) {
           return Center(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(KubusSpacing.lg),
@@ -678,7 +678,9 @@ class _MarketplaceState extends State<Marketplace>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (access.isReadOnlySession)
+              if (capabilities.hasAccount &&
+                  capabilities.hasWalletIdentity &&
+                  !capabilities.signerReady)
                 Container(
                   margin: const EdgeInsets.only(bottom: KubusSpacing.md),
                   padding: const EdgeInsets.all(KubusSpacing.md),
@@ -821,6 +823,14 @@ class _MarketplaceState extends State<Marketplace>
     final value =
         collectiblesProvider.getDisplayValueForCollectible(collectible) ??
             entry.displayValue;
+    final capabilities = Web3CapabilityResolver.resolve(
+      Web3CapabilityContext.fromProviders(
+        profileProvider: context.watch<ProfileProvider>(),
+        walletProvider: context.watch<WalletProvider>(),
+        entityOwnerAddress: collectible.ownerAddress,
+        entityIsListed: collectible.isForSale,
+      ),
+    );
     return Semantics(
         button: true,
         label: l10n.marketplaceOpenCollectibleDetailsSemantic(
@@ -998,22 +1008,23 @@ class _MarketplaceState extends State<Marketplace>
                                       ],
                                     ),
                                   ),
-                                  IconButton(
-                                    onPressed: () =>
-                                        _removeFromSale(collectible),
-                                    tooltip:
-                                        l10n.marketplaceRemoveFromSaleTooltip,
-                                    icon: Icon(
-                                      Icons.remove_circle,
-                                      color: roles.negativeAction,
-                                      size: 16,
+                                  if (capabilities.canUnlistEdition)
+                                    IconButton(
+                                      onPressed: () =>
+                                          _removeFromSale(collectible),
+                                      tooltip:
+                                          l10n.marketplaceRemoveFromSaleTooltip,
+                                      icon: Icon(
+                                        Icons.remove_circle,
+                                        color: roles.negativeAction,
+                                        size: 16,
+                                      ),
+                                      constraints: const BoxConstraints(
+                                        minWidth: 32,
+                                        minHeight: 32,
+                                      ),
+                                      padding: EdgeInsets.zero,
                                     ),
-                                    constraints: const BoxConstraints(
-                                      minWidth: 32,
-                                      minHeight: 32,
-                                    ),
-                                    padding: EdgeInsets.zero,
-                                  ),
                                 ],
                               )
                             else
@@ -1052,21 +1063,23 @@ class _MarketplaceState extends State<Marketplace>
                                       ],
                                     ),
                                   ),
-                                  IconButton(
-                                    onPressed: () =>
-                                        _listForSale(collectible, entry.title),
-                                    tooltip: l10n.marketplaceListForSaleTooltip,
-                                    icon: Icon(
-                                      Icons.sell,
-                                      color: roles.warningAction,
-                                      size: 16,
+                                  if (capabilities.canListEdition)
+                                    IconButton(
+                                      onPressed: () => _listForSale(
+                                          collectible, entry.title),
+                                      tooltip:
+                                          l10n.marketplaceListForSaleTooltip,
+                                      icon: Icon(
+                                        Icons.sell,
+                                        color: roles.warningAction,
+                                        size: 16,
+                                      ),
+                                      constraints: const BoxConstraints(
+                                        minWidth: 32,
+                                        minHeight: 32,
+                                      ),
+                                      padding: EdgeInsets.zero,
                                     ),
-                                    constraints: const BoxConstraints(
-                                      minWidth: 32,
-                                      minHeight: 32,
-                                    ),
-                                    padding: EdgeInsets.zero,
-                                  ),
                                 ],
                               ),
                           ],
@@ -1547,7 +1560,26 @@ class _MarketplaceState extends State<Marketplace>
     }
   }
 
-  void _removeFromSale(Collectible collectible) {
+  Future<void> _removeFromSale(Collectible collectible) async {
+    final profileProvider = context.read<ProfileProvider>();
+    final walletProvider = context.read<WalletProvider>();
+    final capabilities = Web3CapabilityResolver.resolve(
+      Web3CapabilityContext.fromProviders(
+        profileProvider: profileProvider,
+        walletProvider: walletProvider,
+        entityOwnerAddress: collectible.ownerAddress,
+        entityIsListed: collectible.isForSale,
+      ),
+    );
+    if (!capabilities.canUnlistEdition) return;
+
+    final canProceed = await WalletActionGuard.ensureSignerAccess(
+      context: context,
+      profileProvider: profileProvider,
+      walletProvider: walletProvider,
+    );
+    if (!mounted || !canProceed) return;
+
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final collectiblesProvider = context.read<CollectiblesProvider>();
@@ -1908,9 +1940,7 @@ class _MarketplaceState extends State<Marketplace>
                                   child: Text(
                                     entry.isListed
                                         ? l10n.marketplaceCardActionListed
-                                        : (series != null && !entry.isSoldOut
-                                            ? l10n.marketplaceCardActionMint
-                                            : l10n.marketplaceCardActionView),
+                                        : l10n.marketplaceCardActionView,
                                     style:
                                         KubusTextStyles.compactBadge.copyWith(
                                       fontWeight: FontWeight.w600,
@@ -1973,7 +2003,6 @@ class _MarketplaceState extends State<Marketplace>
 
   void _showNFTSeriesDetails(MarketplaceArtworkEntry entry) {
     final series = entry.series;
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
 
@@ -2057,7 +2086,6 @@ class _MarketplaceState extends State<Marketplace>
                       ),
                     ),
                     const SizedBox(height: 24),
-
                     if (series != null) ...[
                       Row(
                         children: [
@@ -2090,7 +2118,6 @@ class _MarketplaceState extends State<Marketplace>
                       ),
                       const SizedBox(height: 16),
                     ],
-
                     Row(
                       children: [
                         Expanded(
@@ -2118,69 +2145,33 @@ class _MarketplaceState extends State<Marketplace>
                       ],
                     ),
                     const SizedBox(height: 24),
-
-                    // Action buttons
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: series == null || series.isSoldOut
-                                ? null
-                                : () {
-                                    Navigator.of(context).pop();
-                                    _mintNFT(series);
-                                  },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: themeProvider.accentColor,
-                              foregroundColor:
-                                  Theme.of(context).colorScheme.onPrimary,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius:
-                                    BorderRadius.circular(KubusRadius.md),
-                              ),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: IconButton(
+                        tooltip: l10n.marketplaceShareTooltip,
+                        onPressed: () {
+                          ShareService().showShareSheet(
+                            context,
+                            target: ShareTarget.artwork(
+                              artworkId: entry.artwork.id,
+                              title: entry.title,
                             ),
-                            child: Text(
-                              series == null
-                                  ? l10n.marketplaceMintUnavailableLabel
-                                  : (series.isSoldOut
-                                      ? l10n.marketplaceSoldOutLabel
-                                      : l10n.marketplaceMintNftButtonLabel),
-                              style: KubusTypography.inter(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
+                            sourceScreen: 'marketplace_series',
+                          );
+                        },
+                        icon: Container(
+                          padding: const EdgeInsets.all(
+                              KubusSpacing.sm + KubusSpacing.xs),
+                          decoration: BoxDecoration(
+                            color: scheme.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(KubusRadius.md),
+                          ),
+                          child: Icon(
+                            Icons.share,
+                            color: scheme.onSurface,
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        IconButton(
-                          tooltip: l10n.marketplaceShareTooltip,
-                          onPressed: () {
-                            ShareService().showShareSheet(
-                              context,
-                              target: ShareTarget.artwork(
-                                artworkId: entry.artwork.id,
-                                title: entry.title,
-                              ),
-                              sourceScreen: 'marketplace_series',
-                            );
-                          },
-                          icon: Container(
-                            padding: const EdgeInsets.all(
-                                KubusSpacing.sm + KubusSpacing.xs),
-                            decoration: BoxDecoration(
-                              color: scheme.surfaceContainerHighest,
-                              borderRadius:
-                                  BorderRadius.circular(KubusRadius.md),
-                            ),
-                            child: Icon(
-                              Icons.share,
-                              color: scheme.onSurface,
-                            ),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                     const SizedBox(height: 24),
                   ],
@@ -2215,376 +2206,6 @@ class _MarketplaceState extends State<Marketplace>
         fontWeight: FontWeight.w700,
       ),
     );
-  }
-
-  Future<void> _mintNFT(CollectibleSeries series) async {
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
-    final l10n = AppLocalizations.of(context)!;
-    final profileProvider = context.read<ProfileProvider>();
-    final walletProvider = context.read<WalletProvider>();
-
-    final canProceed = await WalletActionGuard.ensureSignerAccess(
-      context: context,
-      profileProvider: profileProvider,
-      walletProvider: walletProvider,
-    );
-    if (!mounted || !canProceed) {
-      return;
-    }
-
-    if (series.requiresARInteraction) {
-      showKubusDialog(
-        context: context,
-        builder: (context) => KubusAlertDialog(
-          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(KubusRadius.lg),
-          ),
-          title: Row(
-            children: [
-              Icon(
-                Icons.view_in_ar,
-                color: AppColorUtils.tealAccent,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                l10n.marketplaceArRequiredTitle,
-                style: KubusTypography.inter(
-                  color: Theme.of(context).colorScheme.onSurface,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          content: Text(
-            l10n.marketplaceArRequiredDescription,
-            style: KubusTypography.inter(
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.8),
-              height: 1.5,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(
-                l10n.commonCancel,
-                style: KubusTypography.inter(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.6),
-                ),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                // Navigate to AR screen or map
-                Navigator.of(context).pushNamed('/ar');
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: themeProvider.accentColor,
-                foregroundColor: Theme.of(context).colorScheme.onPrimary,
-              ),
-              child: Text(
-                l10n.marketplaceGoToArButton,
-                style: KubusTypography.inter(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    } else {
-      // Show regular mint dialog
-      _showMintDialog(series);
-    }
-  }
-
-  void _showMintDialog(CollectibleSeries series) {
-    final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
-    showKubusDialog(
-      context: context,
-      builder: (context) => KubusAlertDialog(
-        backgroundColor: scheme.primaryContainer,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(KubusRadius.lg),
-        ),
-        title: Text(
-          l10n.marketplaceMintDialogTitle,
-          style: KubusTypography.inter(
-            color: scheme.onSurface,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              l10n.marketplaceMintConfirmCollectionDescription(series.name),
-              style: KubusTypography.inter(
-                color: scheme.onSurface.withValues(alpha: 0.78),
-                height: 1.5,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(KubusSpacing.sm + KubusSpacing.xs),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.secondaryContainer,
-                borderRadius: BorderRadius.circular(KubusRadius.sm),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    l10n.marketplaceMintPriceLabel,
-                    style: KubusTypography.inter(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.6),
-                    ),
-                  ),
-                  Text(
-                    '${series.mintPrice.toInt()} KUB8',
-                    style: KubusTypography.inter(
-                      color: Theme.of(context).colorScheme.onSurface,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(
-              l10n.commonCancel,
-              style: KubusTypography.inter(
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.6),
-              ),
-            ),
-          ),
-          Consumer<ThemeProvider>(
-            builder: (context, themeProvider, _) => ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                _processMint(series);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: themeProvider.accentColor,
-                foregroundColor: Theme.of(context).colorScheme.onPrimary,
-              ),
-              child: Text(
-                l10n.marketplaceConfirmMintButton,
-                style: KubusTypography.inter(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _processMint(CollectibleSeries series) async {
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
-    var loadingShown = false;
-    final profileProvider = context.read<ProfileProvider>();
-    final walletProvider = context.read<WalletProvider>();
-
-    final canProceed = await WalletActionGuard.ensureSignerAccess(
-      context: context,
-      profileProvider: profileProvider,
-      walletProvider: walletProvider,
-    );
-    if (!mounted || !canProceed) {
-      return;
-    }
-
-    try {
-      final collectiblesProvider = context.read<CollectiblesProvider>();
-      final walletAddress = (walletProvider.currentWalletAddress ?? '').trim();
-      if (walletAddress.isEmpty) {
-        throw Exception(
-          AppLocalizations.of(context)!.marketplaceMintConnectWalletDescription,
-        );
-      }
-
-      // Show loading
-      showKubusDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => Center(
-          child: SizedBox(
-              width: 72,
-              height: 72,
-              child: InlineLoading(
-                  shape: BoxShape.circle,
-                  color: themeProvider.accentColor,
-                  tileSize: 8.0)),
-        ),
-      );
-      loadingShown = true;
-
-      await collectiblesProvider.mintCollectible(
-        seriesId: series.id,
-        ownerAddress: walletAddress,
-        transactionHash: 'local_mint_${DateTime.now().millisecondsSinceEpoch}',
-        properties: {
-          'mint_timestamp': DateTime.now().toIso8601String(),
-          'minted_by': walletAddress,
-        },
-      );
-
-      if (!mounted) return;
-      Navigator.of(context).pop(); // Close loading
-
-      // Show success
-      if (!mounted) return;
-      final l10n = AppLocalizations.of(context)!;
-      showKubusDialog(
-        context: context,
-        builder: (context) => KubusAlertDialog(
-          backgroundColor:
-              Theme.of(context).colorScheme.surfaceContainerHighest,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(KubusRadius.lg),
-          ),
-          title: Row(
-            children: [
-              Icon(
-                Icons.check_circle,
-                color: KubusColorRoles.of(context).web3MarketplaceAccent,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                l10n.marketplaceMintSuccessTitle,
-                style: KubusTypography.inter(
-                  color: Theme.of(context).colorScheme.onSurface,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          content: Text(
-            l10n.marketplaceMintSuccessDescription,
-            style: KubusTypography.inter(
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.8),
-              height: 1.5,
-            ),
-          ),
-          actions: [
-            Consumer<ThemeProvider>(
-              builder: (context, themeProvider, _) => ElevatedButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  if (!mounted) return;
-                  unawaited(
-                    HomeQuickActionExecutor.execute(
-                      this.context,
-                      'wallet',
-                      source: HomeQuickActionSurface.legacyProvider,
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: themeProvider.accentColor,
-                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                ),
-                child: Text(
-                  l10n.marketplaceViewInWalletButton,
-                  style: KubusTypography.inter(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('Marketplace: mint collectible failed: $e');
-      }
-      if (!mounted) return;
-      if (loadingShown && Navigator.of(context).canPop()) {
-        Navigator.of(context).pop(); // Close loading
-      }
-
-      if (!mounted) return;
-      final l10n = AppLocalizations.of(context)!;
-      showKubusDialog(
-        context: context,
-        builder: (context) => KubusAlertDialog(
-          backgroundColor:
-              Theme.of(context).colorScheme.surfaceContainerHighest,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(KubusRadius.lg),
-          ),
-          title: Row(
-            children: [
-              Icon(
-                Icons.error,
-                color: Theme.of(context).colorScheme.error,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                l10n.marketplaceMintFailedTitle,
-                style: KubusTypography.inter(
-                  color: Theme.of(context).colorScheme.onSurface,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          content: Text(
-            l10n.marketplaceMintFailedDescription,
-            style: KubusTypography.inter(
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.8),
-              height: 1.5,
-            ),
-          ),
-          actions: [
-            ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.3),
-                foregroundColor: Theme.of(context).colorScheme.onPrimary,
-              ),
-              child: Text(
-                l10n.commonClose,
-                style: KubusTypography.inter(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
   }
 }
 
