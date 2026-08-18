@@ -8,6 +8,7 @@ import 'package:art_kubus/providers/kubus_node_provider.dart';
 import 'package:art_kubus/providers/spatial_capture_provider.dart';
 import 'package:art_kubus/services/kubus_node_service.dart';
 import 'package:art_kubus/services/spatial_capture_policy.dart';
+import 'package:art_kubus/services/spatial_library_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// A stand-in kubus Node speaking the real `/local/v1/captures/drafts` contract.
@@ -285,6 +286,22 @@ void main() {
     // Every file arrived as raw bytes on its own PUT.
     final puts = node.requests.where((r) => r.startsWith('PUT ')).length;
     expect(puts, provider.frameCount + 1);
+  });
+
+  test('Node outage leaves the finished private source in the phone library',
+      () async {
+    final provider = await readyCapture();
+    final nodeProvider = await pairedNode();
+    await node.stop();
+
+    await expectLater(provider.finish(nodeProvider), throwsA(isA<Object>()));
+
+    final library =
+        SpatialLibraryStore(root: Directory('${root.path}_spatial-library'));
+    final record = (await library.list()).single;
+    expect(record.rawPresent, isTrue);
+    expect(record.sampleCount, provider.frameCount);
+    expect(await Directory(record.sourcePath).exists(), isTrue);
   });
 
   test('no aggregate base64 capture payload is ever produced', () async {
