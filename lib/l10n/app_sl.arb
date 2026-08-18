@@ -6338,6 +6338,7 @@
   "arErrorArcoreUnsupportedDevice": "Ta naprava ne podpira AR.",
   "arErrorArcoreInstallDeclined": "AR potrebuje Google Play storitve za AR. Namestite jih in poskusite znova.",
   "arErrorSessionUnavailable": "AR trenutno ni na voljo. Poskusite znova.",
+  "arErrorCameraPermissionRequired": "AR potrebuje dostop do kamere. Dovolite ga za nadaljevanje.",
   "arTrackingInitializing": "AR se še umerja. Telefon premikajte počasi.",
   "arTrackingInsufficientLight": "Več svetlobe bo AR pomagalo razumeti prostor.",
   "arTrackingExcessiveMotion": "Telefon premikajte počasneje.",

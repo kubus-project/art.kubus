@@ -19,6 +19,15 @@ object ArCoreSessionMapping {
     const val CODE_CAMERA_UNAVAILABLE = "camera_unavailable"
 
     /**
+     * CAMERA is not granted yet.
+     *
+     * Flutter owns the permission flow and only mounts the AR view once the
+     * grant exists, so the native view reports this instead of raising its own
+     * dialog, which used to pause the activity mid-initialization.
+     */
+    const val CODE_CAMERA_PERMISSION_REQUIRED = "camera_permission_required"
+
+    /**
      * Maps an ARCore availability exception to a stable code.
      *
      * Keyed on the exception's simple name rather than the type so this stays

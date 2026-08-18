@@ -106,9 +106,12 @@ class RenderableCustomFactory {
                             val renderable = flutterArCoreNode.shape?.buildShape(material)
                             handler(renderable, null)
                         } catch (ex: Exception) {
-                            Log.e(TAG, "renderable error ${ex}")
+                            // The failure is already reported through handler,
+                            // which Flutter turns into a localized message. The
+                            // Toast here was never shown (show() was missing)
+                            // and would have leaked a raw exception string.
+                            Log.e(TAG, "renderable error $ex")
                             handler(null, ex)
-                            Toast.makeText(context, ex.toString(), Toast.LENGTH_LONG)
                         }
                     }
 

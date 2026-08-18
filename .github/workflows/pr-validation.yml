@@ -270,6 +270,13 @@ jobs:
             sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0' 'platform-tools'
           fi
       - run: flutter pub get
+      - name: ARCore plugin JVM unit tests
+        shell: bash
+        working-directory: android
+        # The native AR session lifecycle and the exactly-once method-channel
+        # contract are only covered here; nothing else in CI compiles or
+        # exercises the plugin's Kotlin sources.
+        run: ./gradlew :arcore_flutter_plugin:testDebugUnitTest --console=plain
       - run: flutter build apk --release
 
   ios:

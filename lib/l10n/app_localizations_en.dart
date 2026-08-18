@@ -15799,6 +15799,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'AR is unavailable right now. Try again.';
 
   @override
+  String get arErrorCameraPermissionRequired =>
+      'AR needs camera access. Allow it to continue.';
+
+  @override
   String get arTrackingInitializing =>
       'AR is still locating itself. Move your phone slowly.';
 

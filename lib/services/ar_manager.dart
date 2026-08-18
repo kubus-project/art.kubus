@@ -541,6 +541,17 @@ class ARManager {
           setArCoreController(controller);
           onARViewCreated();
         },
+        // An initialization failure used to be swallowed, so the screen waited
+        // on a callback that never arrived. Routing it through the same
+        // recoverable-error path gives the user localized guidance and a retry.
+        onArCoreViewFailed: (error) {
+          if (kDebugMode) {
+            debugPrint('ARManager: AR view init failed: ${error.code}');
+          }
+          onSessionError?.call(
+            ArCoreSessionError(code: error.code, message: error.message),
+          );
+        },
         enableTapRecognizer: enableTapRecognizer,
         // Required for onPlaneDetected: without the update listener the
         // session never reports that a surface is available.

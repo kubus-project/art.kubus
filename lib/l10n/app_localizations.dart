@@ -27486,6 +27486,12 @@ abstract class AppLocalizations {
   /// **'AR is unavailable right now. Try again.'**
   String get arErrorSessionUnavailable;
 
+  /// No description provided for @arErrorCameraPermissionRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'AR needs camera access. Allow it to continue.'**
+  String get arErrorCameraPermissionRequired;
+
   /// No description provided for @arTrackingInitializing.
   ///
   /// In en, this message translates to:

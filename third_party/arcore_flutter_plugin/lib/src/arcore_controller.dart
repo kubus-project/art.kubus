@@ -556,11 +556,15 @@ class ArCoreController {
 
   Future<void> removeNodeWithIndex(int index) async {
     try {
-      return await _channel.invokeMethod('removeARCoreNodeWithIndex', {
+      await _channel.invokeMethod('removeARCoreNodeWithIndex', {
         'index': index,
       });
-    } catch (ex) {
-      debugPrint(ex as String?);
+    } catch (error) {
+      // The old `ex as String?` threw a TypeError from inside the catch
+      // block, turning a handled platform failure into an unhandled one.
+      if (debug ?? true) {
+        debugPrint('ArCoreController($id): removeNodeWithIndex failed: $error');
+      }
     }
   }
 }

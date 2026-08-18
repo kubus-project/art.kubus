@@ -15957,6 +15957,10 @@ class AppLocalizationsSl extends AppLocalizations {
       'AR trenutno ni na voljo. Poskusite znova.';
 
   @override
+  String get arErrorCameraPermissionRequired =>
+      'AR potrebuje dostop do kamere. Dovolite ga za nadaljevanje.';
+
+  @override
   String get arTrackingInitializing =>
       'AR se še umerja. Telefon premikajte počasi.';
 

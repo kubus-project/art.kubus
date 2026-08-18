@@ -69,30 +69,48 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
     private var lastTrackingFailureReason: TrackingFailureReason? = null
 
     /**
-     * Set once teardown begins. Guards every asynchronous path so a capture,
-     * scene update, or lifecycle callback that lands after dispose() cannot
-     * touch a destroyed session or a detached channel.
+     * Lifecycle of this view's native session.
+     *
+     * Method-channel calls, activity callbacks, the capture executor and scene
+     * updates all drive it concurrently, so it owns the "is this legal now"
+     * decision that used to be inferred from `arSceneView == null`.
      */
-    @Volatile
-    private var isDisposed: Boolean = false
+    private val lifecycle = ArSessionLifecycle()
 
     /**
-     * Reports a typed, recoverable AR session error to Flutter.
+     * Every in-flight Flutter call, so teardown can settle them.
      *
-     * Recoverable session problems are product states, not crashes: Flutter
-     * maps the code to localized guidance and offers a retry.
+     * A capture still encoding when dispose() runs must complete its Dart
+     * future; dropping it left the sampler awaiting a reply forever.
      */
+    private val pendingCalls = ArPendingCalls()
+
+    /** Whether teardown has begun, so callbacks must stop emitting. */
+    private val isDisposed: Boolean
+        get() = lifecycle.isTearingDown
+
     /**
-     * Completes a pending [MethodChannel.Result] on the main thread.
+     * Adapts a channel result onto [ArCallResult] and tracks it.
      *
-     * Skips delivery once teardown has begun: replying through a channel whose
-     * view is gone throws, and the Dart side has already abandoned the call.
+     * Every branch of the method handler completes through here, which is what
+     * makes the exactly-once contract hold across all of them at once.
+     */
+    private fun track(result: MethodChannel.Result): ArCallResult =
+            pendingCalls.track(object : ArCallResult {
+                override fun success(value: Any?) = result.success(value)
+                override fun error(code: String, message: String?, details: Any?) =
+                        result.error(code, message, details)
+                override fun notImplemented() = result.notImplemented()
+            })
+
+    /**
+     * Completes a tracked call on the main thread.
+     *
+     * Unlike a plain post this still runs during teardown: the tracked result
+     * absorbs a detached channel, and Dart is awaiting a reply either way.
      */
     private fun completeOnMain(block: () -> Unit) {
         mainHandler.post {
-            if (isDisposed) {
-                return@post
-            }
             try {
                 block()
             } catch (e: Exception) {
@@ -101,23 +119,44 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
         }
     }
 
-    private fun reportSessionError(code: String, message: String) {
+    /**
+     * Sends a native-originated event to Flutter.
+     *
+     * Single funnel for every `invokeMethod` raised by a callback: teardown
+     * detaches the channel handler, and invoking through it afterwards throws
+     * on the main thread. Callbacks can still fire at that point - a queued
+     * scene update, a late tap - so the guard lives here, not at each site.
+     */
+    private fun emitToFlutterSafely(method: String, arguments: Any?) {
         if (isDisposed) {
             return
         }
-        mainHandler.post {
-            if (isDisposed) {
-                return@post
-            }
-            try {
-                methodChannel.invokeMethod(
-                        "onSessionError",
-                        hashMapOf("code" to code, "message" to message)
-                )
-            } catch (e: Exception) {
-                debugLog("reportSessionError failed: ${e.localizedMessage}")
-            }
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            deliverToFlutter(method, arguments)
+        } else {
+            mainHandler.post { deliverToFlutter(method, arguments) }
         }
+    }
+
+    private fun deliverToFlutter(method: String, arguments: Any?) {
+        if (isDisposed) {
+            return
+        }
+        try {
+            methodChannel.invokeMethod(method, arguments)
+        } catch (e: Exception) {
+            debugLog("emit $method failed: ${e.localizedMessage}")
+        }
+    }
+
+    /**
+     * Reports a typed, recoverable AR session error to Flutter.
+     *
+     * Recoverable session problems are product states, not crashes: Flutter
+     * maps the code to localized guidance and offers a retry.
+     */
+    private fun reportSessionError(code: String, message: String) {
+        emitToFlutterSafely("onSessionError", hashMapOf("code" to code, "message" to message))
     }
 
     //AUGMENTEDFACE
@@ -125,9 +164,14 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
     private var faceMeshTexture: Texture? = null
     private val faceNodeMap = HashMap<AugmentedFace, AugmentedFaceNode>()
 
+    /** Stable view handed to Flutter, kept past session teardown. */
+    private val hostView: View
+
     init {
         methodChannel.setMethodCallHandler(this)
-        arSceneView = ArSceneView(context)
+        val createdView = ArSceneView(context)
+        arSceneView = createdView
+        hostView = createdView
         // Set up a tap gesture detector.
         gestureDetector = GestureDetector(
                 context,
@@ -144,6 +188,13 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
 
         sceneUpdateListener = Scene.OnUpdateListener { frameTime ->
 
+            // Sceneform can deliver a queued update after teardown starts.
+            // Touching the session or the channel at that point throws on the
+            // main thread, which surfaced as an unexplained process death.
+            if (isDisposed) {
+                return@OnUpdateListener
+            }
+
             val frame = arSceneView?.arFrame ?: return@OnUpdateListener
 
             val camera = frame.camera
@@ -155,7 +206,7 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
                     )) {
                 lastCameraTrackingState = camera.trackingState
                 lastTrackingFailureReason = camera.trackingFailureReason
-                methodChannel.invokeMethod("onTrackingStateChanged", hashMapOf(
+                emitToFlutterSafely("onTrackingStateChanged", hashMapOf(
                     "state" to camera.trackingState.toString(),
                     "failureReason" to camera.trackingFailureReason.toString()
                 ))
@@ -175,13 +226,16 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
                     map["extentX"] = plane.extentX
                     map["extentZ"] = plane.extentZ
 
-                    methodChannel.invokeMethod("onPlaneDetected", map)
+                    emitToFlutterSafely("onPlaneDetected", map)
                 }
             }
         }
 
         faceSceneUpdateListener = Scene.OnUpdateListener { frameTime ->
             run {
+                if (isDisposed) {
+                    return@OnUpdateListener
+                }
                 //                if (faceRegionsRenderable == null || faceMeshTexture == null) {
                 if (faceMeshTexture == null) {
                     return@OnUpdateListener
@@ -216,8 +270,10 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
             }
         }
 
-        // Lastly request CAMERA permission which is required by ARCore.
-        ArCoreUtils.requestCameraPermission(activity, RC_PERMISSIONS)
+        // Camera permission is owned by Flutter, which only mounts this view
+        // once CAMERA is granted. Requesting it here as well raced that flow:
+        // the dialog paused the activity mid platform-view creation, which
+        // pushed a pause/resume through a half-built session.
         setupLifeCycle(context)
     }
 
@@ -249,19 +305,47 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
     }
 
 
+    /**
+     * Entry point for every Flutter AR call.
+     *
+     * Each branch completes [tracked] exactly once. Branches that previously
+     * fell through without completing - dispose, resume, getTrackingState,
+     * togglePlaneRenderer, positionChanged, loadMesh and the else case - left
+     * the Dart future pending forever, so awaiting `dispose()` during a camera
+     * handoff never returned and the mode switch deadlocked.
+     *
+     * An unexpected throw here would otherwise reach the Android main thread
+     * and kill the process, so it is mapped to a typed failure instead.
+     */
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
+        val tracked = track(result)
+        try {
+            dispatch(call, tracked)
+        } catch (error: Throwable) {
+            debugLog("method ${call.method} failed: ${error.localizedMessage}")
+            tracked.error(
+                    ArCoreSessionMapping.CODE_SESSION_UNAVAILABLE,
+                    error.localizedMessage ?: "The AR session failed to handle ${call.method}.",
+                    null
+            )
+        }
+    }
+
+    private fun dispatch(call: MethodCall, result: ArCallResult) {
         when (call.method) {
             "init" -> {
-                arScenViewInit(call, result, activity)
+                arScenViewInit(call, result)
             }
             "addArCoreNode" -> {
                 debugLog(" addArCoreNode")
+                if (requireScene(result) == null) return
                 val map = call.arguments as HashMap<String, Any>
-                val flutterNode = FlutterArCoreNode(map);
+                val flutterNode = FlutterArCoreNode(map)
                 onAddNode(flutterNode, result)
             }
             "addArCoreNodeWithAnchor" -> {
-                debugLog(" addArCoreNode")
+                debugLog(" addArCoreNodeWithAnchor")
+                if (requireScene(result) == null) return
                 val map = call.arguments as HashMap<String, Any>
                 val flutterNode = FlutterArCoreNode(map)
                 addNodeWithAnchor(flutterNode, map, result)
@@ -276,52 +360,86 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
                 updateAnchoredNode(call, result)
             }
             "positionChanged" -> {
+                // Position is applied through updateAnchoredNode so the anchor
+                // and its content keep separate coordinate spaces.
                 debugLog(" positionChanged")
-
+                result.success(null)
             }
             "rotationChanged" -> {
                 debugLog(" rotationChanged")
                 updateRotation(call, result)
-
             }
             "updateMaterials" -> {
                 debugLog(" updateMaterials")
                 updateMaterials(call, result)
-
             }
             "takeScreenshot" -> {
                 debugLog(" takeScreenshot")
                 takeScreenshot(call, result)
-
             }
             "captureSpatialFrame" -> captureSpatialFrame(result)
             "loadMesh" -> {
                 val map = call.arguments as HashMap<String, Any>
-                val textureBytes = map["textureBytes"] as ByteArray
+                val textureBytes = map["textureBytes"] as? ByteArray
+                if (textureBytes == null) {
+                    result.error("invalid_mesh_texture", "textureBytes must be a byte array", null)
+                    return
+                }
                 loadMesh(textureBytes)
+                result.success(null)
             }
             "dispose" -> {
                 debugLog("Disposing ARCore now")
-                dispose()
+                // Exempted from its own cancellation sweep so it survives to
+                // report that teardown actually finished; disposeSession
+                // completes it. A second dispose finds teardown already
+                // claimed and is settled by the cancellation record instead.
+                disposeSession(exempt = result)
             }
             "resume" -> {
                 debugLog("Resuming ARCore now")
-                onResume()
+                resumeSessionSafely(result)
+            }
+            "pause" -> {
+                debugLog("Pausing ARCore now")
+                pauseSessionSafely()
+                result.success(null)
             }
             "getTrackingState" -> {
-                debugLog("1/3: Requested tracking state, returning that back to Flutter now")
-
-                val trState = arSceneView?.arFrame?.camera?.trackingState
-                debugLog("2/3: Tracking state is " + trState.toString())
-                methodChannel.invokeMethod("getTrackingState", trState.toString())
+                // Answers on the result rather than through a second
+                // invokeMethod, so the caller's future actually resolves.
+                val trackingState = arSceneView?.arFrame?.camera?.trackingState
+                debugLog("Tracking state is $trackingState")
+                result.success(trackingState?.toString())
             }
             "togglePlaneRenderer" -> {
-                debugLog(" Toggle planeRenderer visibility" )
-                arSceneView!!.planeRenderer.isVisible = !arSceneView!!.planeRenderer.isVisible
+                debugLog(" Toggle planeRenderer visibility")
+                val scene = requireScene(result) ?: return
+                scene.planeRenderer.isVisible = !scene.planeRenderer.isVisible
+                result.success(scene.planeRenderer.isVisible)
             }
-            else -> {
-            }
+            else -> result.notImplemented()
         }
+    }
+
+    /**
+     * Returns the scene view, or completes [result] with a typed error.
+     *
+     * Operations used to `return` when the view was gone, abandoning the call.
+     * Flutter needs to know the session went away so it can show a recoverable
+     * state rather than waiting on a reply that never comes.
+     */
+    private fun requireScene(result: ArCallResult): ArSceneView? {
+        val scene = arSceneView
+        if (scene == null || isDisposed) {
+            result.error(
+                    ArSessionLifecycle.CODE_SESSION_DISPOSED,
+                    "The AR session is no longer available.",
+                    null
+            )
+            return null
+        }
+        return scene
     }
 
 /*    fun maybeEnableArButton() {
@@ -356,12 +474,15 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
 
             override fun onActivityResumed(activity: Activity) {
                 debugLog("onActivityResumed")
-                onResume()
+                // Subsequent resumes only. The first session start happens in
+                // init, because the activity is already resumed by the time
+                // this callback is registered.
+                resumeFromActivity()
             }
 
             override fun onActivityPaused(activity: Activity) {
                 debugLog("onActivityPaused")
-                onPause()
+                pauseSessionSafely()
             }
 
             override fun onActivityStopped(activity: Activity) {
@@ -383,6 +504,9 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
 
     private fun onSingleTap(tap: MotionEvent?) {
         debugLog(" onSingleTap")
+        if (!lifecycle.acceptsSceneWork) {
+            return
+        }
         val frame = arSceneView?.arFrame
         if (frame != null) {
             if (tap != null && frame.camera.trackingState == TrackingState.TRACKING) {
@@ -400,40 +524,39 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
                         list.add(arguments)
                     }
                 }
-                methodChannel.invokeMethod("onPlaneTap", list)
+                emitToFlutterSafely("onPlaneTap", list)
             }
         }
     }
 
-    private fun takeScreenshot(call: MethodCall, result: MethodChannel.Result) {
+    private fun takeScreenshot(call: MethodCall, result: ArCallResult) {
+        val scene = requireScene(result) ?: return
         try {
-            // create bitmap screen capture
-
             // Create a bitmap the size of the scene view.
-            val bitmap: Bitmap = Bitmap.createBitmap(arSceneView!!.getWidth(), arSceneView!!.getHeight(),
+            val bitmap: Bitmap = Bitmap.createBitmap(scene.width, scene.height,
                     Bitmap.Config.ARGB_8888)
 
             // Create a handler thread to offload the processing of the image.
             val handlerThread = HandlerThread("PixelCopier")
             handlerThread.start()
-            // Make the request to copy.
-            // Make the request to copy.
-            PixelCopy.request(arSceneView!!, bitmap, { copyResult ->
+            PixelCopy.request(scene, bitmap, { copyResult ->
                 if (copyResult === PixelCopy.SUCCESS) {
                     try {
                         saveBitmapToDisk(bitmap)
                     } catch (e: IOException) {
-                        e.printStackTrace();
+                        debugLog("screenshot save failed: ${e.localizedMessage}")
                     }
                 }
                 handlerThread.quitSafely()
             }, Handler(handlerThread.getLooper()))
-
+            result.success(null)
         } catch (e: Throwable) {
-            // Several error may come out with file handling or DOM
-            e.printStackTrace()
+            result.error(
+                    "screenshot_failed",
+                    e.localizedMessage ?: "Failed to capture a screenshot.",
+                    null
+            )
         }
-        result.success(null)
     }
 
     private class CopiedPlane(val bytes: ByteArray, val rowStride: Int, val pixelStride: Int)
@@ -445,7 +568,7 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
         return CopiedPlane(bytes, plane.rowStride, plane.pixelStride)
     }
 
-    private fun captureSpatialFrame(result: MethodChannel.Result) {
+    private fun captureSpatialFrame(result: ArCallResult) {
         val view = arSceneView
         val frame = view?.arFrame
         if (view == null || frame == null || frame.camera.trackingState != TrackingState.TRACKING) {
@@ -612,48 +735,209 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
         return mPath as String
     }
 
-    private fun arScenViewInit(call: MethodCall, result: MethodChannel.Result, context: Context) {
+    /**
+     * Creates the real AR session, then reports readiness.
+     *
+     * This used to only wire listeners and return success, so Dart marked the
+     * controller ready while no [Session] existed. The session was created
+     * exclusively from `Activity.onResume`, but a platform view is built while
+     * the activity is *already* resumed, and registering lifecycle callbacks
+     * at that point never replays the resume that already happened. On first
+     * entry the session was therefore never created and every tracking query
+     * answered "not ready".
+     *
+     * Initialization now performs the whole transaction - permission,
+     * availability, session, config, setupSession, resume - and reports
+     * success only once the view is genuinely running.
+     */
+    private fun arScenViewInit(call: MethodCall, result: ArCallResult) {
         debugLog("arScenViewInit")
-        val enableTapRecognizer: Boolean? = call.argument("enableTapRecognizer")
-        if (enableTapRecognizer != null && enableTapRecognizer) {
-            arSceneView
-                    ?.scene
-                    ?.setOnTouchListener { hitTestResult: HitTestResult, event: MotionEvent? ->
 
-                        if (hitTestResult.node != null) {
-                            debugLog(" onNodeTap " + hitTestResult.node?.name)
-                            debugLog(hitTestResult.node?.localPosition.toString())
-                            debugLog(hitTestResult.node?.worldPosition.toString())
-                            methodChannel.invokeMethod(
-                                "onNodeTap",
-                                publicNodeNameForTap(hitTestResult.node),
-                            )
-                            return@setOnTouchListener true
-                        }
-                        val handled = event?.let { gestureDetector.onTouchEvent(it) } ?: false
-                        return@setOnTouchListener handled
-                    }
+        when (val outcome = lifecycle.beginInitialize()) {
+            is ArLifecycleOutcome.Rejected -> {
+                result.error(outcome.code, outcome.message, null)
+                return
+            }
+            ArLifecycleOutcome.NoOp -> {
+                // Already running; a remounted view must not build a second
+                // session that would fight the first one for the camera.
+                result.success(null)
+                return
+            }
+            ArLifecycleOutcome.Proceed -> Unit
         }
+
+        val scene = arSceneView
+        if (scene == null) {
+            lifecycle.initializeFailed()
+            result.error(
+                    ArCoreSessionMapping.CODE_SESSION_UNAVAILABLE,
+                    "The AR view is not available.",
+                    null
+            )
+            return
+        }
+
+        // Flutter owns camera permission and only mounts this view once CAMERA
+        // is granted. If it is missing the view reports it rather than raising
+        // its own dialog, which used to pause the activity mid-initialization.
+        if (!ArCoreUtils.hasCameraPermission(activity)) {
+            lifecycle.initializeFailed()
+            result.error(
+                    ArCoreSessionMapping.CODE_CAMERA_PERMISSION_REQUIRED,
+                    "Camera permission is required for AR.",
+                    null
+            )
+            return
+        }
+
+        configureListeners(call, scene)
+
+        val session = try {
+            ArCoreUtils.createArSession(activity, mUserRequestedInstall, isAugmentedFaces)
+        } catch (e: UnavailableUserDeclinedInstallationException) {
+            lifecycle.initializeFailed()
+            result.error(
+                    ArCoreSessionMapping.CODE_INSTALL_DECLINED,
+                    "ARCore installation was declined.",
+                    null
+            )
+            return
+        } catch (e: UnavailableException) {
+            lifecycle.initializeFailed()
+            result.error(
+                    ArCoreUtils.availabilityCodeFor(e),
+                    e.localizedMessage ?: "ARCore is unavailable.",
+                    null
+            )
+            return
+        } catch (e: SecurityException) {
+            lifecycle.initializeFailed()
+            result.error(
+                    ArCoreSessionMapping.CODE_CAMERA_PERMISSION_REQUIRED,
+                    "Camera permission is required for AR.",
+                    null
+            )
+            return
+        } catch (e: Throwable) {
+            lifecycle.initializeFailed()
+            result.error(
+                    ArCoreSessionMapping.CODE_SESSION_UNAVAILABLE,
+                    e.localizedMessage ?: "Failed to create the AR session.",
+                    null
+            )
+            return
+        }
+
+        if (session == null) {
+            // ARCore is installing. Clearing the flag makes the next attempt
+            // either return INSTALLED or throw, instead of looping forever.
+            mUserRequestedInstall = false
+            lifecycle.initializeFailed()
+            result.error(
+                    ArCoreSessionMapping.CODE_INSTALL_REQUIRED,
+                    "ARCore is being installed.",
+                    null
+            )
+            return
+        }
+
+        try {
+            val config = Config(session)
+            if (isAugmentedFaces) {
+                config.augmentedFaceMode = Config.AugmentedFaceMode.MESH3D
+            }
+            config.updateMode = Config.UpdateMode.LATEST_CAMERA_IMAGE
+            config.focusMode = Config.FocusMode.AUTO
+            if (session.isDepthModeSupported(Config.DepthMode.AUTOMATIC)) {
+                config.depthMode = Config.DepthMode.AUTOMATIC
+            }
+            session.configure(config)
+            scene.setupSession(session)
+        } catch (e: Throwable) {
+            lifecycle.initializeFailed()
+            closeSessionQuietly(session)
+            result.error(
+                    ArCoreSessionMapping.CODE_SESSION_UNAVAILABLE,
+                    e.localizedMessage ?: "Failed to configure the AR session.",
+                    null
+            )
+            return
+        }
+
+        // The first resume happens here rather than waiting for an activity
+        // callback that will not arrive, since the activity is already resumed.
+        try {
+            scene.resume()
+        } catch (e: CameraNotAvailableException) {
+            lifecycle.initializeFailed()
+            result.error(
+                    ArCoreSessionMapping.CODE_CAMERA_UNAVAILABLE,
+                    "The camera is currently unavailable.",
+                    null
+            )
+            return
+        } catch (e: Throwable) {
+            lifecycle.initializeFailed()
+            result.error(
+                    ArCoreSessionMapping.CODE_SESSION_UNAVAILABLE,
+                    e.localizedMessage ?: "Failed to start the AR session.",
+                    null
+            )
+            return
+        }
+
+        lifecycle.initializeSucceeded()
+        debugLog("AR session running")
+        result.success(null)
+    }
+
+    /** Wires tap, update and plane-renderer behaviour requested by Flutter. */
+    private fun configureListeners(call: MethodCall, scene: ArSceneView) {
+        val enableTapRecognizer: Boolean? = call.argument("enableTapRecognizer")
+        if (enableTapRecognizer == true) {
+            scene.scene?.setOnTouchListener { hitTestResult: HitTestResult, event: MotionEvent? ->
+                if (isDisposed) {
+                    return@setOnTouchListener false
+                }
+                if (hitTestResult.node != null) {
+                    debugLog(" onNodeTap " + hitTestResult.node?.name)
+                    emitToFlutterSafely(
+                            "onNodeTap",
+                            publicNodeNameForTap(hitTestResult.node),
+                    )
+                    return@setOnTouchListener true
+                }
+                val handled = event?.let { gestureDetector.onTouchEvent(it) } ?: false
+                return@setOnTouchListener handled
+            }
+        }
+
         val enableUpdateListener: Boolean? = call.argument("enableUpdateListener")
-        if (enableUpdateListener != null && enableUpdateListener) {
-            // Set an update listener on the Scene that will hide the loading message once a Plane is
-            // detected.
-            arSceneView?.scene?.addOnUpdateListener(sceneUpdateListener)
+        if (enableUpdateListener == true) {
+            scene.scene?.addOnUpdateListener(sceneUpdateListener)
         }
 
         val enablePlaneRenderer: Boolean? = call.argument("enablePlaneRenderer")
-        if (enablePlaneRenderer != null && !enablePlaneRenderer) {
-            debugLog(" The plane renderer (enablePlaneRenderer) is set to " + enablePlaneRenderer.toString())
-            arSceneView!!.planeRenderer.isVisible = false
+        if (enablePlaneRenderer == false) {
+            debugLog(" The plane renderer (enablePlaneRenderer) is disabled")
+            scene.planeRenderer.isVisible = false
         }
-        
-        result.success(null)
+    }
+
+    /** Releases a session that failed after construction. */
+    private fun closeSessionQuietly(session: Session) {
+        try {
+            session.close()
+        } catch (e: Throwable) {
+            debugLog("session close failed: ${e.localizedMessage}")
+        }
     }
 
     fun addNodeWithAnchor(
         flutterArCoreNode: FlutterArCoreNode,
         parameters: HashMap<String, Any>,
-        result: MethodChannel.Result,
+        result: ArCallResult,
     ) {
 
         if (arSceneView == null) {
@@ -710,7 +994,7 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
         }
     }
 
-    fun onAddNode(flutterArCoreNode: FlutterArCoreNode, result: MethodChannel.Result?) {
+    fun onAddNode(flutterArCoreNode: FlutterArCoreNode, result: ArCallResult?) {
 
         debugLog(flutterArCoreNode.toString())
         NodeFactory.makeNode(activity.applicationContext, flutterArCoreNode, debug) { node, throwable ->
@@ -748,7 +1032,7 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
         }
     }
 
-    fun removeNode(name: String, result: MethodChannel.Result) {
+    fun removeNode(name: String, result: ArCallResult) {
         val node = arSceneView?.scene?.findByName(name)
         if (node != null) {
             if (node is AnchorNode) {
@@ -773,7 +1057,7 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
      * and scale apply only to the content child. Omitted components are left
      * untouched.
      */
-    fun updateAnchoredNode(call: MethodCall, result: MethodChannel.Result) {
+    fun updateAnchoredNode(call: MethodCall, result: ArCallResult) {
         val name = call.argument<String>("name")
         var anchorNode = findAnchorNode(name)
         if (anchorNode == null) {
@@ -883,9 +1167,17 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
     private fun renderableHolderFor(node: Node): Node =
         (node as? AnchorNode)?.let(::findContentNode) ?: node
 
-    fun updateRotation(call: MethodCall, result: MethodChannel.Result) {
+    fun updateRotation(call: MethodCall, result: ArCallResult) {
         val name = call.argument<String>("name")
-        val node = arSceneView?.scene?.findByName(name) as RotatingNode
+        // An unchecked `as RotatingNode` threw whenever the node was missing
+        // or of another type, which during teardown meant a crash rather than
+        // a reply.
+        val node = arSceneView?.scene?.findByName(name) as? RotatingNode
+        if (node == null) {
+            debugLog("updateRotation: no rotating node named $name")
+            result.success(false)
+            return
+        }
         debugLog("rotating node:  $node")
         val degreesPerSecond = call.argument<Double?>("degreesPerSecond")
         debugLog("rotating value:  $degreesPerSecond")
@@ -896,7 +1188,7 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
         result.success(null)
     }
 
-    fun updateMaterials(call: MethodCall, result: MethodChannel.Result) {
+    fun updateMaterials(call: MethodCall, result: ArCallResult) {
         val name = call.argument<String>("name")
         val materials = call.argument<ArrayList<HashMap<String, *>>>("materials")!!
         // Follow the renderable: once a placement has been transformed its
@@ -911,8 +1203,15 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
         result.success(null)
     }
 
+    /**
+     * The view handed to Flutter.
+     *
+     * Backed by its own reference because [arSceneView] is cleared during
+     * teardown, and the host can still query the view while unmounting; the
+     * old `arSceneView as View` threw once that field went null.
+     */
     override fun getView(): View {
-        return arSceneView as View
+        return hostView
     }
 
     /**
@@ -920,11 +1219,28 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
      * while a capture is still in flight, and the host may dispose the view
      * again during activity teardown.
      */
+    /**
+     * Platform-view teardown.
+     *
+     * Flutter's explicit `dispose` call and the host's own disposal can race,
+     * so the ordering matters and lives in [disposeSession].
+     */
     override fun dispose() {
-        if (isDisposed) {
+        disposeSession()
+    }
+
+    /**
+     * Tears the session down exactly once, settling everything in flight.
+     *
+     * Order is deliberate. Outstanding calls are completed *before* the
+     * channel handler is detached, because a reply through a detached channel
+     * never reaches Dart - which is how awaiting `dispose()` used to hang a
+     * camera handoff forever.
+     */
+    private fun disposeSession(exempt: ArCallResult? = null) {
+        if (!lifecycle.beginDispose()) {
             return
         }
-        isDisposed = true
 
         // Unregister exactly once. Registering on every platform-view creation
         // without ever unregistering leaked one callbacks instance per AR mode
@@ -943,113 +1259,165 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
         // capture cannot touch a destroyed session.
         spatialCaptureExecutor.shutdown()
 
-        // Detach the channel so late native callbacks cannot reach a Flutter
-        // engine that has already released this view.
-        try {
-            methodChannel.setMethodCallHandler(null)
-        } catch (e: Exception) {
-            debugLog("setMethodCallHandler(null) failed: ${e.localizedMessage}")
-        }
+        // Settle every call still awaiting a reply. A capture mid-encode has a
+        // Dart future waiting on it; dropping it stalled the sampler.
+        pendingCalls.cancelAll(
+                ArSessionLifecycle.CODE_SESSION_DISPOSED,
+                "The AR session is shutting down.",
+                except = exempt
+        )
 
-        if (arSceneView != null) {
-            onPause()
-            onDestroy()
+        try {
+            releaseScene()
+        } finally {
+            // Teardown is complete, so answer the call that drove it. Dart
+            // treats a completed dispose as "the camera is released", and it
+            // has to be answered before the handler goes away.
+            exempt?.success(null)
+            try {
+                methodChannel.setMethodCallHandler(null)
+            } catch (e: Exception) {
+                debugLog("setMethodCallHandler(null) failed: ${e.localizedMessage}")
+            }
+            lifecycle.disposeFinished()
         }
     }
 
-    fun onResume() {
-        debugLog("onResume()")
-
-        if (arSceneView == null) {
-            return
+    /** Pauses, detaches and destroys the scene view and its session. */
+    private fun releaseScene() {
+        val scene = arSceneView ?: return
+        try {
+            scene.scene?.removeOnUpdateListener(sceneUpdateListener)
+            scene.scene?.removeOnUpdateListener(faceSceneUpdateListener)
+            scene.scene?.setOnTouchListener(null)
+        } catch (e: Exception) {
+            debugLog("listener detach failed: ${e.localizedMessage}")
         }
 
-        // request camera permission if not already requested
-        if (!ArCoreUtils.hasCameraPermission(activity)) {
-            ArCoreUtils.requestCameraPermission(activity, RC_PERMISSIONS)
-        }
-
-        if (arSceneView?.session == null) {
-            debugLog("session is null")
+        for (faceNode in faceNodeMap.values) {
             try {
-                val session = ArCoreUtils.createArSession(activity, mUserRequestedInstall, isAugmentedFaces)
-                if (session == null) {
-                    // Ensures next invocation of requestInstall() will either return
-                    // INSTALLED or throw an exception.
-                    mUserRequestedInstall = false
-                    return
-                } else {
-                    val config = Config(session)
-                    if (isAugmentedFaces) {
-                        config.augmentedFaceMode = Config.AugmentedFaceMode.MESH3D
-                    }
-                    config.updateMode = Config.UpdateMode.LATEST_CAMERA_IMAGE
-                    config.focusMode = Config.FocusMode.AUTO;
-                    if (session.isDepthModeSupported(Config.DepthMode.AUTOMATIC)) {
-                        config.depthMode = Config.DepthMode.AUTOMATIC
-                    }
-                    session.configure(config)
-                    arSceneView?.setupSession(session)
-                }
-            } catch (ex: UnavailableUserDeclinedInstallationException) {
-                // The user declined the ARCore install. Report a typed,
-                // recoverable state so Flutter can offer a localized retry
-                // instead of a raw platform Toast.
-                reportSessionError(
-                        ArCoreSessionMapping.CODE_INSTALL_DECLINED,
-                        "ARCore installation was declined."
-                )
-                return
-            } catch (e: UnavailableException) {
-                reportSessionError(
-                        ArCoreUtils.availabilityCodeFor(e),
-                        e.localizedMessage ?: "ARCore is unavailable."
-                )
-                return
+                faceNode.setParent(null)
+            } catch (e: Exception) {
+                debugLog("face node detach failed: ${e.localizedMessage}")
             }
+        }
+        faceNodeMap.clear()
+
+        try {
+            scene.pause()
+        } catch (e: Exception) {
+            debugLog("pause during teardown failed: ${e.localizedMessage}")
         }
 
         try {
-            arSceneView?.resume()
-        } catch (ex: CameraNotAvailableException) {
-            // The camera being briefly unavailable - another owner still
-            // holding it, or a transition in progress - is recoverable. Closing
-            // the whole Flutter activity over it destroyed unrelated app state
-            // and looked like a crash.
-            reportSessionError(
-                    ArCoreSessionMapping.CODE_CAMERA_UNAVAILABLE,
-                    "The camera is currently unavailable."
+            scene.destroy()
+        } catch (e: Exception) {
+            debugLog("destroy failed: ${e.localizedMessage}")
+        }
+
+        arSceneView = null
+    }
+
+    /**
+     * Resumes the session if that is legal right now.
+     *
+     * Activity resume and an explicit Flutter resume can arrive together, and
+     * calling `ArSceneView.resume()` twice - or on a torn-down view - throws on
+     * the main thread. The lifecycle decides; this only performs.
+     */
+    private fun resumeSessionSafely(result: ArCallResult) {
+        when (val outcome = lifecycle.requestResume()) {
+            is ArLifecycleOutcome.Rejected -> {
+                result.error(outcome.code, outcome.message, null)
+                return
+            }
+            ArLifecycleOutcome.NoOp -> {
+                result.success(null)
+                return
+            }
+            ArLifecycleOutcome.Proceed -> Unit
+        }
+
+        val scene = arSceneView
+        if (scene == null) {
+            lifecycle.resumeFailed()
+            result.error(
+                    ArSessionLifecycle.CODE_SESSION_DISPOSED,
+                    "The AR session is no longer available.",
+                    null
             )
             return
         }
 
-        if (arSceneView?.session != null) {
-            //arSceneView!!.planeRenderer.isVisible = false
-            debugLog("Searching for surfaces")
+        try {
+            scene.resume()
+        } catch (e: CameraNotAvailableException) {
+            // Another owner briefly holding the camera is recoverable. Closing
+            // the Flutter activity over it destroyed unrelated app state and
+            // looked to the user like a crash.
+            lifecycle.resumeFailed()
+            result.error(
+                    ArCoreSessionMapping.CODE_CAMERA_UNAVAILABLE,
+                    "The camera is currently unavailable.",
+                    null
+            )
+            return
+        } catch (e: Throwable) {
+            lifecycle.resumeFailed()
+            result.error(
+                    ArCoreSessionMapping.CODE_SESSION_UNAVAILABLE,
+                    e.localizedMessage ?: "Failed to resume the AR session.",
+                    null
+            )
+            return
         }
+
+        lifecycle.resumeSucceeded()
+        result.success(null)
     }
 
-    fun onPause() {
-        if (arSceneView != null) {
+    /** Pauses the session if it is running; never an error. */
+    private fun pauseSessionSafely() {
+        if (lifecycle.requestPause() != ArLifecycleOutcome.Proceed) {
+            return
+        }
+        try {
             arSceneView?.pause()
+        } catch (e: Throwable) {
+            debugLog("pause failed: ${e.localizedMessage}")
         }
     }
 
-    fun onDestroy() {
-      if (arSceneView != null) {
-            debugLog("Goodbye ARCore! Destroying the Activity now 7.")
-
-            try {
-                arSceneView?.scene?.removeOnUpdateListener(sceneUpdateListener)
-                arSceneView?.scene?.removeOnUpdateListener(faceSceneUpdateListener)
-                debugLog("Goodbye arSceneView.")
-
-                arSceneView?.destroy()
-                arSceneView = null
-
-            }catch (e : Exception){
-                e.printStackTrace();
-           }
+    /**
+     * Resume driven by the activity, with no Flutter call to answer.
+     *
+     * A recoverable failure is reported as a session event rather than thrown,
+     * so a backgrounded-and-restored AR screen degrades into a retryable state.
+     */
+    private fun resumeFromActivity() {
+        if (lifecycle.requestResume() != ArLifecycleOutcome.Proceed) {
+            return
+        }
+        val scene = arSceneView
+        if (scene == null) {
+            lifecycle.resumeFailed()
+            return
+        }
+        try {
+            scene.resume()
+            lifecycle.resumeSucceeded()
+        } catch (e: CameraNotAvailableException) {
+            lifecycle.resumeFailed()
+            reportSessionError(
+                    ArCoreSessionMapping.CODE_CAMERA_UNAVAILABLE,
+                    "The camera is currently unavailable."
+            )
+        } catch (e: Throwable) {
+            lifecycle.resumeFailed()
+            reportSessionError(
+                    ArCoreSessionMapping.CODE_SESSION_UNAVAILABLE,
+                    e.localizedMessage ?: "Failed to resume the AR session."
+            )
         }
     }
 
@@ -1080,7 +1448,7 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
 
     }*/
 
-    /*    fun updatePosition(call: MethodCall, result: MethodChannel.Result) {
+    /*    fun updatePosition(call: MethodCall, result: ArCallResult) {
         val name = call.argument<String>("name")
         val node = arSceneView?.scene?.findByName(name)
         node?.localPosition = parseVector3(call.arguments as HashMap<String, Any>)

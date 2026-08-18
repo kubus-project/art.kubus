@@ -7,12 +7,21 @@ import 'package:flutter/material.dart';
 
 typedef void ArCoreViewCreatedCallback(ArCoreController controller);
 
+/// Called when the native session could not be initialized.
+///
+/// Without this the failure was swallowed and [ArCoreViewCreatedCallback]
+/// simply never fired, so the AR screen waited forever instead of showing
+/// recoverable guidance such as "install ARCore" or "allow camera access".
+typedef ArCoreViewFailedCallback = void Function(
+    ArCoreInitializationException error);
+
 enum ArCoreViewType { AUGMENTEDFACE, STANDARDVIEW, AUGMENTEDIMAGES }
 
 class ArCoreView extends StatefulWidget {
   final ArCoreViewCreatedCallback onArCoreViewCreated;
 
-//  final UnsupportedHandler onArCoreUnsupported;
+  /// Reports a typed initialization failure so the host can show guidance.
+  final ArCoreViewFailedCallback? onArCoreViewFailed;
 
   final bool enableTapRecognizer;
   final bool enablePlaneRenderer;
@@ -23,7 +32,7 @@ class ArCoreView extends StatefulWidget {
   const ArCoreView(
       {Key? key,
       required this.onArCoreViewCreated,
-//    @required this.onArCoreUnsupported,
+      this.onArCoreViewFailed,
       this.enableTapRecognizer = false,
       this.enablePlaneRenderer = true,
       this.enableUpdateListener = false,
@@ -84,6 +93,11 @@ class _ArCoreViewState extends State<ArCoreView> with WidgetsBindingObserver {
       }
       await controller.dispose();
       if (_controller == controller) _controller = null;
+      // Report the failure rather than swallowing it: a silent return left the
+      // host waiting on a callback that would never arrive.
+      if (mounted && generation == _generation) {
+        _reportFailure(error);
+      }
       return;
     }
 
@@ -102,6 +116,27 @@ class _ArCoreViewState extends State<ArCoreView> with WidgetsBindingObserver {
     } catch (error, stack) {
       if (widget.debug) {
         debugPrint('ArCoreView: onArCoreViewCreated threw: $error\n$stack');
+      }
+    }
+  }
+
+  /// Hands a typed failure to the host without letting it escape.
+  ///
+  /// This runs detached from the platform-view callback, so a throwing
+  /// listener here would land in the root zone as an unhandled error.
+  void _reportFailure(Object error) {
+    final failure = error is ArCoreInitializationException
+        ? error
+        : ArCoreInitializationException(
+            code: 'arcore_session_unavailable',
+            message: '$error',
+          );
+    try {
+      widget.onArCoreViewFailed?.call(failure);
+    } catch (listenerError, listenerStack) {
+      if (widget.debug) {
+        debugPrint(
+            'ArCoreView: onArCoreViewFailed threw: $listenerError\n$listenerStack');
       }
     }
   }

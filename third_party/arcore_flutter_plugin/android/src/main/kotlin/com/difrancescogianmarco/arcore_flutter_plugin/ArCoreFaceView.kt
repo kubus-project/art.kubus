@@ -140,9 +140,11 @@ class ArCoreFaceView(activity:Activity,context: Context, messenger: BinaryMessen
 
         if (arSceneView?.session == null) {
 
-            // request camera permission if not already requested
+            // Flutter owns the permission flow and only mounts this view once
+            // CAMERA is granted. Raising a second request here paused the
+            // activity mid-initialization and raced the session startup.
             if (!ArCoreUtils.hasCameraPermission(activity)) {
-                ArCoreUtils.requestCameraPermission(activity, RC_PERMISSIONS)
+                return
             }
 
             // If the session wasn't created yet, don't resume rendering.
@@ -167,8 +169,9 @@ class ArCoreFaceView(activity:Activity,context: Context, messenger: BinaryMessen
         try {
             arSceneView?.resume()
         } catch (ex: CameraNotAvailableException) {
+            // The camera being briefly held elsewhere is recoverable. Closing
+            // the activity over it tore down the whole single-activity app.
             ArCoreUtils.displayError(activity, "Unable to get camera", ex)
-            activity.finish()
             return
         }
 

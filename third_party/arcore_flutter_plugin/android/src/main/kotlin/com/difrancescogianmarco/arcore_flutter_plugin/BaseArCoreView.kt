@@ -33,17 +33,25 @@ open class BaseArCoreView(val activity: Activity, context: Context, messenger: B
 
     init {
         methodChannel.setMethodCallHandler(this)
-        if (ArCoreUtils.checkIsSupportedDeviceOrFinish(activity)) {
+        // An unsupported device is reported to Flutter rather than closing the
+        // activity, and camera permission stays owned by Flutter, which only
+        // mounts this view once CAMERA is granted.
+        if (ArCoreUtils.isSupportedDevice(activity)) {
             isSupportedDevice = true
             arSceneView = ArSceneView(context)
-            ArCoreUtils.requestCameraPermission(activity, RC_PERMISSIONS)
             setupLifeCycle(context)
         }
     }
 
+    /**
+     * Logs when debugging is enabled.
+     *
+     * This called itself rather than the platform logger, so any debug build
+     * that logged recursed until the main thread died of StackOverflowError.
+     */
     protected fun debugLog(message: String) {
         if (debug) {
-            debugLog(message)
+            Log.i(TAG, message)
         }
     }
 
@@ -95,8 +103,14 @@ open class BaseArCoreView(val activity: Activity, context: Context, messenger: B
         }
     }
 
+    /**
+     * Default handler for views that do not override it.
+     *
+     * Returning without completing left every Dart future pending forever, so
+     * an unhandled call now reports itself as unimplemented.
+     */
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
-
+        result.notImplemented()
     }
 
     open fun onResume() {

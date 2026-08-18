@@ -6358,6 +6358,7 @@
   "arErrorArcoreUnsupportedDevice": "This device does not support AR.",
   "arErrorArcoreInstallDeclined": "AR needs Google Play Services for AR. You can install it and try again.",
   "arErrorSessionUnavailable": "AR is unavailable right now. Try again.",
+  "arErrorCameraPermissionRequired": "AR needs camera access. Allow it to continue.",
   "arTrackingInitializing": "AR is still locating itself. Move your phone slowly.",
   "arTrackingInsufficientLight": "More light will help AR understand the space.",
   "arTrackingExcessiveMotion": "Move your phone more slowly.",
