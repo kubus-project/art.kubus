@@ -3,7 +3,6 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
-import 'package:art_kubus/providers/kubus_node_provider.dart';
 import 'package:art_kubus/providers/spatial_capture_provider.dart';
 import 'package:art_kubus/services/spatial_capture_policy.dart';
 import 'package:art_kubus/services/spatial_capture_session.dart';
@@ -146,7 +145,7 @@ void main() {
         // The provider refuses, and says so with a typed exception rather than
         // a raw StateError carrying an English sentence.
         await expectLater(
-          provider.finish(_UnusedNodeProvider()),
+          provider.finish(),
           throwsA(isA<SpatialCaptureNotReadyException>()),
         );
 
@@ -165,14 +164,4 @@ void main() {
       },
     );
   });
-}
-
-/// `finish()` rejects before it ever touches the node.
-///
-/// Every member throws, so the test fails loudly if a future change starts
-/// contacting the node before checking whether the capture is finishable.
-class _UnusedNodeProvider implements KubusNodeProvider {
-  @override
-  dynamic noSuchMethod(Invocation invocation) =>
-      throw StateError('the node must not be reached for an unready capture');
 }

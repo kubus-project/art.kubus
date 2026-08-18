@@ -1,13 +1,11 @@
 package com.difrancescogianmarco.arcore_flutter_plugin
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.Log
 import android.widget.ImageView
-import android.widget.Toast
 import com.difrancescogianmarco.arcore_flutter_plugin.flutter_models.FlutterArCoreNode
 import com.google.ar.sceneform.assets.RenderableSource
 import com.google.ar.sceneform.rendering.Material
@@ -27,7 +25,6 @@ class RenderableCustomFactory {
 
         val TAG = "RenderableCustomFactory"
 
-        @SuppressLint("ShowToast")
         fun makeRenderable(context: Context, flutterArCoreNode: FlutterArCoreNode, handler: RenderableHandler) {
 
             if (flutterArCoreNode.dartType == "ArCoreReferenceNode") {

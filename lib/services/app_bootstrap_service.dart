@@ -17,6 +17,7 @@ import '../providers/institution_provider.dart';
 import '../providers/navigation_provider.dart';
 import '../providers/marker_management_provider.dart';
 import '../providers/kubus_node_provider.dart';
+import '../providers/spatial_library_provider.dart';
 import '../providers/presence_provider.dart';
 import '../providers/profile_provider.dart';
 import '../providers/saved_items_provider.dart';
@@ -62,6 +63,7 @@ class AppBootstrapService {
     final presenceProvider = context.read<PresenceProvider>();
     final markerManagementProvider = context.read<MarkerManagementProvider>();
     final kubusNodeProvider = context.read<KubusNodeProvider>();
+    final spatialLibraryProvider = context.read<SpatialLibraryProvider>();
     final availabilityOperatorProvider =
         context.read<AvailabilityOperatorProvider>();
 
@@ -95,6 +97,7 @@ class AppBootstrapService {
       _runTask('presence', presenceProvider.initialize),
       if (AppConfig.isFeatureEnabled('availabilityNodes'))
         _runTask('kubus_node', kubusNodeProvider.initialize),
+      _runTask('spatial_library', spatialLibraryProvider.initialize),
       if (AppConfig.isFeatureEnabled('availabilityNodes') &&
           hasAuth &&
           (resolvedWallet ?? '').trim().isNotEmpty)

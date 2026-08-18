@@ -89,6 +89,12 @@ class KubusNodePairingPayload {
     if (sessionId.isEmpty || secret.isEmpty) {
       throw const FormatException('Invalid pairing session');
     }
+    final endpoints = (node['endpoints'] as List<dynamic>? ?? const [])
+        .map((value) => Uri.tryParse(value.toString()))
+        .whereType<Uri>()
+        .where(_isAllowedEndpoint)
+        .where((value) => value != endpoint)
+        .toList(growable: false);
     return KubusNodePairingPayload(
       endpoint: endpoint,
       sessionId: sessionId,
@@ -96,6 +102,7 @@ class KubusNodePairingPayload {
       nodeId: (node['id'] ?? node['nodeId'] ?? json['nodeId'] ?? '')
           .toString()
           .trim(),
+      alternateEndpoints: endpoints,
       fingerprint: (node['fingerprint'] ?? '').toString(),
       label: (node['label'] ?? '').toString(),
     );
@@ -349,6 +356,7 @@ class SpatialVariant {
     required this.mimeType,
     required this.format,
     required this.storageClass,
+    this.localPath,
   });
   final String role;
   final String cid;
@@ -356,6 +364,17 @@ class SpatialVariant {
   final String mimeType;
   final String format;
   final String storageClass;
+  final String? localPath;
+
+  SpatialVariant copyWith({String? localPath}) => SpatialVariant(
+        role: role,
+        cid: cid,
+        sizeBytes: sizeBytes,
+        mimeType: mimeType,
+        format: format,
+        storageClass: storageClass,
+        localPath: localPath ?? this.localPath,
+      );
   factory SpatialVariant.fromJson(Map<String, dynamic> json) => SpatialVariant(
         role: (json['role'] ?? '').toString(),
         cid: (json['cid'] ?? '').toString(),
@@ -363,6 +382,7 @@ class SpatialVariant {
         mimeType: (json['mimeType'] ?? '').toString(),
         format: (json['format'] ?? '').toString(),
         storageClass: (json['storageClass'] ?? '').toString(),
+        localPath: json['localPath']?.toString(),
       );
 }
 

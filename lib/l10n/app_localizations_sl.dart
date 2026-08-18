@@ -16113,12 +16113,125 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get arCameraSwitching => 'Preklapljam kamero …';
+
   @override
   String get spatialCaptureDiscardAndRestart => 'Zavrzi in začni znova';
 
   @override
   String get spatialCaptureGuideFullUnusable =>
       'Zajem je dosegel omejitev, preden je zajel dovolj umetnine. Začnite znova in se več premikajte okoli nje.';
+
   @override
   String get arCaptureFrameFailed => 'Zajem sličice ni uspel. Poskusite znova.';
+
+  @override
+  String get spatialCaptureSaved =>
+      'Zajeto zasebno na tem telefonu. Obdelajte zdaj ali pozneje v Prostorski knjižnici.';
+
+  @override
+  String get spatialLibraryTitle => 'Prostorska knjižnica';
+
+  @override
+  String get spatialLibraryOpen => 'Odpri knjižnico';
+
+  @override
+  String get spatialLibraryEmpty =>
+      'Vaši zasebni prostorski zajemi bodo prikazani tukaj.';
+
+  @override
+  String get spatialLibraryFilterAll => 'Vse';
+
+  @override
+  String get spatialLibraryFilterCaptured => 'Zajeto';
+
+  @override
+  String get spatialLibraryFilterProcessing => 'Obdelava';
+
+  @override
+  String get spatialLibraryFilterReady => 'Pripravljeno';
+
+  @override
+  String get spatialLibraryFilterPublished => 'Objavljeno';
+
+  @override
+  String get spatialLibraryStatusCaptured => 'Zajeto';
+
+  @override
+  String get spatialLibraryStatusWaiting => 'Čaka na Node';
+
+  @override
+  String get spatialLibraryStatusUploading => 'Nalaganje';
+
+  @override
+  String get spatialLibraryStatusQueued => 'V čakalni vrsti';
+
+  @override
+  String get spatialLibraryStatusProcessing => 'Obdelava';
+
+  @override
+  String get spatialLibraryStatusDownloading => 'Prenašanje';
+
+  @override
+  String get spatialLibraryStatusReady => 'Pripravljeno';
+
+  @override
+  String get spatialLibraryStatusPublished => 'Objavljeno';
+
+  @override
+  String get spatialLibraryStatusFailed => 'Neuspešno';
+
+  @override
+  String get spatialLibraryPrivate => 'Zasebno';
+
+  @override
+  String get spatialLibraryPublic => 'Javno';
+
+  @override
+  String get spatialLibraryRawStorage => 'Izvorni zajem';
+
+  @override
+  String get spatialLibraryProcessedStorage => 'Obdelano';
+
+  @override
+  String get spatialLibraryTotalStorage => 'Skupaj';
+
+  @override
+  String get spatialLibraryProcess => 'Obdelaj';
+
+  @override
+  String get spatialLibraryRetryUpload => 'Ponovi nalaganje';
+
+  @override
+  String get spatialLibraryRetryProcessing => 'Ponovi obdelavo';
+
+  @override
+  String get spatialLibraryView => 'Ogled';
+
+  @override
+  String get spatialLibraryPublish => 'Objavi';
+
+  @override
+  String get spatialLibraryShare => 'Deli';
+
+  @override
+  String get spatialLibraryDeleteRaw => 'Izbriši izvorni zajem';
+
+  @override
+  String get spatialLibraryDeleteProcessed =>
+      'Izbriši lokalni obdelani rezultat';
+
+  @override
+  String get spatialLibraryDeleteRecord => 'Izbriši lokalni zapis';
+
+  @override
+  String get spatialLibraryDeleteRecordWarning =>
+      'To izbriše samo lokalni zapis. Objavljeni javni arhiv bo ostal objavljen.';
+
+  @override
+  String get spatialLibraryProcessorUnavailable =>
+      'Noben procesor ni na voljo. Vaš zasebni zajem ostaja varno shranjen.';
+
+  @override
+  String get spatialLibraryOperationFailed =>
+      'Dejanja ni bilo mogoče dokončati. Vaš zasebni izvor ostaja nedotaknjen.';
 }

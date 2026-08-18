@@ -25,6 +25,7 @@ import '../../providers/artwork_provider.dart';
 import '../../providers/kubus_node_provider.dart';
 import '../../providers/spatial_capture_provider.dart';
 import '../../services/ar_camera_orchestrator.dart';
+import '../../services/ar_mode_session_controller.dart';
 import '../../services/ar_placement_controller.dart';
 import '../../services/ar_placement_preview.dart';
 import '../../services/ar_error_messages.dart';
@@ -872,6 +873,8 @@ class _ARScreenState extends State<ARScreen>
                   modeIcon: _iconForMode(_currentMode),
                   isDark: themeProvider.isDarkMode,
                   onOpenSettings: _showARSettings,
+                  onOpenLibrary: () =>
+                      Navigator.of(context).pushNamed('/spatial-library'),
                   flashEnabled: _flashEnabled,
                   onToggleFlash: _currentMode == 'scan' &&
                           _scannerController != null &&
@@ -1290,16 +1293,6 @@ class _ARScreenState extends State<ARScreen>
   /// was then rejected by the provider, stranding the capture.
   List<ArSecondaryAction> _secondaryActions(AppLocalizations l10n) {
     if (_currentMode == 'create') {
-      final capture = context.watch<SpatialCaptureProvider>();
-      if (capture.state == SpatialCaptureState.error) {
-        return [
-          ArSecondaryAction(
-            label: l10n.spatialCaptureRetryTransfer,
-            icon: Icons.refresh,
-            onPressed: _retrySpatialTransfer,
-          ),
-        ];
-      }
       // Finish capture is the single primary action in Spatial mode. A second
       // secondary Finish made the destructive transition look duplicated.
       return const [];
@@ -1523,13 +1516,7 @@ class _ARScreenState extends State<ARScreen>
         // duplicates the selected dock mode and obscures the rendered scene.
         return null;
       case 'create':
-        final busy = const {
-          SpatialCaptureState.transferring,
-          SpatialCaptureState.awaitingProcessingChoice,
-          SpatialCaptureState.queued,
-          SpatialCaptureState.processing,
-          SpatialCaptureState.verifying,
-        }.contains(capture.state);
+        final busy = capture.state == SpatialCaptureState.transferring;
         if (capture.state == SpatialCaptureState.capturing) {
           return ArPrimaryAction(
             label: l10n.spatialCaptureFinish,
@@ -1612,11 +1599,7 @@ class _ARScreenState extends State<ARScreen>
   Future<void> _acquireCameraFor(String modeId) async {
     await _cameraOrchestrator.requestMode(modeId);
     if (!mounted) return;
-    if (modeId == 'view') {
-      await _spatialTracking.pauseSession();
-    } else {
-      await _spatialTracking.resumeSession();
-    }
+    await const ArModeSessionController().apply(modeId, _spatialTracking);
     if (!mounted) return;
     if (modeId == 'place') _armPlacementForSelection();
   }
@@ -1650,14 +1633,6 @@ class _ARScreenState extends State<ARScreen>
 
   Future<void> _captureSpatialFrame() async {
     final capture = context.read<SpatialCaptureProvider>();
-    if (capture.state == SpatialCaptureState.reviewReady) {
-      await _reviewSpatialResult(
-        capture,
-        context.read<KubusNodeProvider>(),
-        remote: capture.remoteResult != null,
-      );
-      return;
-    }
     if (capture.state != SpatialCaptureState.capturing) {
       final profile = context.read<ProfileProvider>().currentUser;
       final wallet = _resolveCurrentWalletAddress();
@@ -1772,7 +1747,8 @@ class _ARScreenState extends State<ARScreen>
   }
 
   /// Resumes a transfer that failed, re-sending only what never landed.
-  Future<void> _retrySpatialTransfer() async {
+  @visibleForTesting
+  Future<void> retrySpatialTransfer() async {
     final capture = context.read<SpatialCaptureProvider>();
     final node = context.read<KubusNodeProvider>();
     if (!node.isPaired) {
@@ -1857,7 +1833,7 @@ class _ARScreenState extends State<ARScreen>
     _changeMode('create');
   }
 
-  /// Finishes the capture and streams it to the paired node.
+  /// Finishes the capture into the phone's private Spatial Library.
   ///
   /// Nothing here stops sampling before the capture has been accepted. The old
   /// order — stop the sampler, then call `finish()` — left a rejected capture
@@ -1867,7 +1843,6 @@ class _ARScreenState extends State<ARScreen>
   /// resumable.
   Future<void> _finishSpatialCapture() async {
     final capture = context.read<SpatialCaptureProvider>();
-    final node = context.read<KubusNodeProvider>();
     final l10n = AppLocalizations.of(context)!;
 
     // Guard before touching the sampler. `canFinish` is the same authority the
@@ -1880,25 +1855,30 @@ class _ARScreenState extends State<ARScreen>
       );
       return;
     }
-    if (!node.isPaired) {
+    // Only now: the capture is going to durable storage, so sampling stops.
+    _stopSpatialSampling();
+    try {
+      await capture.finish();
+    } catch (error) {
+      if (!mounted) return;
+      AppConfig.debugPrint('ARScreen: capture library save failed: $error');
       ScaffoldMessenger.of(context).showKubusSnackBar(
-        SnackBar(content: Text(l10n.spatialCaptureNodeRequired)),
-        tone: KubusSnackBarTone.neutral,
+        SnackBar(content: Text(l10n.spatialLibraryOperationFailed)),
+        tone: KubusSnackBarTone.error,
       );
       return;
     }
-
-    // Only now: the capture is going to be handed over, so sampling stops.
-    _stopSpatialSampling();
-    try {
-      await capture.finish(node);
-    } catch (error) {
-      if (!mounted) return;
-      _reportTransferFailure(error);
-      return;
-    }
     if (!mounted) return;
-    await _continueAfterTransfer(capture, node);
+    ScaffoldMessenger.of(context).showKubusSnackBar(
+      SnackBar(
+        content: Text(l10n.spatialCaptureSaved),
+        action: SnackBarAction(
+          label: l10n.spatialLibraryOpen,
+          onPressed: () => Navigator.of(context).pushNamed('/spatial-library'),
+        ),
+      ),
+      tone: KubusSnackBarTone.success,
+    );
   }
 
   /// Runs the processing choice and review flow for a delivered capture.

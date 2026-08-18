@@ -45,6 +45,8 @@ Future<void> _pumpChrome(
   ArTransferReadout? transfer,
   String selectedModeId = 'place',
   bool enabled = true,
+  bool showPrimary = true,
+  String primaryLabel = _primaryLabel,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1.0;
@@ -80,11 +82,13 @@ Future<void> _pumpChrome(
               modes: _modes,
               selectedModeId: selectedModeId,
               onSelectMode: (_) {},
-              primaryAction: ArPrimaryAction(
-                label: _primaryLabel,
-                icon: Icons.add_location,
-                onPressed: enabled ? () {} : null,
-              ),
+              primaryAction: showPrimary
+                  ? ArPrimaryAction(
+                      label: primaryLabel,
+                      icon: Icons.add_location,
+                      onPressed: enabled ? () {} : null,
+                    )
+                  : null,
               secondaryActions: secondaryActions,
             ),
           ),
@@ -220,6 +224,32 @@ void main() {
       // does not jump as capture state changes.
       expect(find.text(_primaryLabel), findsOneWidget);
       expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('Spatial exposes exactly one Finish capture action',
+        (tester) async {
+      await _pumpChrome(
+        tester,
+        const Size(390, 844),
+        1,
+        selectedModeId: 'create',
+        primaryLabel: 'Finish capture',
+      );
+
+      expect(find.text('Finish capture'), findsOneWidget);
+    });
+
+    testWidgets('View has no duplicate primary action', (tester) async {
+      await _pumpChrome(
+        tester,
+        const Size(390, 844),
+        1,
+        selectedModeId: 'view',
+        showPrimary: false,
+      );
+
+      expect(find.byWidgetPredicate((widget) => widget is ElevatedButton),
+          findsNothing);
     });
   });
 

@@ -27552,10 +27552,6 @@ abstract class AppLocalizations {
   /// **'Rotate'**
   String get arPlacementRotate;
 
-  /// No description provided for @arCaptureFrameFailed.
-  ///
-  /// In en, this message translates to:
-  /// **'Could not capture a frame. Try again.'**
   /// No description provided for @spatialCaptureGuideIdle.
   ///
   /// In en, this message translates to:
@@ -27649,7 +27645,7 @@ abstract class AppLocalizations {
   /// No description provided for @spatialTransferUploading.
   ///
   /// In en, this message translates to:
-  /// **'Uploading $done of $total files'**
+  /// **'Uploading {done} of {total} files'**
   String spatialTransferUploading(int done, int total);
 
   /// No description provided for @spatialArchiveEmptyTitle.
@@ -27679,7 +27675,7 @@ abstract class AppLocalizations {
   /// No description provided for @spatialRecoveryBody.
   ///
   /// In en, this message translates to:
-  /// **'$count tracked views from an interrupted capture are still on this device.'**
+  /// **'{count} tracked views from an interrupted capture are still on this device.'**
   String spatialRecoveryBody(int count);
 
   /// No description provided for @spatialRecoveryResume.
@@ -27765,7 +27761,222 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Capture reached its limit before covering enough of the artwork. Start over and move around it more.'**
   String get spatialCaptureGuideFullUnusable;
+
+  /// No description provided for @arCaptureFrameFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not capture a frame. Try again.'**
   String get arCaptureFrameFailed;
+
+  /// No description provided for @spatialCaptureSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Captured privately on this phone. Process it now or later from Spatial Library.'**
+  String get spatialCaptureSaved;
+
+  /// No description provided for @spatialLibraryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Spatial Library'**
+  String get spatialLibraryTitle;
+
+  /// No description provided for @spatialLibraryOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Open library'**
+  String get spatialLibraryOpen;
+
+  /// No description provided for @spatialLibraryEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Your private spatial captures will appear here.'**
+  String get spatialLibraryEmpty;
+
+  /// No description provided for @spatialLibraryFilterAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get spatialLibraryFilterAll;
+
+  /// No description provided for @spatialLibraryFilterCaptured.
+  ///
+  /// In en, this message translates to:
+  /// **'Captured'**
+  String get spatialLibraryFilterCaptured;
+
+  /// No description provided for @spatialLibraryFilterProcessing.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing'**
+  String get spatialLibraryFilterProcessing;
+
+  /// No description provided for @spatialLibraryFilterReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready'**
+  String get spatialLibraryFilterReady;
+
+  /// No description provided for @spatialLibraryFilterPublished.
+  ///
+  /// In en, this message translates to:
+  /// **'Published'**
+  String get spatialLibraryFilterPublished;
+
+  /// No description provided for @spatialLibraryStatusCaptured.
+  ///
+  /// In en, this message translates to:
+  /// **'Captured'**
+  String get spatialLibraryStatusCaptured;
+
+  /// No description provided for @spatialLibraryStatusWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for Node'**
+  String get spatialLibraryStatusWaiting;
+
+  /// No description provided for @spatialLibraryStatusUploading.
+  ///
+  /// In en, this message translates to:
+  /// **'Uploading'**
+  String get spatialLibraryStatusUploading;
+
+  /// No description provided for @spatialLibraryStatusQueued.
+  ///
+  /// In en, this message translates to:
+  /// **'Queued'**
+  String get spatialLibraryStatusQueued;
+
+  /// No description provided for @spatialLibraryStatusProcessing.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing'**
+  String get spatialLibraryStatusProcessing;
+
+  /// No description provided for @spatialLibraryStatusDownloading.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading'**
+  String get spatialLibraryStatusDownloading;
+
+  /// No description provided for @spatialLibraryStatusReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready'**
+  String get spatialLibraryStatusReady;
+
+  /// No description provided for @spatialLibraryStatusPublished.
+  ///
+  /// In en, this message translates to:
+  /// **'Published'**
+  String get spatialLibraryStatusPublished;
+
+  /// No description provided for @spatialLibraryStatusFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed'**
+  String get spatialLibraryStatusFailed;
+
+  /// No description provided for @spatialLibraryPrivate.
+  ///
+  /// In en, this message translates to:
+  /// **'Private'**
+  String get spatialLibraryPrivate;
+
+  /// No description provided for @spatialLibraryPublic.
+  ///
+  /// In en, this message translates to:
+  /// **'Public'**
+  String get spatialLibraryPublic;
+
+  /// No description provided for @spatialLibraryRawStorage.
+  ///
+  /// In en, this message translates to:
+  /// **'Raw source'**
+  String get spatialLibraryRawStorage;
+
+  /// No description provided for @spatialLibraryProcessedStorage.
+  ///
+  /// In en, this message translates to:
+  /// **'Processed'**
+  String get spatialLibraryProcessedStorage;
+
+  /// No description provided for @spatialLibraryTotalStorage.
+  ///
+  /// In en, this message translates to:
+  /// **'Total'**
+  String get spatialLibraryTotalStorage;
+
+  /// No description provided for @spatialLibraryProcess.
+  ///
+  /// In en, this message translates to:
+  /// **'Process'**
+  String get spatialLibraryProcess;
+
+  /// No description provided for @spatialLibraryRetryUpload.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry upload'**
+  String get spatialLibraryRetryUpload;
+
+  /// No description provided for @spatialLibraryRetryProcessing.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry processing'**
+  String get spatialLibraryRetryProcessing;
+
+  /// No description provided for @spatialLibraryView.
+  ///
+  /// In en, this message translates to:
+  /// **'View'**
+  String get spatialLibraryView;
+
+  /// No description provided for @spatialLibraryPublish.
+  ///
+  /// In en, this message translates to:
+  /// **'Publish'**
+  String get spatialLibraryPublish;
+
+  /// No description provided for @spatialLibraryShare.
+  ///
+  /// In en, this message translates to:
+  /// **'Share'**
+  String get spatialLibraryShare;
+
+  /// No description provided for @spatialLibraryDeleteRaw.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete raw capture'**
+  String get spatialLibraryDeleteRaw;
+
+  /// No description provided for @spatialLibraryDeleteProcessed.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete local processed result'**
+  String get spatialLibraryDeleteProcessed;
+
+  /// No description provided for @spatialLibraryDeleteRecord.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete local record'**
+  String get spatialLibraryDeleteRecord;
+
+  /// No description provided for @spatialLibraryDeleteRecordWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'This removes the local record only. A published public archive will stay published.'**
+  String get spatialLibraryDeleteRecordWarning;
+
+  /// No description provided for @spatialLibraryProcessorUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No processor is available. Your private capture remains safely stored.'**
+  String get spatialLibraryProcessorUnavailable;
+
+  /// No description provided for @spatialLibraryOperationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'That action could not be completed. Your private source remains intact.'**
+  String get spatialLibraryOperationFailed;
 }
 
 class _AppLocalizationsDelegate

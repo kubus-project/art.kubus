@@ -84,8 +84,12 @@ class ArCoreFaceView(activity:Activity,context: Context, messenger: BinaryMessen
                     }
                 }
                 "loadMesh" -> {
-                    val map = call.arguments as HashMap<*, *>
-                    val textureBytes = map["textureBytes"] as ByteArray
+                    val map = call.arguments as? Map<*, *>
+                    val textureBytes = map?.get("textureBytes") as? ByteArray
+                    if (textureBytes == null) {
+                        result.error("invalid_mesh_texture", "textureBytes must be a byte array", null)
+                        return
+                    }
                     val skin3DModelFilename = map["skin3DModelFilename"] as? String
                     loadMesh(textureBytes, skin3DModelFilename)
                     result.success(null)
@@ -105,7 +109,7 @@ class ArCoreFaceView(activity:Activity,context: Context, messenger: BinaryMessen
         }
     }
 
-    fun loadMesh(textureBytes: ByteArray?, skin3DModelFilename: String?) {
+    fun loadMesh(textureBytes: ByteArray, skin3DModelFilename: String?) {
         if (skin3DModelFilename != null) {
             // Load the face regions renderable.
             // This is a skinned model that renders 3D objects mapped to the regions of the augmented face.
@@ -122,7 +126,7 @@ class ArCoreFaceView(activity:Activity,context: Context, messenger: BinaryMessen
         // Load the face mesh texture.
         Texture.builder()
                 //.setSource(activity, Uri.parse("fox_face_mesh_texture.png"))
-                .setSource(BitmapFactory.decodeByteArray(textureBytes, 0, textureBytes!!.size))
+                .setSource(BitmapFactory.decodeByteArray(textureBytes, 0, textureBytes.size))
                 .build()
                 .thenAccept { texture -> faceMeshTexture = texture }
     }

@@ -100,6 +100,7 @@ class ArStatusHeader extends StatelessWidget {
     this.isDark = true,
     this.onToggleFlash,
     this.flashEnabled = false,
+    this.onOpenLibrary,
   });
 
   final String modeLabel;
@@ -108,6 +109,7 @@ class ArStatusHeader extends StatelessWidget {
   final bool isDark;
   final VoidCallback? onToggleFlash;
   final bool flashEnabled;
+  final VoidCallback? onOpenLibrary;
 
   @override
   Widget build(BuildContext context) {
@@ -164,6 +166,13 @@ class ArStatusHeader extends StatelessWidget {
               icon: flashEnabled ? Icons.flash_on : Icons.flash_off,
               tint: flashEnabled ? AppColorUtils.amberAccent : null,
               onPressed: onToggleFlash!,
+            ),
+            const SizedBox(width: KubusSpacing.sm),
+          ],
+          if (onOpenLibrary != null) ...[
+            _HeaderAction(
+              icon: Icons.video_library_outlined,
+              onPressed: onOpenLibrary!,
             ),
             const SizedBox(width: KubusSpacing.sm),
           ],

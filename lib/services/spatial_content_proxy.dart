@@ -43,6 +43,12 @@ class SpatialContentProxy {
       return;
     }
     for (final candidate in _candidates) {
+      if (candidate.uri.scheme == 'file') {
+        if (await _serveLocalFile(request, File.fromUri(candidate.uri))) {
+          return;
+        }
+        continue;
+      }
       final client = HttpClient();
       try {
         final upstream = await client.getUrl(candidate.uri);
@@ -80,6 +86,36 @@ class SpatialContentProxy {
     }
     request.response.statusCode = HttpStatus.badGateway;
     await request.response.close();
+  }
+
+  Future<bool> _serveLocalFile(HttpRequest request, File file) async {
+    if (!await file.exists()) return false;
+    final total = await file.length();
+    var start = 0;
+    var end = total - 1;
+    final range = request.headers.value(HttpHeaders.rangeHeader);
+    if (range != null) {
+      final match = RegExp(r'^bytes=(\d+)-(\d*)$').firstMatch(range.trim());
+      if (match == null) return false;
+      start = int.parse(match.group(1)!);
+      if ((match.group(2) ?? '').isNotEmpty) {
+        end = int.parse(match.group(2)!);
+      }
+      if (start < 0 || start >= total || end < start) return false;
+      if (end >= total) end = total - 1;
+      request.response.statusCode = HttpStatus.partialContent;
+      request.response.headers.set(
+        HttpHeaders.contentRangeHeader,
+        'bytes $start-$end/$total',
+      );
+    } else {
+      request.response.statusCode = HttpStatus.ok;
+    }
+    request.response.headers.contentType = ContentType.binary;
+    request.response.headers.set(HttpHeaders.acceptRangesHeader, 'bytes');
+    request.response.contentLength = end - start + 1;
+    await file.openRead(start, end + 1).pipe(request.response);
+    return true;
   }
 
   Future<void> close() async {

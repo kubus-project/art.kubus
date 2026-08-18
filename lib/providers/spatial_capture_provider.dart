@@ -495,18 +495,13 @@ class SpatialCaptureProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Streams the capture to the paired node and finalizes it there.
+  /// Commits a finished capture to the phone's private Spatial Library.
   ///
-  /// Files travel as raw bytes into a node-side draft, one at a time, straight
-  /// off disk. Nothing assembles the capture into a single in-memory document:
-  /// the previous base64 package inflated the payload by a third and required
-  /// both ends to hold every frame at once, which a continuous mobile capture
-  /// cannot afford.
-  ///
-  /// An interrupted transfer resumes against the same draft, so a retry
-  /// re-sends only what is missing and never creates a second durable record.
-  Future<void> finish(KubusNodeProvider node) async {
-    var store = _store;
+  /// Upload and processing are separate resumable library actions. A Node is
+  /// intentionally absent from this contract, so processor availability can
+  /// never turn a successful capture into a failed capture.
+  Future<SpatialLibraryRecord> finish() async {
+    final store = _store;
     if (store == null || !_coverage.isReadyToFinish) {
       throw const SpatialCaptureNotReadyException();
     }
@@ -517,22 +512,29 @@ class SpatialCaptureProvider extends ChangeNotifier {
     );
     notifyListeners();
     try {
-      // The capture becomes durable private phone data before a Node receives
-      // one byte. If the Node is offline, the source still remains visible and
-      // retryable in the library after restart.
-      final record = await _libraryStore.promoteCapture(store);
-      final reopened =
-          await SpatialCaptureStore.open(Directory(record.sourcePath));
-      if (reopened == null) {
-        throw StateError('Spatial Library source could not be reopened.');
-      }
-      _store = reopened;
-      store = reopened;
-      await _streamToNode(node, store);
-      _state = SpatialCaptureState.awaitingProcessingChoice;
+      final coverage = <String, dynamic>{
+        'viewpointCount': _coverage.viewpointCount,
+        'baselineMeters': _coverage.baselineMeters,
+        'progress': _coverage.progress,
+        'grade': _coverage.grade.name,
+      };
+      await store.writeManifest(extra: coverage);
+      final record = await _libraryStore.promoteCapture(
+        store,
+        coverageMetadata: coverage,
+        qualityMetadata: <String, dynamic>{
+          'acceptedSamples': store.sampleCount,
+          'depthAvailable': store.depthObserved,
+        },
+      );
+      _store = null;
+      _captureId = record.localSpatialId;
+      _state = SpatialCaptureState.complete;
+      _transfer = const SpatialTransferProgress();
       notifyListeners();
+      return record;
     } catch (error) {
-      // The capture stays on disk so the transfer can be retried.
+      // Promotion never deletes the original on failure.
       _state = SpatialCaptureState.error;
       _error = _describe(error);
       _transfer = const SpatialTransferProgress();

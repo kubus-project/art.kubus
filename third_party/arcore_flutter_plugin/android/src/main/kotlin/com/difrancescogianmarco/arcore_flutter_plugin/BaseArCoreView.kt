@@ -154,7 +154,7 @@ open class BaseArCoreView(val activity: Activity, context: Context, messenger: B
 //            arSceneView?.resume()
 //        } catch (ex: CameraNotAvailableException) {
 //            ArCoreUtils.displayError(activity, "Unable to get camera", ex)
-//            activity.finish()
+//            // Session failures are reported to Flutter; never close the host Activity.
 //            return
 //        }
     }

@@ -65,6 +65,7 @@ import 'providers/deferred_onboarding_provider.dart';
 import 'providers/pending_action_provider.dart';
 import 'providers/kubus_node_provider.dart';
 import 'providers/spatial_capture_provider.dart';
+import 'providers/spatial_library_provider.dart';
 import 'providers/availability_operator_provider.dart';
 import 'core/app_initializer.dart';
 import 'core/startup_trace.dart';
@@ -86,6 +87,7 @@ import 'screens/art/art_detail_screen.dart';
 import 'screens/desktop/art/desktop_artwork_detail_screen.dart';
 import 'screens/desktop/desktop_shell.dart';
 import 'screens/node/kubus_node_screen.dart';
+import 'screens/spatial/spatial_library_screen.dart';
 import 'screens/settings/availability_node_operator_screen.dart';
 import 'screens/desktop/web3/desktop_connect_wallet_screen.dart';
 import 'screens/web3/wallet/connectwallet_screen.dart';
@@ -472,6 +474,15 @@ class _AppLauncherState extends State<AppLauncher> {
               ChangeNotifierProvider(create: (context) => AppRefreshProvider()),
               ChangeNotifierProvider(create: (context) => ConfigProvider()),
               ChangeNotifierProvider(create: (context) => KubusNodeProvider()),
+              ChangeNotifierProxyProvider<KubusNodeProvider,
+                  SpatialLibraryProvider>(
+                create: (_) => SpatialLibraryProvider(),
+                update: (_, node, library) {
+                  final value = library ?? SpatialLibraryProvider();
+                  value.bindNode(node);
+                  return value;
+                },
+              ),
               ChangeNotifierProvider(
                   create: (context) => SpatialCaptureProvider()),
               ChangeNotifierProvider(
@@ -914,6 +925,7 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
   Map<String, WidgetBuilder> get _namedRoutes => {
         ...ShellRoutes.builders,
         '/ar': (context) => const ARScreen(),
+        '/spatial-library': (context) => const SpatialLibraryScreen(),
         '/artwork': (context) {
           final args = ModalRoute.of(context)?.settings.arguments;
           String? artworkId;

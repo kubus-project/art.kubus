@@ -6,6 +6,8 @@ import 'dart:typed_data';
 
 import 'package:art_kubus/providers/kubus_node_provider.dart';
 import 'package:art_kubus/providers/spatial_capture_provider.dart';
+import 'package:art_kubus/providers/spatial_library_provider.dart';
+import 'package:art_kubus/models/kubus_node_models.dart';
 import 'package:art_kubus/services/kubus_node_service.dart';
 import 'package:art_kubus/services/spatial_capture_policy.dart';
 import 'package:art_kubus/services/spatial_library_store.dart';
@@ -34,6 +36,10 @@ class FakeKubusNode {
   final Map<String, Map<String, List<int>>> drafts = {};
   final Map<String, Map<String, dynamic>> draftMetadata = {};
   final List<String> committed = [];
+  final List<int> processedVariant = List<int>.generate(4096, (i) => i % 251);
+  static const manifestCid = 'Qmaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+  static const variantCid = 'Qmbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+  String? committedCaptureId;
 
   /// Every request line, so a test can assert nothing base64-shaped was posted.
   final List<String> requests = [];
@@ -73,6 +79,59 @@ class FakeKubusNode {
         'nodeId': 'fake-node-1',
         'fingerprint': 'fake-node-fingerprint',
       });
+    }
+
+    if (request.method == 'POST' && path == '/local/v1/jobs') {
+      return _json(request, 201, {
+        'id': 'job-1',
+        'type': 'spatial.reconstruct',
+        'state': 'queued',
+        'progress': 0,
+      });
+    }
+
+    if (request.method == 'GET' && path == '/local/v1/jobs/job-1') {
+      return _json(request, 200, {
+        'id': 'job-1',
+        'type': 'spatial.reconstruct',
+        'state': 'completed',
+        'progress': 1,
+        'output': {'id': 'spatial-1'},
+      });
+    }
+
+    if (request.method == 'GET' && path == '/local/v1/spatial/spatial-1') {
+      return _json(request, 200, {
+        'id': 'spatial-1',
+        'manifestCid': manifestCid,
+        'manifest': {
+          'schema': 'kubus.spatial/1',
+          'id': 'spatial-1',
+          'type': 'gaussianSplat',
+          'artworkId': 'art-1',
+          'captureId': committedCaptureId,
+          'capturedAt': '2026-08-18T00:00:00.000Z',
+          'variants': [
+            {
+              'role': 'spatial_mobile',
+              'cid': variantCid,
+              'sizeBytes': processedVariant.length,
+              'mimeType': 'application/octet-stream',
+              'format': 'spz',
+              'storageClass': 'warm',
+            },
+          ],
+        },
+      });
+    }
+
+    if (request.method == 'GET' && path == '/local/v1/content/$variantCid') {
+      request.response.statusCode = 200;
+      request.response.headers.contentType = ContentType.binary;
+      request.response.contentLength = processedVariant.length;
+      request.response.add(processedVariant);
+      await request.response.close();
+      return;
     }
 
     if (request.method == 'POST' && path == '/local/v1/captures/drafts') {
@@ -134,8 +193,9 @@ class FakeKubusNode {
         return _json(request, 400, {'error': 'capture_package_empty'});
       }
       committed.add(id);
+      committedCaptureId = 'capture-$id';
       return _json(request, 201, {
-        'id': 'capture-$id',
+        'id': committedCaptureId,
         'state': 'stored',
         'private': true,
         'fileCount': draft.length,
@@ -194,8 +254,91 @@ class _TestNodeProvider implements KubusNodeProvider {
   final KubusNodeService service;
 
   @override
+  bool get isPaired => service.isPaired;
+
+  @override
+  KubusNodeSnapshot? get snapshot => const KubusNodeSnapshot(
+        status: <String, dynamic>{},
+        capabilities: <Map<String, dynamic>>[
+          <String, dynamic>{
+            'name': 'spatial.reconstruction',
+            'available': true,
+            'healthy': true,
+          },
+        ],
+      );
+
+  @override
+  Future<KubusNodeJob> startReconstruction({
+    required String captureId,
+    required String artworkId,
+    String? markerId,
+  }) =>
+      service.createJob(
+        type: 'spatial.reconstruct',
+        input: <String, dynamic>{
+          'captureId': captureId,
+          'artworkId': artworkId,
+          if (markerId != null) 'markerId': markerId,
+        },
+      );
+
+  @override
+  Future<void> refresh() async {}
+
+  @override
   dynamic noSuchMethod(Invocation invocation) =>
       throw StateError('unexpected node call: ${invocation.memberName}');
+}
+
+class _NetworkTestNodeProvider extends _TestNodeProvider {
+  _NetworkTestNodeProvider(super.service);
+
+  bool acknowledged = false;
+
+  @override
+  Future<KubusRemoteComputeJob> startRemoteReconstruction({
+    required String captureId,
+    required KubusComputeCandidate provider,
+    required Map<String, dynamic> requirements,
+  }) async =>
+      const KubusRemoteComputeJob(
+        id: 'network-job-1',
+        state: 'REQUESTED',
+        type: 'spatial.reconstruct',
+        protocolVersion: 'kubus.compute/1',
+        providerNodeId: 'provider-1',
+      );
+
+  @override
+  Future<KubusRemoteComputeJob> refreshRemoteJob(String id) async =>
+      const KubusRemoteComputeJob(
+        id: 'network-job-1',
+        state: 'OUTPUT_READY',
+        type: 'spatial.reconstruct',
+        protocolVersion: 'kubus.compute/1',
+        providerNodeId: 'provider-1',
+      );
+
+  @override
+  Future<Map<String, dynamic>> retrieveRemoteResult(String id) async =>
+      <String, dynamic>{'id': 'spatial-1'};
+
+  @override
+  Future<KubusRemoteComputeJob> acknowledgeRemoteResult(
+    String id, {
+    required bool accepted,
+    String? reason,
+  }) async {
+    acknowledged = accepted;
+    return const KubusRemoteComputeJob(
+      id: 'network-job-1',
+      state: 'COMPLETED',
+      type: 'spatial.reconstruct',
+      protocolVersion: 'kubus.compute/1',
+      providerNodeId: 'provider-1',
+    );
+  }
 }
 
 class _MemoryCredentialStore implements KubusNodeCredentialStore {
@@ -267,165 +410,184 @@ void main() {
     return provider;
   }
 
-  test('a capture is streamed file by file and committed', () async {
-    final provider = await readyCapture();
+  Future<SpatialLibraryProvider> openLibrary(
+      KubusNodeProvider nodeProvider) async {
+    final library = SpatialLibraryProvider(
+      store: SpatialLibraryStore(
+        root: Directory('${root.path}_spatial-library'),
+      ),
+      legacyCaptureRoot: root,
+      pollInterval: Duration.zero,
+    );
+    library.bindNode(nodeProvider);
+    await library.initialize();
+    return library;
+  }
+
+  test('finish is durable before Node processing and result returns to phone',
+      () async {
+    final capture = await readyCapture();
+    final accepted = capture.frameCount;
+    final record = await capture.finish();
+
+    expect(capture.state, SpatialCaptureState.complete);
+    expect(record.sampleCount, accepted);
+    expect(node.requests, isEmpty,
+        reason: 'Finish Capture must not contact a processor');
+
     final nodeProvider = await pairedNode();
+    final library = await openLibrary(nodeProvider);
+    final ready = await library.processWithOwnNode(record.localSpatialId);
 
-    await provider.finish(nodeProvider);
-
-    expect(provider.state, SpatialCaptureState.awaitingProcessingChoice);
-    expect(provider.captureId, isNotNull);
+    expect(ready.processingState, SpatialLibraryProcessingState.readyPrivate);
+    expect(ready.integrityState, SpatialLibraryIntegrityState.valid);
+    expect(ready.rawPresent, isTrue);
+    expect(await File(ready.resultManifestPath!).exists(), isTrue);
+    expect(await File(ready.resultVariantPaths['spatial_mobile']!).exists(),
+        isTrue);
     expect(node.committed, hasLength(1));
-
     final draft = node.drafts.values.single;
-    // One RGB file per accepted sample, plus the frame index.
-    expect(draft.length, provider.frameCount + 1);
+    expect(draft.length, accepted + 1);
     expect(draft.containsKey('frames.json'), isTrue);
-    expect(draft.containsKey('rgb/00000.jpg'), isTrue);
-
-    // Every file arrived as raw bytes on its own PUT.
-    final puts = node.requests.where((r) => r.startsWith('PUT ')).length;
-    expect(puts, provider.frameCount + 1);
   });
 
-  test('Node outage leaves the finished private source in the phone library',
+  test('Node outage cannot turn a successful finish into capture failure',
       () async {
-    final provider = await readyCapture();
-    final nodeProvider = await pairedNode();
+    final capture = await readyCapture();
+    final accepted = capture.frameCount;
     await node.stop();
 
-    await expectLater(provider.finish(nodeProvider), throwsA(isA<Object>()));
+    final record = await capture.finish();
 
-    final library =
-        SpatialLibraryStore(root: Directory('${root.path}_spatial-library'));
-    final record = (await library.list()).single;
+    expect(capture.state, SpatialCaptureState.complete);
+    expect(
+        record.processingState, SpatialLibraryProcessingState.capturedPrivate);
+    expect(record.sampleCount, accepted);
     expect(record.rawPresent, isTrue);
-    expect(record.sampleCount, provider.frameCount);
     expect(await Directory(record.sourcePath).exists(), isTrue);
   });
 
-  test('no aggregate base64 capture payload is ever produced', () async {
-    final provider = await readyCapture();
+  test('processing streams files and never creates aggregate base64 JSON',
+      () async {
+    final capture = await readyCapture();
+    final record = await capture.finish();
     final nodeProvider = await pairedNode();
+    final library = await openLibrary(nodeProvider);
 
-    await provider.finish(nodeProvider);
+    await library.processWithOwnNode(record.localSpatialId);
 
-    // The legacy whole-package endpoint is never touched.
-    expect(
-      node.requests.where((r) => r == 'POST /local/v1/captures'),
-      isEmpty,
-      reason: 'spatial capture must not use the base64 JSON package route',
-    );
-
-    // The only JSON body is the draft metadata, and it carries no file content.
+    expect(node.requests.where((r) => r == 'POST /local/v1/captures'), isEmpty);
     for (final body in node.jsonBodies) {
-      expect(body.contains('contentBase64'), isFalse,
-          reason: 'no file bytes may be base64-encoded into a JSON document');
-      expect(body.contains('"files"'), isFalse,
-          reason: 'the draft is opened from metadata alone');
-      expect(body.length, lessThan(4096),
-          reason: 'the metadata document must stay small regardless of capture '
-              'size');
+      expect(body.contains('contentBase64'), isFalse);
+      expect(body.contains('"files"'), isFalse);
+      expect(body.length, lessThan(4096));
     }
   });
 
-  test('transfer progress is measured, not interpolated', () async {
-    final provider = await readyCapture();
-    final nodeProvider = await pairedNode();
+  test('measured upload progress is persisted in the library record', () async {
+    final capture = await readyCapture();
+    final accepted = capture.frameCount;
+    final record = await capture.finish();
+    final library = await openLibrary(await pairedNode());
 
-    final phases = <SpatialTransferPhase>[];
-    final uploaded = <int>[];
-    provider.addListener(() {
-      final transfer = provider.transfer;
-      if (phases.isEmpty || phases.last != transfer.phase) {
-        phases.add(transfer.phase);
-      }
-      if (transfer.phase == SpatialTransferPhase.uploading) {
-        uploaded.add(transfer.uploadedFiles);
-      }
-    });
+    final ready = await library.processWithOwnNode(record.localSpatialId);
 
-    await provider.finish(nodeProvider);
-
-    expect(phases, contains(SpatialTransferPhase.preparing));
-    expect(phases, contains(SpatialTransferPhase.uploading));
-    expect(phases, contains(SpatialTransferPhase.committing));
-    // Counts advance one file at a time and end at the real total.
-    expect(uploaded.first, lessThan(uploaded.last));
-    expect(uploaded.last, provider.frameCount + 1);
+    expect(ready.uploadedFiles, accepted + 1);
+    expect(ready.totalFiles, accepted + 1);
+    expect(ready.uploadedBytes, ready.totalUploadBytes);
+    expect(ready.uploadedBytes, greaterThan(0));
   });
 
-  test('an interrupted transfer resumes without duplicating the capture',
-      () async {
-    final provider = await readyCapture();
-    final nodeProvider = await pairedNode();
-
-    // Fail partway through the uploads.
+  test('an interrupted upload resumes the persisted draft', () async {
+    final capture = await readyCapture();
+    final record = await capture.finish();
+    final library = await openLibrary(await pairedNode());
     node.failUploadsBefore = 5;
-    await expectLater(provider.finish(nodeProvider), throwsA(anything));
-    expect(provider.state, SpatialCaptureState.error);
-    expect(node.committed, isEmpty);
 
+    await expectLater(
+      library.processWithOwnNode(record.localSpatialId),
+      throwsA(anything),
+    );
+    final failed = await library.store.get(record.localSpatialId);
+    expect(failed!.processingState,
+        SpatialLibraryProcessingState.waitingForProcessor);
+    expect(failed.draftId, isNotNull);
     final draftsAfterFailure = node.drafts.length;
-    expect(draftsAfterFailure, 1);
 
-    // Now let uploads through and resume.
     node.failUploadsBefore = 0;
-    await provider.retryTransfer(nodeProvider);
-
-    expect(provider.state, SpatialCaptureState.awaitingProcessingChoice);
-    expect(
-      node.drafts.length,
-      draftsAfterFailure,
-      reason: 'the retry resumes the existing draft rather than opening a new '
-          'one',
-    );
-    expect(
-      node.committed,
-      hasLength(1),
-      reason: 'exactly one durable capture record is created',
-    );
-    expect(node.drafts.values.single.length, provider.frameCount + 1);
+    final ready = await library.processWithOwnNode(record.localSpatialId);
+    expect(ready.processingState, SpatialLibraryProcessingState.readyPrivate);
+    expect(node.drafts.length, draftsAfterFailure);
+    expect(node.committed, hasLength(1));
   });
 
-  test('a forgotten draft is replaced rather than resumed', () async {
-    final provider = await readyCapture();
-    final nodeProvider = await pairedNode();
-
+  test('a missing Node draft is recreated without duplicate final capture',
+      () async {
+    final capture = await readyCapture();
+    final record = await capture.finish();
+    final library = await openLibrary(await pairedNode());
     node.failUploadsBefore = 3;
-    await expectLater(provider.finish(nodeProvider), throwsA(anything));
-
-    // A node restart drops in-memory drafts and leaves the directory behind.
+    await expectLater(
+      library.processWithOwnNode(record.localSpatialId),
+      throwsA(anything),
+    );
     node.drafts.clear();
-
     node.failUploadsBefore = 0;
-    await provider.retryTransfer(nodeProvider);
 
-    expect(provider.state, SpatialCaptureState.awaitingProcessingChoice);
-    expect(node.committed, hasLength(1),
-        reason: 'still exactly one durable capture record');
-    expect(node.drafts.values.single.length, provider.frameCount + 1,
-        reason: 'the replacement draft received the whole capture');
+    final ready = await library.processWithOwnNode(record.localSpatialId);
+
+    expect(ready.processingState, SpatialLibraryProcessingState.readyPrivate);
+    expect(node.committed, hasLength(1));
   });
 
-  test('a node without the streaming API reports a typed incompatibility',
+  test('a node without streaming reports typed incompatibility and keeps raw',
       () async {
     await node.stop();
     node = FakeKubusNode(supportsDrafts: false);
     await node.start();
-
-    final provider = await readyCapture();
-    final nodeProvider = await pairedNode();
+    final capture = await readyCapture();
+    final record = await capture.finish();
+    final library = await openLibrary(await pairedNode());
 
     await expectLater(
-      provider.finish(nodeProvider),
+      library.processWithOwnNode(record.localSpatialId),
       throwsA(isA<KubusNodeUnsupportedException>()),
     );
-    expect(
-      node.requests.where((r) => r == 'POST /local/v1/captures'),
-      isEmpty,
-      reason: 'an incompatible node is reported, not silently downgraded to '
-          'the base64 route',
+    final preserved = await library.store.get(record.localSpatialId);
+    expect(preserved!.rawPresent, isTrue);
+    expect(await Directory(preserved.sourcePath).exists(), isTrue);
+    expect(node.requests.where((r) => r == 'POST /local/v1/captures'), isEmpty);
+  });
+
+  test('network GPU uses the same durable record and result import pipeline',
+      () async {
+    final capture = await readyCapture();
+    final record = await capture.finish();
+    final baseProvider = await pairedNode();
+    final networkProvider = _NetworkTestNodeProvider(baseProvider.service);
+    final library = await openLibrary(networkProvider);
+    const candidate = KubusComputeCandidate(
+      nodeId: 'provider-1',
+      label: 'Shared GPU',
+      encryptionPublicKey: 'x25519-public',
+      signingPublicKey: 'ed25519-public',
+      gpu: <String, dynamic>{'model': 'RTX 4090'},
+      worker: <String, dynamic>{'version': '1.1.5'},
+      reliability: <String, dynamic>{'successRate': 1},
+      queue: <String, dynamic>{'queuedJobs': 0},
+      rankScore: 1,
     );
+
+    final ready =
+        await library.processWithNetwork(record.localSpatialId, candidate);
+
+    expect(ready.processingState, SpatialLibraryProcessingState.readyPrivate);
+    expect(ready.networkProviderNodeId, 'provider-1');
+    expect(ready.networkRequestId, 'network-job-1');
+    expect(ready.integrityState, SpatialLibraryIntegrityState.valid);
+    expect(ready.rawPresent, isTrue);
+    expect(networkProvider.acknowledged, isTrue);
+    expect(await File(ready.resultVariantPaths['spatial_mobile']!).exists(),
+        isTrue);
   });
 }

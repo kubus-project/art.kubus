@@ -87,8 +87,10 @@ class _NativeSpatialViewerState extends State<_NativeSpatialViewer> {
           _controller = null;
         });
       }
-      final candidates = await widget.nodeService
-          .resolveContentCandidates('ipfs://${variant.cid}');
+      final candidates = await widget.nodeService.resolveContentCandidates(
+        'ipfs://${variant.cid}',
+        localPath: variant.localPath,
+      );
       if (candidates.isEmpty) {
         throw StateError('No content route is available.');
       }

@@ -15954,12 +15954,124 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get arCameraSwitching => 'Switching camera…';
+
   @override
   String get spatialCaptureDiscardAndRestart => 'Discard and start over';
 
   @override
   String get spatialCaptureGuideFullUnusable =>
       'Capture reached its limit before covering enough of the artwork. Start over and move around it more.';
+
   @override
   String get arCaptureFrameFailed => 'Could not capture a frame. Try again.';
+
+  @override
+  String get spatialCaptureSaved =>
+      'Captured privately on this phone. Process it now or later from Spatial Library.';
+
+  @override
+  String get spatialLibraryTitle => 'Spatial Library';
+
+  @override
+  String get spatialLibraryOpen => 'Open library';
+
+  @override
+  String get spatialLibraryEmpty =>
+      'Your private spatial captures will appear here.';
+
+  @override
+  String get spatialLibraryFilterAll => 'All';
+
+  @override
+  String get spatialLibraryFilterCaptured => 'Captured';
+
+  @override
+  String get spatialLibraryFilterProcessing => 'Processing';
+
+  @override
+  String get spatialLibraryFilterReady => 'Ready';
+
+  @override
+  String get spatialLibraryFilterPublished => 'Published';
+
+  @override
+  String get spatialLibraryStatusCaptured => 'Captured';
+
+  @override
+  String get spatialLibraryStatusWaiting => 'Waiting for Node';
+
+  @override
+  String get spatialLibraryStatusUploading => 'Uploading';
+
+  @override
+  String get spatialLibraryStatusQueued => 'Queued';
+
+  @override
+  String get spatialLibraryStatusProcessing => 'Processing';
+
+  @override
+  String get spatialLibraryStatusDownloading => 'Downloading';
+
+  @override
+  String get spatialLibraryStatusReady => 'Ready';
+
+  @override
+  String get spatialLibraryStatusPublished => 'Published';
+
+  @override
+  String get spatialLibraryStatusFailed => 'Failed';
+
+  @override
+  String get spatialLibraryPrivate => 'Private';
+
+  @override
+  String get spatialLibraryPublic => 'Public';
+
+  @override
+  String get spatialLibraryRawStorage => 'Raw source';
+
+  @override
+  String get spatialLibraryProcessedStorage => 'Processed';
+
+  @override
+  String get spatialLibraryTotalStorage => 'Total';
+
+  @override
+  String get spatialLibraryProcess => 'Process';
+
+  @override
+  String get spatialLibraryRetryUpload => 'Retry upload';
+
+  @override
+  String get spatialLibraryRetryProcessing => 'Retry processing';
+
+  @override
+  String get spatialLibraryView => 'View';
+
+  @override
+  String get spatialLibraryPublish => 'Publish';
+
+  @override
+  String get spatialLibraryShare => 'Share';
+
+  @override
+  String get spatialLibraryDeleteRaw => 'Delete raw capture';
+
+  @override
+  String get spatialLibraryDeleteProcessed => 'Delete local processed result';
+
+  @override
+  String get spatialLibraryDeleteRecord => 'Delete local record';
+
+  @override
+  String get spatialLibraryDeleteRecordWarning =>
+      'This removes the local record only. A published public archive will stay published.';
+
+  @override
+  String get spatialLibraryProcessorUnavailable =>
+      'No processor is available. Your private capture remains safely stored.';
+
+  @override
+  String get spatialLibraryOperationFailed =>
+      'That action could not be completed. Your private source remains intact.';
 }

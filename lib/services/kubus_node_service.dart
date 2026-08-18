@@ -120,7 +120,8 @@ class KubusNodeService {
   String? _credential;
   String? _fingerprint;
   String? _nodeId;
-  final Set<String> _verifiedEndpoints = <String>{};
+  static const Duration _identityVerificationTtl = Duration(seconds: 30);
+  final Map<String, DateTime> _verifiedEndpoints = <String, DateTime>{};
 
   Uri? get endpoint => _endpoint;
   List<Uri> get endpoints => List.unmodifiable(_endpoints);
@@ -132,6 +133,9 @@ class KubusNodeService {
   Future<bool> initialize() async {
     final rawEndpoint = await _store.read(_endpointKey);
     _endpoint = Uri.tryParse(rawEndpoint ?? '');
+    if (_endpoint != null && !_isAllowedStoredEndpoint(_endpoint!)) {
+      _endpoint = null;
+    }
     final rawEndpoints = await _store.read(_endpointsKey);
     if (rawEndpoints != null) {
       try {
@@ -140,6 +144,7 @@ class KubusNodeService {
           _endpoints = decoded
               .map((value) => Uri.tryParse(value.toString()))
               .whereType<Uri>()
+              .where(_isAllowedStoredEndpoint)
               .toList(growable: false);
         }
       } on FormatException {
@@ -162,6 +167,12 @@ class KubusNodeService {
     KubusNodePairingPayload payload, {
     String label = 'art.kubus app',
   }) async {
+    if (payload.endpoints
+        .any((endpoint) => !_isAllowedStoredEndpoint(endpoint))) {
+      throw const FormatException(
+        'Remote Node endpoints require HTTPS; HTTP is private-LAN only.',
+      );
+    }
     if (_isWeb &&
         payload.endpoints.any((endpoint) => endpoint.scheme != 'https')) {
       throw StateError('A secure HTTPS local node route is required on web.');
@@ -210,7 +221,7 @@ class KubusNodeService {
     _credential = token;
     _fingerprint = payload.fingerprint;
     _nodeId = payload.nodeId;
-    _verifiedEndpoints.add(connectedEndpoint.toString());
+    _verifiedEndpoints[connectedEndpoint.toString()] = DateTime.now().toUtc();
     await _store.write(_endpointKey, connectedEndpoint.toString());
     await _store.write(_endpointsKey,
         jsonEncode(_endpoints.map((endpoint) => endpoint.toString()).toList()));
@@ -287,7 +298,11 @@ class KubusNodeService {
     Map<String, dynamic> metadata,
   ) async =>
       KubusCaptureDraft.fromJson(
-        await _post('/local/v1/captures/drafts', metadata),
+        await _post(
+          '/local/v1/captures/drafts',
+          metadata,
+          requireFreshIdentity: true,
+        ),
       );
 
   /// Streams one file into a draft straight off disk.
@@ -305,7 +320,7 @@ class KubusNodeService {
   }) async {
     if (!isPaired) throw StateError('No kubus Node is paired.');
     final length = await file.length();
-    final endpoint = await _selectVerifiedEndpoint();
+    final endpoint = await _selectVerifiedEndpoint(forceIdentityCheck: true);
     final request = _StreamedFileRequest(
       'PUT',
       _resolve(
@@ -368,6 +383,42 @@ class KubusNodeService {
       );
   Future<Map<String, dynamic>> getSpatial(String id) =>
       _get('/local/v1/spatial/${Uri.encodeComponent(id)}');
+
+  Future<Map<String, dynamic>> publishSpatial({
+    required String spatialId,
+    required String backendAuthorization,
+    required String artworkId,
+    String? markerId,
+  }) =>
+      _post('/local/v1/spatial/${Uri.encodeComponent(spatialId)}/publish', {
+        'backendAuthorization': backendAuthorization,
+        'artworkId': artworkId,
+        if (markerId != null) 'markerId': markerId,
+      });
+
+  /// Streams a private Node content object directly to disk. This is used for
+  /// processed variants; `bodyBytes` would otherwise retain a large splat in
+  /// the Dart heap before it reaches the phone library.
+  Future<void> downloadContentToFile(String cid, File destination) async {
+    if (!isPaired) throw StateError('No kubus Node is paired.');
+    final endpoint = await _selectVerifiedEndpoint(forceIdentityCheck: true);
+    final request = http.Request(
+      'GET',
+      _resolve(endpoint, '/local/v1/content/${Uri.encodeComponent(cid)}'),
+    )..headers['Authorization'] = 'Bearer $_credential';
+    final response =
+        await _client.send(request).timeout(const Duration(minutes: 5));
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      _decode(await http.Response.fromStream(response));
+    }
+    await destination.parent.create(recursive: true);
+    final sink = destination.openWrite();
+    try {
+      await sink.addStream(response.stream);
+    } finally {
+      await sink.close();
+    }
+  }
 
   Future<List<KubusComputeCandidate>> findComputeCandidates({
     required String backendAuthorization,
@@ -466,20 +517,29 @@ class KubusNodeService {
       );
 
   Future<List<KubusContentCandidate>> resolveContentCandidates(
-    String raw,
-  ) async {
+    String raw, {
+    String? localPath,
+  }) async {
+    final local = localPath == null ? null : File(localPath);
+    final localCandidates = <KubusContentCandidate>[];
+    if (local != null && await local.exists()) {
+      localCandidates.add(
+        KubusContentCandidate(uri: local.uri, source: 'spatial_library'),
+      );
+    }
     final cid = _extractCid(raw);
     if (cid == null) {
-      return StorageConfig.resolveAllUrls(raw)
-          .map(
-            (url) => KubusContentCandidate(
-              uri: Uri.parse(url),
-              source: 'configured',
-            ),
-          )
-          .toList(growable: false);
+      return <KubusContentCandidate>[
+        ...localCandidates,
+        ...StorageConfig.resolveAllUrls(raw).map(
+          (url) => KubusContentCandidate(
+            uri: Uri.parse(url),
+            source: 'configured',
+          ),
+        ),
+      ];
     }
-    final candidates = <KubusContentCandidate>[];
+    final candidates = <KubusContentCandidate>[...localCandidates];
     if (!_isWeb && isPaired) {
       candidates.add(
         KubusContentCandidate(
@@ -536,19 +596,29 @@ class KubusNodeService {
     String path,
     Map<String, dynamic> body, {
     Duration timeout = const Duration(seconds: 20),
+    bool requireFreshIdentity = false,
   }) async =>
-      _decode(await _request('POST', path, body: body, timeout: timeout));
+      _decode(
+        await _request(
+          'POST',
+          path,
+          body: body,
+          timeout: timeout,
+          requireFreshIdentity: requireFreshIdentity,
+        ),
+      );
   Future<http.Response> _request(
     String method,
     String path, {
     Map<String, dynamic>? body,
     Duration timeout = const Duration(seconds: 20),
+    bool requireFreshIdentity = false,
   }) async {
     if (!isPaired) throw StateError('No kubus Node is paired.');
     Object? lastError;
     for (final endpoint in _orderedEndpoints()) {
       try {
-        await _verifyEndpoint(endpoint);
+        await _verifyEndpoint(endpoint, force: requireFreshIdentity);
         final request = http.Request(method, _resolve(endpoint, path));
         request.headers.addAll({
           'Accept': 'application/json',
@@ -565,6 +635,8 @@ class KubusNodeService {
         // not fail over authorization or application errors to another host.
         _endpoint = endpoint;
         return response;
+      } on KubusNodeIdentityException {
+        rethrow;
       } catch (error) {
         lastError = error;
       }
@@ -578,13 +650,15 @@ class KubusNodeService {
     return [primary, ..._endpoints.where((endpoint) => endpoint != primary)];
   }
 
-  Future<Uri> _selectVerifiedEndpoint() async {
+  Future<Uri> _selectVerifiedEndpoint({bool forceIdentityCheck = false}) async {
     Object? lastError;
     for (final endpoint in _orderedEndpoints()) {
       try {
-        await _verifyEndpoint(endpoint);
+        await _verifyEndpoint(endpoint, force: forceIdentityCheck);
         _endpoint = endpoint;
         return endpoint;
+      } on KubusNodeIdentityException {
+        rethrow;
       } catch (error) {
         lastError = error;
       }
@@ -597,15 +671,19 @@ class KubusNodeService {
     String? credential,
     String? expectedNodeId,
     String? expectedFingerprint,
+    bool force = false,
   }) async {
     final expectedId = expectedNodeId ?? _nodeId;
     final expectedPrint = expectedFingerprint ?? _fingerprint;
     if (expectedId == null || expectedPrint == null) {
       throw const KubusNodeIdentityException();
     }
-    if (credential == null &&
-        _verifiedEndpoints.contains(endpoint.toString())) {
-      return;
+    final verifiedAt = _verifiedEndpoints[endpoint.toString()];
+    if (!force && credential == null && verifiedAt != null) {
+      if (DateTime.now().toUtc().difference(verifiedAt) <
+          _identityVerificationTtl) {
+        return;
+      }
     }
     final response = await _client.get(
       _resolve(endpoint, '/local/v1/info'),
@@ -616,7 +694,7 @@ class KubusNodeService {
         info['fingerprint']?.toString() != expectedPrint) {
       throw const KubusNodeIdentityException();
     }
-    _verifiedEndpoints.add(endpoint.toString());
+    _verifiedEndpoints[endpoint.toString()] = DateTime.now().toUtc();
   }
 
   static Map<String, dynamic> _decode(http.Response response) {
@@ -662,6 +740,29 @@ class KubusNodeService {
 
   static Uri _resolve(Uri base, String path) =>
       base.replace(path: path, query: null, fragment: null);
+
+  static bool _isAllowedStoredEndpoint(Uri endpoint) {
+    if (!endpoint.hasAuthority) return false;
+    if (endpoint.scheme == 'https') return true;
+    if (endpoint.scheme != 'http') return false;
+    final host = endpoint.host.toLowerCase();
+    if (host == 'localhost' ||
+        host == '127.0.0.1' ||
+        host == '::1' ||
+        host.endsWith('.local') ||
+        host.endsWith('.internal') ||
+        host.startsWith('10.') ||
+        host.startsWith('192.168.')) {
+      return true;
+    }
+    final parts = host.split('.');
+    final second = parts.length > 1 ? int.tryParse(parts[1]) : null;
+    return parts.first == '172' &&
+        second != null &&
+        second >= 16 &&
+        second <= 31;
+  }
+
   static String? _extractCid(String raw) {
     var value = raw.trim();
     if (StorageConfig.isLikelyCid(value)) return value;

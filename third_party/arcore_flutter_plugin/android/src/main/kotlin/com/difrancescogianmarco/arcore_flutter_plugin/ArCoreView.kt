@@ -284,7 +284,7 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
     }
 
 
-    fun loadMesh(textureBytes: ByteArray?) {
+    fun loadMesh(textureBytes: ByteArray) {
         // Load the face regions renderable.
         // This is a skinned model that renders 3D objects mapped to the regions of the augmented face.
         /*ModelRenderable.builder()
@@ -299,7 +299,7 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
         // Load the face mesh texture.
         //                .setSource(activity, Uri.parse("fox_face_mesh_texture.png"))
         Texture.builder()
-                .setSource(BitmapFactory.decodeByteArray(textureBytes, 0, textureBytes!!.size))
+                .setSource(BitmapFactory.decodeByteArray(textureBytes, 0, textureBytes.size))
                 .build()
                 .thenAccept { texture -> faceMeshTexture = texture }
     }
@@ -732,7 +732,7 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
         fileOutputStream.flush()
         fileOutputStream.close()
 //        Log.i("path","fileoutputstream closed")
-        return mPath as String
+        return mPath
     }
 
     /**
@@ -1192,7 +1192,11 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
 
     fun updateMaterials(call: MethodCall, result: ArCallResult) {
         val name = call.argument<String>("name")
-        val materials = call.argument<ArrayList<HashMap<String, *>>>("materials")!!
+        val materials = call.argument<ArrayList<HashMap<String, *>>>("materials")
+        if (name.isNullOrBlank() || materials.isNullOrEmpty()) {
+            result.error("invalid_materials", "A node name and at least one material are required", null)
+            return
+        }
         // Follow the renderable: once a placement has been transformed its
         // content lives on a child beneath the anchor, so looking only at the
         // named node would silently stop updating materials.

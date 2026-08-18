@@ -76,9 +76,10 @@ class ArCoreAugmentedImagesView(activity: Activity, context: Context, messenger:
 
                     TrackingState.STOPPED -> {
                         debugLog( "STOPPED: ${augmentedImage.name}")
-                        val anchorNode = augmentedImageMap[augmentedImage.index]!!.second
-                        augmentedImageMap.remove(augmentedImage.index)
-                        arSceneView?.scene?.removeChild(anchorNode)
+                        val removed = augmentedImageMap.remove(augmentedImage.index)
+                        removed?.second?.let { anchorNode ->
+                            arSceneView?.scene?.removeChild(anchorNode)
+                        }
                         val text = String.format("Removed Image %d", augmentedImage.index)
                         debugLog( text)
                     }
@@ -166,12 +167,14 @@ class ArCoreAugmentedImagesView(activity: Activity, context: Context, messenger:
                 }
                 "attachObjectToAugmentedImage" -> {
                     debugLog( "attachObjectToAugmentedImage")
-                    val map = call.arguments as HashMap<String, Any>
-                    val flutterArCoreNode = FlutterArCoreNode(map["node"] as HashMap<String, Any>)
-                    val index = map["index"] as Int
-                    if (augmentedImageMap.containsKey(index)) {
-//                        val augmentedImage = augmentedImageMap[index]!!.first
-                        val anchorNode = augmentedImageMap[index]!!.second
+                    val map = call.arguments as? Map<*, *>
+                    val nodeMap = map?.get("node") as? HashMap<String, Any>
+                    val index = map?.get("index") as? Int
+                    val anchorNode = index?.let { augmentedImageMap[it]?.second }
+                    if (nodeMap == null || index == null) {
+                        result.error("invalid_augmented_image_node", "A node and image index are required", null)
+                    } else if (anchorNode != null) {
+                        val flutterArCoreNode = FlutterArCoreNode(nodeMap)
 //                        setImage(augmentedImage, anchorNode)
 //                        onAddNode(flutterArCoreNode, result)
                         NodeFactory.makeNode(activity.applicationContext, flutterArCoreNode, debug) { node, throwable ->
@@ -197,10 +200,14 @@ class ArCoreAugmentedImagesView(activity: Activity, context: Context, messenger:
                 "removeARCoreNodeWithIndex" -> {
                     debugLog( "removeObject")
                     try {
-                        val map = call.arguments as HashMap<String, Any>
-                        val index = map["index"] as Int
-                        removeNode(augmentedImageMap[index]!!.second)
-                        augmentedImageMap.remove(index)
+                        val map = call.arguments as? Map<*, *>
+                        val index = map?.get("index") as? Int
+                        val anchorNode = index?.let { augmentedImageMap.remove(it)?.second }
+                        if (anchorNode == null) {
+                            result.error("removeARCoreNodeWithIndex", "No augmented image exists at that index", null)
+                            return
+                        }
+                        removeNode(anchorNode)
                         result.success(null)
                     } catch (ex: Exception) {
                         result.error("removeARCoreNodeWithIndex", ex.localizedMessage, null)
