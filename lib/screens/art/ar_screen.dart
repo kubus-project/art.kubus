@@ -922,7 +922,7 @@ class _ARScreenState extends State<ARScreen>
     }
     final capture = context.read<SpatialCaptureProvider>();
     if (capture.state == SpatialCaptureState.capturing) {
-      return l10n.spatialCaptureFinish;
+      return l10n.spatialCaptureGuideOverlap;
     }
     if (capture.state == SpatialCaptureState.paused) {
       return l10n.spatialCaptureGuidePaused;
@@ -1300,14 +1300,9 @@ class _ARScreenState extends State<ARScreen>
           ),
         ];
       }
-      if (!capture.canFinish) return const [];
-      return [
-        ArSecondaryAction(
-          label: l10n.spatialCaptureFinish,
-          icon: Icons.check_circle_outline,
-          onPressed: _finishSpatialCapture,
-        ),
-      ];
+      // Finish capture is the single primary action in Spatial mode. A second
+      // secondary Finish made the destructive transition look duplicated.
+      return const [];
     }
     if (_currentMode == 'place' && _placement.hasPlacement) {
       final canAdjust = _placement.canAdjust;
