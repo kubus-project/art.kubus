@@ -1,3 +1,0 @@
-[workspace]
-members = ["fee-splitter"]
-resolver = "2"
