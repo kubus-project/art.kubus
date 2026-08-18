@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -38,7 +39,8 @@ class _FakeResultNode extends KubusNodeService {
 
   @override
   Future<void> downloadContentToFile(String cid, File destination) async {
-    final bytes = contents[cid];
+    final bytes =
+        cid == _manifestCid ? utf8.encode(jsonEncode(manifest)) : contents[cid];
     if (bytes == null) throw StateError('content_missing');
     await destination.parent.create(recursive: true);
     final sink = destination.openWrite();

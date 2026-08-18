@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as image_lib;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -421,13 +422,19 @@ class SpatialLibraryRecord {
 /// Processing and publication only add metadata or derived results. The
 /// explicit deletion methods are the only paths that remove meaningful data.
 class SpatialLibraryStore {
-  SpatialLibraryStore({Directory? root}) : _root = root;
+  SpatialLibraryStore({
+    Directory? root,
+    @visibleForTesting
+    Future<void> Function(SpatialLibraryRecord record)? beforeRecordCommit,
+  })  : _root = root,
+        _beforeRecordCommit = beforeRecordCommit;
 
   static const int schemaVersion = 2;
   static const String rootFolderName = 'spatial-library';
   static const String _recordName = 'record.json';
 
   final Directory? _root;
+  final Future<void> Function(SpatialLibraryRecord record)? _beforeRecordCommit;
   final Map<String, Future<void>> _recordLocks = <String, Future<void>>{};
 
   Future<Directory> root() async {
@@ -461,7 +468,14 @@ class SpatialLibraryStore {
           if (!await capture.directory.exists()) {
             throw StateError('Capture source disappeared before promotion.');
           }
-          await capture.directory.rename(source.path);
+          final staging = Directory('${source.path}.tmp');
+          if (await staging.exists()) await staging.delete(recursive: true);
+          await _copyDirectory(capture.directory, staging);
+          final stagedCapture = await SpatialCaptureStore.open(staging);
+          if (stagedCapture == null || stagedCapture.sampleCount == 0) {
+            throw StateError('Copied capture source is not readable.');
+          }
+          await staging.rename(source.path);
         }
         final reopened = await SpatialCaptureStore.open(source);
         if (reopened == null || reopened.sampleCount == 0) {
@@ -487,9 +501,56 @@ class SpatialLibraryStore {
           draftId: reopened.draftId,
           thumbnailPath: thumbnailPath,
         );
+        await _beforeRecordCommit?.call(record);
         await _saveUnlocked(record);
+        if (p.normalize(capture.directory.path) != p.normalize(source.path) &&
+            await capture.directory.exists()) {
+          await capture.directory.delete(recursive: true);
+        }
         return record;
       });
+
+  Future<List<SpatialLibraryRecord>> recoverInterruptedProcessing() async {
+    final recovered = <SpatialLibraryRecord>[];
+    for (final record in await list()) {
+      final (state, code, publicationState) = switch (record.processingState) {
+        SpatialLibraryProcessingState.uploading => (
+            SpatialLibraryProcessingState.waitingForProcessor,
+            'upload_interrupted',
+            record.publicationState,
+          ),
+        SpatialLibraryProcessingState.queued ||
+        SpatialLibraryProcessingState.processing =>
+          (
+            SpatialLibraryProcessingState.failedRetryable,
+            'processing_interrupted',
+            record.publicationState,
+          ),
+        SpatialLibraryProcessingState.downloadingResult => (
+            SpatialLibraryProcessingState.failedRetryable,
+            'result_download_interrupted',
+            record.publicationState,
+          ),
+        SpatialLibraryProcessingState.publishing => (
+            SpatialLibraryProcessingState.readyPrivate,
+            'publication_interrupted',
+            SpatialLibraryPublicationState.failed,
+          ),
+        _ => (record.processingState, null, record.publicationState),
+      };
+      if (code == null) continue;
+      recovered.add(await _mutate(
+        record.localSpatialId,
+        (current) => current.copyWith(
+          processingState: state,
+          publicationState: publicationState,
+          lastErrorCode: code,
+          lastErrorAt: DateTime.now().toUtc(),
+        ),
+      ));
+    }
+    return recovered;
+  }
 
   Future<List<SpatialLibraryRecord>> migrateLegacy(
     Directory captureRoot,
@@ -544,7 +605,7 @@ class SpatialLibraryStore {
 
   Future<SpatialLibraryRecord> recordNodeTransfer(
     String localSpatialId, {
-    String? nodeId,
+    Object? nodeId = _notSet,
     Object? draftId = _notSet,
     Object? nodeCaptureId = _notSet,
     int? uploadedFiles,
@@ -564,6 +625,18 @@ class SpatialLibraryStore {
           totalUploadBytes: totalBytes,
         ),
       );
+
+  Future<void> _copyDirectory(Directory source, Directory destination) async {
+    await destination.create(recursive: true);
+    await for (final entity in source.list(followLinks: false)) {
+      final targetPath = p.join(destination.path, p.basename(entity.path));
+      if (entity is File) {
+        await entity.copy(targetPath);
+      } else if (entity is Directory) {
+        await _copyDirectory(entity, Directory(targetPath));
+      }
+    }
+  }
 
   Future<SpatialLibraryRecord> recordJob(
     String localSpatialId, {

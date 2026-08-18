@@ -44,6 +44,56 @@ void main() {
     expect(afterRestart.single.sampleCount, 1);
   });
 
+  test('promotion keeps the original recoverable until record commit',
+      () async {
+    final capture = await SpatialCaptureStore.create(
+      captureId: 'commit-interruption',
+      artworkId: 'art-1',
+      root: root,
+    );
+    await capture.writeSample(rgb: Uint8List.fromList(<int>[1, 2, 3]));
+    final interrupted = SpatialLibraryStore(
+      root: libraryRoot,
+      beforeRecordCommit: (_) async => throw FileSystemException('simulated'),
+    );
+
+    await expectLater(interrupted.promoteCapture(capture), throwsA(anything));
+
+    expect(await capture.directory.exists(), isTrue);
+    expect(await interrupted.get(capture.captureId), isNull);
+    final recovered =
+        await SpatialLibraryStore(root: libraryRoot).promoteCapture(capture);
+    expect(
+        await File(
+                '${(await SpatialLibraryStore(root: libraryRoot).recordDirectory(recovered.localSpatialId)).path}${Platform.pathSeparator}record.json')
+            .exists(),
+        isTrue);
+    expect(await Directory(recovered.sourcePath).exists(), isTrue);
+  });
+
+  test('restart normalizes abandoned processing states to retryable records',
+      () async {
+    final capture = await SpatialCaptureStore.create(
+      captureId: 'interrupted-processing',
+      artworkId: 'art-1',
+      root: root,
+    );
+    await capture.writeSample(rgb: Uint8List.fromList(<int>[1, 2, 3]));
+    final library = SpatialLibraryStore(root: libraryRoot);
+    final record = await library.promoteCapture(capture);
+    await library.updateProcessing(
+      record.localSpatialId,
+      SpatialLibraryProcessingState.processing,
+    );
+
+    final recovered = await library.recoverInterruptedProcessing();
+
+    expect(recovered.single.processingState,
+        SpatialLibraryProcessingState.failedRetryable);
+    expect(recovered.single.lastErrorCode, 'processing_interrupted');
+    expect((await library.get(record.localSpatialId))!.rawPresent, isTrue);
+  });
+
   test('migrates legacy capture-temp idempotently without deleting raw data',
       () async {
     final capture = await SpatialCaptureStore.create(

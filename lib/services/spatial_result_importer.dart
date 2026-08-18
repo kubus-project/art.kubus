@@ -46,12 +46,6 @@ class SpatialResultImporter {
     Directory? staging;
     try {
       final nodeRecord = await node.getSpatial(spatialId);
-      final rawManifest = nodeRecord['manifest'];
-      if (rawManifest is! Map) {
-        throw const SpatialResultValidationException('manifest_missing');
-      }
-      final manifest = Map<String, dynamic>.from(rawManifest);
-      final content = _validateManifest(manifest, libraryRecord);
       final manifestCid = nodeRecord['manifestCid']?.toString();
       if (manifestCid == null || !StorageConfig.isLikelyCid(manifestCid)) {
         throw const SpatialResultValidationException('manifest_cid_invalid');
@@ -65,6 +59,20 @@ class SpatialResultImporter {
         ),
       );
       await staging.create(recursive: true);
+      final manifestPartial = File(p.join(staging.path, 'manifest.partial'));
+      await node.downloadContentToFile(manifestCid, manifestPartial);
+      final decodedManifest = jsonDecode(await manifestPartial.readAsString());
+      if (decodedManifest is! Map) {
+        throw const SpatialResultValidationException('manifest_missing');
+      }
+      final manifest = Map<String, dynamic>.from(decodedManifest);
+      final rawManifest = nodeRecord['manifest'];
+      if (rawManifest is! Map || !_deepJsonEquals(rawManifest, manifest)) {
+        throw const SpatialResultValidationException(
+          'manifest_response_mismatch',
+        );
+      }
+      final content = _validateManifest(manifest, libraryRecord);
       final variantDirectory = Directory(p.join(staging.path, 'variants'));
       await variantDirectory.create(recursive: true);
 
@@ -89,8 +97,9 @@ class SpatialResultImporter {
         totalBytes += length;
       }
 
-      final manifestFile = File(p.join(staging.path, 'manifest.json'));
-      await manifestFile.writeAsString(jsonEncode(manifest), flush: true);
+      final manifestFile = await manifestPartial.rename(
+        p.join(staging.path, 'manifest.json'),
+      );
       totalBytes += await manifestFile.length();
 
       final finalDirectory = Directory(p.join(recordDirectory.path, 'result'));
@@ -227,4 +236,24 @@ class SpatialResultImporter {
     final normalized = value.toLowerCase().replaceFirst('.', '');
     return RegExp(r'^[a-z0-9]{1,8}$').hasMatch(normalized) ? normalized : 'bin';
   }
+}
+
+bool _deepJsonEquals(Object? left, Object? right) {
+  if (left is Map && right is Map) {
+    if (left.length != right.length) return false;
+    for (final key in left.keys) {
+      if (!right.containsKey(key) || !_deepJsonEquals(left[key], right[key])) {
+        return false;
+      }
+    }
+    return true;
+  }
+  if (left is List && right is List) {
+    if (left.length != right.length) return false;
+    for (var index = 0; index < left.length; index++) {
+      if (!_deepJsonEquals(left[index], right[index])) return false;
+    }
+    return true;
+  }
+  return left == right;
 }

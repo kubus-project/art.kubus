@@ -41,6 +41,25 @@ class FakeKubusNode {
   static const variantCid = 'Qmbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
   String? committedCaptureId;
 
+  Map<String, dynamic> get spatialManifest => <String, dynamic>{
+        'schema': 'kubus.spatial/1',
+        'id': 'spatial-1',
+        'type': 'gaussianSplat',
+        'artworkId': 'art-1',
+        'captureId': committedCaptureId,
+        'capturedAt': '2026-08-18T00:00:00.000Z',
+        'variants': <Map<String, dynamic>>[
+          <String, dynamic>{
+            'role': 'spatial_mobile',
+            'cid': variantCid,
+            'sizeBytes': processedVariant.length,
+            'mimeType': 'application/octet-stream',
+            'format': 'spz',
+            'storageClass': 'warm',
+          },
+        ],
+      };
+
   /// Every request line, so a test can assert nothing base64-shaped was posted.
   final List<String> requests = [];
 
@@ -104,25 +123,18 @@ class FakeKubusNode {
       return _json(request, 200, {
         'id': 'spatial-1',
         'manifestCid': manifestCid,
-        'manifest': {
-          'schema': 'kubus.spatial/1',
-          'id': 'spatial-1',
-          'type': 'gaussianSplat',
-          'artworkId': 'art-1',
-          'captureId': committedCaptureId,
-          'capturedAt': '2026-08-18T00:00:00.000Z',
-          'variants': [
-            {
-              'role': 'spatial_mobile',
-              'cid': variantCid,
-              'sizeBytes': processedVariant.length,
-              'mimeType': 'application/octet-stream',
-              'format': 'spz',
-              'storageClass': 'warm',
-            },
-          ],
-        },
+        'manifest': spatialManifest,
       });
+    }
+
+    if (request.method == 'GET' && path == '/local/v1/content/$manifestCid') {
+      final bytes = utf8.encode(jsonEncode(spatialManifest));
+      request.response.statusCode = 200;
+      request.response.headers.contentType = ContentType.json;
+      request.response.contentLength = bytes.length;
+      request.response.add(bytes);
+      await request.response.close();
+      return;
     }
 
     if (request.method == 'GET' && path == '/local/v1/content/$variantCid') {
@@ -397,9 +409,14 @@ void main() {
     return _TestNodeProvider(service);
   }
 
-  Future<SpatialCaptureProvider> readyCapture() async {
+  Future<SpatialCaptureProvider> readyCapture({
+    SpatialLibraryStore? libraryStore,
+    Future<void> Function()? onLibraryChanged,
+  }) async {
     final provider = SpatialCaptureProvider(
       storageRoot: root,
+      libraryStore: libraryStore,
+      onLibraryChanged: onLibraryChanged,
       policy: const SpatialCapturePolicy(minSampleInterval: Duration.zero),
     );
     await provider.begin(artworkId: 'art-1', capturedBy: 'wallet-1');
@@ -465,6 +482,49 @@ void main() {
     expect(record.sampleCount, accepted);
     expect(record.rawPresent, isTrue);
     expect(await Directory(record.sourcePath).exists(), isTrue);
+  });
+
+  test('finish immediately refreshes the app-wide Spatial Library', () async {
+    final store = SpatialLibraryStore(
+      root: Directory('${root.path}_spatial-library'),
+    );
+    final library = SpatialLibraryProvider(
+      store: store,
+      legacyCaptureRoot: root,
+    );
+    await library.initialize();
+    final capture = await readyCapture(
+      libraryStore: store,
+      onLibraryChanged: library.reload,
+    );
+
+    final record = await capture.finish();
+
+    expect(library.records.map((item) => item.localSpatialId),
+        contains(record.localSpatialId));
+  });
+
+  test('initialization makes an interrupted processing record retryable',
+      () async {
+    final capture = await readyCapture();
+    final record = await capture.finish();
+    final store = SpatialLibraryStore(
+      root: Directory('${root.path}_spatial-library'),
+    );
+    await store.updateProcessing(
+      record.localSpatialId,
+      SpatialLibraryProcessingState.downloadingResult,
+    );
+    final library = SpatialLibraryProvider(
+      store: store,
+      legacyCaptureRoot: root,
+    );
+
+    await library.initialize();
+
+    expect(library.records.single.processingState,
+        SpatialLibraryProcessingState.failedRetryable);
+    expect(library.records.single.lastErrorCode, 'result_download_interrupted');
   });
 
   test('processing streams files and never creates aggregate base64 JSON',
@@ -537,6 +597,26 @@ void main() {
     final ready = await library.processWithOwnNode(record.localSpatialId);
 
     expect(ready.processingState, SpatialLibraryProcessingState.readyPrivate);
+    expect(node.committed, hasLength(1));
+  });
+
+  test('a capture transferred to a different Node is uploaded again', () async {
+    final capture = await readyCapture();
+    final record = await capture.finish();
+    final library = await openLibrary(await pairedNode());
+    await library.store.recordNodeTransfer(
+      record.localSpatialId,
+      nodeId: 'previous-node',
+      draftId: 'previous-draft',
+      nodeCaptureId: 'previous-capture',
+      uploadedFiles: record.sampleCount,
+      uploadedBytes: record.sourceBytes,
+    );
+
+    final ready = await library.processWithOwnNode(record.localSpatialId);
+
+    expect(ready.nodeId, 'fake-node-1');
+    expect(ready.nodeCaptureId, isNot('previous-capture'));
     expect(node.committed, hasLength(1));
   });
 

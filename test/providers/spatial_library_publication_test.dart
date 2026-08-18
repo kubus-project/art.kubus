@@ -108,22 +108,17 @@ void main() {
       'captureProvenance': <String, dynamic>{
         'source': 'localCapture',
         'captureId': 'node-capture-1',
-        'sourceDirectory': r'C:\private\raw',
       },
       'processing': <String, dynamic>{
         'protocol': 'kubus.spatial-job/1',
         'workerVersion': 'worker/1',
-        'bearerCredential': 'must-not-publish',
         'reconstruction': <String, dynamic>{
           'engine': 'nerfstudio',
           'method': 'splatfacto',
           'iterations': 15000,
           'outputFormat': 'spz',
-          'framesPath': r'C:\private\raw\frames.json',
         },
       },
-      'rawRgb': <String>['private.jpg'],
-      'pairingSecret': 'must-not-publish',
       'variants': <Map<String, dynamic>>[
         <String, dynamic>{
           'role': 'spatial_mobile',
@@ -132,7 +127,6 @@ void main() {
           'mimeType': 'application/octet-stream',
           'format': 'spz',
           'storageClass': 'warm',
-          'localPath': variant.path,
         },
       ],
     }));
@@ -175,6 +169,12 @@ void main() {
     expect(published.canonicalManifestCid, isNotEmpty);
     expect(published.canonicalRecordCid, isNotEmpty);
     expect(published.variantCids['spatial_mobile'], _variantCid);
+    final submitted = publicClient.requests.single['spatial'] as Map;
+    expect(submitted['manifestCid'], _manifestCid);
+    expect(
+      submitted['manifestSizeBytes'],
+      await File(record.resultManifestPath!).length(),
+    );
 
     final secondClient = ArtworkSpatialHistory.fromJson(
       <String, dynamic>{'history': publicClient.history},
@@ -195,6 +195,24 @@ void main() {
     expect(encoded, isNot(contains('bearerCredential')));
     expect(encoded, isNot(contains('pairingSecret')));
     expect(encoded, isNot(contains(record.sourcePath)));
+  });
+
+  test('manifest requiring sanitization is rejected before CID publication',
+      () async {
+    final manifestFile = File(record.resultManifestPath!);
+    final unsafe =
+        jsonDecode(await manifestFile.readAsString()) as Map<String, dynamic>
+          ..['rawRgb'] = <String>['private.jpg']
+          ..['pairingSecret'] = 'must-not-publish';
+    await manifestFile.writeAsString(jsonEncode(unsafe));
+
+    await expectLater(
+      provider.publish(record.localSpatialId),
+      throwsA(isA<StateError>()),
+    );
+
+    expect(publicClient.requests, isEmpty);
+    expect(publicClient.history, isEmpty);
   });
 
   test('publication history is append-only and newest remains current',

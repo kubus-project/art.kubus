@@ -113,6 +113,7 @@ class SpatialCaptureProvider extends ChangeNotifier {
     SpatialCapturePolicy policy = const SpatialCapturePolicy(),
     Directory? storageRoot,
     SpatialLibraryStore? libraryStore,
+    Future<void> Function()? onLibraryChanged,
   })  : _policy = policy,
         _storageRoot = storageRoot,
         _libraryStore = libraryStore ??
@@ -121,13 +122,15 @@ class SpatialCaptureProvider extends ChangeNotifier {
                   ? null
                   : Directory('${storageRoot.path}_spatial-library'),
             ),
+        _onLibraryChanged = onLibraryChanged,
         _gate = SpatialSamplingGate(policy: policy) {
     _coverage = SpatialCoverageAccumulator(policy: policy);
   }
 
   final SpatialCapturePolicy _policy;
   final Directory? _storageRoot;
-  final SpatialLibraryStore _libraryStore;
+  SpatialLibraryStore _libraryStore;
+  Future<void> Function()? _onLibraryChanged;
   final SpatialSamplingGate _gate;
   late final SpatialCoverageAccumulator _coverage;
 
@@ -156,6 +159,15 @@ class SpatialCaptureProvider extends ChangeNotifier {
   int _operationGeneration = 0;
 
   SpatialCaptureState get state => _state;
+
+  void bindLibraryStore(
+    SpatialLibraryStore store, {
+    Future<void> Function()? onChanged,
+  }) {
+    _libraryStore = store;
+    _onLibraryChanged = onChanged;
+  }
+
   SpatialCapturePolicy get policy => _policy;
   SpatialCapturePauseReason? get pauseReason => _pauseReason;
 
@@ -527,6 +539,7 @@ class SpatialCaptureProvider extends ChangeNotifier {
           'depthAvailable': store.depthObserved,
         },
       );
+      await _onLibraryChanged?.call();
       _store = null;
       _captureId = record.localSpatialId;
       _state = SpatialCaptureState.complete;

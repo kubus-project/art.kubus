@@ -84,6 +84,7 @@ class SpatialLibraryProvider extends ChangeNotifier {
     final legacyRoot =
         _legacyCaptureRoot ?? await SpatialCaptureStore.defaultRoot();
     await store.migrateLegacy(legacyRoot);
+    await store.recoverInterruptedProcessing();
     await reload();
   }
 
@@ -262,6 +263,9 @@ class SpatialLibraryProvider extends ChangeNotifier {
         throw StateError('local_manifest_invalid');
       }
       final publicManifest = sanitizePublicationManifest(decoded);
+      if (!_deepJsonEquals(publicManifest, decoded)) {
+        throw StateError('local_manifest_not_public_safe');
+      }
       final result = await _publicationClient.publish(
         spatial: <String, dynamic>{
           'id': publicManifest['id'],
@@ -439,9 +443,27 @@ class SpatialLibraryProvider extends ChangeNotifier {
     if (record == null || !record.rawPresent) {
       throw StateError('raw_source_required');
     }
-    if ((record.nodeCaptureId ?? '').isNotEmpty) return record;
     final source = await SpatialCaptureStore.open(Directory(record.sourcePath));
     if (source == null) throw StateError('raw_source_unreadable');
+    final activeNodeId = node.service.nodeId;
+    if (activeNodeId == null || activeNodeId.isEmpty) {
+      throw StateError('node_identity_unavailable');
+    }
+    final sameNode = record.nodeId == activeNodeId;
+    if ((record.nodeCaptureId ?? '').isNotEmpty && sameNode) return record;
+    if (!sameNode &&
+        ((record.nodeCaptureId ?? '').isNotEmpty ||
+            (record.draftId ?? '').isNotEmpty)) {
+      await source.recordDraftId(null);
+      record = await store.recordNodeTransfer(
+        localSpatialId,
+        nodeId: activeNodeId,
+        draftId: null,
+        nodeCaptureId: null,
+        uploadedFiles: 0,
+        uploadedBytes: 0,
+      );
+    }
     await store.updateProcessing(
       localSpatialId,
       SpatialLibraryProcessingState.uploading,
@@ -559,4 +581,24 @@ class SpatialLibraryProvider extends ChangeNotifier {
     if (node == null || !node.isPaired) throw StateError('node_unavailable');
     return node;
   }
+}
+
+bool _deepJsonEquals(Object? left, Object? right) {
+  if (left is Map && right is Map) {
+    if (left.length != right.length) return false;
+    for (final key in left.keys) {
+      if (!right.containsKey(key) || !_deepJsonEquals(left[key], right[key])) {
+        return false;
+      }
+    }
+    return true;
+  }
+  if (left is List && right is List) {
+    if (left.length != right.length) return false;
+    for (var index = 0; index < left.length; index++) {
+      if (!_deepJsonEquals(left[index], right[index])) return false;
+    }
+    return true;
+  }
+  return left == right;
 }

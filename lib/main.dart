@@ -483,8 +483,18 @@ class _AppLauncherState extends State<AppLauncher> {
                   return value;
                 },
               ),
-              ChangeNotifierProvider(
-                  create: (context) => SpatialCaptureProvider()),
+              ChangeNotifierProxyProvider<SpatialLibraryProvider,
+                  SpatialCaptureProvider>(
+                create: (_) => SpatialCaptureProvider(),
+                update: (_, library, capture) {
+                  final value = capture ?? SpatialCaptureProvider();
+                  value.bindLibraryStore(
+                    library.store,
+                    onChanged: library.reload,
+                  );
+                  return value;
+                },
+              ),
               ChangeNotifierProvider(
                 create: (context) => AvailabilityOperatorProvider(),
               ),
