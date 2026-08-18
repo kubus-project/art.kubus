@@ -144,18 +144,21 @@ class ArCoreAugmentedImagesView(activity: Activity, context: Context, messenger:
                     val map = call.arguments as HashMap<String, Any>
                     val singleImageBytes = map["bytes"] as? ByteArray
                     setupSession(singleImageBytes, true)
+                    result.success(null)
                 }
                 "load_multiple_images_on_db" -> {
                     debugLog( "load_multiple_image_on_db")
                     val map = call.arguments as HashMap<String, Any>
                     val dbByteMap = map["bytesMap"] as? Map<String, ByteArray>
                     setupSession(dbByteMap)
+                    result.success(null)
                 }
                 "load_augmented_images_database" -> {
                     debugLog( "LOAD DB")
                     val map = call.arguments as HashMap<String, Any>
                     val dbByteArray = map["bytes"] as? ByteArray
                     setupSession(dbByteArray, false)
+                    result.success(null)
                 }
                 "attachObjectToAugmentedImage" -> {
                     debugLog( "attachObjectToAugmentedImage")
@@ -173,8 +176,14 @@ class ArCoreAugmentedImagesView(activity: Activity, context: Context, messenger:
                                 node.setParent(anchorNode)
                                 arSceneView?.scene?.addChild(anchorNode)
                                 result.success(null)
-                            } else if (throwable != null) {
-                                result.error("attachObjectToAugmentedImage error", throwable.localizedMessage, null)
+                            } else {
+                                // A null node with no throwable left the call
+                                // pending forever.
+                                result.error(
+                                        "attachObjectToAugmentedImage error",
+                                        throwable?.localizedMessage ?: "The node could not be built.",
+                                        null
+                                )
                             }
                         }
                     } else {
@@ -194,9 +203,10 @@ class ArCoreAugmentedImagesView(activity: Activity, context: Context, messenger:
                     }
                 }
                 "dispose" -> {
-                    debugLog( " updateMaterials")
+                    debugLog(" dispose")
                     job.cancel()
                     dispose()
+                    result.success(null)
                 }
                 else -> {
                     result.notImplemented()

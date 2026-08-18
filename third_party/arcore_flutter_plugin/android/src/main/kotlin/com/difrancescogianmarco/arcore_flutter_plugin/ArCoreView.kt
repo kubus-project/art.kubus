@@ -940,7 +940,9 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
         result: ArCallResult,
     ) {
 
-        if (arSceneView == null) {
+        // Callers reach this through requireScene, but the bare `return` here
+        // abandoned the call outright, so it stays defended at the source.
+        if (requireScene(result) == null) {
             return
         }
 

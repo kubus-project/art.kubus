@@ -84,10 +84,12 @@ class ArCoreFaceView(activity:Activity,context: Context, messenger: BinaryMessen
                     val textureBytes = map["textureBytes"] as ByteArray
                     val skin3DModelFilename = map["skin3DModelFilename"] as? String
                     loadMesh(textureBytes, skin3DModelFilename)
+                    result.success(null)
                 }
                 "dispose" -> {
-                    debugLog( " updateMaterials")
+                    debugLog(" dispose")
                     dispose()
+                    result.success(null)
                 }
                 else -> {
                     result.notImplemented()
