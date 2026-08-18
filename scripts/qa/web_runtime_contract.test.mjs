@@ -329,12 +329,26 @@ test('web routing reserves public HTML, interactive app and real 404 surfaces', 
   const htaccess = readFileSync(resolve(repoRoot, 'web', '.htaccess'), 'utf8');
   const gateway = readFileSync(resolve(repoRoot, 'web', 'seo-proxy.php'), 'utf8');
   const notFound = readFileSync(resolve(repoRoot, 'web', '404.html'), 'utf8');
+  const routeManifest = JSON.parse(readFileSync(
+    resolve(repoRoot, 'web', 'web_interactive_routes.json'),
+    'utf8',
+  ));
 
   assert.match(htaccess, /seo-proxy\.php \[L,QSA\]/);
   assert.doesNotMatch(htaccess, /\[P,L,NE\]/);
   assert.match(htaccess, /\^app\(\?:\/\.\*\)\?\$ index\.html/);
   assert.match(htaccess, /Unknown paths are real 404s/);
   assert.match(htaccess, /RewriteRule \^ - \[R=404,L\]/);
+  assert.match(htaccess, /BEGIN GENERATED WEB INTERACTIVE ROUTES/);
+  assert.doesNotMatch(htaccess, /RewriteRule \^\.\*\$? index\.html/);
+  const refreshPaths = new Set(routeManifest.routes.map((route) => route.path));
+  for (const required of [
+    '/', '/en', '/sl', '/app', '/main', '/map', '/community', '/onboarding',
+    '/register', '/sign-in', '/secure-account', '/verify-email',
+    '/verify-email/success', '/forgot-password', '/reset-password',
+  ]) {
+    assert.ok(refreshPaths.has(required), `missing canonical refresh route ${required}`);
+  }
   assert.match(gateway, /const KUBUS_SEO_UPSTREAM_ORIGIN = 'https:\/\/api\.kubus\.site'/);
   assert.match(gateway, /\$method !== 'GET' && \$method !== 'HEAD'/);
   assert.match(gateway, /CURLOPT_FOLLOWLOCATION => false/);

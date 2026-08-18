@@ -1,24 +1,39 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:art_kubus/models/event.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../../config/config.dart';
 import '../../widgets/inline_loading.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../utils/app_animations.dart';
 import '../../widgets/app_loading.dart';
 import '../../utils/app_color_utils.dart';
 import '../../utils/design_tokens.dart';
+import '../../utils/node_state_presentation.dart';
 import 'package:provider/provider.dart';
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
 import '../../services/share/share_deep_link_parser.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:vector_math/vector_math_64.dart' as vector;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/map_marker_subject.dart';
+import '../../models/kubus_node_models.dart';
 import '../../providers/artwork_provider.dart';
+import '../../providers/kubus_node_provider.dart';
+import '../../providers/spatial_capture_provider.dart';
+import '../../services/ar_camera_orchestrator.dart';
+import '../../services/ar_placement_controller.dart';
+import '../../services/ar_placement_preview.dart';
+import '../../services/ar_error_messages.dart';
+import 'ar_chrome.dart';
+import '../../services/camera_ownership_coordinator.dart';
+import '../../services/camera_permission_coordinator.dart';
+import '../../services/kubus_node_service.dart';
+import '../../services/spatial_capture_store.dart';
+import '../../services/spatial_capture_session.dart';
 import '../../providers/dao_provider.dart';
 import '../../providers/institution_provider.dart';
 import '../../providers/exhibitions_provider.dart';
@@ -28,7 +43,10 @@ import '../../providers/saved_items_provider.dart';
 import '../../services/user_action_logger.dart';
 import '../../services/contextual_auth_gate.dart';
 import '../../providers/wallet_provider.dart';
-import '../../services/ar_manager.dart';
+import '../../services/spatial_tracking_adapter.dart';
+import '../../services/spatial_content_proxy.dart';
+import '../../services/walking_location_service.dart';
+import '../../providers/profile_provider.dart';
 import '../../services/ar_integration_service.dart';
 import '../../services/achievement_service.dart';
 import '../../services/ar_marker_service.dart';
@@ -41,6 +59,7 @@ import '../community/profile_screen_methods.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/widgets/common/keyboard_inset_padding.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
+import '../../widgets/spatial/spatial_viewer.dart';
 import '../../utils/share_deep_link_navigation.dart';
 
 /// AR Screen with seamless Android and iOS support
@@ -52,17 +71,272 @@ class ARScreen extends StatefulWidget {
   State<ARScreen> createState() => _ARScreenState();
 }
 
-class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
+class _SpatialProcessingSelection {
+  const _SpatialProcessingSelection({required this.local, this.provider});
+
+  final bool local;
+  final KubusComputeCandidate? provider;
+}
+
+class _SpatialProcessingProgressDialog extends StatelessWidget {
+  const _SpatialProcessingProgressDialog({required this.remote});
+
+  final bool remote;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final capture = context.watch<SpatialCaptureProvider>();
+    final stages = remote
+        ? NodeStatePresentation.remoteStages(l10n)
+        : NodeStatePresentation.localStages(l10n);
+    final progress = remote
+        ? NodeStatePresentation.remoteJob(
+            l10n,
+            capture.remoteJobState ?? 'REQUESTED',
+          )
+        : NodeStatePresentation.localJob(
+            l10n,
+            capture.localJobState ?? 'queued',
+            capture.localJobProgress,
+          );
+    return AlertDialog(
+      title: Text(
+        stages[progress.stageIndex.clamp(0, stages.length - 1).toInt()],
+      ),
+      content: SizedBox(
+        width: 520,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            InlineLoading(
+              height: 8,
+              progress: progress.determinate ? progress.fraction : null,
+              animate: !progress.determinate,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(height: KubusSpacing.md),
+            Text(progress.body),
+            const SizedBox(height: KubusSpacing.sm),
+            Text(
+              l10n.spatialProgressLeaveHint,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: KubusSpacing.md),
+            Wrap(
+              spacing: KubusSpacing.sm,
+              runSpacing: KubusSpacing.xs,
+              children: [
+                for (var index = 0; index < stages.length; index++)
+                  Chip(
+                    avatar: Icon(
+                      index < progress.stageIndex
+                          ? Icons.check_circle_rounded
+                          : index == progress.stageIndex
+                              ? Icons.radio_button_checked_rounded
+                              : Icons.radio_button_unchecked_rounded,
+                      size: 16,
+                    ),
+                    label: Text(stages[index]),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Shown while the camera is being handed from one owner to the other.
+///
+/// Neither platform view is mounted during a handoff, so this stands in for
+/// the fraction of a second between the outgoing owner releasing the device and
+/// the incoming one taking it.
+class _CameraHandoffSurface extends StatelessWidget {
+  const _CameraHandoffSurface({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: Colors.black,
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const AppLoading(),
+            const SizedBox(height: KubusSpacing.md),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: KubusTypography.inter(
+                color: Colors.white70,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+enum _SpatialResultAction { keepUnpublished, publish, reject }
+
+enum _SpatialFailureAction { tryAnother, processLocally, keepForLater }
+
+/// One place a capture can be processed, presented as a committed choice.
+///
+/// The card states what happens to the source material before it offers the
+/// action, because that — not speed — is what the decision turns on.
+class _ProcessingDestination extends StatelessWidget {
+  const _ProcessingDestination({
+    required this.title,
+    required this.body,
+    required this.actionLabel,
+    required this.primary,
+    required this.onPressed,
+    this.detail,
+  });
+
+  final String title;
+  final String? detail;
+  final String body;
+  final String actionLabel;
+  final bool primary;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final enabled = onPressed != null;
+
+    return Container(
+      padding: const EdgeInsets.all(KubusSpacing.md),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(KubusRadius.md),
+        border: Border.all(
+          color: primary && enabled ? scheme.primary : scheme.outlineVariant,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          if (detail != null) ...[
+            const SizedBox(height: KubusSpacing.xxs),
+            Text(
+              detail!,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+          const SizedBox(height: KubusSpacing.sm),
+          Text(body, style: theme.textTheme.bodyMedium),
+          const SizedBox(height: KubusSpacing.md),
+          SizedBox(
+            width: double.infinity,
+            child: primary
+                ? FilledButton(onPressed: onPressed, child: Text(actionLabel))
+                : OutlinedButton(
+                    onPressed: onPressed,
+                    child: Text(actionLabel),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ARScreenState extends State<ARScreen>
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   late AnimationController _animationController;
 
-  final ARManager _arManager = ARManager();
+  final SpatialTrackingAdapter _spatialTracking =
+      PlatformSpatialTrackingAdapter();
   final ARIntegrationService _arIntegrationService = ARIntegrationService();
+
+  /// Place Artwork workflow: selection, surface search, preview, adjust,
+  /// confirm. Selecting an artwork never places it.
+  final ArPlacementController _placement = ArPlacementController();
+
+  /// Single owner of the camera permission request, so the scanner and the AR
+  /// session cannot both prompt for it.
+  final CameraPermissionCoordinator _cameraPermission =
+      CameraPermissionCoordinator();
+
+  /// Explicit camera ownership. The scanner and ARCore cannot both hold the
+  /// camera, and widget disposal alone does not sequence the handoff.
+  late final CameraOwnershipCoordinator _camera = CameraOwnershipCoordinator(
+    releaseScanner: () async {
+      // Stop the scanner and drop its controller before AR opens the camera.
+      final controller = _scannerController;
+      _scannerController = null;
+      _flashEnabled = false;
+      if (controller == null) return;
+      try {
+        await controller.stop();
+      } catch (error) {
+        if (kDebugMode) debugPrint('ARScreen: scanner stop failed: $error');
+      }
+    },
+    releaseAr: () async {
+      _stopSpatialSampling();
+      await _placementPreview?.clear();
+      _placement.reset();
+      // Drop the cached platform view so a later AR acquisition builds a fresh
+      // one. Reusing a widget whose native session has been torn down would
+      // show a dead surface.
+      _arCameraView = null;
+      await _spatialTracking.disposeSession();
+    },
+  );
   final ARMarkerService _arMarkerService = ARMarkerService();
+  final WalkingLocationApi _locationService =
+      const GeolocatorWalkingLocationService();
+
+  /// Owns mode selection and the camera handoff between the scanner and AR.
+  late final ArCameraOrchestrator _cameraOrchestrator = ArCameraOrchestrator(
+    camera: _camera,
+    permission: _cameraPermission,
+  );
 
   bool _isARReady = false;
+  SpatialCaptureSession? _captureSession;
   bool _isLoading = true;
   final bool _showControls = true;
-  String _currentMode = 'scan'; // scan, place, view
+
+  /// The mode whose chrome is currently rendered. Only advances once the
+  /// camera handoff for it has completed.
+  String get _currentMode => _cameraOrchestrator.currentMode;
+
+  /// The AR platform view, kept across mode changes so Place <-> Spatial does
+  /// not remount it and recreate the session underneath.
+  Widget? _arCameraView;
+
+  /// Keeps the scene's preview node in step with the placement being composed.
+  ArPlacementPreview? _placementPreview;
+
+  /// Scale and rotation at the start of the current direct-manipulation
+  /// gesture, so deltas apply against a stable base.
+  double _gestureBaseScale = 1;
+  double _gestureBaseRotation = 0;
+
+  /// Set while a recovery prompt is on screen, so it is offered once.
+  bool _recoveryChecked = false;
+
   LatLng? _currentLocation;
 
   // AR Settings
@@ -76,57 +350,48 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
   bool _flashEnabled = false;
   dynamic _scannerController;
 
-  // Mock data for testing
-  final List<Map<String, dynamic>> _mockArtworks = [
-    {
-      'id': 'artwork_1',
-      'title': 'Digital Cube',
-      'artist': 'Test Artist',
-      'description': 'A simple 3D cube for testing AR placement',
-      'model': 'cube',
-      'scale': 0.3,
-    },
-    {
-      'id': 'artwork_2',
-      'title': 'Sphere Sculpture',
-      'artist': 'Mock Artist',
-      'description': 'A spherical artwork floating in space',
-      'model': 'sphere',
-      'scale': 0.25,
-    },
-    {
-      'id': 'artwork_3',
-      'title': 'Pyramid Art',
-      'artist': 'Demo Creator',
-      'description': 'A geometric pyramid installation',
-      'model': 'pyramid',
-      'scale': 0.35,
-    },
-  ];
-
   final List<Map<String, dynamic>> _placedObjects = [];
   Map<String, dynamic>? _selectedArtwork;
+  String? _selectedSpatialId;
   final Set<String> _likedArtworks = {};
   final Set<String> _savedArtworks = {};
+  final List<SpatialContentProxy> _arAssetProxies = [];
+
+  List<Map<String, dynamic>> get _availableArtworks => context
+      .read<ArtworkProvider>()
+      .artworks
+      .where(
+        (artwork) =>
+            artwork.arEnabled &&
+            ((artwork.model3DCID ?? '').isNotEmpty ||
+                (artwork.model3DURL ?? '').isNotEmpty),
+      )
+      .map(
+        (artwork) => <String, dynamic>{
+          'id': artwork.id,
+          'title': artwork.title,
+          'artist': artwork.artist,
+          'description': artwork.description,
+          'modelURL': (artwork.model3DCID ?? '').isNotEmpty
+              ? 'ipfs://${artwork.model3DCID}'
+              : artwork.model3DURL,
+          'scale': artwork.arScale ?? 1.0,
+        },
+      )
+      .toList(growable: false);
 
   final List<Map<String, dynamic>> _arModes = [
-    {
-      'id': 'scan',
-      'icon': Icons.qr_code_scanner,
-    },
-    {
-      'id': 'place',
-      'icon': Icons.add_location,
-    },
-    {
-      'id': 'view',
-      'icon': Icons.visibility,
-    },
-    {
-      'id': 'create',
-      'icon': Icons.create,
-    },
+    {'id': 'scan', 'icon': Icons.qr_code_scanner},
+    {'id': 'place', 'icon': Icons.add_location},
+    {'id': 'view', 'icon': Icons.visibility},
+    {'id': 'create', 'icon': Icons.create},
   ];
+
+  Iterable<Map<String, dynamic>> get _availableArModes =>
+      AppConfig.isFeatureEnabled('availabilityNodes')
+          ? _arModes
+          : _arModes
+              .where((mode) => mode['id'] == 'scan' || mode['id'] == 'place');
 
   String _modeName(AppLocalizations l10n, String modeId) {
     switch (modeId) {
@@ -160,6 +425,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
     return DateTime.now();
   }
 
+  /// Longer description of a mode, used by the AR settings sheet.
   String _modeDescription(AppLocalizations l10n, String modeId) {
     switch (modeId) {
       case 'scan':
@@ -184,7 +450,132 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
       duration: AppAnimationTheme.defaults.long,
       vsync: this,
     );
+    // Placement is driven by real hit tests and surface detection, not by the
+    // AR view becoming ready.
+    _spatialTracking.onSurfaceTap = _onSurfaceTap;
+    _spatialTracking.onSurfaceDetected =
+        () => _placement.setSurfaceAvailable(true);
+    _spatialTracking.isTracking.addListener(_onTrackingChanged);
+    _spatialTracking.trackingFailureReason.addListener(_onPlacementChanged);
+    _placement.addListener(_onPlacementChanged);
+    // Camera ownership drives which platform view is mounted, so the screen
+    // has to rebuild whenever it changes or a handoff starts.
+    _cameraOrchestrator.addListener(_onCameraChanged);
+    _placementPreview = ArPlacementPreview(
+      tracking: _spatialTracking,
+      resolveModel: _resolveArAsset,
+      onError: _onPreviewError,
+    );
+    WidgetsBinding.instance.addObserver(this);
   }
+
+  void _onCameraChanged() {
+    if (mounted) setState(() {});
+  }
+
+  void _onPreviewError(Object error) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showKubusSnackBar(
+      SnackBar(
+        content: Text(AppLocalizations.of(context)!.arPlacementPreviewFailed),
+      ),
+      tone: KubusSnackBarTone.warning,
+    );
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (!mounted) return;
+    switch (state) {
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.paused:
+      case AppLifecycleState.hidden:
+      case AppLifecycleState.detached:
+        // Backgrounding suspends sampling and releases the camera. The capture
+        // and its files are preserved so the user can resume where they left
+        // off.
+        _pauseSpatialCapture(SpatialCapturePauseReason.appBackgrounded);
+        unawaited(_cameraOrchestrator.releaseAll());
+      case AppLifecycleState.resumed:
+        // Re-check permission first: the user may have granted it in system
+        // settings while the app was backgrounded. The orchestrator then
+        // re-acquires whichever mode was active, and tracking is reacquired by
+        // the sampler's own gate.
+        unawaited(
+          _cameraPermission
+              .refresh()
+              .then((_) => _cameraOrchestrator.reacquire()),
+        );
+    }
+  }
+
+  void _onTrackingChanged() {
+    _placement.setTracking(_spatialTracking.isTracking.value);
+    final capture = context.read<SpatialCaptureProvider>();
+    // Tracking loss pauses capture instead of failing it; the sampler resumes
+    // on its own once tracking returns.
+    if (!_spatialTracking.isTracking.value &&
+        capture.state == SpatialCaptureState.capturing) {
+      capture.pause(SpatialCapturePauseReason.trackingLost);
+    } else if (_spatialTracking.isTracking.value &&
+        capture.pauseReason == SpatialCapturePauseReason.trackingLost) {
+      capture.resume();
+      _startSpatialSampling();
+    }
+  }
+
+  void _onPlacementChanged() {
+    if (!mounted) return;
+    setState(() {});
+    // Mirror the placement into the scene. A transform the user cannot see is
+    // not a preview, and adjustment controls that change nothing visible are
+    // not controls.
+    unawaited(_placementPreview?.sync(_placement) ?? Future<void>.value());
+  }
+
+  /// Arms the Place workflow for the currently selected artwork.
+  ///
+  /// Selecting an artwork never places it: this only lets the controller start
+  /// looking for a surface.
+  void _armPlacementForSelection() {
+    if (_currentMode != 'place') return;
+    final artwork = _selectedArtwork;
+    if (artwork == null) return;
+    _placement.selectArtwork(
+      artworkId: artwork['id'].toString(),
+      modelPath: (artwork['modelURL'] ?? artwork['model'] ?? '').toString(),
+    );
+  }
+
+  void _onAdjustStart(ScaleStartDetails details) {
+    final transform = _placement.transform;
+    if (transform == null) return;
+    _gestureBaseScale = transform.localScale;
+    _gestureBaseRotation = transform.localYawRadians;
+    _placement.beginAdjusting();
+  }
+
+  void _onAdjustUpdate(ScaleUpdateDetails details) {
+    final transform = _placement.transform;
+    if (transform == null) return;
+    // Pinch scales; a two-finger twist rotates. Both are applied relative to
+    // the values captured when the gesture began, so a single gesture cannot
+    // compound its own output.
+    if (details.scale != 1.0) {
+      final target = (_gestureBaseScale * details.scale)
+          .clamp(_placement.minScale, _placement.maxScale);
+      if (transform.localScale != 0) {
+        _placement.scaleBy(target / transform.localScale);
+      }
+    }
+    if (details.rotation != 0) {
+      final target = _gestureBaseRotation + details.rotation;
+      _placement.rotateBy(target - transform.localYawRadians);
+    }
+  }
+
+  void _onAdjustEnd(ScaleEndDetails details) => _placement.endAdjusting();
 
   @override
   void didChangeDependencies() {
@@ -211,8 +602,10 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
     setState(() => _isLoading = true);
 
     try {
-      final platformProvider =
-          Provider.of<PlatformProvider>(context, listen: false);
+      final platformProvider = Provider.of<PlatformProvider>(
+        context,
+        listen: false,
+      );
 
       if (!platformProvider.supportsARFeatures) {
         if (mounted) {
@@ -229,8 +622,17 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
       }
 
       // Initialize AR Manager and Integration Service
-      await _arManager.initialize();
+      await _spatialTracking.initialize();
       await _arIntegrationService.initialize();
+      if (!mounted) return;
+
+      final location = await _locationService.acquireLiveFix(
+        requestPermission: true,
+      );
+      if (location.isAvailable) {
+        _currentLocation = location.fix!.position;
+        await _arIntegrationService.updateLocation(_currentLocation!);
+      }
       if (!mounted) return;
 
       // Set up callbacks for AR events
@@ -259,17 +661,19 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
         }
       };
 
-      // Mock location for testing (replace with actual location service)
-      _currentLocation = const LatLng(46.0569, 14.5058); // Ljubljana, Slovenia
-      await _arIntegrationService.updateLocation(_currentLocation!);
-      if (!mounted) return;
-
       setState(() {
         _isARReady = true;
         _isLoading = false;
       });
       _syncSavedArtworkStateFromProvider();
       _animationController.forward();
+      // Register the initial camera owner through the same mechanism as every
+      // later switch. The scanner used to mount straight from the mode while
+      // the coordinator still believed nobody held the camera, so the very
+      // first handoff released an owner it did not know about.
+      await _acquireCameraFor(_currentMode);
+      if (!mounted) return;
+      await _offerInterruptedCaptureRecovery();
     } catch (e) {
       if (kDebugMode) {
         debugPrint('ARScreen: AR initialization error: $e');
@@ -299,15 +703,14 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
   void _launchARForMarker(String? artworkId) {
     if (artworkId == null) return;
     // Find artwork and launch AR
-    final artwork = _mockArtworks.firstWhere(
-      (a) => a['id'] == artworkId,
-      orElse: () => _mockArtworks.first,
-    );
+    final artworks = _availableArtworks;
+    final artwork = artworks.where((a) => a['id'] == artworkId).firstOrNull;
+    if (artwork == null) return;
 
-    setState(() {
-      _selectedArtwork = artwork;
-      _currentMode = 'view';
-    });
+    setState(() => _selectedArtwork = artwork);
+    _changeMode(
+      AppConfig.isFeatureEnabled('availabilityNodes') ? 'view' : 'place',
+    );
 
     if (kDebugMode) {
       debugPrint('ARScreen: Launching AR for artwork: ${artwork['title']}');
@@ -380,8 +783,25 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
 
   @override
   void dispose() {
+    _captureSession?.dispose();
     _animationController.dispose();
-    _arManager.dispose();
+    // Detach before tearing the session down so a late native callback cannot
+    // reach a disposed State.
+    _spatialTracking.isTracking.removeListener(_onTrackingChanged);
+    _spatialTracking.trackingFailureReason.removeListener(_onPlacementChanged);
+    _spatialTracking.onSurfaceTap = null;
+    _spatialTracking.onSurfaceDetected = null;
+    WidgetsBinding.instance.removeObserver(this);
+    _placement.removeListener(_onPlacementChanged);
+    _placement.dispose();
+    _placementPreview?.dispose();
+    _cameraOrchestrator.removeListener(_onCameraChanged);
+    _cameraOrchestrator.dispose();
+    _camera.dispose();
+    for (final proxy in _arAssetProxies) {
+      unawaited(proxy.close());
+    }
+    _spatialTracking.dispose();
     _arIntegrationService.dispose();
     super.dispose();
   }
@@ -404,155 +824,162 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
       // Keep AR chrome transparent so the root gradient can still paint.
       // (The AR view itself remains opaque and renders its own content.)
       backgroundColor: Colors.transparent,
-      body: SafeArea(
-        bottom: false,
-        child: Stack(
+      body: ArScreenChrome(
+        header: _isARReady
+            ? ArStatusHeader(
+                modeLabel: _modeName(l10n, _currentMode),
+                modeIcon: _iconForMode(_currentMode),
+                isDark: themeProvider.isDarkMode,
+                onOpenSettings: _showARSettings,
+                flashEnabled: _flashEnabled,
+                onToggleFlash: _currentMode == 'scan' &&
+                        _scannerController != null &&
+                        _cameraOrchestrator.surface == ArCameraSurface.scanner
+                    ? _toggleFlash
+                    : null,
+              )
+            : null,
+        cameraSurface: _isARReady ? _buildCameraSurface(l10n) : _emptyCanvas(),
+        overlay: _isLoading ? _buildLoadingOverlay() : null,
+        guidance: _isARReady && !_isLoading ? _buildGuidance(l10n) : null,
+        controls: _isARReady && _showControls
+            ? ArControlsRegion(
+                modes: _modeOptions(l10n),
+                selectedModeId: _currentMode,
+                onSelectMode: _changeMode,
+                isDark: themeProvider.isDarkMode,
+                primaryAction: _primaryAction(l10n),
+                secondaryActions: _secondaryActions(l10n),
+              )
+            : const SizedBox.shrink(),
+      ),
+    );
+  }
+
+  Widget _emptyCanvas() => const ColoredBox(color: Colors.black);
+
+  IconData _iconForMode(String modeId) =>
+      _arModes.firstWhere((mode) => mode['id'] == modeId)['icon'] as IconData;
+
+  List<ArModeOption> _modeOptions(AppLocalizations l10n) => _availableArModes
+      .map(
+        (mode) => ArModeOption(
+          id: mode['id'] as String,
+          icon: mode['icon'] as IconData,
+          label: _modeName(l10n, mode['id'] as String),
+        ),
+      )
+      .toList(growable: false);
+
+  Future<void> _toggleFlash() async {
+    final controller = _scannerController;
+    if (controller == null) return;
+    try {
+      await controller.toggleTorch();
+      if (!mounted) return;
+      setState(() => _flashEnabled = !_flashEnabled);
+    } catch (_) {
+      // Torch is not available on every camera; silently leaving the control
+      // in its previous state is the honest outcome.
+    }
+  }
+
+  /// The camera surface for whoever actually holds the camera.
+  ///
+  /// Driven by [ArCameraOrchestrator.surface], not by the selected mode.
+  /// Keying it off the mode let the incoming camera widget mount while the
+  /// outgoing owner was still releasing the device, which is exactly the
+  /// contention the ownership sequencing exists to prevent.
+  Widget _buildCameraSurface(AppLocalizations l10n) {
+    switch (_cameraOrchestrator.surface) {
+      case ArCameraSurface.none:
+        // Neither camera is mounted during a handoff. This is the invariant:
+        // the new platform view appears only once the old owner has let go.
+        return _cameraOrchestrator.isTransitioning
+            ? _CameraHandoffSurface(label: l10n.arCameraSwitching)
+            : _emptyCanvas();
+      case ArCameraSurface.scanner:
+        return ARMarkerScanner(
+          key: const ValueKey('ar-scanner-surface'),
+          onDeepLinkFound: (target) {
+            if (!mounted) return;
+            unawaited(_openScannedDeepLink(target));
+          },
+          onArtworkFound: (artworkData) async {
+            if (!mounted) return;
+            setState(() {
+              _placedObjects.add({
+                'id': artworkData['id'] ?? DateTime.now().toString(),
+                'title': artworkData['title'] ?? l10n.commonUnknown,
+                'artist': artworkData['artist'] ?? l10n.commonUnknown,
+                'modelUrl': artworkData['modelUrl'],
+                'timestamp': DateTime.now().millisecondsSinceEpoch,
+              });
+            });
+          },
+          onControllerReady: (controller) {
+            if (!mounted) return;
+            setState(() => _scannerController = controller);
+          },
+        );
+      case ArCameraSurface.ar:
+        // Archive playback is a viewer, not a camera surface, but it lives on
+        // the AR owner so switching to it does not tear the session down.
+        //
+        // The AR view must stay mounted underneath it. Returning the archive
+        // alone removes the platform view from the tree, and Flutter disposes
+        // the native view with it — while the orchestrator still reports
+        // CameraOwner.ar, so the same-owner transition back to Place or
+        // Capture skips releaseAr and re-renders the cached widget over a dead
+        // session. Keeping it mounted behind an opaque archive preserves the
+        // session without showing the camera.
+        //
+        // The Stack is unconditional and the AR view is always child 0. A
+        // structure that swapped between a bare child and a Stack child would
+        // move the platform view in the element tree, and Flutter would
+        // dispose and recreate it — the same dead session by a subtler route.
+        return Stack(
+          fit: StackFit.expand,
           children: [
-            // Main AR View - QR Scanner for 'scan' mode, camera view for others
-            if (_isARReady)
-              _currentMode == 'scan'
-                  ? ARMarkerScanner(
-                      onDeepLinkFound: (target) {
-                        if (!mounted) return;
-                        unawaited(
-                          _openScannedDeepLink(target),
-                        );
-                      },
-                      onArtworkFound: (artworkData) async {
-                        setState(() {
-                          // Store scanned artwork
-                          _placedObjects.add({
-                            'id':
-                                artworkData['id'] ?? DateTime.now().toString(),
-                            'title': artworkData['title'] ?? l10n.commonUnknown,
-                            'artist':
-                                artworkData['artist'] ?? l10n.commonUnknown,
-                            'modelUrl': artworkData['modelUrl'],
-                            'timestamp': DateTime.now().millisecondsSinceEpoch,
-                          });
-                        });
-                      },
-                      onControllerReady: (controller) {
-                        setState(() {
-                          _scannerController = controller;
-                        });
-                      },
-                    )
-                  : _currentMode == 'view'
-                      ? _buildViewMode(themeProvider)
-                      : _buildModePreview(themeProvider),
-
-            // Loading overlay
-            if (_isLoading) _buildLoadingOverlay(),
-
-            // Top bar with mode and settings (for all modes)
-            if (_isARReady)
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                child: _buildTopBar(themeProvider),
-              ),
-
-            // Bottom controls overlay (only for non-scan modes)
-            if (_isARReady && _showControls && _currentMode != 'scan')
-              Positioned(
-                bottom: 0,
-                left: 0,
-                right: 0,
-                child: _buildBottomControls(themeProvider),
-              ),
-
-            // Mode selector overlay for all modes (positioned at bottom)
-            if (_isARReady)
-              Positioned(
-                bottom: KubusSpacing.lg + KubusLayout.mainBottomNavBarHeight,
-                left: KubusSpacing.lg,
-                right: KubusSpacing.lg,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: KubusSpacing.sm,
-                    vertical: KubusSpacing.sm,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .surface
-                        .withValues(alpha: 0.95),
-                    borderRadius: BorderRadius.circular(KubusRadius.lg),
-                    border: Border.all(
-                      color: AppColorUtils.cyanAccent.withValues(alpha: 0.3),
-                      width: 1,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: _arModes.map((mode) {
-                      final modeId = mode['id'] as String;
-                      final modeIcon = mode['icon'] as IconData;
-                      final isSelected = modeId == _currentMode;
-                      return Expanded(
-                        child: GestureDetector(
-                          onTap: () => _changeMode(modeId),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              vertical: KubusSpacing.md,
-                            ),
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? AppColorUtils.cyanAccent
-                                      .withValues(alpha: 0.2)
-                                  : Colors.transparent,
-                              borderRadius:
-                                  BorderRadius.circular(KubusRadius.md),
-                              border: Border.all(
-                                color: isSelected
-                                    ? AppColorUtils.cyanAccent
-                                    : Colors.transparent,
-                                width: 2,
-                              ),
-                            ),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  modeIcon,
-                                  color: isSelected
-                                      ? AppColorUtils.cyanAccent
-                                      : Theme.of(context)
-                                          .colorScheme
-                                          .onSurface
-                                          .withValues(alpha: 0.6),
-                                  size: KubusHeaderMetrics.actionIcon,
-                                ),
-                                const SizedBox(height: KubusSpacing.xs),
-                                Text(
-                                  _modeName(l10n, modeId),
-                                  style: KubusTypography.inter(
-                                    color: isSelected
-                                        ? AppColorUtils.cyanAccent
-                                        : Theme.of(context)
-                                            .colorScheme
-                                            .onSurface
-                                            .withValues(alpha: 0.6),
-                                    fontSize: KubusChromeMetrics.navMetaLabel,
-                                    fontWeight: isSelected
-                                        ? FontWeight.w600
-                                        : FontWeight.normal,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
+            _buildArCameraSurface(),
+            if (_currentMode == 'view')
+              ColoredBox(
+                color: Theme.of(context).colorScheme.surface,
+                child: _buildSpatialArchive(),
               ),
           ],
-        ),
-      ),
+        );
+    }
+  }
+
+  /// The ARCore/ARKit view, built once and reused.
+  ///
+  /// Cached so switching between Place and Spatial rebuilds only the chrome.
+  /// A fresh widget instance each time would remount the platform view and
+  /// silently recreate the AR session the coordinator just kept alive.
+  Widget _buildArCameraSurface() {
+    final view = _arCameraView ??= _spatialTracking.buildTrackedView(
+      onReady: (_) {
+        if (kDebugMode) {
+          debugPrint('ARScreen: AR view created successfully');
+        }
+        // The AR view becoming ready must never confirm a placement. It only
+        // means the session can start looking for a surface; the user still
+        // chooses where the artwork goes.
+        _armPlacementForSelection();
+      },
+    );
+
+    // Direct manipulation of the previewed artwork. Pinch scales it, a
+    // horizontal drag rotates it — both applied to the live preview node, so
+    // the controls are not merely domain methods with no visible effect.
+    return GestureDetector(
+      key: const ValueKey('ar-camera-surface'),
+      behavior: HitTestBehavior.translucent,
+      onScaleStart: _placement.canAdjust ? _onAdjustStart : null,
+      onScaleUpdate: _placement.canAdjust ? _onAdjustUpdate : null,
+      onScaleEnd: _placement.canAdjust ? _onAdjustEnd : null,
+      child: view,
     );
   }
 
@@ -576,14 +1003,11 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
             ),
             const SizedBox(height: 8),
             Text(
-              _arManager.isInitialized
-                  ? l10n.arReadyStatus
-                  : l10n.arSettingUpStatus,
+              _isARReady ? l10n.arReadyStatus : l10n.arSettingUpStatus,
               style: KubusTypography.inter(
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.7),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.7),
                 fontSize: 14,
               ),
             ),
@@ -593,234 +1017,121 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildViewMode(ThemeProvider themeProvider) {
-    final l10n = AppLocalizations.of(context)!;
-    return Container(
-      color: Colors.transparent,
-      child: _placedObjects.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.visibility_off,
-                    size: 64,
-                    color: AppColorUtils.cyanAccent.withValues(alpha: 0.5),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    l10n.arNoArtworksYetTitle,
-                    style: KubusTypography.inter(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 40),
-                    child: Text(
-                      l10n.arNoArtworksYetDescription,
-                      style: KubusTypography.inter(
-                        fontSize: 16,
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.7),
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ],
-              ),
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.only(
-                  left: 16,
-                  right: 16,
-                  top: 80,
-                  bottom:
-                      120), // Top padding for app bar, bottom for mode selector
-              itemCount: _placedObjects.length,
-              itemBuilder: (context, index) {
-                final artwork = _placedObjects[index];
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: ListTile(
-                    leading: Container(
-                      width: 50,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        color: AppColorUtils.cyanAccent.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(KubusRadius.sm),
-                      ),
-                      child: Icon(
-                        Icons.view_in_ar,
-                        color: AppColorUtils.cyanAccent,
-                      ),
-                    ),
-                    title: Text(
-                      artwork['title'] ?? l10n.commonUnknown,
-                      style: KubusTypography.inter(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    subtitle: Text(
-                      artwork['artist'] ?? l10n.commonUnknown,
-                      style: KubusTypography.inter(),
-                    ),
-                    trailing: IconButton(
-                      icon: Icon(
-                        Icons.open_in_new,
-                        color: AppColorUtils.cyanAccent,
-                      ),
-                      onPressed: () async {
-                        // Launch AR viewer for this artwork using ARManager
-                        final messenger = ScaffoldMessenger.of(context);
-                        final scheme = Theme.of(context).colorScheme;
-                        final l10n = AppLocalizations.of(context)!;
-                        try {
-                          // Add model to AR scene
-                          await _arManager.addModel(
-                            modelPath: artwork['modelURL'] ?? '',
-                            position: vector.Vector3(0, 0, -1.5),
-                            scale: vector.Vector3.all(1.0),
-                            name: artwork['id'],
-                          );
-
-                          if (!mounted) return;
-                          messenger.showKubusSnackBar(
-                            SnackBar(
-                              content: Text(l10n.arModelLoadedToast),
-                              backgroundColor: scheme.primary,
-                            ),
-                          );
-                        } catch (e) {
-                          if (kDebugMode) {
-                            debugPrint('ARScreen: Failed to load AR model: $e');
-                          }
-                          if (!mounted) return;
-                          messenger.showKubusSnackBar(
-                            SnackBar(
-                              content: Text(l10n.arModelLoadFailedToast),
-                              backgroundColor: scheme.error,
-                            ),
-                          );
-                        }
-                      },
-                    ),
-                  ),
-                );
-              },
-            ),
-    );
+  // Helper method to place selected artwork in AR
+  Future<String> _resolveArAsset(String raw) async {
+    if (raw.trim().isEmpty) {
+      throw StateError('This artwork has no tracked 3D asset.');
+    }
+    final service = context.read<KubusNodeProvider>().service;
+    final candidates = await service.resolveContentCandidates(raw);
+    if (candidates.isEmpty) {
+      throw StateError('No content route is available for this artwork.');
+    }
+    final proxy = await SpatialContentProxy.start(candidates);
+    _arAssetProxies.add(proxy);
+    return proxy.uri.toString();
   }
 
-  Widget _buildModePreview(ThemeProvider themeProvider) {
+  Widget _buildSpatialArchive() {
     final l10n = AppLocalizations.of(context)!;
-    final mode = _arModes.firstWhere((mode) => mode['id'] == _currentMode);
-    final modeId = mode['id'] as String;
-    final modeIcon = mode['icon'] as IconData;
-
-    // For place and create modes, show AR camera view
-    if (_currentMode == 'place' || _currentMode == 'create') {
-      return Stack(
-        children: [
-          // AR camera view from ARManager
-          _arManager.createARView(
-            onARViewCreated: (controller) {
-              if (kDebugMode) {
-                debugPrint('ARScreen: AR View created successfully');
-              }
-              // Automatically place selected artwork if in place mode
-              if (_currentMode == 'place' && _selectedArtwork != null) {
-                _placeSelectedArtwork();
-              }
-            },
-          ),
-          // Instruction overlay for place mode
-          if (_currentMode == 'place' && _selectedArtwork != null)
-            Positioned(
-              top: 100,
-              left: 20,
-              right: 20,
-              child: Container(
-                padding: const EdgeInsets.all(KubusSpacing.md),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.7),
-                  borderRadius: BorderRadius.circular(KubusRadius.md),
+    final node = context.watch<KubusNodeProvider>();
+    final selectedArtworkId = _selectedArtwork?['id']?.toString();
+    final histories = node.jobs
+        .where(
+      (job) => job.state == 'completed' && job.output?['manifest'] is Map,
+    )
+        .where((job) {
+      final manifest = job.output!['manifest'] as Map;
+      return selectedArtworkId == null ||
+          manifest['artworkId']?.toString() == selectedArtworkId;
+    }).toList(growable: false)
+      ..sort((a, b) {
+        final aDate =
+            (a.output!['manifest'] as Map)['capturedAt']?.toString() ?? '';
+        final bDate =
+            (b.output!['manifest'] as Map)['capturedAt']?.toString() ?? '';
+        return bDate.compareTo(aDate);
+      });
+    if (histories.isEmpty) {
+      return ColoredBox(
+        color: Theme.of(context).colorScheme.surface,
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(KubusSpacing.xl),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.view_in_ar_outlined, size: 52),
+                const SizedBox(height: KubusSpacing.md),
+                Text(
+                  l10n.spatialArchiveEmptyTitle,
+                  style: Theme.of(context).textTheme.headlineSmall,
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      l10n.arPlacingTitle('${_selectedArtwork!['title']}'),
-                      style: KubusTypography.inter(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      l10n.arPlacingInstruction,
-                      style: KubusTypography.inter(
-                        color: Colors.white70,
-                        fontSize: 14,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
+                const SizedBox(height: KubusSpacing.sm),
+                Text(
+                  l10n.spatialArchiveEmptyBody,
+                  textAlign: TextAlign.center,
                 ),
-              ),
+              ],
             ),
-        ],
+          ),
+        ),
       );
     }
-
-    // For view mode, show placeholder (will be replaced with actual AR view when artwork selected)
-    return Container(
-      color: Colors.black,
-      padding: const EdgeInsets.only(
-          top: 80,
-          bottom: 140), // Top padding for app bar, bottom for mode selector
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              modeIcon,
-              color: AppColorUtils.cyanAccent,
-              size: 64,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              l10n.arModePreviewTitle(_modeName(l10n, modeId)),
-              style: KubusTypography.inter(
-                color: Colors.white,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 40),
-              child: Text(
-                _modeDescription(l10n, modeId),
-                style: KubusTypography.inter(
-                  color: Colors.white70,
-                  fontSize: 16,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ],
+    final selected =
+        histories.where((job) => job.id == _selectedSpatialId).firstOrNull ??
+            histories.first;
+    final manifest = SpatialContent.fromJson(
+      Map<String, dynamic>.from(selected.output!['manifest'] as Map),
+    );
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: SpatialViewer(content: manifest, nodeService: node.service),
         ),
-      ),
+        Positioned(
+          left: 16,
+          right: 16,
+          bottom: 150,
+          child: GlassSurface(
+            child: SizedBox(
+              height: 64,
+              child: ListView.separated(
+                padding: const EdgeInsets.all(KubusSpacing.sm),
+                scrollDirection: Axis.horizontal,
+                itemCount: histories.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                itemBuilder: (context, index) {
+                  final job = histories[index];
+                  final value = job.output!['manifest'] as Map;
+                  final capturedAt = DateTime.tryParse(
+                    value['capturedAt']?.toString() ?? '',
+                  );
+                  return ChoiceChip(
+                    selected: job.id == selected.id,
+                    label: Text(
+                      capturedAt == null
+                          ? l10n.spatialArchiveRecord
+                          : '${capturedAt.month}/${capturedAt.year}',
+                    ),
+                    onSelected: (_) =>
+                        setState(() => _selectedSpatialId = job.id),
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
-  // Helper method to place selected artwork in AR
+  /// Commits the previewed placement into the scene.
+  ///
+  /// The preview node already sits at the chosen pose with the chosen rotation
+  /// and scale, so confirming promotes it rather than adding a second node —
+  /// which is what left the scene with an orphan preview underneath the placed
+  /// artwork.
   Future<void> _placeSelectedArtwork() async {
     if (_selectedArtwork == null) return;
 
@@ -829,21 +1140,37 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
     final scheme = Theme.of(context).colorScheme;
 
     try {
-      // Place model in front of camera
-      await _arManager.addModel(
-        modelPath: _selectedArtwork!['modelURL'] ?? '',
-        position: vector.Vector3(0, 0, -1.5), // 1.5 meters in front
-        scale: vector.Vector3.all(1.0),
-        name: _selectedArtwork!['id'],
+      // Anchor at the pose the user actually chose. A placement with no
+      // hit-tested transform is not renderable, so there is nothing to add.
+      final transform = _placement.transform;
+      if (transform == null) return;
+
+      final previewName = await _placementPreview?.commit();
+      if (previewName != null) {
+        // Promote the preview: it is already at the confirmed transform.
+        if (kDebugMode) {
+          debugPrint('ARScreen: committed placement preview $previewName');
+        }
+        return;
+      }
+
+      // No preview survived (the session was recreated, for instance): build
+      // the node from the confirmed transform, rotation included.
+      await _spatialTracking.addAnchoredModel(
+        modelPath: await _resolveArAsset(
+          (_selectedArtwork!['modelURL'] ?? '').toString(),
+        ),
+        anchor: transform.anchor,
+        localYawRadians: transform.localYawRadians,
+        localScale: transform.localScale,
+        name: _selectedArtwork!['id'].toString(),
       );
 
       if (kDebugMode) {
         debugPrint(
-            'ARScreen: Placed AR artwork: ${_selectedArtwork!['title']}');
+          'ARScreen: Placed AR artwork: ${_selectedArtwork!['title']}',
+        );
       }
-
-      // Note: Discovery tracking would require converting Map to Artwork object
-      // This can be implemented when backend integration is complete
     } catch (e) {
       if (mounted) {
         if (kDebugMode) {
@@ -859,202 +1186,296 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
     }
   }
 
-  Widget _buildTopBar(ThemeProvider themeProvider) {
-    final l10n = AppLocalizations.of(context)!;
-    final isDark = themeProvider.isDarkMode;
-    final overlayColor = isDark
-        ? Theme.of(context).colorScheme.surface.withValues(alpha: 0.8)
-        : Theme.of(context).colorScheme.surface.withValues(alpha: 0.95);
-
-    final currentModeId = _currentMode;
-    final currentModeIcon = _arModes.firstWhere(
-      (mode) => mode['id'] == currentModeId,
-    )['icon'] as IconData;
-
-    return Container(
-      padding: const EdgeInsets.all(KubusSpacing.md),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            overlayColor,
-            overlayColor.withValues(alpha: 0.0),
-          ],
+  /// The contextual actions for the current mode.
+  ///
+  /// Finish eligibility is never derived here: it comes from
+  /// [SpatialCaptureProvider.canFinish], the one authority on whether a capture
+  /// covers enough of the subject to reconstruct. Deriving it independently
+  /// from a frame count produced a Finish button that stopped the sampler and
+  /// was then rejected by the provider, stranding the capture.
+  List<ArSecondaryAction> _secondaryActions(AppLocalizations l10n) {
+    if (_currentMode == 'create') {
+      final capture = context.watch<SpatialCaptureProvider>();
+      if (capture.state == SpatialCaptureState.error) {
+        return [
+          ArSecondaryAction(
+            label: l10n.spatialCaptureRetryTransfer,
+            icon: Icons.refresh,
+            onPressed: _retrySpatialTransfer,
+          ),
+        ];
+      }
+      if (!capture.canFinish) return const [];
+      return [
+        ArSecondaryAction(
+          label: l10n.spatialCaptureFinish,
+          icon: Icons.check_circle_outline,
+          onPressed: _finishSpatialCapture,
         ),
-      ),
-      child: Row(
-        children: [
-          // Mode indicator (back button removed during AR camera view)
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: KubusSpacing.md,
-                vertical: KubusSpacing.sm,
-              ),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primaryContainer,
-                borderRadius: BorderRadius.circular(KubusRadius.xl),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    currentModeIcon,
-                    color: AppColorUtils.cyanAccent,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    _modeName(l10n, currentModeId),
-                    style: KubusTypography.inter(
-                      color: Theme.of(context).colorScheme.onSurface,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const Spacer(),
-          // Flash button (only in scan mode)
-          if (_currentMode == 'scan' && _scannerController != null) ...[
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: _flashEnabled
-                    ? AppColorUtils.amberAccent.withValues(alpha: 0.2)
-                    : Theme.of(context).colorScheme.primaryContainer,
-                borderRadius: BorderRadius.circular(KubusRadius.xl),
-                border: _flashEnabled
-                    ? Border.all(color: AppColorUtils.amberAccent, width: 1.5)
-                    : null,
-              ),
-              child: IconButton(
-                padding: EdgeInsets.zero,
-                icon: Icon(
-                  _flashEnabled ? Icons.flash_on : Icons.flash_off,
-                  color: _flashEnabled
-                      ? AppColorUtils.amberAccent
-                      : Theme.of(context).colorScheme.onSurface,
-                  size: KubusHeaderMetrics.actionIcon,
-                ),
-                onPressed: () async {
-                  try {
-                    await _scannerController.toggleTorch();
-                    setState(() {
-                      _flashEnabled = !_flashEnabled;
-                    });
-                  } catch (e) {
-                    // Flash not available
-                  }
-                },
-              ),
-            ),
-            const SizedBox(width: KubusSpacing.sm),
-          ],
-          // Settings button
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primaryContainer,
-              borderRadius: BorderRadius.circular(KubusRadius.xl),
-            ),
-            child: IconButton(
-              padding: EdgeInsets.zero,
-              icon: Icon(Icons.settings,
-                  color: Theme.of(context).colorScheme.onSurface, size: 20),
-              onPressed: _showARSettings,
-            ),
-          ),
-        ],
-      ),
-    );
+      ];
+    }
+    if (_currentMode == 'place' && _placement.hasPlacement) {
+      final canAdjust = _placement.canAdjust;
+      return [
+        ArSecondaryAction(
+          label: l10n.commonCancel,
+          icon: Icons.close,
+          onPressed: _cancelPlacement,
+        ),
+        ArSecondaryAction(
+          label: l10n.arPlacementRotate,
+          icon: Icons.rotate_right,
+          onPressed: canAdjust ? () => _placement.rotateBy(math.pi / 8) : null,
+        ),
+        ArSecondaryAction(
+          label: l10n.arPlacementScaleUp,
+          icon: Icons.zoom_in,
+          onPressed: canAdjust ? () => _placement.scaleBy(1.1) : null,
+        ),
+        ArSecondaryAction(
+          label: l10n.arPlacementScaleDown,
+          icon: Icons.zoom_out,
+          onPressed: canAdjust ? () => _placement.scaleBy(1 / 1.1) : null,
+        ),
+      ];
+    }
+    return const [];
   }
 
-  Widget _buildBottomControls(ThemeProvider themeProvider) {
-    final isDark = themeProvider.isDarkMode;
-    final overlayColor = isDark
-        ? Theme.of(context).colorScheme.surface.withValues(alpha: 0.8)
-        : Theme.of(context).colorScheme.surface.withValues(alpha: 0.95);
+  /// Whether a capture is stuck: it hit a ceiling but never covered enough of
+  /// the subject to be worth reconstructing.
+  ///
+  /// Resuming would stop again on the next tick and finishing is refused, so
+  /// this state needs its own way out rather than two disabled buttons.
+  bool _isUnusableAtLimit(SpatialCaptureProvider capture) =>
+      capture.state == SpatialCaptureState.paused &&
+      capture.pauseReason == SpatialCapturePauseReason.limitReached &&
+      !capture.canFinish;
 
-    return Container(
-      padding: const EdgeInsets.only(
-          left: 24,
-          right: 24,
-          bottom: 100 + KubusLayout.mainBottomNavBarHeight,
-          top: 24), // Extra bottom padding for mode selector
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.bottomCenter,
-          end: Alignment.topCenter,
-          colors: [
-            overlayColor,
-            overlayColor.withValues(alpha: 0.0),
-          ],
-        ),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Action button based on mode (mode selector removed - now unified at bottom)
-          _buildActionButton(themeProvider),
-        ],
-      ),
-    );
+  /// Throws away a capture that reached its ceiling without usable coverage and
+  /// starts a fresh one.
+  Future<void> _discardAndRestartCapture() async {
+    final capture = context.read<SpatialCaptureProvider>();
+    _stopSpatialSampling();
+    await capture.discard();
+    if (!mounted) return;
+    await _captureSpatialFrame();
   }
 
-  Widget _buildActionButton(ThemeProvider themeProvider) {
-    final l10n = AppLocalizations.of(context)!;
-    String buttonText = '';
-    IconData buttonIcon = Icons.check;
+  /// Discards the preview and returns to choosing a surface.
+  void _cancelPlacement() {
+    _placement.cancelPlacement();
+    unawaited(_placementPreview?.clear() ?? Future<void>.value());
+  }
 
-    switch (_currentMode) {
-      case 'scan':
-        buttonText = l10n.arActionScan;
-        buttonIcon = Icons.qr_code_scanner;
-        break;
-      case 'place':
-        buttonText = l10n.arActionPlace;
-        buttonIcon = Icons.add_location;
-        break;
-      case 'view':
-        buttonText = l10n.arActionView;
-        buttonIcon = Icons.info_outline;
-        break;
-      case 'create':
-        buttonText = l10n.arActionCreate;
-        buttonIcon = Icons.create;
-        break;
+  /// The single contextual guidance surface for the current mode.
+  ///
+  /// One bounded card carries the guidance line, the capture readout and any
+  /// transfer progress. It replaces the stacked glass cards and the
+  /// `Positioned(top: 100)` instruction panels that used to run in parallel
+  /// with it, each unaware of the other.
+  ArContextualGuidance _buildGuidance(AppLocalizations l10n) {
+    final capture = context.watch<SpatialCaptureProvider>();
+    ArCaptureReadout? readout;
+    ArTransferReadout? transfer;
+
+    if (_currentMode == 'create') {
+      if (capture.state == SpatialCaptureState.capturing ||
+          capture.state == SpatialCaptureState.paused) {
+        readout = ArCaptureReadout(
+          // Viewpoint diversity, not a frame-count ratio. Frame count stays
+          // visible as context, but it is not what completeness means.
+          coverage: capture.coverage,
+          animate: capture.state == SpatialCaptureState.capturing,
+          detail: l10n.spatialCaptureTrackedViews(
+            capture.frameCount,
+            capture.depthObserved
+                ? l10n.spatialCaptureDepthAvailable
+                : l10n.spatialCaptureRgbPose,
+          ),
+        );
+      }
+      transfer = _transferReadout(l10n, capture);
     }
 
-    const buttonTextColor = Colors.white;
-
-    return ElevatedButton.icon(
-      onPressed: _handleAction,
-      icon: Icon(buttonIcon, color: buttonTextColor),
-      label: Text(
-        buttonText,
-        style: KubusTypography.inter(
-          fontSize: 16,
-          fontWeight: FontWeight.w600,
-          color: buttonTextColor,
-        ),
-      ),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: AppColorUtils.cyanAccent,
-        foregroundColor: buttonTextColor,
-        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(KubusRadius.md),
-        ),
-        elevation: 8,
-        shadowColor: AppColorUtils.cyanAccent.withValues(alpha: 0.4),
-      ),
+    return ArContextualGuidance(
+      message: _contextualGuidanceMessage(l10n),
+      capture: readout,
+      transfer: transfer,
     );
+  }
+
+  /// Measured transfer progress, or null when nothing is being transferred.
+  ArTransferReadout? _transferReadout(
+    AppLocalizations l10n,
+    SpatialCaptureProvider capture,
+  ) {
+    final progress = capture.transfer;
+    if (!progress.isActive) return null;
+    switch (progress.phase) {
+      case SpatialTransferPhase.preparing:
+        return ArTransferReadout(label: l10n.spatialTransferPreparing);
+      case SpatialTransferPhase.uploading:
+        return ArTransferReadout(
+          label: l10n.spatialTransferUploading(
+            progress.uploadedFiles,
+            progress.totalFiles,
+          ),
+          fraction: progress.fraction,
+        );
+      case SpatialTransferPhase.committing:
+        return ArTransferReadout(label: l10n.spatialTransferCommitting);
+      case SpatialTransferPhase.idle:
+      case SpatialTransferPhase.complete:
+        return null;
+    }
+  }
+
+  String? _contextualGuidanceMessage(AppLocalizations l10n) {
+    // A camera handoff explains itself; nothing else is meaningful mid-switch.
+    if (_cameraOrchestrator.isTransitioning) return l10n.arCameraSwitching;
+
+    // A real tracking problem always wins: it explains why nothing is
+    // happening and what to do about it.
+    final failure = ArErrorMessages.forTrackingFailure(
+      l10n,
+      _spatialTracking.trackingFailureReason.value,
+    );
+    if (failure != null) return failure;
+
+    switch (_currentMode) {
+      case 'place':
+        // A placement survives tracking loss; say so rather than letting the
+        // controls simply go dead with no explanation.
+        if (_placement.isRecoveringTracking) {
+          return l10n.arPlacementTrackingLost;
+        }
+        switch (_placement.state) {
+          case ArPlacementState.none:
+            return l10n.arPlacementSelectArtwork;
+          case ArPlacementState.selected:
+          case ArPlacementState.searchingSurface:
+            return l10n.arPlacementFindingSurface;
+          case ArPlacementState.previewing:
+            return l10n.arPlacementTapToPlace;
+          case ArPlacementState.placed:
+          case ArPlacementState.adjusting:
+            return l10n.arPlacementAdjustHint;
+          case ArPlacementState.confirmed:
+          case ArPlacementState.error:
+            return null;
+        }
+      case 'create':
+        return _captureGuidanceMessage(
+          l10n,
+          context.watch<SpatialCaptureProvider>().guidance,
+        );
+      default:
+        // Modes with no live state of their own still say what they are for,
+        // so the guidance surface is never a blank card.
+        return _modeDescription(l10n, _currentMode);
+    }
+  }
+
+  /// Maps the provider's structured guidance to localized copy.
+  ///
+  /// The provider deliberately returns a case rather than a sentence, so every
+  /// capture guidance path exists in EN and SL instead of only English.
+  String? _captureGuidanceMessage(
+    AppLocalizations l10n,
+    SpatialCaptureGuidance guidance,
+  ) {
+    switch (guidance) {
+      case SpatialCaptureGuidance.idle:
+        return l10n.spatialCaptureGuideIdle;
+      case SpatialCaptureGuidance.trackingLost:
+        return l10n.spatialCaptureGuideTrackingLost;
+      case SpatialCaptureGuidance.limitReached:
+        // Reaching the ceiling means something different depending on whether
+        // the capture is usable, so the guidance says which it is.
+        return context.watch<SpatialCaptureProvider>().canFinish
+            ? l10n.spatialCaptureGuideFull
+            : l10n.spatialCaptureGuideFullUnusable;
+      case SpatialCaptureGuidance.paused:
+        return l10n.spatialCaptureGuidePaused;
+      case SpatialCaptureGuidance.coverageLow:
+        return l10n.spatialCaptureGuideStart;
+      case SpatialCaptureGuidance.coverageFair:
+        return l10n.spatialCaptureGuideOverlap;
+      case SpatialCaptureGuidance.coverageGood:
+        return l10n.spatialCaptureGuideDetails;
+      case SpatialCaptureGuidance.coverageReady:
+        return l10n.spatialCaptureGuideReady;
+    }
+  }
+
+  /// The one primary action for the current mode.
+  ///
+  /// While a capture is running, this is Finish — and it is enabled strictly by
+  /// [SpatialCaptureProvider.canFinish]. The old `frameCount >= 8` gate let the
+  /// user press Finish on a capture the provider would then reject, after the
+  /// handler had already stopped the sampler: the capture was left running with
+  /// nothing driving it and no way forward.
+  ArPrimaryAction? _primaryAction(AppLocalizations l10n) {
+    if (_currentMode == 'scan') return null;
+    final capture = context.watch<SpatialCaptureProvider>();
+
+    switch (_currentMode) {
+      case 'place':
+        final canConfirm = _placement.canConfirm;
+        return ArPrimaryAction(
+          label: canConfirm ? l10n.arPlacementConfirm : l10n.arActionPlace,
+          icon: canConfirm ? Icons.check : Icons.add_location,
+          onPressed: _cameraOrchestrator.isTransitioning ? null : _handleAction,
+        );
+      case 'view':
+        return ArPrimaryAction(
+          label: l10n.arActionView,
+          icon: Icons.info_outline,
+          onPressed: _cameraOrchestrator.isTransitioning ? null : _handleAction,
+        );
+      case 'create':
+        final busy = const {
+          SpatialCaptureState.transferring,
+          SpatialCaptureState.awaitingProcessingChoice,
+          SpatialCaptureState.queued,
+          SpatialCaptureState.processing,
+          SpatialCaptureState.verifying,
+        }.contains(capture.state);
+        if (capture.state == SpatialCaptureState.capturing) {
+          return ArPrimaryAction(
+            label: l10n.spatialCaptureFinish,
+            icon: Icons.check_circle_outline,
+            onPressed: capture.canFinish ? _finishSpatialCapture : null,
+          );
+        }
+        if (capture.state == SpatialCaptureState.paused) {
+          // A capture stopped at a ceiling without usable coverage cannot be
+          // resumed — sampling would stop again immediately — and cannot be
+          // finished. Offering Resume there is a dead end, so the way out is
+          // the primary action instead.
+          if (_isUnusableAtLimit(capture)) {
+            return ArPrimaryAction(
+              label: l10n.spatialCaptureDiscardAndRestart,
+              icon: Icons.restart_alt,
+              onPressed: busy ? null : _discardAndRestartCapture,
+            );
+          }
+          return ArPrimaryAction(
+            label: l10n.spatialCaptureResume,
+            icon: Icons.play_arrow,
+            onPressed: busy ? null : _handleAction,
+          );
+        }
+        return ArPrimaryAction(
+          label: l10n.spatialCaptureStart,
+          icon: Icons.center_focus_strong,
+          onPressed: busy || _cameraOrchestrator.isTransitioning
+              ? null
+              : _handleAction,
+        );
+    }
+    return null;
   }
 
   // Event handlers
@@ -1073,32 +1494,705 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
     );
   }
 
+  /// Switches modes, sequencing the camera handoff before the chrome follows.
+  ///
+  /// The requested mode and the rendered mode are separate on purpose. The
+  /// screen used to set `_currentMode` first and only then ask for the camera,
+  /// so the incoming platform view could mount while the outgoing owner was
+  /// still releasing the device — the exact contention the coordinator exists
+  /// to prevent. Now the chrome advances only once the handoff has completed.
   void _changeMode(String modeId) {
-    setState(() {
-      _currentMode = modeId;
-      // Clear scanner controller when leaving scan mode
-      if (modeId != 'scan') {
-        _scannerController = null;
-        _flashEnabled = false;
-      }
-    });
+    if (!AppConfig.isFeatureEnabled('availabilityNodes') &&
+        (modeId == 'view' || modeId == 'create')) {
+      return;
+    }
+    if (modeId == _cameraOrchestrator.requestedMode) return;
+    if (modeId != 'create') {
+      // Pause the provider alongside the sampler. Cancelling the timer alone
+      // left the capture in `capturing` with nothing driving it, so returning
+      // to this mode showed a disabled Finish button and a session that could
+      // never make progress again.
+      _pauseSpatialCapture(SpatialCapturePauseReason.modeChanged);
+    }
+    unawaited(_acquireCameraFor(modeId));
+  }
+
+  /// Acquires the camera for [modeId], but never before permission is granted.
+  ///
+  /// Requests are serialized by the coordinator, so rapid mode toggling queues
+  /// handoffs rather than interleaving them.
+  Future<void> _acquireCameraFor(String modeId) async {
+    await _cameraOrchestrator.requestMode(modeId);
+    if (!mounted) return;
+    if (modeId == 'place') _armPlacementForSelection();
   }
 
   void _handleAction() {
+    if (!AppConfig.isFeatureEnabled('availabilityNodes') &&
+        (_currentMode == 'view' || _currentMode == 'create')) {
+      return;
+    }
     switch (_currentMode) {
       case 'scan':
         _startScanning();
         break;
       case 'place':
-        _placeArtwork();
+        // One contextual primary action: arm an artwork, then confirm the
+        // previewed placement once the user has chosen a surface.
+        if (_placement.canConfirm) {
+          unawaited(_confirmPlacement());
+        } else {
+          _placeArtwork();
+        }
         break;
       case 'view':
         _viewArtworkDetails();
         break;
       case 'create':
-        _createArtwork();
+        unawaited(_captureSpatialFrame());
         break;
     }
+  }
+
+  Future<void> _captureSpatialFrame() async {
+    final capture = context.read<SpatialCaptureProvider>();
+    if (capture.state == SpatialCaptureState.reviewReady) {
+      await _reviewSpatialResult(
+        capture,
+        context.read<KubusNodeProvider>(),
+        remote: capture.remoteResult != null,
+      );
+      return;
+    }
+    if (capture.state != SpatialCaptureState.capturing) {
+      final profile = context.read<ProfileProvider>().currentUser;
+      final wallet = _resolveCurrentWalletAddress();
+      final artworks = context.read<ArtworkProvider>().artworks;
+      final selectedId = _selectedArtwork?['id']?.toString();
+      final selected =
+          artworks.where((artwork) => artwork.id == selectedId).firstOrNull ??
+              artworks.firstOrNull;
+      if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
+      if (selected == null) {
+        // A missing artwork is an ordinary precondition, not a crash: tell the
+        // user what to do instead of throwing a StateError at them.
+        ScaffoldMessenger.of(context).showKubusSnackBar(
+          SnackBar(content: Text(l10n.spatialCaptureChooseArtwork)),
+          tone: KubusSnackBarTone.warning,
+        );
+        return;
+      }
+      final ownsArtwork = wallet.isNotEmpty && selected.walletAddress == wallet;
+      if (profile == null ||
+          (!profile.isArtist && !profile.isInstitution && !ownsArtwork)) {
+        ScaffoldMessenger.of(context).showKubusSnackBar(
+          SnackBar(content: Text(l10n.spatialCaptureContributorOnly)),
+          tone: KubusSnackBarTone.warning,
+        );
+        return;
+      }
+      // A paused capture is resumed rather than restarted, so returning to
+      // this mode never discards work already on disk.
+      if (capture.state == SpatialCaptureState.paused) {
+        capture.resume();
+        _startSpatialSampling();
+        return;
+      }
+      await capture.begin(
+        artworkId: selected.id,
+        markerId: selected.arMarkerId,
+        capturedBy: wallet.isEmpty ? profile.id : wallet,
+      );
+      _startSpatialSampling();
+      return;
+    }
+    // Already capturing: take one sample now rather than waiting for the tick.
+    await _ensureCaptureSession().tick();
+  }
+
+  /// Lazily builds the sampling engine bound to this screen's providers.
+  SpatialCaptureSession _ensureCaptureSession() {
+    return _captureSession ??= SpatialCaptureSession(
+      provider: context.read<SpatialCaptureProvider>(),
+      isTracking: () =>
+          _spatialTracking.isReady && _spatialTracking.isTracking.value,
+      captureFrame: _spatialTracking.captureFrame,
+      onCaptureError: _reportCaptureError,
+    );
+  }
+
+  void _startSpatialSampling() => _ensureCaptureSession().start();
+
+  /// Stops the sampler without touching capture state.
+  void _stopSpatialSampling() => _captureSession?.stop();
+
+  /// Suspends an active capture and its sampler together.
+  ///
+  /// Leaving the capture mode used to cancel the sampler while the provider
+  /// stayed in `capturing`, so returning showed a disabled Finish button with
+  /// nothing driving it — a permanently stuck session.
+  void _pauseSpatialCapture(SpatialCapturePauseReason reason) {
+    final session = _captureSession;
+    if (session != null) {
+      session.pause(reason);
+      return;
+    }
+    final capture = context.read<SpatialCaptureProvider>();
+    if (capture.state == SpatialCaptureState.capturing) {
+      capture.pause(reason);
+    }
+  }
+
+  /// Surfaces only genuinely unexpected capture failures. Routine frame misses
+  /// are absorbed by the session and never reach here.
+  void _reportCaptureError(Object error) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showKubusSnackBar(
+      SnackBar(
+          content: Text(AppLocalizations.of(context)!.arCaptureFrameFailed)),
+      tone: KubusSnackBarTone.warning,
+    );
+  }
+
+  String _resolveCurrentWalletAddress() =>
+      (context.read<WalletProvider>().currentWalletAddress ?? '').trim();
+
+  /// Reports a failed transfer in product language.
+  ///
+  /// The capture is still on disk either way, so the message says so rather
+  /// than surfacing a `PlatformException` or a raw node response.
+  void _reportTransferFailure(Object error) {
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
+    final message = error is KubusNodeUnsupportedException
+        ? l10n.spatialCaptureNodeOutdated
+        : l10n.spatialCaptureTransferFailed;
+    if (kDebugMode) {
+      debugPrint('ARScreen: capture transfer failed: $error');
+    }
+    ScaffoldMessenger.of(context).showKubusSnackBar(
+      SnackBar(content: Text(message)),
+      tone: KubusSnackBarTone.error,
+    );
+  }
+
+  /// Resumes a transfer that failed, re-sending only what never landed.
+  Future<void> _retrySpatialTransfer() async {
+    final capture = context.read<SpatialCaptureProvider>();
+    final node = context.read<KubusNodeProvider>();
+    if (!node.isPaired) {
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+        SnackBar(
+          content:
+              Text(AppLocalizations.of(context)!.spatialCaptureNodeRequired),
+        ),
+        tone: KubusSnackBarTone.neutral,
+      );
+      return;
+    }
+    try {
+      await capture.retryTransfer(node);
+    } catch (error) {
+      _reportTransferFailure(error);
+      return;
+    }
+    if (!mounted) return;
+    await _continueAfterTransfer(capture, node);
+  }
+
+  /// Offers back a capture an earlier session left behind.
+  ///
+  /// Only captures belonging to the signed-in account are offered, so one
+  /// user's work is never handed to whoever opens AR next on a shared device.
+  Future<void> _offerInterruptedCaptureRecovery() async {
+    if (_recoveryChecked) return;
+    _recoveryChecked = true;
+    if (!AppConfig.isFeatureEnabled('availabilityNodes')) return;
+
+    final capture = context.read<SpatialCaptureProvider>();
+    final wallet = _resolveCurrentWalletAddress();
+    final profile = context.read<ProfileProvider>().currentUser;
+    final owner = wallet.isNotEmpty ? wallet : (profile?.id ?? '');
+    if (owner.isEmpty) return;
+
+    final List<InterruptedSpatialCapture> recoverable;
+    try {
+      recoverable = await capture.findRecoverable(capturedBy: owner);
+    } catch (error) {
+      if (kDebugMode) {
+        debugPrint('ARScreen: recovery scan failed: $error');
+      }
+      return;
+    }
+    if (!mounted || recoverable.isEmpty) return;
+
+    final candidate = recoverable.first;
+    final l10n = AppLocalizations.of(context)!;
+    final resume = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.spatialRecoveryTitle),
+        content: Text(l10n.spatialRecoveryBody(candidate.sampleCount)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(null),
+            child: Text(l10n.spatialRecoveryKeep),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l10n.spatialRecoveryDiscard),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(l10n.spatialRecoveryResume),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || resume == null) return;
+
+    if (!resume) {
+      await capture.discardInterrupted(candidate);
+      return;
+    }
+    final adopted = await capture.resumeInterrupted(candidate);
+    if (!mounted || !adopted) return;
+    // The capture comes back paused; entering capture mode resumes sampling
+    // once AR is tracking again.
+    _changeMode('create');
+  }
+
+  /// Finishes the capture and streams it to the paired node.
+  ///
+  /// Nothing here stops sampling before the capture has been accepted. The old
+  /// order — stop the sampler, then call `finish()` — left a rejected capture
+  /// still in `capturing` with no sampler running and a Finish button the
+  /// provider would keep refusing: a capture that could neither progress nor
+  /// complete. Every early return below leaves the capture active and
+  /// resumable.
+  Future<void> _finishSpatialCapture() async {
+    final capture = context.read<SpatialCaptureProvider>();
+    final node = context.read<KubusNodeProvider>();
+    final l10n = AppLocalizations.of(context)!;
+
+    // Guard before touching the sampler. `canFinish` is the same authority the
+    // button is gated on, re-checked here because state can move between the
+    // build and the tap.
+    if (!capture.canFinish) {
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+        SnackBar(content: Text(l10n.spatialCaptureNotReadyToast)),
+        tone: KubusSnackBarTone.warning,
+      );
+      return;
+    }
+    if (!node.isPaired) {
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+        SnackBar(content: Text(l10n.spatialCaptureNodeRequired)),
+        tone: KubusSnackBarTone.neutral,
+      );
+      return;
+    }
+
+    // Only now: the capture is going to be handed over, so sampling stops.
+    _stopSpatialSampling();
+    try {
+      await capture.finish(node);
+    } catch (error) {
+      if (!mounted) return;
+      _reportTransferFailure(error);
+      return;
+    }
+    if (!mounted) return;
+    await _continueAfterTransfer(capture, node);
+  }
+
+  /// Runs the processing choice and review flow for a delivered capture.
+  Future<void> _continueAfterTransfer(
+    SpatialCaptureProvider capture,
+    KubusNodeProvider node,
+  ) async {
+    var selection = await _chooseSpatialProcessing(capture, node);
+    while (mounted && selection != null) {
+      if (!selection.local && !await _confirmRemoteComputePrivacy()) return;
+      final remote = !selection.local;
+      try {
+        final operation = selection.local
+            ? capture.processLocally(node)
+            : capture.processOnNetwork(node, selection.provider!);
+        await _showSpatialProcessingProgress(
+          capture,
+          operation,
+          remote: remote,
+        );
+        await operation;
+        if (!mounted) return;
+        await _reviewSpatialResult(capture, node, remote: remote);
+        return;
+      } catch (_) {
+        if (!mounted) return;
+        final action = await _showSpatialProcessingFailure(
+          capture,
+          localAvailable:
+              node.snapshot?.capabilityAvailable('spatial.reconstruction') ==
+                  true,
+          remote: remote,
+        );
+        if (!mounted ||
+            action == null ||
+            action == _SpatialFailureAction.keepForLater) {
+          return;
+        }
+        capture.prepareRetry();
+        if (action == _SpatialFailureAction.processLocally) {
+          selection = const _SpatialProcessingSelection(local: true);
+        } else {
+          selection = await _chooseSpatialProcessing(capture, node);
+        }
+      }
+    }
+  }
+
+  Future<void> _showSpatialProcessingProgress(
+    SpatialCaptureProvider capture,
+    Future<void> operation, {
+    required bool remote,
+  }) async {
+    var open = true;
+    final dialogShown = Completer<void>();
+    unawaited(
+      operation.then<void>(
+        (_) async {
+          await dialogShown.future;
+          if (mounted && open) {
+            await Navigator.of(context, rootNavigator: true).maybePop();
+          }
+        },
+        onError: (_, __) async {
+          await dialogShown.future;
+          if (mounted && open) {
+            await Navigator.of(context, rootNavigator: true).maybePop();
+          }
+        },
+      ),
+    );
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (_) {
+        if (!dialogShown.isCompleted) dialogShown.complete();
+        return _SpatialProcessingProgressDialog(remote: remote);
+      },
+    );
+    open = false;
+  }
+
+  Future<_SpatialFailureAction?> _showSpatialProcessingFailure(
+    SpatialCaptureProvider capture, {
+    required bool remote,
+    required bool localAvailable,
+  }) {
+    final l10n = AppLocalizations.of(context)!;
+    return showDialog<_SpatialFailureAction>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.spatialFailedTitle),
+        content: Text(
+          remote ? l10n.spatialFailedRemoteBody : l10n.spatialFailedLocalBody,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(
+              dialogContext,
+            ).pop(_SpatialFailureAction.keepForLater),
+            child: Text(l10n.spatialFailedKeepForLater),
+          ),
+          if (remote && localAvailable)
+            TextButton(
+              onPressed: () => Navigator.of(
+                dialogContext,
+              ).pop(_SpatialFailureAction.processLocally),
+              child: Text(l10n.spatialFailedProcessLocally),
+            ),
+          if (remote)
+            FilledButton(
+              onPressed: () => Navigator.of(
+                dialogContext,
+              ).pop(_SpatialFailureAction.tryAnother),
+              child: Text(l10n.spatialFailedTryAnother),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<_SpatialProcessingSelection?> _chooseSpatialProcessing(
+    SpatialCaptureProvider capture,
+    KubusNodeProvider node,
+  ) async {
+    final l10n = AppLocalizations.of(context)!;
+    final localAvailable =
+        node.snapshot?.capabilityAvailable('spatial.reconstruction') == true;
+    List<KubusComputeCandidate> candidates = const [];
+    try {
+      candidates = await node.loadComputeCandidates(
+        inputBytes: capture.estimatedInputBytes,
+      );
+    } catch (_) {
+      candidates = const [];
+    }
+    if (!mounted) return null;
+    // Where the capture is processed is a decision about privacy, not a
+    // preference to be toggled: each destination is its own committed action,
+    // so nobody picks a radio button and then hunts for a confirm button.
+    var selectedIndex = 0;
+    var manualSelection = false;
+    final gpuLabel = NodeStatePresentation.gpuLabel(
+      node.snapshot?.worker ?? const {},
+    );
+
+    return showModalBottomSheet<_SpatialProcessingSelection>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (sheetContext, setSheetState) => SafeArea(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(
+              KubusSpacing.lg,
+              KubusSpacing.lg,
+              KubusSpacing.lg,
+              MediaQuery.viewInsetsOf(sheetContext).bottom + KubusSpacing.lg,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  localAvailable
+                      ? l10n.spatialProcessTitle
+                      : l10n.spatialProcessNoLocalGpu,
+                  style: Theme.of(sheetContext).textTheme.headlineSmall,
+                ),
+                const SizedBox(height: KubusSpacing.lg),
+
+                // Local is the privacy-preserving default and leads.
+                if (localAvailable)
+                  _ProcessingDestination(
+                    title: l10n.spatialProcessLocalTitle,
+                    detail: gpuLabel,
+                    body: l10n.spatialProcessLocalPrivacy,
+                    actionLabel: l10n.spatialProcessLocallyAction,
+                    primary: true,
+                    onPressed: () => Navigator.of(
+                      sheetContext,
+                    ).pop(const _SpatialProcessingSelection(local: true)),
+                  ),
+                if (localAvailable) const SizedBox(height: KubusSpacing.md),
+
+                _ProcessingDestination(
+                  title: l10n.spatialProcessNetworkTitle,
+                  detail: candidates.isEmpty
+                      ? null
+                      : l10n.spatialProcessNetworkAvailable(candidates.length),
+                  body: candidates.isEmpty
+                      ? l10n.kubusNodeEmptyProvidersBody
+                      : l10n.spatialProcessNetworkPrivacy,
+                  actionLabel: l10n.spatialProcessNetworkAction,
+                  // With no local GPU this is the only way forward, so it
+                  // becomes the primary action rather than a dead end.
+                  primary: !localAvailable,
+                  onPressed: candidates.isEmpty
+                      ? null
+                      : () => Navigator.of(sheetContext).pop(
+                            _SpatialProcessingSelection(
+                              local: false,
+                              provider: candidates[selectedIndex],
+                            ),
+                          ),
+                ),
+
+                if (candidates.length > 1) ...[
+                  const SizedBox(height: KubusSpacing.sm),
+                  TextButton(
+                    onPressed: () =>
+                        setSheetState(() => manualSelection = !manualSelection),
+                    child: Text(
+                      manualSelection
+                          ? l10n.spatialProcessAutoSelect
+                          : l10n.spatialProcessAdvanced,
+                    ),
+                  ),
+                  if (manualSelection)
+                    for (var index = 0; index < candidates.length; index++)
+                      _computeCandidateTile(
+                        sheetContext,
+                        candidates[index],
+                        selected: selectedIndex == index,
+                        onTap: () => setSheetState(() => selectedIndex = index),
+                      ),
+                ],
+
+                const SizedBox(height: KubusSpacing.md),
+                Text(
+                  l10n.spatialProcessMaximumPrivacy,
+                  style: Theme.of(sheetContext).textTheme.bodySmall,
+                ),
+                const SizedBox(height: KubusSpacing.sm),
+                TextButton(
+                  onPressed: () => Navigator.of(sheetContext).pop(),
+                  child: Text(l10n.spatialProcessKeepLocal),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _computeCandidateTile(
+    BuildContext context,
+    KubusComputeCandidate candidate, {
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    final l10n = AppLocalizations.of(context)!;
+    final model = (candidate.gpu['model'] ?? 'GPU').toString();
+    final vram = candidate.totalVramBytes <= 0
+        ? null
+        : NodeStatePresentation.formatBytes(candidate.totalVramBytes);
+    final queue = candidate.jobsAhead == 0
+        ? l10n.spatialProcessReady
+        : l10n.spatialProcessJobsAhead(candidate.jobsAhead);
+    final success = candidate.successRate <= 0
+        ? null
+        : l10n.spatialProcessSuccessRate(
+            (candidate.successRate * 100).toStringAsFixed(1),
+          );
+    return ListTile(
+      onTap: onTap,
+      selected: selected,
+      contentPadding: EdgeInsets.zero,
+      trailing: selected
+          ? Icon(
+              Icons.check_rounded,
+              color: Theme.of(context).colorScheme.primary,
+            )
+          : null,
+      title: Text(candidate.label),
+      subtitle: Text(
+        [
+          '$model${vram == null ? '' : ' · $vram'}',
+          [queue, if (success != null) success].join(' · '),
+        ].join('\n'),
+      ),
+      isThreeLine: true,
+    );
+  }
+
+  Future<bool> _confirmRemoteComputePrivacy() async {
+    const key = 'kubus_remote_compute_privacy_v1';
+    final preferences = await SharedPreferences.getInstance();
+    if (preferences.getBool(key) == true) return true;
+    if (!mounted) return false;
+    final l10n = AppLocalizations.of(context)!;
+    final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: Text(l10n.spatialRemotePrivacyTitle),
+            content: Text(
+              '${l10n.spatialRemotePrivacyBody}\n\n${l10n.spatialProcessMaximumPrivacy}',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: Text(l10n.commonCancel),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                child: Text(l10n.spatialRemotePrivacyConfirm),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+    if (confirmed) await preferences.setBool(key, true);
+    return confirmed;
+  }
+
+  Future<void> _reviewSpatialResult(
+    SpatialCaptureProvider capture,
+    KubusNodeProvider node, {
+    required bool remote,
+  }) async {
+    final spatialId = capture.spatialId;
+    if (spatialId == null || spatialId.isEmpty) return;
+    final record = await node.service.getSpatial(spatialId);
+    final manifest = record['manifest'];
+    if (!mounted || manifest is! Map<String, dynamic>) return;
+    final content = SpatialContent.fromJson(manifest);
+    final l10n = AppLocalizations.of(context)!;
+    final action = await showDialog<_SpatialResultAction>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => PopScope(
+        canPop: false,
+        child: AlertDialog(
+          title: Text(l10n.spatialResultReviewTitle),
+          content: SizedBox(
+            width: 640,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  height: 360,
+                  child: SpatialViewer(
+                    content: content,
+                    nodeService: node.service,
+                  ),
+                ),
+                const SizedBox(height: KubusSpacing.sm),
+                Text(l10n.spatialResultReviewBody),
+              ],
+            ),
+          ),
+          actions: [
+            if (remote)
+              TextButton(
+                onPressed: () => Navigator.of(
+                  dialogContext,
+                ).pop(_SpatialResultAction.reject),
+                child: Text(l10n.spatialResultReject),
+              ),
+            TextButton(
+              onPressed: () => Navigator.of(
+                dialogContext,
+              ).pop(_SpatialResultAction.keepUnpublished),
+              child: Text(l10n.spatialResultKeepPrivate),
+            ),
+            FilledButton(
+              onPressed: () =>
+                  Navigator.of(dialogContext).pop(_SpatialResultAction.publish),
+              child: Text(l10n.spatialResultPublish),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (action == null || !mounted) return;
+    if (remote && action == _SpatialResultAction.reject) {
+      await capture.rejectRemoteResult(node);
+      return;
+    }
+    if (action == _SpatialResultAction.publish) {
+      await node.requestPublication(
+        spatialId: spatialId,
+        artworkId: capture.artworkId!,
+        markerId: capture.markerId,
+      );
+    }
+    if (remote) await capture.approveRemoteResult(node);
   }
 
   void _startScanning() {
@@ -1126,10 +2220,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.3),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -1148,9 +2241,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                 child: ListView.builder(
                   controller: scrollController,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: _mockArtworks.length,
+                  itemCount: _availableArtworks.length,
                   itemBuilder: (context, index) {
-                    final artwork = _mockArtworks[index];
+                    final artwork = _availableArtworks[index];
                     return Card(
                       margin: const EdgeInsets.only(bottom: 12),
                       child: ListTile(
@@ -1158,26 +2251,34 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                           width: 50,
                           height: 50,
                           decoration: BoxDecoration(
-                            color:
-                                Theme.of(context).colorScheme.primaryContainer,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.primaryContainer,
                             borderRadius: BorderRadius.circular(KubusRadius.sm),
                           ),
-                          child: Icon(Icons.view_in_ar,
-                              color: Theme.of(context).colorScheme.primary),
+                          child: Icon(
+                            Icons.view_in_ar,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
                         ),
-                        title: Text(artwork['title'],
-                            style: KubusTypography.inter(
-                                fontWeight: FontWeight.w600)),
+                        title: Text(
+                          artwork['title'],
+                          style: KubusTypography.inter(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                         subtitle: Text(
-                            l10n.commonByArtist(artwork['artist']?.toString() ??
-                                l10n.commonUnknown),
-                            style: KubusTypography.inter(fontSize: 12)),
+                          l10n.commonByArtist(
+                            artwork['artist']?.toString() ?? l10n.commonUnknown,
+                          ),
+                          style: KubusTypography.inter(fontSize: 12),
+                        ),
                         trailing: Icon(Icons.arrow_forward_ios, size: 16),
                         onTap: () {
-                          setState(() {
-                            _selectedArtwork = artwork;
-                            _currentMode = 'place';
-                          });
+                          setState(() => _selectedArtwork = artwork);
+                          // Through the handoff, so the AR session is actually
+                          // in hand before Place renders.
+                          _changeMode('place');
                           Navigator.pop(context);
 
                           // Show snackbar after navigation completes and context is still mounted
@@ -1211,7 +2312,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
 
   void _placeArtwork() {
     if (_selectedArtwork == null) {
-      if (_mockArtworks.isEmpty) {
+      if (_availableArtworks.isEmpty) {
         final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showKubusSnackBar(
           SnackBar(
@@ -1221,28 +2322,67 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
         );
         return;
       }
-      _selectedArtwork = _mockArtworks.first;
+      _selectedArtwork = _availableArtworks.first;
     }
 
     final selected = _selectedArtwork!;
+    // Selecting is not placing. The artwork is armed here; it is anchored only
+    // when the user taps a surface the ARCore hit test accepts, which
+    // _onPlaneTap turns into a real pose.
+    _placement.selectArtwork(
+      artworkId: selected['id'].toString(),
+      modelPath: (selected['modelURL'] ?? selected['model'] ?? '').toString(),
+    );
+  }
+
+  /// Commits the previewed placement into the scene.
+  Future<void> _confirmPlacement() async {
+    final transform = _placement.transform;
+    final artworkId = _placement.artworkId;
+    if (transform == null || artworkId == null) return;
+    if (!_placement.canConfirm) return;
+
+    // Render the model at the pose the user chose before recording it.
+    await _placeSelectedArtwork();
+    if (!mounted) return;
+
+    final selected = _selectedArtwork;
     final placedObject = {
       'id': 'placed_${DateTime.now().millisecondsSinceEpoch}',
-      'artworkId': selected['id'],
-      'title': selected['title'],
-      'artist': selected['artist'],
-      'model': selected['model'] ?? selected['modelURL'],
-      'modelURL': selected['modelURL'],
-      'scale': ((selected['scale'] as double?) ?? 1.0) * _modelScale,
-      'position': {'x': 0.0, 'y': 0.0, 'z': -1.5},
-      'rotation': {'x': 0.0, 'y': 0.0, 'z': 0.0},
+      'artworkId': artworkId,
+      'title': selected?['title'],
+      'artist': selected?['artist'],
+      'model': selected?['model'] ?? selected?['modelURL'],
+      'modelURL': selected?['modelURL'],
+      'scale': ((selected?['scale'] as double?) ?? 1.0) * transform.localScale,
+      'position': {
+        'x': transform.anchor.position.x,
+        'y': transform.anchor.position.y,
+        'z': transform.anchor.position.z,
+      },
+      'rotation': {
+        'x': transform.anchor.rotation.x,
+        'y': transform.localYawRadians,
+        'z': transform.anchor.rotation.z,
+        'w': transform.anchor.rotation.w,
+      },
       'timestamp': DateTime.now().toIso8601String(),
     };
 
+    _placement.confirm();
     setState(() {
       _placedObjects.add(placedObject);
     });
 
     _onObjectPlaced(placedObject['id'] as String);
+  }
+
+  /// Applies a hit test from a tap on a tracked surface.
+  void _onSurfaceTap(List<ArPlacementAnchorPose> hits) {
+    if (hits.isEmpty) return;
+    // The adapter delivers accepted hits nearest first.
+    final placed = _placement.applyHitTest(hits.first);
+    if (placed && mounted) setState(() {});
   }
 
   void _viewArtworkDetails() {
@@ -1290,16 +2430,21 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                     return Card(
                       margin: const EdgeInsets.only(bottom: 12),
                       child: ListTile(
-                        leading: Icon(Icons.view_in_ar,
-                            color: Theme.of(context).colorScheme.primary),
+                        leading: Icon(
+                          Icons.view_in_ar,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
                         title: Text(obj['title']),
                         subtitle: Text(
                           l10n.commonByArtist(
-                              obj['artist']?.toString() ?? l10n.commonUnknown),
+                            obj['artist']?.toString() ?? l10n.commonUnknown,
+                          ),
                         ),
                         trailing: IconButton(
-                          icon: Icon(Icons.delete,
-                              color: Theme.of(context).colorScheme.error),
+                          icon: Icon(
+                            Icons.delete,
+                            color: Theme.of(context).colorScheme.error,
+                          ),
                           onPressed: () {
                             setState(() {
                               _placedObjects.removeAt(index);
@@ -1307,7 +2452,8 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                             Navigator.pop(context);
                             ScaffoldMessenger.of(context).showKubusSnackBar(
                               SnackBar(
-                                  content: Text(l10n.arArtworkRemovedToast)),
+                                content: Text(l10n.arArtworkRemovedToast),
+                              ),
                             );
                           },
                         ),
@@ -1369,15 +2515,17 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
             ? subjectOptionsByType[selectedSubjectType]!.first
             : null;
 
-    final titleController =
-        TextEditingController(text: selectedSubject?.title ?? '');
+    final titleController = TextEditingController(
+      text: selectedSubject?.title ?? '',
+    );
     final descriptionController = TextEditingController(
       text: selectedSubject != null && selectedSubject.subtitle.isNotEmpty
           ? selectedSubject.subtitle
           : '',
     );
-    final categoryController =
-        TextEditingController(text: selectedSubjectType.defaultCategory);
+    final categoryController = TextEditingController(
+      text: selectedSubjectType.defaultCategory,
+    );
     final formKey = GlobalKey<FormState>();
 
     Uint8List? selectedModelBytes;
@@ -1549,8 +2697,8 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
           };
           _selectedArtwork = newArtwork;
           _placedObjects.add(newArtwork);
-          _currentMode = 'place';
         });
+        _changeMode('place');
 
         messenger.showKubusSnackBar(
           SnackBar(
@@ -1597,8 +2745,10 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.create,
-                                color: Theme.of(context).colorScheme.primary),
+                            Icon(
+                              Icons.create,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
                             const SizedBox(width: KubusSpacing.sm),
                             Expanded(
                               child: Text(
@@ -1606,8 +2756,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                                 style: KubusTypography.inter(
                                   fontSize: 22,
                                   fontWeight: FontWeight.w700,
-                                  color:
-                                      Theme.of(context).colorScheme.onSurface,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface,
                                 ),
                               ),
                             ),
@@ -1624,10 +2775,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                           l10n.arCreateUploadSubtitle,
                           style: KubusTypography.inter(
                             fontSize: 13,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.7),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withValues(alpha: 0.7),
                           ),
                         ),
                         const SizedBox(height: KubusSpacing.lg),
@@ -1636,15 +2786,18 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                           decoration: InputDecoration(
                             labelText: l10n.arCreateSubjectTypeLabel,
                             border: OutlineInputBorder(
-                                borderRadius:
-                                    BorderRadius.circular(KubusRadius.md)),
+                              borderRadius: BorderRadius.circular(
+                                KubusRadius.md,
+                              ),
+                            ),
                           ),
                           items: allowedSubjectTypes
                               .map(
                                 (type) => DropdownMenuItem(
                                   value: type,
                                   child: Text(
-                                      '${type.label} (${l10n.commonRequired})'),
+                                    '${type.label} (${l10n.commonRequired})',
+                                  ),
                                 ),
                               )
                               .toList(),
@@ -1657,10 +2810,13 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                             initialValue: selectedSubject,
                             decoration: InputDecoration(
                               labelText: l10n.arCreateSubjectLabel(
-                                  selectedSubjectType.label),
+                                selectedSubjectType.label,
+                              ),
                               border: OutlineInputBorder(
-                                  borderRadius:
-                                      BorderRadius.circular(KubusRadius.md)),
+                                borderRadius: BorderRadius.circular(
+                                  KubusRadius.md,
+                                ),
+                              ),
                             ),
                             items: (subjectOptionsByType[selectedSubjectType] ??
                                     [])
@@ -1671,9 +2827,12 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
-                                        Text(option.title,
-                                            style: KubusTypography.inter(
-                                                fontWeight: FontWeight.w600)),
+                                        Text(
+                                          option.title,
+                                          style: KubusTypography.inter(
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
                                         if (option.subtitle.isNotEmpty)
                                           Text(
                                             option.subtitle,
@@ -1701,7 +2860,8 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                                           value.subtitle.isNotEmpty
                                               ? value.subtitle
                                               : l10n.arCreateDefaultDescription(
-                                                  value.title);
+                                                  value.title,
+                                                );
                                     });
                                   },
                           )
@@ -1714,8 +2874,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                                   .colorScheme
                                   .surfaceContainerHighest
                                   .withValues(alpha: 0.5),
-                              borderRadius:
-                                  BorderRadius.circular(KubusRadius.md),
+                              borderRadius: BorderRadius.circular(
+                                KubusRadius.md,
+                              ),
                             ),
                             child: Text(
                               l10n.arCreateNoSubjectsAvailable(
@@ -1731,8 +2892,10 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                           decoration: InputDecoration(
                             labelText: l10n.arCreateMarkerTitleLabel,
                             border: OutlineInputBorder(
-                                borderRadius:
-                                    BorderRadius.circular(KubusRadius.md)),
+                              borderRadius: BorderRadius.circular(
+                                KubusRadius.md,
+                              ),
+                            ),
                           ),
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
@@ -1752,8 +2915,10 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                           decoration: InputDecoration(
                             labelText: l10n.arCreateDescriptionLabel,
                             border: OutlineInputBorder(
-                                borderRadius:
-                                    BorderRadius.circular(KubusRadius.md)),
+                              borderRadius: BorderRadius.circular(
+                                KubusRadius.md,
+                              ),
+                            ),
                           ),
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
@@ -1772,8 +2937,10 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                           decoration: InputDecoration(
                             labelText: l10n.arCreateCategoryLabel,
                             border: OutlineInputBorder(
-                                borderRadius:
-                                    BorderRadius.circular(KubusRadius.md)),
+                              borderRadius: BorderRadius.circular(
+                                KubusRadius.md,
+                              ),
+                            ),
                           ),
                         ),
                         const SizedBox(height: KubusSpacing.md),
@@ -1795,15 +2962,18 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                                   height: 18,
                                   width: 18,
                                   child: InlineLoading(
-                                      tileSize: 4,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .primary),
+                                    tileSize: 4,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.primary,
+                                  ),
                                 )
                               : const Icon(Icons.upload_file),
-                          label: Text(selectedModelName == null
-                              ? l10n.arCreateSelectModelButton
-                              : l10n.arCreateReplaceModelButton),
+                          label: Text(
+                            selectedModelName == null
+                                ? l10n.arCreateSelectModelButton
+                                : l10n.arCreateReplaceModelButton,
+                          ),
                         ),
                         if (selectedModelName != null) ...[
                           const SizedBox(height: KubusSpacing.sm),
@@ -1815,8 +2985,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                                   .colorScheme
                                   .primaryContainer
                                   .withValues(alpha: 0.4),
-                              borderRadius:
-                                  BorderRadius.circular(KubusRadius.md),
+                              borderRadius: BorderRadius.circular(
+                                KubusRadius.md,
+                              ),
                             ),
                             child: Row(
                               children: [
@@ -1830,13 +3001,15 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                                       Text(
                                         selectedModelName!,
                                         style: KubusTypography.inter(
-                                            fontWeight: FontWeight.w600),
+                                          fontWeight: FontWeight.w600,
+                                        ),
                                       ),
                                       if (selectedModelSize != null)
                                         Text(
                                           formatFileSize(selectedModelSize!),
                                           style: KubusTypography.inter(
-                                              fontSize: 12),
+                                            fontSize: 12,
+                                          ),
                                         ),
                                     ],
                                   ),
@@ -1910,8 +3083,10 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                           ),
                           child: Row(
                             children: [
-                              Icon(Icons.my_location,
-                                  color: Theme.of(context).colorScheme.primary),
+                              Icon(
+                                Icons.my_location,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Text(
@@ -1931,13 +3106,16 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                                 : () => submit(setModalState),
                             style: ElevatedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 16),
-                              backgroundColor:
-                                  Theme.of(context).colorScheme.primary,
-                              foregroundColor:
-                                  Theme.of(context).colorScheme.onPrimary,
+                              backgroundColor: Theme.of(
+                                context,
+                              ).colorScheme.primary,
+                              foregroundColor: Theme.of(
+                                context,
+                              ).colorScheme.onPrimary,
                               shape: RoundedRectangleBorder(
-                                borderRadius:
-                                    BorderRadius.circular(KubusRadius.md),
+                                borderRadius: BorderRadius.circular(
+                                  KubusRadius.md,
+                                ),
                               ),
                             ),
                             icon: isSubmitting
@@ -1945,10 +3123,11 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                                     height: 18,
                                     width: 18,
                                     child: InlineLoading(
-                                        tileSize: 4,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onPrimary),
+                                      tileSize: 4,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onPrimary,
+                                    ),
                                   )
                                 : const Icon(Icons.upload),
                             label: Text(
@@ -1956,7 +3135,8 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                                   ? l10n.arCreateUploadingLabel
                                   : l10n.arCreateUploadAndCreateButton,
                               style: KubusTypography.inter(
-                                  fontWeight: FontWeight.w600),
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ),
@@ -2051,10 +3231,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                     l10n.commonByArtist(artist),
                     style: KubusTypography.inter(
                       fontSize: 16,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.7),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.7),
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -2097,7 +3276,8 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                         onTap: () {
                           _handleLike(artwork);
                           setModalState(
-                              () {}); // Update modal state immediately
+                            () {},
+                          ); // Update modal state immediately
                         },
                         isActive: _likedArtworks.contains(artwork['id']),
                         activeColor: Theme.of(context).colorScheme.error,
@@ -2113,7 +3293,8 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                         onTap: () {
                           _handleSave(artwork);
                           setModalState(
-                              () {}); // Update modal state immediately
+                            () {},
+                          ); // Update modal state immediately
                         },
                         isActive: _savedArtworks.contains(artwork['id']),
                         activeColor: Theme.of(context).colorScheme.primary,
@@ -2141,10 +3322,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
               style: KubusTypography.inter(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.6),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
           ),
@@ -2219,10 +3399,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                 icon,
                 color: isActive
                     ? color
-                    : Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.7),
+                    : Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.7),
                 size: 18,
               ),
             ),
@@ -2235,10 +3414,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                 fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
                 color: isActive
                     ? color
-                    : Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.7),
+                    : Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
               child: Text(label),
             ),
@@ -2276,8 +3454,10 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
         _likedArtworks.add(artwork['id']);
       }
     });
-    final walletAddress = Provider.of<WalletProvider>(context, listen: false)
-        .currentWalletAddress;
+    final walletAddress = Provider.of<WalletProvider>(
+      context,
+      listen: false,
+    ).currentWalletAddress;
 
     final isNowLiked = _likedArtworks.contains(artwork['id']);
     if (isNowLiked) {
@@ -2291,15 +3471,12 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
     // Track like in community interactions
     final post = CommunityPost(
       id: artwork['id'],
-      authorIdentityData: ProfileIdentityData.fromIdentityPayload(
-        {
-          'author': {
-            'id': artwork['artworkId'] ?? artwork['id'],
-            'displayName': artwork['artist'],
-          },
+      authorIdentityData: ProfileIdentityData.fromIdentityPayload({
+        'author': {
+          'id': artwork['artworkId'] ?? artwork['id'],
+          'displayName': artwork['artist'],
         },
-        fallbackLabel: l10n.commonUnknown,
-      ),
+      }, fallbackLabel: l10n.commonUnknown),
       content: artwork['title'],
       timestamp: _parseArtworkTimestamp(artwork['timestamp']),
       isLiked: _likedArtworks.contains(artwork['id']),
@@ -2322,9 +3499,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
               color: isLiked ? scheme.onPrimary : scheme.onSurface,
             ),
             const SizedBox(width: 8),
-            Text(
-              isLiked ? l10n.arLikeAddedToast : l10n.arLikeRemovedToast,
-            ),
+            Text(isLiked ? l10n.arLikeAddedToast : l10n.arLikeRemovedToast),
           ],
         ),
         backgroundColor:
@@ -2345,12 +3520,19 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
       context,
       actionLabel: l10n.commonSave.toLowerCase(),
       returnRoute: '/a/${Uri.encodeComponent(artworkId)}',
+      actionType: PendingActionType.save,
+      targetType: PendingActionTargetType.artwork,
+      targetId: artworkId,
+      targetLabel: (artwork['title'] ?? '').toString(),
+      sourceScreen: 'ar_viewer',
     );
     if (!authenticated || !mounted) return;
 
     // Update SavedItemsProvider
-    final savedItemsProvider =
-        Provider.of<SavedItemsProvider>(context, listen: false);
+    final savedItemsProvider = Provider.of<SavedItemsProvider>(
+      context,
+      listen: false,
+    );
     await savedItemsProvider.toggleArtworkSaved(artworkId);
     if (!mounted) return;
     setState(() {
@@ -2387,9 +3569,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
               color: isSaved ? scheme.onPrimary : scheme.onSurface,
             ),
             const SizedBox(width: 8),
-            Text(
-              isSaved ? l10n.arSaveAddedToast : l10n.arSaveRemovedToast,
-            ),
+            Text(isSaved ? l10n.arSaveAddedToast : l10n.arSaveRemovedToast),
           ],
         ),
         backgroundColor:
@@ -2472,15 +3652,20 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                     ),
                     const SizedBox(height: 12),
                     ListTile(
-                      leading: Icon(Icons.flash_on,
-                          color: Theme.of(context).colorScheme.primary),
-                      title: Text(l10n.arFlashControlTitle,
-                          style: KubusTypography.inter(fontSize: 14)),
+                      leading: Icon(
+                        Icons.flash_on,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      title: Text(
+                        l10n.arFlashControlTitle,
+                        style: KubusTypography.inter(fontSize: 14),
+                      ),
                       subtitle: Text(
-                          _flashEnabled
-                              ? l10n.commonCurrentlyOn
-                              : l10n.commonCurrentlyOff,
-                          style: KubusTypography.inter(fontSize: 12)),
+                        _flashEnabled
+                            ? l10n.commonCurrentlyOn
+                            : l10n.commonCurrentlyOff,
+                        style: KubusTypography.inter(fontSize: 12),
+                      ),
                       trailing: Switch(
                         value: _flashEnabled,
                         onChanged: (value) async {
@@ -2489,7 +3674,8 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                               await _scannerController.toggleTorch();
                               if (!context.mounted || !mounted) return;
                               setModalState(
-                                  () => _flashEnabled = !_flashEnabled);
+                                () => _flashEnabled = !_flashEnabled,
+                              );
                               setState(() => _flashEnabled = !_flashEnabled);
                             } catch (e) {
                               if (kDebugMode) {
@@ -2507,12 +3693,18 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                       ),
                     ),
                     ListTile(
-                      leading: Icon(Icons.qr_code_scanner,
-                          color: Theme.of(context).colorScheme.primary),
-                      title: Text(l10n.arScannerOverlayTitle,
-                          style: KubusTypography.inter(fontSize: 14)),
-                      subtitle: Text(l10n.arScannerOverlaySubtitle,
-                          style: KubusTypography.inter(fontSize: 12)),
+                      leading: Icon(
+                        Icons.qr_code_scanner,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      title: Text(
+                        l10n.arScannerOverlayTitle,
+                        style: KubusTypography.inter(fontSize: 14),
+                      ),
+                      subtitle: Text(
+                        l10n.arScannerOverlaySubtitle,
+                        style: KubusTypography.inter(fontSize: 12),
+                      ),
                       onTap: () {
                         Navigator.pop(context);
                         messenger.showKubusSnackBar(
@@ -2536,10 +3728,14 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                   ),
                   const SizedBox(height: 12),
                   SwitchListTile(
-                    title: Text(l10n.arShowFeaturePointsTitle,
-                        style: KubusTypography.inter(fontSize: 14)),
-                    subtitle: Text(l10n.arShowFeaturePointsSubtitle,
-                        style: KubusTypography.inter(fontSize: 12)),
+                    title: Text(
+                      l10n.arShowFeaturePointsTitle,
+                      style: KubusTypography.inter(fontSize: 14),
+                    ),
+                    subtitle: Text(
+                      l10n.arShowFeaturePointsSubtitle,
+                      style: KubusTypography.inter(fontSize: 12),
+                    ),
                     value: _showFeaturePoints,
                     onChanged: (value) {
                       setModalState(() => _showFeaturePoints = value);
@@ -2547,10 +3743,14 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                     },
                   ),
                   SwitchListTile(
-                    title: Text(l10n.arShowPlanesTitle,
-                        style: KubusTypography.inter(fontSize: 14)),
-                    subtitle: Text(l10n.arShowPlanesSubtitle,
-                        style: KubusTypography.inter(fontSize: 12)),
+                    title: Text(
+                      l10n.arShowPlanesTitle,
+                      style: KubusTypography.inter(fontSize: 14),
+                    ),
+                    subtitle: Text(
+                      l10n.arShowPlanesSubtitle,
+                      style: KubusTypography.inter(fontSize: 12),
+                    ),
                     value: _showPlanes,
                     onChanged: (value) {
                       setModalState(() => _showPlanes = value);
@@ -2558,10 +3758,14 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                     },
                   ),
                   SwitchListTile(
-                    title: Text(l10n.arAutoDetectSurfacesTitle,
-                        style: KubusTypography.inter(fontSize: 14)),
-                    subtitle: Text(l10n.arAutoDetectSurfacesSubtitle,
-                        style: KubusTypography.inter(fontSize: 12)),
+                    title: Text(
+                      l10n.arAutoDetectSurfacesTitle,
+                      style: KubusTypography.inter(fontSize: 14),
+                    ),
+                    subtitle: Text(
+                      l10n.arAutoDetectSurfacesSubtitle,
+                      style: KubusTypography.inter(fontSize: 12),
+                    ),
                     value: _autoDetectSurfaces,
                     onChanged: (value) {
                       setModalState(() => _autoDetectSurfaces = value);
@@ -2569,10 +3773,14 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                     },
                   ),
                   SwitchListTile(
-                    title: Text(l10n.arDebugInfoTitle,
-                        style: KubusTypography.inter(fontSize: 14)),
-                    subtitle: Text(l10n.arDebugInfoSubtitle,
-                        style: KubusTypography.inter(fontSize: 12)),
+                    title: Text(
+                      l10n.arDebugInfoTitle,
+                      style: KubusTypography.inter(fontSize: 14),
+                    ),
+                    subtitle: Text(
+                      l10n.arDebugInfoSubtitle,
+                      style: KubusTypography.inter(fontSize: 12),
+                    ),
                     value: _showDebugInfo,
                     onChanged: (value) {
                       setModalState(() => _showDebugInfo = value);
@@ -2614,11 +3822,26 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                   ),
                   const SizedBox(height: 12),
                   ListTile(
+                    leading: const Icon(Icons.add_location_alt_outlined),
+                    title: const Text('Create artwork location marker'),
+                    subtitle: const Text(
+                      'Advanced contributor action using your live location.',
+                    ),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _createArtwork();
+                    },
+                  ),
+                  ListTile(
                     leading: const Icon(Icons.delete_sweep),
-                    title: Text(l10n.arClearAllArtworksTitle,
-                        style: KubusTypography.inter(fontSize: 14)),
-                    subtitle: Text(l10n.arClearAllArtworksSubtitle,
-                        style: KubusTypography.inter(fontSize: 12)),
+                    title: Text(
+                      l10n.arClearAllArtworksTitle,
+                      style: KubusTypography.inter(fontSize: 14),
+                    ),
+                    subtitle: Text(
+                      l10n.arClearAllArtworksSubtitle,
+                      style: KubusTypography.inter(fontSize: 12),
+                    ),
                     onTap: () {
                       setState(() => _placedObjects.clear());
                       Navigator.pop(context);
@@ -2629,10 +3852,14 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                   ),
                   ListTile(
                     leading: const Icon(Icons.refresh),
-                    title: Text(l10n.arResetSessionTitle,
-                        style: KubusTypography.inter(fontSize: 14)),
-                    subtitle: Text(l10n.arResetSessionSubtitle,
-                        style: KubusTypography.inter(fontSize: 12)),
+                    title: Text(
+                      l10n.arResetSessionTitle,
+                      style: KubusTypography.inter(fontSize: 14),
+                    ),
+                    subtitle: Text(
+                      l10n.arResetSessionSubtitle,
+                      style: KubusTypography.inter(fontSize: 12),
+                    ),
                     onTap: () {
                       Navigator.pop(context);
                       _initializeAR();
@@ -2666,9 +3893,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
           ),
           content: Text(
             l10n.arNotSupportedMessage,
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
           ),
           actions: [
             TextButton(
@@ -2677,9 +3902,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
               },
               child: Text(
                 l10n.commonOk,
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.primary,
-                ),
+                style: TextStyle(color: Theme.of(context).colorScheme.primary),
               ),
             ),
           ],
@@ -2704,9 +3927,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
           ),
           content: Text(
             l10n.arInitializationFailedMessage,
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
           ),
           actions: [
             TextButton(
@@ -2716,9 +3937,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
               },
               child: Text(
                 l10n.commonCancel,
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.outline,
-                ),
+                style: TextStyle(color: Theme.of(context).colorScheme.outline),
               ),
             ),
             TextButton(
@@ -2728,9 +3947,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
               },
               child: Text(
                 l10n.commonRetry,
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.primary,
-                ),
+                style: TextStyle(color: Theme.of(context).colorScheme.primary),
               ),
             ),
           ],

@@ -1,6 +1,13 @@
 part of 'kubus_marker_overlay_card.dart';
 
 extension _KubusMarkerOverlayCardBodyParts on KubusMarkerOverlayCard {
+  int _badgeCount() => markerOverlayBadgeCount(
+        marker: marker,
+        artwork: artwork,
+        distanceText: distanceText,
+        canPresentExhibition: canPresentExhibition,
+      );
+
   Widget _buildMetadataTier({
     required BuildContext context,
     required ColorScheme scheme,
@@ -45,14 +52,13 @@ extension _KubusMarkerOverlayCardBodyParts on KubusMarkerOverlayCard {
       );
     }
 
-    final subjectCategory = (marker.metadata?['subjectCategory'] ??
-            marker.metadata?['subject_category'])
-        ?.toString()
-        .trim();
-    if ((subjectCategory ?? '').isNotEmpty) {
+    // Event/exhibition type badge. Reads through `ArtMarker.subjectCategory`, so
+    // it also resolves nested and top-level payload shapes.
+    final subjectCategory = (marker.subjectCategory ?? '').trim();
+    if (subjectCategory.isNotEmpty) {
       badges.add(
         _OverlayMetaBadge(
-          label: subjectCategory!,
+          label: subjectCategory,
           icon: Icons.category_outlined,
           accent: scheme.onSurfaceVariant,
         ),
@@ -73,7 +79,7 @@ extension _KubusMarkerOverlayCardBodyParts on KubusMarkerOverlayCard {
 
     return Wrap(
       spacing: KubusSpacing.xs,
-      runSpacing: KubusSpacing.xs,
+      runSpacing: MarkerOverlayCardMetrics.badgeRunSpacing,
       children: badges,
     );
   }
@@ -82,9 +88,11 @@ extension _KubusMarkerOverlayCardBodyParts on KubusMarkerOverlayCard {
     required BuildContext context,
     required ColorScheme scheme,
     required String visibleDescription,
-    required int maxDescriptionLines,
+    required int maxLines,
   }) {
-    if (visibleDescription.isEmpty) return const SizedBox.shrink();
+    if (visibleDescription.isEmpty || maxLines <= 0) {
+      return const SizedBox.shrink();
+    }
 
     return Semantics(
       label: AppLocalizations.of(context)!.markerDescriptionSemanticLabel,
@@ -93,12 +101,12 @@ extension _KubusMarkerOverlayCardBodyParts on KubusMarkerOverlayCard {
         waitDuration: const Duration(milliseconds: 500),
         child: Text(
           visibleDescription,
-          maxLines: maxDescriptionLines,
+          maxLines: maxLines,
           overflow: TextOverflow.ellipsis,
           style: KubusTextStyles.detailBody.copyWith(
             color: scheme.onSurfaceVariant,
-            height: 1.34,
-            fontSize: KubusHeaderMetrics.sectionSubtitle - 2,
+            height: MarkerOverlayCardMetrics.descriptionLineHeightFactor,
+            fontSize: MarkerOverlayCardMetrics.descriptionFontSize,
             fontWeight: FontWeight.w400,
           ),
         ),

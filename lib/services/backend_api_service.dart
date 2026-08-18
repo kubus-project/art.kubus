@@ -11,6 +11,7 @@ import '../models/art_marker.dart';
 import '../models/promotion.dart';
 import '../models/artwork.dart';
 import '../models/artwork_comment.dart';
+import '../models/kubus_node_models.dart';
 import '../models/community_group.dart';
 import '../models/event.dart';
 import '../models/exhibition.dart';
@@ -47,6 +48,7 @@ part 'backend_api_service_domain_transports.dart';
 part 'backend_api_service_recovery_transport.dart';
 part 'backend_api_service_public_object_transport.dart';
 part 'backend_api_service_availability_transport.dart';
+part 'backend_api_service_spatial_transport.dart';
 part 'backend_api_service_signed_action_transport.dart';
 part 'backend_api_service_dao_transport.dart';
 part 'backend_api_service_wallet_settlement_transport.dart';
@@ -158,7 +160,9 @@ abstract class ArtworkBackendApi {
 
   Future<Artwork> getArtwork(String artworkId);
   Future<Artwork?> updateArtwork(
-      String artworkId, Map<String, dynamic> updates);
+    String artworkId,
+    Map<String, dynamic> updates,
+  );
   Future<Artwork?> publishArtwork(String artworkId);
   Future<Artwork?> unpublishArtwork(String artworkId);
   Future<int?> likeArtwork(String artworkId);
@@ -202,7 +206,9 @@ abstract class ProfileBackendApi {
   Future<Map<String, dynamic>> saveProfile(Map<String, dynamic> profileData);
 
   Future<Map<String, dynamic>> updateProfile(
-      String walletAddress, Map<String, dynamic> updates);
+    String walletAddress,
+    Map<String, dynamic> updates,
+  );
 
   Future<Map<String, dynamic>> uploadAvatarToProfile({
     required List<int> fileBytes,
@@ -227,7 +233,9 @@ abstract class MarkerBackendApi {
   Future<List<ArtMarker>> getMyArtMarkers();
   Future<ArtMarker?> createArtMarkerRecord(Map<String, dynamic> payload);
   Future<ArtMarker?> updateArtMarkerRecord(
-      String markerId, Map<String, dynamic> updates);
+    String markerId,
+    Map<String, dynamic> updates,
+  );
   Future<bool> deleteArtMarkerRecord(String markerId);
   Future<StreetArtClaim> submitStreetArtClaim({
     required String markerId,
@@ -244,13 +252,7 @@ abstract class MarkerBackendApi {
   });
 }
 
-enum AuthSignInMethod {
-  unknown,
-  email,
-  google,
-  wallet,
-  passkey,
-}
+enum AuthSignInMethod { unknown, email, google, wallet, passkey }
 
 String _authSignInMethodToStorageValue(AuthSignInMethod method) {
   switch (method) {
@@ -556,8 +558,11 @@ class BackendApiService
     return true;
   }
 
-  void _markRateLimited(String key, http.Response response,
-      {int defaultWindowMs = 60000}) {
+  void _markRateLimited(
+    String key,
+    http.Response response, {
+    int defaultWindowMs = 60000,
+  }) {
     int windowMs = defaultWindowMs;
     try {
       if (response.headers['retry-after'] != null) {
@@ -602,7 +607,8 @@ class BackendApiService
   }
 
   Map<String, dynamic> _sanitizeDiagnosticsMetadata(
-      Map<String, dynamic> input) {
+    Map<String, dynamic> input,
+  ) {
     final output = <String, dynamic>{};
     input.forEach((key, value) {
       final lower = key.toLowerCase();
@@ -620,8 +626,9 @@ class BackendApiService
       } else if (value is String) {
         output[key] = _redactDiagnosticsString(value);
       } else if (value is Map) {
-        output[key] =
-            _sanitizeDiagnosticsMetadata(Map<String, dynamic>.from(value));
+        output[key] = _sanitizeDiagnosticsMetadata(
+          Map<String, dynamic>.from(value),
+        );
       } else {
         output[key] = value;
       }
@@ -636,8 +643,10 @@ class BackendApiService
       'Bearer [redacted]',
     );
     out = out.replaceAll(
-      RegExp(r'(token|password|secret|private[_-]?key)=([^&\s]+)',
-          caseSensitive: false),
+      RegExp(
+        r'(token|password|secret|private[_-]?key)=([^&\s]+)',
+        caseSensitive: false,
+      ),
       r'$1=[redacted]',
     );
     out = out.replaceAll(
@@ -857,20 +866,24 @@ class BackendApiService
           .write(key: 'jwt_token', value: token)
           .timeout(const Duration(milliseconds: 800));
       AppConfig.debugPrint(
-          'BackendApiService: Auth token written to secure storage');
+        'BackendApiService: Auth token written to secure storage',
+      );
     } catch (e) {
       AppConfig.debugPrint(
-          'BackendApiService: failed to write secure storage token: $e');
+        'BackendApiService: failed to write secure storage token: $e',
+      );
     }
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('jwt_token', token);
       await prefs.setBool(PreferenceKeys.hasCompletedAuthOnboarding, true);
       AppConfig.debugPrint(
-          'BackendApiService: Auth token written to SharedPreferences fallback');
+        'BackendApiService: Auth token written to SharedPreferences fallback',
+      );
     } catch (e) {
       AppConfig.debugPrint(
-          'BackendApiService: failed to write prefs token: $e');
+        'BackendApiService: failed to write prefs token: $e',
+      );
     }
   }
 
@@ -888,17 +901,20 @@ class BackendApiService
           .write(key: 'refresh_token', value: trimmed)
           .timeout(const Duration(milliseconds: 800));
       AppConfig.debugPrint(
-          'BackendApiService: Refresh token written to secure storage');
+        'BackendApiService: Refresh token written to secure storage',
+      );
     } catch (e) {
       AppConfig.debugPrint(
-          'BackendApiService: failed to write refresh token: $e');
+        'BackendApiService: failed to write refresh token: $e',
+      );
     }
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('refresh_token', trimmed);
     } catch (e) {
       AppConfig.debugPrint(
-          'BackendApiService: failed to write refresh token to prefs: $e');
+        'BackendApiService: failed to write refresh token to prefs: $e',
+      );
     }
   }
 
@@ -910,7 +926,8 @@ class BackendApiService
           .timeout(const Duration(milliseconds: 800));
     } catch (e) {
       AppConfig.debugPrint(
-          'BackendApiService: refresh token secure storage read failed: $e');
+        'BackendApiService: refresh token secure storage read failed: $e',
+      );
     }
 
     if (refreshToken == null || refreshToken.isEmpty) {
@@ -919,7 +936,8 @@ class BackendApiService
         refreshToken = AuthGatingService.readStoredRefreshToken(prefs);
       } catch (e) {
         AppConfig.debugPrint(
-            'BackendApiService: refresh token prefs read failed: $e');
+          'BackendApiService: refresh token prefs read failed: $e',
+        );
       }
     }
 
@@ -947,7 +965,8 @@ class BackendApiService
             .timeout(const Duration(milliseconds: 800));
       } catch (e) {
         AppConfig.debugPrint(
-            'BackendApiService: secure storage read failed: $e');
+          'BackendApiService: secure storage read failed: $e',
+        );
       }
 
       // Fallback to SharedPreferences (useful for web builds where secure storage may not persist)
@@ -958,11 +977,13 @@ class BackendApiService
           token = AuthGatingService.readStoredAccessToken(prefs);
           if (token != null && token.isNotEmpty) {
             AppConfig.debugPrint(
-                'BackendApiService: Auth token loaded from SharedPreferences fallback');
+              'BackendApiService: Auth token loaded from SharedPreferences fallback',
+            );
           }
         } catch (e) {
           AppConfig.debugPrint(
-              'BackendApiService: SharedPreferences fallback failed: $e');
+            'BackendApiService: SharedPreferences fallback failed: $e',
+          );
         }
       }
       if (token != null && token.isNotEmpty) {
@@ -971,12 +992,14 @@ class BackendApiService
           _authWalletCanonical = _tryExtractWalletFromToken(token);
           await resolveLastSignInMethod();
           AppConfig.debugPrint(
-              'BackendApiService: Auth token loaded (in-memory)');
+            'BackendApiService: Auth token loaded (in-memory)',
+          );
         } else {
           _authToken = null;
           _authWalletCanonical = null;
           AppConfig.debugPrint(
-              'BackendApiService: Stored auth token is expired; ignoring');
+            'BackendApiService: Stored auth token is expired; ignoring',
+          );
         }
         // Attempt to decode exp field for debug information
         try {
@@ -990,12 +1013,14 @@ class BackendApiService
               final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
               final secsLeft = exp - now;
               AppConfig.debugPrint(
-                  'BackendApiService: token expiry in $secsLeft seconds');
+                'BackendApiService: token expiry in $secsLeft seconds',
+              );
             }
           }
         } catch (e) {
           AppConfig.debugPrint(
-              'BackendApiService: failed to decode token expiry: $e');
+            'BackendApiService: failed to decode token expiry: $e',
+          );
         }
       } else {
         AppConfig.debugPrint('BackendApiService: No stored auth token found');
@@ -1020,7 +1045,8 @@ class BackendApiService
           .delete(key: 'refresh_token')
           .timeout(const Duration(milliseconds: 800));
       AppConfig.debugPrint(
-          'BackendApiService: Auth cleared from secure storage');
+        'BackendApiService: Auth cleared from secure storage',
+      );
     } catch (e) {
       AppConfig.debugPrint('BackendApiService: Error clearing auth token: $e');
     }
@@ -1034,10 +1060,12 @@ class BackendApiService
       }
       await prefs.remove(PreferenceKeys.authLastSignInMethodV1);
       AppConfig.debugPrint(
-          'BackendApiService: Auth cleared from SharedPreferences');
+        'BackendApiService: Auth cleared from SharedPreferences',
+      );
     } catch (e) {
       AppConfig.debugPrint(
-          'BackendApiService: Error clearing prefs auth token: $e');
+        'BackendApiService: Error clearing prefs auth token: $e',
+      );
     }
   }
 
@@ -1207,7 +1235,8 @@ class BackendApiService
 
     final resolvedHeaders = _applyAuthHeader(
       Map<String, String>.from(
-          headers ?? _getHeaders(includeAuth: includeAuth)),
+        headers ?? _getHeaders(includeAuth: includeAuth),
+      ),
       includeAuth: includeAuth,
     );
 
@@ -1236,13 +1265,17 @@ class BackendApiService
       final authWallet =
           _authWalletCanonical ?? _tryExtractWalletFromToken(_authToken) ?? '';
       final preferredWallet = _preferredWalletCanonical ?? '';
-      AppConfig.networkLog(method.toUpperCase(), uri.toString(), data: {
-        'authHeader': hasAuthHeader,
-        'includeAuth': includeAuth,
-        'webCredentialsExpected': _webCredentialsExpected,
-        'tokenWallet': authWallet,
-        'preferredWallet': preferredWallet,
-      });
+      AppConfig.networkLog(
+        method.toUpperCase(),
+        uri.toString(),
+        data: {
+          'authHeader': hasAuthHeader,
+          'includeAuth': includeAuth,
+          'webCredentialsExpected': _webCredentialsExpected,
+          'tokenWallet': authWallet,
+          'preferredWallet': preferredWallet,
+        },
+      );
     }
 
     final http.Response response;
@@ -1259,26 +1292,42 @@ class BackendApiService
           break;
         case 'POST':
           response = await _client
-              .post(uri,
-                  headers: resolvedHeaders, body: body, encoding: encoding)
+              .post(
+                uri,
+                headers: resolvedHeaders,
+                body: body,
+                encoding: encoding,
+              )
               .timeout(timeout);
           break;
         case 'PUT':
           response = await _client
-              .put(uri,
-                  headers: resolvedHeaders, body: body, encoding: encoding)
+              .put(
+                uri,
+                headers: resolvedHeaders,
+                body: body,
+                encoding: encoding,
+              )
               .timeout(timeout);
           break;
         case 'PATCH':
           response = await _client
-              .patch(uri,
-                  headers: resolvedHeaders, body: body, encoding: encoding)
+              .patch(
+                uri,
+                headers: resolvedHeaders,
+                body: body,
+                encoding: encoding,
+              )
               .timeout(timeout);
           break;
         case 'DELETE':
           response = await _client
-              .delete(uri,
-                  headers: resolvedHeaders, body: body, encoding: encoding)
+              .delete(
+                uri,
+                headers: resolvedHeaders,
+                body: body,
+                encoding: encoding,
+              )
               .timeout(timeout);
           break;
         default:
@@ -1315,10 +1364,11 @@ class BackendApiService
       final snippet = response.body.length <= 240
           ? response.body
           : response.body.substring(0, 240);
-      AppConfig.networkLog('RESP', uri.toString(), data: {
-        'status': response.statusCode,
-        'bodySnippet': snippet,
-      });
+      AppConfig.networkLog(
+        'RESP',
+        uri.toString(),
+        data: {'status': response.statusCode, 'bodySnippet': snippet},
+      );
     }
 
     final responseRequestId = response.headers['x-request-id'] ??
@@ -1337,7 +1387,9 @@ class BackendApiService
         coordinator != null &&
         AppConfig.isFeatureEnabled('rePromptLoginOnExpiry') &&
         _isAuthFailureStatus(
-            statusCode: response.statusCode, responseBody: response.body);
+          statusCode: response.statusCode,
+          responseBody: response.body,
+        );
 
     if (!isAuthFailure) {
       if (_isSuccessStatus(response.statusCode)) {
@@ -1711,7 +1763,9 @@ class BackendApiService
         coordinator != null &&
         AppConfig.isFeatureEnabled('rePromptLoginOnExpiry') &&
         _isAuthFailureStatus(
-            statusCode: response.statusCode, responseBody: response.body);
+          statusCode: response.statusCode,
+          responseBody: response.body,
+        );
 
     if (!isAuthFailure) return response;
     if (retriedAfterReauth) return response;
@@ -1781,9 +1835,7 @@ class BackendApiService
     );
   }
 
-  Map<String, dynamic> _normalizeSecurityStatusMap(
-    Map<String, dynamic> data,
-  ) {
+  Map<String, dynamic> _normalizeSecurityStatusMap(Map<String, dynamic> data) {
     return _backendApiNormalizeSecurityStatusMap(data);
   }
 
@@ -1925,8 +1977,9 @@ class BackendApiService
     String path, {
     Map<String, String>? queryParameters,
   }) {
-    return Uri.parse('${_normalizeApiBaseUrl(rawBaseUrl)}$path')
-        .replace(queryParameters: queryParameters);
+    return Uri.parse(
+      '${_normalizeApiBaseUrl(rawBaseUrl)}$path',
+    ).replace(queryParameters: queryParameters);
   }
 
   int _effectivePort(Uri uri) {
@@ -2060,8 +2113,9 @@ class BackendApiService
     final preferredWriteBaseUrl = _extractPreferredWriteBaseUrl(response);
     if (preferredWriteBaseUrl == null) return null;
 
-    final preferredOrigin =
-        _uriOriginKey(_baseUrlOriginUri(preferredWriteBaseUrl));
+    final preferredOrigin = _uriOriginKey(
+      _baseUrlOriginUri(preferredWriteBaseUrl),
+    );
     if (preferredOrigin == null ||
         preferredOrigin == _uriOriginKey(originalUri)) {
       return null;
@@ -2101,8 +2155,16 @@ class BackendApiService
 
   bool _shouldImplicitFailoverOnStatus(String method, int statusCode) {
     if (method.toUpperCase() == 'GET') {
-      return const <int>{500, 502, 503, 504, 522, 523, 524, 530}
-          .contains(statusCode);
+      return const <int>{
+        500,
+        502,
+        503,
+        504,
+        522,
+        523,
+        524,
+        530,
+      }.contains(statusCode);
     }
     return _isTransientWriteStatusCode(statusCode);
   }
@@ -2137,11 +2199,7 @@ class BackendApiService
     bool allowOrbitFallback = false,
   }) {
     return _fetchJson(
-      _buildApiUri(
-        rawBaseUrl,
-        path,
-        queryParameters: queryParameters,
-      ),
+      _buildApiUri(rawBaseUrl, path, queryParameters: queryParameters),
       includeAuth: includeAuth,
       allowOrbitFallback: allowOrbitFallback,
       allowImplicitBackendFailover: false,
@@ -2181,7 +2239,8 @@ class BackendApiService
         try {
           final result = await liveRead(candidateBaseUrl);
           _publicFallbackService.recordBackendSuccess(
-              baseUrl: candidateBaseUrl);
+            baseUrl: candidateBaseUrl,
+          );
           return result;
         } catch (error) {
           if (!_isFallbackEligibleReadError(error)) {
@@ -2255,7 +2314,8 @@ class BackendApiService
         );
         if (_isSuccessStatus(response.statusCode)) {
           _publicFallbackService.recordBackendSuccess(
-              baseUrl: candidateBaseUrl);
+            baseUrl: candidateBaseUrl,
+          );
           return response;
         }
         if (!_isTransientWriteStatusCode(response.statusCode)) {
@@ -2416,10 +2476,7 @@ class BackendApiService
     final decoded = _decodeResponseMap(response);
     if (decoded == null) return null;
 
-    return _extractResponseEntityMap(
-          decoded,
-          preferredKeys: preferredKeys,
-        ) ??
+    return _extractResponseEntityMap(decoded, preferredKeys: preferredKeys) ??
         decoded;
   }
 
@@ -2582,11 +2639,7 @@ class BackendApiService
     required String email,
     required String password,
   }) =>
-      _backendApiLoginWithEmail(
-        this,
-        email: email,
-        password: password,
-      );
+      _backendApiLoginWithEmail(this, email: email, password: password);
 
   Future<Map<String, dynamic>> getPasskeyLoginOptions({String? email}) =>
       _backendApiGetPasskeyLoginOptions(this, email: email);
@@ -2594,10 +2647,7 @@ class BackendApiService
   Future<Map<String, dynamic>> verifyPasskeyLogin({
     required Map<String, dynamic> responsePayload,
   }) =>
-      _backendApiVerifyPasskeyLogin(
-        this,
-        responsePayload: responsePayload,
-      );
+      _backendApiVerifyPasskeyLogin(this, responsePayload: responsePayload);
 
   /// Account passkey (sign-in) registration options.
   /// POST /api/auth/passkey/register/options (authenticated)
@@ -2651,29 +2701,22 @@ class BackendApiService
         includeAuth: includeAuth,
       );
 
-  Future<Map<String, dynamic>> resendEmailVerification(
-          {required String email}) =>
-      _resendEmailVerificationRequest(
-        email: email,
-        includeAuth: false,
-      );
+  Future<Map<String, dynamic>> resendEmailVerification({
+    required String email,
+  }) =>
+      _resendEmailVerificationRequest(email: email, includeAuth: false);
 
   Future<Map<String, dynamic>> resendEmailVerificationForCurrentAccount({
     String? email,
   }) =>
-      _resendEmailVerificationRequest(
-        email: email ?? '',
-        includeAuth: true,
-      );
+      _resendEmailVerificationRequest(email: email ?? '', includeAuth: true);
 
   /// Check whether an email has been verified.
   /// GET /api/auth/email-status?email=...
-  Future<Map<String, dynamic>> getEmailVerificationStatus(
-          {required String email}) =>
-      _backendApiGetEmailVerificationStatus(
-        this,
-        email: email,
-      );
+  Future<Map<String, dynamic>> getEmailVerificationStatus({
+    required String email,
+  }) =>
+      _backendApiGetEmailVerificationStatus(this, email: email);
 
   /// Return email/password credential status for the authenticated account.
   /// GET /api/auth/account-security-status
@@ -2688,10 +2731,7 @@ class BackendApiService
   Future<Map<String, dynamic>> addPasswordToCurrentAccount({
     required String password,
   }) =>
-      _backendApiAddPasswordToCurrentAccount(
-        this,
-        password: password,
-      );
+      _backendApiAddPasswordToCurrentAccount(this, password: password);
 
   /// Verify email
   /// POST /api/auth/verify-email { token }
@@ -2709,11 +2749,7 @@ class BackendApiService
     required String token,
     required String newPassword,
   }) =>
-      _backendApiResetPassword(
-        this,
-        token: token,
-        newPassword: newPassword,
-      );
+      _backendApiResetPassword(this, token: token, newPassword: newPassword);
 
   /// Login with Google idToken (verified server-side).
   ///
@@ -2760,18 +2796,12 @@ class BackendApiService
   Future<EncryptedWalletBackupDefinition?> getEncryptedWalletBackup({
     String? walletAddress,
   }) =>
-      _backendApiGetEncryptedWalletBackup(
-        this,
-        walletAddress: walletAddress,
-      );
+      _backendApiGetEncryptedWalletBackup(this, walletAddress: walletAddress);
 
   Future<EncryptedWalletBackupDefinition> putEncryptedWalletBackup(
     EncryptedWalletBackupDefinition definition,
   ) =>
-      _backendApiPutEncryptedWalletBackup(
-        this,
-        definition,
-      );
+      _backendApiPutEncryptedWalletBackup(this, definition);
 
   Future<void> deleteEncryptedWalletBackup({String? walletAddress}) =>
       _backendApiDeleteEncryptedWalletBackup(
@@ -2830,10 +2860,7 @@ class BackendApiService
   Future<List<WalletBackupPasskeyDefinition>> getWalletRecoveryPasskeys({
     String? walletAddress,
   }) =>
-      _backendApiGetWalletRecoveryPasskeys(
-        this,
-        walletAddress: walletAddress,
-      );
+      _backendApiGetWalletRecoveryPasskeys(this, walletAddress: walletAddress);
 
   Future<Map<String, dynamic>> revokeWalletRecoveryPasskey({
     required String id,
@@ -2894,13 +2921,18 @@ class BackendApiService
       }
       if (response.statusCode == 404) {
         throw Exception(
-            'Email preferences endpoint not available on the backend (received 404). Ensure the server is updated.');
+          'Email preferences endpoint not available on the backend (received 404). Ensure the server is updated.',
+        );
       }
       throw BackendApiRequestException(
-          statusCode: response.statusCode, path: uri.path, body: response.body);
+        statusCode: response.statusCode,
+        path: uri.path,
+        body: response.body,
+      );
     } catch (e) {
       AppConfig.debugPrint(
-          'BackendApiService.getMyEmailPreferences failed: $e');
+        'BackendApiService.getMyEmailPreferences failed: $e',
+      );
       rethrow;
     }
   }
@@ -2908,7 +2940,8 @@ class BackendApiService
   /// Update authenticated user's email preferences
   /// PATCH /api/profiles/me/preferences
   Future<Map<String, dynamic>> updateMyEmailPreferences(
-      Map<String, dynamic> preferences) async {
+    Map<String, dynamic> preferences,
+  ) async {
     try {
       final uri = Uri.parse('$baseUrl/api/profiles/me/preferences');
       final response = await _patch(
@@ -2921,13 +2954,18 @@ class BackendApiService
       }
       if (response.statusCode == 404) {
         throw Exception(
-            'Email preferences endpoint not available on the backend (received 404). Ensure the server is updated.');
+          'Email preferences endpoint not available on the backend (received 404). Ensure the server is updated.',
+        );
       }
       throw BackendApiRequestException(
-          statusCode: response.statusCode, path: uri.path, body: response.body);
+        statusCode: response.statusCode,
+        path: uri.path,
+        body: response.body,
+      );
     } catch (e) {
       AppConfig.debugPrint(
-          'BackendApiService.updateMyEmailPreferences failed: $e');
+        'BackendApiService.updateMyEmailPreferences failed: $e',
+      );
       rethrow;
     }
   }
@@ -2947,7 +2985,10 @@ class BackendApiService
     final response = await _get(uri, headers: _getHeaders());
     if (!_isSuccessStatus(response.statusCode)) {
       throw BackendApiRequestException(
-          statusCode: response.statusCode, path: uri.path, body: response.body);
+        statusCode: response.statusCode,
+        path: uri.path,
+        body: response.body,
+      );
     }
     final decoded = jsonDecode(response.body);
     final rawItems = decoded is Map
@@ -2956,8 +2997,10 @@ class BackendApiService
     final items = rawItems is List
         ? rawItems
             .whereType<Map>()
-            .map((entry) =>
-                SavedItemRecord.fromJson(Map<String, dynamic>.from(entry)))
+            .map(
+              (entry) =>
+                  SavedItemRecord.fromJson(Map<String, dynamic>.from(entry)),
+            )
             .where((record) => record.id.isNotEmpty)
             .toList(growable: false)
         : const <SavedItemRecord>[];
@@ -2976,7 +3019,10 @@ class BackendApiService
     );
     if (!_isSuccessStatus(response.statusCode)) {
       throw BackendApiRequestException(
-          statusCode: response.statusCode, path: uri.path, body: response.body);
+        statusCode: response.statusCode,
+        path: uri.path,
+        body: response.body,
+      );
     }
     final decoded = jsonDecode(response.body);
     final payload =
@@ -2993,12 +3039,16 @@ class BackendApiService
     final response = await _delete(uri, headers: _getHeaders());
     if (!_isSuccessStatus(response.statusCode)) {
       throw BackendApiRequestException(
-          statusCode: response.statusCode, path: uri.path, body: response.body);
+        statusCode: response.statusCode,
+        path: uri.path,
+        body: response.body,
+      );
     }
   }
 
   Future<Map<String, bool>> getSavedBatchStatus(
-      Iterable<SavedItemRecord> items) async {
+    Iterable<SavedItemRecord> items,
+  ) async {
     final uri = Uri.parse('$baseUrl/api/saved/batch-status');
     final response = await _post(
       uri,
@@ -3012,7 +3062,10 @@ class BackendApiService
     );
     if (!_isSuccessStatus(response.statusCode)) {
       throw BackendApiRequestException(
-          statusCode: response.statusCode, path: uri.path, body: response.body);
+        statusCode: response.statusCode,
+        path: uri.path,
+        body: response.body,
+      );
     }
     final decoded = jsonDecode(response.body);
     final raw = decoded is Map ? (decoded['status'] ?? decoded['data']) : null;
@@ -3087,8 +3140,11 @@ class BackendApiService
 
   /// Fetch messages for a conversation
   /// GET /api/messages/:conversationId/messages
-  Future<Map<String, dynamic>> fetchMessages(String conversationId,
-          {int page = 1, int limit = 50}) =>
+  Future<Map<String, dynamic>> fetchMessages(
+    String conversationId, {
+    int page = 1,
+    int limit = 50,
+  }) =>
       _backendApiFetchMessagesImpl(
         this,
         conversationId,
@@ -3099,8 +3155,11 @@ class BackendApiService
   /// Send a message to a conversation (JSON)
   /// POST /api/messages/:conversationId/messages { message, data, replyToId }
   Future<Map<String, dynamic>> sendMessage(
-          String conversationId, String message,
-          {Map<String, dynamic>? data, String? replyToId}) =>
+    String conversationId,
+    String message, {
+    Map<String, dynamic>? data,
+    String? replyToId,
+  }) =>
       _backendApiSendMessageImpl(
         this,
         conversationId,
@@ -3112,16 +3171,20 @@ class BackendApiService
   /// Fetch conversation members
   /// GET /api/messages/:conversationId/members
   Future<Map<String, dynamic>> fetchConversationMembers(
-          String conversationId) =>
+    String conversationId,
+  ) =>
       _backendApiFetchConversationMembersImpl(this, conversationId);
 
   /// Upload a message attachment by posting multipart to the messages endpoint
-  Future<Map<String, dynamic>> uploadMessageAttachment(String conversationId,
-          List<int> bytes, String filename, String contentType,
-          {bool compress = true,
-          UploadCompressionPolicy? compressionPolicy,
-          void Function(UploadCompressionProgress progress)?
-              onCompressionProgress}) =>
+  Future<Map<String, dynamic>> uploadMessageAttachment(
+    String conversationId,
+    List<int> bytes,
+    String filename,
+    String contentType, {
+    bool compress = true,
+    UploadCompressionPolicy? compressionPolicy,
+    void Function(UploadCompressionProgress progress)? onCompressionProgress,
+  }) =>
       _backendApiUploadMessageAttachmentImpl(
         this,
         conversationId,
@@ -3135,8 +3198,11 @@ class BackendApiService
 
   /// Create a conversation
   /// POST /api/messages { title, members }
-  Future<Map<String, dynamic>> createConversation(
-          {String? title, bool isGroup = false, List<String>? members}) =>
+  Future<Map<String, dynamic>> createConversation({
+    String? title,
+    bool isGroup = false,
+    List<String>? members,
+  }) =>
       _backendApiCreateConversationImpl(
         this,
         title: title,
@@ -3145,12 +3211,15 @@ class BackendApiService
       );
 
   /// Upload conversation avatar (attempt common endpoints)
-  Future<Map<String, dynamic>> uploadConversationAvatar(String conversationId,
-          List<int> bytes, String filename, String contentType,
-          {bool compress = true,
-          UploadCompressionPolicy? compressionPolicy,
-          void Function(UploadCompressionProgress progress)?
-              onCompressionProgress}) =>
+  Future<Map<String, dynamic>> uploadConversationAvatar(
+    String conversationId,
+    List<int> bytes,
+    String filename,
+    String contentType, {
+    bool compress = true,
+    UploadCompressionPolicy? compressionPolicy,
+    void Function(UploadCompressionProgress progress)? onCompressionProgress,
+  }) =>
       _backendApiUploadConversationAvatarImpl(
         this,
         conversationId,
@@ -3164,16 +3233,16 @@ class BackendApiService
 
   /// Add a member to conversation
   Future<Map<String, dynamic>> addConversationMember(
-          String conversationId, String walletAddress) =>
-      _backendApiAddConversationMemberImpl(
-        this,
-        conversationId,
-        walletAddress,
-      );
+    String conversationId,
+    String walletAddress,
+  ) =>
+      _backendApiAddConversationMemberImpl(this, conversationId, walletAddress);
 
   /// Remove a member from conversation (best-effort)
   Future<Map<String, dynamic>> removeConversationMember(
-          String conversationId, String walletOrUsername) =>
+    String conversationId,
+    String walletOrUsername,
+  ) =>
       _backendApiRemoveConversationMemberImpl(
         this,
         conversationId,
@@ -3182,7 +3251,9 @@ class BackendApiService
 
   /// Transfer conversation ownership (best-effort)
   Future<Map<String, dynamic>> transferConversationOwner(
-          String conversationId, String newOwnerWallet) =>
+    String conversationId,
+    String newOwnerWallet,
+  ) =>
       _backendApiTransferConversationOwnerImpl(
         this,
         conversationId,
@@ -3195,11 +3266,15 @@ class BackendApiService
 
   /// Mark a specific message as read
   Future<Map<String, dynamic>> markMessageRead(
-          String conversationId, String messageId) =>
+    String conversationId,
+    String messageId,
+  ) =>
       _backendApiMarkMessageReadImpl(this, conversationId, messageId);
 
   Future<Map<String, dynamic>> renameConversation(
-          String conversationId, String newTitle) =>
+    String conversationId,
+    String newTitle,
+  ) =>
       _backendApiRenameConversationImpl(this, conversationId, newTitle);
 
   Future<Map<String, dynamic>> deleteConversation(String conversationId) =>
@@ -3225,7 +3300,8 @@ class BackendApiService
   /// Get wallet-scoped collectible ownership index
   /// GET /api/profiles/:walletAddress/collectibles
   Future<Map<String, dynamic>> getWalletCollectibleIndex(
-          String walletAddress) =>
+    String walletAddress,
+  ) =>
       _backendApiGetWalletCollectibleIndex(this, walletAddress);
 
   /// Fetch multiple profiles in a single batch call
@@ -3293,9 +3369,7 @@ class BackendApiService
     try {
       await _ensureAuthBeforeRequest();
       final uri = Uri.parse('$baseUrl/api/app/promotion-rate-cards').replace(
-        queryParameters: <String, String>{
-          'entityType': entityType.apiValue,
-        },
+        queryParameters: <String, String>{'entityType': entityType.apiValue},
       );
       final dynamic data = await _fetchJson(
         uri,
@@ -3316,7 +3390,8 @@ class BackendApiService
           .toList(growable: false);
     } catch (e) {
       AppConfig.debugPrint(
-          'BackendApiService.getPromotionRateCards failed: $e');
+        'BackendApiService.getPromotionRateCards failed: $e',
+      );
       rethrow;
     }
   }
@@ -3330,19 +3405,16 @@ class BackendApiService
   }) async {
     try {
       await _ensureAuthBeforeRequest();
-      final params = <String, String>{
-        'rateCardId': rateCardId,
-      };
+      final params = <String, String>{'rateCardId': rateCardId};
       if (startDate != null) {
         params['startDate'] = startDate.toIso8601String();
       }
       if (endDate != null) {
         params['endDate'] = endDate.toIso8601String();
       }
-      final uri =
-          Uri.parse('$baseUrl/api/app/promotion-slot-availability').replace(
-        queryParameters: params,
-      );
+      final uri = Uri.parse(
+        '$baseUrl/api/app/promotion-slot-availability',
+      ).replace(queryParameters: params);
       final dynamic data = await _fetchJson(
         uri,
         includeAuth: true,
@@ -3448,13 +3520,10 @@ class BackendApiService
   }) async {
     try {
       await _ensureAuthBeforeRequest();
-      final uri =
-          Uri.parse('$baseUrl/api/app/promotion-requests/$requestId/cancel');
-      final response = await _post(
-        uri,
-        headers: _getHeaders(),
-        body: '{}',
+      final uri = Uri.parse(
+        '$baseUrl/api/app/promotion-requests/$requestId/cancel',
       );
+      final response = await _post(uri, headers: _getHeaders(), body: '{}');
       if (response.statusCode < 200 || response.statusCode >= 300) {
         throw BackendApiRequestException(
           statusCode: response.statusCode,
@@ -3472,7 +3541,8 @@ class BackendApiService
       throw Exception('Invalid cancellation response');
     } catch (e) {
       AppConfig.debugPrint(
-          'BackendApiService.cancelPromotionRequest failed: $e');
+        'BackendApiService.cancelPromotionRequest failed: $e',
+      );
       rethrow;
     }
   }
@@ -3523,7 +3593,8 @@ class BackendApiService
       throw Exception('Invalid promotion request response payload');
     } catch (e) {
       AppConfig.debugPrint(
-          'BackendApiService.createPromotionRequest failed: $e');
+        'BackendApiService.createPromotionRequest failed: $e',
+      );
       rethrow;
     }
   }
@@ -3553,7 +3624,8 @@ class BackendApiService
           .toList(growable: false);
     } catch (e) {
       AppConfig.debugPrint(
-          'BackendApiService.getMyPromotionRequests failed: $e');
+        'BackendApiService.getMyPromotionRequests failed: $e',
+      );
       rethrow;
     }
   }
@@ -3569,9 +3641,9 @@ class BackendApiService
       if (limitPerRail != null) {
         query['limit'] = limitPerRail.toString();
       }
-      final uri = Uri.parse('$baseUrl/api/public/home-rails').replace(
-        queryParameters: query,
-      );
+      final uri = Uri.parse(
+        '$baseUrl/api/public/home-rails',
+      ).replace(queryParameters: query);
       final dynamic data = await _fetchJson(
         uri,
         includeAuth: false,
@@ -3605,17 +3677,22 @@ class BackendApiService
       };
       if (status != null) queryParams['status'] = status;
 
-      final uri = Uri.parse('$baseUrl/api/profiles/$walletAddress/artworks')
-          .replace(queryParameters: queryParams);
-      final response = await _get(uri,
-          includeAuth: false, headers: _getHeaders(includeAuth: false));
+      final uri = Uri.parse(
+        '$baseUrl/api/profiles/$walletAddress/artworks',
+      ).replace(queryParameters: queryParams);
+      final response = await _get(
+        uri,
+        includeAuth: false,
+        headers: _getHeaders(includeAuth: false),
+      );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         return List<Map<String, dynamic>>.from(data['data'] as List);
       } else {
         throw Exception(
-            'Failed to get artist artworks: ${response.statusCode}');
+          'Failed to get artist artworks: ${response.statusCode}',
+        );
       }
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.getArtistArtworks failed: $e');
@@ -3737,8 +3814,9 @@ class BackendApiService
       }
 
       final encodedId = Uri.encodeComponent(entityId);
-      final uri = Uri.parse('$baseUrl/api/stats/$entityType/$encodedId')
-          .replace(queryParameters: queryParams.isEmpty ? null : queryParams);
+      final uri = Uri.parse(
+        '$baseUrl/api/stats/$entityType/$encodedId',
+      ).replace(queryParameters: queryParams.isEmpty ? null : queryParams);
       final response = await _get(
         uri,
         includeAuth: includeAuth,
@@ -3786,10 +3864,7 @@ class BackendApiService
       final includeAuth =
           scope.trim().toLowerCase() != 'public' && hasAuthSession;
 
-      final queryParams = <String, String>{
-        'metric': metric,
-        'bucket': bucket,
-      };
+      final queryParams = <String, String>{'metric': metric, 'bucket': bucket};
       if (timeframe.trim().isNotEmpty) {
         queryParams['timeframe'] = timeframe.trim();
       }
@@ -3803,8 +3878,9 @@ class BackendApiService
       if (scope.trim().isNotEmpty) queryParams['scope'] = scope.trim();
 
       final encodedId = Uri.encodeComponent(entityId);
-      final uri = Uri.parse('$baseUrl/api/stats/$entityType/$encodedId/series')
-          .replace(queryParameters: queryParams);
+      final uri = Uri.parse(
+        '$baseUrl/api/stats/$entityType/$encodedId/series',
+      ).replace(queryParameters: queryParams);
       final response = await _get(
         uri,
         includeAuth: includeAuth,
@@ -3964,7 +4040,8 @@ class BackendApiService
       );
     } catch (e) {
       AppConfig.debugPrint(
-          'BackendApiService.getArtMarkersInBounds failed: $e');
+        'BackendApiService.getArtMarkersInBounds failed: $e',
+      );
       rethrow;
     }
   }
@@ -4027,10 +4104,12 @@ class BackendApiService
       final markers = await _loadSnapshotDatasetMaps('markers');
       return markers
           .map(_artMarkerFromBackendJson)
-          .where((marker) =>
-              marker.isPublic &&
-              marker.isActive &&
-              (marker.artworkId ?? '').trim() == id)
+          .where(
+            (marker) =>
+                marker.isPublic &&
+                marker.isActive &&
+                (marker.artworkId ?? '').trim() == id,
+          )
           .toList(growable: false);
     }
 
@@ -4052,9 +4131,10 @@ class BackendApiService
           final markerList = payload is List ? payload : const <dynamic>[];
           return markerList
               .whereType<Map>()
-              .map((entry) => _artMarkerFromBackendJson(
-                    Map<String, dynamic>.from(entry),
-                  ))
+              .map(
+                (entry) =>
+                    _artMarkerFromBackendJson(Map<String, dynamic>.from(entry)),
+              )
               .toList(growable: false);
         },
         snapshotRead: readSnapshot,
@@ -4072,7 +4152,8 @@ class BackendApiService
         }
       }
       AppConfig.debugPrint(
-          'BackendApiService.getArtMarkersByArtwork failed: $e');
+        'BackendApiService.getArtMarkersByArtwork failed: $e',
+      );
       return const <ArtMarker>[];
     }
   }
@@ -4105,7 +4186,8 @@ class BackendApiService
       }
 
       throw Exception(
-          'Failed to load markers: ${response.statusCode} ${response.body}');
+        'Failed to load markers: ${response.statusCode} ${response.body}',
+      );
     } catch (e) {
       AppConfig.debugPrint('BackendeApiService.getMyArtMarkers failed: $e');
       rethrow;
@@ -4136,10 +4218,15 @@ class BackendApiService
               decoded['artMarker'] ??
               decoded;
           if (marker is Map<String, dynamic>) {
-            return _artMarkerFromBackendJson(marker);
+            final parsed = _artMarkerFromBackendJson(marker);
+            if (parsed.id.trim().isNotEmpty) return parsed;
           }
         }
-        return null;
+        throw BackendApiRequestException(
+          statusCode: response.statusCode,
+          path: uri.path,
+          body: response.body,
+        );
       }
 
       throw BackendApiRequestException(
@@ -4149,7 +4236,8 @@ class BackendApiService
       );
     } catch (e) {
       AppConfig.debugPrint(
-          'BackendApiService.createArtMarkerRecord failed: $e');
+        'BackendApiService.createArtMarkerRecord failed: $e',
+      );
       rethrow;
     }
   }
@@ -4158,10 +4246,14 @@ class BackendApiService
   /// PUT /api/art-markers/:id
   @override
   Future<ArtMarker?> updateArtMarkerRecord(
-      String markerId, Map<String, dynamic> updates) async {
+    String markerId,
+    Map<String, dynamic> updates,
+  ) async {
     _throwIfIpfsFallbackUnavailable('Marker editing');
     bool markerReflectsUpdates(
-        ArtMarker marker, Map<String, dynamic> requested) {
+      ArtMarker marker,
+      Map<String, dynamic> requested,
+    ) {
       final requestedName = requested['name'] ?? requested['title'];
       if (requestedName != null && marker.name != requestedName.toString()) {
         return false;
@@ -4277,10 +4369,7 @@ class BackendApiService
         }
       }
 
-      final refreshed = await getArtMarker(
-        markerId,
-        allowOrbitFallback: false,
-      );
+      final refreshed = await getArtMarker(markerId, allowOrbitFallback: false);
       if (kDebugMode && refreshed == null) {
         AppConfig.debugPrint(
           'BackendApiService.updateArtMarkerRecord: successful PUT but GET fallback returned null for marker $markerId',
@@ -4297,7 +4386,8 @@ class BackendApiService
       return refreshed;
     } catch (e) {
       AppConfig.debugPrint(
-          'BackendApiService.updateArtMarkerRecord failed: $e');
+        'BackendApiService.updateArtMarkerRecord failed: $e',
+      );
       rethrow;
     }
   }
@@ -4326,7 +4416,8 @@ class BackendApiService
       );
     } catch (e) {
       AppConfig.debugPrint(
-          'BackendApiService.deleteArtMarkerRecord failed: $e');
+        'BackendApiService.deleteArtMarkerRecord failed: $e',
+      );
       rethrow;
     }
   }
@@ -4544,15 +4635,15 @@ class BackendApiService
     try {
       await _ensureAuthBeforeRequest(walletAddress: walletAddress);
 
-      final uri =
-          Uri.parse('$baseUrl/api/attestations/attendance/challenge').replace(
-        queryParameters: <String, String>{'markerId': markerId.trim()},
-      );
+      final uri = Uri.parse(
+        '$baseUrl/api/attestations/attendance/challenge',
+      ).replace(queryParameters: <String, String>{'markerId': markerId.trim()});
       final response = await _get(uri, headers: _getHeaders());
       if (response.statusCode == 404 || response.statusCode == 400) {
-        final fallbackUri = Uri.parse('$baseUrl/api/attendance/challenge')
-            .replace(
-                queryParameters: <String, String>{'markerId': markerId.trim()});
+        final fallbackUri =
+            Uri.parse('$baseUrl/api/attendance/challenge').replace(
+          queryParameters: <String, String>{'markerId': markerId.trim()},
+        );
         final fallback = await _get(fallbackUri, headers: _getHeaders());
         if (fallback.statusCode == 200) {
           return jsonDecode(fallback.body) as Map<String, dynamic>;
@@ -4573,7 +4664,8 @@ class BackendApiService
       );
     } catch (e) {
       AppConfig.debugPrint(
-          'BackendApiService.getAttendanceChallenge failed: $e');
+        'BackendApiService.getAttendanceChallenge failed: $e',
+      );
       rethrow;
     }
   }
@@ -4610,7 +4702,8 @@ class BackendApiService
       );
     } catch (e) {
       AppConfig.debugPrint(
-          'BackendApiService.createScanHandoffToken failed: $e');
+        'BackendApiService.createScanHandoffToken failed: $e',
+      );
       rethrow;
     }
   }
@@ -4721,11 +4814,9 @@ class BackendApiService
     try {
       await _ensureAuthBeforeRequest(walletAddress: walletAddress);
       final safeLimit = limit.clamp(1, 250);
-      final uri = Uri.parse('$baseUrl/api/attestations/me').replace(
-        queryParameters: <String, String>{
-          'limit': '$safeLimit',
-        },
-      );
+      final uri = Uri.parse(
+        '$baseUrl/api/attestations/me',
+      ).replace(queryParameters: <String, String>{'limit': '$safeLimit'});
       final response = await _get(uri, headers: _getHeaders());
       if (response.statusCode != 200) {
         throw BackendApiRequestException(
@@ -4741,8 +4832,10 @@ class BackendApiService
       if (raw is! List) return const <UnifiedAttestation>[];
       return raw
           .whereType<Map>()
-          .map((entry) =>
-              UnifiedAttestation.fromJson(Map<String, dynamic>.from(entry)))
+          .map(
+            (entry) =>
+                UnifiedAttestation.fromJson(Map<String, dynamic>.from(entry)),
+          )
           .toList(growable: false);
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.getMyAttestations failed: $e');
@@ -4761,7 +4854,8 @@ class BackendApiService
     try {
       await _ensureAuthBeforeRequest();
       final uri = Uri.parse(
-          '$baseUrl/api/attestations/exhibitions/$exhibitionId/claim');
+        '$baseUrl/api/attestations/exhibitions/$exhibitionId/claim',
+      );
       final response = await _post(
         uri,
         headers: _getHeaders(),
@@ -4788,15 +4882,14 @@ class BackendApiService
       if (attestations is List && attestations.isNotEmpty) {
         final first = attestations.first;
         if (first is Map) {
-          return UnifiedAttestation.fromJson(
-            Map<String, dynamic>.from(first),
-          );
+          return UnifiedAttestation.fromJson(Map<String, dynamic>.from(first));
         }
       }
       return null;
     } catch (e) {
       AppConfig.debugPrint(
-          'BackendApiService.claimExhibitionAttestation failed: $e');
+        'BackendApiService.claimExhibitionAttestation failed: $e',
+      );
       rethrow;
     }
   }
@@ -4811,7 +4904,8 @@ class BackendApiService
       );
     } catch (e) {
       AppConfig.debugPrint(
-          'BackendApiService.incrementMarkerInteractions failed: $e');
+        'BackendApiService.incrementMarkerInteractions failed: $e',
+      );
     }
   }
 
@@ -4874,8 +4968,10 @@ class BackendApiService
           final List<dynamic> artworks =
               listCandidate is List ? listCandidate : <dynamic>[];
           return artworks
-              .map((json) =>
-                  parseArtworkFromBackendJson(json as Map<String, dynamic>))
+              .map(
+                (json) =>
+                    parseArtworkFromBackendJson(json as Map<String, dynamic>),
+              )
               .toList(growable: false);
         },
         snapshotRead: () async {
@@ -4899,9 +4995,10 @@ class BackendApiService
             }
 
             if (arEnabled != null) {
-              final snapshotArEnabled =
-                  _tryBoolValue(entry['arEnabled'] ?? entry['is_ar_enabled']) ??
-                      false;
+              final snapshotArEnabled = _tryBoolValue(
+                    entry['arEnabled'] ?? entry['is_ar_enabled'],
+                  ) ??
+                  false;
               if (snapshotArEnabled != arEnabled) {
                 return false;
               }
@@ -4979,12 +5076,17 @@ class BackendApiService
   /// PUT /api/artworks/:id
   @override
   Future<Artwork?> updateArtwork(
-      String artworkId, Map<String, dynamic> updates) async {
+    String artworkId,
+    Map<String, dynamic> updates,
+  ) async {
     try {
       await _ensureAuthWithStoredWallet();
       final uri = Uri.parse('$baseUrl/api/artworks/$artworkId');
-      final response =
-          await _put(uri, headers: _getHeaders(), body: jsonEncode(updates));
+      final response = await _put(
+        uri,
+        headers: _getHeaders(),
+        body: jsonEncode(updates),
+      );
       if (response.statusCode == 200) {
         final payload = _extractSuccessfulEntityMap(
           response,
@@ -5002,7 +5104,8 @@ class BackendApiService
         return null;
       }
       throw Exception(
-          'Failed to update artwork: ${response.statusCode} ${response.body}');
+        'Failed to update artwork: ${response.statusCode} ${response.body}',
+      );
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.updateArtwork failed: $e');
       rethrow;
@@ -5035,7 +5138,8 @@ class BackendApiService
         return null;
       }
       throw Exception(
-          'Failed to publish artwork: ${response.statusCode} ${response.body}');
+        'Failed to publish artwork: ${response.statusCode} ${response.body}',
+      );
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.publishArtwork failed: $e');
       rethrow;
@@ -5068,7 +5172,8 @@ class BackendApiService
         return null;
       }
       throw Exception(
-          'Failed to unpublish artwork: ${response.statusCode} ${response.body}');
+        'Failed to unpublish artwork: ${response.statusCode} ${response.body}',
+      );
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.unpublishArtwork failed: $e');
       rethrow;
@@ -5089,7 +5194,8 @@ class BackendApiService
         return true;
       }
       throw Exception(
-          'Failed to delete artwork: ${response.statusCode} ${response.body}');
+        'Failed to delete artwork: ${response.statusCode} ${response.body}',
+      );
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.deleteArtwork failed: $e');
       rethrow;
@@ -5107,11 +5213,12 @@ class BackendApiService
     if (normalizedNetwork.isEmpty || normalizedAction.isEmpty) return null;
 
     try {
-      final uri =
-          Uri.parse('$baseUrl/api/fees/estimate').replace(queryParameters: {
-        'network': normalizedNetwork,
-        'action': normalizedAction,
-      });
+      final uri = Uri.parse('$baseUrl/api/fees/estimate').replace(
+        queryParameters: {
+          'network': normalizedNetwork,
+          'action': normalizedAction,
+        },
+      );
       final response = await _get(uri, headers: _getHeaders());
       if (response.statusCode != 200) return null;
       final decoded =
@@ -5131,8 +5238,9 @@ class BackendApiService
 
   /// Fetch AR config + linked artwork content (public when artwork is public).
   /// GET /api/ar/:arConfigId/content
-  Future<Map<String, dynamic>?> getArContent(
-      {required String arConfigId}) async {
+  Future<Map<String, dynamic>?> getArContent({
+    required String arConfigId,
+  }) async {
     final id = arConfigId.trim();
     if (id.isEmpty) return null;
 
@@ -5178,10 +5286,12 @@ class BackendApiService
         if (regenerate) 'regenerate': true,
       };
 
-      final response = await _post(uri,
-          headers: _getHeaders(),
-          body: jsonEncode(body),
-          isIdempotent: !regenerate);
+      final response = await _post(
+        uri,
+        headers: _getHeaders(),
+        body: jsonEncode(body),
+        isIdempotent: !regenerate,
+      );
       if (response.statusCode != 200) return null;
       final decoded =
           response.body.isNotEmpty ? jsonDecode(response.body) : null;
@@ -5259,8 +5369,12 @@ class BackendApiService
         if (status != null && status.trim().isNotEmpty) 'status': status.trim(),
         if (markerMeta != null) 'markerMeta': markerMeta,
       };
-      final response = await _put(uri,
-          headers: _getHeaders(), body: jsonEncode(body), isIdempotent: true);
+      final response = await _put(
+        uri,
+        headers: _getHeaders(),
+        body: jsonEncode(body),
+        isIdempotent: true,
+      );
       if (response.statusCode != 200) return null;
       final decoded =
           response.body.isNotEmpty ? jsonDecode(response.body) : null;
@@ -5432,7 +5546,8 @@ class BackendApiService
         body: e.message,
       );
       AppConfig.debugPrint(
-          'BackendApiService.createArtworkRecord failed: $error');
+        'BackendApiService.createArtworkRecord failed: $error',
+      );
       throw error;
     } on http.ClientException catch (e) {
       final error = BackendApiRequestException(
@@ -5441,7 +5556,8 @@ class BackendApiService
         body: e.message,
       );
       AppConfig.debugPrint(
-          'BackendApiService.createArtworkRecord failed: $error');
+        'BackendApiService.createArtworkRecord failed: $error',
+      );
       throw error;
     } catch (e) {
       final error = BackendApiRequestException(
@@ -5450,7 +5566,8 @@ class BackendApiService
         body: e.toString(),
       );
       AppConfig.debugPrint(
-          'BackendApiService.createArtworkRecord failed: $error');
+        'BackendApiService.createArtworkRecord failed: $error',
+      );
       throw error;
     }
   }
@@ -5565,8 +5682,10 @@ class BackendApiService
 
   /// Record a view for an exhibition
   /// POST /api/exhibitions/:id/view
-  Future<void> recordExhibitionView(String exhibitionId,
-      {String? source}) async {
+  Future<void> recordExhibitionView(
+    String exhibitionId, {
+    String? source,
+  }) async {
     try {
       final uri =
           Uri.parse('$baseUrl/api/exhibitions/$exhibitionId/view').replace(
@@ -5594,11 +5713,9 @@ class BackendApiService
     int page = 1,
     int limit = 50,
   }) async {
-    final uri = Uri.parse('$baseUrl/api/artworks/$artworkId/comments')
-        .replace(queryParameters: {
-      'page': page.toString(),
-      'limit': limit.toString(),
-    });
+    final uri = Uri.parse('$baseUrl/api/artworks/$artworkId/comments').replace(
+      queryParameters: {'page': page.toString(), 'limit': limit.toString()},
+    );
     final response = await _get(
       uri,
       includeAuth: false,
@@ -5652,7 +5769,8 @@ class BackendApiService
         return ArtworkComment.fromMap(data);
       }
       throw Exception(
-          'Unexpected createArtworkComment payload: ${response.body}');
+        'Unexpected createArtworkComment payload: ${response.body}',
+      );
     }
 
     throw BackendApiRequestException(
@@ -5686,7 +5804,8 @@ class BackendApiService
         return ArtworkComment.fromMap(data);
       }
       throw Exception(
-          'Unexpected editArtworkComment payload: ${response.body}');
+        'Unexpected editArtworkComment payload: ${response.body}',
+      );
     }
 
     throw BackendApiRequestException(
@@ -5736,13 +5855,13 @@ class BackendApiService
       if (response == null || !_isSuccessStatus(response.statusCode)) {
         return null;
       }
-      return _extractIntFromResponse(
-        response,
-        const <String>['discoveryCount'],
-      );
+      return _extractIntFromResponse(response, const <String>[
+        'discoveryCount',
+      ]);
     } catch (e) {
       AppConfig.debugPrint(
-          'BackendApiService.discoverArtworkWithCount failed: $e');
+        'BackendApiService.discoverArtworkWithCount failed: $e',
+      );
       return null;
     }
   }
@@ -5807,8 +5926,10 @@ class BackendApiService
           );
           final posts = data['data'] as List<dynamic>? ?? <dynamic>[];
           return posts
-              .map((json) =>
-                  _communityPostFromBackendJson(json as Map<String, dynamic>))
+              .map(
+                (json) =>
+                    _communityPostFromBackendJson(json as Map<String, dynamic>),
+              )
               .toList(growable: false);
         },
         snapshotRead: () async {
@@ -5858,7 +5979,8 @@ class BackendApiService
             });
           } else {
             posts.sort(
-                (left, right) => right.timestamp.compareTo(left.timestamp));
+              (left, right) => right.timestamp.compareTo(left.timestamp),
+            );
           }
 
           final start = ((page - 1) * limit).clamp(0, posts.length).toInt();
@@ -5892,10 +6014,14 @@ class BackendApiService
         queryParams['source'] = 'orbit';
       }
 
-      final uri = Uri.parse('$baseUrl/api/community/tags/trending')
-          .replace(queryParameters: queryParams);
-      final data =
-          await _fetchJson(uri, includeAuth: false, allowOrbitFallback: false);
+      final uri = Uri.parse(
+        '$baseUrl/api/community/tags/trending',
+      ).replace(queryParameters: queryParams);
+      final data = await _fetchJson(
+        uri,
+        includeAuth: false,
+        allowOrbitFallback: false,
+      );
       final list =
           (data['data'] ?? data['tags'] ?? data['results']) as List<dynamic>?;
       if (list == null) return const [];
@@ -5992,8 +6118,9 @@ class BackendApiService
       };
 
       final data = await _fetchJson(
-        Uri.parse('$baseUrl/api/community/interactions/state')
-            .replace(queryParameters: queryParams),
+        Uri.parse(
+          '$baseUrl/api/community/interactions/state',
+        ).replace(queryParameters: queryParams),
         includeAuth: true,
       );
       final payload = data['data'] ?? data;
@@ -6065,8 +6192,9 @@ class BackendApiService
 
       if (response.statusCode == 201) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final createdPost =
-            _communityPostFromBackendJson(data['data'] as Map<String, dynamic>);
+        final createdPost = _communityPostFromBackendJson(
+          data['data'] as Map<String, dynamic>,
+        );
         final achievementResult = data['achievements'] is Map
             ? achievements_model.AchievementEventResult.fromJson(
                 data['achievements'] as Map<String, dynamic>,
@@ -6259,10 +6387,12 @@ class BackendApiService
       if (response.statusCode == 201) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         return _communityPostFromBackendJson(
-            data['data'] as Map<String, dynamic>);
+          data['data'] as Map<String, dynamic>,
+        );
       } else {
         throw Exception(
-            'Failed to create repost: ${response.statusCode} - ${response.body}');
+          'Failed to create repost: ${response.statusCode} - ${response.body}',
+        );
       }
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.createRepost failed: $e');
@@ -6288,8 +6418,9 @@ class BackendApiService
         'page': page.toString(),
         'sort': sort.trim().toLowerCase(),
       };
-      final uri = Uri.parse('$baseUrl/api/community/art-feed')
-          .replace(queryParameters: params);
+      final uri = Uri.parse(
+        '$baseUrl/api/community/art-feed',
+      ).replace(queryParameters: params);
       final data = await _fetchJson(
         uri,
         includeAuth: false,
@@ -6297,8 +6428,10 @@ class BackendApiService
       );
       final posts = data['data'] as List<dynamic>? ?? <dynamic>[];
       return posts
-          .map((json) =>
-              _communityPostFromBackendJson(json as Map<String, dynamic>))
+          .map(
+            (json) =>
+                _communityPostFromBackendJson(json as Map<String, dynamic>),
+          )
           .toList();
     } catch (e) {
       final status = _tryParseRequestFailedStatus(e);
@@ -6307,7 +6440,8 @@ class BackendApiService
       if (status == 404 || status == 501 || status == 503) {
         if (kDebugMode) {
           AppConfig.debugPrint(
-              'BackendApiService: art feed unavailable (HTTP $status)');
+            'BackendApiService: art feed unavailable (HTTP $status)',
+          );
         }
         return <CommunityPost>[];
       }
@@ -6331,8 +6465,9 @@ class BackendApiService
         'limit': limit.toString(),
         if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
       };
-      final uri = Uri.parse('$baseUrl/api/groups')
-          .replace(queryParameters: queryParams);
+      final uri = Uri.parse(
+        '$baseUrl/api/groups',
+      ).replace(queryParameters: queryParams);
       final jsonData = await _fetchJson(
         uri,
         includeAuth: false,
@@ -6359,7 +6494,8 @@ class BackendApiService
       if (status == 404 || status == 501 || status == 503) {
         if (kDebugMode) {
           AppConfig.debugPrint(
-              'BackendApiService: community groups unavailable (HTTP $status)');
+            'BackendApiService: community groups unavailable (HTTP $status)',
+          );
         }
         return <CommunityGroupSummary>[];
       }
@@ -6456,12 +6592,10 @@ class BackendApiService
     int limit = 50,
   }) async {
     try {
-      final qp = {
-        'page': page.toString(),
-        'limit': limit.toString(),
-      };
-      final uri = Uri.parse('$baseUrl/api/groups/$groupId/posts')
-          .replace(queryParameters: qp);
+      final qp = {'page': page.toString(), 'limit': limit.toString()};
+      final uri = Uri.parse(
+        '$baseUrl/api/groups/$groupId/posts',
+      ).replace(queryParameters: qp);
       final data = await _fetchJson(
         uri,
         includeAuth: false,
@@ -6469,8 +6603,10 @@ class BackendApiService
       );
       final posts = data['data'] as List<dynamic>? ?? <dynamic>[];
       return posts
-          .map((json) =>
-              _communityPostFromBackendJson(json as Map<String, dynamic>))
+          .map(
+            (json) =>
+                _communityPostFromBackendJson(json as Map<String, dynamic>),
+          )
           .toList();
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.getGroupPosts failed: $e');
@@ -6561,14 +6697,16 @@ class BackendApiService
             );
           } catch (e) {
             AppConfig.debugPrint(
-                'BackendApiService.createGroupPost: UserActionLogger failed: $e');
+              'BackendApiService.createGroupPost: UserActionLogger failed: $e',
+            );
           }
           return decoratedPost;
         }
         throw Exception('Unexpected group post payload');
       }
       throw Exception(
-          'Failed to create group post: ${response.statusCode} - ${response.body}');
+        'Failed to create group post: ${response.statusCode} - ${response.body}',
+      );
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.createGroupPost failed: $e');
       rethrow;
@@ -6596,7 +6734,8 @@ class BackendApiService
       throw Exception('Failed to resolve subjects: ${response.statusCode}');
     } catch (e) {
       AppConfig.debugPrint(
-          'BackendApiService.resolveCommunitySubjects failed: $e');
+        'BackendApiService.resolveCommunitySubjects failed: $e',
+      );
       return const <Map<String, dynamic>>[];
     }
   }
@@ -6624,7 +6763,8 @@ class BackendApiService
 
       if (response.statusCode != 201 && response.statusCode != 200) {
         throw Exception(
-            'Failed to share post via DM: ${response.statusCode} - ${response.body}');
+          'Failed to share post via DM: ${response.statusCode} - ${response.body}',
+        );
       }
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.sharePostViaDM failed: $e');
@@ -6672,7 +6812,8 @@ class BackendApiService
 
       if (response.statusCode != 201 && response.statusCode != 200) {
         throw Exception(
-            'Failed to share via DM: ${response.statusCode} - ${response.body}');
+          'Failed to share via DM: ${response.statusCode} - ${response.body}',
+        );
       }
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.shareEntityViaDM failed: $e');
@@ -6690,7 +6831,8 @@ class BackendApiService
     try {
       final response = await _get(
         Uri.parse(
-            '$baseUrl/api/community/posts/$postId/reposts?page=$page&limit=$limit'),
+          '$baseUrl/api/community/posts/$postId/reposts?page=$page&limit=$limit',
+        ),
         headers: _getHeaders(),
       );
 
@@ -6722,7 +6864,8 @@ class BackendApiService
 
       if (response.statusCode != 200) {
         throw Exception(
-            'Failed to delete repost: ${response.statusCode} - ${response.body}');
+          'Failed to delete repost: ${response.statusCode} - ${response.body}',
+        );
       }
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.deleteRepost failed: $e');
@@ -6757,7 +6900,8 @@ class BackendApiService
 
       if (response.statusCode != 200 && response.statusCode != 201) {
         AppConfig.debugPrint(
-            'BackendApiService.trackAnalyticsEvent failed (${response.statusCode})');
+          'BackendApiService.trackAnalyticsEvent failed (${response.statusCode})',
+        );
       }
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.trackAnalyticsEvent failed: $e');
@@ -6824,7 +6968,8 @@ class BackendApiService
           }
         }
         throw Exception(
-            'Unexpected response when creating comment: ${response.body}');
+          'Unexpected response when creating comment: ${response.body}',
+        );
       } else {
         throw Exception('Failed to create comment: ${response.statusCode}');
       }
@@ -6868,7 +7013,8 @@ class BackendApiService
           }
         }
         throw Exception(
-            'Unexpected response when editing comment: ${response.body}');
+          'Unexpected response when editing comment: ${response.body}',
+        );
       }
 
       throw BackendApiRequestException(
@@ -6895,8 +7041,9 @@ class BackendApiService
         'limit': limit.toString(),
       };
 
-      final uri = Uri.parse('$baseUrl/api/community/posts/$postId/comments')
-          .replace(queryParameters: queryParams);
+      final uri = Uri.parse(
+        '$baseUrl/api/community/posts/$postId/comments',
+      ).replace(queryParameters: queryParams);
       final response = await _get(
         uri,
         includeAuth: false,
@@ -6998,14 +7145,19 @@ class BackendApiService
   }
 
   /// Get users who liked a post
-  Future<List<CommunityLikeUser>> getPostLikes(String postId,
-      {int limit = 50, int offset = 0}) async {
+  Future<List<CommunityLikeUser>> getPostLikes(
+    String postId, {
+    int limit = 50,
+    int offset = 0,
+  }) async {
     try {
-      final uri = Uri.parse('$baseUrl/api/community/posts/$postId/likes')
-          .replace(queryParameters: {
-        'limit': limit.toString(),
-        'offset': offset.toString(),
-      });
+      final uri =
+          Uri.parse('$baseUrl/api/community/posts/$postId/likes').replace(
+        queryParameters: {
+          'limit': limit.toString(),
+          'offset': offset.toString(),
+        },
+      );
 
       final response = await _get(
         uri,
@@ -7031,14 +7183,19 @@ class BackendApiService
   }
 
   /// Get users who liked a comment
-  Future<List<CommunityLikeUser>> getCommentLikes(String commentId,
-      {int limit = 50, int offset = 0}) async {
+  Future<List<CommunityLikeUser>> getCommentLikes(
+    String commentId, {
+    int limit = 50,
+    int offset = 0,
+  }) async {
     try {
-      final uri = Uri.parse('$baseUrl/api/community/comments/$commentId/likes')
-          .replace(queryParameters: {
-        'limit': limit.toString(),
-        'offset': offset.toString(),
-      });
+      final uri =
+          Uri.parse('$baseUrl/api/community/comments/$commentId/likes').replace(
+        queryParameters: {
+          'limit': limit.toString(),
+          'offset': offset.toString(),
+        },
+      );
 
       final response = await _get(
         uri,
@@ -7172,8 +7329,9 @@ class BackendApiService
         'offset': offset.toString(),
       };
 
-      final uri = Uri.parse('$baseUrl/api/community/followers/$encoded')
-          .replace(queryParameters: queryParams);
+      final uri = Uri.parse(
+        '$baseUrl/api/community/followers/$encoded',
+      ).replace(queryParameters: queryParams);
       final response = await _get(
         uri,
         includeAuth: false,
@@ -7220,8 +7378,9 @@ class BackendApiService
         'offset': offset.toString(),
       };
 
-      final uri = Uri.parse('$baseUrl/api/community/following/$encoded')
-          .replace(queryParameters: queryParams);
+      final uri = Uri.parse(
+        '$baseUrl/api/community/following/$encoded',
+      ).replace(queryParameters: queryParams);
       final response = await _get(
         uri,
         includeAuth: false,
@@ -7347,7 +7506,8 @@ class BackendApiService
       final body =
           response.body.isNotEmpty ? response.body : 'No response body';
       throw Exception(
-          'Failed to submit report (${response.statusCode}): $body');
+        'Failed to submit report (${response.statusCode}): $body',
+      );
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.submitReport failed: $e');
       rethrow;
@@ -7392,7 +7552,8 @@ class BackendApiService
       final body =
           response.body.isNotEmpty ? response.body : 'No response body';
       throw Exception(
-          'Failed to create support ticket (${response.statusCode}): $body');
+        'Failed to create support ticket (${response.statusCode}): $body',
+      );
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.createSupportTicket failed: $e');
       rethrow;
@@ -7415,7 +7576,8 @@ class BackendApiService
         return jsonDecode(response.body) as Map<String, dynamic>;
       } else {
         throw Exception(
-            'Failed to get user achievements: ${response.statusCode}');
+          'Failed to get user achievements: ${response.statusCode}',
+        );
       }
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.getUserAchievements failed: $e');
@@ -7429,7 +7591,8 @@ class BackendApiService
   }
 
   Future<Map<String, dynamic>> getPublicUserAchievements(
-      String walletAddress) async {
+    String walletAddress,
+  ) async {
     try {
       final response = await _get(
         Uri.parse('$baseUrl/api/achievements/users/$walletAddress'),
@@ -7441,10 +7604,12 @@ class BackendApiService
         return jsonDecode(response.body) as Map<String, dynamic>;
       }
       throw Exception(
-          'Failed to get public user achievements: ${response.statusCode}');
+        'Failed to get public user achievements: ${response.statusCode}',
+      );
     } catch (e) {
       AppConfig.debugPrint(
-          'BackendApiService.getPublicUserAchievements failed: $e');
+        'BackendApiService.getPublicUserAchievements failed: $e',
+      );
       return {
         'success': false,
         'definitions': [],
@@ -7501,7 +7666,8 @@ class BackendApiService
       return jsonDecode(response.body) as Map<String, dynamic>;
     }
     throw Exception(
-        'Failed to record achievement event: ${response.statusCode}');
+      'Failed to record achievement event: ${response.statusCode}',
+    );
   }
 
   /// Unlock an achievement
@@ -7615,11 +7781,12 @@ class BackendApiService
     int limit = 50,
     int offset = 0,
   }) =>
-      _backendApiGetDAOReviews(
-        this,
-        limit: limit,
-        offset: offset,
-      );
+      _backendApiGetDAOReviews(this, limit: limit, offset: offset);
+
+  /// Return server-derived DAO review decision authority for the current
+  /// authenticated principal, including explicit reviewer allowlists.
+  Future<bool> getDAOReviewModerationAuthority() =>
+      _backendApiGetDAOReviewModerationAuthority(this);
 
   /// Get a single DAO review by id or wallet address
   /// GET /api/dao/reviews/:id
@@ -7643,16 +7810,19 @@ class BackendApiService
 
   /// List institutions
   /// GET /api/institutions
-  Future<List<Map<String, dynamic>>> listInstitutions(
-      {int limit = 50, int offset = 0}) async {
+  Future<List<Map<String, dynamic>>> listInstitutions({
+    int limit = 50,
+    int offset = 0,
+  }) async {
     try {
-      final uri =
-          Uri.parse('$baseUrl/api/institutions').replace(queryParameters: {
-        'limit': '$limit',
-        'offset': '$offset',
-      });
-      final response = await _get(uri,
-          includeAuth: false, headers: _getHeaders(includeAuth: false));
+      final uri = Uri.parse(
+        '$baseUrl/api/institutions',
+      ).replace(queryParameters: {'limit': '$limit', 'offset': '$offset'});
+      final response = await _get(
+        uri,
+        includeAuth: false,
+        headers: _getHeaders(includeAuth: false),
+      );
 
       if (response.statusCode == 200) {
         _institutionsApiAvailable = true;
@@ -7717,10 +7887,7 @@ class BackendApiService
     int offset = 0,
   }) async {
     try {
-      final query = <String, String>{
-        'limit': '$limit',
-        'offset': '$offset',
-      };
+      final query = <String, String>{'limit': '$limit', 'offset': '$offset'};
       if (upcoming != null) query['upcoming'] = '$upcoming';
       if (from != null && from.trim().isNotEmpty) query['from'] = from.trim();
       if (to != null && to.trim().isNotEmpty) query['to'] = to.trim();
@@ -7785,8 +7952,11 @@ class BackendApiService
             if (hostUserId != null && hostUserId.trim().isNotEmpty) {
               retryQuery['hostUserId'] = hostUserId.trim();
             }
-            final retryUri = _buildApiUri(candidateBaseUrl, '/api/events',
-                queryParameters: retryQuery);
+            final retryUri = _buildApiUri(
+              candidateBaseUrl,
+              '/api/events',
+              queryParameters: retryQuery,
+            );
             final retryRes = await _get(
               retryUri,
               includeAuth: false,
@@ -7909,8 +8079,11 @@ class BackendApiService
     try {
       await _ensureAuthBeforeRequest();
       final uri = Uri.parse('$baseUrl/api/events');
-      final response =
-          await _post(uri, headers: _getHeaders(), body: jsonEncode(payload));
+      final response = await _post(
+        uri,
+        headers: _getHeaders(),
+        body: jsonEncode(payload),
+      );
       if (response.statusCode == 200 || response.statusCode == 201) {
         final eventRaw = _extractSuccessfulEntityMap(
           response,
@@ -7935,15 +8108,19 @@ class BackendApiService
   /// Update an event
   /// PUT /api/events/:id
   Future<KubusEvent?> updateEvent(
-      String id, Map<String, dynamic> updates) async {
+    String id,
+    Map<String, dynamic> updates,
+  ) async {
     _throwIfIpfsFallbackUnavailable('Event editing');
     try {
       await _ensureAuthBeforeRequest();
       final uri = Uri.parse('$baseUrl/api/events/$id');
-      final response = await _put(uri,
-          headers: _getHeaders(),
-          body: jsonEncode(updates),
-          isIdempotent: true);
+      final response = await _put(
+        uri,
+        headers: _getHeaders(),
+        body: jsonEncode(updates),
+        isIdempotent: true,
+      );
       if (response.statusCode == 200) {
         final eventRaw = _extractSuccessfulEntityMap(
           response,
@@ -7977,8 +8154,11 @@ class BackendApiService
     try {
       await _ensureAuthBeforeRequest();
       final uri = Uri.parse('$baseUrl/api/events/$id');
-      final response =
-          await _delete(uri, headers: _getHeaders(), isIdempotent: true);
+      final response = await _delete(
+        uri,
+        headers: _getHeaders(),
+        isIdempotent: true,
+      );
       if (response.statusCode == 200 || response.statusCode == 204) return true;
       final decoded =
           response.body.isNotEmpty ? jsonDecode(response.body) : null;
@@ -7986,7 +8166,8 @@ class BackendApiService
         return true;
       }
       throw Exception(
-          'Failed to delete event: ${response.statusCode} ${response.body}');
+        'Failed to delete event: ${response.statusCode} ${response.body}',
+      );
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.deleteEvent failed: $e');
       rethrow;
@@ -7995,14 +8176,15 @@ class BackendApiService
 
   /// List exhibitions for an event
   /// GET /api/events/:id/exhibitions
-  Future<List<Exhibition>> listEventExhibitions(String eventId,
-      {int limit = 50, int offset = 0}) async {
+  Future<List<Exhibition>> listEventExhibitions(
+    String eventId, {
+    int limit = 50,
+    int offset = 0,
+  }) async {
     try {
-      final uri = Uri.parse('$baseUrl/api/events/$eventId/exhibitions')
-          .replace(queryParameters: {
-        'limit': '$limit',
-        'offset': '$offset',
-      });
+      final uri = Uri.parse(
+        '$baseUrl/api/events/$eventId/exhibitions',
+      ).replace(queryParameters: {'limit': '$limit', 'offset': '$offset'});
       final decoded = await _fetchJson(
         uri,
         includeAuth: false,
@@ -8044,10 +8226,7 @@ class BackendApiService
       if (mine == true) {
         await _ensureAuthBeforeRequest();
       }
-      final qp = <String, String>{
-        'limit': '$limit',
-        'offset': '$offset',
-      };
+      final qp = <String, String>{'limit': '$limit', 'offset': '$offset'};
       if (eventId != null && eventId.trim().isNotEmpty) {
         qp['eventId'] = eventId.trim();
       }
@@ -8142,37 +8321,63 @@ class BackendApiService
   /// POST /api/exhibitions
   Future<Exhibition?> createExhibition(Map<String, dynamic> payload) async {
     _throwIfIpfsFallbackUnavailable('Exhibition publishing');
+    const path = '/api/exhibitions';
     try {
       await _ensureAuthBeforeRequest();
-      final uri = Uri.parse('$baseUrl/api/exhibitions');
-      final response =
-          await _post(uri, headers: _getHeaders(), body: jsonEncode(payload));
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final exhibitionRaw = _extractSuccessfulEntityMap(
-          response,
-          preferredKeys: const <String>['exhibition'],
-        );
-        if (exhibitionRaw != null) {
-          return Exhibition.fromJson(exhibitionRaw);
-        }
-        return null;
+      final uri = Uri.parse('$baseUrl$path');
+      final response = await _post(
+        uri,
+        headers: _getHeaders(),
+        body: jsonEncode(payload),
+      );
+      if (_isSuccessStatus(response.statusCode)) {
+        final exhibition = _parseIdentifiedExhibition(response);
+        if (exhibition != null) return exhibition;
       }
-      throw Exception(
-          'Failed to create exhibition: ${response.statusCode} ${response.body}');
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.createExhibition failed: $e');
-      rethrow;
+      throw BackendApiRequestException(
+        statusCode: response.statusCode,
+        path: path,
+        body: response.body,
+      );
+    } catch (error, stackTrace) {
+      _throwTypedMutationFailure(
+        error: error,
+        stackTrace: stackTrace,
+        operation: 'BackendApiService.createExhibition',
+        path: path,
+      );
     }
+  }
+
+  /// Parse an exhibition from a successful mutation response.
+  ///
+  /// Returns `null` when the envelope is unexpected *or* when it decodes to an
+  /// exhibition without a usable id. `_extractSuccessfulEntityMap` falls back to
+  /// the whole decoded body when no preferred key matches, so a bare
+  /// `{"success": true}` would otherwise yield an `Exhibition` with an empty id
+  /// and be reported to callers as a completed mutation.
+  Exhibition? _parseIdentifiedExhibition(http.Response response) {
+    final raw = _extractSuccessfulEntityMap(
+      response,
+      preferredKeys: const <String>['exhibition'],
+    );
+    if (raw == null) return null;
+    final exhibition = Exhibition.fromJson(raw);
+    if (exhibition.id.trim().isEmpty) return null;
+    return exhibition;
   }
 
   /// Update exhibition
   /// PUT /api/exhibitions/:id
   Future<Exhibition?> updateExhibition(
-      String id, Map<String, dynamic> updates) async {
+    String id,
+    Map<String, dynamic> updates,
+  ) async {
     _throwIfIpfsFallbackUnavailable('Exhibition editing');
+    final path = '/api/exhibitions/$id';
     try {
       await _ensureAuthBeforeRequest();
-      final uri = Uri.parse('$baseUrl/api/exhibitions/$id');
+      final uri = Uri.parse('$baseUrl$path');
       if (kDebugMode && AppConfig.enableNetworkLogging) {
         final cover = updates['coverUrl'] ??
             updates['cover_url'] ??
@@ -8182,37 +8387,40 @@ class BackendApiService
           AppConfig.networkLog(
             'PUT',
             uri.toString(),
-            data: <String, dynamic>{
-              'coverUrl': cover,
-            },
+            data: <String, dynamic>{'coverUrl': cover},
           );
         }
       }
-      final response = await _put(uri,
-          headers: _getHeaders(),
-          body: jsonEncode(updates),
-          isIdempotent: true);
-      if (response.statusCode == 200) {
-        final exhibitionRaw = _extractSuccessfulEntityMap(
-          response,
-          preferredKeys: const <String>['exhibition'],
-        );
-        if (exhibitionRaw != null) {
-          return Exhibition.fromJson(exhibitionRaw);
-        }
-        try {
-          return await getExhibition(id);
-        } catch (_) {
-          // A successful update should still behave like success even if the
-          // backend returned a slightly unexpected response envelope.
-        }
-        return null;
+      final response = await _put(
+        uri,
+        headers: _getHeaders(),
+        body: jsonEncode(updates),
+        isIdempotent: true,
+      );
+      if (_isSuccessStatus(response.statusCode)) {
+        final exhibition = _parseIdentifiedExhibition(response);
+        if (exhibition != null) return exhibition;
+        // Deliberately no re-read fallback here. `getExhibition` is a public
+        // read: it is unauthenticated and falls back to the public snapshot
+        // dataset, so it can return a stale or pre-update record. Treating
+        // that as confirmation would report "Saved" for an update that never
+        // landed, which is the exact failure this contract exists to remove.
+        // The backend returns the updated exhibition on every success
+        // (`exhibitionsService.updateExhibition` -> `ok({ exhibition })`), so
+        // an unparseable 2xx is genuinely unconfirmed.
       }
-      throw Exception(
-          'Failed to update exhibition: ${response.statusCode} ${response.body}');
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.updateExhibition failed: $e');
-      rethrow;
+      throw BackendApiRequestException(
+        statusCode: response.statusCode,
+        path: path,
+        body: response.body,
+      );
+    } catch (error, stackTrace) {
+      _throwTypedMutationFailure(
+        error: error,
+        stackTrace: stackTrace,
+        operation: 'BackendApiService.updateExhibition',
+        path: path,
+      );
     }
   }
 
@@ -8222,8 +8430,11 @@ class BackendApiService
     try {
       await _ensureAuthBeforeRequest();
       final uri = Uri.parse('$baseUrl/api/exhibitions/$id');
-      final response =
-          await _delete(uri, headers: _getHeaders(), isIdempotent: true);
+      final response = await _delete(
+        uri,
+        headers: _getHeaders(),
+        isIdempotent: true,
+      );
       if (response.statusCode == 200 || response.statusCode == 204) return true;
       final decoded =
           response.body.isNotEmpty ? jsonDecode(response.body) : null;
@@ -8231,7 +8442,8 @@ class BackendApiService
         return true;
       }
       throw Exception(
-          'Failed to delete exhibition: ${response.statusCode} ${response.body}');
+        'Failed to delete exhibition: ${response.statusCode} ${response.body}',
+      );
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.deleteExhibition failed: $e');
       rethrow;
@@ -8241,7 +8453,9 @@ class BackendApiService
   /// Link artworks to an exhibition
   /// POST /api/exhibitions/:id/artworks { artworkIds: [...] }
   Future<Map<String, dynamic>> linkExhibitionArtworks(
-      String exhibitionId, List<String> artworkIds) async {
+    String exhibitionId,
+    List<String> artworkIds,
+  ) async {
     await _ensureAuthBeforeRequest();
     final uri = Uri.parse('$baseUrl/api/exhibitions/$exhibitionId/artworks');
     final response = await _post(
@@ -8256,31 +8470,41 @@ class BackendApiService
           : {'success': true};
     }
     throw Exception(
-        'Failed to link exhibition artworks: ${response.statusCode} ${response.body}');
+      'Failed to link exhibition artworks: ${response.statusCode} ${response.body}',
+    );
   }
 
   /// Unlink a single artwork from an exhibition
   /// DELETE /api/exhibitions/:id/artworks/:artworkId
   Future<Map<String, dynamic>> unlinkExhibitionArtwork(
-      String exhibitionId, String artworkId) async {
+    String exhibitionId,
+    String artworkId,
+  ) async {
     await _ensureAuthBeforeRequest();
-    final uri =
-        Uri.parse('$baseUrl/api/exhibitions/$exhibitionId/artworks/$artworkId');
-    final response =
-        await _delete(uri, headers: _getHeaders(), isIdempotent: true);
+    final uri = Uri.parse(
+      '$baseUrl/api/exhibitions/$exhibitionId/artworks/$artworkId',
+    );
+    final response = await _delete(
+      uri,
+      headers: _getHeaders(),
+      isIdempotent: true,
+    );
     if (_isSuccessStatus(response.statusCode)) {
       return response.body.isNotEmpty
           ? (jsonDecode(response.body) as Map<String, dynamic>)
           : {'success': true};
     }
     throw Exception(
-        'Failed to unlink exhibition artwork: ${response.statusCode} ${response.body}');
+      'Failed to unlink exhibition artwork: ${response.statusCode} ${response.body}',
+    );
   }
 
   /// Link markers to an exhibition
   /// POST /api/exhibitions/:id/markers { markerIds: [...] }
   Future<Map<String, dynamic>> linkExhibitionMarkers(
-      String exhibitionId, List<String> markerIds) async {
+    String exhibitionId,
+    List<String> markerIds,
+  ) async {
     await _ensureAuthBeforeRequest();
     final uri = Uri.parse('$baseUrl/api/exhibitions/$exhibitionId/markers');
     final response = await _post(
@@ -8295,25 +8519,33 @@ class BackendApiService
           : {'success': true};
     }
     throw Exception(
-        'Failed to link exhibition markers: ${response.statusCode} ${response.body}');
+      'Failed to link exhibition markers: ${response.statusCode} ${response.body}',
+    );
   }
 
   /// Unlink a single marker from an exhibition
   /// DELETE /api/exhibitions/:id/markers/:markerId
   Future<Map<String, dynamic>> unlinkExhibitionMarker(
-      String exhibitionId, String markerId) async {
+    String exhibitionId,
+    String markerId,
+  ) async {
     await _ensureAuthBeforeRequest();
-    final uri =
-        Uri.parse('$baseUrl/api/exhibitions/$exhibitionId/markers/$markerId');
-    final response =
-        await _delete(uri, headers: _getHeaders(), isIdempotent: true);
+    final uri = Uri.parse(
+      '$baseUrl/api/exhibitions/$exhibitionId/markers/$markerId',
+    );
+    final response = await _delete(
+      uri,
+      headers: _getHeaders(),
+      isIdempotent: true,
+    );
     if (_isSuccessStatus(response.statusCode)) {
       return response.body.isNotEmpty
           ? (jsonDecode(response.body) as Map<String, dynamic>)
           : {'success': true};
     }
     throw Exception(
-        'Failed to unlink exhibition marker: ${response.statusCode} ${response.body}');
+      'Failed to unlink exhibition marker: ${response.statusCode} ${response.body}',
+    );
   }
 
   /// Fetch exhibition POAP status
@@ -8351,8 +8583,9 @@ class BackendApiService
   }) async {
     try {
       await _ensureAuthBeforeRequest();
-      final uri =
-          Uri.parse('$baseUrl/api/exhibitions/$exhibitionId/poap/claim');
+      final uri = Uri.parse(
+        '$baseUrl/api/exhibitions/$exhibitionId/poap/claim',
+      );
       final response = await _post(
         uri,
         headers: _getHeaders(),
@@ -8389,14 +8622,15 @@ class BackendApiService
 
   /// List linked program events for an exhibition
   /// GET /api/exhibitions/:id/events
-  Future<List<KubusEvent>> listExhibitionEvents(String exhibitionId,
-      {int limit = 50, int offset = 0}) async {
+  Future<List<KubusEvent>> listExhibitionEvents(
+    String exhibitionId, {
+    int limit = 50,
+    int offset = 0,
+  }) async {
     try {
-      final uri = Uri.parse('$baseUrl/api/exhibitions/$exhibitionId/events')
-          .replace(queryParameters: {
-        'limit': '$limit',
-        'offset': '$offset',
-      });
+      final uri = Uri.parse(
+        '$baseUrl/api/exhibitions/$exhibitionId/events',
+      ).replace(queryParameters: {'limit': '$limit', 'offset': '$offset'});
       final decoded = await _fetchJson(
         uri,
         includeAuth: false,
@@ -8455,12 +8689,18 @@ class BackendApiService
   /// Unlink an event from an exhibition program
   /// DELETE /api/exhibitions/:id/events/:eventId
   Future<Map<String, dynamic>> unlinkExhibitionEvent(
-      String exhibitionId, String eventId) async {
+    String exhibitionId,
+    String eventId,
+  ) async {
     await _ensureAuthBeforeRequest();
-    final uri =
-        Uri.parse('$baseUrl/api/exhibitions/$exhibitionId/events/$eventId');
-    final response =
-        await _delete(uri, headers: _getHeaders(), isIdempotent: true);
+    final uri = Uri.parse(
+      '$baseUrl/api/exhibitions/$exhibitionId/events/$eventId',
+    );
+    final response = await _delete(
+      uri,
+      headers: _getHeaders(),
+      isIdempotent: true,
+    );
     if (_isSuccessStatus(response.statusCode)) {
       return response.body.isNotEmpty
           ? (jsonDecode(response.body) as Map<String, dynamic>)
@@ -8507,12 +8747,18 @@ class BackendApiService
   /// Unlink an exhibition from an event
   /// DELETE /api/events/:id/exhibitions/:exhibitionId
   Future<Map<String, dynamic>> unlinkEventExhibition(
-      String eventId, String exhibitionId) async {
+    String eventId,
+    String exhibitionId,
+  ) async {
     await _ensureAuthBeforeRequest();
-    final uri =
-        Uri.parse('$baseUrl/api/events/$eventId/exhibitions/$exhibitionId');
-    final response =
-        await _delete(uri, headers: _getHeaders(), isIdempotent: true);
+    final uri = Uri.parse(
+      '$baseUrl/api/events/$eventId/exhibitions/$exhibitionId',
+    );
+    final response = await _delete(
+      uri,
+      headers: _getHeaders(),
+      isIdempotent: true,
+    );
     if (_isSuccessStatus(response.statusCode)) {
       return response.body.isNotEmpty
           ? (jsonDecode(response.body) as Map<String, dynamic>)
@@ -8598,11 +8844,17 @@ class BackendApiService
   /// Configure event POAP badge (owner/editor only)
   /// PUT /api/events/:id/poap
   Future<Map<String, dynamic>> upsertEventPoap(
-      String eventId, Map<String, dynamic> payload) async {
+    String eventId,
+    Map<String, dynamic> payload,
+  ) async {
     await _ensureAuthBeforeRequest();
     final uri = Uri.parse('$baseUrl/api/events/$eventId/poap');
-    final response = await _put(uri,
-        headers: _getHeaders(), body: jsonEncode(payload), isIdempotent: true);
+    final response = await _put(
+      uri,
+      headers: _getHeaders(),
+      body: jsonEncode(payload),
+      isIdempotent: true,
+    );
     if (_isSuccessStatus(response.statusCode)) {
       return response.body.isNotEmpty
           ? (jsonDecode(response.body) as Map<String, dynamic>)
@@ -8618,11 +8870,17 @@ class BackendApiService
   /// Configure exhibition POAP badge (owner/editor only)
   /// PUT /api/exhibitions/:id/poap
   Future<Map<String, dynamic>> upsertExhibitionPoap(
-      String exhibitionId, Map<String, dynamic> payload) async {
+    String exhibitionId,
+    Map<String, dynamic> payload,
+  ) async {
     await _ensureAuthBeforeRequest();
     final uri = Uri.parse('$baseUrl/api/exhibitions/$exhibitionId/poap');
-    final response = await _put(uri,
-        headers: _getHeaders(), body: jsonEncode(payload), isIdempotent: true);
+    final response = await _put(
+      uri,
+      headers: _getHeaders(),
+      body: jsonEncode(payload),
+      isIdempotent: true,
+    );
     if (_isSuccessStatus(response.statusCode)) {
       return response.body.isNotEmpty
           ? (jsonDecode(response.body) as Map<String, dynamic>)
@@ -8682,14 +8940,17 @@ class BackendApiService
   /// List collaborators for an entity
   /// GET /api/collab/:entityType/:entityId/members
   Future<List<CollabMember>> listCollaborators(
-      String entityType, String entityId) async {
+    String entityType,
+    String entityId,
+  ) async {
     try {
       try {
         await ensureAuthLoaded();
       } catch (_) {}
       final includeAuth = hasAuthSession;
-      final uri =
-          Uri.parse('$baseUrl/api/collab/$entityType/$entityId/members');
+      final uri = Uri.parse(
+        '$baseUrl/api/collab/$entityType/$entityId/members',
+      );
       final decoded = await _fetchJson(
         uri,
         includeAuth: includeAuth,
@@ -8754,8 +9015,11 @@ class BackendApiService
     try {
       await _ensureAuthBeforeRequest();
       final uri = Uri.parse('$baseUrl$path');
-      final response =
-          await _post(uri, headers: _getHeaders(), isIdempotent: true);
+      final response = await _post(
+        uri,
+        headers: _getHeaders(),
+        isIdempotent: true,
+      );
       if (_isSuccessStatus(response.statusCode)) return true;
       throw BackendApiRequestException(
         statusCode: response.statusCode,
@@ -8779,8 +9043,11 @@ class BackendApiService
     try {
       await _ensureAuthBeforeRequest();
       final uri = Uri.parse('$baseUrl$path');
-      final response =
-          await _post(uri, headers: _getHeaders(), isIdempotent: true);
+      final response = await _post(
+        uri,
+        headers: _getHeaders(),
+        isIdempotent: true,
+      );
       if (_isSuccessStatus(response.statusCode)) return true;
       throw BackendApiRequestException(
         statusCode: response.statusCode,
@@ -8799,8 +9066,12 @@ class BackendApiService
 
   /// Update collaborator role
   /// PATCH /api/collab/:entityType/:entityId/members/:memberUserId
-  Future<bool> updateCollaboratorRole(String entityType, String entityId,
-      String memberUserId, String role) async {
+  Future<bool> updateCollaboratorRole(
+    String entityType,
+    String entityId,
+    String memberUserId,
+    String role,
+  ) async {
     final path = '/api/collab/$entityType/$entityId/members/$memberUserId';
     try {
       await _ensureAuthBeforeRequest();
@@ -8830,13 +9101,19 @@ class BackendApiService
   /// Remove a collaborator
   /// DELETE /api/collab/:entityType/:entityId/members/:memberUserId
   Future<bool> removeCollaborator(
-      String entityType, String entityId, String memberUserId) async {
+    String entityType,
+    String entityId,
+    String memberUserId,
+  ) async {
     final path = '/api/collab/$entityType/$entityId/members/$memberUserId';
     try {
       await _ensureAuthBeforeRequest();
       final uri = Uri.parse('$baseUrl$path');
-      final response =
-          await _delete(uri, headers: _getHeaders(), isIdempotent: true);
+      final response = await _delete(
+        uri,
+        headers: _getHeaders(),
+        isIdempotent: true,
+      );
       if (_isSuccessStatus(response.statusCode)) return true;
       throw BackendApiRequestException(
         statusCode: response.statusCode,
@@ -8895,11 +9172,13 @@ class BackendApiService
         return jsonDecode(response.body) as Map<String, dynamic>;
       } else {
         throw Exception(
-            'Failed to update achievement progress: ${response.statusCode}');
+          'Failed to update achievement progress: ${response.statusCode}',
+        );
       }
     } catch (e) {
       AppConfig.debugPrint(
-          'BackendApiService.updateAchievementProgress failed: $e');
+        'BackendApiService.updateAchievementProgress failed: $e',
+      );
       rethrow;
     }
   }
@@ -8919,7 +9198,8 @@ class BackendApiService
         return data['stats'] as Map<String, dynamic>;
       } else {
         throw Exception(
-            'Failed to get achievement stats: ${response.statusCode}');
+          'Failed to get achievement stats: ${response.statusCode}',
+        );
       }
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.getAchievementStats failed: $e');
@@ -8942,7 +9222,8 @@ class BackendApiService
     try {
       final response = await _get(
         Uri.parse(
-            '$baseUrl/api/achievements/leaderboard?limit=$limit&type=$type'),
+          '$baseUrl/api/achievements/leaderboard?limit=$limit&type=$type',
+        ),
         headers: _getHeaders(),
       );
 
@@ -8954,7 +9235,8 @@ class BackendApiService
       }
     } catch (e) {
       AppConfig.debugPrint(
-          'BackendApiService.getAchievementLeaderboard failed: $e');
+        'BackendApiService.getAchievementLeaderboard failed: $e',
+      );
       return [];
     }
   }
@@ -9141,8 +9423,9 @@ class BackendApiService
 
           var collections = await _loadSnapshotDatasetMaps('collections');
           if (snapshotWalletFilter.isNotEmpty) {
-            final canonicalRequested =
-                WalletUtils.canonical(snapshotWalletFilter);
+            final canonicalRequested = WalletUtils.canonical(
+              snapshotWalletFilter,
+            );
             collections = collections.where((entry) {
               final candidate = WalletUtils.canonical(
                 entry['walletAddress'] ??
@@ -9267,9 +9550,7 @@ class BackendApiService
         AppConfig.networkLog(
           'PUT',
           '$baseUrl/api/collections/$collectionId',
-          data: <String, dynamic>{
-            'thumbnailUrl': payload['thumbnailUrl'],
-          },
+          data: <String, dynamic>{'thumbnailUrl': payload['thumbnailUrl']},
         );
       }
 
@@ -9290,7 +9571,8 @@ class BackendApiService
         return payload;
       }
       throw Exception(
-          'Failed to update collection: ${response.statusCode} ${response.body}');
+        'Failed to update collection: ${response.statusCode} ${response.body}',
+      );
     } catch (e) {
       rethrow;
     }
@@ -9335,11 +9617,13 @@ class BackendApiService
 
       if (response.statusCode != 200) {
         throw Exception(
-            'Failed to add artwork to collection: ${response.statusCode}');
+          'Failed to add artwork to collection: ${response.statusCode}',
+        );
       }
     } catch (e) {
       AppConfig.debugPrint(
-          'BackendApiService.addArtworkToCollection failed: $e');
+        'BackendApiService.addArtworkToCollection failed: $e',
+      );
       rethrow;
     }
   }
@@ -9359,11 +9643,13 @@ class BackendApiService
 
       if (response.statusCode != 200) {
         throw Exception(
-            'Failed to remove artwork from collection: ${response.statusCode}');
+          'Failed to remove artwork from collection: ${response.statusCode}',
+        );
       }
     } catch (e) {
       AppConfig.debugPrint(
-          'BackendApiService.removeArtworkFromCollection failed: $e');
+        'BackendApiService.removeArtworkFromCollection failed: $e',
+      );
       rethrow;
     }
   }
@@ -9389,8 +9675,9 @@ class BackendApiService
         queryParams['type'] = type;
       }
 
-      final uri = Uri.parse('$baseUrl/api/notifications')
-          .replace(queryParameters: queryParams);
+      final uri = Uri.parse(
+        '$baseUrl/api/notifications',
+      ).replace(queryParameters: queryParams);
       final response = await _get(uri, headers: _getHeaders());
 
       if (response.statusCode == 200) {
@@ -9399,7 +9686,8 @@ class BackendApiService
         return notifications.map((e) => e as Map<String, dynamic>).toList();
       } else {
         throw Exception(
-            'Failed to fetch notifications: ${response.statusCode}');
+          'Failed to fetch notifications: ${response.statusCode}',
+        );
       }
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.getNotifications failed: $e');
@@ -9424,7 +9712,8 @@ class BackendApiService
       }
     } catch (e) {
       AppConfig.debugPrint(
-          'BackendApiService.getUnreadNotificationCount failed: $e');
+        'BackendApiService.getUnreadNotificationCount failed: $e',
+      );
       return 0;
     }
   }
@@ -9441,11 +9730,13 @@ class BackendApiService
 
       if (response.statusCode != 200) {
         throw Exception(
-            'Failed to mark notification as read: ${response.statusCode}');
+          'Failed to mark notification as read: ${response.statusCode}',
+        );
       }
     } catch (e) {
       AppConfig.debugPrint(
-          'BackendApiService.markNotificationAsRead failed: $e');
+        'BackendApiService.markNotificationAsRead failed: $e',
+      );
       rethrow;
     }
   }
@@ -9462,11 +9753,13 @@ class BackendApiService
 
       if (response.statusCode != 200) {
         throw Exception(
-            'Failed to mark all notifications as read: ${response.statusCode}');
+          'Failed to mark all notifications as read: ${response.statusCode}',
+        );
       }
     } catch (e) {
       AppConfig.debugPrint(
-          'BackendApiService.markAllNotificationsAsRead failed: $e');
+        'BackendApiService.markAllNotificationsAsRead failed: $e',
+      );
       rethrow;
     }
   }
@@ -9483,7 +9776,8 @@ class BackendApiService
 
       if (response.statusCode != 200) {
         throw Exception(
-            'Failed to delete notification: ${response.statusCode}');
+          'Failed to delete notification: ${response.statusCode}',
+        );
       }
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.deleteNotification failed: $e');
@@ -9505,7 +9799,8 @@ class BackendApiService
     }
     if ((_authToken ?? '').trim().isEmpty) {
       throw Exception(
-          'Authentication required: sign in again before deleting your account.');
+        'Authentication required: sign in again before deleting your account.',
+      );
     }
     try {
       final response = await _delete(
@@ -9543,18 +9838,22 @@ class BackendApiService
       );
       if (response.statusCode != 200 && response.statusCode != 204) {
         throw Exception(
-            'Failed to delete account data: ${response.statusCode}');
+          'Failed to delete account data: ${response.statusCode}',
+        );
       }
     } catch (e) {
       AppConfig.debugPrint(
-          'BackendApiService.deleteMyWalletScopedData failed: $e');
+        'BackendApiService.deleteMyWalletScopedData failed: $e',
+      );
       rethrow;
     }
   }
 
   /// Deprecated name kept for compatibility; wallet-scoped data only.
-  @Deprecated('Use deleteMyAccount for account deletion or '
-      'deleteMyWalletScopedData for wallet-scoped data removal.')
+  @Deprecated(
+    'Use deleteMyAccount for account deletion or '
+    'deleteMyWalletScopedData for wallet-scoped data removal.',
+  )
   Future<void> deleteMyAccountData({String? walletAddress}) =>
       deleteMyWalletScopedData(walletAddress: walletAddress);
 
@@ -9577,10 +9876,14 @@ class BackendApiService
         'page': page.toString(),
       };
 
-      final uri = Uri.parse('$baseUrl/api/search')
-          .replace(queryParameters: queryParams);
-      final response = await _get(uri,
-          includeAuth: false, headers: _getHeaders(includeAuth: false));
+      final uri = Uri.parse(
+        '$baseUrl/api/search',
+      ).replace(queryParameters: queryParams);
+      final response = await _get(
+        uri,
+        includeAuth: false,
+        headers: _getHeaders(includeAuth: false),
+      );
 
       if (response.statusCode == 200) {
         return jsonDecode(response.body) as Map<String, dynamic>;
@@ -9610,8 +9913,9 @@ class BackendApiService
         'limit': limit.toString(),
       };
 
-      final uri = Uri.parse('$baseUrl/api/search/suggestions')
-          .replace(queryParameters: queryParams);
+      final uri = Uri.parse(
+        '$baseUrl/api/search/suggestions',
+      ).replace(queryParameters: queryParams);
       final key = _rateLimitKey('GET', uri);
       if (_isRateLimited(key)) {
         throw Exception(_rateLimitMessage(key));
@@ -9621,8 +9925,11 @@ class BackendApiService
       dynamic data;
 
       Future<dynamic> tryFetch(Uri target) async {
-        final response =
-            await _get(target, headers: headers, includeAuth: true);
+        final response = await _get(
+          target,
+          headers: headers,
+          includeAuth: true,
+        );
         if (_isSuccessStatus(response.statusCode)) {
           return jsonDecode(response.body);
         }
@@ -9653,28 +9960,33 @@ class BackendApiService
         }
       }
       AppConfig.debugPrint(
-          'BackendApiService.getSearchSuggestions: unexpected payload for "$query"');
+        'BackendApiService.getSearchSuggestions: unexpected payload for "$query"',
+      );
       return const [];
     } catch (e) {
       AppConfig.debugPrint(
-          'BackendApiService.getSearchSuggestions failed for "$query": $e');
+        'BackendApiService.getSearchSuggestions failed for "$query": $e',
+      );
       return const [];
     }
   }
 
   /// Get trending search terms
   /// GET /api/search/trending
-  Future<List<Map<String, dynamic>>> getTrendingSearches(
-      {int limit = 10}) async {
+  Future<List<Map<String, dynamic>>> getTrendingSearches({
+    int limit = 10,
+  }) async {
     try {
-      final queryParams = <String, String>{
-        'limit': limit.toString(),
-      };
+      final queryParams = <String, String>{'limit': limit.toString()};
 
-      final uri = Uri.parse('$baseUrl/api/search/trending')
-          .replace(queryParameters: queryParams);
-      final response = await _get(uri,
-          includeAuth: false, headers: _getHeaders(includeAuth: false));
+      final uri = Uri.parse(
+        '$baseUrl/api/search/trending',
+      ).replace(queryParameters: queryParams);
+      final response = await _get(
+        uri,
+        includeAuth: false,
+        headers: _getHeaders(includeAuth: false),
+      );
 
       if (response.statusCode == 200) {
         final jsonData = jsonDecode(response.body) as Map<String, dynamic>;
@@ -9694,11 +10006,15 @@ class BackendApiService
   /// Add a reaction to a message
   /// POST /api/messages/:conversationId/messages/:messageId/reactions
   Future<void> addMessageReaction(
-      String conversationId, String messageId, String emoji) async {
+    String conversationId,
+    String messageId,
+    String emoji,
+  ) async {
     try {
       final response = await _post(
         Uri.parse(
-            '$baseUrl/api/messages/$conversationId/messages/$messageId/reactions'),
+          '$baseUrl/api/messages/$conversationId/messages/$messageId/reactions',
+        ),
         headers: _getHeaders(),
         isIdempotent: true,
         body: jsonEncode({'emoji': emoji}),
@@ -9716,11 +10032,15 @@ class BackendApiService
   /// Remove a reaction from a message
   /// DELETE /api/messages/:conversationId/messages/:messageId/reactions
   Future<void> removeMessageReaction(
-      String conversationId, String messageId, String emoji) async {
+    String conversationId,
+    String messageId,
+    String emoji,
+  ) async {
     try {
       final response = await _delete(
         Uri.parse(
-            '$baseUrl/api/messages/$conversationId/messages/$messageId/reactions'),
+          '$baseUrl/api/messages/$conversationId/messages/$messageId/reactions',
+        ),
         headers: _getHeaders(),
         body: jsonEncode({'emoji': emoji}),
         isIdempotent: true,
@@ -9731,7 +10051,8 @@ class BackendApiService
       }
     } catch (e) {
       AppConfig.debugPrint(
-          'BackendApiService.removeMessageReaction failed: $e');
+        'BackendApiService.removeMessageReaction failed: $e',
+      );
       rethrow;
     }
   }
@@ -9787,10 +10108,12 @@ ArtMarker _artMarkerFromBackendJson(Map<String, dynamic> json) {
   String? artworkId = stringVal(json['artworkId'] ?? json['artwork_id']);
   if (artworkId == null || artworkId.isEmpty) {
     final metaArtwork = mergedMeta ?? {};
-    artworkId = stringVal(metaArtwork['linkedArtworkId'] ??
-        metaArtwork['linked_artwork_id'] ??
-        metaArtwork['artworkId'] ??
-        metaArtwork['artwork_id']);
+    artworkId = stringVal(
+      metaArtwork['linkedArtworkId'] ??
+          metaArtwork['linked_artwork_id'] ??
+          metaArtwork['artworkId'] ??
+          metaArtwork['artwork_id'],
+    );
   }
   final allowSubjectIdAsArtworkId = subjectId != null &&
       subjectId.isNotEmpty &&
@@ -9842,10 +10165,14 @@ ArtMarker _artMarkerFromBackendJson(Map<String, dynamic> json) {
         mergedMeta?['ownerWalletAddress'] ??
         mergedMeta?['owner_wallet_address'],
     'viewCount': intVal(json['viewCount'] ?? json['views'], 0),
-    'interactionCount':
-        intVal(json['interactionCount'] ?? json['interactions'], 0),
-    'activationRadius':
-        doubleVal(json['activationRadius'] ?? json['activation_radius'], 50.0),
+    'interactionCount': intVal(
+      json['interactionCount'] ?? json['interactions'],
+      0,
+    ),
+    'activationRadius': doubleVal(
+      json['activationRadius'] ?? json['activation_radius'],
+      50.0,
+    ),
     'requiresProximity':
         json['requiresProximity'] ?? json['requires_proximity'] ?? true,
     'isPublic': json['isPublic'] ?? json['is_public'] ?? true,
@@ -9982,9 +10309,11 @@ Artwork parseArtworkFromBackendJson(Map<String, dynamic> json) {
       return convert(raw);
     }
     if (raw is Map) {
-      return convert(raw
-          .cast<dynamic, dynamic>()
-          .map((key, value) => MapEntry(key.toString(), value)));
+      return convert(
+        raw.cast<dynamic, dynamic>().map(
+              (key, value) => MapEntry(key.toString(), value),
+            ),
+      );
     }
     return null;
   }
@@ -10003,11 +10332,12 @@ Artwork parseArtworkFromBackendJson(Map<String, dynamic> json) {
     addMeta('walletAddress', json['walletAddress'] ?? json['wallet_address']);
     addMeta('creatorId', json['creatorId'] ?? json['creator_id']);
     addMeta(
-        'creators',
-        json['creators'] ??
-            json['artists'] ??
-            json['collaborators'] ??
-            json['contributors']);
+      'creators',
+      json['creators'] ??
+          json['artists'] ??
+          json['collaborators'] ??
+          json['contributors'],
+    );
     addMeta(
       'creatorWallets',
       json['creatorWallets'] ??
@@ -10034,23 +10364,35 @@ Artwork parseArtworkFromBackendJson(Map<String, dynamic> json) {
     addMeta('imageCID', json['imageCID'] ?? json['image_cid']);
     addMeta('publicRef', json['publicRef'] ?? json['public_ref']);
     addMeta(
-        'canonicalSource', json['canonicalSource'] ?? json['canonical_source']);
-    addMeta('publicManifestCid',
-        json['publicManifestCid'] ?? json['public_manifest_cid']);
-    addMeta('publicRecordCid',
-        json['publicRecordCid'] ?? json['public_record_cid']);
+      'canonicalSource',
+      json['canonicalSource'] ?? json['canonical_source'],
+    );
     addMeta(
-        'publicRegistry', json['publicRegistry'] ?? json['public_registry']);
+      'publicManifestCid',
+      json['publicManifestCid'] ?? json['public_manifest_cid'],
+    );
+    addMeta(
+      'publicRecordCid',
+      json['publicRecordCid'] ?? json['public_record_cid'],
+    );
+    addMeta(
+      'publicRegistry',
+      json['publicRegistry'] ?? json['public_registry'],
+    );
     addMeta('cidRegistry', json['cidRegistry'] ?? json['cid_registry']);
     addMeta('poap', json['poap']);
     addMeta('promotion', json['promotion']);
     // Image attribution (photographer / licence), surfaced in detail screens.
     addMeta('imageAuthor', json['imageAuthor'] ?? json['image_author']);
     addMeta('imageLicense', json['imageLicense'] ?? json['image_license']);
-    addMeta('imageAttribution',
-        json['imageAttribution'] ?? json['image_attribution']);
     addMeta(
-        'imageSourceUrl', json['imageSourceUrl'] ?? json['image_source_url']);
+      'imageAttribution',
+      json['imageAttribution'] ?? json['image_attribution'],
+    );
+    addMeta(
+      'imageSourceUrl',
+      json['imageSourceUrl'] ?? json['image_source_url'],
+    );
 
     return metadata;
   }
@@ -10186,8 +10528,9 @@ Artwork parseArtworkFromBackendJson(Map<String, dynamic> json) {
   final normalizedImageUrl = MediaUrlResolver.resolveDisplayUrl(rawImage) ??
       MediaUrlResolver.resolveDisplayUrl(imageCid) ??
       StorageConfig.resolveUrl(imageCid);
-  final arScale =
-      doubleVal(json['arScale'] ?? json['ar_scale'] ?? arAsset?['scale']);
+  final arScale = doubleVal(
+    json['arScale'] ?? json['ar_scale'] ?? arAsset?['scale'],
+  );
   final arRotation = normalizeRotation(
     json['arRotation'] ??
         json['ar_rotation'] ??
@@ -10275,8 +10618,9 @@ Artwork parseArtworkFromBackendJson(Map<String, dynamic> json) {
     return const <Map<String, dynamic>>[];
   }
 
-  final galleryMeta =
-      parseGalleryMeta(json['galleryMeta'] ?? json['gallery_meta']);
+  final galleryMeta = parseGalleryMeta(
+    json['galleryMeta'] ?? json['gallery_meta'],
+  );
 
   final poapJson = json['poap'] is Map<String, dynamic>
       ? (json['poap'] as Map<String, dynamic>)
@@ -10290,9 +10634,9 @@ Artwork parseArtworkFromBackendJson(Map<String, dynamic> json) {
     poapJson?['poapMode'],
   ]);
   final poapMode = ArtworkPoapModeApi.fromApiValue(poapModeRaw);
-  final poapEnabled = boolVal(poapJson?['enabled'] ??
-          json['poapEnabled'] ??
-          json['poap_enabled']) ??
+  final poapEnabled = boolVal(
+        poapJson?['enabled'] ?? json['poapEnabled'] ?? json['poap_enabled'],
+      ) ??
       (poapMode != ArtworkPoapMode.none);
   final poapEventId = pickString([
     poapJson?['eventId'],
@@ -10306,18 +10650,24 @@ Artwork parseArtworkFromBackendJson(Map<String, dynamic> json) {
     json['poapClaimUrl'],
     json['poap_claim_url'],
   ]);
-  final poapValidFrom = parseDate(poapJson?['validFrom'] ??
-      poapJson?['valid_from'] ??
-      json['poapValidFrom'] ??
-      json['poap_valid_from']);
-  final poapValidTo = parseDate(poapJson?['validTo'] ??
-      poapJson?['valid_to'] ??
-      json['poapValidTo'] ??
-      json['poap_valid_to']);
-  final poapRewardAmount = intVal(poapJson?['rewardAmount'] ??
-      poapJson?['reward_amount'] ??
-      json['poapRewardAmount'] ??
-      json['poap_reward_amount']);
+  final poapValidFrom = parseDate(
+    poapJson?['validFrom'] ??
+        poapJson?['valid_from'] ??
+        json['poapValidFrom'] ??
+        json['poap_valid_from'],
+  );
+  final poapValidTo = parseDate(
+    poapJson?['validTo'] ??
+        poapJson?['valid_to'] ??
+        json['poapValidTo'] ??
+        json['poap_valid_to'],
+  );
+  final poapRewardAmount = intVal(
+    poapJson?['rewardAmount'] ??
+        poapJson?['reward_amount'] ??
+        json['poapRewardAmount'] ??
+        json['poap_reward_amount'],
+  );
   final poapTitle = pickString([
     poapJson?['title'],
     poapJson?['poapTitle'],
@@ -10341,17 +10691,16 @@ Artwork parseArtworkFromBackendJson(Map<String, dynamic> json) {
       ? (MediaUrlResolver.resolveDisplayUrl(poapImageRaw) ?? poapImageRaw)
       : null;
 
-  final walletAddress =
-      nullableString(json['walletAddress'] ?? json['wallet_address']);
+  final walletAddress = nullableString(
+    json['walletAddress'] ?? json['wallet_address'],
+  );
   final isPublic = boolVal(json['isPublic'] ?? json['is_public']) ?? true;
   final isActive = boolVal(json['isActive'] ?? json['is_active']) ?? true;
   final isForSale = boolVal(json['isForSale'] ?? json['is_for_sale']) ?? false;
   final price = doubleVal(json['price']);
   final currency = nullableString(json['currency']);
-  final isNft = boolVal(
-        json['isNft'] ?? json['is_nft'] ?? nftJson,
-      ) ??
-      (nftJson != null);
+  final isNft =
+      boolVal(json['isNft'] ?? json['is_nft'] ?? nftJson) ?? (nftJson != null);
   final nftMintAddress = pickString([
     json['nftMintAddress'],
     json['nft_mint_address'],
@@ -10369,8 +10718,9 @@ Artwork parseArtworkFromBackendJson(Map<String, dynamic> json) {
       parseDate(json['createdAt'] ?? json['created_at']) ?? DateTime.now();
   final updatedAt = parseDate(json['updatedAt'] ?? json['updated_at']);
   final discoveredAt = parseDate(json['discoveredAt'] ?? json['discovered_at']);
-  final discoveryUserId =
-      nullableString(json['discoveryUserId'] ?? json['discovery_user_id']);
+  final discoveryUserId = nullableString(
+    json['discoveryUserId'] ?? json['discovery_user_id'],
+  );
   final isFavoriteByCurrentUser =
       boolVal(json['isFavoriteByCurrentUser'] ?? json['isFavorited']) ?? false;
   final discoveredFlag = boolVal(
@@ -10383,8 +10733,10 @@ Artwork parseArtworkFromBackendJson(Map<String, dynamic> json) {
     json['status'] ?? json['artworkStatus'] ?? json['artwork_status'],
   );
   if (statusRaw != null) {
-    final normalized =
-        statusRaw.toLowerCase().trim().replaceAll(RegExp(r'[^a-z]'), '');
+    final normalized = statusRaw.toLowerCase().trim().replaceAll(
+          RegExp(r'[^a-z]'),
+          '',
+        );
 
     if (normalized == 'favorite' || normalized == 'favourite') {
       status = ArtworkStatus.favorite;
@@ -10530,7 +10882,8 @@ GroupPostPreview? _groupPostPreviewFromJson(dynamic raw) {
 }
 
 CommunityGroupSummary _communityGroupSummaryFromJson(
-    Map<String, dynamic> json) {
+  Map<String, dynamic> json,
+) {
   return _backendApiCommunityGroupSummaryFromJson(json);
 }
 

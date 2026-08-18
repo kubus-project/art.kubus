@@ -90,51 +90,85 @@ class MarkerAttributionSection extends StatelessWidget {
     return v.isEmpty ? null : v;
   }
 
-  /// Number of attribution rows the shared marker quick card will render.
-  ///
-  /// The marker-card height planner uses this exact resolver so photo,
-  /// licence, artist, and source rows receive space before the card is laid
-  /// out. Keeping the estimate beside the rendering precedence prevents the
-  /// image/description area from collapsing into an internal scrollbar.
-  static int visibleRowCountFromMarkerAndArtwork(
-    ArtMarker? marker,
-    Artwork? artwork,
-  ) {
-    final values = _resolveMarkerAndArtworkValues(marker, artwork);
-    var count = 0;
-    final artist = _clean(values.artist);
-    if (artist != null &&
-        !RegExp(r'^unknown$', caseSensitive: false).hasMatch(artist)) {
-      count += 1;
-    }
-    final photoLine = _clean(values.imageAttribution) ??
-        <String?>[
-          _clean(values.imageAuthor),
-          _clean(values.imageLicense),
-        ].whereType<String>().join(' / ');
-    if (photoLine.isNotEmpty) count += 1;
-    if (_clean(values.sourceAttribution) != null) count += 1;
-    return count;
+  static bool _rendersArtist(String? artist) {
+    final value = _clean(artist);
+    if (value == null) return false;
+    return !RegExp(r'^unknown$', caseSensitive: false).hasMatch(value);
   }
 
-  static _MarkerAttributionValues _resolveMarkerAndArtworkValues(
+  static String _photoLine({
+    String? imageAttribution,
+    String? imageAuthor,
+    String? imageLicense,
+  }) {
+    return _clean(imageAttribution) ??
+        <String?>[
+          _clean(imageAuthor),
+          _clean(imageLicense),
+        ].whereType<String>().join(' / ');
+  }
+
+  /// How many credit rows this section renders for the given values.
+  ///
+  /// Exposed so the marker quick card's height estimator reserves exactly the
+  /// space the section will occupy instead of guessing.
+  static int rowCountFrom({
+    String? artist,
+    String? imageAttribution,
+    String? imageAuthor,
+    String? imageLicense,
+    String? sourceAttribution,
+  }) {
+    var rows = 0;
+    if (_rendersArtist(artist)) rows++;
+    if (_photoLine(
+      imageAttribution: imageAttribution,
+      imageAuthor: imageAuthor,
+      imageLicense: imageLicense,
+    ).isNotEmpty) {
+      rows++;
+    }
+    if (_clean(sourceAttribution) != null) rows++;
+    return rows;
+  }
+
+  /// Row count for the marker + linked artwork combination rendered by
+  /// [MarkerAttributionSection.fromMarkerAndArtwork].
+  static int rowCountForMarkerAndArtwork(ArtMarker? marker, Artwork? artwork) {
+    return rowValuesForMarkerAndArtwork(marker, artwork).length;
+  }
+
+  /// The credit values this section renders, in render order.
+  ///
+  /// Exposed so the marker quick card's height estimator can predict which rows
+  /// wrap onto a second line (each row renders up to [rowMaxLines]) instead of
+  /// assuming every credit fits on one line — long artist/photo/source credits
+  /// are common on open-data markers.
+  static List<String> rowValuesForMarkerAndArtwork(
     ArtMarker? marker,
     Artwork? artwork,
   ) {
-    final usesArtworkCover =
-        ArtworkMediaResolver.resolveCover(artwork: artwork) != null;
-    return _MarkerAttributionValues(
-      artist: artwork == null ? marker?.artistName : null,
-      imageAttribution: usesArtworkCover
-          ? artwork?.imageAttribution
-          : marker?.imageAttribution,
-      imageAuthor:
-          usesArtworkCover ? artwork?.imageAuthor : marker?.imageAuthor,
-      imageLicense:
-          usesArtworkCover ? artwork?.imageLicense : marker?.imageLicense,
-      sourceAttribution: marker?.sourceAttribution,
+    final section = MarkerAttributionSection.fromMarkerAndArtwork(
+      marker,
+      artwork,
     );
+    final values = <String>[];
+    if (_rendersArtist(section.artist)) {
+      values.add(_clean(section.artist)!);
+    }
+    final photoLine = _photoLine(
+      imageAttribution: section.imageAttribution,
+      imageAuthor: section.imageAuthor,
+      imageLicense: section.imageLicense,
+    );
+    if (photoLine.isNotEmpty) values.add(photoLine);
+    final source = _clean(section.sourceAttribution);
+    if (source != null) values.add(source);
+    return values;
   }
+
+  /// Maximum lines one credit row renders (see the `Text` below).
+  static const int rowMaxLines = 2;
 
   @override
   Widget build(BuildContext context) {
@@ -143,11 +177,11 @@ class MarkerAttributionSection extends StatelessWidget {
 
     final artistValue = _clean(artist);
     // Prefer the display-ready line; otherwise compose from author/licence.
-    final photoLine = _clean(imageAttribution) ??
-        [
-          _clean(imageAuthor),
-          _clean(imageLicense),
-        ].whereType<String>().join(' / ');
+    final photoLine = _photoLine(
+      imageAttribution: imageAttribution,
+      imageAuthor: imageAuthor,
+      imageLicense: imageLicense,
+    );
     final source = _clean(sourceAttribution);
 
     final rows = <Widget>[];
@@ -178,10 +212,9 @@ class MarkerAttributionSection extends StatelessWidget {
       );
     }
 
-    if (artistValue != null &&
-        !RegExp(r'^unknown$', caseSensitive: false).hasMatch(artistValue)) {
-      addRow(
-          Icons.brush_outlined, l10n.markerAttributionArtistLabel, artistValue);
+    if (_rendersArtist(artistValue)) {
+      addRow(Icons.brush_outlined, l10n.markerAttributionArtistLabel,
+          artistValue!);
     }
     if (photoLine.isNotEmpty) {
       addRow(

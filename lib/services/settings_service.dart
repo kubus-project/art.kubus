@@ -8,6 +8,8 @@ import '../providers/wallet_provider.dart';
 import 'backend_api_service.dart';
 import 'onboarding_state_service.dart';
 import 'push_notification_service.dart';
+import 'pending_action_service.dart';
+import 'telemetry/telemetry_service.dart';
 
 /// Centralized storage and side-effect helpers for settings.
 class SettingsService {
@@ -141,10 +143,19 @@ class SettingsService {
       'notification_permission_granted',
       'last_inactive_ts',
       'lock_timeout_seconds',
+      // A remembered activation intent belongs to the session that captured
+      // it. Leaving it behind would offer the previous user's pending Save or
+      // Follow to whoever signs in next on this device.
+      PendingActionService.storageKey,
     };
     for (final key in removeKeys) {
       await prefs.remove(key);
     }
+    await const PendingActionService().clearCompletionMarkers(prefs: prefs);
+
+    // Telemetry must stop attributing events to the account that just left.
+    TelemetryService().setActorUserId(null);
+    await TelemetryService().rotateSession();
 
     // Keep onboarding state intact on logout so returning users are not
     // forced through onboarding again unless they explicitly reset it.

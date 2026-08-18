@@ -10,6 +10,8 @@ import 'backend_api_service.dart';
 import 'achievement_service.dart';
 import 'storage_config.dart';
 import 'socket_service.dart';
+import 'telemetry/contribution_type.dart';
+import 'telemetry/telemetry_service.dart';
 import 'telemetry/telemetry_uuid.dart';
 
 @immutable
@@ -28,9 +30,11 @@ class MapMarkerService {
   MapMarkerService._internal({
     BackendApiService? backendApiService,
     SocketService? socketService,
+    TelemetryService? telemetryService,
     bool enableSocketBridge = true,
   })  : _backendApi = backendApiService ?? BackendApiService(),
         _socket = socketService ?? SocketService(),
+        _telemetry = telemetryService ?? TelemetryService(),
         _enableSocketBridge = enableSocketBridge;
 
   static final MapMarkerService _instance = MapMarkerService._internal();
@@ -39,14 +43,17 @@ class MapMarkerService {
   @visibleForTesting
   static MapMarkerService createForTest({
     BackendApiService? backendApiService,
+    TelemetryService? telemetryService,
   }) {
     return MapMarkerService._internal(
       backendApiService: backendApiService,
+      telemetryService: telemetryService,
       enableSocketBridge: false,
     );
   }
 
   final BackendApiService _backendApi;
+  final TelemetryService _telemetry;
   final List<ArtMarker> _cachedMarkers = [];
   final StreamController<ArtMarker> _markerStreamController =
       StreamController<ArtMarker>.broadcast();
@@ -519,6 +526,7 @@ class MapMarkerService {
     String? modelCID,
     String? modelURL,
   }) async {
+    _noteContributionStarted();
     String? clientNonce;
     try {
       final normalizedArtworkId = artworkId?.trim() ?? '';
@@ -607,6 +615,7 @@ class MapMarkerService {
         _cachedMarkers.add(created);
         notifyMarkerUpserted(created);
         unawaited(_trackStreetArtAchievements(created));
+        _noteContributionPublished();
         return created;
       }
 
@@ -619,6 +628,7 @@ class MapMarkerService {
             _cachedMarkers.add(marker);
             notifyMarkerUpserted(marker);
             unawaited(_trackStreetArtAchievements(marker));
+            _noteContributionPublished();
             _log(
                 'MapMarkerService: recovered created marker via nonce ${marker.id}');
             return marker;
@@ -639,6 +649,7 @@ class MapMarkerService {
               _cachedMarkers.add(marker);
               notifyMarkerUpserted(marker);
               unawaited(_trackStreetArtAchievements(marker));
+              _noteContributionPublished();
               _log(
                   'MapMarkerService: recovered created marker after error ${marker.id}');
               return marker;
@@ -650,6 +661,36 @@ class MapMarkerService {
       }
     }
     return null;
+  }
+
+  /// Marker contribution telemetry for the map-screen creation path.
+  ///
+  /// This service is the second of the two independent production entry points
+  /// for marker creation: the map screens reach it through
+  /// `KubusMapMarkerCreationCoordinator`, while the marker editor uses
+  /// [MarkerManagementProvider] instead. Neither delegates to the other — each
+  /// calls `BackendApiService.createArtMarkerRecord` itself — so both owning
+  /// their telemetry yields exactly one event per created marker. If one is
+  /// ever changed to wrap the other, the wrapper must stop emitting.
+  ///
+  /// The three published branches below (direct success, nonce recovery after a
+  /// null response, nonce recovery after an error) are mutually exclusive
+  /// returns, so a submission that the backend committed but that appeared to
+  /// fail emits one submitted event, not zero and not two.
+  void _noteContributionStarted() {
+    unawaited(
+      _telemetry
+          .trackContributionStarted(type: ContributionType.marker)
+          .catchError((_) {}),
+    );
+  }
+
+  void _noteContributionPublished() {
+    unawaited(
+      _telemetry
+          .trackSuccessfulContribution(ContributionType.marker)
+          .catchError((_) {}),
+    );
   }
 
   /// Map markers are metadata containers on the map; AR uploads are handled by

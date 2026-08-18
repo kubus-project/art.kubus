@@ -219,6 +219,8 @@ test('production smoke contract preserves routing, SEO, revision, takeover, and 
   const source = await readFile(path.join(scriptDir, 'smoke_production_web.sh'), 'utf8');
   for (const required of [
     'root did not boot the Flutter application',
+    'for route in onboarding register',
+    'does not serve the Flutter application',
     'kubus-web-revision.txt',
     'production robots.txt lacks the production sitemap',
     'unknown production route is not a real 404',
@@ -261,9 +263,13 @@ function startWafOrigin({ token, mode, appBodyOverride }) {
       response.end('<html><script src="flutter_bootstrap.js"></script></html>');
       return;
     }
-    if (request.url === '/app') {
+    if (request.url === '/app' || request.url === '/onboarding' || request.url === '/register') {
       response.writeHead(200, { 'Content-Type': 'text/html' });
-      response.end(appBodyOverride ?? '<html><script src="flutter_bootstrap.js"></script></html>');
+      response.end(
+        request.url === '/app' && appBodyOverride
+          ? appBodyOverride
+          : '<html><script src="flutter_bootstrap.js"></script></html>',
+      );
       return;
     }
     response.writeHead(404, { 'Content-Type': 'text/plain' });

@@ -50,6 +50,9 @@ import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../widgets/map/dialogs/street_art_claims_dialog.dart';
+import '../../widgets/spatial/artwork_spatial_archive_section.dart';
+import '../../providers/activation_prompt_provider.dart';
+import '../../services/meta/meta_conversion_adapter.dart';
 
 class ArtDetailScreen extends StatefulWidget {
   final String artworkId;
@@ -94,6 +97,11 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
       context,
       actionLabel: l10n.commonSave.toLowerCase(),
       returnRoute: _publicReturnRoute(context),
+      actionType: PendingActionType.save,
+      targetType: PendingActionTargetType.artwork,
+      targetId: artworkId,
+      targetLabel: provider.getArtworkById(artworkId)?.title,
+      sourceScreen: 'artwork_detail',
     );
     if (!authenticated || !mounted) return;
     await provider.toggleArtworkSaved(artworkId);
@@ -108,6 +116,11 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
       context,
       actionLabel: l10n.artworkDetailLike.toLowerCase(),
       returnRoute: _publicReturnRoute(context),
+      actionType: PendingActionType.like,
+      targetType: PendingActionTargetType.artwork,
+      targetId: artworkId,
+      targetLabel: provider.getArtworkById(artworkId)?.title,
+      sourceScreen: 'artwork_detail',
     );
     if (!authenticated || !mounted) return;
     await provider.toggleLike(artworkId);
@@ -142,6 +155,11 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
       _loadArtworkDetails();
       context.read<ArtworkProvider>().incrementViewCount(widget.artworkId);
       unawaited(TelemetryService().trackArtworkViewed(widget.artworkId));
+      ActivationPromptProvider.recordEntityViewFor(context);
+      unawaited(MetaConversionAdapter.instance.trackViewContent(
+        contentType: 'artwork',
+        contentId: widget.artworkId,
+      ));
     });
   }
 
@@ -337,6 +355,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                               if (artwork.galleryUrls.isNotEmpty)
                                 const SizedBox(height: DetailSpacing.cardGap),
                               _buildDescription(artwork),
+                              const SizedBox(height: DetailSpacing.cardGap),
+                              ArtworkSpatialArchiveSection(artwork: artwork),
                               const SizedBox(height: DetailSpacing.cardGap),
                               _buildSocialStats(artwork),
                               const SizedBox(height: DetailSpacing.cardGap),

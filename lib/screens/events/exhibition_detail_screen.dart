@@ -40,6 +40,8 @@ import '../../widgets/promotion/promotion_builder_sheet.dart';
 import '../../widgets/common/subject_options_sheet.dart';
 import '../../widgets/public_entity_takeover_ready.dart';
 import 'event_detail_screen.dart';
+import '../../services/telemetry/telemetry_service.dart';
+import '../../providers/activation_prompt_provider.dart';
 
 class ExhibitionDetailScreen extends StatefulWidget {
   final String exhibitionId;
@@ -88,6 +90,8 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
       final provider = context.read<ExhibitionsProvider>();
       unawaited(provider.recordExhibitionView(widget.exhibitionId,
           source: 'exhibition_detail'));
+      unawaited(TelemetryService().trackExhibitionViewed(widget.exhibitionId));
+      ActivationPromptProvider.recordEntityViewFor(context);
       unawaited(_load());
     });
   }

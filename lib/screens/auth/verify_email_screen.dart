@@ -17,6 +17,7 @@ import '../desktop/auth/desktop_auth_shell.dart';
 import '../desktop/desktop_shell.dart';
 import '../../services/backend_api_service.dart';
 import 'email_verification_success_screen.dart';
+import '../../services/telemetry/telemetry_service.dart';
 
 class VerifyEmailScreen extends StatefulWidget {
   const VerifyEmailScreen({
@@ -44,6 +45,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
   void initState() {
     super.initState();
     _emailController = TextEditingController(text: (widget.email ?? '').trim());
+    unawaited(TelemetryService().trackEmailVerificationViewed());
     final token = (widget.token ?? '').trim();
     if (token.isNotEmpty) {
       unawaited(_verifyToken(token));
@@ -71,6 +73,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
       // logged-in app instance instead of falling back to /sign-in.
       final sessionEstablished =
           await BackendApiService().persistAuthTokensFromResponse(response);
+      unawaited(TelemetryService().trackEmailVerified());
       if (!mounted) return;
       setState(() => _verified = true);
       if (!mounted) return;
@@ -182,6 +185,9 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
           : response;
       final verified =
           payload['emailVerified'] == true || payload['verified'] == true;
+      if (verified) {
+        unawaited(TelemetryService().trackEmailVerified());
+      }
       if (!mounted) return;
       if (verified) {
         setState(() => _verified = true);

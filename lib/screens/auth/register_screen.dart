@@ -9,6 +9,8 @@ class RegisterScreen extends StatelessWidget {
     this.onVerificationRequired,
     this.onError,
     this.onSwitchToSignIn,
+    this.redirectRoute,
+    this.redirectArguments,
   });
 
   final bool embedded;
@@ -17,11 +19,19 @@ class RegisterScreen extends StatelessWidget {
   final ValueChanged<Object>? onError;
   final VoidCallback? onSwitchToSignIn;
 
+  /// Route to return to once the account exists. Carried through from the
+  /// contextual activation prompt so a guest lands back on the exact entity
+  /// they were trying to act on instead of a generic shell.
+  final String? redirectRoute;
+  final Object? redirectArguments;
+
   @override
   Widget build(BuildContext context) {
     return AuthMethodsPanel(
       embedded: embedded,
       googleAuthOrigin: embedded ? 'onboarding' : 'register',
+      redirectRoute: redirectRoute,
+      redirectArguments: redirectArguments,
       onAuthSuccess: onAuthCompleted == null
           ? null
           : (_) async {

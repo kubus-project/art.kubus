@@ -961,6 +961,10 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
       context,
       actionLabel: l10n.commonSave.toLowerCase(),
       returnRoute: '/p/${Uri.encodeComponent(post.id)}',
+      actionType: PendingActionType.save,
+      targetType: PendingActionTargetType.post,
+      targetId: post.id,
+      sourceScreen: 'group_feed',
     );
     if (!authenticated || !mounted) return;
     try {

@@ -4,20 +4,27 @@ import android.app.Activity
 import android.app.Application
 import android.content.Context
 import android.graphics.BitmapFactory
+import android.graphics.ImageFormat
+import android.graphics.Rect
+import android.graphics.YuvImage
+import android.media.Image
 import android.os.Bundle
 import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.view.GestureDetector
 import android.view.MotionEvent
+import android.view.PixelCopy
 import android.view.View
-import android.widget.Toast
 import com.difrancescogianmarco.arcore_flutter_plugin.flutter_models.FlutterArCoreHitTestResult
 import com.difrancescogianmarco.arcore_flutter_plugin.flutter_models.FlutterArCoreNode
 import com.difrancescogianmarco.arcore_flutter_plugin.flutter_models.FlutterArCorePose
 import com.difrancescogianmarco.arcore_flutter_plugin.models.RotatingNode
 import com.difrancescogianmarco.arcore_flutter_plugin.utils.ArCoreUtils
+import com.difrancescogianmarco.arcore_flutter_plugin.utils.DecodableUtils
 import com.google.ar.core.*
 import com.google.ar.core.exceptions.CameraNotAvailableException
+import com.google.ar.core.exceptions.NotYetAvailableException
 import com.google.ar.core.exceptions.UnavailableException
 import com.google.ar.core.exceptions.UnavailableUserDeclinedInstallationException
 import com.google.ar.sceneform.*
@@ -32,14 +39,17 @@ import io.flutter.plugin.platform.PlatformView
 
 import android.graphics.Bitmap
 import android.os.Environment
-import android.view.PixelCopy
 import android.os.HandlerThread
 import android.content.ContextWrapper
 import java.io.FileOutputStream
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.RejectedExecutionException
 
 class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMessenger, id: Int, private val isAugmentedFaces: Boolean, private val debug: Boolean) : PlatformView, MethodChannel.MethodCallHandler {
     private val methodChannel: MethodChannel = MethodChannel(messenger, "arcore_flutter_plugin_$id")
@@ -50,9 +60,65 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
     private val TAG: String = ArCoreView::class.java.name
     private var arSceneView: ArSceneView? = null
     private val gestureDetector: GestureDetector
+    private val spatialCaptureExecutor: ExecutorService = Executors.newSingleThreadExecutor()
+    private val mainHandler = Handler(Looper.getMainLooper())
     private val RC_PERMISSIONS = 0x123
     private var sceneUpdateListener: Scene.OnUpdateListener
     private var faceSceneUpdateListener: Scene.OnUpdateListener
+    private var lastCameraTrackingState: TrackingState? = null
+    private var lastTrackingFailureReason: TrackingFailureReason? = null
+
+    /**
+     * Set once teardown begins. Guards every asynchronous path so a capture,
+     * scene update, or lifecycle callback that lands after dispose() cannot
+     * touch a destroyed session or a detached channel.
+     */
+    @Volatile
+    private var isDisposed: Boolean = false
+
+    /**
+     * Reports a typed, recoverable AR session error to Flutter.
+     *
+     * Recoverable session problems are product states, not crashes: Flutter
+     * maps the code to localized guidance and offers a retry.
+     */
+    /**
+     * Completes a pending [MethodChannel.Result] on the main thread.
+     *
+     * Skips delivery once teardown has begun: replying through a channel whose
+     * view is gone throws, and the Dart side has already abandoned the call.
+     */
+    private fun completeOnMain(block: () -> Unit) {
+        mainHandler.post {
+            if (isDisposed) {
+                return@post
+            }
+            try {
+                block()
+            } catch (e: Exception) {
+                debugLog("result delivery failed: ${e.localizedMessage}")
+            }
+        }
+    }
+
+    private fun reportSessionError(code: String, message: String) {
+        if (isDisposed) {
+            return
+        }
+        mainHandler.post {
+            if (isDisposed) {
+                return@post
+            }
+            try {
+                methodChannel.invokeMethod(
+                        "onSessionError",
+                        hashMapOf("code" to code, "message" to message)
+                )
+            } catch (e: Exception) {
+                debugLog("reportSessionError failed: ${e.localizedMessage}")
+            }
+        }
+    }
 
     //AUGMENTEDFACE
     private var faceRegionsRenderable: ModelRenderable? = null
@@ -80,7 +146,22 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
 
             val frame = arSceneView?.arFrame ?: return@OnUpdateListener
 
-            if (frame.camera.trackingState != TrackingState.TRACKING) {
+            val camera = frame.camera
+            if (ArCoreSessionMapping.shouldEmitTrackingChange(
+                            lastCameraTrackingState?.toString(),
+                            lastTrackingFailureReason?.toString(),
+                            camera.trackingState.toString(),
+                            camera.trackingFailureReason.toString()
+                    )) {
+                lastCameraTrackingState = camera.trackingState
+                lastTrackingFailureReason = camera.trackingFailureReason
+                methodChannel.invokeMethod("onTrackingStateChanged", hashMapOf(
+                    "state" to camera.trackingState.toString(),
+                    "failureReason" to camera.trackingFailureReason.toString()
+                ))
+            }
+
+            if (camera.trackingState != TrackingState.TRACKING) {
                 return@OnUpdateListener
             }
 
@@ -183,12 +264,16 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
                 debugLog(" addArCoreNode")
                 val map = call.arguments as HashMap<String, Any>
                 val flutterNode = FlutterArCoreNode(map)
-                addNodeWithAnchor(flutterNode, result)
+                addNodeWithAnchor(flutterNode, map, result)
             }
             "removeARCoreNode" -> {
                 debugLog(" removeARCoreNode")
                 val map = call.arguments as HashMap<String, Any>
                 removeNode(map["nodeName"] as String, result)
+            }
+            "updateAnchoredNode" -> {
+                debugLog(" updateAnchoredNode")
+                updateAnchoredNode(call, result)
             }
             "positionChanged" -> {
                 debugLog(" positionChanged")
@@ -209,6 +294,7 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
                 takeScreenshot(call, result)
 
             }
+            "captureSpatialFrame" -> captureSpatialFrame(result)
             "loadMesh" -> {
                 val map = call.arguments as HashMap<String, Any>
                 val textureBytes = map["textureBytes"] as ByteArray
@@ -350,6 +436,160 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
         result.success(null)
     }
 
+    private class CopiedPlane(val bytes: ByteArray, val rowStride: Int, val pixelStride: Int)
+
+    private fun copyPlane(plane: Image.Plane): CopiedPlane {
+        val buffer = plane.buffer.duplicate()
+        val bytes = ByteArray(buffer.remaining())
+        buffer.get(bytes)
+        return CopiedPlane(bytes, plane.rowStride, plane.pixelStride)
+    }
+
+    private fun captureSpatialFrame(result: MethodChannel.Result) {
+        val view = arSceneView
+        val frame = view?.arFrame
+        if (view == null || frame == null || frame.camera.trackingState != TrackingState.TRACKING) {
+            result.error("tracking_unavailable", "ARCore tracking is not ready", null)
+            return
+        }
+        // ARCore Frame/Image objects expire with the render callback, so every plane is
+        // copied to a plain byte array synchronously here. The expensive YUV->NV21
+        // rearrangement and JPEG compression run afterwards on a worker thread; only the
+        // already-copied bytes are touched there, never the expired Frame/Image.
+        try {
+                val camera = frame.camera
+                val pose = camera.pose
+                val intrinsics = camera.imageIntrinsics
+                val dimensions = intrinsics.imageDimensions
+                val focalLength = intrinsics.focalLength
+                val principalPoint = intrinsics.principalPoint
+                var cameraTimestamp = frame.timestamp
+
+                var imageWidth = 0
+                var imageHeight = 0
+                lateinit var yPlane: CopiedPlane
+                lateinit var uPlane: CopiedPlane
+                lateinit var vPlane: CopiedPlane
+                frame.acquireCameraImage().use { image ->
+                    cameraTimestamp = image.timestamp
+                    imageWidth = image.width
+                    imageHeight = image.height
+                    yPlane = copyPlane(image.planes[0])
+                    uPlane = copyPlane(image.planes[1])
+                    vPlane = copyPlane(image.planes[2])
+                }
+
+                var depthPlane: CopiedPlane? = null
+                var depthWidth = 0
+                var depthHeight = 0
+                var confidenceBytes: ByteArray? = null
+                try {
+                    // acquireDepthImage() is deprecated in favour of
+                    // acquireDepthImage16Bits(), but that API arrived in ARCore
+                    // 1.31 and this module pins com.google.ar:core:1.26.0
+                    // alongside the archived Sceneform 1.17.1. Moving to the
+                    // 16-bit API requires an ARCore upgrade that Sceneform
+                    // constrains, so it stays on the deprecated call until that
+                    // dependency work happens.
+                    frame.acquireDepthImage().use { depth ->
+                        depthPlane = copyPlane(depth.planes[0])
+                        depthWidth = depth.width
+                        depthHeight = depth.height
+                    }
+                    frame.acquireRawDepthConfidenceImage().use { confidence ->
+                        confidenceBytes = copyPlane(confidence.planes[0]).bytes
+                    }
+                } catch (_: NotYetAvailableException) {
+                    // Depth is an optional enhancement and may lag valid RGB.
+                } catch (_: Exception) {
+                    // Depth is optional and absence is explicitly represented.
+                }
+
+                // A dispose() racing an in-flight capture rejects the task. The
+                // pending Dart future must still be completed, or the sampler
+                // waits on it forever.
+                try {
+                    spatialCaptureExecutor.execute {
+                    try {
+                        val nv21 = yuv420888ToNv21(imageWidth, imageHeight, yPlane, uPlane, vPlane)
+                        val rgb = ByteArrayOutputStream().use { stream ->
+                            YuvImage(nv21, ImageFormat.NV21, imageWidth, imageHeight, null)
+                                .compressToJpeg(Rect(0, 0, imageWidth, imageHeight), 92, stream)
+                            stream.toByteArray()
+                        }
+                        val payload = hashMapOf<String, Any>(
+                            "rgb" to rgb,
+                            "timestampNanos" to cameraTimestamp,
+                            "poseTranslation" to pose.translation.toList(),
+                            "poseRotation" to pose.rotationQuaternion.toList(),
+                            "intrinsics" to hashMapOf(
+                                "width" to dimensions[0],
+                                "height" to dimensions[1],
+                                "fx" to focalLength[0],
+                                "fy" to focalLength[1],
+                                "cx" to principalPoint[0],
+                                "cy" to principalPoint[1]
+                            ),
+                            "depthAvailable" to false
+                        )
+                        val depth = depthPlane
+                        if (depth != null) {
+                            payload["depth"] = depth.bytes
+                            payload["depthWidth"] = depthWidth
+                            payload["depthHeight"] = depthHeight
+                            payload["depthRowStride"] = depth.rowStride
+                            payload["depthPixelStride"] = depth.pixelStride
+                            payload["depthAvailable"] = true
+                        }
+                        confidenceBytes?.let { payload["depthConfidence"] = it }
+
+                        completeOnMain { result.success(payload) }
+                    } catch (error: Throwable) {
+                        completeOnMain {
+                            result.error("capture_failed", error.localizedMessage, null)
+                        }
+                    }
+                    }
+                } catch (_: RejectedExecutionException) {
+                    completeOnMain {
+                        result.error(
+                                "capture_cancelled",
+                                "The AR session is shutting down.",
+                                null
+                        )
+                    }
+                }
+        } catch (_: NotYetAvailableException) {
+            result.error("frame_not_yet_available", "Camera image is temporarily unavailable", null)
+        } catch (error: Throwable) {
+                result.error("capture_failed", error.localizedMessage, null)
+        }
+    }
+
+    private fun yuv420888ToNv21(
+        width: Int,
+        height: Int,
+        yPlane: CopiedPlane,
+        uPlane: CopiedPlane,
+        vPlane: CopiedPlane
+    ): ByteArray {
+        val output = ByteArray(width * height * 3 / 2)
+        var outputIndex = 0
+        for (row in 0 until height) {
+            for (column in 0 until width) {
+                output[outputIndex++] = yPlane.bytes[row * yPlane.rowStride + column * yPlane.pixelStride]
+            }
+        }
+
+        for (row in 0 until height / 2) {
+            for (column in 0 until width / 2) {
+                output[outputIndex++] = vPlane.bytes[row * vPlane.rowStride + column * vPlane.pixelStride]
+                output[outputIndex++] = uPlane.bytes[row * uPlane.rowStride + column * uPlane.pixelStride]
+            }
+        }
+        return output
+    }
+
     @Throws(IOException::class)
     fun saveBitmapToDisk(bitmap: Bitmap):String {
 
@@ -384,7 +624,10 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
                             debugLog(" onNodeTap " + hitTestResult.node?.name)
                             debugLog(hitTestResult.node?.localPosition.toString())
                             debugLog(hitTestResult.node?.worldPosition.toString())
-                            methodChannel.invokeMethod("onNodeTap", hitTestResult.node?.name)
+                            methodChannel.invokeMethod(
+                                "onNodeTap",
+                                publicNodeNameForTap(hitTestResult.node),
+                            )
                             return@setOnTouchListener true
                         }
                         val handled = event?.let { gestureDetector.onTouchEvent(it) } ?: false
@@ -407,7 +650,11 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
         result.success(null)
     }
 
-    fun addNodeWithAnchor(flutterArCoreNode: FlutterArCoreNode, result: MethodChannel.Result) {
+    fun addNodeWithAnchor(
+        flutterArCoreNode: FlutterArCoreNode,
+        parameters: HashMap<String, Any>,
+        result: MethodChannel.Result,
+    ) {
 
         if (arSceneView == null) {
             return
@@ -418,11 +665,38 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
                 result.error("Make Renderable Error", t.localizedMessage, null)
                 return@makeRenderable
             }
-            val myAnchor = arSceneView?.session?.createAnchor(Pose(flutterArCoreNode.getPosition(), flutterArCoreNode.getRotation()))
+            val transform = AnchoredPlacementTransforms.initial(
+                flutterArCoreNode.getPosition(),
+                flutterArCoreNode.getRotation(),
+                (parameters["localYawRadians"] as? Number)?.toDouble() ?: 0.0,
+                (parameters["localScale"] as? Number)?.toDouble() ?: 1.0,
+            )
+            val myAnchor = arSceneView?.session?.createAnchor(
+                Pose(transform.anchorTranslation, transform.anchorRotation),
+            )
             if (myAnchor != null) {
                 val anchorNode = AnchorNode(myAnchor)
                 anchorNode.name = flutterArCoreNode.name
-                anchorNode.renderable = renderable
+                val content = Node()
+                content.name = "${anchorNode.name}$contentNodeSuffix"
+                content.renderable = renderable
+                content.localPosition = com.google.ar.sceneform.math.Vector3(
+                    transform.contentTranslation[0],
+                    transform.contentTranslation[1],
+                    transform.contentTranslation[2],
+                )
+                content.localRotation = com.google.ar.sceneform.math.Quaternion(
+                    transform.contentRotation[0],
+                    transform.contentRotation[1],
+                    transform.contentRotation[2],
+                    transform.contentRotation[3],
+                )
+                content.localScale = com.google.ar.sceneform.math.Vector3(
+                    transform.contentScale[0],
+                    transform.contentScale[1],
+                    transform.contentScale[2],
+                )
+                content.setParent(anchorNode)
 
                 debugLog("addNodeWithAnchor inserted ${anchorNode.name}")
                 attachNodeToParent(anchorNode, flutterArCoreNode.parentNodeName)
@@ -477,12 +751,137 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
     fun removeNode(name: String, result: MethodChannel.Result) {
         val node = arSceneView?.scene?.findByName(name)
         if (node != null) {
-            arSceneView?.scene?.removeChild(node);
+            if (node is AnchorNode) {
+                node.anchor?.detach()
+            }
+            node.setParent(null)
             debugLog("removed ${node.name}")
         }
 
         result.success(null)
     }
+
+    /**
+     * Updates a stable anchored placement without mixing world and local space.
+     *
+     * A placement preview is adjusted continuously — pinch to scale, drag to
+     * rotate, tap to reposition — and removing and re-adding the node for every
+     * change reloads its renderable and makes the artwork blink. Mutating the
+     * live node keeps the preview stable and matches what the user is doing.
+     *
+     * A supplied anchor pose replaces the immutable ARCore anchor. Local yaw
+     * and scale apply only to the content child. Omitted components are left
+     * untouched.
+     */
+    fun updateAnchoredNode(call: MethodCall, result: MethodChannel.Result) {
+        val name = call.argument<String>("name")
+        var anchorNode = findAnchorNode(name)
+        if (anchorNode == null) {
+            debugLog("updateAnchoredNode: no anchor named $name")
+            result.success(false)
+            return
+        }
+
+        val anchorPosition = DecodableUtils.parseVector3(
+            call.argument<HashMap<String, Double>>("anchorPosition"),
+        )
+        val anchorRotation = DecodableUtils.parseQuaternion(
+            call.argument<HashMap<String, Double>>("anchorRotation"),
+        )
+        if ((anchorPosition == null) != (anchorRotation == null)) {
+            result.error("invalid_anchor_pose", "Anchor position and rotation must be supplied together", null)
+            return
+        }
+        if (anchorPosition != null && anchorRotation != null) {
+            anchorNode = replaceAnchorPose(
+                anchorNode,
+                floatArrayOf(anchorPosition.x, anchorPosition.y, anchorPosition.z),
+                floatArrayOf(anchorRotation.x, anchorRotation.y, anchorRotation.z, anchorRotation.w),
+            )
+            if (anchorNode == null) {
+                result.success(false)
+                return
+            }
+        }
+
+        val localYaw = call.argument<Number>("localYawRadians")?.toDouble()
+        val localScale = call.argument<Number>("localScale")?.toDouble()
+        if ((localYaw != null && !localYaw.isFinite()) ||
+            (localScale != null && (!localScale.isFinite() || localScale <= 0.0))) {
+            result.error("invalid_content_transform", "Content yaw and scale must be finite; scale must be positive", null)
+            return
+        }
+        val content = findContentNode(anchorNode)
+        if (content == null) {
+            result.success(false)
+            return
+        }
+        val current = AnchoredPlacementTransform(
+            floatArrayOf(), floatArrayOf(), floatArrayOf(0f, 0f, 0f),
+            floatArrayOf(content.localRotation.x, content.localRotation.y, content.localRotation.z, content.localRotation.w),
+            floatArrayOf(content.localScale.x, content.localScale.y, content.localScale.z),
+        )
+        val next = AnchoredPlacementTransforms.withContent(current, localYaw, localScale)
+        content.localPosition = com.google.ar.sceneform.math.Vector3(
+            next.contentTranslation[0], next.contentTranslation[1], next.contentTranslation[2],
+        )
+        content.localRotation = com.google.ar.sceneform.math.Quaternion(
+            next.contentRotation[0], next.contentRotation[1], next.contentRotation[2], next.contentRotation[3],
+        )
+        content.localScale = com.google.ar.sceneform.math.Vector3(
+            next.contentScale[0], next.contentScale[1], next.contentScale[2],
+        )
+        result.success(true)
+    }
+
+    /** Suffix identifying the content child created beneath an AnchorNode. */
+    private val contentNodeSuffix = "#content"
+
+    private fun findAnchorNode(name: String?): AnchorNode? =
+        name?.let { arSceneView?.scene?.findByName(it) as? AnchorNode }
+
+    private fun findContentNode(anchor: AnchorNode): Node? =
+        anchor.children.firstOrNull { it.name == "${anchor.name}$contentNodeSuffix" }
+
+    /**
+     * Keeps Flutter's node-tap contract independent of the internal content
+     * child used by anchored placement previews.
+     */
+    private fun publicNodeNameForTap(node: Node?): String? {
+        var current = node
+        while (current != null) {
+            if (current is AnchorNode) {
+                return current.name
+            }
+            current = current.parent
+        }
+        return node?.name
+    }
+
+    /** Replaces an immutable ARCore anchor while retaining its content node. */
+    private fun replaceAnchorPose(
+        anchorNode: AnchorNode,
+        translation: FloatArray,
+        rotation: FloatArray,
+    ): AnchorNode? {
+        val content = findContentNode(anchorNode) ?: return null
+        val replacementAnchor = arSceneView?.session?.createAnchor(Pose(translation, rotation)) ?: return null
+        val parent = anchorNode.parent
+        content.setParent(null)
+        anchorNode.setParent(null)
+        anchorNode.anchor?.detach()
+        return AnchorNode(replacementAnchor).also { replacement ->
+            replacement.name = anchorNode.name
+            replacement.setParent(parent)
+            content.setParent(replacement)
+        }
+    }
+
+    /**
+     * Returns the node currently carrying the renderable.
+     */
+    private fun renderableHolderFor(node: Node): Node =
+        (node as? AnchorNode)?.let(::findContentNode) ?: node
 
     fun updateRotation(call: MethodCall, result: MethodChannel.Result) {
         val name = call.argument<String>("name")
@@ -500,7 +899,10 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
     fun updateMaterials(call: MethodCall, result: MethodChannel.Result) {
         val name = call.argument<String>("name")
         val materials = call.argument<ArrayList<HashMap<String, *>>>("materials")!!
-        val node = arSceneView?.scene?.findByName(name)
+        // Follow the renderable: once a placement has been transformed its
+        // content lives on a child beneath the anchor, so looking only at the
+        // named node would silently stop updating materials.
+        val node = arSceneView?.scene?.findByName(name)?.let { renderableHolderFor(it) }
         val oldMaterial = node?.renderable?.material?.makeCopy()
         if (oldMaterial != null) {
             val material = MaterialCustomFactory.updateMaterial(oldMaterial, materials[0])
@@ -513,7 +915,42 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
         return arSceneView as View
     }
 
+    /**
+     * Tears the platform view down. Idempotent: Flutter can call dispose()
+     * while a capture is still in flight, and the host may dispose the view
+     * again during activity teardown.
+     */
     override fun dispose() {
+        if (isDisposed) {
+            return
+        }
+        isDisposed = true
+
+        // Unregister exactly once. Registering on every platform-view creation
+        // without ever unregistering leaked one callbacks instance per AR mode
+        // transition, and each leaked instance kept driving onPause/onResume on
+        // a view that no longer existed.
+        if (this::activityLifecycleCallbacks.isInitialized) {
+            try {
+                activity.application
+                        .unregisterActivityLifecycleCallbacks(activityLifecycleCallbacks)
+            } catch (e: Exception) {
+                debugLog("unregisterActivityLifecycleCallbacks failed: ${e.localizedMessage}")
+            }
+        }
+
+        // Stop accepting new work before tearing the scene down, so a queued
+        // capture cannot touch a destroyed session.
+        spatialCaptureExecutor.shutdown()
+
+        // Detach the channel so late native callbacks cannot reach a Flutter
+        // engine that has already released this view.
+        try {
+            methodChannel.setMethodCallHandler(null)
+        } catch (e: Exception) {
+            debugLog("setMethodCallHandler(null) failed: ${e.localizedMessage}")
+        }
+
         if (arSceneView != null) {
             onPause()
             onDestroy()
@@ -548,16 +985,26 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
                     }
                     config.updateMode = Config.UpdateMode.LATEST_CAMERA_IMAGE
                     config.focusMode = Config.FocusMode.AUTO;
+                    if (session.isDepthModeSupported(Config.DepthMode.AUTOMATIC)) {
+                        config.depthMode = Config.DepthMode.AUTOMATIC
+                    }
                     session.configure(config)
                     arSceneView?.setupSession(session)
                 }
             } catch (ex: UnavailableUserDeclinedInstallationException) {
-                // Display an appropriate message to the user zand return gracefully.
-                Toast.makeText(activity, "TODO: handle exception " + ex.localizedMessage, Toast.LENGTH_LONG)
-                        .show();
+                // The user declined the ARCore install. Report a typed,
+                // recoverable state so Flutter can offer a localized retry
+                // instead of a raw platform Toast.
+                reportSessionError(
+                        ArCoreSessionMapping.CODE_INSTALL_DECLINED,
+                        "ARCore installation was declined."
+                )
                 return
             } catch (e: UnavailableException) {
-                ArCoreUtils.handleSessionException(activity, e)
+                reportSessionError(
+                        ArCoreUtils.availabilityCodeFor(e),
+                        e.localizedMessage ?: "ARCore is unavailable."
+                )
                 return
             }
         }
@@ -565,8 +1012,14 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
         try {
             arSceneView?.resume()
         } catch (ex: CameraNotAvailableException) {
-            ArCoreUtils.displayError(activity, "Unable to get camera", ex)
-            activity.finish()
+            // The camera being briefly unavailable - another owner still
+            // holding it, or a transition in progress - is recoverable. Closing
+            // the whole Flutter activity over it destroyed unrelated app state
+            // and looked like a crash.
+            reportSessionError(
+                    ArCoreSessionMapping.CODE_CAMERA_UNAVAILABLE,
+                    "The camera is currently unavailable."
+            )
             return
         }
 

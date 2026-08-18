@@ -355,6 +355,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       context,
       actionLabel: l10n.commonComments.toLowerCase(),
       returnRoute: '/p/${Uri.encodeComponent(_post!.id)}',
+      actionType: PendingActionType.comment,
+      targetType: PendingActionTargetType.post,
+      targetId: _post!.id,
+      sourceScreen: 'post_detail',
     );
     if (!authenticated || !mounted) return;
     _commentController.clear();
@@ -1661,6 +1665,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       context,
       actionLabel: l10n.commonSave.toLowerCase(),
       returnRoute: '/p/${Uri.encodeComponent(post.id)}',
+      actionType: PendingActionType.save,
+      targetType: PendingActionTargetType.post,
+      targetId: post.id,
+      sourceScreen: 'post_detail',
     );
     if (!authenticated || !mounted) return;
     try {

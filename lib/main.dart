@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:developer' as dev;
 import 'dart:isolate';
 import 'package:art_kubus/screens/events/event_detail_screen.dart';
 import 'package:art_kubus/screens/events/exhibition_detail_screen.dart';
@@ -63,6 +62,10 @@ import 'providers/main_tab_provider.dart';
 import 'providers/map_deep_link_provider.dart';
 import 'providers/walking_navigation_provider.dart';
 import 'providers/deferred_onboarding_provider.dart';
+import 'providers/pending_action_provider.dart';
+import 'providers/kubus_node_provider.dart';
+import 'providers/spatial_capture_provider.dart';
+import 'providers/availability_operator_provider.dart';
 import 'core/app_initializer.dart';
 import 'core/startup_trace.dart';
 import 'core/app_navigator.dart';
@@ -82,17 +85,19 @@ import 'screens/art/ar_screen.dart';
 import 'screens/art/art_detail_screen.dart';
 import 'screens/desktop/art/desktop_artwork_detail_screen.dart';
 import 'screens/desktop/desktop_shell.dart';
+import 'screens/node/kubus_node_screen.dart';
 import 'screens/settings/availability_node_operator_screen.dart';
 import 'screens/desktop/web3/desktop_connect_wallet_screen.dart';
 import 'screens/web3/wallet/connectwallet_screen.dart';
 import 'screens/web3/promotions/promotion_checkout_return_screen.dart';
 // user_service initialization moved to profile and wallet flows.
+import 'services/guest_session_service.dart';
 import 'services/push_notification_service.dart';
 import 'services/notification_handler.dart';
 import 'services/solana_wallet_service.dart';
 import 'services/socket_service.dart';
 import 'services/backend_api_service.dart';
-import 'services/diagnostics/diagnostics_client.dart';
+import 'services/diagnostics/unhandled_error_reporter.dart';
 import 'services/public_action_outbox_service.dart';
 import 'services/public_fallback_service.dart';
 import 'services/telemetry/telemetry_route_observer.dart';
@@ -101,124 +106,47 @@ import 'services/webgl_context_helper.dart';
 
 import 'widgets/glass_components.dart';
 import 'widgets/security_gate_overlay.dart';
+import 'widgets/auth/pending_action_continuation.dart';
 
 import 'screens/collab/invites_inbox_screen.dart';
 import 'services/share/share_deep_link_parser.dart';
 import 'features/map/navigation/walking_navigation_debug_harness.dart';
 import 'screens/debug/walking_route_render_harness_screen.dart';
+import 'providers/activation_prompt_provider.dart';
+import 'models/pending_action_intent.dart';
 
-class _UnhandledErrorDedupe {
-  static const Duration _dedupeWindow = Duration(seconds: 2);
-  static const bool _logInRelease =
-      bool.fromEnvironment('ERROR_STACK_LOG', defaultValue: false);
-  static String? _lastSignature;
-  static DateTime? _lastLoggedAt;
-  static int _suppressedCount = 0;
-  static bool _capturedFirst = false;
-  static DateTime? _lastUiSurfaceAt;
-  // Stored for debugging / external stack mapping tools.
-  // ignore: unused_field
-  static Object? firstError;
-  // ignore: unused_field
-  static StackTrace? firstStack;
-  // ignore: unused_field
-  static String? firstSource;
+/// Global unhandled-error router.
+///
+/// Each global error domain reports here exactly once. Notably
+/// `FlutterError.onError` no longer re-dispatches into the guarded zone:
+/// doing so turned every framework or plugin error into a second, spurious
+/// `Zone` event at `fatal` severity, so ordinary recoverable AR errors
+/// surfaced to the user as "Unhandled Zone error".
+final UnhandledErrorReporter _unhandledErrors = UnhandledErrorReporter(
+  debugSurface: _surfaceUnhandledErrorInDebugUi,
+);
 
-  static void handle(Object error, StackTrace stack, {required String source}) {
-    _captureFirst(error, stack, source);
-    final signature = _signatureFor(error, stack, source);
-    final now = DateTime.now();
-    final lastAt = _lastLoggedAt;
-
-    if (_lastSignature == signature &&
-        lastAt != null &&
-        now.difference(lastAt) < _dedupeWindow) {
-      _suppressedCount += 1;
-      return;
-    }
-
-    if (_suppressedCount > 0 && kDebugMode) {
-      debugPrint('main.dart: suppressed $_suppressedCount duplicate error(s)');
-    }
-
-    _suppressedCount = 0;
-    _lastSignature = signature;
-    _lastLoggedAt = now;
-
-    if (kDebugMode || _logInRelease) {
-      debugPrint(
-          'main.dart: Unhandled error ($source) ${error.runtimeType}: $error');
-      debugPrint('main.dart: stack: $stack');
-    } else {
-      // Keep a minimal breadcrumb in release so errors are never fully silent.
-      dev.log(
-        'Unhandled error ($source) ${error.runtimeType}',
-        name: 'main.dart',
-        error: error,
-        stackTrace: stack,
-      );
-    }
-
-    _surfaceDebugUi(error: error, source: source);
-    unawaited(DiagnosticsClient.instance.captureError(
-      error,
-      stack,
-      source: source,
-      severity: source == 'PlatformDispatcher' || source == 'Zone'
-          ? 'fatal'
-          : 'error',
-    ));
-  }
-
-  static void _captureFirst(Object error, StackTrace stack, String source) {
-    if (_capturedFirst) return;
-    _capturedFirst = true;
-    firstError = error;
-    firstStack = stack;
-    firstSource = source;
-    if (kDebugMode || _logInRelease) {
-      debugPrint(
-          'main.dart: First unhandled error captured ($source) ${error.runtimeType}: $error');
-      debugPrint('main.dart: First error stack: $stack');
-    }
-  }
-
-  static String _signatureFor(Object error, StackTrace stack, String source) {
-    final stackLine = stack.toString().split('\n').first.trim();
-    return '$source|${error.runtimeType}|$error|$stackLine';
-  }
-
-  static void _surfaceDebugUi({
-    required Object error,
-    required String source,
-  }) {
-    if (!kDebugMode) return;
-    final now = DateTime.now();
-    final last = _lastUiSurfaceAt;
-    if (last != null && now.difference(last) < const Duration(seconds: 4)) {
-      return;
-    }
-    _lastUiSurfaceAt = now;
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final context = appNavigatorKey.currentContext;
-      if (context == null) return;
-      final messenger = ScaffoldMessenger.maybeOf(context);
-      if (messenger == null) return;
-      messenger.hideCurrentSnackBar();
-      messenger.showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 4),
-          content: Text(
-            'Unhandled $source error: ${error.runtimeType}',
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
+void _surfaceUnhandledErrorInDebugUi(UnhandledErrorReport report) {
+  if (!kDebugMode) return;
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    final context = appNavigatorKey.currentContext;
+    if (context == null) return;
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    if (messenger == null) return;
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 4),
+        content: Text(
+          'Unhandled ${report.source.wireName} error: '
+          '${report.error.runtimeType}',
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
         ),
-      );
-    });
-  }
+      ),
+    );
+  });
 }
 
 SemanticsHandle? _webSemanticsHandle;
@@ -229,6 +157,17 @@ const bool _enableWebSemantics = bool.fromEnvironment(
 );
 
 void main() {
+  // Freeze the launch URL before anything else can navigate.
+  //
+  // `Uri.base` follows the live browser location on web, so the campaign query
+  // string survives only until the first route change. A direct ad landing on
+  // `/register?utm_*` resolves straight to the screen without ever building
+  // `AppInitializer`, so nothing used to persist its attribution at all. Taking
+  // the snapshot synchronously here — before `runApp` and before any `await` —
+  // makes capture independent of routing and of when it is read.
+  GuestSessionService.snapshotLaunchUrl();
+  GuestSessionService.expectPlatformInitialLinkResolution();
+
   // We'll initialize the bindings inside the runZonedGuarded callback so the
   // WidgetsBinding is created in the same zone as the rest of the app and
   // prevents 'Zone mismatch' warnings when the zone-global error handler
@@ -236,8 +175,10 @@ void main() {
 
   // Silence debugPrint in release unless explicitly enabled. This avoids
   // unintended runtime type issues from debug-only logging in production.
-  const bool allowReleasePrint =
-      bool.fromEnvironment('ERROR_STACK_LOG', defaultValue: false);
+  const bool allowReleasePrint = bool.fromEnvironment(
+    'ERROR_STACK_LOG',
+    defaultValue: false,
+  );
   if (!kDebugMode && !allowReleasePrint) {
     debugPrint = (String? message, {int? wrapWidth}) {};
   }
@@ -247,10 +188,11 @@ void main() {
     // Keep message minimal and safe for web debugging
     final message = 'An unexpected error occurred';
     try {
-      _UnhandledErrorDedupe.handle(
+      _unhandledErrors.report(
         details.exception,
         details.stack ?? StackTrace.current,
-        source: 'ErrorWidget',
+        source: UnhandledErrorSource.errorWidget,
+        details: details,
       );
     } catch (_) {
       // Never crash the fallback builder.
@@ -312,18 +254,27 @@ void main() {
             debugPrint('FlutterError.presentError failed: $e');
           }
           try {
-            final stack = details.stack ?? StackTrace.current;
-            _UnhandledErrorDedupe.handle(details.exception, stack,
-                source: 'FlutterError');
-            Zone.current.handleUncaughtError(details.exception, stack);
+            // Report in the FlutterError domain only. Forwarding to
+            // Zone.current.handleUncaughtError() here would re-enter the
+            // runZonedGuarded handler below and report the same incident a
+            // second time as a fatal 'Zone' error.
+            _unhandledErrors.report(
+              details.exception,
+              details.stack ?? StackTrace.current,
+              source: UnhandledErrorSource.flutterError,
+              details: details,
+            );
           } catch (e, st) {
-            debugPrint('Failed to forward FlutterError to zone: $e\n$st');
+            debugPrint('main.dart: failed to report FlutterError: $e\n$st');
           }
         };
 
         PlatformDispatcher.instance.onError = (Object error, StackTrace stack) {
-          _UnhandledErrorDedupe.handle(error, stack,
-              source: 'PlatformDispatcher');
+          _unhandledErrors.report(
+            error,
+            stack,
+            source: UnhandledErrorSource.platformDispatcher,
+          );
           return true;
         };
 
@@ -339,15 +290,23 @@ void main() {
                   final Object err = pair[0] is Object
                       ? pair[0] as Object
                       : Exception(pair[0].toString());
-                  final StackTrace st =
-                      StackTrace.fromString(pair[1].toString());
-                  _UnhandledErrorDedupe.handle(err, st, source: 'Isolate');
+                  final StackTrace st = StackTrace.fromString(
+                    pair[1].toString(),
+                  );
+                  _unhandledErrors.report(
+                    err,
+                    st,
+                    source: UnhandledErrorSource.isolate,
+                  );
                   return;
                 }
                 final Object err =
                     pair is Object ? pair : Exception(pair.toString());
-                _UnhandledErrorDedupe.handle(err, StackTrace.current,
-                    source: 'Isolate');
+                _unhandledErrors.report(
+                  err,
+                  StackTrace.current,
+                  source: UnhandledErrorSource.isolate,
+                );
               } catch (_) {
                 // Ignore listener failures.
               }
@@ -369,8 +328,13 @@ void main() {
     },
     (error, stack) {
       try {
-        _UnhandledErrorDedupe.handle(error, stack, source: 'Zone');
-        // Optionally report to analytics/logging service here.
+        // Reached only by errors that genuinely escaped the guarded zone,
+        // e.g. an unobserved Future from a fire-and-forget platform call.
+        _unhandledErrors.report(
+          error,
+          stack,
+          source: UnhandledErrorSource.zone,
+        );
       } catch (e) {
         debugPrint('Error while handling zone error: $e');
       }
@@ -426,7 +390,8 @@ class _AppLauncherState extends State<AppLauncher> {
       );
     } catch (e, st) {
       AppConfig.debugPrint(
-          'AppLauncher: PushNotificationService init failed: $e\n$st');
+        'AppLauncher: PushNotificationService init failed: $e\n$st',
+      );
     }
   }
 
@@ -439,7 +404,8 @@ class _AppLauncherState extends State<AppLauncher> {
         ChangeNotifierProvider<ThemeProvider>(create: (_) => ThemeProvider()),
         ChangeNotifierProvider<LocaleProvider>(create: (_) => LocaleProvider()),
         ChangeNotifierProvider<GlassCapabilitiesProvider>(
-            create: (_) => GlassCapabilitiesProvider()),
+          create: (_) => GlassCapabilitiesProvider(),
+        ),
       ],
       child: Consumer2<ThemeProvider, LocaleProvider>(
         builder: (context, themeProvider, localeProvider, _) {
@@ -481,16 +447,36 @@ class _AppLauncherState extends State<AppLauncher> {
               ChangeNotifierProvider(create: (context) => MainTabProvider()),
               // Marker deep links open inside the already-mounted MapScreen.
               ChangeNotifierProvider(
-                  create: (context) => MapDeepLinkProvider()),
+                create: (context) => MapDeepLinkProvider(),
+              ),
               ChangeNotifierProvider(
-                  create: (context) => WalkingNavigationProvider()),
+                create: (context) => WalkingNavigationProvider(),
+              ),
               // Session-scoped onboarding deferral for deep-link cold starts.
               ChangeNotifierProvider(
-                  create: (context) => DeferredOnboardingProvider()),
+                create: (context) => DeferredOnboardingProvider(),
+              ),
+              // Remembers the identity-dependent action a guest attempted, so
+              // it can be offered back to them after they create an account.
               ChangeNotifierProvider(
-                  create: (context) => PublicEntityTakeoverProvider()),
+                create: (context) => PendingActionProvider(),
+              ),
+              // Non-blocking "create a free account" prompt, armed only after
+              // a visitor has shown real interest.
+              ChangeNotifierProvider(
+                create: (context) => ActivationPromptProvider(),
+              ),
+              ChangeNotifierProvider(
+                create: (context) => PublicEntityTakeoverProvider(),
+              ),
               ChangeNotifierProvider(create: (context) => AppRefreshProvider()),
               ChangeNotifierProvider(create: (context) => ConfigProvider()),
+              ChangeNotifierProvider(create: (context) => KubusNodeProvider()),
+              ChangeNotifierProvider(
+                  create: (context) => SpatialCaptureProvider()),
+              ChangeNotifierProvider(
+                create: (context) => AvailabilityOperatorProvider(),
+              ),
               ChangeNotifierProvider<AppModeProvider>(
                 lazy: false,
                 create: (context) => AppModeProvider(),
@@ -500,7 +486,8 @@ class _AppLauncherState extends State<AppLauncher> {
                 update: (context, configProvider, telemetry) {
                   final service = telemetry ?? TelemetryService();
                   service.setAnalyticsPreferenceEnabled(
-                      configProvider.enableAnalytics);
+                    configProvider.enableAnalytics,
+                  );
                   return service;
                 },
               ),
@@ -521,8 +508,12 @@ class _AppLauncherState extends State<AppLauncher> {
               ChangeNotifierProxyProvider2<AppRefreshProvider, ConfigProvider,
                   StatsProvider>(
                 create: (context) => StatsProvider(),
-                update: (context, appRefreshProvider, configProvider,
-                    statsProvider) {
+                update: (
+                  context,
+                  appRefreshProvider,
+                  configProvider,
+                  statsProvider,
+                ) {
                   final provider = statsProvider ?? StatsProvider();
                   provider.bindToRefresh(appRefreshProvider);
                   provider.bindConfigProvider(configProvider);
@@ -532,8 +523,12 @@ class _AppLauncherState extends State<AppLauncher> {
               ChangeNotifierProxyProvider2<AppRefreshProvider, ProfileProvider,
                   PresenceProvider>(
                 create: (context) => PresenceProvider(),
-                update: (context, appRefreshProvider, profileProvider,
-                    presenceProvider) {
+                update: (
+                  context,
+                  appRefreshProvider,
+                  profileProvider,
+                  presenceProvider,
+                ) {
                   final provider = presenceProvider ?? PresenceProvider();
                   provider.bindToRefresh(appRefreshProvider);
                   provider.bindProfileProvider(profileProvider);
@@ -542,7 +537,8 @@ class _AppLauncherState extends State<AppLauncher> {
               ),
               ChangeNotifierProvider(create: (context) => SavedItemsProvider()),
               ChangeNotifierProvider(
-                  create: (context) => CommunitySubjectProvider()),
+                create: (context) => CommunitySubjectProvider(),
+              ),
               ChangeNotifierProxyProvider<AppRefreshProvider,
                   NotificationProvider>(
                 create: (context) => NotificationProvider(),
@@ -568,9 +564,11 @@ class _AppLauncherState extends State<AppLauncher> {
                 },
               ),
               ChangeNotifierProvider(
-                  create: (context) => DesktopDashboardStateProvider()),
+                create: (context) => DesktopDashboardStateProvider(),
+              ),
               ChangeNotifierProvider(
-                  create: (context) => AnalyticsFiltersProvider()),
+                create: (context) => AnalyticsFiltersProvider(),
+              ),
               ChangeNotifierProvider(create: (context) => NavigationProvider()),
               ChangeNotifierProvider(create: (context) => TaskProvider()),
               ChangeNotifierProvider(create: (context) => CacheProvider()),
@@ -618,8 +616,13 @@ class _AppLauncherState extends State<AppLauncher> {
                   PlatformDeepLinkListenerProvider>(
                 lazy: false,
                 create: (context) => PlatformDeepLinkListenerProvider(),
-                update: (context, deepLinkProvider, authDeepLinkProvider,
-                    walletProvider, listenerProvider) {
+                update: (
+                  context,
+                  deepLinkProvider,
+                  authDeepLinkProvider,
+                  walletProvider,
+                  listenerProvider,
+                ) {
                   final provider =
                       listenerProvider ?? PlatformDeepLinkListenerProvider();
                   provider.bindProviders(
@@ -632,12 +635,17 @@ class _AppLauncherState extends State<AppLauncher> {
               ),
               ChangeNotifierProvider(create: (context) => EventsProvider()),
               ChangeNotifierProvider(
-                  create: (context) => ExhibitionsProvider()),
+                create: (context) => ExhibitionsProvider(),
+              ),
               ChangeNotifierProxyProvider2<AppRefreshProvider, ProfileProvider,
                   CollabProvider>(
                 create: (context) => CollabProvider(),
-                update: (context, appRefreshProvider, profileProvider,
-                    collabProvider) {
+                update: (
+                  context,
+                  appRefreshProvider,
+                  profileProvider,
+                  collabProvider,
+                ) {
                   final provider = collabProvider ?? CollabProvider();
                   provider.bindToRefresh(appRefreshProvider);
                   provider.bindProfileProvider(profileProvider);
@@ -645,7 +653,8 @@ class _AppLauncherState extends State<AppLauncher> {
                 },
               ),
               ChangeNotifierProvider(
-                  create: (context) => CollectionsProvider()),
+                create: (context) => CollectionsProvider(),
+              ),
               ChangeNotifierProxyProvider<SavedItemsProvider, ArtworkProvider>(
                 create: (context) => ArtworkProvider(),
                 update: (context, savedItemsProvider, artworkProvider) {
@@ -655,15 +664,21 @@ class _AppLauncherState extends State<AppLauncher> {
                 },
               ),
               ChangeNotifierProvider(
-                  create: (context) => ArtworkDraftsProvider()),
+                create: (context) => ArtworkDraftsProvider(),
+              ),
               ChangeNotifierProvider(
-                  create: (context) => ArtworkArConfigProvider()),
+                create: (context) => ArtworkArConfigProvider(),
+              ),
               ChangeNotifierProvider(create: (context) => PromotionProvider()),
               ChangeNotifierProxyProvider2<ArtworkProvider, AppRefreshProvider,
                   PortfolioProvider>(
                 create: (context) => PortfolioProvider(),
-                update: (context, artworkProvider, appRefreshProvider,
-                    portfolioProvider) {
+                update: (
+                  context,
+                  artworkProvider,
+                  appRefreshProvider,
+                  portfolioProvider,
+                ) {
                   final provider = portfolioProvider ?? PortfolioProvider();
                   provider.bindArtworkProvider(artworkProvider);
                   provider.bindAppRefreshProvider(appRefreshProvider);
@@ -697,8 +712,12 @@ class _AppLauncherState extends State<AppLauncher> {
               ChangeNotifierProxyProvider2<ProfileProvider, DAOProvider,
                   InstitutionProvider>(
                 create: (context) => InstitutionProvider(),
-                update: (context, profileProvider, daoProvider,
-                    institutionProvider) {
+                update: (
+                  context,
+                  profileProvider,
+                  daoProvider,
+                  institutionProvider,
+                ) {
                   final provider = institutionProvider ?? InstitutionProvider();
                   provider.bindProfileProvider(profileProvider);
                   provider.bindDaoProvider(daoProvider);
@@ -737,8 +756,12 @@ class _AppLauncherState extends State<AppLauncher> {
               ChangeNotifierProxyProvider2<ProfileProvider, WalletProvider,
                   AttendanceProvider>(
                 create: (context) => AttendanceProvider(),
-                update: (context, profileProvider, walletProvider,
-                    attendanceProvider) {
+                update: (
+                  context,
+                  profileProvider,
+                  walletProvider,
+                  attendanceProvider,
+                ) {
                   final provider = attendanceProvider ?? AttendanceProvider();
                   provider.bindAuthContext(
                     isSignedIn: walletProvider.authority.hasAccountSession,
@@ -750,8 +773,12 @@ class _AppLauncherState extends State<AppLauncher> {
               ChangeNotifierProxyProvider2<ProfileProvider, WalletProvider,
                   AttestationProvider>(
                 create: (context) => AttestationProvider(),
-                update: (context, profileProvider, walletProvider,
-                    attestationProvider) {
+                update: (
+                  context,
+                  profileProvider,
+                  walletProvider,
+                  attestationProvider,
+                ) {
                   final provider = attestationProvider ?? AttestationProvider();
                   provider.bindAuthContext(
                     isSignedIn: walletProvider.authority.hasAccountSession,
@@ -764,8 +791,13 @@ class _AppLauncherState extends State<AppLauncher> {
               ChangeNotifierProxyProvider3<AppRefreshProvider, ProfileProvider,
                   WalletProvider, ChatProvider>(
                 create: (context) => ChatProvider(),
-                update: (context, appRefreshProvider, profileProvider,
-                    walletProvider, chatProvider) {
+                update: (
+                  context,
+                  appRefreshProvider,
+                  profileProvider,
+                  walletProvider,
+                  chatProvider,
+                ) {
                   final provider = chatProvider ?? ChatProvider();
                   provider.bindToRefresh(appRefreshProvider);
                   provider.bindAuthContext(
@@ -780,8 +812,13 @@ class _AppLauncherState extends State<AppLauncher> {
                   NotificationProvider, SecurityGateProvider>(
                 lazy: false,
                 create: (context) => SecurityGateProvider(),
-                update: (context, profileProvider, walletProvider,
-                    notificationProvider, securityGateProvider) {
+                update: (
+                  context,
+                  profileProvider,
+                  walletProvider,
+                  notificationProvider,
+                  securityGateProvider,
+                ) {
                   final provider =
                       securityGateProvider ?? SecurityGateProvider();
                   provider.bindDependencies(
@@ -807,21 +844,27 @@ class _AppLauncherState extends State<AppLauncher> {
                           .trim()
                           .isNotEmpty;
                   provider.bindSession(
-                      hasSession:
-                          tokenPresent || securityGateProvider.hasLocalAccount);
+                    hasSession:
+                        tokenPresent || securityGateProvider.hasLocalAccount,
+                  );
                   return provider;
                 },
               ),
               ChangeNotifierProxyProvider2<ProfileProvider, WalletProvider,
                   MarkerManagementProvider>(
                 create: (context) => MarkerManagementProvider(),
-                update: (context, profileProvider, walletProvider,
-                    markerManagementProvider) {
+                update: (
+                  context,
+                  profileProvider,
+                  walletProvider,
+                  markerManagementProvider,
+                ) {
                   final provider =
                       markerManagementProvider ?? MarkerManagementProvider();
                   provider.bindWallet(
-                      profileProvider.currentUser?.walletAddress ??
-                          walletProvider.currentWalletAddress);
+                    profileProvider.currentUser?.walletAddress ??
+                        walletProvider.currentWalletAddress,
+                  );
                   if (!provider.initialized && !provider.isLoading) {
                     unawaited(provider.initialize());
                   }
@@ -893,9 +936,7 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
           attendanceMarkerId = attendanceMarkerId?.trim();
           if (artworkId == null || artworkId.isEmpty) {
             final l10n = AppLocalizations.of(context)!;
-            return Scaffold(
-              body: Center(child: Text(l10n.artworkNotFound)),
-            );
+            return Scaffold(body: Center(child: Text(l10n.artworkNotFound)));
           }
           final isDesktop = DesktopBreakpoints.isDesktop(context);
           return isDesktop
@@ -932,9 +973,7 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
           attendanceMarkerId = attendanceMarkerId?.trim();
           if (exhibitionId == null || exhibitionId.isEmpty) {
             final l10n = AppLocalizations.of(context)!;
-            return Scaffold(
-              body: Center(child: Text(l10n.exhibitionNotFound)),
-            );
+            return Scaffold(body: Center(child: Text(l10n.exhibitionNotFound)));
           }
           return ExhibitionDetailScreen(
             exhibitionId: exhibitionId,
@@ -946,9 +985,12 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
         '/connect-wallet': (context) => DesktopBreakpoints.isDesktop(context)
             ? const DesktopConnectWalletScreen()
             : const ConnectWallet(),
-        '/wallet/availability-node': (context) =>
-            const AvailabilityNodeOperatorScreen(),
-        '/settings/availability-node': (context) =>
+        '/wallet/availability-node': (context) => const KubusNodeScreen(),
+        '/settings/availability-node': (context) => const KubusNodeScreen(),
+        // The operator-token workflow is advanced setup, not the node's front
+        // door. It keeps its own route rather than being what "kubus Node"
+        // opens onto.
+        '/settings/availability-node/advanced': (context) =>
             const AvailabilityNodeOperatorScreen(),
         '/wallet_connect': (context) => DesktopBreakpoints.isDesktop(context)
             ? const DesktopConnectWalletScreen()
@@ -973,7 +1015,20 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
           }
           return const SignInScreen();
         },
-        '/register': (context) => const RegisterScreen(),
+        '/register': (context) {
+          final args = ModalRoute.of(context)?.settings.arguments;
+          if (args is Map) {
+            // Never hand an unvalidated route to the post-auth redirect.
+            final requested = args['redirectRoute']?.toString();
+            return RegisterScreen(
+              redirectRoute: PendingActionIntent.isSafeInternalRoute(requested)
+                  ? requested
+                  : null,
+              redirectArguments: args['redirectArguments'],
+            );
+          }
+          return const RegisterScreen();
+        },
         '/secure-account': (context) => const SecureAccountScreen(),
         '/verify-email': (context) {
           final args = ModalRoute.of(context)?.settings.arguments;
@@ -1032,8 +1087,7 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
         '/web3': (context) {
           final l10n = AppLocalizations.of(context)!;
           return Scaffold(
-            body: Center(child: Text(l10n.web3DashboardComingSoon)),
-          );
+              body: Center(child: Text(l10n.web3DashboardComingSoon)));
         },
       };
 
@@ -1059,10 +1113,7 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
           ),
           settings: RouteSettings(
             name: '/verify-email',
-            arguments: {
-              'token': token,
-              if (email.isNotEmpty) 'email': email,
-            },
+            arguments: {'token': token, if (email.isNotEmpty) 'email': email},
           ),
         );
       }
@@ -1071,14 +1122,11 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
     if (uri.path == '/verify-email/success') {
       final email = (uri.queryParameters['email'] ?? '').trim();
       return MaterialPageRoute(
-        builder: (_) => EmailVerificationSuccessScreen(
-          email: email.isEmpty ? null : email,
-        ),
+        builder: (_) =>
+            EmailVerificationSuccessScreen(email: email.isEmpty ? null : email),
         settings: RouteSettings(
           name: '/verify-email/success',
-          arguments: {
-            if (email.isNotEmpty) 'email': email,
-          },
+          arguments: {if (email.isNotEmpty) 'email': email},
         ),
       );
     }
@@ -1163,20 +1211,15 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
     final target = const ShareDeepLinkParser().parse(uri);
     if (target != null) {
       return MaterialPageRoute(
-        builder: (_) => DeepLinkBootstrapScreen(
-          target: target,
-          initialUri: uri,
-        ),
+        builder: (_) =>
+            DeepLinkBootstrapScreen(target: target, initialUri: uri),
         settings: settings,
       );
     }
 
     final namedRouteBuilder = _namedRoutes[uri.path];
     if (namedRouteBuilder != null) {
-      return MaterialPageRoute(
-        builder: namedRouteBuilder,
-        settings: settings,
-      );
+      return MaterialPageRoute(builder: namedRouteBuilder, settings: settings);
     }
 
     // Fall back to the main initializer for unknown named routes
@@ -1191,23 +1234,35 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
     final normalized = initialRoute.trim().isEmpty ? '/' : initialRoute.trim();
     final uri = Uri.tryParse(normalized) ?? Uri(path: normalized);
 
+    // Mobile cold start. `main()` has no launch URL to freeze on Android/iOS,
+    // and a deep link to `/register?utm_*` resolves straight to its screen
+    // without ever building `AppInitializer` — so this is the only point
+    // common to every cold entry where the platform's initial route is still
+    // visible before dispatch. On web the snapshot is already frozen by
+    // `main()` and this is a no-op, which is what keeps attribution
+    // first-touch.
+    //
+    // Only a URL that actually carries parameters is frozen: a bare platform
+    // route must not claim the snapshot, or a deep link delivered moments
+    // later as `initialUri` would be locked out by the first-touch guard.
+    if (uri.queryParameters.isNotEmpty) {
+      GuestSessionService.snapshotLaunchUrl(override: uri);
+      _startEntryAttributionBootstrap();
+    }
+
     // Direct shell URLs still need AppInitializer so auth/session restoration,
     // provider hydration, and warm-up run before the shell renders.
     if (ShellRoutes.shouldWrapInitialUri(uri)) {
       return <Route<dynamic>>[
         MaterialPageRoute(
-          builder: (_) => AppInitializer(
-            preferredShellRoute: uri.path,
-            initialUri: uri,
-          ),
+          builder: (_) =>
+              AppInitializer(preferredShellRoute: uri.path, initialUri: uri),
           settings: RouteSettings(name: normalized),
         ),
       ];
     }
 
-    return <Route<dynamic>>[
-      _buildAppRoute(RouteSettings(name: normalized)),
-    ];
+    return <Route<dynamic>>[_buildAppRoute(RouteSettings(name: normalized))];
   }
 
   @override
@@ -1215,7 +1270,60 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _initNotificationRouting();
-    unawaited(TelemetryService().ensureInitialized());
+    // Android/iOS supply the launch URI during initial-route dispatch, after
+    // initState. Waiting until the first frame for a bare launch gives that
+    // dispatch a chance to freeze an attributed URI before this future is
+    // cached, while still recording app_entry for ordinary `/` launches.
+    if (GuestSessionService.hasLaunchSnapshot) {
+      _startEntryAttributionBootstrap();
+    } else {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _startEntryAttributionBootstrap();
+      });
+    }
+  }
+
+  Future<void>? _entryAttributionBootstrap;
+
+  void _startEntryAttributionBootstrap() {
+    // A bare launch still represents an app entry. The post-frame fallback in
+    // initState keeps it in the denominator without racing the initial-route
+    // callback that supplies attributed Android/iOS deep links.
+    if (_entryAttributionBootstrap != null) {
+      // A mobile initial URI can be delivered after the bare-launch fallback
+      // has already run. Capture and refresh again without emitting a second
+      // app_entry event; GuestSessionService keeps this first-touch safe.
+      unawaited(_refreshEntryAttribution());
+      return;
+    }
+    _entryAttributionBootstrap = _bootstrapEntryAttribution();
+  }
+
+  /// Persist campaign attribution and open the funnel, on every entry route.
+  ///
+  /// Runs here rather than in `AppInitializer` because a direct ad landing on
+  /// `/register` resolves straight to its screen and never builds
+  /// `AppInitializer` at all — so its attribution was previously never written
+  /// to storage and was lost on the first reload. `snapshotLaunchUrl` has
+  /// already frozen the launch URL in `main()`, so the values are the landing
+  /// ones no matter how much navigation has happened by now.
+  Future<void> _bootstrapEntryAttribution() async {
+    await _refreshEntryAttribution();
+    unawaited(TelemetryService().trackAppEntry());
+  }
+
+  Future<void> _refreshEntryAttribution() async {
+    await GuestSessionService.waitForPlatformInitialLinkResolution();
+    try {
+      await GuestSessionService.captureFromLaunchUrl();
+    } catch (_) {
+      // Attribution must never block startup.
+    }
+    final telemetry = TelemetryService();
+    await telemetry.ensureInitialized();
+    // The capture above may have landed after the attribution snapshot was
+    // taken during initialisation, so re-read it before the first event.
+    await telemetry.refreshEntryAttribution();
   }
 
   void _initNotificationRouting() {
@@ -1233,24 +1341,32 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
 
         if (entityId.isEmpty) {
           navigator.push(
-              MaterialPageRoute(builder: (_) => const InvitesInboxScreen()));
+            MaterialPageRoute(builder: (_) => const InvitesInboxScreen()),
+          );
           return;
         }
 
         if (entityType == 'events' || entityType == 'event') {
-          navigator.push(MaterialPageRoute(
-              builder: (_) => EventDetailScreen(eventId: entityId)));
+          navigator.push(
+            MaterialPageRoute(
+              builder: (_) => EventDetailScreen(eventId: entityId),
+            ),
+          );
           return;
         }
 
         if (entityType == 'exhibitions' || entityType == 'exhibition') {
-          navigator.push(MaterialPageRoute(
-              builder: (_) => ExhibitionDetailScreen(exhibitionId: entityId)));
+          navigator.push(
+            MaterialPageRoute(
+              builder: (_) => ExhibitionDetailScreen(exhibitionId: entityId),
+            ),
+          );
           return;
         }
 
         navigator.push(
-            MaterialPageRoute(builder: (_) => const InvitesInboxScreen()));
+          MaterialPageRoute(builder: (_) => const InvitesInboxScreen()),
+        );
         return;
       }
 
@@ -1281,8 +1397,10 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
     final refreshProvider = Provider.of<AppRefreshProvider>(ctx, listen: false);
     final chatProvider = Provider.of<ChatProvider>(ctx, listen: false);
     final presenceProvider = Provider.of<PresenceProvider>(ctx, listen: false);
-    final notificationProvider =
-        Provider.of<NotificationProvider>(ctx, listen: false);
+    final notificationProvider = Provider.of<NotificationProvider>(
+      ctx,
+      listen: false,
+    );
     final collabProvider = Provider.of<CollabProvider>(ctx, listen: false);
     final isForeground = state != AppLifecycleState.paused &&
         state != AppLifecycleState.inactive;
@@ -1327,11 +1445,22 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
           darkTheme: themeProvider.darkTheme,
           themeMode: themeProvider.themeMode,
           builder: (context, child) {
+            // Report the resolved UI locale so the funnel can compare the
+            // English and Slovenian experiences.
+            TelemetryService().setLocale(
+              Localizations.localeOf(context).languageCode,
+            );
             return AnimatedGradientBackground(
               animate: false,
               intensity: 0.22,
               child: SecurityGateOverlay(
-                child: child ?? const SizedBox.shrink(),
+                // Mounted above the navigator so a restored pending action can
+                // be confirmed on whichever entity the visitor was returned to,
+                // on mobile and desktop alike.
+                child: PendingActionContinuationHost(
+                  navigatorKey: appNavigatorKey,
+                  child: child ?? const SizedBox.shrink(),
+                ),
               ),
             );
           },

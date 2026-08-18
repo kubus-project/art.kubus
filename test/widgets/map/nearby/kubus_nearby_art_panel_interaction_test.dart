@@ -96,6 +96,33 @@ void main() {
     expect(closeTapCount, 1);
   });
 
+  testWidgets('nearby artwork with a spatial archive shows the subtle 3D badge',
+      (tester) async {
+    final controller = NearbyArtController(map: _FakeNearbyMapDelegate());
+    final artwork = _artwork().copyWith(spatialCaptureCount: 2);
+    await tester.pumpWidget(
+      _buildApp(
+        SizedBox(
+          width: 420,
+          height: 640,
+          child: KubusNearbyArtPanel(
+            controller: controller,
+            layout: KubusNearbyArtPanelLayout.mobileBottomSheet,
+            artworks: <Artwork>[artwork],
+            markers: <ArtMarker>[_marker(artworkId: artwork.id)],
+            basePosition: const LatLng(46.0569, 14.5058),
+            isLoading: false,
+            travelModeEnabled: false,
+            radiusKm: 2,
+            onRadiusTap: () {},
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byIcon(Icons.threed_rotation_rounded), findsOneWidget);
+  });
+
   testWidgets('nearby panel mobile handle is decorative for semantics',
       (tester) async {
     final semantics = tester.ensureSemantics();

@@ -16,7 +16,7 @@ publish_to: "none" # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 0.7.2+26072901
+version: 0.8.0+26081201
 
 environment:
   sdk: ">=3.6.0 <4.0.0"
@@ -96,6 +96,8 @@ dependencies:
   # arkit_plugin: ^1.2.0  # iOS ARKit - DISABLED due to vector_math 2.1.4 incompatibility
   arcore_flutter_plugin:
     path: third_party/arcore_flutter_plugin # Local override with updated Android config
+  arkit_plugin: 1.5.0
+  webview_flutter: 4.14.1
   # Note: ARManager provides unified API for both platforms
   # Features: Plane detection, object placement, hit testing, GLTF/GLB models
   # See AR_IMPLEMENTATION.md for setup instructions
@@ -180,6 +182,8 @@ flutter:
     - assets/images/backgrounds/background_map_dark.png
     - assets/map_styles/kubus_light.json
     - assets/map_styles/kubus_dark.json
+    - assets/spatial_viewer/index.html
+    - assets/spatial_viewer/viewer.bundle.js
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware

@@ -144,6 +144,21 @@ class ArCoreUtils {
                     }
         }
 
+        /**
+         * Maps an ARCore availability failure to a stable code for Flutter.
+         *
+         * Flutter owns the user-facing wording so install, update, and
+         * unsupported-device states can be localized and given an action,
+         * rather than surfaced as an untranslated platform Toast.
+         */
+        fun availabilityCodeFor(sessionException: UnavailableException): String {
+            // Delegates to ArCoreSessionMapping so the mapping itself is unit
+            // testable on the JVM without the ARCore runtime.
+            return com.difrancescogianmarco.arcore_flutter_plugin
+                    .ArCoreSessionMapping
+                    .availabilityCode(sessionException.javaClass.simpleName)
+        }
+
         fun handleSessionException(
                 activity: Activity, sessionException: UnavailableException) {
 

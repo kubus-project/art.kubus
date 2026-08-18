@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -5,17 +7,22 @@ import '../models/art_marker.dart';
 import '../services/backend_api_service.dart';
 import '../services/achievement_service.dart';
 import '../services/map_marker_service.dart';
+import '../services/telemetry/contribution_type.dart';
+import '../services/telemetry/telemetry_service.dart';
 import '../services/telemetry/telemetry_uuid.dart';
 
 class MarkerManagementProvider extends ChangeNotifier {
   MarkerManagementProvider({
     MarkerBackendApi? api,
     MapMarkerService? mapMarkerService,
+    TelemetryService? telemetry,
   })  : _api = api ?? BackendApiService(),
-        _mapMarkerService = mapMarkerService ?? MapMarkerService();
+        _mapMarkerService = mapMarkerService ?? MapMarkerService(),
+        _telemetry = telemetry ?? TelemetryService();
 
   final MarkerBackendApi _api;
   final MapMarkerService _mapMarkerService;
+  final TelemetryService _telemetry;
 
   String? _boundWallet;
   bool _initialized = false;
@@ -115,8 +122,9 @@ class MarkerManagementProvider extends ChangeNotifier {
       _error = null;
       notifyListeners();
       try {
-        final results =
-            await _api.getMyArtMarkers().timeout(const Duration(seconds: 20));
+        final results = await _api.getMyArtMarkers().timeout(
+              const Duration(seconds: 20),
+            );
         _markers = results;
         _lastFetch = DateTime.now();
       } catch (e) {
@@ -139,7 +147,9 @@ class MarkerManagementProvider extends ChangeNotifier {
   }
 
   ArtMarker _applyUpdatesToMarker(
-      ArtMarker base, Map<String, dynamic> updates) {
+    ArtMarker base,
+    Map<String, dynamic> updates,
+  ) {
     String? name;
     String? description;
     String? category;
@@ -181,7 +191,7 @@ class MarkerManagementProvider extends ChangeNotifier {
             updates['metadata'] is Map<String, dynamic>
         ? <String, dynamic>{
             ...(base.metadata ?? const {}),
-            ...(updates['metadata'] as Map<String, dynamic>)
+            ...(updates['metadata'] as Map<String, dynamic>),
           }
         : base.metadata;
 
@@ -218,11 +228,13 @@ class MarkerManagementProvider extends ChangeNotifier {
       if (expected.isNotEmpty && marker.category != expected) return false;
     }
 
-    if (updates.containsKey('isPublic') && marker.isPublic != (updates['isPublic'] == true)) {
+    if (updates.containsKey('isPublic') &&
+        marker.isPublic != (updates['isPublic'] == true)) {
       return false;
     }
 
-    if (updates.containsKey('isActive') && marker.isActive != (updates['isActive'] == true)) {
+    if (updates.containsKey('isActive') &&
+        marker.isActive != (updates['isActive'] == true)) {
       return false;
     }
 
@@ -233,22 +245,30 @@ class MarkerManagementProvider extends ChangeNotifier {
 
     if (updates.containsKey('activationRadius')) {
       final raw = updates['activationRadius'];
-      final expected = raw is num
-          ? raw.toDouble()
-          : double.tryParse(raw?.toString() ?? '');
-      if (expected != null && (marker.activationRadius - expected).abs() > 0.0001) {
+      final expected =
+          raw is num ? raw.toDouble() : double.tryParse(raw?.toString() ?? '');
+      if (expected != null &&
+          (marker.activationRadius - expected).abs() > 0.0001) {
         return false;
       }
     }
 
-    final latRaw = updates['latitude'] ?? updates['lat'] ?? updates['position']?['lat'];
-    final lngRaw = updates['longitude'] ?? updates['lng'] ?? updates['position']?['lng'];
-    final expectedLat = latRaw is num ? latRaw.toDouble() : double.tryParse(latRaw?.toString() ?? '');
-    final expectedLng = lngRaw is num ? lngRaw.toDouble() : double.tryParse(lngRaw?.toString() ?? '');
-    if (expectedLat != null && (marker.position.latitude - expectedLat).abs() > 0.000001) {
+    final latRaw =
+        updates['latitude'] ?? updates['lat'] ?? updates['position']?['lat'];
+    final lngRaw =
+        updates['longitude'] ?? updates['lng'] ?? updates['position']?['lng'];
+    final expectedLat = latRaw is num
+        ? latRaw.toDouble()
+        : double.tryParse(latRaw?.toString() ?? '');
+    final expectedLng = lngRaw is num
+        ? lngRaw.toDouble()
+        : double.tryParse(lngRaw?.toString() ?? '');
+    if (expectedLat != null &&
+        (marker.position.latitude - expectedLat).abs() > 0.000001) {
       return false;
     }
-    if (expectedLng != null && (marker.position.longitude - expectedLng).abs() > 0.000001) {
+    if (expectedLng != null &&
+        (marker.position.longitude - expectedLng).abs() > 0.000001) {
       return false;
     }
 
@@ -280,7 +300,9 @@ class MarkerManagementProvider extends ChangeNotifier {
 
       meta['clientNonce'] = clientNonce;
       meta.putIfAbsent(
-          'clientCreatedAtMs', () => DateTime.now().millisecondsSinceEpoch);
+        'clientCreatedAtMs',
+        () => DateTime.now().millisecondsSinceEpoch,
+      );
       normalizedPayload['metadata'] = meta;
     } catch (_) {
       // Best-effort; keep original payload and disable nonce recovery.
@@ -307,6 +329,7 @@ class MarkerManagementProvider extends ChangeNotifier {
     Map<String, dynamic> normalizedPayload,
     String? clientNonce,
   ) async {
+    _noteContributionStarted();
     try {
       final created = await _api
           .createArtMarkerRecord(normalizedPayload)
@@ -318,6 +341,7 @@ class MarkerManagementProvider extends ChangeNotifier {
             if ((marker.metadata?['clientNonce'] ?? '').toString() ==
                 clientNonce) {
               _mapMarkerService.notifyMarkerUpserted(marker);
+              _noteContributionPublished();
               return marker;
             }
           }
@@ -326,10 +350,11 @@ class MarkerManagementProvider extends ChangeNotifier {
       }
       _markers = <ArtMarker>[
         created,
-        ..._markers.where((m) => m.id != created.id)
+        ..._markers.where((m) => m.id != created.id),
       ];
       _mapMarkerService.notifyMarkerUpserted(created);
       _trackStreetArtAchievements(created);
+      _noteContributionPublished();
       notifyListeners();
       return created;
     } catch (e) {
@@ -345,6 +370,7 @@ class MarkerManagementProvider extends ChangeNotifier {
                 clientNonce) {
               _mapMarkerService.notifyMarkerUpserted(marker);
               _trackStreetArtAchievements(marker);
+              _noteContributionPublished();
               return marker;
             }
           }
@@ -357,8 +383,49 @@ class MarkerManagementProvider extends ChangeNotifier {
     }
   }
 
+  /// Record that a marker was published.
+  ///
+  /// Publishing a marker is the platform's meaningful contribution, and it is
+  /// what "activated" means for paid acquisition reporting. The event type
+  /// already existed but had no call site, so activation was unmeasurable.
+  ///
+  /// Called from every path that returns a published marker, including the two
+  /// nonce-recovery branches. Those recover submissions where the request timed
+  /// out or returned null *after* the backend committed — precisely the slow
+  /// ones, which would otherwise be the submissions missing from activation
+  /// reporting.
+  ///
+  /// This provider owns its own telemetry because it is a real production entry
+  /// point in its own right: `marker_editor_view` calls it directly and it
+  /// talks to `BackendApiService` itself rather than delegating to
+  /// [MapMarkerService]. The map screens use the other path. Since neither
+  /// wraps the other, one submission can only ever traverse one of them, so
+  /// both instrumenting themselves produces one event per marker rather than
+  /// two.
+  ///
+  /// The recovery branches are guarded per submission by [_createInFlightByNonce]
+  /// and are mutually exclusive with the direct-success branch, so a recovered
+  /// creation emits exactly one submitted event, never zero and never two.
+  void _noteContributionStarted() {
+    unawaited(
+      _telemetry
+          .trackContributionStarted(type: ContributionType.marker)
+          .catchError((_) {}),
+    );
+  }
+
+  void _noteContributionPublished() {
+    unawaited(
+      _telemetry
+          .trackSuccessfulContribution(ContributionType.marker)
+          .catchError((_) {}),
+    );
+  }
+
   Future<ArtMarker?> updateMarker(
-      String markerId, Map<String, dynamic> updates) async {
+    String markerId,
+    Map<String, dynamic> updates,
+  ) async {
     final id = markerId.trim();
     if (id.isEmpty) return null;
     final index = _markers.indexWhere((m) => m.id == id);
@@ -448,8 +515,9 @@ class MarkerManagementProvider extends ChangeNotifier {
           .timeout(const Duration(seconds: 20));
       if (!ok) {
         _markers = before;
-        _mapMarkerService
-            .notifyMarkerUpserted(before.firstWhere((m) => m.id == id));
+        _mapMarkerService.notifyMarkerUpserted(
+          before.firstWhere((m) => m.id == id),
+        );
         notifyListeners();
         return false;
       }
@@ -460,8 +528,9 @@ class MarkerManagementProvider extends ChangeNotifier {
       _error = e.toString();
       _markers = before;
       try {
-        _mapMarkerService
-            .notifyMarkerUpserted(before.firstWhere((m) => m.id == id));
+        _mapMarkerService.notifyMarkerUpserted(
+          before.firstWhere((m) => m.id == id),
+        );
       } catch (_) {}
       notifyListeners();
       return false;
@@ -479,7 +548,9 @@ class MarkerManagementProvider extends ChangeNotifier {
         );
       } catch (e) {
         if (kDebugMode) {
-          debugPrint('MarkerManagementProvider: street-art achievement tracking failed: $e');
+          debugPrint(
+            'MarkerManagementProvider: street-art achievement tracking failed: $e',
+          );
         }
       }
     });
