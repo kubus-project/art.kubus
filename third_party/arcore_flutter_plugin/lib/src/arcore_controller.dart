@@ -554,6 +554,9 @@ class ArCoreController {
   /// Resumes the native session. Never throws; awaiting is optional.
   Future<void> resume() => _invokeUnawaited('resume');
 
+  /// Pauses camera/tracking work while Flutter presents a non-AR viewer.
+  Future<void> pause() => _invokeUnawaited('pause');
+
   Future<void> removeNodeWithIndex(int index) async {
     try {
       await _channel.invokeMethod('removeARCoreNodeWithIndex', {

@@ -20,7 +20,13 @@ KubusNodePairingPayload get _payload => KubusNodePairingPayload(
       endpoint: Uri.parse('http://192.168.1.8:8787'),
       sessionId: 'session-1',
       secret: 'one-time-secret',
+      nodeId: 'node-1',
       fingerprint: 'sha256:node',
+    );
+
+http.Response _nodeInfo() => http.Response(
+      jsonEncode({'nodeId': 'node-1', 'fingerprint': 'sha256:node'}),
+      200,
     );
 
 void main() {
@@ -33,6 +39,7 @@ void main() {
       isWeb: false,
       client: MockClient((request) async {
         requests.add(request);
+        if (request.url.path.endsWith('/info')) return _nodeInfo();
         if (request.url.path.endsWith('/pairing/exchange')) {
           return http.Response(
             jsonEncode({'token': 'kubus_local_scoped-token'}),
@@ -58,10 +65,12 @@ void main() {
     final service = KubusNodeService(
       credentialStore: _MemoryCredentialStore(),
       isWeb: false,
-      client: MockClient((request) async => http.Response(
-            jsonEncode({'token': 'kubus_local_scoped-token'}),
-            201,
-          )),
+      client: MockClient((request) async => request.url.path.endsWith('/info')
+          ? _nodeInfo()
+          : http.Response(
+              jsonEncode({'token': 'kubus_local_scoped-token'}),
+              201,
+            )),
     );
     await service.pair(_payload);
 
@@ -92,6 +101,7 @@ void main() {
       isWeb: false,
       client: MockClient((request) async {
         requests.add(request);
+        if (request.url.path.endsWith('/info')) return _nodeInfo();
         if (request.url.host == 'node.example.test') {
           throw http.ClientException('remote tunnel unavailable');
         }
@@ -107,6 +117,7 @@ void main() {
       alternateEndpoints: [Uri.parse('http://192.168.1.8:8787')],
       sessionId: 'session-1',
       secret: 'one-time-secret',
+      nodeId: 'node-1',
       fingerprint: 'sha256:node',
     );
 
@@ -119,6 +130,27 @@ void main() {
     expect(requests.last.url.host, '192.168.1.8');
   });
 
+  test('rejects an endpoint whose authenticated identity differs from pairing',
+      () async {
+    final service = KubusNodeService(
+      credentialStore: _MemoryCredentialStore(),
+      isWeb: false,
+      client: MockClient((request) async {
+        if (request.url.path.endsWith('/pairing/exchange')) {
+          return http.Response(
+              jsonEncode({'token': 'kubus_local_scoped-token'}), 201);
+        }
+        return http.Response(
+          jsonEncode({'nodeId': 'other-node', 'fingerprint': 'other-print'}),
+          200,
+        );
+      }),
+    );
+
+    await expectLater(service.pair(_payload), throwsA(isA<StateError>()));
+    expect(service.isPaired, isFalse);
+  });
+
   test('network compute discovery forwards auth only inside paired JSON',
       () async {
     final requests = <http.Request>[];
@@ -127,6 +159,7 @@ void main() {
       isWeb: false,
       client: MockClient((request) async {
         requests.add(request);
+        if (request.url.path.endsWith('/info')) return _nodeInfo();
         if (request.url.path.endsWith('/pairing/exchange')) {
           return http.Response(
             jsonEncode({'token': 'kubus_local_scoped-token'}),
@@ -178,6 +211,7 @@ void main() {
       isWeb: false,
       client: MockClient((request) async {
         requests.add(request);
+        if (request.url.path.endsWith('/info')) return _nodeInfo();
         if (request.url.path.endsWith('/pairing/exchange')) {
           return http.Response(
             jsonEncode({'token': 'kubus_local_scoped-token'}),

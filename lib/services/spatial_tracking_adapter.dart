@@ -79,6 +79,10 @@ abstract class SpatialTrackingAdapter {
   /// actually let go.
   Future<void> disposeSession();
 
+  /// Suspends/resumes camera and rendering without replacing the platform view.
+  Future<void> pauseSession();
+  Future<void> resumeSession();
+
   void dispose();
 }
 
@@ -225,6 +229,12 @@ class PlatformSpatialTrackingAdapter implements SpatialTrackingAdapter {
 
   @override
   Future<void> disposeSession() => _manager.dispose();
+
+  @override
+  Future<void> pauseSession() => _manager.pauseSession();
+
+  @override
+  Future<void> resumeSession() => _manager.resumeSession();
 
   @override
   void dispose() => unawaited(_manager.dispose());

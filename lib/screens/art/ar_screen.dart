@@ -443,6 +443,7 @@ class _ARScreenState extends State<ARScreen>
   }
 
   bool _hasInitialized = false;
+  final ValueNotifier<int> _placementRevision = ValueNotifier<int>(0);
 
   @override
   void initState() {
@@ -557,11 +558,17 @@ class _ARScreenState extends State<ARScreen>
 
   void _onPlacementChanged() {
     if (!mounted) return;
-    setState(() {});
+    // Gestures must never rebuild ARScreen or remount the Android platform
+    // view. Only the compact reactive chrome observes this revision.
+    _placementRevision.value++;
     // Mirror the placement into the scene. A transform the user cannot see is
     // not a preview, and adjustment controls that change nothing visible are
     // not controls.
-    unawaited(_placementPreview?.sync(_placement) ?? Future<void>.value());
+    unawaited(
+      (_placementPreview?.sync(_placement) ?? Future<void>.value()).catchError(
+        _onPreviewError,
+      ),
+    );
   }
 
   /// Arms the Place workflow for the currently selected artwork.
@@ -833,6 +840,7 @@ class _ARScreenState extends State<ARScreen>
       unawaited(proxy.close());
     }
     _spatialTracking.dispose();
+    _placementRevision.dispose();
     _arIntegrationService.dispose();
     super.dispose();
   }
@@ -857,30 +865,36 @@ class _ARScreenState extends State<ARScreen>
       backgroundColor: Colors.transparent,
       body: ArScreenChrome(
         header: _isARReady
-            ? ArStatusHeader(
-                modeLabel: _statusLabel(l10n),
-                modeIcon: _iconForMode(_currentMode),
-                isDark: themeProvider.isDarkMode,
-                onOpenSettings: _showARSettings,
-                flashEnabled: _flashEnabled,
-                onToggleFlash: _currentMode == 'scan' &&
-                        _scannerController != null &&
-                        _cameraOrchestrator.surface == ArCameraSurface.scanner
-                    ? _toggleFlash
-                    : null,
+            ? ValueListenableBuilder<int>(
+                valueListenable: _placementRevision,
+                builder: (_, __, ___) => ArStatusHeader(
+                  modeLabel: _statusLabel(l10n),
+                  modeIcon: _iconForMode(_currentMode),
+                  isDark: themeProvider.isDarkMode,
+                  onOpenSettings: _showARSettings,
+                  flashEnabled: _flashEnabled,
+                  onToggleFlash: _currentMode == 'scan' &&
+                          _scannerController != null &&
+                          _cameraOrchestrator.surface == ArCameraSurface.scanner
+                      ? _toggleFlash
+                      : null,
+                ),
               )
             : null,
         cameraSurface: _isARReady ? _buildCameraSurface(l10n) : _emptyCanvas(),
         overlay: _isLoading ? _buildLoadingOverlay() : null,
         guidance: _isARReady && !_isLoading ? _buildGuidance(l10n) : null,
         controls: _isARReady && _showControls
-            ? ArControlsRegion(
-                modes: _modeOptions(l10n),
-                selectedModeId: _currentMode,
-                onSelectMode: _changeMode,
-                isDark: themeProvider.isDarkMode,
-                primaryAction: _primaryAction(l10n),
-                secondaryActions: _secondaryActions(l10n),
+            ? ValueListenableBuilder<int>(
+                valueListenable: _placementRevision,
+                builder: (_, __, ___) => ArControlsRegion(
+                  modes: _modeOptions(l10n),
+                  selectedModeId: _currentMode,
+                  onSelectMode: _changeMode,
+                  isDark: themeProvider.isDarkMode,
+                  primaryAction: _primaryAction(l10n),
+                  secondaryActions: _secondaryActions(l10n),
+                ),
               )
             : const SizedBox.shrink(),
       ),
@@ -1602,6 +1616,12 @@ class _ARScreenState extends State<ARScreen>
   /// handoffs rather than interleaving them.
   Future<void> _acquireCameraFor(String modeId) async {
     await _cameraOrchestrator.requestMode(modeId);
+    if (!mounted) return;
+    if (modeId == 'view') {
+      await _spatialTracking.pauseSession();
+    } else {
+      await _spatialTracking.resumeSession();
+    }
     if (!mounted) return;
     if (modeId == 'place') _armPlacementForSelection();
   }

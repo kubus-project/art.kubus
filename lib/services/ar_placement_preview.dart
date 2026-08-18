@@ -43,6 +43,8 @@ class ArPlacementPreview {
   /// Serializes scene mutations. Two overlapping syncs could otherwise add a
   /// second node while the first is still resolving its model.
   Future<void> _queue = Future<void>.value();
+  ArPlacementController? _latestPlacement;
+  Future<void>? _syncing;
 
   bool _disposed = false;
 
@@ -60,7 +62,23 @@ class ArPlacementPreview {
   /// Adds the node on the first hit-tested pose, updates it in place for every
   /// later change, and removes it when the placement is cancelled.
   Future<void> sync(ArPlacementController placement) {
-    return _enqueue(() => _sync(placement));
+    _latestPlacement = placement;
+    // Gesture updates can arrive every frame. If native work is still in
+    // flight, retain just the newest transform and apply it next; replaying
+    // every intermediate scale/yaw creates a visible backlog.
+    return _syncing ??= _drainLatestSync();
+  }
+
+  Future<void> _drainLatestSync() async {
+    try {
+      while (!_disposed && _latestPlacement != null) {
+        final placement = _latestPlacement!;
+        _latestPlacement = null;
+        await _sync(placement);
+      }
+    } finally {
+      _syncing = null;
+    }
   }
 
   Future<void> _sync(ArPlacementController placement) async {
@@ -214,6 +232,7 @@ class ArPlacementPreview {
 
   void dispose() {
     _disposed = true;
+    _latestPlacement = null;
     _nodeName = null;
     _nodeArtworkId = null;
   }

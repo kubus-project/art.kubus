@@ -156,6 +156,16 @@ class FakeSpatialTrackingAdapter implements SpatialTrackingAdapter {
   }
 
   @override
+  Future<void> pauseSession() async {
+    calls.add('pauseSession');
+  }
+
+  @override
+  Future<void> resumeSession() async {
+    calls.add('resumeSession');
+  }
+
+  @override
   Widget buildTrackedView({
     required ValueChanged<Object?> onReady,
     ValueChanged<SpatialTrackingSessionError>? onError,

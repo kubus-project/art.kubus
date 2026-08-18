@@ -67,6 +67,13 @@ class FakeKubusNode {
     final path = request.uri.path;
     requests.add('${request.method} $path');
 
+    if (request.method == 'GET' && path == '/local/v1/info') {
+      return _json(request, 200, {
+        'nodeId': 'fake-node-1',
+        'fingerprint': 'fake-node-fingerprint',
+      });
+    }
+
     if (request.method == 'POST' && path == '/local/v1/captures/drafts') {
       final body = await utf8.decoder.bind(request).join();
       jsonBodies.add(body);
@@ -239,6 +246,8 @@ void main() {
     final store = _MemoryCredentialStore();
     await store.write('kubus_node_endpoint_v1', node.endpoint.toString());
     await store.write('kubus_node_credential_v1', 'kubus_local_testtoken');
+    await store.write('kubus_node_id_v2', 'fake-node-1');
+    await store.write('kubus_node_fingerprint_v1', 'fake-node-fingerprint');
     service = KubusNodeService(credentialStore: store, isWeb: false);
     await service.initialize();
     return _TestNodeProvider(service);

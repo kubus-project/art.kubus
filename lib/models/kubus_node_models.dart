@@ -13,6 +13,7 @@ class KubusNodePairingPayload {
     required this.endpoint,
     required this.sessionId,
     required this.secret,
+    this.nodeId,
     this.alternateEndpoints = const [],
     this.fingerprint,
     this.label,
@@ -20,6 +21,7 @@ class KubusNodePairingPayload {
   final Uri endpoint;
   final String sessionId;
   final String secret;
+  final String? nodeId;
   final List<Uri> alternateEndpoints;
   final String? fingerprint;
   final String? label;
@@ -39,24 +41,29 @@ class KubusNodePairingPayload {
       final uri = Uri.tryParse(text);
       if (uri == null) throw const FormatException('Invalid pairing code');
       final endpoint = Uri.tryParse(uri.queryParameters['e'] ?? '');
+      final version = uri.queryParameters['v'];
       final sessionId = (uri.queryParameters['s'] ?? '').trim();
       final secret = (uri.queryParameters['k'] ?? '').trim();
+      final nodeId = (uri.queryParameters['n'] ?? '').trim();
+      final fingerprint = (uri.queryParameters['f'] ?? '').trim();
       if (endpoint == null ||
           !_isAllowedEndpoint(endpoint) ||
           sessionId.isEmpty ||
-          secret.isEmpty) {
+          secret.isEmpty ||
+          (version == '2' && (nodeId.isEmpty || fingerprint.isEmpty))) {
         throw const FormatException('Invalid pairing code');
       }
       return KubusNodePairingPayload(
         endpoint: endpoint,
         sessionId: sessionId,
         secret: secret,
+        nodeId: nodeId.isEmpty ? null : nodeId,
         alternateEndpoints: (uri.queryParametersAll['a'] ?? const [])
             .map(Uri.tryParse)
             .whereType<Uri>()
             .where(_isAllowedEndpoint)
             .toList(growable: false),
-        fingerprint: uri.queryParameters['f'],
+        fingerprint: fingerprint.isEmpty ? null : fingerprint,
         label: uri.queryParameters['l'],
       );
     }
@@ -86,6 +93,9 @@ class KubusNodePairingPayload {
       endpoint: endpoint,
       sessionId: sessionId,
       secret: secret,
+      nodeId: (node['id'] ?? node['nodeId'] ?? json['nodeId'] ?? '')
+          .toString()
+          .trim(),
       fingerprint: (node['fingerprint'] ?? '').toString(),
       label: (node['label'] ?? '').toString(),
     );

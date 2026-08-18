@@ -7,6 +7,7 @@ import '../models/kubus_node_models.dart';
 import '../services/kubus_node_service.dart';
 import '../services/spatial_capture_policy.dart';
 import '../services/spatial_capture_store.dart';
+import '../services/spatial_library_store.dart';
 import 'kubus_node_provider.dart';
 import '../config/config.dart';
 
@@ -111,14 +112,22 @@ class SpatialCaptureProvider extends ChangeNotifier {
   SpatialCaptureProvider({
     SpatialCapturePolicy policy = const SpatialCapturePolicy(),
     Directory? storageRoot,
+    SpatialLibraryStore? libraryStore,
   })  : _policy = policy,
         _storageRoot = storageRoot,
+        _libraryStore = libraryStore ??
+            SpatialLibraryStore(
+              root: storageRoot == null
+                  ? null
+                  : Directory('${storageRoot.path}_spatial-library'),
+            ),
         _gate = SpatialSamplingGate(policy: policy) {
     _coverage = SpatialCoverageAccumulator(policy: policy);
   }
 
   final SpatialCapturePolicy _policy;
   final Directory? _storageRoot;
+  final SpatialLibraryStore _libraryStore;
   final SpatialSamplingGate _gate;
   late final SpatialCoverageAccumulator _coverage;
 
@@ -497,7 +506,7 @@ class SpatialCaptureProvider extends ChangeNotifier {
   /// An interrupted transfer resumes against the same draft, so a retry
   /// re-sends only what is missing and never creates a second durable record.
   Future<void> finish(KubusNodeProvider node) async {
-    final store = _store;
+    var store = _store;
     if (store == null || !_coverage.isReadyToFinish) {
       throw const SpatialCaptureNotReadyException();
     }
@@ -508,6 +517,17 @@ class SpatialCaptureProvider extends ChangeNotifier {
     );
     notifyListeners();
     try {
+      // The capture becomes durable private phone data before a Node receives
+      // one byte. If the Node is offline, the source still remains visible and
+      // retryable in the library after restart.
+      final record = await _libraryStore.promoteCapture(store);
+      final reopened =
+          await SpatialCaptureStore.open(Directory(record.sourcePath));
+      if (reopened == null) {
+        throw StateError('Spatial Library source could not be reopened.');
+      }
+      _store = reopened;
+      store = reopened;
       await _streamToNode(node, store);
       _state = SpatialCaptureState.awaitingProcessingChoice;
       notifyListeners();

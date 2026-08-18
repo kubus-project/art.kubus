@@ -479,6 +479,16 @@ class ARManager {
     throw StateError('Spatial tracking is not ready on this device.');
   }
 
+  /// Retains the platform view/session identity while releasing its camera and
+  /// renderer workload for the local SpatialViewer.
+  Future<void> pauseSession() async {
+    if (Platform.isAndroid) await _arCoreController?.pause();
+  }
+
+  Future<void> resumeSession() async {
+    if (Platform.isAndroid) await _arCoreController?.resume();
+  }
+
   void _trackNode(String name, String type) {
     _placedNodes.add({
       'name': name,
