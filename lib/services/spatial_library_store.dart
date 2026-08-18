@@ -184,6 +184,22 @@ class SpatialLibraryStore {
     return record;
   }
 
+  /// Idempotently promotes useful legacy `capture-temp` work. Empty debris is
+  /// deliberately left to the capture store's grace-period cleanup; this
+  /// migration never deletes user samples as a side effect of upgrading.
+  Future<List<SpatialLibraryRecord>> migrateLegacy(
+      Directory captureRoot) async {
+    if (!await captureRoot.exists()) return const [];
+    final migrated = <SpatialLibraryRecord>[];
+    final entries = await captureRoot.list(followLinks: false).toList();
+    for (final directory in entries.whereType<Directory>()) {
+      final capture = await SpatialCaptureStore.open(directory);
+      if (capture == null || capture.sampleCount == 0) continue;
+      migrated.add(await promoteCapture(capture));
+    }
+    return migrated;
+  }
+
   Future<void> save(SpatialLibraryRecord record) async {
     final folder =
         Directory(p.join((await root()).path, record.localSpatialId));

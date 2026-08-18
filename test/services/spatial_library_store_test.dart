@@ -42,4 +42,21 @@ void main() {
     expect(afterRestart.single.localSpatialId, record.localSpatialId);
     expect(afterRestart.single.sampleCount, 1);
   });
+
+  test('migrates legacy capture-temp idempotently without deleting raw data',
+      () async {
+    final capture = await SpatialCaptureStore.create(
+      captureId: 'legacy-1',
+      artworkId: 'art-1',
+      root: root,
+    );
+    await capture.writeSample(rgb: Uint8List.fromList([1, 2, 3]));
+    final library = SpatialLibraryStore(root: libraryRoot);
+
+    expect(await library.migrateLegacy(root), hasLength(1));
+    expect(await library.migrateLegacy(root), isEmpty);
+    final record = (await library.list()).single;
+    expect(await Directory(record.sourcePath).exists(), isTrue);
+    expect(record.rawPresent, isTrue);
+  });
 }
