@@ -314,6 +314,7 @@ class _ARScreenState extends State<ARScreen>
   );
 
   bool _isARReady = false;
+  String? _arSessionErrorCode;
   SpatialCaptureSession? _captureSession;
   bool _isLoading = true;
   final bool _showControls = true;
@@ -455,6 +456,7 @@ class _ARScreenState extends State<ARScreen>
     _spatialTracking.onSurfaceTap = _onSurfaceTap;
     _spatialTracking.onSurfaceDetected =
         () => _placement.setSurfaceAvailable(true);
+    _spatialTracking.onSessionError = _onArSessionError;
     _spatialTracking.isTracking.addListener(_onTrackingChanged);
     _spatialTracking.trackingFailureReason.addListener(_onPlacementChanged);
     _placement.addListener(_onPlacementChanged);
@@ -481,6 +483,34 @@ class _ARScreenState extends State<ARScreen>
       ),
       tone: KubusSnackBarTone.warning,
     );
+  }
+
+  void _onArSessionError(SpatialTrackingSessionError error) {
+    if (!mounted || ArErrorMessages.isSessionTeardown(error.code)) return;
+    setState(() {
+      // The native platform view can no longer be reused after a failed
+      // initialization/resume. Dropping it makes Retry create a real session
+      // instead of retaining a black or dead surface.
+      _arCameraView = null;
+      _isLoading = false;
+      _arSessionErrorCode = error.code;
+    });
+  }
+
+  Future<void> _retryArSession() async {
+    if (!mounted) return;
+    setState(() {
+      _arSessionErrorCode = null;
+      _isLoading = true;
+    });
+    try {
+      await _cameraOrchestrator.releaseAll();
+      if (!mounted) return;
+      await _acquireCameraFor(_currentMode);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -791,6 +821,7 @@ class _ARScreenState extends State<ARScreen>
     _spatialTracking.trackingFailureReason.removeListener(_onPlacementChanged);
     _spatialTracking.onSurfaceTap = null;
     _spatialTracking.onSurfaceDetected = null;
+    _spatialTracking.onSessionError = null;
     WidgetsBinding.instance.removeObserver(this);
     _placement.removeListener(_onPlacementChanged);
     _placement.dispose();
@@ -827,7 +858,7 @@ class _ARScreenState extends State<ARScreen>
       body: ArScreenChrome(
         header: _isARReady
             ? ArStatusHeader(
-                modeLabel: _modeName(l10n, _currentMode),
+                modeLabel: _statusLabel(l10n),
                 modeIcon: _iconForMode(_currentMode),
                 isDark: themeProvider.isDarkMode,
                 onOpenSettings: _showARSettings,
@@ -871,6 +902,23 @@ class _ARScreenState extends State<ARScreen>
       )
       .toList(growable: false);
 
+  String _statusLabel(AppLocalizations l10n) {
+    if (_arSessionErrorCode != null) {
+      return ArErrorMessages.forSessionError(l10n, _arSessionErrorCode!);
+    }
+    final capture = context.read<SpatialCaptureProvider>();
+    if (capture.state == SpatialCaptureState.capturing) {
+      return l10n.spatialCaptureFinish;
+    }
+    if (capture.state == SpatialCaptureState.paused) {
+      return l10n.spatialCaptureGuidePaused;
+    }
+    if (_cameraOrchestrator.isTransitioning) return l10n.arCameraSwitching;
+    return _spatialTracking.isTracking.value
+        ? l10n.arReadyStatus
+        : ArErrorMessages.initializing(l10n);
+  }
+
   Future<void> _toggleFlash() async {
     final controller = _scannerController;
     if (controller == null) return;
@@ -891,6 +939,8 @@ class _ARScreenState extends State<ARScreen>
   /// outgoing owner was still releasing the device, which is exactly the
   /// contention the ownership sequencing exists to prevent.
   Widget _buildCameraSurface(AppLocalizations l10n) {
+    final errorCode = _arSessionErrorCode;
+    if (errorCode != null) return _buildArSessionError(l10n, errorCode);
     switch (_cameraOrchestrator.surface) {
       case ArCameraSurface.none:
         // Neither camera is mounted during a handoff. This is the invariant:
@@ -952,6 +1002,36 @@ class _ARScreenState extends State<ARScreen>
     }
   }
 
+  Widget _buildArSessionError(AppLocalizations l10n, String code) {
+    final retryable = ArErrorMessages.isRetryable(code);
+    return ColoredBox(
+      color: Theme.of(context).colorScheme.surface,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(KubusSpacing.xl),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.videocam_off_outlined, size: 48),
+              const SizedBox(height: KubusSpacing.md),
+              Text(
+                ArErrorMessages.forSessionError(l10n, code),
+                textAlign: TextAlign.center,
+              ),
+              if (retryable) ...[
+                const SizedBox(height: KubusSpacing.lg),
+                FilledButton(
+                  onPressed: _retryArSession,
+                  child: Text(l10n.commonRetry),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   /// The ARCore/ARKit view, built once and reused.
   ///
   /// Cached so switching between Place and Spatial rebuilds only the chrome.
@@ -968,6 +1048,7 @@ class _ARScreenState extends State<ARScreen>
         // chooses where the artwork goes.
         _armPlacementForSelection();
       },
+      onError: _onArSessionError,
     );
 
     // Direct manipulation of the previewed artwork. Pinch scales it, a
@@ -1429,11 +1510,9 @@ class _ARScreenState extends State<ARScreen>
           onPressed: _cameraOrchestrator.isTransitioning ? null : _handleAction,
         );
       case 'view':
-        return ArPrimaryAction(
-          label: l10n.arActionView,
-          icon: Icons.info_outline,
-          onPressed: _cameraOrchestrator.isTransitioning ? null : _handleAction,
-        );
+        // The viewer itself is the action. A second large View button only
+        // duplicates the selected dock mode and obscures the rendered scene.
+        return null;
       case 'create':
         final busy = const {
           SpatialCaptureState.transferring,

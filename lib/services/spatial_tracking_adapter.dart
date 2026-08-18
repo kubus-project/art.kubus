@@ -11,6 +11,7 @@ abstract class SpatialTrackingAdapter {
   Future<bool> initialize();
   Widget buildTrackedView({
     required ValueChanged<Object?> onReady,
+    ValueChanged<SpatialTrackingSessionError>? onError,
     bool enableTapRecognizer = true,
     bool enablePlaneDetection = true,
   });
@@ -66,6 +67,12 @@ abstract class SpatialTrackingAdapter {
   /// Fired when the session first has a usable surface.
   set onSurfaceDetected(void Function()? handler);
 
+  /// A typed, recoverable failure raised while the native session is being
+  /// installed, configured, resumed, or torn down.  This is deliberately part
+  /// of the adapter contract: a platform view is not allowed to fail silently
+  /// behind a cached Flutter widget.
+  set onSessionError(ValueChanged<SpatialTrackingSessionError>? handler);
+
   /// Tears the AR session down and waits for the camera to be released.
   ///
   /// Awaitable so another camera owner can be started only once this one has
@@ -73,6 +80,13 @@ abstract class SpatialTrackingAdapter {
   Future<void> disposeSession();
 
   void dispose();
+}
+
+class SpatialTrackingSessionError {
+  const SpatialTrackingSessionError({required this.code, this.message});
+
+  final String code;
+  final String? message;
 }
 
 class PlatformSpatialTrackingAdapter implements SpatialTrackingAdapter {
@@ -87,11 +101,20 @@ class PlatformSpatialTrackingAdapter implements SpatialTrackingAdapter {
   @override
   Widget buildTrackedView({
     required ValueChanged<Object?> onReady,
+    ValueChanged<SpatialTrackingSessionError>? onError,
     bool enableTapRecognizer = true,
     bool enablePlaneDetection = true,
   }) =>
       _manager.createARView(
         onARViewCreated: onReady,
+        onArCoreViewFailed: onError == null
+            ? null
+            : (error) => onError(
+                  SpatialTrackingSessionError(
+                    code: error.code,
+                    message: error.message,
+                  ),
+                ),
         enableTapRecognizer: enableTapRecognizer,
         enablePlaneDetection: enablePlaneDetection,
       );
@@ -183,6 +206,18 @@ class PlatformSpatialTrackingAdapter implements SpatialTrackingAdapter {
   @override
   set onSurfaceDetected(void Function()? handler) {
     _manager.onSurfaceDetected = handler;
+  }
+
+  @override
+  set onSessionError(ValueChanged<SpatialTrackingSessionError>? handler) {
+    _manager.onSessionError = handler == null
+        ? null
+        : (error) => handler(
+              SpatialTrackingSessionError(
+                code: error.code,
+                message: error.message,
+              ),
+            );
   }
 
   @override

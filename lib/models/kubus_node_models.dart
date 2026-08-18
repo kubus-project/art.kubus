@@ -13,14 +13,18 @@ class KubusNodePairingPayload {
     required this.endpoint,
     required this.sessionId,
     required this.secret,
+    this.alternateEndpoints = const [],
     this.fingerprint,
     this.label,
   });
   final Uri endpoint;
   final String sessionId;
   final String secret;
+  final List<Uri> alternateEndpoints;
   final String? fingerprint;
   final String? label;
+
+  List<Uri> get endpoints => [endpoint, ...alternateEndpoints];
 
   /// Reads a scanned or pasted pairing code.
   ///
@@ -38,8 +42,7 @@ class KubusNodePairingPayload {
       final sessionId = (uri.queryParameters['s'] ?? '').trim();
       final secret = (uri.queryParameters['k'] ?? '').trim();
       if (endpoint == null ||
-          !endpoint.hasScheme ||
-          !endpoint.hasAuthority ||
+          !_isAllowedEndpoint(endpoint) ||
           sessionId.isEmpty ||
           secret.isEmpty) {
         throw const FormatException('Invalid pairing code');
@@ -48,6 +51,11 @@ class KubusNodePairingPayload {
         endpoint: endpoint,
         sessionId: sessionId,
         secret: secret,
+        alternateEndpoints: (uri.queryParametersAll['a'] ?? const [])
+            .map(Uri.tryParse)
+            .whereType<Uri>()
+            .where(_isAllowedEndpoint)
+            .toList(growable: false),
         fingerprint: uri.queryParameters['f'],
         label: uri.queryParameters['l'],
       );
@@ -66,7 +74,7 @@ class KubusNodePairingPayload {
     final endpoint = Uri.tryParse(
       (node['endpoint'] ?? json['endpoint'] ?? '').toString(),
     );
-    if (endpoint == null || !endpoint.hasScheme || !endpoint.hasAuthority) {
+    if (endpoint == null || !_isAllowedEndpoint(endpoint)) {
       throw const FormatException('Invalid kubus Node endpoint');
     }
     final sessionId = (json['sessionId'] ?? '').toString().trim();
@@ -81,6 +89,21 @@ class KubusNodePairingPayload {
       fingerprint: (node['fingerprint'] ?? '').toString(),
       label: (node['label'] ?? '').toString(),
     );
+  }
+
+  static bool _isAllowedEndpoint(Uri endpoint) {
+    if (!endpoint.hasAuthority) return false;
+    if (endpoint.scheme == 'https') return true;
+    if (endpoint.scheme != 'http') return false;
+    final host = endpoint.host.toLowerCase();
+    if (host.endsWith('.local') || host.endsWith('.internal')) return true;
+    if (host.startsWith('10.') || host.startsWith('192.168.')) return true;
+    final parts = host.split('.');
+    final second = parts.length > 1 ? int.tryParse(parts[1]) : null;
+    return parts.first == '172' &&
+        second != null &&
+        second >= 16 &&
+        second <= 31;
   }
 }
 

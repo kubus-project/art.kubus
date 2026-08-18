@@ -137,7 +137,11 @@ class ArCoreAugmentedImagesView(activity: Activity, context: Context, messenger:
             when (call.method) {
                 "init" -> {
                     debugLog( "INIT AUGMENTED IMAGES")
-                    arScenViewInit(call, result)
+                    if (!ArCoreUtils.hasCameraPermission(activity)) {
+                        result.error("camera_permission_required", "Camera permission must be granted before mounting AR.", null)
+                    } else {
+                        arScenViewInit(call, result)
+                    }
                 }
                 "load_single_image_on_db" -> {
                     debugLog( "load_single_image_on_db")
@@ -215,7 +219,7 @@ class ArCoreAugmentedImagesView(activity: Activity, context: Context, messenger:
         } else {
             debugLog( "Impossible call " + call.method + " method on unsupported device")
             job.cancel()
-            result.error("Unsupported Device", "", null)
+            result.error("arcore_unsupported_device", "This device cannot run ARCore.", null)
         }
     }
 
@@ -239,6 +243,7 @@ class ArCoreAugmentedImagesView(activity: Activity, context: Context, messenger:
             // CAMERA is granted. Raising a second request here paused the
             // activity mid-initialization and raced the session startup.
             if (!ArCoreUtils.hasCameraPermission(activity)) {
+                methodChannel.invokeMethod("onSessionError", hashMapOf("code" to "camera_permission_required"))
                 return
             }
 

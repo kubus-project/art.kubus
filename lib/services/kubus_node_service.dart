@@ -99,16 +99,19 @@ class KubusNodeService {
         _store = credentialStore ?? SecureKubusNodeCredentialStore(),
         _isWeb = isWeb ?? kIsWeb;
   static const _endpointKey = 'kubus_node_endpoint_v1';
+  static const _endpointsKey = 'kubus_node_endpoints_v2';
   static const _credentialKey = 'kubus_node_credential_v1';
   static const _fingerprintKey = 'kubus_node_fingerprint_v1';
   final http.Client _client;
   final KubusNodeCredentialStore _store;
   final bool _isWeb;
   Uri? _endpoint;
+  List<Uri> _endpoints = const [];
   String? _credential;
   String? _fingerprint;
 
   Uri? get endpoint => _endpoint;
+  List<Uri> get endpoints => List.unmodifiable(_endpoints);
   String? get fingerprint => _fingerprint;
   bool get isPaired =>
       _endpoint != null && (_credential ?? '').startsWith('kubus_local_');
@@ -116,6 +119,26 @@ class KubusNodeService {
   Future<bool> initialize() async {
     final rawEndpoint = await _store.read(_endpointKey);
     _endpoint = Uri.tryParse(rawEndpoint ?? '');
+    final rawEndpoints = await _store.read(_endpointsKey);
+    if (rawEndpoints != null) {
+      try {
+        final decoded = jsonDecode(rawEndpoints);
+        if (decoded is List) {
+          _endpoints = decoded
+              .map((value) => Uri.tryParse(value.toString()))
+              .whereType<Uri>()
+              .toList(growable: false);
+        }
+      } on FormatException {
+        _endpoints = const [];
+      }
+    }
+    if (_endpoints.isEmpty && _endpoint != null) {
+      _endpoints = [_endpoint!];
+    }
+    if (_endpoint == null && _endpoints.isNotEmpty) {
+      _endpoint = _endpoints.first;
+    }
     _credential = await _store.read(_credentialKey);
     _fingerprint = await _store.read(_fingerprintKey);
     return isPaired;
@@ -125,29 +148,46 @@ class KubusNodeService {
     KubusNodePairingPayload payload, {
     String label = 'art.kubus app',
   }) async {
-    if (_isWeb && payload.endpoint.scheme != 'https') {
+    if (_isWeb &&
+        payload.endpoints.any((endpoint) => endpoint.scheme != 'https')) {
       throw StateError('A secure HTTPS local node route is required on web.');
     }
-    final response = await _client
-        .post(
-          _resolve(payload.endpoint, '/local/v1/pairing/exchange'),
-          headers: const {'Content-Type': 'application/json'},
-          body: jsonEncode({
-            'sessionId': payload.sessionId,
-            'secret': payload.secret,
-            'label': label,
-          }),
-        )
-        .timeout(const Duration(seconds: 10));
-    final data = _decode(response);
+    Map<String, dynamic>? data;
+    Uri? connectedEndpoint;
+    Object? lastError;
+    for (final endpoint in payload.endpoints) {
+      try {
+        data = _decode(await _client
+            .post(
+              _resolve(endpoint, '/local/v1/pairing/exchange'),
+              headers: const {'Content-Type': 'application/json'},
+              body: jsonEncode({
+                'sessionId': payload.sessionId,
+                'secret': payload.secret,
+                'label': label
+              }),
+            )
+            .timeout(const Duration(seconds: 10)));
+        connectedEndpoint = endpoint;
+        break;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+    if (data == null || connectedEndpoint == null) {
+      throw StateError('Unable to reach this paired kubus Node: $lastError');
+    }
     final token = (data['token'] ?? '').toString();
     if (!token.startsWith('kubus_local_')) {
       throw StateError('Node returned an invalid local credential.');
     }
-    _endpoint = payload.endpoint;
+    _endpoint = connectedEndpoint;
+    _endpoints = payload.endpoints;
     _credential = token;
     _fingerprint = payload.fingerprint;
-    await _store.write(_endpointKey, payload.endpoint.toString());
+    await _store.write(_endpointKey, connectedEndpoint.toString());
+    await _store.write(_endpointsKey,
+        jsonEncode(_endpoints.map((endpoint) => endpoint.toString()).toList()));
     await _store.write(_credentialKey, token);
     if ((payload.fingerprint ?? '').isNotEmpty) {
       await _store.write(_fingerprintKey, payload.fingerprint!);
@@ -156,10 +196,12 @@ class KubusNodeService {
 
   Future<void> unpair() async {
     _endpoint = null;
+    _endpoints = const [];
     _credential = null;
     _fingerprint = null;
     await Future.wait([
       _store.delete(_endpointKey),
+      _store.delete(_endpointsKey),
       _store.delete(_credentialKey),
       _store.delete(_fingerprintKey),
     ]);
@@ -472,17 +514,36 @@ class KubusNodeService {
     Duration timeout = const Duration(seconds: 20),
   }) async {
     if (!isPaired) throw StateError('No kubus Node is paired.');
-    final request = http.Request(method, _resolve(_endpoint!, path));
-    request.headers.addAll({
-      'Accept': 'application/json',
-      'Authorization': 'Bearer $_credential',
-    });
-    if (body != null) {
-      request.headers['Content-Type'] = 'application/json';
-      request.body = jsonEncode(body);
+    Object? lastError;
+    for (final endpoint in _orderedEndpoints()) {
+      try {
+        final request = http.Request(method, _resolve(endpoint, path));
+        request.headers.addAll({
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $_credential'
+        });
+        if (body != null) {
+          request.headers['Content-Type'] = 'application/json';
+          request.body = jsonEncode(body);
+        }
+        final response = await http.Response.fromStream(
+          await _client.send(request).timeout(timeout),
+        );
+        // A response proves the endpoint belongs to this Node transport. Do
+        // not fail over authorization or application errors to another host.
+        _endpoint = endpoint;
+        return response;
+      } catch (error) {
+        lastError = error;
+      }
     }
-    final streamed = await _client.send(request).timeout(timeout);
-    return http.Response.fromStream(streamed);
+    throw StateError('kubus Node is unavailable: $lastError');
+  }
+
+  List<Uri> _orderedEndpoints() {
+    final primary = _endpoint;
+    if (primary == null) return _endpoints;
+    return [primary, ..._endpoints.where((endpoint) => endpoint != primary)];
   }
 
   static Map<String, dynamic> _decode(http.Response response) {

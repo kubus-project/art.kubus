@@ -84,6 +84,41 @@ void main() {
     await expectLater(service.pair(_payload), throwsStateError);
   });
 
+  test('falls back from an unavailable remote endpoint to the paired LAN node',
+      () async {
+    final requests = <http.Request>[];
+    final service = KubusNodeService(
+      credentialStore: _MemoryCredentialStore(),
+      isWeb: false,
+      client: MockClient((request) async {
+        requests.add(request);
+        if (request.url.host == 'node.example.test') {
+          throw http.ClientException('remote tunnel unavailable');
+        }
+        if (request.url.path.endsWith('/pairing/exchange')) {
+          return http.Response(
+              jsonEncode({'token': 'kubus_local_scoped-token'}), 201);
+        }
+        return http.Response(jsonEncode({'status': 'online'}), 200);
+      }),
+    );
+    final payload = KubusNodePairingPayload(
+      endpoint: Uri.parse('https://node.example.test'),
+      alternateEndpoints: [Uri.parse('http://192.168.1.8:8787')],
+      sessionId: 'session-1',
+      secret: 'one-time-secret',
+      fingerprint: 'sha256:node',
+    );
+
+    await service.pair(payload);
+    await service.fetchNetwork();
+
+    expect(service.endpoint, Uri.parse('http://192.168.1.8:8787'));
+    expect(requests.any((request) => request.url.host == 'node.example.test'),
+        isTrue);
+    expect(requests.last.url.host, '192.168.1.8');
+  });
+
   test('network compute discovery forwards auth only inside paired JSON',
       () async {
     final requests = <http.Request>[];

@@ -532,6 +532,7 @@ class ARManager {
   /// Get platform-specific view widget
   Widget createARView({
     required Function onARViewCreated,
+    void Function(ArCoreSessionError error)? onArCoreViewFailed,
     bool enableTapRecognizer = true,
     bool enablePlaneDetection = true,
   }) {
@@ -548,9 +549,10 @@ class ARManager {
           if (kDebugMode) {
             debugPrint('ARManager: AR view init failed: ${error.code}');
           }
-          onSessionError?.call(
-            ArCoreSessionError(code: error.code, message: error.message),
-          );
+          final sessionError =
+              ArCoreSessionError(code: error.code, message: error.message);
+          onArCoreViewFailed?.call(sessionError);
+          onSessionError?.call(sessionError);
         },
         enableTapRecognizer: enableTapRecognizer,
         // Required for onPlaneDetected: without the update listener the

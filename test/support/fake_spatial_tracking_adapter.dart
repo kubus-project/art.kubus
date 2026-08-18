@@ -158,6 +158,7 @@ class FakeSpatialTrackingAdapter implements SpatialTrackingAdapter {
   @override
   Widget buildTrackedView({
     required ValueChanged<Object?> onReady,
+    ValueChanged<SpatialTrackingSessionError>? onError,
     bool enableTapRecognizer = true,
     bool enablePlaneDetection = true,
   }) {
@@ -295,6 +296,9 @@ class FakeSpatialTrackingAdapter implements SpatialTrackingAdapter {
   set onSurfaceDetected(void Function()? handler) {
     _onSurfaceDetected = handler;
   }
+
+  @override
+  set onSessionError(ValueChanged<SpatialTrackingSessionError>? handler) {}
 
   @override
   Future<void> disposeSession() async {

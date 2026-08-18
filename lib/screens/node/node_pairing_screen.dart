@@ -58,9 +58,32 @@ class _NodePairingScreenState extends State<NodePairingScreen> {
 
   @override
   void dispose() {
-    _controller?.dispose();
+    unawaited(_disposeScanner());
     _manualController.dispose();
     super.dispose();
+  }
+
+  Future<void> _disposeScanner() async {
+    final controller = _controller;
+    _controller = null;
+    if (controller == null) return;
+    try {
+      await controller.dispose();
+    } catch (_) {
+      // A controller which has already lost its camera is still disposed from
+      // Flutter's point of view; there is no useful recovery action here.
+    }
+  }
+
+  Future<void> _enterManual() async {
+    final controller = _controller;
+    if (controller != null) {
+      try {
+        await controller.stop();
+      } catch (_) {}
+    }
+    if (!mounted) return;
+    setState(() => _stage = _PairingStage.manual);
   }
 
   Future<void> _startCamera() async {
@@ -80,6 +103,17 @@ class _NodePairingScreenState extends State<NodePairingScreen> {
       return;
     }
     if (!mounted) return;
+    final existing = _controller;
+    if (existing != null) {
+      try {
+        await existing.start();
+        if (!mounted) return;
+        setState(() => _stage = _PairingStage.scanning);
+        return;
+      } catch (_) {
+        await _disposeScanner();
+      }
+    }
     setState(() {
       _controller = MobileScannerController(
         facing: CameraFacing.back,
@@ -96,13 +130,19 @@ class _NodePairingScreenState extends State<NodePairingScreen> {
       final value = barcode.rawValue;
       if (value == null || value.isEmpty) continue;
       _handledCode = true;
-      unawaited(_controller?.stop());
-      _accept(value);
+      unawaited(_accept(value));
       return;
     }
   }
 
-  void _accept(String raw) {
+  Future<void> _accept(String raw) async {
+    final controller = _controller;
+    if (controller != null) {
+      try {
+        await controller.stop();
+      } catch (_) {}
+    }
+    if (!mounted) return;
     try {
       final payload = KubusNodePairingPayload.parse(raw);
       setState(() {
@@ -115,7 +155,13 @@ class _NodePairingScreenState extends State<NodePairingScreen> {
         _message = _l10n.kubusNodeScanInvalid;
         _handledCode = false;
       });
-      unawaited(_controller?.start());
+      if (controller != null) {
+        try {
+          await controller.start();
+        } catch (_) {
+          if (mounted) setState(() => _stage = _PairingStage.manual);
+        }
+      }
     }
   }
 
@@ -182,7 +228,7 @@ class _NodePairingScreenState extends State<NodePairingScreen> {
               _ScannerMessage(message: _l10n.kubusNodeScanBody),
               const SizedBox(height: KubusSpacing.sm),
               TextButton(
-                onPressed: () => setState(() => _stage = _PairingStage.manual),
+                onPressed: () => unawaited(_enterManual()),
                 style: TextButton.styleFrom(foregroundColor: Colors.white),
                 child: Text(_l10n.kubusNodeScanManualAction),
               ),
@@ -215,11 +261,11 @@ class _NodePairingScreenState extends State<NodePairingScreen> {
             errorText: _message,
             border: const OutlineInputBorder(),
           ),
-          onSubmitted: _accept,
+          onSubmitted: (value) => unawaited(_accept(value)),
         ),
         const SizedBox(height: KubusSpacing.md),
         FilledButton(
-          onPressed: () => _accept(_manualController.text),
+          onPressed: () => unawaited(_accept(_manualController.text)),
           child: Text(_l10n.kubusNodePairAction),
         ),
         if (!kIsWeb) ...[

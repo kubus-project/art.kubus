@@ -77,7 +77,11 @@ class ArCoreFaceView(activity:Activity,context: Context, messenger: BinaryMessen
             debugLog(call.method +"called on supported device")
             when (call.method) {
                 "init" -> {
-                    arScenViewInit(call, result)
+                    if (!ArCoreUtils.hasCameraPermission(activity)) {
+                        result.error("camera_permission_required", "Camera permission must be granted before mounting AR.", null)
+                    } else {
+                        arScenViewInit(call, result)
+                    }
                 }
                 "loadMesh" -> {
                     val map = call.arguments as HashMap<*, *>
@@ -97,7 +101,7 @@ class ArCoreFaceView(activity:Activity,context: Context, messenger: BinaryMessen
             }
         }else{
             debugLog("Impossible call " + call.method + " method on unsupported device")
-            result.error("Unsupported Device","",null)
+            result.error("arcore_unsupported_device", "This device cannot run ARCore.", null)
         }
     }
 
@@ -146,6 +150,7 @@ class ArCoreFaceView(activity:Activity,context: Context, messenger: BinaryMessen
             // CAMERA is granted. Raising a second request here paused the
             // activity mid-initialization and raced the session startup.
             if (!ArCoreUtils.hasCameraPermission(activity)) {
+                methodChannel.invokeMethod("onSessionError", hashMapOf("code" to "camera_permission_required"))
                 return
             }
 

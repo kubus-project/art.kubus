@@ -7,6 +7,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.util.Log
 import android.view.View
+import android.widget.FrameLayout
 import com.difrancescogianmarco.arcore_flutter_plugin.flutter_models.FlutterArCoreNode
 import com.difrancescogianmarco.arcore_flutter_plugin.utils.ArCoreUtils
 import com.google.ar.core.ArCoreApk
@@ -25,6 +26,8 @@ open class BaseArCoreView(val activity: Activity, context: Context, messenger: B
     lateinit var activityLifecycleCallbacks: Application.ActivityLifecycleCallbacks
     protected val methodChannel: MethodChannel = MethodChannel(messenger, "arcore_flutter_plugin_$id")
     protected var arSceneView: ArSceneView? = null
+    private val unsupportedView = FrameLayout(context)
+    private var lifecycleRegistered = false
     //    protected val activity: Activity = (context.applicationContext as FlutterApplication).currentActivity
     protected val RC_PERMISSIONS = 0x123
     protected var installRequested: Boolean = false
@@ -90,10 +93,14 @@ open class BaseArCoreView(val activity: Activity, context: Context, messenger: B
 
         activity.application
                 .registerActivityLifecycleCallbacks(this.activityLifecycleCallbacks)
+        lifecycleRegistered = true
     }
 
     override fun getView(): View {
-        return arSceneView as View
+        // Flutter must always receive a valid PlatformView. The typed init
+        // error is delivered over the channel; returning null here crashes the
+        // host activity before Dart can render its recovery UI.
+        return arSceneView ?: unsupportedView
     }
 
     override fun dispose() {
@@ -212,6 +219,10 @@ open class BaseArCoreView(val activity: Activity, context: Context, messenger: B
     }
 
     open fun onDestroy() {
+        if (lifecycleRegistered) {
+            activity.application.unregisterActivityLifecycleCallbacks(activityLifecycleCallbacks)
+            lifecycleRegistered = false
+        }
         if (arSceneView != null) {
             arSceneView?.destroy()
             arSceneView = null
