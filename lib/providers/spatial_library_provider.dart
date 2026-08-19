@@ -63,11 +63,13 @@ class SpatialLibraryProvider extends ChangeNotifier {
     SpatialPublicationClient? publicationClient,
     Directory? legacyCaptureRoot,
     Duration pollInterval = const Duration(seconds: 2),
+    Duration providerSearchInterval = const Duration(seconds: 30),
   })  : store = store ?? SpatialLibraryStore(),
         _publicationClient =
             publicationClient ?? BackendSpatialPublicationClient(),
         _legacyCaptureRoot = legacyCaptureRoot,
-        _pollInterval = pollInterval {
+        _pollInterval = pollInterval,
+        _providerSearchInterval = providerSearchInterval {
     _importer = SpatialResultImporter(store: this.store);
   }
 
@@ -75,6 +77,7 @@ class SpatialLibraryProvider extends ChangeNotifier {
   final SpatialPublicationClient _publicationClient;
   final Directory? _legacyCaptureRoot;
   final Duration _pollInterval;
+  final Duration _providerSearchInterval;
   late final SpatialResultImporter _importer;
   KubusNodeProvider? _node;
   List<SpatialLibraryRecord> _records = const <SpatialLibraryRecord>[];
@@ -88,9 +91,6 @@ class SpatialLibraryProvider extends ChangeNotifier {
 
   /// How long an unmatched network request stays open before it expires.
   static const Duration networkRequestLifetime = Duration(hours: 24);
-
-  /// Gap between provider-discovery attempts for an open request.
-  static const Duration providerSearchInterval = Duration(seconds: 30);
 
   List<SpatialLibraryRecord> get records => List.unmodifiable(_records);
   bool get loading => _loading;
@@ -284,12 +284,7 @@ class SpatialLibraryProvider extends ChangeNotifier {
       );
     }
     while (!_disposed) {
-      final record = await store.get(localSpatialId);
-      final request = record?.networkRequest;
-      if (record == null || request == null || !request.isActive) break;
-      final jobId = request.jobId;
-      if (jobId == null || jobId.isEmpty) break;
-      if (await _pollRemoteJob(localSpatialId, record, request, jobId)) break;
+      if (await advanceNetworkRequest(localSpatialId)) break;
       await Future<void>.delayed(_pollInterval);
     }
     final settled = await store.get(localSpatialId);
@@ -391,6 +386,20 @@ class SpatialLibraryProvider extends ChangeNotifier {
   Future<SpatialLibraryRecord> requestNetworkProcessing(
     String localSpatialId,
   ) async {
+    final record = await openNetworkRequest(localSpatialId);
+    unawaited(driveNetworkRequest(localSpatialId));
+    return record;
+  }
+
+  /// Writes the request to disk without starting to drive it.
+  ///
+  /// Separated from [requestNetworkProcessing] because the durable record is
+  /// the promise to the user; driving it is just how that promise gets kept.
+  /// Splitting them also lets a caller step the state machine deterministically
+  /// instead of racing a background loop.
+  Future<SpatialLibraryRecord> openNetworkRequest(
+    String localSpatialId,
+  ) async {
     final current = await store.get(localSpatialId);
     if (current == null) throw StateError('record_missing');
     if (!current.rawPresent) throw StateError('raw_source_required');
@@ -406,7 +415,6 @@ class SpatialLibraryProvider extends ChangeNotifier {
       processingState: SpatialLibraryProcessingState.waitingForProcessor,
     );
     await reload();
-    unawaited(driveNetworkRequest(localSpatialId));
     return record;
   }
 
@@ -458,51 +466,60 @@ class SpatialLibraryProvider extends ChangeNotifier {
 
   /// Drives one persisted request forward until it terminates.
   ///
-  /// Re-reads the record every pass, so a cancel, a delete, or a second
-  /// caller stops this loop rather than racing it.
-  @visibleForTesting
+  /// Guarded so a resume sweep and a user tap cannot search twice for one
+  /// capture.
   Future<void> driveNetworkRequest(String localSpatialId) async {
     if (!_drivingNetworkRequests.add(localSpatialId)) return;
     try {
       while (!_disposed) {
-        final record = await store.get(localSpatialId);
-        final request = record?.networkRequest;
-        if (record == null || request == null || !request.isActive) return;
-
-        if (DateTime.now().toUtc().difference(request.requestedAt) >
-                networkRequestLifetime &&
-            request.jobId == null) {
-          await _finishNetworkRequest(
-            localSpatialId,
-            request.copyWith(
-              state: SpatialNetworkRequestState.expired,
-              updatedAt: DateTime.now().toUtc(),
-              failureCode: 'network_request_expired',
-            ),
-            SpatialLibraryProcessingState.failedRetryable,
-          );
-          return;
-        }
-
-        final jobId = request.jobId;
-        if (jobId != null && jobId.isNotEmpty) {
-          if (await _pollRemoteJob(localSpatialId, record, request, jobId)) {
-            return;
-          }
-          await Future<void>.delayed(_pollInterval);
-          continue;
-        }
-
-        final provider = await _findProvider(localSpatialId, record, request);
-        if (provider == null) {
-          await Future<void>.delayed(providerSearchInterval);
-          continue;
-        }
-        if (!await _startRemoteJob(localSpatialId, request, provider)) return;
+        if (await advanceNetworkRequest(localSpatialId)) return;
+        await Future<void>.delayed(
+          (await store.get(localSpatialId))?.networkRequest?.jobId == null
+              ? _providerSearchInterval
+              : _pollInterval,
+        );
       }
     } finally {
       _drivingNetworkRequests.remove(localSpatialId);
     }
+  }
+
+  /// Advances a persisted request by exactly one step.
+  ///
+  /// Returns true when there is nothing left to do — the request settled, was
+  /// cancelled, or the record is gone. Re-reads the record every time, so a
+  /// cancel or a delete stops the loop rather than racing it.
+  @visibleForTesting
+  Future<bool> advanceNetworkRequest(String localSpatialId) async {
+    final record = await store.get(localSpatialId);
+    final request = record?.networkRequest;
+    if (record == null || request == null || !request.isActive) return true;
+
+    // A request nobody ever took is expired rather than left open forever.
+    if (DateTime.now().toUtc().difference(request.requestedAt) >
+            networkRequestLifetime &&
+        request.jobId == null) {
+      await _finishNetworkRequest(
+        localSpatialId,
+        request.copyWith(
+          state: SpatialNetworkRequestState.expired,
+          updatedAt: DateTime.now().toUtc(),
+          failureCode: 'network_request_expired',
+        ),
+        SpatialLibraryProcessingState.failedRetryable,
+      );
+      return true;
+    }
+
+    final jobId = request.jobId;
+    if (jobId != null && jobId.isNotEmpty) {
+      return _pollRemoteJob(localSpatialId, record, request, jobId);
+    }
+
+    final provider = await _findProvider(localSpatialId, record, request);
+    // No provider right now is not a failure: the request stays open.
+    if (provider == null) return false;
+    return !await _startRemoteJob(localSpatialId, request, provider);
   }
 
   /// Looks for a provider once. Null means "none right now", not "never".

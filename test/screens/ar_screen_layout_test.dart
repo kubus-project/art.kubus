@@ -9,6 +9,7 @@ import 'package:vector_math/vector_math_64.dart' as vector;
 
 /// Screen sizes the AR chrome must survive, smallest first.
 const _sizes = <String, Size>{
+  '320x640': Size(320, 640),
   '360x640': Size(360, 640),
   '390x844': Size(390, 844),
   '412x915': Size(412, 915),
@@ -45,6 +46,7 @@ Future<void> _pumpChrome(
   ArTransferReadout? transfer,
   String selectedModeId = 'place',
   String statusLabel = 'Tracking',
+  VoidCallback? onToggleFlash,
   bool enabled = true,
   bool showPrimary = true,
   String primaryLabel = _primaryLabel,
@@ -72,6 +74,8 @@ Future<void> _pumpChrome(
               statusAccent: const Color(0xFF4ECDC4),
               moreTooltip: 'More actions',
               onOpenMore: () {},
+              onToggleFlash: onToggleFlash,
+              flashTooltip: 'Flash',
             ),
             // Stands in for the ARCore platform view.
             cameraSurface: const ColoredBox(color: Colors.black),
@@ -252,6 +256,130 @@ void main() {
 
       expect(find.byWidgetPredicate((widget) => widget is ElevatedButton),
           findsNothing);
+    });
+  });
+
+  group('the status header fits the narrowest phone at every text scale', () {
+    // The statuses the header actually shows. Each is one or two words on
+    // purpose: the pill reports state, and the guidance surface explains it.
+    const statuses = <String>[
+      'Tracking',
+      'Finding surface',
+      'Capturing',
+      'Paused',
+      'Error',
+    ];
+
+    for (final size in _sizes.values) {
+      for (final scale in _textScales) {
+        testWidgets(
+          'header lays out at ${size.width.toInt()}px @ ${scale}x text',
+          (tester) async {
+            for (final status in statuses) {
+              await _pumpChrome(tester, size, scale, statusLabel: status);
+              expect(tester.takeException(), isNull);
+
+              final header = tester.getRect(find.byType(ArStatusHeader));
+              expect(header.left, greaterThanOrEqualTo(0));
+              expect(header.right, lessThanOrEqualTo(size.width));
+
+              final overflow = tester.getRect(
+                find.byIcon(Icons.more_horiz_rounded),
+              );
+              expect(
+                overflow.right,
+                lessThanOrEqualTo(size.width),
+                reason: 'the overflow control must stay on screen',
+              );
+
+              final pill = tester.getRect(find.byType(ArStatusPill));
+              expect(
+                pill.right,
+                lessThanOrEqualTo(overflow.left),
+                reason: 'the pill yields width rather than overlapping actions',
+              );
+            }
+          },
+        );
+      }
+    }
+
+    testWidgets('an ordinary status is not truncated at 320px and 2.0x text',
+        (tester) async {
+      for (final status in statuses) {
+        await _pumpChrome(
+          tester,
+          const Size(320, 640),
+          2.0,
+          statusLabel: status,
+        );
+
+        final text = tester.widget<Text>(find.text(status));
+        final painter = TextPainter(
+          text: TextSpan(text: status, style: text.style),
+          textDirection: TextDirection.ltr,
+          maxLines: text.maxLines,
+          textScaler: TextScaler.linear(2.0),
+        )..layout(maxWidth: tester.getSize(find.text(status)).width);
+
+        expect(
+          painter.didExceedMaxLines,
+          isFalse,
+          reason: '"'
+              '$status" must stay readable, not ellipsize to a stub '
+              '(laid out in ${tester.getSize(find.text(status)).width}px)',
+        );
+      }
+    });
+
+    testWidgets('secondary controls live behind the overflow, not on the row',
+        (tester) async {
+      await _pumpChrome(tester, const Size(320, 640), 2.0);
+
+      expect(find.byIcon(Icons.more_horiz_rounded), findsOneWidget);
+      // Library and settings are one tap away rather than permanently
+      // competing with the status for a 320dp row.
+      expect(find.byIcon(Icons.video_library_outlined), findsNothing);
+      expect(find.byIcon(Icons.settings), findsNothing);
+    });
+
+    testWidgets('flash appears only when it is actually actionable',
+        (tester) async {
+      await _pumpChrome(tester, const Size(360, 640), 1.0);
+      expect(find.byIcon(Icons.flash_off), findsNothing);
+
+      await _pumpChrome(
+        tester,
+        const Size(360, 640),
+        1.0,
+        onToggleFlash: () {},
+      );
+      expect(find.byIcon(Icons.flash_off), findsOneWidget);
+    });
+
+    testWidgets('a long session error goes to guidance, never into the pill',
+        (tester) async {
+      const longError =
+          'AR is unavailable because this device does not support ARCore. '
+          'You can still browse artworks and published spatial archives.';
+
+      await _pumpChrome(
+        tester,
+        const Size(320, 640),
+        1.0,
+        statusLabel: 'Error',
+        guidance: longError,
+      );
+
+      expect(find.text(longError), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(ArStatusPill),
+          matching: find.text(longError),
+        ),
+        findsNothing,
+      );
+      expect(tester.takeException(), isNull);
     });
   });
 

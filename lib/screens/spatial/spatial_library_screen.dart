@@ -172,9 +172,18 @@ class _StorageSummary extends StatelessWidget {
     final roles = KubusColorRoles.of(context);
     return LayoutBuilder(
       builder: (context, constraints) {
-        final cardWidth = constraints.maxWidth < 520
-            ? (constraints.maxWidth - KubusSpacing.sm) / 2
-            : (constraints.maxWidth - (KubusSpacing.sm * 2)) / 3;
+        // Columns are chosen from the width a stat tile actually needs at the
+        // reader's text size, not from the raw viewport width. A 320dp phone
+        // at a 2x text scale cannot hold two of these side by side, and
+        // forcing it to overflows the row.
+        final scaler = MediaQuery.textScalerOf(context);
+        final minCardWidth = scaler.scale(KubusChromeMetrics.statLabel) * 10;
+        final columns = constraints.maxWidth >= 520 ? 3 : 2;
+        final fittingColumns =
+            (constraints.maxWidth / minCardWidth).floor().clamp(1, columns);
+        final cardWidth =
+            (constraints.maxWidth - (KubusSpacing.sm * (fittingColumns - 1))) /
+                fittingColumns;
         return Wrap(
           spacing: KubusSpacing.sm,
           runSpacing: KubusSpacing.sm,

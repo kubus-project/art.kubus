@@ -61,6 +61,25 @@ class ArtworkProvider extends ChangeNotifier {
   bool isSpatialHistoryLoading(String artworkId) =>
       _spatialHistoryLoads.containsKey(artworkId);
 
+  /// Replaces the in-memory artwork list, order included.
+  ///
+  /// Exists so a test can reproduce the ordering churn that used to decide
+  /// which artwork a spatial capture was filed under: surfaces must resolve
+  /// each record by its own id, so reordering this list changes nothing they
+  /// display.
+  @visibleForTesting
+  void seedArtworksForTesting(List<Artwork> artworks) {
+    _artworks
+      ..clear()
+      ..addAll(artworks);
+    _artworkById
+      ..clear()
+      ..addEntries(
+        artworks.map((artwork) => MapEntry(artwork.id, artwork)),
+      );
+    notifyListeners();
+  }
+
   @visibleForTesting
   void seedSpatialHistoryForTesting(
     String artworkId,

@@ -18,10 +18,17 @@ class SpatialMarkerDirectory {
     MarkerManagementProvider? management,
     MapMarkerService? mapMarkers,
   })  : _management = management,
-        _mapMarkers = mapMarkers ?? MapMarkerService();
+        _injectedMapMarkers = mapMarkers;
 
   final MarkerManagementProvider? _management;
-  final MapMarkerService _mapMarkers;
+  final MapMarkerService? _injectedMapMarkers;
+
+  /// Resolved on demand, never in the constructor.
+  ///
+  /// [MapMarkerService] is an app-wide singleton that owns a socket bridge and
+  /// telemetry; building one just to render a label would start real
+  /// background work for a widget that may only need the artwork title.
+  MapMarkerService get _mapMarkers => _injectedMapMarkers ?? MapMarkerService();
 
   /// Every marker currently known to the app, own markers first.
   List<ArtMarker> get known {

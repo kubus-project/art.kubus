@@ -184,41 +184,84 @@ class ArStatusPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: KubusSpacing.md,
-        vertical: KubusSpacing.sm,
-      ),
-      decoration: BoxDecoration(
-        color: scheme.surface.withValues(alpha: 0.92),
-        borderRadius: BorderRadius.circular(KubusRadius.xl),
-        border: KubusBorders.accentTint(accent),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // A dot, not an icon: the mode already has its own dock entry, and
-          // the colour is the signal.
-          Container(
-            width: KubusSizes.statusDot,
-            height: KubusSizes.statusDot,
-            decoration: BoxDecoration(color: accent, shape: BoxShape.circle),
-          ),
-          const SizedBox(width: KubusSpacing.sm),
-          Flexible(
-            child: Text(
-              label,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: KubusTextStyles.navLabel.copyWith(
-                color: scheme.onSurface,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
+    final style = KubusTextStyles.navLabel.copyWith(
+      color: scheme.onSurface,
+      fontWeight: FontWeight.w600,
     );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Padding is the first thing the label can take back on a narrow row
+        // at a large text scale, so it is given up only when the label
+        // actually needs it — measured, not guessed from a width threshold
+        // that would be wrong for some language or font.
+        final comfortable = _labelFits(
+          context,
+          style: style,
+          available: constraints.maxWidth -
+              (KubusSpacing.md * 2) -
+              KubusSizes.statusDot -
+              KubusSpacing.sm,
+        );
+        final horizontal = comfortable ? KubusSpacing.md : KubusSpacing.xs;
+        final gap = comfortable ? KubusSpacing.sm : KubusSpacing.xs;
+        return Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: horizontal,
+            vertical: KubusSpacing.sm,
+          ),
+          decoration: BoxDecoration(
+            color: scheme.surface.withValues(alpha: 0.92),
+            borderRadius: BorderRadius.circular(KubusRadius.xl),
+            border: KubusBorders.accentTint(accent),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // A dot, not an icon: the mode already has its own dock entry,
+              // and the colour is the signal.
+              Container(
+                width: KubusSizes.statusDot,
+                height: KubusSizes.statusDot,
+                decoration:
+                    BoxDecoration(color: accent, shape: BoxShape.circle),
+              ),
+              SizedBox(width: gap),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: _maxLines,
+                  overflow: TextOverflow.ellipsis,
+                  style: style,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// Two lines: a status is one or two words, and a word that will not fit on
+  /// one line at an accessible text size still has to be readable.
+  static const int _maxLines = 2;
+
+  /// Whether [label] renders inside [_maxLines] in [available] logical pixels.
+  bool _labelFits(
+    BuildContext context, {
+    required TextStyle style,
+    required double available,
+  }) {
+    if (!available.isFinite) return true;
+    if (available <= 0) return false;
+    final painter = TextPainter(
+      text: TextSpan(text: label, style: style),
+      textDirection: Directionality.of(context),
+      maxLines: _maxLines,
+      textScaler: MediaQuery.textScalerOf(context),
+    )..layout(maxWidth: available);
+    final exceeded = painter.didExceedMaxLines;
+    painter.dispose();
+    return !exceeded;
   }
 }
 
