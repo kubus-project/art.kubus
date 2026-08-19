@@ -91,8 +91,13 @@ class ArTransferReadout {
   final double? fraction;
 }
 
-/// Compact status header. Part of the layout, never an overlay, so it cannot
-/// sit on top of the camera content or the controls.
+/// Compact status header, floating over the edge-to-edge camera. Its
+/// top-to-transparent gradient scrim exists for exactly that: legible text
+/// over unpredictable live camera content, the same visual language as the
+/// controls region below. It never sits on top of the controls — those are
+/// bottom-anchored and the header is top-anchored, so the two can only meet
+/// if the intervening guidance content overflows, which the layout tests
+/// guard against.
 ///
 /// The header carries exactly two things: what the session is doing, and one
 /// overflow affordance. Flash appears only while it is genuinely actionable.
@@ -611,6 +616,13 @@ class ArControlsRegion extends StatelessWidget {
 /// The camera surface is injected, so this composes identically in production
 /// and under test — the structural guarantee the previous mirrored harness
 /// could not give.
+///
+/// Edge-to-edge (Part 6): the camera is a full-bleed `Positioned.fill`
+/// underneath everything, extending behind the status bar rather than being
+/// confined to the space left over once the header/controls reserve their
+/// own rows. Header, guidance and controls float over it inside their own
+/// `SafeArea`, exactly as before — their relative layout to each other is
+/// unchanged, only the camera's own bounds grew to the full screen.
 class ArScreenChrome extends StatelessWidget {
   const ArScreenChrome({
     super.key,
@@ -632,33 +644,41 @@ class ArScreenChrome extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final guidanceCard = guidance;
-    return SafeArea(
-      bottom: false,
-      child: Column(
-        children: [
-          if (header != null) header!,
+    return Stack(
+      children: [
+        // The dominant surface, genuinely edge-to-edge: it is not inset by
+        // SafeArea, so it renders behind the status bar and (via `bottom:
+        // false` below) behind the system navigation area too.
+        Positioned.fill(child: cameraSurface),
+        if (overlay != null) Positioned.fill(child: overlay!),
+        SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              if (header != null) header!,
 
-          // The camera is the dominant surface. Contextual guidance is bounded
-          // inside this region and cannot reach the controls below.
-          Expanded(
-            child: Stack(
-              children: [
-                Positioned.fill(child: cameraSurface),
-                if (overlay != null) Positioned.fill(child: overlay!),
-                if (guidanceCard != null && !guidanceCard.isEmpty)
-                  Positioned(
-                    left: KubusSpacing.lg,
-                    right: KubusSpacing.lg,
-                    bottom: KubusSpacing.md,
-                    child: guidanceCard,
-                  ),
-              ],
-            ),
+              // Contextual guidance is bounded inside this region and cannot
+              // reach the controls below — unchanged from the pre-edge-to-edge
+              // layout, just no longer double-hosting the camera as well.
+              Expanded(
+                child: Stack(
+                  children: [
+                    if (guidanceCard != null && !guidanceCard.isEmpty)
+                      Positioned(
+                        left: KubusSpacing.lg,
+                        right: KubusSpacing.lg,
+                        bottom: KubusSpacing.md,
+                        child: guidanceCard,
+                      ),
+                  ],
+                ),
+              ),
+
+              controls,
+            ],
           ),
-
-          controls,
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

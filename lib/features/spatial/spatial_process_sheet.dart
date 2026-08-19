@@ -48,6 +48,8 @@ class SpatialProcessSheet extends StatelessWidget {
       showModalBottomSheet<SpatialProcessorChoice>(
         context: context,
         useSafeArea: true,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
         builder: (_) => SpatialProcessSheet(
           ownNode: ownNode,
           providersAvailableNow: providersAvailableNow,
@@ -59,59 +61,55 @@ class SpatialProcessSheet extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final roles = KubusColorRoles.of(context);
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(KubusSpacing.lg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            Text(l10n.spatialProcessTitle, style: KubusTextStyles.sheetTitle),
-            const SizedBox(height: KubusSpacing.md),
-            _ProcessorOption(
-              icon: Icons.computer_rounded,
-              accent: roles.statTeal,
-              title: l10n.spatialProcessLocalTitle,
-              body: l10n.spatialProcessOwnNodeSubtitle,
-              // The connection note is the whole difference between LAN and
-              // remote: same Node, same data, different route. Unpaired is
-              // not a disabled state — it is an invitation to pair, reachable
-              // from the exact moment the user needs a processor.
-              note: switch (ownNode) {
-                SpatialOwnNodeReachability.localNetwork =>
-                  l10n.spatialProcessOwnNodeLocal,
-                SpatialOwnNodeReachability.remote =>
-                  l10n.spatialProcessOwnNodeRemote,
-                SpatialOwnNodeReachability.unpaired =>
-                  l10n.spatialProcessOwnNodeUnpaired,
-              },
-              noteColor: ownNode == SpatialOwnNodeReachability.unpaired
-                  ? scheme.onSurfaceVariant
-                  : null,
-              enabled: true,
-              onTap: () => Navigator.of(context).pop(
-                ownNode == SpatialOwnNodeReachability.unpaired
-                    ? SpatialProcessorChoice.connectOwnNode
-                    : SpatialProcessorChoice.ownNode,
-              ),
+    return BackdropGlassSheet(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Text(l10n.spatialProcessTitle, style: KubusTextStyles.sheetTitle),
+          const SizedBox(height: KubusSpacing.md),
+          _ProcessorOption(
+            icon: Icons.computer_rounded,
+            accent: roles.statTeal,
+            title: l10n.spatialProcessLocalTitle,
+            body: l10n.spatialProcessOwnNodeSubtitle,
+            // The connection note is the whole difference between LAN and
+            // remote: same Node, same data, different route. Unpaired is
+            // not a disabled state — it is an invitation to pair, reachable
+            // from the exact moment the user needs a processor.
+            note: switch (ownNode) {
+              SpatialOwnNodeReachability.localNetwork =>
+                l10n.spatialProcessOwnNodeLocal,
+              SpatialOwnNodeReachability.remote =>
+                l10n.spatialProcessOwnNodeRemote,
+              SpatialOwnNodeReachability.unpaired =>
+                l10n.spatialProcessOwnNodeUnpaired,
+            },
+            noteColor: ownNode == SpatialOwnNodeReachability.unpaired
+                ? scheme.onSurfaceVariant
+                : null,
+            enabled: true,
+            onTap: () => Navigator.of(context).pop(
+              ownNode == SpatialOwnNodeReachability.unpaired
+                  ? SpatialProcessorChoice.connectOwnNode
+                  : SpatialProcessorChoice.ownNode,
             ),
-            const SizedBox(height: KubusSpacing.sm),
-            _ProcessorOption(
-              icon: Icons.hub_rounded,
-              accent: roles.statBlue,
-              title: l10n.spatialProcessNetworkTitle,
-              body: l10n.spatialProcessNetworkSubtitle,
-              note: providersAvailableNow
-                  ? null
-                  : l10n.spatialProcessNoProviderNow,
-              noteColor: providersAvailableNow ? null : scheme.onSurfaceVariant,
-              enabled: true,
-              onTap: () => Navigator.of(context).pop(
-                SpatialProcessorChoice.kubusNetwork,
-              ),
+          ),
+          const SizedBox(height: KubusSpacing.sm),
+          _ProcessorOption(
+            icon: Icons.hub_rounded,
+            accent: roles.statBlue,
+            title: l10n.spatialProcessNetworkTitle,
+            body: l10n.spatialProcessNetworkSubtitle,
+            note:
+                providersAvailableNow ? null : l10n.spatialProcessNoProviderNow,
+            noteColor: providersAvailableNow ? null : scheme.onSurfaceVariant,
+            enabled: true,
+            onTap: () => Navigator.of(context).pop(
+              SpatialProcessorChoice.kubusNetwork,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -143,7 +141,8 @@ class _ProcessorOption extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Opacity(
       opacity: enabled ? 1 : 0.5,
-      child: KubusCard(
+      child: LiquidGlassCard(
+        padding: const EdgeInsets.all(KubusSpacing.md),
         onTap: enabled ? onTap : null,
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,

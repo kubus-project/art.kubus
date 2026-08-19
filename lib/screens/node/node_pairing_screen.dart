@@ -12,6 +12,7 @@ import '../../models/kubus_node_models.dart';
 import '../../providers/kubus_node_provider.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/node_state_presentation.dart';
+import '../../widgets/common/kubus_glass_icon_button.dart';
 import '../../widgets/glass/glass_surface.dart';
 import '../../widgets/inline_loading.dart';
 import '../../widgets/kubus_button.dart';
@@ -247,7 +248,7 @@ class _NodePairingScreenState extends State<NodePairingScreen> {
             padding: const EdgeInsets.all(KubusSpacing.md),
             child: Align(
               alignment: Alignment.topLeft,
-              child: _GlassIconButton(
+              child: KubusGlassIconButton(
                 icon: Icons.arrow_back_rounded,
                 tooltip: MaterialLocalizations.of(context).backButtonTooltip,
                 onPressed: () => Navigator.of(context).maybePop(),
@@ -456,35 +457,6 @@ class _ScannerReticle extends StatelessWidget {
               width: KubusBorders.emphasisWidth,
             ),
             borderRadius: BorderRadius.circular(KubusRadius.lg),
-          ),
-        ),
-      );
-}
-
-/// Small round glass control floating over the camera — the back button here,
-/// reusing the canonical [GlassSurface] rather than an opaque app-bar icon.
-class _GlassIconButton extends StatelessWidget {
-  const _GlassIconButton({
-    required this.icon,
-    required this.onPressed,
-    this.tooltip,
-  });
-
-  final IconData icon;
-  final VoidCallback onPressed;
-  final String? tooltip;
-
-  @override
-  Widget build(BuildContext context) => GlassSurface(
-        borderRadius: BorderRadius.circular(KubusRadius.xl),
-        child: SizedBox(
-          width: 44,
-          height: 44,
-          child: IconButton(
-            icon: Icon(icon, color: Colors.white),
-            tooltip: tooltip,
-            onPressed: onPressed,
-            padding: EdgeInsets.zero,
           ),
         ),
       );

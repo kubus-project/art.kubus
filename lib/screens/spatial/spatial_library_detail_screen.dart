@@ -449,13 +449,14 @@ class _SpatialLibraryDetailScreenState
               title: Text(l10n.spatialEditAssociationTitle),
               content: Text(l10n.spatialEditAssociationProcessedWarning),
               actions: <Widget>[
-                TextButton(
+                KubusOutlineButton(
                   onPressed: () => Navigator.of(dialogContext).pop(false),
-                  child: Text(l10n.commonCancel),
+                  label: l10n.commonCancel,
                 ),
-                FilledButton(
+                KubusButton(
                   onPressed: () => Navigator.of(dialogContext).pop(true),
-                  child: Text(l10n.spatialEditAssociationConfirm),
+                  label: l10n.spatialEditAssociationConfirm,
+                  variant: KubusButtonVariant.accent,
                 ),
               ],
             ),
@@ -544,13 +545,14 @@ class _SpatialLibraryDetailScreenState
                 title: Text(l10n.spatialRemotePrivacyTitle),
                 content: Text(l10n.spatialRemotePrivacyBody),
                 actions: <Widget>[
-                  TextButton(
+                  KubusOutlineButton(
                     onPressed: () => Navigator.of(dialogContext).pop(false),
-                    child: Text(l10n.commonCancel),
+                    label: l10n.commonCancel,
                   ),
-                  FilledButton(
+                  KubusButton(
                     onPressed: () => Navigator.of(dialogContext).pop(true),
-                    child: Text(l10n.spatialRemotePrivacyConfirm),
+                    label: l10n.spatialRemotePrivacyConfirm,
+                    variant: KubusButtonVariant.accent,
                   ),
                 ],
               ),
@@ -574,13 +576,14 @@ class _SpatialLibraryDetailScreenState
             title: Text(l10n.spatialLibraryDeleteRecord),
             content: Text(l10n.spatialLibraryDeleteRecordWarning),
             actions: <Widget>[
-              TextButton(
+              KubusOutlineButton(
                 onPressed: () => Navigator.of(dialogContext).pop(false),
-                child: Text(l10n.commonCancel),
+                label: l10n.commonCancel,
               ),
-              FilledButton(
+              KubusButton(
                 onPressed: () => Navigator.of(dialogContext).pop(true),
-                child: Text(l10n.spatialLibraryDeleteRecord),
+                label: l10n.spatialLibraryDeleteRecord,
+                variant: KubusButtonVariant.destructive,
               ),
             ],
           ),

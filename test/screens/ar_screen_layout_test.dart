@@ -383,6 +383,36 @@ void main() {
     });
   });
 
+  group('the camera surface is genuinely edge-to-edge (Part 6)', () {
+    testWidgets(
+      'the camera fills the full screen, including behind the status bar '
+      '— not just the region left over once the header/controls reserve '
+      'their own rows',
+      (tester) async {
+        const size = Size(360, 640);
+        await _pumpChrome(tester, size, 1.0);
+
+        final camera = tester.getRect(find.byType(ColoredBox).first);
+        expect(camera, const Rect.fromLTWH(0, 0, 360, 640));
+      },
+    );
+
+    testWidgets(
+      'the header floats over the camera rather than pushing it down',
+      (tester) async {
+        await _pumpChrome(tester, const Size(360, 640), 1.0);
+
+        final camera = tester.getRect(find.byType(ColoredBox).first);
+        final header = tester.getRect(find.byType(ArStatusHeader));
+
+        // The header sits inside the camera's bounds (floating over it), it
+        // does not start where the camera's bounds end.
+        expect(header.top, greaterThanOrEqualTo(camera.top));
+        expect(header.bottom, lessThanOrEqualTo(camera.bottom));
+      },
+    );
+  });
+
   group('no legacy absolutely-positioned instruction cards', () {
     testWidgets(
       'the chrome positions nothing at a fixed top offset',
