@@ -278,21 +278,37 @@ jobs:
         # exercises the plugin's Kotlin sources.
         run: ./gradlew :arcore_flutter_plugin:testDebugUnitTest --console=plain
       - run: flutter build apk --release
-      - name: Report device-test APK identity
+      - name: Sign and verify the device-test APK
         shell: bash
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           set -euo pipefail
-          apk=build/app/outputs/flutter-apk/app-release.apk
-          "$ANDROID_HOME"/build-tools/36.0.0/apksigner verify             --verbose --print-certs "$apk"
-          sha256sum "$apk"
+          # The release build is unsigned: this repository applies a signing
+          # config only when real release credentials are present, and PR CI
+          # deliberately holds none. An unsigned APK cannot be installed, so
+          # the device-test copy is signed with a throwaway key generated here.
+          # It is never a release identity and never leaves the runner.
+          tools="${ANDROID_HOME}/build-tools/36.0.0"
+          out="art-kubus-ar-spatial-device-test-${HEAD_SHA:0:7}.apk"
+          mkdir -p artifacts/device-test
+          cp build/app/outputs/flutter-apk/app-release.apk "artifacts/device-test/${out}"
+          keytool -genkeypair -keystore device-test.keystore -storepass android \
+            -keypass android -alias devicetest -keyalg RSA -keysize 2048 \
+            -validity 30 -dname 'CN=art.kubus device test, OU=CI, O=kubus, C=SI'
+          "${tools}/apksigner" sign --ks device-test.keystore \
+            --ks-pass pass:android --key-pass pass:android \
+            --ks-key-alias devicetest "artifacts/device-test/${out}"
+          rm -f device-test.keystore
+          "${tools}/apksigner" verify --verbose --print-certs \
+            "artifacts/device-test/${out}"
+          "${tools}/aapt2" dump badging "artifacts/device-test/${out}" | head -3
+          sha256sum "artifacts/device-test/${out}"
       - name: Publish device-test APK
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          # Debug-signed on purpose: PR CI holds no release-signing material,
-          # and creating a second production identity to make a test build
-          # installable would be worse than labelling it for what it is.
           name: art-kubus-ar-spatial-device-test-${{ github.event.pull_request.head.sha || github.sha }}
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: artifacts/device-test/*.apk
           if-no-files-found: error
           retention-days: 14
 

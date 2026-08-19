@@ -467,6 +467,13 @@ class SpatialLibraryProvider extends ChangeNotifier {
     }
   }
 
+  /// Longest gap between provider-discovery attempts.
+  ///
+  /// A request may stay open for a day. Asking every thirty seconds for that
+  /// long is a radio wake-up roughly three thousand times for a question whose
+  /// answer changes slowly, so unanswered searches back off.
+  static const Duration maxProviderSearchInterval = Duration(minutes: 5);
+
   /// Drives one persisted request forward until it terminates.
   ///
   /// Guarded so a resume sweep and a user tap cannot search twice for one
@@ -474,17 +481,31 @@ class SpatialLibraryProvider extends ChangeNotifier {
   Future<void> driveNetworkRequest(String localSpatialId) async {
     if (!_drivingNetworkRequests.add(localSpatialId)) return;
     try {
+      var searchDelay = _providerSearchInterval;
       while (!_disposed) {
         if (await advanceNetworkRequest(localSpatialId)) return;
-        await Future<void>.delayed(
-          (await store.get(localSpatialId))?.networkRequest?.jobId == null
-              ? _providerSearchInterval
-              : _pollInterval,
-        );
+        final running =
+            (await store.get(localSpatialId))?.networkRequest?.jobId != null;
+        if (running) {
+          // A job in flight reports real progress, so it is polled steadily.
+          searchDelay = _providerSearchInterval;
+          await Future<void>.delayed(_pollInterval);
+          continue;
+        }
+        await Future<void>.delayed(searchDelay);
+        searchDelay = _nextSearchDelay(searchDelay);
       }
     } finally {
       _drivingNetworkRequests.remove(localSpatialId);
     }
+  }
+
+  Duration _nextSearchDelay(Duration current) {
+    if (current <= Duration.zero) return current;
+    final doubled = current * 2;
+    return doubled > maxProviderSearchInterval
+        ? maxProviderSearchInterval
+        : doubled;
   }
 
   /// Advances a persisted request by exactly one step.

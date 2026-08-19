@@ -27,6 +27,7 @@ import '../../services/kubus_node_service.dart';
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
 import '../../services/spatial_library_store.dart';
+import '../../utils/artwork_navigation.dart';
 import '../../utils/node_state_presentation.dart';
 import '../../widgets/kubus_kit.dart';
 import '../../widgets/spatial/spatial_viewer.dart';
@@ -186,6 +187,8 @@ class _SpatialLibraryDetailScreenState
                 SpatialLibraryAction.publish,
                 SpatialLibraryAction.viewPublicArchive,
                 SpatialLibraryAction.share,
+                // `viewResult` is deliberately absent: the scene is rendered
+                // above, so a button for it would do nothing visible.
               ]),
             ],
           ),
@@ -375,9 +378,12 @@ class _SpatialLibraryDetailScreenState
       case SpatialLibraryAction.cancelProcessingRequest:
         await _run(() => provider.cancelNetworkRequest(record.localSpatialId));
       case SpatialLibraryAction.viewResult:
+        // The scene is already rendered at the top of this screen.
+        break;
       case SpatialLibraryAction.viewPublicArchive:
-        // Both open the scene already rendered at the top of this screen.
-        Scrollable.ensureVisible(context);
+        // The public archive lives on the artwork, with its full version
+        // history, rather than being duplicated here.
+        await openArtwork(context, record.artworkId, source: 'spatial_library');
       case SpatialLibraryAction.publish:
         await _run(() => provider.publish(record.localSpatialId));
       case SpatialLibraryAction.share:

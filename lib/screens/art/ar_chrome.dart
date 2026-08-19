@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../utils/app_color_utils.dart';
+
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../widgets/inline_loading.dart';
@@ -514,6 +516,9 @@ class ArControlsRegion extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final accent = KubusColorRoles.of(context).screenAccentForKey('ar', scheme);
+    // Contrast-resolved rather than assumed white: the AR accent is a light
+    // teal, and white-on-teal is barely readable over a bright camera feed.
+    final onAccent = AppColorUtils.onColor(accent);
     final action = primaryAction;
 
     return Container(
@@ -544,20 +549,20 @@ class ArControlsRegion extends StatelessWidget {
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: action.onPressed,
-                icon: Icon(action.icon, color: Colors.white),
+                icon: Icon(action.icon, color: onAccent),
                 label: Text(
                   action.label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: KubusTextStyles.detailButton.copyWith(
-                    color: Colors.white,
+                    color: onAccent,
                   ),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: accent,
-                  foregroundColor: Colors.white,
+                  foregroundColor: onAccent,
                   disabledBackgroundColor: accent.withValues(alpha: 0.35),
-                  disabledForegroundColor: Colors.white.withValues(alpha: 0.7),
+                  disabledForegroundColor: onAccent.withValues(alpha: 0.7),
                   padding: const EdgeInsets.symmetric(
                     horizontal: KubusSpacing.lg,
                     vertical: KubusSpacing.md,
