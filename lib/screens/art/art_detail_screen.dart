@@ -356,7 +356,10 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                                 const SizedBox(height: DetailSpacing.cardGap),
                               _buildDescription(artwork),
                               const SizedBox(height: DetailSpacing.cardGap),
-                              ArtworkSpatialArchiveSection(artwork: artwork),
+                              ArtworkSpatialArchiveSection(
+                                artwork: artwork,
+                                contextMarkerId: widget.attendanceMarkerId,
+                              ),
                               const SizedBox(height: DetailSpacing.cardGap),
                               _buildSocialStats(artwork),
                               const SizedBox(height: DetailSpacing.cardGap),

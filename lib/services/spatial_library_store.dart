@@ -7,6 +7,7 @@ import 'package:image/image.dart' as image_lib;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import '../config/config.dart';
 import 'spatial_capture_store.dart';
 
 const Object _notSet = Object();
@@ -1401,7 +1402,9 @@ class SpatialLibraryStore {
       await _saveUnlocked(upgraded);
     } catch (error) {
       if (kDebugMode) {
-        debugPrint('SpatialLibraryStore: schema stamp deferred: $error');
+        AppConfig.debugPrint(
+          'SpatialLibraryStore: schema stamp deferred: $error',
+        );
       }
     }
     return upgraded;

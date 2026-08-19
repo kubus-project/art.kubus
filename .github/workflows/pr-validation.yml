@@ -278,6 +278,23 @@ jobs:
         # exercises the plugin's Kotlin sources.
         run: ./gradlew :arcore_flutter_plugin:testDebugUnitTest --console=plain
       - run: flutter build apk --release
+      - name: Report device-test APK identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk=build/app/outputs/flutter-apk/app-release.apk
+          "$ANDROID_HOME"/build-tools/36.0.0/apksigner verify             --verbose --print-certs "$apk"
+          sha256sum "$apk"
+      - name: Publish device-test APK
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          # Debug-signed on purpose: PR CI holds no release-signing material,
+          # and creating a second production identity to make a test build
+          # installable would be worse than labelling it for what it is.
+          name: art-kubus-ar-spatial-device-test-${{ github.event.pull_request.head.sha || github.sha }}
+          path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+          retention-days: 14
 
   ios:
     name: iOS release compile without codesigning

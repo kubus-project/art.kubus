@@ -31,9 +31,20 @@ import 'spatial_viewer.dart';
 /// archive and its history, the owner's own unpublished drafts, and the one
 /// action that continues the archive rather than starting a parallel one.
 class ArtworkSpatialArchiveSection extends StatefulWidget {
-  const ArtworkSpatialArchiveSection({required this.artwork, super.key});
+  const ArtworkSpatialArchiveSection({
+    required this.artwork,
+    this.contextMarkerId,
+    super.key,
+  });
 
   final Artwork artwork;
+
+  /// The marker this screen was opened from, when it was opened from one.
+  ///
+  /// Preferred over the artwork's own AR marker so a capture launched from a
+  /// specific map pin is filed against that pin, not against whichever marker
+  /// the artwork happens to name.
+  final String? contextMarkerId;
 
   @override
   State<ArtworkSpatialArchiveSection> createState() =>
@@ -209,7 +220,7 @@ class _ArtworkSpatialArchiveSectionState
   Future<void> _startCapture(BuildContext context, bool hasPublic) async {
     final marker = SpatialMarkerDirectory(
       management: context.read<MarkerManagementProvider?>(),
-    ).resolve(widget.artwork.arMarkerId);
+    ).resolve(widget.contextMarkerId ?? widget.artwork.arMarkerId);
     await openArSpatialCapture(
       context,
       SpatialCaptureLaunchRequest.newCapture(

@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 
+import '../config/config.dart';
 import '../models/kubus_node_models.dart';
 import '../models/spatial_capture_target.dart';
 import '../services/backend_api_service.dart';
@@ -437,7 +438,9 @@ class SpatialLibraryProvider extends ChangeNotifier {
         // A provider we cannot reach cannot be told, but the user's intent is
         // still recorded locally rather than silently dropped.
         if (kDebugMode) {
-          debugPrint('SpatialLibrary: remote cancel not delivered: $error');
+          AppConfig.debugPrint(
+            'SpatialLibrary: remote cancel not delivered: $error',
+          );
         }
       }
     }
@@ -546,7 +549,9 @@ class SpatialLibraryProvider extends ChangeNotifier {
       // An unreachable discovery service is a reason to try again later, not
       // a reason to drop the user's request.
       if (kDebugMode) {
-        debugPrint('SpatialLibrary: provider search deferred: $error');
+        AppConfig.debugPrint(
+          'SpatialLibrary: provider search deferred: $error',
+        );
       }
       return null;
     }
@@ -631,7 +636,9 @@ class SpatialLibraryProvider extends ChangeNotifier {
       // A dropped connection is not a failed job. Leave the request open so
       // the next pass — or the next launch — picks it up again.
       if (kDebugMode) {
-        debugPrint('SpatialLibrary: remote job poll deferred: $error');
+        AppConfig.debugPrint(
+          'SpatialLibrary: remote job poll deferred: $error',
+        );
       }
       return false;
     }
@@ -1103,7 +1110,9 @@ class SpatialLibraryProvider extends ChangeNotifier {
         await _requireNode().cancelRemoteJob(request.jobId!);
       } catch (error) {
         if (kDebugMode) {
-          debugPrint('SpatialLibrary: remote cancel not delivered: $error');
+          AppConfig.debugPrint(
+            'SpatialLibrary: remote cancel not delivered: $error',
+          );
         }
       }
     }
