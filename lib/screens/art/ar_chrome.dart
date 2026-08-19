@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../utils/app_color_utils.dart';
 import '../../utils/design_tokens.dart';
+import '../../utils/kubus_color_roles.dart';
 import '../../widgets/inline_loading.dart';
 
 /// The production AR chrome, as widgets rather than inline builders.
@@ -91,30 +91,47 @@ class ArTransferReadout {
 
 /// Compact status header. Part of the layout, never an overlay, so it cannot
 /// sit on top of the camera content or the controls.
+///
+/// The header carries exactly two things: what the session is doing, and one
+/// overflow affordance. Flash appears only while it is genuinely actionable.
+/// Library and AR settings live behind the overflow, because three permanent
+/// icon buttons plus a status pill do not fit a 320dp row at accessible text
+/// sizes — the previous layout clipped the status to unreadable stubs on real
+/// hardware.
 class ArStatusHeader extends StatelessWidget {
   const ArStatusHeader({
     super.key,
-    required this.modeLabel,
-    required this.modeIcon,
-    required this.onOpenSettings,
+    required this.statusLabel,
+    required this.statusAccent,
+    required this.onOpenMore,
+    required this.moreTooltip,
     this.isDark = true,
     this.onToggleFlash,
+    this.flashTooltip,
     this.flashEnabled = false,
-    this.onOpenLibrary,
   });
 
-  final String modeLabel;
-  final IconData modeIcon;
-  final VoidCallback onOpenSettings;
+  /// One or two words. Long-form guidance belongs in [ArContextualGuidance].
+  final String statusLabel;
+
+  /// Semantic status color, resolved by the caller from `KubusColorRoles`.
+  final Color statusAccent;
+
+  final VoidCallback onOpenMore;
+  final String moreTooltip;
   final bool isDark;
+
+  /// Null hides flash entirely. It is only offered while a torch-capable
+  /// camera surface is actually mounted.
   final VoidCallback? onToggleFlash;
+  final String? flashTooltip;
   final bool flashEnabled;
-  final VoidCallback? onOpenLibrary;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final overlayColor = scheme.surface.withValues(alpha: isDark ? 0.8 : 0.95);
+    final flashTint = KubusColorRoles.of(context).statAmber;
 
     return Container(
       padding: const EdgeInsets.all(KubusSpacing.md),
@@ -127,56 +144,78 @@ class ArStatusHeader extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Flexible, not Expanded: at large text scales the label must be
-          // allowed to shrink rather than force the actions off the row.
+          // Flexible, not Expanded: the pill takes the width it needs and
+          // yields the rest, so the actions can never be pushed off the row.
           Flexible(
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: KubusSpacing.md,
-                vertical: KubusSpacing.sm,
-              ),
-              decoration: BoxDecoration(
-                color: scheme.primaryContainer,
-                borderRadius: BorderRadius.circular(KubusRadius.xl),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(modeIcon, color: AppColorUtils.cyanAccent, size: 20),
-                  const SizedBox(width: KubusSpacing.sm),
-                  Flexible(
-                    child: Text(
-                      modeLabel,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: KubusTypography.inter(
-                        color: scheme.onSurface,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            child: ArStatusPill(label: statusLabel, accent: statusAccent),
           ),
-          const Spacer(),
+          const SizedBox(width: KubusSpacing.sm),
           if (onToggleFlash != null) ...[
             _HeaderAction(
               icon: flashEnabled ? Icons.flash_on : Icons.flash_off,
-              tint: flashEnabled ? AppColorUtils.amberAccent : null,
+              tooltip: flashTooltip ?? '',
+              tint: flashEnabled ? flashTint : null,
               onPressed: onToggleFlash!,
             ),
             const SizedBox(width: KubusSpacing.sm),
           ],
-          if (onOpenLibrary != null) ...[
-            _HeaderAction(
-              icon: Icons.video_library_outlined,
-              onPressed: onOpenLibrary!,
+          _HeaderAction(
+            icon: Icons.more_horiz_rounded,
+            tooltip: moreTooltip,
+            onPressed: onOpenMore,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The status pill itself, exposed so layout tests can measure it directly.
+///
+/// Two lines rather than one: at a 2.0 text scale on a 320dp screen a single
+/// line cannot hold "Finding surface" beside a 44dp action, and truncating a
+/// two-word status to "Findi…" tells the user nothing.
+class ArStatusPill extends StatelessWidget {
+  const ArStatusPill({super.key, required this.label, required this.accent});
+
+  final String label;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: KubusSpacing.md,
+        vertical: KubusSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: scheme.surface.withValues(alpha: 0.92),
+        borderRadius: BorderRadius.circular(KubusRadius.xl),
+        border: KubusBorders.accentTint(accent),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // A dot, not an icon: the mode already has its own dock entry, and
+          // the colour is the signal.
+          Container(
+            width: KubusSizes.statusDot,
+            height: KubusSizes.statusDot,
+            decoration: BoxDecoration(color: accent, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: KubusSpacing.sm),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: KubusTextStyles.navLabel.copyWith(
+                color: scheme.onSurface,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-            const SizedBox(width: KubusSpacing.sm),
-          ],
-          _HeaderAction(icon: Icons.settings, onPressed: onOpenSettings),
+          ),
         ],
       ),
     );
@@ -184,33 +223,42 @@ class ArStatusHeader extends StatelessWidget {
 }
 
 class _HeaderAction extends StatelessWidget {
-  const _HeaderAction({required this.icon, required this.onPressed, this.tint});
+  const _HeaderAction({
+    required this.icon,
+    required this.onPressed,
+    required this.tooltip,
+    this.tint,
+  });
 
   final IconData icon;
   final VoidCallback onPressed;
+  final String tooltip;
   final Color? tint;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Container(
-      width: 40,
-      height: 40,
-      decoration: BoxDecoration(
-        color: tint == null
-            ? scheme.primaryContainer
-            : tint!.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(KubusRadius.xl),
-        border: tint == null ? null : Border.all(color: tint!, width: 1.5),
-      ),
-      child: IconButton(
-        padding: EdgeInsets.zero,
-        icon: Icon(
-          icon,
-          color: tint ?? scheme.onSurface,
-          size: KubusHeaderMetrics.actionIcon,
+    return SizedBox(
+      width: KubusHeaderMetrics.actionHitArea,
+      height: KubusHeaderMetrics.actionHitArea,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: tint == null
+              ? scheme.surface.withValues(alpha: 0.92)
+              : tint!.withValues(alpha: 0.2),
+          borderRadius: BorderRadius.circular(KubusRadius.xl),
+          border: KubusBorders.accentTint(tint ?? scheme.outline),
         ),
-        onPressed: onPressed,
+        child: IconButton(
+          padding: EdgeInsets.zero,
+          tooltip: tooltip.isEmpty ? null : tooltip,
+          icon: Icon(
+            icon,
+            color: tint ?? scheme.onSurface,
+            size: KubusHeaderMetrics.actionIcon,
+          ),
+          onPressed: onPressed,
+        ),
       ),
     );
   }
@@ -259,17 +307,18 @@ class ArContextualGuidance extends StatelessWidget {
             Text(
               message!,
               textAlign: TextAlign.center,
-              maxLines: 3,
+              // Session errors and capture guidance land here rather than in
+              // the status pill, so this surface has to hold a sentence.
+              maxLines: 4,
               overflow: TextOverflow.ellipsis,
-              style: KubusTypography.inter(
+              style: KubusTextStyles.navMetaLabel.copyWith(
                 color: scheme.onSurface,
-                fontSize: KubusChromeMetrics.navMetaLabel,
               ),
             ),
           if (capture != null) ...[
             const SizedBox(height: KubusSpacing.sm),
             InlineLoading(
-              height: 6,
+              height: KubusSizes.meterThin,
               progress: capture!.coverage,
               color: scheme.primary,
               animate: capture!.animate,
@@ -286,7 +335,7 @@ class ArContextualGuidance extends StatelessWidget {
           if (transfer != null) ...[
             const SizedBox(height: KubusSpacing.sm),
             InlineLoading(
-              height: 6,
+              height: KubusSizes.meterThin,
               progress: transfer!.fraction,
               color: scheme.primary,
               animate: transfer!.fraction == null,
@@ -322,6 +371,9 @@ class ArModeDock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    // The AR surface accent, resolved through the shared role table rather
+    // than a hard-coded hue, so it tracks the theme like every other screen.
+    final accent = KubusColorRoles.of(context).screenAccentForKey('ar', scheme);
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: KubusSpacing.sm,
@@ -330,16 +382,13 @@ class ArModeDock extends StatelessWidget {
       decoration: BoxDecoration(
         color: scheme.surface.withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(KubusRadius.lg),
-        border: Border.all(
-          color: AppColorUtils.cyanAccent.withValues(alpha: 0.3),
-        ),
+        border: KubusBorders.accentTint(accent),
       ),
       child: Row(
         children: modes.map((mode) {
           final isSelected = mode.id == selectedModeId;
-          final tint = isSelected
-              ? AppColorUtils.cyanAccent
-              : scheme.onSurface.withValues(alpha: 0.6);
+          final tint =
+              isSelected ? accent : scheme.onSurface.withValues(alpha: 0.6);
           return Expanded(
             child: Semantics(
               button: true,
@@ -353,15 +402,12 @@ class ArModeDock extends StatelessWidget {
                       const EdgeInsets.symmetric(vertical: KubusSpacing.sm),
                   decoration: BoxDecoration(
                     color: isSelected
-                        ? AppColorUtils.cyanAccent.withValues(alpha: 0.2)
+                        ? accent.withValues(alpha: 0.2)
                         : Colors.transparent,
                     borderRadius: BorderRadius.circular(KubusRadius.md),
-                    border: Border.all(
-                      color: isSelected
-                          ? AppColorUtils.cyanAccent
-                          : Colors.transparent,
-                      width: 2,
-                    ),
+                    border: isSelected
+                        ? KubusBorders.active(context, accent: accent)
+                        : null,
                   ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -379,9 +425,8 @@ class ArModeDock extends StatelessWidget {
                         child: Text(
                           mode.label,
                           maxLines: 1,
-                          style: KubusTypography.inter(
+                          style: KubusTextStyles.navMetaLabel.copyWith(
                             color: tint,
-                            fontSize: KubusChromeMetrics.navMetaLabel,
                             fontWeight: isSelected
                                 ? FontWeight.w600
                                 : FontWeight.normal,
@@ -425,6 +470,7 @@ class ArControlsRegion extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final accent = KubusColorRoles.of(context).screenAccentForKey('ar', scheme);
     final action = primaryAction;
 
     return Container(
@@ -460,17 +506,14 @@ class ArControlsRegion extends StatelessWidget {
                   action.label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: KubusTypography.inter(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
+                  style: KubusTextStyles.detailButton.copyWith(
                     color: Colors.white,
                   ),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColorUtils.cyanAccent,
+                  backgroundColor: accent,
                   foregroundColor: Colors.white,
-                  disabledBackgroundColor:
-                      AppColorUtils.cyanAccent.withValues(alpha: 0.35),
+                  disabledBackgroundColor: accent.withValues(alpha: 0.35),
                   disabledForegroundColor: Colors.white.withValues(alpha: 0.7),
                   padding: const EdgeInsets.symmetric(
                     horizontal: KubusSpacing.lg,
@@ -479,8 +522,8 @@ class ArControlsRegion extends StatelessWidget {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(KubusRadius.md),
                   ),
-                  elevation: 8,
-                  shadowColor: AppColorUtils.cyanAccent.withValues(alpha: 0.4),
+                  elevation: KubusElevation.raised,
+                  shadowColor: accent.withValues(alpha: 0.4),
                 ),
               ),
             ),

@@ -87,6 +87,7 @@ import 'screens/art/art_detail_screen.dart';
 import 'screens/desktop/art/desktop_artwork_detail_screen.dart';
 import 'screens/desktop/desktop_shell.dart';
 import 'screens/node/kubus_node_screen.dart';
+import 'screens/spatial/spatial_library_detail_screen.dart';
 import 'screens/spatial/spatial_library_screen.dart';
 import 'screens/settings/availability_node_operator_screen.dart';
 import 'screens/desktop/web3/desktop_connect_wallet_screen.dart';
@@ -935,7 +936,19 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
   Map<String, WidgetBuilder> get _namedRoutes => {
         ...ShellRoutes.builders,
         '/ar': (context) => const ARScreen(),
-        '/spatial-library': (context) => const SpatialLibraryScreen(),
+        // A localSpatialId argument opens straight to that capture, so the
+        // "Saved" flow lands on the record it just created rather than on a
+        // list the user then has to search.
+        '/spatial-library': (context) {
+          final arguments = ModalRoute.of(context)?.settings.arguments;
+          final localSpatialId =
+              arguments is String && arguments.trim().isNotEmpty
+                  ? arguments.trim()
+                  : null;
+          return localSpatialId == null
+              ? const SpatialLibraryScreen()
+              : SpatialLibraryDetailScreen(localSpatialId: localSpatialId);
+        },
         '/artwork': (context) {
           final args = ModalRoute.of(context)?.settings.arguments;
           String? artworkId;

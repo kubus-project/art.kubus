@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:art_kubus/models/spatial_capture_target.dart';
 import 'package:art_kubus/providers/spatial_capture_provider.dart';
 import 'package:art_kubus/services/ar_placement_controller.dart';
 import 'package:art_kubus/services/ar_placement_preview.dart';
@@ -47,7 +48,8 @@ void main() {
     test('capture cannot start before tracking', () async {
       await ar.initialize();
       ar.completeInitialization();
-      await capture.begin(artworkId: 'art-1');
+      await capture.begin(
+          target: const SpatialCaptureTarget(artworkId: 'art-1'));
       final session = buildSession();
 
       final outcome = await session.tick();
@@ -60,7 +62,8 @@ void main() {
       await ar.initialize();
       ar.completeInitialization();
       ar.acquireTracking();
-      await capture.begin(artworkId: 'art-1');
+      await capture.begin(
+          target: const SpatialCaptureTarget(artworkId: 'art-1'));
       final session = buildSession();
 
       expect(await session.tick(), SpatialSampleOutcome.accepted);
@@ -82,7 +85,8 @@ void main() {
       ar
         ..completeInitialization()
         ..acquireTracking();
-      await capture.begin(artworkId: 'art-1');
+      await capture.begin(
+          target: const SpatialCaptureTarget(artworkId: 'art-1'));
       final session = buildSession();
       await session.tick();
       await session.tick();
@@ -101,7 +105,8 @@ void main() {
       ar
         ..completeInitialization()
         ..acquireTracking();
-      await capture.begin(artworkId: 'art-1');
+      await capture.begin(
+          target: const SpatialCaptureTarget(artworkId: 'art-1'));
       final session = buildSession();
       await session.tick();
 
@@ -122,7 +127,8 @@ void main() {
         ..completeInitialization()
         ..acquireTracking()
         ..queueTransientFrameMiss();
-      await capture.begin(artworkId: 'art-1');
+      await capture.begin(
+          target: const SpatialCaptureTarget(artworkId: 'art-1'));
       final errors = <Object>[];
       final session = buildSession(onError: errors.add);
 
@@ -141,7 +147,8 @@ void main() {
         ..completeInitialization()
         ..acquireTracking()
         ..queueFatalCaptureError();
-      await capture.begin(artworkId: 'art-1');
+      await capture.begin(
+          target: const SpatialCaptureTarget(artworkId: 'art-1'));
       final errors = <Object>[];
       final session = buildSession(onError: errors.add);
 
@@ -158,7 +165,8 @@ void main() {
       ar
         ..completeInitialization()
         ..acquireTracking();
-      await capture.begin(artworkId: 'art-1');
+      await capture.begin(
+          target: const SpatialCaptureTarget(artworkId: 'art-1'));
       final errors = <Object>[];
       final session = buildSession(onError: errors.add);
 

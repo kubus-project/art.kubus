@@ -44,6 +44,7 @@ Future<void> _pumpChrome(
   ArCaptureReadout? capture,
   ArTransferReadout? transfer,
   String selectedModeId = 'place',
+  String statusLabel = 'Tracking',
   bool enabled = true,
   bool showPrimary = true,
   String primaryLabel = _primaryLabel,
@@ -67,9 +68,10 @@ Future<void> _pumpChrome(
           backgroundColor: Colors.transparent,
           body: ArScreenChrome(
             header: ArStatusHeader(
-              modeLabel: 'Place',
-              modeIcon: Icons.add_location,
-              onOpenSettings: () {},
+              statusLabel: statusLabel,
+              statusAccent: const Color(0xFF4ECDC4),
+              moreTooltip: 'More actions',
+              onOpenMore: () {},
             ),
             // Stands in for the ARCore platform view.
             cameraSurface: const ColoredBox(color: Colors.black),

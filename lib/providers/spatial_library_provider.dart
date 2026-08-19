@@ -5,12 +5,25 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 
 import '../models/kubus_node_models.dart';
+import '../models/spatial_capture_target.dart';
 import '../services/backend_api_service.dart';
 import '../services/kubus_node_service.dart';
 import '../services/spatial_capture_store.dart';
 import '../services/spatial_library_store.dart';
 import '../services/spatial_result_importer.dart';
 import 'kubus_node_provider.dart';
+
+/// How the user's own paired Node can be reached right now.
+enum SpatialOwnNodeReachability {
+  /// No Node is paired to this device.
+  unpaired,
+
+  /// Reachable on the local network.
+  localNetwork,
+
+  /// Reachable over remote HTTPS. Still the user's own Node.
+  remote,
+}
 
 abstract class SpatialPublicationClient {
   Future<Map<String, dynamic>> publish({
@@ -69,9 +82,83 @@ class SpatialLibraryProvider extends ChangeNotifier {
   bool _loading = false;
   String? _error;
 
+  /// Records whose persisted network request is currently being driven, so a
+  /// resume sweep and a user tap cannot start two searches for one capture.
+  final Set<String> _drivingNetworkRequests = <String>{};
+
+  /// How long an unmatched network request stays open before it expires.
+  static const Duration networkRequestLifetime = Duration(hours: 24);
+
+  /// Gap between provider-discovery attempts for an open request.
+  static const Duration providerSearchInterval = Duration(seconds: 30);
+
   List<SpatialLibraryRecord> get records => List.unmodifiable(_records);
   bool get loading => _loading;
   String? get error => _error;
+
+  /// One record by id, without a linear scan at every call site.
+  SpatialLibraryRecord? recordFor(String localSpatialId) {
+    for (final record in _records) {
+      if (record.localSpatialId == localSpatialId) return record;
+    }
+    return null;
+  }
+
+  /// The records captured for one artwork, newest first.
+  ///
+  /// Resolved from each record's own `artworkId`, never from a shared
+  /// selection, so one artwork's drafts cannot appear under another.
+  List<SpatialLibraryRecord> recordsForArtwork(String artworkId) {
+    final id = artworkId.trim();
+    if (id.isEmpty) return const <SpatialLibraryRecord>[];
+    return _records
+        .where((record) => record.artworkId == id)
+        .toList(growable: false);
+  }
+
+  /// Every local record in one capture lineage, oldest revision first.
+  List<SpatialLibraryRecord> lineageOf(SpatialLibraryRecord record) {
+    var root = record;
+    // Walk to the oldest ancestor still on the device.
+    final guard = <String>{root.localSpatialId};
+    while (root.parentLocalSpatialId != null) {
+      final parent = recordFor(root.parentLocalSpatialId!);
+      if (parent == null || !guard.add(parent.localSpatialId)) break;
+      root = parent;
+    }
+    final lineage = <SpatialLibraryRecord>[root];
+    var changed = true;
+    while (changed) {
+      changed = false;
+      for (final candidate in _records) {
+        if (lineage
+            .any((item) => item.localSpatialId == candidate.localSpatialId)) {
+          continue;
+        }
+        final parentId = candidate.parentLocalSpatialId;
+        if (parentId == null) continue;
+        if (!lineage.any((item) => item.localSpatialId == parentId)) continue;
+        lineage.add(candidate);
+        changed = true;
+      }
+    }
+    lineage.sort((a, b) => a.revision.compareTo(b.revision));
+    return List<SpatialLibraryRecord>.unmodifiable(lineage);
+  }
+
+  bool _disposed = false;
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+
+  @override
+  void notifyListeners() {
+    if (_disposed) return;
+    super.notifyListeners();
+  }
 
   void bindNode(KubusNodeProvider node) {
     if (identical(_node, node)) return;
@@ -86,6 +173,8 @@ class SpatialLibraryProvider extends ChangeNotifier {
     await store.migrateLegacy(legacyRoot);
     await store.recoverInterruptedProcessing();
     await reload();
+    // A request the user made before closing the app is still their request.
+    await resumeNetworkRequests();
   }
 
   Future<void> reload() async {
@@ -121,6 +210,9 @@ class SpatialLibraryProvider extends ChangeNotifier {
         SpatialLibraryProcessingState.queued,
         target: 'ownNode',
       );
+      // Choosing the user's own Node retires any open network request: two
+      // processors racing on one capture is never what the user asked for.
+      await _retireNetworkRequest(localSpatialId);
       final job = await node.startReconstruction(
         captureId: record.nodeCaptureId!,
         artworkId: record.artworkId,
@@ -164,12 +256,313 @@ class SpatialLibraryProvider extends ChangeNotifier {
     }
   }
 
+  /// Processes on a provider the caller has already chosen, and waits.
+  ///
+  /// Built on the same persisted request as [requestNetworkProcessing] rather
+  /// than beside it, so there is one network state machine: a caller that
+  /// awaits and a caller that walks away see the same durable record.
   Future<SpatialLibraryRecord> processWithNetwork(
     String localSpatialId,
     KubusComputeCandidate provider,
   ) async {
-    final node = _requireNode();
+    final now = DateTime.now().toUtc();
+    final opened = SpatialNetworkRequest(
+      state: SpatialNetworkRequestState.networkRequested,
+      requestedAt: now,
+      updatedAt: now,
+      requestId: 'netreq-${now.microsecondsSinceEpoch}',
+    );
+    await store.recordNetworkRequest(
+      localSpatialId,
+      opened,
+      processingState: SpatialLibraryProcessingState.waitingForProcessor,
+    );
+    if (!await _startRemoteJob(localSpatialId, opened, provider)) {
+      throw StateError(
+        (await store.get(localSpatialId))?.networkRequest?.failureCode ??
+            'network_compute_failed',
+      );
+    }
+    while (!_disposed) {
+      final record = await store.get(localSpatialId);
+      final request = record?.networkRequest;
+      if (record == null || request == null || !request.isActive) break;
+      final jobId = request.jobId;
+      if (jobId == null || jobId.isEmpty) break;
+      if (await _pollRemoteJob(localSpatialId, record, request, jobId)) break;
+      await Future<void>.delayed(_pollInterval);
+    }
+    final settled = await store.get(localSpatialId);
+    if (settled?.networkRequest?.state != SpatialNetworkRequestState.complete) {
+      throw StateError(
+        settled?.networkRequest?.failureCode ?? 'network_compute_failed',
+      );
+    }
+    await reload();
+    return settled!;
+  }
+
+  Future<List<KubusComputeCandidate>> loadNetworkCandidates(
+    SpatialLibraryRecord record,
+  ) =>
+      _requireNode().loadComputeCandidates(inputBytes: record.sourceBytes);
+
+  /// Whether the paired Node is reachable and, if so, how.
+  ///
+  /// "My Node over the LAN" and "my Node over HTTPS" are the same Node and the
+  /// same trust relationship; only the route differs. Neither is the same as
+  /// a third party's GPU, so the UI must never present them as one list of
+  /// interchangeable processors.
+  SpatialOwnNodeReachability get ownNodeReachability {
+    final node = _node;
+    if (node == null || !node.isPaired) {
+      return SpatialOwnNodeReachability.unpaired;
+    }
+    return node.service.isEndpointOnLocalNetwork
+        ? SpatialOwnNodeReachability.localNetwork
+        : SpatialOwnNodeReachability.remote;
+  }
+
+  // ---------------------------------------------------------------------
+  // Association and local metadata
+  // ---------------------------------------------------------------------
+
+  /// Repoints a record at a different artwork and/or marker.
+  ///
+  /// Refuses to touch a published record: its association is part of what the
+  /// public archive claims. The caller branches a revision instead.
+  Future<SpatialLibraryRecord> updateAssociation(
+    String localSpatialId,
+    SpatialCaptureTarget target,
+  ) async {
+    final record = await store.updateAssociation(
+      localSpatialId,
+      artworkId: target.artworkId,
+      markerId: target.markerId,
+      artworkTitleSnapshot: target.artworkTitleSnapshot,
+      artistNameSnapshot: target.artistNameSnapshot,
+      markerLabelSnapshot: target.markerLabelSnapshot,
+    );
+    await reload();
+    return record;
+  }
+
+  /// Updates the user-authored name and note. Technical facts are not
+  /// reachable from here.
+  Future<SpatialLibraryRecord> updateMetadata(
+    String localSpatialId, {
+    String? displayName,
+    String? note,
+  }) async {
+    final record = await store.updateLocalMetadata(
+      localSpatialId,
+      displayName: displayName,
+      note: note,
+    );
+    await reload();
+    return record;
+  }
+
+  /// Branches a new private draft from an existing record.
+  ///
+  /// The parent keeps everything it has, published archives included. The
+  /// branch starts from a copy of the parent's raw source so the user extends
+  /// the archive rather than restarting it.
+  Future<SpatialLibraryRecord> createRevision(String localSpatialId) async {
+    final record = await store.createRevision(
+      localSpatialId,
+      newLocalSpatialId:
+          'capture-${DateTime.now().toUtc().microsecondsSinceEpoch}',
+    );
+    await reload();
+    return record;
+  }
+
+  // ---------------------------------------------------------------------
+  // Durable network compute requests
+  // ---------------------------------------------------------------------
+
+  /// Opens a durable request for network compute.
+  ///
+  /// Deliberately independent of whether a provider is discoverable right now:
+  /// network compute is asynchronous, so "no provider answered in the last two
+  /// seconds" is not a reason to withhold the option. The request is written to
+  /// disk first and driven afterwards, so it survives the app being closed.
+  Future<SpatialLibraryRecord> requestNetworkProcessing(
+    String localSpatialId,
+  ) async {
+    final current = await store.get(localSpatialId);
+    if (current == null) throw StateError('record_missing');
+    if (!current.rawPresent) throw StateError('raw_source_required');
+    final now = DateTime.now().toUtc();
+    final record = await store.recordNetworkRequest(
+      localSpatialId,
+      SpatialNetworkRequest(
+        state: SpatialNetworkRequestState.networkRequested,
+        requestedAt: now,
+        updatedAt: now,
+        requestId: 'netreq-${now.microsecondsSinceEpoch}',
+      ),
+      processingState: SpatialLibraryProcessingState.waitingForProcessor,
+    );
+    await reload();
+    unawaited(driveNetworkRequest(localSpatialId));
+    return record;
+  }
+
+  /// Withdraws an open request, telling the provider where the protocol
+  /// supports it.
+  Future<SpatialLibraryRecord> cancelNetworkRequest(
+    String localSpatialId,
+  ) async {
+    final current = await store.get(localSpatialId);
+    if (current == null) throw StateError('record_missing');
+    final request = current.networkRequest;
+    if (request == null || !request.isCancellable) {
+      throw StateError('request_not_cancellable');
+    }
+    final jobId = request.jobId;
+    if (jobId != null && jobId.isNotEmpty) {
+      try {
+        await _requireNode().cancelRemoteJob(jobId);
+      } catch (error) {
+        // A provider we cannot reach cannot be told, but the user's intent is
+        // still recorded locally rather than silently dropped.
+        if (kDebugMode) {
+          debugPrint('SpatialLibrary: remote cancel not delivered: $error');
+        }
+      }
+    }
+    final record = await store.recordNetworkRequest(
+      localSpatialId,
+      request.copyWith(
+        state: SpatialNetworkRequestState.cancelled,
+        updatedAt: DateTime.now().toUtc(),
+      ),
+      processingState: SpatialLibraryProcessingState.capturedPrivate,
+    );
+    await reload();
+    return record;
+  }
+
+  /// Picks up every request left open by a previous run.
+  ///
+  /// Called during initialization so closing the app never loses a request:
+  /// the capture still reads "Finding a processor" when the user comes back.
+  Future<void> resumeNetworkRequests() async {
+    for (final record in _records) {
+      if (record.networkRequest?.isActive != true) continue;
+      unawaited(driveNetworkRequest(record.localSpatialId));
+    }
+  }
+
+  /// Drives one persisted request forward until it terminates.
+  ///
+  /// Re-reads the record every pass, so a cancel, a delete, or a second
+  /// caller stops this loop rather than racing it.
+  @visibleForTesting
+  Future<void> driveNetworkRequest(String localSpatialId) async {
+    if (!_drivingNetworkRequests.add(localSpatialId)) return;
     try {
+      while (!_disposed) {
+        final record = await store.get(localSpatialId);
+        final request = record?.networkRequest;
+        if (record == null || request == null || !request.isActive) return;
+
+        if (DateTime.now().toUtc().difference(request.requestedAt) >
+                networkRequestLifetime &&
+            request.jobId == null) {
+          await _finishNetworkRequest(
+            localSpatialId,
+            request.copyWith(
+              state: SpatialNetworkRequestState.expired,
+              updatedAt: DateTime.now().toUtc(),
+              failureCode: 'network_request_expired',
+            ),
+            SpatialLibraryProcessingState.failedRetryable,
+          );
+          return;
+        }
+
+        final jobId = request.jobId;
+        if (jobId != null && jobId.isNotEmpty) {
+          if (await _pollRemoteJob(localSpatialId, record, request, jobId)) {
+            return;
+          }
+          await Future<void>.delayed(_pollInterval);
+          continue;
+        }
+
+        final provider = await _findProvider(localSpatialId, record, request);
+        if (provider == null) {
+          await Future<void>.delayed(providerSearchInterval);
+          continue;
+        }
+        if (!await _startRemoteJob(localSpatialId, request, provider)) return;
+      }
+    } finally {
+      _drivingNetworkRequests.remove(localSpatialId);
+    }
+  }
+
+  /// Looks for a provider once. Null means "none right now", not "never".
+  Future<KubusComputeCandidate?> _findProvider(
+    String localSpatialId,
+    SpatialLibraryRecord record,
+    SpatialNetworkRequest request,
+  ) async {
+    if (request.state != SpatialNetworkRequestState.searchingProvider) {
+      await store.recordNetworkRequest(
+        localSpatialId,
+        request.copyWith(
+          state: SpatialNetworkRequestState.searchingProvider,
+          updatedAt: DateTime.now().toUtc(),
+        ),
+        processingState: SpatialLibraryProcessingState.waitingForProcessor,
+      );
+      await reload();
+    }
+    try {
+      final candidates = await loadNetworkCandidates(record);
+      return candidates.isEmpty ? null : candidates.first;
+    } catch (error) {
+      // An unreachable discovery service is a reason to try again later, not
+      // a reason to drop the user's request.
+      if (kDebugMode) {
+        debugPrint('SpatialLibrary: provider search deferred: $error');
+      }
+      return null;
+    }
+  }
+
+  /// Uploads the source and hands the job to [provider].
+  ///
+  /// Returns false when the loop should stop — a failure the user has to act
+  /// on rather than something waiting will fix.
+  Future<bool> _startRemoteJob(
+    String localSpatialId,
+    SpatialNetworkRequest request,
+    KubusComputeCandidate provider,
+  ) async {
+    final offered = request.copyWith(
+      state: SpatialNetworkRequestState.providerOffered,
+      updatedAt: DateTime.now().toUtc(),
+      providerNodeId: provider.nodeId,
+      providerLabel: provider.label,
+      providerTier: provider.worker['tier']?.toString(),
+      queuedAhead: provider.jobsAhead,
+      estimatedDurationSeconds:
+          _protocolInt(provider.queue['estimatedWaitSeconds']),
+      estimatedCostKub8: _protocolDouble(provider.worker['priceKub8']),
+    );
+    await store.recordNetworkRequest(
+      localSpatialId,
+      offered,
+      processingState: SpatialLibraryProcessingState.waitingForProcessor,
+    );
+    await reload();
+    try {
+      final node = _requireNode();
       final record = await _uploadToNode(localSpatialId, node);
       final job = await node.startRemoteReconstruction(
         captureId: record.nodeCaptureId!,
@@ -182,63 +575,182 @@ class SpatialLibraryProvider extends ChangeNotifier {
           'outputTier': 'mobile_archive',
         },
       );
-      await store.recordJob(
+      await store.recordNetworkRequest(
         localSpatialId,
-        jobId: job.id,
-        networkProviderNodeId: provider.nodeId,
-        networkRequestId: job.id,
-        state: SpatialLibraryProcessingState.queued,
+        offered.copyWith(
+          state: SpatialNetworkRequestState.providerAccepted,
+          updatedAt: DateTime.now().toUtc(),
+          jobId: job.id,
+        ),
+        processingState: SpatialLibraryProcessingState.queued,
       );
-      while (true) {
-        final current = await node.refreshRemoteJob(job.id);
-        if (const <String>{
-          'OUTPUT_READY',
-          'VERIFYING',
-          'VERIFIED',
-          'COMPLETED',
-        }.contains(current.state)) {
-          final result = await node.retrieveRemoteResult(job.id);
-          final spatialId = result['id']?.toString() ?? '';
-          if (spatialId.isEmpty) throw StateError('spatial_result_missing');
-          final imported = await _importer.importFromNode(
-            localSpatialId: localSpatialId,
-            spatialId: spatialId,
-            node: node.service,
-          );
-          await node.acknowledgeRemoteResult(job.id, accepted: true);
-          await reload();
-          return imported;
-        }
-        if (const <String>{
-          'DECLINED',
-          'EXPIRED',
-          'FAILED',
-          'CANCELLED',
-          'DISPUTED',
-        }.contains(current.state)) {
-          throw StateError(
-            current.failure?['reason']?.toString() ?? 'network_compute_failed',
-          );
-        }
-        await store.updateProcessing(
-          localSpatialId,
-          current.state == 'RUNNING'
-              ? SpatialLibraryProcessingState.processing
-              : SpatialLibraryProcessingState.queued,
-          target: 'networkGpu',
-        );
-        await Future<void>.delayed(_pollInterval);
-      }
+      await reload();
+      return true;
     } catch (error) {
-      await _recordProcessingFailure(localSpatialId, error);
-      rethrow;
+      await _finishNetworkRequest(
+        localSpatialId,
+        offered.copyWith(
+          state: SpatialNetworkRequestState.failed,
+          updatedAt: DateTime.now().toUtc(),
+          failureCode: _failureCodeFor(error),
+        ),
+        SpatialLibraryProcessingState.failedRetryable,
+      );
+      return false;
     }
   }
 
-  Future<List<KubusComputeCandidate>> loadNetworkCandidates(
+  /// Advances a running remote job by one poll. True means the loop is done.
+  Future<bool> _pollRemoteJob(
+    String localSpatialId,
     SpatialLibraryRecord record,
-  ) =>
-      _requireNode().loadComputeCandidates(inputBytes: record.sourceBytes);
+    SpatialNetworkRequest request,
+    String jobId,
+  ) async {
+    final KubusRemoteComputeJob job;
+    try {
+      job = await _requireNode().refreshRemoteJob(jobId);
+    } catch (error) {
+      // A dropped connection is not a failed job. Leave the request open so
+      // the next pass — or the next launch — picks it up again.
+      if (kDebugMode) {
+        debugPrint('SpatialLibrary: remote job poll deferred: $error');
+      }
+      return false;
+    }
+
+    if (const <String>{
+      'OUTPUT_READY',
+      'VERIFYING',
+      'VERIFIED',
+      'COMPLETED',
+    }.contains(job.state)) {
+      await store.recordNetworkRequest(
+        localSpatialId,
+        request.copyWith(
+          state: SpatialNetworkRequestState.downloading,
+          updatedAt: DateTime.now().toUtc(),
+        ),
+        processingState: SpatialLibraryProcessingState.downloadingResult,
+      );
+      await reload();
+      try {
+        final node = _requireNode();
+        final result = await node.retrieveRemoteResult(jobId);
+        final spatialId = result['id']?.toString() ?? '';
+        if (spatialId.isEmpty) throw StateError('spatial_result_missing');
+        await _importer.importFromNode(
+          localSpatialId: localSpatialId,
+          spatialId: spatialId,
+          node: node.service,
+        );
+        await node.acknowledgeRemoteResult(jobId, accepted: true);
+        await store.recordNetworkRequest(
+          localSpatialId,
+          request.copyWith(
+            state: SpatialNetworkRequestState.complete,
+            updatedAt: DateTime.now().toUtc(),
+          ),
+          processingState: SpatialLibraryProcessingState.readyPrivate,
+        );
+        await reload();
+      } catch (error) {
+        await _finishNetworkRequest(
+          localSpatialId,
+          request.copyWith(
+            state: SpatialNetworkRequestState.failed,
+            updatedAt: DateTime.now().toUtc(),
+            failureCode: _failureCodeFor(error),
+          ),
+          SpatialLibraryProcessingState.failedRetryable,
+        );
+      }
+      return true;
+    }
+
+    if (const <String>{'DECLINED', 'EXPIRED'}.contains(job.state)) {
+      await _finishNetworkRequest(
+        localSpatialId,
+        request.copyWith(
+          state: job.state == 'EXPIRED'
+              ? SpatialNetworkRequestState.expired
+              : SpatialNetworkRequestState.failed,
+          updatedAt: DateTime.now().toUtc(),
+          failureCode: job.state == 'EXPIRED'
+              ? 'network_request_expired'
+              : 'provider_declined',
+        ),
+        SpatialLibraryProcessingState.failedRetryable,
+      );
+      return true;
+    }
+
+    if (const <String>{'FAILED', 'CANCELLED', 'DISPUTED'}.contains(job.state)) {
+      await _finishNetworkRequest(
+        localSpatialId,
+        request.copyWith(
+          state: job.state == 'CANCELLED'
+              ? SpatialNetworkRequestState.cancelled
+              : SpatialNetworkRequestState.failed,
+          updatedAt: DateTime.now().toUtc(),
+          failureCode:
+              job.failure?['reason']?.toString() ?? 'network_compute_failed',
+        ),
+        job.state == 'CANCELLED'
+            ? SpatialLibraryProcessingState.capturedPrivate
+            : SpatialLibraryProcessingState.failedRetryable,
+      );
+      return true;
+    }
+
+    final next = job.state == 'RUNNING'
+        ? SpatialNetworkRequestState.processing
+        : SpatialNetworkRequestState.queued;
+    if (next != request.state) {
+      await store.recordNetworkRequest(
+        localSpatialId,
+        request.copyWith(state: next, updatedAt: DateTime.now().toUtc()),
+        processingState: next == SpatialNetworkRequestState.processing
+            ? SpatialLibraryProcessingState.processing
+            : SpatialLibraryProcessingState.queued,
+      );
+      await reload();
+    }
+    return false;
+  }
+
+  Future<void> _finishNetworkRequest(
+    String localSpatialId,
+    SpatialNetworkRequest request,
+    SpatialLibraryProcessingState processingState,
+  ) async {
+    await store.recordNetworkRequest(
+      localSpatialId,
+      request,
+      processingState: processingState,
+    );
+    if (request.failureCode != null) {
+      await store.recordFailure(localSpatialId, code: request.failureCode!);
+    }
+    await reload();
+  }
+
+  static int? _protocolInt(Object? value) =>
+      value is num ? value.toInt() : int.tryParse(value?.toString() ?? '');
+
+  static double? _protocolDouble(Object? value) => value is num
+      ? value.toDouble()
+      : double.tryParse(value?.toString() ?? '');
+
+  static String _failureCodeFor(Object error) {
+    if (error is KubusNodeIdentityException) return 'node_identity_mismatch';
+    if (error is SpatialResultValidationException) return error.code;
+    if (error is StateError) {
+      final message = error.message;
+      if (message.isNotEmpty) return message;
+    }
+    return 'network_compute_failed';
+  }
 
   Future<SpatialContent> loadLocalContent(String localSpatialId) async {
     final record = await store.get(localSpatialId);
@@ -250,6 +762,12 @@ class SpatialLibraryProvider extends ChangeNotifier {
     var record = await store.get(localSpatialId);
     if (record == null || !record.hasLocalResult) {
       throw StateError('ready_private_result_required');
+    }
+    if (record.resultStale) {
+      // The scene on disk no longer describes the capture it came from.
+      // Publishing it would archive a version of the artwork that never
+      // existed as a single scan.
+      throw StateError('result_stale_reprocess_required');
     }
     await store.recordPublication(
       localSpatialId,
@@ -556,6 +1074,23 @@ class SpatialLibraryProvider extends ChangeNotifier {
       totalBytes: totalBytes,
     );
     return record;
+  }
+
+  /// Cancels and clears an open network request, best effort.
+  Future<void> _retireNetworkRequest(String localSpatialId) async {
+    final record = await store.get(localSpatialId);
+    final request = record?.networkRequest;
+    if (request == null) return;
+    if (request.isCancellable && (request.jobId ?? '').isNotEmpty) {
+      try {
+        await _requireNode().cancelRemoteJob(request.jobId!);
+      } catch (error) {
+        if (kDebugMode) {
+          debugPrint('SpatialLibrary: remote cancel not delivered: $error');
+        }
+      }
+    }
+    await store.clearNetworkRequest(localSpatialId);
   }
 
   Future<void> _recordProcessingFailure(

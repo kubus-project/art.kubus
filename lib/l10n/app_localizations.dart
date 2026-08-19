@@ -27977,6 +27977,630 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'That action could not be completed. Your private source remains intact.'**
   String get spatialLibraryOperationFailed;
+
+  /// No description provided for @arStatusTracking.
+  ///
+  /// In en, this message translates to:
+  /// **'Tracking'**
+  String get arStatusTracking;
+
+  /// No description provided for @arStatusFindingSurface.
+  ///
+  /// In en, this message translates to:
+  /// **'Finding surface'**
+  String get arStatusFindingSurface;
+
+  /// No description provided for @arStatusCapturing.
+  ///
+  /// In en, this message translates to:
+  /// **'Capturing'**
+  String get arStatusCapturing;
+
+  /// No description provided for @arStatusPaused.
+  ///
+  /// In en, this message translates to:
+  /// **'Paused'**
+  String get arStatusPaused;
+
+  /// No description provided for @arStatusError.
+  ///
+  /// In en, this message translates to:
+  /// **'Error'**
+  String get arStatusError;
+
+  /// No description provided for @arStatusSwitching.
+  ///
+  /// In en, this message translates to:
+  /// **'Switching'**
+  String get arStatusSwitching;
+
+  /// No description provided for @arMoreActions.
+  ///
+  /// In en, this message translates to:
+  /// **'More actions'**
+  String get arMoreActions;
+
+  /// No description provided for @arToggleFlash.
+  ///
+  /// In en, this message translates to:
+  /// **'Flash'**
+  String get arToggleFlash;
+
+  /// No description provided for @arOpenArSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'AR settings'**
+  String get arOpenArSettings;
+
+  /// No description provided for @spatialTargetPickerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the artwork'**
+  String get spatialTargetPickerTitle;
+
+  /// No description provided for @spatialTargetPickerSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Every spatial capture is filed under one artwork.'**
+  String get spatialTargetPickerSubtitle;
+
+  /// No description provided for @spatialTargetSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search artworks'**
+  String get spatialTargetSearchHint;
+
+  /// No description provided for @spatialTargetNoArtworksTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No artworks yet'**
+  String get spatialTargetNoArtworksTitle;
+
+  /// No description provided for @spatialTargetNoArtworksBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Add an artwork before capturing spatial data for it.'**
+  String get spatialTargetNoArtworksBody;
+
+  /// No description provided for @spatialTargetNoResultsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No matches'**
+  String get spatialTargetNoResultsTitle;
+
+  /// No description provided for @spatialTargetNoResultsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'No artwork matches that search.'**
+  String get spatialTargetNoResultsBody;
+
+  /// No description provided for @spatialTargetMarkerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a marker'**
+  String get spatialTargetMarkerTitle;
+
+  /// No description provided for @spatialTargetMarkerSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional. Links this capture to a specific location or AR marker.'**
+  String get spatialTargetMarkerSubtitle;
+
+  /// No description provided for @spatialTargetNoMarker.
+  ///
+  /// In en, this message translates to:
+  /// **'No specific marker'**
+  String get spatialTargetNoMarker;
+
+  /// No description provided for @spatialTargetChangeArtwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Change artwork'**
+  String get spatialTargetChangeArtwork;
+
+  /// No description provided for @spatialMarkerKindLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Map location'**
+  String get spatialMarkerKindLocation;
+
+  /// No description provided for @spatialMarkerKindConfiguration.
+  ///
+  /// In en, this message translates to:
+  /// **'AR marker'**
+  String get spatialMarkerKindConfiguration;
+
+  /// No description provided for @spatialLibraryStatusReprocessNeeded.
+  ///
+  /// In en, this message translates to:
+  /// **'Reprocessing required'**
+  String get spatialLibraryStatusReprocessNeeded;
+
+  /// No description provided for @spatialLibraryStatusPublishing.
+  ///
+  /// In en, this message translates to:
+  /// **'Publishing'**
+  String get spatialLibraryStatusPublishing;
+
+  /// No description provided for @spatialNetworkStateRequested.
+  ///
+  /// In en, this message translates to:
+  /// **'Requested'**
+  String get spatialNetworkStateRequested;
+
+  /// No description provided for @spatialNetworkStateSearching.
+  ///
+  /// In en, this message translates to:
+  /// **'Finding a processor'**
+  String get spatialNetworkStateSearching;
+
+  /// No description provided for @spatialNetworkStateOffered.
+  ///
+  /// In en, this message translates to:
+  /// **'Provider offered'**
+  String get spatialNetworkStateOffered;
+
+  /// No description provided for @spatialNetworkStateAccepted.
+  ///
+  /// In en, this message translates to:
+  /// **'Provider accepted'**
+  String get spatialNetworkStateAccepted;
+
+  /// No description provided for @spatialNetworkStateVerifying.
+  ///
+  /// In en, this message translates to:
+  /// **'Verifying'**
+  String get spatialNetworkStateVerifying;
+
+  /// No description provided for @spatialNetworkStateExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Request expired'**
+  String get spatialNetworkStateExpired;
+
+  /// No description provided for @spatialNetworkStateCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Request cancelled'**
+  String get spatialNetworkStateCancelled;
+
+  /// No description provided for @spatialLibraryVersionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'v{version}'**
+  String spatialLibraryVersionLabel(int version);
+
+  /// No description provided for @spatialLibraryArtworkUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Artwork unavailable'**
+  String get spatialLibraryArtworkUnavailable;
+
+  /// No description provided for @spatialLibraryMarkerUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Marker unavailable'**
+  String get spatialLibraryMarkerUnavailable;
+
+  /// No description provided for @spatialLibraryLinkedTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Linked to'**
+  String get spatialLibraryLinkedTo;
+
+  /// No description provided for @spatialLibraryArtworkLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Artwork'**
+  String get spatialLibraryArtworkLabel;
+
+  /// No description provided for @spatialLibraryMarkerLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Marker'**
+  String get spatialLibraryMarkerLabel;
+
+  /// No description provided for @spatialLibrarySectionCapture.
+  ///
+  /// In en, this message translates to:
+  /// **'Capture'**
+  String get spatialLibrarySectionCapture;
+
+  /// No description provided for @spatialLibrarySectionProcessing.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing'**
+  String get spatialLibrarySectionProcessing;
+
+  /// No description provided for @spatialLibrarySectionArchive.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive'**
+  String get spatialLibrarySectionArchive;
+
+  /// No description provided for @spatialLibraryCoverage.
+  ///
+  /// In en, this message translates to:
+  /// **'Coverage'**
+  String get spatialLibraryCoverage;
+
+  /// No description provided for @spatialLibraryCoveragePercent.
+  ///
+  /// In en, this message translates to:
+  /// **'{percent}% coverage'**
+  String spatialLibraryCoveragePercent(int percent);
+
+  /// No description provided for @spatialLibraryTrackedViews.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 tracked view} other{{count} tracked views}}'**
+  String spatialLibraryTrackedViews(int count);
+
+  /// No description provided for @spatialLibraryDepthAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Depth available'**
+  String get spatialLibraryDepthAvailable;
+
+  /// No description provided for @spatialLibraryDepthUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No depth data'**
+  String get spatialLibraryDepthUnavailable;
+
+  /// No description provided for @spatialLibraryRawSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Raw source'**
+  String get spatialLibraryRawSource;
+
+  /// No description provided for @spatialLibraryRawSourceDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Raw source deleted'**
+  String get spatialLibraryRawSourceDeleted;
+
+  /// No description provided for @spatialLibraryContinueCapture.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue capture'**
+  String get spatialLibraryContinueCapture;
+
+  /// No description provided for @spatialLibraryEditAssociation.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit association'**
+  String get spatialLibraryEditAssociation;
+
+  /// No description provided for @spatialLibraryEditMetadata.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename or add a note'**
+  String get spatialLibraryEditMetadata;
+
+  /// No description provided for @spatialLibraryProcessScene.
+  ///
+  /// In en, this message translates to:
+  /// **'Process scene'**
+  String get spatialLibraryProcessScene;
+
+  /// No description provided for @spatialLibraryNotProcessed.
+  ///
+  /// In en, this message translates to:
+  /// **'Not processed'**
+  String get spatialLibraryNotProcessed;
+
+  /// No description provided for @spatialLibraryViewResult.
+  ///
+  /// In en, this message translates to:
+  /// **'View result'**
+  String get spatialLibraryViewResult;
+
+  /// No description provided for @spatialLibraryViewPublicArchive.
+  ///
+  /// In en, this message translates to:
+  /// **'View public archive'**
+  String get spatialLibraryViewPublicArchive;
+
+  /// No description provided for @spatialLibraryNewRevision.
+  ///
+  /// In en, this message translates to:
+  /// **'Add spatial update'**
+  String get spatialLibraryNewRevision;
+
+  /// No description provided for @spatialLibraryMoreActions.
+  ///
+  /// In en, this message translates to:
+  /// **'More'**
+  String get spatialLibraryMoreActions;
+
+  /// No description provided for @spatialLibraryCancelRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel request'**
+  String get spatialLibraryCancelRequest;
+
+  /// No description provided for @spatialLibraryChangeProcessor.
+  ///
+  /// In en, this message translates to:
+  /// **'Change processor'**
+  String get spatialLibraryChangeProcessor;
+
+  /// No description provided for @spatialLibraryVersionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Versions'**
+  String get spatialLibraryVersionsTitle;
+
+  /// No description provided for @spatialLibraryCurrentPublicVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'Current public version'**
+  String get spatialLibraryCurrentPublicVersion;
+
+  /// No description provided for @spatialLibraryLocalDraft.
+  ///
+  /// In en, this message translates to:
+  /// **'Local draft'**
+  String get spatialLibraryLocalDraft;
+
+  /// No description provided for @spatialLibraryRevisionOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Revision {revision}'**
+  String spatialLibraryRevisionOf(int revision);
+
+  /// No description provided for @spatialLibraryStaleResultWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'More capture data was added after this result. Process it again to refresh the scene.'**
+  String get spatialLibraryStaleResultWarning;
+
+  /// No description provided for @spatialLibraryStorageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Storage'**
+  String get spatialLibraryStorageTitle;
+
+  /// No description provided for @spatialLibraryCapturedOnLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Captured'**
+  String get spatialLibraryCapturedOnLabel;
+
+  /// No description provided for @spatialEditMetadataTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Capture details'**
+  String get spatialEditMetadataTitle;
+
+  /// No description provided for @spatialEditDisplayNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get spatialEditDisplayNameLabel;
+
+  /// No description provided for @spatialEditDisplayNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'For example: North facade, evening capture'**
+  String get spatialEditDisplayNameHint;
+
+  /// No description provided for @spatialEditNoteLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Note'**
+  String get spatialEditNoteLabel;
+
+  /// No description provided for @spatialEditAssociationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Change association'**
+  String get spatialEditAssociationTitle;
+
+  /// No description provided for @spatialEditAssociationProcessedWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'This capture already has a processed result. Changing the artwork changes the metadata it would be published with.'**
+  String get spatialEditAssociationProcessedWarning;
+
+  /// No description provided for @spatialEditAssociationPublishedWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'This capture is published. Changing it starts a new draft revision; the published version stays exactly as it is.'**
+  String get spatialEditAssociationPublishedWarning;
+
+  /// No description provided for @spatialEditAssociationConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Change association'**
+  String get spatialEditAssociationConfirm;
+
+  /// No description provided for @spatialProcessOwnNodeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Use your paired kubus Node.'**
+  String get spatialProcessOwnNodeSubtitle;
+
+  /// No description provided for @spatialProcessOwnNodeRemote.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected remotely'**
+  String get spatialProcessOwnNodeRemote;
+
+  /// No description provided for @spatialProcessOwnNodeLocal.
+  ///
+  /// In en, this message translates to:
+  /// **'On your network'**
+  String get spatialProcessOwnNodeLocal;
+
+  /// No description provided for @spatialProcessNetworkSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Request processing from an available GPU provider.'**
+  String get spatialProcessNetworkSubtitle;
+
+  /// No description provided for @spatialProcessRequestNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Request network processing'**
+  String get spatialProcessRequestNetwork;
+
+  /// No description provided for @spatialProcessNoProviderNow.
+  ///
+  /// In en, this message translates to:
+  /// **'No provider is available right now. The request stays open until one is.'**
+  String get spatialProcessNoProviderNow;
+
+  /// No description provided for @spatialProviderQueueAhead.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No jobs ahead} =1{1 job ahead} other{{count} jobs ahead}}'**
+  String spatialProviderQueueAhead(int count);
+
+  /// No description provided for @spatialProviderEstimatedDuration.
+  ///
+  /// In en, this message translates to:
+  /// **'About {minutes} min'**
+  String spatialProviderEstimatedDuration(int minutes);
+
+  /// No description provided for @spatialProviderEstimatedCost.
+  ///
+  /// In en, this message translates to:
+  /// **'About {amount} KUB8'**
+  String spatialProviderEstimatedCost(String amount);
+
+  /// No description provided for @spatialProviderNoEstimate.
+  ///
+  /// In en, this message translates to:
+  /// **'Not offered'**
+  String get spatialProviderNoEstimate;
+
+  /// No description provided for @spatialProviderLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Provider'**
+  String get spatialProviderLabel;
+
+  /// No description provided for @spatialFailureNodeUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Node unavailable'**
+  String get spatialFailureNodeUnavailable;
+
+  /// No description provided for @spatialFailureUploadInterrupted.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload interrupted'**
+  String get spatialFailureUploadInterrupted;
+
+  /// No description provided for @spatialFailureProcessorDeclined.
+  ///
+  /// In en, this message translates to:
+  /// **'The processor declined the job'**
+  String get spatialFailureProcessorDeclined;
+
+  /// No description provided for @spatialFailureProcessingFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing failed'**
+  String get spatialFailureProcessingFailed;
+
+  /// No description provided for @spatialFailureResultDownload.
+  ///
+  /// In en, this message translates to:
+  /// **'Result download failed'**
+  String get spatialFailureResultDownload;
+
+  /// No description provided for @spatialFailureResultVerification.
+  ///
+  /// In en, this message translates to:
+  /// **'Result verification failed'**
+  String get spatialFailureResultVerification;
+
+  /// No description provided for @spatialFailureRequestExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'The request expired before a processor took it'**
+  String get spatialFailureRequestExpired;
+
+  /// No description provided for @spatialFailureGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong'**
+  String get spatialFailureGeneric;
+
+  /// No description provided for @spatialFailureRawIntact.
+  ///
+  /// In en, this message translates to:
+  /// **'Your raw capture is untouched.'**
+  String get spatialFailureRawIntact;
+
+  /// No description provided for @spatialCaptureSavedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved to Spatial Library'**
+  String get spatialCaptureSavedTitle;
+
+  /// No description provided for @spatialCaptureContinueLater.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue later'**
+  String get spatialCaptureContinueLater;
+
+  /// No description provided for @spatialCaptureTargetRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose an artwork before starting a capture.'**
+  String get spatialCaptureTargetRequired;
+
+  /// No description provided for @spatialCaptureTargetLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Capturing for {title}'**
+  String spatialCaptureTargetLabel(String title);
+
+  /// No description provided for @spatialCaptureSourceUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The raw capture for this record is no longer on this device.'**
+  String get spatialCaptureSourceUnavailable;
+
+  /// No description provided for @spatialCaptureContinueFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'That capture could not be reopened.'**
+  String get spatialCaptureContinueFailed;
+
+  /// No description provided for @spatialArtworkDraftsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your spatial drafts'**
+  String get spatialArtworkDraftsTitle;
+
+  /// No description provided for @spatialArtworkDraftsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Private to this device until you publish.'**
+  String get spatialArtworkDraftsSubtitle;
+
+  /// No description provided for @spatialArtworkAddUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'Add spatial update'**
+  String get spatialArtworkAddUpdate;
+
+  /// No description provided for @spatialArtworkCaptureCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Capture spatial data'**
+  String get spatialArtworkCaptureCta;
+
+  /// No description provided for @spatialViewOnMap.
+  ///
+  /// In en, this message translates to:
+  /// **'View on map'**
+  String get spatialViewOnMap;
 }
 
 class _AppLocalizationsDelegate

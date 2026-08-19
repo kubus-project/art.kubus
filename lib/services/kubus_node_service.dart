@@ -745,7 +745,18 @@ class KubusNodeService {
     if (!endpoint.hasAuthority) return false;
     if (endpoint.scheme == 'https') return true;
     if (endpoint.scheme != 'http') return false;
+    return isPrivateLanHost(endpoint);
+  }
+
+  /// Whether [endpoint] addresses a host on the user's own network.
+  ///
+  /// Exposed because the difference matters to the user: reaching *their* Node
+  /// over the LAN and reaching *their* Node over the internet are the same
+  /// trust relationship shown differently, and neither is the same as handing
+  /// the capture to a stranger's GPU.
+  static bool isPrivateLanHost(Uri endpoint) {
     final host = endpoint.host.toLowerCase();
+    if (host.isEmpty) return false;
     if (host == 'localhost' ||
         host == '127.0.0.1' ||
         host == '::1' ||
@@ -761,6 +772,15 @@ class KubusNodeService {
         second != null &&
         second >= 16 &&
         second <= 31;
+  }
+
+  /// True when the paired Node is currently reached over the local network.
+  ///
+  /// False for a paired Node reached over remote HTTPS, and false when there
+  /// is no endpoint at all.
+  bool get isEndpointOnLocalNetwork {
+    final active = _endpoint;
+    return active != null && isPrivateLanHost(active);
   }
 
   static String? _extractCid(String raw) {

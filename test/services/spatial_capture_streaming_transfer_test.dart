@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:art_kubus/providers/kubus_node_provider.dart';
+import 'package:art_kubus/models/spatial_capture_target.dart';
 import 'package:art_kubus/providers/spatial_capture_provider.dart';
 import 'package:art_kubus/providers/spatial_library_provider.dart';
 import 'package:art_kubus/models/kubus_node_models.dart';
@@ -419,7 +420,10 @@ void main() {
       onLibraryChanged: onLibraryChanged,
       policy: const SpatialCapturePolicy(minSampleInterval: Duration.zero),
     );
-    await provider.begin(artworkId: 'art-1', capturedBy: 'wallet-1');
+    await provider.begin(
+      target: const SpatialCaptureTarget(artworkId: 'art-1'),
+      capturedBy: 'wallet-1',
+    );
     for (var i = 0; i < 30; i++) {
       await provider.offerFrame(orbitFrame(i), isTracking: true);
     }

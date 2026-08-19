@@ -16074,4 +16074,360 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get spatialLibraryOperationFailed =>
       'That action could not be completed. Your private source remains intact.';
+
+  @override
+  String get arStatusTracking => 'Tracking';
+
+  @override
+  String get arStatusFindingSurface => 'Finding surface';
+
+  @override
+  String get arStatusCapturing => 'Capturing';
+
+  @override
+  String get arStatusPaused => 'Paused';
+
+  @override
+  String get arStatusError => 'Error';
+
+  @override
+  String get arStatusSwitching => 'Switching';
+
+  @override
+  String get arMoreActions => 'More actions';
+
+  @override
+  String get arToggleFlash => 'Flash';
+
+  @override
+  String get arOpenArSettings => 'AR settings';
+
+  @override
+  String get spatialTargetPickerTitle => 'Choose the artwork';
+
+  @override
+  String get spatialTargetPickerSubtitle =>
+      'Every spatial capture is filed under one artwork.';
+
+  @override
+  String get spatialTargetSearchHint => 'Search artworks';
+
+  @override
+  String get spatialTargetNoArtworksTitle => 'No artworks yet';
+
+  @override
+  String get spatialTargetNoArtworksBody =>
+      'Add an artwork before capturing spatial data for it.';
+
+  @override
+  String get spatialTargetNoResultsTitle => 'No matches';
+
+  @override
+  String get spatialTargetNoResultsBody => 'No artwork matches that search.';
+
+  @override
+  String get spatialTargetMarkerTitle => 'Choose a marker';
+
+  @override
+  String get spatialTargetMarkerSubtitle =>
+      'Optional. Links this capture to a specific location or AR marker.';
+
+  @override
+  String get spatialTargetNoMarker => 'No specific marker';
+
+  @override
+  String get spatialTargetChangeArtwork => 'Change artwork';
+
+  @override
+  String get spatialMarkerKindLocation => 'Map location';
+
+  @override
+  String get spatialMarkerKindConfiguration => 'AR marker';
+
+  @override
+  String get spatialLibraryStatusReprocessNeeded => 'Reprocessing required';
+
+  @override
+  String get spatialLibraryStatusPublishing => 'Publishing';
+
+  @override
+  String get spatialNetworkStateRequested => 'Requested';
+
+  @override
+  String get spatialNetworkStateSearching => 'Finding a processor';
+
+  @override
+  String get spatialNetworkStateOffered => 'Provider offered';
+
+  @override
+  String get spatialNetworkStateAccepted => 'Provider accepted';
+
+  @override
+  String get spatialNetworkStateVerifying => 'Verifying';
+
+  @override
+  String get spatialNetworkStateExpired => 'Request expired';
+
+  @override
+  String get spatialNetworkStateCancelled => 'Request cancelled';
+
+  @override
+  String spatialLibraryVersionLabel(int version) {
+    return 'v$version';
+  }
+
+  @override
+  String get spatialLibraryArtworkUnavailable => 'Artwork unavailable';
+
+  @override
+  String get spatialLibraryMarkerUnavailable => 'Marker unavailable';
+
+  @override
+  String get spatialLibraryLinkedTo => 'Linked to';
+
+  @override
+  String get spatialLibraryArtworkLabel => 'Artwork';
+
+  @override
+  String get spatialLibraryMarkerLabel => 'Marker';
+
+  @override
+  String get spatialLibrarySectionCapture => 'Capture';
+
+  @override
+  String get spatialLibrarySectionProcessing => 'Processing';
+
+  @override
+  String get spatialLibrarySectionArchive => 'Archive';
+
+  @override
+  String get spatialLibraryCoverage => 'Coverage';
+
+  @override
+  String spatialLibraryCoveragePercent(int percent) {
+    return '$percent% coverage';
+  }
+
+  @override
+  String spatialLibraryTrackedViews(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count tracked views',
+      one: '1 tracked view',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get spatialLibraryDepthAvailable => 'Depth available';
+
+  @override
+  String get spatialLibraryDepthUnavailable => 'No depth data';
+
+  @override
+  String get spatialLibraryRawSource => 'Raw source';
+
+  @override
+  String get spatialLibraryRawSourceDeleted => 'Raw source deleted';
+
+  @override
+  String get spatialLibraryContinueCapture => 'Continue capture';
+
+  @override
+  String get spatialLibraryEditAssociation => 'Edit association';
+
+  @override
+  String get spatialLibraryEditMetadata => 'Rename or add a note';
+
+  @override
+  String get spatialLibraryProcessScene => 'Process scene';
+
+  @override
+  String get spatialLibraryNotProcessed => 'Not processed';
+
+  @override
+  String get spatialLibraryViewResult => 'View result';
+
+  @override
+  String get spatialLibraryViewPublicArchive => 'View public archive';
+
+  @override
+  String get spatialLibraryNewRevision => 'Add spatial update';
+
+  @override
+  String get spatialLibraryMoreActions => 'More';
+
+  @override
+  String get spatialLibraryCancelRequest => 'Cancel request';
+
+  @override
+  String get spatialLibraryChangeProcessor => 'Change processor';
+
+  @override
+  String get spatialLibraryVersionsTitle => 'Versions';
+
+  @override
+  String get spatialLibraryCurrentPublicVersion => 'Current public version';
+
+  @override
+  String get spatialLibraryLocalDraft => 'Local draft';
+
+  @override
+  String spatialLibraryRevisionOf(int revision) {
+    return 'Revision $revision';
+  }
+
+  @override
+  String get spatialLibraryStaleResultWarning =>
+      'More capture data was added after this result. Process it again to refresh the scene.';
+
+  @override
+  String get spatialLibraryStorageTitle => 'Storage';
+
+  @override
+  String get spatialLibraryCapturedOnLabel => 'Captured';
+
+  @override
+  String get spatialEditMetadataTitle => 'Capture details';
+
+  @override
+  String get spatialEditDisplayNameLabel => 'Name';
+
+  @override
+  String get spatialEditDisplayNameHint =>
+      'For example: North facade, evening capture';
+
+  @override
+  String get spatialEditNoteLabel => 'Note';
+
+  @override
+  String get spatialEditAssociationTitle => 'Change association';
+
+  @override
+  String get spatialEditAssociationProcessedWarning =>
+      'This capture already has a processed result. Changing the artwork changes the metadata it would be published with.';
+
+  @override
+  String get spatialEditAssociationPublishedWarning =>
+      'This capture is published. Changing it starts a new draft revision; the published version stays exactly as it is.';
+
+  @override
+  String get spatialEditAssociationConfirm => 'Change association';
+
+  @override
+  String get spatialProcessOwnNodeSubtitle => 'Use your paired kubus Node.';
+
+  @override
+  String get spatialProcessOwnNodeRemote => 'Connected remotely';
+
+  @override
+  String get spatialProcessOwnNodeLocal => 'On your network';
+
+  @override
+  String get spatialProcessNetworkSubtitle =>
+      'Request processing from an available GPU provider.';
+
+  @override
+  String get spatialProcessRequestNetwork => 'Request network processing';
+
+  @override
+  String get spatialProcessNoProviderNow =>
+      'No provider is available right now. The request stays open until one is.';
+
+  @override
+  String spatialProviderQueueAhead(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count jobs ahead',
+      one: '1 job ahead',
+      zero: 'No jobs ahead',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String spatialProviderEstimatedDuration(int minutes) {
+    return 'About $minutes min';
+  }
+
+  @override
+  String spatialProviderEstimatedCost(String amount) {
+    return 'About $amount KUB8';
+  }
+
+  @override
+  String get spatialProviderNoEstimate => 'Not offered';
+
+  @override
+  String get spatialProviderLabel => 'Provider';
+
+  @override
+  String get spatialFailureNodeUnavailable => 'Node unavailable';
+
+  @override
+  String get spatialFailureUploadInterrupted => 'Upload interrupted';
+
+  @override
+  String get spatialFailureProcessorDeclined =>
+      'The processor declined the job';
+
+  @override
+  String get spatialFailureProcessingFailed => 'Processing failed';
+
+  @override
+  String get spatialFailureResultDownload => 'Result download failed';
+
+  @override
+  String get spatialFailureResultVerification => 'Result verification failed';
+
+  @override
+  String get spatialFailureRequestExpired =>
+      'The request expired before a processor took it';
+
+  @override
+  String get spatialFailureGeneric => 'Something went wrong';
+
+  @override
+  String get spatialFailureRawIntact => 'Your raw capture is untouched.';
+
+  @override
+  String get spatialCaptureSavedTitle => 'Saved to Spatial Library';
+
+  @override
+  String get spatialCaptureContinueLater => 'Continue later';
+
+  @override
+  String get spatialCaptureTargetRequired =>
+      'Choose an artwork before starting a capture.';
+
+  @override
+  String spatialCaptureTargetLabel(String title) {
+    return 'Capturing for $title';
+  }
+
+  @override
+  String get spatialCaptureSourceUnavailable =>
+      'The raw capture for this record is no longer on this device.';
+
+  @override
+  String get spatialCaptureContinueFailed =>
+      'That capture could not be reopened.';
+
+  @override
+  String get spatialArtworkDraftsTitle => 'Your spatial drafts';
+
+  @override
+  String get spatialArtworkDraftsSubtitle =>
+      'Private to this device until you publish.';
+
+  @override
+  String get spatialArtworkAddUpdate => 'Add spatial update';
+
+  @override
+  String get spatialArtworkCaptureCta => 'Capture spatial data';
+
+  @override
+  String get spatialViewOnMap => 'View on map';
 }
