@@ -5,6 +5,7 @@ import 'package:art_kubus/models/event.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 import '../../config/config.dart';
 import '../../widgets/inline_loading.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
@@ -471,6 +472,20 @@ class _ARScreenState extends State<ARScreen>
   bool _hasInitialized = false;
   final ValueNotifier<int> _placementRevision = ValueNotifier<int>(0);
 
+  // Measures the actual rendered height of the bottom mode dock / actions
+  // region so floating snackbars can sit above it instead of overlapping it
+  // (Part 17). The dock's height isn't a fixed constant — it grows with the
+  // primary/secondary actions and with text-scale — so a real measurement is
+  // used instead of a guessed pixel offset.
+  final GlobalKey _controlsRegionKey = GlobalKey();
+
+  double get _controlsRegionInset {
+    final box =
+        _controlsRegionKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null || !box.hasSize) return 0;
+    return box.size.height;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -496,6 +511,13 @@ class _ARScreenState extends State<ARScreen>
       onError: _onPreviewError,
     );
     WidgetsBinding.instance.addObserver(this);
+    // The screen dimming/locking mid-scan, mid-placement, or mid-capture is
+    // actively destructive here (a lost AR session, an interrupted spatial
+    // capture) rather than merely inconvenient, so keep the display on for
+    // the whole time this screen is mounted. Released in dispose() —
+    // ARScreen is unmounted whenever the user leaves this tab, so this never
+    // outlives AR/Spatial use.
+    unawaited(WakelockPlus.enable());
   }
 
   void _onCameraChanged() {
@@ -923,6 +945,7 @@ class _ARScreenState extends State<ARScreen>
 
   @override
   void dispose() {
+    unawaited(WakelockPlus.disable());
     _captureSession?.dispose();
     _animationController.dispose();
     // Detach before tearing the session down so a late native callback cannot
@@ -997,15 +1020,18 @@ class _ARScreenState extends State<ARScreen>
         overlay: _isLoading ? _buildLoadingOverlay() : null,
         guidance: _isARReady && !_isLoading ? _buildGuidance(l10n) : null,
         controls: _isARReady && _showControls
-            ? ValueListenableBuilder<int>(
-                valueListenable: _placementRevision,
-                builder: (_, __, ___) => ArControlsRegion(
-                  modes: _modeOptions(l10n),
-                  selectedModeId: _currentMode,
-                  onSelectMode: _changeMode,
-                  isDark: themeProvider.isDarkMode,
-                  primaryAction: _primaryAction(l10n),
-                  secondaryActions: _secondaryActions(l10n),
+            ? KeyedSubtree(
+                key: _controlsRegionKey,
+                child: ValueListenableBuilder<int>(
+                  valueListenable: _placementRevision,
+                  builder: (_, __, ___) => ArControlsRegion(
+                    modes: _modeOptions(l10n),
+                    selectedModeId: _currentMode,
+                    onSelectMode: _changeMode,
+                    isDark: themeProvider.isDarkMode,
+                    primaryAction: _primaryAction(l10n),
+                    secondaryActions: _secondaryActions(l10n),
+                  ),
                 ),
               )
             : const SizedBox.shrink(),
@@ -2594,6 +2620,13 @@ class _ARScreenState extends State<ARScreen>
           SnackBar(
             content: Text(l10n.arSelectArtworkBeforePlacingToast),
             backgroundColor: Theme.of(context).colorScheme.error,
+            // Floats above the measured mode-dock/actions region instead of
+            // behind it — see `_controlsRegionInset`.
+            margin: EdgeInsets.only(
+              left: KubusSpacing.md,
+              right: KubusSpacing.md,
+              bottom: _controlsRegionInset + KubusSpacing.md,
+            ),
           ),
         );
         return;

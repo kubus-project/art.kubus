@@ -27906,6 +27906,18 @@ abstract class AppLocalizations {
   /// **'Total'**
   String get spatialLibraryTotalStorage;
 
+  /// No description provided for @spatialLibraryNodeConnected.
+  ///
+  /// In en, this message translates to:
+  /// **'Node connected'**
+  String get spatialLibraryNodeConnected;
+
+  /// No description provided for @spatialLibraryNodeConnect.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect Node'**
+  String get spatialLibraryNodeConnect;
+
   /// No description provided for @spatialLibraryProcess.
   ///
   /// In en, this message translates to:

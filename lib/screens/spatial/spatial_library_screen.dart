@@ -7,12 +7,15 @@ import '../../features/spatial/spatial_marker_directory.dart';
 import '../../features/spatial/spatial_record_card.dart';
 import '../../features/spatial/spatial_status_presentation.dart';
 import '../../l10n/app_localizations.dart';
+import '../../providers/kubus_node_provider.dart';
 import '../../providers/marker_management_provider.dart';
 import '../../providers/spatial_library_provider.dart';
 import '../../services/kubus_node_service.dart';
 import '../../services/spatial_library_store.dart';
 import '../../utils/node_state_presentation.dart';
 import '../../widgets/kubus_kit.dart';
+import '../node/kubus_node_screen.dart';
+import '../node/node_pairing_screen.dart';
 import 'spatial_library_detail_screen.dart';
 
 enum SpatialLibraryFilter { all, captured, processing, ready, published }
@@ -71,6 +74,8 @@ class _SpatialLibraryScreenState extends State<SpatialLibraryScreen> {
           padding: const EdgeInsets.all(KubusSpacing.md),
           children: <Widget>[
             _StorageSummary(raw: raw, processed: processed),
+            const SizedBox(height: KubusSpacing.sm),
+            const _NodeStatusPill(),
             const SizedBox(height: KubusSpacing.md),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
@@ -158,6 +163,55 @@ class _SpatialLibraryScreenState extends State<SpatialLibraryScreen> {
         SpatialLibraryFilter.ready => Icons.check_circle_outline_rounded,
         SpatialLibraryFilter.published => Icons.public_rounded,
       };
+}
+
+/// Compact Node connectivity affordance for the library list.
+///
+/// Not a dashboard — one glass pill that reads at a glance and reaches
+/// pairing (or the full Node status screen) from the point of need, so a
+/// visitor with a raw capture never has to go hunting through Settings to
+/// connect their own Node before they can process something (Part 3.1).
+class _NodeStatusPill extends StatelessWidget {
+  const _NodeStatusPill();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final node = context.watch<KubusNodeProvider>();
+    final roles = KubusColorRoles.of(context);
+    final isPaired = node.isPaired;
+
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: KubusGlassChip(
+        label: isPaired
+            ? l10n.spatialLibraryNodeConnected
+            : l10n.spatialLibraryNodeConnect,
+        icon: isPaired
+            ? Icons.dns_rounded
+            : Icons.add_link_rounded,
+        active: isPaired,
+        accentColor: isPaired ? roles.positiveAction : null,
+        onPressed: () {
+          if (isPaired) {
+            Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const KubusNodeScreen(),
+                settings: const RouteSettings(name: '/node'),
+              ),
+            );
+          } else {
+            Navigator.of(context).push(
+              MaterialPageRoute<bool>(
+                builder: (_) => const NodePairingScreen(),
+                settings: const RouteSettings(name: '/node-pairing'),
+              ),
+            );
+          }
+        },
+      ),
+    );
+  }
 }
 
 class _StorageSummary extends StatelessWidget {

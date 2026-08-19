@@ -6430,6 +6430,8 @@
   "spatialLibraryRawStorage": "Raw source",
   "spatialLibraryProcessedStorage": "Processed",
   "spatialLibraryTotalStorage": "Total",
+  "spatialLibraryNodeConnected": "Node connected",
+  "spatialLibraryNodeConnect": "Connect Node",
   "spatialLibraryProcess": "Process",
   "spatialLibraryRetryUpload": "Retry upload",
   "spatialLibraryRetryProcessing": "Retry processing",

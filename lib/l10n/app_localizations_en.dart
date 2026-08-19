@@ -16037,6 +16037,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get spatialLibraryTotalStorage => 'Total';
 
   @override
+  String get spatialLibraryNodeConnected => 'Node connected';
+
+  @override
+  String get spatialLibraryNodeConnect => 'Connect Node';
+
+  @override
   String get spatialLibraryProcess => 'Process';
 
   @override

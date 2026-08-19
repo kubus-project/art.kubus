@@ -6410,6 +6410,8 @@
   "spatialLibraryRawStorage": "Izvorni zajem",
   "spatialLibraryProcessedStorage": "Obdelano",
   "spatialLibraryTotalStorage": "Skupaj",
+  "spatialLibraryNodeConnected": "Node povezan",
+  "spatialLibraryNodeConnect": "Poveži Node",
   "spatialLibraryProcess": "Obdelaj",
   "spatialLibraryRetryUpload": "Ponovi nalaganje",
   "spatialLibraryRetryProcessing": "Ponovi obdelavo",

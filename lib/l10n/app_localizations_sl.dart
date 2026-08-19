@@ -16196,6 +16196,12 @@ class AppLocalizationsSl extends AppLocalizations {
   String get spatialLibraryTotalStorage => 'Skupaj';
 
   @override
+  String get spatialLibraryNodeConnected => 'Node povezan';
+
+  @override
+  String get spatialLibraryNodeConnect => 'Poveži Node';
+
+  @override
   String get spatialLibraryProcess => 'Obdelaj';
 
   @override

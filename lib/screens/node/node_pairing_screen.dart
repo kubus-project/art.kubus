@@ -5,13 +5,16 @@ import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../models/kubus_node_models.dart';
 import '../../providers/kubus_node_provider.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/node_state_presentation.dart';
+import '../../widgets/glass/glass_surface.dart';
 import '../../widgets/inline_loading.dart';
+import '../../widgets/kubus_button.dart';
 import '../../widgets/node/node_ui.dart';
 
 /// Connecting the app to a kubus Node.
@@ -47,6 +50,17 @@ class _NodePairingScreenState extends State<NodePairingScreen> {
   @override
   void initState() {
     super.initState();
+    // Defensive: this screen never wants an inherited focus (no field here
+    // uses autofocus). Clearing explicitly on entry means a stray focus
+    // carried over from wherever the visitor came from can never leave the
+    // manual-entry field pre-focused with the keyboard — and the clipboard
+    // paste suggestion Android shows on it — up before the user has tapped
+    // anything themselves.
+    FocusManager.instance.primaryFocus?.unfocus();
+    // The camera preview is meaningless if the screen dims/locks mid-scan,
+    // and the flow is short, so keep the display on for as long as this
+    // screen is mounted rather than only during the scanning stage.
+    unawaited(WakelockPlus.enable());
     // A desktop browser has no useful camera path; start where the user can
     // actually make progress instead of showing a viewfinder that never opens.
     if (kIsWeb) {
@@ -58,6 +72,7 @@ class _NodePairingScreenState extends State<NodePairingScreen> {
 
   @override
   void dispose() {
+    unawaited(WakelockPlus.disable());
     unawaited(_disposeScanner());
     _manualController.dispose();
     super.dispose();
@@ -187,52 +202,86 @@ class _NodePairingScreenState extends State<NodePairingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // The scanner is a full-screen camera surface with floating glass chrome
+    // (Part 7 / Finding E) — it must never sit inside an opaque Scaffold
+    // AppBar. Every other stage is a normal reading/form surface, so it keeps
+    // the conventional app bar shell.
+    if (_stage == _PairingStage.scanning) {
+      return _buildScannerScreen();
+    }
     return Scaffold(
       appBar: AppBar(title: Text(_l10n.kubusNodePairTitle)),
       body: SafeArea(
         child: switch (_stage) {
-          _PairingStage.scanning => _buildScanner(),
           _PairingStage.manual => _buildManual(),
           _PairingStage.confirming ||
           _PairingStage.connecting =>
             _buildConfirm(),
           _PairingStage.connected => _buildConnected(),
+          _PairingStage.scanning => const SizedBox.shrink(),
         },
       ),
     );
   }
 
-  /// Camera fills the screen with one instruction and one escape hatch. No
-  /// stack of floating panels over a live viewfinder.
-  Widget _buildScanner() {
+  /// Camera fills the literal screen root — status bar and all — with a
+  /// floating glass back button top-left and one instruction + escape hatch
+  /// docked at the bottom. `SafeArea` wraps only that floating chrome, never
+  /// the camera itself.
+  Widget _buildScannerScreen() {
     final controller = _controller;
-    if (controller == null) {
-      return const Center(child: InlineLoading(width: 96, height: 4));
-    }
     return Stack(
       fit: StackFit.expand,
       children: [
-        MobileScanner(controller: controller, onDetect: _onDetect),
-        const _ScannerReticle(),
-        Positioned(
-          left: KubusSpacing.lg,
-          right: KubusSpacing.lg,
-          bottom: KubusSpacing.lg,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (_message != null) ...[
-                _ScannerMessage(message: _message!),
-                const SizedBox(height: KubusSpacing.md),
-              ],
-              _ScannerMessage(message: _l10n.kubusNodeScanBody),
-              const SizedBox(height: KubusSpacing.sm),
-              TextButton(
-                onPressed: () => unawaited(_enterManual()),
-                style: TextButton.styleFrom(foregroundColor: Colors.white),
-                child: Text(_l10n.kubusNodeScanManualAction),
+        if (controller == null)
+          const ColoredBox(
+            color: Colors.black,
+            child: Center(child: InlineLoading(width: 96, height: 4)),
+          )
+        else ...[
+          MobileScanner(controller: controller, onDetect: _onDetect),
+          const _ScannerReticle(),
+        ],
+        SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(KubusSpacing.md),
+            child: Align(
+              alignment: Alignment.topLeft,
+              child: _GlassIconButton(
+                icon: Icons.arrow_back_rounded,
+                tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+                onPressed: () => Navigator.of(context).maybePop(),
               ),
-            ],
+            ),
+          ),
+        ),
+        SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(KubusSpacing.lg),
+            child: Align(
+              alignment: Alignment.bottomCenter,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (_message != null) ...[
+                    _ScannerMessage(message: _message!),
+                    const SizedBox(height: KubusSpacing.md),
+                  ],
+                  _ScannerMessage(message: _l10n.kubusNodeScanBody),
+                  const SizedBox(height: KubusSpacing.sm),
+                  GlassSurface(
+                    borderRadius: BorderRadius.circular(KubusRadius.xl),
+                    child: TextButton(
+                      onPressed: () => unawaited(_enterManual()),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.white,
+                      ),
+                      child: Text(_l10n.kubusNodeScanManualAction),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ],
@@ -264,19 +313,22 @@ class _NodePairingScreenState extends State<NodePairingScreen> {
           onSubmitted: (value) => unawaited(_accept(value)),
         ),
         const SizedBox(height: KubusSpacing.md),
-        FilledButton(
+        KubusButton(
           onPressed: () => unawaited(_accept(_manualController.text)),
-          child: Text(_l10n.kubusNodePairAction),
+          label: _l10n.kubusNodePairAction,
+          variant: KubusButtonVariant.accent,
+          isFullWidth: true,
         ),
         if (!kIsWeb) ...[
           const SizedBox(height: KubusSpacing.sm),
-          TextButton.icon(
+          KubusOutlineButton(
             onPressed: () {
               setState(() => _message = null);
               unawaited(_startCamera());
             },
-            icon: const Icon(Icons.qr_code_scanner_rounded),
-            label: Text(_l10n.kubusNodeScanTitle),
+            icon: Icons.qr_code_scanner_rounded,
+            label: _l10n.kubusNodeScanTitle,
+            isFullWidth: true,
           ),
         ],
       ],
@@ -333,19 +385,18 @@ class _NodePairingScreenState extends State<NodePairingScreen> {
           ),
         ],
         const SizedBox(height: KubusSpacing.lg),
-        FilledButton(
+        KubusButton(
           onPressed: busy ? null : _connect,
-          child: busy
-              ? const SizedBox.square(
-                  dimension: 18,
-                  child: InlineLoading(tileSize: 4),
-                )
-              : Text(_l10n.kubusNodeConfirmAction),
+          label: _l10n.kubusNodeConfirmAction,
+          isLoading: busy,
+          variant: KubusButtonVariant.accent,
+          isFullWidth: true,
         ),
         const SizedBox(height: KubusSpacing.sm),
-        TextButton(
+        KubusOutlineButton(
           onPressed: busy ? null : () => Navigator.of(context).maybePop(),
-          child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
+          label: MaterialLocalizations.of(context).cancelButtonLabel,
+          isFullWidth: true,
         ),
       ],
     );
@@ -377,9 +428,11 @@ class _NodePairingScreenState extends State<NodePairingScreen> {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: KubusSpacing.lg),
-            FilledButton(
+            KubusButton(
               onPressed: () => Navigator.of(context).pop(true),
-              child: Text(MaterialLocalizations.of(context).okButtonLabel),
+              label: MaterialLocalizations.of(context).okButtonLabel,
+              variant: KubusButtonVariant.accent,
+              isFullWidth: true,
             ),
           ],
         ),
@@ -403,6 +456,35 @@ class _ScannerReticle extends StatelessWidget {
               width: KubusBorders.emphasisWidth,
             ),
             borderRadius: BorderRadius.circular(KubusRadius.lg),
+          ),
+        ),
+      );
+}
+
+/// Small round glass control floating over the camera — the back button here,
+/// reusing the canonical [GlassSurface] rather than an opaque app-bar icon.
+class _GlassIconButton extends StatelessWidget {
+  const _GlassIconButton({
+    required this.icon,
+    required this.onPressed,
+    this.tooltip,
+  });
+
+  final IconData icon;
+  final VoidCallback onPressed;
+  final String? tooltip;
+
+  @override
+  Widget build(BuildContext context) => GlassSurface(
+        borderRadius: BorderRadius.circular(KubusRadius.xl),
+        child: SizedBox(
+          width: 44,
+          height: 44,
+          child: IconButton(
+            icon: Icon(icon, color: Colors.white),
+            tooltip: tooltip,
+            onPressed: onPressed,
+            padding: EdgeInsets.zero,
           ),
         ),
       );

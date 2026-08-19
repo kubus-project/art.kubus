@@ -1363,11 +1363,23 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
 
   void _initNotificationRouting() {
     final handler = NotificationHandler();
+    // A notification tap can fire while `AppInitializer` is still hydrating
+    // providers and deciding the deterministic cold-start route (this can take
+    // several seconds). Deferring behind `AppStartupGate` stops that navigation
+    // from racing AppInitializer's own route push and landing the visitor on
+    // an unrelated screen — see `AppStartupGate` for the full rationale.
     handler.onNavigate = (route, params) {
-      final navigator = appNavigatorKey.currentState;
-      if (navigator == null) return;
+      AppStartupGate.runWhenReady(() => _dispatchNotificationRoute(route, params));
+    };
 
-      if (route == '/collab_invite') {
+    handler.initialize();
+  }
+
+  void _dispatchNotificationRoute(String route, Map<String, dynamic> params) {
+    final navigator = appNavigatorKey.currentState;
+    if (navigator == null) return;
+
+    if (route == '/collab_invite') {
         final rawType = (params['entityType'] ?? '').toString();
         final rawId = (params['entityId'] ?? '').toString();
 
@@ -1405,15 +1417,12 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
         return;
       }
 
-      // Best-effort fallback to named routes.
-      try {
-        navigator.pushNamed(route, arguments: params);
-      } catch (_) {
-        // Ignore unknown routes.
-      }
-    };
-
-    handler.initialize();
+    // Best-effort fallback to named routes.
+    try {
+      navigator.pushNamed(route, arguments: params);
+    } catch (_) {
+      // Ignore unknown routes.
+    }
   }
 
   @override
