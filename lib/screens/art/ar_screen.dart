@@ -413,11 +413,12 @@ class _ARScreenState extends State<ARScreen>
     {'id': 'create', 'icon': Icons.create},
   ];
 
-  Iterable<Map<String, dynamic>> get _availableArModes =>
-      AppConfig.isFeatureEnabled('availabilityNodes')
-          ? _arModes
-          : _arModes
-              .where((mode) => mode['id'] == 'scan' || mode['id'] == 'place');
+  // Scan, Place, View and Spatial capture are all phone-native modes. None of
+  // them require a Node: 'availabilityNodes' governs distributed compute
+  // pairing, not the camera's own capabilities, so it must never hide a mode
+  // here — that coupling is exactly what made Spatial disappear underneath a
+  // Node feature flag it has nothing to do with.
+  Iterable<Map<String, dynamic>> get _availableArModes => _arModes;
 
   String _modeName(AppLocalizations l10n, String modeId) {
     switch (modeId) {
@@ -678,7 +679,6 @@ class _ARScreenState extends State<ARScreen>
   /// A continuation reopens the record's own source; a fresh request only
   /// switches to capture mode with the target already decided.
   Future<void> _applyLaunchRequest(SpatialCaptureLaunchRequest request) async {
-    if (!AppConfig.isFeatureEnabled('availabilityNodes')) return;
     final capture = context.read<SpatialCaptureProvider>();
 
     // An unfinished capture already owns the session, and it belongs to
@@ -850,9 +850,7 @@ class _ARScreenState extends State<ARScreen>
     if (artwork == null) return;
 
     setState(() => _selectedArtwork = artwork);
-    _changeMode(
-      AppConfig.isFeatureEnabled('availabilityNodes') ? 'view' : 'place',
-    );
+    _changeMode('view');
 
     if (kDebugMode) {
       debugPrint('ARScreen: Launching AR for artwork: ${artwork['title']}');
@@ -1725,10 +1723,6 @@ class _ARScreenState extends State<ARScreen>
   /// still releasing the device — the exact contention the coordinator exists
   /// to prevent. Now the chrome advances only once the handoff has completed.
   void _changeMode(String modeId) {
-    if (!AppConfig.isFeatureEnabled('availabilityNodes') &&
-        (modeId == 'view' || modeId == 'create')) {
-      return;
-    }
     if (modeId == _cameraOrchestrator.requestedMode) return;
     if (modeId != 'create') {
       // Pause the provider alongside the sampler. Cancelling the timer alone
@@ -1753,10 +1747,6 @@ class _ARScreenState extends State<ARScreen>
   }
 
   void _handleAction() {
-    if (!AppConfig.isFeatureEnabled('availabilityNodes') &&
-        (_currentMode == 'view' || _currentMode == 'create')) {
-      return;
-    }
     switch (_currentMode) {
       case 'scan':
         _startScanning();
@@ -1934,7 +1924,6 @@ class _ARScreenState extends State<ARScreen>
   Future<void> _offerInterruptedCaptureRecovery() async {
     if (_recoveryChecked) return;
     _recoveryChecked = true;
-    if (!AppConfig.isFeatureEnabled('availabilityNodes')) return;
 
     final capture = context.read<SpatialCaptureProvider>();
     final wallet = _resolveCurrentWalletAddress();

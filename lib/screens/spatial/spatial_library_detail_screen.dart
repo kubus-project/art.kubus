@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../config/config.dart';
 import '../../features/spatial/spatial_artwork_thumbnail.dart';
 import '../../features/spatial/spatial_capture_target_picker.dart';
 import '../../features/spatial/spatial_detail_sections.dart';
@@ -31,6 +30,7 @@ import '../../utils/artwork_navigation.dart';
 import '../../utils/node_state_presentation.dart';
 import '../../widgets/kubus_kit.dart';
 import '../../widgets/spatial/spatial_viewer.dart';
+import '../node/node_pairing_screen.dart';
 import 'spatial_capture_launch.dart';
 
 /// The management surface for one capture.
@@ -106,11 +106,7 @@ class _SpatialLibraryDetailScreenState
       artwork: artwork,
       marker: marker,
     );
-    final actions = SpatialRecordActions.of(
-      record,
-      processorConfigured: AppConfig.isFeatureEnabled('availabilityNodes') &&
-          context.read<KubusNodeProvider>().isPaired,
-    );
+    final actions = SpatialRecordActions.of(record);
     final lineage = provider.lineageOf(record);
 
     return Scaffold(
@@ -509,12 +505,10 @@ class _SpatialLibraryDetailScreenState
     SpatialLibraryRecord record,
   ) async {
     final l10n = AppLocalizations.of(context)!;
-    if (!AppConfig.isFeatureEnabled('availabilityNodes')) {
-      _showError(l10n.spatialLibraryProcessorUnavailable);
-      return;
-    }
     // Discovery is informational only. It decides what the sheet *says*, never
-    // what it offers.
+    // what it offers. The KUBUS Network is reachable regardless of whether
+    // this device has a Node of its own paired — owning a Node is never the
+    // gate on processing.
     var providersAvailableNow = false;
     try {
       providersAvailableNow =
@@ -530,6 +524,15 @@ class _SpatialLibraryDetailScreenState
     );
     if (!mounted || choice == null) return;
     switch (choice) {
+      case SpatialProcessorChoice.connectOwnNode:
+        // Pairing is reachable from the point of need — not a detour through
+        // Settings. On success, drop straight back into the same processing
+        // flow with the Node's freshly paired state already reflected.
+        final paired = await Navigator.of(context).push<bool>(
+          MaterialPageRoute(builder: (_) => const NodePairingScreen()),
+        );
+        if (!mounted || paired != true) return;
+        await _chooseProcessor(provider, record);
       case SpatialProcessorChoice.ownNode:
         // The user's own Node needs no third-party privacy consent: the data
         // never leaves their own hardware.

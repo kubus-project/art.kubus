@@ -6522,6 +6522,8 @@
   "spatialProcessOwnNodeSubtitle": "Use your paired kubus Node.",
   "spatialProcessOwnNodeRemote": "Connected remotely",
   "spatialProcessOwnNodeLocal": "On your network",
+  "spatialProcessOwnNodeUnpaired": "Not connected — tap to pair",
+  "spatialProcessConnectOwnNode": "Connect my Node",
   "spatialProcessNetworkSubtitle": "Request processing from an available GPU provider.",
   "spatialProcessRequestNetwork": "Request network processing",
   "spatialProcessNoProviderNow": "No provider is available right now. The request stays open until one is.",

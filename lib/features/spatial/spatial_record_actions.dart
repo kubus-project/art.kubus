@@ -88,14 +88,13 @@ class SpatialRecordActions {
 
   /// Resolves the action set from the record's own state.
   ///
-  /// [processorConfigured] reflects whether the device has any processor to
-  /// offer at all — an unpaired Node with the Node feature off. It never
-  /// gates the *network* request, which is deliberately available even when
-  /// no provider is reachable at this instant.
-  static SpatialRecordActions of(
-    SpatialLibraryRecord record, {
-    bool processorConfigured = true,
-  }) {
+  /// Processing is always reachable from here. The KUBUS Network is a
+  /// processor the user never has to own or pair — it is offered even when
+  /// no provider is reachable at this instant, and even when the user has no
+  /// Node of their own. Whether *this* device happens to have its own Node
+  /// paired only changes what the process sheet recommends, never whether
+  /// the primary action exists.
+  static SpatialRecordActions of(SpatialLibraryRecord record) {
     final request = record.networkRequest;
     final requestActive = request?.isActive == true;
     final busy = record.isBusy;
@@ -129,11 +128,11 @@ class SpatialRecordActions {
       }
     } else if (record.processingState ==
         SpatialLibraryProcessingState.failedRetryable) {
-      if (record.rawPresent && processorConfigured) {
+      if (record.rawPresent) {
         primary = SpatialLibraryAction.retryProcessing;
         secondary.add(SpatialLibraryAction.changeProcessor);
       }
-    } else if (needsProcessing && processorConfigured) {
+    } else if (needsProcessing) {
       primary = SpatialLibraryAction.process;
     }
 

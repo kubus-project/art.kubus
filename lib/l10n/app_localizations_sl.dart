@@ -16488,6 +16488,13 @@ class AppLocalizationsSl extends AppLocalizations {
   String get spatialProcessOwnNodeLocal => 'V vašem omrežju';
 
   @override
+  String get spatialProcessOwnNodeUnpaired =>
+      'Ni povezano — dotaknite se za povezavo';
+
+  @override
+  String get spatialProcessConnectOwnNode => 'Poveži moj Node';
+
+  @override
   String get spatialProcessNetworkSubtitle =>
       'Zahtevajte obdelavo pri razpoložljivem ponudniku GPU.';
 

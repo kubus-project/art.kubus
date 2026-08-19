@@ -11,6 +11,9 @@ enum SpatialProcessorChoice {
 
   /// A request for compute from someone else's GPU on the kubus network.
   kubusNetwork,
+
+  /// No Node is paired yet — the user asked to pair one from here.
+  connectOwnNode,
 }
 
 /// Asks who should process a capture.
@@ -71,17 +74,25 @@ class SpatialProcessSheet extends StatelessWidget {
               title: l10n.spatialProcessLocalTitle,
               body: l10n.spatialProcessOwnNodeSubtitle,
               // The connection note is the whole difference between LAN and
-              // remote: same Node, same data, different route.
+              // remote: same Node, same data, different route. Unpaired is
+              // not a disabled state — it is an invitation to pair, reachable
+              // from the exact moment the user needs a processor.
               note: switch (ownNode) {
                 SpatialOwnNodeReachability.localNetwork =>
                   l10n.spatialProcessOwnNodeLocal,
                 SpatialOwnNodeReachability.remote =>
                   l10n.spatialProcessOwnNodeRemote,
-                SpatialOwnNodeReachability.unpaired => null,
+                SpatialOwnNodeReachability.unpaired =>
+                  l10n.spatialProcessOwnNodeUnpaired,
               },
-              enabled: ownNode != SpatialOwnNodeReachability.unpaired,
+              noteColor: ownNode == SpatialOwnNodeReachability.unpaired
+                  ? scheme.onSurfaceVariant
+                  : null,
+              enabled: true,
               onTap: () => Navigator.of(context).pop(
-                SpatialProcessorChoice.ownNode,
+                ownNode == SpatialOwnNodeReachability.unpaired
+                    ? SpatialProcessorChoice.connectOwnNode
+                    : SpatialProcessorChoice.ownNode,
               ),
             ),
             const SizedBox(height: KubusSpacing.sm),

@@ -28434,6 +28434,18 @@ abstract class AppLocalizations {
   /// **'On your network'**
   String get spatialProcessOwnNodeLocal;
 
+  /// No description provided for @spatialProcessOwnNodeUnpaired.
+  ///
+  /// In en, this message translates to:
+  /// **'Not connected — tap to pair'**
+  String get spatialProcessOwnNodeUnpaired;
+
+  /// No description provided for @spatialProcessConnectOwnNode.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect my Node'**
+  String get spatialProcessConnectOwnNode;
+
   /// No description provided for @spatialProcessNetworkSubtitle.
   ///
   /// In en, this message translates to:

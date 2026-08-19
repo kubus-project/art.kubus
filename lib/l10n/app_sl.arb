@@ -6502,6 +6502,8 @@
   "spatialProcessOwnNodeSubtitle": "Uporabite svoje seznanjeno vozlišče kubus Node.",
   "spatialProcessOwnNodeRemote": "Povezano na daljavo",
   "spatialProcessOwnNodeLocal": "V vašem omrežju",
+  "spatialProcessOwnNodeUnpaired": "Ni povezano — dotaknite se za povezavo",
+  "spatialProcessConnectOwnNode": "Poveži moj Node",
   "spatialProcessNetworkSubtitle": "Zahtevajte obdelavo pri razpoložljivem ponudniku GPU.",
   "spatialProcessRequestNetwork": "Zahtevaj obdelavo v omrežju",
   "spatialProcessNoProviderNow": "Trenutno ni na voljo nobenega ponudnika. Zahteva ostane odprta, dokler se kateri ne pojavi.",

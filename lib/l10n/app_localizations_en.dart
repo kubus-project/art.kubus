@@ -16325,6 +16325,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get spatialProcessOwnNodeLocal => 'On your network';
 
   @override
+  String get spatialProcessOwnNodeUnpaired => 'Not connected — tap to pair';
+
+  @override
+  String get spatialProcessConnectOwnNode => 'Connect my Node';
+
+  @override
   String get spatialProcessNetworkSubtitle =>
       'Request processing from an available GPU provider.';
 
