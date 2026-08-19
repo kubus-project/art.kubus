@@ -16594,4 +16594,8 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get spatialViewOnMap => 'Pokaži na zemljevidu';
+
+  @override
+  String get spatialCaptureAnotherOpen =>
+      'Zajem za drugo umetniško delo je še odprt. Preden začnete novega, ga dokončajte ali zavrzite.';
 }

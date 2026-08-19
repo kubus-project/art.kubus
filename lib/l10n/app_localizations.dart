@@ -28601,6 +28601,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'View on map'**
   String get spatialViewOnMap;
+
+  /// No description provided for @spatialCaptureAnotherOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'A capture for another artwork is still open. Finish or discard it before starting a new one.'**
+  String get spatialCaptureAnotherOpen;
 }
 
 class _AppLocalizationsDelegate

@@ -375,6 +375,9 @@ class _ARScreenState extends State<ARScreen>
   /// Set once the screen has consumed its route arguments.
   bool _launchRequestApplied = false;
 
+  /// A capture launch waiting for the AR session to come up.
+  SpatialCaptureLaunchRequest? _pendingLaunchRequest;
+
   String? _selectedSpatialId;
   final Set<String> _likedArtworks = {};
   final Set<String> _savedArtworks = {};
@@ -646,15 +649,15 @@ class _ARScreenState extends State<ARScreen>
 
     // The capture target arrives as a route argument, so it belongs to the
     // navigation that created it rather than to whatever the app currently
-    // considers "selected".
+    // considers "selected". It is only *applied* once AR is up: switching
+    // modes before initialization would ask the camera orchestrator for a
+    // surface the session has not created yet.
     if (!_launchRequestApplied) {
       _launchRequestApplied = true;
       final request = SpatialCaptureLaunchRequest.maybeOf(context);
       if (request != null) {
         _spatialTarget = request.target;
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) unawaited(_applyLaunchRequest(request));
-        });
+        _pendingLaunchRequest = request;
       }
     }
 
@@ -676,6 +679,26 @@ class _ARScreenState extends State<ARScreen>
   /// switches to capture mode with the target already decided.
   Future<void> _applyLaunchRequest(SpatialCaptureLaunchRequest request) async {
     if (!AppConfig.isFeatureEnabled('availabilityNodes')) return;
+    final capture = context.read<SpatialCaptureProvider>();
+
+    // An unfinished capture already owns the session, and it belongs to
+    // whichever artwork it was started for. Quietly resuming it under a new
+    // target would misattribute it; quietly discarding it would throw away
+    // work. So the request yields and says why.
+    final open = capture.isCapturing || capture.isPaused;
+    if (open && capture.artworkId != request.target?.artworkId) {
+      _changeMode('create');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+        SnackBar(
+          content:
+              Text(AppLocalizations.of(context)!.spatialCaptureAnotherOpen),
+        ),
+        tone: KubusSnackBarTone.warning,
+      );
+      return;
+    }
+
     _changeMode('create');
     if (!request.isContinuation) {
       if (request.mustChooseTarget && _spatialTarget == null) {
@@ -787,6 +810,12 @@ class _ARScreenState extends State<ARScreen>
       await _acquireCameraFor(_currentMode);
       if (!mounted) return;
       await _offerInterruptedCaptureRecovery();
+      if (!mounted) return;
+      final pending = _pendingLaunchRequest;
+      if (pending != null) {
+        _pendingLaunchRequest = null;
+        await _applyLaunchRequest(pending);
+      }
     } catch (e) {
       if (kDebugMode) {
         debugPrint('ARScreen: AR initialization error: $e');

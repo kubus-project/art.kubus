@@ -16430,4 +16430,8 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get spatialViewOnMap => 'View on map';
+
+  @override
+  String get spatialCaptureAnotherOpen =>
+      'A capture for another artwork is still open. Finish or discard it before starting a new one.';
 }

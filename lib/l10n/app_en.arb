@@ -6553,5 +6553,6 @@
   "spatialArtworkDraftsSubtitle": "Private to this device until you publish.",
   "spatialArtworkAddUpdate": "Add spatial update",
   "spatialArtworkCaptureCta": "Capture spatial data",
-  "spatialViewOnMap": "View on map"
+  "spatialViewOnMap": "View on map",
+  "spatialCaptureAnotherOpen": "A capture for another artwork is still open. Finish or discard it before starting a new one."
 }

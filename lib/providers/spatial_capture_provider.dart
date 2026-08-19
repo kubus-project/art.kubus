@@ -283,6 +283,7 @@ class SpatialCaptureProvider extends ChangeNotifier {
     _operationGeneration++;
     await _releaseStore();
     _continuingLocalSpatialId = null;
+    _target = null;
     _coverage.reset();
     final startedAt = DateTime.now().toUtc();
     final captureId = 'capture-${startedAt.microsecondsSinceEpoch}';
@@ -1051,6 +1052,7 @@ class SpatialCaptureProvider extends ChangeNotifier {
       await store.discard();
     }
     _continuingLocalSpatialId = null;
+    _target = null;
     _coverage.reset();
     _lastAcceptedPose = null;
     _lastAcceptedAt = null;
