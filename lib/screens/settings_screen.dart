@@ -50,6 +50,7 @@ import '../utils/wallet_backup_status.dart';
 import '../utils/wallet_action_guard.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/utils/wallet_reconnect_action.dart';
+import '../config/api_keys.dart';
 
 part 'settings_screen_parts/settings_screen_p1.dart';
 part 'settings_screen_parts/settings_screen_p2.dart';

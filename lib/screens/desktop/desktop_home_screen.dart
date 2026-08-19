@@ -77,6 +77,7 @@ import '../../widgets/search/kubus_general_search.dart';
 import '../../widgets/search/kubus_search_config.dart';
 import '../../widgets/search/kubus_search_controller.dart';
 import '../../widgets/search/kubus_search_result.dart';
+import '../../config/api_keys.dart';
 
 @visibleForTesting
 int resolveArtworksDiscoveredCount({
@@ -985,9 +986,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
   Widget _buildWalletBalances() {
     return Consumer<WalletProvider>(
       builder: (context, walletProvider, _) {
-        final kub8 = walletProvider.tokens
-            .where((t) => t.symbol.toUpperCase() == 'KUB8')
-            .firstOrNull;
+        // KUB8 is the canonical mint, never the symbol.
+        final kub8 = walletProvider.getTokenByMint(ApiKeys.kub8MintAddress);
         final sol = walletProvider.tokens
             .where((t) => t.symbol.toUpperCase() == 'SOL')
             .firstOrNull;

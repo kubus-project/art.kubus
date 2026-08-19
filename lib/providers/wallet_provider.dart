@@ -26,6 +26,7 @@ import '../services/wallet_passkey_crypto_service.dart';
 import '../config/config.dart';
 import '../config/api_keys.dart';
 import '../utils/wallet_utils.dart';
+import '../utils/token_amounts.dart';
 
 enum BiometricAuthOutcome {
   success,
@@ -725,6 +726,12 @@ class WalletProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   bool get isBalanceVisible => _isBalanceVisible;
   double get totalBalance => _wallet?.totalValue ?? 0.0;
+
+  /// Whether a trustworthy price source backs [totalBalance].
+  ///
+  /// No price feed is integrated, so token balances are reported but no fiat valuation is.
+  /// Surfaces must hide monetary totals rather than present an invented number as real value.
+  bool get hasFiatValuation => false;
   String? get currentWalletAddress => _currentWalletAddress;
   bool get hasWalletIdentity =>
       _currentWalletAddress != null && _currentWalletAddress!.isNotEmpty;
@@ -2056,7 +2063,9 @@ class WalletProvider extends ChangeNotifier {
           symbol: 'SOL',
           type: TokenType.native,
           balance: solBalance,
-          value: solBalance * 50.0, // Placeholder price
+          // No trustworthy price source is wired up, so no monetary value is claimed.
+          // Reporting an invented figure as a real valuation would be worse than reporting none.
+          value: 0.0,
           changePercentage: 0.0,
           contractAddress: 'native',
           decimals: 9,
@@ -2076,7 +2085,8 @@ class WalletProvider extends ChangeNotifier {
           symbol: t.symbol,
           type: isKub8 ? TokenType.governance : TokenType.erc20,
           balance: t.balance,
-          value: t.balance * 1.0, // Placeholder until price API
+          // See above: token balances are real, fiat valuations are not available.
+          value: 0.0,
           changePercentage: 0.0,
           contractAddress: t.mint,
           decimals: t.decimals,
@@ -2463,7 +2473,7 @@ class WalletProvider extends ChangeNotifier {
   // Token methods
   Token? getTokenBySymbol(String symbol) {
     try {
-      return _tokens.firstWhere((token) => token.symbol == symbol);
+      return tokens.firstWhere((token) => token.symbol == symbol);
     } catch (e) {
       return null;
     }
@@ -2474,7 +2484,9 @@ class WalletProvider extends ChangeNotifier {
     final normalized = mint.trim().toLowerCase();
     if (normalized.isEmpty) return null;
 
-    for (final token in _tokens) {
+    // Reads the public holdings view rather than the backing field, so every consumer sees the
+    // same token set.
+    for (final token in tokens) {
       if (token.contractAddress.toLowerCase() == normalized) {
         return token;
       }
@@ -2485,6 +2497,26 @@ class WalletProvider extends ChangeNotifier {
       return getTokenBySymbol('SOL');
     }
     return null;
+  }
+
+  /// The wallet's canonical KUB8 holding, identified by mint.
+  ///
+  /// A token that merely calls itself "KUB8" is not KUB8: symbols are display metadata and can
+  /// be set to anything by whoever created the mint.
+  Token? kub8TokenForMint(String mintAddress) => getTokenByMint(mintAddress);
+
+  /// Raw base-unit balance of the canonical KUB8 mint currently held by this wallet.
+  ///
+  /// This is a UX signal only. The backend verifies the actual on-chain transfer before any
+  /// promotion is treated as paid.
+  BigInt kub8RawBalanceForMint(String mintAddress, int decimals) {
+    final token = getTokenByMint(mintAddress);
+    if (token == null) return BigInt.zero;
+    try {
+      return TokenAmounts.fromDouble(token.balance, decimals);
+    } on TokenAmountException {
+      return BigInt.zero;
+    }
   }
 
   List<Token> getTokensByType(TokenType type) {
@@ -2780,6 +2812,81 @@ class WalletProvider extends ChangeNotifier {
     return _visibleTransactions(_transactions)
         .where((tx) => tx.token == token)
         .toList();
+  }
+
+  /// Send an exact number of raw SPL base units to `toAddress`, with no fee overlay.
+  ///
+  /// Used for platform payments such as promotions, where the quoted amount IS the platform's
+  /// revenue and adding a fee split on top would overcharge the user. The token is identified by
+  /// mint; the decimals must match what the mint actually reports, which the underlying transfer
+  /// re-checks against the RPC before signing.
+  ///
+  /// Returns the submitted signature. Both internally managed and external signers go through
+  /// their existing abstractions, so no separate wallet implementation is introduced.
+  Future<SubmittedSolanaTransactionRecord> sendSplTokenPaymentRaw({
+    required String mintAddress,
+    required String toAddress,
+    required BigInt rawAmount,
+    required int decimals,
+  }) async {
+    if (!canTransact ||
+        _currentWalletAddress == null ||
+        _currentWalletAddress!.isEmpty) {
+      throw Exception('Connect wallet before sending transactions');
+    }
+    if (toAddress.trim().isEmpty) {
+      throw Exception('Recipient address is required');
+    }
+    if (rawAmount <= BigInt.zero) {
+      throw Exception('Amount must be greater than zero');
+    }
+
+    final walletAddress = _currentWalletAddress!;
+    final tokenMeta = getTokenByMint(mintAddress);
+    if (tokenMeta == null) {
+      throw SolanaWalletSendException(
+        'This wallet holds no token account for the requested mint. Refresh your wallet and try again.',
+      );
+    }
+    if (tokenMeta.decimals != decimals) {
+      throw SolanaWalletSendException(
+        'Token decimals mismatch for this mint. Expected $decimals but the wallet reports ${tokenMeta.decimals}.',
+      );
+    }
+
+    final sourceAccounts = _planSplSourceTokenAccountsFromOwnedAccounts(
+      authoritativeAccounts: tokenMeta.ownedTokenAccounts,
+      tokenMeta: tokenMeta,
+      transfers: [
+        _PlannedSplTransferRecord(
+          id: 'primary',
+          label: 'promotion payment',
+          amount: TokenAmounts.toDisplayDouble(rawAmount, decimals),
+        ),
+      ],
+    );
+
+    final useExternalSigner = hasExternalSigner && !hasLocalSigner;
+    final submission = useExternalSigner
+        ? await _submitUnsignedTransactionRecord(
+            await _solanaWalletService.buildTransferSplTokenTransactionBase64Raw(
+              fromAddress: walletAddress,
+              mint: mintAddress,
+              toAddress: toAddress,
+              rawAmount: rawAmount,
+              decimals: decimals,
+              sourceTokenAccount: sourceAccounts['primary'],
+            ),
+          )
+        : await _solanaWalletService.transferSplTokenRaw(
+            mint: mintAddress,
+            toAddress: toAddress,
+            rawAmount: rawAmount,
+            decimals: decimals,
+            sourceTokenAccount: sourceAccounts['primary'],
+          );
+
+    return submission;
   }
 
   Future<WalletTransactionSubmissionResult> sendTransaction({

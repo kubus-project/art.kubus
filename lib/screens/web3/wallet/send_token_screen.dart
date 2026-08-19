@@ -994,10 +994,11 @@ class _SendTokenScreenState extends State<SendTokenScreen>
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     switch (token) {
       case 'KUB8':
-        final kub8Tokens = walletProvider.tokens
-            .where((t) => t.symbol.toUpperCase() == 'KUB8');
-        return kub8Tokens.isNotEmpty
-            ? kub8Tokens.first.balance.toStringAsFixed(2)
+        // KUB8 is the canonical mint, never the symbol.
+        final kub8Token =
+            walletProvider.getTokenByMint(ApiKeys.kub8MintAddress);
+        return kub8Token != null
+            ? kub8Token.balance.toStringAsFixed(2)
             : '0.00';
       case 'SOL':
         final solTokens =

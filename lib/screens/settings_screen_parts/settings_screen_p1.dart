@@ -213,14 +213,12 @@ extension _SettingsScreenStatePart1 on _SettingsScreenState {
               Consumer<WalletProvider>(
                 builder: (context, walletProvider, child) {
                   // Get KUB8 balance
-                  final kub8Balance = walletProvider.tokens
-                          .where(
-                              (token) => token.symbol.toUpperCase() == 'KUB8')
-                          .isNotEmpty
-                      ? walletProvider.tokens
-                          .where(
-                              (token) => token.symbol.toUpperCase() == 'KUB8')
-                          .first
+                  // KUB8 is the canonical mint, never the symbol.
+                  final kub8Balance = walletProvider
+                              .getTokenByMint(ApiKeys.kub8MintAddress) !=
+                          null
+                      ? walletProvider
+                          .getTokenByMint(ApiKeys.kub8MintAddress)!
                           .balance
                       : 0.0;
 

@@ -12,6 +12,7 @@ import '../../../utils/app_animations.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/kubus_labs_feature.dart';
 import '../../../widgets/common/kubus_labs_adornment.dart';
+import '../../../config/api_keys.dart';
 
 /// Navigation item data model
 enum DesktopNavLabelKey {
@@ -794,9 +795,9 @@ class _DesktopNavigationState extends State<DesktopNavigation>
     return Consumer2<WalletProvider, ProfileProvider>(
       builder: (context, walletProvider, profileProvider, _) {
         final tokens = walletProvider.tokens;
-        final kub8Balance = tokens
-            .where((t) => t.symbol.toUpperCase() == 'KUB8')
-            .fold<double>(0.0, (prev, t) => t.balance);
+        // KUB8 is the canonical mint, never the symbol.
+        final kub8Balance =
+            walletProvider.getTokenByMint(ApiKeys.kub8MintAddress)?.balance ?? 0.0;
         final solBalance = tokens
             .where((t) => t.symbol.toUpperCase() == 'SOL')
             .fold<double>(0.0, (prev, t) => t.balance);

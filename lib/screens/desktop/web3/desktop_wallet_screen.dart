@@ -31,6 +31,7 @@ import '../../../widgets/wallet/kubus_wallet_shell.dart';
 import '../../../widgets/wallet/wallet_action_controller.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import '../../web3/wallet/wallet_backup_protection_screen.dart';
+import '../../../config/api_keys.dart';
 
 /// Desktop wallet screen with professional dashboard layout
 /// Web-optimized with hover states and keyboard shortcuts
@@ -493,11 +494,9 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
             .firstOrNull
             ?.balance ??
         0.0;
-    final kub8Balance = walletProvider.tokens
-            .where((t) => t.symbol.toUpperCase() == 'KUB8')
-            .firstOrNull
-            ?.balance ??
-        0.0;
+    // KUB8 is the canonical mint, never the symbol.
+    final kub8Balance =
+        walletProvider.getTokenByMint(ApiKeys.kub8MintAddress)?.balance ?? 0.0;
     final walletAddress = (walletProvider.currentWalletAddress ?? '').trim();
     final scheme = Theme.of(context).colorScheme;
     final accent = roles.statAmber;
