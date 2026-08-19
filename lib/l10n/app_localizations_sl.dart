@@ -9654,7 +9654,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get daoDelegationFailedToast =>
-      'Delegacije ni bilo mogoÄe shraniti. Poskusi znova.';
+      'Delegacije ni bilo mogoče shraniti. Poskusi znova.';
 
   @override
   String get daoViewDelegationDetailsAction => 'Ogled podrobnosti';
@@ -14091,6 +14091,35 @@ class AppLocalizationsSl extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get promotionBuilderQuoteExpired =>
+      'Ponudba je potekla. Ceno smo osvežili.';
+
+  @override
+  String get promotionBuilderPaymentConfirming =>
+      'Plačilo je poslano. Čakamo na potrditev omrežja.';
+
+  @override
+  String get promotionBuilderVerifyPayment => 'Preveri plačilo';
+
+  @override
+  String get promotionBuilderWalletSessionMismatch =>
+      'Povezana denarnica se je spremenila. Ponovno se povežite in poskusite znova.';
+
+  @override
+  String get promotionBuilderConnectWalletForKub8 =>
+      'Za plačilo s KUB8 povežite denarnico, ki lahko podpisuje.';
+
+  @override
+  String get promotionBuilderKub8Unavailable =>
+      'Plačila s KUB8 trenutno niso na voljo.';
+
+  @override
+  String get promotionBuilderKub8Required => 'Potrebno';
+
+  @override
+  String get promotionBuilderKub8Available => 'Na voljo';
 
   @override
   String get promotionActionPromote => 'Promoviraj';

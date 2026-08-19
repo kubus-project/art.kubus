@@ -3,11 +3,59 @@ import 'package:flutter/foundation.dart';
 import '../models/promotion.dart';
 import '../services/backend_api_service.dart';
 
+/// How a KUB8 promotion payment is progressing, for UI feedback.
+enum Kub8PaymentStage {
+  idle,
+
+  /// Waiting for the user to approve the transfer in their wallet.
+  awaitingWalletApproval,
+
+  /// The transfer was submitted to the cluster.
+  submitted,
+
+  /// The backend is verifying the finalized transaction.
+  verifying,
+
+  /// The backend confirmed a real on-chain transfer.
+  confirmed,
+
+  failed,
+}
+
+/// Outcome of a KUB8 promotion payment attempt.
+class Kub8PaymentOutcome {
+  const Kub8PaymentOutcome({
+    required this.stage,
+    this.request,
+    this.signature,
+    this.message,
+  });
+
+  final Kub8PaymentStage stage;
+  final PromotionRequest? request;
+  final String? signature;
+  final String? message;
+
+  bool get isConfirmed => stage == Kub8PaymentStage.confirmed;
+
+  /// The transfer is on chain but not yet verified. The signature must be retried, never
+  /// re-signed, otherwise the user could pay twice.
+  bool get needsVerificationRetry =>
+      stage == Kub8PaymentStage.submitted || stage == Kub8PaymentStage.verifying;
+}
+
+/// Signs an SPL transfer of an exact raw amount and returns the submitted signature.
+typedef Kub8TransferSigner = Future<String> Function({
+  required String mintAddress,
+  required String destinationOwner,
+  required BigInt rawAmount,
+  required int decimals,
+});
+
 class PromotionProvider extends ChangeNotifier {
   final BackendApiService _api;
 
-  PromotionProvider({BackendApiService? api})
-      : _api = api ?? BackendApiService();
+  PromotionProvider({BackendApiService? api}) : _api = api ?? BackendApiService();
 
   final Map<PromotionEntityType, List<PromotionRateCard>> _rateCardsByType =
       <PromotionEntityType, List<PromotionRateCard>>{};
@@ -26,6 +74,20 @@ class PromotionProvider extends ChangeNotifier {
   PriceQuote? _currentQuote;
   SlotAvailability? _currentSlotAvailability;
   AlternativeDatesResponse? _currentAlternatives;
+  PromotionPolicyConfig _config = PromotionPolicyConfig.defaults;
+  bool _configLoaded = false;
+
+  Kub8PaymentStage _kub8Stage = Kub8PaymentStage.idle;
+  String? _pendingKub8Signature;
+  String? _pendingKub8RequestId;
+
+  // Monotonic request generations. Only a response whose generation still matches the latest
+  // request may write to state, so a slow earlier response can never overwrite a newer one.
+  int _quoteGeneration = 0;
+  int _quoteInFlight = 0;
+  int _availabilityGeneration = 0;
+  int _availabilityInFlight = 0;
+  int _alternativesGeneration = 0;
 
   bool get rateCardsLoading => _rateCardsLoading;
   bool get requestsLoading => _requestsLoading;
@@ -35,9 +97,21 @@ class PromotionProvider extends ChangeNotifier {
   String? get error => _error;
   String get lastFeaturedLocale => _lastFeaturedLocale;
 
+  /// True while a quote request is outstanding.
+  bool get quoteLoading => _quoteInFlight > 0;
+  bool get availabilityLoading => _availabilityInFlight > 0;
+
   PriceQuote? get currentQuote => _currentQuote;
   SlotAvailability? get currentSlotAvailability => _currentSlotAvailability;
   AlternativeDatesResponse? get currentAlternatives => _currentAlternatives;
+  PromotionPolicyConfig get config => _config;
+  bool get configLoaded => _configLoaded;
+
+  Kub8PaymentStage get kub8Stage => _kub8Stage;
+
+  /// A signature that was submitted on chain but is not yet verified by the backend.
+  String? get pendingKub8Signature => _pendingKub8Signature;
+  String? get pendingKub8RequestId => _pendingKub8RequestId;
 
   List<PromotionRateCard> rateCardsFor(PromotionEntityType entityType) =>
       List.unmodifiable(
@@ -56,6 +130,21 @@ class PromotionProvider extends ChangeNotifier {
     return const <HomeRailItem>[];
   }
 
+  /// Load the backend's scheduling and payment policy. The booking horizon and the canonical
+  /// KUB8 mint come from here rather than being duplicated in the client.
+  Future<void> loadConfig({bool force = false}) async {
+    if (_configLoaded && !force) return;
+    try {
+      _config = await _api.getPromotionConfig();
+      _configLoaded = true;
+      notifyListeners();
+    } catch (e) {
+      // Config is advisory; the backend still enforces every rule. Keep the defaults.
+      _configLoaded = false;
+      debugPrint('PromotionProvider.loadConfig failed: $e');
+    }
+  }
+
   Future<void> loadRateCards(
     PromotionEntityType entityType, {
     bool force = false,
@@ -69,8 +158,7 @@ class PromotionProvider extends ChangeNotifier {
     _error = null;
     notifyListeners();
     try {
-      final rateCards =
-          await _api.getPromotionRateCards(entityType: entityType);
+      final rateCards = await _api.getPromotionRateCards(entityType: entityType);
       _rateCardsByType[entityType] = rateCards;
     } catch (e) {
       _error = e.toString();
@@ -81,32 +169,44 @@ class PromotionProvider extends ChangeNotifier {
     }
   }
 
-  Future<SlotAvailability> checkSlotAvailability({
+  Future<SlotAvailability?> checkSlotAvailability({
     required String rateCardId,
     DateTime? startDate,
     DateTime? endDate,
   }) async {
+    final generation = ++_availabilityGeneration;
+    _availabilityInFlight += 1;
+    notifyListeners();
     try {
       final availability = await _api.getSlotAvailability(
         rateCardId: rateCardId,
         startDate: startDate,
         endDate: endDate,
       );
+      if (generation != _availabilityGeneration) {
+        // A newer availability request has been issued; this response is stale.
+        return null;
+      }
       _currentSlotAvailability = availability;
-      notifyListeners();
       return availability;
     } catch (e) {
-      _error = e.toString();
+      if (generation == _availabilityGeneration) {
+        _error = e.toString();
+      }
       rethrow;
+    } finally {
+      _availabilityInFlight -= 1;
+      notifyListeners();
     }
   }
 
-  Future<AlternativeDatesResponse> getAlternativeDates({
+  Future<AlternativeDatesResponse?> getAlternativeDates({
     required String rateCardId,
     required int slotIndex,
     required DateTime startDate,
     required int durationDays,
   }) async {
+    final generation = ++_alternativesGeneration;
     try {
       final alternatives = await _api.getAlternativeDates(
         rateCardId: rateCardId,
@@ -114,41 +214,81 @@ class PromotionProvider extends ChangeNotifier {
         startDate: startDate,
         durationDays: durationDays,
       );
+      if (generation != _alternativesGeneration) return null;
       _currentAlternatives = alternatives;
       notifyListeners();
       return alternatives;
     } catch (e) {
-      _error = e.toString();
+      if (generation == _alternativesGeneration) {
+        _error = e.toString();
+      }
       rethrow;
     }
   }
 
-  Future<PriceQuote> calculateQuote({
+  /// Request an immutable quote for the current selection.
+  ///
+  /// Returns null when a newer quote request superseded this one, in which case the caller must
+  /// not treat the result as current.
+  Future<PriceQuote?> requestQuote({
     required String rateCardId,
     required int durationDays,
+    required PromotionEntityType entityType,
+    required String targetEntityId,
     int? slotIndex,
     DateTime? startDate,
   }) async {
+    final generation = ++_quoteGeneration;
+    _quoteInFlight += 1;
+    // A quote in flight invalidates whatever was shown before, so the UI cannot submit an
+    // amount that no longer matches the selection.
+    _currentQuote = null;
+    _error = null;
+    notifyListeners();
     try {
       final quote = await _api.calculatePriceQuote(
         rateCardId: rateCardId,
         durationDays: durationDays,
+        entityType: entityType,
+        targetEntityId: targetEntityId,
         slotIndex: slotIndex,
         startDate: startDate,
       );
+      if (generation != _quoteGeneration) {
+        // A newer request won. Discard this response rather than showing a stale price.
+        return null;
+      }
       _currentQuote = quote;
-      notifyListeners();
       return quote;
     } catch (e) {
-      _error = e.toString();
+      if (generation == _quoteGeneration) {
+        _error = e.toString();
+        _currentQuote = null;
+      }
       rethrow;
+    } finally {
+      _quoteInFlight -= 1;
+      notifyListeners();
     }
   }
 
+  /// Invalidate the current quote because the selection changed.
+  void invalidateQuote() {
+    _quoteGeneration += 1;
+    _currentQuote = null;
+    notifyListeners();
+  }
+
   void clearQuote() {
+    _quoteGeneration += 1;
+    _availabilityGeneration += 1;
+    _alternativesGeneration += 1;
     _currentQuote = null;
     _currentSlotAvailability = null;
     _currentAlternatives = null;
+    _kub8Stage = Kub8PaymentStage.idle;
+    _pendingKub8Signature = null;
+    _pendingKub8RequestId = null;
     notifyListeners();
   }
 
@@ -198,14 +338,15 @@ class PromotionProvider extends ChangeNotifier {
     }
   }
 
+  /// Submit the accepted quote.
+  ///
+  /// [idempotencyKey] must stay stable across retries of the same user action so a lost
+  /// response cannot create a second promotion request.
   Future<PromotionRequestSubmission?> submitPromotionRequest({
-    required String targetEntityId,
-    required PromotionEntityType entityType,
-    required String rateCardId,
-    required int durationDays,
+    required String quoteId,
     required PromotionPaymentMethod paymentMethod,
-    int? slotIndex,
-    DateTime? startDate,
+    required String idempotencyKey,
+    String? walletAddress,
   }) async {
     if (_submitting) return null;
     _submitting = true;
@@ -213,13 +354,10 @@ class PromotionProvider extends ChangeNotifier {
     notifyListeners();
     try {
       final submission = await _api.createPromotionRequest(
-        targetEntityId: targetEntityId,
-        entityType: entityType,
-        rateCardId: rateCardId,
-        durationDays: durationDays,
+        quoteId: quoteId,
         paymentMethod: paymentMethod,
-        slotIndex: slotIndex,
-        startDate: startDate,
+        idempotencyKey: idempotencyKey,
+        walletAddress: walletAddress,
       );
       _myRequests.removeWhere((r) => r.id == submission.request.id);
       _myRequests.insert(0, submission.request);
@@ -231,6 +369,105 @@ class PromotionProvider extends ChangeNotifier {
       _submitting = false;
       notifyListeners();
     }
+  }
+
+  /// Sign and settle a KUB8 promotion payment.
+  ///
+  /// The wallet signs the exact raw amount the backend issued. If the response to verification
+  /// is lost, the signature is retained so the caller can retry verification instead of signing
+  /// a second transfer.
+  Future<Kub8PaymentOutcome> payPromotionWithKub8({
+    required PromotionRequestSubmission submission,
+    required Kub8TransferSigner signer,
+    String? walletAddress,
+  }) async {
+    final payment = submission.kub8Payment;
+    if (payment == null) {
+      return const Kub8PaymentOutcome(
+        stage: Kub8PaymentStage.failed,
+        message: 'This promotion has no KUB8 payment instruction.',
+      );
+    }
+
+    final requestId = submission.request.id;
+    _pendingKub8RequestId = requestId;
+    _setKub8Stage(Kub8PaymentStage.awaitingWalletApproval);
+
+    String signature;
+    try {
+      signature = await signer(
+        mintAddress: payment.mintAddress,
+        destinationOwner: payment.destinationOwner,
+        rawAmount: payment.amountRaw,
+        decimals: payment.decimals,
+      );
+    } catch (e) {
+      _setKub8Stage(Kub8PaymentStage.failed);
+      return Kub8PaymentOutcome(
+        stage: Kub8PaymentStage.failed,
+        message: e.toString(),
+      );
+    }
+
+    // The transfer is on chain from here on. Never sign again for this request.
+    _pendingKub8Signature = signature;
+    _setKub8Stage(Kub8PaymentStage.submitted);
+
+    return verifyPendingKub8Payment(
+      requestId: requestId,
+      signature: signature,
+      walletAddress: walletAddress,
+    );
+  }
+
+  /// Ask the backend to verify a submitted transfer. Safe to call repeatedly.
+  Future<Kub8PaymentOutcome> verifyPendingKub8Payment({
+    required String requestId,
+    required String signature,
+    String? walletAddress,
+  }) async {
+    _pendingKub8RequestId = requestId;
+    _pendingKub8Signature = signature;
+    _setKub8Stage(Kub8PaymentStage.verifying);
+    try {
+      final request = await _api.attachPromotionKub8Payment(
+        requestId: requestId,
+        signature: signature,
+        walletAddress: walletAddress,
+      );
+      _myRequests.removeWhere((r) => r.id == request.id);
+      _myRequests.insert(0, request);
+      _pendingKub8Signature = null;
+      _pendingKub8RequestId = null;
+      _setKub8Stage(Kub8PaymentStage.confirmed);
+      return Kub8PaymentOutcome(
+        stage: Kub8PaymentStage.confirmed,
+        request: request,
+        signature: signature,
+      );
+    } on PromotionPaymentPendingException catch (e) {
+      // Still confirming. The signature is kept so the user retries verification rather than
+      // paying again.
+      _setKub8Stage(Kub8PaymentStage.submitted);
+      return Kub8PaymentOutcome(
+        stage: Kub8PaymentStage.submitted,
+        signature: signature,
+        message: e.message,
+      );
+    } catch (e) {
+      _error = e.toString();
+      _setKub8Stage(Kub8PaymentStage.failed);
+      return Kub8PaymentOutcome(
+        stage: Kub8PaymentStage.failed,
+        signature: signature,
+        message: e.toString(),
+      );
+    }
+  }
+
+  void _setKub8Stage(Kub8PaymentStage stage) {
+    _kub8Stage = stage;
+    notifyListeners();
   }
 
   Future<void> loadHomeRails({

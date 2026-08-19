@@ -159,9 +159,14 @@ void main() {
         expect(request.url.path, '/api/app/promotion-requests');
         expect(request.headers['Authorization'], 'Bearer test-token');
         final requestBody = jsonDecode(request.body) as Map<String, dynamic>;
-        expect(requestBody['rateCardId'], 'rate-1');
-        expect(requestBody['durationDays'], 7);
-        expect(requestBody['slotIndex'], 1);
+        // Submission references the immutable quote, never raw pricing parameters, so the
+        // charged amount cannot drift from what the user accepted.
+        expect(requestBody['quoteId'], 'quote-1');
+        expect(requestBody['paymentMethod'], 'fiat_card');
+        expect(requestBody['idempotencyKey'], 'idem-1');
+        expect(requestBody.containsKey('rateCardId'), isFalse);
+        expect(requestBody.containsKey('durationDays'), isFalse);
+        expect(request.headers['Idempotency-Key'], 'idem-1');
         return http.Response(
           jsonEncode(<String, Object?>{
             'success': true,
@@ -191,12 +196,9 @@ void main() {
     );
 
     final submission = await api.createPromotionRequest(
-      targetEntityId: 'art-1',
-      entityType: PromotionEntityType.artwork,
-      rateCardId: 'rate-1',
-      durationDays: 7,
+      quoteId: 'quote-1',
       paymentMethod: PromotionPaymentMethod.fiatCard,
-      slotIndex: 1,
+      idempotencyKey: 'idem-1',
     );
 
     expect(submission.request.id, 'req-1');
@@ -206,6 +208,92 @@ void main() {
     expect(
       submission.checkoutUrl,
       'https://checkout.example/session-1',
+    );
+  });
+
+  test('createPromotionRequest surfaces the KUB8 payment instruction', () async {
+    final api = BackendApiService();
+    api.setAuthTokenForTesting('test-token');
+    api.setHttpClient(
+      MockClient((request) async {
+        final requestBody = jsonDecode(request.body) as Map<String, dynamic>;
+        expect(requestBody['paymentMethod'], 'kub8_spl');
+        return http.Response(
+          jsonEncode(<String, Object?>{
+            'success': true,
+            'data': <String, Object?>{
+              'id': 'req-kub8',
+              'targetEntityId': 'art-1',
+              'entityType': 'artwork',
+              'rateCardId': 'rate-1',
+              'placementTier': 'featured',
+              'durationDays': 7,
+              'calculatedFiatPrice': 77.0,
+              'calculatedKub8Price': 238.0,
+              'discountAppliedPercent': 0,
+              'paymentMethod': 'kub8_spl',
+              'paymentStatus': 'awaiting_payment',
+              'reviewStatus': 'pending_review',
+              'quoteId': 'quote-1',
+              'kub8Payment': <String, Object?>{
+                'mintAddress': 'BnRyTep3pLBJrBDt9UxbRYeh3jzQt4nrG99FT3yoKXrm',
+                'decimals': 6,
+                'amountRaw': '238000000',
+                'amount': '238',
+                'cluster': 'devnet',
+                'destinationOwner': 'F81jSXoiB15kcEERt8nxYabm5kgZ37jGbC9fmAQZMSws',
+                'destinationTokenAccount': 'TreasuryTokenAccount1111',
+              },
+            },
+          }),
+          201,
+          headers: const <String, String>{'content-type': 'application/json'},
+        );
+      }),
+    );
+
+    final submission = await api.createPromotionRequest(
+      quoteId: 'quote-1',
+      paymentMethod: PromotionPaymentMethod.kub8Spl,
+      idempotencyKey: 'idem-kub8',
+    );
+
+    // The exact raw amount is carried through untouched: the client signs that integer.
+    expect(submission.kub8Payment, isNotNull);
+    expect(submission.kub8Payment!.amountRaw, BigInt.parse('238000000'));
+    expect(submission.kub8Payment!.decimals, 6);
+    expect(
+      submission.kub8Payment!.mintAddress,
+      'BnRyTep3pLBJrBDt9UxbRYeh3jzQt4nrG99FT3yoKXrm',
+    );
+    expect(submission.request.awaitsKub8Payment, isTrue);
+  });
+
+  test('attachPromotionKub8Payment reports a pending transaction distinctly',
+      () async {
+    final api = BackendApiService();
+    api.setAuthTokenForTesting('test-token');
+    api.setHttpClient(
+      MockClient((request) async {
+        expect(request.url.path, '/api/app/promotion-requests/req-1/kub8-payment');
+        return http.Response(
+          jsonEncode(<String, Object?>{
+            'success': false,
+            'pending': true,
+            'error': 'Payment transaction is not confirmed yet.',
+            'errorCode': 'CHAIN_TRANSACTION_PENDING',
+          }),
+          202,
+          headers: const <String, String>{'content-type': 'application/json'},
+        );
+      }),
+    );
+
+    // A pending confirmation is not a failure: the caller must retry verification with the
+    // same signature rather than paying again.
+    await expectLater(
+      api.attachPromotionKub8Payment(requestId: 'req-1', signature: 'sig-1'),
+      throwsA(isA<PromotionPaymentPendingException>()),
     );
   });
 }

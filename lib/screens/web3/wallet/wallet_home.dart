@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import '../../../config/config.dart';
+import '../../../config/api_keys.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../providers/wallet_provider.dart';
 import '../../../providers/navigation_provider.dart';
@@ -439,9 +440,9 @@ class _WalletHomeState extends State<WalletHome> {
   // Helper methods to get specific token balances
   double _getKub8Balance() {
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-    final kub8Tokens = walletProvider.tokens
-        .where((token) => token.symbol.toUpperCase() == 'KUB8');
-    return kub8Tokens.isNotEmpty ? kub8Tokens.first.balance : 0.0;
+    // KUB8 is identified by its canonical mint. A token that merely calls itself "KUB8" is a
+    // different token and must never be counted here.
+    return walletProvider.getTokenByMint(ApiKeys.kub8MintAddress)?.balance ?? 0.0;
   }
 
   double _getSolBalance() {
@@ -588,13 +589,17 @@ class _WalletHomeState extends State<WalletHome> {
                             icon: Icons.bolt_outlined,
                             tintColor: roles.statAmber,
                           ),
-                          KubusWalletMetaPill(
-                            label: l10n.walletHomeApproxTotalValue(
-                              '\$${wallet?.totalValue.toStringAsFixed(2) ?? '0.00'}',
+                          // Only shown when a real price source backs the number. Without one,
+                          // no monetary total is displayed rather than an invented one.
+                          if (Provider.of<WalletProvider>(context, listen: false)
+                              .hasFiatValuation)
+                            KubusWalletMetaPill(
+                              label: l10n.walletHomeApproxTotalValue(
+                                '\$${wallet?.totalValue.toStringAsFixed(2) ?? '0.00'}',
+                              ),
+                              icon: Icons.account_balance_wallet_outlined,
+                              tintColor: roles.statTeal,
                             ),
-                            icon: Icons.account_balance_wallet_outlined,
-                            tintColor: roles.statTeal,
-                          ),
                           if (isReadOnlySession)
                             KubusWalletMetaPill(
                               label: l10n.walletReconnectManualRequiredToast,
@@ -782,16 +787,23 @@ class _WalletHomeState extends State<WalletHome> {
                                       Theme.of(context).colorScheme.onSurface,
                                 ),
                               ),
-                              const SizedBox(height: KubusSpacing.xxs),
-                              Text(
-                                '\$${token.value.toStringAsFixed(2)}',
-                                style: KubusTextStyles.detailCaption.copyWith(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurface
-                                      .withValues(alpha: 0.68),
+                              // A per-token fiat figure is only shown when a real price source
+                              // backs it. The balance above is always real; the valuation is not
+                              // invented to fill the space.
+                              if (Provider.of<WalletProvider>(context,
+                                      listen: false)
+                                  .hasFiatValuation) ...<Widget>[
+                                const SizedBox(height: KubusSpacing.xxs),
+                                Text(
+                                  '\$${token.value.toStringAsFixed(2)}',
+                                  style: KubusTextStyles.detailCaption.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.68),
+                                  ),
                                 ),
-                              ),
+                              ],
                             ],
                           ),
                         ],
