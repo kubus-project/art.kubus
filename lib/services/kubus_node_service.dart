@@ -6,6 +6,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 
 import '../models/kubus_node_models.dart';
+import 'node/http_node_transport.dart';
+import 'node/kubus_node_transport.dart';
 import 'storage_config.dart';
 
 /// A request the paired node rejected, carrying its stable error code.
@@ -38,26 +40,6 @@ class KubusNodeUnsupportedException implements Exception {
 
   @override
   String toString() => 'KubusNodeUnsupportedException($route)';
-}
-
-/// A PUT whose body is read from disk as it is sent.
-///
-/// Keeps a capture file out of Dart memory: the bytes flow from the file
-/// straight into the socket.
-class _StreamedFileRequest extends http.BaseRequest {
-  _StreamedFileRequest(super.method, super.url, this._file, this._length);
-
-  final File _file;
-  final int _length;
-
-  @override
-  int? get contentLength => _length;
-
-  @override
-  http.ByteStream finalize() {
-    super.finalize();
-    return http.ByteStream(_file.openRead());
-  }
 }
 
 abstract class KubusNodeCredentialStore {
@@ -95,15 +77,36 @@ class KubusNodeService {
     http.Client? client,
     KubusNodeCredentialStore? credentialStore,
     bool? isWeb,
+    KubusNodeTransport? transport,
   })  : _client = client ?? http.Client(),
         _store = credentialStore ?? SecureKubusNodeCredentialStore(),
-        _isWeb = isWeb ?? kIsWeb;
+        _isWeb = isWeb ?? kIsWeb {
+    _transport = transport ??
+        HttpNodeTransport(
+          endpoint: () => _endpoint!,
+          credential: () => _credential,
+          // The paired endpoint may be a private address or an
+          // operator-configured public one. Both are HTTP to the same Node;
+          // the resolver that distinguishes them arrives with the rest of the
+          // ladder, and nothing above this layer changes when it does.
+          kind: KubusNodeTransportKind.localDirect,
+          client: _client,
+        );
+  }
   static const _endpointKey = 'kubus_node_endpoint_v1';
   static const _credentialKey = 'kubus_node_credential_v1';
   static const _fingerprintKey = 'kubus_node_fingerprint_v1';
   final http.Client _client;
   final KubusNodeCredentialStore _store;
   final bool _isWeb;
+
+  /// The route Node API operations travel over.
+  ///
+  /// Injectable so a test can assert the service's protocol behaviour without
+  /// a socket, and so later rungs (WebRTC direct, relayed) can be substituted
+  /// without touching any caller.
+  late final KubusNodeTransport _transport;
+
   Uri? _endpoint;
   String? _credential;
   String? _fingerprint;
@@ -139,7 +142,17 @@ class KubusNodeService {
           }),
         )
         .timeout(const Duration(seconds: 10));
-    final data = _decode(response);
+    // Pairing deliberately bypasses the transport: it runs against the
+    // endpoint in the scanned payload, before any credential exists to
+    // authenticate a transport with. Its response still goes through the same
+    // protocol decoder, so error semantics are identical everywhere.
+    final data = _decode(
+      KubusNodeResponse(
+        statusCode: response.statusCode,
+        body: response.body,
+        requestPath: response.request?.url.path,
+      ),
+    );
     final token = (data['token'] ?? '').toString();
     if (!token.startsWith('kubus_local_')) {
       throw StateError('Node returned an invalid local credential.');
@@ -232,25 +245,17 @@ class KubusNodeService {
     Duration timeout = const Duration(minutes: 5),
   }) async {
     if (!isPaired) throw StateError('No kubus Node is paired.');
-    final length = await file.length();
-    final request = _StreamedFileRequest(
-      'PUT',
-      _resolve(
-        _endpoint!,
-        '/local/v1/captures/drafts/${Uri.encodeComponent(draftId)}/files',
-      ).replace(queryParameters: <String, String>{'path': path}),
-      file,
-      length,
+    final response = await _transport.streamUpload(
+      KubusNodeRequest(
+        method: 'PUT',
+        path: '/local/v1/captures/drafts/${Uri.encodeComponent(draftId)}/files',
+        query: <String, String>{'path': path},
+        timeout: timeout,
+      ),
+      file: file,
+      contentType: mimeType,
     );
-    request.headers.addAll({
-      'Accept': 'application/json',
-      'Authorization': 'Bearer $_credential',
-      'Content-Type': mimeType,
-    });
-    final streamed = await _client.send(request).timeout(timeout);
-    return KubusCaptureDraft.fromJson(
-      _decode(await http.Response.fromStream(streamed)),
-    );
+    return KubusCaptureDraft.fromJson(_decode(response));
   }
 
   /// Draft progress, so an interrupted transfer resumes instead of restarting.
@@ -465,27 +470,24 @@ class KubusNodeService {
     Duration timeout = const Duration(seconds: 20),
   }) async =>
       _decode(await _request('POST', path, body: body, timeout: timeout));
-  Future<http.Response> _request(
+  Future<KubusNodeResponse> _request(
     String method,
     String path, {
     Map<String, dynamic>? body,
     Duration timeout = const Duration(seconds: 20),
   }) async {
     if (!isPaired) throw StateError('No kubus Node is paired.');
-    final request = http.Request(method, _resolve(_endpoint!, path));
-    request.headers.addAll({
-      'Accept': 'application/json',
-      'Authorization': 'Bearer $_credential',
-    });
-    if (body != null) {
-      request.headers['Content-Type'] = 'application/json';
-      request.body = jsonEncode(body);
-    }
-    final streamed = await _client.send(request).timeout(timeout);
-    return http.Response.fromStream(streamed);
+    return _transport.request(
+      KubusNodeRequest(
+        method: method,
+        path: path,
+        jsonBody: body,
+        timeout: timeout,
+      ),
+    );
   }
 
-  static Map<String, dynamic> _decode(http.Response response) {
+  static Map<String, dynamic> _decode(KubusNodeResponse response) {
     final Object? body;
     try {
       body = jsonDecode(response.body.isEmpty ? '{}' : response.body);
@@ -509,7 +511,7 @@ class KubusNodeService {
             'node_request_failed',
           }.contains(code)) {
         throw KubusNodeUnsupportedException(
-          response.request?.url.path ?? 'unknown',
+          response.requestPath ?? 'unknown',
         );
       }
       throw KubusNodeRequestException(
