@@ -58,4 +58,3 @@ class AppStartupGate {
     _ready = false;
   }
 }
-

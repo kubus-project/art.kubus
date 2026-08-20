@@ -1369,7 +1369,8 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
     // from racing AppInitializer's own route push and landing the visitor on
     // an unrelated screen — see `AppStartupGate` for the full rationale.
     handler.onNavigate = (route, params) {
-      AppStartupGate.runWhenReady(() => _dispatchNotificationRoute(route, params));
+      AppStartupGate.runWhenReady(
+          () => _dispatchNotificationRoute(route, params));
     };
 
     handler.initialize();
@@ -1380,42 +1381,42 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
     if (navigator == null) return;
 
     if (route == '/collab_invite') {
-        final rawType = (params['entityType'] ?? '').toString();
-        final rawId = (params['entityId'] ?? '').toString();
+      final rawType = (params['entityType'] ?? '').toString();
+      final rawId = (params['entityId'] ?? '').toString();
 
-        final entityType = rawType.trim().toLowerCase();
-        final entityId = rawId.trim();
+      final entityType = rawType.trim().toLowerCase();
+      final entityId = rawId.trim();
 
-        if (entityId.isEmpty) {
-          navigator.push(
-            MaterialPageRoute(builder: (_) => const InvitesInboxScreen()),
-          );
-          return;
-        }
-
-        if (entityType == 'events' || entityType == 'event') {
-          navigator.push(
-            MaterialPageRoute(
-              builder: (_) => EventDetailScreen(eventId: entityId),
-            ),
-          );
-          return;
-        }
-
-        if (entityType == 'exhibitions' || entityType == 'exhibition') {
-          navigator.push(
-            MaterialPageRoute(
-              builder: (_) => ExhibitionDetailScreen(exhibitionId: entityId),
-            ),
-          );
-          return;
-        }
-
+      if (entityId.isEmpty) {
         navigator.push(
           MaterialPageRoute(builder: (_) => const InvitesInboxScreen()),
         );
         return;
       }
+
+      if (entityType == 'events' || entityType == 'event') {
+        navigator.push(
+          MaterialPageRoute(
+            builder: (_) => EventDetailScreen(eventId: entityId),
+          ),
+        );
+        return;
+      }
+
+      if (entityType == 'exhibitions' || entityType == 'exhibition') {
+        navigator.push(
+          MaterialPageRoute(
+            builder: (_) => ExhibitionDetailScreen(exhibitionId: entityId),
+          ),
+        );
+        return;
+      }
+
+      navigator.push(
+        MaterialPageRoute(builder: (_) => const InvitesInboxScreen()),
+      );
+      return;
+    }
 
     // Best-effort fallback to named routes.
     try {

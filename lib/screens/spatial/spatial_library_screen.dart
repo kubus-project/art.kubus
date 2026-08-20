@@ -187,9 +187,7 @@ class _NodeStatusPill extends StatelessWidget {
         label: isPaired
             ? l10n.spatialLibraryNodeConnected
             : l10n.spatialLibraryNodeConnect,
-        icon: isPaired
-            ? Icons.dns_rounded
-            : Icons.add_link_rounded,
+        icon: isPaired ? Icons.dns_rounded : Icons.add_link_rounded,
         active: isPaired,
         accentColor: isPaired ? roles.positiveAction : null,
         onPressed: () {
