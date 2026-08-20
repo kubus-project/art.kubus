@@ -6,6 +6,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 
 import '../models/kubus_node_models.dart';
+import 'node/http_node_transport.dart';
+import 'node/kubus_node_transport.dart';
 import 'storage_config.dart';
 
 /// A request the paired node rejected, carrying its stable error code.
@@ -104,9 +106,17 @@ class KubusNodeService {
     http.Client? client,
     KubusNodeCredentialStore? credentialStore,
     bool? isWeb,
+    KubusNodeTransport? transport,
   })  : _client = client ?? http.Client(),
         _store = credentialStore ?? SecureKubusNodeCredentialStore(),
-        _isWeb = isWeb ?? kIsWeb;
+        _isWeb = isWeb ?? kIsWeb {
+    _transport = transport ?? HttpNodeTransport(
+      endpoint: () => _endpoint!,
+      credential: () => _credential,
+      kind: KubusNodeTransportKind.localDirect,
+      client: _client,
+    );
+  }
   static const _endpointKey = 'kubus_node_endpoint_v1';
   static const _endpointsKey = 'kubus_node_endpoints_v2';
   static const _credentialKey = 'kubus_node_credential_v1';
@@ -115,6 +125,7 @@ class KubusNodeService {
   final http.Client _client;
   final KubusNodeCredentialStore _store;
   final bool _isWeb;
+  late final KubusNodeTransport _transport;
   Uri? _endpoint;
   List<Uri> _endpoints = const [];
   String? _credential;
@@ -319,26 +330,17 @@ class KubusNodeService {
     Duration timeout = const Duration(minutes: 5),
   }) async {
     if (!isPaired) throw StateError('No kubus Node is paired.');
-    final length = await file.length();
-    final endpoint = await _selectVerifiedEndpoint(forceIdentityCheck: true);
-    final request = _StreamedFileRequest(
-      'PUT',
-      _resolve(
-        endpoint,
-        '/local/v1/captures/drafts/${Uri.encodeComponent(draftId)}/files',
-      ).replace(queryParameters: <String, String>{'path': path}),
-      file,
-      length,
+    final response = await _transport.streamUpload(
+      KubusNodeRequest(
+        method: 'PUT',
+        path: '/local/v1/captures/drafts/${Uri.encodeComponent(draftId)}/files',
+        query: <String, String>{'path': path},
+        timeout: timeout,
+      ),
+      file: file,
+      contentType: mimeType,
     );
-    request.headers.addAll({
-      'Accept': 'application/json',
-      'Authorization': 'Bearer $_credential',
-      'Content-Type': mimeType,
-    });
-    final streamed = await _client.send(request).timeout(timeout);
-    return KubusCaptureDraft.fromJson(
-      _decode(await http.Response.fromStream(streamed)),
-    );
+    return KubusCaptureDraft.fromJson(_decode(response));
   }
 
   /// Draft progress, so an interrupted transfer resumes instead of restarting.
@@ -607,7 +609,7 @@ class KubusNodeService {
           requireFreshIdentity: requireFreshIdentity,
         ),
       );
-  Future<http.Response> _request(
+  Future<KubusNodeResponse> _request(
     String method,
     String path, {
     Map<String, dynamic>? body,
@@ -615,33 +617,12 @@ class KubusNodeService {
     bool requireFreshIdentity = false,
   }) async {
     if (!isPaired) throw StateError('No kubus Node is paired.');
-    Object? lastError;
-    for (final endpoint in _orderedEndpoints()) {
-      try {
-        await _verifyEndpoint(endpoint, force: requireFreshIdentity);
-        final request = http.Request(method, _resolve(endpoint, path));
-        request.headers.addAll({
-          'Accept': 'application/json',
-          'Authorization': 'Bearer $_credential'
-        });
-        if (body != null) {
-          request.headers['Content-Type'] = 'application/json';
-          request.body = jsonEncode(body);
-        }
-        final response = await http.Response.fromStream(
-          await _client.send(request).timeout(timeout),
-        );
-        // A response proves the endpoint belongs to this Node transport. Do
-        // not fail over authorization or application errors to another host.
-        _endpoint = endpoint;
-        return response;
-      } on KubusNodeIdentityException {
-        rethrow;
-      } catch (error) {
-        lastError = error;
-      }
-    }
-    throw StateError('kubus Node is unavailable: $lastError');
+    return _transport.request(KubusNodeRequest(
+      method: method,
+      path: path,
+      jsonBody: body,
+      timeout: timeout,
+    ));
   }
 
   List<Uri> _orderedEndpoints() {
@@ -689,7 +670,11 @@ class KubusNodeService {
       _resolve(endpoint, '/local/v1/info'),
       headers: {'Authorization': 'Bearer ${credential ?? _credential}'},
     ).timeout(const Duration(seconds: 10));
-    final info = _decode(response);
+    final info = _decode(KubusNodeResponse(
+      statusCode: response.statusCode,
+      body: response.body,
+      requestPath: response.request?.url.path,
+    ));
     if (info['nodeId']?.toString() != expectedId ||
         info['fingerprint']?.toString() != expectedPrint) {
       throw const KubusNodeIdentityException();
@@ -697,7 +682,7 @@ class KubusNodeService {
     _verifiedEndpoints[endpoint.toString()] = DateTime.now().toUtc();
   }
 
-  static Map<String, dynamic> _decode(http.Response response) {
+  static Map<String, dynamic> _decode(KubusNodeResponse response) {
     final Object? body;
     try {
       body = jsonDecode(response.body.isEmpty ? '{}' : response.body);
@@ -721,7 +706,7 @@ class KubusNodeService {
             'node_request_failed',
           }.contains(code)) {
         throw KubusNodeUnsupportedException(
-          response.request?.url.path ?? 'unknown',
+          response.requestPath ?? 'unknown',
         );
       }
       throw KubusNodeRequestException(
