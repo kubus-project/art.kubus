@@ -19,7 +19,7 @@ vocabulary.
 
 Big-endian, 16-byte header:
 
-```
+```text
   0       1       2       3       4              8
   +-------+-------+-------+-------+--------------+
   | magic | ver   | type  | flags | requestId    |
@@ -40,7 +40,7 @@ introduced to fix.
 ### Types
 
 | Value | Type | Purpose |
-|-------|------|---------|
+| ----- | ---- | ------- |
 | 1 | `requestHead` | Opens a request; method/path/query/headers in metadata |
 | 2 | `requestChunk` | Request body chunk |
 | 3 | `responseHead` | Opens a response; status in metadata |
@@ -94,7 +94,7 @@ queue.
 ### Bounds, each a threat-model case
 
 | Bound | Prevents |
-|-------|----------|
+| ----- | -------- |
 | `maxBufferedBytes` | Peer flooding chunks faster than the sink drains |
 | `maxTotalBytes` | Peer filling the disk by never sending a final frame |
 | Frame after final | Appending to a committed stream |

@@ -51,11 +51,21 @@ preference. The honest description is:
 > A hybrid, local-first, distributed architecture with a small, short-lived
 > control plane.
 
-**TURN relay is a practical compromise.** When NAT topology defeats direct
-connectivity, a relay carries the (encrypted) traffic. Someone operates and
-pays for that relay. This is presented as an infrastructural compromise that
-buys accessibility, not as evidence of decentralisation. The policy
-deliberately prefers every unrelayed route first, so relay is the exception.
+**TURN relay is a separate service and a practical compromise.** When NAT
+topology defeats direct connectivity, a relay carries the encrypted traffic.
+That relay is *not* part of the art.kubus backend — it is a distinct service
+(coturn or equivalent) that forwards opaque bytes and understands no
+application concept. Someone operates and pays for it.
+
+This is presented as an infrastructural compromise that buys accessibility,
+not as evidence of decentralisation. It is also **optional**: owning or
+operating a Node never requires a relay, and the system works entirely without
+one whenever LAN, direct WebRTC, or an operator's own HTTPS ingress is
+available. Policy pushes every unrelayed route ahead of it, and pushes it
+further down still for bulk spatial transfers — so relay stays the exception
+rather than a quiet default. See `docs/node/turn-and-relay.md`.
+
+The separation that matters: **control plane ≠ data plane ≠ relay.**
 
 **Backend signaling is observable metadata.** The control plane can see *that*
 a device wishes to reach a Node, and when. It cannot see what they exchange.
@@ -103,4 +113,5 @@ shows up concretely in this work:
 - `docs/node/transport-ladder.md`
 - `docs/node/webrtc-protocol.md`
 - `docs/node/signaling.md`
+- `docs/node/turn-and-relay.md`
 - `docs/node/threat-model.md`
