@@ -44,5 +44,39 @@ void main() {
         );
       },
     );
+
+    testWidgets(
+      'the floating scanner copy sits under a Material, so it never falls '
+      'back to the giant yellow-underlined debug text style',
+      (tester) async {
+        await tester.pumpWidget(_app());
+        await tester.pump();
+
+        // Removing the Scaffold to make the camera full-screen once left this
+        // copy with no Material ancestor. `Text` then resolves
+        // `DefaultTextStyle.fallback()` — 48px monospace with a double yellow
+        // underline — which is exactly how it rendered on the S22.
+        final scannerCopy = find.text(
+          'Open Devices in your kubus Node interface and scan the code it '
+          'shows.',
+        );
+        expect(scannerCopy, findsOneWidget);
+        expect(
+          find.ancestor(of: scannerCopy, matching: find.byType(Material)),
+          findsWidgets,
+          reason: 'scanner copy must inherit a real DefaultTextStyle',
+        );
+
+        final style = DefaultTextStyle.of(
+          tester.element(scannerCopy),
+        ).style;
+        expect(
+          style.fontSize,
+          isNot(48.0),
+          reason: 'a 48px size means the debug fallback style is in use',
+        );
+        expect(style.decoration, isNot(TextDecoration.underline));
+      },
+    );
   });
 }

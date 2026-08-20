@@ -229,63 +229,76 @@ class _NodePairingScreenState extends State<NodePairingScreen> {
   /// floating glass back button top-left and one instruction + escape hatch
   /// docked at the bottom. `SafeArea` wraps only that floating chrome, never
   /// the camera itself.
+  ///
+  /// The `Scaffold` carries no `AppBar`, so the camera stays edge-to-edge
+  /// (Part 7 / Finding E) — but it is not optional. `Scaffold` supplies the
+  /// `Material` ancestor every `Text` here needs: without one, `Text` falls
+  /// back to `DefaultTextStyle.fallback()`, which in debug renders as giant
+  /// monospace with a yellow double underline. Returning a bare `Stack` from
+  /// this method did exactly that on device.
   Widget _buildScannerScreen() {
     final controller = _controller;
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        if (controller == null)
-          const ColoredBox(
-            color: Colors.black,
-            child: Center(child: InlineLoading(width: 96, height: 4)),
-          )
-        else ...[
-          MobileScanner(controller: controller, onDetect: _onDetect),
-          const _ScannerReticle(),
-        ],
-        SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(KubusSpacing.md),
-            child: Align(
-              alignment: Alignment.topLeft,
-              child: KubusGlassIconButton(
-                icon: Icons.arrow_back_rounded,
-                tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-                onPressed: () => Navigator.of(context).maybePop(),
+    return Scaffold(
+      backgroundColor: Colors.black,
+      // The camera is the ground; nothing here takes keyboard input, so the
+      // viewfinder must never be resized out from under itself.
+      resizeToAvoidBottomInset: false,
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          if (controller == null)
+            const ColoredBox(
+              color: Colors.black,
+              child: Center(child: InlineLoading(width: 96, height: 4)),
+            )
+          else ...[
+            MobileScanner(controller: controller, onDetect: _onDetect),
+            const _ScannerReticle(),
+          ],
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(KubusSpacing.md),
+              child: Align(
+                alignment: Alignment.topLeft,
+                child: KubusGlassIconButton(
+                  icon: Icons.arrow_back_rounded,
+                  tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+                  onPressed: () => Navigator.of(context).maybePop(),
+                ),
               ),
             ),
           ),
-        ),
-        SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(KubusSpacing.lg),
-            child: Align(
-              alignment: Alignment.bottomCenter,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (_message != null) ...[
-                    _ScannerMessage(message: _message!),
-                    const SizedBox(height: KubusSpacing.md),
-                  ],
-                  _ScannerMessage(message: _l10n.kubusNodeScanBody),
-                  const SizedBox(height: KubusSpacing.sm),
-                  GlassSurface(
-                    borderRadius: BorderRadius.circular(KubusRadius.xl),
-                    child: TextButton(
-                      onPressed: () => unawaited(_enterManual()),
-                      style: TextButton.styleFrom(
-                        foregroundColor: Colors.white,
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(KubusSpacing.lg),
+              child: Align(
+                alignment: Alignment.bottomCenter,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (_message != null) ...[
+                      _ScannerMessage(message: _message!),
+                      const SizedBox(height: KubusSpacing.md),
+                    ],
+                    _ScannerMessage(message: _l10n.kubusNodeScanBody),
+                    const SizedBox(height: KubusSpacing.sm),
+                    GlassSurface(
+                      borderRadius: BorderRadius.circular(KubusRadius.xl),
+                      child: TextButton(
+                        onPressed: () => unawaited(_enterManual()),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.white,
+                        ),
+                        child: Text(_l10n.kubusNodeScanManualAction),
                       ),
-                      child: Text(_l10n.kubusNodeScanManualAction),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
