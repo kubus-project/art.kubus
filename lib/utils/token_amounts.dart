@@ -36,7 +36,8 @@ class TokenAmounts {
     _assertDecimals(decimals);
     final normalized = amount.trim();
     if (!_decimalPattern.hasMatch(normalized)) {
-      throw TokenAmountException('Cannot convert "$amount" to raw token units.');
+      throw TokenAmountException(
+          'Cannot convert "$amount" to raw token units.');
     }
     final negative = normalized.startsWith('-');
     final unsigned = negative ? normalized.substring(1) : normalized;
@@ -81,8 +82,10 @@ class TokenAmounts {
     final divisor = BigInt.from(10).pow(decimals);
     final whole = absolute ~/ divisor;
     final fraction = absolute % divisor;
-    final fractionText =
-        fraction.toString().padLeft(decimals, '0').replaceAll(RegExp(r'0+$'), '');
+    final fractionText = fraction
+        .toString()
+        .padLeft(decimals, '0')
+        .replaceAll(RegExp(r'0+$'), '');
     final sign = negative ? '-' : '';
     return fractionText.isEmpty ? '$sign$whole' : '$sign$whole.$fractionText';
   }
@@ -91,7 +94,8 @@ class TokenAmounts {
   static BigInt parseRawUnits(String? value, {String field = 'amountRaw'}) {
     final normalized = (value ?? '').trim();
     if (!_integerPattern.hasMatch(normalized)) {
-      throw TokenAmountException('$field must be a non-negative integer string.');
+      throw TokenAmountException(
+          '$field must be a non-negative integer string.');
     }
     return BigInt.parse(normalized);
   }

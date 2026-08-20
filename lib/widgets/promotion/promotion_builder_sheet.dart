@@ -404,7 +404,8 @@ class _PromotionBuilderSheetState extends State<_PromotionBuilderSheet> {
   String _describeSubmitError(Object error) {
     final l10n = AppLocalizations.of(context)!;
     final text = error.toString();
-    if (text.contains('QUOTE_EXPIRED')) return l10n.promotionBuilderQuoteExpired;
+    if (text.contains('QUOTE_EXPIRED'))
+      return l10n.promotionBuilderQuoteExpired;
     if (text.contains('SLOT_UNAVAILABLE')) {
       return l10n.promotionBuilderSelectedSlotUnavailable;
     }
@@ -492,9 +493,8 @@ class _PromotionBuilderSheetState extends State<_PromotionBuilderSheet> {
         final isKub8 = _paymentMethod.isKub8;
         final kub8Supported = quote?.supportsKub8 ?? false;
         // Balance gating is UX only: the backend still verifies the real on-chain transfer.
-        final hasEnoughKub8 = kub8RequiredRaw == null
-            ? false
-            : kub8BalanceRaw >= kub8RequiredRaw;
+        final hasEnoughKub8 =
+            kub8RequiredRaw == null ? false : kub8BalanceRaw >= kub8RequiredRaw;
         final canSignKub8 = walletProvider.canTransact;
 
         final hasPendingFiatCheckout =

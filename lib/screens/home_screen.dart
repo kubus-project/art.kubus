@@ -1196,7 +1196,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   builder: (context, walletProvider, child) {
                     // Get KUB8 balance
                     final kub8Balance = walletProvider
-                            .getTokenByMint(ApiKeys.kub8MintAddress) !=
+                                .getTokenByMint(ApiKeys.kub8MintAddress) !=
                             null
                         ? walletProvider
                             .getTokenByMint(ApiKeys.kub8MintAddress)!

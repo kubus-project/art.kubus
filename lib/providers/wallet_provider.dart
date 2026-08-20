@@ -2869,7 +2869,8 @@ class WalletProvider extends ChangeNotifier {
     final useExternalSigner = hasExternalSigner && !hasLocalSigner;
     final submission = useExternalSigner
         ? await _submitUnsignedTransactionRecord(
-            await _solanaWalletService.buildTransferSplTokenTransactionBase64Raw(
+            await _solanaWalletService
+                .buildTransferSplTokenTransactionBase64Raw(
               fromAddress: walletAddress,
               mint: mintAddress,
               toAddress: toAddress,

@@ -56,6 +56,7 @@ part 'settings_screen_parts/settings_screen_p1.dart';
 part 'settings_screen_parts/settings_screen_p2.dart';
 part 'settings_screen_parts/settings_screen_p3.dart';
 part 'settings_screen_parts/settings_screen_p4.dart';
+
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
@@ -73,7 +74,6 @@ class _SettingsScreenState extends State<SettingsScreen>
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
   bool _didAnimateEntrance = false;
-
 
   // Profile settings state
   String _profileVisibility = 'Public';
@@ -141,7 +141,6 @@ class _SettingsScreenState extends State<SettingsScreen>
     _loadAllSettings();
   }
 
-
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -161,8 +160,6 @@ class _SettingsScreenState extends State<SettingsScreen>
     _animationController.dispose();
     super.dispose();
   }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -216,73 +213,6 @@ class _SettingsScreenState extends State<SettingsScreen>
       ),
     );
   }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 }
 
 class _ProfileVisibilityOption {

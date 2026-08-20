@@ -1048,9 +1048,8 @@ class _SendTokenScreenState extends State<SendTokenScreen>
       }
     }
 
-    final rawMessage = error is SolanaWalletSendException
-        ? error.message
-        : error.toString();
+    final rawMessage =
+        error is SolanaWalletSendException ? error.message : error.toString();
     final message = rawMessage.startsWith('Exception:')
         ? rawMessage.substring('Exception:'.length).trim()
         : rawMessage.trim();

@@ -3609,7 +3609,8 @@ class BackendApiService
         }),
       );
 
-      final decoded = response.body.isNotEmpty ? jsonDecode(response.body) : null;
+      final decoded =
+          response.body.isNotEmpty ? jsonDecode(response.body) : null;
 
       if (response.statusCode == 202) {
         throw PromotionPaymentPendingException(

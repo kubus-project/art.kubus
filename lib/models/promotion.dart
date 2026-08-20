@@ -937,7 +937,8 @@ class PromotionQuoteKub8 {
       amount: (json['amount'] ?? '0').toString(),
       cluster: (json['cluster'] ?? '').toString(),
       destinationOwner: (json['destinationOwner'] ?? '').toString(),
-      destinationTokenAccount: (json['destinationTokenAccount'] as String?)?.trim(),
+      destinationTokenAccount:
+          (json['destinationTokenAccount'] as String?)?.trim(),
     );
   }
 
@@ -1105,7 +1106,8 @@ class PriceQuote {
       expiresAt: parseDate(json['expiresAt']),
       consumedAt: parseDate(json['consumedAt']),
       policy: json['policy'] is Map<String, dynamic>
-          ? PromotionPolicyConfig.fromJson(json['policy'] as Map<String, dynamic>)
+          ? PromotionPolicyConfig.fromJson(
+              json['policy'] as Map<String, dynamic>)
           : null,
     );
   }
@@ -1188,8 +1190,8 @@ class CancellationResult {
       refundProcessed: json['refundProcessed'] == true,
       isRefundable: json['isRefundable'] == true,
       refundRequired: json['refundRequired'] == true,
-      refundState:
-          PromotionRefundStateApi.fromApiValue(json['refundStatus']?.toString()),
+      refundState: PromotionRefundStateApi.fromApiValue(
+          json['refundStatus']?.toString()),
       message: (json['message'] ?? '').toString(),
     );
   }
@@ -1390,12 +1392,16 @@ class PromotionRequest {
   /// True while the promotion is waiting for the user to sign and submit an on-chain payment.
   bool get awaitsKub8Payment =>
       paymentMethod.isKub8 &&
-      const <String>{'awaiting_payment', 'pending', 'failed', 'submitted', 'verifying'}
-          .contains(paymentStatus);
+      const <String>{
+        'awaiting_payment',
+        'pending',
+        'failed',
+        'submitted',
+        'verifying'
+      }.contains(paymentStatus);
 
   /// True once the backend has verified a real on-chain transfer for this promotion.
-  bool get isPaid =>
-      const <String>{'captured', 'paid'}.contains(paymentStatus);
+  bool get isPaid => const <String>{'captured', 'paid'}.contains(paymentStatus);
 }
 
 class PromotionRequestSubmission {
@@ -1444,7 +1450,9 @@ class PromotionRequestSubmission {
       kub8Payment: PromotionQuoteKub8.fromJson(
         kub8Payload is Map<String, dynamic>
             ? kub8Payload
-            : (kub8Payload is Map ? Map<String, dynamic>.from(kub8Payload) : null),
+            : (kub8Payload is Map
+                ? Map<String, dynamic>.from(kub8Payload)
+                : null),
       ),
       replayed: payload['replayed'] == true || json['replayed'] == true,
     );

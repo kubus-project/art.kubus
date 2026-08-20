@@ -214,13 +214,13 @@ extension _SettingsScreenStatePart1 on _SettingsScreenState {
                 builder: (context, walletProvider, child) {
                   // Get KUB8 balance
                   // KUB8 is the canonical mint, never the symbol.
-                  final kub8Balance = walletProvider
-                              .getTokenByMint(ApiKeys.kub8MintAddress) !=
-                          null
-                      ? walletProvider
-                          .getTokenByMint(ApiKeys.kub8MintAddress)!
-                          .balance
-                      : 0.0;
+                  final kub8Balance =
+                      walletProvider.getTokenByMint(ApiKeys.kub8MintAddress) !=
+                              null
+                          ? walletProvider
+                              .getTokenByMint(ApiKeys.kub8MintAddress)!
+                              .balance
+                          : 0.0;
 
                   // Get SOL balance
                   final solBalance = walletProvider.tokens

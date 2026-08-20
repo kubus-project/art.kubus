@@ -39,7 +39,8 @@ class _FakeWalletProvider extends WalletProvider {
   bool get canTransact => _canSign;
 
   @override
-  String? get currentWalletAddress => 'A8FtJ7fvJHZfsmMLfT85rTE6itNCf4qu26A4nU9LeCZ2';
+  String? get currentWalletAddress =>
+      'A8FtJ7fvJHZfsmMLfT85rTE6itNCf4qu26A4nU9LeCZ2';
 }
 
 /// A token holding, identified by its mint.
@@ -157,7 +158,10 @@ void main() {
                 'quoteTtlSeconds': 900,
                 'fiatCurrency': 'EUR',
                 'paymentMethods': <String, Object?>{
-                  'fiat': <String, Object?>{'method': 'fiat_card', 'enabled': true},
+                  'fiat': <String, Object?>{
+                    'method': 'fiat_card',
+                    'enabled': true
+                  },
                   'kub8': <String, Object?>{
                     'method': 'kub8_spl',
                     'enabled': kub8Enabled,
@@ -300,7 +304,8 @@ void main() {
             headers: const <String, String>{'content-type': 'application/json'},
           );
         }
-        throw StateError('Unexpected request: ${request.method} ${request.url}');
+        throw StateError(
+            'Unexpected request: ${request.method} ${request.url}');
       }),
     );
     return api;
@@ -374,7 +379,8 @@ void main() {
     return button.onPressed != null;
   }
 
-  testWidgets('submitting references the immutable quote, not raw pricing inputs',
+  testWidgets(
+      'submitting references the immutable quote, not raw pricing inputs',
       (tester) async {
     final launcher = _FakeUrlLauncherPlatform(const <bool>[true]);
     UrlLauncherPlatform.instance = launcher;
@@ -426,7 +432,8 @@ void main() {
     expect(createCalls, 0);
   });
 
-  testWidgets('insufficient canonical KUB8 disables submit and shows the shortfall',
+  testWidgets(
+      'insufficient canonical KUB8 disables submit and shows the shortfall',
       (tester) async {
     final api = buildPromotionApi(
       setCreateCalls: (_) {},
@@ -465,7 +472,8 @@ void main() {
     expect(submitEnabled(tester), isTrue);
   });
 
-  testWidgets('a KUB8 shortfall never blocks a fiat submission', (tester) async {
+  testWidgets('a KUB8 shortfall never blocks a fiat submission',
+      (tester) async {
     final api = buildPromotionApi(
       setCreateCalls: (_) {},
       setCreateBody: (_) {},

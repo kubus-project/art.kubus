@@ -68,7 +68,8 @@ void main() {
     expect(response.rails.first.items.first.promotion.isPromoted, isTrue);
   });
 
-  test('getPublicHomeRails accepts top-level payloads and limitPerRail', () async {
+  test('getPublicHomeRails accepts top-level payloads and limitPerRail',
+      () async {
     final api = BackendApiService();
     api.setHttpClient(
       MockClient((request) async {
@@ -211,7 +212,8 @@ void main() {
     );
   });
 
-  test('createPromotionRequest surfaces the KUB8 payment instruction', () async {
+  test('createPromotionRequest surfaces the KUB8 payment instruction',
+      () async {
     final api = BackendApiService();
     api.setAuthTokenForTesting('test-token');
     api.setHttpClient(
@@ -241,7 +243,8 @@ void main() {
                 'amountRaw': '238000000',
                 'amount': '238',
                 'cluster': 'devnet',
-                'destinationOwner': 'F81jSXoiB15kcEERt8nxYabm5kgZ37jGbC9fmAQZMSws',
+                'destinationOwner':
+                    'F81jSXoiB15kcEERt8nxYabm5kgZ37jGbC9fmAQZMSws',
                 'destinationTokenAccount': 'TreasuryTokenAccount1111',
               },
             },
@@ -275,7 +278,8 @@ void main() {
     api.setAuthTokenForTesting('test-token');
     api.setHttpClient(
       MockClient((request) async {
-        expect(request.url.path, '/api/app/promotion-requests/req-1/kub8-payment');
+        expect(
+            request.url.path, '/api/app/promotion-requests/req-1/kub8-payment');
         return http.Response(
           jsonEncode(<String, Object?>{
             'success': false,

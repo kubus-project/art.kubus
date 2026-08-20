@@ -602,64 +602,66 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                       size: KubusChromeMetrics.navIcon,
                     ),
                   ),
-                // Generic badge with count (for collab invites, etc.)
-                if (showBadge && badgeCount > 0)
-                  Positioned(
-                    right: 0,
-                    top: 0,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: KubusSpacing.xs,
-                        vertical: KubusSpacing.xxs,
-                      ),
-                      constraints: const BoxConstraints(
-                        minWidth:
-                            KubusSpacing.sm + KubusSpacing.xs + KubusSpacing.xxs,
-                        minHeight:
-                            KubusSpacing.sm + KubusSpacing.xs + KubusSpacing.xxs,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.error,
-                        borderRadius: BorderRadius.circular(KubusRadius.sm),
-                        border: Border.all(
-                          color: Theme.of(context).colorScheme.surface,
-                          width: 1,
+                  // Generic badge with count (for collab invites, etc.)
+                  if (showBadge && badgeCount > 0)
+                    Positioned(
+                      right: 0,
+                      top: 0,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: KubusSpacing.xs,
+                          vertical: KubusSpacing.xxs,
                         ),
-                      ),
-                      child: Center(
-                        child: Text(
-                          badgeCount > 99 ? '99+' : badgeCount.toString(),
-                          style: KubusTextStyles.compactBadge.copyWith(
-                            color: Theme.of(context).colorScheme.onError,
+                        constraints: const BoxConstraints(
+                          minWidth: KubusSpacing.sm +
+                              KubusSpacing.xs +
+                              KubusSpacing.xxs,
+                          minHeight: KubusSpacing.sm +
+                              KubusSpacing.xs +
+                              KubusSpacing.xxs,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.error,
+                          borderRadius: BorderRadius.circular(KubusRadius.sm),
+                          border: Border.all(
+                            color: Theme.of(context).colorScheme.surface,
+                            width: 1,
+                          ),
+                        ),
+                        child: Center(
+                          child: Text(
+                            badgeCount > 99 ? '99+' : badgeCount.toString(),
+                            style: KubusTextStyles.compactBadge.copyWith(
+                              color: Theme.of(context).colorScheme.onError,
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                // Notification badge (uses NotificationProvider)
-                if (showBadge && badgeCount == 0)
-                  Selector<NotificationProvider, int>(
-                    selector: (_, np) => np.unreadCount,
-                    builder: (context, unreadCount, _) {
-                      if (unreadCount == 0) return const SizedBox.shrink();
-                      return Positioned(
-                        right: 0,
-                        top: 0,
-                        child: Container(
-                          width: KubusChromeMetrics.navBadgeDot,
-                          height: KubusChromeMetrics.navBadgeDot,
-                          decoration: BoxDecoration(
-                            color: widget.activeAccent,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: Theme.of(context).colorScheme.surface,
-                              width: 1,
+                  // Notification badge (uses NotificationProvider)
+                  if (showBadge && badgeCount == 0)
+                    Selector<NotificationProvider, int>(
+                      selector: (_, np) => np.unreadCount,
+                      builder: (context, unreadCount, _) {
+                        if (unreadCount == 0) return const SizedBox.shrink();
+                        return Positioned(
+                          right: 0,
+                          top: 0,
+                          child: Container(
+                            width: KubusChromeMetrics.navBadgeDot,
+                            height: KubusChromeMetrics.navBadgeDot,
+                            decoration: BoxDecoration(
+                              color: widget.activeAccent,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Theme.of(context).colorScheme.surface,
+                                width: 1,
+                              ),
                             ),
                           ),
-                        ),
-                      );
-                    },
-                  ),
+                        );
+                      },
+                    ),
                 ],
               ),
             ),
@@ -724,64 +726,66 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                       size: KubusChromeMetrics.navIcon,
                     ),
                   ),
-                // Generic badge with count (for collab invites, etc.)
-                if (showBadge && badgeCount > 0)
-                  Positioned(
-                    right: 0,
-                    top: 0,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: KubusSpacing.xs,
-                        vertical: KubusSpacing.xxs,
-                      ),
-                      constraints: const BoxConstraints(
-                        minWidth:
-                            KubusSpacing.sm + KubusSpacing.xs + KubusSpacing.xxs,
-                        minHeight:
-                            KubusSpacing.sm + KubusSpacing.xs + KubusSpacing.xxs,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.error,
-                        borderRadius: BorderRadius.circular(KubusRadius.sm),
-                        border: Border.all(
-                          color: Theme.of(context).colorScheme.surface,
-                          width: 1,
+                  // Generic badge with count (for collab invites, etc.)
+                  if (showBadge && badgeCount > 0)
+                    Positioned(
+                      right: 0,
+                      top: 0,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: KubusSpacing.xs,
+                          vertical: KubusSpacing.xxs,
                         ),
-                      ),
-                      child: Center(
-                        child: Text(
-                          badgeCount > 99 ? '99+' : badgeCount.toString(),
-                          style: KubusTextStyles.compactBadge.copyWith(
-                            color: Theme.of(context).colorScheme.onError,
+                        constraints: const BoxConstraints(
+                          minWidth: KubusSpacing.sm +
+                              KubusSpacing.xs +
+                              KubusSpacing.xxs,
+                          minHeight: KubusSpacing.sm +
+                              KubusSpacing.xs +
+                              KubusSpacing.xxs,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.error,
+                          borderRadius: BorderRadius.circular(KubusRadius.sm),
+                          border: Border.all(
+                            color: Theme.of(context).colorScheme.surface,
+                            width: 1,
+                          ),
+                        ),
+                        child: Center(
+                          child: Text(
+                            badgeCount > 99 ? '99+' : badgeCount.toString(),
+                            style: KubusTextStyles.compactBadge.copyWith(
+                              color: Theme.of(context).colorScheme.onError,
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                // Notification badge (uses NotificationProvider)
-                if (showBadge && badgeCount == 0)
-                  Selector<NotificationProvider, int>(
-                    selector: (_, np) => np.unreadCount,
-                    builder: (context, unreadCount, _) {
-                      if (unreadCount == 0) return const SizedBox.shrink();
-                      return Positioned(
-                        right: 0,
-                        top: 0,
-                        child: Container(
-                          width: KubusChromeMetrics.navBadgeDot,
-                          height: KubusChromeMetrics.navBadgeDot,
-                          decoration: BoxDecoration(
-                            color: widget.activeAccent,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: Theme.of(context).colorScheme.surface,
-                              width: 1,
+                  // Notification badge (uses NotificationProvider)
+                  if (showBadge && badgeCount == 0)
+                    Selector<NotificationProvider, int>(
+                      selector: (_, np) => np.unreadCount,
+                      builder: (context, unreadCount, _) {
+                        if (unreadCount == 0) return const SizedBox.shrink();
+                        return Positioned(
+                          right: 0,
+                          top: 0,
+                          child: Container(
+                            width: KubusChromeMetrics.navBadgeDot,
+                            height: KubusChromeMetrics.navBadgeDot,
+                            decoration: BoxDecoration(
+                              color: widget.activeAccent,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Theme.of(context).colorScheme.surface,
+                                width: 1,
+                              ),
                             ),
                           ),
-                        ),
-                      );
-                    },
-                  ),
+                        );
+                      },
+                    ),
                 ],
               ),
             ),
@@ -797,7 +801,8 @@ class _DesktopNavigationState extends State<DesktopNavigation>
         final tokens = walletProvider.tokens;
         // KUB8 is the canonical mint, never the symbol.
         final kub8Balance =
-            walletProvider.getTokenByMint(ApiKeys.kub8MintAddress)?.balance ?? 0.0;
+            walletProvider.getTokenByMint(ApiKeys.kub8MintAddress)?.balance ??
+                0.0;
         final solBalance = tokens
             .where((t) => t.symbol.toUpperCase() == 'SOL')
             .fold<double>(0.0, (prev, t) => t.balance);

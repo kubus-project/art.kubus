@@ -108,6 +108,7 @@ void main() {
     expect(provider.homeRails, isEmpty);
     expect(provider.error, isNotNull);
   });
+
   /// Build a quote payload with a distinguishing duration, resolved after [delay].
   Map<String, Object?> quotePayload({
     required String quoteId,
@@ -123,7 +124,10 @@ void main() {
       'placementTier': 'boost',
       'durationDays': durationDays,
       'slotAvailable': true,
-      'allowedPaymentMethods': <Object?>['fiat_card', if (kub8AmountRaw != null) 'kub8_spl'],
+      'allowedPaymentMethods': <Object?>[
+        'fiat_card',
+        if (kub8AmountRaw != null) 'kub8_spl'
+      ],
       'pricing': <String, Object?>{
         'fiatPricePerDay': '4.00',
         'kub8PricePerDay': '2.00',
@@ -224,7 +228,9 @@ void main() {
     api.setHttpClient(
       MockClient((request) async {
         final slotCount =
-            request.url.queryParameters['startDate']!.contains('2026-07') ? 2 : 1;
+            request.url.queryParameters['startDate']!.contains('2026-07')
+                ? 2
+                : 1;
         final gate = completers[slotCount]!;
         await gate.future;
         return http.Response(
@@ -316,7 +322,8 @@ void main() {
     expect(provider.currentQuote?.quoteId, 'quote-2');
   });
 
-  test('invalidateQuote drops a quote that no longer matches the selection', () async {
+  test('invalidateQuote drops a quote that no longer matches the selection',
+      () async {
     final api = BackendApiService();
     api.setAuthTokenForTesting('test-token');
     api.setHttpClient(
@@ -378,7 +385,8 @@ void main() {
                 'amountRaw': '14000000',
                 'amount': '14',
                 'cluster': 'devnet',
-                'destinationOwner': 'F81jSXoiB15kcEERt8nxYabm5kgZ37jGbC9fmAQZMSws',
+                'destinationOwner':
+                    'F81jSXoiB15kcEERt8nxYabm5kgZ37jGbC9fmAQZMSws',
               },
             },
           }),
@@ -401,7 +409,8 @@ void main() {
     expect(submission?.kub8Payment?.amountRaw, BigInt.parse('14000000'));
   });
 
-  test('a KUB8 payment signs the exact raw amount and confirms after verification',
+  test(
+      'a KUB8 payment signs the exact raw amount and confirms after verification',
       () async {
     BigInt? signedAmount;
     String? signedMint;
@@ -543,7 +552,8 @@ void main() {
     expect(verificationCalls, 0);
   });
 
-  test('an unconfirmed transfer keeps its signature for retry instead of re-signing',
+  test(
+      'an unconfirmed transfer keeps its signature for retry instead of re-signing',
       () async {
     var attempts = 0;
     final api = BackendApiService();

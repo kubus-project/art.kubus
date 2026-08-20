@@ -425,7 +425,8 @@ class _WalletHomeState extends State<WalletHome> {
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     // KUB8 is identified by its canonical mint. A token that merely calls itself "KUB8" is a
     // different token and must never be counted here.
-    return walletProvider.getTokenByMint(ApiKeys.kub8MintAddress)?.balance ?? 0.0;
+    return walletProvider.getTokenByMint(ApiKeys.kub8MintAddress)?.balance ??
+        0.0;
   }
 
   double _getSolBalance() {
@@ -557,7 +558,8 @@ class _WalletHomeState extends State<WalletHome> {
                           ),
                           // Only shown when a real price source backs the number. Without one,
                           // no monetary total is displayed rather than an invented one.
-                          if (Provider.of<WalletProvider>(context, listen: false)
+                          if (Provider.of<WalletProvider>(context,
+                                  listen: false)
                               .hasFiatValuation)
                             KubusWalletMetaPill(
                               label: l10n.walletHomeApproxTotalValue(
@@ -781,7 +783,8 @@ class _WalletHomeState extends State<WalletHome> {
                                     maxLines: 1,
                                     softWrap: false,
                                     overflow: TextOverflow.ellipsis,
-                                    style: KubusTextStyles.detailCaption.copyWith(
+                                    style:
+                                        KubusTextStyles.detailCaption.copyWith(
                                       color: Theme.of(context)
                                           .colorScheme
                                           .onSurface

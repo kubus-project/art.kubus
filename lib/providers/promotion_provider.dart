@@ -41,7 +41,8 @@ class Kub8PaymentOutcome {
   /// The transfer is on chain but not yet verified. The signature must be retried, never
   /// re-signed, otherwise the user could pay twice.
   bool get needsVerificationRetry =>
-      stage == Kub8PaymentStage.submitted || stage == Kub8PaymentStage.verifying;
+      stage == Kub8PaymentStage.submitted ||
+      stage == Kub8PaymentStage.verifying;
 }
 
 /// Signs an SPL transfer of an exact raw amount and returns the submitted signature.
@@ -55,7 +56,8 @@ typedef Kub8TransferSigner = Future<String> Function({
 class PromotionProvider extends ChangeNotifier {
   final BackendApiService _api;
 
-  PromotionProvider({BackendApiService? api}) : _api = api ?? BackendApiService();
+  PromotionProvider({BackendApiService? api})
+      : _api = api ?? BackendApiService();
 
   final Map<PromotionEntityType, List<PromotionRateCard>> _rateCardsByType =
       <PromotionEntityType, List<PromotionRateCard>>{};
@@ -158,7 +160,8 @@ class PromotionProvider extends ChangeNotifier {
     _error = null;
     notifyListeners();
     try {
-      final rateCards = await _api.getPromotionRateCards(entityType: entityType);
+      final rateCards =
+          await _api.getPromotionRateCards(entityType: entityType);
       _rateCardsByType[entityType] = rateCards;
     } catch (e) {
       _error = e.toString();
