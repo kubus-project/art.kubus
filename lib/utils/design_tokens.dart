@@ -159,6 +159,47 @@ class KubusSizes {
   /// Hairline borders used on glass surfaces.
   static const double hairline = 1.0;
 
+  // --- Token identity (wallet asset marks) ---
+
+  /// Token mark used as a corner badge on another icon.
+  static const double tokenAvatarXs = 18.0;
+
+  /// Token avatar in dense rows, chips, and transaction meta.
+  static const double tokenAvatarSm = 32.0;
+
+  /// Token avatar in asset list rows (default).
+  static const double tokenAvatarMd = 40.0;
+
+  /// Token avatar in balance heroes.
+  static const double tokenAvatarLg = 48.0;
+
+  /// Glyph size inside a token avatar, as a share of the avatar box.
+  static const double tokenGlyphRatio = 0.5;
+
+  // --- Wallet chrome ---
+
+  /// Minimum height for status/meta chips so short labels never collapse
+  /// into a cramped box.
+  static const double chipMinHeight = 26.0;
+
+  /// Icon size inside status/meta chips.
+  static const double chipIcon = 14.0;
+
+  /// Icon container in wallet action cards and transaction badges.
+  static const double walletActionIconBox = 40.0;
+
+  /// Icon size inside [walletActionIconBox].
+  static const double walletActionIcon = 20.0;
+
+  /// Minimum height for a compact wallet action card (desktop rails/grids).
+  static const double walletActionCardMinHeightCompact = 104.0;
+
+  /// Minimum height for a touch-density wallet action card.
+  static const double walletActionCardMinHeight = 144.0;
+
+  /// Max width for a monospace hash/address value before it middle-truncates.
+  static const double addressValueMaxWidth = 220.0;
+
   /// Common max widths for modal/dialog content.
   static const double dialogWidthMd = 420.0;
   static const double dialogWidthLg = 520.0;
@@ -197,6 +238,10 @@ class KubusChromeMetrics {
   static const double statLabel = 13.0;
   static const double statChange = 12.0;
   static const double heroTitle = 24.0;
+
+  /// Headline figure in a balance/metric hero — one step above [heroTitle]
+  /// so a wallet total reads as the page's primary number.
+  static const double heroMetricValue = 34.0;
   static const double heroSubtitle = 14.0;
   static const double heroIconBox = 56.0;
   static const double heroIcon = 28.0;
@@ -283,16 +328,26 @@ class KubusTypography {
     // ThemeData text colors (fixes dark-mode regressions where GoogleFonts
     // defaults to light theme colors).
     return GoogleFonts.interTextTheme(const TextTheme()).copyWith(
-      displayLarge:
-          GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 32),
-      displayMedium:
-          GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 28),
-      displaySmall:
-          GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 24),
-      headlineMedium:
-          GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 20),
-      headlineSmall:
-          GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 18),
+      displayLarge: GoogleFonts.inter(
+        fontWeight: FontWeight.bold,
+        fontSize: 32,
+      ),
+      displayMedium: GoogleFonts.inter(
+        fontWeight: FontWeight.bold,
+        fontSize: 28,
+      ),
+      displaySmall: GoogleFonts.inter(
+        fontWeight: FontWeight.bold,
+        fontSize: 24,
+      ),
+      headlineMedium: GoogleFonts.inter(
+        fontWeight: FontWeight.w700,
+        fontSize: 20,
+      ),
+      headlineSmall: GoogleFonts.inter(
+        fontWeight: FontWeight.w600,
+        fontSize: 18,
+      ),
       titleLarge: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 18),
       titleMedium: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 16),
       bodyLarge: GoogleFonts.inter(fontWeight: FontWeight.w400, fontSize: 16),
@@ -496,6 +551,14 @@ class KubusTextStyles {
         height: 1.45,
       );
 
+  /// Headline figure for balance/metric heroes.
+  static TextStyle get heroMetric =>
+      KubusTypography.textTheme.displaySmall!.copyWith(
+        fontSize: KubusChromeMetrics.heroMetricValue,
+        fontWeight: FontWeight.w700,
+        height: 1.1,
+      );
+
   static TextStyle get statValue =>
       KubusTypography.textTheme.displaySmall!.copyWith(
         fontSize: KubusChromeMetrics.statValue,
@@ -556,30 +619,20 @@ class KubusTextStyles {
   static TextStyle get detailSectionTitle =>
       sectionTitle.copyWith(fontWeight: FontWeight.w700);
 
-  static TextStyle get detailCardTitle =>
-      KubusTypography.textTheme.bodyMedium!.copyWith(
-        fontSize: 15,
-        fontWeight: FontWeight.w600,
-      );
+  static TextStyle get detailCardTitle => KubusTypography.textTheme.bodyMedium!
+      .copyWith(fontSize: 15, fontWeight: FontWeight.w600);
 
-  static TextStyle get detailBody =>
-      KubusTypography.textTheme.bodyMedium!.copyWith(
-        height: 1.5,
-        fontWeight: FontWeight.w400,
-      );
+  static TextStyle get detailBody => KubusTypography.textTheme.bodyMedium!
+      .copyWith(height: 1.5, fontWeight: FontWeight.w400);
 
   static TextStyle get detailCaption =>
       screenSubtitle.copyWith(fontSize: 13, fontWeight: FontWeight.w400);
 
-  static TextStyle get detailLabel =>
-      KubusTypography.textTheme.labelMedium!.copyWith(
-        fontWeight: FontWeight.w500,
-      );
+  static TextStyle get detailLabel => KubusTypography.textTheme.labelMedium!
+      .copyWith(fontWeight: FontWeight.w500);
 
-  static TextStyle get detailButton =>
-      KubusTypography.textTheme.labelLarge!.copyWith(
-        fontWeight: FontWeight.w600,
-      );
+  static TextStyle get detailButton => KubusTypography.textTheme.labelLarge!
+      .copyWith(fontWeight: FontWeight.w600);
 }
 
 class KubusGradients {
@@ -644,10 +697,7 @@ class KubusGradients {
   );
 
   static const LinearGradient authDark = LinearGradient(
-    colors: [
-      Color(0xFF05070A),
-      Color(0xFF102A43),
-    ],
+    colors: [Color(0xFF05070A), Color(0xFF102A43)],
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
   );
@@ -656,7 +706,8 @@ class KubusGradients {
     colors: [
       Color(0xFFFFFFFF),
       Color(
-          0xFFE6F0FF), // Subtle blue-white wash (prevents flat whitinstancee look)
+        0xFFE6F0FF,
+      ), // Subtle blue-white wash (prevents flat whitinstancee look)
     ],
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
@@ -664,9 +715,7 @@ class KubusGradients {
 
   static BoxDecoration scaffoldDecoration(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return BoxDecoration(
-      gradient: isDark ? darkBackground : lightBackground,
-    );
+    return BoxDecoration(gradient: isDark ? darkBackground : lightBackground);
   }
 
   // --- Animated Gradient Color Stops ---
@@ -701,11 +750,7 @@ class KubusGradients {
 
   /// Shimmer overlay gradient for glass effects
   static const LinearGradient glassShimmer = LinearGradient(
-    colors: [
-      Color(0x00FFFFFF),
-      Color(0x15FFFFFF),
-      Color(0x00FFFFFF),
-    ],
+    colors: [Color(0x00FFFFFF), Color(0x15FFFFFF), Color(0x00FFFFFF)],
     stops: [0.0, 0.5, 1.0],
     begin: Alignment(-1.5, -1.5),
     end: Alignment(1.5, 1.5),
@@ -795,8 +840,9 @@ class KubusBorders {
 
   static BorderSide focusSide(BuildContext context, {Color? accent}) =>
       BorderSide(
-        color: (accent ?? Theme.of(context).colorScheme.primary)
-            .withValues(alpha: 0.70),
+        color: (accent ?? Theme.of(context).colorScheme.primary).withValues(
+          alpha: 0.70,
+        ),
         width: emphasisWidth,
       );
 
@@ -805,8 +851,9 @@ class KubusBorders {
 
   static BorderSide activeSide(BuildContext context, {Color? accent}) =>
       BorderSide(
-        color: (accent ?? Theme.of(context).colorScheme.primary)
-            .withValues(alpha: 0.85),
+        color: (accent ?? Theme.of(context).colorScheme.primary).withValues(
+          alpha: 0.85,
+        ),
         width: emphasisWidth,
       );
 
