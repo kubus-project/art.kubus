@@ -5,7 +5,15 @@ How two already-paired peers find each other.
 ## Scope
 
 Signaling is **control-plane metadata used to establish a connection**. It is
-never the data plane.
+never the data plane, and it is not the relay either.
+
+Three separate things, never merged:
+
+- **control plane** (this document) — authenticates, signals, issues
+  short-lived TURN credentials
+- **data plane** — the Node, holding private content
+- **relay** — a separate service forwarding encrypted packets when direct
+  connectivity fails; see `docs/node/turn-and-relay.md`
 
 Captures, processed scenes and any other private content travel on the
 established transport. Nothing of the kind passes through signaling, and the
@@ -31,7 +39,7 @@ plane. See `docs/research/node-accessibility-alignment.md`.
 ## Message types
 
 | Type | Payload | Purpose |
-|------|---------|---------|
+| ---- | ------- | ------- |
 | `offer` | SDP | Session description from the initiator |
 | `answer` | SDP | Reply |
 | `candidate` | ICE candidate | One transport candidate |

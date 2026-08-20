@@ -23,16 +23,16 @@ Nodes, and never separate identities.
 ## The rungs
 
 | # | Rung | When | Carries | Needs internet | Relay |
-|---|------|------|---------|----------------|-------|
+| --- | ---- | ---- | ------- | -------------- | ----- |
 | 1 | `localDirect` | Same network | HTTP to a private address | No | No |
 | 2 | `webRtcDirect` | Away, hole-punching works | DataChannel | Yes | No |
 | 3 | `remoteHttps` | Operator configured ingress | HTTPS | Yes | No |
 | 4 | `webRtcRelay` | Away, NAT defeats direct | DataChannel via TURN | Yes | Yes |
 
-Local is preferred because it is the only rung needing no internet, adds no
-extra hop, and keeps a large capture entirely inside the user's own network.
-Relay is last because it is the slowest and the only one that costs someone
-bandwidth.
+The relay rung is always last, and always optional. See
+`docs/node/turn-and-relay.md` — the relay is a **separate service**, not part
+of the backend, and the system works entirely without it whenever LAN, direct
+WebRTC, or an operator's own HTTPS ingress is available.
 
 ## Selection
 
@@ -41,17 +41,36 @@ bandwidth.
 made at all. The service asks for `/local/v1/...`; the resolver decides how it
 gets there.
 
-Ordering is deterministic and therefore testable:
+**The order is not hard-coded.** `NodeTransportPolicy` is an interface, because
+the right order has not been benchmarked on real networks and is unlikely to be
+one answer for every client:
 
-```
-score = structural preference × 1000
+- **`NativeTransportPolicy`** — LAN first. A native client can reach a private
+  address directly.
+- **`BrowserTransportPolicy`** — WebRTC first. Direct private-network HTTP from
+  a public origin is frequently blocked by browser security policy, so a
+  browser should not spend its first attempt there.
+
+Both put the relay last. The current orders are starting positions to be
+measured, not claims of optimality.
+
+Scoring is deterministic and therefore testable:
+
+```text
+score = policy order index × 1000
       + health penalty
       + latency penalty (capped)
+      + policy penalty
 ```
 
-Health and measured latency reorder *within* the structural preference but can
-never promote a relay above a working direct route — a fast relay is still a
-relay.
+Health and measured latency reorder *within* the policy's order but can never
+promote a relay above a working direct route — a fast relay is still a relay.
+
+The policy penalty is where cost enters: a bulk transfer (≥ 8 MB) or a metered
+network pushes the relay far down, because a spatial capture is exactly the
+payload that turns occasional fallback into a standing bandwidth bill. The
+relay is penalised, never removed — if it is the only surviving route, a slow
+upload beats no upload.
 
 ### Two rules that shape everything
 
@@ -119,4 +138,6 @@ architecture stays vendor-neutral.
 - `lib/services/node/http_node_transport.dart` — rungs 1 and 3
 - `lib/services/node/node_transport_resolver.dart` — selection, health, failover
 - `lib/services/node/node_transport_health.dart` — per-route health
+- `lib/services/node/node_transport_policy.dart` — pluggable ordering and penalties
+- `lib/services/node/turn_configuration.dart` — STUN/TURN config, credentials
 - `lib/services/node/node_connection_status.dart` — user-facing status

@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'kubus_node_transport.dart';
 import 'node_transport_health.dart';
+import 'node_transport_policy.dart';
 
 /// Raised when no route to the paired Node could carry the request.
 ///
@@ -37,8 +38,12 @@ class KubusNodeUnreachableException implements Exception {
 class KubusNodeTransportResolver implements KubusNodeTransport {
   KubusNodeTransportResolver({
     required List<KubusNodeTransport> transports,
+    NodeTransportPolicy? policy,
+    TransportSelectionContext context = const TransportSelectionContext(),
     DateTime Function()? clock,
   })  : _transports = List.unmodifiable(transports),
+        _policy = policy ?? const NativeTransportPolicy(),
+        _context = context,
         _clock = clock ?? DateTime.now {
     for (final transport in _transports) {
       _health[transport.kind] = TransportHealthRecord(kind: transport.kind);
@@ -47,24 +52,17 @@ class KubusNodeTransportResolver implements KubusNodeTransport {
 
   final List<KubusNodeTransport> _transports;
   final DateTime Function() _clock;
+
+  /// Decides ordering. Injected rather than fixed, because the right order is
+  /// not yet measured and is unlikely to be the same for a native client and
+  /// a browser — see [NodeTransportPolicy].
+  final NodeTransportPolicy _policy;
+
+  /// What the policy knows about the operation being routed.
+  final TransportSelectionContext _context;
+
   final Map<KubusNodeTransportKind, TransportHealthRecord> _health =
       <KubusNodeTransportKind, TransportHealthRecord>{};
-
-  /// Static preference, lowest first, used to break ties.
-  ///
-  /// Local is preferred because it is the only rung that needs no internet,
-  /// adds no relay hop, and keeps a large capture entirely inside the user's
-  /// own network. A relayed route is last because it is both the slowest and
-  /// the only one that costs someone bandwidth. Health and measured latency
-  /// can reorder within this, but never promote a relay above a working
-  /// direct route.
-  static const List<KubusNodeTransportKind> preferenceOrder =
-      <KubusNodeTransportKind>[
-    KubusNodeTransportKind.localDirect,
-    KubusNodeTransportKind.webRtcDirect,
-    KubusNodeTransportKind.remoteHttps,
-    KubusNodeTransportKind.webRtcRelay,
-  ];
 
   /// The rung that last carried a request successfully, for diagnostics.
   KubusNodeTransportKind? get activeKind => _activeKind;
@@ -75,7 +73,8 @@ class KubusNodeTransportResolver implements KubusNodeTransport {
       Map.unmodifiable(_health);
 
   @override
-  KubusNodeTransportKind get kind => _activeKind ?? preferenceOrder.first;
+  KubusNodeTransportKind get kind =>
+      _activeKind ?? _policy.order(_context).first;
 
   @override
   bool get isAvailable => _transports.any((t) => t.isAvailable);
@@ -91,18 +90,24 @@ class KubusNodeTransportResolver implements KubusNodeTransport {
   /// Candidates worth trying now, best first.
   List<KubusNodeTransport> candidates() {
     final now = _clock();
+    final order = _policy.order(_context);
     final eligible = _transports
         .where((t) => t.isAvailable)
+        // A route the policy omits entirely is not attempted at all.
+        .where((t) => order.contains(t.kind))
         .where((t) => _health[t.kind]!.isEligible(now))
         .toList();
-    eligible.sort((a, b) => _score(a).compareTo(_score(b)));
+    eligible.sort((a, b) => _score(a, order).compareTo(_score(b, order)));
     return eligible;
   }
 
   /// Lower is better. Deterministic, so ordering is testable.
-  int _score(KubusNodeTransport transport) {
+  int _score(
+    KubusNodeTransport transport,
+    List<KubusNodeTransportKind> order,
+  ) {
     final record = _health[transport.kind]!;
-    final base = preferenceOrder.indexOf(transport.kind) * 1000;
+    final base = order.indexOf(transport.kind) * 1000;
     final healthPenalty = switch (record.state) {
       KubusTransportHealth.healthy => 0,
       KubusTransportHealth.unknown => 100,
@@ -112,10 +117,13 @@ class KubusNodeTransportResolver implements KubusNodeTransport {
       KubusTransportHealth.cooldown => 900,
     };
     // Latency refines the choice but cannot outrank the structural preference,
-    // so a fast relay never displaces a working LAN route.
+    // so a fast relay never displaces a working direct route.
     final latencyPenalty =
         ((record.latencyEwmaMs ?? 0) / 50).clamp(0, 99).toInt();
-    return base + healthPenalty + latencyPenalty;
+    // The policy's own judgement — for example pushing a relay far down for a
+    // bulk spatial transfer, without removing it as a last resort.
+    final policyPenalty = _policy.penaltyFor(transport.kind, _context);
+    return base + healthPenalty + latencyPenalty + policyPenalty;
   }
 
   @override
