@@ -72,14 +72,20 @@ class NodePresenceSnapshot {
   const NodePresenceSnapshot({
     required this.nodeId,
     required this.online,
+    this.registered = true,
     this.protocolVersion,
     this.fingerprint,
-    this.capabilities = const <String>[],
+    this.capabilities = const <String, bool>{},
     this.lastSeenAt,
   });
 
+  /// Registered with the control plane, but not connected right now.
   factory NodePresenceSnapshot.offline(String nodeId) =>
-      NodePresenceSnapshot(nodeId: nodeId, online: false);
+      NodePresenceSnapshot(nodeId: nodeId, online: false, registered: true);
+
+  /// The control plane has no record of this Node at all.
+  factory NodePresenceSnapshot.unregistered(String nodeId) =>
+      NodePresenceSnapshot(nodeId: nodeId, online: false, registered: false);
 
   factory NodePresenceSnapshot.fromJson(
     String nodeId,
@@ -88,24 +94,49 @@ class NodePresenceSnapshot {
       NodePresenceSnapshot(
         nodeId: nodeId,
         online: true,
-        protocolVersion: json['protocolVersion'] as String?,
+        registered: true,
+        protocolVersion: (json['protocolVersion'] as num?)?.toInt(),
         fingerprint: json['fingerprint'] as String?,
-        capabilities:
-            (json['capabilities'] as List<dynamic>? ?? const <dynamic>[])
-                .whereType<String>()
-                .toList(growable: false),
+        capabilities: <String, bool>{
+          for (final entry in (json['capabilities'] as Map<dynamic, dynamic>? ??
+                  const <dynamic, dynamic>{})
+              .entries)
+            entry.key.toString(): entry.value == true,
+        },
         lastSeenAt: DateTime.tryParse(json['lastSeenAt'] as String? ?? ''),
       );
 
   final String nodeId;
   final bool online;
-  final String? protocolVersion;
+
+  /// Whether the control plane has ever heard of this Node.
+  ///
+  /// Distinct from offline: a Node the backend does not know cannot be reached
+  /// remotely at all until it registers, whereas an offline Node just needs
+  /// turning on. Telling a user the wrong one sends them looking in the wrong
+  /// place.
+  final bool registered;
+
+  /// Wire protocol the Node speaks. Used to detect a version mismatch before
+  /// spending a negotiation on a peer that cannot talk to us.
+  final int? protocolVersion;
 
   /// Advisory only. Compared against the paired fingerprint as an early
   /// mismatch hint, never as proof — see the library comment.
   final String? fingerprint;
-  final List<String> capabilities;
+
+  /// Flags describing what a connection to this Node could do, e.g. whether it
+  /// can relay. Named flags rather than a free-form list, matching the control
+  /// plane's allowlist exactly.
+  final Map<String, bool> capabilities;
   final DateTime? lastSeenAt;
+
+  /// Whether this Node advertises a protocol this client can speak.
+  bool get isProtocolCompatible =>
+      protocolVersion == null || protocolVersion == supportedProtocolVersion;
+
+  /// The wire protocol version this client implements.
+  static const int supportedProtocolVersion = 1;
 }
 
 /// One negotiated signalling session.
@@ -260,15 +291,18 @@ class NodeSignalingClient {
     final result = await _emitWithAck('presence:query', <String, dynamic>{
       'nodeId': nodeId,
     });
-    final status = result['status'];
-    if (status == 'online') {
-      final presence = result['presence'];
-      return NodePresenceSnapshot.fromJson(
-        nodeId,
-        presence is Map ? _asMap(presence) : const <String, dynamic>{},
-      );
+    switch (result['status']) {
+      case 'online':
+        final presence = result['presence'];
+        return NodePresenceSnapshot.fromJson(
+          nodeId,
+          presence is Map ? _asMap(presence) : const <String, dynamic>{},
+        );
+      case 'unregistered':
+        return NodePresenceSnapshot.unregistered(nodeId);
+      default:
+        return NodePresenceSnapshot.offline(nodeId);
     }
-    return NodePresenceSnapshot.offline(nodeId);
   }
 
   /// Requests a session with a Node and waits for it to be accepted.
@@ -336,12 +370,21 @@ class NodeSignalingClient {
     }
   }
 
-  Future<void> sendOffer(String sessionId, String sdp, String type) =>
+  Future<void> sendOffer(
+    String sessionId,
+    String sdp,
+    String type, {
+    List<Map<String, Object?>> iceServers = const <Map<String, Object?>>[],
+  }) =>
       _emitWithAck('signal:offer', <String, dynamic>{
         'sessionId': sessionId,
         'messageId': _messageId(),
         'sdp': sdp,
         'type': type,
+        // The Node needs the same ephemeral ICE configuration to allocate its
+        // relay side. These are short-lived user credentials, never coturn's
+        // static secret, and the signaling client never logs the payload.
+        if (iceServers.isNotEmpty) 'iceServers': iceServers,
       });
 
   Future<void> sendCandidate(
@@ -405,14 +448,20 @@ class NodeSignalingClient {
       ack: (Object? response) {
         if (completer.isCompleted) return;
         final map = _asMap(response);
-        final error = map['error'];
-        if (error != null) {
+        // The control plane answers `{ok: true, ...}` or
+        // `{ok: false, code, error}`. The code is the part worth acting on;
+        // the message is for a log, never for a user.
+        if (map['ok'] == false) {
+          final code = map['code'];
           completer.completeError(
-            SignalingException(_failureFor(error), _codeOf(error)),
+            SignalingException(
+              _failureFor(code is String ? code : null),
+              code is String ? code : null,
+            ),
           );
           return;
         }
-        completer.complete(_asMap(map['data'] ?? map));
+        completer.complete(map);
       },
     );
     return completer.future.timeout(
@@ -424,24 +473,19 @@ class NodeSignalingClient {
     );
   }
 
-  static String? _codeOf(Object? error) {
-    if (error is Map) {
-      final code = error['code'];
-      if (code is String) return code;
-    }
-    return null;
-  }
-
-  static SignalingFailure _failureFor(Object? error) {
-    switch (_codeOf(error)) {
+  static SignalingFailure _failureFor(String? code) {
+    switch (code) {
       case 'NODE_UNREGISTERED':
         return SignalingFailure.nodeUnregistered;
       case 'NODE_OFFLINE':
         return SignalingFailure.nodeOffline;
       case 'SESSION_EXPIRED':
+      case 'SESSION_NOT_FOUND':
         return SignalingFailure.expired;
       case 'ROLE_NOT_ALLOWED':
       case 'INVALID_PAYLOAD':
+      case 'MESSAGE_TOO_LARGE':
+      case 'REPLAYED_MESSAGE':
         return SignalingFailure.protocol;
       default:
         return SignalingFailure.unavailable;

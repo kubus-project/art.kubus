@@ -41,7 +41,7 @@ class KubusNodeTransportResolver implements KubusNodeTransport {
     NodeTransportPolicy? policy,
     TransportSelectionContext Function()? contextForOperation,
     DateTime Function()? clock,
-  })  : _transports = List.unmodifiable(transports),
+  })  : _transports = List<KubusNodeTransport>.of(transports),
         _policy = policy ?? const NativeTransportPolicy(),
         _contextForOperation = contextForOperation ?? _defaultContext,
         _clock = clock ?? DateTime.now {
@@ -50,6 +50,13 @@ class KubusNodeTransportResolver implements KubusNodeTransport {
     }
   }
 
+  /// Mutable because a WebRTC route cannot exist at construction time.
+  ///
+  /// The ladder is assembled during startup, but the WebRTC rungs need a
+  /// signalling session, ICE credentials, and a completed identity proof —
+  /// none of which are available then, and all of which can be lost and
+  /// re-established while the app runs. Routes therefore join and leave a live
+  /// resolver rather than being fixed once.
   final List<KubusNodeTransport> _transports;
   final DateTime Function() _clock;
 
@@ -91,12 +98,59 @@ class KubusNodeTransportResolver implements KubusNodeTransport {
   bool get isAvailable => _transports.any((t) => t.isAvailable);
 
   /// Discards cached verdicts after the network changed underneath us.
+  ///
+  /// A route that failed on the previous network says nothing about this one.
+  /// Leaving it in cooldown is how a perfectly good LAN route stays out of
+  /// consideration after the user walks back through their own front door.
   void onNetworkChanged() {
     for (final record in _health.values) {
       record.resetForNetworkChange();
     }
     _activeKind = null;
   }
+
+  /// Adds a route that became available after construction.
+  ///
+  /// This is how a verified WebRTC transport joins the ladder: it can only be
+  /// built once signalling has run and the Node has proved its identity, which
+  /// is necessarily later than the moment the service was created. A route of
+  /// the same kind is replaced and its predecessor closed, so a reconnect does
+  /// not leave the old peer connection alive behind it.
+  ///
+  /// Health is deliberately reset for the adopted kind: the new route is a
+  /// different connection, and inheriting the failures of the one it replaces
+  /// would put a working route straight into cooldown.
+  void adopt(KubusNodeTransport transport) {
+    final existingIndex =
+        _transports.indexWhere((candidate) => candidate.kind == transport.kind);
+    if (existingIndex >= 0) {
+      final previous = _transports[existingIndex];
+      _transports[existingIndex] = transport;
+      if (!identical(previous, transport)) previous.close();
+    } else {
+      _transports.add(transport);
+    }
+    _health[transport.kind] = TransportHealthRecord(kind: transport.kind);
+    if (_activeKind == transport.kind) _activeKind = null;
+  }
+
+  /// Removes a route that is no longer usable, closing it.
+  ///
+  /// Called when a peer connection drops: leaving a dead transport in the list
+  /// costs every subsequent operation a failed attempt before it falls through
+  /// to a route that works.
+  void release(KubusNodeTransportKind kind) {
+    final index = _transports.indexWhere((candidate) => candidate.kind == kind);
+    if (index < 0) return;
+    final removed = _transports.removeAt(index);
+    _health.remove(kind);
+    if (_activeKind == kind) _activeKind = null;
+    removed.close();
+  }
+
+  /// Whether a route of this kind is currently part of the ladder.
+  bool hasTransport(KubusNodeTransportKind kind) =>
+      _transports.any((candidate) => candidate.kind == kind);
 
   /// Candidates worth trying now for [context], best first.
   ///

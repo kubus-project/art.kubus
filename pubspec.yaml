@@ -89,6 +89,13 @@ dependencies:
   qr_flutter: ^4.1.0 # QR code generation
   mobile_scanner: ^7.2.0 # QR code scanning (modern replacement for qr_code_scanner)
 
+  # Real network-state reporting for the Node transport resolver: which route
+  # to the paired Node is worth trying depends on whether the device is on
+  # Wi-Fi or mobile data, and a switch between them must invalidate stale route
+  # health rather than waiting for a timeout to discover it. Pinned below 7.2
+  # by the override below.
+  connectivity_plus: ^7.0.0
+
   # Real WebRTC peer connections for the Node transport ladder. Only the
   # DataChannel half is used: no camera or microphone is ever opened, so the
   # media permissions the plugin declares are deliberately not requested at

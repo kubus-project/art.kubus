@@ -65,8 +65,12 @@ class NodeRtcConnector {
       final activePeer = KubusRtcPeer(
         iceConfiguration: ice,
         connectTimeout: _connectTimeout,
-        onLocalDescription: (sdp, type) =>
-            _signaling.sendOffer(session.sessionId, sdp, type),
+        onLocalDescription: (sdp, type) => _signaling.sendOffer(
+          session.sessionId,
+          sdp,
+          type,
+          iceServers: ice.toIceServers(DateTime.now()),
+        ),
         onLocalCandidate: (candidate) => _signaling.sendCandidate(
           session.sessionId,
           candidate: candidate.candidate ?? '',
