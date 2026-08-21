@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:art_kubus/services/node/http_node_transport.dart';
 import 'package:art_kubus/services/node/kubus_node_transport.dart';
+import 'package:art_kubus/services/node/node_idempotency_key.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -28,12 +29,121 @@ void main() {
     });
 
     test('an idempotency key makes a mutating request retryable', () {
-      const request = KubusNodeRequest(
+      final request = KubusNodeRequest(
         method: 'POST',
         path: '/local/v1/captures/drafts/abc/commit',
-        idempotencyKey: 'draft-abc-commit',
+        idempotencyKey: NodeIdempotencyKey('draft-abc-commit'),
       );
       expect(request.isSafeToRetry, isTrue);
+    });
+
+    test('a blank idempotency key never makes a mutation retryable', () {
+      // Regression: a mutating request used to become retry-safe merely
+      // because the key field was non-null, so an empty or whitespace-only
+      // key forwarded a blank `Idempotency-Key` the Node cannot deduplicate
+      // against — and a failover then risked a second capture or job.
+      for (final blank in ['', ' ', '   ', '\t', '\n', '  \t \n ']) {
+        expect(
+          NodeIdempotencyKey.tryParse(blank),
+          isNull,
+          reason: 'blank key ${jsonEncode(blank)} must not parse',
+        );
+        final request = KubusNodeRequest(
+          method: 'POST',
+          path: '/local/v1/jobs',
+          idempotencyKey: NodeIdempotencyKey.tryParse(blank),
+        );
+        expect(
+          request.isSafeToRetry,
+          isFalse,
+          reason: 'blank key ${jsonEncode(blank)}',
+        );
+      }
+    });
+
+    test('a malformed idempotency key is rejected rather than downgraded', () {
+      const malformed = <String>[
+        'short', // below the minimum length
+        ' leading-space-key', // untrimmed
+        'trailing-space-key ',
+        'has space inside',
+        'newline\nkey',
+        'header\r\ninjection: yes',
+        'semi;colon;key',
+        'comma,separated,key',
+        'slash/separated/key',
+      ];
+      for (final value in malformed) {
+        expect(
+          NodeIdempotencyKey.tryParse(value),
+          isNull,
+          reason: 'tryParse ${jsonEncode(value)}',
+        );
+        expect(
+          () => NodeIdempotencyKey(value),
+          throwsArgumentError,
+          reason: 'constructor ${jsonEncode(value)}',
+        );
+      }
+      expect(
+        NodeIdempotencyKey.tryParse('a' * (NodeIdempotencyKey.maxLength + 1)),
+        isNull,
+      );
+      expect(
+        NodeIdempotencyKey.tryParse('a' * NodeIdempotencyKey.maxLength),
+        isNotNull,
+      );
+    });
+
+    test('a derived key is stable for the same operation and scope', () {
+      // Deduplication only survives an app restart if the same intent derives
+      // the same key, so committing draft d1 must key identically every time.
+      final first = NodeIdempotencyKey.forOperation(
+        'capture.commit',
+        scope: 'draft-d1',
+      );
+      final second = NodeIdempotencyKey.forOperation(
+        'capture.commit',
+        scope: 'draft-d1',
+      );
+      final other = NodeIdempotencyKey.forOperation(
+        'capture.commit',
+        scope: 'draft-d2',
+      );
+      expect(first, equals(second));
+      expect(first.value, equals(second.value));
+      expect(first, isNot(equals(other)));
+      expect(NodeIdempotencyKey.tryParse(first.value), isNotNull);
+    });
+
+    test('a derived key normalises unsafe characters instead of failing', () {
+      final key = NodeIdempotencyKey.forOperation(
+        'Capture Commit',
+        scope: 'draft/d 1?x=2',
+      );
+      expect(NodeIdempotencyKey.tryParse(key.value), isNotNull);
+      expect(key.value, matches(RegExp(r'^[A-Za-z0-9\-._~:]+$')));
+      expect(
+        () => NodeIdempotencyKey.forOperation('   ', scope: 'draft-d1'),
+        throwsArgumentError,
+      );
+      expect(
+        () => NodeIdempotencyKey.forOperation('capture.commit', scope: '  '),
+        throwsArgumentError,
+      );
+    });
+
+    test('a random key is unique, valid, and long enough to be unguessable',
+        () {
+      final keys = List.generate(
+        64,
+        (_) => NodeIdempotencyKey.random('job.create').value,
+      );
+      expect(keys.toSet(), hasLength(64));
+      for (final value in keys) {
+        expect(NodeIdempotencyKey.tryParse(value), isNotNull);
+        expect(value.length, greaterThanOrEqualTo(32));
+      }
     });
   });
 
@@ -150,10 +260,10 @@ void main() {
       );
 
       await transport.request(
-        const KubusNodeRequest(
+        KubusNodeRequest(
           method: 'POST',
           path: '/local/v1/captures/drafts/d1/commit',
-          idempotencyKey: 'draft-d1-commit',
+          idempotencyKey: NodeIdempotencyKey('draft-d1-commit'),
         ),
       );
 

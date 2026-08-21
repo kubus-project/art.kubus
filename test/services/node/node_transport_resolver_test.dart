@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:art_kubus/services/node/kubus_node_transport.dart';
+import 'package:art_kubus/services/node/node_idempotency_key.dart';
 import 'package:art_kubus/services/node/node_transport_health.dart';
 import 'package:art_kubus/services/node/node_transport_resolver.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -69,10 +70,10 @@ class _TestClock {
 
 const _read = KubusNodeRequest(method: 'GET', path: '/local/v1/info');
 const _write = KubusNodeRequest(method: 'POST', path: '/local/v1/jobs');
-const _idempotentWrite = KubusNodeRequest(
+final _idempotentWrite = KubusNodeRequest(
   method: 'POST',
   path: '/local/v1/captures/drafts/d1/commit',
-  idempotencyKey: 'draft-d1-commit',
+  idempotencyKey: NodeIdempotencyKey('draft-d1-commit'),
 );
 
 void main() {
@@ -377,10 +378,10 @@ void main() {
       final resolver = KubusNodeTransportResolver(transports: [lan, https]);
 
       await resolver.streamUpload(
-        const KubusNodeRequest(
+        KubusNodeRequest(
           method: 'PUT',
           path: '/local/v1/captures/drafts/d1/files',
-          idempotencyKey: 'd1-file-0',
+          idempotencyKey: NodeIdempotencyKey('d1-file-0'),
         ),
         file: file,
         contentType: 'application/octet-stream',

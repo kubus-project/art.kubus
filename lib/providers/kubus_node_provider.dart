@@ -101,6 +101,11 @@ class KubusNodeProvider extends ChangeNotifier {
         'artworkId': artworkId,
         if (markerId != null) 'markerId': markerId,
       },
+      // The capture is this request's durable identity, so a retry after an
+      // ambiguous failure — or a second tap on Process — reaches the same job
+      // instead of queueing the same reconstruction twice. The node releases
+      // the key when a job fails, so a deliberate re-run still starts work.
+      requestId: captureId,
     );
     await refresh();
     return job;

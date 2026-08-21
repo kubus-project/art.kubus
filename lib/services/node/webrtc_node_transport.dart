@@ -88,7 +88,7 @@ class WebRtcNodeTransport implements KubusNodeTransport {
               if (request.headers.isNotEmpty) 'headers': request.headers,
               if (contentType != null) 'contentType': contentType,
               if (request.idempotencyKey != null)
-                'idempotencyKey': request.idempotencyKey,
+                'idempotencyKey': request.idempotencyKey!.value,
               if (request.jsonBody != null) 'json': request.jsonBody,
             },
           ),
