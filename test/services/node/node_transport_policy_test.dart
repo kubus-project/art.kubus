@@ -99,8 +99,10 @@ void main() {
       final resolver = KubusNodeTransportResolver(
         transports: [relay, https],
         policy: const NativeTransportPolicy(),
-        context:
-            const TransportSelectionContext(payloadBytes: 400 * 1024 * 1024),
+        contextForOperation: () => const TransportSelectionContext(
+          operationClass: NodeOperationClass.bulkUpload,
+          expectedUploadBytes: 400 * 1024 * 1024,
+        ),
       );
 
       await resolver.request(_read);
@@ -117,8 +119,10 @@ void main() {
       final resolver = KubusNodeTransportResolver(
         transports: [relay],
         policy: const NativeTransportPolicy(),
-        context:
-            const TransportSelectionContext(payloadBytes: 400 * 1024 * 1024),
+        contextForOperation: () => const TransportSelectionContext(
+          operationClass: NodeOperationClass.bulkUpload,
+          expectedUploadBytes: 400 * 1024 * 1024,
+        ),
       );
 
       await resolver.request(_read);
@@ -129,8 +133,8 @@ void main() {
 
     test('a metered network penalises the relay for ordinary requests', () {
       const policy = NativeTransportPolicy();
-      const metered = TransportSelectionContext(isMeteredNetwork: true);
-      const unmetered = TransportSelectionContext();
+      const metered = TransportSelectionContext(network: NetworkClass.mobile);
+      const unmetered = TransportSelectionContext(network: NetworkClass.wifi);
 
       expect(
         policy.penaltyFor(KubusNodeTransportKind.webRtcRelay, metered),
@@ -143,8 +147,8 @@ void main() {
     test('non-relay routes are never penalised for size or metering', () {
       const policy = NativeTransportPolicy();
       const heavy = TransportSelectionContext(
-        payloadBytes: 400 * 1024 * 1024,
-        isMeteredNetwork: true,
+        expectedUploadBytes: 400 * 1024 * 1024,
+        network: NetworkClass.mobile,
       );
 
       for (final kind in [
@@ -159,9 +163,10 @@ void main() {
     test(
         'the bulk threshold is what distinguishes a capture from a status call',
         () {
-      const small = TransportSelectionContext(payloadBytes: 1024);
+      const small = TransportSelectionContext(expectedUploadBytes: 1024);
       const large = TransportSelectionContext(
-        payloadBytes: TransportSelectionContext.bulkTransferThresholdBytes,
+        expectedUploadBytes:
+            TransportSelectionContext.defaultBulkTransferThresholdBytes,
       );
 
       expect(small.isBulkTransfer, isFalse);

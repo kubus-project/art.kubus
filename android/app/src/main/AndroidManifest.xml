@@ -18,12 +18,39 @@
 <uses-feature android:name="android.hardware.fingerprint" android:required="false" />
 <uses-feature android:name="android.hardware.camera.ar" android:required="true"/>
 
+    <!--
+      ACCESS_NETWORK_STATE backs connectivity_plus, which the Node transport
+      resolver uses to notice a network change and re-evaluate which route to
+      the paired Node is usable, rather than waiting for the current one to
+      time out.
+    -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
     <application
     android:requestLegacyExternalStorage="true"
         android:label="art.kubus"
         android:name="${applicationName}"
         android:icon="@drawable/belilogo_crn"
         android:usesCleartextTraffic="true">
+        <!--
+          usesCleartextTraffic is required for the LAN rung: a kubus Node on a
+          private address cannot hold a publicly trusted certificate, so it is
+          reached over plain HTTP.
+
+          It is deliberately broader than we want, and it cannot be narrowed
+          here. A network security config matches domains, not address ranges —
+          `<domain>192.168.0.0</domain>` matches that literal host and its
+          subdomains, never the 192.168.x.x range — so scoping cleartext to
+          private networks through the platform is not expressible, and a
+          config that appears to do it would silently break every real LAN
+          address instead.
+
+          The restriction is therefore enforced in application code: a stored
+          Node endpoint is only allowed to be plain HTTP when its host is a
+          private-network address, and an operator-configured remote endpoint
+          must be HTTPS. That check is the real control; this flag only stops
+          the platform from vetoing it.
+        -->
         <activity
             android:name=".MainActivity"
             android:exported="true"

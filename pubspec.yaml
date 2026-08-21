@@ -89,6 +89,12 @@ dependencies:
   qr_flutter: ^4.1.0 # QR code generation
   mobile_scanner: ^7.2.0 # QR code scanning (modern replacement for qr_code_scanner)
 
+  # Real WebRTC peer connections for the Node transport ladder. Only the
+  # DataChannel half is used: no camera or microphone is ever opened, so the
+  # media permissions the plugin declares are deliberately not requested at
+  # runtime. See docs/node/webrtc-protocol.md.
+  flutter_webrtc: ^1.6.0
+
   # Camera and AR
   camera: ^0.12.0+1
   flutter_compass: ^0.8.1
