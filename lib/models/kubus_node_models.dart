@@ -13,20 +13,49 @@ class KubusNodePairingPayload {
     required this.endpoint,
     required this.sessionId,
     required this.secret,
-    this.nodeId,
-    this.alternateEndpoints = const [],
     this.fingerprint,
     this.label,
+    this.nodeId,
+    this.publicKey,
+    this.alternateEndpoints = const <Uri>[],
+    this.version = 0,
   });
   final Uri endpoint;
   final String sessionId;
   final String secret;
-  final String? nodeId;
-  final List<Uri> alternateEndpoints;
+
+  /// The Node's identity fingerprint, for a human to compare on screen.
+  ///
+  /// Derived from [publicKey]; it is a display convenience, never the thing
+  /// that decides trust — anyone who has seen this QR can repeat a fingerprint.
   final String? fingerprint;
   final String? label;
 
-  List<Uri> get endpoints => [endpoint, ...alternateEndpoints];
+  /// The Node's stable public identifier, used to reach it through the control
+  /// plane when no direct address works.
+  final String? nodeId;
+
+  /// The Node's raw Ed25519 public key, base64url, 32 bytes.
+  ///
+  /// This is the only field in the payload that makes remote connection safe.
+  /// Without it a device can confirm nothing about a peer that dials in later:
+  /// endpoints move, fingerprints can be repeated, and a node id is public.
+  /// With it, the device can demand a signature over a challenge it chose.
+  final String? publicKey;
+
+  /// Other addresses the same Node answers on, best-effort.
+  final List<Uri> alternateEndpoints;
+
+  /// Payload schema version. v3 is the first to carry [publicKey].
+  final int version;
+
+  /// Whether this payload can support a verifiable remote connection.
+  ///
+  /// A payload without a public key can still pair over the local network,
+  /// but the device will never be able to prove a remote peer's identity, so
+  /// the Node must be re-paired before it can be reached from elsewhere.
+  bool get supportsIdentityVerification =>
+      (publicKey ?? '').isNotEmpty && version >= 3;
 
   /// Reads a scanned or pasted pairing code.
   ///
@@ -41,30 +70,30 @@ class KubusNodePairingPayload {
       final uri = Uri.tryParse(text);
       if (uri == null) throw const FormatException('Invalid pairing code');
       final endpoint = Uri.tryParse(uri.queryParameters['e'] ?? '');
-      final version = uri.queryParameters['v'];
       final sessionId = (uri.queryParameters['s'] ?? '').trim();
       final secret = (uri.queryParameters['k'] ?? '').trim();
-      final nodeId = (uri.queryParameters['n'] ?? '').trim();
-      final fingerprint = (uri.queryParameters['f'] ?? '').trim();
       if (endpoint == null ||
-          !_isAllowedEndpoint(endpoint) ||
+          !endpoint.hasScheme ||
+          !endpoint.hasAuthority ||
           sessionId.isEmpty ||
-          secret.isEmpty ||
-          (version == '2' && (nodeId.isEmpty || fingerprint.isEmpty))) {
+          secret.isEmpty) {
         throw const FormatException('Invalid pairing code');
       }
       return KubusNodePairingPayload(
         endpoint: endpoint,
         sessionId: sessionId,
         secret: secret,
-        nodeId: nodeId.isEmpty ? null : nodeId,
-        alternateEndpoints: (uri.queryParametersAll['a'] ?? const [])
-            .map(Uri.tryParse)
-            .whereType<Uri>()
-            .where(_isAllowedEndpoint)
-            .toList(growable: false),
-        fingerprint: fingerprint.isEmpty ? null : fingerprint,
+        fingerprint: uri.queryParameters['f'],
         label: uri.queryParameters['l'],
+        nodeId: uri.queryParameters['n'],
+        publicKey: uri.queryParameters['pk'],
+        alternateEndpoints: uri.queryParametersAll['a']
+                ?.map(Uri.tryParse)
+                .whereType<Uri>()
+                .where((value) => value.hasScheme && value.hasAuthority)
+                .toList(growable: false) ??
+            const <Uri>[],
+        version: int.tryParse(uri.queryParameters['v'] ?? '') ?? 0,
       );
     }
     final decoded = jsonDecode(text);
@@ -81,7 +110,7 @@ class KubusNodePairingPayload {
     final endpoint = Uri.tryParse(
       (node['endpoint'] ?? json['endpoint'] ?? '').toString(),
     );
-    if (endpoint == null || !_isAllowedEndpoint(endpoint)) {
+    if (endpoint == null || !endpoint.hasScheme || !endpoint.hasAuthority) {
       throw const FormatException('Invalid kubus Node endpoint');
     }
     final sessionId = (json['sessionId'] ?? '').toString().trim();
@@ -89,38 +118,23 @@ class KubusNodePairingPayload {
     if (sessionId.isEmpty || secret.isEmpty) {
       throw const FormatException('Invalid pairing session');
     }
-    final endpoints = (node['endpoints'] as List<dynamic>? ?? const [])
-        .map((value) => Uri.tryParse(value.toString()))
-        .whereType<Uri>()
-        .where(_isAllowedEndpoint)
-        .where((value) => value != endpoint)
-        .toList(growable: false);
     return KubusNodePairingPayload(
       endpoint: endpoint,
       sessionId: sessionId,
       secret: secret,
-      nodeId: (node['id'] ?? node['nodeId'] ?? json['nodeId'] ?? '')
-          .toString()
-          .trim(),
-      alternateEndpoints: endpoints,
       fingerprint: (node['fingerprint'] ?? '').toString(),
       label: (node['label'] ?? '').toString(),
+      nodeId: (node['id'] ?? '').toString(),
+      publicKey: (node['publicKey'] ?? '').toString(),
+      alternateEndpoints:
+          (node['endpoints'] as List<dynamic>? ?? const <dynamic>[])
+              .map((value) => Uri.tryParse(value.toString()))
+              .whereType<Uri>()
+              .where((value) => value.hasScheme && value.hasAuthority)
+              .where((value) => value != endpoint)
+              .toList(growable: false),
+      version: (json['version'] as num?)?.toInt() ?? 0,
     );
-  }
-
-  static bool _isAllowedEndpoint(Uri endpoint) {
-    if (!endpoint.hasAuthority) return false;
-    if (endpoint.scheme == 'https') return true;
-    if (endpoint.scheme != 'http') return false;
-    final host = endpoint.host.toLowerCase();
-    if (host.endsWith('.local') || host.endsWith('.internal')) return true;
-    if (host.startsWith('10.') || host.startsWith('192.168.')) return true;
-    final parts = host.split('.');
-    final second = parts.length > 1 ? int.tryParse(parts[1]) : null;
-    return parts.first == '172' &&
-        second != null &&
-        second >= 16 &&
-        second <= 31;
   }
 }
 
@@ -356,7 +370,6 @@ class SpatialVariant {
     required this.mimeType,
     required this.format,
     required this.storageClass,
-    this.localPath,
   });
   final String role;
   final String cid;
@@ -364,17 +377,6 @@ class SpatialVariant {
   final String mimeType;
   final String format;
   final String storageClass;
-  final String? localPath;
-
-  SpatialVariant copyWith({String? localPath}) => SpatialVariant(
-        role: role,
-        cid: cid,
-        sizeBytes: sizeBytes,
-        mimeType: mimeType,
-        format: format,
-        storageClass: storageClass,
-        localPath: localPath ?? this.localPath,
-      );
   factory SpatialVariant.fromJson(Map<String, dynamic> json) => SpatialVariant(
         role: (json['role'] ?? '').toString(),
         cid: (json['cid'] ?? '').toString(),
@@ -382,7 +384,6 @@ class SpatialVariant {
         mimeType: (json['mimeType'] ?? '').toString(),
         format: (json['format'] ?? '').toString(),
         storageClass: (json['storageClass'] ?? '').toString(),
-        localPath: json['localPath']?.toString(),
       );
 }
 
