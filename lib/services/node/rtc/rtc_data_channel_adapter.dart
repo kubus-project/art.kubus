@@ -14,8 +14,12 @@ import '../kubus_data_channel.dart';
 /// risk lives. Leaking `RTCDataChannel` upward would make the framing layer
 /// untestable without a peer connection, a platform channel, and a network.
 class RtcDataChannelAdapter implements KubusDataChannel {
-  RtcDataChannelAdapter(this._channel, {int? maxBufferedBytes})
-      : _maxBufferedBytes = maxBufferedBytes ?? defaultMaxBufferedBytes {
+  RtcDataChannelAdapter(
+    this._channel, {
+    int? maxBufferedBytes,
+    void Function(RTCDataChannelState state)? onStateChange,
+  })  : _maxBufferedBytes = maxBufferedBytes ?? defaultMaxBufferedBytes,
+        _onExternalStateChange = onStateChange {
     _channel.onMessage = _onMessage;
     _channel.onDataChannelState = _onStateChange;
     // The channel may already be open by the time we attach: flutter_webrtc
@@ -38,6 +42,7 @@ class RtcDataChannelAdapter implements KubusDataChannel {
 
   final RTCDataChannel _channel;
   final int _maxBufferedBytes;
+  final void Function(RTCDataChannelState state)? _onExternalStateChange;
   final StreamController<Uint8List> _messages =
       StreamController<Uint8List>.broadcast();
 
@@ -112,6 +117,10 @@ class RtcDataChannelAdapter implements KubusDataChannel {
       case RTCDataChannelState.RTCDataChannelConnecting:
         _isOpen = false;
     }
+    // The peer owns connection readiness while this adapter owns stream
+    // lifetime. Compose those responsibilities: replacing this callback makes
+    // a remotely closed channel look open and leaves requests to time out.
+    _onExternalStateChange?.call(state);
   }
 
   void _finish() {

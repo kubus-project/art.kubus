@@ -59,8 +59,8 @@ class KubusNodeProvider extends ChangeNotifier {
       notifyListeners();
       return;
     }
-    await _restoreRemoteRoute();
     await refresh();
+    unawaited(_restoreRemoteRoute());
   }
 
   Future<void> pair(KubusNodePairingPayload payload) async {
@@ -69,8 +69,8 @@ class KubusNodeProvider extends ChangeNotifier {
     notifyListeners();
     try {
       await service.pair(payload);
-      await _restoreRemoteRoute();
       await refresh();
+      unawaited(_restoreRemoteRoute());
     } catch (error) {
       _state = KubusNodeConnectionState.error;
       _error = error.toString();

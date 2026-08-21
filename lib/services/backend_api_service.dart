@@ -352,11 +352,17 @@ class BackendApiService
       final urls = (data['urls'] as List<dynamic>? ?? const <dynamic>[])
           .whereType<String>()
           .toList(growable: false);
+      final stunUrls = <String>{
+        ...((data['stunUrls'] as List<dynamic>? ?? const <dynamic>[])
+            .whereType<String>()),
+        ...urls.where((url) => url.startsWith('stun:')),
+      };
+      final stun = stunUrls.map(StunServer.new).toList(growable: false);
       final username = data['username'] as String?;
       final credential = data['credential'] as String?;
       final expiresAt = DateTime.tryParse(data['expiresAt'] as String? ?? '');
       if (username == null || credential == null || expiresAt == null) {
-        return const IceConfiguration();
+        return IceConfiguration(stun: stun);
       }
       final turn = TurnCredentials(
         urls: urls,
@@ -366,7 +372,7 @@ class BackendApiService
       );
       final now = DateTime.now();
       turn.validate(now: now, issuedAt: now);
-      return IceConfiguration(turn: turn);
+      return IceConfiguration(stun: stun, turn: turn);
     } on Object {
       return const IceConfiguration();
     }

@@ -30,11 +30,13 @@ class NodeRtcConnector {
     required NodeSignalingClient signaling,
     required Future<IceConfiguration> Function() iceConfiguration,
     required Uint8List? Function() pairedPublicKey,
+    String? Function()? credential,
     Duration connectTimeout = const Duration(seconds: 30),
     Duration proofTimeout = const Duration(seconds: 10),
   })  : _signaling = signaling,
         _iceConfiguration = iceConfiguration,
         _pairedPublicKey = pairedPublicKey,
+        _credential = credential ?? _noCredential,
         _connectTimeout = connectTimeout,
         _proofTimeout = proofTimeout;
 
@@ -47,6 +49,9 @@ class NodeRtcConnector {
   final NodeSignalingClient _signaling;
   final Future<IceConfiguration> Function() _iceConfiguration;
   final Uint8List? Function() _pairedPublicKey;
+  final String? Function() _credential;
+
+  static String? _noCredential() => null;
   final Duration _connectTimeout;
   final Duration _proofTimeout;
 
@@ -95,6 +100,9 @@ class NodeRtcConnector {
         kind: activePeer.isRelayed
             ? KubusNodeTransportKind.webRtcRelay
             : KubusNodeTransportKind.webRtcDirect,
+        // The channel is identity-verified immediately above. Do not capture
+        // this credential before that proof succeeds.
+        credential: _credential(),
       );
 
       // Signalling has done its job. Leaving the session open would keep

@@ -20,8 +20,10 @@ class WebRtcNodeTransport implements KubusNodeTransport {
   WebRtcNodeTransport({
     required KubusDataChannel channel,
     required this.kind,
+    String? credential,
     KubusFrameSplitter? splitter,
   })  : _channel = channel,
+        _credential = credential,
         _splitter = splitter ?? const KubusFrameSplitter() {
     _subscription = _channel.messages.listen(
       _onMessage,
@@ -33,6 +35,7 @@ class WebRtcNodeTransport implements KubusNodeTransport {
   }
 
   final KubusDataChannel _channel;
+  final String? _credential;
   final KubusFrameSplitter _splitter;
 
   @override
@@ -85,7 +88,13 @@ class WebRtcNodeTransport implements KubusNodeTransport {
               'method': request.method,
               'path': request.path,
               if (request.query.isNotEmpty) 'query': request.query,
-              if (request.headers.isNotEmpty) 'headers': request.headers,
+              if (request.headers.isNotEmpty ||
+                  (_credential ?? '').startsWith('kubus_local_'))
+                'headers': <String, String>{
+                  ...request.headers,
+                  if ((_credential ?? '').startsWith('kubus_local_'))
+                    'Authorization': 'Bearer $_credential',
+                },
               if (contentType != null) 'contentType': contentType,
               if (request.idempotencyKey != null)
                 'idempotencyKey': request.idempotencyKey!.value,
