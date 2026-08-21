@@ -127,7 +127,7 @@ class _AvailabilityNodeOperatorBodyState
           final snippet = context
               .read<AvailabilityOperatorProvider>()
               .buildEnvSnippet(token: created.token, walletAddress: wallet);
-          return AlertDialog(
+          return KubusAlertDialog(
             title: Text(l10n.availabilityNodeCreatedTitle),
             content: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 640),
@@ -191,7 +191,7 @@ class _AvailabilityNodeOperatorBodyState
     final wallet = _resolveWallet();
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         title: Text(l10n.availabilityNodeRevokeTitle),
         content: Text(l10n.availabilityNodeRevokeBody(token.label)),
         actions: [

@@ -13,7 +13,7 @@ import '../../providers/kubus_node_provider.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/node_state_presentation.dart';
 import '../../widgets/common/kubus_glass_icon_button.dart';
-import '../../widgets/glass/glass_surface.dart';
+import '../../widgets/glass_components.dart';
 import '../../widgets/inline_loading.dart';
 import '../../widgets/kubus_button.dart';
 import '../../widgets/node/node_ui.dart';
@@ -476,20 +476,24 @@ class _ScannerReticle extends StatelessWidget {
 }
 
 /// Readable text over an unpredictable camera image needs its own ground.
+///
+/// Uses the canonical floating-chrome glass ([FrostedContainer]) rather than
+/// a plain scrim, but keeps an explicit dark tint (not the theme surface
+/// colour): the background here is a live camera feed, not app content, so
+/// contrast has to hold regardless of what the camera happens to be pointed
+/// at, not just the current theme.
 class _ScannerMessage extends StatelessWidget {
   const _ScannerMessage({required this.message});
 
   final String message;
 
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context) => FrostedContainer(
+        backgroundColor: Colors.black,
+        borderRadius: BorderRadius.circular(KubusRadius.sm),
         padding: const EdgeInsets.symmetric(
           horizontal: KubusSpacing.md,
           vertical: KubusSpacing.sm,
-        ),
-        decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.62),
-          borderRadius: BorderRadius.circular(KubusRadius.sm),
         ),
         child: Text(
           message,

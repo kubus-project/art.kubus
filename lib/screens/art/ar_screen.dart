@@ -111,7 +111,7 @@ class _SpatialProcessingProgressDialog extends StatelessWidget {
             capture.localJobState ?? 'queued',
             capture.localJobProgress,
           );
-    return AlertDialog(
+    return KubusAlertDialog(
       title: Text(
         stages[progress.stageIndex.clamp(0, stages.length - 1).toInt()],
       ),
@@ -1972,7 +1972,7 @@ class _ARScreenState extends State<ARScreen>
     final l10n = AppLocalizations.of(context)!;
     final resume = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
+      builder: (dialogContext) => KubusAlertDialog(
         title: Text(l10n.spatialRecoveryTitle),
         content: Text(l10n.spatialRecoveryBody(candidate.sampleCount)),
         actions: [
@@ -2197,7 +2197,7 @@ class _ARScreenState extends State<ARScreen>
     final l10n = AppLocalizations.of(context)!;
     return showDialog<_SpatialFailureAction>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
+      builder: (dialogContext) => KubusAlertDialog(
         title: Text(l10n.spatialFailedTitle),
         content: Text(
           remote ? l10n.spatialFailedRemoteBody : l10n.spatialFailedLocalBody,
@@ -2401,7 +2401,7 @@ class _ARScreenState extends State<ARScreen>
     final l10n = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
           context: context,
-          builder: (dialogContext) => AlertDialog(
+          builder: (dialogContext) => KubusAlertDialog(
             title: Text(l10n.spatialRemotePrivacyTitle),
             content: Text(
               '${l10n.spatialRemotePrivacyBody}\n\n${l10n.spatialProcessMaximumPrivacy}',
@@ -2440,7 +2440,7 @@ class _ARScreenState extends State<ARScreen>
       barrierDismissible: false,
       builder: (dialogContext) => PopScope(
         canPop: false,
-        child: AlertDialog(
+        child: KubusAlertDialog(
           title: Text(l10n.spatialResultReviewTitle),
           content: SizedBox(
             width: 640,
@@ -2709,29 +2709,25 @@ class _ARScreenState extends State<ARScreen>
       backgroundColor: Colors.transparent,
       builder: (context) {
         final l10n = AppLocalizations.of(context)!;
-        return Container(
+        return SizedBox(
           height: MediaQuery.of(context).size.height * 0.6,
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(KubusRadius.xl),
-            ),
-          ),
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(KubusSpacing.lg),
-                child: Text(
-                  l10n.arPlacedArtworksTitle(_placedObjects.length),
-                  style: KubusTypography.inter(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
+          child: BackdropGlassSheet(
+            padding: EdgeInsets.zero,
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(KubusSpacing.lg),
+                  child: Text(
+                    l10n.arPlacedArtworksTitle(_placedObjects.length),
+                    style: KubusTypography.inter(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
                   ),
                 ),
-              ),
-              Expanded(
-                child: ListView.builder(
+                Expanded(
+                  child: ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   itemCount: _placedObjects.length,
                   itemBuilder: (context, index) {
@@ -2776,6 +2772,7 @@ class _ARScreenState extends State<ARScreen>
                 ),
               ),
             ],
+          ),
           ),
         );
       },
