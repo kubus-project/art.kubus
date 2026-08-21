@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
@@ -8,6 +9,7 @@ import 'package:http/http.dart' as http;
 import '../models/kubus_node_models.dart';
 import 'node/http_node_transport.dart';
 import 'node/kubus_node_transport.dart';
+import 'node/node_idempotency_key.dart';
 import 'storage_config.dart';
 
 /// A request the paired node rejected, carrying its stable error code.
@@ -207,8 +209,18 @@ class KubusNodeService {
 
   Future<Map<String, dynamic>> getCapture(String id) =>
       _get('/local/v1/captures/${Uri.encodeComponent(id)}');
+
+  /// Deletes a capture.
+  ///
+  /// Keyed on the capture itself: deleting `c1` twice is deleting `c1`, so a
+  /// failover that replays this converges instead of doing something new.
   Future<void> deleteCapture(String id) async {
-    await _request('DELETE', '/local/v1/captures/${Uri.encodeComponent(id)}');
+    await _request(
+      'DELETE',
+      '/local/v1/captures/${Uri.encodeComponent(id)}',
+      idempotencyKey:
+          NodeIdempotencyKey.forOperation('capture.delete', scope: id),
+    );
   }
 
   // --- Streaming capture transfer -------------------------------------------
@@ -224,11 +236,25 @@ class KubusNodeService {
   /// Throws [KubusNodeUnsupportedException] when the paired node predates the
   /// streaming API, so the caller can ask the user to update it rather than
   /// surfacing a bare 404.
+  /// Opens a draft the capture's files are streamed into.
+  ///
+  /// [localCaptureId] is the capture's stable client-side identity and is what
+  /// the draft is keyed on. It must be the same value across every retry of
+  /// the same capture — including after an app restart — or the Node cannot
+  /// tell a resumed upload from a second capture of the same scene.
   Future<KubusCaptureDraft> beginCaptureDraft(
-    Map<String, dynamic> metadata,
-  ) async =>
+    Map<String, dynamic> metadata, {
+    required String localCaptureId,
+  }) async =>
       KubusCaptureDraft.fromJson(
-        await _post('/local/v1/captures/drafts', metadata),
+        await _post(
+          '/local/v1/captures/drafts',
+          metadata,
+          idempotencyKey: NodeIdempotencyKey.forOperation(
+            'capture.draft',
+            scope: localCaptureId,
+          ),
+        ),
       );
 
   /// Streams one file into a draft straight off disk.
@@ -251,6 +277,13 @@ class KubusNodeService {
         path: '/local/v1/captures/drafts/${Uri.encodeComponent(draftId)}/files',
         query: <String, String>{'path': path},
         timeout: timeout,
+        // A PUT names the exact slot it fills, so replaying it rewrites the
+        // same file rather than appending a second one. That is what makes an
+        // interrupted large upload safe to resume on a different rung.
+        idempotencyKey: NodeIdempotencyKey.forOperation(
+          'capture.draft-file',
+          scope: '$draftId:$path',
+        ),
       ),
       file: file,
       contentType: mimeType,
@@ -265,10 +298,18 @@ class KubusNodeService {
       );
 
   /// Finalizes a draft into a durable capture record.
+  ///
+  /// The highest-stakes mutation in the flow: a commit whose response is lost
+  /// is indistinguishable from one that never ran, and an unkeyed retry would
+  /// produce a second durable capture of the same scene. Keyed on the draft,
+  /// which is stable for the life of the transfer, so the Node returns the
+  /// already-committed record instead of committing again.
   Future<Map<String, dynamic>> commitCaptureDraft(String draftId) => _post(
         '/local/v1/captures/drafts/${Uri.encodeComponent(draftId)}/commit',
         const {},
         timeout: const Duration(minutes: 5),
+        idempotencyKey:
+            NodeIdempotencyKey.forOperation('capture.commit', scope: draftId),
       );
 
   /// Abandons a draft and everything already uploaded into it.
@@ -276,15 +317,31 @@ class KubusNodeService {
     await _request(
       'DELETE',
       '/local/v1/captures/drafts/${Uri.encodeComponent(draftId)}',
+      idempotencyKey: NodeIdempotencyKey.forOperation(
+        'capture.draft-discard',
+        scope: draftId,
+      ),
     );
   }
 
+  /// Creates a processing job.
+  ///
+  /// [requestId] is the caller's stable identity for *this* request and must
+  /// be held across retries — minting a fresh one per attempt would defeat
+  /// deduplication and start the same reconstruction twice. Callers that
+  /// already have a durable handle (a capture id) should pass it.
   Future<KubusNodeJob> createJob({
     required String type,
     required Map<String, dynamic> input,
+    required String requestId,
   }) async =>
       KubusNodeJob.fromJson(
-        await _post('/local/v1/jobs', {'type': type, 'input': input}),
+        await _post(
+          '/local/v1/jobs',
+          {'type': type, 'input': input},
+          idempotencyKey:
+              NodeIdempotencyKey.forOperation('job.create', scope: requestId),
+        ),
       );
   Future<List<KubusNodeJob>> listJobs() async =>
       ((await _get('/local/v1/jobs'))['jobs'] as List<dynamic>? ?? const [])
@@ -296,7 +353,11 @@ class KubusNodeService {
       );
   Future<KubusNodeJob> cancelJob(String id) async => KubusNodeJob.fromJson(
         await _post(
-            '/local/v1/jobs/${Uri.encodeComponent(id)}/cancel', const {}),
+          '/local/v1/jobs/${Uri.encodeComponent(id)}/cancel',
+          const {},
+          idempotencyKey:
+              NodeIdempotencyKey.forOperation('job.cancel', scope: id),
+        ),
       );
   Future<Map<String, dynamic>> getSpatial(String id) =>
       _get('/local/v1/spatial/${Uri.encodeComponent(id)}');
@@ -307,18 +368,31 @@ class KubusNodeService {
     int minimumVramBytes = 0,
     String type = 'spatial.reconstruct',
   }) async {
-    final data = await _post('/local/v1/compute/candidates', {
-      'backendAuthorization': backendAuthorization,
-      'type': type,
-      'inputBytes': inputBytes,
-      'minimumVramBytes': minimumVramBytes,
-    });
+    // A POST only because the query carries a bearer token in the body. It
+    // creates nothing, so keying it on the query lets a failover retry it.
+    final data = await _post(
+      '/local/v1/compute/candidates',
+      {
+        'backendAuthorization': backendAuthorization,
+        'type': type,
+        'inputBytes': inputBytes,
+        'minimumVramBytes': minimumVramBytes,
+      },
+      idempotencyKey: NodeIdempotencyKey.forOperation(
+        'compute.candidates',
+        scope: '$type:$inputBytes:$minimumVramBytes',
+      ),
+    );
     return (data['nodes'] as List<dynamic>? ?? const [])
         .whereType<Map<String, dynamic>>()
         .map(KubusComputeCandidate.fromJson)
         .toList(growable: false);
   }
 
+  /// Requests reconstruction on someone else's GPU.
+  ///
+  /// Keyed on the capture and the chosen provider: a lost response must not
+  /// dispatch the same private capture to a second paid provider.
   Future<KubusRemoteComputeJob> createRemoteComputeJob({
     required String backendAuthorization,
     required String captureId,
@@ -327,15 +401,20 @@ class KubusNodeService {
   }) async =>
       KubusRemoteComputeJob.fromJson(
         await _post(
-            '/local/v1/compute/jobs',
-            {
-              'backendAuthorization': backendAuthorization,
-              'captureId': captureId,
-              'provider': provider.toJson(),
-              'requirements': requirements,
-              'type': 'spatial.reconstruct',
-            },
-            timeout: const Duration(minutes: 10)),
+          '/local/v1/compute/jobs',
+          {
+            'backendAuthorization': backendAuthorization,
+            'captureId': captureId,
+            'provider': provider.toJson(),
+            'requirements': requirements,
+            'type': 'spatial.reconstruct',
+          },
+          timeout: const Duration(minutes: 10),
+          idempotencyKey: NodeIdempotencyKey.forOperation(
+            'compute.job',
+            scope: '$captureId:${provider.nodeId}',
+          ),
+        ),
       );
 
   Future<KubusRemoteComputeJob> getRemoteComputeJob(
@@ -344,9 +423,13 @@ class KubusNodeService {
   ) async =>
       KubusRemoteComputeJob.fromJson(
         await _post(
-            '/local/v1/compute/jobs/${Uri.encodeComponent(id)}/status', {
-          'backendAuthorization': backendAuthorization,
-        }),
+          '/local/v1/compute/jobs/${Uri.encodeComponent(id)}/status',
+          {'backendAuthorization': backendAuthorization},
+          idempotencyKey: NodeIdempotencyKey.forOperation(
+            'compute.job-status',
+            scope: id,
+          ),
+        ),
       );
 
   Future<Map<String, dynamic>> retrieveRemoteComputeResult(
@@ -357,6 +440,10 @@ class KubusNodeService {
         '/local/v1/compute/jobs/${Uri.encodeComponent(id)}/retrieve',
         {'backendAuthorization': backendAuthorization},
         timeout: const Duration(minutes: 10),
+        idempotencyKey: NodeIdempotencyKey.forOperation(
+          'compute.job-retrieve',
+          scope: id,
+        ),
       );
 
   Future<KubusRemoteComputeJob> acknowledgeRemoteComputeResult({
@@ -373,6 +460,12 @@ class KubusNodeService {
             'accepted': accepted,
             if (reason != null) 'reason': reason,
           },
+          // The verdict is part of the key: re-sending "accepted" is a replay,
+          // but a later rejection is a different decision and must get through.
+          idempotencyKey: NodeIdempotencyKey.forOperation(
+            'compute.job-acknowledge',
+            scope: '$id:${accepted ? 'accept' : 'reject'}',
+          ),
         ),
       );
 
@@ -382,19 +475,39 @@ class KubusNodeService {
   ) async =>
       KubusRemoteComputeJob.fromJson(
         await _post(
-            '/local/v1/compute/jobs/${Uri.encodeComponent(id)}/cancel', {
-          'backendAuthorization': backendAuthorization,
-        }),
+          '/local/v1/compute/jobs/${Uri.encodeComponent(id)}/cancel',
+          {'backendAuthorization': backendAuthorization},
+          idempotencyKey: NodeIdempotencyKey.forOperation(
+            'compute.job-cancel',
+            scope: id,
+          ),
+        ),
       );
 
   Future<Map<String, dynamic>> getComputeSettings() =>
       _get('/local/v1/compute/settings');
 
+  /// Replaces the Node's remote-compute settings.
+  ///
+  /// Keyed on a digest of the settings themselves: replaying the same write is
+  /// a no-op the Node can recognise, while a genuinely different update is a
+  /// different key and is never mistaken for a replay.
   Future<Map<String, dynamic>> updateComputeSettings(
     Map<String, dynamic> settings,
   ) async =>
       _decode(
-        await _request('PUT', '/local/v1/compute/settings', body: settings),
+        await _request(
+          'PUT',
+          '/local/v1/compute/settings',
+          body: settings,
+          idempotencyKey: NodeIdempotencyKey.forOperation(
+            'compute.settings',
+            scope: sha256
+                .convert(utf8.encode(jsonEncode(settings)))
+                .toString()
+                .substring(0, 32),
+          ),
+        ),
       );
 
   Future<List<KubusContentCandidate>> resolveContentCandidates(
@@ -468,13 +581,21 @@ class KubusNodeService {
     String path,
     Map<String, dynamic> body, {
     Duration timeout = const Duration(seconds: 20),
+    NodeIdempotencyKey? idempotencyKey,
   }) async =>
-      _decode(await _request('POST', path, body: body, timeout: timeout));
+      _decode(await _request(
+        'POST',
+        path,
+        body: body,
+        timeout: timeout,
+        idempotencyKey: idempotencyKey,
+      ));
   Future<KubusNodeResponse> _request(
     String method,
     String path, {
     Map<String, dynamic>? body,
     Duration timeout = const Duration(seconds: 20),
+    NodeIdempotencyKey? idempotencyKey,
   }) async {
     if (!isPaired) throw StateError('No kubus Node is paired.');
     return _transport.request(
@@ -483,6 +604,7 @@ class KubusNodeService {
         path: path,
         jsonBody: body,
         timeout: timeout,
+        idempotencyKey: idempotencyKey,
       ),
     );
   }

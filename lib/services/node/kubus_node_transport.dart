@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'node_idempotency_key.dart';
+
 /// How a request reached the paired Node.
 ///
 /// This is diagnostic and policy metadata only. It never changes what an
@@ -66,7 +68,12 @@ class KubusNodeRequest {
   /// Set for operations that must not be duplicated if a transport fails and
   /// the request is retried on another rung — draft commits, job creation.
   /// Safe reads leave this null.
-  final String? idempotencyKey;
+  ///
+  /// Typed rather than a raw string so a blank or malformed key cannot reach
+  /// this far: [NodeIdempotencyKey] rejects those at construction, and a
+  /// request the Node could not deduplicate therefore stays unkeyed — and
+  /// unretryable — instead of appearing retry-safe.
+  final NodeIdempotencyKey? idempotencyKey;
 
   /// Whether this operation may be retried on a different transport without
   /// risking a duplicate side effect.

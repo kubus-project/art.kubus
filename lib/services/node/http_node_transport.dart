@@ -98,7 +98,7 @@ class HttpNodeTransport implements KubusNodeTransport {
       'Accept': 'application/json',
       if (credential != null) 'Authorization': 'Bearer $credential',
       if (request.idempotencyKey != null)
-        'Idempotency-Key': request.idempotencyKey!,
+        'Idempotency-Key': request.idempotencyKey!.value,
       ...request.headers,
     };
   }

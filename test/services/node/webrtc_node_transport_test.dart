@@ -5,6 +5,7 @@ import 'dart:typed_data';
 
 import 'package:art_kubus/services/node/kubus_data_channel.dart';
 import 'package:art_kubus/services/node/kubus_node_transport.dart';
+import 'package:art_kubus/services/node/node_idempotency_key.dart';
 import 'package:art_kubus/services/node/webrtc_frame.dart';
 import 'package:art_kubus/services/node/webrtc_frame_stream.dart';
 import 'package:art_kubus/services/node/webrtc_node_transport.dart';
@@ -225,11 +226,11 @@ void main() {
       addTearDown(transport.close);
 
       await transport.request(
-        const KubusNodeRequest(
+        KubusNodeRequest(
           method: 'POST',
           path: '/local/v1/captures/drafts/d1/commit',
           query: {'x': '1'},
-          idempotencyKey: 'commit-d1',
+          idempotencyKey: NodeIdempotencyKey('commit-d1'),
           jsonBody: {'a': 1},
         ),
       );

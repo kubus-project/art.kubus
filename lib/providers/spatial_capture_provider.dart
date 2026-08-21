@@ -590,7 +590,8 @@ class SpatialCaptureProvider extends ChangeNotifier {
     }
 
     if (draftId == null) {
-      final draft = await node.service.beginCaptureDraft(<String, dynamic>{
+      final draft = await node.service
+          .beginCaptureDraft(localCaptureId: store.captureId, <String, dynamic>{
         'schema': 'kubus.capture/1',
         'artworkId': store.artworkId,
         if (store.markerId != null) 'markerId': store.markerId,
