@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart';
 import '../models/kubus_node_models.dart';
 import '../services/kubus_node_service.dart';
 import '../services/backend_api_service.dart';
-import '../services/node/turn_configuration.dart';
 import '../services/node/turn_credential_service.dart';
 
 class KubusNodeProvider extends ChangeNotifier {
