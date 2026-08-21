@@ -39,11 +39,11 @@ class KubusNodeTransportResolver implements KubusNodeTransport {
   KubusNodeTransportResolver({
     required List<KubusNodeTransport> transports,
     NodeTransportPolicy? policy,
-    TransportSelectionContext context = const TransportSelectionContext(),
+    TransportSelectionContext Function()? contextForOperation,
     DateTime Function()? clock,
   })  : _transports = List.unmodifiable(transports),
         _policy = policy ?? const NativeTransportPolicy(),
-        _context = context,
+        _contextForOperation = contextForOperation ?? _defaultContext,
         _clock = clock ?? DateTime.now {
     for (final transport in _transports) {
       _health[transport.kind] = TransportHealthRecord(kind: transport.kind);
@@ -58,8 +58,19 @@ class KubusNodeTransportResolver implements KubusNodeTransport {
   /// a browser — see [NodeTransportPolicy].
   final NodeTransportPolicy _policy;
 
-  /// What the policy knows about the operation being routed.
-  final TransportSelectionContext _context;
+  /// Supplies what the policy knows about the operation about to be routed.
+  ///
+  /// A function rather than a value: the answer changes between operations and
+  /// between moments. Holding one context for the resolver's lifetime meant a
+  /// 400 MB capture upload was routed with the same information as a status
+  /// poll, and a switch from Wi-Fi to mobile data was invisible to routing
+  /// until a route actually timed out.
+  final TransportSelectionContext Function() _contextForOperation;
+
+  /// Used when no supplier is injected. Conservative on purpose: an unknown
+  /// network is treated as metered, and every rung stays available.
+  static TransportSelectionContext _defaultContext() =>
+      const TransportSelectionContext();
 
   final Map<KubusNodeTransportKind, TransportHealthRecord> _health =
       <KubusNodeTransportKind, TransportHealthRecord>{};
@@ -74,7 +85,7 @@ class KubusNodeTransportResolver implements KubusNodeTransport {
 
   @override
   KubusNodeTransportKind get kind =>
-      _activeKind ?? _policy.order(_context).first;
+      _activeKind ?? _policy.order(_contextForOperation()).first;
 
   @override
   bool get isAvailable => _transports.any((t) => t.isAvailable);
@@ -87,17 +98,25 @@ class KubusNodeTransportResolver implements KubusNodeTransport {
     _activeKind = null;
   }
 
-  /// Candidates worth trying now, best first.
-  List<KubusNodeTransport> candidates() {
+  /// Candidates worth trying now for [context], best first.
+  ///
+  /// Takes the context explicitly so ordering is a pure function of the
+  /// operation and the current health, which is what makes it testable without
+  /// mutating resolver state between assertions.
+  List<KubusNodeTransport> candidates([TransportSelectionContext? context]) {
+    final resolved = context ?? _contextForOperation();
     final now = _clock();
-    final order = _policy.order(_context);
+    final order = _policy.order(resolved);
     final eligible = _transports
         .where((t) => t.isAvailable)
         // A route the policy omits entirely is not attempted at all.
         .where((t) => order.contains(t.kind))
         .where((t) => _health[t.kind]!.isEligible(now))
         .toList();
-    eligible.sort((a, b) => _score(a, order).compareTo(_score(b, order)));
+    eligible.sort(
+      (a, b) =>
+          _score(a, order, resolved).compareTo(_score(b, order, resolved)),
+    );
     return eligible;
   }
 
@@ -105,6 +124,7 @@ class KubusNodeTransportResolver implements KubusNodeTransport {
   int _score(
     KubusNodeTransport transport,
     List<KubusNodeTransportKind> order,
+    TransportSelectionContext context,
   ) {
     final record = _health[transport.kind]!;
     final base = order.indexOf(transport.kind) * 1000;
@@ -122,34 +142,51 @@ class KubusNodeTransportResolver implements KubusNodeTransport {
         ((record.latencyEwmaMs ?? 0) / 50).clamp(0, 99).toInt();
     // The policy's own judgement — for example pushing a relay far down for a
     // bulk spatial transfer, without removing it as a last resort.
-    final policyPenalty = _policy.penaltyFor(transport.kind, _context);
+    final policyPenalty = _policy.penaltyFor(transport.kind, context);
     return base + healthPenalty + latencyPenalty + policyPenalty;
   }
 
   @override
-  Future<KubusNodeResponse> request(KubusNodeRequest request) =>
-      _run(request, (transport) => transport.request(request));
+  Future<KubusNodeResponse> request(KubusNodeRequest request) => _run(
+        request,
+        (transport) => transport.request(request),
+        _contextForOperation().copyWith(
+          operationClass: request.isSafeToRetry
+              ? NodeOperationClass.interactive
+              : NodeOperationClass.mutation,
+        ),
+      );
 
   @override
   Future<KubusNodeResponse> streamUpload(
     KubusNodeRequest request, {
     required File file,
     required String contentType,
-  }) =>
-      _run(
+  }) async {
+    // The actual file length is known here, so routing never has to guess how
+    // big this transfer is — which is the whole reason a relay can be pushed
+    // down for a capture but not for a status poll.
+    final length = await file.length();
+    return _run(
+      request,
+      (transport) => transport.streamUpload(
         request,
-        (transport) => transport.streamUpload(
-          request,
-          file: file,
-          contentType: contentType,
-        ),
-      );
+        file: file,
+        contentType: contentType,
+      ),
+      _contextForOperation().copyWith(
+        operationClass: NodeOperationClass.bulkUpload,
+        expectedUploadBytes: length,
+      ),
+    );
+  }
 
   Future<KubusNodeResponse> _run(
     KubusNodeRequest request,
     Future<KubusNodeResponse> Function(KubusNodeTransport) operation,
+    TransportSelectionContext context,
   ) async {
-    final ordered = candidates();
+    final ordered = candidates(context);
     if (ordered.isEmpty) {
       throw const KubusNodeUnreachableException(<KubusNodeTransportKind>[]);
     }
