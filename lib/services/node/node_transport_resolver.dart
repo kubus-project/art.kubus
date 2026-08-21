@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'kubus_data_channel.dart';
 import 'kubus_node_transport.dart';
 import 'node_transport_health.dart';
 import 'node_transport_policy.dart';
@@ -293,6 +294,7 @@ class KubusNodeTransportResolver implements KubusNodeTransport {
       error is TimeoutException ||
       error is HttpException ||
       error is HandshakeException ||
+      error is KubusDataChannelClosedException ||
       error is KubusNodeUnreachableException;
 
   @override

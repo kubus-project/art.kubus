@@ -115,6 +115,7 @@ class KubusNodeService {
 
   /// The Node's stable public id, used to reach it via the control plane.
   static const _nodeIdKey = 'kubus_node_id_v1';
+  static const _remoteEndpointKey = 'kubus_node_remote_endpoint_v1';
   final http.Client _client;
   final KubusNodeCredentialStore _store;
   final bool _isWeb;
@@ -193,6 +194,8 @@ class KubusNodeService {
     _fingerprint = await _store.read(_fingerprintKey);
     _publicKeyBase64Url = await _store.read(_publicKeyKey);
     _nodeId = await _store.read(_nodeIdKey);
+    _remoteEndpoint = Uri.tryParse(await _store.read(_remoteEndpointKey) ?? '');
+    _adoptRemoteHttpsRoute();
     return isPaired;
   }
 
@@ -225,6 +228,7 @@ class KubusNodeService {
         signaling: signaling,
         iceConfiguration: iceConfiguration,
         pairedPublicKey: () => pairedPublicKey,
+        credential: () => _credential,
       ).connect(nodeId);
       resolver.adopt(transport);
       return transport.kind;
@@ -297,6 +301,8 @@ class KubusNodeService {
     _fingerprint = payload.fingerprint;
     _publicKeyBase64Url = publicKey;
     _nodeId = payload.nodeId;
+    _remoteEndpoint = _httpsAlternate(payload.alternateEndpoints);
+    _adoptRemoteHttpsRoute();
     await _store.write(_endpointKey, payload.endpoint.toString());
     await _store.write(_credentialKey, token);
     if ((payload.fingerprint ?? '').isNotEmpty) {
@@ -314,6 +320,31 @@ class KubusNodeService {
     } else {
       await _store.delete(_nodeIdKey);
     }
+    if (_remoteEndpoint != null) {
+      await _store.write(_remoteEndpointKey, _remoteEndpoint.toString());
+    } else {
+      await _store.delete(_remoteEndpointKey);
+    }
+  }
+
+  static Uri? _httpsAlternate(List<Uri> endpoints) {
+    for (final endpoint in endpoints) {
+      if (endpoint.scheme == 'https' && endpoint.hasAuthority) return endpoint;
+    }
+    return null;
+  }
+
+  void _adoptRemoteHttpsRoute() {
+    final endpoint = _remoteEndpoint;
+    final resolver = _resolver;
+    if (endpoint == null || resolver == null) return;
+    resolver.adopt(
+      NodeTransportFactory.remoteHttps(
+        endpoint: () => _remoteEndpoint ?? endpoint,
+        credential: () => _credential,
+        client: _client,
+      ),
+    );
   }
 
   static Uint8List? _decodePublicKey(String encoded) {
@@ -335,12 +366,14 @@ class KubusNodeService {
     _fingerprint = null;
     _publicKeyBase64Url = null;
     _nodeId = null;
+    _remoteEndpoint = null;
     await Future.wait([
       _store.delete(_endpointKey),
       _store.delete(_credentialKey),
       _store.delete(_fingerprintKey),
       _store.delete(_publicKeyKey),
       _store.delete(_nodeIdKey),
+      _store.delete(_remoteEndpointKey),
     ]);
   }
 

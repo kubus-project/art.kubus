@@ -73,6 +73,21 @@ class NodeTransportFactory {
     );
   }
 
+  /// Builds the public HTTPS rung when pairing metadata supplies one after the
+  /// service's initial construction. The resolver adopts it live, avoiding a
+  /// stale null snapshot that would otherwise silently omit HTTPS forever.
+  static HttpNodeTransport remoteHttps({
+    required Uri Function() endpoint,
+    required String? Function() credential,
+    http.Client? client,
+  }) =>
+      HttpNodeTransport(
+        endpoint: endpoint,
+        credential: credential,
+        kind: KubusNodeTransportKind.remoteHttps,
+        client: client,
+      );
+
   /// The ordering appropriate to this platform.
   ///
   /// Web gets a different policy for a concrete reason rather than a stylistic

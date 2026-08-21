@@ -130,21 +130,23 @@ class KubusRtcPeer {
       final channel = await connection.createDataChannel('kubus', init);
       _channel = channel;
 
-      final adapter = RtcDataChannelAdapter(channel);
+      late final RtcDataChannelAdapter adapter;
+      adapter = RtcDataChannelAdapter(
+        channel,
+        onStateChange: (RTCDataChannelState state) {
+          if (state == RTCDataChannelState.RTCDataChannelOpen &&
+              !ready.isCompleted) {
+            ready.complete(adapter);
+          }
+          if (state == RTCDataChannelState.RTCDataChannelClosed &&
+              !ready.isCompleted) {
+            ready.completeError(
+              const KubusRtcException(KubusRtcFailure.channelNeverOpened),
+            );
+          }
+        },
+      );
       _adapter = adapter;
-
-      channel.onDataChannelState = (RTCDataChannelState state) {
-        if (state == RTCDataChannelState.RTCDataChannelOpen &&
-            !ready.isCompleted) {
-          ready.complete(adapter);
-        }
-        if (state == RTCDataChannelState.RTCDataChannelClosed &&
-            !ready.isCompleted) {
-          ready.completeError(
-            const KubusRtcException(KubusRtcFailure.channelNeverOpened),
-          );
-        }
-      };
 
       final offer = await connection.createOffer(<String, dynamic>{});
       await connection.setLocalDescription(offer);
