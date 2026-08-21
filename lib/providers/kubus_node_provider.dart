@@ -1,16 +1,20 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 import '../models/kubus_node_models.dart';
 import '../services/kubus_node_service.dart';
 import '../services/backend_api_service.dart';
 import '../services/node/turn_configuration.dart';
+import '../services/node/turn_credential_service.dart';
 
 class KubusNodeProvider extends ChangeNotifier {
-  KubusNodeProvider({KubusNodeService? service})
-      : service = service ?? KubusNodeService();
+  KubusNodeProvider({
+    KubusNodeService? service,
+    TurnCredentialService? turnCredentialService,
+  })  : service = service ?? KubusNodeService(),
+        _turnCredentialService =
+            turnCredentialService ?? TurnCredentialService();
   final KubusNodeService service;
+  final TurnCredentialService _turnCredentialService;
   KubusNodeConnectionState _state = KubusNodeConnectionState.unpaired;
   KubusNodeSnapshot? _snapshot;
   List<KubusNodeJob> _jobs = const [];
@@ -227,58 +231,12 @@ class KubusNodeProvider extends ChangeNotifier {
       await service.connectRemote(
         signalingBaseUrl: backend.baseUrl,
         authToken: () async => backend.getAuthToken(),
-        iceConfiguration: () => _loadIceConfiguration(backend),
+        iceConfiguration: _turnCredentialService.loadIceConfiguration,
       );
     } on Object {
       // The resolver retains any working direct rungs. Connection state is set
       // by refresh from an actual Node response, not from this coordination
       // attempt alone.
-    }
-  }
-
-  Future<IceConfiguration> _loadIceConfiguration(
-    BackendApiService backend,
-  ) async {
-    final token = (backend.getAuthToken() ?? '').trim();
-    if (token.isEmpty) return const IceConfiguration();
-    try {
-      final response = await http
-          .post(
-            Uri.parse('${backend.baseUrl}/api/turn/credentials'),
-            headers: <String, String>{
-              'Authorization': 'Bearer $token',
-              'Content-Type': 'application/json',
-            },
-            body: jsonEncode(const <String, Object?>{}),
-          )
-          .timeout(const Duration(seconds: 12));
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        // TURN is a fallback rather than a prerequisite. A direct ICE path
-        // remains worth attempting when the relay is temporarily unavailable.
-        return const IceConfiguration();
-      }
-      final decoded = jsonDecode(response.body);
-      final data = decoded is Map ? decoded['data'] : null;
-      if (data is! Map) return const IceConfiguration();
-      final urls = (data['urls'] as List<dynamic>? ?? const <dynamic>[])
-          .whereType<String>()
-          .toList(growable: false);
-      final username = data['username'] as String?;
-      final credential = data['credential'] as String?;
-      final expiresAt = DateTime.tryParse(data['expiresAt'] as String? ?? '');
-      if (username == null || credential == null || expiresAt == null) {
-        return const IceConfiguration();
-      }
-      final turn = TurnCredentials(
-        urls: urls,
-        username: username,
-        credential: credential,
-        expiresAt: expiresAt,
-      );
-      turn.validate(now: DateTime.now(), issuedAt: DateTime.now());
-      return IceConfiguration(turn: turn);
-    } on Object {
-      return const IceConfiguration();
     }
   }
 }
