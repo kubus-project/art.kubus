@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show ServicesBinding;
 import 'package:http/http.dart' as http;
 
 import 'http_node_transport.dart';
@@ -122,12 +123,41 @@ class NetworkContextSource {
   /// consideration after the user walks back through their front door.
   Future<void> start({void Function(NetworkClass network)? onChanged}) async {
     await _refresh();
-    _subscription ??= _connectivity.onConnectivityChanged.listen((results) {
-      final next = _classify(results);
-      if (next == _current) return;
-      _current = next;
-      onChanged?.call(next);
-    });
+    if (_subscription != null) return;
+    if (!_hasServicesBinding()) return;
+    try {
+      // On headless Dart tests (and during very early embedding startup) the
+      // connectivity plugin can throw before a ServicesBinding exists. Route
+      // selection must remain usable in that state: the already-conservative
+      // `unknown` context is preferable to making Node initialization fail.
+      _subscription = _connectivity.onConnectivityChanged.listen(
+        (results) {
+          final next = _classify(results);
+          if (next == _current) return;
+          _current = next;
+          onChanged?.call(next);
+        },
+        // Platform channels can report a binding/plugin failure *after* the
+        // subscription has been created. Do not let an optional diagnostics
+        // signal turn a valid Node operation into an uncaught async error.
+        onError: (_, __) {},
+      );
+    } on Object {
+      // Keep the last successful snapshot (or `unknown`) and simply forgo
+      // live changes until this service is reconstructed on a bound runtime.
+    }
+  }
+
+  bool _hasServicesBinding() {
+    try {
+      // Accessing the binding is deliberately only a readiness probe. This
+      // class must also work in pure-Dart/IO callers, where asking the plugin
+      // to create its EventChannel would otherwise report an uncaught error.
+      ServicesBinding.instance;
+      return true;
+    } on Object {
+      return false;
+    }
   }
 
   Future<void> _refresh() async {
