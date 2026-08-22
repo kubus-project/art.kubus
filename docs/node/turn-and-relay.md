@@ -10,7 +10,11 @@ These are never merged, and the separation is the point:
 | --- | --- | --- |
 | **Control plane** (art.kubus backend) | Authenticates user/device/Node, carries short-lived signaling, issues short-lived TURN credentials, serves STUN/TURN configuration | Metadata: *that* a device wants to reach a Node |
 | **Data plane** (the Node) | Holds private captures, processes them, serves results | The content, because it is the owner's own machine |
-| **Relay** (coturn or equivalent) | Forwards encrypted WebRTC packets when direct connectivity fails | Ciphertext and packet sizes. Nothing else. |
+| **Relay** (Coturn on the HA witness host) | Forwards encrypted WebRTC packets when direct connectivity fails | Ciphertext and packet sizes. Nothing else. |
+
+The relay is deployed on the isolated HA witness overlay, not on an API/backend
+host. Flutter does not encode that host or deployment topology: it consumes the
+authoritative STUN/TURN URLs and expiring credentials returned by the backend.
 
 **The relay is not part of the backend.** It is a separate service, deployed
 and scaled separately, and it understands nothing about captures, spatial
