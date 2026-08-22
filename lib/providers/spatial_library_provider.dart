@@ -404,6 +404,11 @@ class SpatialLibraryProvider extends ChangeNotifier {
     final current = await store.get(localSpatialId);
     if (current == null) throw StateError('record_missing');
     if (!current.rawPresent) throw StateError('raw_source_required');
+    // Network processing still uploads the raw capture through the user's
+    // own paired Node (see SpatialProcessSheet's doc comment), so failing
+    // fast and loud here beats persisting a request that can only fail once
+    // driveNetworkRequest actually reaches _startRemoteJob's _requireNode().
+    _requireNode();
     final now = DateTime.now().toUtc();
     final record = await store.recordNetworkRequest(
       localSpatialId,

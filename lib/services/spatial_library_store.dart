@@ -991,6 +991,12 @@ class SpatialLibraryStore {
           artworkTitleSnapshot: artworkTitleSnapshot,
           artistNameSnapshot: artistNameSnapshot,
           markerLabelSnapshot: markerLabelSnapshot,
+          // A processed result's manifest carries the artwork/marker id it
+          // was reconstructed for (result import enforces the match). Once
+          // this record points somewhere else, that result describes the
+          // old association - publish() must not treat it as current, and
+          // the user needs to see reprocessing is required again.
+          resultStale: record.hasLocalResult ? true : null,
         );
       },
     );

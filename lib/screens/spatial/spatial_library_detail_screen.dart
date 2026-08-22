@@ -506,16 +506,18 @@ class _SpatialLibraryDetailScreenState
     SpatialLibraryRecord record,
   ) async {
     final l10n = AppLocalizations.of(context)!;
-    // Discovery is informational only. It decides what the sheet *says*, never
-    // what it offers. The KUBUS Network is reachable regardless of whether
-    // this device has a Node of its own paired — owning a Node is never the
-    // gate on processing.
+    // Discovery is informational only. It decides what the sheet *says*, not
+    // whether the network option is shown - that only depends on pairing
+    // (see SpatialProcessSheet's doc comment for why network processing
+    // needs a paired Node too).
     var providersAvailableNow = false;
-    try {
-      providersAvailableNow =
-          (await provider.loadNetworkCandidates(record)).isNotEmpty;
-    } catch (_) {
-      providersAvailableNow = false;
+    if (provider.ownNodeReachability != SpatialOwnNodeReachability.unpaired) {
+      try {
+        providersAvailableNow =
+            (await provider.loadNetworkCandidates(record)).isNotEmpty;
+      } catch (_) {
+        providersAvailableNow = false;
+      }
     }
     if (!mounted) return;
     final choice = await SpatialProcessSheet.show(

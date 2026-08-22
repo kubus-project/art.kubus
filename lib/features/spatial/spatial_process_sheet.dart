@@ -23,10 +23,16 @@ enum SpatialProcessorChoice {
 /// HTTPS instead of the LAN changes the route, not the trust — so it is one
 /// option with a connection note, never a third processor.
 ///
-/// The network option is always offered. Provider discovery is asynchronous,
-/// so "nobody answered in the last two seconds" is a fact about right now, not
-/// a reason to hide a capability; choosing it opens a durable request that
-/// waits for a provider to appear.
+/// Provider discovery is asynchronous, so "nobody answered in the last two
+/// seconds" is a fact about right now, not a reason to hide the network
+/// option; choosing it opens a durable request that waits for a provider to
+/// appear.
+///
+/// Network processing still uploads the raw capture through the user's own
+/// paired Node first (there is no other place today that stages it for a
+/// third-party processor to reach), so pairing is a real prerequisite for
+/// both options, not just "my own Node". Tapping either while unpaired asks
+/// to pair first, then re-opens this sheet with the freshly paired state.
 class SpatialProcessSheet extends StatelessWidget {
   const SpatialProcessSheet({
     super.key,
@@ -101,12 +107,20 @@ class SpatialProcessSheet extends StatelessWidget {
             accent: roles.statBlue,
             title: l10n.spatialProcessNetworkTitle,
             body: l10n.spatialProcessNetworkSubtitle,
-            note:
-                providersAvailableNow ? null : l10n.spatialProcessNoProviderNow,
-            noteColor: providersAvailableNow ? null : scheme.onSurfaceVariant,
+            note: ownNode == SpatialOwnNodeReachability.unpaired
+                ? l10n.spatialProcessOwnNodeUnpaired
+                : providersAvailableNow
+                    ? null
+                    : l10n.spatialProcessNoProviderNow,
+            noteColor: ownNode == SpatialOwnNodeReachability.unpaired ||
+                    !providersAvailableNow
+                ? scheme.onSurfaceVariant
+                : null,
             enabled: true,
             onTap: () => Navigator.of(context).pop(
-              SpatialProcessorChoice.kubusNetwork,
+              ownNode == SpatialOwnNodeReachability.unpaired
+                  ? SpatialProcessorChoice.connectOwnNode
+                  : SpatialProcessorChoice.kubusNetwork,
             ),
           ),
         ],

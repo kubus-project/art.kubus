@@ -69,7 +69,10 @@ void main() {
       // The unpaired tile carries no reduced-opacity disabled affordance —
       // it is a live invitation to pair, not a greyed-out dead end.
       expect(opacity.opacity, 1.0);
-      expect(find.text('Not connected — tap to pair'), findsOneWidget);
+      // Both tiles show it: network processing uploads through this same
+      // Node (see SpatialProcessSheet's doc comment), so pairing is a real
+      // prerequisite for either option, not just this one.
+      expect(find.text('Not connected — tap to pair'), findsNWidgets(2));
     });
 
     testWidgets('tapping an unpaired own Node returns connectOwnNode',
@@ -100,7 +103,7 @@ void main() {
     });
 
     testWidgets(
-        'the KUBUS Network option stays tappable with zero providers online',
+        'the KUBUS Network option stays tappable with zero providers online, once paired',
         (tester) async {
       SpatialProcessorChoice? result;
       await tester.pumpWidget(
@@ -110,7 +113,7 @@ void main() {
               onPressed: () async {
                 result = await SpatialProcessSheet.show(
                   context,
-                  ownNode: SpatialOwnNodeReachability.unpaired,
+                  ownNode: SpatialOwnNodeReachability.localNetwork,
                   providersAvailableNow: false,
                 );
               },
@@ -131,6 +134,39 @@ void main() {
       await tester.tap(find.text('Kubus network'));
       await tester.pumpAndSettle();
       expect(result, SpatialProcessorChoice.kubusNetwork);
+    });
+  });
+
+  group('network processing needs a paired Node too', () {
+    // Network processing still uploads the raw capture through the user's
+    // own paired Node (there is no other place today that stages it for a
+    // third-party processor to reach), so an unpaired user cannot actually
+    // reach a provider regardless of what discovery reports.
+    testWidgets(
+        'tapping KUBUS Network while unpaired asks to pair first, not silently kubusNetwork',
+        (tester) async {
+      SpatialProcessorChoice? result;
+      await tester.pumpWidget(
+        _app(
+          Builder(
+            builder: (context) => ElevatedButton(
+              onPressed: () async {
+                result = await SpatialProcessSheet.show(
+                  context,
+                  ownNode: SpatialOwnNodeReachability.unpaired,
+                  providersAvailableNow: true,
+                );
+              },
+              child: const Text('open'),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Kubus network'));
+      await tester.pumpAndSettle();
+      expect(result, SpatialProcessorChoice.connectOwnNode);
     });
   });
 }

@@ -166,7 +166,13 @@ class SpatialRecordActions {
     if (record.hasLocalResult && !busy) {
       overflow.add(SpatialLibraryAction.deleteProcessed);
     }
-    if (!busy) {
+    // A network request keeps uploading/polling/persisting job state in the
+    // background even though it isn't "busy" in the isBusy sense (see
+    // waitingForProcessor). Deleting the record out from under it removes
+    // the source and record.json while the driver still expects both,
+    // leaving a partial/orphaned remote capture or a request with nothing
+    // left to attach its result to.
+    if (!busy && !requestActive) {
       overflow.add(SpatialLibraryAction.deleteLocalRecord);
     }
 
