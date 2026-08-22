@@ -101,6 +101,7 @@ class _PromotionBuilderSheetState extends State<_PromotionBuilderSheet> {
   /// must retry verification, never sign again.
   PromotionRequestSubmission? _pendingKub8Submission;
   String? _pendingKub8Signature;
+  int _quoteRequestGeneration = 0;
 
   @override
   void initState() {
@@ -142,6 +143,10 @@ class _PromotionBuilderSheetState extends State<_PromotionBuilderSheet> {
   Future<void> _updateQuote() async {
     final rateCard = _selectedRateCard;
     if (rateCard == null) return;
+    final generation = ++_quoteRequestGeneration;
+    final durationDays = _durationDays;
+    final startDate = _startDate;
+    final selectedSlot = _selectedSlot;
 
     setState(() {
       _loadingQuote = true;
@@ -154,30 +159,31 @@ class _PromotionBuilderSheetState extends State<_PromotionBuilderSheet> {
       // Check slot availability if premium tier. A stale availability response is dropped by
       // the provider, so it can never contradict the current selection.
       if (rateCard.isSlotBased && _selectedSlot != null) {
-        final endDate = _startDate.add(Duration(days: _durationDays));
+        final endDate = startDate.add(Duration(days: durationDays));
         await provider.checkSlotAvailability(
           rateCardId: rateCard.id,
-          startDate: _startDate,
+          startDate: startDate,
           endDate: endDate,
         );
       }
+      if (!mounted || generation != _quoteRequestGeneration) return;
 
       // Request an immutable quote. Submission references its quoteId, so the price the user
       // accepts is the price that is charged.
       await provider.requestQuote(
         rateCardId: rateCard.id,
-        durationDays: _durationDays,
+        durationDays: durationDays,
         entityType: widget.entityType,
         targetEntityId: widget.entityId,
-        slotIndex: rateCard.isSlotBased ? _selectedSlot : null,
-        startDate: _startDate,
+        slotIndex: rateCard.isSlotBased ? selectedSlot : null,
+        startDate: startDate,
       );
     } catch (e) {
-      if (mounted) {
+      if (mounted && generation == _quoteRequestGeneration) {
         setState(() => _error = e.toString());
       }
     } finally {
-      if (mounted) {
+      if (mounted && generation == _quoteRequestGeneration) {
         setState(() => _loadingQuote = false);
       }
     }
@@ -302,6 +308,14 @@ class _PromotionBuilderSheetState extends State<_PromotionBuilderSheet> {
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
     final walletAddress = walletProvider.currentWalletAddress;
+    final payment = submission.kub8Payment;
+    if (payment == null ||
+        walletProvider.currentSolanaNetwork.trim().toLowerCase() !=
+            payment.cluster.trim().toLowerCase()) {
+      setState(() =>
+          _error = 'Switch the wallet to the network required by this quote.');
+      return;
+    }
 
     final outcome = await provider.payPromotionWithKub8(
       submission: submission,
@@ -357,12 +371,13 @@ class _PromotionBuilderSheetState extends State<_PromotionBuilderSheet> {
 
   /// Retry verification of a transfer that is already on chain.
   Future<void> _retryKub8Verification() async {
-    final submission = _pendingKub8Submission;
-    final signature = _pendingKub8Signature;
-    if (submission == null || signature == null) return;
+    final provider = context.read<PromotionProvider>();
+    final requestId =
+        provider.pendingKub8RequestId ?? _pendingKub8Submission?.request.id;
+    final signature = provider.pendingKub8Signature ?? _pendingKub8Signature;
+    if (requestId == null || signature == null) return;
 
     final l10n = AppLocalizations.of(context)!;
-    final provider = context.read<PromotionProvider>();
     final walletProvider = context.read<WalletProvider>();
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
@@ -373,7 +388,7 @@ class _PromotionBuilderSheetState extends State<_PromotionBuilderSheet> {
     });
     try {
       final outcome = await provider.verifyPendingKub8Payment(
-        requestId: submission.request.id,
+        requestId: requestId,
         signature: signature,
         walletAddress: walletProvider.currentWalletAddress,
       );
@@ -501,8 +516,9 @@ class _PromotionBuilderSheetState extends State<_PromotionBuilderSheet> {
         final hasPendingFiatCheckout =
             _paymentMethod == PromotionPaymentMethod.fiatCard &&
                 _pendingFiatSubmission != null;
-        final hasPendingKub8Verification =
-            isKub8 && _pendingKub8Submission != null;
+        final hasPendingKub8Verification = isKub8 &&
+            (promotionProvider.pendingKub8Signature != null ||
+                _pendingKub8Submission != null);
 
         final quoteUsable = quote != null &&
             !quote.isExpired &&

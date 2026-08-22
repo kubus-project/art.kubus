@@ -289,9 +289,8 @@ class PromotionProvider extends ChangeNotifier {
     _currentQuote = null;
     _currentSlotAvailability = null;
     _currentAlternatives = null;
-    _kub8Stage = Kub8PaymentStage.idle;
-    _pendingKub8Signature = null;
-    _pendingKub8RequestId = null;
+    // Settlement survives closing the quote UI: after a signature exists, the
+    // only safe retry is backend verification of that exact transaction.
     notifyListeners();
   }
 
@@ -459,9 +458,12 @@ class PromotionProvider extends ChangeNotifier {
       );
     } catch (e) {
       _error = e.toString();
-      _setKub8Stage(Kub8PaymentStage.failed);
+      // A signature already exists. Even an ordinary network/server failure
+      // must remain verification-retryable; returning to a failed signing
+      // state could charge the wallet a second time.
+      _setKub8Stage(Kub8PaymentStage.submitted);
       return Kub8PaymentOutcome(
-        stage: Kub8PaymentStage.failed,
+        stage: Kub8PaymentStage.submitted,
         signature: signature,
         message: e.toString(),
       );
