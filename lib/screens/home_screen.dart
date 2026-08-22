@@ -79,6 +79,7 @@ import '../widgets/support/support_section.dart';
 import '../services/share/share_deep_link_parser.dart';
 import '../services/share/share_types.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import '../config/api_keys.dart';
 
 @visibleForTesting
 bool shouldShowHomeStatCardIcon({
@@ -1194,14 +1195,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 Consumer<WalletProvider>(
                   builder: (context, walletProvider, child) {
                     // Get KUB8 balance
-                    final kub8Balance = walletProvider.tokens
-                            .where(
-                                (token) => token.symbol.toUpperCase() == 'KUB8')
-                            .isNotEmpty
-                        ? walletProvider.tokens
-                            .where(
-                                (token) => token.symbol.toUpperCase() == 'KUB8')
-                            .first
+                    final kub8Balance = walletProvider
+                                .getTokenByMint(ApiKeys.kub8MintAddress) !=
+                            null
+                        ? walletProvider
+                            .getTokenByMint(ApiKeys.kub8MintAddress)!
                             .balance
                         : 0.0;
 

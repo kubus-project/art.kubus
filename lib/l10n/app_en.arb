@@ -5699,6 +5699,14 @@
       "count": {}
     }
   },
+  "promotionBuilderQuoteExpired": "This quote expired. We refreshed the price for you.",
+  "promotionBuilderPaymentConfirming": "Payment sent. Waiting for the network to confirm it.",
+  "promotionBuilderVerifyPayment": "Check payment",
+  "promotionBuilderWalletSessionMismatch": "Your connected wallet changed. Reconnect it and try again.",
+  "promotionBuilderConnectWalletForKub8": "Connect a wallet that can sign to pay with KUB8.",
+  "promotionBuilderKub8Unavailable": "KUB8 payments are unavailable right now.",
+  "promotionBuilderKub8Required": "Required",
+  "promotionBuilderKub8Available": "Available",
   "promotionActionPromote": "Promote",
   "promotionActionBoost": "Boost",
   "promotionFeaturedLabel": "Featured",

@@ -13,6 +13,7 @@ import '../models/wallet.dart';
 import 'storage_config.dart';
 import '../models/swap_quote.dart';
 import '../utils/wallet_utils.dart';
+import '../utils/token_amounts.dart';
 import 'ipfs_metadata_resolver.dart';
 
 enum DerivationPathType { standard, legacy }
@@ -899,6 +900,25 @@ class SolanaWalletService {
     required double amount,
     required int decimals,
     String? sourceTokenAccount,
+  }) =>
+      transferSplTokenRaw(
+        mint: mint,
+        toAddress: toAddress,
+        rawAmount: TokenAmounts.fromDouble(amount, decimals),
+        decimals: decimals,
+        sourceTokenAccount: sourceTokenAccount,
+      );
+
+  /// Transfer an exact number of raw base units.
+  ///
+  /// This is the entry point for anything financial: the caller supplies the integer amount
+  /// the backend expects, so nothing in the client can round a payment.
+  Future<SubmittedSolanaTransactionRecord> transferSplTokenRaw({
+    required String mint,
+    required String toAddress,
+    required BigInt rawAmount,
+    required int decimals,
+    String? sourceTokenAccount,
   }) async {
     if (!hasActiveKeyPair) {
       throw Exception('No active keypair set for SPL transfer');
@@ -908,7 +928,7 @@ class SolanaWalletService {
         fromAddress: _activeKeyPair!.address,
         mint: mint,
         toAddress: toAddress,
-        amount: amount,
+        rawAmount: rawAmount,
         decimals: decimals,
         sourceTokenAccount: sourceTokenAccount,
       );
@@ -930,13 +950,32 @@ class SolanaWalletService {
     required double amount,
     required int decimals,
     String? sourceTokenAccount,
+  }) =>
+          buildTransferSplTokenTransactionBase64Raw(
+            fromAddress: fromAddress,
+            mint: mint,
+            toAddress: toAddress,
+            rawAmount: TokenAmounts.fromDouble(amount, decimals),
+            decimals: decimals,
+            sourceTokenAccount: sourceTokenAccount,
+          );
+
+  /// Build an unsigned transfer of an exact number of raw base units, for external signers.
+  Future<UnsignedSolanaTransactionRecord>
+      buildTransferSplTokenTransactionBase64Raw({
+    required String fromAddress,
+    required String mint,
+    required String toAddress,
+    required BigInt rawAmount,
+    required int decimals,
+    String? sourceTokenAccount,
   }) async {
     try {
       final instructions = await _buildSplTokenTransferInstructions(
         fromAddress: fromAddress,
         mint: mint,
         toAddress: toAddress,
-        amount: amount,
+        rawAmount: rawAmount,
         decimals: decimals,
         sourceTokenAccount: sourceTokenAccount,
       );
@@ -1343,11 +1382,11 @@ class SolanaWalletService {
   Future<_ResolvedSplSourceAccountRecord> _resolveSplSourceAccount({
     required String ownerAddress,
     required String mint,
-    required double amount,
+    required BigInt rawAmount,
     required int decimals,
     String? sourceTokenAccount,
   }) async {
-    if (amount <= 0) {
+    if (rawAmount <= BigInt.zero) {
       throw const SolanaWalletSendException(
         'Token amount must be greater than zero.',
       );
@@ -1357,7 +1396,8 @@ class SolanaWalletService {
         'Invalid token decimals for mint $mint.',
       );
     }
-    final requiredRawAmount = BigInt.from((amount * pow(10, decimals)).round());
+    final requiredRawAmount = rawAmount;
+    final amount = TokenAmounts.fromRawUnits(rawAmount, decimals);
 
     final ownedTokenAccounts = await _loadOwnedTokenAccountsForMint(
       ownerAddress: ownerAddress,
@@ -1939,7 +1979,7 @@ class SolanaWalletService {
     required String fromAddress,
     required String mint,
     required String toAddress,
-    required double amount,
+    required BigInt rawAmount,
     required int decimals,
     String? sourceTokenAccount,
   }) async {
@@ -1955,7 +1995,7 @@ class SolanaWalletService {
     final resolvedSource = await _resolveSplSourceAccount(
       ownerAddress: fromAddress,
       mint: mint,
-      amount: amount,
+      rawAmount: rawAmount,
       decimals: decimals,
       sourceTokenAccount: sourceTokenAccount,
     );
@@ -1978,14 +2018,14 @@ class SolanaWalletService {
       );
     }
 
-    final amountRaw = (amount * pow(10, decimals)).round();
     instructions.add(
       TokenInstruction.transferChecked(
         source: resolvedSource.publicKey,
         mint: mintPub,
         destination: toAta,
         owner: fromPub,
-        amount: amountRaw,
+        // Exact integer base units. Never a float multiplied by a power of ten.
+        amount: rawAmount.toInt(),
         decimals: decimals,
       ),
     );

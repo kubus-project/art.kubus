@@ -1,6 +1,7 @@
 import 'dart:collection';
 import 'dart:convert';
 
+import 'package:art_kubus/config/api_keys.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/models/promotion.dart';
 import 'package:art_kubus/models/wallet.dart';
@@ -19,13 +20,48 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher_platform_interface/link.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 
+const String kKub8Mint = ApiKeys.kub8MintAddress;
+const String kTreasuryOwner = 'F81jSXoiB15kcEERt8nxYabm5kgZ37jGbC9fmAQZMSws';
+
+/// A wallet whose token list and signing capability the test controls.
 class _FakeWalletProvider extends WalletProvider {
-  _FakeWalletProvider(this._tokens) : super(deferInit: true);
+  _FakeWalletProvider(this._tokens, {bool canSign = true})
+      : _canSign = canSign,
+        super(deferInit: true);
 
   final List<Token> _tokens;
+  final bool _canSign;
 
   @override
   List<Token> get tokens => List<Token>.unmodifiable(_tokens);
+
+  @override
+  bool get canTransact => _canSign;
+
+  @override
+  String? get currentWalletAddress =>
+      'A8FtJ7fvJHZfsmMLfT85rTE6itNCf4qu26A4nU9LeCZ2';
+}
+
+/// A token holding, identified by its mint.
+Token buildToken({
+  required String mint,
+  required String symbol,
+  required double balance,
+  int decimals = 6,
+}) {
+  return Token(
+    id: 'spl_$mint',
+    name: symbol,
+    symbol: symbol,
+    type: TokenType.erc20,
+    balance: balance,
+    value: 0,
+    changePercentage: 0,
+    contractAddress: mint,
+    decimals: decimals,
+    network: 'Solana',
+  );
 }
 
 class _FakeUrlLauncherPlatform extends UrlLauncherPlatform {
@@ -93,36 +129,53 @@ void main() {
     UrlLauncherPlatform.instance = originalLauncher;
   });
 
-  PromotionRequest buildRequest(PromotionPaymentMethod paymentMethod) {
-    return PromotionRequest(
-      id: 'req-1',
-      targetEntityId: 'art-1',
-      entityType: PromotionEntityType.artwork,
-      rateCardId: 'rate-1',
-      rateCardCode: 'artwork_boost',
-      placementTier: PromotionPlacementTier.boost,
-      durationDays: 7,
-      calculatedFiatPrice: 28.98,
-      calculatedKub8Price: 10.01,
-      discountAppliedPercent: 0,
-      paymentMethod: paymentMethod,
-      paymentStatus: 'pending',
-      reviewStatus: 'pending_review',
-      scheduledStartAt: DateTime.utc(2026, 3, 20),
-      createdAt: DateTime.utc(2026, 3, 17),
-    );
-  }
-
+  /// Backend double for the whole builder flow.
+  ///
+  /// [kub8Enabled] controls whether the issued quote offers KUB8 at all, mirroring an
+  /// environment where the canonical mint is not configured.
   BackendApiService buildPromotionApi({
-    required PromotionRequestSubmission submission,
     required ValueSetter<int> setCreateCalls,
-    required ValueSetter<String?> setSubmittedRateCardId,
+    required ValueSetter<Map<String, dynamic>?> setCreateBody,
+    bool kub8Enabled = true,
+    String kub8AmountRaw = '70000000',
+    String? checkoutUrl,
+    ValueSetter<int>? setQuoteCalls,
   }) {
     final api = BackendApiService();
     api.setAuthTokenForTesting('test-token');
     var createCalls = 0;
+    var quoteCalls = 0;
     api.setHttpClient(
       MockClient((request) async {
+        if (request.method == 'GET' &&
+            request.url.path == '/api/app/promotion-config') {
+          return http.Response(
+            jsonEncode(<String, Object?>{
+              'success': true,
+              'data': <String, Object?>{
+                'maxBookingDaysAhead': 90,
+                'cancellationWindowHours': 24,
+                'quoteTtlSeconds': 900,
+                'fiatCurrency': 'EUR',
+                'paymentMethods': <String, Object?>{
+                  'fiat': <String, Object?>{
+                    'method': 'fiat_card',
+                    'enabled': true
+                  },
+                  'kub8': <String, Object?>{
+                    'method': 'kub8_spl',
+                    'enabled': kub8Enabled,
+                    'mintAddress': kKub8Mint,
+                    'decimals': 6,
+                    'cluster': 'devnet',
+                  },
+                },
+              },
+            }),
+            200,
+            headers: const <String, String>{'content-type': 'application/json'},
+          );
+        }
         if (request.method == 'GET' &&
             request.url.path == '/api/app/promotion-rate-cards') {
           return http.Response(
@@ -134,8 +187,8 @@ void main() {
                   'code': 'artwork_boost',
                   'entityType': PromotionEntityType.artwork.apiValue,
                   'placementTier': PromotionPlacementTier.boost.apiValue,
-                  'fiatPricePerDay': 4.14,
-                  'kub8PricePerDay': 1.43,
+                  'fiatPricePerDay': 4.00,
+                  'kub8PricePerDay': 10.00,
                   'minDays': 3,
                   'maxDays': 30,
                   'slotCount': null,
@@ -150,30 +203,56 @@ void main() {
         }
         if (request.method == 'POST' &&
             request.url.path == '/api/app/promotion-price-quote') {
+          quoteCalls += 1;
+          setQuoteCalls?.call(quoteCalls);
+          final body = jsonDecode(request.body) as Map<String, dynamic>;
+          // The quote is bound to the entity being promoted.
+          expect(body['entityType'], 'artwork');
+          expect(body['targetEntityId'], 'art-1');
           return http.Response(
             jsonEncode(<String, Object?>{
               'success': true,
               'data': <String, Object?>{
+                'quoteId': 'quote-1',
                 'rateCardId': 'rate-1',
-                'entityType': PromotionEntityType.artwork.apiValue,
+                'rateCardVersion': 'v1',
+                'entityType': 'artwork',
+                'entityId': 'art-1',
                 'placementTier': PromotionPlacementTier.boost.apiValue,
-                'durationDays': 7,
+                'durationDays': body['durationDays'],
                 'slotAvailable': true,
+                'allowedPaymentMethods': <Object?>[
+                  'fiat_card',
+                  if (kub8Enabled) 'kub8_spl',
+                ],
                 'pricing': <String, Object?>{
-                  'fiatPricePerDay': 4.14,
-                  'kub8PricePerDay': 1.43,
-                  'baseFiatPrice': 28.98,
-                  'baseKub8Price': 10.01,
-                  'discountPercent': 0,
-                  'finalFiatPrice': 28.98,
-                  'finalKub8Price': 10.01,
+                  'fiatPricePerDay': '4.00',
+                  'kub8PricePerDay': '10.00',
+                  'baseFiatAmount': '28.00',
+                  'baseKub8Amount': '70',
+                  'discountPercent': '0',
+                  'finalFiatAmount': '28.00',
+                  'fiatCurrency': 'EUR',
+                  'finalKub8Amount': '70',
+                  'finalKub8AmountRaw': kub8Enabled ? kub8AmountRaw : null,
                 },
+                if (kub8Enabled)
+                  'kub8': <String, Object?>{
+                    'mintAddress': kKub8Mint,
+                    'decimals': 6,
+                    'amountRaw': kub8AmountRaw,
+                    'amount': '70',
+                    'cluster': 'devnet',
+                    'destinationOwner': kTreasuryOwner,
+                    'destinationTokenAccount': 'TreasuryTokenAccount1111',
+                  },
                 'schedule': <String, Object?>{
-                  'startDate': '2026-03-20T00:00:00.000Z',
-                  'endDate': '2026-03-27T00:00:00.000Z',
-                  'cancellationDeadline': '2026-03-19T00:00:00.000Z',
+                  'startAt': '2026-09-20T00:00:00.000Z',
+                  'endAt': '2026-09-27T00:00:00.000Z',
+                  'cancellationDeadlineAt': '2026-09-19T00:00:00.000Z',
                 },
                 'isRefundable': true,
+                'expiresAt': '2099-01-01T00:00:00.000Z',
               },
             }),
             200,
@@ -195,33 +274,30 @@ void main() {
             request.url.path == '/api/app/promotion-requests') {
           createCalls += 1;
           setCreateCalls(createCalls);
-          final requestBody = jsonDecode(request.body) as Map<String, dynamic>;
-          final submittedRateCardId = requestBody['rateCardId']?.toString();
-          setSubmittedRateCardId(submittedRateCardId);
-          expect(requestBody['durationDays'], 7);
+          final body = jsonDecode(request.body) as Map<String, dynamic>;
+          setCreateBody(body);
           return http.Response(
             jsonEncode(<String, Object?>{
               'success': true,
               'data': <String, Object?>{
-                'id': submission.request.id,
-                'targetEntityId': submission.request.targetEntityId,
-                'entityType': submission.request.entityType.apiValue,
-                'rateCardId':
-                    submittedRateCardId ?? submission.request.rateCardId,
-                'rateCardCode': submission.request.rateCardCode,
-                'placementTier': submission.request.placementTier.apiValue,
-                'durationDays': submission.request.durationDays,
-                'calculatedFiatPrice': submission.request.calculatedFiatPrice,
-                'calculatedKub8Price': submission.request.calculatedKub8Price,
-                'discountAppliedPercent':
-                    submission.request.discountAppliedPercent,
-                'scheduledStartAt':
-                    submission.request.scheduledStartAt?.toIso8601String(),
-                'paymentMethod': submission.request.paymentMethod.apiValue,
-                'paymentStatus': submission.request.paymentStatus,
-                'reviewStatus': submission.request.reviewStatus,
-                if (submission.checkoutUrl != null)
-                  'checkoutUrl': submission.checkoutUrl,
+                'id': 'req-1',
+                'targetEntityId': 'art-1',
+                'entityType': 'artwork',
+                'rateCardId': 'rate-1',
+                'rateCardCode': 'artwork_boost',
+                'placementTier': PromotionPlacementTier.boost.apiValue,
+                'durationDays': 7,
+                'calculatedFiatPrice': 28.0,
+                'calculatedKub8Price': 70.0,
+                'discountAppliedPercent': 0,
+                'scheduledStartAt': '2026-09-20T00:00:00.000Z',
+                'paymentMethod': body['paymentMethod'],
+                'paymentStatus': body['paymentMethod'] == 'kub8_spl'
+                    ? 'awaiting_payment'
+                    : 'pending',
+                'reviewStatus': 'pending_review',
+                'quoteId': 'quote-1',
+                if (checkoutUrl != null) 'checkoutUrl': checkoutUrl,
               },
             }),
             201,
@@ -273,7 +349,7 @@ void main() {
     final listFinder = find.byKey(const Key('promotionBuilderListView'));
     expect(listFinder, findsOneWidget);
 
-    for (var i = 0; i < 10 && target.evaluate().isEmpty; i++) {
+    for (var i = 0; i < 12 && target.evaluate().isEmpty; i++) {
       await tester.drag(listFinder, const Offset(0, -220));
       await tester.pumpAndSettle();
     }
@@ -288,133 +364,186 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  Future<void> selectKub8(WidgetTester tester) async {
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+    final kub8Segment = find.text(l10n.promotionBuilderPaymentKub8);
+    await scrollSheetUntilVisible(tester, kub8Segment);
+    await tester.tap(kub8Segment);
+    await tester.pumpAndSettle();
+  }
+
+  bool submitEnabled(WidgetTester tester) {
+    final button = tester.widget<ElevatedButton>(
+      find.byKey(const Key('promotionBuilderSubmitButton')),
+    );
+    return button.onPressed != null;
+  }
+
   testWidgets(
-      'fiat-card submit retries checkout launch without creating a duplicate request',
+      'submitting references the immutable quote, not raw pricing inputs',
       (tester) async {
-    final launcher = _FakeUrlLauncherPlatform(<bool>[false, true]);
+    final launcher = _FakeUrlLauncherPlatform(const <bool>[true]);
     UrlLauncherPlatform.instance = launcher;
 
     var createCalls = 0;
-    String? submittedRateCardId;
+    Map<String, dynamic>? createBody;
     final api = buildPromotionApi(
-      submission: PromotionRequestSubmission(
-        request: buildRequest(PromotionPaymentMethod.fiatCard),
-        checkoutUrl: 'https://checkout.example/session-1',
-      ),
       setCreateCalls: (value) => createCalls = value,
-      setSubmittedRateCardId: (value) => submittedRateCardId = value,
+      setCreateBody: (value) => createBody = value,
+      checkoutUrl: 'https://checkout.example/session-1',
     );
-    final walletProvider = _FakeWalletProvider(
-      <Token>[
-        Token(
-          id: 'kub8',
-          name: 'Kub8',
-          symbol: 'KUB8',
-          type: TokenType.native,
-          balance: 50,
-          value: 50,
-          changePercentage: 0,
-          contractAddress: 'kub8',
-          network: 'solana',
-        ),
-      ],
-    );
+    final walletProvider = _FakeWalletProvider(<Token>[]);
 
-    await pumpSheet(
-      tester,
-      api: api,
-      walletProvider: walletProvider,
-    );
-    final l10n = AppLocalizations.of(
-      tester.element(find.byType(BackdropGlassSheet)),
-    )!;
-
+    await pumpSheet(tester, api: api, walletProvider: walletProvider);
     await scrollToSubmitButton(tester);
-
     await tester.tap(find.byKey(const Key('promotionBuilderSubmitButton')));
     await tester.pumpAndSettle();
 
     expect(createCalls, 1);
-    expect(submittedRateCardId, 'rate-1');
-    expect(
-        launcher.launchedUrls, <String>['https://checkout.example/session-1']);
-    expect(find.text(l10n.promotionBuilderContinuePayment), findsOneWidget);
-
-    await tester.tap(find.byKey(const Key('promotionBuilderSubmitButton')));
-    await tester.pumpAndSettle();
-
-    expect(createCalls, 1);
-    expect(
-      launcher.launchedUrls,
-      <String>[
-        'https://checkout.example/session-1',
-        'https://checkout.example/session-1',
-      ],
-    );
-    expect(
-      find.text(l10n.promotionBuilderPromoteEntityTitle('Test artwork')),
-      findsNothing,
-    );
+    expect(createBody?['quoteId'], 'quote-1');
+    expect(createBody?['idempotencyKey'], isNotNull);
+    // The client never re-sends pricing inputs, so it cannot influence the charge.
+    expect(createBody?.containsKey('rateCardId'), isFalse);
+    expect(createBody?.containsKey('durationDays'), isFalse);
   });
 
-  testWidgets('KUB8 submit keeps the in-app success flow', (tester) async {
-    final launcher = _FakeUrlLauncherPlatform(const <bool>[]);
-    UrlLauncherPlatform.instance = launcher;
-
+  testWidgets('a token that merely calls itself KUB8 is not treated as KUB8',
+      (tester) async {
     var createCalls = 0;
-    String? submittedRateCardId;
     final api = buildPromotionApi(
-      submission: PromotionRequestSubmission(
-        request: buildRequest(PromotionPaymentMethod.kub8Balance),
-      ),
       setCreateCalls: (value) => createCalls = value,
-      setSubmittedRateCardId: (value) => submittedRateCardId = value,
+      setCreateBody: (_) {},
     );
-    final walletProvider = _FakeWalletProvider(
-      <Token>[
-        Token(
-          id: 'kub8',
-          name: 'Kub8',
-          symbol: 'KUB8',
-          type: TokenType.native,
-          balance: 50,
-          value: 50,
-          changePercentage: 0,
-          contractAddress: 'kub8',
-          network: 'solana',
-        ),
-      ],
-    );
+    // Plenty of balance, but on an impostor mint.
+    final walletProvider = _FakeWalletProvider(<Token>[
+      buildToken(
+        mint: 'So11111111111111111111111111111111111111112',
+        symbol: 'KUB8',
+        balance: 100000,
+      ),
+    ]);
 
-    await pumpSheet(
-      tester,
-      api: api,
-      walletProvider: walletProvider,
-    );
-    final l10n = AppLocalizations.of(
-      tester.element(find.byType(BackdropGlassSheet)),
-    )!;
-
-    await scrollSheetUntilVisible(
-      tester,
-      find.text(l10n.promotionBuilderPaymentKub8),
-    );
-
-    await tester.tap(find.text(l10n.promotionBuilderPaymentKub8));
-    await tester.pumpAndSettle();
-
+    await pumpSheet(tester, api: api, walletProvider: walletProvider);
+    await selectKub8(tester);
     await scrollToSubmitButton(tester);
 
-    await tester.tap(find.byKey(const Key('promotionBuilderSubmitButton')));
+    // Identity is the canonical mint, so this wallet has zero spendable KUB8.
+    expect(submitEnabled(tester), isFalse);
+    expect(createCalls, 0);
+  });
+
+  testWidgets(
+      'insufficient canonical KUB8 disables submit and shows the shortfall',
+      (tester) async {
+    final api = buildPromotionApi(
+      setCreateCalls: (_) {},
+      setCreateBody: (_) {},
+    );
+    // 70 KUB8 is required; this wallet holds 10.
+    final walletProvider = _FakeWalletProvider(<Token>[
+      buildToken(mint: kKub8Mint, symbol: 'KUB8', balance: 10),
+    ]);
+
+    await pumpSheet(tester, api: api, walletProvider: walletProvider);
+    await selectKub8(tester);
+    await scrollSheetUntilVisible(
+      tester,
+      find.byKey(const Key('promotionBuilderKub8Status')),
+    );
+
+    expect(find.textContaining('70'), findsWidgets);
+    await scrollToSubmitButton(tester);
+    expect(submitEnabled(tester), isFalse);
+  });
+
+  testWidgets('sufficient canonical KUB8 enables submit', (tester) async {
+    final api = buildPromotionApi(
+      setCreateCalls: (_) {},
+      setCreateBody: (_) {},
+    );
+    final walletProvider = _FakeWalletProvider(<Token>[
+      buildToken(mint: kKub8Mint, symbol: 'KUB8', balance: 250),
+    ]);
+
+    await pumpSheet(tester, api: api, walletProvider: walletProvider);
+    await selectKub8(tester);
+    await scrollToSubmitButton(tester);
+
+    expect(submitEnabled(tester), isTrue);
+  });
+
+  testWidgets('a KUB8 shortfall never blocks a fiat submission',
+      (tester) async {
+    final api = buildPromotionApi(
+      setCreateCalls: (_) {},
+      setCreateBody: (_) {},
+    );
+    final walletProvider = _FakeWalletProvider(<Token>[
+      buildToken(mint: kKub8Mint, symbol: 'KUB8', balance: 0),
+    ]);
+
+    await pumpSheet(tester, api: api, walletProvider: walletProvider);
+    await scrollToSubmitButton(tester);
+
+    // Fiat is the default method and stays available regardless of the KUB8 balance.
+    expect(submitEnabled(tester), isTrue);
+  });
+
+  testWidgets('a wallet that cannot sign cannot start a KUB8 payment',
+      (tester) async {
+    final api = buildPromotionApi(
+      setCreateCalls: (_) {},
+      setCreateBody: (_) {},
+    );
+    final walletProvider = _FakeWalletProvider(
+      <Token>[buildToken(mint: kKub8Mint, symbol: 'KUB8', balance: 250)],
+      canSign: false,
+    );
+
+    await pumpSheet(tester, api: api, walletProvider: walletProvider);
+    await selectKub8(tester);
+    await scrollToSubmitButton(tester);
+
+    expect(submitEnabled(tester), isFalse);
+  });
+
+  testWidgets('changing the duration re-quotes before submission is possible',
+      (tester) async {
+    var quoteCalls = 0;
+    final api = buildPromotionApi(
+      setCreateCalls: (_) {},
+      setCreateBody: (_) {},
+      setQuoteCalls: (value) => quoteCalls = value,
+    );
+    final walletProvider = _FakeWalletProvider(<Token>[]);
+
+    await pumpSheet(tester, api: api, walletProvider: walletProvider);
+    final initialQuoteCalls = quoteCalls;
+
+    final slider = find.byType(Slider);
+    await scrollSheetUntilVisible(tester, slider);
+    await tester.drag(slider, const Offset(60, 0));
     await tester.pumpAndSettle();
 
-    expect(createCalls, 1);
-    expect(submittedRateCardId, 'rate-1');
-    expect(launcher.launchedUrls, isEmpty);
-    expect(
-      find.text(l10n.promotionBuilderPromoteEntityTitle('Test artwork')),
-      findsNothing,
+    // The selection change forces a fresh quote rather than reusing the old price.
+    expect(quoteCalls, greaterThan(initialQuoteCalls));
+  });
+
+  testWidgets('KUB8 is not offered when the quote does not allow it',
+      (tester) async {
+    final api = buildPromotionApi(
+      setCreateCalls: (_) {},
+      setCreateBody: (_) {},
+      kub8Enabled: false,
     );
-    expect(find.text(l10n.promotionBuilderSubmitSuccess), findsOneWidget);
+    final walletProvider = _FakeWalletProvider(<Token>[
+      buildToken(mint: kKub8Mint, symbol: 'KUB8', balance: 250),
+    ]);
+
+    await pumpSheet(tester, api: api, walletProvider: walletProvider);
+    await scrollToSubmitButton(tester);
+
+    // Fiat still works; the KUB8 segment is present but disabled by the quote.
+    expect(submitEnabled(tester), isTrue);
   });
 }

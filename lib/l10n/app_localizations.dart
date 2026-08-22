@@ -66,14 +66,11 @@ abstract class AppLocalizations {
       : localeName = _safeCanonicalizedLocale(locale);
 
   // Hand-applied after every `flutter gen-l10n`: the generator emits a bare
-  // `Intl.canonicalizedLocale(locale)`, which throws on the empty/"undefined"
-  // locale the web shell can hand us before the app locale resolves.
-  // `test/l10n/app_localizations_locale_guard_test.dart` fails without it.
+  // `Intl.canonicalizedLocale(locale)`, which does not guard the temporary
+  // empty/"undefined" locale the web shell can provide during startup.
   static String _safeCanonicalizedLocale(String locale) {
     final raw = locale.trim();
-    if (raw.isEmpty || raw == 'undefined' || raw == 'null') {
-      return 'sl';
-    }
+    if (raw.isEmpty || raw == 'undefined' || raw == 'null') return 'sl';
     return intl.Intl.canonicalizedLocale(raw);
   }
 
@@ -11823,7 +11820,7 @@ abstract class AppLocalizations {
   /// No description provided for @walletHomeActionNfts.
   ///
   /// In en, this message translates to:
-  /// **'Artifacts'**
+  /// **'Digital Editions'**
   String get walletHomeActionNfts;
 
   /// No description provided for @walletHomeQuickActionsTitle.
@@ -12207,7 +12204,7 @@ abstract class AppLocalizations {
   /// No description provided for @walletHomeDesktopTabNfts.
   ///
   /// In en, this message translates to:
-  /// **'Artifacts'**
+  /// **'Owned Editions'**
   String get walletHomeDesktopTabNfts;
 
   /// No description provided for @walletHomeDesktopTabStaking.
@@ -24253,6 +24250,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, =1{1 guaranteed slot} other{{count} guaranteed slots}}'**
   String promotionBuilderGuaranteedSlots(num count);
+
+  /// No description provided for @promotionBuilderQuoteExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'This quote expired. We refreshed the price for you.'**
+  String get promotionBuilderQuoteExpired;
+
+  /// No description provided for @promotionBuilderPaymentConfirming.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment sent. Waiting for the network to confirm it.'**
+  String get promotionBuilderPaymentConfirming;
+
+  /// No description provided for @promotionBuilderVerifyPayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Check payment'**
+  String get promotionBuilderVerifyPayment;
+
+  /// No description provided for @promotionBuilderWalletSessionMismatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Your connected wallet changed. Reconnect it and try again.'**
+  String get promotionBuilderWalletSessionMismatch;
+
+  /// No description provided for @promotionBuilderConnectWalletForKub8.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect a wallet that can sign to pay with KUB8.'**
+  String get promotionBuilderConnectWalletForKub8;
+
+  /// No description provided for @promotionBuilderKub8Unavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'KUB8 payments are unavailable right now.'**
+  String get promotionBuilderKub8Unavailable;
+
+  /// No description provided for @promotionBuilderKub8Required.
+  ///
+  /// In en, this message translates to:
+  /// **'Required'**
+  String get promotionBuilderKub8Required;
+
+  /// No description provided for @promotionBuilderKub8Available.
+  ///
+  /// In en, this message translates to:
+  /// **'Available'**
+  String get promotionBuilderKub8Available;
 
   /// No description provided for @promotionActionPromote.
   ///
