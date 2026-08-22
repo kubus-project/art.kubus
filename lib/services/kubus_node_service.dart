@@ -40,6 +40,15 @@ class KubusNodeUnsupportedException implements Exception {
   String toString() => 'KubusNodeUnsupportedException($route)';
 }
 
+/// An endpoint answered, but it is not the Node the user paired. Treat this
+/// as a security failure: never fail over private capture traffic to it.
+class KubusNodeIdentityException implements Exception {
+  const KubusNodeIdentityException();
+
+  @override
+  String toString() => 'KubusNodeIdentityException';
+}
+
 /// A PUT whose body is read from disk as it is sent.
 ///
 /// Keeps a capture file out of Dart memory: the bytes flow from the file
@@ -99,25 +108,58 @@ class KubusNodeService {
         _store = credentialStore ?? SecureKubusNodeCredentialStore(),
         _isWeb = isWeb ?? kIsWeb;
   static const _endpointKey = 'kubus_node_endpoint_v1';
+  static const _endpointsKey = 'kubus_node_endpoints_v2';
   static const _credentialKey = 'kubus_node_credential_v1';
   static const _fingerprintKey = 'kubus_node_fingerprint_v1';
+  static const _nodeIdKey = 'kubus_node_id_v2';
   final http.Client _client;
   final KubusNodeCredentialStore _store;
   final bool _isWeb;
   Uri? _endpoint;
+  List<Uri> _endpoints = const [];
   String? _credential;
   String? _fingerprint;
+  String? _nodeId;
+  static const Duration _identityVerificationTtl = Duration(seconds: 30);
+  final Map<String, DateTime> _verifiedEndpoints = <String, DateTime>{};
 
   Uri? get endpoint => _endpoint;
+  List<Uri> get endpoints => List.unmodifiable(_endpoints);
   String? get fingerprint => _fingerprint;
+  String? get nodeId => _nodeId;
   bool get isPaired =>
       _endpoint != null && (_credential ?? '').startsWith('kubus_local_');
 
   Future<bool> initialize() async {
     final rawEndpoint = await _store.read(_endpointKey);
     _endpoint = Uri.tryParse(rawEndpoint ?? '');
+    if (_endpoint != null && !_isAllowedStoredEndpoint(_endpoint!)) {
+      _endpoint = null;
+    }
+    final rawEndpoints = await _store.read(_endpointsKey);
+    if (rawEndpoints != null) {
+      try {
+        final decoded = jsonDecode(rawEndpoints);
+        if (decoded is List) {
+          _endpoints = decoded
+              .map((value) => Uri.tryParse(value.toString()))
+              .whereType<Uri>()
+              .where(_isAllowedStoredEndpoint)
+              .toList(growable: false);
+        }
+      } on FormatException {
+        _endpoints = const [];
+      }
+    }
+    if (_endpoints.isEmpty && _endpoint != null) {
+      _endpoints = [_endpoint!];
+    }
+    if (_endpoint == null && _endpoints.isNotEmpty) {
+      _endpoint = _endpoints.first;
+    }
     _credential = await _store.read(_credentialKey);
     _fingerprint = await _store.read(_fingerprintKey);
+    _nodeId = await _store.read(_nodeIdKey);
     return isPaired;
   }
 
@@ -125,30 +167,66 @@ class KubusNodeService {
     KubusNodePairingPayload payload, {
     String label = 'art.kubus app',
   }) async {
-    if (_isWeb && payload.endpoint.scheme != 'https') {
+    if (payload.endpoints
+        .any((endpoint) => !_isAllowedStoredEndpoint(endpoint))) {
+      throw const FormatException(
+        'Remote Node endpoints require HTTPS; HTTP is private-LAN only.',
+      );
+    }
+    if (_isWeb &&
+        payload.endpoints.any((endpoint) => endpoint.scheme != 'https')) {
       throw StateError('A secure HTTPS local node route is required on web.');
     }
-    final response = await _client
-        .post(
-          _resolve(payload.endpoint, '/local/v1/pairing/exchange'),
-          headers: const {'Content-Type': 'application/json'},
-          body: jsonEncode({
-            'sessionId': payload.sessionId,
-            'secret': payload.secret,
-            'label': label,
-          }),
-        )
-        .timeout(const Duration(seconds: 10));
-    final data = _decode(response);
-    final token = (data['token'] ?? '').toString();
-    if (!token.startsWith('kubus_local_')) {
-      throw StateError('Node returned an invalid local credential.');
+    if ((payload.nodeId ?? '').isEmpty || (payload.fingerprint ?? '').isEmpty) {
+      throw const FormatException('Pairing code is missing Node identity.');
     }
-    _endpoint = payload.endpoint;
+    Map<String, dynamic>? data;
+    Uri? connectedEndpoint;
+    Object? lastError;
+    for (final endpoint in payload.endpoints) {
+      try {
+        data = _decode(await _client
+            .post(
+              _resolve(endpoint, '/local/v1/pairing/exchange'),
+              headers: const {'Content-Type': 'application/json'},
+              body: jsonEncode({
+                'sessionId': payload.sessionId,
+                'secret': payload.secret,
+                'label': label
+              }),
+            )
+            .timeout(const Duration(seconds: 10)));
+        final token = (data['token'] ?? '').toString();
+        if (!token.startsWith('kubus_local_')) {
+          throw StateError('Node returned an invalid local credential.');
+        }
+        await _verifyEndpoint(
+          endpoint,
+          credential: token,
+          expectedNodeId: payload.nodeId!,
+          expectedFingerprint: payload.fingerprint!,
+        );
+        connectedEndpoint = endpoint;
+        break;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+    if (data == null || connectedEndpoint == null) {
+      throw StateError('Unable to reach this paired kubus Node: $lastError');
+    }
+    final token = (data['token'] ?? '').toString();
+    _endpoint = connectedEndpoint;
+    _endpoints = payload.endpoints;
     _credential = token;
     _fingerprint = payload.fingerprint;
-    await _store.write(_endpointKey, payload.endpoint.toString());
+    _nodeId = payload.nodeId;
+    _verifiedEndpoints[connectedEndpoint.toString()] = DateTime.now().toUtc();
+    await _store.write(_endpointKey, connectedEndpoint.toString());
+    await _store.write(_endpointsKey,
+        jsonEncode(_endpoints.map((endpoint) => endpoint.toString()).toList()));
     await _store.write(_credentialKey, token);
+    await _store.write(_nodeIdKey, payload.nodeId!);
     if ((payload.fingerprint ?? '').isNotEmpty) {
       await _store.write(_fingerprintKey, payload.fingerprint!);
     }
@@ -156,12 +234,17 @@ class KubusNodeService {
 
   Future<void> unpair() async {
     _endpoint = null;
+    _endpoints = const [];
     _credential = null;
     _fingerprint = null;
+    _nodeId = null;
+    _verifiedEndpoints.clear();
     await Future.wait([
       _store.delete(_endpointKey),
+      _store.delete(_endpointsKey),
       _store.delete(_credentialKey),
       _store.delete(_fingerprintKey),
+      _store.delete(_nodeIdKey),
     ]);
   }
 
@@ -215,7 +298,11 @@ class KubusNodeService {
     Map<String, dynamic> metadata,
   ) async =>
       KubusCaptureDraft.fromJson(
-        await _post('/local/v1/captures/drafts', metadata),
+        await _post(
+          '/local/v1/captures/drafts',
+          metadata,
+          requireFreshIdentity: true,
+        ),
       );
 
   /// Streams one file into a draft straight off disk.
@@ -233,10 +320,11 @@ class KubusNodeService {
   }) async {
     if (!isPaired) throw StateError('No kubus Node is paired.');
     final length = await file.length();
+    final endpoint = await _selectVerifiedEndpoint(forceIdentityCheck: true);
     final request = _StreamedFileRequest(
       'PUT',
       _resolve(
-        _endpoint!,
+        endpoint,
         '/local/v1/captures/drafts/${Uri.encodeComponent(draftId)}/files',
       ).replace(queryParameters: <String, String>{'path': path}),
       file,
@@ -295,6 +383,42 @@ class KubusNodeService {
       );
   Future<Map<String, dynamic>> getSpatial(String id) =>
       _get('/local/v1/spatial/${Uri.encodeComponent(id)}');
+
+  Future<Map<String, dynamic>> publishSpatial({
+    required String spatialId,
+    required String backendAuthorization,
+    required String artworkId,
+    String? markerId,
+  }) =>
+      _post('/local/v1/spatial/${Uri.encodeComponent(spatialId)}/publish', {
+        'backendAuthorization': backendAuthorization,
+        'artworkId': artworkId,
+        if (markerId != null) 'markerId': markerId,
+      });
+
+  /// Streams a private Node content object directly to disk. This is used for
+  /// processed variants; `bodyBytes` would otherwise retain a large splat in
+  /// the Dart heap before it reaches the phone library.
+  Future<void> downloadContentToFile(String cid, File destination) async {
+    if (!isPaired) throw StateError('No kubus Node is paired.');
+    final endpoint = await _selectVerifiedEndpoint(forceIdentityCheck: true);
+    final request = http.Request(
+      'GET',
+      _resolve(endpoint, '/local/v1/content/${Uri.encodeComponent(cid)}'),
+    )..headers['Authorization'] = 'Bearer $_credential';
+    final response =
+        await _client.send(request).timeout(const Duration(minutes: 5));
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      _decode(await http.Response.fromStream(response));
+    }
+    await destination.parent.create(recursive: true);
+    final sink = destination.openWrite();
+    try {
+      await sink.addStream(response.stream);
+    } finally {
+      await sink.close();
+    }
+  }
 
   Future<List<KubusComputeCandidate>> findComputeCandidates({
     required String backendAuthorization,
@@ -393,20 +517,29 @@ class KubusNodeService {
       );
 
   Future<List<KubusContentCandidate>> resolveContentCandidates(
-    String raw,
-  ) async {
+    String raw, {
+    String? localPath,
+  }) async {
+    final local = localPath == null ? null : File(localPath);
+    final localCandidates = <KubusContentCandidate>[];
+    if (local != null && await local.exists()) {
+      localCandidates.add(
+        KubusContentCandidate(uri: local.uri, source: 'spatial_library'),
+      );
+    }
     final cid = _extractCid(raw);
     if (cid == null) {
-      return StorageConfig.resolveAllUrls(raw)
-          .map(
-            (url) => KubusContentCandidate(
-              uri: Uri.parse(url),
-              source: 'configured',
-            ),
-          )
-          .toList(growable: false);
+      return <KubusContentCandidate>[
+        ...localCandidates,
+        ...StorageConfig.resolveAllUrls(raw).map(
+          (url) => KubusContentCandidate(
+            uri: Uri.parse(url),
+            source: 'configured',
+          ),
+        ),
+      ];
     }
-    final candidates = <KubusContentCandidate>[];
+    final candidates = <KubusContentCandidate>[...localCandidates];
     if (!_isWeb && isPaired) {
       candidates.add(
         KubusContentCandidate(
@@ -463,26 +596,105 @@ class KubusNodeService {
     String path,
     Map<String, dynamic> body, {
     Duration timeout = const Duration(seconds: 20),
+    bool requireFreshIdentity = false,
   }) async =>
-      _decode(await _request('POST', path, body: body, timeout: timeout));
+      _decode(
+        await _request(
+          'POST',
+          path,
+          body: body,
+          timeout: timeout,
+          requireFreshIdentity: requireFreshIdentity,
+        ),
+      );
   Future<http.Response> _request(
     String method,
     String path, {
     Map<String, dynamic>? body,
     Duration timeout = const Duration(seconds: 20),
+    bool requireFreshIdentity = false,
   }) async {
     if (!isPaired) throw StateError('No kubus Node is paired.');
-    final request = http.Request(method, _resolve(_endpoint!, path));
-    request.headers.addAll({
-      'Accept': 'application/json',
-      'Authorization': 'Bearer $_credential',
-    });
-    if (body != null) {
-      request.headers['Content-Type'] = 'application/json';
-      request.body = jsonEncode(body);
+    Object? lastError;
+    for (final endpoint in _orderedEndpoints()) {
+      try {
+        await _verifyEndpoint(endpoint, force: requireFreshIdentity);
+        final request = http.Request(method, _resolve(endpoint, path));
+        request.headers.addAll({
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $_credential'
+        });
+        if (body != null) {
+          request.headers['Content-Type'] = 'application/json';
+          request.body = jsonEncode(body);
+        }
+        final response = await http.Response.fromStream(
+          await _client.send(request).timeout(timeout),
+        );
+        // A response proves the endpoint belongs to this Node transport. Do
+        // not fail over authorization or application errors to another host.
+        _endpoint = endpoint;
+        return response;
+      } on KubusNodeIdentityException {
+        rethrow;
+      } catch (error) {
+        lastError = error;
+      }
     }
-    final streamed = await _client.send(request).timeout(timeout);
-    return http.Response.fromStream(streamed);
+    throw StateError('kubus Node is unavailable: $lastError');
+  }
+
+  List<Uri> _orderedEndpoints() {
+    final primary = _endpoint;
+    if (primary == null) return _endpoints;
+    return [primary, ..._endpoints.where((endpoint) => endpoint != primary)];
+  }
+
+  Future<Uri> _selectVerifiedEndpoint({bool forceIdentityCheck = false}) async {
+    Object? lastError;
+    for (final endpoint in _orderedEndpoints()) {
+      try {
+        await _verifyEndpoint(endpoint, force: forceIdentityCheck);
+        _endpoint = endpoint;
+        return endpoint;
+      } on KubusNodeIdentityException {
+        rethrow;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+    throw StateError('kubus Node is unavailable: $lastError');
+  }
+
+  Future<void> _verifyEndpoint(
+    Uri endpoint, {
+    String? credential,
+    String? expectedNodeId,
+    String? expectedFingerprint,
+    bool force = false,
+  }) async {
+    final expectedId = expectedNodeId ?? _nodeId;
+    final expectedPrint = expectedFingerprint ?? _fingerprint;
+    if (expectedId == null || expectedPrint == null) {
+      throw const KubusNodeIdentityException();
+    }
+    final verifiedAt = _verifiedEndpoints[endpoint.toString()];
+    if (!force && credential == null && verifiedAt != null) {
+      if (DateTime.now().toUtc().difference(verifiedAt) <
+          _identityVerificationTtl) {
+        return;
+      }
+    }
+    final response = await _client.get(
+      _resolve(endpoint, '/local/v1/info'),
+      headers: {'Authorization': 'Bearer ${credential ?? _credential}'},
+    ).timeout(const Duration(seconds: 10));
+    final info = _decode(response);
+    if (info['nodeId']?.toString() != expectedId ||
+        info['fingerprint']?.toString() != expectedPrint) {
+      throw const KubusNodeIdentityException();
+    }
+    _verifiedEndpoints[endpoint.toString()] = DateTime.now().toUtc();
   }
 
   static Map<String, dynamic> _decode(http.Response response) {
@@ -528,6 +740,49 @@ class KubusNodeService {
 
   static Uri _resolve(Uri base, String path) =>
       base.replace(path: path, query: null, fragment: null);
+
+  static bool _isAllowedStoredEndpoint(Uri endpoint) {
+    if (!endpoint.hasAuthority) return false;
+    if (endpoint.scheme == 'https') return true;
+    if (endpoint.scheme != 'http') return false;
+    return isPrivateLanHost(endpoint);
+  }
+
+  /// Whether [endpoint] addresses a host on the user's own network.
+  ///
+  /// Exposed because the difference matters to the user: reaching *their* Node
+  /// over the LAN and reaching *their* Node over the internet are the same
+  /// trust relationship shown differently, and neither is the same as handing
+  /// the capture to a stranger's GPU.
+  static bool isPrivateLanHost(Uri endpoint) {
+    final host = endpoint.host.toLowerCase();
+    if (host.isEmpty) return false;
+    if (host == 'localhost' ||
+        host == '127.0.0.1' ||
+        host == '::1' ||
+        host.endsWith('.local') ||
+        host.endsWith('.internal') ||
+        host.startsWith('10.') ||
+        host.startsWith('192.168.')) {
+      return true;
+    }
+    final parts = host.split('.');
+    final second = parts.length > 1 ? int.tryParse(parts[1]) : null;
+    return parts.first == '172' &&
+        second != null &&
+        second >= 16 &&
+        second <= 31;
+  }
+
+  /// True when the paired Node is currently reached over the local network.
+  ///
+  /// False for a paired Node reached over remote HTTPS, and false when there
+  /// is no endpoint at all.
+  bool get isEndpointOnLocalNetwork {
+    final active = _endpoint;
+    return active != null && isPrivateLanHost(active);
+  }
+
   static String? _extractCid(String raw) {
     var value = raw.trim();
     if (StorageConfig.isLikelyCid(value)) return value;

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
 
+import 'package:art_kubus/models/spatial_capture_target.dart';
 import 'package:art_kubus/providers/spatial_capture_provider.dart';
 import 'package:art_kubus/services/spatial_capture_policy.dart';
 import 'package:art_kubus/services/spatial_capture_session.dart';
@@ -62,7 +63,8 @@ void main() {
 
   group('sampling', () {
     test('a tick captures while tracking', () async {
-      await provider.begin(artworkId: 'art-1');
+      await provider.begin(
+          target: const SpatialCaptureTarget(artworkId: 'art-1'));
       final session = build();
 
       final outcome = await session.tick();
@@ -79,7 +81,8 @@ void main() {
     });
 
     test('tracking loss skips without ending the capture', () async {
-      await provider.begin(artworkId: 'art-1');
+      await provider.begin(
+          target: const SpatialCaptureTarget(artworkId: 'art-1'));
       final session = build();
       tracking = false;
 
@@ -91,7 +94,8 @@ void main() {
     });
 
     test('sampling resumes on its own when tracking returns', () async {
-      await provider.begin(artworkId: 'art-1');
+      await provider.begin(
+          target: const SpatialCaptureTarget(artworkId: 'art-1'));
       final session = build();
       tracking = false;
       await session.tick();
@@ -104,7 +108,8 @@ void main() {
     });
 
     test('a duplicate viewpoint never reaches the platform', () async {
-      await provider.begin(artworkId: 'art-1');
+      await provider.begin(
+          target: const SpatialCaptureTarget(artworkId: 'art-1'));
       var captureCalls = 0;
       final session = SpatialCaptureSession(
         provider: provider,
@@ -128,7 +133,8 @@ void main() {
 
   group('transient platform errors', () {
     test('a temporarily unavailable frame is skipped silently', () async {
-      await provider.begin(artworkId: 'art-1');
+      await provider.begin(
+          target: const SpatialCaptureTarget(artworkId: 'art-1'));
       final session = build();
       nextError = PlatformException(code: 'frame_not_yet_available');
 
@@ -141,7 +147,8 @@ void main() {
     });
 
     test('a cancelled capture during teardown is not an error', () async {
-      await provider.begin(artworkId: 'art-1');
+      await provider.begin(
+          target: const SpatialCaptureTarget(artworkId: 'art-1'));
       final session = build();
       nextError = PlatformException(code: 'capture_cancelled');
 
@@ -151,7 +158,8 @@ void main() {
     });
 
     test('an unexpected failure is reported once', () async {
-      await provider.begin(artworkId: 'art-1');
+      await provider.begin(
+          target: const SpatialCaptureTarget(artworkId: 'art-1'));
       final session = build();
       nextError = StateError('camera exploded');
 
@@ -161,7 +169,8 @@ void main() {
     });
 
     test('an in-flight marker is always cleared, even on failure', () async {
-      await provider.begin(artworkId: 'art-1');
+      await provider.begin(
+          target: const SpatialCaptureTarget(artworkId: 'art-1'));
       final session = build();
       nextError = StateError('boom');
 
@@ -184,7 +193,8 @@ void main() {
           maxAcceptedSamples: 3,
         ),
       );
-      await provider.begin(artworkId: 'art-1');
+      await provider.begin(
+          target: const SpatialCaptureTarget(artworkId: 'art-1'));
       final session = build();
       session.start();
 
@@ -201,7 +211,8 @@ void main() {
 
   group('pause and resume', () {
     test('pause suspends the provider and the sampler together', () async {
-      await provider.begin(artworkId: 'art-1');
+      await provider.begin(
+          target: const SpatialCaptureTarget(artworkId: 'art-1'));
       final session = build()..start();
 
       session.pause(SpatialCapturePauseReason.modeChanged);
@@ -211,7 +222,8 @@ void main() {
     });
 
     test('resume restarts both', () async {
-      await provider.begin(artworkId: 'art-1');
+      await provider.begin(
+          target: const SpatialCaptureTarget(artworkId: 'art-1'));
       final session = build()..start();
       session.pause(SpatialCapturePauseReason.modeChanged);
 
@@ -224,7 +236,8 @@ void main() {
 
     test('a tick after pause stops the sampler rather than capturing',
         () async {
-      await provider.begin(artworkId: 'art-1');
+      await provider.begin(
+          target: const SpatialCaptureTarget(artworkId: 'art-1'));
       final session = build()..start();
       provider.pause(SpatialCapturePauseReason.user);
 
@@ -238,7 +251,8 @@ void main() {
 
   group('lifecycle', () {
     test('start is idempotent', () async {
-      await provider.begin(artworkId: 'art-1');
+      await provider.begin(
+          target: const SpatialCaptureTarget(artworkId: 'art-1'));
       final session = build()
         ..start()
         ..start();
@@ -249,7 +263,8 @@ void main() {
     });
 
     test('a disposed session never captures again', () async {
-      await provider.begin(artworkId: 'art-1');
+      await provider.begin(
+          target: const SpatialCaptureTarget(artworkId: 'art-1'));
       final session = build()..start();
 
       session.dispose();

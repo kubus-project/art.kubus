@@ -161,9 +161,19 @@ class UnhandledErrorReporter {
 
   void _log(UnhandledErrorReport report) {
     if (kDebugMode || _logInRelease) {
+      // `buildFlutterErrorContext` already resolves `details.context`, which
+      // names the subtree that was building ("while building X") — the one
+      // field that turns a bare "RenderFlex overflowed by 78 pixels" into
+      // something you can act on. It was being collected for the sink and
+      // then dropped from the console line, which made on-device triage a
+      // guessing game. It rides on the existing header line rather than a
+      // second call, so one grep returns the error and where it came from.
+      final metadata = report.metadata;
+      final context =
+          metadata == null || metadata.isEmpty ? '' : '\n  context: $metadata';
       debugPrint(
         'UnhandledErrorReporter: unhandled error (${report.source.wireName}) '
-        '${report.error.runtimeType}: ${report.error}',
+        '${report.error.runtimeType}: ${report.error}$context',
       );
       debugPrint('UnhandledErrorReporter: stack: ${report.stack}');
       return;

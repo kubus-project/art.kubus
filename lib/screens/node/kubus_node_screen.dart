@@ -9,6 +9,7 @@ import '../../providers/availability_operator_provider.dart';
 import '../../providers/kubus_node_provider.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/node_state_presentation.dart';
+import '../../widgets/glass_components.dart';
 import '../../widgets/node/node_ui.dart';
 import 'node_pairing_screen.dart';
 
@@ -935,7 +936,7 @@ class _SetupSection extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
+      builder: (dialogContext) => KubusAlertDialog(
         title: Text(l10n.kubusNodeUnpairAction),
         content: Text(l10n.kubusNodeConfirmBody),
         actions: [

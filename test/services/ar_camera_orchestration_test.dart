@@ -36,9 +36,15 @@ class FakePermissionCoordinator implements CameraPermissionCoordinator {
   bool granted;
   int requests = 0;
 
+  /// Set to make the permission check fail the way a dead platform channel
+  /// does, rather than answering denied.
+  Object? failure;
+
   @override
   Future<CameraPermissionState> ensureGranted() async {
     requests++;
+    final failure = this.failure;
+    if (failure != null) throw failure;
     return granted
         ? CameraPermissionState.granted
         : CameraPermissionState.denied;
@@ -267,6 +273,49 @@ void main() {
       expect(orchestrator.permissionDenied, isFalse);
       expect(orchestrator.owner, CameraOwner.ar);
       expect(device.holder, 'ar');
+    });
+  });
+
+  group('teardown during a handoff', () {
+    test('a screen disposed mid-handoff does not notify after dispose',
+        () async {
+      final pending = orchestrator.requestMode('place');
+      // The user leaves the AR route while the handoff is still running.
+      orchestrator.dispose();
+
+      // Completing the handoff must not call notifyListeners() on a disposed
+      // ChangeNotifier, which throws a FlutterError into the zone.
+      await expectLater(pending, completes);
+      expect(orchestrator.currentMode, 'scan',
+          reason: 'a disposed orchestrator must not advance its mode');
+
+      // tearDown disposes again; that has to stay safe too.
+      orchestrator.dispose();
+      camera.dispose();
+      build();
+    });
+
+    test('a mode requested after dispose is ignored rather than throwing',
+        () async {
+      orchestrator.dispose();
+
+      await expectLater(orchestrator.requestMode('place'), completes);
+      expect(device.holder, isNull);
+
+      orchestrator.dispose();
+      camera.dispose();
+      build();
+    });
+
+    test('a failing handoff never escapes as an unhandled rejection', () async {
+      // Permission checks and platform teardown can both fail; a caller that
+      // does not await must not be handed a rejected future.
+      permission.failure = StateError('permission channel died');
+
+      await expectLater(orchestrator.requestMode('place'), completes);
+      expect(orchestrator.permissionDenied, isTrue,
+          reason: 'an unusable permission check must not mount a camera');
+      expect(device.holder, isNull);
     });
   });
 

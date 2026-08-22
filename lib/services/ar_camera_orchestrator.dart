@@ -39,6 +39,13 @@ class ArCameraOrchestrator extends ChangeNotifier {
   String _currentMode;
   bool _permissionDenied = false;
 
+  /// Set once the AR screen is gone.
+  ///
+  /// A handoff outlives the screen that started it - the user can pop the
+  /// route while the outgoing owner is still releasing - and notifying a
+  /// disposed [ChangeNotifier] throws. Every async continuation checks this.
+  bool _disposed = false;
+
   /// The mode the user last asked for.
   String get requestedMode => _requestedMode;
 
@@ -81,30 +88,79 @@ class ArCameraOrchestrator extends ChangeNotifier {
   /// Safe to call repeatedly: the coordinator queues transitions, so rapid
   /// toggling serializes rather than interleaving two handoffs.
   Future<void> requestMode(String modeId) async {
+    if (_disposed) return;
     _requestedMode = modeId;
-    notifyListeners();
+    _notify();
     await _acquire(modeId);
   }
 
   /// Re-acquires the camera for the current mode, used on app resume.
   Future<void> reacquire() => _acquire(_requestedMode);
 
+  /// Never throws.
+  ///
+  /// Callers legitimately fire this without awaiting - a mode button cannot
+  /// block on a camera handoff - so a rejection here would surface as an
+  /// unhandled error in the root zone rather than as a recoverable AR state.
   Future<void> _acquire(String modeId) async {
-    final permission = await _permission.ensureGranted();
+    if (_disposed) return;
+    final CameraPermissionState permission;
+    try {
+      permission = await _permission.ensureGranted();
+    } catch (error, stack) {
+      // An unusable permission check is treated as "not granted": mounting a
+      // camera on the strength of a failed check is the worse outcome.
+      if (kDebugMode) {
+        debugPrint('ArCameraOrchestrator: permission check failed: $error');
+        debugPrintStack(stackTrace: stack);
+      }
+      await _denyAndRelease();
+      return;
+    }
+
+    if (_disposed) return;
     if (!permission.isGranted) {
       // Never start ARCore or the scanner without permission: the platform
       // would fail opaquely and look like a broken camera.
-      _permissionDenied = true;
-      await _camera.releaseAll();
-      notifyListeners();
+      await _denyAndRelease();
       return;
     }
+
     _permissionDenied = false;
-    await _camera.requestOwner(ownerForMode(modeId));
+    try {
+      await _camera.requestOwner(ownerForMode(modeId));
+    } catch (error, stack) {
+      if (kDebugMode) {
+        debugPrint('ArCameraOrchestrator: handoff to $modeId failed: $error');
+        debugPrintStack(stackTrace: stack);
+      }
+      _notify();
+      return;
+    }
+
     // Only a request that is still the latest one may advance the rendered
     // mode; an older queued handoff completing must not drag the UI backwards.
-    if (_requestedMode != modeId) return;
+    if (_disposed || _requestedMode != modeId) return;
     _currentMode = modeId;
+    _notify();
+  }
+
+  /// Records a denied permission and gives the camera back.
+  Future<void> _denyAndRelease() async {
+    _permissionDenied = true;
+    try {
+      await _camera.releaseAll();
+    } catch (error) {
+      if (kDebugMode) {
+        debugPrint('ArCameraOrchestrator: release failed: $error');
+      }
+    }
+    _notify();
+  }
+
+  /// Notifies only while this orchestrator is still alive.
+  void _notify() {
+    if (_disposed) return;
     notifyListeners();
   }
 
@@ -113,6 +169,9 @@ class ArCameraOrchestrator extends ChangeNotifier {
 
   @override
   void dispose() {
+    // The screen's dispose and a queued teardown can both land here.
+    if (_disposed) return;
+    _disposed = true;
     _camera.removeListener(notifyListeners);
     super.dispose();
   }

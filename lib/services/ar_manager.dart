@@ -479,6 +479,16 @@ class ARManager {
     throw StateError('Spatial tracking is not ready on this device.');
   }
 
+  /// Retains the platform view/session identity while releasing its camera and
+  /// renderer workload for the local SpatialViewer.
+  Future<void> pauseSession() async {
+    if (Platform.isAndroid) await _arCoreController?.pause();
+  }
+
+  Future<void> resumeSession() async {
+    if (Platform.isAndroid) await _arCoreController?.resume();
+  }
+
   void _trackNode(String name, String type) {
     _placedNodes.add({
       'name': name,
@@ -532,6 +542,7 @@ class ARManager {
   /// Get platform-specific view widget
   Widget createARView({
     required Function onARViewCreated,
+    void Function(ArCoreSessionError error)? onArCoreViewFailed,
     bool enableTapRecognizer = true,
     bool enablePlaneDetection = true,
   }) {
@@ -540,6 +551,18 @@ class ARManager {
         onArCoreViewCreated: (ArCoreController controller) {
           setArCoreController(controller);
           onARViewCreated();
+        },
+        // An initialization failure used to be swallowed, so the screen waited
+        // on a callback that never arrived. Routing it through the same
+        // recoverable-error path gives the user localized guidance and a retry.
+        onArCoreViewFailed: (error) {
+          if (kDebugMode) {
+            debugPrint('ARManager: AR view init failed: ${error.code}');
+          }
+          final sessionError =
+              ArCoreSessionError(code: error.code, message: error.message);
+          onArCoreViewFailed?.call(sessionError);
+          onSessionError?.call(sessionError);
         },
         enableTapRecognizer: enableTapRecognizer,
         // Required for onPlaneDetected: without the update listener the

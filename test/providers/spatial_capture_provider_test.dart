@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
+import 'package:art_kubus/models/spatial_capture_target.dart';
 import 'package:art_kubus/providers/spatial_capture_provider.dart';
 import 'package:art_kubus/services/spatial_capture_policy.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -52,7 +53,10 @@ void main() {
     SpatialCapturePolicy? policy,
   }) async {
     final provider = buildProvider(policy: policy);
-    await provider.begin(artworkId: 'art-1', capturedBy: 'wallet-1');
+    await provider.begin(
+      target: const SpatialCaptureTarget(artworkId: 'art-1'),
+      capturedBy: 'wallet-1',
+    );
     return provider;
   }
 
@@ -106,7 +110,8 @@ void main() {
       final provider = buildProvider();
       final initial = provider.operationGeneration;
 
-      await provider.begin(artworkId: 'art-1');
+      await provider.begin(
+          target: const SpatialCaptureTarget(artworkId: 'art-1'));
       expect(provider.operationGeneration, initial + 1);
 
       await provider.reset();

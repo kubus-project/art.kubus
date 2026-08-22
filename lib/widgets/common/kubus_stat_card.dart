@@ -72,12 +72,22 @@ class _KubusStatCardState extends State<KubusStatCard>
   static const Duration _hoverTransitionDuration = Duration(milliseconds: 280);
   static const Duration _floatDuration = Duration(milliseconds: 2200);
 
-  late final AnimationController _floatController = AnimationController(
-    vsync: this,
-    duration: _floatDuration,
-  );
+  late final AnimationController _floatController;
 
   bool _isHovered = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Created here rather than lazily: a card that is never hovered used to
+    // build its controller from inside `dispose()`, which looks up the
+    // TickerMode ancestor of an already-deactivated element and trips a
+    // framework assertion on every teardown.
+    _floatController = AnimationController(
+      vsync: this,
+      duration: _floatDuration,
+    );
+  }
 
   @override
   void dispose() {

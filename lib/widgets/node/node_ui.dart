@@ -4,15 +4,20 @@ import 'package:flutter/services.dart';
 import '../../l10n/app_localizations.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/node_state_presentation.dart';
+import '../glass_components.dart';
 import '../inline_loading.dart';
 
 /// Shared surfaces for the kubus Node screens.
 ///
-/// These are deliberately opaque rather than glass. Glass belongs to the app's
-/// navigation and map overlays, where it signals "floating above content"; the
-/// node screens are information-dense and read for long stretches, so they use
-/// stable surfaces with real contrast instead. Keeping them here means one
-/// panel, one status treatment and one metric style across every node screen.
+/// The Node is a kubus product surface, not a separate visual language: its
+/// one shared panel ([NodePanel]) uses the same canonical liquid-glass
+/// treatment ([LiquidGlassCard]) the rest of the app uses for elevated
+/// content surfaces. Status banners ([NodeBanner]) stay opaque-tinted by
+/// severity colour on purpose - that colour *is* the signal, and a glass
+/// tint over it would blur exactly what needs to read clearly at a glance.
+/// Small inline chrome (status dots, legend swatches, stage-progress
+/// segments below) is not a surface at all and is never glass. Keeping the
+/// panel here means one change here reaches every node screen.
 
 /// Maps severity to colour. Always paired with a text label at the call site —
 /// no status in these screens is communicated by colour alone.
@@ -90,14 +95,8 @@ class NodePanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    return Container(
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        borderRadius: BorderRadius.circular(KubusRadius.md),
-        border: Border.all(color: scheme.outlineVariant),
-      ),
+    return LiquidGlassCard(
       padding: padding,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

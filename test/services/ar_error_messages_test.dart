@@ -37,6 +37,9 @@ void main() {
       'app_update_required',
       'arcore_unsupported_device',
       'arcore_session_unavailable',
+      // Native reports this instead of raising its own permission dialog, so
+      // it needs its own guidance rather than a generic failure.
+      'camera_permission_required',
     ];
 
     test('every code maps to distinct English guidance', () {
@@ -76,9 +79,20 @@ void main() {
       expect(ArErrorMessages.isRetryable('camera_unavailable'), isTrue);
       expect(ArErrorMessages.isRetryable('arcore_install_required'), isTrue);
       expect(
+        ArErrorMessages.isRetryable('camera_permission_required'),
+        isTrue,
+      );
+      expect(
         ArErrorMessages.isRetryable('arcore_unsupported_device'),
         isFalse,
       );
+    });
+
+    test('a disposing session is not surfaced as a user-facing error', () {
+      // Teardown settles every in-flight call with this code. It means "the
+      // screen went away", which is not something to tell the user about.
+      expect(ArErrorMessages.isSessionTeardown('ar_session_disposed'), isTrue);
+      expect(ArErrorMessages.isSessionTeardown('camera_unavailable'), isFalse);
     });
   });
 

@@ -422,7 +422,10 @@ class _DesktopArtworkDetailScreenState
         _buildArSetupSection(artwork),
         Padding(
           padding: const EdgeInsets.only(top: DetailSpacing.cardGap),
-          child: ArtworkSpatialArchiveSection(artwork: artwork),
+          child: ArtworkSpatialArchiveSection(
+            artwork: artwork,
+            contextMarkerId: widget.attendanceMarkerId,
+          ),
         ),
         _buildDescription(artwork),
         _buildPoapInfoCard(artwork),

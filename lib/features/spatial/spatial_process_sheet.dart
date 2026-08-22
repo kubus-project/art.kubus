@@ -1,0 +1,195 @@
+import 'package:flutter/material.dart';
+
+import '../../l10n/app_localizations.dart';
+import '../../providers/spatial_library_provider.dart';
+import '../../widgets/kubus_kit.dart';
+
+/// What the user picked in the processing sheet.
+enum SpatialProcessorChoice {
+  /// The user's own paired Node, wherever it currently is.
+  ownNode,
+
+  /// A request for compute from someone else's GPU on the kubus network.
+  kubusNetwork,
+
+  /// No Node is paired yet — the user asked to pair one from here.
+  connectOwnNode,
+}
+
+/// Asks who should process a capture.
+///
+/// There are exactly two answers, and they are different in kind rather than
+/// in degree: your own Node, or a stranger's. Reaching your own Node over
+/// HTTPS instead of the LAN changes the route, not the trust — so it is one
+/// option with a connection note, never a third processor.
+///
+/// Provider discovery is asynchronous, so "nobody answered in the last two
+/// seconds" is a fact about right now, not a reason to hide the network
+/// option; choosing it opens a durable request that waits for a provider to
+/// appear.
+///
+/// Network processing still uploads the raw capture through the user's own
+/// paired Node first (there is no other place today that stages it for a
+/// third-party processor to reach), so pairing is a real prerequisite for
+/// both options, not just "my own Node". Tapping either while unpaired asks
+/// to pair first, then re-opens this sheet with the freshly paired state.
+class SpatialProcessSheet extends StatelessWidget {
+  const SpatialProcessSheet({
+    super.key,
+    required this.ownNode,
+    required this.providersAvailableNow,
+  });
+
+  final SpatialOwnNodeReachability ownNode;
+
+  /// Whether provider discovery found anyone at the moment the sheet opened.
+  /// Informational only — it never gates the option.
+  final bool providersAvailableNow;
+
+  static Future<SpatialProcessorChoice?> show(
+    BuildContext context, {
+    required SpatialOwnNodeReachability ownNode,
+    required bool providersAvailableNow,
+  }) =>
+      showModalBottomSheet<SpatialProcessorChoice>(
+        context: context,
+        useSafeArea: true,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (_) => SpatialProcessSheet(
+          ownNode: ownNode,
+          providersAvailableNow: providersAvailableNow,
+        ),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    final roles = KubusColorRoles.of(context);
+    return BackdropGlassSheet(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Text(l10n.spatialProcessTitle, style: KubusTextStyles.sheetTitle),
+          const SizedBox(height: KubusSpacing.md),
+          _ProcessorOption(
+            icon: Icons.computer_rounded,
+            accent: roles.statTeal,
+            title: l10n.spatialProcessLocalTitle,
+            body: l10n.spatialProcessOwnNodeSubtitle,
+            // The connection note is the whole difference between LAN and
+            // remote: same Node, same data, different route. Unpaired is
+            // not a disabled state — it is an invitation to pair, reachable
+            // from the exact moment the user needs a processor.
+            note: switch (ownNode) {
+              SpatialOwnNodeReachability.localNetwork =>
+                l10n.spatialProcessOwnNodeLocal,
+              SpatialOwnNodeReachability.remote =>
+                l10n.spatialProcessOwnNodeRemote,
+              SpatialOwnNodeReachability.unpaired =>
+                l10n.spatialProcessOwnNodeUnpaired,
+            },
+            noteColor: ownNode == SpatialOwnNodeReachability.unpaired
+                ? scheme.onSurfaceVariant
+                : null,
+            enabled: true,
+            onTap: () => Navigator.of(context).pop(
+              ownNode == SpatialOwnNodeReachability.unpaired
+                  ? SpatialProcessorChoice.connectOwnNode
+                  : SpatialProcessorChoice.ownNode,
+            ),
+          ),
+          const SizedBox(height: KubusSpacing.sm),
+          _ProcessorOption(
+            icon: Icons.hub_rounded,
+            accent: roles.statBlue,
+            title: l10n.spatialProcessNetworkTitle,
+            body: l10n.spatialProcessNetworkSubtitle,
+            note: ownNode == SpatialOwnNodeReachability.unpaired
+                ? l10n.spatialProcessOwnNodeUnpaired
+                : providersAvailableNow
+                    ? null
+                    : l10n.spatialProcessNoProviderNow,
+            noteColor: ownNode == SpatialOwnNodeReachability.unpaired ||
+                    !providersAvailableNow
+                ? scheme.onSurfaceVariant
+                : null,
+            enabled: true,
+            onTap: () => Navigator.of(context).pop(
+              ownNode == SpatialOwnNodeReachability.unpaired
+                  ? SpatialProcessorChoice.connectOwnNode
+                  : SpatialProcessorChoice.kubusNetwork,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProcessorOption extends StatelessWidget {
+  const _ProcessorOption({
+    required this.icon,
+    required this.accent,
+    required this.title,
+    required this.body,
+    required this.enabled,
+    required this.onTap,
+    this.note,
+    this.noteColor,
+  });
+
+  final IconData icon;
+  final Color accent;
+  final String title;
+  final String body;
+  final String? note;
+  final Color? noteColor;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Opacity(
+      opacity: enabled ? 1 : 0.5,
+      child: LiquidGlassCard(
+        padding: const EdgeInsets.all(KubusSpacing.md),
+        onTap: enabled ? onTap : null,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Icon(icon, color: accent),
+            const SizedBox(width: KubusSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(title, style: KubusTextStyles.detailCardTitle),
+                  const SizedBox(height: KubusSpacing.xxs),
+                  Text(
+                    body,
+                    style: KubusTextStyles.detailCaption.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                  if (note != null) ...<Widget>[
+                    const SizedBox(height: KubusSpacing.xs),
+                    Text(
+                      note!,
+                      style: KubusTextStyles.detailCaption.copyWith(
+                        color: noteColor ?? accent,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

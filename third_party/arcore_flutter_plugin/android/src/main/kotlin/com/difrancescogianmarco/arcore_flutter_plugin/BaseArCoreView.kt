@@ -7,6 +7,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.util.Log
 import android.view.View
+import android.widget.FrameLayout
 import com.difrancescogianmarco.arcore_flutter_plugin.flutter_models.FlutterArCoreNode
 import com.difrancescogianmarco.arcore_flutter_plugin.utils.ArCoreUtils
 import com.google.ar.core.ArCoreApk
@@ -25,6 +26,8 @@ open class BaseArCoreView(val activity: Activity, context: Context, messenger: B
     lateinit var activityLifecycleCallbacks: Application.ActivityLifecycleCallbacks
     protected val methodChannel: MethodChannel = MethodChannel(messenger, "arcore_flutter_plugin_$id")
     protected var arSceneView: ArSceneView? = null
+    private val unsupportedView = FrameLayout(context)
+    private var lifecycleRegistered = false
     //    protected val activity: Activity = (context.applicationContext as FlutterApplication).currentActivity
     protected val RC_PERMISSIONS = 0x123
     protected var installRequested: Boolean = false
@@ -33,17 +36,25 @@ open class BaseArCoreView(val activity: Activity, context: Context, messenger: B
 
     init {
         methodChannel.setMethodCallHandler(this)
-        if (ArCoreUtils.checkIsSupportedDeviceOrFinish(activity)) {
+        // An unsupported device is reported to Flutter rather than closing the
+        // activity, and camera permission stays owned by Flutter, which only
+        // mounts this view once CAMERA is granted.
+        if (ArCoreUtils.isSupportedDevice(activity)) {
             isSupportedDevice = true
             arSceneView = ArSceneView(context)
-            ArCoreUtils.requestCameraPermission(activity, RC_PERMISSIONS)
             setupLifeCycle(context)
         }
     }
 
+    /**
+     * Logs when debugging is enabled.
+     *
+     * This called itself rather than the platform logger, so any debug build
+     * that logged recursed until the main thread died of StackOverflowError.
+     */
     protected fun debugLog(message: String) {
         if (debug) {
-            debugLog(message)
+            Log.i(TAG, message)
         }
     }
 
@@ -82,10 +93,14 @@ open class BaseArCoreView(val activity: Activity, context: Context, messenger: B
 
         activity.application
                 .registerActivityLifecycleCallbacks(this.activityLifecycleCallbacks)
+        lifecycleRegistered = true
     }
 
     override fun getView(): View {
-        return arSceneView as View
+        // Flutter must always receive a valid PlatformView. The typed init
+        // error is delivered over the channel; returning null here crashes the
+        // host activity before Dart can render its recovery UI.
+        return arSceneView ?: unsupportedView
     }
 
     override fun dispose() {
@@ -95,8 +110,14 @@ open class BaseArCoreView(val activity: Activity, context: Context, messenger: B
         }
     }
 
+    /**
+     * Default handler for views that do not override it.
+     *
+     * Returning without completing left every Dart future pending forever, so
+     * an unhandled call now reports itself as unimplemented.
+     */
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
-
+        result.notImplemented()
     }
 
     open fun onResume() {
@@ -133,7 +154,7 @@ open class BaseArCoreView(val activity: Activity, context: Context, messenger: B
 //            arSceneView?.resume()
 //        } catch (ex: CameraNotAvailableException) {
 //            ArCoreUtils.displayError(activity, "Unable to get camera", ex)
-//            activity.finish()
+//            // Session failures are reported to Flutter; never close the host Activity.
 //            return
 //        }
     }
@@ -198,6 +219,10 @@ open class BaseArCoreView(val activity: Activity, context: Context, messenger: B
     }
 
     open fun onDestroy() {
+        if (lifecycleRegistered) {
+            activity.application.unregisterActivityLifecycleCallbacks(activityLifecycleCallbacks)
+            lifecycleRegistered = false
+        }
         if (arSceneView != null) {
             arSceneView?.destroy()
             arSceneView = null

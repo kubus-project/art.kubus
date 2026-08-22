@@ -4,9 +4,11 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 
 import '../models/kubus_node_models.dart';
+import '../models/spatial_capture_target.dart';
 import '../services/kubus_node_service.dart';
 import '../services/spatial_capture_policy.dart';
 import '../services/spatial_capture_store.dart';
+import '../services/spatial_library_store.dart';
 import 'kubus_node_provider.dart';
 import '../config/config.dart';
 
@@ -111,14 +113,25 @@ class SpatialCaptureProvider extends ChangeNotifier {
   SpatialCaptureProvider({
     SpatialCapturePolicy policy = const SpatialCapturePolicy(),
     Directory? storageRoot,
+    SpatialLibraryStore? libraryStore,
+    Future<void> Function()? onLibraryChanged,
   })  : _policy = policy,
         _storageRoot = storageRoot,
+        _libraryStore = libraryStore ??
+            SpatialLibraryStore(
+              root: storageRoot == null
+                  ? null
+                  : Directory('${storageRoot.path}_spatial-library'),
+            ),
+        _onLibraryChanged = onLibraryChanged,
         _gate = SpatialSamplingGate(policy: policy) {
     _coverage = SpatialCoverageAccumulator(policy: policy);
   }
 
   final SpatialCapturePolicy _policy;
   final Directory? _storageRoot;
+  SpatialLibraryStore _libraryStore;
+  Future<void> Function()? _onLibraryChanged;
   final SpatialSamplingGate _gate;
   late final SpatialCoverageAccumulator _coverage;
 
@@ -132,8 +145,12 @@ class SpatialCaptureProvider extends ChangeNotifier {
   int _skippedSamples = 0;
   SpatialTransferProgress _transfer = const SpatialTransferProgress();
 
-  String? _artworkId;
-  String? _markerId;
+  SpatialCaptureTarget? _target;
+
+  /// The library record this capture is extending, when the session was opened
+  /// from "Continue capture" rather than from a fresh start.
+  String? _continuingLocalSpatialId;
+
   String? _capturedBy;
   DateTime? _startedAt;
   String? _captureId;
@@ -147,6 +164,15 @@ class SpatialCaptureProvider extends ChangeNotifier {
   int _operationGeneration = 0;
 
   SpatialCaptureState get state => _state;
+
+  void bindLibraryStore(
+    SpatialLibraryStore store, {
+    Future<void> Function()? onChanged,
+  }) {
+    _libraryStore = store;
+    _onLibraryChanged = onChanged;
+  }
+
   SpatialCapturePolicy get policy => _policy;
   SpatialCapturePauseReason? get pauseReason => _pauseReason;
 
@@ -189,8 +215,21 @@ class SpatialCaptureProvider extends ChangeNotifier {
   String? get jobId => _jobId;
   String? get error => _error;
   String? get spatialId => _spatialId;
-  String? get artworkId => _artworkId;
-  String? get markerId => _markerId;
+
+  /// The artwork and marker this capture is filed under.
+  ///
+  /// Owned by the capture for its whole life. It is set once, from an explicit
+  /// user choice, and never re-derived from a provider — so reordering the
+  /// artwork list, uploading a new artwork, or changing the selection on
+  /// another screen cannot move a capture onto different work.
+  SpatialCaptureTarget? get target => _target;
+
+  String? get artworkId => _target?.artworkId;
+  String? get markerId => _target?.markerId;
+
+  /// Non-null while this session is adding samples to an existing record.
+  String? get continuingLocalSpatialId => _continuingLocalSpatialId;
+  bool get isContinuingExistingCapture => _continuingLocalSpatialId != null;
   Map<String, dynamic>? get remoteResult => _remoteResult;
   String? get remoteJobState => _remoteJobState;
   String? get localJobState => _localJobState;
@@ -232,13 +271,19 @@ class SpatialCaptureProvider extends ChangeNotifier {
   }
 
   /// Starts a capture, opening its on-disk directory.
+  ///
+  /// [target] is required and has no default. There is deliberately no
+  /// "current artwork" fallback: a capture with no explicitly chosen artwork
+  /// must not start at all, because filing it under a guess is silent
+  /// misattribution the user only discovers once the raw source is gone.
   Future<void> begin({
-    required String artworkId,
-    String? markerId,
+    required SpatialCaptureTarget target,
     String? capturedBy,
   }) async {
     _operationGeneration++;
-    await _store?.discard();
+    await _releaseStore();
+    _continuingLocalSpatialId = null;
+    _target = null;
     _coverage.reset();
     final startedAt = DateTime.now().toUtc();
     final captureId = 'capture-${startedAt.microsecondsSinceEpoch}';
@@ -246,15 +291,15 @@ class SpatialCaptureProvider extends ChangeNotifier {
     // during capture still leaves a directory recovery can find and offer back.
     _store = await SpatialCaptureStore.create(
       captureId: captureId,
-      artworkId: artworkId,
-      markerId: markerId,
+      artworkId: target.artworkId,
+      markerId: target.markerId,
       capturedBy: capturedBy,
       startedAt: startedAt,
       root: _storageRoot,
     );
     _startedAt = startedAt;
-    _artworkId = artworkId;
-    _markerId = markerId;
+    _target = target;
+    _continuingLocalSpatialId = null;
     _capturedBy = capturedBy;
     _lastAcceptedPose = null;
     _lastAcceptedAt = null;
@@ -301,7 +346,8 @@ class SpatialCaptureProvider extends ChangeNotifier {
     if (store == null || store.sampleCount == 0) return false;
 
     _operationGeneration++;
-    await _store?.discard();
+    await _releaseStore();
+    _continuingLocalSpatialId = null;
     _store = store;
     _coverage.reset();
     // Rebuild coverage from the poses already on disk, so a resumed capture
@@ -310,8 +356,13 @@ class SpatialCaptureProvider extends ChangeNotifier {
       final pose = SpatialPose.tryFromFramePayload(sample.metadata);
       if (pose != null) _coverage.addAccepted(pose);
     }
-    _artworkId = store.artworkId;
-    _markerId = store.markerId;
+    // The target comes back from the capture's own manifest, never from a
+    // provider: a resumed capture keeps the artwork it was started for.
+    _target = SpatialCaptureTarget(
+      artworkId: store.artworkId,
+      markerId: store.markerId,
+    );
+    _continuingLocalSpatialId = null;
     _capturedBy = store.capturedBy;
     _startedAt = store.startedAt;
     _lastAcceptedPose = null;
@@ -328,6 +379,63 @@ class SpatialCaptureProvider extends ChangeNotifier {
     _localJobState = null;
     _localJobProgress = 0;
     _transfer = const SpatialTransferProgress();
+    _state = SpatialCaptureState.paused;
+    _pauseReason = SpatialCapturePauseReason.user;
+    notifyListeners();
+    return true;
+  }
+
+  /// Reopens an existing library record's raw source so more samples can be
+  /// added to it.
+  ///
+  /// This is not a new capture. The record keeps its identity, its artwork and
+  /// marker association, and everything already on disk — coverage included,
+  /// rebuilt from the stored poses rather than reset to zero. Finishing folds
+  /// the extra samples back into the same record instead of creating a second,
+  /// disconnected one.
+  ///
+  /// Returns false when the raw source is gone or unreadable, so the caller can
+  /// say so instead of silently starting from scratch.
+  Future<bool> continueCapture(SpatialLibraryRecord record) async {
+    if (!record.rawPresent || record.sourcePath.isEmpty) return false;
+    final store = await SpatialCaptureStore.open(Directory(record.sourcePath));
+    if (store == null) return false;
+
+    _operationGeneration++;
+    await _releaseStore();
+    _store = store;
+    _coverage.reset();
+    for (final sample in store.samples) {
+      final pose = SpatialPose.tryFromFramePayload(sample.metadata);
+      if (pose != null) _coverage.addAccepted(pose);
+    }
+    // The record is the authority for the association, not the app's current
+    // selection and not the on-disk manifest, which may predate an edit.
+    _target = SpatialCaptureTarget(
+      artworkId: record.artworkId,
+      markerId: record.markerId,
+      artworkTitleSnapshot: record.artworkTitleSnapshot,
+      artistNameSnapshot: record.artistNameSnapshot,
+      markerLabelSnapshot: record.markerLabelSnapshot,
+    );
+    _continuingLocalSpatialId = record.localSpatialId;
+    _capturedBy = record.ownerId ?? store.capturedBy;
+    _startedAt = record.capturedAt;
+    _lastAcceptedPose = null;
+    _lastAcceptedAt = null;
+    _requestInFlight = false;
+    _lastOutcome = null;
+    _skippedSamples = 0;
+    _captureId = null;
+    _jobId = null;
+    _error = null;
+    _spatialId = null;
+    _remoteResult = null;
+    _remoteJobState = null;
+    _localJobState = null;
+    _localJobProgress = 0;
+    _transfer = const SpatialTransferProgress();
+    // Paused, not capturing: sampling only restarts once AR has tracking.
     _state = SpatialCaptureState.paused;
     _pauseReason = SpatialCapturePauseReason.user;
     notifyListeners();
@@ -469,11 +577,25 @@ class SpatialCaptureProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Releases the open capture store.
+  ///
+  /// Files are deleted only for a scratch capture this provider created. A
+  /// session that was continuing an existing library record must never delete
+  /// its source directory — that directory *is* the record's raw capture, and
+  /// discarding it would destroy work the user already saved.
+  Future<void> _releaseStore() async {
+    final store = _store;
+    _store = null;
+    if (store == null) return;
+    if (_continuingLocalSpatialId != null) return;
+    await store.discard();
+  }
+
   /// Abandons the capture and deletes its files. Explicit user intent only.
   Future<void> discard() async {
     _operationGeneration++;
-    await _store?.discard();
-    _store = null;
+    await _releaseStore();
+    _continuingLocalSpatialId = null;
     _coverage.reset();
     _lastAcceptedPose = null;
     _lastAcceptedAt = null;
@@ -486,17 +608,12 @@ class SpatialCaptureProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Streams the capture to the paired node and finalizes it there.
+  /// Commits a finished capture to the phone's private Spatial Library.
   ///
-  /// Files travel as raw bytes into a node-side draft, one at a time, straight
-  /// off disk. Nothing assembles the capture into a single in-memory document:
-  /// the previous base64 package inflated the payload by a third and required
-  /// both ends to hold every frame at once, which a continuous mobile capture
-  /// cannot afford.
-  ///
-  /// An interrupted transfer resumes against the same draft, so a retry
-  /// re-sends only what is missing and never creates a second durable record.
-  Future<void> finish(KubusNodeProvider node) async {
+  /// Upload and processing are separate resumable library actions. A Node is
+  /// intentionally absent from this contract, so processor availability can
+  /// never turn a successful capture into a failed capture.
+  Future<SpatialLibraryRecord> finish() async {
     final store = _store;
     if (store == null || !_coverage.isReadyToFinish) {
       throw const SpatialCaptureNotReadyException();
@@ -508,11 +625,48 @@ class SpatialCaptureProvider extends ChangeNotifier {
     );
     notifyListeners();
     try {
-      await _streamToNode(node, store);
-      _state = SpatialCaptureState.awaitingProcessingChoice;
+      final coverage = <String, dynamic>{
+        'viewpointCount': _coverage.viewpointCount,
+        'baselineMeters': _coverage.baselineMeters,
+        'progress': _coverage.progress,
+        'grade': _coverage.grade.name,
+      };
+      final quality = <String, dynamic>{
+        'acceptedSamples': store.sampleCount,
+        'depthAvailable': store.depthObserved,
+      };
+      await store.writeManifest(extra: coverage);
+      final continuing = _continuingLocalSpatialId;
+      final record = continuing == null
+          ? await _libraryStore.promoteCapture(
+              store,
+              coverageMetadata: coverage,
+              qualityMetadata: quality,
+              artworkTitleSnapshot: _target?.artworkTitleSnapshot,
+              artistNameSnapshot: _target?.artistNameSnapshot,
+              markerLabelSnapshot: _target?.markerLabelSnapshot,
+            )
+          // Extending an existing record updates it in place. Promoting again
+          // would either return the untouched original or fork a second,
+          // disconnected capture of the same work.
+          : await _libraryStore.applyContinuedCapture(
+              continuing,
+              sampleCount: store.sampleCount,
+              sourceBytes: store.bytesWritten,
+              hasDepth: store.depthObserved,
+              coverageMetadata: coverage,
+              qualityMetadata: quality,
+            );
+      await _onLibraryChanged?.call();
+      _store = null;
+      _continuingLocalSpatialId = null;
+      _captureId = record.localSpatialId;
+      _state = SpatialCaptureState.complete;
+      _transfer = const SpatialTransferProgress();
       notifyListeners();
+      return record;
     } catch (error) {
-      // The capture stays on disk so the transfer can be retried.
+      // Promotion never deletes the original on failure.
       _state = SpatialCaptureState.error;
       _error = _describe(error);
       _transfer = const SpatialTransferProgress();
@@ -700,8 +854,8 @@ class SpatialCaptureProvider extends ChangeNotifier {
     try {
       final job = await node.startReconstruction(
         captureId: _captureId!,
-        artworkId: _artworkId!,
-        markerId: _markerId,
+        artworkId: _target!.artworkId,
+        markerId: _target?.markerId,
       );
       if (generation != _operationGeneration) return;
       _jobId = job.id;
@@ -890,9 +1044,15 @@ class SpatialCaptureProvider extends ChangeNotifier {
     _operationGeneration++;
     final store = _store;
     _store = null;
-    if (store != null && (_captureId ?? '').isEmpty) {
+    // Never delete a continued record's source, and never delete a capture
+    // already delivered to a node.
+    if (store != null &&
+        (_captureId ?? '').isEmpty &&
+        _continuingLocalSpatialId == null) {
       await store.discard();
     }
+    _continuingLocalSpatialId = null;
+    _target = null;
     _coverage.reset();
     _lastAcceptedPose = null;
     _lastAcceptedAt = null;

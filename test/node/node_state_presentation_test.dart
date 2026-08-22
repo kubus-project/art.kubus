@@ -236,19 +236,22 @@ void main() {
   });
 
   group('pairing code', () {
-    test('reads the URI form the node QR encodes', () {
+    test('reads the complete v2 URI form the node QR encodes', () {
       final payload = KubusNodePairingPayload.parse(
-        'kubus-node://pair?e=http%3A%2F%2F192.168.1.24%3A8787&s=session-1&k=secret-value',
+        'kubus-node://pair?v=2&e=http%3A%2F%2F192.168.1.24%3A8787&a=https%3A%2F%2Fnode.example.test&s=session-1&k=secret-value&n=node-1&f=fingerprint-value&l=Studio',
       );
       expect(payload.endpoint.toString(), 'http://192.168.1.24:8787');
       expect(payload.sessionId, 'session-1');
       expect(payload.secret, 'secret-value');
+      expect(payload.nodeId, 'node-1');
+      expect(
+          payload.alternateEndpoints, [Uri.parse('https://node.example.test')]);
     });
 
-    test('still accepts the JSON the node endpoint returns', () {
+    test('accepts a phone-reachable endpoint in the node response', () {
       final payload = KubusNodePairingPayload.parse(
         '{"sessionId":"s1","secret":"k1",'
-        '"node":{"endpoint":"http://127.0.0.1:8787","label":"ROK-DESKTOP"}}',
+        '"node":{"endpoint":"http://192.168.1.24:8787","label":"ROK-DESKTOP"}}',
       );
       expect(payload.sessionId, 's1');
       expect(payload.label, 'ROK-DESKTOP');
@@ -258,7 +261,9 @@ void main() {
       for (final raw in [
         '',
         'https://art.kubus/some/page',
+        'kubus-node://pair?e=http%3A%2F%2F127.0.0.1%3A8787&s=a&k=b',
         'kubus-node://pair?e=http://x&s=&k=abc',
+        'kubus-node://pair?v=2&e=http%3A%2F%2F192.168.1.2&s=a&k=b',
         'kubus-node://pair?s=a&k=b',
         '{"not":"pairing"}',
       ]) {

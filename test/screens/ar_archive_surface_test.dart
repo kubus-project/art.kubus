@@ -1,6 +1,7 @@
 import 'package:art_kubus/services/ar_camera_orchestrator.dart';
 import 'package:art_kubus/services/camera_permission_coordinator.dart';
 import 'package:art_kubus/services/camera_ownership_coordinator.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -64,6 +65,31 @@ class _ArSurfaceHost extends StatelessWidget {
       ],
     );
   }
+}
+
+class _PlacementRevisionHost extends StatelessWidget {
+  const _PlacementRevisionHost({
+    required this.revision,
+    required this.onArDisposed,
+  });
+
+  final ValueListenable<int> revision;
+  final VoidCallback onArDisposed;
+
+  @override
+  Widget build(BuildContext context) => Stack(
+        fit: StackFit.expand,
+        children: <Widget>[
+          _ArSurfaceMarker(onDispose: onArDisposed),
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: ValueListenableBuilder<int>(
+              valueListenable: revision,
+              builder: (_, value, __) => Text('transform-$value'),
+            ),
+          ),
+        ],
+      );
 }
 
 Future<void> _pump(WidgetTester tester, String mode, VoidCallback onDisposed) {
@@ -152,5 +178,31 @@ void main() {
       expect(orchestrator.owner, CameraOwner.ar);
       expect(orchestrator.surface, ArCameraSurface.ar);
     });
+  });
+
+  testWidgets(
+      'placement transform revisions never remount the AR platform view',
+      (tester) async {
+    final revision = ValueNotifier<int>(0);
+    addTearDown(revision.dispose);
+    var disposals = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: _PlacementRevisionHost(
+          revision: revision,
+          onArDisposed: () => disposals++,
+        ),
+      ),
+    );
+    final initialState = tester.state(find.byType(_ArSurfaceMarker));
+
+    for (var value = 1; value <= 20; value++) {
+      revision.value = value;
+      await tester.pump();
+    }
+
+    expect(find.text('transform-20'), findsOneWidget);
+    expect(disposals, isZero);
+    expect(tester.state(find.byType(_ArSurfaceMarker)), same(initialState));
   });
 }

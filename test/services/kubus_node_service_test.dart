@@ -20,7 +20,13 @@ KubusNodePairingPayload get _payload => KubusNodePairingPayload(
       endpoint: Uri.parse('http://192.168.1.8:8787'),
       sessionId: 'session-1',
       secret: 'one-time-secret',
+      nodeId: 'node-1',
       fingerprint: 'sha256:node',
+    );
+
+http.Response _nodeInfo() => http.Response(
+      jsonEncode({'nodeId': 'node-1', 'fingerprint': 'sha256:node'}),
+      200,
     );
 
 void main() {
@@ -33,6 +39,7 @@ void main() {
       isWeb: false,
       client: MockClient((request) async {
         requests.add(request);
+        if (request.url.path.endsWith('/info')) return _nodeInfo();
         if (request.url.path.endsWith('/pairing/exchange')) {
           return http.Response(
             jsonEncode({'token': 'kubus_local_scoped-token'}),
@@ -58,10 +65,12 @@ void main() {
     final service = KubusNodeService(
       credentialStore: _MemoryCredentialStore(),
       isWeb: false,
-      client: MockClient((request) async => http.Response(
-            jsonEncode({'token': 'kubus_local_scoped-token'}),
-            201,
-          )),
+      client: MockClient((request) async => request.url.path.endsWith('/info')
+          ? _nodeInfo()
+          : http.Response(
+              jsonEncode({'token': 'kubus_local_scoped-token'}),
+              201,
+            )),
     );
     await service.pair(_payload);
 
@@ -84,6 +93,64 @@ void main() {
     await expectLater(service.pair(_payload), throwsStateError);
   });
 
+  test('falls back from an unavailable remote endpoint to the paired LAN node',
+      () async {
+    final requests = <http.Request>[];
+    final service = KubusNodeService(
+      credentialStore: _MemoryCredentialStore(),
+      isWeb: false,
+      client: MockClient((request) async {
+        requests.add(request);
+        if (request.url.path.endsWith('/info')) return _nodeInfo();
+        if (request.url.host == 'node.example.test') {
+          throw http.ClientException('remote tunnel unavailable');
+        }
+        if (request.url.path.endsWith('/pairing/exchange')) {
+          return http.Response(
+              jsonEncode({'token': 'kubus_local_scoped-token'}), 201);
+        }
+        return http.Response(jsonEncode({'status': 'online'}), 200);
+      }),
+    );
+    final payload = KubusNodePairingPayload(
+      endpoint: Uri.parse('https://node.example.test'),
+      alternateEndpoints: [Uri.parse('http://192.168.1.8:8787')],
+      sessionId: 'session-1',
+      secret: 'one-time-secret',
+      nodeId: 'node-1',
+      fingerprint: 'sha256:node',
+    );
+
+    await service.pair(payload);
+    await service.fetchNetwork();
+
+    expect(service.endpoint, Uri.parse('http://192.168.1.8:8787'));
+    expect(requests.any((request) => request.url.host == 'node.example.test'),
+        isTrue);
+    expect(requests.last.url.host, '192.168.1.8');
+  });
+
+  test('rejects an endpoint whose authenticated identity differs from pairing',
+      () async {
+    final service = KubusNodeService(
+      credentialStore: _MemoryCredentialStore(),
+      isWeb: false,
+      client: MockClient((request) async {
+        if (request.url.path.endsWith('/pairing/exchange')) {
+          return http.Response(
+              jsonEncode({'token': 'kubus_local_scoped-token'}), 201);
+        }
+        return http.Response(
+          jsonEncode({'nodeId': 'other-node', 'fingerprint': 'other-print'}),
+          200,
+        );
+      }),
+    );
+
+    await expectLater(service.pair(_payload), throwsA(isA<StateError>()));
+    expect(service.isPaired, isFalse);
+  });
+
   test('network compute discovery forwards auth only inside paired JSON',
       () async {
     final requests = <http.Request>[];
@@ -92,6 +159,7 @@ void main() {
       isWeb: false,
       client: MockClient((request) async {
         requests.add(request);
+        if (request.url.path.endsWith('/info')) return _nodeInfo();
         if (request.url.path.endsWith('/pairing/exchange')) {
           return http.Response(
             jsonEncode({'token': 'kubus_local_scoped-token'}),
@@ -143,6 +211,7 @@ void main() {
       isWeb: false,
       client: MockClient((request) async {
         requests.add(request);
+        if (request.url.path.endsWith('/info')) return _nodeInfo();
         if (request.url.path.endsWith('/pairing/exchange')) {
           return http.Response(
             jsonEncode({'token': 'kubus_local_scoped-token'}),
@@ -166,5 +235,100 @@ void main() {
     expect(settings['enabled'], isTrue);
     expect(requests.last.method, 'PUT');
     expect(requests.last.url.path, '/local/v1/compute/settings');
+  });
+
+  test('native pairing rejects arbitrary public HTTP before sending a secret',
+      () async {
+    var requests = 0;
+    final service = KubusNodeService(
+      credentialStore: _MemoryCredentialStore(),
+      isWeb: false,
+      client: MockClient((_) async {
+        requests++;
+        return http.Response('{}', 500);
+      }),
+    );
+    final payload = KubusNodePairingPayload(
+      endpoint: Uri.parse('http://node.example.test:8787'),
+      sessionId: 'session-1',
+      secret: 'one-time-secret',
+      nodeId: 'node-1',
+      fingerprint: 'sha256:node',
+    );
+
+    await expectLater(service.pair(payload), throwsFormatException);
+    expect(requests, isZero);
+  });
+
+  test('paired HTTPS endpoint remains usable outside the LAN', () async {
+    final requests = <http.Request>[];
+    final service = KubusNodeService(
+      credentialStore: _MemoryCredentialStore(),
+      isWeb: false,
+      client: MockClient((request) async {
+        requests.add(request);
+        if (request.url.path.endsWith('/pairing/exchange')) {
+          return http.Response(
+              jsonEncode({'token': 'kubus_local_scoped-token'}), 201);
+        }
+        if (request.url.path.endsWith('/info')) return _nodeInfo();
+        return http.Response(jsonEncode({'status': 'online'}), 200);
+      }),
+    );
+    final payload = KubusNodePairingPayload(
+      endpoint: Uri.parse('https://node.example.test'),
+      sessionId: 'session-1',
+      secret: 'one-time-secret',
+      nodeId: 'node-1',
+      fingerprint: 'sha256:node',
+    );
+
+    await service.pair(payload);
+    await service.fetchNetwork();
+
+    expect(service.endpoint, Uri.parse('https://node.example.test'));
+    expect(requests.every((request) => request.url.scheme == 'https'), isTrue);
+  });
+
+  test('fresh private-transfer verification stops on changed endpoint identity',
+      () async {
+    var infoCalls = 0;
+    var draftPosts = 0;
+    final service = KubusNodeService(
+      credentialStore: _MemoryCredentialStore(),
+      isWeb: false,
+      client: MockClient((request) async {
+        if (request.url.path.endsWith('/pairing/exchange')) {
+          return http.Response(
+              jsonEncode({'token': 'kubus_local_scoped-token'}), 201);
+        }
+        if (request.url.path.endsWith('/info')) {
+          infoCalls++;
+          return infoCalls == 1
+              ? _nodeInfo()
+              : http.Response(
+                  jsonEncode({
+                    'nodeId': 'proxy-changed-node',
+                    'fingerprint': 'sha256:changed',
+                  }),
+                  200,
+                );
+        }
+        if (request.url.path.endsWith('/captures/drafts')) draftPosts++;
+        return http.Response(jsonEncode({'status': 'online'}), 200);
+      }),
+    );
+
+    await service.pair(_payload);
+    await service.fetchNetwork();
+    await expectLater(
+      service.beginCaptureDraft(<String, dynamic>{'schema': 'kubus.capture/1'}),
+      throwsA(isA<KubusNodeIdentityException>()),
+    );
+
+    expect(infoCalls, 2,
+        reason: 'private upload must bypass the short-lived identity cache');
+    expect(draftPosts, isZero,
+        reason: 'no private capture metadata reaches a mismatched endpoint');
   });
 }

@@ -26,6 +26,8 @@ class ArErrorMessages {
         return l10n.arErrorAppUpdateRequired;
       case 'arcore_unsupported_device':
         return l10n.arErrorArcoreUnsupportedDevice;
+      case 'camera_permission_required':
+        return l10n.arErrorCameraPermissionRequired;
       default:
         return l10n.arErrorSessionUnavailable;
     }
@@ -36,6 +38,13 @@ class ArErrorMessages {
   /// An unsupported device cannot; everything else is worth another attempt
   /// once the user has acted.
   static bool isRetryable(String code) => code != 'arcore_unsupported_device';
+
+  /// Whether [code] just means the session was torn down.
+  ///
+  /// Teardown settles every in-flight platform call with this code so no Dart
+  /// future is left hanging. That is bookkeeping, not a failure the user
+  /// caused or can act on, so callers drop it rather than showing guidance.
+  static bool isSessionTeardown(String code) => code == 'ar_session_disposed';
 
   /// Guidance for an ARCore [TrackingFailureReason].
   ///

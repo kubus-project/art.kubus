@@ -3,19 +3,48 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../config/config.dart';
+import '../../features/spatial/spatial_marker_directory.dart';
+import '../../features/spatial/spatial_record_card.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/artwork.dart';
 import '../../models/kubus_node_models.dart';
+import '../../models/spatial_capture_target.dart';
 import '../../providers/artwork_provider.dart';
 import '../../providers/kubus_node_provider.dart';
+import '../../providers/marker_management_provider.dart';
+import '../../providers/profile_provider.dart';
+import '../../providers/spatial_library_provider.dart';
+import '../../services/spatial_library_store.dart';
+import '../../screens/spatial/spatial_capture_launch.dart';
+import '../../screens/spatial/spatial_library_detail_screen.dart';
 import '../../utils/design_tokens.dart';
 import '../common/kubus_reading_surface.dart';
+import '../kubus_button.dart';
+import '../../utils/kubus_color_roles.dart';
 import 'spatial_viewer.dart';
 
+/// The artwork's spatial presence, on the artwork's own screen.
+///
+/// Spatial content that only exists inside the Spatial Library is a service,
+/// not a feature. This is where it becomes part of the artwork: the published
+/// archive and its history, the owner's own unpublished drafts, and the one
+/// action that continues the archive rather than starting a parallel one.
 class ArtworkSpatialArchiveSection extends StatefulWidget {
-  const ArtworkSpatialArchiveSection({required this.artwork, super.key});
+  const ArtworkSpatialArchiveSection({
+    required this.artwork,
+    this.contextMarkerId,
+    super.key,
+  });
 
   final Artwork artwork;
+
+  /// The marker this screen was opened from, when it was opened from one.
+  ///
+  /// Preferred over the artwork's own AR marker so a capture launched from a
+  /// specific map pin is filed against that pin, not against whichever marker
+  /// the artwork happens to name.
+  final String? contextMarkerId;
 
   @override
   State<ArtworkSpatialArchiveSection> createState() =>
@@ -56,15 +85,29 @@ class _ArtworkSpatialArchiveSectionState
     final history = provider.spatialHistoryFor(widget.artwork.id);
     final error = provider.spatialHistoryErrorFor(widget.artwork.id);
     final knownCount = widget.artwork.spatialCaptureCount;
-    if ((history == null || history.history.isEmpty) && knownCount == 0) {
+    final l10n = AppLocalizations.of(context)!;
+
+    // Drafts are resolved from each record's own artworkId, and shown only on
+    // the device that holds them: a private capture is not part of the public
+    // record until its owner publishes it.
+    final drafts = (context
+                .watch<SpatialLibraryProvider?>()
+                ?.recordsForArtwork(widget.artwork.id) ??
+            const <SpatialLibraryRecord>[])
+        .where((record) => !record.isPublished)
+        .toList(growable: false);
+
+    final hasPublic = history != null && history.history.isNotEmpty;
+    final canCapture = _canCapture(context);
+
+    if (!hasPublic && knownCount == 0 && drafts.isEmpty && !canCapture) {
       return const SizedBox.shrink();
     }
-    final l10n = AppLocalizations.of(context)!;
-    if (history == null || history.history.isEmpty) {
-      if (error == null) return const SizedBox.shrink();
+
+    if (!hasPublic && knownCount > 0 && error != null && drafts.isEmpty) {
       return KubusReadingSurface(
         child: Row(
-          children: [
+          children: <Widget>[
             const Icon(Icons.view_in_ar_outlined),
             const SizedBox(width: KubusSpacing.sm),
             Expanded(child: Text(l10n.spatialViewerUnavailable)),
@@ -78,15 +121,13 @@ class _ArtworkSpatialArchiveSectionState
         ),
       );
     }
-    final current = history.current!;
-    final date = MaterialLocalizations.of(context)
-        .formatMediumDate(current.capturedAt.toLocal());
+
     return KubusReadingSurface(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+        children: <Widget>[
           Row(
-            children: [
+            children: <Widget>[
               const Icon(Icons.view_in_ar_outlined),
               const SizedBox(width: KubusSpacing.sm),
               Expanded(
@@ -95,23 +136,98 @@ class _ArtworkSpatialArchiveSectionState
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
               ),
-              Text(l10n.spatialCaptureCount(history.history.length)),
+              if (hasPublic)
+                Text(l10n.spatialCaptureCount(history.history.length)),
             ],
           ),
-          const SizedBox(height: KubusSpacing.sm),
-          Text(
-            l10n.spatialCapturedOn(date),
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+          if (hasPublic) ...<Widget>[
+            const SizedBox(height: KubusSpacing.sm),
+            _PublicArchiveSummary(history: history),
+            const SizedBox(height: KubusSpacing.md),
+            FilledButton.icon(
+              onPressed: () => _openArchive(context, history),
+              icon: const Icon(Icons.threed_rotation_rounded),
+              label: Text(l10n.spatialViewIn3d),
+            ),
+          ],
+          if (drafts.isNotEmpty) ...<Widget>[
+            const SizedBox(height: KubusSpacing.lg),
+            Text(
+              l10n.spatialArtworkDraftsTitle,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: KubusSpacing.xxs),
+            Text(
+              l10n.spatialArtworkDraftsSubtitle,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+            ),
+            const SizedBox(height: KubusSpacing.sm),
+            for (final record in drafts) ...<Widget>[
+              SpatialRecordCard(
+                key: ValueKey<String>(record.localSpatialId),
+                record: record,
+                artworkOverride: widget.artwork,
+                markerDirectory: SpatialMarkerDirectory(
+                  management: context.read<MarkerManagementProvider?>(),
                 ),
-          ),
-          const SizedBox(height: KubusSpacing.md),
-          FilledButton.icon(
-            onPressed: () => _openArchive(context, history),
-            icon: const Icon(Icons.threed_rotation_rounded),
-            label: Text(l10n.spatialViewIn3d),
-          ),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => SpatialLibraryDetailScreen(
+                      localSpatialId: record.localSpatialId,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: KubusSpacing.sm),
+            ],
+          ],
+          if (canCapture) ...<Widget>[
+            const SizedBox(height: KubusSpacing.md),
+            KubusButton(
+              onPressed: () => unawaited(_startCapture(context, hasPublic)),
+              // Continuing a public archive is a different intent from making
+              // the first one, and the label says which.
+              label: hasPublic
+                  ? l10n.spatialArtworkAddUpdate
+                  : l10n.spatialArtworkCaptureCta,
+              icon: Icons.center_focus_strong,
+              variant: KubusButtonVariant.secondary,
+              isFullWidth: true,
+            ),
+          ],
         ],
+      ),
+    );
+  }
+
+  /// Whether this viewer may capture spatial data for this artwork.
+  ///
+  /// No profile means no permission, which is also the right answer when the
+  /// section renders somewhere the profile graph is not mounted.
+  bool _canCapture(BuildContext context) {
+    if (!AppConfig.isFeatureEnabled('availabilityNodes')) return false;
+    final profile = context.watch<ProfileProvider?>()?.currentUser;
+    if (profile == null) return false;
+    return profile.isArtist || profile.isInstitution;
+  }
+
+  /// Opens AR with this artwork already chosen.
+  ///
+  /// The target travels with the navigation, so the capture that comes back
+  /// is filed under the artwork the user was actually looking at.
+  Future<void> _startCapture(BuildContext context, bool hasPublic) async {
+    final marker = SpatialMarkerDirectory(
+      management: context.read<MarkerManagementProvider?>(),
+    ).resolve(widget.contextMarkerId ?? widget.artwork.arMarkerId);
+    await openArSpatialCapture(
+      context,
+      SpatialCaptureLaunchRequest.newCapture(
+        target: SpatialCaptureTarget.fromArtwork(
+          widget.artwork,
+          marker: marker,
+        ),
       ),
     );
   }
@@ -124,6 +240,54 @@ class _ArtworkSpatialArchiveSectionState
         context: context,
         builder: (_) => _SpatialArchiveDialog(history: history),
       );
+}
+
+/// The public archive's current version and when it was captured.
+class _PublicArchiveSummary extends StatelessWidget {
+  const _PublicArchiveSummary({required this.history});
+
+  final ArtworkSpatialHistory history;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    final roles = KubusColorRoles.of(context);
+    final current = history.current!;
+    final date = MaterialLocalizations.of(context)
+        .formatMediumDate(current.capturedAt.toLocal());
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Row(
+          children: <Widget>[
+            Icon(Icons.public_rounded, color: roles.positiveAction, size: 18),
+            const SizedBox(width: KubusSpacing.xs),
+            Text(
+              l10n.spatialLibraryCurrentPublicVersion,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+            ),
+            const SizedBox(width: KubusSpacing.sm),
+            Text(
+              l10n.spatialLibraryVersionLabel(current.version),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+          ],
+        ),
+        const SizedBox(height: KubusSpacing.xs),
+        Text(
+          l10n.spatialCapturedOn(date),
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: scheme.onSurfaceVariant,
+              ),
+        ),
+      ],
+    );
+  }
 }
 
 class _SpatialArchiveDialog extends StatefulWidget {
@@ -189,9 +353,9 @@ class _SpatialArchiveDialogState extends State<_SpatialArchiveDialog> {
                                 avatar:
                                     const Icon(Icons.layers_outlined, size: 18),
                                 label: Text(
-                                  MaterialLocalizations.of(context)
-                                      .formatMediumDate(
-                                          capture.capturedAt.toLocal()),
+                                  l10n.spatialLibraryVersionLabel(
+                                    capture.version,
+                                  ),
                                 ),
                                 onSelected: (_) =>
                                     setState(() => selected = capture),

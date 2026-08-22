@@ -44,8 +44,10 @@ Widget buildSpatialViewer({
               const SizedBox(height: 16),
               FilledButton.icon(
                 onPressed: () async {
-                  final candidates = await nodeService
-                      .resolveContentCandidates('ipfs://${variant.cid}');
+                  final candidates = await nodeService.resolveContentCandidates(
+                    'ipfs://${variant.cid}',
+                    localPath: variant.localPath,
+                  );
                   if (candidates.isNotEmpty) {
                     await launchUrl(candidates.first.uri,
                         mode: LaunchMode.externalApplication);

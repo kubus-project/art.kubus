@@ -65,6 +65,7 @@ import 'providers/deferred_onboarding_provider.dart';
 import 'providers/pending_action_provider.dart';
 import 'providers/kubus_node_provider.dart';
 import 'providers/spatial_capture_provider.dart';
+import 'providers/spatial_library_provider.dart';
 import 'providers/availability_operator_provider.dart';
 import 'core/app_initializer.dart';
 import 'core/startup_trace.dart';
@@ -86,6 +87,8 @@ import 'screens/art/art_detail_screen.dart';
 import 'screens/desktop/art/desktop_artwork_detail_screen.dart';
 import 'screens/desktop/desktop_shell.dart';
 import 'screens/node/kubus_node_screen.dart';
+import 'screens/spatial/spatial_library_detail_screen.dart';
+import 'screens/spatial/spatial_library_screen.dart';
 import 'screens/settings/availability_node_operator_screen.dart';
 import 'screens/desktop/web3/desktop_connect_wallet_screen.dart';
 import 'screens/web3/wallet/connectwallet_screen.dart';
@@ -472,8 +475,27 @@ class _AppLauncherState extends State<AppLauncher> {
               ChangeNotifierProvider(create: (context) => AppRefreshProvider()),
               ChangeNotifierProvider(create: (context) => ConfigProvider()),
               ChangeNotifierProvider(create: (context) => KubusNodeProvider()),
-              ChangeNotifierProvider(
-                  create: (context) => SpatialCaptureProvider()),
+              ChangeNotifierProxyProvider<KubusNodeProvider,
+                  SpatialLibraryProvider>(
+                create: (_) => SpatialLibraryProvider(),
+                update: (_, node, library) {
+                  final value = library ?? SpatialLibraryProvider();
+                  value.bindNode(node);
+                  return value;
+                },
+              ),
+              ChangeNotifierProxyProvider<SpatialLibraryProvider,
+                  SpatialCaptureProvider>(
+                create: (_) => SpatialCaptureProvider(),
+                update: (_, library, capture) {
+                  final value = capture ?? SpatialCaptureProvider();
+                  value.bindLibraryStore(
+                    library.store,
+                    onChanged: library.reload,
+                  );
+                  return value;
+                },
+              ),
               ChangeNotifierProvider(
                 create: (context) => AvailabilityOperatorProvider(),
               ),
@@ -914,6 +936,19 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
   Map<String, WidgetBuilder> get _namedRoutes => {
         ...ShellRoutes.builders,
         '/ar': (context) => const ARScreen(),
+        // A localSpatialId argument opens straight to that capture, so the
+        // "Saved" flow lands on the record it just created rather than on a
+        // list the user then has to search.
+        '/spatial-library': (context) {
+          final arguments = ModalRoute.of(context)?.settings.arguments;
+          final localSpatialId =
+              arguments is String && arguments.trim().isNotEmpty
+                  ? arguments.trim()
+                  : null;
+          return localSpatialId == null
+              ? const SpatialLibraryScreen()
+              : SpatialLibraryDetailScreen(localSpatialId: localSpatialId);
+        },
         '/artwork': (context) {
           final args = ModalRoute.of(context)?.settings.arguments;
           String? artworkId;
@@ -1328,57 +1363,67 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
 
   void _initNotificationRouting() {
     final handler = NotificationHandler();
+    // A notification tap can fire while `AppInitializer` is still hydrating
+    // providers and deciding the deterministic cold-start route (this can take
+    // several seconds). Deferring behind `AppStartupGate` stops that navigation
+    // from racing AppInitializer's own route push and landing the visitor on
+    // an unrelated screen — see `AppStartupGate` for the full rationale.
     handler.onNavigate = (route, params) {
-      final navigator = appNavigatorKey.currentState;
-      if (navigator == null) return;
+      AppStartupGate.runWhenReady(
+          () => _dispatchNotificationRoute(route, params));
+    };
 
-      if (route == '/collab_invite') {
-        final rawType = (params['entityType'] ?? '').toString();
-        final rawId = (params['entityId'] ?? '').toString();
+    handler.initialize();
+  }
 
-        final entityType = rawType.trim().toLowerCase();
-        final entityId = rawId.trim();
+  void _dispatchNotificationRoute(String route, Map<String, dynamic> params) {
+    final navigator = appNavigatorKey.currentState;
+    if (navigator == null) return;
 
-        if (entityId.isEmpty) {
-          navigator.push(
-            MaterialPageRoute(builder: (_) => const InvitesInboxScreen()),
-          );
-          return;
-        }
+    if (route == '/collab_invite') {
+      final rawType = (params['entityType'] ?? '').toString();
+      final rawId = (params['entityId'] ?? '').toString();
 
-        if (entityType == 'events' || entityType == 'event') {
-          navigator.push(
-            MaterialPageRoute(
-              builder: (_) => EventDetailScreen(eventId: entityId),
-            ),
-          );
-          return;
-        }
+      final entityType = rawType.trim().toLowerCase();
+      final entityId = rawId.trim();
 
-        if (entityType == 'exhibitions' || entityType == 'exhibition') {
-          navigator.push(
-            MaterialPageRoute(
-              builder: (_) => ExhibitionDetailScreen(exhibitionId: entityId),
-            ),
-          );
-          return;
-        }
-
+      if (entityId.isEmpty) {
         navigator.push(
           MaterialPageRoute(builder: (_) => const InvitesInboxScreen()),
         );
         return;
       }
 
-      // Best-effort fallback to named routes.
-      try {
-        navigator.pushNamed(route, arguments: params);
-      } catch (_) {
-        // Ignore unknown routes.
+      if (entityType == 'events' || entityType == 'event') {
+        navigator.push(
+          MaterialPageRoute(
+            builder: (_) => EventDetailScreen(eventId: entityId),
+          ),
+        );
+        return;
       }
-    };
 
-    handler.initialize();
+      if (entityType == 'exhibitions' || entityType == 'exhibition') {
+        navigator.push(
+          MaterialPageRoute(
+            builder: (_) => ExhibitionDetailScreen(exhibitionId: entityId),
+          ),
+        );
+        return;
+      }
+
+      navigator.push(
+        MaterialPageRoute(builder: (_) => const InvitesInboxScreen()),
+      );
+      return;
+    }
+
+    // Best-effort fallback to named routes.
+    try {
+      navigator.pushNamed(route, arguments: params);
+    } catch (_) {
+      // Ignore unknown routes.
+    }
   }
 
   @override

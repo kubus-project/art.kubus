@@ -4,7 +4,7 @@ import 'package:app_links/app_links.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
-import '../core/app_navigator.dart';
+import '../core/app_navigator.dart' show AppStartupGate, appNavigatorKey;
 import '../core/mobile_shell_registry.dart';
 import '../services/auth/auth_deep_link_parser.dart';
 import '../services/share/share_deep_link_parser.dart';
@@ -91,7 +91,24 @@ class PlatformDeepLinkListenerProvider extends ChangeNotifier {
     _handleUri(uri, allowImmediateNavigation: false);
   }
 
+  /// Live (post-cold-start) link events can arrive while `AppInitializer` is
+  /// still deciding the deterministic cold-start route. Deferring immediate
+  /// navigation behind `AppStartupGate` until that decision lands prevents a
+  /// live event from racing it and winning non-deterministically — the same
+  /// class of race `AppStartupGate` closes for notification taps. Cold-start
+  /// seeding (`allowImmediateNavigation: false`) never navigates directly, so
+  /// it does not need to wait.
   void _handleUri(Uri uri, {bool allowImmediateNavigation = true}) {
+    if (allowImmediateNavigation) {
+      AppStartupGate.runWhenReady(
+        () => _processUri(uri, allowImmediateNavigation: true),
+      );
+      return;
+    }
+    _processUri(uri, allowImmediateNavigation: false);
+  }
+
+  void _processUri(Uri uri, {required bool allowImmediateNavigation}) {
     final raw = uri.toString().trim();
     if (raw.isEmpty) return;
 

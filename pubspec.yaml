@@ -128,6 +128,7 @@ dependencies:
   flutter_image_compress: ^2.4.0
   video_compress: ^3.1.4
   image: ^4.8.0
+  wakelock_plus: ^1.5.2
 
 # Dependency overrides to fix arkit_plugin compatibility with vector_math 2.1.4
 # The scaleByVector3 method was removed in vector_math 2.1.4

@@ -38,9 +38,13 @@ class ArcoreFlutterPlugin : FlutterPlugin, ActivityAware {
     }
 
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
-        flutterPluginBinding?.platformViewRegistry?.registerViewFactory(CHANNEL_NAME, ArCoreViewFactory(binding.activity, flutterPluginBinding?.binaryMessenger!!))
+        val engineBinding = flutterPluginBinding ?: return
+        engineBinding.platformViewRegistry.registerViewFactory(
+                CHANNEL_NAME,
+                ArCoreViewFactory(binding.activity, engineBinding.binaryMessenger)
+        )
         methodCallHandler = MethodCallHandlerImpl(
-                binding.activity, flutterPluginBinding?.binaryMessenger!!)
+                binding.activity, engineBinding.binaryMessenger)
 
     }
 
