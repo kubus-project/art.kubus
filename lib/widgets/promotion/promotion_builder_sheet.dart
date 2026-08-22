@@ -404,8 +404,9 @@ class _PromotionBuilderSheetState extends State<_PromotionBuilderSheet> {
   String _describeSubmitError(Object error) {
     final l10n = AppLocalizations.of(context)!;
     final text = error.toString();
-    if (text.contains('QUOTE_EXPIRED'))
+    if (text.contains('QUOTE_EXPIRED')) {
       return l10n.promotionBuilderQuoteExpired;
+    }
     if (text.contains('SLOT_UNAVAILABLE')) {
       return l10n.promotionBuilderSelectedSlotUnavailable;
     }
