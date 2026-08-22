@@ -2728,51 +2728,51 @@ class _ARScreenState extends State<ARScreen>
                 ),
                 Expanded(
                   child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: _placedObjects.length,
-                  itemBuilder: (context, index) {
-                    final obj = _placedObjects[index];
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      child: ListTile(
-                        leading: Icon(
-                          Icons.view_in_ar,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                        title: Text(obj['title']),
-                        subtitle: Text(
-                          l10n.commonByArtist(
-                            obj['artist']?.toString() ?? l10n.commonUnknown,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: _placedObjects.length,
+                    itemBuilder: (context, index) {
+                      final obj = _placedObjects[index];
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        child: ListTile(
+                          leading: Icon(
+                            Icons.view_in_ar,
+                            color: Theme.of(context).colorScheme.primary,
                           ),
-                        ),
-                        trailing: IconButton(
-                          icon: Icon(
-                            Icons.delete,
-                            color: Theme.of(context).colorScheme.error,
+                          title: Text(obj['title']),
+                          subtitle: Text(
+                            l10n.commonByArtist(
+                              obj['artist']?.toString() ?? l10n.commonUnknown,
+                            ),
                           ),
-                          onPressed: () {
-                            setState(() {
-                              _placedObjects.removeAt(index);
-                            });
+                          trailing: IconButton(
+                            icon: Icon(
+                              Icons.delete,
+                              color: Theme.of(context).colorScheme.error,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _placedObjects.removeAt(index);
+                              });
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showKubusSnackBar(
+                                SnackBar(
+                                  content: Text(l10n.arArtworkRemovedToast),
+                                ),
+                              );
+                            },
+                          ),
+                          onTap: () {
                             Navigator.pop(context);
-                            ScaffoldMessenger.of(context).showKubusSnackBar(
-                              SnackBar(
-                                content: Text(l10n.arArtworkRemovedToast),
-                              ),
-                            );
+                            _showArtworkDetails(obj['id']);
                           },
                         ),
-                        onTap: () {
-                          Navigator.pop(context);
-                          _showArtworkDetails(obj['id']);
-                        },
-                      ),
-                    );
-                  },
+                      );
+                    },
+                  ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
           ),
         );
       },
