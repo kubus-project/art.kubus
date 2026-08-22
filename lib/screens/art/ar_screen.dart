@@ -1073,8 +1073,8 @@ class _ARScreenState extends State<ARScreen>
   Future<void> _showArOverflow(AppLocalizations l10n) async {
     final action = await showModalBottomSheet<String>(
       context: context,
-      useSafeArea: true,
-      builder: (sheetContext) => SafeArea(
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => BackdropGlassSheet(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
@@ -2054,51 +2054,48 @@ class _ARScreenState extends State<ARScreen>
   ) async {
     final open = await showModalBottomSheet<bool>(
       context: context,
-      useSafeArea: true,
-      builder: (sheetContext) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(KubusSpacing.lg),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              Row(
-                children: <Widget>[
-                  Icon(
-                    Icons.check_circle_rounded,
-                    color: KubusColorRoles.of(sheetContext).positiveAction,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => BackdropGlassSheet(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                Icon(
+                  Icons.check_circle_rounded,
+                  color: KubusColorRoles.of(sheetContext).positiveAction,
+                ),
+                const SizedBox(width: KubusSpacing.sm),
+                Expanded(
+                  child: Text(
+                    l10n.spatialCaptureSavedTitle,
+                    style: KubusTextStyles.sheetTitle,
                   ),
-                  const SizedBox(width: KubusSpacing.sm),
-                  Expanded(
-                    child: Text(
-                      l10n.spatialCaptureSavedTitle,
-                      style: KubusTextStyles.sheetTitle,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: KubusSpacing.sm),
-              Text(
-                l10n.spatialCaptureSaved,
-                style: KubusTextStyles.sheetSubtitle,
-              ),
-              const SizedBox(height: KubusSpacing.lg),
-              KubusButton(
-                onPressed: () => Navigator.of(sheetContext).pop(true),
-                label: l10n.spatialLibraryOpen,
-                icon: Icons.video_library_outlined,
-                variant: KubusButtonVariant.accent,
-                isFullWidth: true,
-              ),
-              const SizedBox(height: KubusSpacing.sm),
-              KubusButton(
-                onPressed: () => Navigator.of(sheetContext).pop(false),
-                label: l10n.spatialCaptureContinueLater,
-                variant: KubusButtonVariant.secondary,
-                isFullWidth: true,
-              ),
-            ],
-          ),
+                ),
+              ],
+            ),
+            const SizedBox(height: KubusSpacing.sm),
+            Text(
+              l10n.spatialCaptureSaved,
+              style: KubusTextStyles.sheetSubtitle,
+            ),
+            const SizedBox(height: KubusSpacing.lg),
+            KubusButton(
+              onPressed: () => Navigator.of(sheetContext).pop(true),
+              label: l10n.spatialLibraryOpen,
+              icon: Icons.video_library_outlined,
+              variant: KubusButtonVariant.accent,
+              isFullWidth: true,
+            ),
+            const SizedBox(height: KubusSpacing.sm),
+            KubusButton(
+              onPressed: () => Navigator.of(sheetContext).pop(false),
+              label: l10n.spatialCaptureContinueLater,
+              variant: KubusButtonVariant.secondary,
+              isFullWidth: true,
+            ),
+          ],
         ),
       ),
     );
@@ -2256,16 +2253,10 @@ class _ARScreenState extends State<ARScreen>
     return showModalBottomSheet<_SpatialProcessingSelection>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: Colors.transparent,
       builder: (sheetContext) => StatefulBuilder(
-        builder: (sheetContext, setSheetState) => SafeArea(
+        builder: (sheetContext, setSheetState) => BackdropGlassSheet(
           child: SingleChildScrollView(
-            padding: EdgeInsets.fromLTRB(
-              KubusSpacing.lg,
-              KubusSpacing.lg,
-              KubusSpacing.lg,
-              MediaQuery.viewInsetsOf(sheetContext).bottom + KubusSpacing.lg,
-            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -2508,12 +2499,10 @@ class _ARScreenState extends State<ARScreen>
         initialChildSize: 0.6,
         minChildSize: 0.4,
         maxChildSize: 0.9,
-        builder: (context, scrollController) => Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(KubusRadius.xl),
-            ),
+        builder: (context, scrollController) => LiquidGlassPanel(
+          padding: EdgeInsets.zero,
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(KubusRadius.xl),
           ),
           child: Column(
             children: [
@@ -3036,13 +3025,10 @@ class _ARScreenState extends State<ARScreen>
           return SafeArea(
             child: KeyboardInsetPadding(
               extraBottom: KubusSpacing.lg,
-              child: Container(
+              child: LiquidGlassPanel(
                 margin: const EdgeInsets.all(KubusSpacing.md),
                 padding: const EdgeInsets.all(KubusSpacing.lg),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  borderRadius: BorderRadius.circular(KubusRadius.xl),
-                ),
+                borderRadius: BorderRadius.circular(KubusRadius.xl),
                 child: Form(
                   key: formKey,
                   child: SingleChildScrollView(
@@ -3501,113 +3487,113 @@ class _ARScreenState extends State<ARScreen>
               ? l10n.commonUnknown
               : (scale * 100).toStringAsFixed(0);
 
-          return Container(
+          return SizedBox(
             height: MediaQuery.of(context).size.height * 0.6,
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
+            child: LiquidGlassPanel(
+              padding: EdgeInsets.zero,
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(KubusRadius.xl),
               ),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(KubusSpacing.lg),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          title,
-                          style: KubusTypography.inter(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).colorScheme.onSurface,
+              child: Padding(
+                padding: const EdgeInsets.all(KubusSpacing.lg),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            title,
+                            style: KubusTypography.inter(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
                           ),
                         ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    l10n.commonByArtist(artist),
-                    style: KubusTypography.inter(
-                      fontSize: 16,
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withValues(alpha: 0.7),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(height: 24),
-                  _buildDetailRow(l10n.arDetailModelLabel, model),
-                  _buildDetailRow(l10n.arDetailScaleLabel, '$scalePercent%'),
-                  _buildDetailRow(
-                    l10n.arDetailPlacedLabel,
-                    _formatTimestamp(l10n, artwork['timestamp']),
-                  ),
-                  const SizedBox(height: 24),
-                  const Divider(),
-                  const SizedBox(height: 16),
-                  Text(
-                    l10n.commonActions,
-                    style: KubusTypography.inter(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.onSurface,
+                    const SizedBox(height: 8),
+                    Text(
+                      l10n.commonByArtist(artist),
+                      style: KubusTypography.inter(
+                        fontSize: 16,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.7),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      _buildInteractionButton(
-                        Icons.share_outlined,
-                        l10n.arShareButtonLabel,
-                        onTap: () {
-                          _handleShare(artwork);
-                          setModalState(() {});
-                        },
+                    const SizedBox(height: 24),
+                    _buildDetailRow(l10n.arDetailModelLabel, model),
+                    _buildDetailRow(l10n.arDetailScaleLabel, '$scalePercent%'),
+                    _buildDetailRow(
+                      l10n.arDetailPlacedLabel,
+                      _formatTimestamp(l10n, artwork['timestamp']),
+                    ),
+                    const SizedBox(height: 24),
+                    const Divider(),
+                    const SizedBox(height: 16),
+                    Text(
+                      l10n.commonActions,
+                      style: KubusTypography.inter(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
-                      const SizedBox(width: 12),
-                      _buildInteractionButton(
-                        _likedArtworks.contains(artwork['id'])
-                            ? Icons.favorite
-                            : Icons.favorite_border,
-                        _likedArtworks.contains(artwork['id'])
-                            ? l10n.arLikedButtonLabel
-                            : l10n.arLikeButtonLabel,
-                        onTap: () {
-                          _handleLike(artwork);
-                          setModalState(
-                            () {},
-                          ); // Update modal state immediately
-                        },
-                        isActive: _likedArtworks.contains(artwork['id']),
-                        activeColor: Theme.of(context).colorScheme.error,
-                      ),
-                      const SizedBox(width: 12),
-                      _buildInteractionButton(
-                        _savedArtworks.contains(artwork['id'])
-                            ? Icons.bookmark
-                            : Icons.bookmark_border,
-                        _savedArtworks.contains(artwork['id'])
-                            ? l10n.arSavedButtonLabel
-                            : l10n.arSaveButtonLabel,
-                        onTap: () {
-                          _handleSave(artwork);
-                          setModalState(
-                            () {},
-                          ); // Update modal state immediately
-                        },
-                        isActive: _savedArtworks.contains(artwork['id']),
-                        activeColor: Theme.of(context).colorScheme.primary,
-                      ),
-                    ],
-                  ),
-                ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        _buildInteractionButton(
+                          Icons.share_outlined,
+                          l10n.arShareButtonLabel,
+                          onTap: () {
+                            _handleShare(artwork);
+                            setModalState(() {});
+                          },
+                        ),
+                        const SizedBox(width: 12),
+                        _buildInteractionButton(
+                          _likedArtworks.contains(artwork['id'])
+                              ? Icons.favorite
+                              : Icons.favorite_border,
+                          _likedArtworks.contains(artwork['id'])
+                              ? l10n.arLikedButtonLabel
+                              : l10n.arLikeButtonLabel,
+                          onTap: () {
+                            _handleLike(artwork);
+                            setModalState(
+                              () {},
+                            ); // Update modal state immediately
+                          },
+                          isActive: _likedArtworks.contains(artwork['id']),
+                          activeColor: Theme.of(context).colorScheme.error,
+                        ),
+                        const SizedBox(width: 12),
+                        _buildInteractionButton(
+                          _savedArtworks.contains(artwork['id'])
+                              ? Icons.bookmark
+                              : Icons.bookmark_border,
+                          _savedArtworks.contains(artwork['id'])
+                              ? l10n.arSavedButtonLabel
+                              : l10n.arSaveButtonLabel,
+                          onTap: () {
+                            _handleSave(artwork);
+                            setModalState(
+                              () {},
+                            ); // Update modal state immediately
+                          },
+                          isActive: _savedArtworks.contains(artwork['id']),
+                          activeColor: Theme.of(context).colorScheme.primary,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           );
@@ -3914,42 +3900,213 @@ class _ARScreenState extends State<ARScreen>
           final l10n = AppLocalizations.of(context)!;
           final messenger = ScaffoldMessenger.of(context);
 
-          return Container(
+          return SizedBox(
             height: MediaQuery.of(context).size.height * 0.7,
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
+            child: LiquidGlassPanel(
+              padding: EdgeInsets.zero,
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(KubusRadius.xl),
               ),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(KubusSpacing.lg),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          l10n.arSettingsTitle,
-                          style: KubusTypography.inter(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).colorScheme.onSurface,
+              child: Padding(
+                padding: const EdgeInsets.all(KubusSpacing.lg),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            l10n.arSettingsTitle,
+                            style: KubusTypography.inter(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
                           ),
                         ),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    // Scan Settings Section
+                    if (_currentMode == 'scan') ...[
+                      Text(
+                        l10n.arScannerSettingsTitle,
+                        style: KubusTypography.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.pop(context),
+                      const SizedBox(height: 12),
+                      ListTile(
+                        leading: Icon(
+                          Icons.flash_on,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                        title: Text(
+                          l10n.arFlashControlTitle,
+                          style: KubusTypography.inter(fontSize: 14),
+                        ),
+                        subtitle: Text(
+                          _flashEnabled
+                              ? l10n.commonCurrentlyOn
+                              : l10n.commonCurrentlyOff,
+                          style: KubusTypography.inter(fontSize: 12),
+                        ),
+                        trailing: Switch(
+                          value: _flashEnabled,
+                          onChanged: (value) async {
+                            if (_scannerController != null) {
+                              try {
+                                await _scannerController.toggleTorch();
+                                if (!context.mounted || !mounted) return;
+                                setModalState(
+                                  () => _flashEnabled = !_flashEnabled,
+                                );
+                                setState(() => _flashEnabled = !_flashEnabled);
+                              } catch (e) {
+                                if (kDebugMode) {
+                                  debugPrint(
+                                      'ARScreen: Flash toggle failed: $e');
+                                }
+                                if (!context.mounted) return;
+                                messenger.showKubusSnackBar(
+                                  SnackBar(
+                                    content:
+                                        Text(l10n.arFlashNotAvailableToast),
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                        ),
                       ),
+                      ListTile(
+                        leading: Icon(
+                          Icons.qr_code_scanner,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                        title: Text(
+                          l10n.arScannerOverlayTitle,
+                          style: KubusTypography.inter(fontSize: 14),
+                        ),
+                        subtitle: Text(
+                          l10n.arScannerOverlaySubtitle,
+                          style: KubusTypography.inter(fontSize: 12),
+                        ),
+                        onTap: () {
+                          Navigator.pop(context);
+                          messenger.showKubusSnackBar(
+                            SnackBar(
+                              content: Text(l10n.arScannerOverlayResetToast),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      const Divider(),
+                      const SizedBox(height: 16),
                     ],
-                  ),
-                  const SizedBox(height: 24),
-                  // Scan Settings Section
-                  if (_currentMode == 'scan') ...[
                     Text(
-                      l10n.arScannerSettingsTitle,
+                      l10n.arDisplayTitle,
+                      style: KubusTypography.inter(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SwitchListTile(
+                      title: Text(
+                        l10n.arShowFeaturePointsTitle,
+                        style: KubusTypography.inter(fontSize: 14),
+                      ),
+                      subtitle: Text(
+                        l10n.arShowFeaturePointsSubtitle,
+                        style: KubusTypography.inter(fontSize: 12),
+                      ),
+                      value: _showFeaturePoints,
+                      onChanged: (value) {
+                        setModalState(() => _showFeaturePoints = value);
+                        setState(() => _showFeaturePoints = value);
+                      },
+                    ),
+                    SwitchListTile(
+                      title: Text(
+                        l10n.arShowPlanesTitle,
+                        style: KubusTypography.inter(fontSize: 14),
+                      ),
+                      subtitle: Text(
+                        l10n.arShowPlanesSubtitle,
+                        style: KubusTypography.inter(fontSize: 12),
+                      ),
+                      value: _showPlanes,
+                      onChanged: (value) {
+                        setModalState(() => _showPlanes = value);
+                        setState(() => _showPlanes = value);
+                      },
+                    ),
+                    SwitchListTile(
+                      title: Text(
+                        l10n.arAutoDetectSurfacesTitle,
+                        style: KubusTypography.inter(fontSize: 14),
+                      ),
+                      subtitle: Text(
+                        l10n.arAutoDetectSurfacesSubtitle,
+                        style: KubusTypography.inter(fontSize: 12),
+                      ),
+                      value: _autoDetectSurfaces,
+                      onChanged: (value) {
+                        setModalState(() => _autoDetectSurfaces = value);
+                        setState(() => _autoDetectSurfaces = value);
+                      },
+                    ),
+                    SwitchListTile(
+                      title: Text(
+                        l10n.arDebugInfoTitle,
+                        style: KubusTypography.inter(fontSize: 14),
+                      ),
+                      subtitle: Text(
+                        l10n.arDebugInfoSubtitle,
+                        style: KubusTypography.inter(fontSize: 12),
+                      ),
+                      value: _showDebugInfo,
+                      onChanged: (value) {
+                        setModalState(() => _showDebugInfo = value);
+                        setState(() => _showDebugInfo = value);
+                      },
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      l10n.arModelScaleLabel(
+                        (_modelScale * 100).toStringAsFixed(0),
+                      ),
+                      style: KubusTypography.inter(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                    ),
+                    Slider(
+                      value: _modelScale,
+                      min: 0.5,
+                      max: 2.0,
+                      divisions: 15,
+                      label: '${(_modelScale * 100).toStringAsFixed(0)}%',
+                      onChanged: (value) {
+                        setModalState(() => _modelScale = value);
+                        setState(() => _modelScale = value);
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    const Divider(),
+                    const SizedBox(height: 16),
+                    Text(
+                      l10n.commonActions,
                       style: KubusTypography.inter(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
@@ -3958,223 +4115,55 @@ class _ARScreenState extends State<ARScreen>
                     ),
                     const SizedBox(height: 12),
                     ListTile(
-                      leading: Icon(
-                        Icons.flash_on,
-                        color: Theme.of(context).colorScheme.primary,
+                      leading: const Icon(Icons.add_location_alt_outlined),
+                      title: const Text('Create artwork location marker'),
+                      subtitle: const Text(
+                        'Advanced contributor action using your live location.',
                       ),
-                      title: Text(
-                        l10n.arFlashControlTitle,
-                        style: KubusTypography.inter(fontSize: 14),
-                      ),
-                      subtitle: Text(
-                        _flashEnabled
-                            ? l10n.commonCurrentlyOn
-                            : l10n.commonCurrentlyOff,
-                        style: KubusTypography.inter(fontSize: 12),
-                      ),
-                      trailing: Switch(
-                        value: _flashEnabled,
-                        onChanged: (value) async {
-                          if (_scannerController != null) {
-                            try {
-                              await _scannerController.toggleTorch();
-                              if (!context.mounted || !mounted) return;
-                              setModalState(
-                                () => _flashEnabled = !_flashEnabled,
-                              );
-                              setState(() => _flashEnabled = !_flashEnabled);
-                            } catch (e) {
-                              if (kDebugMode) {
-                                debugPrint('ARScreen: Flash toggle failed: $e');
-                              }
-                              if (!context.mounted) return;
-                              messenger.showKubusSnackBar(
-                                SnackBar(
-                                  content: Text(l10n.arFlashNotAvailableToast),
-                                ),
-                              );
-                            }
-                          }
-                        },
-                      ),
+                      onTap: () {
+                        Navigator.pop(context);
+                        _createArtwork();
+                      },
                     ),
                     ListTile(
-                      leading: Icon(
-                        Icons.qr_code_scanner,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
+                      leading: const Icon(Icons.delete_sweep),
                       title: Text(
-                        l10n.arScannerOverlayTitle,
+                        l10n.arClearAllArtworksTitle,
                         style: KubusTypography.inter(fontSize: 14),
                       ),
                       subtitle: Text(
-                        l10n.arScannerOverlaySubtitle,
+                        l10n.arClearAllArtworksSubtitle,
+                        style: KubusTypography.inter(fontSize: 12),
+                      ),
+                      onTap: () {
+                        setState(() => _placedObjects.clear());
+                        Navigator.pop(context);
+                        messenger.showKubusSnackBar(
+                          SnackBar(
+                              content: Text(l10n.arAllArtworksClearedToast)),
+                        );
+                      },
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.refresh),
+                      title: Text(
+                        l10n.arResetSessionTitle,
+                        style: KubusTypography.inter(fontSize: 14),
+                      ),
+                      subtitle: Text(
+                        l10n.arResetSessionSubtitle,
                         style: KubusTypography.inter(fontSize: 12),
                       ),
                       onTap: () {
                         Navigator.pop(context);
+                        _initializeAR();
                         messenger.showKubusSnackBar(
-                          SnackBar(
-                            content: Text(l10n.arScannerOverlayResetToast),
-                          ),
+                          SnackBar(content: Text(l10n.arSessionResetToast)),
                         );
                       },
                     ),
-                    const SizedBox(height: 16),
-                    const Divider(),
-                    const SizedBox(height: 16),
                   ],
-                  Text(
-                    l10n.arDisplayTitle,
-                    style: KubusTypography.inter(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  SwitchListTile(
-                    title: Text(
-                      l10n.arShowFeaturePointsTitle,
-                      style: KubusTypography.inter(fontSize: 14),
-                    ),
-                    subtitle: Text(
-                      l10n.arShowFeaturePointsSubtitle,
-                      style: KubusTypography.inter(fontSize: 12),
-                    ),
-                    value: _showFeaturePoints,
-                    onChanged: (value) {
-                      setModalState(() => _showFeaturePoints = value);
-                      setState(() => _showFeaturePoints = value);
-                    },
-                  ),
-                  SwitchListTile(
-                    title: Text(
-                      l10n.arShowPlanesTitle,
-                      style: KubusTypography.inter(fontSize: 14),
-                    ),
-                    subtitle: Text(
-                      l10n.arShowPlanesSubtitle,
-                      style: KubusTypography.inter(fontSize: 12),
-                    ),
-                    value: _showPlanes,
-                    onChanged: (value) {
-                      setModalState(() => _showPlanes = value);
-                      setState(() => _showPlanes = value);
-                    },
-                  ),
-                  SwitchListTile(
-                    title: Text(
-                      l10n.arAutoDetectSurfacesTitle,
-                      style: KubusTypography.inter(fontSize: 14),
-                    ),
-                    subtitle: Text(
-                      l10n.arAutoDetectSurfacesSubtitle,
-                      style: KubusTypography.inter(fontSize: 12),
-                    ),
-                    value: _autoDetectSurfaces,
-                    onChanged: (value) {
-                      setModalState(() => _autoDetectSurfaces = value);
-                      setState(() => _autoDetectSurfaces = value);
-                    },
-                  ),
-                  SwitchListTile(
-                    title: Text(
-                      l10n.arDebugInfoTitle,
-                      style: KubusTypography.inter(fontSize: 14),
-                    ),
-                    subtitle: Text(
-                      l10n.arDebugInfoSubtitle,
-                      style: KubusTypography.inter(fontSize: 12),
-                    ),
-                    value: _showDebugInfo,
-                    onChanged: (value) {
-                      setModalState(() => _showDebugInfo = value);
-                      setState(() => _showDebugInfo = value);
-                    },
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    l10n.arModelScaleLabel(
-                      (_modelScale * 100).toStringAsFixed(0),
-                    ),
-                    style: KubusTypography.inter(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                  ),
-                  Slider(
-                    value: _modelScale,
-                    min: 0.5,
-                    max: 2.0,
-                    divisions: 15,
-                    label: '${(_modelScale * 100).toStringAsFixed(0)}%',
-                    onChanged: (value) {
-                      setModalState(() => _modelScale = value);
-                      setState(() => _modelScale = value);
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  const Divider(),
-                  const SizedBox(height: 16),
-                  Text(
-                    l10n.commonActions,
-                    style: KubusTypography.inter(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  ListTile(
-                    leading: const Icon(Icons.add_location_alt_outlined),
-                    title: const Text('Create artwork location marker'),
-                    subtitle: const Text(
-                      'Advanced contributor action using your live location.',
-                    ),
-                    onTap: () {
-                      Navigator.pop(context);
-                      _createArtwork();
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.delete_sweep),
-                    title: Text(
-                      l10n.arClearAllArtworksTitle,
-                      style: KubusTypography.inter(fontSize: 14),
-                    ),
-                    subtitle: Text(
-                      l10n.arClearAllArtworksSubtitle,
-                      style: KubusTypography.inter(fontSize: 12),
-                    ),
-                    onTap: () {
-                      setState(() => _placedObjects.clear());
-                      Navigator.pop(context);
-                      messenger.showKubusSnackBar(
-                        SnackBar(content: Text(l10n.arAllArtworksClearedToast)),
-                      );
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.refresh),
-                    title: Text(
-                      l10n.arResetSessionTitle,
-                      style: KubusTypography.inter(fontSize: 14),
-                    ),
-                    subtitle: Text(
-                      l10n.arResetSessionSubtitle,
-                      style: KubusTypography.inter(fontSize: 12),
-                    ),
-                    onTap: () {
-                      Navigator.pop(context);
-                      _initializeAR();
-                      messenger.showKubusSnackBar(
-                        SnackBar(content: Text(l10n.arSessionResetToast)),
-                      );
-                    },
-                  ),
-                ],
+                ),
               ),
             ),
           );
