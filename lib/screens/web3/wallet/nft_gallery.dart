@@ -115,10 +115,10 @@ class _NFTGalleryState extends State<NFTGallery> {
                   width: double.infinity,
                   child: EmptyStateCard(
                     icon: Icons.account_balance_wallet,
-                    title: 'Connect your wallet',
-                    description: 'Connect a wallet to view your collectibles.',
+                    title: l10n.walletGalleryConnectTitle,
+                    description: l10n.walletGalleryConnectDescription,
                     showAction: true,
-                    actionLabel: 'Connect Wallet',
+                    actionLabel: l10n.walletGalleryConnectAction,
                     onAction: () =>
                         Navigator.of(context).pushNamed('/connect-wallet'),
                   ),
@@ -206,7 +206,8 @@ class _NFTGalleryState extends State<NFTGallery> {
     bool isSmallScreen,
   ) {
     final scheme = Theme.of(context).colorScheme;
-    final title = series?.name ?? 'Collectible';
+    final l10n = AppLocalizations.of(context)!;
+    final title = series?.name ?? l10n.walletGalleryDigitalEditionFallbackTitle;
     final rawImage = series?.imageUrl ?? series?.animationUrl;
     final resolvedImage = rawImage == null
         ? null
@@ -258,7 +259,7 @@ class _NFTGalleryState extends State<NFTGallery> {
                         ),
                       ),
                       child: Text(
-                        collectible.status.name.toUpperCase(),
+                        _collectibleStatusLabel(l10n, collectible.status),
                         style: KubusTypography.inter(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
@@ -308,7 +309,7 @@ class _NFTGalleryState extends State<NFTGallery> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Token #${collectible.tokenId}',
+                          l10n.walletGalleryTokenId(collectible.tokenId),
                           style: KubusTypography.inter(
                             fontSize: 12,
                             color: scheme.onSurface.withValues(alpha: 0.7),
@@ -321,8 +322,10 @@ class _NFTGalleryState extends State<NFTGallery> {
                   const Spacer(),
                   Text(
                     (collectible.transactionHash ?? '').isNotEmpty
-                        ? 'Tx: ${_shortenHash(collectible.transactionHash ?? '')}'
-                        : 'Tx: —',
+                        ? l10n.walletGalleryTransaction(
+                            _shortenHash(collectible.transactionHash ?? ''),
+                          )
+                        : l10n.walletGalleryTransactionUnavailable,
                     style: KubusTypography.inter(
                       fontSize: 11,
                       color: scheme.onSurface.withValues(alpha: 0.55),
@@ -337,6 +340,19 @@ class _NFTGalleryState extends State<NFTGallery> {
         ],
       ),
     );
+  }
+
+  String _collectibleStatusLabel(
+    AppLocalizations l10n,
+    CollectibleStatus status,
+  ) {
+    return switch (status) {
+      CollectibleStatus.minted => l10n.walletGalleryStatusMinted,
+      CollectibleStatus.listed => l10n.walletGalleryStatusListed,
+      CollectibleStatus.sold => l10n.walletGalleryStatusSold,
+      CollectibleStatus.transferred => l10n.walletGalleryStatusTransferred,
+      CollectibleStatus.burned => l10n.walletGalleryStatusBurned,
+    };
   }
 
   Widget _imageFallback(Color rarityColor, ColorScheme scheme) {

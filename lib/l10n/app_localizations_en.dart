@@ -142,9 +142,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String archiveObjectSeriesDefaultDescription(
-    Object artworkTitle,
-    Object artistName,
-  ) {
+      Object artworkTitle, Object artistName) {
     return 'Digital editions of $artworkTitle by $artistName';
   }
 
@@ -179,11 +177,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String communityAchievementUnlockedToast(
-    Object title,
-    Object extra,
-    Object amount,
-    Object currency,
-  ) {
+      Object title, Object extra, Object amount, Object currency) {
     return 'Achievement unlocked\n$title$extra\n+$amount $currency recognition';
   }
 
@@ -232,9 +226,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String recentActivityArchiveObjectStatusDescription(
-    Object status,
-    Object title,
-  ) {
+      Object status, Object title) {
     return 'Digital edition $status for $title';
   }
 
@@ -2373,7 +2365,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get desktopSettingsFeatureNftMintingDescription =>
-      'Create and manage digital records connected to artworks, visits or contributions.';
+      'Create and manage digital editions connected to artworks.';
 
   @override
   String get desktopSettingsFeatureCommunityTitle => 'Community';
@@ -2589,10 +2581,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String walletSessionStatusSummary(
-    Object accountStatus,
-    Object walletStatus,
-    Object signerStatus,
-  ) {
+      Object accountStatus, Object walletStatus, Object signerStatus) {
     return 'Account: $accountStatus · Wallet: $walletStatus · Access: $signerStatus';
   }
 
@@ -7183,10 +7172,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String receiveTokenSidebarTransferSubtitle(
-    Object token,
-    Object amount,
-    Object date,
-  ) {
+      Object token, Object amount, Object date) {
     return '$token · $amount · $date';
   }
 
@@ -7241,10 +7227,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String sendTokenSidebarRecipientSubtitle(
-    Object token,
-    Object amount,
-    Object date,
-  ) {
+      Object token, Object amount, Object date) {
     return '$token · $amount · $date';
   }
 
@@ -7355,10 +7338,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String sendTokenSendSuccessWithSignatureToast(
-    Object amount,
-    Object token,
-    Object signature,
-  ) {
+      Object amount, Object token, Object signature) {
     return '$amount $token submitted. Tx: $signature';
   }
 
@@ -9141,9 +9121,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String marketplaceOpenCollectibleDetailsSemantic(
-    Object title,
-    Object tokenId,
-  ) {
+      Object title, Object tokenId) {
     return 'Open details for $title, token $tokenId';
   }
 
@@ -9604,9 +9582,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String daoDelegateVotingPowerDialogBody(
-    Object votingPower,
-    Object delegateName,
-  ) {
+      Object votingPower, Object delegateName) {
     return 'Are you sure you want to delegate your $votingPower voting power to $delegateName?';
   }
 
@@ -11583,10 +11559,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String walletSwapSubmittedToastWithSignature(
-    Object fromToken,
-    Object toToken,
-    Object signature,
-  ) {
+      Object fromToken, Object toToken, Object signature) {
     return 'Swap submitted: $fromToken ? $toToken. Tx: $signature';
   }
 
@@ -13536,9 +13509,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String analyticsRecommendationConsistencyDescription(
-    Object activeBuckets,
-    Object totalBuckets,
-  ) {
+      Object activeBuckets, Object totalBuckets) {
     return 'Activity was recorded on $activeBuckets of $totalBuckets buckets.';
   }
 
@@ -13736,9 +13707,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String daoProposalVotesSupportSummaryLabel(
-    Object totalVotes,
-    Object supportPct,
-  ) {
+      Object totalVotes, Object supportPct) {
     return '$totalVotes votes · $supportPct% support';
   }
 
@@ -15140,10 +15109,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String analyticsInsightActivePatternDescription(
-    Object activeBuckets,
-    Object totalBuckets,
-    Object metric,
-  ) {
+      Object activeBuckets, Object totalBuckets, Object metric) {
     return '$activeBuckets of $totalBuckets intervals recorded $metric.';
   }
 
@@ -15259,7 +15225,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Create a digital edition series for this artwork.';
 
   @override
-  String get artworkEditionSeriesNameLabel => 'Series name';
+  String get artworkEditionSeriesNameLabel => 'Edition series name';
 
   @override
   String get artworkEditionSizeLabel => 'Edition size';
@@ -15269,4 +15235,181 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get artworkEditionCreateAction => 'Create digital edition';
+
+  @override
+  String get artworkCreatorExtensionsTitle => 'Artwork extensions';
+
+  @override
+  String get artworkCreatorDigitalEditionWalletRequired =>
+      'Create an optional digital edition after publishing. A wallet is required for this feature.';
+
+  @override
+  String get artworkEditionSeriesDescriptionLabel => 'Series description';
+
+  @override
+  String get artworkEditionDefaultsToArtworkTitle =>
+      'Defaults to the artwork title';
+
+  @override
+  String get artworkEditionDefaultsToArtworkDescription =>
+      'Defaults to the artwork description';
+
+  @override
+  String get artworkEditionPriceKub8Label => 'Edition price (KUB8)';
+
+  @override
+  String get artworkEditionCreatorRoyaltyLabel => 'Creator royalty (%)';
+
+  @override
+  String get artworkEditionCreatorRoyaltyHelp => 'Applied to secondary sales';
+
+  @override
+  String get artworkEditionTypeLabel => 'Digital edition type';
+
+  @override
+  String get artworkEditionTypeStandard => 'Standard digital edition';
+
+  @override
+  String get artworkEditionTypeAttendanceRecord => 'Attendance record';
+
+  @override
+  String get artworkEditionTypeAchievement => 'Achievement record';
+
+  @override
+  String get artworkEditionTypeLimited => 'Limited digital edition';
+
+  @override
+  String get artworkCreatorAttendanceRecordsTitle => 'Attendance records';
+
+  @override
+  String get artworkCreatorAttendanceNoneTitle => 'No attendance record';
+
+  @override
+  String get artworkCreatorAttendanceNoneDescription =>
+      'Publish without an attendance record.';
+
+  @override
+  String get artworkCreatorAttendanceExistingTitle =>
+      'Use an existing attendance record';
+
+  @override
+  String get artworkCreatorAttendanceExistingDescription =>
+      'Add an event ID or record link from an existing attendance setup.';
+
+  @override
+  String get artworkCreatorAttendanceCreateTitle => 'Create with art.kubus';
+
+  @override
+  String get artworkCreatorAttendanceCreateDescription =>
+      'art.kubus creates an attendance record link after publication.';
+
+  @override
+  String get artworkCreatorAttendanceEventIdLabel => 'Attendance event ID';
+
+  @override
+  String get artworkCreatorAttendanceEventIdHint =>
+      'Paste an existing event ID.';
+
+  @override
+  String get artworkCreatorAttendanceRecordLinkHint =>
+      'A link visitors can open to save the attendance record.';
+
+  @override
+  String get artworkCreatorAttendanceRecognitionAmountLabel =>
+      'Recognition amount (KUB8)';
+
+  @override
+  String get artworkCreatorAttendanceClaimWindowLabel => 'Claim window (days)';
+
+  @override
+  String get artworkCreatorAttendanceBadgeTitleLabel =>
+      'Attendance record title';
+
+  @override
+  String get artworkCreatorAttendanceBadgeDescriptionLabel =>
+      'Attendance record description';
+
+  @override
+  String get artworkCreatorAttendanceBadgeImageLabel =>
+      'Attendance record image';
+
+  @override
+  String get artworkCreatorAttendanceUsesArtworkCover =>
+      'Uses the artwork cover by default.';
+
+  @override
+  String get artworkCreatorCustomImageLabel => 'Custom image';
+
+  @override
+  String get artworkCreatorAttendanceUseCoverInstead =>
+      'Use artwork cover instead';
+
+  @override
+  String get artworkCreatorAttendanceGeneratedAfterPublish =>
+      'The attendance record link is generated when you publish.';
+
+  @override
+  String get artworkCreatorEnableAr => 'Enable AR';
+
+  @override
+  String get artworkCreatorArAfterPublish =>
+      'Generate or upload a marker after publishing.';
+
+  @override
+  String get artworkCreatorArUnavailable =>
+      'AR is currently unavailable on this platform.';
+
+  @override
+  String get artworkCreatorManageAr => 'Create or manage AR';
+
+  @override
+  String get walletGalleryConnectTitle => 'Connect your wallet';
+
+  @override
+  String get walletGalleryConnectDescription =>
+      'Connect a wallet to view your digital editions.';
+
+  @override
+  String get walletGalleryConnectAction => 'Connect wallet';
+
+  @override
+  String get walletGalleryDigitalEditionFallbackTitle => 'Digital edition';
+
+  @override
+  String walletGalleryTokenId(Object tokenId) {
+    return 'Token #$tokenId';
+  }
+
+  @override
+  String walletGalleryTransaction(Object hash) {
+    return 'Transaction: $hash';
+  }
+
+  @override
+  String get walletGalleryTransactionUnavailable => 'Transaction unavailable';
+
+  @override
+  String get walletGalleryStatusMinted => 'Issued';
+
+  @override
+  String get walletGalleryStatusListed => 'Listed';
+
+  @override
+  String get walletGalleryStatusSold => 'Sold';
+
+  @override
+  String get walletGalleryStatusTransferred => 'Transferred';
+
+  @override
+  String get walletGalleryStatusBurned => 'Retired';
+
+  @override
+  String get artworkCreatorFeeEstimateTitle => 'Estimated network fees';
+
+  @override
+  String get artworkCreatorFeeEstimateUnavailable => 'Unavailable';
+
+  @override
+  String get artworkCreatorAttendanceImageTooSmall =>
+      'The attendance record image must be at least 256 px on its shortest side.';
 }

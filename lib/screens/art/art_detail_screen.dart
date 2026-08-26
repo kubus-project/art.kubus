@@ -2360,7 +2360,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                 TextField(
                   controller: descController,
                   decoration: InputDecoration(
-                    labelText: 'Description',
+                    labelText: l10n.commonDescription,
                     labelStyle: KubusTypography.inter(),
                     border: const OutlineInputBorder(),
                   ),
@@ -2395,10 +2395,10 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                 TextField(
                   controller: royaltyController,
                   decoration: InputDecoration(
-                    labelText: 'Royalty %',
+                    labelText: l10n.artworkEditionCreatorRoyaltyLabel,
                     labelStyle: KubusTypography.inter(),
                     border: const OutlineInputBorder(),
-                    helperText: 'Creator royalty on secondary sales (0-100)',
+                    helperText: l10n.artworkEditionCreatorRoyaltyHelp,
                     helperStyle: KubusTypography.inter(fontSize: 12),
                   ),
                   style: KubusTypography.inter(),
@@ -2410,7 +2410,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                 DropdownButtonFormField<CollectibleType>(
                   initialValue: selectedType,
                   decoration: InputDecoration(
-                    labelText: l10n.artworkCreatorCreateDigitalEdition,
+                    labelText: l10n.artworkEditionTypeLabel,
                     labelStyle: KubusTypography.inter(),
                     border: const OutlineInputBorder(),
                   ),
@@ -2422,7 +2422,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                     return DropdownMenuItem(
                       value: type,
                       child: Text(
-                        type.toString().split('.').last.toUpperCase(),
+                        _collectibleTypeLabel(l10n, type),
                         style: KubusTypography.inter(
                           color: Theme.of(context).colorScheme.onSurface,
                         ),
@@ -2442,7 +2442,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
             TextButton(
               onPressed: () => Navigator.pop(context),
               child: Text(
-                'Cancel',
+                l10n.commonCancel,
                 style: KubusTypography.inter(
                   color: Theme.of(context).colorScheme.outline,
                 ),
@@ -2475,6 +2475,18 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         ),
       ),
     );
+  }
+
+  String _collectibleTypeLabel(
+    AppLocalizations l10n,
+    CollectibleType type,
+  ) {
+    return switch (type) {
+      CollectibleType.nft => l10n.artworkEditionTypeStandard,
+      CollectibleType.poap => l10n.artworkEditionTypeAttendanceRecord,
+      CollectibleType.achievement => l10n.artworkEditionTypeAchievement,
+      CollectibleType.limitedEdition => l10n.artworkEditionTypeLimited,
+    };
   }
 
   Future<void> _mintNFT({
@@ -2544,7 +2556,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
             ),
             const SizedBox(height: 8),
             Text(
-              'This may take a few moments',
+              l10n.archiveObjectCreationPleaseWait,
               style: KubusTypography.inter(
                 fontSize: 14,
                 color: Theme.of(

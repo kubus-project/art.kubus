@@ -144,9 +144,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String archiveObjectSeriesDefaultDescription(
-    Object artworkTitle,
-    Object artistName,
-  ) {
+      Object artworkTitle, Object artistName) {
     return 'Digitalne izdaje umetnine $artworkTitle, avtor: $artistName';
   }
 
@@ -182,11 +180,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String communityAchievementUnlockedToast(
-    Object title,
-    Object extra,
-    Object amount,
-    Object currency,
-  ) {
+      Object title, Object extra, Object amount, Object currency) {
     return 'Dosežek odklenjen\n$title$extra\n+$amount $currency priznanja';
   }
 
@@ -234,9 +228,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String recentActivityArchiveObjectStatusDescription(
-    Object status,
-    Object title,
-  ) {
+      Object status, Object title) {
     return 'Digitalna izdaja $status za $title';
   }
 
@@ -2388,7 +2380,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get desktopSettingsFeatureNftMintingDescription =>
-      'Ustvarjaj in upravljaj digitalne zapise, povezane z umetninami, obiski ali prispevki.';
+      'Ustvarjaj in upravljaj digitalne izdaje, povezane z umetninami.';
 
   @override
   String get desktopSettingsFeatureCommunityTitle => 'Skupnost';
@@ -2605,10 +2597,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String walletSessionStatusSummary(
-    Object accountStatus,
-    Object walletStatus,
-    Object signerStatus,
-  ) {
+      Object accountStatus, Object walletStatus, Object signerStatus) {
     return 'Račun: $accountStatus · Denarnica: $walletStatus · Dostop: $signerStatus';
   }
 
@@ -7237,10 +7226,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String receiveTokenSidebarTransferSubtitle(
-    Object token,
-    Object amount,
-    Object date,
-  ) {
+      Object token, Object amount, Object date) {
     return '$token • $amount • $date';
   }
 
@@ -7295,10 +7281,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String sendTokenSidebarRecipientSubtitle(
-    Object token,
-    Object amount,
-    Object date,
-  ) {
+      Object token, Object amount, Object date) {
     return '$token • $amount • $date';
   }
 
@@ -7410,10 +7393,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String sendTokenSendSuccessWithSignatureToast(
-    Object amount,
-    Object token,
-    Object signature,
-  ) {
+      Object amount, Object token, Object signature) {
     return '$amount $token oddano. Tx: $signature';
   }
 
@@ -9215,9 +9195,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String marketplaceOpenCollectibleDetailsSemantic(
-    Object title,
-    Object tokenId,
-  ) {
+      Object title, Object tokenId) {
     return 'Odpri podrobnosti za $title, žeton $tokenId';
   }
 
@@ -9684,9 +9662,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String daoDelegateVotingPowerDialogBody(
-    Object votingPower,
-    Object delegateName,
-  ) {
+      Object votingPower, Object delegateName) {
     return 'Ali res želiš delegirati svojo glasovalno moč $votingPower delegatu $delegateName?';
   }
 
@@ -11698,10 +11674,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String walletSwapSubmittedToastWithSignature(
-    Object fromToken,
-    Object toToken,
-    Object signature,
-  ) {
+      Object fromToken, Object toToken, Object signature) {
     return 'Zamenjava oddana: $fromToken → $toToken. Tx: $signature';
   }
 
@@ -13676,9 +13649,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String analyticsRecommendationConsistencyDescription(
-    Object activeBuckets,
-    Object totalBuckets,
-  ) {
+      Object activeBuckets, Object totalBuckets) {
     return 'Aktivnost je bila zabeležena v $activeBuckets od $totalBuckets intervalov.';
   }
 
@@ -13880,9 +13851,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String daoProposalVotesSupportSummaryLabel(
-    Object totalVotes,
-    Object supportPct,
-  ) {
+      Object totalVotes, Object supportPct) {
     return '$totalVotes glasov • $supportPct% podpore';
   }
 
@@ -15293,10 +15262,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String analyticsInsightActivePatternDescription(
-    Object activeBuckets,
-    Object totalBuckets,
-    Object metric,
-  ) {
+      Object activeBuckets, Object totalBuckets, Object metric) {
     return '$activeBuckets od $totalBuckets intervalov je zabeležilo: $metric.';
   }
 
@@ -15414,7 +15380,7 @@ class AppLocalizationsSl extends AppLocalizations {
       'Za to umetnino ustvari serijo digitalnih izdaj.';
 
   @override
-  String get artworkEditionSeriesNameLabel => 'Ime serije';
+  String get artworkEditionSeriesNameLabel => 'Ime serije digitalnih izdaj';
 
   @override
   String get artworkEditionSizeLabel => 'Velikost izdaje';
@@ -15424,4 +15390,183 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get artworkEditionCreateAction => 'Ustvari digitalno izdajo';
+
+  @override
+  String get artworkCreatorExtensionsTitle => 'Razširitve umetnine';
+
+  @override
+  String get artworkCreatorDigitalEditionWalletRequired =>
+      'Po objavi lahko ustvariš neobvezno digitalno izdajo. Za to funkcijo potrebuješ denarnico.';
+
+  @override
+  String get artworkEditionSeriesDescriptionLabel => 'Opis serije';
+
+  @override
+  String get artworkEditionDefaultsToArtworkTitle =>
+      'Privzeto se uporabi naslov umetnine';
+
+  @override
+  String get artworkEditionDefaultsToArtworkDescription =>
+      'Privzeto se uporabi opis umetnine';
+
+  @override
+  String get artworkEditionPriceKub8Label => 'Cena izdaje (KUB8)';
+
+  @override
+  String get artworkEditionCreatorRoyaltyLabel => 'Avtorski delež (%)';
+
+  @override
+  String get artworkEditionCreatorRoyaltyHelp =>
+      'Uporabi se pri nadaljnjih prodajah';
+
+  @override
+  String get artworkEditionTypeLabel => 'Vrsta digitalne izdaje';
+
+  @override
+  String get artworkEditionTypeStandard => 'Standardna digitalna izdaja';
+
+  @override
+  String get artworkEditionTypeAttendanceRecord => 'Zapis prisotnosti';
+
+  @override
+  String get artworkEditionTypeAchievement => 'Zapis dosežka';
+
+  @override
+  String get artworkEditionTypeLimited => 'Omejena digitalna izdaja';
+
+  @override
+  String get artworkCreatorAttendanceRecordsTitle => 'Zapisi prisotnosti';
+
+  @override
+  String get artworkCreatorAttendanceNoneTitle => 'Brez zapisa prisotnosti';
+
+  @override
+  String get artworkCreatorAttendanceNoneDescription =>
+      'Objavi brez zapisa prisotnosti.';
+
+  @override
+  String get artworkCreatorAttendanceExistingTitle =>
+      'Uporabi obstoječi zapis prisotnosti';
+
+  @override
+  String get artworkCreatorAttendanceExistingDescription =>
+      'Dodaj ID dogodka ali povezavo do zapisa iz obstoječe nastavitve prisotnosti.';
+
+  @override
+  String get artworkCreatorAttendanceCreateTitle => 'Ustvari z art.kubus';
+
+  @override
+  String get artworkCreatorAttendanceCreateDescription =>
+      'art.kubus po objavi ustvari povezavo do zapisa prisotnosti.';
+
+  @override
+  String get artworkCreatorAttendanceEventIdLabel => 'ID dogodka prisotnosti';
+
+  @override
+  String get artworkCreatorAttendanceEventIdHint =>
+      'Prilepi obstoječi ID dogodka.';
+
+  @override
+  String get artworkCreatorAttendanceRecordLinkHint =>
+      'Povezava, ki jo lahko obiskovalci odprejo in shranijo zapis prisotnosti.';
+
+  @override
+  String get artworkCreatorAttendanceRecognitionAmountLabel =>
+      'Količina priznanja (KUB8)';
+
+  @override
+  String get artworkCreatorAttendanceClaimWindowLabel =>
+      'Obdobje prevzema (dni)';
+
+  @override
+  String get artworkCreatorAttendanceBadgeTitleLabel =>
+      'Naslov zapisa prisotnosti';
+
+  @override
+  String get artworkCreatorAttendanceBadgeDescriptionLabel =>
+      'Opis zapisa prisotnosti';
+
+  @override
+  String get artworkCreatorAttendanceBadgeImageLabel =>
+      'Slika zapisa prisotnosti';
+
+  @override
+  String get artworkCreatorAttendanceUsesArtworkCover =>
+      'Privzeto se uporabi naslovna slika umetnine.';
+
+  @override
+  String get artworkCreatorCustomImageLabel => 'Lastna slika';
+
+  @override
+  String get artworkCreatorAttendanceUseCoverInstead =>
+      'Uporabi naslovno sliko umetnine';
+
+  @override
+  String get artworkCreatorAttendanceGeneratedAfterPublish =>
+      'Povezava do zapisa prisotnosti se ustvari ob objavi.';
+
+  @override
+  String get artworkCreatorEnableAr => 'Omogoči AR';
+
+  @override
+  String get artworkCreatorArAfterPublish =>
+      'Po objavi lahko ustvariš ali naložiš oznako.';
+
+  @override
+  String get artworkCreatorArUnavailable =>
+      'AR na tej platformi trenutno ni na voljo.';
+
+  @override
+  String get artworkCreatorManageAr => 'Ustvari ali upravljaj AR';
+
+  @override
+  String get walletGalleryConnectTitle => 'Poveži denarnico';
+
+  @override
+  String get walletGalleryConnectDescription =>
+      'Poveži denarnico za ogled svojih digitalnih izdaj.';
+
+  @override
+  String get walletGalleryConnectAction => 'Poveži denarnico';
+
+  @override
+  String get walletGalleryDigitalEditionFallbackTitle => 'Digitalna izdaja';
+
+  @override
+  String walletGalleryTokenId(Object tokenId) {
+    return 'Žeton št. $tokenId';
+  }
+
+  @override
+  String walletGalleryTransaction(Object hash) {
+    return 'Transakcija: $hash';
+  }
+
+  @override
+  String get walletGalleryTransactionUnavailable => 'Transakcija ni na voljo';
+
+  @override
+  String get walletGalleryStatusMinted => 'Izdana';
+
+  @override
+  String get walletGalleryStatusListed => 'V prodaji';
+
+  @override
+  String get walletGalleryStatusSold => 'Prodana';
+
+  @override
+  String get walletGalleryStatusTransferred => 'Prenesena';
+
+  @override
+  String get walletGalleryStatusBurned => 'Umaknjena';
+
+  @override
+  String get artworkCreatorFeeEstimateTitle => 'Predvideni stroški omrežja';
+
+  @override
+  String get artworkCreatorFeeEstimateUnavailable => 'Ni na voljo';
+
+  @override
+  String get artworkCreatorAttendanceImageTooSmall =>
+      'Slika zapisa prisotnosti mora biti na krajši stranici velika vsaj 256 px.';
 }

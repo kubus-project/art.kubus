@@ -431,11 +431,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
     const minSide = 256;
     if (width < minSide || height < minSide) {
       messenger.showKubusSnackBar(
-        const SnackBar(
-          content: Text(
-            'Badge image is too small. Minimum is 256px on the shortest side.',
-          ),
-        ),
+        SnackBar(content: Text(l10n.artworkCreatorAttendanceImageTooSmall)),
       );
       return;
     }
@@ -1096,7 +1092,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
     final l10n = AppLocalizations.of(context)!;
 
     return CreatorSection(
-      title: 'Publishing layers',
+      title: l10n.artworkCreatorExtensionsTitle,
       children: [
         CreatorInfoBox(
           text: l10n.artworkCreatorOptionalExtensionsDescription,
@@ -1109,7 +1105,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
           title: l10n.artworkCreatorCreateDigitalEdition,
           subtitle: (AppConfig.isFeatureEnabled('web3') &&
                   AppConfig.isFeatureEnabled('nftMinting'))
-              ? 'You can create it after publishing (wallet required).'
+              ? l10n.artworkCreatorDigitalEditionWalletRequired
               : l10n.artworkCreatorDigitalEditionUnavailable,
           value: draft.mintNftAfterPublish,
           onChanged: (AppConfig.isFeatureEnabled('web3') &&
@@ -1127,9 +1123,9 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
           const CreatorFieldSpacing(),
           CreatorTextField(
             controller: _nftSeriesNameController,
-            label: 'Series name',
+            label: l10n.artworkEditionSeriesNameLabel,
             hint: draft.title.trim().isEmpty
-                ? 'Defaults to artwork title'
+                ? l10n.artworkEditionDefaultsToArtworkTitle
                 : draft.title.trim(),
             accentColor: accent,
             onChanged: (v) => drafts.updateOptionalFeatures(
@@ -1140,8 +1136,8 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
           const CreatorFieldSpacing(),
           CreatorTextField(
             controller: _nftSeriesDescriptionController,
-            label: 'Series description',
-            hint: 'Defaults to artwork description',
+            label: l10n.artworkEditionSeriesDescriptionLabel,
+            hint: l10n.artworkEditionDefaultsToArtworkDescription,
             maxLines: 3,
             accentColor: accent,
             onChanged: (v) => drafts.updateOptionalFeatures(
@@ -1155,7 +1151,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
               Expanded(
                 child: CreatorTextField(
                   controller: _nftSupplyController,
-                  label: 'Supply',
+                  label: l10n.artworkEditionSizeLabel,
                   accentColor: accent,
                   keyboardType: TextInputType.number,
                   onChanged: (v) {
@@ -1173,7 +1169,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
               Expanded(
                 child: CreatorTextField(
                   controller: _nftMintPriceController,
-                  label: 'Mint price (KUB8)',
+                  label: l10n.artworkEditionPriceKub8Label,
                   accentColor: accent,
                   keyboardType: const TextInputType.numberWithOptions(
                     decimal: true,
@@ -1194,7 +1190,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
           const CreatorFieldSpacing(),
           CreatorTextField(
             controller: _nftRoyaltyController,
-            label: 'Artist fee (royalty %)',
+            label: l10n.artworkEditionCreatorRoyaltyLabel,
             accentColor: accent,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             onChanged: (v) {
@@ -1218,7 +1214,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
               bottom: KubusSpacing.sm,
             ),
             child: Text(
-              'Attendance badge',
+              l10n.artworkCreatorAttendanceRecordsTitle,
               style: KubusTextStyles.detailSectionTitle.copyWith(
                 color: scheme.onSurface,
               ),
@@ -1237,29 +1233,28 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
               },
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                children: const [
+                children: [
                   RadioListTile<ArtworkPoapMode>(
                     value: ArtworkPoapMode.none,
-                    title: Text('No badge'),
-                    subtitle: Text(
-                      'Publish without attendance recognition records.',
-                    ),
+                    title: Text(l10n.artworkCreatorAttendanceNoneTitle),
+                    subtitle:
+                        Text(l10n.artworkCreatorAttendanceNoneDescription),
                   ),
                   RadioListTile<ArtworkPoapMode>(
                     value: ArtworkPoapMode.existingPoap,
-                    title: Text('Use existing attendance record'),
+                    title: Text(l10n.artworkCreatorAttendanceExistingTitle),
                     subtitle: Text(
-                      'Paste an Event ID or record link from an existing attendance setup.',
+                      l10n.artworkCreatorAttendanceExistingDescription,
                     ),
                   ),
                   RadioListTile<ArtworkPoapMode>(
                     value: ArtworkPoapMode.kubusPoap,
                     title: Text(
-                      'Create with kubus',
+                      l10n.artworkCreatorAttendanceCreateTitle,
                       style: TextStyle(fontStyle: FontStyle.italic),
                     ),
                     subtitle: Text(
-                      'kubus generates a simple attendance record link automatically.',
+                      l10n.artworkCreatorAttendanceCreateDescription,
                       style: TextStyle(fontStyle: FontStyle.italic),
                     ),
                   ),
@@ -1270,8 +1265,8 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
           if (draft.poapMode == ArtworkPoapMode.existingPoap) ...[
             const CreatorFieldSpacing(),
             CreatorTextField(
-              label: 'Attendance event ID',
-              hint: 'If you have an Event ID, paste it here.',
+              label: l10n.artworkCreatorAttendanceEventIdLabel,
+              hint: l10n.artworkCreatorAttendanceEventIdHint,
               accentColor: accent,
               controller: _poapEventIdController,
               onChanged: (v) => drafts.updateOptionalFeatures(
@@ -1282,7 +1277,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
             const CreatorFieldSpacing(),
             CreatorTextField(
               label: l10n.artworkCreatorAttendanceRecordUrlOptionalLabel,
-              hint: 'A link people can open to save the badge.',
+              hint: l10n.artworkCreatorAttendanceRecordLinkHint,
               accentColor: accent,
               controller: _poapClaimUrlController,
               onChanged: (v) => drafts.updateOptionalFeatures(
@@ -1295,7 +1290,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
             const CreatorFieldSpacing(),
             CreatorTextField(
               controller: _poapRewardAmountController,
-              label: 'Recognition amount (KUB8)',
+              label: l10n.artworkCreatorAttendanceRecognitionAmountLabel,
               accentColor: accent,
               keyboardType: TextInputType.number,
               onChanged: (v) {
@@ -1311,7 +1306,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
             const CreatorFieldSpacing(),
             CreatorTextField(
               controller: _poapClaimDaysController,
-              label: 'Claim window (days)',
+              label: l10n.artworkCreatorAttendanceClaimWindowLabel,
               accentColor: accent,
               keyboardType: TextInputType.number,
               onChanged: (v) {
@@ -1327,10 +1322,10 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
             const CreatorFieldSpacing(),
             CreatorTextField(
               controller: _poapTitleController,
-              label: 'Badge title',
+              label: l10n.artworkCreatorAttendanceBadgeTitleLabel,
               hint: draft.title.trim().isEmpty
-                  ? 'Defaults to your artwork title'
-                  : 'Defaults to: ${draft.title.trim()}',
+                  ? l10n.artworkEditionDefaultsToArtworkTitle
+                  : draft.title.trim(),
               accentColor: accent,
               onChanged: (v) => drafts.updateOptionalFeatures(
                 draftId: widget.draftId,
@@ -1340,8 +1335,8 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
             const CreatorFieldSpacing(),
             CreatorTextField(
               controller: _poapDescriptionController,
-              label: 'Badge description',
-              hint: 'Defaults to your artwork description',
+              label: l10n.artworkCreatorAttendanceBadgeDescriptionLabel,
+              hint: l10n.artworkEditionDefaultsToArtworkDescription,
               maxLines: 3,
               accentColor: accent,
               onChanged: (v) => drafts.updateOptionalFeatures(
@@ -1382,14 +1377,15 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Badge image',
+                        l10n.artworkCreatorAttendanceBadgeImageLabel,
                         style: KubusTextStyles.detailSectionTitle,
                       ),
                       const SizedBox(height: KubusSpacing.xs),
                       Text(
                         draft.poapImageBytes == null
-                            ? 'Uses your artwork cover by default.'
-                            : (draft.poapImageFileName ?? 'Custom image'),
+                            ? l10n.artworkCreatorAttendanceUsesArtworkCover
+                            : (draft.poapImageFileName ??
+                                l10n.artworkCreatorCustomImageLabel),
                         style: KubusTextStyles.detailLabel.copyWith(
                           color: scheme.onSurface.withValues(alpha: 0.75),
                         ),
@@ -1407,14 +1403,16 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                               Icons.upload_file_outlined,
                               size: 18,
                             ),
-                            label: const Text('Upload'),
+                            label: Text(l10n.commonUpload),
                           ),
                           if (draft.poapImageBytes != null)
                             TextButton(
                               onPressed: draft.isSubmitting
                                   ? null
                                   : () => drafts.clearPoapImage(widget.draftId),
-                              child: const Text('Use cover instead'),
+                              child: Text(
+                                l10n.artworkCreatorAttendanceUseCoverInstead,
+                              ),
                             ),
                         ],
                       ),
@@ -1425,7 +1423,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
             ),
             const CreatorFieldSpacing(),
             Text(
-              'Your attendance record link will be generated when you publish.',
+              l10n.artworkCreatorAttendanceGeneratedAfterPublish,
               style: KubusTextStyles.detailLabel.copyWith(
                 color: scheme.onSurface.withValues(alpha: 0.7),
               ),
@@ -1445,10 +1443,10 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
         // --- AR toggle ---
         const CreatorFieldSpacing(height: KubusSpacing.lg),
         CreatorSwitchTile(
-          title: 'Enable AR',
+          title: l10n.artworkCreatorEnableAr,
           subtitle: AppConfig.isFeatureEnabled('ar')
-              ? 'You can generate or upload a marker after publishing.'
-              : 'AR is currently unavailable on this platform.',
+              ? l10n.artworkCreatorArAfterPublish
+              : l10n.artworkCreatorArUnavailable,
           value: draft.arEnabled,
           onChanged: AppConfig.isFeatureEnabled('ar') && !draft.isSubmitting
               ? (v) => drafts.updateOptionalFeatures(
@@ -1471,7 +1469,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
               );
             },
             icon: const Icon(Icons.qr_code_2),
-            label: const Text('Create / Manage AR'),
+            label: Text(l10n.artworkCreatorManageAr),
           ),
         ],
       ],
@@ -1489,6 +1487,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
     if (future == null) return const SizedBox.shrink();
 
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.only(top: KubusSpacing.md),
       child: FutureBuilder<Map<String, dynamic>?>(
@@ -1501,7 +1500,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
 
           String headline;
           if (minCost == null || maxCost == null) {
-            headline = 'Unavailable';
+            headline = l10n.artworkCreatorFeeEstimateUnavailable;
           } else if (minCost == 0 && maxCost == 0) {
             headline = '0';
           } else if (minCost == maxCost) {
@@ -1521,7 +1520,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Approx. network fees',
+                  l10n.artworkCreatorFeeEstimateTitle,
                   style: KubusTextStyles.detailSectionTitle.copyWith(
                     color: scheme.onSurface,
                   ),
@@ -1747,7 +1746,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
               );
             },
             icon: const Icon(Icons.qr_code_2),
-            label: const Text('Create / Manage AR'),
+            label: Text(l10n.artworkCreatorManageAr),
           ),
         ],
         if (draft.mintNftAfterPublish &&

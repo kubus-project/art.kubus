@@ -64,6 +64,8 @@ import 'app_localizations_sl.dart';
 abstract class AppLocalizations {
   AppLocalizations(String locale) : localeName = _supportedLocaleName(locale);
 
+  // gen-l10n accepts arbitrary constructor values. Keep transient values from
+  // reaching intl, which only supports the locales shipped by this client.
   static String _supportedLocaleName(String locale) {
     final localeName = intl.Intl.canonicalizedLocale(locale.trim());
     return switch (localeName) {
@@ -102,7 +104,7 @@ abstract class AppLocalizations {
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
     Locale('en'),
-    Locale('sl'),
+    Locale('sl')
   ];
 
   /// No description provided for @appTagline.
@@ -338,9 +340,7 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Digital editions of {artworkTitle} by {artistName}'**
   String archiveObjectSeriesDefaultDescription(
-    Object artworkTitle,
-    Object artistName,
-  );
+      Object artworkTitle, Object artistName);
 
   /// No description provided for @archiveObjectSeriesCreateFailed.
   ///
@@ -389,11 +389,7 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Achievement unlocked\n{title}{extra}\n+{amount} {currency} recognition'**
   String communityAchievementUnlockedToast(
-    Object title,
-    Object extra,
-    Object amount,
-    Object currency,
-  );
+      Object title, Object extra, Object amount, Object currency);
 
   /// No description provided for @communityViewAchievementsAction.
   ///
@@ -472,9 +468,7 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Digital edition {status} for {title}'**
   String recentActivityArchiveObjectStatusDescription(
-    Object status,
-    Object title,
-  );
+      Object status, Object title);
 
   /// No description provided for @recentActivityFallbackArtworkTitle.
   ///
@@ -4235,7 +4229,7 @@ abstract class AppLocalizations {
   /// No description provided for @desktopSettingsFeatureNftMintingDescription.
   ///
   /// In en, this message translates to:
-  /// **'Create and manage digital records connected to artworks, visits or contributions.'**
+  /// **'Create and manage digital editions connected to artworks.'**
   String get desktopSettingsFeatureNftMintingDescription;
 
   /// No description provided for @desktopSettingsFeatureCommunityTitle.
@@ -4621,10 +4615,7 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Account: {accountStatus} · Wallet: {walletStatus} · Access: {signerStatus}'**
   String walletSessionStatusSummary(
-    Object accountStatus,
-    Object walletStatus,
-    Object signerStatus,
-  );
+      Object accountStatus, Object walletStatus, Object signerStatus);
 
   /// No description provided for @walletActionSignInRequiredToast.
   ///
@@ -12563,10 +12554,7 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{token} · {amount} · {date}'**
   String receiveTokenSidebarTransferSubtitle(
-    Object token,
-    Object amount,
-    Object date,
-  );
+      Object token, Object amount, Object date);
 
   /// No description provided for @sendTokenTitle.
   ///
@@ -12663,10 +12651,7 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{token} · {amount} · {date}'**
   String sendTokenSidebarRecipientSubtitle(
-    Object token,
-    Object amount,
-    Object date,
-  );
+      Object token, Object amount, Object date);
 
   /// No description provided for @sendTokenSidebarSummaryTitle.
   ///
@@ -12841,10 +12826,7 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{amount} {token} submitted. Tx: {signature}'**
   String sendTokenSendSuccessWithSignatureToast(
-    Object amount,
-    Object token,
-    Object signature,
-  );
+      Object amount, Object token, Object signature);
 
   /// No description provided for @sendTokenSendFailedToast.
   ///
@@ -15929,9 +15911,7 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Open details for {title}, token {tokenId}'**
   String marketplaceOpenCollectibleDetailsSemantic(
-    Object title,
-    Object tokenId,
-  );
+      Object title, Object tokenId);
 
   /// No description provided for @marketplaceShareTooltip.
   ///
@@ -16742,9 +16722,7 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Are you sure you want to delegate your {votingPower} voting power to {delegateName}?'**
   String daoDelegateVotingPowerDialogBody(
-    Object votingPower,
-    Object delegateName,
-  );
+      Object votingPower, Object delegateName);
 
   /// No description provided for @daoDelegationBenefitsTitle.
   ///
@@ -20171,10 +20149,7 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Swap submitted: {fromToken} ? {toToken}. Tx: {signature}'**
   String walletSwapSubmittedToastWithSignature(
-    Object fromToken,
-    Object toToken,
-    Object signature,
-  );
+      Object fromToken, Object toToken, Object signature);
 
   /// No description provided for @walletTransactionConfirmationsLabel.
   ///
@@ -23589,9 +23564,7 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Activity was recorded on {activeBuckets} of {totalBuckets} buckets.'**
   String analyticsRecommendationConsistencyDescription(
-    Object activeBuckets,
-    Object totalBuckets,
-  );
+      Object activeBuckets, Object totalBuckets);
 
   /// No description provided for @analyticsRecommendationReverseDecline.
   ///
@@ -23916,9 +23889,7 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{totalVotes} votes · {supportPct}% support'**
   String daoProposalVotesSupportSummaryLabel(
-    Object totalVotes,
-    Object supportPct,
-  );
+      Object totalVotes, Object supportPct);
 
   /// No description provided for @commonSearchHint.
   ///
@@ -26313,10 +26284,7 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{activeBuckets} of {totalBuckets} intervals recorded {metric}.'**
   String analyticsInsightActivePatternDescription(
-    Object activeBuckets,
-    Object totalBuckets,
-    Object metric,
-  );
+      Object activeBuckets, Object totalBuckets, Object metric);
 
   /// No description provided for @analyticsInsightPeakTitle.
   ///
@@ -26507,7 +26475,7 @@ abstract class AppLocalizations {
   /// No description provided for @artworkEditionSeriesNameLabel.
   ///
   /// In en, this message translates to:
-  /// **'Series name'**
+  /// **'Edition series name'**
   String get artworkEditionSeriesNameLabel;
 
   /// No description provided for @artworkEditionSizeLabel.
@@ -26527,6 +26495,312 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Create digital edition'**
   String get artworkEditionCreateAction;
+
+  /// No description provided for @artworkCreatorExtensionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Artwork extensions'**
+  String get artworkCreatorExtensionsTitle;
+
+  /// No description provided for @artworkCreatorDigitalEditionWalletRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Create an optional digital edition after publishing. A wallet is required for this feature.'**
+  String get artworkCreatorDigitalEditionWalletRequired;
+
+  /// No description provided for @artworkEditionSeriesDescriptionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Series description'**
+  String get artworkEditionSeriesDescriptionLabel;
+
+  /// No description provided for @artworkEditionDefaultsToArtworkTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Defaults to the artwork title'**
+  String get artworkEditionDefaultsToArtworkTitle;
+
+  /// No description provided for @artworkEditionDefaultsToArtworkDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Defaults to the artwork description'**
+  String get artworkEditionDefaultsToArtworkDescription;
+
+  /// No description provided for @artworkEditionPriceKub8Label.
+  ///
+  /// In en, this message translates to:
+  /// **'Edition price (KUB8)'**
+  String get artworkEditionPriceKub8Label;
+
+  /// No description provided for @artworkEditionCreatorRoyaltyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Creator royalty (%)'**
+  String get artworkEditionCreatorRoyaltyLabel;
+
+  /// No description provided for @artworkEditionCreatorRoyaltyHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Applied to secondary sales'**
+  String get artworkEditionCreatorRoyaltyHelp;
+
+  /// No description provided for @artworkEditionTypeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Digital edition type'**
+  String get artworkEditionTypeLabel;
+
+  /// No description provided for @artworkEditionTypeStandard.
+  ///
+  /// In en, this message translates to:
+  /// **'Standard digital edition'**
+  String get artworkEditionTypeStandard;
+
+  /// No description provided for @artworkEditionTypeAttendanceRecord.
+  ///
+  /// In en, this message translates to:
+  /// **'Attendance record'**
+  String get artworkEditionTypeAttendanceRecord;
+
+  /// No description provided for @artworkEditionTypeAchievement.
+  ///
+  /// In en, this message translates to:
+  /// **'Achievement record'**
+  String get artworkEditionTypeAchievement;
+
+  /// No description provided for @artworkEditionTypeLimited.
+  ///
+  /// In en, this message translates to:
+  /// **'Limited digital edition'**
+  String get artworkEditionTypeLimited;
+
+  /// No description provided for @artworkCreatorAttendanceRecordsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Attendance records'**
+  String get artworkCreatorAttendanceRecordsTitle;
+
+  /// No description provided for @artworkCreatorAttendanceNoneTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No attendance record'**
+  String get artworkCreatorAttendanceNoneTitle;
+
+  /// No description provided for @artworkCreatorAttendanceNoneDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Publish without an attendance record.'**
+  String get artworkCreatorAttendanceNoneDescription;
+
+  /// No description provided for @artworkCreatorAttendanceExistingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Use an existing attendance record'**
+  String get artworkCreatorAttendanceExistingTitle;
+
+  /// No description provided for @artworkCreatorAttendanceExistingDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Add an event ID or record link from an existing attendance setup.'**
+  String get artworkCreatorAttendanceExistingDescription;
+
+  /// No description provided for @artworkCreatorAttendanceCreateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create with art.kubus'**
+  String get artworkCreatorAttendanceCreateTitle;
+
+  /// No description provided for @artworkCreatorAttendanceCreateDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'art.kubus creates an attendance record link after publication.'**
+  String get artworkCreatorAttendanceCreateDescription;
+
+  /// No description provided for @artworkCreatorAttendanceEventIdLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Attendance event ID'**
+  String get artworkCreatorAttendanceEventIdLabel;
+
+  /// No description provided for @artworkCreatorAttendanceEventIdHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste an existing event ID.'**
+  String get artworkCreatorAttendanceEventIdHint;
+
+  /// No description provided for @artworkCreatorAttendanceRecordLinkHint.
+  ///
+  /// In en, this message translates to:
+  /// **'A link visitors can open to save the attendance record.'**
+  String get artworkCreatorAttendanceRecordLinkHint;
+
+  /// No description provided for @artworkCreatorAttendanceRecognitionAmountLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Recognition amount (KUB8)'**
+  String get artworkCreatorAttendanceRecognitionAmountLabel;
+
+  /// No description provided for @artworkCreatorAttendanceClaimWindowLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Claim window (days)'**
+  String get artworkCreatorAttendanceClaimWindowLabel;
+
+  /// No description provided for @artworkCreatorAttendanceBadgeTitleLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Attendance record title'**
+  String get artworkCreatorAttendanceBadgeTitleLabel;
+
+  /// No description provided for @artworkCreatorAttendanceBadgeDescriptionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Attendance record description'**
+  String get artworkCreatorAttendanceBadgeDescriptionLabel;
+
+  /// No description provided for @artworkCreatorAttendanceBadgeImageLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Attendance record image'**
+  String get artworkCreatorAttendanceBadgeImageLabel;
+
+  /// No description provided for @artworkCreatorAttendanceUsesArtworkCover.
+  ///
+  /// In en, this message translates to:
+  /// **'Uses the artwork cover by default.'**
+  String get artworkCreatorAttendanceUsesArtworkCover;
+
+  /// No description provided for @artworkCreatorCustomImageLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom image'**
+  String get artworkCreatorCustomImageLabel;
+
+  /// No description provided for @artworkCreatorAttendanceUseCoverInstead.
+  ///
+  /// In en, this message translates to:
+  /// **'Use artwork cover instead'**
+  String get artworkCreatorAttendanceUseCoverInstead;
+
+  /// No description provided for @artworkCreatorAttendanceGeneratedAfterPublish.
+  ///
+  /// In en, this message translates to:
+  /// **'The attendance record link is generated when you publish.'**
+  String get artworkCreatorAttendanceGeneratedAfterPublish;
+
+  /// No description provided for @artworkCreatorEnableAr.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable AR'**
+  String get artworkCreatorEnableAr;
+
+  /// No description provided for @artworkCreatorArAfterPublish.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate or upload a marker after publishing.'**
+  String get artworkCreatorArAfterPublish;
+
+  /// No description provided for @artworkCreatorArUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'AR is currently unavailable on this platform.'**
+  String get artworkCreatorArUnavailable;
+
+  /// No description provided for @artworkCreatorManageAr.
+  ///
+  /// In en, this message translates to:
+  /// **'Create or manage AR'**
+  String get artworkCreatorManageAr;
+
+  /// No description provided for @walletGalleryConnectTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect your wallet'**
+  String get walletGalleryConnectTitle;
+
+  /// No description provided for @walletGalleryConnectDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect a wallet to view your digital editions.'**
+  String get walletGalleryConnectDescription;
+
+  /// No description provided for @walletGalleryConnectAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect wallet'**
+  String get walletGalleryConnectAction;
+
+  /// No description provided for @walletGalleryDigitalEditionFallbackTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Digital edition'**
+  String get walletGalleryDigitalEditionFallbackTitle;
+
+  /// No description provided for @walletGalleryTokenId.
+  ///
+  /// In en, this message translates to:
+  /// **'Token #{tokenId}'**
+  String walletGalleryTokenId(Object tokenId);
+
+  /// No description provided for @walletGalleryTransaction.
+  ///
+  /// In en, this message translates to:
+  /// **'Transaction: {hash}'**
+  String walletGalleryTransaction(Object hash);
+
+  /// No description provided for @walletGalleryTransactionUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Transaction unavailable'**
+  String get walletGalleryTransactionUnavailable;
+
+  /// No description provided for @walletGalleryStatusMinted.
+  ///
+  /// In en, this message translates to:
+  /// **'Issued'**
+  String get walletGalleryStatusMinted;
+
+  /// No description provided for @walletGalleryStatusListed.
+  ///
+  /// In en, this message translates to:
+  /// **'Listed'**
+  String get walletGalleryStatusListed;
+
+  /// No description provided for @walletGalleryStatusSold.
+  ///
+  /// In en, this message translates to:
+  /// **'Sold'**
+  String get walletGalleryStatusSold;
+
+  /// No description provided for @walletGalleryStatusTransferred.
+  ///
+  /// In en, this message translates to:
+  /// **'Transferred'**
+  String get walletGalleryStatusTransferred;
+
+  /// No description provided for @walletGalleryStatusBurned.
+  ///
+  /// In en, this message translates to:
+  /// **'Retired'**
+  String get walletGalleryStatusBurned;
+
+  /// No description provided for @artworkCreatorFeeEstimateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimated network fees'**
+  String get artworkCreatorFeeEstimateTitle;
+
+  /// No description provided for @artworkCreatorFeeEstimateUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Unavailable'**
+  String get artworkCreatorFeeEstimateUnavailable;
+
+  /// No description provided for @artworkCreatorAttendanceImageTooSmall.
+  ///
+  /// In en, this message translates to:
+  /// **'The attendance record image must be at least 256 px on its shortest side.'**
+  String get artworkCreatorAttendanceImageTooSmall;
 }
 
 class _AppLocalizationsDelegate
@@ -26556,9 +26830,8 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
   }
 
   throw FlutterError(
-    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
-    'an issue with the localizations generation tool. Please file an issue '
-    'on GitHub with a reproducible sample app and the gen-l10n configuration '
-    'that was used.',
-  );
+      'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+      'an issue with the localizations generation tool. Please file an issue '
+      'on GitHub with a reproducible sample app and the gen-l10n configuration '
+      'that was used.');
 }
